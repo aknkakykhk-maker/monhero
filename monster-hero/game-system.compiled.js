@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a8bfb8229ceea6d
+// source-sha256: 46bab90b5e616d1b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 01:59";
+const BUILD_DATE = "2026-10-26 02:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -53845,6 +53845,7 @@ function ProfileScreen({
   onOpenNameEdit,
   onOpenIconPicker,
   onOpenFramePicker,
+  onOpenDex,
   onOpenItems,
   onOpenCallStylePicker,
   onOpenAssistantPicker,
@@ -54017,7 +54018,22 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-amber-300"
     }, "フレーム"), React.createElement("b", {
       className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
-    }, frameName))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
+    }, frameName))), onboarded && !onboardingPreview && onOpenDex && React.createElement("button", {
+      type: "button",
+      "data-profile-tile": "dex",
+      onClick: onOpenDex,
+      className: tile
+    }, React.createElement("span", {
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base",
+      "aria-hidden": "true"
+    }, "📖"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black text-emerald-300"
+    }, "図鑑"), React.createElement("b", {
+      className: "block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, "アイコン・", React.createElement("wbr", null), "フレーム"))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
       type: "button",
       "data-profile-tile": "costume",
       onClick: onOpenCostumePicker,
@@ -96241,6 +96257,10 @@ function MonsterHeroGame() {
   const [favQuery, setFavQuery] = useState('');
   const [favSort, setFavSort] = useState('bond');
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
+  const [showLookDex, setShowLookDex] = useState(false);
+  const [lookDexTab, setLookDexTab] = useState('icon');
+  const [lookDexZoom, setLookDexZoom] = useState(null);
+  const [lookDexView, setLookDexView] = useState('both');
   const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
   const ownedProfileFramesRef = useRef([]);
   const [ownedAssistantCostumes, setOwnedAssistantCostumes] = useState([]);
@@ -122058,6 +122078,11 @@ function MonsterHeroGame() {
       },
       onOpenIconPicker: () => setShowIconPicker(true),
       onOpenFramePicker: () => setShowFramePicker(true),
+      onOpenDex: () => {
+        setLookDexZoom(null);
+        setLookDexView('both');
+        setShowLookDex(true);
+      },
       costumeEnabled: assistantCostumeFeatureOn(),
       wornCostume: assistantCostumeWornFor(selectedAssistantId),
       onOpenCostumePicker: () => {
@@ -124422,6 +124447,271 @@ function MonsterHeroGame() {
       }, "モンスターの枠（条件を達成するとマーケットで買えます）"), saleFrames.map(cell), giftFrames.length > 0 && React.createElement(PickerGroupLabel, {
         count: giftFrames.length
       }, "イベントの枠（プレゼントで届きました）"), giftFrames.map(cell)));
+    })(), showLookDex && (() => {
+      const closeDex = () => {
+        setShowLookDex(false);
+        setLookDexZoom(null);
+      };
+      const ownedIconIds = new Set(expandOwnedMarketIcons(ownedMarketIcons));
+      const frameOwned = frame => profileFrameOwned(frame.id, ownedProfileFrames);
+      const frames = releasedProfileFrames().filter(frame => !profileFrameGift(frame) || frameOwned(frame));
+      const iconSeen = new Set();
+      const icons = [...STARTER_MONSTER_IDS.map(id => ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m => ({
+        id: m.id,
+        name: m.name,
+        src: m.faceIconUrl || m.iconUrl,
+        source: 'starter',
+        owned: true
+      })), ...BREEDER_MARKET_ITEMS.filter(item => item.type === 'icon' && (item.shop !== false || ownedIconIds.has(item.id))).map(item => ({
+        id: item.id,
+        name: String(item.name || '').replace(/のアイコン$/, ''),
+        src: item.icon,
+        source: item.shop === false ? 'gift' : 'market',
+        owned: ownedIconIds.has(item.id)
+      }))].filter(m => {
+        const image = String(m.src || '').split('?')[0];
+        if (iconSeen.has(m.id) || iconSeen.has(image)) return false;
+        iconSeen.add(m.id);
+        iconSeen.add(image);
+        return true;
+      });
+      const isFrame = lookDexTab === 'frame';
+      const list = isFrame ? frames.map(frame => ({
+        id: frame.id,
+        name: frame.name,
+        desc: frame.desc,
+        frame,
+        owned: frameOwned(frame)
+      })) : icons;
+      const ownedCount = list.filter(x => x.owned).length;
+      const myIconSrc = resolveIconUrl(breederIcon);
+      const avatarOf = (x, view, className, fit) => isFrame ? React.createElement(ProfileAvatar, {
+        src: view === 'frame' ? null : myIconSrc,
+        id: breederIcon,
+        frameId: view === 'icon' ? null : x.id,
+        alt: x.name,
+        className: className,
+        fit: fit,
+        fallback: view === 'frame' ? null : React.createElement(User, {
+          size: 22,
+          className: "text-indigo-400"
+        })
+      }) : React.createElement(ProfileAvatar, {
+        src: view === 'frame' ? null : x.src,
+        id: x.id,
+        frameId: view === 'icon' ? null : profileFrameId,
+        alt: x.name,
+        className: className,
+        fit: fit
+      });
+      const howTo = x => {
+        if (!isFrame) return x.source === 'starter' ? 'はじめから使える' : x.source === 'market' ? 'マーケットで買える' : 'プレゼントで届いた';
+        const unlock = profileFrameUnlock(x.frame);
+        if (unlock) {
+          const who = assistantById(unlock.assistantId);
+          return `${who && who.name || ''}との仲良し度 Lv${unlock.bondLevel}でもらえる`;
+        }
+        if (profileFrameGift(x.frame)) return 'ジャック大王を倒すと届く';
+        if (profileFrameSale(x.frame)) {
+          const status = profileFrameConditionStatus(x.frame);
+          return status && status.text ? `マーケットで買える（${status.text}）` : 'マーケットで買える';
+        }
+        return 'はじめから使える';
+      };
+      const tabButton = (id, label) => React.createElement("button", {
+        key: id,
+        type: "button",
+        "data-dex-tab": id,
+        "aria-pressed": lookDexTab === id,
+        onClick: () => {
+          setLookDexTab(id);
+          setLookDexZoom(null);
+        },
+        className: `flex-1 rounded-xl py-2 text-[13px] font-black active:scale-95 ${lookDexTab === id ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-300'}`
+      }, label);
+      const shell = {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 120,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        color: '#fff'
+      };
+      if (lookDexZoom != null && list[lookDexZoom]) {
+        const x = list[lookDexZoom];
+        const n = list.length;
+        const go = d => setLookDexZoom((lookDexZoom + d + n) % n);
+        const vw = typeof window !== 'undefined' ? window.innerWidth : 390,
+          vh = typeof window !== 'undefined' ? window.innerHeight : 664;
+        const box = Math.max(120, Math.min(vw - 40, 360, Math.round(vh * 0.42)));
+        const selected = isFrame ? normalizeProfileFrameId(profileFrameId) === x.id : breederIcon === x.id;
+        const choose = () => {
+          if (!x.owned) return;
+          if (isFrame) selectProfileFrame(x.id);else {
+            setBreederIcon(x.id);
+            setOnboardingIcon(x.id);
+            if (!onboardingPreview) storeSet('mh_breeder_icon', x.id, false);
+          }
+        };
+        let touchX = null;
+        return React.createElement("div", {
+          "data-dex-zoom": x.id,
+          style: {
+            ...shell,
+            background: '#020617',
+            overflowY: 'auto'
+          },
+          onTouchStart: e => {
+            touchX = e.touches && e.touches[0] ? e.touches[0].clientX : null;
+          },
+          onTouchEnd: e => {
+            const t = e.changedTouches && e.changedTouches[0];
+            if (touchX == null || !t) return;
+            const dx = t.clientX - touchX;
+            touchX = null;
+            if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+          }
+        }, React.createElement("div", {
+          style: {
+            width: '100%',
+            maxWidth: 420,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '0 16px 20px'
+          }
+        }, React.createElement("div", {
+          style: {
+            alignSelf: 'stretch',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 0'
+          }
+        }, React.createElement("span", {
+          className: "text-[12px] font-bold text-slate-400"
+        }, lookDexZoom + 1, " / ", n), React.createElement("button", {
+          type: "button",
+          "data-dex-zoom-close": true,
+          "aria-label": "一覧へもどる",
+          onClick: () => setLookDexZoom(null),
+          className: "rounded-full px-3 py-1 text-[20px] leading-none text-white active:scale-95"
+        }, "✕")), React.createElement("div", {
+          style: {
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            alignSelf: 'stretch',
+            height: box
+          }
+        }, React.createElement("button", {
+          type: "button",
+          "data-dex-prev": true,
+          "aria-label": "前へ",
+          onClick: () => go(-1),
+          className: "absolute left-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90"
+        }, "‹"), React.createElement("div", {
+          style: {
+            width: box,
+            height: box,
+            position: 'relative',
+            opacity: x.owned ? 1 : 0.55
+          }
+        }, avatarOf(x, lookDexView, 'w-full h-full', true), !x.owned && React.createElement(Lock, {
+          size: 34,
+          className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]"
+        })), React.createElement("button", {
+          type: "button",
+          "data-dex-next": true,
+          "aria-label": "次へ",
+          onClick: () => go(1),
+          className: "absolute right-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90"
+        }, "›")), React.createElement("div", {
+          className: "mt-3 flex flex-wrap justify-center gap-1.5"
+        }, [['both', '重ねて'], ['frame', 'フレームだけ'], ['icon', 'アイコンだけ']].map(([id, label]) => React.createElement("button", {
+          key: id,
+          type: "button",
+          "data-dex-view": id,
+          "aria-pressed": lookDexView === id,
+          onClick: () => setLookDexView(id),
+          className: `rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView === id ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-200'}`
+        }, label))), React.createElement("b", {
+          className: "mt-3 text-center text-[18px] font-black leading-tight"
+        }, jaWrap(x.name)), x.desc && React.createElement("p", {
+          className: "mt-1.5 text-center text-[12px] leading-relaxed text-slate-300"
+        }, helpWrap(x.desc)), React.createElement("p", {
+          "data-dex-howto": true,
+          className: "mt-2 text-center text-[12px] font-black leading-snug text-amber-400"
+        }, x.owned ? '' : '🔒 ', helpWrap(`手に入れ方：${howTo(x)}`)), x.owned ? React.createElement("button", {
+          type: "button",
+          "data-dex-choose": true,
+          onClick: choose,
+          disabled: selected,
+          className: `mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected ? 'bg-slate-700 text-slate-300' : 'bg-amber-500 text-slate-900'}`
+        }, selected ? 'いま使っています' : 'これにする') : React.createElement("div", {
+          className: "mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400"
+        }, "まだ持っていません")));
+      }
+      return React.createElement("div", {
+        "data-dex": true,
+        style: {
+          ...shell,
+          background: '#0b1020'
+        }
+      }, React.createElement("div", {
+        style: {
+          width: '100%',
+          maxWidth: 520,
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0
+        }
+      }, React.createElement("div", {
+        className: "flex items-center gap-2 px-3.5 pt-3.5 pb-2"
+      }, React.createElement("button", {
+        type: "button",
+        "data-dex-close": true,
+        "aria-label": "閉じる",
+        onClick: closeDex,
+        className: "px-1 text-[22px] leading-none text-white active:scale-90"
+      }, "‹"), React.createElement("b", {
+        className: "flex-1 text-[17px] font-black"
+      }, jaWrap('アイコン・フレーム図鑑'))), React.createElement("div", {
+        className: "flex gap-2 px-3.5"
+      }, tabButton('icon', 'アイコン'), tabButton('frame', 'フレーム')), React.createElement("p", {
+        "data-dex-count": true,
+        className: "px-3.5 pt-2.5 text-[12px] font-black text-amber-300"
+      }, "集めた ", ownedCount, " / ", list.length), React.createElement("p", {
+        className: "px-3.5 text-[10px] text-slate-400"
+      }, "押すと大きく見られます"), React.createElement("div", {
+        style: {
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          padding: 14,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gap: 10,
+          alignContent: 'start'
+        }
+      }, list.map((x, i) => React.createElement("button", {
+        key: x.id,
+        type: "button",
+        "data-dex-item": x.id,
+        "data-dex-owned": x.owned ? 'yes' : 'no',
+        onClick: () => setLookDexZoom(i),
+        className: "flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900 px-1 pb-2 pt-4 active:scale-95"
+      }, React.createElement("span", {
+        className: `relative block ${x.owned ? '' : 'opacity-45'}`
+      }, avatarOf(x, 'both', 'w-12 h-12', true), !x.owned && React.createElement(Lock, {
+        size: 16,
+        className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
+      })), React.createElement("span", {
+        className: `w-full text-center text-[9px] font-black leading-tight ${x.owned ? 'text-slate-200' : 'text-slate-500'}`
+      }, jaWrap(x.name)))))));
     })(), showCostumePicker && (() => {
       const closeCostume = () => {
         setShowCostumePicker(false);

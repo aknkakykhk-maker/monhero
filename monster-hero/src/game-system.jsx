@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 43521132d84f1103
+// generated-sha256: 99266c6ef71e553a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 01:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 02:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33773,7 +33773,7 @@ function ProfileScreen({
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
   costumeEnabled=false, wornCostume=null, onOpenCostumePicker=null,
-  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
+  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenDex, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
@@ -33873,6 +33873,13 @@ function ProfileScreen({
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"/>
                 <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{frameName}</b></span>
               </button>
+              {/* アイコン・フレーム図鑑(2026-10-25)。集めたもの・まだのものを一覧で見る */}
+              {onboarded&&!onboardingPreview&&onOpenDex&&(
+                <button type="button" data-profile-tile="dex" onClick={onOpenDex} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">📖</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-emerald-300">図鑑</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>アイコン・<wbr/>フレーム</b></span>
+                </button>
+              )}
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">👗</span>
@@ -58529,6 +58536,11 @@ function MonsterHeroGame() {
   const [favSort, setFavSort] = useState('bond');
   // 鍵つきの枠を押したとき、その条件を出すためのid(押していなければ null)
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
+  // アイコン・フレーム図鑑(2026-10-25)。開いているか・どちらのタブか・大きく見ている番号(null=一覧)・大きく見るときの見せ方
+  const [showLookDex, setShowLookDex] = useState(false);
+  const [lookDexTab, setLookDexTab] = useState('icon');
+  const [lookDexZoom, setLookDexZoom] = useState(null);
+  const [lookDexView, setLookDexView] = useState('both');
   // もらった飾り枠(2026-09-16)。助手との仲良し度が Lv2/5/7 になると1枚ずつ増える。
   // ★保存キーは新設のみ。既存の mh_* には一切触らない(CLAUDE.md ⑦)
   // ★一度もらったら外さない。助手を切り替えても、条件を変えても残す
@@ -76417,7 +76429,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onOpenNameEdit={(name)=>{setTempName(name);setShowNameEdit(true);}}
             onOpenIconPicker={()=>setShowIconPicker(true)}
-            onOpenFramePicker={()=>setShowFramePicker(true)}
+            onOpenFramePicker={()=>setShowFramePicker(true)} onOpenDex={()=>{ setLookDexZoom(null); setLookDexView('both'); setShowLookDex(true); }}
             costumeEnabled={assistantCostumeFeatureOn()}
             wornCostume={assistantCostumeWornFor(selectedAssistantId)}
             onOpenCostumePicker={()=>{setCostumeAssistantId(selectedAssistantId);setShowCostumePicker(true);}}
@@ -77748,6 +77760,114 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {giftFrames.map(cell)}
               </div>
             </PickerSheet>
+          );
+        })()}
+        {showLookDex&&(()=>{
+          // アイコン・フレーム図鑑(2026-10-25 社長「これで作る」)。集めたもの・まだのものを一覧で見て、押すと大きく見られる。
+          // 並ぶのは公開済みのものだけ。贈り物で届く枠はピッカーと同じく届くまで出さない。売っていないアイコン(shop:false)も持っているときだけ出す。
+          // 新しい保存キーは作らない(選んだときは、アイコン・フレームのピッカーと同じ保存先へ書く)
+          const closeDex=()=>{ setShowLookDex(false); setLookDexZoom(null); };
+          const ownedIconIds=new Set(expandOwnedMarketIcons(ownedMarketIcons));
+          const frameOwned=(frame)=>profileFrameOwned(frame.id, ownedProfileFrames);
+          const frames=releasedProfileFrames().filter(frame=>!profileFrameGift(frame)||frameOwned(frame));
+          const iconSeen=new Set();
+          const icons=[
+            ...STARTER_MONSTER_IDS.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>({id:m.id,name:m.name,src:m.faceIconUrl||m.iconUrl,source:'starter',owned:true})),
+            ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='icon'&&(item.shop!==false||ownedIconIds.has(item.id)))
+              .map(item=>({id:item.id,name:String(item.name||'').replace(/のアイコン$/,''),src:item.icon,source:item.shop===false?'gift':'market',owned:ownedIconIds.has(item.id)})),
+          ].filter(m=>{ const image=String(m.src||'').split('?')[0]; if(iconSeen.has(m.id)||iconSeen.has(image)) return false; iconSeen.add(m.id); iconSeen.add(image); return true; });
+          const isFrame=lookDexTab==='frame';
+          const list=isFrame?frames.map(frame=>({id:frame.id,name:frame.name,desc:frame.desc,frame,owned:frameOwned(frame)})):icons;
+          const ownedCount=list.filter(x=>x.owned).length;
+          const myIconSrc=resolveIconUrl(breederIcon);
+          const avatarOf=(x,view,className,fit)=>isFrame
+            ? <ProfileAvatar src={view==='frame'?null:myIconSrc} id={breederIcon} frameId={view==='icon'?null:x.id} alt={x.name} className={className} fit={fit} fallback={view==='frame'?null:<User size={22} className="text-indigo-400"/>}/>
+            : <ProfileAvatar src={view==='frame'?null:x.src} id={x.id} frameId={view==='icon'?null:profileFrameId} alt={x.name} className={className} fit={fit}/>;
+          const howTo=(x)=>{
+            if(!isFrame) return x.source==='starter'?'はじめから使える':x.source==='market'?'マーケットで買える':'プレゼントで届いた';
+            const unlock=profileFrameUnlock(x.frame);
+            if(unlock){ const who=assistantById(unlock.assistantId); return `${(who&&who.name)||''}との仲良し度 Lv${unlock.bondLevel}でもらえる`; }
+            if(profileFrameGift(x.frame)) return 'ジャック大王を倒すと届く'; // フレームを選ぶ窓の言い方とそろえる(2026-10-25 窓口)
+            if(profileFrameSale(x.frame)){ const status=profileFrameConditionStatus(x.frame); return status&&status.text?`マーケットで買える（${status.text}）`:'マーケットで買える'; }
+            return 'はじめから使える';
+          };
+          const tabButton=(id,label)=>(
+            <button key={id} type="button" data-dex-tab={id} aria-pressed={lookDexTab===id} onClick={()=>{ setLookDexTab(id); setLookDexZoom(null); }}
+              className={`flex-1 rounded-xl py-2 text-[13px] font-black active:scale-95 ${lookDexTab===id?'bg-amber-700 text-white':'bg-slate-800 text-slate-300'}`}>{label}</button>
+          );
+          const shell={position:'fixed',inset:0,zIndex:120,display:'flex',flexDirection:'column',alignItems:'center',color:'#fff'};
+          if(lookDexZoom!=null&&list[lookDexZoom]){
+            const x=list[lookDexZoom];
+            const n=list.length;
+            const go=(d)=>setLookDexZoom((lookDexZoom+d+n)%n);
+            const vw=typeof window!=='undefined'?window.innerWidth:390, vh=typeof window!=='undefined'?window.innerHeight:664;
+            // 飾りの大きいフレームも収まる大きさ(飾りは絵の約1.4倍に広がる)。横向きでは高さにも合わせる
+            const box=Math.max(120, Math.min(vw-40, 360, Math.round(vh*0.42)));
+            const selected=isFrame?normalizeProfileFrameId(profileFrameId)===x.id:breederIcon===x.id;
+            const choose=()=>{
+              if(!x.owned) return;
+              if(isFrame) selectProfileFrame(x.id);
+              else { setBreederIcon(x.id); setOnboardingIcon(x.id); if(!onboardingPreview) storeSet('mh_breeder_icon', x.id, false); }
+            };
+            let touchX=null;
+            return (
+              <div data-dex-zoom={x.id} style={{...shell,background:'#020617',overflowY:'auto'}}
+                onTouchStart={(e)=>{ touchX=e.touches&&e.touches[0]?e.touches[0].clientX:null; }}
+                onTouchEnd={(e)=>{ const t=e.changedTouches&&e.changedTouches[0]; if(touchX==null||!t) return; const dx=t.clientX-touchX; touchX=null; if(Math.abs(dx)>40) go(dx<0?1:-1); }}>
+                <div style={{width:'100%',maxWidth:420,display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 20px'}}>
+                  <div style={{alignSelf:'stretch',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0'}}>
+                    <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
+                    <button type="button" data-dex-zoom-close aria-label="一覧へもどる" onClick={()=>setLookDexZoom(null)} className="rounded-full px-3 py-1 text-[20px] leading-none text-white active:scale-95">✕</button>
+                  </div>
+                  <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center',alignSelf:'stretch',height:box}}>
+                    <button type="button" data-dex-prev aria-label="前へ" onClick={()=>go(-1)} className="absolute left-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90">‹</button>
+                    <div style={{width:box,height:box,position:'relative',opacity:x.owned?1:0.55}}>
+                      {avatarOf(x,lookDexView,'w-full h-full',true)}
+                      {!x.owned&&<Lock size={34} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]"/>}
+                    </div>
+                    <button type="button" data-dex-next aria-label="次へ" onClick={()=>go(1)} className="absolute right-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90">›</button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                    {[['both','重ねて'],['frame','フレームだけ'],['icon','アイコンだけ']].map(([id,label])=>(
+                      <button key={id} type="button" data-dex-view={id} aria-pressed={lookDexView===id} onClick={()=>setLookDexView(id)}
+                        className={`rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView===id?'bg-amber-500 text-slate-900':'bg-slate-800 text-slate-200'}`}>{label}</button>
+                    ))}
+                  </div>
+                  <b className="mt-3 text-center text-[18px] font-black leading-tight">{jaWrap(x.name)}</b>
+                  {x.desc&&<p className="mt-1.5 text-center text-[12px] leading-relaxed text-slate-300">{helpWrap(x.desc)}</p>}
+                  <p data-dex-howto className="mt-2 text-center text-[12px] font-black leading-snug text-amber-400">{x.owned?'':'🔒 '}{helpWrap(`手に入れ方：${howTo(x)}`)}</p>
+                  {x.owned
+                    ? <button type="button" data-dex-choose onClick={choose} disabled={selected}
+                        className={`mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected?'bg-slate-700 text-slate-300':'bg-amber-500 text-slate-900'}`}>{selected?'いま使っています':'これにする'}</button>
+                    : <div className="mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400">まだ持っていません</div>}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div data-dex style={{...shell,background:'#0b1020'}}>
+              <div style={{width:'100%',maxWidth:520,display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
+                <div className="flex items-center gap-2 px-3.5 pt-3.5 pb-2">
+                  <button type="button" data-dex-close aria-label="閉じる" onClick={closeDex} className="px-1 text-[22px] leading-none text-white active:scale-90">‹</button>
+                  <b className="flex-1 text-[17px] font-black">{jaWrap('アイコン・フレーム図鑑')}</b>
+                </div>
+                <div className="flex gap-2 px-3.5">{tabButton('icon','アイコン')}{tabButton('frame','フレーム')}</div>
+                <p data-dex-count className="px-3.5 pt-2.5 text-[12px] font-black text-amber-300">集めた {ownedCount} / {list.length}</p>
+                <p className="px-3.5 text-[10px] text-slate-400">押すと大きく見られます</p>
+                <div style={{flex:1,minHeight:0,overflowY:'auto',padding:14,display:'grid',gridTemplateColumns:'repeat(4, minmax(0, 1fr))',gap:10,alignContent:'start'}}>
+                  {list.map((x,i)=>(
+                    <button key={x.id} type="button" data-dex-item={x.id} data-dex-owned={x.owned?'yes':'no'} onClick={()=>setLookDexZoom(i)}
+                      className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900 px-1 pb-2 pt-4 active:scale-95">
+                      <span className={`relative block ${x.owned?'':'opacity-45'}`}>
+                        {avatarOf(x,'both','w-12 h-12',true)}
+                        {!x.owned&&<Lock size={16} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                      </span>
+                      <span className={`w-full text-center text-[9px] font-black leading-tight ${x.owned?'text-slate-200':'text-slate-500'}`}>{jaWrap(x.name)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           );
         })()}
 
