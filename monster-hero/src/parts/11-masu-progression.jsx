@@ -1813,7 +1813,14 @@ const monsterCategoryName = (categoryId) =>
 // ドラゴン・ジョーカーのようにモンスターがいない血統は、絵を作らず名前だけで見せる
 const lineageIconUrl = (lineage) => {
   const base = lineage?.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[lineage.monId] : null;
-  return base?.faceIconUrl || base?.iconUrl || null;
+  if (base) return base.faceIconUrl || base.iconUrl || null;
+  // 味方モンスターがまだいない血統(ジョーカーなど)は、案の子の顔アイコン → 血統別のアイコンの順に使う
+  const draft = lineage?.id && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined'
+    ? Object.values(UPCOMING_MONSTER_DRAFTS).find((d) => d?.draftLineage?.main === lineage.id && d.draftLineage.sub === lineage.id)
+    : null;
+  if (draft) return draft.faceIconUrl || draft.iconUrl || null;
+  const icons = typeof MONSTER_LINEAGE_ICONS !== 'undefined' ? MONSTER_LINEAGE_ICONS : null;
+  return (lineage?.id && lineage.id !== 'unknown' && icons && icons[lineage.id]) || null;
 };
 // 図鑑の説明。まだ書いていないモンスターは、空欄にせず調査中と伝える
 const monsterDexDescription = (monsterId) =>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d53619f7ec0fa1b0
+// generated-sha256: 44782b463ecc4501
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 22:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 23:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2831,7 +2831,14 @@ const monsterCategoryName = (categoryId) =>
 // ドラゴン・ジョーカーのようにモンスターがいない血統は、絵を作らず名前だけで見せる
 const lineageIconUrl = (lineage) => {
   const base = lineage?.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[lineage.monId] : null;
-  return base?.faceIconUrl || base?.iconUrl || null;
+  if (base) return base.faceIconUrl || base.iconUrl || null;
+  // 味方モンスターがまだいない血統(ジョーカーなど)は、案の子の顔アイコン → 血統別のアイコンの順に使う
+  const draft = lineage?.id && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined'
+    ? Object.values(UPCOMING_MONSTER_DRAFTS).find((d) => d?.draftLineage?.main === lineage.id && d.draftLineage.sub === lineage.id)
+    : null;
+  if (draft) return draft.faceIconUrl || draft.iconUrl || null;
+  const icons = typeof MONSTER_LINEAGE_ICONS !== 'undefined' ? MONSTER_LINEAGE_ICONS : null;
+  return (lineage?.id && lineage.id !== 'unknown' && icons && icons[lineage.id]) || null;
 };
 // 図鑑の説明。まだ書いていないモンスターは、空欄にせず調査中と伝える
 const monsterDexDescription = (monsterId) =>
