@@ -342,6 +342,25 @@ const packs = () => {
     ok(shared >= 1, `${p.name}に全モンスター・ブリーダーのカードが無い`);
     ok(all.cards.every((no) => ['any', 'breeder', ...PLAN[p.id]].includes(db.cards[no].user)), `${p.name}にほかの種族の技が入っている`);
   });
+  // 準備中のカードが ready になるたびに、パック・提供割合が自動で追いつく(手で書いた表や数は無い。2026-10-25 窓口の確かめの依頼)
+  //   いまのデータで準備中を全部 ready にした仮のデータで、どの弾も 50前後・全部のカードがその弾の割合の表に入り・足すと100%
+  const dbAll = JSON.parse(JSON.stringify(db));
+  Object.values(dbAll.cards).forEach((c) => { c.ready = true; });
+  E.CARD_PACKS.forEach((p) => {
+    const all = E.cardPackAllCards(dbAll, p);
+    const r = E.cardPackCardRates(dbAll, p.id);
+    ok(r.tech.length === all.cards.length && r.mon.length === all.monsters.length, `${p.name}: 準備中が全部入ったとき、提供割合の表がカードの数に追いつかない(技 ${r.tech.length}/${all.cards.length}・モンスター ${r.mon.length}/${all.monsters.length})`);
+    ok(r.tech.every((x) => Math.abs(x.p - 1 / all.cards.length) < 1e-12) && Math.abs(r.tech.reduce((a, x) => a + x.p, 0) - 1) < 1e-9 && Math.abs(r.mon.reduce((a, x) => a + x.p, 0) - 1) < 1e-9, `${p.name}: 準備中が全部入ったときの割合が合わない`);
+    const n = all.cards.length + all.monsters.length;
+    ok(n >= 48 && n <= 52, `${p.name}: 準備中が全部入ったときの種類が50前後でない(${n})`);
+    // 1パック開けると、新しく入ったカードも出る(いまは準備中のカードが ready になったら出る)
+    const fresh = all.cards.filter((no) => !db.cards[no].ready);
+    if (fresh.length) {
+      const seen = new Set();
+      for (let i = 0; i < 400; i++) E.cardOpenPack(dbAll, p.id, { collection: {}, pity: {} }, rand).cards.forEach((c) => seen.add(c.no));
+      ok(fresh.every((no) => seen.has(no)), `${p.name}: ready になったカードがパックから出ない(${fresh.filter((no) => !seen.has(no)).slice(0, 5).join('・')})`);
+    }
+  });
   // 天井の保存: 以前の w1〜w4 は消さずに残し、新しい弾へ1回だけ写す(新しい弾に数があれば上書きしない)
   const legacy = E.cardNormalizePity({ w1: 3, w2: 5, w4: 1, p9: 2, p1: 'x' });
   ok(JSON.stringify(legacy) === '{"w1":3,"w2":5,"w4":1}', `以前の天井の数を残していない(${JSON.stringify(legacy)})`);
