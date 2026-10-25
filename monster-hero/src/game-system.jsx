@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42812baac3a8e289
+// generated-sha256: 945b706af253e20f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 22:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 00:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2831,7 +2831,14 @@ const monsterCategoryName = (categoryId) =>
 // ドラゴン・ジョーカーのようにモンスターがいない血統は、絵を作らず名前だけで見せる
 const lineageIconUrl = (lineage) => {
   const base = lineage?.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[lineage.monId] : null;
-  return base?.faceIconUrl || base?.iconUrl || null;
+  if (base) return base.faceIconUrl || base.iconUrl || null;
+  // 味方モンスターがまだいない血統(ジョーカーなど)は、案の子の顔アイコン → 血統別のアイコンの順に使う
+  const draft = lineage?.id && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined'
+    ? Object.values(UPCOMING_MONSTER_DRAFTS).find((d) => d?.draftLineage?.main === lineage.id && d.draftLineage.sub === lineage.id)
+    : null;
+  if (draft) return draft.faceIconUrl || draft.iconUrl || null;
+  const icons = typeof MONSTER_LINEAGE_ICONS !== 'undefined' ? MONSTER_LINEAGE_ICONS : null;
+  return (lineage?.id && lineage.id !== 'unknown' && icons && icons[lineage.id]) || null;
 };
 // 図鑑の説明。まだ書いていないモンスターは、空欄にせず調査中と伝える
 const monsterDexDescription = (monsterId) =>
@@ -16057,8 +16064,25 @@ const ASSET_CACHE_DEFAULT_ENABLED = true;
 const ASSET_PACKS = [
   { id: 'beat', icon: '🎵', label: 'モンヒロビート', desc: '全曲の音源とジャケット' },
   { id: 'battle', icon: '⚔️', label: 'バトル', desc: 'バトル・HOMEのBGM、モンスター・敵・演出・助手の画像' },
+  // MFバトルカードのカードの絵(小さい版と大きい版。2026-10-25 社長)。公開の印(RELEASE_FLAGS.cardBattle)が立つまでは、
+  // デバッグ端末にだけ見せる。遊ぶ人には出さず、「全部」にも自動ダウンロードにも入れない(assetPackOpen)。公開した日から自動で入る
+  { id: 'card', icon: '🃏', label: 'バトルカード', desc: 'MFバトルカードのカードの絵', gate: 'cardBattle' },
   { id: 'all', icon: '📦', label: '全部', desc: 'モンヒロビートとバトルの両方' },
 ];
+// まとまりを出してよいか(公開の印か、デバッグの合言葉が合った端末か。印は読むだけ)
+const assetPackOpen = (pack) => {
+  if (!pack || !pack.gate) return true;
+  try { if (typeof EVENT_REPLAY_RELEASE_FLAGS !== 'undefined' && EVENT_REPLAY_RELEASE_FLAGS[pack.gate]) return true; } catch (e) {}
+  try { return typeof localStorage !== 'undefined' && typeof DEBUG_UNLOCK_KEY !== 'undefined' && localStorage.getItem(DEBUG_UNLOCK_KEY) === '1'; } catch (e) { return false; }
+};
+const assetPackOfId = (id) => ASSET_PACKS.find((p) => p.id === id) || null;
+// 設定の「ダウンロード」に並べるまとまり(出してよいものだけ)。「全部」の説明も、バトルカードを出すときは3つにする
+const assetPacksShown = () => {
+  const cardOpen = assetPackOpen(assetPackOfId('card'));
+  return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・バトル・バトルカードの全部' } : p));
+};
+// 自動ダウンロードで、よく使う画像のあとに落とすカードの絵。小さい版を先に、大きい版をそのあとに(2026-10-25 社長「両方入れる」)
+const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
 // 自動の前もって落としで、まず落とす「よく使う画面の画像」(背景・タイトル・画面の部品・顔アイコン)
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 // 自動の前もって落としで1回の起動に落とす上限(バイト)。モバイル回線では少なく、わからない端末(iPhone)は控えめに
@@ -16104,7 +16128,8 @@ const ASSET_CACHE = (() => {
     }
     return manifestPromise;
   };
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' || f.pack === packId);
+  // 「全部」には、出してよいまとまりのものだけを入れる(公開前のバトルカードは入れない)
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
 
   // 端末にあるもの(版も一覧と同じもの)を数え直す
   const refreshStatus = async () => {
@@ -16176,7 +16201,7 @@ const ASSET_CACHE = (() => {
 
   // ---- まとまりのダウンロード ----
   const download = async (packId) => {
-    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId)) return false;
+    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId && assetPackOpen(p))) return false;
     // 最初の await より前に job を置く(2つ同時に始めると、進み具合を取り合う)
     const j = job = { packId, preparing: true, total: 0, done: 0, bytesTotal: 0, bytesDone: 0, failed: 0, cancel: false, error: null };
     emit();
@@ -16307,6 +16332,8 @@ const ASSET_CACHE = (() => {
     if (!m) return;
     enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
+    // カードの絵(小さい版→大きい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
+    if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
   };
 
   let listening = false;
@@ -32683,7 +32710,7 @@ function AssetDownloadPage({ onBack }) {
         {!asset.supported && (
           <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
         )}
-        {ASSET_PACKS.map(pack => {
+        {assetPacksShown().map(pack => {
           const st = packs[pack.id] || { count: 0, bytes: 0, haveCount: 0, haveBytes: 0 };
           const complete = st.count > 0 && st.haveCount >= st.count;
           const running = job && job.packId === pack.id;
@@ -52741,6 +52768,62 @@ const CardBattleTeaser = ({ onClose }) => {
   );
 };
 
+// ---- 「助手と対戦」で、選んだ助手の戦い方の型と使うモンスター(2026-10-25 社長「攻撃型とかピクシーとかなになにを編成しやすいとか出して」) ----
+// どれもデータ(CARD_AI_HABITS・CARD_AI_DECKS)から作る。癖の重みや勝率などの数字は出さない(見えない強さを明かさない)
+const CARD_FOE_STYLES = Object.freeze({
+  attack: { label: '攻撃型', note: 'ちから・かしこさの技で、どんどん攻める' },
+  disrupt: { label: '邪魔型', note: 'ガッツを減らしたり、こちらのじゃまをする' },
+  big: { label: '大技型', note: 'ガッツをためて、大きな技を打つ' },
+  saveGuts: { label: 'ため型', note: 'ガッツをためてから動く' },
+  keepGuard: { label: '守り型', note: '守りのカードを残して、固く戦う' },
+  area: { label: '全体攻撃型', note: '全体攻撃で、まとめてダメージを与える' },
+  finish: { label: 'とどめ型', note: '弱ったモンスターを、確実に倒しにくる' },
+  balance: { label: 'バランス型', note: '場面に合わせて、まんべんなく戦う' },
+});
+// いちばん強い癖で型を決める。どの癖もほとんど同じ(いちばん強くても 1.2 まで)なら、バランス型
+const cardFoeStyle = (who) => {
+  const h = CARD_AI_HABITS[who];
+  if (!h) return null;
+  const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
+  return v <= 1.2 ? CARD_FOE_STYLES.balance : (CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance);
+};
+const CardFoeStyle = ({ db, who, level }) => {
+  const style = cardFoeStyle(who);
+  const recipe = CARD_AI_DECKS[who];
+  if (!style || !recipe) return null;
+  const kit = recipe.kit ? db.starters[recipe.kit] : null;
+  const mons = (recipe.monsters || (kit ? kit.monsters : [])).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+  const upper = level === 'hard' || level === 'expert' || level === 'master';
+  const lv = CARD_LEVEL_LABEL[level] || '';
+  // 強さでデッキの組み方が変わる(cardAiBuildDeck): スターターの助手は EASY・NORMAL ではスターターのまま、HARD から同じ3体で組み直す
+  const deckNote = kit && !upper ? `${lv}: スターター「${kit.name}」のままのデッキ`
+    : `${lv}: この3体に合わせて、${style.label}のデッキを組んでくる${level === 'expert' || level === 'master' ? '(いろいろな弾のカードも使う)' : ''}`;
+  return (
+    <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
+        <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <small className="shrink-0 text-[10px] font-black text-slate-400">使うモンスター</small>
+        {mons.map((m) => (
+          <span key={m.no} data-card-foe-mon={m.no} className="flex shrink-0 items-center gap-1">
+            <img src={cardMonArt(m) || CARD_IMG(m.img)} alt="" aria-hidden="true" className="h-7 w-7 rounded-md bg-white/10 object-contain"/>
+            <b className="whitespace-nowrap text-[12px] font-black text-white">{m.name}</b>
+          </span>
+        ))}
+      </div>
+      {Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && (
+        <div data-card-foe-prefer className="text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
+          <small className="mr-1 text-[10px] font-black text-slate-400">よく使うカード</small>
+          {recipe.prefer.map((n, i) => <span key={n} className="inline-block whitespace-nowrap">{n}{i < recipe.prefer.length - 1 ? '・' : ''}</span>)}
+        </div>
+      )}
+      <div data-card-foe-deck-note className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(deckNote)}</div>
+    </div>
+  );
+};
+
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
 const CardDetailModal = ({ db, no, onClose }) => {
   const c = cardOf(db, no);
@@ -54006,7 +54089,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       <div data-mh-screen data-card-top="foe" className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="助手と対戦" accent="text-amber-200" onBack={() => setView('mode')} note="相手の助手と強さをえらびます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5 landscape:grid-cols-6">
             {foes.map((x) => (
               <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
                 <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"/>
@@ -54015,6 +54098,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               </button>
             ))}
           </div>
+          {/* 横の画面は、紹介と型の欄を左右に並べる(縦に積むと強さのボタンが下へ出た。landscape-screens-check) */}
+          <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0">
           {a && (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
               {/* 背の低い画面(SE)では絵を低くして、下の「使うデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
@@ -54026,6 +54111,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               </div>
             </div>
           )}
+          {a && <CardFoeStyle db={db} who={a.id} level={foe.level}/>}
+          </div>
           <ScreenSectionLabel note="勝つと次の強さが開きます">強さ</ScreenSectionLabel>
           <div className="grid grid-cols-5 gap-1">
             {CARD_LEVEL_ORDER.map((lv) => {
@@ -54309,31 +54396,32 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       </header>
       <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`}>
         <ModeSelectAssistantPanel assistant={topAssistantShown} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist}/>
-        <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+        <div data-card-top-menu className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:overflow-y-auto landscape:py-2 landscape:[&>*:first-child]:mt-auto landscape:[&>*:last-child]:mb-auto [@media(orientation:landscape)_and_(max-height:360px)]:space-y-1.5">
           {!assistShown && topAssistant && <ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="justify-end" withLabel/>}
+          {/* 横の画面は、はみ出すときは上から並べる(justify-center だと上の段が送っても見えない所へ出た。2026-10-25 ダメダシくん)。背の低い横画面ではボタンを詰める */}
           {/* いまのデッキ(小さく。押すとデッキ編成へ) */}
           {activeDeck && (
-            <button type="button" data-card-active-deck onClick={go('decks')} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]">
+            <button type="button" data-card-active-deck onClick={go('decks')} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98] [@media(orientation:landscape)_and_(max-height:360px)]:py-1">
               <small className="shrink-0 text-[10px] font-black text-slate-400">いまのデッキ</small>
               <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{activeDeck.name}</b>
-              <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
+              <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 [@media(orientation:landscape)_and_(max-height:360px)]:h-6 [@media(orientation:landscape)_and_(max-height:360px)]:w-[18px] rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
             </button>
           )}
-          {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
+          {notice && <p className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:360px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:360px)]:leading-snug`} style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
               <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}
-                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px]`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
+                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
                 <span aria-hidden="true" className="mhms-mark">{c.mark}</span>
-                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">{c.ico}</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden">{c.ico}</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">{c.label}</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">{c.sub}</small></span>
               </button>
             ))}
           </div>
           <div data-card-top-shortcuts className="mhms-in grid grid-cols-4 gap-1.5" style={{ animationDelay: '.28s' }}>
             {smallButtons.map((b) => (
-              <button key={b.key} type="button" {...b.attr} onClick={b.onClick} className={`mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 ${b.tone}`}>
-                <span aria-hidden="true" className="text-lg">{b.ico}</span><b className="text-[11px] font-black">{b.label}</b>{b.sub && <small className="text-[9px] font-black text-slate-300/90">{b.sub}</small>}
+              <button key={b.key} type="button" {...b.attr} onClick={b.onClick} className={`mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[40px] [@media(orientation:landscape)_and_(max-height:360px)]:flex-row [@media(orientation:landscape)_and_(max-height:360px)]:gap-1 ${b.tone}`}>
+                <span aria-hidden="true" className="text-lg">{b.ico}</span><b className="text-[11px] font-black">{b.label}</b>{b.sub && <small className="text-[9px] font-black text-slate-300/90 [@media(orientation:landscape)_and_(max-height:360px)]:hidden">{b.sub}</small>}
               </button>
             ))}
           </div>
