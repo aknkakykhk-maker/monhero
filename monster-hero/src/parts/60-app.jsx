@@ -4628,6 +4628,8 @@ function MonsterHeroGame() {
   const [cardBgm, setCardBgm] = useState(null);
   // MFバトルカードのオプションの「開いたら自動で始める」(mh_card_settings_v1.quickAutoStart)。カードを開いたとき・オプションで変えたときに入れる
   const [cardQuickAutoStart, setCardQuickAutoStart] = useState(false);
+  // HOME の「MFバトルカード 近日公開」の札を押したときの予告の小窓(保存しない)
+  const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
   // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「カードポイント」の売り場を出す(デバッグ専用のあいだ。区切り2)
@@ -17297,6 +17299,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
       <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&!cardScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
+        {/* MFバトルカードの予告の小窓(HOME の「近日公開」の札から。84 の CardBattleTeaser) */}
+        {gameState==='HOME'&&cardTeaserOpen&&<CardBattleTeaser onClose={()=>setCardTeaserOpen(false)}/>}
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
           <HomeScreen
@@ -17320,6 +17324,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             raidJackEventId={raidJackEventId} onOpenRaidJack={openRaidJack}
             onOpenAssistantChat={RELEASE_FLAGS.assistantChat===true?()=>setAssistantChatOpen(true):null}
             cardBattleVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome} onOpenCardBattle={()=>{setCardOrigin('home');setGameState('CARD_TOP');}}
+            /* 公開前の予告(社長 2026-10-25)。ふつうのプレイヤーに「近日公開」の札を出し、押すと予告の小窓。公開の印が立てば出なくなり、上のふつうの入口に替わる */
+            cardBattleTeaser={!EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&!cardBattleDebugHome} onOpenCardTeaser={()=>setCardTeaserOpen(true)}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}

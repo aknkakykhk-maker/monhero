@@ -334,7 +334,7 @@ function HomeScreen({
   // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
   onOpenAssistantChat = null,
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
-  cardBattleVisible = false, onOpenCardBattle = null,
+  cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -442,6 +442,9 @@ function HomeScreen({
         </button>}
         {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる) */}
         {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeEventCampaign?'':' raised'}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
+        {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
+            公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
+        {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
         <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと

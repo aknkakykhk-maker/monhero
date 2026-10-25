@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "5b2eeae1c4e2",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117295745,"count":610},"all":{"bytes":224683191,"count":703}},
+  "id": "71b0272215cb",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117406145,"count":611},"all":{"bytes":224793591,"count":704}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -304,6 +304,7 @@
     "images/enemies/naga.png": {"v":"318937e614cf","size":6118,"pack":"battle"},
     "images/enemies/nyarlathotep.png": {"v":"784ba273ad33","size":12094,"pack":"battle"},
     "images/enemies/splatter.png": {"v":"fc268b0fd810","size":9486,"pack":"battle"},
+    "images/events/card-battle-teaser.jpg": {"v":"dc64e1718761","size":110400,"pack":"battle"},
     "images/events/dreamy-dye-preview.jpg": {"v":"bfaca221c64c","size":69448,"pack":"battle"},
     "images/events/dreamy-profile.jpg": {"v":"b0b01f8e3321","size":128759,"pack":"battle"},
     "images/events/ghost-dye-preview.jpg": {"v":"a44df82dcc3d","size":64486,"pack":"battle"},
