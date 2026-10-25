@@ -57,7 +57,7 @@ function AssetDownloadPage({ onBack }) {
         {!asset.supported && (
           <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
         )}
-        {ASSET_PACKS.map(pack => {
+        {assetPacksShown().map(pack => {
           const st = packs[pack.id] || { count: 0, bytes: 0, haveCount: 0, haveBytes: 0 };
           const complete = st.count > 0 && st.haveCount >= st.count;
           const running = job && job.packId === pack.id;

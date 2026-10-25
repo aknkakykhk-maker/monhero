@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 40144b554ddc50a3
+// source-sha256: b2a3f22629b5ba11
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 22:50";
+const BUILD_DATE = "2026-10-25 22:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -26436,11 +26436,37 @@ const ASSET_PACKS = [{
   label: 'バトル',
   desc: 'バトル・HOMEのBGM、モンスター・敵・演出・助手の画像'
 }, {
+  id: 'card',
+  icon: '🃏',
+  label: 'バトルカード',
+  desc: 'MFバトルカードのカードの絵',
+  gate: 'cardBattle'
+}, {
   id: 'all',
   icon: '📦',
   label: '全部',
   desc: 'モンヒロビートとバトルの両方'
 }];
+const assetPackOpen = pack => {
+  if (!pack || !pack.gate) return true;
+  try {
+    if (typeof EVENT_REPLAY_RELEASE_FLAGS !== 'undefined' && EVENT_REPLAY_RELEASE_FLAGS[pack.gate]) return true;
+  } catch (e) {}
+  try {
+    return typeof localStorage !== 'undefined' && typeof DEBUG_UNLOCK_KEY !== 'undefined' && localStorage.getItem(DEBUG_UNLOCK_KEY) === '1';
+  } catch (e) {
+    return false;
+  }
+};
+const assetPackOfId = id => ASSET_PACKS.find(p => p.id === id) || null;
+const assetPacksShown = () => {
+  const cardOpen = assetPackOpen(assetPackOfId('card'));
+  return ASSET_PACKS.filter(assetPackOpen).map(p => p.id === 'all' && cardOpen ? {
+    ...p,
+    desc: 'モンヒロビート・バトル・バトルカードの全部'
+  } : p);
+};
+const ASSET_CARD_AUTO_PREFIX = 'images/card-battle/s/';
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 const ASSET_AUTO_BUDGET = {
   cellular: 8 * 1024 * 1024,
@@ -26502,7 +26528,7 @@ const ASSET_CACHE = (() => {
     }
     return manifestPromise;
   };
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' || f.pack === packId);
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId);
   const refreshStatus = async () => {
     status = {
       ...status,
@@ -26619,7 +26645,7 @@ const ASSET_CACHE = (() => {
     } catch (e) {}
   };
   const download = async packId => {
-    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId)) return false;
+    if (job || !settings.enabled || !supported() || !ASSET_PACKS.some(p => p.id === packId && assetPackOpen(p))) return false;
     const j = job = {
       packId,
       preparing: true,
@@ -26801,6 +26827,7 @@ const ASSET_CACHE = (() => {
     if (!m) return;
     enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
+    if (assetPackOpen(assetPackOfId('card'))) enqueue(Object.keys(m.files).filter(p => p.startsWith(ASSET_CARD_AUTO_PREFIX)));
   };
   let listening = false;
   const listen = () => {
@@ -51873,7 +51900,7 @@ function AssetDownloadPage({
   }, "ダウンロードを使う")), !asset.supported && React.createElement("p", {
     "data-asset-unsupported": true,
     className: "rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100"
-  }, "この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。"), ASSET_PACKS.map(pack => {
+  }, "この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。"), assetPacksShown().map(pack => {
     const st = packs[pack.id] || {
       count: 0,
       bytes: 0,
