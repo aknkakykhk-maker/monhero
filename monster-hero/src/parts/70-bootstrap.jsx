@@ -4293,6 +4293,12 @@ const createAnimationStyle = () => {
     .mh-card-flip { transform-style: preserve-3d; animation: mhCardFlip .5s ease-in .9s both; }
     .mh-card-flip-face { backface-visibility: hidden; }
     .mh-card-flip-back { position: absolute; inset: 0; border-radius: 3px; transform: rotateY(180deg); backface-visibility: hidden; border: 2px solid rgba(148,163,184,.55); background: repeating-linear-gradient(45deg, #1e1b4b 0 5px, #312e81 5px 10px); filter: brightness(.6); }
+    /* MFバトルカード: 番が替わる帯・相手のカードを大きく見せる(案A・B。2026-10-25) */
+    .mh-card-turn-banner { animation: mhCardTurnBanner .9s ease-out both; }
+    @keyframes mhCardTurnBanner { 0% { opacity: 0; transform: translateY(-50%) scaleX(.6); } 18% { opacity: 1; transform: translateY(-50%) scaleX(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-card-big { animation: mhCardBig .22s ease-out both; }
+    @keyframes mhCardBig { 0% { opacity: 0; scale: .85; } 100% { opacity: 1; scale: 1; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-big { animation: none; } }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }
