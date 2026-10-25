@@ -1326,6 +1326,14 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Worm: { body:'jelly', bodyMask:null, parts:[] },
   Centaur: { body:'breathe', bodyMask:null, parts:[] },
   Colorpandora: { body:'hop', bodyMask:null, parts:[] },
+  HamLiger: { body:'breathe', bodyMask:null, parts:[] },
+  Melonbo: { body:'hop', bodyMask:null, parts:[] },
+  LavenderKeel: { body:'drift', bodyMask:null, parts:[] },
+  VirgiaHapi: { body:'breathe', bodyMask:null, parts:[] },
+  Angel: { body:'drift', bodyMask:null, parts:[] },
+  HitotsumeOuji: { body:'sway', bodyMask:null, parts:[] },
+  Tsunomaru: { body:'hop', bodyMask:null, parts:[] },
+  Bazula: { body:'sway', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
