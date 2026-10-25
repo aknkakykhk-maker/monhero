@@ -200,6 +200,25 @@ const CardBattleTeaser = ({ onClose }) => {
   );
 };
 
+// ---- 結果の画面の、相手の助手のひとこと。決まった台詞をすぐ出し、対戦後のひとこと(AI)が届いたら差しかえる(83-card-battle-talk-ai.jsx) ----
+const CardResultTalk = ({ a, lineScene, talkFacts }) => {
+  const [line] = useState(() => cardPickLine(a.id, lineScene, null)); // 助手から見た勝ち負け
+  const [ai, setAi] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    if (talkFacts && cardAiTalkOn()) void cardTalkFetch('after', { who: a.id, facts: talkFacts, samples: cardTalkSamples(a.id, lineScene) }).then((r) => { if (alive && r) setAi(r); });
+    return () => { alive = false; };
+  }, []);
+  const text = ai ? ai.text : line ? line.text : '';
+  const face = ai ? ai.face : line ? line.face : 'normal';
+  return (
+    <div data-card-result-talk={ai ? 'ai' : 'line'} className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh)' }}/>
+      <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{text}</div>
+    </div>
+  );
+};
+
 // ---- 「助手と対戦」で、選んだ助手の戦い方の型と使うモンスター(2026-10-25 社長「攻撃型とかピクシーとかなになにを編成しやすいとか出して」) ----
 // どれもデータ(CARD_AI_HABITS・CARD_AI_DECKS)から作る。癖の重みや勝率などの数字は出さない(見えない強さを明かさない)
 const CARD_FOE_STYLES = Object.freeze({
@@ -494,10 +513,13 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const spoke = useRef({ turn: -1, n: 0 });
   const bubbleTimer = useRef(null);
   const finished = useRef(false);
+  // 助手のおしゃべり(AI・83-card-battle-talk-ai.jsx): この試合で山場を聞いた回数と、それぞれの側がリードされたことがあるか(逆転の判定)
+  const talk = useRef({ n: 0, behind: [false, false] });
   const press = useCardLongPress((no) => setDetail(no), pressMs);
   const paused = !!detail || !!discard || quit;
 
-  const say = (scene) => {
+  // ai … 山場なら { scene(AIに伝える場面), next(操作のあとの状態) }。決まった台詞を出したまま、間に合ったときだけAIのひとことに差しかえる
+  const say = (scene, ai = null) => {
     if (!scene || pvp || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
@@ -507,9 +529,18 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     spoke.current.n += 1;
     lastLine.current = { ...lastLine.current, [scene]: line.index };
     setFace(line.face);
-    setBubble({ text: line.text, key: `${Date.now()}-${scene}` });
+    const key = `${Date.now()}-${scene}`;
+    setBubble({ text: line.text, key });
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+    if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
+      talk.current.n += 1;
+      void cardTalkFetch('moment', { who: game.who, facts: cardTalkMomentFacts(db, ai.next, CARD_CPU, ai.scene), samples: cardTalkSamples(game.who, scene) }).then((r) => {
+        if (!r) return;
+        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text } : cur));
+        setFace(r.face);
+      });
+    }
   };
   useEffect(() => { if (!tutorial) say('start'); return () => clearTimeout(bubbleTimer.current); }, []);
   // 練習試合: 段が変わったら、その段の台詞を出す。みゅあの台詞は吹き出しに出して、少ししたら次へ。ドラの台詞は説明の窓に出す
@@ -617,8 +648,11 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     else if (evs.some((e) => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI((i) => i + 1);
     const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
+    // 逆転(リードの向きが変わった)は、AIに伝える場面だけを替える(決まった台詞はいまの場面のまま)
+    const flip = tutorial ? null : cardTalkComebackScene(st, next, CARD_CPU);
+    [0, 1].forEach((p) => { if (cardTalkLead(next, p) < 0) talk.current.behind[p] = true; });
     setSt(next); setSel(null); setPicks([]); setHint('');
-    if (scene) say(scene);
+    if (scene) say(scene, { scene: flip || scene, next });
     return true;
   };
 
@@ -703,7 +737,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   useEffect(() => {
     if (st.winner === null || finished.current || tutorial) return undefined; // 練習試合は、ドラの締めの台詞のあと「次へ」で終わる
     finished.current = true;
-    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
+    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st, comeback: !!talk.current.behind[st.winner] }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
     return () => clearTimeout(t);
   }, [st.winner]);
 
@@ -1334,6 +1368,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     storeGet(CARD_SAVE_KEYS.topAssist, null).then((v) => { if (alive && v && typeof v === 'object' && !Array.isArray(v)) setAssist({ modeSelectArt: v.modeSelectArt !== false, modeSelectComment: v.modeSelectComment !== false }); }).catch(() => {});
     return () => { alive = false; };
   }, []);
+  // 助手のおしゃべり(AI)の入/切(保存は mh_card_ai_talk_v1。無い・壊れていたら入)。出すのは呼べる端末だけ(公開の印か、デバッグ端末)
+  const [aiTalk, setAiTalk] = useState(cardAiTalkState.on);
+  useEffect(() => { let alive = true; void cardLoadAiTalk().then((v) => { if (alive) setAiTalk(v.on); }); return () => { alive = false; }; }, []);
+  const toggleAiTalk = () => { const next = !aiTalk; setAiTalk(next); void cardSaveAiTalk(next); };
   const toggleAssist = (key) => {
     if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
     const next = { ...assist, [key]: assist[key] === false };
@@ -1377,7 +1415,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
 
   if (screen === 'CARD_BATTLE' && game) {
-    return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st }) => {
+    return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
@@ -1410,7 +1448,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
-      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts });
+      // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
+      const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
+      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts });
       onBgm && onBgm(null);
       onNavigate('CARD_TOP');
       setView('result');
@@ -1583,7 +1623,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- 結果 ----
   // デッキ編成(87-card-deck-edit.jsx)。保存はここで mh_card_decks_v1 へまとめて入れる
   if (view === 'deckEdit' && editDeck) {
-    return <CardDeckEditor key={editDeck.id} db={db} collection={save.collection} deck={editDeck} onCancel={() => { setEditDeck(null); setView('decks'); }} onSave={async (d) => {
+    return <CardDeckEditor key={editDeck.id} db={db} collection={save.collection} deck={editDeck} advisor={topAssistant} onCancel={() => { setEditDeck(null); setView('decks'); }} onSave={async (d) => {
       const ok = await persist({ decks: cardDecksPut(save.decks, d) });
       setNotice(ok ? `「${d.name}」を保存しました` : '保存できませんでした');
       setEditDeck(null); setView('decks');
@@ -1644,19 +1684,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (view === 'result' && result) {
     const a = allAssistants.find((x) => x.id === result.who);
     const win = result.outcome === 'win';
-    const line = a ? cardPickLine(a.id, win ? 'lose' : 'win', null) : null; // 助手から見た勝ち負け
     const r = result.reward;
     return (
       <div data-mh-screen data-card-top="result" data-card-outcome={result.outcome} data-card-gain={result.demo ? undefined : r.total} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
-          {a && (
-            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <CardAssistantArt src={assistantFullImage(a, line ? line.face : 'normal')} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh)' }}/>
-              <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
-            </div>
-          )}
+          {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}</div>
@@ -1764,6 +1798,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
+          {cardTalkOpen() && (
+            <div data-card-ai-talk-panel className={SCREEN_PANEL_CLASS}>
+              <div className="flex items-center gap-2">
+                <b className="min-w-0 flex-1 text-[13px] font-black text-white">助手のおしゃべり(AI)</b>
+                <button type="button" data-card-ai-talk aria-pressed={aiTalk} onClick={() => { Audio_.fgSe.tap(); toggleAiTalk(); }}
+                  className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${aiTalk ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{aiTalk ? 'ON' : 'OFF'}</button>
+              </div>
+              <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります')}</p>
+            </div>
+          )}
           {/* 対戦中の設定(社長 2026-10-25「オプションでバトル中の設定関係を各種作って」)。並べ方・名前はモンヒロバトルの「バトルの見た目」と同じ形(題・説明・選択肢の名前と一言)。
               設定の中身は 82 の CARD_SETTING_GROUPS。保存は mh_card_settings_v1 に足した項目(前からの人は既定値で補う) */}
           {CARD_SETTING_GROUPS.map((g) => (
