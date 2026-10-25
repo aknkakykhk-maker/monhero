@@ -217,7 +217,7 @@ const RIGS = [
   { id:'Worm', img:'images/monsters/worm.png', body:'jelly', parts:[] },
   { id:'Centaur', img:'images/monsters/centaur.png', body:'breathe', parts:[] },
   { id:'Colorpandora', img:'images/monsters/colorpandora.png', body:'hop', parts:[] },
-  // 派生モンスター8体(2026-10-25・案の子)。動かす部分はまだ無く、体の動きだけ
+  // 派生モンスター14体(2026-10-25・案の子)。動かす部分はまだ無く、体の動きだけ
   { id:'HamLiger', img:'images/monsters/c010.png', body:'breathe', parts:[] },
   { id:'Melonbo', img:'images/monsters/c012.png', body:'hop', parts:[] },
   { id:'LavenderKeel', img:'images/monsters/c013.png', body:'drift', parts:[] },
@@ -226,6 +226,12 @@ const RIGS = [
   { id:'HitotsumeOuji', img:'images/monsters/c017.png', body:'sway', parts:[] },
   { id:'Tsunomaru', img:'images/monsters/c018.png', body:'hop', parts:[] },
   { id:'Bazula', img:'images/monsters/c019.png', body:'sway', parts:[] },
+  { id:'NachtFalter', img:'images/monsters/c033.png', body:'drift', parts:[] },
+  { id:'Katchusaur', img:'images/monsters/c034.png', body:'breathe', parts:[] },
+  { id:'YoroiMocchi', img:'images/monsters/c035.png', body:'breathe', parts:[] },
+  { id:'ParPurin', img:'images/monsters/c036.png', body:'jelly', parts:[] },
+  { id:'DarkHenger', img:'images/monsters/c038.png', body:'drift', parts:[] },
+  { id:'MamaNyaa', img:'images/monsters/c039.png', body:'breathe', parts:[] },
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

@@ -183,7 +183,7 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:MF_CENTAUR_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'centaur', sub:'centaur' }) }),
   Colorpandora: Object.freeze({ id:'Colorpandora', name:"コロペンドラ", emoji:"🟩", imgUrl:MF_COLORPANDORA_IMG, iconUrl:MF_COLORPANDORA_IMG,
     faceIconUrl:MF_COLORPANDORA_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'colorpandora', sub:'colorpandora' }) }),
-  // 派生モンスター8体(2026-10-25・案の段階)。立ち絵・顔アイコンはMFバトルカードの派生カードと共用(HYBRID_C0NN)。名前・血統・図鑑の文は社長から(本編の図鑑の写し)
+  // 派生モンスター14体(2026-10-25・案の段階)。立ち絵・顔アイコンはMFバトルカードの派生カードと共用(HYBRID_C0NN)。名前・血統・図鑑の文は社長から(本編の図鑑の写し)
   HamLiger: Object.freeze({ id:'HamLiger', name:"ハムライガー", emoji:"🦊", imgUrl:HYBRID_C010_IMG, iconUrl:HYBRID_C010_IMG,
     faceIconUrl:HYBRID_C010_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'tiger', sub:'ham' }) }),
   Melonbo: Object.freeze({ id:'Melonbo', name:"メロンボ", emoji:"🍈", imgUrl:HYBRID_C012_IMG, iconUrl:HYBRID_C012_IMG,
@@ -200,4 +200,16 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C018_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'suezo', sub:'tiger' }) }),
   Bazula: Object.freeze({ id:'Bazula', name:"バズラ", emoji:"🐲", imgUrl:HYBRID_C019_IMG, iconUrl:HYBRID_C019_IMG,
     faceIconUrl:HYBRID_C019_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'naga', sub:'gali' }) }),
+  NachtFalter: Object.freeze({ id:'NachtFalter', name:"ナハトファルター", emoji:"🦋", imgUrl:HYBRID_C033_IMG, iconUrl:HYBRID_C033_IMG,
+    faceIconUrl:HYBRID_C033_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'pixie', sub:'worm' }) }),
+  Katchusaur: Object.freeze({ id:'Katchusaur', name:"カッチュウサウル", emoji:"🦕", imgUrl:HYBRID_C034_IMG, iconUrl:HYBRID_C034_IMG,
+    faceIconUrl:HYBRID_C034_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'dino', sub:'worm' }) }),
+  YoroiMocchi: Object.freeze({ id:'YoroiMocchi', name:"ヨロイモッチー", emoji:"🛡️", imgUrl:HYBRID_C035_IMG, iconUrl:HYBRID_C035_IMG,
+    faceIconUrl:HYBRID_C035_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'mocchi', sub:'durahan' }) }),
+  ParPurin: Object.freeze({ id:'ParPurin', name:"パー・プリン", emoji:"🟣", imgUrl:HYBRID_C036_IMG, iconUrl:HYBRID_C036_IMG,
+    faceIconUrl:HYBRID_C036_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'gel', sub:'naga' }) }),
+  DarkHenger: Object.freeze({ id:'DarkHenger', name:"ダークヘンガー", emoji:"🖤", imgUrl:HYBRID_C038_IMG, iconUrl:HYBRID_C038_IMG,
+    faceIconUrl:HYBRID_C038_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'henger', sub:'monol' }) }),
+  MamaNyaa: Object.freeze({ id:'MamaNyaa', name:"ママニャー", emoji:"😺", imgUrl:HYBRID_C039_IMG, iconUrl:HYBRID_C039_IMG,
+    faceIconUrl:HYBRID_C039_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'nya', sub:'pixie' }) }),
 });
