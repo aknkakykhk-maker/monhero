@@ -92,7 +92,8 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   const { data, info } = await sharp(isField(file) && !file.startsWith(JA) ? await normalizeField(file) : file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
-  if (artCopyright && !isMonster(file)) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
+  // 全体カードの © は場所がほかの技カードと違う(絵の右下 y≈708〜722)ので、文字を描き直す段(card-image-ja.js の field)で消してある。ここでは消さない
+  if (artCopyright && !isMonster(file) && !(isField(file) && file.startsWith(JA))) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
   for (const r of rects) fillRect(data, info.channels, r);
   return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
 };
@@ -135,7 +136,7 @@ const build = async (opts) => {
   console.log(`書き出し: ${files.length}枚 × ${Object.keys(SIZES).length}つの大きさ → ${path.relative(ROOT, OUT)}`);
 };
 
-module.exports = { erase, allCards, isMonster, jaOf };
+module.exports = { erase, allCards, isMonster, jaOf, normalizeField };
 
 if (require.main === module) (async () => {
   const args = process.argv.slice(2);
