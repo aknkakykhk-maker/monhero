@@ -18,6 +18,8 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SRC = path.join(ROOT, 'tools', 'art-sources', 'card-battle');
+const sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp'));
+const { normalizeField } = require(path.join(__dirname, 'card-image-build.js'));
 const W = 742, H = 1038;
 const KIND_JA = { DGE: '回避', BLK: '防御', SPE: '特殊', POW: 'ちから', INT: 'かしこさ' };
 const TYPE_JA = { G: '地上', A: '空中', W: '水中' };
@@ -63,6 +65,47 @@ const LAYOUTS = {
       { body: c.text, cx: 440, cy: 854, w: 452, size: 30, lh: 39 },
     ],
   },
+  // 全体カード(breeder-field。2026-10-25 社長「文字を描き直す」)。元の絵は画面から切り出したもので文字がにじんでいる。
+  // card-image-build.js の normalizeField で枠にそろえたあとの絵(座標はその上)に、加勢(112)と同じ字・大きさで描き直す。
+  // 左上は赤い「全体」の札、その下の盾は空(ガッツの札は下の箱)。絵の部分は手を加えない
+  field: {
+    erase: [
+      { name: 'title', rect: [205, 55, 503, 122], keep: 'dark', dir: 'col' },   // 右は x≈505 で題字の帯が終わり、その先は絵
+      // 絵の右下の「© TECMO」(にじんでいる)。すぐ上の行の色を列ごとに写す
+      { name: 'copy', rect: [494, 704, 676, 722], from: 'top' },
+      { name: 'kind', rect: [76, 78, 178, 206], keep: 'colored' },
+      { name: 'label', rect: [56, 688, 232, 733], from: 'bottom' },
+      { name: 'guts', rect: [66, 768, 158, 941], keep: 'paint', fill: 228, shape: 'round', r: 18 },   // 箱の角の外(暗い地)は塗らない
+      { name: 'text', rect: [198, 766, 683, 944], keep: 'paint', stripe: [244, 232, 10], shape: 'round', r: 20 },
+      { name: 'no', rect: [58, 952, 214, 994], keep: 'hlerp' },
+      // 文の箱のすぐ下の暗いふち(元の字が箱からはみ出して写っていることがある)
+      { name: 'under', rect: [214, 944, 668, 953], keep: 'hlerp' },
+    ],
+    draw: (c) => [
+      { t: c.name, x: 214, y: 112, size: 52, weight: 900, align: 'left', style: 'title', maxW: 285 },
+      ...kindLines(c.kind, 127, 142, 46),
+      { t: 'ブリーダー', x: 64, y: 724, size: 33, weight: 900, align: 'left', style: 'title', maxW: 200 },
+      { t: String(c.guts ?? ''), x: 112, y: 878, size: 118, weight: 900, align: 'center', color: '#111' },
+      { t: 'ガッツ', x: 112, y: 931, size: 24, weight: 500, align: 'center', color: '#1a1a1a' },
+      { body: c.text, cx: 440, cy: 854, w: 452, size: 30, lh: 39 },
+      { t: `No. ${String(c.no).replace(/^F/, '')}`, x: 62, y: 988, size: 25, weight: 500, align: 'left', color: '#ffffff' },
+    ],
+  },
+  // 全体カードの高画質版(breeder-field/hi/。統括部長が作った描き直しの絵。絵はきれいだが文字は化けている)がある子。
+  // 高画質版は下半分(箱・番号)の配置が1枚ごとにばらばらなので、上(題字・絵・「ブリーダー」の札。FIELD_HI_SEAM より上)だけ
+  // 高画質版を使い、下は元の絵のまま。座標はどちらも normalizeField で枠にそろえたあと。上は高画質版で測り、下は field と同じ
+  fieldHi: {
+    erase: [
+      { name: 'title', rect: [182, 47, 505, 114], keep: 'dark', dir: 'col' },
+      { name: 'kind', rect: [78, 78, 158, 158], keep: 'colored' },
+      { name: 'label', rect: [58, 684, 244, 744], keep: 'hlerp' },
+    ],
+    draw: (c) => [
+      { t: c.name, x: 210, y: 104, size: 52, weight: 900, align: 'left', style: 'title', maxW: 285 },
+      ...kindLines(c.kind, 118, 118, 44),
+      { t: 'ブリーダー', x: 66, y: 708, size: 33, weight: 900, align: 'left', style: 'title', maxW: 200 },
+    ],
+  },
   // 混血のモンスター(左上「メイン」の札・右上の特徴の丸・右下「サブ」の札・左下の名前)
   hybrid: {
     erase: [
@@ -83,6 +126,14 @@ const LAYOUTS = {
     ],
   },
 };
+// 高画質版の下半分は元の絵なので、箱・番号の消し方と描き方は field のものをそのまま使う
+const FIELD_HI_SEAM = 734;
+// 高画質版のうち、絵の窓が短い(「ブリーダー」の札が上に寄っている)もの。[縦の倍率, ずらす量]で、札を元の絵の場所(y≈697)へ下ろす
+const FIELD_HI_FIT = { F255: [1.048, -3], F263: [1.0325, -2] };
+const FIELD_LOWER = ['guts', 'text', 'no', 'under'];
+LAYOUTS.fieldHi.erase.push(...LAYOUTS.field.erase.filter((e) => FIELD_LOWER.includes(e.name)));
+const fieldHiTop = LAYOUTS.fieldHi.draw;
+LAYOUTS.fieldHi.draw = (c) => [...fieldHiTop(c), ...LAYOUTS.field.draw(c).slice(-4)];
 // 種類の札の字(縦に2字。3字以上は小さく)
 const kindLines = (kind, cx, cy, base = 52, gap = 1.18) => {
   const s = [...(KIND_JA[kind] || kind || '')];
@@ -97,12 +148,13 @@ const loadCards = () => {
   const out = {};
   const add = (folder, layout) => {
     const j = JSON.parse(fs.readFileSync(path.join(SRC, folder, 'cards.json'), 'utf8'));
-    (j.skills || []).forEach((k) => { out[k.no] = { no: k.no, folder, layout, file: `${k.no}.jpg`, name: k.name, text: k.text || '', kind: k.kind_en || '', guts: k.guts }; });
+    (j.skills || []).forEach((k) => { out[k.no] = { no: k.no, folder, layout, file: `${k.no}.jpg`, name: k.name, text: k.text || '', kind: k.kind_en || k.kind || '', guts: k.guts }; });
     (j.monsters || j.monster || []).forEach((m) => { if (!m.excluded) out[m.no] = { no: m.no, folder, layout, file: m.img || `${m.no.replace('-', '')}.jpg`, name: m.name, type: m.type_en || m.type, main: m.main, sub: m.sub }; });
   };
   add('any-monster', 'any');
   if (fs.existsSync(path.join(SRC, 'breeder', 'cards.json'))) add('breeder', 'breeder');
   if (fs.existsSync(path.join(SRC, 'hybrid', 'cards.json'))) add('hybrid', 'hybrid');
+  if (fs.existsSync(path.join(SRC, 'breeder-field', 'cards.json'))) add('breeder-field', 'field');
   return out;
 };
 
@@ -128,8 +180,9 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
     const [x0, y0, x1, y1] = e.rect;
     const w = x1 - x0, h = y1 - y0;
     const id = cx.getImageData(x0, y0, w, h); const d = id.data;
-    if (e.from === 'bottom') {
-      const below = cx.getImageData(x0, y1, w, 2).data;
+    // from: 'top' … すぐ上の2行の色を列ごとに写す(全体カードの絵の右下の ©)/ 'bottom' … すぐ下の2行
+    if (e.from === 'bottom' || e.from === 'top') {
+      const below = cx.getImageData(x0, e.from === 'top' ? y0 - 2 : y1, w, 2).data;
       for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) {
         let sum = 0, n = 0;
         for (let dx = -3; dx <= 3; dx++) { const xx = Math.min(w - 1, Math.max(0, x + dx)); for (let yy = 0; yy < 2; yy++) { sum += below[(yy * w + xx) * 4 + c]; n++; } }
@@ -138,18 +191,60 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
       cx.putImageData(id, x0, y0);
       continue;
     }
-    const keep = keepOf[e.keep];
     const inShape = (x, y) => {
       if (e.shape === 'circle') return (x - w / 2) ** 2 + (y - h / 2) ** 2 <= (Math.min(w, h) / 2) ** 2;
       if (e.shape === 'tab') { const ax = x + x0, ay = y + y0; const [tx, ty, tk] = e.tab; return ax <= tx || ay < ty - (ax - tx) * tk; }
       // cut: 左上の角(札の丸い角のふち)は消さない。[x, y] より左かつ上
       if (e.cut && x + x0 < e.cut[0] && y + y0 < e.cut[1]) return false;
+      // round: 角の丸い四角(箱の角の外=暗い地は消さない)。半径は e.r
+      if (e.shape === 'round') {
+        const r = e.r || 16; const dx = Math.max(r - x, x - (w - 1 - r), 0); const dy = Math.max(r - y, y - (h - 1 - r), 0);
+        return dx * dx + dy * dy <= r * r;
+      }
       if (e.shape !== 'stadium') return true;
       const r = w / 2; const cxx = w / 2;
       if (y < r) return (x - cxx) ** 2 + (y - r) ** 2 <= r * r;
       if (y > h - r) return (x - cxx) ** 2 + (y - (h - r)) ** 2 <= r * r;
       return true;
     };
+    // hlerp: 横向きに濃淡のある帯(全体カードの番号の帯)。行ごとに、四角のすぐ左とすぐ右の色を、横へまっすぐつなぐ
+    if (e.keep === 'hlerp') {
+      const L = cx.getImageData(x0 - 2, y0, 1, h).data, R = cx.getImageData(x1 + 1, y0, 1, h).data;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const t = (x + 1) / (w + 1);
+        for (let c = 0; c < 3; c++) d[(y * w + x) * 4 + c] = Math.round(L[y * 4 + c] * (1 - t) + R[y * 4 + c] * t);
+      }
+      cx.putImageData(id, x0, y0);
+      continue;
+    }
+    // paint: 箱を塗り直す(全体カード。元の絵の字はにじんで消しきれないので、加勢(112)と同じ色の箱にする)。
+    //   stripe … [明るい色, 濃い色, 段の高さ](横じま) / 無ければ fill の一色
+    if (e.keep === 'paint') {
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        if (!inShape(x, y)) continue;
+        const v = e.stripe ? (Math.floor((y + y0) / e.stripe[2]) % 2 ? e.stripe[1] : e.stripe[0]) : e.fill;
+        const k = (y * w + x) * 4; d[k] = v; d[k + 1] = v; d[k + 2] = v;
+      }
+      cx.putImageData(id, x0, y0);
+      continue;
+    }
+    // rowMedian: 横じまの箱(全体カードの文の箱)。形の中を、行ごとの真ん中の色でそのまま塗る(うすい字の影も残さない)
+    if (e.keep === 'rowMedian') {
+      for (let y = 0; y < h; y++) {
+        const xs = []; for (let x = 0; x < w; x++) if (inShape(x, y)) xs.push(x);
+        if (!xs.length) continue;
+        const inner = xs.slice(Math.floor(xs.length * 0.15), Math.ceil(xs.length * 0.85));
+        for (let c = 0; c < 3; c++) {
+          const vals = inner.map((x) => d[(y * w + x) * 4 + c]).sort((p, q) => p - q);
+          // 字の点は暗いので、明るいほうの真ん中(上から4分の1)を地の色にする
+          const v = vals[Math.floor(vals.length * 0.75)];
+          xs.forEach((x) => { d[(y * w + x) * 4 + c] = v; });
+        }
+      }
+      cx.putImageData(id, x0, y0);
+      continue;
+    }
+    const keep = keepOf[e.keep];
     // 字の点(地の色でない点)を印にし、まわり grow 点ぶんも広げる(字のふちの薄い線を残さない)
     const grow = e.grow ?? 2;
     const raw = new Uint8Array(w * h);
@@ -296,10 +391,20 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
   for (const no of want) {
     const c = cards[no];
     if (!c) { console.log(`知らないカード: ${no}`); continue; }
-    const layout = LAYOUTS[c.layout];
+    const layout = LAYOUTS[c.layout === 'field' && fs.existsSync(path.join(SRC, c.folder, 'hi', c.file)) ? 'fieldHi' : c.layout];
     if (!layout) { console.log(`まだ配置を決めていない: ${no}(${c.layout})`); continue; }
     const src = path.join(SRC, c.folder, c.file);
-    const imgUrl = `data:image/jpeg;base64,${fs.readFileSync(src).toString('base64')}`;
+    // 全体カードは、先に枠にそろえた絵(card-image-build.js の normalizeField)に描く。高画質版(breeder-field/hi/)があれば、上半分だけそちらに替える
+    const hi = c.layout === 'field' ? path.join(SRC, c.folder, 'hi', c.file) : null;
+    const useHi = !!hi && fs.existsSync(hi);
+    let buf = c.layout === 'field' ? await normalizeField(src) : fs.readFileSync(src);
+    if (useHi) {
+      const [sy, dy] = FIELD_HI_FIT[path.basename(c.file, '.jpg')] || [1, 0];
+      const hiBuf = await sharp(await normalizeField(hi)).resize(W, Math.round(H * sy), { fit: 'fill' }).toBuffer();
+      const top = await sharp(hiBuf).extract({ left: 0, top: -dy, width: W, height: FIELD_HI_SEAM }).toBuffer();
+      buf = await sharp(buf).composite([{ input: top, left: 0, top: 0 }]).png().toBuffer();
+    }
+    const imgUrl = `data:image/${c.layout === 'field' ? 'png' : 'jpeg'};base64,${buf.toString('base64')}`;
     const ops = layout.draw(c);
     const data = await page.evaluate(pageScript, { imgUrl, fontUrls, layout: { erase: layout.erase.map((e) => (typeof e === 'function' ? e(c) : e)) }, ops });
     fs.writeFileSync(path.join(outDir, c.file), Buffer.from(data.split(',')[1], 'base64'));

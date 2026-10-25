@@ -306,7 +306,11 @@ const decksAndSaves = () => {
     ok(/3枚まで/.test(E.cardDeckAddReason(db, three, no, { [no]: 9 })), '同じ名前の4枚目が入ってしまう');
     ok(/持っているのは/.test(E.cardDeckAddReason(db, { ...d, cards: [no] }, no, { [no]: 1 })), '持っている枚数を超えて入ってしまう');
     const notReady = Object.values(db.cards).find((c) => !c.ready);
-    ok(/準備中/.test(E.cardDeckAddReason(db, d, notReady.no, { [notReady.no]: 3 })), '準備中のカードが入ってしまう');
+    // 準備中のカードは 2026-10-25 に0枚になった(おいのり・全体カード)。準備中の札が増えたときに見る
+    const nr = notReady || { ...Object.values(db.cards)[0], no: '__nr', ready: false };
+    if (!notReady) db.cards.__nr = nr;
+    ok(/準備中/.test(E.cardDeckAddReason(db, d, nr.no, { [nr.no]: 3 })), '準備中のカードが入ってしまう');
+    if (!notReady) delete db.cards.__nr;
     const full = { id: 's', name: 's', monsters: kit.monsters.slice(), cards: kit.cards.slice() };
     ok(E.cardDeckReady(db, full, col) && !E.cardDeckReady(db, full, {}), '持っていないカードのデッキが対戦に使えてしまう');
     const ds = E.cardDecksPut({ active: 'a', decks: [{ ...full, id: 'a' }] }, { ...full, id: 'b' });
@@ -361,14 +365,18 @@ const packs = () => {
   ok(E.CARD_SAVE_KEYS.pity === 'mh_card_pack_pity_v1' && E.CARD_SAVE_KEYS.shop === 'mh_card_shop_v1' && E.CARD_SAVE_KEYS.pitySplit === 'mh_card_pack_pity_split_v1', 'パックの保存キーの名前が違う');
   // 8弾の分け方(2026-10-25 社長が決めた案。種族3つずつ・第1〜3弾はスターターキットの顔ぶれ・混血はメインの種族の弾)
   const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
-  const HYBRID = { p1: ['ダークハム', 'ヘルファット'], p2: ['ストライクリパー'], p3: ['バロン', 'アクアリウス', 'プラムラー'], p4: ['ワカクサケンザイ', 'ガーラント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス'], p7: ['ギガロン'], p8: [] };
+  // 混血・派生は主の種族の弾へ(#3575)。2026-10-25 の派生25枚も同じ決め(立ち絵の無い5枚は図鑑だけで、パックには出ない)
+  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
+  const DEX_ONLY = ['C-011', 'C-014', 'C-032', 'C-037', 'C-044'];
+  ok(DEX_ONLY.every((no) => db.monsters[no] && db.monsters[no].dexOnly) && Object.values(db.monsters).filter((m) => m.dexOnly).length === DEX_ONLY.length, '立ち絵の無い5枚だけが「図鑑だけ」になっていない');
+  ok(['C-020', 'C-044', 'C-045'].every((no) => db.monsters[no].sub === 'unknown'), '副が ??? の3枚の副が unknown でない');
   ok(E.CARD_PACKS.length === 8 && E.CARD_PACKS.every((p, i) => p.id === `p${i + 1}` && p.name === `第${i + 1}弾パック` && JSON.stringify(p.species) === JSON.stringify(PLAN[p.id])), '8弾の顔ぶれが決めた案と違う');
   const lost = [...Object.keys(db.cards), ...Object.keys(db.monsters)].filter((no) => !E.cardPackIdOf(db, no));
   ok(!lost.length, `どの弾にも入っていないカードがある: ${lost.slice(0, 8).join('・')}`);
   E.CARD_PACKS.forEach((p) => {
     const all = E.cardPackAllCards(db, p);
     const n = all.monsters.length + all.cards.length;
-    ok(n >= 48 && n <= 52, `${p.name}の種類が50前後でない(${n})`);
+    ok(n >= 48 && n <= 58, `${p.name}の種類が50前後でない(${n})`);   // 派生25枚(2026-10-25)で、第1〜3・5弾は少し増えた
     const hy = all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name).sort();
     ok(JSON.stringify(hy) === JSON.stringify(HYBRID[p.id].slice().sort()), `${p.name}の混血が決めた案と違う(${hy.join('・')})`);
     const shared = all.cards.filter((no) => db.cards[no].user === 'any' || db.cards[no].user === 'breeder').length;
@@ -404,7 +412,7 @@ const packs = () => {
     const kiraRate = (rar.kira + rar.alt) / N;
     ok(kiraRate > 0.13 && kiraRate < 0.24, `${pack.name}のキラの出る割合がおかしい(${kiraRate.toFixed(3)})`);
     ok((pack.no <= 3) === (rar.alt > 0), `${pack.name}の別絵キラの出かたが違う(第1〜3弾だけに出る)`);
-    const pool = Object.values(db.cards).filter((c) => c.ready && E.cardPackIdOf(db, c.no) === pack.id).length + Object.values(db.monsters).filter((m) => m.ready !== false && E.cardPackIdOf(db, m.no) === pack.id).length;
+    const pool = Object.values(db.cards).filter((c) => c.ready && E.cardPackIdOf(db, c.no) === pack.id).length + Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && E.cardPackIdOf(db, m.no) === pack.id).length;
     ok(seen.size === pool, `${pack.name}で出ないカードがある(${seen.size}/${pool})`);
     ok(Object.entries(col).every(([no, n]) => (db.cards[no] ? n <= 3 : n <= 1)), `${pack.name}で持てる枚数を超えた`);
   });
@@ -633,8 +641,8 @@ const pendingCards = () => {
     const hyAtk = Object.values(db.cards).find((c) => c.ready && c.user === hy.main && c.kind === 'pow' && !(c.effects || []).length);
     if (hyAtk) { const st3 = scene({ mons: [[hy.no, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[hyAtk.no, '346'], []], guts: [9, 0] }); ok(!optWith(st3, [hyAtk.no, '346'], 0), '346: 混血の子の技に付けられる'); } }
   // ジョイのサポート(276): ガッツ3以下のブリーダーのカードに付けて、そのカードは0ガッツ。1ターン1枚のまま
-  // その場面ですぐ出せるブリーダーのカード(狙いの要る札・条件のある札は見本にしない)
-  const breederFresh = (minG, maxG) => Object.values(db.cards).filter((c) => c.ready && c.user === 'breeder' && c.guts >= minG && c.guts <= maxG && !(c.effects || []).some((e) => ['attach', 'extraAttackTarget', 'unstunTarget', 'useWhenAllies', 'heal'].includes(e.t)))
+  // その場面ですぐ出せるブリーダーのカード(狙いの要る札・条件のある札・合体は見本にしない。合体は派生が増えると使える場面が変わる)
+  const breederFresh = (minG, maxG) => Object.values(db.cards).filter((c) => c.ready && c.user === 'breeder' && c.guts >= minG && c.guts <= maxG && !(c.effects || []).some((e) => ['attach', 'extraAttackTarget', 'unstunTarget', 'useWhenAllies', 'heal', 'fuse'].includes(e.t)))
     .filter((c) => { const t = scene({ hands: [[c.no], []], guts: [9, 0] }); return E.cardAttackOptions(db, t).some((x) => x.type === 'breeder'); }).sort((a, b) => b.guts - a.guts || (a.no < b.no ? -1 : 1));
   { ready('276'); const br = breederFresh(1, 3)[0];
     ok(br, '276: ガッツ3以下のブリーダーのカードの見本が無い');
@@ -896,7 +904,6 @@ const pendingCards = () => {
     ok(a && a.hand.some((i) => st.players[0].hand[i] === '150'), '150: ゲルがゴーレムの技を出せない');
     ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no && x.hand.length === 1), '150: ものまねを付けずに出せてしまう'); }
   // ---- 区切り7: モンスターが入れ替わる ----
-  ok(!db.cards['280'].ready, '280: おいのりは、全体カードを入れる日まで準備中のまま(社長 案A)');
   // ヒノトリの復活(128): 倒れたヒノトリをライフ4で戻す。そのターンは攻撃できない
   { ready('128'); const ph = monOf('phoenix'); let st = scene({ mons: [[ph, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['128', plainOf('phoenix', 'pow') ? plainOf('phoenix', 'pow').no : gol.no], []], guts: [9, 0] });
     ok(!find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '128'), '128: ヒノトリが倒れていないのに出せる');
@@ -929,6 +936,79 @@ const pendingCards = () => {
     if (hy && sp) { const st = scene({ mons: [[hy.no, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[sp.no, '348'], []], guts: [9, 0] });
       ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === sp.no && x.hand.length === 1), '348: 太古の記憶なしでサブの特殊技が出せる');
       ok(find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === sp.no && x.hand.length === 2), `348: 太古の記憶を付けてサブの特殊技(${sp.name})が出せない`); } }
+  // ---- 全体カード(2026-10-25): 場に1枚だけ・両方に効く・入れ替え・おいのり ----
+  {
+    const F = (no) => { ready(no); return db.cards[no]; };
+    const fieldScene = (hand0, hand1 = [], g = [9, 9], mons = [['C-003', 'C-001', 'C-005'], ['C-001', 'C-003', 'C-005']]) => big(scene({ mons, hands: [hand0, hand1], guts: g }));
+    // 全体カードを出す。相手に手札があるとおいのりの窓が開くので、ふだんは「使わない」で閉じる(keep で開いたまま返す)
+    const place = (st, no, keep = false) => { const a = find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder' && st.players[st.active].hand[x.hand[0]] === no); ok(a, `${no}: 全体カードを出せない`); const s1 = a ? act(st, a) : st; return s1.pendingPray && !keep ? act(s1, { type: 'pray' }) : s1; };
+    // 置く・ブリーダーの札は1ターン1枚・入れ替えると前のものは出した人の捨て札へ
+    { F('F116'); F('F261'); let st = fieldScene(['F116', 'F261']);
+      st = place(st, 'F116'); ok(st.field && st.field.no === 'F116' && st.field.p === 0 && !st.players[0].discard.includes('F116'), 'F116: 場に置かれない・捨て札へ行った');
+      ok(!find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder'), '全体カード: 1ターンに2枚出せる(ブリーダーの札は1枚まで)');
+      let s2 = nextTurnOf(st, 1); s2.players[1].hand = ['F261']; s2 = place(s2, 'F261');
+      ok(s2.field.no === 'F261' && s2.players[0].discard.includes('F116'), '全体カード: 入れ替えたとき、前のものが出した人の捨て札へ行かない'); }
+    // 壮絶な戦い(ちから・かしこさ +1)・興奮のるつぼ(かしこさ -2)・飛び散る火花(かしこさ +1)
+    { let st = place(fieldScene(['F116', gol.no]), 'F116'); const r = hitOnce(st, optWith(st, [gol.no], 0)); ok(r.dmg[0] === gol.damage + 1, `F116: ちから技のダメージが+1にならない(${r.dmg[0]})`); }
+    { const it = Object.values(db.cards).filter((c) => c.ready && c.kind === 'int' && monOf(c.user) && !(c.effects || []).length && c.damage >= 3 && c.guts <= 3).sort((a, b) => (a.no < b.no ? -1 : 1))[0];
+      ok(it, 'F117: 文の無いかしこさ技の見本が無い');
+      const itMons = it ? [[monOf(it.user), ...['C-001', 'C-005', 'C-003'].filter((x) => x !== monOf(it.user))].slice(0, 3), ['C-001', 'C-003', 'C-005']] : null;
+      if (it) { F('F117'); let st = place(fieldScene(['F117', it.no], [], [9, 9], itMons), 'F117'); const a = optWith(st, [it.no], 0); ok(a, 'F117: かしこさ技を出せない');
+        if (a) { const r = hitOnce(st, a); ok(r.dmg[0] === it.damage - 2, `F117: かしこさ技が-2にならない(${r.dmg[0]})`); }
+        let s3 = place(fieldScene(['F261', it.no], [], [9, 9], itMons), 'F261'); const r3 = hitOnce(s3, optWith(s3, [it.no], 0)); ok(r3.dmg[0] === it.damage + 1, 'F261: かしこさ技が+1にならない'); } }
+    // ホリィの声援(-1)・師匠のまなざし(+1): 払うガッツ
+    { F('F118'); F('F256'); let st = place(fieldScene(['F118', gol.no], [], [3 + gol.guts - 1, 0]), 'F118');
+      ok(st.players[0].guts.length === gol.guts - 1 && optWith(st, [gol.no], 0), 'F118: 1少ないガッツで技が出せない');
+      let s2 = place(fieldScene(['F256', gol.no], [], [3 + gol.guts, 0]), 'F256');
+      ok(s2.players[0].guts.length === gol.guts && !optWith(s2, [gol.no], 0), 'F256: 1多いガッツが要らない'); }
+    // 必殺技の応酬(最終的なダメージ3以下は出せない)・必殺技の封印(4以上は出せない)
+    { F('F119'); F('F258'); const plain = (c) => c.ready && c.kind === 'pow' && monOf(c.user) && !(c.effects || []).length && c.guts <= 4;
+      const sp = Object.keys(Object.fromEntries(Object.values(db.cards).filter(plain).map((c) => [c.user, 1]))).sort().find((u) => Object.values(db.cards).some((c) => plain(c) && c.user === u && c.damage <= 3) && Object.values(db.cards).some((c) => plain(c) && c.user === u && c.damage >= 4));
+      const lo = sp && Object.values(db.cards).find((c) => plain(c) && c.user === sp && c.damage <= 3);
+      const hi = sp && Object.values(db.cards).find((c) => plain(c) && c.user === sp && c.damage >= 4);
+      ok(lo && hi, 'F119/F258: 見本の技が無い');
+      const ms = sp ? [[monOf(sp), ...['C-001', 'C-005', 'C-003'].filter((x) => x !== monOf(sp))].slice(0, 3), ['C-001', 'C-003', 'C-005']] : null;
+      if (lo && hi) {
+        let st = place(fieldScene(['F119', lo.no, hi.no], [], [12, 9], ms), 'F119'); ok(!optWith(st, [lo.no], 0) && optWith(st, [hi.no], 0), 'F119: ダメージ3以下が出せる・4以上が出せない');
+        let s2 = place(fieldScene(['F258', lo.no, hi.no], [], [12, 9], ms), 'F258'); ok(optWith(s2, [lo.no], 0) && !optWith(s2, [hi.no], 0), 'F258: ダメージ4以上が出せる・3以下が出せない'); } }
+    // 大混乱: 次の番のドローの前に、その番の人の山札の上から2枚を捨てる
+    { F('F120'); let st = place(fieldScene(['F120']), 'F120'); const d0 = st.players[1].deck.length, x0 = st.players[1].discard.length;
+      st = act(act(st, { type: 'endAttacks' }), { type: 'guts', hand: [] });
+      ok(st.players[1].discard.length === x0 + 2 && st.players[1].deck.length === d0 - 2 - (5 - 0), `F120: 山札の上から2枚を捨てない(${st.players[1].discard.length - x0})`); }
+    // 純血のプライド: 純血の子の攻撃に、派生の子は回避を出せない(防御は出せる)
+    { F('F255'); const hy = 'C-010'; let st = fieldScene(['F255', gol.no], ['109', '111'], [9, 9], [['C-003', 'C-001', 'C-005'], [hy, 'C-003', 'C-005']]);
+      const before = act(st, optWith(st, [gol.no], 0)); ok(E.cardGuardOptions(db, before).some((x) => before.players[1].hand[x.hand] === '109'), 'F255: 見本の場面で回避が出せない');
+      st = place(st, 'F255'); const s2 = act(st, optWith(st, [gol.no], 0));
+      ok(!E.cardGuardOptions(db, s2).some((x) => s2.players[1].hand[x.hand] === '109') && E.cardGuardOptions(db, s2).some((x) => s2.players[1].hand[x.hand] === '111'), 'F255: 派生の子が回避を出せる・防御まで止まる'); }
+    // がんじがらめ: モンスターの特殊技は出せない
+    { F('F257'); const sp = Object.values(db.cards).find((c) => c.ready && c.user === 'golem' && c.kind === 'spe');
+      if (sp) { const st0 = fieldScene(['F257', sp.no]); const had = E.cardAttackOptions(db, st0).some((x) => x.mon >= 0 && st0.players[0].hand[x.hand[0]] === sp.no);
+        const st = place(st0, 'F257'); ok(!had || !E.cardAttackOptions(db, st).some((x) => x.mon >= 0 && st.players[0].hand[x.hand[0]] === sp.no), 'F257: モンスターの特殊技が出せる'); } }
+    // 悪天候・空間のひずみ: 全員の持ちょうが変わる。場から無くなると元に戻る
+    { F('F259'); F('F262'); const pix = monOf('pixie'); let st = fieldScene(['F259'], [], [9, 9], [[pix, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']]);
+      st = place(st, 'F259'); ok(st.players.every((pl) => pl.mons.every((m) => E.cardMonType(m, st.turn) === 'ground')), 'F259: 全員が地上にならない');
+      let s2 = nextTurnOf(st, 1); s2.players[1].hand = ['F262']; s2 = place(s2, 'F262'); ok(s2.players.every((pl) => pl.mons.every((m) => E.cardMonType(m, s2.turn) === 'air')), 'F262: 全員が空中にならない');
+      let s3 = nextTurnOf(s2, 0); s3.players[0].hand = ['F116']; s3 = place(s3, 'F116');
+      ok(E.cardMonType(s3.players[0].mons[0], s3.turn) === 'air' && E.cardMonType(s3.players[0].mons[1], s3.turn) === db.monsters['C-003'].type, 'F262: 場から無くなっても、本来の持ちょうに戻らない'); }
+    // 灼熱の地: 攻撃を終えたとき、攻撃した側の全員に1ダメージ
+    { F('F260'); let st = place(fieldScene(['F260']), 'F260'); const l0 = st.players[0].mons.map((m) => m.life);
+      st = act(st, { type: 'endAttacks' }); ok(st.players[0].mons.every((m, i) => m.life === l0[i] - 1) && st.players[1].mons.every((m) => m.life === 40), 'F260: 攻撃した側の全員に1ダメージにならない'); }
+    // 長期戦の予感: ガッツの段で2枚まで
+    { F('F263'); let st = place(fieldScene(['F263', '100', '100', '100']), 'F263'); st = act(st, { type: 'endAttacks' });
+      ok(!E.cardApplyAction(db, st, { type: 'guts', hand: [0, 1, 2] }) && E.cardApplyAction(db, st, { type: 'guts', hand: [0, 1] }), 'F263: 3枚ガッツにできる・2枚にできない'); }
+    // 冷静な判断: 出した時に1枚引く
+    { F('F115'); const st0 = fieldScene(['F115']); const st = place(st0, 'F115'); ok(st.players[0].hand.length === 1 && st.players[0].deck.length === st0.players[0].deck.length - 1, 'F115: 1枚引かない'); }
+    // おいのり: 相手が全体カードを出した瞬間に出せる。その全体カードは効かずに捨て札へ・前から場にあったものはそのまま
+    { ready('280'); let st = place(fieldScene(['F261']), 'F261');
+      let s2 = nextTurnOf(st, 1); s2.players[1].hand = ['F116']; s2.players[0].hand = ['280', '100'];
+      s2 = place(s2, 'F116', true); ok(s2.pendingPray && s2.pendingPray.p === 0 && E.cardDecider(s2) === 0, '280: 相手が全体カードを出したのに、おいのりの窓が開かない');
+      const use = E.cardLegalActions(db, s2).find((x) => x.type === 'pray' && x.hand); ok(use, '280: おいのりを出す手が無い');
+      if (use) { const s3 = act(s2, use); ok(s3.field && s3.field.no === 'F261' && s3.players[1].discard.includes('F116') && s3.players[0].discard.includes('280') && !s3.pendingPray, '280: 出した全体カードが捨て札へ行かない・前の全体カードが消えた'); }
+      const s4 = act(s2, { type: 'pray' }); ok(s4.field.no === 'F116' && s4.players[0].discard.includes('F261'), '280: 使わないとき、全体カードが入れ替わらない');
+      // おいのりを持っていない(手札が無い)ときは窓を開かない・助手もおいのりを使う
+      let s5 = nextTurnOf(st, 1); s5.players[1].hand = ['F116']; s5.players[0].hand = []; s5 = place(s5, 'F116'); ok(!s5.pendingPray && s5.field.no === 'F116', '280: 手札が無いのに窓が開く');
+      ok(E.cardAiChooseAction(db, s2, E.cardAiPolicy('kyuko', 'master'), () => 0.5).hand, '280: 助手がおいのりを使わない'); }
+  }
 };
 scenes();
 pendingCards();

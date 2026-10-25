@@ -11,7 +11,7 @@
 // カードの絵(道具 tools/card/card-image-build.js が © を消して縮めたもの)。s=240×336(手札・場)/ l=480×672(詳しい画面)。フォルダごと使う
 const CARD_IMAGE_SET = Object.freeze({ imageDir: 'images/card-battle' });
 const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}.jpg`;
-const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御' });
+const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御', fld: '全体' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
 // 結果の画面の大きい見出し(2026-10-24 改善部の点検 V6「勝ち負けが左上の小さな見出しだけ」)。tone … win / lose / plain
@@ -200,6 +200,25 @@ const CardBattleTeaser = ({ onClose }) => {
   );
 };
 
+// ---- 結果の画面の、相手の助手のひとこと。決まった台詞をすぐ出し、対戦後のひとこと(AI)が届いたら差しかえる(83-card-battle-talk-ai.jsx) ----
+const CardResultTalk = ({ a, lineScene, talkFacts }) => {
+  const [line] = useState(() => cardPickLine(a.id, lineScene, null)); // 助手から見た勝ち負け
+  const [ai, setAi] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    if (talkFacts && cardAiTalkOn()) void cardTalkFetch('after', { who: a.id, facts: talkFacts, samples: cardTalkSamples(a.id, lineScene) }).then((r) => { if (alive && r) setAi(r); });
+    return () => { alive = false; };
+  }, []);
+  const text = ai ? ai.text : line ? line.text : '';
+  const face = ai ? ai.face : line ? line.face : 'normal';
+  return (
+    <div data-card-result-talk={ai ? 'ai' : 'line'} className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh)' }}/>
+      <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{text}</div>
+    </div>
+  );
+};
+
 // ---- 「助手と対戦」で、選んだ助手の戦い方の型と使うモンスター(2026-10-25 社長「攻撃型とかピクシーとかなになにを編成しやすいとか出して」) ----
 // どれもデータ(CARD_AI_HABITS・CARD_AI_DECKS)から作る。癖の重みや勝率などの数字は出さない(見えない強さを明かさない)
 const CARD_FOE_STYLES = Object.freeze({
@@ -231,10 +250,9 @@ const CardFoeStyle = ({ db, who, level }) => {
   const style = cardFoeStyle(who);
   const recipe = CARD_AI_DECKS[who];
   if (!style || !recipe) return null;
-  // 好きなモンスター(主血統で決める。82 の CARD_AI_FAVORITE)。顔はその種族の通常のモンスター。混血・派生も使うことがある
+  // 好きなモンスター(主血統で決める。82 の CARD_AI_FAVORITE)。名前と顔だけ出す(社長 2026-10-25「余計な文消しといて」)
   const favSpecies = CARD_AI_FAVORITE[who];
   const fav = Object.values(db.monsters).find((m) => m.species === favSpecies && !m.variant && String(m.wave) !== 'hybrid') || null;
-  const kin = cardAiFavoriteCandidates(db, who).filter((no) => String((cardMonsterOf(db, no) || {}).wave) === 'hybrid').length;
   const lv = CARD_LEVEL_LABEL[level] || '';
   const upper = level === 'hard' || level === 'expert' || level === 'master';
   return (
@@ -250,7 +268,6 @@ const CardFoeStyle = ({ db, who, level }) => {
             <img src={cardMonArt(fav) || CARD_IMG(fav.img)} alt="" aria-hidden="true" className="h-8 w-8 rounded-md bg-white/10 object-contain"/>
             <b className="whitespace-nowrap text-[13px] font-black text-amber-100">{fav.name}</b>
           </span>
-          <span className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(kin ? 'いつも1体入れる(キラや派生のことも)' : 'いつも1体入れる(キラのことも)')}</span>
         </div>
       )}
       {upper && Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && (
@@ -294,6 +311,7 @@ const CardDetailModal = ({ db, no, onClose }) => {
             <span className="rounded-md bg-sky-900 px-2 py-0.5">{CARD_TYPE_LABEL[m.type]}</span>
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{m.no}</span>
           </div>
+          {m.dexOnly && <p data-card-dex-only className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('まだ手に入らないカードです(パックには入っていません)')}</p>}
         </div>
       )}
       <button type="button" onClick={onClose} className="mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black">閉じる</button>
@@ -495,10 +513,13 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const spoke = useRef({ turn: -1, n: 0 });
   const bubbleTimer = useRef(null);
   const finished = useRef(false);
+  // 助手のおしゃべり(AI・83-card-battle-talk-ai.jsx): この試合で山場を聞いた回数と、それぞれの側がリードされたことがあるか(逆転の判定)
+  const talk = useRef({ n: 0, behind: [false, false] });
   const press = useCardLongPress((no) => setDetail(no), pressMs);
   const paused = !!detail || !!discard || quit;
 
-  const say = (scene) => {
+  // ai … 山場なら { scene(AIに伝える場面), next(操作のあとの状態) }。決まった台詞を出したまま、間に合ったときだけAIのひとことに差しかえる
+  const say = (scene, ai = null) => {
     if (!scene || pvp || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
@@ -508,9 +529,18 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     spoke.current.n += 1;
     lastLine.current = { ...lastLine.current, [scene]: line.index };
     setFace(line.face);
-    setBubble({ text: line.text, key: `${Date.now()}-${scene}` });
+    const key = `${Date.now()}-${scene}`;
+    setBubble({ text: line.text, key });
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+    if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
+      talk.current.n += 1;
+      void cardTalkFetch('moment', { who: game.who, facts: cardTalkMomentFacts(db, ai.next, CARD_CPU, ai.scene), samples: cardTalkSamples(game.who, scene) }).then((r) => {
+        if (!r) return;
+        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text } : cur));
+        setFace(r.face);
+      });
+    }
   };
   useEffect(() => { if (!tutorial) say('start'); return () => clearTimeout(bubbleTimer.current); }, []);
   // 練習試合: 段が変わったら、その段の台詞を出す。みゅあの台詞は吹き出しに出して、少ししたら次へ。ドラの台詞は説明の窓に出す
@@ -618,8 +648,11 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     else if (evs.some((e) => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI((i) => i + 1);
     const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
+    // 逆転(リードの向きが変わった)は、AIに伝える場面だけを替える(決まった台詞はいまの場面のまま)
+    const flip = tutorial ? null : cardTalkComebackScene(st, next, CARD_CPU);
+    [0, 1].forEach((p) => { if (cardTalkLead(next, p) < 0) talk.current.behind[p] = true; });
     setSt(next); setSel(null); setPicks([]); setHint('');
-    if (scene) say(scene);
+    if (scene) say(scene, { scene: flip || scene, next });
     return true;
   };
 
@@ -704,7 +737,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   useEffect(() => {
     if (st.winner === null || finished.current || tutorial) return undefined; // 練習試合は、ドラの締めの台詞のあと「次へ」で終わる
     finished.current = true;
-    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
+    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st, comeback: !!talk.current.behind[st.winner] }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
     return () => clearTimeout(t);
   }, [st.winner]);
 
@@ -713,6 +746,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const decider = cardDeciderOf(st);
   const myTurn = st.winner === null && decider === CARD_ME;
   const mode = !myTurn ? 'wait'
+    : st.pendingPray ? 'pray'
     : st.pendingReveal ? 'reveal'
     : st.pendingChoice ? 'choose'
     : st.pendingDiscard ? 'discard'
@@ -721,6 +755,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     : st.phase === 'main' ? 'attack'
     : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
+  // おいのりの窓(相手が全体カードを出した瞬間): おいのりを持っていなければ、少しおいて自動で「使わない」
+  const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find((o) => o.hand) || null : null;
+  const prayKey = mode === 'pray' && !prayUse ? `${st.turn}-${st.log.length}` : '';
+  useEffect(() => {
+    if (!prayKey) return undefined;
+    const t = setTimeout(() => step({ type: 'pray' }), Math.round(500 * pace));
+    return () => clearTimeout(t);
+  }, [prayKey]);
+  // 長期戦の予感(全体カード): ガッツの段でガッツにできる枚数
+  const gutsMax = (cardFieldEff(st, 'fieldGutsMax') || {}).n || 99;
   // 見せる段(相手の死神の力): こちらは選ぶことが無いので、少し見せてから自動で進める
   const revealKey = mode === 'reveal' ? `${st.turn}-${st.log.length}` : '';
   useEffect(() => {
@@ -803,7 +847,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
     if (mode === 'guts' || mode === 'setup' || mode === 'discard') {
-      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : 99;
+      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : mode === 'discard' ? st.pendingDiscard.n : gutsMax;
       setPicks((cur) => (cur.includes(i) ? cur.filter((x) => x !== i) : cur.length >= max ? cur : [...cur, i]));
       return;
     }
@@ -880,7 +924,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     }
     if (mode === 'guard') guardOpts.filter((o) => o.hand === i).forEach((o) => { out[`${CARD_ME}-${o.mon}`] = o; });
     if ((mode === 'guts' || mode === 'setup') && !picks.includes(i)) {
-      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : 99;
+      const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : gutsMax;
       if (picks.length < max && (!tutorial || cardTutorialHandOk(tutStage.id, st, i))) out.guts = 'pick';
     }
     return out;
@@ -996,6 +1040,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`}</div>;
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
     if (mode === 'reveal') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">相手に手札を見せています…</div>;
+    if (mode === 'pray') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">{prayUse ? 'おいのりを使うか選んでください' : '相手が全体カードを出しました'}</div>;
     if (mode === 'choose') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">カードを1枚選んでください</div>;
     if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
     if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
@@ -1011,7 +1056,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   })();
   const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ')
     : mode === 'guard' ? (guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません')
-    : mode === 'guts' ? 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)'
+    : mode === 'guts' ? (gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)')
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
     : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
 
@@ -1080,6 +1125,14 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             {/* 小さい段は1行(だれ「技」)にして、まんなかの高さに収める(2段だと上が切れた。カゲあつくんの確認 2026-10-25) */}
             <div className={`${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`}>{action.who}<span className={tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'}>「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
           </div>
+        )}
+        {/* 場の全体カード(両方に効く)。タップで詳しい画面。名前は切らずに折り返す */}
+        {st.field && cardOf(db, st.field.no) && (
+          <button type="button" data-card-env={st.field.no} data-card-env-side={st.field.p === CARD_ME ? 'me' : 'foe'} onClick={() => setDetail(st.field.no)}
+            className="relative z-[1] flex max-w-full items-center gap-1.5 rounded-xl border-2 border-emerald-300/80 bg-emerald-950/80 px-2 py-0.5 text-left active:scale-[.98]">
+            <span className="shrink-0 whitespace-nowrap rounded-md bg-emerald-400 px-1 py-0.5 text-[10px] font-black text-emerald-950">全体</span>
+            <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
+          </button>
         )}
         <div data-card-log className="relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
           {pendingText && <div className="text-rose-200">{pendingText}</div>}
@@ -1227,6 +1280,22 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
           </div>
         </div>
       )}
+      {mode === 'pray' && prayUse && (() => {
+        const fc = cardOf(db, st.pendingPray.no);
+        return (
+          <div data-card-pray className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
+            <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
+              <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap(`相手が全体カード「${fc ? fc.name : ''}」を出しました`)}</div>
+              {fc && <button type="button" onClick={() => setDetail(fc.no)} className="mt-1 block w-full rounded-xl bg-slate-800 px-2 py-1.5 text-left text-[12px] font-bold leading-snug text-slate-200" style={JA_WRAP_STYLE}>{fc.text}</button>}
+              <p className="mt-2 text-[12px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('「おいのり」を使うと、この全体カードは効かずに捨て札へ行きます')}</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" data-card-pray-use onClick={() => step(prayUse)} className="mh-button mh-button-primary min-h-[48px] rounded-xl text-[14px] font-black">おいのりを使う</button>
+                <button type="button" data-card-pray-pass onClick={() => step({ type: 'pray' })} className="mh-button min-h-[48px] rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black">使わない</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {choice && (
         <div data-card-choose className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3">
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100">
@@ -1335,6 +1404,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     storeGet(CARD_SAVE_KEYS.topAssist, null).then((v) => { if (alive && v && typeof v === 'object' && !Array.isArray(v)) setAssist({ modeSelectArt: v.modeSelectArt !== false, modeSelectComment: v.modeSelectComment !== false }); }).catch(() => {});
     return () => { alive = false; };
   }, []);
+  // 助手のおしゃべり(AI)の入/切(保存は mh_card_ai_talk_v1。無い・壊れていたら入)。出すのは呼べる端末だけ(公開の印か、デバッグ端末)
+  const [aiTalk, setAiTalk] = useState(cardAiTalkState.on);
+  useEffect(() => { let alive = true; void cardLoadAiTalk().then((v) => { if (alive) setAiTalk(v.on); }); return () => { alive = false; }; }, []);
+  const toggleAiTalk = () => { const next = !aiTalk; setAiTalk(next); void cardSaveAiTalk(next); };
   const toggleAssist = (key) => {
     if (key !== 'modeSelectArt' && key !== 'modeSelectComment') return;
     const next = { ...assist, [key]: assist[key] === false };
@@ -1378,7 +1451,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
 
   if (screen === 'CARD_BATTLE' && game) {
-    return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st }) => {
+    return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
@@ -1411,7 +1484,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
-      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts });
+      // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
+      const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
+      setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts });
       onBgm && onBgm(null);
       onNavigate('CARD_TOP');
       setView('result');
@@ -1539,6 +1614,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               </button>
             ))}
           </div>
+          {/* 強さのボタンは助手の顔のすぐ下(紹介の欄が長いと、下の「対戦する」の帯に潜っていた。2026-10-25 社長の実機) */}
+          <ScreenSectionLabel note="勝つと次の強さが開きます">強さ</ScreenSectionLabel>
+          <div className="grid grid-cols-5 gap-1">
+            {CARD_LEVEL_ORDER.map((lv) => {
+              const open = cardLevelOpen(save.unlocked, lv) || debug;
+              return (
+                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
+                  {CARD_LEVEL_LABEL[lv]}<span className="block text-[10px] text-amber-200">{open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'}</span>
+                </button>
+              );
+            })}
+          </div>
+          {debug && <p className="text-[11px] font-bold text-slate-400">(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)</p>}
           {/* 横の画面は、紹介と型の欄を左右に並べる(縦に積むと強さのボタンが下へ出た。landscape-screens-check) */}
           <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0">
           {a && (
@@ -1554,18 +1642,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           )}
           {a && <CardFoeStyle db={db} who={a.id} level={foe.level}/>}
           </div>
-          <ScreenSectionLabel note="勝つと次の強さが開きます">強さ</ScreenSectionLabel>
-          <div className="grid grid-cols-5 gap-1">
-            {CARD_LEVEL_ORDER.map((lv) => {
-              const open = cardLevelOpen(save.unlocked, lv) || debug;
-              return (
-                <button key={lv} type="button" data-card-level={lv} disabled={!open} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, level: lv })); }} className={`min-h-[52px] rounded-xl border-2 text-[11px] font-black ${foe.level === lv ? 'border-amber-300 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-200'} disabled:opacity-35`}>
-                  {CARD_LEVEL_LABEL[lv]}<span className="block text-[10px] text-amber-200">{open ? `勝ち${CARD_AI_LEVELS[lv].point}` : '🔒'}</span>
-                </button>
-              );
-            })}
-          </div>
-          {debug && <p className="text-[11px] font-bold text-slate-400">(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)</p>}
           <div className={SCREEN_PANEL_FLAT_CLASS}>
             <div className="text-[12px] font-bold text-slate-300">使うデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
             {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
@@ -1583,7 +1659,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- 結果 ----
   // デッキ編成(87-card-deck-edit.jsx)。保存はここで mh_card_decks_v1 へまとめて入れる
   if (view === 'deckEdit' && editDeck) {
-    return <CardDeckEditor key={editDeck.id} db={db} collection={save.collection} deck={editDeck} onCancel={() => { setEditDeck(null); setView('decks'); }} onSave={async (d) => {
+    return <CardDeckEditor key={editDeck.id} db={db} collection={save.collection} deck={editDeck} advisor={topAssistant} onCancel={() => { setEditDeck(null); setView('decks'); }} onSave={async (d) => {
       const ok = await persist({ decks: cardDecksPut(save.decks, d) });
       setNotice(ok ? `「${d.name}」を保存しました` : '保存できませんでした');
       setEditDeck(null); setView('decks');
@@ -1644,19 +1720,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (view === 'result' && result) {
     const a = allAssistants.find((x) => x.id === result.who);
     const win = result.outcome === 'win';
-    const line = a ? cardPickLine(a.id, win ? 'lose' : 'win', null) : null; // 助手から見た勝ち負け
     const r = result.reward;
     return (
       <div data-mh-screen data-card-top="result" data-card-outcome={result.outcome} data-card-gain={result.demo ? undefined : r.total} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
-          {a && (
-            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-              <CardAssistantArt src={assistantFullImage(a, line ? line.face : 'normal')} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh)' }}/>
-              <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
-            </div>
-          )}
+          {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}</div>
@@ -1764,6 +1834,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
+          {cardTalkOpen() && (
+            <div data-card-ai-talk-panel className={SCREEN_PANEL_CLASS}>
+              <div className="flex items-center gap-2">
+                <b className="min-w-0 flex-1 text-[13px] font-black text-white">助手のおしゃべり(AI)</b>
+                <button type="button" data-card-ai-talk aria-pressed={aiTalk} onClick={() => { Audio_.fgSe.tap(); toggleAiTalk(); }}
+                  className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${aiTalk ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{aiTalk ? 'ON' : 'OFF'}</button>
+              </div>
+              <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ONにすると、対戦のあと・対戦の山場・デッキ相談で、助手がその場に合わせたひとことを話します。うまく届かないときは、いつものセリフになります')}</p>
+            </div>
+          )}
           {/* 対戦中の設定(社長 2026-10-25「オプションでバトル中の設定関係を各種作って」)。並べ方・名前はモンヒロバトルの「バトルの見た目」と同じ形(題・説明・選択肢の名前と一言)。
               設定の中身は 82 の CARD_SETTING_GROUPS。保存は mh_card_settings_v1 に足した項目(前からの人は既定値で補う) */}
           {CARD_SETTING_GROUPS.map((g) => (
@@ -1848,7 +1928,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 [@media(orientation:landscape)_and_(max-height:360px)]:h-6 [@media(orientation:landscape)_and_(max-height:360px)]:w-[18px] rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
             </button>
           )}
-          {notice && <p className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:360px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:360px)]:leading-snug`} style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
+          {/* 横の背の低い画面(高さ420まで)では1行に縮める(2行だと下のボタンが画面の外へ押し出される。667×375 の点検) */}
+          {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
               <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}

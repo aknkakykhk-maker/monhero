@@ -8,6 +8,7 @@
 //   ① どの助手を選んでも、型の札(〜型)・説明・好きなモンスター(1体・顔付き)が出る。型は CARD_AI_HABITS から決まる(みゅあ=攻撃型 など)
 //   ② 好んで入れるカードがある助手(あつ)だけ、しっかり組む強さ(HARD から)で「よく使うカード」が出る
 //   ③ 強さで組み方の説明が変わる(EASY は気分屋・HARD は相性のいい3体 など。82 の CARD_AI_BUILD と同じ決め)
+//   ⑤ どの助手を選んでも、強さのボタンが送らずに全部見える(「対戦する」の帯に潜らない)
 //   ④ 字が切れていない(1行のままの字が箱からはみ出さない)・数字(重みや勝率)を出していない(「1体」〜「4体」「第1弾」だけは数として出す)
 const http = require('http');
 const path = require('path');
@@ -145,6 +146,24 @@ const seed = (withAuto) => `(() => {
           if (/[0-9０-９]/.test(r.text.replace(/[1-4]体|第[0-9]弾/g, ''))) bad.push(`${who}: 数字を出している(${(r.text.replace(/[1-4]体|第[0-9]弾/g, '').match(/.{0,8}[0-9０-９].{0,8}/) || [''])[0]})`);
         }
       }
+      // ⑤ 強さのボタン(EASY〜MASTER)が、送らなくても全部見える(下の「対戦する」の帯に潜らない。2026-10-25 社長の実機で下半分が切れていた)
+      const lv = await page.evaluate(async () => {
+        const out = [];
+        for (const who of [...document.querySelectorAll('[data-card-foe]')].map((b) => b.getAttribute('data-card-foe'))) {
+          document.querySelector(`[data-card-foe="${who}"]`).click();
+          await new Promise((r) => setTimeout(r, 120));
+          document.querySelectorAll('[data-card-top="foe"] .mh-scroll, [data-card-top="foe"] [class*="overflow-y-auto"]').forEach((el) => { el.scrollTop = 0; });
+          await new Promise((r) => setTimeout(r, 80));
+          // 画面の外に出ていない・「対戦する」の帯と重なっていない(横の画面は帯が左の列にあるので、重なりで見る)
+          const start = document.querySelector('[data-card-start]');
+          const f = start ? start.closest('div').getBoundingClientRect() : null;
+          const over = (r) => f && r.left < f.right && r.right > f.left && r.top < f.bottom && r.bottom > f.top + 0.5;
+          const hidden = [...document.querySelectorAll('[data-card-level]')].filter((b) => { const r = b.getBoundingClientRect(); return r.top < 0 || r.bottom > innerHeight + 0.5 || over(r); }).map((b) => b.getAttribute('data-card-level'));
+          if (hidden.length) out.push(`${who}: ${hidden.join('・')}`);
+        }
+        return out;
+      });
+      check(`⑤ ${w}×${h}: どの助手を選んでも、強さのボタンが送らずに全部見える(「対戦する」の帯に潜らない)`, lv.length === 0, lv.slice(0, 3).join(' / '));
       check(`①〜④ ${w}×${h}: 助手${foes.length}人の型・好きなモンスター・よく使うカード・強さの組み方が切れずに出る`, foes.length >= 6 && bad.length === 0, bad.slice(0, 4).join(' / '));
       if (SHOT && w === 390 && h === 844) {
         await page.click('[data-card-foe="atsu"]'); await page.click('[data-card-level="easy"]'); await page.waitForTimeout(300);

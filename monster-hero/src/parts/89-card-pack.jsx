@@ -26,11 +26,12 @@ const CARD_PACKS = Object.freeze([
   rarity: Object.freeze(p.no <= 3 ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 }), pity: true,
 })));
 // 全モンスター(any)・ブリーダー(breeder)のカードの配り先(37枚。どの弾も50種前後になるよう、番号の若い順に半分ずつ配った)
+// 全体カード15枚(F。2026-10-25 カード部デッキくんの表)は、種類の少ない弾から埋めて、どの弾も55種にそろえた
 const CARD_PACK_SHARED = Object.freeze({
   p1: ['109', '112'], p2: ['113', '110', '114'], p3: ['111'],
-  p4: ['122', '121', '126', '123', '127', '124'], p5: ['125', '128', '249', '252', '250', '253'],
-  p6: ['254', '251', '276', '273', '277', '274'], p7: ['275', '278', '345', '279', '346', '280'],
-  p8: ['351', '347', '352', '348', '366', '349', '350'],
+  p4: ['122', '121', '126', '123', '127', '124', 'F255', 'F256', 'F257', 'F258'], p5: ['125', '128', '249', '252', '250', '253'],
+  p6: ['254', '251', '276', '273', '277', '274', 'F263'], p7: ['275', '278', '345', '279', '346', '280', 'F259', 'F260', 'F261', 'F262'],
+  p8: ['351', '347', '352', '348', '366', '349', '350', 'F115', 'F116', 'F117', 'F118', 'F119', 'F120'],
 });
 // 以前の弾(w1〜w4・混血)の id。天井の保存(mh_card_pack_pity_v1)に残っている数は消さない(決まり⑦)
 const CARD_PACK_LEGACY_IDS = Object.freeze(['w1', 'w2', 'w3', 'w4', 'hybrid']);
@@ -56,7 +57,8 @@ const cardPackIdOf = (db, no) => {
   return cardPackIdOfSpecies(c.user);
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter((c) => c.ready && cardPackIdOf(db, c.no) === pack.id).map((c) => c.no).sort();
-const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter((m) => m.ready !== false && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map((m) => m.no).sort();
+// 図鑑だけの子(dexOnly・立ち絵が無い派生。社長 2026-10-25)はパックに入れない
+const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map((m) => m.no).sort();
 // 図鑑・中身の一覧用: その弾のカード全部(準備中も含む)
 const cardPackAllCards = (db, pack) => ({
   monsters: Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id).map((m) => m.no).sort(),

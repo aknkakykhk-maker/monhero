@@ -2,6 +2,9 @@
 
 統括部長の依頼(2026-10-25)。**試しだけで、本番のゲームには組み込まない。**
 
+> **2026-10-25 終了。** 社長が「バトル中の手はいまのまま、AIは別の要素に入れる」と決めた(→ `docs/spec/CARD_ASSISTANT_TALK.md`)。
+> 関数 `card-ai-trial` と道具 `tools/card/card-ai-trial.js` は片付けた(公開していた関数は窓口が 410 を返すだけの口に差し替え)。下の結果と記録だけ残す。
+
 - 関数: `supabase/functions/card-ai-trial/`(中身は core.js・入口は index.ts)。鍵と合言葉は Supabase の Secrets にだけ置く
 - 道具: `node tools/card/card-ai-trial.js`(使い方は先頭の説明)。URL と合言葉は環境変数で渡す
 - プレイヤー側は今のAI(HARD)。助手側は、攻撃の手・守りの返事・札を選ぶ段のたびに関数へ聞く(ガッツにする札などは今のAI)
