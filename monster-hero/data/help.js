@@ -1220,7 +1220,7 @@ const HELP_CATEGORIES = [
     topics: [
       {
         id:'card-mode', emoji:'🃏', title:'MFバトルカードってどんなモード', releaseFlag:'cardBattle', group:'まずはここから',
-        assistant:'はじめての人は、スターターを選んで練習試合からだよ。あたしが相手するね♪', expression:'happy',
+        assistant:'はじめての人は、スターターを選んで練習試合からだよ。練習の相手はみゅあだよ♪', expression:'happy',
         blocks:[
           {t:'p',text:'MFバトルカードは、モンスターカード3枚と技カード50枚でデッキを組み、相手と交互にカードを出し合うカードゲームです。HOMEの「MFバトルカード」から入れます。相手のモンスター3体を先に全員倒したほうの勝ちです。'},
           {t:'p',text:'モンヒロバトルとは別の遊びで、育てたマスモンの強さは持ち込みません。ここで遊んでもマスモンの育成や所持データは変わりません。'},
@@ -1243,7 +1243,7 @@ const HELP_CATEGORIES = [
       },
       {
         id:'card-rules', emoji:'📘', title:'ルールとターンの流れ', releaseFlag:'cardBattle', group:'まずはここから',
-        assistant:'流れは「引く→攻撃→ガッツ→おわり」の4つだけだな。迷ったらカードの文を読むといいだよ', expression:'happy',
+        assistant:'流れは「引く→攻撃→ガッツ→おわり」の4つだけ！ 迷ったらカードの文を読んでみてね', expression:'happy',
         blocks:[
           {t:'note', title:'いちばん大事な決まり', text:'カードに書いてある文が、いつもこのルールより先です。ルールはカードに書いていないときの決まりです。'},
           {t:'p',text:'準備: おたがいにモンスター3体を伏せて置き、山札を切って5枚引きます。先攻・後攻は毎回くじで決まります。後攻は、対戦を始める前に手札から2枚までガッツにできます。'},
@@ -1410,7 +1410,7 @@ const HELP_CATEGORIES = [
       },
       {
         id:'card-ai-talk', emoji:'💬', title:'助手のひとこと', releaseFlag:'cardAssistantTalk', group:'対戦',
-        assistant:'大技が決まったときとか、あたしもその場でひとこと言うね！ いらなかったら切れるよ', expression:'happy',
+        assistant:'大技が決まったときとか、相手の助手がその場でひとこと言うよ！ いらなかったら切れるからね', expression:'happy',
         blocks:[
           {t:'p',text:'助手と対戦では、相手の助手がその試合に合わせてひとこと話します。'},
           {t:'list',items:[
