@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3a866b5225b530c8
+// source-sha256: 55d372be6f0b7d29
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 08:49";
+const BUILD_DATE = "2026-10-26 08:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -125205,7 +125205,11 @@ function MonsterHeroGame() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        color: '#fff'
+        color: '#fff',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)'
       };
       if (lookDexZoom != null && list[lookDexZoom]) {
         const x = list[lookDexZoom];
@@ -125213,7 +125217,7 @@ function MonsterHeroGame() {
         const go = d => setLookDexZoom((lookDexZoom + d + n) % n);
         const vw = typeof window !== 'undefined' ? window.innerWidth : 390,
           vh = typeof window !== 'undefined' ? window.innerHeight : 664;
-        const box = Math.max(120, Math.min(vw - 40, 360, Math.round(vh * 0.42)));
+        const box = Math.max(120, Math.min(vw - 96, 340, Math.round(vh * 0.42)));
         const selected = isFrame ? normalizeProfileFrameId(profileFrameId) === x.id : breederIcon === x.id;
         const choose = () => {
           if (!x.owned) return;
@@ -125256,17 +125260,19 @@ function MonsterHeroGame() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '12px 0'
+            padding: '12px 0 4px'
           }
-        }, React.createElement("span", {
-          className: "text-[12px] font-bold text-slate-400"
-        }, lookDexZoom + 1, " / ", n), React.createElement("button", {
+        }, React.createElement("button", {
           type: "button",
           "data-dex-zoom-close": true,
-          "aria-label": "一覧へもどる",
+          "aria-label": "一覧へ戻る",
           onClick: () => setLookDexZoom(null),
-          className: "rounded-full px-3 py-1 text-[20px] leading-none text-white active:scale-95"
-        }, "✕")), React.createElement("div", {
+          className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+        }, React.createElement(ArrowLeft, {
+          size: 20
+        })), React.createElement("span", {
+          className: "text-[12px] font-bold text-slate-400"
+        }, lookDexZoom + 1, " / ", n)), React.createElement("div", {
           style: {
             position: 'relative',
             display: 'flex',
@@ -125339,15 +125345,17 @@ function MonsterHeroGame() {
           minHeight: 0
         }
       }, React.createElement("div", {
-        className: "flex items-center gap-2 px-3.5 pt-3.5 pb-2"
+        className: "flex items-center gap-1.5 px-3.5 pt-3 pb-2"
       }, React.createElement("button", {
         type: "button",
         "data-dex-close": true,
-        "aria-label": "閉じる",
+        "aria-label": "プロフィールへ戻る",
         onClick: closeDex,
-        className: "px-1 text-[22px] leading-none text-white active:scale-90"
-      }, "‹"), React.createElement("b", {
-        className: "flex-1 text-[17px] font-black"
+        className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+      }, React.createElement(ArrowLeft, {
+        size: 20
+      })), React.createElement("b", {
+        className: "min-w-0 flex-1 text-[17px] font-black"
       }, jaWrap('アイコン・フレーム図鑑'))), React.createElement("div", {
         className: "flex gap-2 px-3.5"
       }, tabButton('icon', 'アイコン'), tabButton('frame', 'フレーム')), React.createElement("p", {
