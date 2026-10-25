@@ -183,7 +183,7 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:MF_CENTAUR_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'centaur', sub:'centaur' }) }),
   Colorpandora: Object.freeze({ id:'Colorpandora', name:"コロペンドラ", emoji:"🟩", imgUrl:MF_COLORPANDORA_IMG, iconUrl:MF_COLORPANDORA_IMG,
     faceIconUrl:MF_COLORPANDORA_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'colorpandora', sub:'colorpandora' }) }),
-  // 派生モンスター17体(2026-10-25・案の段階)。立ち絵・顔アイコンはMFバトルカードの派生カードと共用(HYBRID_C0NN)。名前・血統・図鑑の文は社長から(本編の図鑑の写し)
+  // 派生モンスター20体(2026-10-25・案の段階。ムーは敵のムーと分けるため id を MooHybrid にした)。立ち絵・顔アイコンはMFバトルカードの派生カードと共用(HYBRID_C0NN)。名前・血統・図鑑の文は社長から(本編の図鑑の写し)
   HamLiger: Object.freeze({ id:'HamLiger', name:"ハムライガー", emoji:"🦊", imgUrl:HYBRID_C010_IMG, iconUrl:HYBRID_C010_IMG,
     faceIconUrl:HYBRID_C010_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'tiger', sub:'ham' }) }),
   Melonbo: Object.freeze({ id:'Melonbo', name:"メロンボ", emoji:"🍈", imgUrl:HYBRID_C012_IMG, iconUrl:HYBRID_C012_IMG,
@@ -218,4 +218,10 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C041_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'worm', sub:'ham' }) }),
   Jihad: Object.freeze({ id:'Jihad', name:"ジハード", emoji:"🪨", imgUrl:HYBRID_C042_IMG, iconUrl:HYBRID_C042_IMG,
     faceIconUrl:HYBRID_C042_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'dragon', sub:'golem' }) }),
+  Gentle: Object.freeze({ id:'Gentle', name:"ジェントル", emoji:"🎩", imgUrl:HYBRID_C020_IMG, iconUrl:HYBRID_C020_IMG,
+    faceIconUrl:HYBRID_C020_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'mocchi', sub:'unknown' }) }),
+  Vesuvios: Object.freeze({ id:'Vesuvios', name:"ベスビオス", emoji:"⚔️", imgUrl:HYBRID_C043_IMG, iconUrl:HYBRID_C043_IMG,
+    faceIconUrl:HYBRID_C043_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'durahan', sub:'dragon' }) }),
+  MooHybrid: Object.freeze({ id:'MooHybrid', name:"ムー", emoji:"🐉", imgUrl:HYBRID_C045_IMG, iconUrl:HYBRID_C045_IMG,
+    faceIconUrl:HYBRID_C045_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'dragon', sub:'unknown' }) }),
 });

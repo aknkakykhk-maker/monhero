@@ -1343,6 +1343,9 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Hinekuresou: { body:'sway', bodyMask:null, parts:[] },
   Corone: { body:'breathe', bodyMask:null, parts:[] },
   Jihad: { body:'breathe', bodyMask:null, parts:[] },
+  Gentle: { body:'breathe', bodyMask:null, parts:[] },
+  Vesuvios: { body:'breathe', bodyMask:null, parts:[] },
+  MooHybrid: { body:'breathe', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
