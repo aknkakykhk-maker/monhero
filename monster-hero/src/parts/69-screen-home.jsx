@@ -256,7 +256,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
             keep-all で字の間では折らず、<wbr/> の所だけで折る。それでも入らないときだけ anywhere で折る。
             幅360未満の画面は字を9pxにして1行に収める(2026-10-24 窓口「幅320で『ジャック大王／あらわれた』と折れている」) */}
         <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{tier.name}が<wbr/>あらわれた！</>}</span>
-        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9 }}>ジャックを倒した！あそんでダメージを競おう</span> : <>
+        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！あそんでダメージを競おう')}</span> : <>
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
