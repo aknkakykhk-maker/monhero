@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -565,9 +565,12 @@ const pendingCards = () => {
     const hyAtk = Object.values(db.cards).find((c) => c.ready && c.user === hy.main && c.kind === 'pow' && !(c.effects || []).length);
     if (hyAtk) { const st3 = scene({ mons: [[hy.no, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[hyAtk.no, '346'], []], guts: [9, 0] }); ok(!optWith(st3, [hyAtk.no, '346'], 0), '346: 混血の子の技に付けられる'); } }
   // ジョイのサポート(276): ガッツ3以下のブリーダーのカードに付けて、そのカードは0ガッツ。1ターン1枚のまま
-  { ready('276'); const br = Object.values(db.cards).filter((c) => c.ready && c.user === 'breeder' && !(c.effects || []).some((e) => e.t === 'attach') && c.guts >= 1 && c.guts <= 3).sort((a, b) => b.guts - a.guts)[0];
+  // その場面ですぐ出せるブリーダーのカード(狙いの要る札・条件のある札は見本にしない)
+  const breederFresh = (minG, maxG) => Object.values(db.cards).filter((c) => c.ready && c.user === 'breeder' && c.guts >= minG && c.guts <= maxG && !(c.effects || []).some((e) => ['attach', 'extraAttackTarget', 'unstunTarget', 'useWhenAllies', 'heal'].includes(e.t)))
+    .filter((c) => { const t = scene({ hands: [[c.no], []], guts: [9, 0] }); return E.cardAttackOptions(db, t).some((x) => x.type === 'breeder'); }).sort((a, b) => b.guts - a.guts || (a.no < b.no ? -1 : 1));
+  { ready('276'); const br = breederFresh(1, 3)[0];
     ok(br, '276: ガッツ3以下のブリーダーのカードの見本が無い');
-    if (br) { const st = scene({ hands: [[br.no, '276'], []], guts: [0, 0] }); st.players[0].mons.forEach((m) => { m.life = Math.max(1, m.life - 2); });
+    if (br) { const st = scene({ hands: [[br.no, '276'], []], guts: [0, 0] });
       const a = find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder' && x.hand.length === 2);
       ok(a, `276: 0ガッツで「${br.name}」に付けて出せない`);
       if (a) { const s1 = act(st, a); ok(s1.players[0].breederUsed && !find(E.cardAttackOptions(db, s1), (x) => x.type === 'breeder'), '276: ブリーダーのカードがもう1枚出せる'); } } }
@@ -577,6 +580,76 @@ const pendingCards = () => {
     ok(!optWith(st, ['034']), '342: 友情の証の前に、力をためるが0ガッツで出せる');
     const a = optWith(st, ['342']); ok(a, '342: 出せない');
     if (a) { const s1 = act(st, a); ok(s1.players[0].mons[0].attacks === 1, '342: 出した子の1回に数えない'); ok(optWith(s1, ['034']), '342: ほかの味方の特殊技が0ガッツにならない'); } }
+  // ---- 区切り3: もう1回攻撃・攻撃できない・狙いの縛り ----
+  const nextTurnOf = (st0, who) => { let s1 = JSON.parse(JSON.stringify(st0)); s1.active = who; s1.turn += 1; s1.phase = 'main'; s1.players[who].mons.forEach((m) => { m.attacks = 0; }); s1.players[who].breederUsed = false; return s1; };
+  const canHit = (st, nos, m) => !!optWith(st, nos, m);
+  // 孤軍奮闘(250): 味方が1体のときだけ。もう1回攻撃できる
+  { ready('250'); let st = scene({ hands: [['250', gol.no], []], guts: [9, 0] }); ok(!optWith(st, ['250']), '250: 味方が3体なのに出せる');
+    st.players[0].mons[0].ko = true; st.players[0].mons[2].ko = true; const a = optWith(st, ['250']); ok(a, '250: 味方1体で出せない');
+    if (a) { st = act(st, a); ok(canHit(st, [gol.no], 0), '250: もう1回攻撃できない'); } }
+  // オイリーオイル(254): もう攻撃した味方にだけ。その子はもう1回
+  { ready('254'); let st = scene({ hands: [[gol.no, '254', gol.no], []], guts: [9, 0] }); ok(!find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder' && st.players[0].hand[x.hand[0]] === '254'), '254: まだだれも攻撃していないのに出せる');
+    st = act(act(st, optWith(st, [gol.no], 0)), { type: 'pass' }); ok(!canHit(st, [gol.no], 0), '254: 見本: ゴーレムが2回攻撃できてしまう');
+    const a = find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder' && st.players[0].hand[x.hand[0]] === '254');
+    ok(a && a.target && a.target.m === 1, '254: 攻撃したゴーレムを選べない');
+    if (a) { st = act(st, a); ok(canHit(st, [gol.no], 0), '254: もう1回攻撃できない'); } }
+  // 吹き飛ばし(273)・吠え(010): 相手は次のターン攻撃できない(守りとブリーダーのカードは出せる)。夏美草(351)でその印を消せる
+  { ready('273'); ready('351'); let st = scene({ hands: [['273'], [gol.no, '351']], guts: [9, 9] });
+    const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '273' && x.target && x.target.m === 1);
+    ok(a, '273: 相手を選べない');
+    if (a) { st = act(st, a); let s2 = nextTurnOf(st, 1); ok(!canHit(s2, [gol.no], 0), '273: 吹き飛ばされた子が攻撃できる');
+      const n = find(E.cardAttackOptions(db, s2), (x) => x.type === 'breeder' && s2.players[1].hand[x.hand[0]] === '351');
+      ok(n && n.target && n.target.m === 1, '273/351: 夏美草で、攻撃できない子を選べない');
+      if (n) { s2 = act(s2, n); ok(canHit(s2, [gol.no], 0), '351: 夏美草のあとも攻撃できない'); } } }
+  { ready('010'); let st = scene({ mons: [[monOf('tiger'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['010'], [gol.no]], guts: [9, 9] });
+    const a = optWith(st, ['010']); ok(a, '010: 出せない');
+    if (a) { st = act(st, a); const s2 = nextTurnOf(st, 1); ok(!s2.players[1].mons.some((m, j) => E.cardAttackOptions(db, s2).some((x) => x.mon === j)), '010: 吠えのあとも相手の子が技を出せる'); } }
+  // 死亡遊戯(083・ナーガ)・タイムディレイ(294・メタルナー): その子はそのターン何枚でも
+  [['083', 'naga'], ['294', 'metalner']].forEach(([no, sp]) => {
+    ready(no); const mo = monOf(sp); const pw = plainOf(sp, 'pow') || plainOf(sp, 'int'); ok(mo && pw, `${no}: 見本が無い`); if (!mo || !pw) return;
+    let st = big(scene({ mons: [[mo, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[no, pw.no, pw.no, pw.no], []], guts: [20, 0] }));
+    st = act(st, optWith(st, [no]));
+    for (let k = 0; k < 3; k++) { const a = optWith(st, [pw.no], 0); ok(a, `${no}: ${k + 2}枚目の技が出せない`); if (!a) break; st = act(act(st, a), { type: 'pass' }); }
+  });
+  // うたうニャ(197・ニャー): このターン、ブリーダーのカードを何枚でも
+  { ready('197'); const br = breederFresh(0, 3).slice(-1)[0];
+    ok(br, '197: ブリーダーのカードの見本が無い');
+    if (br) { let st = scene({ mons: [[monOf('mew'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['197', br.no, br.no], []], guts: [9, 0] });
+      st = act(st, optWith(st, ['197']));
+      const b1 = find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder'); ok(b1, '197: 1枚目のブリーダーのカードが出せない');
+      if (b1) { st = act(st, b1); ok(find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder'), '197: 2枚目のブリーダーのカードが出せない'); } } }
+  // 挑発(046)・レロレロ(365): 相手は次の番、この子を狙う技しか出せない(全員に当たる技は出せる)
+  // 魅了(057): この子に当たる技を出せない(全員に当たる技も)/ たちはだかる(269): この子を狙う技だけ(全員に当たる技も出せない)
+  const areaPow = Object.values(db.cards).find((c) => c.ready && c.user === 'golem' && (c.effects || []).some((e) => e.t === 'area' && e.who === 'enemies' && !e.only));
+  [['046', 'suezo', 'only', true], ['365', 'mocchi', 'only', true], ['057', 'pixie', 'not', false], ['269', 'zilla', 'only', false]].forEach(([no, sp, mode, areaOk]) => {
+    ready(no); const mo = monOf(sp); ok(mo, `${no}: 見本が無い`); if (!mo) return;
+    let st = scene({ mons: [[mo, 'C-001', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[no], [gol.no, ...(areaPow ? [areaPow.no] : [])]], guts: [9, 20] });
+    const a = optWith(st, [no]); ok(a, `${no}: 出せない`); if (!a) return;
+    st = act(st, a); const s2 = nextTurnOf(st, 1);
+    const hitsMe = canHit(s2, [gol.no], 0), hitsOther = canHit(s2, [gol.no], 1);
+    if (mode === 'only') ok(hitsMe && !hitsOther, `${no}: 縛った子だけを狙える形になっていない(この子 ${hitsMe}・ほか ${hitsOther})`);
+    else ok(!hitsMe && hitsOther, `${no}: 縛った子を狙えてしまう(この子 ${hitsMe}・ほか ${hitsOther})`);
+    if (areaPow) ok(!!optWith(s2, [areaPow.no]) === areaOk, `${no}: 全員に当たる技が${areaOk ? '出せない' : '出せてしまう'}`);
+    const s3 = nextTurnOf(s2, 1); s3.turn += 1; ok(canHit(s3, [gol.no], 1), `${no}: その次の番まで縛りが残る`);
+  });
+  // 歌う(047・スエゾー): 相手の次の番を飛ばす(引かない・山札切れも起きない)
+  { ready('047'); let st = scene({ mons: [[monOf('suezo'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['047'], []], guts: [9, 0] });
+    st.players[1].deck = []; const t0 = st.turn;
+    st = act(st, optWith(st, ['047'])); st = act(act(st, { type: 'endAttacks' }), { type: 'guts', hand: [] });
+    ok(st.active === 0 && st.turn === t0 + 2 && st.winner === null, `047: 相手の番が飛ばない(番 ${st.active}・ターン ${st.turn - t0}・勝ち ${st.winner})`);
+    ok(st.players[1].hand.length === 0, '047: 飛ばされた番に引いている'); }
+  // 怒り(251): 次の自分の番まで守れない。次の自分の番のちから技・かしこさ技2倍
+  { ready('251'); let st = big(scene({ hands: [['251', gol.no], [gol.no]], guts: [9, 9] }));
+    const a = find(E.cardAttackOptions(db, st), (x) => x.mon === 1 && st.players[0].hand[x.hand[0]] === '251'); ok(a, '251: 出せない');
+    if (a) { st = act(st, a); st.players[0].hand.push('109'); const s2 = nextTurnOf(st, 1); s2.players[1].guts = Array(9).fill('100');
+      const h = optWith(s2, [gol.no], 1); let s3 = act(s2, h); ok(!E.cardGuardOptions(db, s3).length, '251: 怒った子が守れる');
+      s3 = act(s3, { type: 'pass' }); const s4 = nextTurnOf(s3, 0); s4.players[1].mons.forEach((x) => { x.life = 40; x.max = 40; });
+      const r = hitOnce(s4, optWith(s4, [gol.no], 0)); ok(r.dmg[0] === gol.damage * 2, `251: 次の番の技が2倍にならない(${r.dmg[0]})`); } }
+  // ほうり上げる(234・ドラゴン): 相手1体をこのターンだけ空中に。もう1回攻撃できる
+  { ready('234'); const dr = monOf('dragon'); const dp = plainOf('dragon', 'pow'); let st = scene({ mons: [[dr, 'C-003', 'C-001'], ['C-001', 'C-003', 'C-005']], hands: [['234', dp.no], []], guts: [9, 0] });
+    const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '234' && x.target && x.target.m === 1); ok(a, '234: 相手を選べない');
+    if (a) { st = act(st, a); ok(E.cardMonType(st.players[1].mons[1], st.turn) === 'air', '234: 空中にならない'); ok(canHit(st, [dp.no], 0), '234: もう1回攻撃できない');
+      ok(E.cardMonType(st.players[1].mons[1], st.turn + 1) === 'ground', '234: ターンが終わっても空中のまま'); } }
 };
 scenes();
 pendingCards();
