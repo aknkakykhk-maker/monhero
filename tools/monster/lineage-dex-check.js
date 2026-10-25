@@ -149,10 +149,11 @@ check('血統を書いていないモンスターでも落ちず ？？？ に�
   A.monsterLineageOf('存在しないid').main.name === '？？？' && A.monsterCategoryOf('存在しないid') === 'rare');
 
 // ---------- ③ 血統アイコン ----------
-// プレイアブルなモンスターがいる血統だけ絵を使い、いない血統は絵を作らず名前で出す
-const iconless = ['dragon', 'joker', 'gel', 'unknown'];
-check('モンスターがいない血統は画像を持たない',
-  iconless.every(id => !A.MONSTER_LINEAGES[id]?.monId && A.lineageIconUrl(A.MONSTER_LINEAGES[id]) === null));
+// 味方モンスターがまだいない血統(ジョーカーなど)も、案の子(UPCOMING_MONSTER_DRAFTS)の顔アイコンで出す(2026-10-25 社長
+// 「モンスターの画像実装したけど図鑑に反映されてない」)。区分が分からない ？？？ だけは絵を使わず名前で出す
+check('味方モンスターがまだいない血統も、案の子の顔アイコンを引ける',
+  ['dragon', 'joker', 'gel', 'colorpandora'].every(id => !A.MONSTER_LINEAGES[id]?.monId && /images\/monster-icons\/face\//.test(A.lineageIconUrl(A.MONSTER_LINEAGES[id]) || '')));
+check('？？？ の血統は画像を持たない', A.lineageIconUrl(A.MONSTER_LINEAGES.unknown) === null);
 check('モンスターがいる血統はアイコンを引ける',
   ['mocchi','undine','ark'].every(id => !!A.lineageIconUrl(A.MONSTER_LINEAGES[id])));
 
