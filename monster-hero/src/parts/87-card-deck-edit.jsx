@@ -9,9 +9,10 @@
 
 const CARD_DECK_FILTERS = Object.freeze([
   { id: 'all', label: '全部' }, { id: 'pow', label: 'ちから' }, { id: 'int', label: 'かしこさ' }, { id: 'spe', label: '特殊' },
-  { id: 'dge', label: '回避' }, { id: 'blk', label: '防御' }, { id: 'any', label: '全モンスター' }, { id: 'breeder', label: 'ブリーダー' },
+  { id: 'dge', label: '回避' }, { id: 'blk', label: '防御' }, { id: 'any', label: '全モンスター' }, { id: 'breeder', label: 'ブリーダー' }, { id: 'fld', label: '全体' },
 ]);
-const cardDeckFilterOk = (c, f) => (f === 'all' ? true : f === 'any' ? c.user === 'any' : f === 'breeder' ? c.user === 'breeder' : c.kind === f && c.user !== 'any' && c.user !== 'breeder');
+// 全体カード(fld)は「ブリーダー」にも「全体」にも出る(使う人はブリーダー)
+const cardDeckFilterOk = (c, f) => (f === 'all' ? true : f === 'any' ? c.user === 'any' : f === 'breeder' ? c.user === 'breeder' : f === 'fld' ? c.kind === 'fld' : c.kind === f && c.user !== 'any' && c.user !== 'breeder');
 
 // 1枚のカード(小さい絵)。右上に「デッキの枚数/持っている枚数」
 const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap, mark = '' }) => {

@@ -59,13 +59,14 @@ const pendingDeck = (monsters, must = [], onlyMust = false) => {
   must.forEach((no) => cards.push(no, no, no)); // 追加の試合で、まだ使われていない札と、付ける先の技を必ず3枚ずつ入れる
   // 種族専用の札は3枚、誰でも・ブリーダーの札は1枚ずつ。準備中だった札は30枚まで(種族専用の札が先)(付ける札ばかりだと、付ける先の技が足りない)
   // onlyMust … 目当ての札だけを入れる(太古の記憶のように、2枚がそろわないと出せない札の追加の試合)
-  const mineP = onlyMust ? [] : PENDING_DONE.filter((no) => usable(db.cards[no], mons));
+  // 全体カード・おいのりは、目当ての試合(must)だけに入れる(ほかの試合に混ざると、がんじがらめなどで目当ての札が出せなくなる)
+  const mineP = onlyMust ? [] : PENDING_DONE.filter((no) => usable(db.cards[no], mons) && no !== '280');
   mineP.filter((no) => !must.includes(no) && !['any', 'breeder'].includes(db.cards[no].user)).forEach((no) => cards.push(no, no, no));
   mineP.filter((no) => !must.includes(no) && ['any', 'breeder'].includes(db.cards[no].user)).forEach((no) => cards.push(no));
   cards.splice(30);
   // 残りは、3体それぞれの札と誰でも使える札を、1種ずつ順に(番号の順だけで埋めると、最初の種族の札ばかりになる)
   // 派生(混血)の子は、メイン・サブの種族の札を使う(子の種族名そのものの札は無い)
-  const lanes = [...new Set(mons.flatMap((m) => (m.main ? [m.main, m.sub].filter(Boolean) : [m.species]))), 'any'].map((sp) => Object.values(db.cards).filter((c) => usable(c, mons) && !PENDING_DONE.includes(c.no) && (sp === 'any' ? c.user === 'any' || c.user === 'breeder' : c.user === sp)).map((c) => c.no).sort());
+  const lanes = [...new Set(mons.flatMap((m) => (m.main ? [m.main, m.sub].filter(Boolean) : [m.species]))), 'any'].map((sp) => Object.values(db.cards).filter((c) => usable(c, mons) && !PENDING_DONE.includes(c.no) && c.kind !== 'fld' && c.no !== '280' && (sp === 'any' ? c.user === 'any' || c.user === 'breeder' : c.user === sp)).map((c) => c.no).sort());
   const rest = [];
   for (let k = 0; lanes.some((l) => k < l.length); k++) lanes.forEach((l) => { if (k < l.length) rest.push(l[k]); });
   // 同じ名前は3枚まで(番号の違う同じ名前の札もある)
@@ -103,7 +104,7 @@ const play = (n, extraTrio, must, extraB, onlyMust) => {
     let act = E.cardAiChooseAction(db, me, pol, r);
     // 28戦目から: 準備中だった札を使える場面なら、その札を選ぶ(コンピューターが選ばない札も、マルチで通るか見るため)
     // 追加の試合の相手(B)は攻撃しない(まだ使われていない札の持ち主が先に倒れないように。守りはふつうに出す)
-    if (extraTrio && !(extraB && extraB.attack) && !aTurn && me.phase === 'main' && !me.pending && !me.pendingDiscard) act = { type: 'endAttacks' };
+    if (extraTrio && !(extraB && extraB.attack) && !aTurn && me.phase === 'main' && !me.pending && !me.pendingDiscard && !me.pendingPray) act = { type: 'endAttacks' };
     else if (forced) {
       const noOf = (a) => (a.type === 'guard' ? [me.players[0].hand[a.hand]] : Array.isArray(a.hand) ? a.hand.map((i) => me.players[0].hand[i]) : []);
       // まだどの試合でも使っていない札を含む手を先に(影縛りには名指しを入れる)
@@ -205,6 +206,26 @@ const hybrids = Object.values(db.monsters).filter((m) => m.main && m.ready !== f
   }
   N += k;
 }
+// 全体カード15枚とおいのり(2026-10-25)。場の札・おいのりの窓・大混乱(山札を捨てる)・灼熱の地などで、2台の場がずれないか。追加の試合も①〜④に数える
+const fieldNos = Object.keys(db.cards).filter((no) => db.cards[no].kind === 'fld').sort();
+const fieldSeen = new Set(); let prayUsed = 0;
+{
+  let k = 0;
+  for (let i = 0; i < fieldNos.length; i += 2) {
+    const must = [...fieldNos.slice(i, i + 2), '280'];
+    for (const side of [0, 1]) {
+      const n0 = N + k;
+      runOne(n0, side ? [['C-005', 'C-001', 'C-003'], ['C-003', 'C-027', 'C-029']] : [['C-003', 'C-027', 'C-029'], ['C-005', 'C-001', 'C-003']], must, { attack: true, must });
+      const g = games[games.length - 1];
+      g.hA.forEach((e) => { if (e.act && e.act.type === 'pray' && e.act.hand) prayUsed++; });
+      [g.A, g.B].forEach((st) => (st.log || []).forEach((l) => { const m = /全体カード「([^」]+)」が場に出た/.exec(l.text); if (m) fieldSeen.add(m[1]); }));
+      k++;
+    }
+  }
+  N += k;
+}
+check(`① 全体カード${fieldNos.length}枚が、マルチの試合で場に出ている`, fieldSeen.size === fieldNos.length, `${fieldSeen.size} / ${fieldNos.length}・まだ ${fieldNos.filter((no) => !fieldSeen.has(db.cards[no].name)).join('・')}`);
+check('① おいのりが、マルチの試合で使われている', prayUsed > 0, `${prayUsed}回`);
 const hyUsed = new Set(games.flatMap((g) => [...g.deckA.monsters, ...g.deckB.monsters]).filter((no) => hybrids.includes(no)));
 check(`① 派生のモンスター${hybrids.length}体が全員、マルチの試合に出ている`, hyUsed.size === hybrids.length, `${hyUsed.size} / ${hybrids.length}`);
 check(`① ${N}戦とも、届いた手を当てられて、2台の場がずっと同じ`, applyOk === N, firstErr);
