@@ -32,6 +32,13 @@
 //         breederUnlimited このターン、ブリーダーのカードを何枚でも / taunt(mode:'only'|'not', noArea) 相手の次の番に狙える相手を縛る /
 //         stunAllEnemies・stunTarget 相手(1体)は次のターン攻撃できない / skipTurn 相手の次の番を飛ばす /
 //         rage 次の自分の番まで、この子は守れない。次の自分の番の技は2倍
+//         ---- 区切り4: 山札・手札・捨て札・ガッツ ----
+//         choose(src:'discard'|'hand', filter:{kind,attack,usable}, then) 1枚選ぶ段(st.pendingChoice)。then … toHand / toDeckBottom /
+//                toDeckShuffleDraw(山札へ戻して切り、1枚引く)/ discardDraw2(捨てて2枚引く)/ oppDiscard(相手の手札から捨てさせる)
+//         peekPick 相手が手札を見せる段(st.pendingReveal)→ こちらが1枚選んで捨てさせる / rush(n) 山札の上からnをガッツ。そのターンはもう出せない /
+//         lastWish 自分をKO、残りライフの枚数を捨て札の新しいほうからガッツへ / gutsZeroBoth / deckToGuts / oppHandToDeckBottom・oppDraw(n) /
+//         gutsToDeckShuffle / selfHurt(n) 味方1体 / oppGutsLoss(n) / refresh 手札を全部捨てて同じ数引く / millOpp(n) / discardBothHands
+//         ★山札を切り直すのは、その山札の持ち主の種(players[i].rng)。マルチで相手の端末と同じ順になる(場の種 st.seed は使わない)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中 /
@@ -109,7 +116,8 @@ const cardCreateGame = (db, { decks, names = ['あなた', 'あいて'], seed = 
     });
     const deck = sh.list;
     const hand = deck.splice(deck.length - CARD_BATTLE_HAND_MAX, CARD_BATTLE_HAND_MAX).reverse();
-    return { name: names[i] || `P${i + 1}`, mons, deck, hand, guts: [], discard: [], breederUsed: false, gutsGuardUntil: -1 };
+    // rng … この山札を試合の中で切り直すときの種(自分の山札の切り方から決まる。マルチでも、山札の持ち主の端末と同じ数になる)
+    return { name: names[i] || `P${i + 1}`, mons, deck, hand, guts: [], discard: [], breederUsed: false, gutsGuardUntil: -1, rng: (sh.seed ^ 0x9E3779B9) >>> 0 };
   });
   const st = { v: 1, seed: s, turn: 0, first, active: cardOther(first), phase: 'setup', players, pending: null, forbid: {}, winner: null, reason: null, log: [], events: [] };
   cardLog(st, `${players[first].name}が先攻、${players[cardOther(first)].name}が後攻`);
@@ -150,6 +158,23 @@ const cardBeginTurn = (st) => {
 const cardPayGuts = (st, p, n) => {
   const me = st.players[p];
   for (let i = 0; i < n; i++) me.discard.push(me.guts.pop());
+};
+// 山札を切り直す(持ち主の種で。古い保存で種が無ければ場の種)
+const cardReshuffle = (st, p) => {
+  const me = st.players[p];
+  const sh = cardShuffle(me.deck, Number.isFinite(me.rng) ? me.rng : st.seed);
+  me.deck = sh.list; me.rng = sh.seed;
+};
+const cardDrawN = (st, p, n) => { const me = st.players[p]; let k = 0; for (let i = 0; i < n; i++) { if (!me.deck.length) break; me.hand.push(me.deck.pop()); k += 1; } return k; };
+// 選ぶ段の候補(手札・捨て札の番号)。discardLen … 選ぶ段を作ったときの捨て札の数(いま使った札は選べない)
+const cardChoiceCands = (db, st, p, mi, e, discardLen) => {
+  const me = st.players[p];
+  const list = e.src === 'hand' ? me.hand : me.discard.slice(0, discardLen === undefined ? me.discard.length : discardLen);
+  const mon = mi >= 0 ? me.mons[mi] : null;
+  const f = e.filter || {};
+  // 絞り込みの無い選び方なら、中身の分からない札(マルチで相手の手札は仮の札)も候補に数える。数がずれると、相手の手が当てられない
+  const any = !f.kind && !f.attack && !f.usable;
+  return list.map((no, i) => ({ i, c: cardOf(db, no) })).filter(({ c }) => (c ? (!f.kind || c.kind === f.kind) && (!f.attack || cardIsAttackKind(c.kind)) && (!f.usable || (mon && cardUsableBy(c, mon))) : any)).map((x) => x.i);
 };
 const cardLoseGuts = (st, p, n) => {
   const me = st.players[p];
@@ -270,7 +295,7 @@ const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every((t) => {
   return hits.every((x) => x.m === t.m);
 });
 // 特殊技の狙い(null は狙わない技)。使えない場面なら空
-const cardSpeTargets = (st, p, mi, card) => {
+const cardSpeTargets = (db, st, p, mi, card) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   const ua = cardEff(card, 'useWhenAllies'); if (ua && me.mons.filter((m) => !m.ko).length !== ua.n) return [];
@@ -278,14 +303,20 @@ const cardSpeTargets = (st, p, mi, card) => {
   if (cardHasEff(card, 'extraAttackTarget')) return me.mons.map((m, j) => (!m.ko && m.attacks > 0 && m.stunTurn !== st.turn ? { p, m: j } : null)).filter(Boolean);
   if (cardHasEff(card, 'unstunTarget')) return me.mons.map((m, j) => (!m.ko && m.stunTurn === st.turn ? { p, m: j } : null)).filter(Boolean);
   if (cardHasEff(card, 'stunTarget') || cardHasEff(card, 'liftTarget')) return opp.mons.map((m, j) => (!m.ko ? { p: cardOther(p), m: j } : null)).filter(Boolean);
+  if (cardHasEff(card, 'selfHurt')) return me.mons.map((m, j) => (!m.ko ? { p, m: j } : null)).filter(Boolean);
+  // 選ぶ札が1枚も無いときは出さない(手札から選ぶ札は、このカードのほかに手札が要る)
+  const ch = cardEff(card, 'choose');
+  if (ch) { const n = cardChoiceCands(db, st, p, mi, ch).length - (ch.src === 'hand' ? 1 : 0); if (n <= 0) return []; }
+  if (cardHasEff(card, 'peekPick') && !opp.hand.length) return [];
   return [null];
 };
 
 // ---- いまできる操作 ----
 // 攻撃の候補を全部並べる(コンピューターと画面の「使えるカード」の両方に使う)
 const cardAttackOptions = (db, st) => {
-  if (st.phase !== 'main' || st.pending || st.winner !== null) return [];
+  if (st.phase !== 'main' || st.pending || st.pendingChoice || st.pendingReveal || st.winner !== null) return [];
   const p = st.active;
+  if (st.lock && st.lock.p === p && st.lock.turn === st.turn) return []; // 突進のあと: そのターンはもう出せない
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   const guts = me.guts.length;
@@ -296,12 +327,13 @@ const cardAttackOptions = (db, st) => {
     if (cardHasEff(card, 'attach')) return; // 付ける札は単独では出さない(下で技に付ける)
     if (card.user === 'breeder') {
       if (me.breederUsed && !cardBreederFree(st, p)) return;
+      if (cardHasEff(card, 'rush') && me.playedTurn === st.turn) return; // 突進は、そのターンの最初のカード
       // ジョイのサポートなど、ブリーダーのカードに付ける札も一緒に(付けると払うガッツが変わる)
       cardAttachSets(db, st, p, null, card, [hi]).forEach((att) => {
         const hand = [hi, ...att];
         if (cardActionCost(db, st, p, me.hand, hand) > guts) return;
         if (card.kind === 'spe') {
-          cardSpeTargets(st, p, -1, card).forEach((target) => out.push({ type: 'breeder', hand, target }));
+          cardSpeTargets(db, st, p, -1, card).forEach((target) => out.push({ type: 'breeder', hand, target }));
         } else {
           me.mons.forEach((m, mi) => { if (m.ko) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn)) out.push({ type: 'breeder', hand, mon: mi, target: { p: cardOther(p), m: j } }); }); });
         }
@@ -331,7 +363,7 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (card.kind === 'spe') {
-          cardSpeTargets(st, p, mi, card).forEach((target) => out.push({ type: 'attack', mon: mi, hand: idxs, target }));
+          cardSpeTargets(db, st, p, mi, card).forEach((target) => out.push({ type: 'attack', mon: mi, hand: idxs, target }));
           return;
         }
         if (cardHasEff(card, 'area')) {
@@ -398,13 +430,15 @@ const cardGuardOptions = (db, st) => {
 const cardLegalActions = (db, st) => {
   if (st.winner !== null) return [];
   if (st.phase === 'setup') return [{ type: 'setupGuts', hand: [] }];
+  if (st.pendingReveal) return [{ type: 'reveal' }];
+  if (st.pendingChoice) return st.pendingChoice.cands.map((i) => ({ type: 'choose', pick: i }));
   if (st.pending) return [...cardGuardOptions(db, st), { type: 'pass' }];
   if (st.phase === 'main') return [...cardAttackOptions(db, st), { type: 'endAttacks' }];
   if (st.phase === 'guts') return [{ type: 'guts', hand: [] }];
   return [];
 };
 // いま決める番の人(守りの途中なら守る側)
-const cardDecider = (st) => (st.pending ? st.pending.defender : st.active);
+const cardDecider = (st) => (st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active);
 
 // ---- 攻撃を出す ----
 // 技を使った人の書き方(2026-10-24 窓口・カゲあつくん: 記録・まんなかの「いま使った技」・守りの番の文を1つの形にそろえる)。
@@ -429,6 +463,7 @@ const cardStartAttack = (db, st, act) => {
   const cost = cardActionCost(db, st, p, me.hand, act.hand);
   const used = cardTakeFromHand(st, p, act.hand);
   cardPayGuts(st, p, cost);
+  me.playedTurn = st.turn; // 突進(そのターンの最初のカード)が見る
   const mi = isBreeder ? (act.mon !== undefined ? act.mon : -1) : act.mon;
   const mon = mi >= 0 ? me.mons[mi] : null;
   if (isBreeder || used.some((n) => { const c = cardOf(db, n); return c && c.user === 'breeder'; })) me.breederUsed = true; // 影縛りなどブリーダーの札を付けたときも1枚に数える
@@ -589,6 +624,34 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
     if (e.t === 'stunTarget' && tm) { tm.stunTurn = st.turn + 1; cardLog(st, `${tm.name}は次のターン攻撃できない`); }
     if (e.t === 'skipTurn') { st.skip = cardOther(p); cardLog(st, `${opp.name}の次の番を飛ばす`); }
     if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`); }
+    // ---- 区切り4 ----
+    if (e.t === 'choose') {
+      const cands = cardChoiceCands(db, st, p, mi, e);
+      if (cands.length) st.pendingChoice = { p, src: e.src, then: e.then, cands, card: card.no };
+      else cardLog(st, '選べるカードが無かった');
+    }
+    if (e.t === 'peekPick') {
+      if (opp.hand.length) { st.pendingReveal = { p: cardOther(p), next: { p, src: 'oppHand', then: 'oppDiscard', card: card.no } }; cardLog(st, `${opp.name}は手札を見せる`); }
+    }
+    if (e.t === 'rush') { let k = 0; for (let i = 0; i < e.n && me.deck.length; i++) { me.guts.push(me.deck.pop()); k += 1; } st.lock = { p, turn: st.turn }; cardLog(st, `${me.name}は山札の上から${k}枚をガッツにした。このターンはもう出せない`); }
+    if (e.t === 'lastWish' && self) {
+      const n = self.life;
+      cardKo(st, p, mi);
+      const k = Math.min(n, me.discard.length);
+      me.guts.push(...me.discard.splice(me.discard.length - k, k));
+      cardLog(st, `捨て札から${k}枚をガッツにした`);
+      cardCheckWin(st, p);
+    }
+    if (e.t === 'gutsZeroBoth') { me.discard.push(...me.guts.splice(0)); const k = cardLoseGuts(st, cardOther(p), 'all'); cardLog(st, `お互いのガッツが0になった${k === 0 && opp.guts.length ? '(相手は精神集中で減らない)' : ''}`); }
+    if (e.t === 'deckToGuts') { const k = me.deck.length; me.guts.push(...me.deck.splice(0)); cardLog(st, `山札の${k}枚を全部ガッツにした`); }
+    if (e.t === 'oppHandToDeckBottom') { const k = opp.hand.length; opp.deck.unshift(...opp.hand.splice(0)); cardLog(st, `${opp.name}の手札${k}枚を山札の一番下へ`); }
+    if (e.t === 'oppDraw') { const k = cardDrawN(st, cardOther(p), e.n); cardLog(st, `${opp.name}は${k}枚引いた`); }
+    if (e.t === 'gutsToDeckShuffle') { const k = me.guts.length; me.deck.push(...me.guts.splice(0)); cardReshuffle(st, p); cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`); }
+    if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
+    if (e.t === 'oppGutsLoss') { const k = cardLoseGuts(st, cardOther(p), e.n); cardLog(st, `${opp.name}はガッツを${k}失った`); }
+    if (e.t === 'refresh') { const k = me.hand.length; me.discard.push(...me.hand.splice(0)); cardDrawN(st, p, k); cardLog(st, `${me.name}は手札を${k}枚捨てて、引き直した`); }
+    if (e.t === 'millOpp') { let k = 0; for (let i = 0; i < e.n && opp.deck.length; i++) { opp.discard.push(opp.deck.pop()); k += 1; } cardLog(st, `${opp.name}の山札を${k}枚捨て札にした`); }
+    if (e.t === 'discardBothHands') { me.discard.push(...me.hand.splice(0)); opp.discard.push(...opp.hand.splice(0)); cardLog(st, 'お互いの手札を全部捨てた'); }
     if (e.t === 'freeSpeThisTurn') { st.freeSpe = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}の味方の特殊技は0ガッツ`); }
     if (e.t === 'forbidThisTurn') { st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds]; cardLog(st, `このターン、相手は${e.kinds.includes('dge') ? '回避' : '防御'}を使えない`); }
   });
@@ -628,6 +691,32 @@ const cardApplyAction = (db, st0, act) => {
   const st = cardClone(st0);
   st.events = [];
   const p = st.active;
+  // 見せる段(死神の力): 手札の持ち主が見せる。そのあと、使った人が1枚選ぶ
+  if (st.pendingReveal) {
+    if (act.type !== 'reveal') return null;
+    const nx = st.pendingReveal.next;
+    const q = st.pendingReveal.p;
+    st.pendingReveal = null;
+    cardEvent(st, { t: 'peek', p: nx.p, hand: st.players[q].hand.slice() });
+    const cands = st.players[q].hand.map((_, i) => i);
+    if (cands.length) st.pendingChoice = { ...nx, cands };
+    return st;
+  }
+  // 選ぶ段: 候補の中から1枚
+  if (st.pendingChoice) {
+    const ch = st.pendingChoice;
+    if (act.type !== 'choose' || !ch.cands.includes(act.pick)) return null;
+    const me = st.players[ch.p];
+    const opp = st.players[cardOther(ch.p)];
+    const take = (list) => list.splice(act.pick, 1)[0];
+    st.pendingChoice = null;
+    if (ch.then === 'toHand') { const no = take(me.discard); me.hand.push(no); cardLog(st, `${me.name}は捨て札から「${(cardOf(db, no) || {}).name || ''}」を手札に加えた`); }
+    if (ch.then === 'toDeckBottom') { const no = take(me.discard); me.deck.unshift(no); cardLog(st, `${me.name}は捨て札から「${(cardOf(db, no) || {}).name || ''}」を山札の一番下へ戻した`); }
+    if (ch.then === 'toDeckShuffleDraw') { me.deck.push(take(me.hand)); cardReshuffle(st, ch.p); cardDrawN(st, ch.p, 1); cardLog(st, `${me.name}は手札を1枚山札に戻して切り、1枚引いた`); }
+    if (ch.then === 'discardDraw2') { me.discard.push(take(me.hand)); const k = cardDrawN(st, ch.p, 2); cardLog(st, `${me.name}は手札を1枚捨てて、${k}枚引いた`); }
+    if (ch.then === 'oppDiscard') { const no = take(opp.hand); opp.discard.push(no); cardLog(st, `${opp.name}は「${(cardOf(db, no) || {}).name || ''}」を捨てた`); }
+    return st;
+  }
   if (st.pendingDiscard) {
     // 相手の手札を捨てさせる: 捨てる側が選ぶ
     if (act.type !== 'discard') return null;
@@ -754,6 +843,21 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      // 区切り4: 山札・手札・捨て札・ガッツ
+      const oppP = st.players[cardOther(p)];
+      if (e.t === 'choose') score += e.then === 'toHand' ? 1.3 : e.then === 'discardDraw2' ? 0.9 : 0.3;
+      if (e.t === 'peekPick') score += 1.4 * habit.disrupt;
+      if (e.t === 'rush') score += me.guts.length < 4 ? 1.6 : 0.2;
+      if (e.t === 'lastWish') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; score += m0 ? Math.min(m0.life, me.discard.length) * 0.6 - 2.5 - (me.mons.filter((m) => !m.ko).length <= 1 ? 99 : 0) : -9; }
+      if (e.t === 'gutsZeroBoth') score += (oppP.guts.length - me.guts.length) * 0.6;
+      if (e.t === 'deckToGuts') score += me.deck.length <= 3 ? 1 : -3;
+      if (e.t === 'oppHandToDeckBottom') score += 0.5 * habit.disrupt;
+      if (e.t === 'gutsToDeckShuffle') score += me.deck.length < 6 ? me.guts.length * 0.5 : -1;
+      if (e.t === 'selfHurt') { const t0 = opt.target ? me.mons[opt.target.m] : null; score += t0 && t0.life >= 3 ? 0.3 : -5; }
+      if (e.t === 'oppGutsLoss') score += Math.min(e.n, oppP.guts.length) * 0.8 * habit.disrupt;
+      if (e.t === 'refresh') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map((n) => cardOf(db, n)).filter((c) => c && c.user !== 'breeder' && c.user !== 'any' && !me.mons.some((m) => !m.ko && cardUsableBy(c, m))).length * 0.6 - 0.4;
+      if (e.t === 'millOpp') score += oppP.deck.length <= e.n ? 3 : 0.5;
+      if (e.t === 'discardBothHands') score += (oppP.hand.length - (me.hand.length - opt.hand.length)) * 0.6;
       // 区切り3: もう1回・何枚でも・攻撃できない・縛り・番を飛ばす
       const mine = opt.mon >= 0 ? me.mons[opt.mon] : null;
       const tmon = opt.target ? st.players[opt.target.p].mons[opt.target.m] : null;
@@ -903,6 +1007,16 @@ const cardAiFillBind = (db, st, o, policy) => {
 
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
+  if (st.pendingReveal) return { type: 'reveal' };
+  if (st.pendingChoice) {
+    // 選ぶ段: 手に入れる・山札へ戻すなら強い札、手札から出すなら要らない札、相手に捨てさせるなら相手の強い札
+    const ch = st.pendingChoice;
+    const me = st.players[ch.p];
+    const list = ch.then === 'oppDiscard' ? st.players[cardOther(ch.p)].hand : ch.src === 'hand' ? me.hand : me.discard;
+    const worth = (no) => { const c = cardOf(db, no); if (!c) return -9; const usable = c.user === 'breeder' || c.user === 'any' || me.mons.some((m) => !m.ko && cardUsableBy(c, m)); return (usable ? 1 : -3) + (c.damage || 0) * 0.5 + (cardIsGuardKind(c.kind) ? 1.5 : 0) - Math.max(0, c.guts - me.guts.length) * 0.3; };
+    const best = ch.cands.slice().sort((a, b) => (ch.then === 'toDeckShuffleDraw' || ch.then === 'discardDraw2' ? worth(list[a]) - worth(list[b]) : worth(list[b]) - worth(list[a])) || a - b)[0];
+    return { type: 'choose', pick: best };
+  }
   if (st.pendingDiscard) {
     const q = st.pendingDiscard.p;
     const hand = st.players[q].hand;
@@ -1001,6 +1115,10 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'stunTarget') v += 0.8;
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
+      if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
+      if (e.t === 'peekPick') v += 0.8 * habit.disrupt;
+      if (e.t === 'rush' || e.t === 'gutsZeroBoth' || e.t === 'oppHandToDeckBottom' || e.t === 'oppGutsLoss' || e.t === 'millOpp' || e.t === 'discardBothHands' || e.t === 'refresh') v += 0.3;
+      if (e.t === 'lastWish' || e.t === 'deckToGuts' || e.t === 'gutsToDeckShuffle' || e.t === 'selfHurt') v -= 0.3;
     });
     if (cardHasEff(card, 'useWhenAllies')) v *= 0.4;
     return v - card.guts * 0.3;
