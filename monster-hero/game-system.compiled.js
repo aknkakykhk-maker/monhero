@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29e781cbd600485a
+// source-sha256: 97637a8247e11373
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 04:52";
+const BUILD_DATE = "2026-10-26 08:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85474,12 +85474,14 @@ const cardNormalizeDaily = (v, today) => {
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
 const CARD_BGM_DEFAULT = Object.freeze({
-  cpu: 'auto',
-  pvp: 'ichika_battle'
+  top: 'atsu_cup_theme',
+  cpu: 'atsu_cup_theme',
+  pvp: 'atsu_cup_theme'
 });
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
   return {
+    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
     cpu: r.cpu === 'auto' || typeof r.cpu === 'string' && isTrack(r.cpu) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp
   };
@@ -86462,6 +86464,16 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D20: 'ワイがいなくても大丈夫だよな？ ルールの画面から、いつでもこの練習試合をやり直せるからな',
   D21: 'まずは光ってる所だよ',
   D22: 'あわてなくていい。光ってる所からな'
+});
+const CARD_TUTORIAL_FACE = Object.freeze({
+  M1: 'wink',
+  M2: 'happy',
+  M3: 'excited',
+  M4: 'surprise',
+  M5: 'troubled',
+  M6: 'surprise',
+  M7: 'crying',
+  M8: 'happy'
 });
 const CARD_TUTORIAL_WRONG = Object.freeze(['D21', 'D22']);
 const CARD_TUTORIAL_POINT = 100;
@@ -87495,6 +87507,7 @@ const CARD_AI_BGM = Object.freeze({
   atsu: 'melo_against_my_own_shadow'
 });
 const CARD_PVP_BGM = 'ichika_battle';
+const cardCpuBgm = (bgm, who) => bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : CARD_AI_BGM[who] || CARD_BGM_DEFAULT.cpu;
 const cardIsBgmTrack = id => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some(t => t.id === id);
 const CARD_SPECIES_ART = Object.freeze({
   tiger: 'Tiger',
@@ -88186,7 +88199,8 @@ const CardBattleBoard = ({
     const key = `${Date.now()}-${scene}`;
     setBubble({
       text: line.text,
-      key
+      key,
+      face: line.face
     });
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
@@ -88200,7 +88214,8 @@ const CardBattleBoard = ({
         if (!r) return;
         setBubble(cur => cur && cur.key === key ? {
           ...cur,
-          text: r.text
+          text: r.text,
+          face: r.face
         } : cur);
         setFace(r.face);
       });
@@ -88217,10 +88232,12 @@ const CardBattleBoard = ({
     if (!tutorial || !tutQ.length) return undefined;
     const head = tutQ[0];
     if (head[0] === 'M') {
-      setFace('happy');
+      const tf = CARD_TUTORIAL_FACE[head] || 'happy';
+      setFace(tf);
       setBubble({
         text: CARD_TUTORIAL_LINES[head],
-        key: `t-${head}-${Date.now()}`
+        key: `t-${head}-${Date.now()}`,
+        face: tf
       });
       const t = setTimeout(() => {
         setBubble(null);
@@ -89108,11 +89125,18 @@ const CardBattleBoard = ({
   }, turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`), bubble && React.createElement("div", {
     key: bubble.key,
     "data-card-bubble": true,
-    className: `pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
+    "data-card-bubble-face": bubble.face || face,
+    className: `pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
     }
+  }, React.createElement("img", {
+    src: assistantFaceImage(who, bubble.face || face),
+    alt: "",
+    className: `${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
+  }), React.createElement("span", {
+    className: "min-w-0"
   }, React.createElement("span", {
     className: "mr-1 text-[11px]",
     style: {
@@ -89120,7 +89144,7 @@ const CardBattleBoard = ({
     }
   }, who.name), React.createElement("span", {
     style: JA_WRAP_STYLE
-  }, jaWrap(bubble.text))), React.createElement("div", {
+  }, jaWrap(bubble.text)))), React.createElement("div", {
     className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
   }), breederFx && React.createElement("div", {
     key: breederFx.key,
@@ -89223,8 +89247,10 @@ const CardBattleBoard = ({
       setTutI(i => i + 1);
     };
     return React.createElement("div", {
+      className: wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'
+    }, React.createElement("div", {
       "data-card-tutor": tutStage.id,
-      className: "relative z-[30] mx-2 mb-1 flex shrink-0 items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950 px-2 py-1.5 shadow-lg"
+      className: `${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`
     }, dra && React.createElement("img", {
       src: assistantFaceImage(dra, 'happy'),
       alt: "ドラ",
@@ -89241,8 +89267,8 @@ const CardBattleBoard = ({
       type: "button",
       "data-card-tutor-next": true,
       onClick: onNext,
-      className: "shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95"
-    }, "次へ"));
+      className: "pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95"
+    }, "次へ")));
   })(), tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
     "data-card-tutor-arrow": true,
     className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900",
@@ -89806,6 +89832,10 @@ const CardBattleScreen = ({
   useEffect(() => {
     void load();
   }, []);
+  const topBgm = save && save.bgm ? save.bgm.top : null;
+  useEffect(() => {
+    if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm);
+  }, [screen, topBgm]);
   useEffect(() => {
     if (screen === 'CARD_TOP' && game && !result) setGame(null);
   }, [screen]);
@@ -89861,7 +89891,7 @@ const CardBattleScreen = ({
       }) => {
         if (game.pvp) {
           CARD_PVP.finish(outcome, st);
-          onBgm && onBgm(null);
+          onBgm && onBgm(save.bgm.top);
           onNavigate('CARD_TOP');
           setView('pvp');
           return;
@@ -89878,7 +89908,7 @@ const CardBattleScreen = ({
             reward: ok ? fin.reward : 0,
             saved: ok
           });
-          onBgm && onBgm(null);
+          onBgm && onBgm(save.bgm.top);
           onNavigate('CARD_TOP');
           setView('result');
           return;
@@ -89933,7 +89963,7 @@ const CardBattleScreen = ({
           facts,
           talk: talkFacts
         });
-        onBgm && onBgm(null);
+        onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
         setView('result');
       }
@@ -89953,7 +89983,7 @@ const CardBattleScreen = ({
       level: 'easy',
       tutorial: true
     });
-    onBgm && onBgm(CARD_AI_BGM.mua);
+    onBgm && onBgm(cardCpuBgm(save && save.bgm, 'mua'));
     onNavigate('CARD_BATTLE');
   };
   const startBattle = (pick = foe) => {
@@ -89989,7 +90019,7 @@ const CardBattleScreen = ({
       level: pick.level,
       settings: save.settings
     });
-    onBgm && onBgm(save.bgm.cpu !== 'auto' ? save.bgm.cpu : CARD_AI_BGM[pick.who] || null);
+    onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
   };
   if (view === 'starter') {
@@ -90169,7 +90199,7 @@ const CardBattleScreen = ({
           ...g,
           settings: save.settings
         });
-        onBgm && onBgm(save.bgm.pvp || null);
+        onBgm && onBgm(save.bgm.pvp || CARD_BGM_DEFAULT.pvp);
         onNavigate('CARD_BATTLE');
       }
     });
@@ -90595,7 +90625,7 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-white"
     }, "音"), React.createElement("b", {
       className: "mt-2 block text-[12px] font-black text-slate-200"
-    }, "対戦のBGM"), [['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
+    }, "対戦のBGM"), [['top', 'トップ画面'], ['cpu', '助手と対戦・練習試合'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
       key: k,
       className: "mt-2 block text-left"
     }, React.createElement("span", {
@@ -90620,7 +90650,7 @@ const CardBattleScreen = ({
     }, "おまかせ(相手の助手に合わせる)"), (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, k === 'pvp' && t.id === CARD_BGM_DEFAULT.pvp ? '(デフォルト)' : ''))), bgmPreview && save.bgm[k] !== 'auto' && React.createElement("button", {
+    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''))), bgmPreview && save.bgm[k] !== 'auto' && React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => bgmPreview.toggle(save.bgm[k]),
@@ -91083,7 +91113,7 @@ const CardBattleScreen = ({
           steps: demo.steps
         }
       });
-      onBgm && onBgm(CARD_AI_BGM.mua);
+      onBgm && onBgm(cardCpuBgm(save.bgm, 'mua'));
       onNavigate('CARD_BATTLE');
     }
   }, "技の動きの見本を流す(保存しない)"), React.createElement("button", {
