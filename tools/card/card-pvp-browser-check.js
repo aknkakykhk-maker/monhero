@@ -63,6 +63,7 @@ const FAKE_WS = () => {
   window.__mhCardPvpAuto = true;
   window.__mhCardPvpAutoMs = 700;
   window.__mhCardPvpRankTest = true;
+  window.__mhCardPvpLineSeed = 1; // 写真に、顔文字の入った負けの台詞(みゅあ)が出るように
   // ★自動操作のブラウザでは、本物の Supabase へ書き込まない仕組みがある(26-supabase.jsx)。この検査は Supabase を偽物に差し替えているので、書き込みも通す
   window.__mhSupabaseStubbed = true;
   window.__mhCardPvpRosterTest = [{ otherId: 'friend-x', userName: 'フレンドX' }];
@@ -221,7 +222,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await shot(A, 'pvp-06-seek');
     await B.locator('[data-card-pvp-free]').click();
     const met = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
-    check('⑦ 「だれとでも」で、受付から2台が出会って対戦が始まる・待っている人数が出る', met && /待っている人 \d+人/.test(waitingA), waitingA);
+    check('⑦ 「だれとでも」で、受付から2台が出会って対戦が始まる・待っている人数が出る(自分は数えない)', met && /あなたのほかに \d+人が待っています|ほかに待っている人はいません/.test(waitingA), waitingA);
     const end2 = Date.now() + 300000;
     while (Date.now() < end2 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
     const r2 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];

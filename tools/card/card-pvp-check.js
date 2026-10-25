@@ -164,7 +164,8 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   check('⑧ ほかの助手の名前を出さない(まだ会っていない子がいる)', all.every((x) => !names.some((n) => x.t.includes(n))), all.filter((x) => names.some((n) => x.t.includes(n))).map((x) => x.t).join(' / '));
   const atsuBad = all.filter((x) => x.id === 'atsu' && !/[笑！？…!?)）]$/.test(x.t));
   check('⑧ あつの台詞は、文末に笑か記号', atsuBad.length === 0, atsuBad.map((x) => x.t).join(' / '));
-  check('⑧ みゅあは「ぢゃん」を使わない・半角の \' を使わない', all.filter((x) => x.id === 'mua').every((x) => !/ぢゃん|'/.test(x.t)));
+  // みゅあの語尾は「ぢゃん」「まぢ」が正しい(社長 2026-10-25)。半角の ' は台詞を壊すので使わない
+  check('⑧ みゅあは半角の \' を使わない', all.filter((x) => x.id === 'mua').every((x) => !/'/.test(x.t)));
   check('⑧ きゅうこは1文に笑とwを両方付けない', all.filter((x) => x.id === 'kyuko').every((x) => !/笑w|w笑/.test(x.t)));
   const leftAll = all.filter((x) => x.k === 'left');
   check('⑧ 相手が抜けたときの「勝ちは勝ち」「電波」は、それぞれ2人まで(同じ言い方にしない)', leftAll.filter((x) => x.t.includes('勝ちは勝ち')).length <= 2 && leftAll.filter((x) => x.t.includes('電波')).length <= 2);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 79ddc56518f7df7e
+// source-sha256: d26b149b20d003fd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 12:01";
+const BUILD_DATE = "2026-10-25 12:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86579,7 +86579,9 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     "data-card-field": true,
     className: wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'
-  }, React.createElement("div", {
+  }, pvp && React.createElement(CardPvpSignal, {
+    clock: pvpClock
+  }), React.createElement("div", {
     className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp ? React.createElement("span", {
     "data-card-pvp-foe": true,
@@ -91097,6 +91099,15 @@ const CARD_PVP = (() => {
     }
   };
 })();
+const cardPvpLineNode = text => String(text).split(/(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/).filter(x => x !== '').map((x, i) => /^\(.*\)|^٩/.test(x) ? React.createElement("span", {
+  key: i,
+  "data-ja-keep": true,
+  style: {
+    whiteSpace: 'nowrap'
+  }
+}, x) : React.createElement(React.Fragment, {
+  key: i
+}, jaWrap(x)));
 const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => React.createElement("span", {
   key: i,
   className: "inline-block"
@@ -91216,7 +91227,8 @@ const CardPvpLobby = ({
     const got = r.got && !r.got.pending ? r.got : null;
     const foeName = room.foe ? room.foe.name : 'あいて';
     const scene = r.reason === '相手が抜けた' ? 'left' : win ? 'win' : 'lose';
-    const line = a ? cardPvpResultLine(a.id, scene, cardPvpSeedOf(room.match)) : null;
+    const lineSeed = typeof window !== 'undefined' && Number.isInteger(window.__mhCardPvpLineSeed) ? window.__mhCardPvpLineSeed : cardPvpSeedOf(room.match);
+    const line = a ? cardPvpResultLine(a.id, scene, lineSeed) : null;
     const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -91242,7 +91254,7 @@ const CardPvpLobby = ({
         borderColor: a.accent,
         ...JA_WRAP_STYLE
       }
-    }, jaWrap(line.text))), React.createElement("div", {
+    }, cardPvpLineNode(line.text))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[14px] font-black text-white",
@@ -91349,7 +91361,7 @@ const CardPvpLobby = ({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
   }, React.createElement("p", {
     className: "mb-2 text-[13px] font-bold text-slate-300"
-  }, "友だちの合言葉で入る"), React.createElement("div", {
+  }, "フレンドの合言葉で入る"), React.createElement("div", {
     className: "flex gap-2"
   }, React.createElement("input", {
     "data-card-pvp-code": true,
@@ -91375,9 +91387,9 @@ const CardPvpLobby = ({
   }, React.createElement("p", {
     className: "text-[15px] font-black text-white"
   }, room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'), React.createElement("p", {
-    "data-card-pvp-waiting": room.lobbyCount,
+    "data-card-pvp-waiting": Math.max(0, room.lobbyCount - 1),
     className: "mt-1 text-[13px] font-bold text-sky-100"
-  }, "いま待っている人 ", Math.max(1, room.lobbyCount), "人"), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
+  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-slate-300 tabular-nums"
   }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
     "data-card-pvp-nobody": true,
@@ -91410,7 +91422,7 @@ const CardPvpLobby = ({
     className: "my-1 text-[40px] font-black tracking-[.3em] text-white"
   }, room.code), React.createElement("p", {
     className: "text-[13px] font-bold text-slate-200"
-  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…'), room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && React.createElement("div", {
+  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉をフレンドに伝えて、待っています…'), room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && React.createElement("div", {
     className: "mt-3 text-left"
   }, React.createElement("button", {
     type: "button",
@@ -91525,7 +91537,7 @@ const useCardPvpClock = (pvp, st, step) => {
   const room = CARD_PVP.get();
   const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   return {
-    left: Math.max(0, Math.ceil(left / 1000)),
+    left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)),
     mine: decider === 0,
     timeouts: room.timeouts,
     offline: room.offline,
@@ -91537,10 +91549,13 @@ const CardPvpStatus = ({
 }) => React.createElement(React.Fragment, null, React.createElement("span", {
   "data-card-pvp-clock": clock.mine ? 'mine' : 'foe',
   className: `rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100' : 'bg-white/10 text-slate-200'}`
-}, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''), (clock.offline || clock.foeQuietSec > 0) && React.createElement("div", {
+}, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''));
+const CardPvpSignal = ({
+  clock
+}) => clock.offline || clock.foeQuietSec > 0 ? React.createElement("div", {
   "data-card-pvp-signal": true,
-  className: "pointer-events-none absolute inset-x-4 top-[44%] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
-}, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`));
+  className: "shrink-0 border-y border-amber-300/40 bg-amber-500/15 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
+}, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`) : null;
 const CardPvpChat = () => {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState('');
