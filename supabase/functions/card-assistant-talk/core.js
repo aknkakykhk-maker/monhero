@@ -14,7 +14,7 @@ export const MODEL = 'claude-haiku-5-5';
 export const KINDS = Object.freeze(['after', 'moment', 'deck']);
 // 回数は「ひとこと(after と moment)」と「デッキ相談(deck)」に分けて数える
 export const bucketOf = (kind) => (kind === 'deck' ? 'deck' : 'talk');
-// 1端末1日・全員合計1日の上限(案。社長の返事で決める。Secrets で上書きできる)
+// 1端末1日・全員合計1日の上限(2026-10-25 社長が案どおりに決めた。Secrets で上書きできる)
 export const USER_TALK_DAILY_LIMIT = 150;
 export const USER_DECK_DAILY_LIMIT = 10;
 export const TOTAL_DAILY_LIMIT = 2000;

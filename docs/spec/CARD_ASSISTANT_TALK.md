@@ -27,7 +27,7 @@
 - キャッシュ: 決まり → 人柄(ここに cache_control)。試合ごとに変わるものは user のほうへ置く
 - ログに本文を書かない(件数・エラーの種類・トークン数だけ)
 
-## 回数の上限(案。社長の返事で決める)
+## 回数の上限(2026-10-25 社長が案どおりに決めた)
 
 `card_assistant_talk_take(p_breeder, p_bucket, p_user_limit, p_total_limit)` で数える(`supabase/migrations/202610250001_card_assistant_talk_usage.sql`)。
 助手とおしゃべりの `assistant_chat_usage` とは別の表。1日の区切りは朝5:00(JST)。
@@ -44,13 +44,13 @@
 - デッキ相談: 一覧 約3千トークン(毎回)+返事 約500 → 1回 約 $0.001〜0.0013
 - 1試合(ひとこと1+山場最大5): 約 $0.0013〜0.005
 - 全員2,000回/日を毎日使い切ると: ふつう 月 約$12・最悪に近いと 月 約$48
-- ⚠ 助手とおしゃべりは最悪に近いと 月 約$97。合わせると月100ドルを超えうる(予算の分け方は社長に確認中)
+- 予算の枠は助手とおしゃべりと分けない(社長「APIの上限は今は絶対行かないからだいじょぶ」)
 
 ## 公開の手順(窓口)
 
 1. `supabase/migrations/202610250001_card_assistant_talk_usage.sql` を流す(足すだけ)
 2. 関数 `card-assistant-talk` を出す(verify_jwt を外す)。Secrets は既存の `ANTHROPIC_API_KEY` を読む
-3. デバッグ端末で3つの場面を試す → 社長が「公開」と言ったら `RELEASE_FLAGS.cardAssistantTalk` を真にする(更新履歴・ヘルプも同じ回で)
+3. デバッグ端末で3つの場面を試す → 社長が「公開」と言ったら `RELEASE_FLAGS.cardAssistantTalk` を真にする(更新履歴・ヘルプは MFバトルカードの公開の日にまとめて書く)
 
 ## 検査
 
