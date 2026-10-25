@@ -40,7 +40,8 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
   const [leave, setLeave] = useState(false);
   const press = useCardLongPress((no) => setDetail(no));
   // 背の低い画面(SE・320幅)では上の枠を小さくし、説明の1行を省いて、カードの一覧を広く見せる(2026-10-24 改善部の点検 V5)
-  const short = typeof window !== 'undefined' && window.innerHeight < 760;
+  //   縦の画面のときだけ(横の画面はカード部の landscape: の大きさにまかせる)
+  const short = typeof window !== 'undefined' && window.innerHeight < 760 && window.innerHeight > window.innerWidth;
   const col = collection || {};
   const changed = JSON.stringify(deck) !== JSON.stringify(deck0);
   const rules = cardDeckProblems(db, deck);
@@ -90,15 +91,15 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
             const no = deck.monsters[i];
             const m = no ? cardMonsterOf(db, no) : null;
             return m
-              ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} className="relative w-[20%] max-w-[64px] active:scale-95" style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">×</span></button>
-              : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setTab('mon')} style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined} className="flex aspect-[5/7] w-[20%] max-w-[64px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[10px] font-bold text-slate-400">モンスター</button>;
+              ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} className="relative w-[20%] max-w-[64px] active:scale-95 landscape:max-w-[42px]" style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">×</span></button>
+              : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setTab('mon')} style={short ? { maxWidth: 'min(64px, 7vh)' } : undefined} className="flex aspect-[5/7] w-[20%] max-w-[64px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[10px] font-bold text-slate-400 landscape:max-w-[42px] landscape:whitespace-nowrap landscape:text-[7px]">モンスター</button>;
           })}
           <div className="min-w-0 flex-1 text-right">
             <div data-card-deck-count className={`text-[20px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`}>{deck.cards.length}<span className="text-[12px] text-slate-400">/{CARD_BATTLE_DECK_SIZE}枚</span></div>
             <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
           </div>
         </div>
-        <div data-card-deck-legend className={`${short ? 'hidden' : ''} text-[10px] font-bold text-slate-400`}>カードの右上: <span className="text-emerald-300">入</span>=デッキに入れた枚数 / 持=持っている枚数</div>
+        <div data-card-deck-legend className={`${short ? 'hidden' : ''} text-[10px] font-bold text-slate-400 landscape:hidden`}>カードの右上: <span className="text-emerald-300">入</span>=デッキに入れた枚数 / 持=持っている枚数</div>
         {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
         {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
       </div>
@@ -128,9 +129,10 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
           </>
           : <ScreenEmpty emoji="🃏" lines={['まだカードが入っていません', '「技・ブリーダー」から入れてください']}/>)}
       </div>
+      {/* 横画面では左の列に入るので、高さを詰めて「保存する/やめる」まで画面に収める(④・landscape-screens-check) */}
       <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
-        <button type="button" data-card-deck-save className="mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
-        <button type="button" className="mh-button mh-button-secondary min-h-[52px] rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]" onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
+        <button type="button" data-card-deck-save className="mh-button mh-button-primary min-h-[52px] landscape:min-h-[44px] rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onSave({ ...deck, name: (deck.name || '').trim() || 'デッキ' }); }}>保存する</button>
+        <button type="button" className="mh-button mh-button-secondary min-h-[52px] landscape:min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 font-black active:scale-[.98]" onClick={() => (changed ? setLeave(true) : onCancel())}>やめる</button>
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {leave && <ConfirmSheet title="保存せずに戻りますか？" message="組みかえたところは消えます" confirmLabel="保存せずに戻る" danger onCancel={() => setLeave(false)} onConfirm={() => { setLeave(false); onCancel(); }}/>}
