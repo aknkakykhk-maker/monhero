@@ -423,7 +423,78 @@ const tutorialRun = () => {
   ok(f1.reward === 100 && f2.reward === 0 && f3.reward === 0 && f3.tutorial.skipped, '練習試合の 100 が1回だけになっていない');
   Object.entries(E.CARD_TUTORIAL_LINES).forEach(([id, t]) => ok(t.length <= 70, `練習試合の台詞 ${id} が長すぎる(${t.length}字)`));
 };
+// 準備中だった83枚(台帳 #141。一覧: docs/progress/card-battle/pending-83/README.md)を、1枚ずつカードの文どおりに動かす
+const pendingCards = () => {
+  const ready = (no) => ok(db.cards[no] && db.cards[no].ready, `${no} が使えるになっていない`);
+  // 区切り1: 力をためる(034・ゴーレム)・根を張る(210・プラント) … 次の自分のちから技1回が2倍。ダメージを受けたら消える
+  [['034', ['C-003', 'C-005', 'C-001'], '026', 5], ['210', ['C-027', 'C-005', 'C-001'], '202', 2]].forEach(([no, mons, atk, base]) => {
+    ready(no);
+    let st = scene({ mons: [mons, ['C-003', 'C-005', 'C-001']], hands: [[no, atk], []], guts: [9, 0] });
+    const o = find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === no);
+    ok(o, `${no}: 使えない`); if (!o) return;
+    st = act(st, o);
+    ok(JSON.stringify(st.players[0].mons[0].charge) === JSON.stringify({ kinds: ['pow'], n: 2 }), `${no}: 次のちから技2倍の印が付かない`);
+    ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0), `${no}: 同じターンにもう1枚使えてしまう(1ターン1枚)`);
+    // 次の自分の番に、ちから技を当てると2倍
+    const nx = (s0) => { const s1 = JSON.parse(JSON.stringify(s0)); s1.turn += 2; s1.players[0].mons.forEach((m) => { m.attacks = 0; }); return s1; };
+    let s2 = nx(st);
+    const a = find(E.cardAttackOptions(db, s2), (x) => x.mon === 0 && x.target && x.target.m === 0);
+    ok(a, `${no}: 次の番にちから技を出せない`);
+    if (a) {
+      const life0 = s2.players[1].mons[0].life;
+      s2 = act(act(s2, a), { type: 'pass' });
+      ok(life0 - s2.players[1].mons[0].life === Math.min(life0, base * 2), `${no}: 次のちから技が2倍にならない(${life0 - s2.players[1].mons[0].life})`);
+      ok(s2.players[0].mons[0].charge === null, `${no}: 1回使ったら印が消えるはず`);
+    }
+    // ダメージを受けたら消える
+    let s3 = JSON.parse(JSON.stringify(st)); s3.active = 1; s3.turn += 1; s3.players[1].hand = ['026']; s3.players[1].guts = Array(3).fill('100'); s3.players[1].mons.forEach((m) => { m.attacks = 0; });
+    const h = find(E.cardAttackOptions(db, s3), (x) => x.mon === 0 && x.target && x.target.m === 0);
+    ok(h, `${no}: 相手が攻撃できない場面になった`);
+    if (h) { s3 = act(act(s3, h), { type: 'pass' }); ok(s3.players[0].mons[0].charge === null, `${no}: ダメージを受けても印が残る`); }
+  });
+  // 区切り1: 舞い上がる(060・ピクシー)・飛び上がる(236・ドラゴン) … ちから技を回避。次の自分の番の技2倍・それまで空中
+  [['060', 'C-005', ['pow']], ['236', 'C-029', ['pow', 'int']]].forEach(([no, mon, kinds]) => {
+    ready(no);
+    let st = scene({ mons: [['C-003', 'C-005', 'C-001'], [mon, 'C-003', 'C-001']], hands: [['026'], [no]], guts: [3, 2] });
+    st = act(st, find(E.cardAttackOptions(db, st), (x) => x.target && x.target.m === 0));
+    const g = find(E.cardGuardOptions(db, st), (x) => st.players[1].hand[x.hand] === no);
+    ok(g, `${no}: ちから技を回避できない`); if (!g) return;
+    const life0 = st.players[1].mons[0].life;
+    st = act(act(st, g), { type: 'pass' });
+    const m = st.players[1].mons[0];
+    ok(m.life === life0, `${no}: 回避したのにダメージを受けた`);
+    ok(m.mult && m.mult.turn === st.turn + 1 && JSON.stringify(m.mult.kinds) === JSON.stringify(kinds) && m.mult.n === 2, `${no}: 次の自分の番の2倍が付かない(${JSON.stringify(m.mult)})`);
+    ok(m.airUntil === st.turn + 1, `${no}: 次のターン終わりまで空中にならない`);
+  });
+  // かしこさ技は舞い上がるで回避できない(ちから技だけ)
+  {
+    let st = scene({ mons: [['C-005', 'C-003', 'C-001'], ['C-005', 'C-003', 'C-001']], hands: [['053'], ['060']], guts: [3, 2] });
+    const o = find(E.cardAttackOptions(db, st), (x) => x.target && x.target.m === 0 && db.cards[st.players[0].hand[x.hand[0]]].kind === 'int');
+    ok(o, '060: かしこさ技の場面が作れない');
+    if (o) { st = act(st, o); ok(!find(E.cardGuardOptions(db, st), (x) => st.players[1].hand[x.hand] === '060'), '060: かしこさ技まで回避できてしまう'); }
+  }
+  // 区切り1: 緊急回避(109・全モンスター) … ちから技・かしこさ技を回避。自分のガッツを全て失う(精神集中でも失う)
+  {
+    ready('109');
+    let st = scene({ hands: [['026'], ['109']], guts: [3, 4] });
+    // ゴーレム(2体目)のキックで、相手の1体目を狙う
+    const o = find(E.cardAttackOptions(db, st), (x) => x.mon === 1 && x.target && x.target.m === 0);
+    ok(o, '109: 場面が作れない'); if (o) {
+      st = act(st, o);
+      st.players[1].gutsGuardUntil = st.turn + 5;
+      const g = find(E.cardGuardOptions(db, st), (x) => st.players[1].hand[x.hand] === '109');
+      ok(g, '109: 回避できない');
+      if (g) {
+        const d0 = st.players[1].discard.length, life0 = st.players[1].mons[0].life;
+        st = act(act(st, g), { type: 'pass' });
+        ok(st.players[1].mons[0].life === life0, '109: 回避したのにダメージを受けた');
+        ok(st.players[1].guts.length === 0 && st.players[1].discard.length === d0 + 5, `109: ガッツを全て失わない(残り ${st.players[1].guts.length})`);
+      }
+    }
+  }
+};
 scenes();
+pendingCards();
 motionDemo();
 tutorialRun();
 packs();

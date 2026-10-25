@@ -14,6 +14,8 @@
 //   ③ 広い箱(58・76px)では、今までどおり1行
 //   ④ 「カララギ/マンゴー」「最後の/きらめき」「空中回転/アタック」「ドラゴン/パンチ」のように、言葉の切れ目で折る
 //   ⑤ 狭い箱では、短い名前も長い名前も名前の高さがそろう(手札の絵の高さがずれない)
+//   ⑥ 字の幅が広い日本語フォント(等幅の IPAゴシック・文泉驛。入れ物によってはこれしか無い)でも①が通る
+//      (2026-10-25 ブレイブくんの入れ物だけ 58・76px で「フォーメーション」などが切れた。1語を詰める倍率に余裕が無かった)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -45,10 +47,12 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => typeof CARD_BATTLE_DATA !== 'undefined' && typeof CardNameFit === 'function' && typeof ReactDOM !== 'undefined', null, { timeout: 60000 });
     // 本物の部品を、手札と同じ字の太さ・大きさの箱へ並べて描く(幅ごと)
-    const measure = (width) => page.evaluate(async (W) => {
+    const measure = (width, font = '') => page.evaluate(async ([W, F]) => {
       const names = [...new Set(Object.values(CARD_BATTLE_DATA.cards).map((c) => c.name))];
       const host = document.createElement('div');
       host.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;background:#000;color:#fff;';
+      const fontStyle = document.createElement('style');
+      if (F) { fontStyle.textContent = `[data-test-host] * { font-family: ${F} !important; }`; host.setAttribute('data-test-host', ''); document.head.appendChild(fontStyle); }
       document.body.appendChild(host);
       const items = names.map((name) => React.createElement('div', { key: name, 'data-test-name': name, style: { width: `${W}px`, marginBottom: '2px' }, className: 'rounded-md bg-black/60 py-0.5 text-center leading-tight' },
         React.createElement(CardNameFit, { name, size: W > 58 ? 11 : 10, className: 'font-bold leading-tight', twoLine: true })));
@@ -59,9 +63,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         const rows = [...box.querySelectorAll('span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 0);
         return { name: box.getAttribute('data-test-name'), rows: rows.map((el) => el.textContent), clipped: rows.filter((el) => el.scrollWidth > el.clientWidth + 0.5).map((el) => el.textContent), h: Math.round(box.getBoundingClientRect().height) };
       });
-      r.unmount(); host.remove();
+      r.unmount(); host.remove(); fontStyle.remove();
       return out;
-    }, width);
+    }, [width, font]);
     for (const W of [50, 58, 76]) {
       const res = await measure(W);
       const clipped = res.filter((x) => x.clipped.length);
@@ -85,6 +89,14 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       } else {
         const twoRows = res.filter((x) => !/[(（]/.test(x.name) && x.rows.length !== 1);
         check(`③ 広い箱 ${W}px では今までどおり1行`, twoRows.length === 0, twoRows.slice(0, 6).map((x) => x.rows.join('/')).join('・'));
+      }
+    }
+    // ⑥ 字の幅が広いフォントでも切れない(入っていない環境では既定のフォントで測るだけになる)
+    for (const font of ['"IPAGothic"', '"WenQuanYi Zen Hei"']) {
+      for (const W of [50, 58, 76]) {
+        const res = await measure(W, font);
+        const clipped = res.filter((x) => x.clipped.length);
+        check(`⑥ ${font} の字で手札の箱 ${W}px: 全部のカード名が切れていない`, res.length > 200 && clipped.length === 0, clipped.slice(0, 6).map((x) => `${x.name}(${x.clipped.join('/')})`).join('・'));
       }
     }
   } catch (e) {

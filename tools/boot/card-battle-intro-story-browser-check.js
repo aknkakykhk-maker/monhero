@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // お話「MFバトルカード ～物置の古い箱～」(card_battle_intro_2026・2026-10-24)を、実際のブラウザで最後まで流す。
-// あつ・きゅうこは、解放した人にだけ出る(atsu/kyuko の印・eventScriptForPlayer)。台本: docs/playbot/reports/2026-10-24/card-battle-intro/story.md
+// あつは、解放した人にだけ出る(atsu の印・eventScriptForPlayer)。きゅうこは最初から選べるので、いつも出る(台帳 #53)。台本: docs/playbot/reports/2026-10-24/card-battle-intro/story.md
 //
 //   node tools/boot/card-battle-intro-story-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、2通りそれぞれの写真を残す
 //   SHOT_LINES=0,4,15 のように行(0から)を並べると、その行ごとに撮る(ファイル名に行の番号が付く)
 //
 //   あつの加入のお話を「見た/まだ」の2通りで起動し、デバッグ設定の「全ストーリーを確認」から再生する
-//   (きゅうこは公開済みで最初からだれでも選べるので、いまのゲームでは必ず出る。きゅうこがいない版は card-battle-intro-story-check.js が見る)
+//   (きゅうこはいつも出る。分かれが無いことは card-battle-intro-story-check.js が見る)
 //   ① 最後まで送れて、行の数が台本どおり(2通りで違う)
 //   ② 解放していない子は一度も出ない(名前・セリフのどこにも)。その子の代わりの行が出る
 //   ③ 解放した子のセリフが出て、代わりの行は出ない
@@ -28,10 +28,10 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
 // お話ごとの行の数(解放あり・なし)と、写真を撮る行(0から)と、その行に出るはずの文
 const STORY = { id: 'card_battle_intro_2026', shot: 9 };
 // 4通りの行の数と、出るはずの文(あり)・代わりの文(なし)
-const CASES = [{ atsu: true, kyuko: true, lines: 53 }, { atsu: false, kyuko: true, lines: 45 }];
+const CASES = [{ atsu: true, kyuko: true, lines: 49 }, { atsu: false, kyuko: true, lines: 42 }];
 const TEXT = {
   atsu: { on: 'モンスター甲子園にも出たことあるよ', off: 'ドラちゃんだけ知ってるの、ずるい' },
-  kyuko: { on: 'デッキの組み方なら任せて', off: '分からないとこは、おでに聞いてくれよな' },
+  kyuko: { on: 'もう組み方考えちゃってる', off: 'デッキの組み方なら任せて' },
 };
 const JOIN = { atsu: 'atsu_join_2026_10_22', kyuko: 'kyuko_join_2026_10_22' };
 (async () => {

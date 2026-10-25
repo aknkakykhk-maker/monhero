@@ -4,7 +4,8 @@
 //
 //   node tools/boot/card-battle-intro-story-check.js
 //
-//   ① あつ・きゅうこの解放あり/なしの4通りで、行の数が台本どおり。解放していない子は一度も出ない
+//   ① あつの解放あり/なしの2通りで、行の数が台本どおり。解放していない子は一度も出ない
+//     きゅうこは最初から選べる(台帳 #53・assistantKyuko は公開済み)ので、分かれ(kyuko の印)は付けない。きゅうこの公開の印が偽でも同じ台本
 //   ② きゅうこの印(kyuko:'with'/'without')を足しても、印の無い台本・あつの印だけの台本の結果は変わらない
 //   ③ 話し方の決まり(あつは文末に笑か記号・みゅあは「てか」を言わない・ききは初めての人)
 //   ④ 公開の印が偽のあいだは流れない。本編で見た(飛ばした)ときだけ mh_story_card_battle_seen_v1 を立て、見終えたら CARD_TOP へ
@@ -21,8 +22,8 @@ const load = (kyukoReleased) => {
 };
 const on = load(true), off = load(false);
 const ATSU = ['atsu_join_2026_10_22'];
-// ① 4通り(きゅうこがいない版は、公開の印が偽のときだけ起きる)
-const want = [[on, ATSU, 53, true, true], [off, ATSU, 51, true, false], [on, [], 45, false, true], [off, [], 43, false, false]];
+// ① 2通り(きゅうこはいつも出る)
+const want = [[on, ATSU, 49, true, true], [on, [], 42, false, true]];
 for (const [e, seen, n, atsu, kyuko] of want) {
   const lines = e.eventScriptForPlayer(e.ASSISTANT_CARD_BATTLE_INTRO, seen);
   const label = `あつ${atsu ? 'あり' : 'なし'}・きゅうこ${kyuko ? 'あり' : 'なし'}`;
@@ -45,6 +46,9 @@ const bad = (who, re) => all.filter((l) => l.who === who && re.test(l.t)).map((l
 check('③ あつのセリフは、文末に笑か記号', bad('atsu', /[^笑！？…!?)）]$/).length === 0, bad('atsu', /[^笑！？…!?)）]$/).join(' / '));
 check('③ みゅあは「てか」と言わない(あつの口ぐせ)', bad('mua', /てか/).length === 0, bad('mua', /てか/).join(' / '));
 check('③ ききは遊んだことがない(経験者はドラ・あつ)', bad('kiki', /遊んだことがあり|やってました|なつかしい/).length === 0);
+check('③ きゅうこは分かれ(kyuko の印)を付けない・公開の印が偽でも同じ台本', all.every((l) => l.kyuko === undefined) && JSON.stringify(off.eventScriptForPlayer(off.ASSISTANT_CARD_BATTLE_INTRO, ATSU)) === JSON.stringify(on.eventScriptForPlayer(all, ATSU)));
+check('③ きゅうこは初めての人(経験者はドラ・あつ・台帳 #115)', bad('kyuko', /任せて|細かい|昔|やってた|なつかしい/).length === 0, bad('kyuko', /任せて|細かい|昔|やってた|なつかしい/).join(' / '));
+check('③ 黄色の箱は「一発逆転」の言い方(台帳 #118・前の「一発で決める」は使わない)', !all.some((l) => /一発で決める|一発必殺/.test(l.t)));
 check('③ きゅうこは1文に笑とwを両方付けない', bad('kyuko', /笑w|w笑/).length === 0);
 check('③ 印は atsu/kyuko の with/without だけ', all.every((l) => [l.atsu, l.kyuko].every((v) => v === undefined || v === 'with' || v === 'without')));
 const ev = on.EVENT_REPLAYS.find((x) => x.id === 'card_battle_intro_2026');
