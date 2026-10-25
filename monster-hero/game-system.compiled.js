@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1e057c362541ecbb
+// source-sha256: cb01743e71e7e3a7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 08:18";
+const BUILD_DATE = "2026-10-26 08:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -91725,6 +91725,16 @@ const CardDeckList = ({
     }
   }));
 };
+const CARD_DEX_MODES = Object.freeze([{
+  id: 'pack',
+  label: '弾ごと'
+}, {
+  id: 'species',
+  label: '血統ごと'
+}, {
+  id: 'kind',
+  label: '種類ごと'
+}]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map(p => ({
   id: String(p.no),
   label: `第${p.no}弾`
@@ -91732,6 +91742,10 @@ const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map(p => ({
   id: 'hybrid',
   label: '混血'
 }]);
+const CARD_DEX_KINDS = Object.freeze([{
+  id: 'mon',
+  label: 'モンスター'
+}, ...CARD_DECK_FILTERS.filter(f => f.id !== 'all')]);
 const cardDexList = (db, tab) => {
   if (tab === 'hybrid') return Object.values(db.monsters).filter(m => String(m.wave) === 'hybrid').map(m => m.no).sort();
   const pack = CARD_PACKS.find(p => String(p.no) === tab);
@@ -91739,20 +91753,69 @@ const cardDexList = (db, tab) => {
   const all = cardPackAllCards(db, pack);
   return [...all.monsters, ...all.cards];
 };
+const cardDexAll = db => [...new Set(CARD_DEX_TABS.flatMap(t => cardDexList(db, t.id)))];
+const cardDexSpeciesOf = (db, no) => {
+  const m = cardMonsterOf(db, no);
+  if (m) return String(m.wave) === 'hybrid' ? m.main : m.species;
+  const c = cardOf(db, no);
+  return c && c.user !== 'any' && c.user !== 'breeder' ? c.user : null;
+};
+const cardDexTabsOf = (db, mode) => {
+  if (mode === 'species') return CARD_PACKS.flatMap(p => p.species).map(sp => ({
+    id: sp,
+    label: (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp
+  }));
+  if (mode === 'kind') return CARD_DEX_KINDS;
+  return CARD_DEX_TABS;
+};
+const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
+  if (mode === 'species') return all.filter(no => cardDexSpeciesOf(db, no) === tab);
+  if (mode === 'kind') return all.filter(no => tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab));
+  return cardDexList(db, tab);
+};
+const CARD_DEX_UNIT = Object.freeze({
+  pack: 'この弾',
+  species: 'この血統',
+  kind: 'この種類'
+});
 const CardDex = ({
   db,
   collection,
   onBack
 }) => {
-  const [tab, setTab] = useState('1');
+  const [mode, setMode] = useState('pack');
+  const [tabs, setTabs] = useState({
+    pack: '1',
+    species: CARD_PACKS[0].species[0],
+    kind: 'mon'
+  });
   const [show, setShow] = useState('all');
   const [detail, setDetail] = useState(null);
   const press = useCardLongPress(no => setDetail(no));
   const col = collection || {};
-  const all = [...new Set(CARD_DEX_TABS.flatMap(t => cardDexList(db, t.id)))];
-  const list = cardDexList(db, tab);
+  const all = useMemo(() => cardDexAll(db), [db]);
+  const tabList = useMemo(() => cardDexTabsOf(db, mode).map(t => ({
+    ...t,
+    list: cardDexListOf(db, mode, t.id, all)
+  })), [db, mode, all]);
+  const tab = tabs[mode];
+  const list = (tabList.find(t => t.id === tab) || tabList[0] || {
+    list: []
+  }).list;
   const shown = list.filter(no => show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true);
   const haveIn = arr => arr.filter(no => col[no] > 0).length;
+  const chip = on => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
+  const unit = CARD_DEX_UNIT[mode];
+  const tabRow = useRef(null);
+  useEffect(() => {
+    try {
+      const el = tabRow.current && tabRow.current.querySelector('[aria-pressed="true"]');
+      if (el) el.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    } catch (_) {}
+  }, [mode, tab]);
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-dex": true,
@@ -91767,22 +91830,42 @@ const CardDex = ({
     "data-card-dex-total": true,
     className: "text-[15px] text-amber-200"
   }, haveIn(all)), " / ", all.length, React.createElement("span", {
+    "data-card-dex-part": true,
     className: "ml-2 text-slate-400"
-  }, "(この弾 ", haveIn(list), " / ", list.length, ")")), React.createElement(ScreenTabs, {
-    value: tab,
-    onChange: setTab,
-    items: CARD_DEX_TABS.map(t => ({
+  }, "(", unit, " ", haveIn(list), " / ", list.length, ")")), React.createElement(ScreenTabs, {
+    value: mode,
+    onChange: m => {
+      setMode(m);
+    },
+    items: CARD_DEX_MODES.map(t => ({
       id: t.id,
       label: t.label
     }))
   }), React.createElement("div", {
+    key: mode,
+    ref: tabRow,
+    "data-card-dex-tabs": mode,
+    className: "mh-scroll mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible"
+  }, tabList.map(t => React.createElement("button", {
+    key: t.id,
+    type: "button",
+    "data-card-dex-tab": t.id,
+    "aria-pressed": t.id === tab,
+    onClick: () => setTabs(v => ({
+      ...v,
+      [mode]: t.id
+    })),
+    className: chip(t.id === tab)
+  }, t.label, React.createElement("span", {
+    className: `ml-1 text-[10px] ${t.id === tab ? 'text-slate-800' : 'text-slate-500'}`
+  }, haveIn(t.list), "/", t.list.length)))), React.createElement("div", {
     className: "mb-1.5 flex shrink-0 gap-1"
   }, [['all', '全部'], ['have', '持っている'], ['miss', 'まだ']].map(([k, label]) => React.createElement("button", {
     key: k,
     type: "button",
     "data-card-dex-show": k,
     onClick: () => setShow(k),
-    className: `rounded-full px-2.5 py-1 text-[11px] font-black ${show === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`
+    className: chip(show === k)
   }, label))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-2`
   }, shown.length ? React.createElement("div", {
@@ -91823,7 +91906,7 @@ const CardDex = ({
     }, "No.", no));
   })) : React.createElement(ScreenEmpty, {
     emoji: "🃏",
-    lines: [show === 'have' ? 'この弾のカードはまだ持っていません' : 'この弾は全部集まっています']
+    lines: [show === 'have' ? `${unit}のカードはまだ持っていません` : `${unit}は全部集まっています`]
   })), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
