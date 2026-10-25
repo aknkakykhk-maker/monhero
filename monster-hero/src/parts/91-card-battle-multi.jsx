@@ -80,6 +80,9 @@ const cardPvpApplyRemote = (db, st, msg) => {
   const foe = s.players[1];
   // 相手の手札は、いつも仮の札に戻してから当てる(死神の力で見せてもらった札・捨て札から戻した札が、本物の番号のまま残らないように)
   if (!(s.pendingChoice && s.pendingChoice.src === 'oppHand')) foe.hand = foe.hand.map(() => CARD_PVP_HIDDEN);
+  // 捨て札の仮の札は、届いた並びで先に本物へ(魔神ファイナルのように、捨て札の中身で効き目が変わる札があるため)。
+  //   届くのは手を当てたあとの並びだが、手の前からあった札は同じ場所にある
+  if (Array.isArray(msg.discard)) foe.discard.forEach((no, i) => { if (no === CARD_PVP_HIDDEN && cardOf(db, msg.discard[i])) foe.discard[i] = msg.discard[i]; });
   const reveal = msg.reveal && typeof msg.reveal === 'object' ? msg.reveal : {};
   for (const [k, no] of Object.entries(reveal)) {
     const i = Number(k);
@@ -189,6 +192,8 @@ const cardPvpCleanAct = (raw) => {
     else { const p = cardPvpInt(raw.target && raw.target.p, 1); const m = cardPvpInt(raw.target && raw.target.m, 2); if (p === null || m === null) return null; act.target = { p, m }; }
   }
   // 影縛りの名指し(守りの札の名前)。本当に名前かどうかは、当てるとき(cardApplyAction)にカードの表で確かめる
+  // ショットガンの割り振り(相手の3体ぶんの点)
+  if (raw.split !== undefined) { if (!Array.isArray(raw.split) || raw.split.length !== 3) return null; act.split = raw.split.map((x) => cardPvpInt(x, 30)); if (act.split.some((x) => x === null)) return null; }
   if (raw.form !== undefined) { if (raw.form !== 'air' && raw.form !== 'ground') return null; act.form = raw.form; } // 変形・トランスフォーム
   if (raw.bind !== undefined && raw.bind !== null) { if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null; act.bind = raw.bind; }
   return act;

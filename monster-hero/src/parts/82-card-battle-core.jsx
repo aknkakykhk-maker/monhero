@@ -45,6 +45,10 @@
 //               liftAllies・waterAll 狙われていなくても出せる(自分以外の味方を空中に・味方を全員このターン水中に)
 //         特殊: safe 次の自分の番まで、どこからのダメージも0 / form 空中か地上かを選ぶ(act.form)
 //         ★守りで持ちょうが変わったら、当てる直前に「当たるか」を見直す(当たらなければ0)
+//         ---- 区切り6: 同時に2枚・ダメージの数え方 ----
+//         pair(dmg) 同じ名前を2枚同時に出したらdmg / requires(names) その札を全部一緒に出すときだけ(払うのはこの札のガッツだけ)/
+//         returnOnHit ダメージを与えたら手札へ戻る / split ダメージを相手に割り振る(act.split … 相手の3体ぶんの点)/
+//         bonusDiscard(user) 捨て札のその種族の攻撃の技の枚数を足す / bonusLost 減ったライフのぶんを足す / mimic(attach) どの種族のちから技でもこの子が出せる
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中 /
@@ -203,6 +207,7 @@ const cardActionCost = (db, st, p, hand, idxs) => {
   const att = cards.filter((c) => cardHasEff(c, 'attach'));
   const core = cards.filter((c) => !cardHasEff(c, 'attach'));
   let main = core.reduce((s, c) => s + (c.guts || 0), 0);
+  if (core[0] && cardHasEff(core[0], 'requires')) main = core[0].guts || 0; // コンビネーション: 一緒に出す2枚のガッツは無視
   const fs = st && st.freeSpe;
   if (core[0] && core[0].kind === 'spe' && core[0].user !== 'breeder' && fs && fs.p === p && fs.turn === st.turn) main = 0;
   if (att.some((c) => cardHasEff(c, 'attachCostHalf'))) main = Math.ceil(main / 2);
@@ -347,7 +352,10 @@ const cardAttackOptions = (db, st) => {
       return;
     }
     me.mons.forEach((mon, mi) => {
-      if (!cardUsableBy(card, mon) || !cardMonCanAttack(db, st, p, mi, card)) return;
+      // ものまね: その子が使えないちから技でも、ものまねを付ければ出せる
+      const mimicIdx = me.hand.map((n2, j) => ({ j, c: cardOf(db, n2) })).filter(({ j, c }) => j !== hi && c && c.ready && cardHasEff(c, 'mimic') && cardUsableBy(c, mon)).map((x) => x.j);
+      const byMimic = !cardUsableBy(card, mon) && card.kind === 'pow' && card.user !== 'breeder' && mimicIdx.length > 0 && !mon.ko;
+      if ((!cardUsableBy(card, mon) && !byMimic) || !cardMonCanAttack(db, st, p, mi, card)) return;
       const uw = cardEff(card, 'useWhen'); if (uw && uw.lifeMax !== undefined && mon.life > uw.lifeMax) return; // 最終奥義など: ライフが少ないときだけ
       const combo = cardEff(card, 'combo');
       // 同時に使う札の組(右爪・左爪・ツノ)。いちばん小さい手札の番号の札を主にして、ほかを足す
@@ -362,9 +370,18 @@ const cardAttackOptions = (db, st) => {
         // 同じ組を別の主の札で二重に数えない(主は組の中でいちばん小さい手札の番号)
         for (let k = sets.length - 1; k >= 0; k--) if (Math.min(...sets[k]) !== hi) sets.splice(k, 1);
       }
+      // キック・しっぽキック: 同じ名前の札を2枚同時に(主は手札の番号の小さいほう)
+      if (cardHasEff(card, 'pair')) { const j = me.hand.findIndex((n2, k) => k > hi && cardOf(db, n2) && cardOf(db, n2).name === card.name); if (j >= 0) sets.push([hi, j]); }
+      // コンビネーション: 決まった札を全部一緒に出すときだけ
+      const req = cardEff(card, 'requires');
+      if (req) {
+        const pick = req.names.map((nm) => me.hand.findIndex((n2, k) => k !== hi && cardOf(db, n2) && cardOf(db, n2).name === nm && cardUsableBy(cardOf(db, n2), mon)));
+        sets.splice(0, sets.length);
+        if (pick.every((k) => k >= 0)) sets.push([hi, ...pick]);
+      }
       // 付ける札(底力・クリティカルなど。0〜2枚)
       const withAttach = [];
-      sets.forEach((s) => { cardAttachSets(db, st, p, mon, card, s).forEach((att) => withAttach.push([...s, ...att])); });
+      sets.forEach((s) => { cardAttachSets(db, st, p, mon, card, s).forEach((att) => { if (!byMimic || att.some((a) => mimicIdx.includes(a))) withAttach.push([...s, ...att]); }); });
       withAttach.forEach((idxs) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
@@ -377,6 +394,12 @@ const cardAttackOptions = (db, st) => {
         if (cardHasEff(card, 'area')) {
           const at = cardAreaTargets(st, p, mi, card);
           if (at.some((t) => t.p !== p) && cardTauntOk(st, p, at, true)) out.push({ type: 'attack', mon: mi, hand: idxs, target: null });
+          return;
+        }
+        if (cardHasEff(card, 'split')) {
+          // ショットガン: 割り振りごとに1つの手(target は無し・split に相手の3体ぶんの点)
+          const alive = opp.mons.map((t) => cardCanTarget(card, t, st.turn));
+          cardSplits(card.damage || 0, alive).forEach((sp) => { const ts = sp.map((x, j) => (x > 0 ? { p: cardOther(p), m: j } : null)).filter(Boolean); if (cardTauntOk(st, p, ts, false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: null, split: sp }); });
           return;
         }
         opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j } }); });
@@ -489,6 +512,33 @@ const cardUseText = (db, st, p, mi, cards) => {
   const l = cardUseWho(db, st, p, mi, cards[0]);
   return `${l.who}の「${cards.map((n) => (cardOf(db, n) || {}).name || '').join('＋')}」${l.by ? `(${l.by}で)` : ''}`;
 };
+// 技のダメージの元(書いてある数・組・2枚同時・捨て札やライフで増える分)。付けた札・倍は別(攻撃を出すときとコンピューターの見積もりで同じ)
+// discard … 技を出す前の捨て札(払ったガッツは入れない。マルチで相手の端末では、払ったガッツは仮の札のため)
+const cardBaseDamage = (db, st, p, mi, main, cards, discard = st.players[p].discard) => {
+  let dmg = main.damage || 0;
+  const combo = cardEff(main, 'combo');
+  if (combo) {
+    const kinds = new Set(cards.filter((c) => combo.names.includes(c.name)).map((c) => c.name)).size;
+    if (combo.table[kinds]) dmg = combo.table[kinds];
+  }
+  const pair = cardEff(main, 'pair'); if (pair && cards.filter((c) => c.name === main.name).length >= 2) dmg = pair.dmg;
+  const me = st.players[p];
+  const bd = cardEff(main, 'bonusDiscard'); if (bd) dmg += discard.map((no) => cardOf(db, no)).filter((c) => c && c.user === bd.user && cardIsAttackKind(c.kind)).length;
+  const mon = mi >= 0 ? me.mons[mi] : null;
+  if (cardHasEff(main, 'bonusLost') && mon) dmg += mon.max - mon.life;
+  return dmg;
+};
+// ショットガン: ダメージの点を、生きている相手に割り振る全部の分け方(1体に全部も入る)
+const cardSplits = (total, alive) => {
+  const out = [];
+  const rec = (i, left, cur) => {
+    if (i === 3) { if (left === 0) out.push(cur.slice()); return; }
+    if (!alive[i]) { cur.push(0); rec(i + 1, left, cur); cur.pop(); return; }
+    for (let k = left; k >= 0; k--) { cur.push(k); rec(i + 1, left - k, cur); cur.pop(); }
+  };
+  rec(0, total, []);
+  return out.filter((sp) => sp.some((x) => x > 0));
+};
 const cardStartAttack = (db, st, act) => {
   const p = st.active;
   const me = st.players[p];
@@ -497,6 +547,7 @@ const cardStartAttack = (db, st, act) => {
   const main = cardOf(db, mainNo);
   const cost = cardActionCost(db, st, p, me.hand, act.hand);
   const used = cardTakeFromHand(st, p, act.hand);
+  const discardBefore = me.discard.slice(); // 魔神ファイナルが数える(払うガッツより前)
   cardPayGuts(st, p, cost);
   me.playedTurn = st.turn; // 突進(そのターンの最初のカード)が見る
   const mi = isBreeder ? (act.mon !== undefined ? act.mon : -1) : act.mon;
@@ -512,19 +563,17 @@ const cardStartAttack = (db, st, act) => {
     return;
   }
   // ダメージの元: 書いてある数・同時に使う組・付けた札・次のターンn倍
-  let dmg = main.damage || 0;
-  const combo = cardEff(main, 'combo');
-  if (combo) {
-    const kinds = new Set(used.map((n) => cardOf(db, n)).filter((c) => combo.names.includes(c.name)).map((c) => c.name)).size;
-    if (combo.table[kinds]) dmg = combo.table[kinds];
-  }
+  let dmg = cardBaseDamage(db, st, p, mi, main, used.map((n) => cardOf(db, n)).filter(Boolean), discardBefore);
   const mods = cardAttachMods(used.map((n) => cardOf(db, n)).filter(Boolean));
   dmg += mods.add;
   let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) { mult *= mon.mult.n; mon.mult = null; }
   if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) { mult *= mon.charge.n; mon.charge = null; } // 静の構え
-  const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, mi, main) : [act.target];
-  st.pending = { attacker: p, defender: cardOther(p), mon: mi, main: mainNo, used, cost, base: dmg, mult, targets, ti: 0,
+  // ショットガン: 割り振った点のある子だけが目標。付けた札の +n は、いちばん前の子のぶんに足す
+  const split = cardHasEff(main, 'split') && Array.isArray(act.split) ? act.split.slice() : null;
+  if (split && mods.add) { const k = split.findIndex((x) => x > 0); split[k] += mods.add; }
+  const targets = split ? split.map((x, j) => (x > 0 ? { p: cardOther(p), m: j } : null)).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, mi, main) : [act.target];
+  st.pending = { attacker: p, defender: cardOther(p), mon: mi, main: mainNo, used, cost, base: dmg, mult, targets, ti: 0, shares: split,
     evaded: false, reduce: 0, reduceHalf: false, reduceAll: false, reflect: null, cover: null, hitAny: false, evadedAny: false, results: [],
     flags: { ...mods.flags, bind: act.bind || null } };
   cardAdvancePending(db, st);
@@ -551,7 +600,7 @@ const cardResolveTarget = (db, st) => {
   if (pd.cover !== null && pd.cover !== undefined) t = { p: t.p, m: pd.cover };
   if (pd.shield !== null && pd.shield !== undefined && t.p === pd.defender && !st.players[t.p].mons[pd.shield].ko) t = { p: t.p, m: pd.shield }; // 盾になる
   const target = st.players[t.p].mons[t.m];
-  let dmg = pd.base * pd.mult;
+  let dmg = (pd.shares ? pd.shares[pd.targets[pd.ti].m] : pd.base) * pd.mult; // ショットガンは、その子に割り振った点
   const mv = cardEff(main, 'multVs');
   if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
   if (pd.takeMult) dmg *= pd.takeMult; // 肉を切らせて
@@ -632,7 +681,13 @@ const cardFinishAttack = (db, st) => {
     cardLog(st, `${atkMon.name}も${self}ダメージを受けた`);
     if (atkMon.life <= 0) cardKo(st, pd.attacker, pd.mon);
   }
-  me.discard.push(...pd.used);
+  // ポン拳: ダメージを与えたら、この札は捨て札にならず手札へ戻る
+  if (cardHasEff(main, 'returnOnHit') && pd.results.some((r) => r.dmg > 0 && r.p !== pd.attacker)) {
+    const k = pd.used.indexOf(pd.main);
+    me.discard.push(...pd.used.filter((_, i) => i !== k));
+    me.hand.push(pd.main);
+    cardLog(st, `「${main.name}」は手札に戻った`);
+  } else me.discard.push(...pd.used);
   st.pending = null;
   cardCheckWin(st, pd.attacker);
 };
@@ -810,7 +865,7 @@ const cardApplyAction = (db, st0, act) => {
   if (st.phase === 'main') {
     if (act.type === 'endAttacks') { st.phase = 'guts'; return st; }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form);
+    const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split));
     if (!ok) return null;
     // 影縛り: 名指しが要る札を付けたら、回避・防御の札の名前が1つ要る(付けていなければ名指しは持たない)
     const needBind = act.hand.some((i) => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
@@ -946,18 +1001,17 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       }
     });
   } else {
-    let dmg = main.damage || 0;
-    const combo = cardEff(main, 'combo');
-    if (combo) { const kinds = new Set(opt.hand.map((i) => cardOf(db, me.hand[i]).name).filter((n) => combo.names.includes(n))).size; dmg = combo.table[kinds] || dmg; }
+    let dmg = cardBaseDamage(db, st, p, opt.mon, main, opt.hand.map((i) => cardOf(db, me.hand[i])).filter(Boolean));
     const mods = cardAttachMods(opt.hand.map((i) => cardOf(db, me.hand[i])).filter(Boolean));
     dmg = (dmg + mods.add) * mods.mult;
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
     if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
     if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
-    const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
+    const targets = opt.split ? opt.split.map((x, j) => (x > 0 ? { p: cardOther(p), m: j } : null)).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
+    const per = dmg / Math.max(1, main.damage || 1); // ショットガン: 割り振った点に、付けた札・倍の割合を掛ける
     targets.forEach((t) => {
       const tm = st.players[t.p].mons[t.m];
-      let d = dmg;
+      let d = opt.split ? Math.round(opt.split[t.m] * per) : dmg;
       const mv = cardEff(main, 'multVs'); if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
       // 影縛り: 名指しで当たりやすくなる見込み(半分)
@@ -1153,6 +1207,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'attachCost') v += e.n * 0.3;
       if (e.t === 'attachCostHalf' || e.t === 'attachFree') v += 0.6;
       if (e.t === 'attachNoEvade' || e.t === 'attachNoGuard') v += 0.7;
+      if (e.t === 'mimic') v += 0.4;
       if (e.t === 'attachBind' || e.t === 'attachNoEvadeHybrid' || e.t === 'attachNoBlockReduce' || e.t === 'attachNoZeroGuard' || e.t === 'attachNoGuardIfGuarded') v += 0.35;
       if (e.t === 'attachSelfIfHit') v -= e.n * 0.3;
     });
@@ -1202,6 +1257,10 @@ const cardAiCardValue = (card, habit) => {
   }
   let dmg = card.damage || 0;
   if (eff('combo')) dmg = 3;
+  const pr = cardEff(card, 'pair'); if (pr) dmg = pr.dmg * 0.45; // 2枚そろったときだけ
+  if (eff('requires')) dmg *= 0.3; // 決まった札がそろわないと出せない
+  if (eff('bonusDiscard') || eff('bonusLost')) dmg += 3;
+  if (eff('returnOnHit')) dmg += 0.8;
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
   const gl = cardEff(card, 'gutsLossOnHit'); if (gl) dmg += (gl.n === 'all' ? 2 : gl.n) * 0.7 * habit.disrupt;
