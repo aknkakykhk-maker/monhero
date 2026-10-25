@@ -192,8 +192,9 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
           <div data-card-ranking-multi className="mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-5 text-center">
             <div aria-hidden="true" className="text-3xl">🎮</div>
             <b className="mt-1 block text-[15px] font-black text-white">マルチ対戦の強さ</b>
-            <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>
-            <p className="mt-2 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')}</p>
+            {/* 「準備中」はマルチ対戦を開ける(MFバトルカードの公開の印・91 の cardPvpOpen)まで */}
+            {!cardPvpOpen() && <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>}
+            {!cardPvpOpen() && <p className="mt-2 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')}</p>}
             {/* 勝つと上がる強さの点数の順(91-card-battle-multi.jsx・表 card_battle_pvp_ratings)。表が無いあいだは「準備中」 */}
             <CardPvpRankingList renderBreederIcon={renderBreederIcon} selfId={selfId}/>
           </div>

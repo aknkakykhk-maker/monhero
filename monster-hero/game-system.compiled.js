@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6ce602830ed7b3df
+// source-sha256: c3e24d1b6aa2b6df
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 12:32";
+const BUILD_DATE = "2026-10-25 12:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84424,20 +84424,20 @@ const CARD_LINE_FACE = Object.freeze({
 });
 const CARD_BATTLE_LINES = Object.freeze({
   mua: {
-    challenge: ['カードで勝負しよ！ あたし、手加減しないよ♪', '準備できた？ あたしはいつでもいけるよ！', 'まじ楽しみすぎる！ 全力でいこ！', 'デッキ組んだ？ あたしのスピード、見せちゃうよ♪'],
-    start: ['いっくよー！ 先に攻めたもん勝ちじゃんｗ', 'よろしくね！ あたし、ガンガンいっちゃうよ♪', 'ﾜｸﾜｸ…！ 最初の一手、決めちゃお！', 'まじ燃えてきた！ 楽しくいこ！'],
-    big: ['これでどーだ！ 大技いっちゃうよ♪', 'ためたガッツ、ぜんぶ乗せじゃんｗ', 'まとめていっけぇー！', 'ここで決めるよ！ 覚悟しててね♪'],
-    bigHit: ['いったぁ…！ 今のはまじ効いた…', 'えっ、そんなに削れるの！？ やばすぎｗ', 'うわー！ でもまだまだいけるよ！', 'ぐぬ…！ 次はあたしの番だかんね！'],
-    guardMine: ['よけたー！ あたしの子、すばしっこいでしょ♪', 'セーフ！ 読んでたもんね〜ｗ', '守りもバッチリじゃん！'],
-    guardTheirs: ['えー！ よけられた！？ うまっ！', 'むぅ、守られちゃった…次は当てるよ！', 'そうくるかー！ やるじゃんｗ'],
+    challenge: ['カードで勝負しよ！ あたし、手加減しないよ♪', '準備できた？ あたしはいつでもいけるよ！', 'まぢ楽しみすぎる！ 全力でいこ！', 'デッキ組んだ？ あたしのスピード、見せちゃうよ♪'],
+    start: ['いっくよー！ 先に攻めたもん勝ちぢゃんｗ', 'よろしくね！ あたし、ガンガンいっちゃうよ♪', 'ﾜｸﾜｸ…！ 最初の一手、決めちゃお！', 'まぢ燃えてきた！ 楽しくいこ！'],
+    big: ['これでどーだ！ 大技いっちゃうよ♪', 'ためたガッツ、ぜんぶ乗せぢゃんｗ', 'まとめていっけぇー！', 'ここで決めるよ！ 覚悟しててね♪'],
+    bigHit: ['いったぁ…！ 今のはまぢ効いた…', 'えっ、そんなに削れるの！？ やばすぎｗ', 'うわー！ でもまだまだいけるよ！', 'ぐぬ…！ 次はあたしの番だかんね！'],
+    guardMine: ['よけたー！ あたしの子、すばしっこいでしょ♪', 'セーフ！ 読んでたもんね〜ｗ', '守りもバッチリぢゃん！'],
+    guardTheirs: ['えー！ よけられた！？ うまっ！', 'むぅ、守られちゃった…次は当てるよ！', 'そうくるかー！ やるぢゃんｗ'],
     myKo: ['あぁっ、倒れちゃった…！ ありがと、休んでて！', 'うそー！ まだ残りの子がいるもん！', 'くやしい…！ でも、ここから巻き返すよ！'],
     theirKo: ['やったー！ 1体倒したよ♪', 'よっしゃ！ この調子でいこ！', '決まったー！ ﾄﾞﾔｧ'],
-    lastMine: ['あと1体…！ でもあたし、あきらめないよ！', 'ピンチすぎる…！ ここからが本番じゃんｗ'],
+    lastMine: ['あと1体…！ でもあたし、あきらめないよ！', 'ピンチすぎる…！ ここからが本番ぢゃんｗ'],
     lastTheirs: ['あと1体だね！ 一気にいっちゃうよ♪', 'ラストスパート！ 最後まで全力でいこ！'],
-    deckMine: ['山札、あと少しじゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
+    deckMine: ['山札、あと少しぢゃん…！ 急がなきゃ！', 'カード残り少ない…早く決めなきゃ！'],
     deckTheirs: ['そっちの山札、もう少ないよ？ 大丈夫？', 'カード足りる…？ あたしまでﾄﾞｷﾄﾞｷしてきた！'],
     win: ['あたしの勝ちー！ めっちゃ楽しかった♪', 'やったー！ またいつでも相手するよ！', '勝っちゃった！ 次も全力でいこ！'],
-    lose: [['負けたー！ でも、まじ楽しかったよ！', 'happy'], ['強すぎじゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']]
+    lose: [['負けたー！ でも、まぢ楽しかったよ！', 'happy'], ['強すぎぢゃんｗ もう1回やろ！', 'excited'], ['くやしー！ 次は絶対負けないからね♪', 'crying']]
   },
   kiki: {
     challenge: ['カードで勝負でつか？ 喜んでお相手しまつ♪♪', '私、こう見えて火力で押すタイプなんです( ˘ω˘)', 'よろしくお願いします。全力でいきますね', '準備はいいですか？ 私はガッツをためて待ってまつ'],
@@ -84577,14 +84577,14 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
   D12: '今度はこっちの番。ガッツが2つあるから「パンチ」が出せる',
   D13: '技をタップして相手をタップ。相手まで運んで離してもいいぞ。1体は1ターンに1回まで攻撃できるからな',
-  M5: 'いったぁ…！ 今のはまじ効いた…',
+  M5: 'いったぁ…！ 今のはまぢ効いた…',
   D14: 'いい当たりだ。ダメージの数だけライフが減って、0になったらKOだよ',
   D15: '最後にもうひとつ。ちょっと時間を進めるぞ…',
   M6: 'あれ？ あたしの山札、なんか少なくない？',
   D16: 'みゅあの山札、もう0枚だろ？ 次の番に引けなかったら、その時点で負けなんだ',
   D17: 'まずは光ってる「攻撃おわり → ガッツへ」を押してみな',
   D17b: '次は「ガッツにしないでターン終了」だ。みゅあの番になるぞ',
-  M7: 'えっ、引けないじゃん…！ 負けたー！🤣ｗ',
+  M7: 'えっ、引けないぢゃん…！ 負けたー！🤣ｗ',
   D18: 'これが山札切れ。3体全部倒しても勝ちだけど、山札の残りも気にしような',
   D19: 'これで5つ全部だ。あとはデッキを組んで、いろんな相手と戦ってみな',
   M8: '楽しかった！ 次は本気で勝負しよ٩(`･ω･´)و',
@@ -86600,7 +86600,9 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     "data-card-field": true,
     className: wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'
-  }, React.createElement("div", {
+  }, pvp && React.createElement(CardPvpSignal, {
+    clock: pvpClock
+  }), React.createElement("div", {
     className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp ? React.createElement("span", {
     "data-card-pvp-foe": true,
@@ -86684,9 +86686,9 @@ const CardBattleBoard = ({
       className: `${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`
     }) : null;
   }), React.createElement("div", {
-    className: "text-[13px] font-black leading-tight"
+    className: `${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
   }, action.who, React.createElement("span", {
-    className: "block text-[15px] text-amber-200"
+    className: tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
   }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), React.createElement("div", {
     "data-card-log": true,
     className: "relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
@@ -87357,9 +87359,6 @@ const CardBattleScreen = ({
         setView('foe');
       }
     }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mhms-mark"
-    }, "ASSISTANT"), React.createElement("span", {
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
@@ -87379,7 +87378,7 @@ const CardBattleScreen = ({
     })))), React.createElement("button", {
       type: "button",
       "data-card-mode-multi": true,
-      disabled: !debug,
+      disabled: !(debug || cardPvpOpen()),
       onClick: () => {
         Audio_.fgSe.tap();
         setView('pvp');
@@ -87389,9 +87388,6 @@ const CardBattleScreen = ({
         animationDelay: '60ms'
       }
     }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mhms-mark"
-    }, "MULTI"), React.createElement("span", {
       className: "relative flex items-center gap-2"
     }, React.createElement("span", {
       "aria-hidden": "true",
@@ -87400,7 +87396,7 @@ const CardBattleScreen = ({
       className: "block text-[22px] font-black italic leading-tight"
     }, "マルチ対戦"), React.createElement("small", {
       className: "block text-[11px] font-black text-slate-900/80"
-    }, "ブリーダーどうしで戦う"))), React.createElement("span", {
+    }, "ブリーダーどうしで戦う"))), !cardPvpOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
     }, debug ? 'つくっている途中(デバッグ)' : '準備中'))));
   }
@@ -87702,7 +87698,7 @@ const CardBattleScreen = ({
           borderColor: dra.accent,
           ...JA_WRAP_STYLE
         }
-      }, jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「練習試合」からできるぞ'))) : null;
+      }, jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ'))) : null;
     })(), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, result.done && result.reward > 0 && React.createElement("div", {
@@ -87777,7 +87773,7 @@ const CardBattleScreen = ({
     }, "クイック周回 ", result.loops, "周ぶん"), React.createElement("div", {
       className: "mt-0.5 text-[11px] font-bold text-slate-300",
       style: JA_WRAP_STYLE
-    }, "裏のクイック周回(", result.quick.quickDifficulty && quickDifficultySetting(result.quick.quickDifficulty)?.label || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
+    }, "裏のクイック周回(", result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase() || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
       "data-card-quick-loops-range": true,
       className: "mt-0.5 text-[11px] font-bold text-sky-100"
     }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目")) : React.createElement("div", {
@@ -89803,9 +89799,9 @@ const CardRankingBoard = ({
     className: "text-3xl"
   }, "🎮"), React.createElement("b", {
     className: "mt-1 block text-[15px] font-black text-white"
-  }, "マルチ対戦の強さ"), React.createElement("span", {
+  }, "マルチ対戦の強さ"), !cardPvpOpen() && React.createElement("span", {
     className: "mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300"
-  }, "準備中"), React.createElement("p", {
+  }, "準備中"), !cardPvpOpen() && React.createElement("p", {
     className: "mt-2 text-[12px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
   }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), React.createElement(CardPvpRankingList, {
@@ -89861,6 +89857,7 @@ const CardRankingBoard = ({
     }, unit)));
   })));
 };
+const cardPvpOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
 const CARD_PVP_HIDDEN = -1;
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
@@ -90228,7 +90225,7 @@ const cardPvpCleanMessage = raw => {
 };
 const CARD_PVP_RESULT_LINES = Object.freeze({
   mua: {
-    win: [['やったー！ 勝っちゃったね♪ あたしまでﾄﾞｷﾄﾞｷしたｗ', 'happy'], ['まじすごいじゃん！ 最後の一手、かっこよすぎたよ！', 'excited'], ['勝ち！ この調子で、どんどん強くなっちゃお٩(`･ω･´)و', 'wink']],
+    win: [['やったー！ 勝っちゃったね♪ あたしまでﾄﾞｷﾄﾞｷしたｗ', 'happy'], ['まぢすごいぢゃん！ 最後の一手、かっこよすぎたよ！', 'excited'], ['勝ち！ この調子で、どんどん強くなっちゃお٩(`･ω･´)و', 'wink']],
     lose: [['くやしー！ でも、いい勝負だったよ！ 次いこ！', 'troubled'], ['ドンマイ！ あたし、ちゃんと見てたよ(｡ ˘-˘)ｳﾝｳﾝ', 'happy'], ['負けちゃったかー…でも、もう1回やったら勝てるって！', 'crying']],
     left: [['えっ、相手いなくなっちゃった？ 勝ちは勝ちだね♪', 'surprise'], ['また会えたら、ちゃんと決着つけよ！', 'normal'], ['あれれ、行っちゃった…次の相手、さがしにいこ！', 'wink']]
   },
@@ -91118,6 +91115,15 @@ const CARD_PVP = (() => {
     }
   };
 })();
+const cardPvpLineNode = text => String(text).split(/(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/).filter(x => x !== '').map((x, i) => /^\(.*\)|^٩/.test(x) ? React.createElement("span", {
+  key: i,
+  "data-ja-keep": true,
+  style: {
+    whiteSpace: 'nowrap'
+  }
+}, x) : React.createElement(React.Fragment, {
+  key: i
+}, jaWrap(x)));
 const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => React.createElement("span", {
   key: i,
   className: "inline-block"
@@ -91237,7 +91243,8 @@ const CardPvpLobby = ({
     const got = r.got && !r.got.pending ? r.got : null;
     const foeName = room.foe ? room.foe.name : 'あいて';
     const scene = r.reason === '相手が抜けた' ? 'left' : win ? 'win' : 'lose';
-    const line = a ? cardPvpResultLine(a.id, scene, cardPvpSeedOf(room.match)) : null;
+    const lineSeed = typeof window !== 'undefined' && Number.isInteger(window.__mhCardPvpLineSeed) ? window.__mhCardPvpLineSeed : cardPvpSeedOf(room.match);
+    const line = a ? cardPvpResultLine(a.id, scene, lineSeed) : null;
     const verifyText = r.verify === 'ok' ? 'おたがいの山札を見せ合って、正しく終わったことを確かめました' : r.verify === 'ng' ? `この試合は無効です(${r.why})` : r.verify === 'skip' ? '相手の山札は届きませんでした(相手が抜けたため)' : 'おたがいの山札を見せ合って、確かめています…';
     return React.createElement("div", {
       "data-mh-screen": true,
@@ -91263,7 +91270,7 @@ const CardPvpLobby = ({
         borderColor: a.accent,
         ...JA_WRAP_STYLE
       }
-    }, jaWrap(line.text))), React.createElement("div", {
+    }, cardPvpLineNode(line.text))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[14px] font-black text-white",
@@ -91322,7 +91329,7 @@ const CardPvpLobby = ({
     title: "マルチ対戦",
     accent: "text-sky-200",
     onBack: back,
-    note: "ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)"
+    note: cardPvpOpen() ? 'ほかのブリーダーと1対1で戦えます' : 'ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)'
   }), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
   }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
@@ -91370,7 +91377,7 @@ const CardPvpLobby = ({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
   }, React.createElement("p", {
     className: "mb-2 text-[13px] font-bold text-slate-300"
-  }, "友だちの合言葉で入る"), React.createElement("div", {
+  }, "フレンドの合言葉で入る"), React.createElement("div", {
     className: "flex gap-2"
   }, React.createElement("input", {
     "data-card-pvp-code": true,
@@ -91396,9 +91403,9 @@ const CardPvpLobby = ({
   }, React.createElement("p", {
     className: "text-[15px] font-black text-white"
   }, room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'), React.createElement("p", {
-    "data-card-pvp-waiting": room.lobbyCount,
+    "data-card-pvp-waiting": Math.max(0, room.lobbyCount - 1),
     className: "mt-1 text-[13px] font-bold text-sky-100"
-  }, "いま待っている人 ", Math.max(1, room.lobbyCount), "人"), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
+  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-slate-300 tabular-nums"
   }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
     "data-card-pvp-nobody": true,
@@ -91431,7 +91438,7 @@ const CardPvpLobby = ({
     className: "my-1 text-[40px] font-black tracking-[.3em] text-white"
   }, room.code), React.createElement("p", {
     className: "text-[13px] font-bold text-slate-200"
-  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉を友だちに伝えて、待っています…'), room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && React.createElement("div", {
+  }, room.phase === 'connecting' ? 'つないでいます…' : room.foe ? `${room.foe.name}さんが来ました。始めます…` : 'この合言葉をフレンドに伝えて、待っています…'), room.phase === 'waiting' && !room.foe && roster && roster.length > 0 && React.createElement("div", {
     className: "mt-3 text-left"
   }, React.createElement("button", {
     type: "button",
@@ -91546,7 +91553,7 @@ const useCardPvpClock = (pvp, st, step) => {
   const room = CARD_PVP.get();
   const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   return {
-    left: Math.max(0, Math.ceil(left / 1000)),
+    left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)),
     mine: decider === 0,
     timeouts: room.timeouts,
     offline: room.offline,
@@ -91558,10 +91565,13 @@ const CardPvpStatus = ({
 }) => React.createElement(React.Fragment, null, React.createElement("span", {
   "data-card-pvp-clock": clock.mine ? 'mine' : 'foe',
   className: `rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100' : 'bg-white/10 text-slate-200'}`
-}, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''), (clock.offline || clock.foeQuietSec > 0) && React.createElement("div", {
+}, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''));
+const CardPvpSignal = ({
+  clock
+}) => clock.offline || clock.foeQuietSec > 0 ? React.createElement("div", {
   "data-card-pvp-signal": true,
-  className: "pointer-events-none absolute inset-x-4 top-[44%] z-[30] rounded-xl border border-amber-300/50 bg-black/80 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
-}, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`));
+  className: "shrink-0 border-y border-amber-300/40 bg-amber-500/15 px-2 py-1 text-center text-[12px] font-bold text-amber-100"
+}, clock.offline ? '電波が途切れています。つなぎ直しています…' : `相手の電波が途切れています(あと${clock.foeQuietSec}秒で相手の負け)`) : null;
 const CardPvpChat = () => {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState('');

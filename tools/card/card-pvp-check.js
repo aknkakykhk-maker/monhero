@@ -164,13 +164,20 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   check('⑧ ほかの助手の名前を出さない(まだ会っていない子がいる)', all.every((x) => !names.some((n) => x.t.includes(n))), all.filter((x) => names.some((n) => x.t.includes(n))).map((x) => x.t).join(' / '));
   const atsuBad = all.filter((x) => x.id === 'atsu' && !/[笑！？…!?)）]$/.test(x.t));
   check('⑧ あつの台詞は、文末に笑か記号', atsuBad.length === 0, atsuBad.map((x) => x.t).join(' / '));
-  check('⑧ みゅあは「ぢゃん」を使わない・半角の \' を使わない', all.filter((x) => x.id === 'mua').every((x) => !/ぢゃん|'/.test(x.t)));
+  // みゅあは「じゃん」「まじ」を崩して「ぢゃん」「まぢ」と書く(社長 2026-10-25。docs/spec/ASSISTANT_MUA_VOICE.md)
+  check('⑧ みゅあは「じゃん」「まじ」を使わない(「ぢゃん」「まぢ」と崩す)・半角の \' を使わない', all.filter((x) => x.id === 'mua').every((x) => !/じゃん(?!け)|まじ(?![めなり])|'/.test(x.t)));
   check('⑧ きゅうこは1文に笑とwを両方付けない', all.filter((x) => x.id === 'kyuko').every((x) => !/笑w|w笑/.test(x.t)));
   const leftAll = all.filter((x) => x.k === 'left');
   check('⑧ 相手が抜けたときの「勝ちは勝ち」「電波」は、それぞれ2人まで(同じ言い方にしない)', leftAll.filter((x) => x.t.includes('勝ちは勝ち')).length <= 2 && leftAll.filter((x) => x.t.includes('電波')).length <= 2);
   const md = fs.readFileSync(path.resolve(__dirname, '..', '..', 'docs/progress/card-battle/multi/result-lines.md'), 'utf8');
   check('⑧ 台詞は、社長に見せた控えの表と1字も違わない', all.every((x) => md.includes(`| ${x.f} | ${x.t} |`)));
   check('⑧ 台詞の選び方: 同じ試合なら同じ台詞・知らない助手はみゅあの台詞', E.cardPvpResultLine('kiki', 'win', 5).text === E.cardPvpResultLine('kiki', 'win', 5).text && E.cardPvpResultLine('zzz', 'lose', 0).text === L.mua.lose[0][0]);
+  // ⑨ 公開の印(社長 案A: MFバトルカードの公開と同じ日にマルチも開く)
+  const full91 = read('src/parts/91-card-battle-multi.jsx'), p84 = read('src/parts/84-screen-card-battle.jsx'), p90 = read('src/parts/90-card-rank.jsx');
+  check('⑨ マルチの公開の印は RELEASE_FLAGS.cardBattle を見るたびに引く', /const cardPvpOpen = \(\) => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS\.cardBattle === true;/.test(full91));
+  check('⑨ 「マルチ対戦」のボタンは、デバッグか公開の印のときだけ押せる', /data-card-mode-multi disabled=\{!\(debug \|\| cardPvpOpen\(\)\)\}/.test(p84));
+  check('⑨ 「準備中」の札は、公開の印が立つまで(ボタン・ランキング)', /\{!cardPvpOpen\(\) && <span[^\n]*準備中/.test(p84) && /\{!cardPvpOpen\(\) && <span[^\n]*準備中/.test(p90));
+  check('⑨ 強さの点数へ届けるのは、公開後のふつうの入口だけ(rank.send で、デバッグではない)', /rankSend=\{!!\(rank && rank\.send\) && !debug\}/.test(p84));
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();
