@@ -315,9 +315,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         if (SHOT) await shot(page, '41-log-sheet');
         await page.locator('[data-card-log-sheet] button').last().click().catch(() => {});
       }
-      if (SHOT && !fitShots.has('banner') && await page.locator('[data-card-turn-banner]').count()) { fitShots.add('banner'); await shot(page, '42-turn-banner'); }
-      if (SHOT && !fitShots.has('big') && await page.locator('[data-card-big]').count()) { fitShots.add('big'); await shot(page, '43-big-card'); }
-      if (SHOT && !fitShots.has('sum') && await page.locator('[data-card-turn-summary]').count()) { fitShots.add('sum'); await shot(page, '44-turn-summary'); }
+      if (SHOT && !fitShots.has('banner') && await page.locator('[data-card-turn-banner]').count()) { fitShots.add('banner'); await page.waitForTimeout(300); await shot(page, '42-turn-banner'); }
+      if (SHOT && !fitShots.has('big') && await page.locator('[data-card-big]').count()) { fitShots.add('big'); await page.waitForTimeout(300); await shot(page, '43-big-card'); }
+      if (SHOT && !fitShots.has('sum') && await page.locator('[data-card-turn-summary]').count()) { fitShots.add('sum'); await page.waitForTimeout(300); await shot(page, '44-turn-summary'); }
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
