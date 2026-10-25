@@ -18,6 +18,8 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SRC = path.join(ROOT, 'tools', 'art-sources', 'card-battle');
+const sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp'));
+const { normalizeField } = require(path.join(__dirname, 'card-image-build.js'));
 const W = 742, H = 1038;
 const KIND_JA = { DGE: '回避', BLK: '防御', SPE: '特殊', POW: 'ちから', INT: 'かしこさ' };
 const TYPE_JA = { G: '地上', A: '空中', W: '水中' };
@@ -89,6 +91,21 @@ const LAYOUTS = {
       { t: `No. ${String(c.no).replace(/^F/, '')}`, x: 62, y: 988, size: 25, weight: 500, align: 'left', color: '#ffffff' },
     ],
   },
+  // 全体カードの高画質版(breeder-field/hi/。統括部長が作った描き直しの絵。絵はきれいだが文字は化けている)がある子。
+  // 高画質版は下半分(箱・番号)の配置が1枚ごとにばらばらなので、上(題字・絵・「ブリーダー」の札。FIELD_HI_SEAM より上)だけ
+  // 高画質版を使い、下は元の絵のまま。座標はどちらも normalizeField で枠にそろえたあと。上は高画質版で測り、下は field と同じ
+  fieldHi: {
+    erase: [
+      { name: 'title', rect: [182, 47, 505, 114], keep: 'dark', dir: 'col' },
+      { name: 'kind', rect: [78, 78, 158, 158], keep: 'colored' },
+      { name: 'label', rect: [58, 684, 244, 744], keep: 'hlerp' },
+    ],
+    draw: (c) => [
+      { t: c.name, x: 210, y: 104, size: 52, weight: 900, align: 'left', style: 'title', maxW: 285 },
+      ...kindLines(c.kind, 118, 118, 44),
+      { t: 'ブリーダー', x: 66, y: 708, size: 33, weight: 900, align: 'left', style: 'title', maxW: 200 },
+    ],
+  },
   // 混血のモンスター(左上「メイン」の札・右上の特徴の丸・右下「サブ」の札・左下の名前)
   hybrid: {
     erase: [
@@ -109,6 +126,14 @@ const LAYOUTS = {
     ],
   },
 };
+// 高画質版の下半分は元の絵なので、箱・番号の消し方と描き方は field のものをそのまま使う
+const FIELD_HI_SEAM = 734;
+// 高画質版のうち、絵の窓が短い(「ブリーダー」の札が上に寄っている)もの。[縦の倍率, ずらす量]で、札を元の絵の場所(y≈697)へ下ろす
+const FIELD_HI_FIT = { F255: [1.048, -3], F263: [1.0325, -2] };
+const FIELD_LOWER = ['guts', 'text', 'no', 'under'];
+LAYOUTS.fieldHi.erase.push(...LAYOUTS.field.erase.filter((e) => FIELD_LOWER.includes(e.name)));
+const fieldHiTop = LAYOUTS.fieldHi.draw;
+LAYOUTS.fieldHi.draw = (c) => [...fieldHiTop(c), ...LAYOUTS.field.draw(c).slice(-4)];
 // 種類の札の字(縦に2字。3字以上は小さく)
 const kindLines = (kind, cx, cy, base = 52, gap = 1.18) => {
   const s = [...(KIND_JA[kind] || kind || '')];
@@ -366,11 +391,19 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
   for (const no of want) {
     const c = cards[no];
     if (!c) { console.log(`知らないカード: ${no}`); continue; }
-    const layout = LAYOUTS[c.layout];
+    const layout = LAYOUTS[c.layout === 'field' && fs.existsSync(path.join(SRC, c.folder, 'hi', c.file)) ? 'fieldHi' : c.layout];
     if (!layout) { console.log(`まだ配置を決めていない: ${no}(${c.layout})`); continue; }
     const src = path.join(SRC, c.folder, c.file);
-    // 全体カードは、先に枠にそろえた絵(card-image-build.js の normalizeField)に描く
-    const buf = c.layout === 'field' ? await require(path.join(__dirname, 'card-image-build.js')).normalizeField(src) : fs.readFileSync(src);
+    // 全体カードは、先に枠にそろえた絵(card-image-build.js の normalizeField)に描く。高画質版(breeder-field/hi/)があれば、上半分だけそちらに替える
+    const hi = c.layout === 'field' ? path.join(SRC, c.folder, 'hi', c.file) : null;
+    const useHi = !!hi && fs.existsSync(hi);
+    let buf = c.layout === 'field' ? await normalizeField(src) : fs.readFileSync(src);
+    if (useHi) {
+      const [sy, dy] = FIELD_HI_FIT[path.basename(c.file, '.jpg')] || [1, 0];
+      const hiBuf = await sharp(await normalizeField(hi)).resize(W, Math.round(H * sy), { fit: 'fill' }).toBuffer();
+      const top = await sharp(hiBuf).extract({ left: 0, top: -dy, width: W, height: FIELD_HI_SEAM }).toBuffer();
+      buf = await sharp(buf).composite([{ input: top, left: 0, top: 0 }]).png().toBuffer();
+    }
     const imgUrl = `data:image/${c.layout === 'field' ? 'png' : 'jpeg'};base64,${buf.toString('base64')}`;
     const ops = layout.draw(c);
     const data = await page.evaluate(pageScript, { imgUrl, fontUrls, layout: { erase: layout.erase.map((e) => (typeof e === 'function' ? e(c) : e)) }, ops });
