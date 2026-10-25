@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4e1e3cc15dd7ec02
+// source-sha256: ecb444baf204569c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 21:38";
+const BUILD_DATE = "2026-10-25 22:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -82624,7 +82624,7 @@ const cardUsableBy = (card, mon) => {
   if (mon.sub && card.user === mon.sub && cardIsGuardKind(card.kind)) return true;
   return false;
 };
-const cardMonType = (mon, turn) => mon.airUntil >= turn ? 'air' : mon.type;
+const cardMonType = (mon, turn) => mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type;
 const cardLog = (st, text, extra) => {
   st.log.push({
     turn: st.turn,
@@ -83019,12 +83019,19 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (card.kind === 'spe') {
-          cardSpeTargets(db, st, p, mi, card).forEach(target => out.push({
+          const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
+          cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => out.push(form ? {
+            type: 'attack',
+            mon: mi,
+            hand: idxs,
+            target,
+            form
+          } : {
             type: 'attack',
             mon: mi,
             hand: idxs,
             target
-          }));
+          })));
           return;
         }
         if (cardHasEff(card, 'area')) {
@@ -83068,6 +83075,9 @@ const cardGuardOptions = (db, st) => {
   const forbid = st.forbid[q] || [];
   const fl = pd.flags || {};
   if (fl.attachNoGuard) return [];
+  if (pd.redirected) return [];
+  const isArea = cardHasEff(atkCard, 'area');
+  const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
   const guardedNow = m => fl.attachNoGuardIfGuarded && m.guardTurn === st.turn || m.noGuardUntil >= st.turn;
@@ -83078,6 +83088,64 @@ const cardGuardOptions = (db, st) => {
     if (c.guts > guts) return;
     if (fl.attachNoZeroGuard && !c.guts) return;
     if (fl.bind && c.name === fl.bind) return;
+    if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
+      if (tgt.p === q) me.mons.forEach((m, mi) => {
+        if (cardUsableBy(c, m) && !guardedNow(m)) out.push({
+          type: 'guard',
+          hand: hi,
+          mon: mi
+        });
+      });
+      return;
+    }
+    if (cardHasEff(c, 'shield')) {
+      if (pd.shield !== null && pd.shield !== undefined) return;
+      me.mons.forEach((m, mi) => {
+        if (mi !== tgt.m && tgt.p === q && cardUsableBy(c, m) && !guardedNow(m)) out.push({
+          type: 'guard',
+          hand: hi,
+          mon: mi
+        });
+      });
+      return;
+    }
+    if (cardHasEff(c, 'redirect')) {
+      if (tgt.p !== q || isArea || !['pow', 'int'].includes(atkCard.kind) || !cardUsableBy(c, target) || guardedNow(target)) return;
+      me.mons.forEach((m, j) => {
+        if (j !== tgt.m && !m.ko) out.push({
+          type: 'guard',
+          hand: hi,
+          mon: tgt.m,
+          to: j
+        });
+      });
+      return;
+    }
+    if (cardHasEff(c, 'evadeAll')) {
+      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && (target.main || target.sub)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
+        type: 'guard',
+        hand: hi,
+        mon: tgt.m
+      });
+      return;
+    }
+    const en = cardEff(c, 'endure') || cardEff(c, 'takeMult');
+    if (en) {
+      if (tgt.p === q && en.kinds.includes(atkCard.kind) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
+        type: 'guard',
+        hand: hi,
+        mon: tgt.m
+      });
+      return;
+    }
+    if (cardHasEff(c, 'noGutsLoss')) {
+      if (tgt.p === q && cardHasEff(atkCard, 'gutsLossOnHit') && !pd.noGutsLoss && cardUsableBy(c, target) && !guardedNow(target)) out.push({
+        type: 'guard',
+        hand: hi,
+        mon: tgt.m
+      });
+      return;
+    }
     if (cardHasEff(c, 'cover')) {
       if (pd.cover !== null && pd.cover !== undefined) return;
       me.mons.forEach((m, mi) => {
@@ -83201,7 +83269,7 @@ const cardStartAttack = (db, st, act) => {
     target: act.target || null
   });
   if (main.kind === 'spe') {
-    cardApplySpecial(db, st, p, mi, main, act.target);
+    cardApplySpecial(db, st, p, mi, main, act.target, act);
     me.discard.push(...used);
     return;
   }
@@ -83271,11 +83339,19 @@ const cardResolveTarget = (db, st) => {
     p: t.p,
     m: pd.cover
   };
+  if (pd.shield !== null && pd.shield !== undefined && t.p === pd.defender && !st.players[t.p].mons[pd.shield].ko) t = {
+    p: t.p,
+    m: pd.shield
+  };
   const target = st.players[t.p].mons[t.m];
   let dmg = pd.base * pd.mult;
   const mv = cardEff(main, 'multVs');
   if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
-  const evaded = pd.evaded;
+  if (pd.takeMult) dmg *= pd.takeMult;
+  const ar = cardEff(main, 'area');
+  const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || ar && ar.only && cardMonType(target, st.turn) !== ar.only);
+  if (missed) dmg = 0;
+  const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker;
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
@@ -83290,6 +83366,8 @@ const cardResolveTarget = (db, st) => {
     }
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
+  if (pd.endure && dmg >= target.life && target.life > 0) dmg = target.life - 1;
+  if (target.safeUntil >= st.turn) dmg = 0;
   target.life = Math.max(0, target.life - dmg);
   if (dmg > 0) target.charge = null;
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
@@ -83310,14 +83388,14 @@ const cardResolveTarget = (db, st) => {
     guarded,
     card: pd.main
   });
-  cardLog(st, evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, {
+  cardLog(st, missed ? `${target.name}には当たらなかった` : evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, {
     kind: 'hit'
   });
   const atkMon = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
   if (dmg > 0) {
     pd.hitAny = true;
     const gl = cardEff(main, 'gutsLossOnHit');
-    if (gl && t.p !== pd.attacker) {
+    if (gl && t.p !== pd.attacker && !pd.noGutsLoss) {
       const k = cardLoseGuts(st, t.p, gl.n);
       if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`);
     }
@@ -83335,6 +83413,7 @@ const cardResolveTarget = (db, st) => {
     if (!evaded) pd.hitAnyNotEvaded = true;
   }
   if (evaded) pd.evadedAny = true;
+  if (atkMon && atkMon.safeUntil >= st.turn) reflected = 0;
   if (reflected > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - reflected);
     atkMon.charge = null;
@@ -83357,6 +83436,9 @@ const cardResolveTarget = (db, st) => {
   pd.reflect = null;
   pd.cover = null;
   pd.noEvade = false;
+  pd.redirected = false;
+  pd.endure = false;
+  pd.takeMult = 0;
 };
 const cardKo = (st, p, m) => {
   const mon = st.players[p].mons[m];
@@ -83384,6 +83466,7 @@ const cardFinishAttack = (db, st) => {
   const sa = cardEff(main, 'selfDamage');
   if (sa) self += sa.n;
   if (pd.flags && pd.flags.selfIfHit && pd.results.some(r => !r.evaded)) self += pd.flags.selfIfHit;
+  if (atkMon && atkMon.safeUntil >= st.turn) self = 0;
   if (self > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - self);
     atkMon.charge = null;
@@ -83405,7 +83488,7 @@ const cardCheckWin = (st, attacker) => {
   const dead = st.players.map(pl => pl.mons.every(m => m.ko));
   if (dead[0] && dead[1]) cardGameOver(st, attacker, '同時にKO(攻撃した側の勝ち)');else if (dead[0]) cardGameOver(st, 1, '全員KO');else if (dead[1]) cardGameOver(st, 0, '全員KO');
 };
-const cardApplySpecial = (db, st, p, mi, card, target) => {
+const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach(e => {
@@ -83522,6 +83605,14 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
       };
       cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`);
     }
+    if (e.t === 'safe' && self) {
+      self.safeUntil = st.turn + 1;
+      cardLog(st, `${self.name}は次の番までダメージを受けない`);
+    }
+    if (e.t === 'form' && self && (act.form === 'air' || act.form === 'ground')) {
+      self.type = act.form;
+      cardLog(st, `${self.name}は${act.form === 'air' ? '空中' : '地上'}になった`);
+    }
     if (e.t === 'choose') {
       const cands = cardChoiceCands(db, st, p, mi, e);
       if (cands.length) st.pendingChoice = {
@@ -83591,7 +83682,7 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
       cardReshuffle(st, p);
       cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`);
     }
-    if (e.t === 'selfHurt' && tm) {
+    if (e.t === 'selfHurt' && tm && tm.safeUntil >= st.turn) cardLog(st, `${tm.name}はダメージを受けない(ぬいぐるみ)`);else if (e.t === 'selfHurt' && tm) {
       tm.life = Math.max(0, tm.life - e.n);
       cardEvent(st, {
         t: 'hit',
@@ -83674,6 +83765,34 @@ const cardApplyGuard = (db, st, act) => {
       keep: !!e.keep
     };
     if (e.t === 'cover') pd.cover = act.mon;
+    if (e.t === 'redirect') {
+      pd.targets[pd.ti] = {
+        p: q,
+        m: act.to
+      };
+      pd.redirected = true;
+      cardLog(st, `目標が${me.mons[act.to].name}に変わった`);
+    }
+    if (e.t === 'endure') pd.endure = true;
+    if (e.t === 'evadeAll') {
+      pd.evadeAll = true;
+      pd.evaded = true;
+    }
+    if (e.t === 'shield') pd.shield = act.mon;
+    if (e.t === 'noGutsLoss') pd.noGutsLoss = true;
+    if (e.t === 'takeMult') pd.takeMult = e.n;
+    if (e.t === 'liftAllies') {
+      me.mons.forEach((m, j) => {
+        if (j !== act.mon && !m.ko) m.airUntil = Math.max(m.airUntil, st.turn + 1);
+      });
+      cardLog(st, `${user.name}以外の味方が空中になった`);
+    }
+    if (e.t === 'waterAll') {
+      me.mons.forEach(m => {
+        if (!m.ko) m.waterUntil = st.turn;
+      });
+      cardLog(st, '味方が全員水中になった');
+    }
     if (e.t === 'nextTurnMult') user.mult = {
       turn: st.turn + 1,
       kinds: e.kinds,
@@ -83774,7 +83893,7 @@ const cardApplyAction = (db, st0, act) => {
       return st;
     }
     if (act.type !== 'guard') return null;
-    const ok = cardGuardOptions(db, st0).some(o => o.hand === act.hand && o.mon === act.mon);
+    const ok = cardGuardOptions(db, st0).some(o => o.hand === act.hand && o.mon === act.mon && o.to === act.to);
     if (!ok) return null;
     cardApplyGuard(db, st, act);
     return st;
@@ -83785,7 +83904,7 @@ const cardApplyAction = (db, st0, act) => {
       return st;
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null));
+    const ok = cardAttackOptions(db, st0).some(o => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form);
     if (!ok) return null;
     const needBind = act.hand.some(i => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
     if (needBind ? !(typeof act.bind === 'string' && cardBindNames(db).includes(act.bind)) : act.bind !== undefined && act.bind !== null) return null;
@@ -83975,6 +84094,11 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      if (e.t === 'safe') {
+        const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
+        score += m0 && m0.life <= Math.ceil(m0.max / 2) ? 1.4 : 0.4;
+      }
+      if (e.t === 'form') score += 0.2;
       const oppP = st.players[cardOther(p)];
       if (e.t === 'choose') score += e.then === 'toHand' ? 1.3 : e.then === 'discardDraw2' ? 0.9 : 0.3;
       if (e.t === 'peekPick') score += 1.4 * habit.disrupt;
@@ -84099,14 +84223,39 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
     const rf = cardEff(c, 'reflect');
     if (rf) after = rf.keep ? dmg : 0;
-    if (cardHasEff(c, 'cover')) {
+    if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
       after = target.life <= dmg && cm.life > dmg ? 0 : dmg;
+    }
+    let extra = 0;
+    if (cardHasEff(c, 'redirect')) {
+      const am = me.mons[o.to];
+      after = 0;
+      extra -= Math.min(dmg, am.life) * 0.9 + (am.life <= dmg ? 5 : 0);
+    }
+    if (cardHasEff(c, 'endure')) after = dmg >= target.life ? target.life - 1 : dmg;
+    if (cardHasEff(c, 'evadeAll')) {
+      after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
+      extra += (pd.targets.length - pd.ti - 1) * Math.min(3, dmg) * 0.6;
+    }
+    if (cardHasEff(c, 'noGutsLoss')) {
+      const gl = cardEff(main, 'gutsLossOnHit');
+      extra += (gl ? gl.n === 'all' ? me.guts.length : Math.min(gl.n, me.guts.length) : 0) * 0.6;
+    }
+    if (cardHasEff(c, 'takeMult')) {
+      after = dmg * 2;
+      extra += 1.2;
+    }
+    if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
+      const tmp = JSON.parse(JSON.stringify(target));
+      if (cardHasEff(c, 'waterAll')) tmp.waterUntil = st.turn;else if (o.mon !== tgt.m) tmp.airUntil = st.turn + 1;
+      const ar = cardEff(main, 'area');
+      after = !cardCanTarget(main, tmp, st.turn) || ar && ar.only && cardMonType(tmp, st.turn) !== ar.only ? 0 : dmg;
     }
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - c.guts : 0;
-    const v = saved * (0.6 + 0.4 * habit.keepGuard) + ko - (c.guts + lostAll) * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
+    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (c.guts + lostAll) * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
     if (!best || v > best.v) best = {
       v,
       o
@@ -84296,7 +84445,7 @@ const cardAiCardValue = (card, habit) => {
     return v - card.guts * 0.3;
   }
   if (cardIsGuardKind(card.kind)) {
-    let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : 1.6;
+    let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : eff('endure') ? 1.1 : eff('redirect') ? 1.0 : eff('shield') ? 1.0 : eff('evadeAll') ? 1.2 : eff('noGutsLoss') ? 0.8 : eff('takeMult') ? 0.5 : eff('liftAllies') || eff('waterAll') ? 0.6 : 1.6;
     const re = cardEff(card, 'reduce');
     if (re) v = 1 + re.n * 0.4;
     if (eff('selfGutsAll')) v -= 1.4;
@@ -84324,6 +84473,8 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'skipTurn') v += 1.5;
       if (e.t === 'rage') v += 0.6;
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
+      if (e.t === 'safe') v += 0.8;
+      if (e.t === 'form') v += 0.1;
       if (e.t === 'peekPick') v += 0.8 * habit.disrupt;
       if (e.t === 'rush' || e.t === 'gutsZeroBoth' || e.t === 'oppHandToDeckBottom' || e.t === 'oppGutsLoss' || e.t === 'millOpp' || e.t === 'discardBothHands' || e.t === 'refresh') v += 0.3;
       if (e.t === 'lastWish' || e.t === 'deckToGuts' || e.t === 'gutsToDeckShuffle' || e.t === 'selfHurt') v -= 0.3;
@@ -87401,15 +87552,15 @@ const CardBattleBoard = ({
         setHint('このカードでは守れません');
         return;
       }
-      const mons = [...new Set(os.map(o => o.mon))];
-      if (mons.length === 1) {
+      const picks2 = [...new Set(os.map(o => o.to !== undefined ? `t${o.to}` : `m${o.mon}`))];
+      if (picks2.length === 1) {
         step(os[0]);
         return;
       }
       setSel({
         hand: i
       });
-      setHint('かばう子をタップ');
+      setHint(os.some(o => o.to !== undefined) ? '目標を移す味方をタップ' : 'かばう子をタップ');
       return;
     }
     if (mode !== 'attack') return;
@@ -87432,7 +87583,7 @@ const CardBattleBoard = ({
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
-      const o = guardOpts.find(x => x.hand === sel.hand && x.mon === m && p === CARD_ME);
+      const o = guardOpts.find(x => x.hand === sel.hand && p === CARD_ME && (x.to !== undefined ? x.to === m : x.mon === m));
       if (o) step(o);
       return;
     }
@@ -87457,7 +87608,7 @@ const CardBattleBoard = ({
       if (p === CARD_ME && m === monChosen) return 'acting';
       if (finalOpts.some(o => o.target && o.target.p === p && o.target.m === m)) return 'target';
     }
-    if (mode === 'guard' && sel && p === CARD_ME && guardOpts.some(o => o.hand === sel.hand && o.mon === m)) return 'user';
+    if (mode === 'guard' && sel && p === CARD_ME && guardOpts.some(o => o.hand === sel.hand && (o.to !== undefined ? o.to === m : o.mon === m))) return 'user';
     if (st.pending) {
       const t = st.pending.targets[st.pending.ti];
       if (t && t.p === p && t.m === m) return 'target';
@@ -87711,7 +87862,16 @@ const CardBattleBoard = ({
       })
     }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了');
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
-    return React.createElement(React.Fragment, null, useBtn ? React.createElement("button", {
+    return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.form) ? ['air', 'ground'].map(f => {
+      const o = finalOpts.find(x => x.form === f);
+      return o ? React.createElement("button", {
+        key: f,
+        type: "button",
+        "data-card-form": f,
+        className: `${btn} mh-button-primary`,
+        onClick: () => askUse(o)
+      }, f === 'air' ? '空中にして使う' : '地上にして使う') : null;
+    }) : useBtn ? React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => askUse(finalOpts[0])
@@ -91857,6 +92017,10 @@ const cardPvpCleanAct = raw => {
     act.hand = cardPvpInt(raw.hand, 20);
     act.mon = cardPvpInt(raw.mon, 2);
     if (act.hand === null || act.mon === null) return null;
+    if (raw.to !== undefined) {
+      act.to = cardPvpInt(raw.to, 2);
+      if (act.to === null) return null;
+    }
     return act;
   }
   if (raw.type === 'reveal') return act;
@@ -91882,6 +92046,10 @@ const cardPvpCleanAct = raw => {
         m
       };
     }
+  }
+  if (raw.form !== undefined) {
+    if (raw.form !== 'air' && raw.form !== 'ground') return null;
+    act.form = raw.form;
   }
   if (raw.bind !== undefined && raw.bind !== null) {
     if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null;

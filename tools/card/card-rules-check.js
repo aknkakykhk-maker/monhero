@@ -755,6 +755,72 @@ const pendingCards = () => {
     st = useSpe(st, '306'); if (st) ok(st.players[1].deck.length === d0 - 3 && st.players[1].discard.length === 3, '306: 相手の山札が3枚捨て札にならない'); }
   { ready('364'); let st = scene({ mons: [['C-008', 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['364', '109'], ['026', '096']], guts: [9, 0] });
     st = useSpe(st, '364'); if (st) ok(!st.players[0].hand.length && !st.players[1].hand.length && st.players[1].discard.length === 2, '364: お互いの手札が全部捨てられない'); }
+  // ---- 区切り5: 守りの新しい形・持ちょうを変える ----
+  // 自分(0)のゴーレム(2体目)で、相手の m 体目を、技 no で狙う場面。相手の手札・ガッツ・3体を決める
+  const atkScene = ({ no = gol.no, oppMons = ['C-001', 'C-003', 'C-005'], oppHand = [], oppGuts = 9, m = 0, myMons = ['C-001', 'C-003', 'C-005'] } = {}) => {
+    let st = big(scene({ mons: [myMons, oppMons], hands: [[no], oppHand], guts: [9, oppGuts] }));
+    const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === no && (!x.target || x.target.m === m));
+    if (!a) return null;
+    return act(st, a);
+  };
+  const guardWith = (st, no, pred = () => true) => find(E.cardGuardOptions(db, st), (x) => st.players[1].hand[x.hand] === no && pred(x));
+  const lifeAfter = (st, g) => { let s1 = g ? act(st, g) : st; while (s1.pending) s1 = act(s1, { type: 'pass' }); return s1; };
+  // 隠れる(107・モッチー): 目標を自分から他の味方へ(守る人が選ぶ)。移した先の子はもう守れない
+  { ready('107'); const st = atkScene({ oppMons: ['C-009', 'C-003', 'C-005'], oppHand: ['107', '109'] });
+    ok(st, '107: 場面が作れない'); if (st) {
+      const gs = E.cardGuardOptions(db, st).filter((x) => st.players[1].hand[x.hand] === '107');
+      ok(gs.length === 2 && gs.every((x) => x.mon === 0 && (x.to === 1 || x.to === 2)), `107: 移す先の候補が合わない(${JSON.stringify(gs)})`);
+      const s1 = act(st, gs.find((x) => x.to === 1)); ok(!E.cardGuardOptions(db, s1).length, '107: 移した先の子がまだ守れる');
+      const s2 = lifeAfter(s1); ok(s2.players[1].mons[0].life === 40 && s2.players[1].mons[1].life === 40 - gol.damage, '107: ダメージが移した先に入らない');
+      ok(!E.cardApplyAction(db, st, { ...gs[0], to: 0 }), '107: 自分へ移す手が通る'); } }
+  // 根性(111): 残りのライフ以上のダメージでも、ライフ1で残る
+  { ready('111'); const st = atkScene({ oppHand: ['111'] }); if (st) { st.players[1].mons[0].life = 3; const g = guardWith(st, '111'); ok(g, '111: 出せない');
+    if (g) { const s1 = lifeAfter(st, g); ok(s1.players[1].mons[0].life === 1 && !s1.players[1].mons[0].ko, `111: ライフ1で残らない(${s1.players[1].mons[0].life})`); } } }
+  // みんな下がれ(123): 全員に当たる技だけ。全員が回避
+  { ready('123'); ok(areaPow, '123: 全員に当たる技の見本が無い');
+    if (areaPow) { const st = atkScene({ no: areaPow.no, oppHand: ['123'] }); ok(st, '123: 場面が作れない');
+      if (st) { const g = guardWith(st, '123'); ok(g, '123: 全員に当たる技に出せない');
+        if (g) { const s1 = lifeAfter(st, g); const half = (areaPow.effects || []).some((e) => e.t === 'halfOnEvade'); ok(s1.players[1].mons.every((x) => x.life === 40 - (half ? Math.ceil(areaPow.damage / 2) : 0)), '123: 全員が回避にならない'); } }
+      const st2 = atkScene({ oppHand: ['123'] }); if (st2) ok(!guardWith(st2, '123'), '123: 1体を狙う技にも出せる'); } }
+  // 盾になる(163・モノリス): 1回の攻撃で味方が受けるダメージを、全部この子が受ける
+  { ready('163'); const mono = monOf('monol');
+    const st = atkScene({ oppMons: [mono, 'C-003', 'C-005'], oppHand: ['163'], m: 1 }); ok(st, '163: 場面が作れない');
+    if (st) { const g = guardWith(st, '163', (x) => x.mon === 0); ok(g, '163: 盾になれない'); if (g) { const s1 = lifeAfter(st, g); ok(s1.players[1].mons[0].life === 40 - gol.damage && s1.players[1].mons[1].life === 40, '163: 盾の子が受けない'); } }
+    if (areaPow) { const st2 = atkScene({ no: areaPow.no, oppMons: ['C-003', mono, 'C-005'], oppHand: ['163'] });
+      if (st2) { const g = guardWith(st2, '163', (x) => x.mon === 1); ok(g, '163: 全員に当たる技で盾になれない');
+        if (g) { const s1 = lifeAfter(st2, g); ok(s1.players[1].mons[1].life === 40 - areaPow.damage * 3 && s1.players[1].mons[0].life === 40 && s1.players[1].mons[2].life === 40, `163: 全員のぶんを盾の子が受けない(${s1.players[1].mons.map((x) => x.life).join(',')})`); } } } }
+  // 我慢(275): ガッツ減少を無効
+  { ready('275'); const gl = Object.values(db.cards).find((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && (c.kind === 'pow' || c.kind === 'int') && (c.effects || []).length === 1 && (c.effects || []).some((e) => e.t === 'gutsLossOnHit'));
+    ok(gl, '275: ガッツを減らす技の見本が無い');
+    if (gl) { const mo = monOf(gl.user); const st = atkScene({ no: gl.no, myMons: [mo, mo === 'C-001' ? 'C-003' : 'C-001', 'C-005'], oppHand: ['275'], oppGuts: 6 });
+      ok(st, '275: 場面が作れない'); if (st) { const g = guardWith(st, '275'); ok(g, '275: 出せない'); if (g) { const s1 = lifeAfter(st, g); ok(s1.players[1].guts.length === 6 - db.cards['275'].guts, '275: ガッツが減った'); } } } }
+  // 吹き上げる(270・グジラ): 狙われていなくても出せる。自分以外の味方が空中になり、空中に当たらない技は外れる
+  { ready('270'); const ch = Object.values(db.cards).find((c) => c.ready && c.kind === 'pow' && (c.effects || []).length === 1 && (c.effects || []).some((e) => e.t === 'cannotHit' && e.type === 'air'));
+    ok(ch, '270: 空中に当たらない技の見本が無い');
+    if (ch) { const mo = monOf(ch.user); const st = atkScene({ no: ch.no, myMons: [mo, mo === 'C-001' ? 'C-003' : 'C-001', 'C-005'], oppMons: [monOf('zilla'), 'C-003', 'C-001'], oppHand: ['270'], m: 1 });
+      ok(st, '270: 場面が作れない'); if (st) { const g = guardWith(st, '270', (x) => x.mon === 0); ok(g, '270: 狙われていないグジラが出せない');
+        if (g) { const s1 = lifeAfter(st, g); ok(s1.players[1].mons[1].life === 40, '270: 空中になったのに当たった'); ok(E.cardMonType(s1.players[1].mons[0], s1.turn) !== 'air', '270: 自分まで空中になった'); } } } }
+  // ひきずりこむ(318・アローヘッド): 味方を全員このターン水中に。地上にしか当たらない技は外れる
+  { ready('318'); const oh = Object.values(db.cards).find((c) => c.ready && c.kind === 'pow' && (c.effects || []).length === 1 && (c.effects || []).some((e) => e.t === 'onlyHit' && e.type === 'ground'));
+    ok(oh, '318: 地上にしか当たらない技の見本が無い');
+    if (oh) { const mo = monOf(oh.user); const st = atkScene({ no: oh.no, myMons: [mo, mo === 'C-001' ? 'C-003' : 'C-001', 'C-005'], oppMons: [monOf('arrowhead'), 'C-003', 'C-001'], oppHand: ['318'], m: 1 });
+      ok(st, '318: 場面が作れない'); if (st) { const g = guardWith(st, '318'); ok(g, '318: 出せない'); if (g) { const s1 = lifeAfter(st, g); ok(s1.players[1].mons[1].life === 40 && E.cardMonType(s1.players[1].mons[1], s1.turn) === 'water' && E.cardMonType(s1.players[1].mons[1], s1.turn + 1) === 'ground', '318: 水中で外れない・次のターンまで水中のまま'); } } } }
+  // 肉を切らせて(249): 受けるダメージ2倍。次のターンのちから技3倍
+  { ready('249'); const st = atkScene({ oppHand: ['249'] }); if (st) { const g = guardWith(st, '249'); ok(g, '249: 出せない');
+    if (g) { const s1 = lifeAfter(st, g); const m0 = s1.players[1].mons[0]; ok(m0.life === 40 - gol.damage * 2 && m0.mult && m0.mult.n === 3 && m0.mult.turn === s1.turn + 1, '249: 2倍で受けて、次のちから技3倍にならない'); } } }
+  // ぬいぐるみ(198・ニャー): 次の自分の番まで、どこからのダメージも0
+  { ready('198'); let st = scene({ mons: [[monOf('mew'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['198'], [gol.no]], guts: [9, 9] });
+    st = useSpe(st, '198'); if (st) { const s2 = nextTurnOf(st, 1); const h = optWith(s2, [gol.no], 0); ok(h, '198: 相手が狙えない');
+      if (h) { const s3 = lifeAfter(act(s2, h)); ok(s3.players[0].mons[0].life === s3.players[0].mons[0].max, '198: ダメージを受けた'); } } }
+  // 変形(185・ヘンガー)・トランスフォーム(293・メタルナー): 空中か地上かを選ぶ。1枚引く
+  [['185', 'henger'], ['293', 'metalner']].forEach(([no, sp]) => {
+    ready(no); const st = scene({ mons: [[monOf(sp), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[no], []], guts: [9, 0] });
+    const os = E.cardAttackOptions(db, st).filter((x) => st.players[0].hand[x.hand[0]] === no);
+    ok(os.length === 2 && os.some((x) => x.form === 'air') && os.some((x) => x.form === 'ground'), `${no}: 空中・地上の2つの手にならない`);
+    const a = os.find((x) => x.form === (db.monsters[monOf(sp)].type === 'air' ? 'ground' : 'air'));
+    if (a) { const s1 = act(st, a); ok(s1.players[0].mons[0].type === a.form && s1.players[0].hand.length === 1, `${no}: 持ちょうが変わらない・引かない`); }
+    ok(!E.cardApplyAction(db, st, { ...os[0], form: 'water' }), `${no}: 空中・地上のほかを選べる`);
+  });
 };
 scenes();
 pendingCards();

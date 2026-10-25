@@ -745,9 +745,10 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (mode === 'guard') {
       const os = guardOpts.filter((o) => o.hand === i);
       if (!os.length) { setHint('このカードでは守れません'); return; }
-      const mons = [...new Set(os.map((o) => o.mon))];
-      if (mons.length === 1) { step(os[0]); return; }
-      setSel({ hand: i }); setHint('かばう子をタップ');
+      // 隠れる(移す先 to がある守り)は、移す先の味方を選ぶ
+      const picks2 = [...new Set(os.map((o) => (o.to !== undefined ? `t${o.to}` : `m${o.mon}`)))];
+      if (picks2.length === 1) { step(os[0]); return; }
+      setSel({ hand: i }); setHint(os.some((o) => o.to !== undefined) ? '目標を移す味方をタップ' : 'かばう子をタップ');
       return;
     }
     if (mode !== 'attack') return;
@@ -766,7 +767,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
-      const o = guardOpts.find((x) => x.hand === sel.hand && x.mon === m && p === CARD_ME);
+      const o = guardOpts.find((x) => x.hand === sel.hand && p === CARD_ME && (x.to !== undefined ? x.to === m : x.mon === m));
       if (o) step(o);
       return;
     }
@@ -785,7 +786,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       if (p === CARD_ME && m === monChosen) return 'acting';
       if (finalOpts.some((o) => o.target && o.target.p === p && o.target.m === m)) return 'target';
     }
-    if (mode === 'guard' && sel && p === CARD_ME && guardOpts.some((o) => o.hand === sel.hand && o.mon === m)) return 'user';
+    if (mode === 'guard' && sel && p === CARD_ME && guardOpts.some((o) => o.hand === sel.hand && (o.to !== undefined ? o.to === m : o.mon === m))) return 'user';
     if (st.pending) {
       const t = st.pending.targets[st.pending.ti];
       if (t && t.p === p && t.m === m) return 'target';
@@ -936,7 +937,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (mode === 'guts') return <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return (<>
-      {useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>使う</button> : null}
+      {/* 変形・トランスフォーム: 空中か地上かを選んで使う */}
+      {useBtn && finalOpts.some((o) => o.form) ? ['air', 'ground'].map((f) => { const o = finalOpts.find((x) => x.form === f); return o ? <button key={f} type="button" data-card-form={f} className={`${btn} mh-button-primary`} onClick={() => askUse(o)}>{f === 'air' ? '空中にして使う' : '地上にして使う'}</button> : null; })
+        : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>使う</button> : null}
       <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
     </>);
   })();

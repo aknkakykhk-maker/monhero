@@ -174,7 +174,11 @@ const cardPvpCleanAct = (raw) => {
   const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose'];
   if (!types.includes(raw.type)) return null;
   const act = { type: raw.type };
-  if (raw.type === 'guard') { act.hand = cardPvpInt(raw.hand, 20); act.mon = cardPvpInt(raw.mon, 2); if (act.hand === null || act.mon === null) return null; return act; }
+  if (raw.type === 'guard') {
+    act.hand = cardPvpInt(raw.hand, 20); act.mon = cardPvpInt(raw.mon, 2); if (act.hand === null || act.mon === null) return null;
+    if (raw.to !== undefined) { act.to = cardPvpInt(raw.to, 2); if (act.to === null) return null; } // 隠れるの移す先
+    return act;
+  }
   if (raw.type === 'reveal') return act;
   // 選ぶ段: 手札か捨て札の番号(捨て札は50枚を超えない)
   if (raw.type === 'choose') { act.pick = cardPvpInt(raw.pick, 60); return act.pick === null ? null : act; }
@@ -185,6 +189,7 @@ const cardPvpCleanAct = (raw) => {
     else { const p = cardPvpInt(raw.target && raw.target.p, 1); const m = cardPvpInt(raw.target && raw.target.m, 2); if (p === null || m === null) return null; act.target = { p, m }; }
   }
   // 影縛りの名指し(守りの札の名前)。本当に名前かどうかは、当てるとき(cardApplyAction)にカードの表で確かめる
+  if (raw.form !== undefined) { if (raw.form !== 'air' && raw.form !== 'ground') return null; act.form = raw.form; } // 変形・トランスフォーム
   if (raw.bind !== undefined && raw.bind !== null) { if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null; act.bind = raw.bind; }
   return act;
 };
