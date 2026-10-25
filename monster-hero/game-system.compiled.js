@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9176c9d2c7465c80
+// source-sha256: a59b96d92e04d2f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 04:10";
+const BUILD_DATE = "2026-10-26 04:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86797,18 +86797,11 @@ const CARD_PACK_SHARED = Object.freeze({
   p1: ['109', '112'],
   p2: ['113', '110', '114'],
   p3: ['111'],
-  p4: ['122', '121', '126', '123', '127', '124'],
+  p4: ['122', '121', '126', '123', '127', '124', 'F255', 'F256', 'F257', 'F258'],
   p5: ['125', '128', '249', '252', '250', '253'],
-  p6: ['254', '251', '276', '273', '277', '274'],
-  p7: ['275', '278', '345', '279', '346', '280'],
-  p8: ['351', '347', '352', '348', '366', '349', '350']
-});
-const CARD_PACK_FIELD = Object.freeze({
-  p8: ['F115', 'F116', 'F117', 'F118', 'F119', 'F120'],
-  p7: ['F255', 'F256', 'F257', 'F258'],
-  p4: ['F259', 'F260', 'F261'],
-  p6: ['F262'],
-  p5: ['F263']
+  p6: ['254', '251', '276', '273', '277', '274', 'F263'],
+  p7: ['275', '278', '345', '279', '346', '280', 'F259', 'F260', 'F261', 'F262'],
+  p8: ['351', '347', '352', '348', '366', '349', '350', 'F115', 'F116', 'F117', 'F118', 'F119', 'F120']
 });
 const CARD_PACK_LEGACY_IDS = Object.freeze(['w1', 'w2', 'w3', 'w4', 'hybrid']);
 const CARD_PACK_PITY_FROM = Object.freeze({
@@ -86838,7 +86831,7 @@ const cardPackIdOf = (db, no) => {
   if (m) return cardPackIdOfSpecies(String(m.wave) === 'hybrid' ? m.main : m.species);
   const c = db.cards[no];
   if (!c) return null;
-  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || Object.entries(CARD_PACK_FIELD).find(([, list]) => list.includes(no)) || [])[0] || null;
+  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || [])[0] || null;
   return cardPackIdOfSpecies(c.user);
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => c.ready && cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort();

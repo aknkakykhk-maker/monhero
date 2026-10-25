@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e54506f63206d69
+// generated-sha256: 9533eb5fa4bab9a4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 04:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 04:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52654,16 +52654,12 @@ const CARD_PACKS = Object.freeze([
   rarity: Object.freeze(p.no <= 3 ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 }), pity: true,
 })));
 // 全モンスター(any)・ブリーダー(breeder)のカードの配り先(37枚。どの弾も50種前後になるよう、番号の若い順に半分ずつ配った)
+// 全体カード15枚(F。2026-10-25 カード部デッキくんの表)は、種類の少ない弾から埋めて、どの弾も55種にそろえた
 const CARD_PACK_SHARED = Object.freeze({
   p1: ['109', '112'], p2: ['113', '110', '114'], p3: ['111'],
-  p4: ['122', '121', '126', '123', '127', '124'], p5: ['125', '128', '249', '252', '250', '253'],
-  p6: ['254', '251', '276', '273', '277', '274'], p7: ['275', '278', '345', '279', '346', '280'],
-  p8: ['351', '347', '352', '348', '366', '349', '350'],
-});
-// 全体カード15枚(2026-10-25)の配り先。★仮(カード部の返事待ち)。どの弾も種類が50前後(48〜58)に収まるよう、種類の少ない弾から番号順に埋めた
-const CARD_PACK_FIELD = Object.freeze({
-  p8: ['F115', 'F116', 'F117', 'F118', 'F119', 'F120'], p7: ['F255', 'F256', 'F257', 'F258'],
-  p4: ['F259', 'F260', 'F261'], p6: ['F262'], p5: ['F263'],
+  p4: ['122', '121', '126', '123', '127', '124', 'F255', 'F256', 'F257', 'F258'], p5: ['125', '128', '249', '252', '250', '253'],
+  p6: ['254', '251', '276', '273', '277', '274', 'F263'], p7: ['275', '278', '345', '279', '346', '280', 'F259', 'F260', 'F261', 'F262'],
+  p8: ['351', '347', '352', '348', '366', '349', '350', 'F115', 'F116', 'F117', 'F118', 'F119', 'F120'],
 });
 // 以前の弾(w1〜w4・混血)の id。天井の保存(mh_card_pack_pity_v1)に残っている数は消さない(決まり⑦)
 const CARD_PACK_LEGACY_IDS = Object.freeze(['w1', 'w2', 'w3', 'w4', 'hybrid']);
@@ -52685,7 +52681,7 @@ const cardPackIdOf = (db, no) => {
   if (m) return cardPackIdOfSpecies(String(m.wave) === 'hybrid' ? m.main : m.species);
   const c = db.cards[no];
   if (!c) return null;
-  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || Object.entries(CARD_PACK_FIELD).find(([, list]) => list.includes(no)) || [])[0] || null;
+  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || [])[0] || null;
   return cardPackIdOfSpecies(c.user);
 };
 const cardPackTechPool = (db, pack) => Object.values(db.cards).filter((c) => c.ready && cardPackIdOf(db, c.no) === pack.id).map((c) => c.no).sort();
