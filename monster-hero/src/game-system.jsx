@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6faf14a582d847c
+// generated-sha256: 18b2d65709e92ee4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 02:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 02:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52902,12 +52902,12 @@ const CardBattleTeaser = ({ onClose }) => {
 };
 
 // ---- 結果の画面の、相手の助手のひとこと。決まった台詞をすぐ出し、対戦後のひとこと(AI)が届いたら差しかえる(83-card-battle-talk-ai.jsx) ----
-const CardResultTalk = ({ a, scene, talkFacts }) => {
-  const [line] = useState(() => cardPickLine(a.id, scene, null)); // 助手から見た勝ち負け
+const CardResultTalk = ({ a, lineScene, talkFacts }) => {
+  const [line] = useState(() => cardPickLine(a.id, lineScene, null)); // 助手から見た勝ち負け
   const [ai, setAi] = useState(null);
   useEffect(() => {
     let alive = true;
-    if (talkFacts && cardAiTalkOn()) void cardTalkFetch('after', { who: a.id, facts: talkFacts, samples: cardTalkSamples(a.id, scene) }).then((r) => { if (alive && r) setAi(r); });
+    if (talkFacts && cardAiTalkOn()) void cardTalkFetch('after', { who: a.id, facts: talkFacts, samples: cardTalkSamples(a.id, lineScene) }).then((r) => { if (alive && r) setAi(r); });
     return () => { alive = false; };
   }, []);
   const text = ai ? ai.text : line ? line.text : '';
@@ -54382,7 +54382,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
-          {a && <CardResultTalk a={a} scene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
+          {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}</div>

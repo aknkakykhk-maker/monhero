@@ -201,12 +201,12 @@ const CardBattleTeaser = ({ onClose }) => {
 };
 
 // ---- 結果の画面の、相手の助手のひとこと。決まった台詞をすぐ出し、対戦後のひとこと(AI)が届いたら差しかえる(83-card-battle-talk-ai.jsx) ----
-const CardResultTalk = ({ a, scene, talkFacts }) => {
-  const [line] = useState(() => cardPickLine(a.id, scene, null)); // 助手から見た勝ち負け
+const CardResultTalk = ({ a, lineScene, talkFacts }) => {
+  const [line] = useState(() => cardPickLine(a.id, lineScene, null)); // 助手から見た勝ち負け
   const [ai, setAi] = useState(null);
   useEffect(() => {
     let alive = true;
-    if (talkFacts && cardAiTalkOn()) void cardTalkFetch('after', { who: a.id, facts: talkFacts, samples: cardTalkSamples(a.id, scene) }).then((r) => { if (alive && r) setAi(r); });
+    if (talkFacts && cardAiTalkOn()) void cardTalkFetch('after', { who: a.id, facts: talkFacts, samples: cardTalkSamples(a.id, lineScene) }).then((r) => { if (alive && r) setAi(r); });
     return () => { alive = false; };
   }, []);
   const text = ai ? ai.text : line ? line.text : '';
@@ -1681,7 +1681,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} accent={win ? 'text-amber-200' : 'text-slate-300'} onBack={() => setView('top')}/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
-          {a && <CardResultTalk a={a} scene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
+          {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-amber-200">もらったカードポイント: {r.total}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}</div>
