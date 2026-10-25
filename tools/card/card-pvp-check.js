@@ -40,7 +40,8 @@ const same = (a, b) => JSON.stringify(pub(a, 0)) === JSON.stringify(pub(b, 1)) &
 const PENDING_DONE = ['034', '210', '060', '236', '109',
   '121', '124', '330', '345', '343', '347', '274', '349', '366', '362', '363', '346', '276', '342', '009', '070', '209',
   '250', '254', '351', '234', '294', '083', '197', '046', '365', '057', '269', '010', '273', '047', '251',
-  '114', '122', '125', '126', '127', '137', '149', '186', '252', '253', '278', '279', '303', '304', '306', '364', '022', '094'];
+  '114', '122', '125', '126', '127', '137', '149', '186', '252', '253', '278', '279', '303', '304', '306', '364', '022', '094',
+  '107', '111', '123', '163', '275', '270', '318', '198', '249', '185', '293'];
 // 付ける札は、準備中だった札だけ入れる(ほかの付ける札まで入れると、技が足りなくなる)
 const usable = (c, mons) => c && c.ready && (PENDING_DONE.includes(c.no) || !(c.effects || []).some((e) => e.t === 'attach'))
   && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => c.user === m.species));
@@ -69,7 +70,7 @@ const pendingDeck = (monsters, must = []) => {
 };
 
 // 1戦: 2台(A・B)。A から見た first、B から見た first は反対
-const play = (n, extraTrio, must) => {
+const play = (n, extraTrio, must, extraB) => {
   const r = rng(1000 + n);
   const who = ['mua', 'kiki', 'momosuke', 'dra', 'kyuko', 'atsu'];
   // 後半の20戦は MASTER のデッキ(全部の弾)。準備中だった札(台帳 #141)も、マルチで当てられるかを見る
@@ -81,7 +82,7 @@ const play = (n, extraTrio, must) => {
     : [[monOf('metalner'), monOf('mew'), monOf('suezo')], [monOf('mocchi'), monOf('zilla'), monOf('dragon')]]);
   const forced = n >= 28 || !!extraTrio;
   const deckA = forced ? pendingDeck(trio[0], must) : E.cardAiBuildDeck(db, who[n % 6], lv);
-  const deckB = forced ? pendingDeck(trio[1]) : E.cardAiBuildDeck(db, who[(n + 3) % 6], lv);
+  const deckB = extraB ? pendingDeck(trio[1], extraB.must) : forced ? pendingDeck(trio[1]) : E.cardAiBuildDeck(db, who[(n + 3) % 6], lv);
   const seedA = (n * 7919 + 13) >>> 0, seedB = (n * 104729 + 7) >>> 0;
   const firstA = n % 2;
   let A = E.cardPvpNewGame(db, { myDeck: deckA, mySeed: seedA, foeMonsters: deckB.monsters, first: firstA, names: ['A', 'B'] });
@@ -97,12 +98,14 @@ const play = (n, extraTrio, must) => {
     let act = E.cardAiChooseAction(db, me, pol, r);
     // 28戦目から: 準備中だった札を使える場面なら、その札を選ぶ(コンピューターが選ばない札も、マルチで通るか見るため)
     // 追加の試合の相手(B)は攻撃しない(まだ使われていない札の持ち主が先に倒れないように。守りはふつうに出す)
-    if (extraTrio && !aTurn && me.phase === 'main' && !me.pending && !me.pendingDiscard) act = { type: 'endAttacks' };
+    if (extraTrio && !(extraB && extraB.attack) && !aTurn && me.phase === 'main' && !me.pending && !me.pendingDiscard) act = { type: 'endAttacks' };
     else if (forced) {
       const noOf = (a) => (a.type === 'guard' ? [me.players[0].hand[a.hand]] : Array.isArray(a.hand) ? a.hand.map((i) => me.players[0].hand[i]) : []);
       // まだどの試合でも使っていない札を含む手を先に(影縛りには名指しを入れる)
-      const legal = E.cardLegalActions(db, me).filter((a) => noOf(a).some((no) => PENDING_DONE.includes(no)));
-      const pick = legal.find((a) => noOf(a).some((no) => PENDING_DONE.includes(no) && !USED_SO_FAR.has(no))) || legal[0];
+      const legal = E.cardLegalActions(db, me).filter((a) => noOf(a).some((no) => PENDING_DONE.includes(no) || (extraB && extraB.must.includes(no))));
+      // 追加の試合の相手は、入れた札(全員に当たる技など)を最初に使う
+      const notLead = (a) => !(extraB && extraB.avoidLead && !aTurn && a.target && a.target.m === 0);
+      const pick = (extraB && extraB.avoidLead && !aTurn && E.cardLegalActions(db, me).find((a) => (a.type === 'attack') && a.target && a.target.p === 1 && a.target.m !== 0)) || (extraB && legal.find((a) => notLead(a) && noOf(a).some((no) => extraB.must.includes(no)))) || legal.find((a) => noOf(a).some((no) => PENDING_DONE.includes(no) && !USED_SO_FAR.has(no))) || legal[0];
       if (pick) act = E.cardAiFillBind(db, me, pick, pol);
     }
     let next = act && E.cardApplyAction(db, me, act);
@@ -127,8 +130,8 @@ const play = (n, extraTrio, must) => {
 let N = 52;
 let applyOk = 0, winOk = 0, hiddenOk = 0, verifyOk = 0, finished = 0, firstErr = '';
 const games = [];
-const runOne = (n, extraTrio, must) => {
-  const g = play(n, extraTrio, must);
+const runOne = (n, extraTrio, must, extraB) => {
+  const g = play(n, extraTrio, must, extraB);
   games.push(g);
   if (!g.err) applyOk++; else if (!firstErr) firstErr = g.err;
   if (g.A.winner !== null) finished++;
@@ -141,7 +144,7 @@ const runOne = (n, extraTrio, must) => {
   if (vA.ok && vB.ok) verifyOk++; else if (!firstErr) firstErr = `${n}戦目のなぞり直し: ${vA.why || vB.why}`;
 };
 for (let n = 0; n < N; n++) runOne(n);
-// まだ使われていない準備中だった札があれば、その札を使える3体で追加の試合(1枚につき3戦まで・全部で40戦まで)。追加の試合も①〜④に数える
+// まだ使われていない準備中だった札があれば、その札を使える3体で追加の試合(1枚につき5戦まで・全部で60戦まで)。追加の試合も①〜④に数える
 {
   const usedNow = () => new Set(games.flatMap((x) => x.usedNos));
   const left = () => PENDING_DONE.filter((no) => !PENDING_RARE.includes(no) && !usedNow().has(no));
@@ -161,7 +164,17 @@ for (let n = 0; n < N; n++) runOne(n);
     const ch = (c.effects || []).find((e) => e.t === 'choose');
     const dgeCard = ch && ch.filter && ch.filter.kind === 'dge' ? Object.values(db.cards).filter((x) => x.ready && x.kind === 'dge' && x.user === leadSp && !PENDING_DONE.includes(x.no)).map((x) => x.no).sort()[0] : null;
     const areaCard = needArea ? Object.values(db.cards).filter((x) => x.ready && x.user === db.monsters[lead].species && (x.effects || []).some((e) => e.t === 'area' && e.who === 'enemies')).map((x) => x.no).sort()[0] : null;
-    for (let k = 0; k < 3 && extra < 40 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, ['C-001', 'C-003', 'C-005']], [no, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])]); }
+    // 守りの札は、相手(B)に攻撃させる。みんな下がれ・我慢は、相手のデッキに全員に当たる技・ガッツを減らす技も入れる
+    const isGuard = ['dge', 'blk'].includes(c.kind);
+    const bMons = ['C-001', 'C-003', 'C-005'];
+    const bNeed = (pred) => Object.values(db.cards).filter((x) => x.ready && ['pow', 'int'].includes(x.kind) && bMons.some((m) => db.monsters[m].species === x.user) && pred(x)).sort((a, b) => a.guts - b.guts || (a.no < b.no ? -1 : 1)).map((x) => x.no)[0]; // いちばん安い技
+    const bMust = (c.effects || []).some((e) => e.t === 'evadeAll') ? [bNeed((x) => (x.effects || []).some((e) => e.t === 'area'))]
+      : (c.effects || []).some((e) => e.t === 'noGutsLoss') ? [bNeed((x) => (x.effects || []).some((e) => e.t === 'gutsLossOnHit'))] : [];
+    // 盾になる・吹き上げる(ほかの子が狙われたときに出す守り)は、相手が先頭の子(カードの持ち主)以外を狙う
+    const avoidLead = (c.effects || []).some((e) => e.t === 'shield' || e.t === 'liftAllies' || e.t === 'cover');
+    const extraB = isGuard ? { attack: true, must: bMust.filter(Boolean), avoidLead } : null;
+    // 盾になる・吹き上げる など、ほかの子が狙われたときに出す守りは、先頭の子をカードの持ち主にして、ほかの2体も並べる
+    for (let k = 0; k < 5 && extra < 60 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, bMons], [no, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])], extraB); }
   }
   N += extra;
 }
