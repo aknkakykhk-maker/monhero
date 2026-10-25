@@ -862,6 +862,40 @@ const pendingCards = () => {
     const a = find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no);
     ok(a && a.hand.some((i) => st.players[0].hand[i] === '150'), '150: ゲルがゴーレムの技を出せない');
     ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no && x.hand.length === 1), '150: ものまねを付けずに出せてしまう'); }
+  // ---- 区切り7: モンスターが入れ替わる ----
+  ok(!db.cards['280'].ready, '280: おいのりは、全体カードを入れる日まで準備中のまま(社長 案A)');
+  // ヒノトリの復活(128): 倒れたヒノトリをライフ4で戻す。そのターンは攻撃できない
+  { ready('128'); const ph = monOf('phoenix'); let st = scene({ mons: [[ph, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['128', plainOf('phoenix', 'pow') ? plainOf('phoenix', 'pow').no : gol.no], []], guts: [9, 0] });
+    ok(!find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '128'), '128: ヒノトリが倒れていないのに出せる');
+    st.players[0].mons[0].ko = true; st.players[0].mons[0].life = 0;
+    const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '128' && x.target && x.target.m === 0); ok(a, '128: 倒れたヒノトリを選べない');
+    if (a) { st = act(st, a); const m = st.players[0].mons[0]; ok(!m.ko && m.life === 4, '128: ライフ4で戻らない'); ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0), '128: 戻ったヒノトリがそのターン攻撃できる'); } }
+  // まゆ化(221)・羽化(222・ワーム): まゆ化した子は羽化のほかを出せない。羽化でムラサキチュウ(C-062)になり、ライフは最大
+  { ready('221'); ready('222'); const wo = monOf('worm'); const wp = plainOf('worm', 'pow');
+    let st = scene({ mons: [[wo, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['221', '222', wp.no], []], guts: [9, 0] });
+    ok(!find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '222'), '222: まゆ化の前に羽化を出せる');
+    st = act(st, optWith(st, ['221']));
+    const s2 = nextTurnOf(st, 0); s2.turn += 1;
+    ok(!optWith(s2, [wp.no], 0), '221: まゆ化した子が技を出せる');
+    const e = optWith(s2, ['222']); ok(e, '222: まゆ化した子が羽化を出せない');
+    if (e) { const s3 = act(s2, e); const m = s3.players[0].mons[0]; ok(m.no === 'C-062' && m.life === db.monsters['C-062'].life && m.max === m.life && !m.cocoon, `222: ムラサキチュウ(最大ライフ)にならない(${m.no} ${m.life})`); } }
+  // 合体(352): 味方2体をKO。メインとサブが合う混血を、メインを出した子の場所に出す(そのターンは攻撃できない)
+  { ready('352'); const hy = db.monsters['C-051']; const ma = monOf(hy.main), sb = monOf(hy.sub);
+    let st = scene({ mons: [[ma, sb, 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['352'], []], guts: [9, 0] });
+    const os = E.cardAttackOptions(db, st).filter((x) => x.type === 'breeder' && x.fuse);
+    ok(os.some((x) => x.fuse.a === 0 && x.fuse.b === 1 && x.fuse.no === 'C-051'), `352: 合体の手が出ない(${JSON.stringify(os.map((x) => x.fuse))})`);
+    const a = os.find((x) => x.fuse.a === 0 && x.fuse.b === 1);
+    if (a) { st = act(st, a); const m0 = st.players[0].mons[0], m1 = st.players[0].mons[1];
+      ok(m0.no === 'C-051' && !m0.ko && m0.life === hy.life && m1.ko, '352: 混血が出ない・もう1体がKOにならない');
+      ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0), '352: 出た子がそのターン攻撃できる'); ok(st.winner === null, '352: 合体で負けになった'); }
+    ok(!E.cardApplyAction(db, scene({ mons: [[ma, sb, 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['352'], []], guts: [9, 0] }), { ...(a || {}), fuse: { a: 0, b: 1, no: 'C-062' } }), '352: 合わない混血を出せる'); }
+  // 太古の記憶(348): 混血の子の、サブの種族の特殊技に付けて出せる
+  { ready('348'); const hy = Object.values(db.monsters).find((m) => m.main && Object.values(db.cards).some((c) => c.ready && c.user === m.sub && c.kind === 'spe' && c.guts <= 3 && !(c.effects || []).some((e) => ['attach', 'choose', 'peekPick', 'useWhenAllies', 'emerge', 'cocoon'].includes(e.t)) && !(c.effects || []).some((e) => ['extraAttackTarget', 'unstunTarget', 'stunTarget', 'liftTarget', 'heal', 'selfHurt', 'revive'].includes(e.t))));
+    const sp = Object.values(db.cards).find((c) => c.ready && c.user === hy.sub && c.kind === 'spe' && c.guts <= 3 && !(c.effects || []).some((e) => ['attach', 'choose', 'peekPick', 'useWhenAllies', 'emerge', 'cocoon', 'extraAttackTarget', 'unstunTarget', 'stunTarget', 'liftTarget', 'heal', 'selfHurt', 'revive'].includes(e.t)));
+    ok(hy && sp, '348: 見本が無い');
+    if (hy && sp) { const st = scene({ mons: [[hy.no, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[sp.no, '348'], []], guts: [9, 0] });
+      ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === sp.no && x.hand.length === 1), '348: 太古の記憶なしでサブの特殊技が出せる');
+      ok(find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === sp.no && x.hand.length === 2), `348: 太古の記憶を付けてサブの特殊技(${sp.name})が出せない`); } }
 };
 scenes();
 pendingCards();

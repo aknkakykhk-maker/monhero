@@ -42,7 +42,8 @@ const PENDING_DONE = ['034', '210', '060', '236', '109',
   '250', '254', '351', '234', '294', '083', '197', '046', '365', '057', '269', '010', '273', '047', '251',
   '114', '122', '125', '126', '127', '137', '149', '186', '252', '253', '278', '279', '303', '304', '306', '364', '022', '094',
   '107', '111', '123', '163', '275', '270', '318', '198', '249', '185', '293',
-  '178', '214', '285', '286', '227', '288', '340', '054', '358', '361', '150'];
+  '178', '214', '285', '286', '227', '288', '340', '054', '358', '361', '150',
+  '128', '221', '222', '352', '348'];
 // 付ける札は、準備中だった札だけ入れる(ほかの付ける札まで入れると、技が足りなくなる)
 const usable = (c, mons) => c && c.ready && (PENDING_DONE.includes(c.no) || !(c.effects || []).some((e) => e.t === 'attach'))
   && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => c.user === m.species));
@@ -52,12 +53,13 @@ const PENDING_RARE = ['124', '250', '127', '123', '275']; // 劇的な幕切れ(
 const USED_SO_FAR = new Set();
 const monOf = (sp) => Object.values(db.monsters).filter((m) => m.species === sp && !m.main).map((m) => m.no).sort()[0];
 // その3体で使える準備中だった札を3枚ずつ入れ、残りはその3体で使える札を3枚ずつ順に足して50枚にする
-const pendingDeck = (monsters, must = []) => {
+const pendingDeck = (monsters, must = [], onlyMust = false) => {
   const mons = monsters.map((no) => db.monsters[no]);
   const cards = [];
   must.forEach((no) => cards.push(no, no, no)); // 追加の試合で、まだ使われていない札と、付ける先の技を必ず3枚ずつ入れる
   // 種族専用の札は3枚、誰でも・ブリーダーの札は1枚ずつ。準備中だった札は30枚まで(種族専用の札が先)(付ける札ばかりだと、付ける先の技が足りない)
-  const mineP = PENDING_DONE.filter((no) => usable(db.cards[no], mons));
+  // onlyMust … 目当ての札だけを入れる(太古の記憶のように、2枚がそろわないと出せない札の追加の試合)
+  const mineP = onlyMust ? [] : PENDING_DONE.filter((no) => usable(db.cards[no], mons));
   mineP.filter((no) => !must.includes(no) && !['any', 'breeder'].includes(db.cards[no].user)).forEach((no) => cards.push(no, no, no));
   mineP.filter((no) => !must.includes(no) && ['any', 'breeder'].includes(db.cards[no].user)).forEach((no) => cards.push(no));
   cards.splice(30);
@@ -72,7 +74,7 @@ const pendingDeck = (monsters, must = []) => {
 };
 
 // 1戦: 2台(A・B)。A から見た first、B から見た first は反対
-const play = (n, extraTrio, must, extraB) => {
+const play = (n, extraTrio, must, extraB, onlyMust) => {
   const r = rng(1000 + n);
   const who = ['mua', 'kiki', 'momosuke', 'dra', 'kyuko', 'atsu'];
   // 後半の20戦は MASTER のデッキ(全部の弾)。準備中だった札(台帳 #141)も、マルチで当てられるかを見る
@@ -83,7 +85,7 @@ const play = (n, extraTrio, must, extraB) => {
     : n < 43 ? [[monOf('centaur'), monOf('colorpandora'), monOf('dino')], [monOf('naga'), monOf('tiger'), monOf('plant')]]
     : [[monOf('metalner'), monOf('mew'), monOf('suezo')], [monOf('mocchi'), monOf('zilla'), monOf('dragon')]]);
   const forced = n >= 28 || !!extraTrio;
-  const deckA = forced ? pendingDeck(trio[0], must) : E.cardAiBuildDeck(db, who[n % 6], lv);
+  const deckA = forced ? pendingDeck(trio[0], must, !!onlyMust) : E.cardAiBuildDeck(db, who[n % 6], lv);
   const deckB = extraB ? pendingDeck(trio[1], extraB.must) : forced ? pendingDeck(trio[1]) : E.cardAiBuildDeck(db, who[(n + 3) % 6], lv);
   const seedA = (n * 7919 + 13) >>> 0, seedB = (n * 104729 + 7) >>> 0;
   const firstA = n % 2;
@@ -132,8 +134,8 @@ const play = (n, extraTrio, must, extraB) => {
 let N = 52;
 let applyOk = 0, winOk = 0, hiddenOk = 0, verifyOk = 0, finished = 0, firstErr = '';
 const games = [];
-const runOne = (n, extraTrio, must, extraB) => {
-  const g = play(n, extraTrio, must, extraB);
+const runOne = (n, extraTrio, must, extraB, onlyMust) => {
+  const g = play(n, extraTrio, must, extraB, onlyMust);
   games.push(g);
   if (!g.err) applyOk++; else if (!firstErr) firstErr = g.err;
   if (g.A.winner !== null) finished++;
@@ -146,7 +148,7 @@ const runOne = (n, extraTrio, must, extraB) => {
   if (vA.ok && vB.ok) verifyOk++; else if (!firstErr) firstErr = `${n}戦目のなぞり直し: ${vA.why || vB.why}`;
 };
 for (let n = 0; n < N; n++) runOne(n);
-// まだ使われていない準備中だった札があれば、その札を使える3体で追加の試合(1枚につき5戦まで・全部で60戦まで)。追加の試合も①〜④に数える
+// まだ使われていない準備中だった札があれば、その札を使える3体で追加の試合(1枚につき5戦まで。場の組み合わせが要る札は10戦まで・全部で80戦まで)。追加の試合も①〜④に数える
 {
   const usedNow = () => new Set(games.flatMap((x) => x.usedNos));
   const left = () => PENDING_DONE.filter((no) => !PENDING_RARE.includes(no) && !usedNow().has(no));
@@ -157,7 +159,17 @@ for (let n = 0; n < N; n++) runOne(n);
     // 全員に当たる技に付ける札は、全員に当たる技を持つコロペンドラと
     const needArea = (c.effects || []).some((e) => e.t === 'attach' && e.when && e.when.area);
     const lead = own || (needArea ? monOf('colorpandora') : 'C-003');
-    const trioA = [lead, ...['C-003', 'C-001', 'C-005'].filter((x) => x !== lead)].slice(0, 3);
+    let trioA = [lead, ...['C-003', 'C-001', 'C-005'].filter((x) => x !== lead)].slice(0, 3);
+    // 場の組み合わせが要る札(区切り7): ヒノトリの復活はヒノトリを、合体は混血になる2体を、太古の記憶は混血の子を並べる
+    const special = [];
+    if ((c.effects || []).some((e) => e.t === 'revive')) trioA = [monOf('phoenix'), 'C-003', 'C-001'];
+    if ((c.effects || []).some((e) => e.t === 'fuse')) { const hy = db.monsters['C-051']; trioA = [monOf(hy.main), monOf(hy.sub), 'C-005']; }
+    if ((c.effects || []).some((e) => e.t === 'ancient')) {
+      const ok2 = (x) => x.ready && x.kind === 'spe' && !(x.effects || []).some((e) => ['attach', 'choose', 'peekPick', 'useWhenAllies', 'emerge', 'cocoon', 'extraAttackTarget', 'unstunTarget', 'heal', 'selfHurt', 'revive', 'lastWish'].includes(e.t));
+      const hy = Object.values(db.monsters).filter((m) => m.main && Object.values(db.cards).some((x) => ok2(x) && x.user === m.sub)).sort((a, b) => (a.no < b.no ? -1 : 1))[0];
+      trioA = [hy.no, 'C-003', 'C-001'];
+      special.push(Object.values(db.cards).filter((x) => ok2(x) && x.user === hy.sub).sort((a, b) => a.guts - b.guts)[0].no);
+    }
     // 付ける札は、付ける先の技(先頭の子の、文の無いちから技)も3枚入れる
     const isAttach = (c.effects || []).some((e) => e.t === 'attach') && !needArea;
     const leadSp = db.monsters[lead].species;
@@ -167,7 +179,7 @@ for (let n = 0; n < N; n++) runOne(n);
     const dgeCard = ch && ch.filter && ch.filter.kind === 'dge' ? Object.values(db.cards).filter((x) => x.ready && x.kind === 'dge' && x.user === leadSp && !PENDING_DONE.includes(x.no)).map((x) => x.no).sort()[0] : null;
     const areaCard = needArea ? Object.values(db.cards).filter((x) => x.ready && x.user === db.monsters[lead].species && (x.effects || []).some((e) => e.t === 'area' && e.who === 'enemies')).map((x) => x.no).sort()[0] : null;
     // 守りの札は、相手(B)に攻撃させる。みんな下がれ・我慢は、相手のデッキに全員に当たる技・ガッツを減らす技も入れる
-    const isGuard = ['dge', 'blk'].includes(c.kind);
+    const isGuard = ['dge', 'blk'].includes(c.kind) || (c.effects || []).some((e) => e.t === 'revive'); // ヒノトリの復活も、相手に攻撃させる(倒れる場面が要る)
     const bMons = ['C-001', 'C-003', 'C-005'];
     const bNeed = (pred) => Object.values(db.cards).filter((x) => x.ready && ['pow', 'int'].includes(x.kind) && bMons.some((m) => db.monsters[m].species === x.user) && pred(x)).sort((a, b) => a.guts - b.guts || (a.no < b.no ? -1 : 1)).map((x) => x.no)[0]; // いちばん安い技
     const bMust = (c.effects || []).some((e) => e.t === 'evadeAll') ? [bNeed((x) => (x.effects || []).some((e) => e.t === 'area'))]
@@ -176,7 +188,7 @@ for (let n = 0; n < N; n++) runOne(n);
     const avoidLead = (c.effects || []).some((e) => e.t === 'shield' || e.t === 'liftAllies' || e.t === 'cover');
     const extraB = isGuard ? { attack: true, must: bMust.filter(Boolean), avoidLead } : null;
     // 盾になる・吹き上げる など、ほかの子が狙われたときに出す守りは、先頭の子をカードの持ち主にして、ほかの2体も並べる
-    for (let k = 0; k < 5 && extra < 60 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, bMons], [no, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])], extraB); }
+    for (let k = 0; k < (special.length ? 10 : 5) && extra < 80 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, bMons], [no, ...special, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])], extraB, special.length > 0); }
   }
   N += extra;
 }
