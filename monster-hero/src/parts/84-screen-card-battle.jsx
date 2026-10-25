@@ -219,39 +219,47 @@ const cardFoeStyle = (who) => {
   const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
   return v <= 1.2 ? CARD_FOE_STYLES.balance : (CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance);
 };
+// 強さごとの組み方の説明(82 の CARD_AI_BUILD と同じ決め。数字は出さない)
+const CARD_FOE_BUILD_NOTE = Object.freeze({
+  easy: '好きな子を中心に、気分で3体えらぶ(ほかの子が混ざることも)。カードは第1弾だけで、組み方は雑',
+  normal: '好きな上位の子が中心。カードは型に合うものを、ざっくり入れる',
+  hard: '4体から相性のいい3体をえらぶ。第1弾のカードで、型どおりにしっかり組む',
+  expert: '4体から相性のいい3体をえらぶ。全部の弾から、強いカードを優先して組む',
+  master: 'いちばん強い組み合わせで、全部の弾から本気で組む。あなたのデッキを見て、3体をえらび直すことも',
+});
 const CardFoeStyle = ({ db, who, level }) => {
   const style = cardFoeStyle(who);
   const recipe = CARD_AI_DECKS[who];
   if (!style || !recipe) return null;
-  const kit = recipe.kit ? db.starters[recipe.kit] : null;
-  const mons = (recipe.monsters || (kit ? kit.monsters : [])).map((no) => cardMonsterOf(db, no)).filter(Boolean);
-  const upper = level === 'hard' || level === 'expert' || level === 'master';
+  // 好きなモンスター ベスト4(毎試合、この中から3体えらぶ。82 の CARD_AI_FAVORITES)
+  const mons = (CARD_AI_FAVORITES[who] || []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
   const lv = CARD_LEVEL_LABEL[level] || '';
-  // 強さでデッキの組み方が変わる(cardAiBuildDeck): スターターの助手は EASY・NORMAL ではスターターのまま、HARD から同じ3体で組み直す
-  const deckNote = kit && !upper ? `${lv}: スターター「${kit.name}」のままのデッキ`
-    : `${lv}: この3体に合わせて、${style.label}のデッキを組んでくる${level === 'expert' || level === 'master' ? '(いろいろな弾のカードも使う)' : ''}`;
+  const upper = level === 'hard' || level === 'expert' || level === 'master';
   return (
     <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
         <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>
       </div>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <small className="shrink-0 text-[10px] font-black text-slate-400">使うモンスター</small>
-        {mons.map((m) => (
-          <span key={m.no} data-card-foe-mon={m.no} className="flex shrink-0 items-center gap-1">
-            <img src={cardMonArt(m) || CARD_IMG(m.img)} alt="" aria-hidden="true" className="h-7 w-7 rounded-md bg-white/10 object-contain"/>
-            <b className="whitespace-nowrap text-[12px] font-black text-white">{m.name}</b>
-          </span>
-        ))}
+      <div>
+        <small className="block text-[10px] font-black text-slate-400">好きなモンスター(毎試合、この中から3体)</small>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {mons.map((m, i) => (
+            <span key={m.no} data-card-foe-mon={m.no} className="flex shrink-0 items-center gap-1">
+              <span aria-hidden="true" className={`text-[10px] font-black ${i === 0 ? 'text-amber-300' : 'text-slate-400'}`}>{i === 0 ? '★' : '・'}</span>
+              <img src={cardMonArt(m) || CARD_IMG(m.img)} alt="" aria-hidden="true" className="h-7 w-7 rounded-md bg-white/10 object-contain"/>
+              <b className="whitespace-nowrap text-[12px] font-black text-white">{m.name}</b>
+            </span>
+          ))}
+        </div>
       </div>
-      {Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && (
+      {upper && Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && (
         <div data-card-foe-prefer className="text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
           <small className="mr-1 text-[10px] font-black text-slate-400">よく使うカード</small>
           {recipe.prefer.map((n, i) => <span key={n} className="inline-block whitespace-nowrap">{n}{i < recipe.prefer.length - 1 ? '・' : ''}</span>)}
         </div>
       )}
-      <div data-card-foe-deck-note className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(deckNote)}</div>
+      <div data-card-foe-deck-note className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`${lv}: ${CARD_FOE_BUILD_NOTE[level] || ''}`)}</div>
     </div>
   );
 };
@@ -1425,7 +1433,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   };
   const startBattle = (pick = foe) => {
     if (!activeDeck || deckIssues.length) { setNotice(deckIssues.join('・')); return; }
-    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level);
+    // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
+    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck });
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
     const assistant = allAssistants.find((a) => a.id === pick.who);

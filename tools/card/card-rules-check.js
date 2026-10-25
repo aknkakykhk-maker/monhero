@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITES, CARD_AI_BUILD, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -174,8 +174,9 @@ const decksAndSaves = () => {
   //   直す前は、みゅあ 33%・ももすけ(MASTER)38% と弱く、弱い子がカードポイントの稼ぎ場になっていた。細かい数は tools/card/card-ai-balance.js
   ['expert', 'master'].forEach((lv) => {
     const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
-      const d = E.cardAiBuildDeck(db, w, lv); let win = 0, n = 0, sd = 1;
-      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
+      let win = 0, n = 0, sd = 1;
+      // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体。2026-10-25)。MASTER はプレイヤー役のデッキを見る
+      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
       return [w, win / n];
     });
     const bad = rates.filter(([, r]) => r < 0.38 || r > 0.65);
@@ -183,12 +184,29 @@ const decksAndSaves = () => {
   });
   // スターターと助手のデッキ(全部の難易度)が決まりどおり
   Object.keys(db.starters).forEach((k) => { const p = E.cardDeckProblems(db, E.cardAiBuildDeck(db, k)); ok(!p.length, `スターター ${k}: ${p.join('・')}`); });
-  Object.keys(E.CARD_AI_DECKS).forEach((w) => Object.keys(E.CARD_AI_LEVELS).forEach((lv) => {
-    const d = E.cardAiBuildDeck(db, w, lv);
+  // 好きなモンスター ベスト4(2026-10-25 社長): どの助手も4体・別々の種族。毎試合3体を選び、EASY だけ1体までベスト4以外が混ざる。
+  //   選ばれ方は1位ほど多い(NORMAL)・毎回同じにはならない。MASTER は相手のデッキで選び直すことがある
+  Object.keys(E.CARD_AI_HABITS).forEach((w) => {
+    const fav = E.CARD_AI_FAVORITES[w] || [];
+    ok(fav.length === 4 && new Set(fav.map((no) => (db.monsters[no] || {}).species)).size === 4, `助手 ${w} の好きなモンスターが4体・別々の種族でない`);
+    const cnt = {}; const trios = new Set();
+    for (let g = 0; g < 200; g++) {
+      const t = E.cardAiPickTrio(db, w, 'normal', E.cardAiSeededRand(`fav:${w}:${g}`), null);
+      ok(t.length === 3 && t.every((no) => fav.includes(no)), `助手 ${w}(NORMAL)の3体がベスト4の外`);
+      t.forEach((no) => { cnt[no] = (cnt[no] || 0) + 1; }); trios.add(t.slice().sort().join(','));
+    }
+    ok((cnt[fav[0]] || 0) > (cnt[fav[3]] || 0) && trios.size >= 2, `助手 ${w}(NORMAL)の3体の選ばれ方が違う(1位ほど多く・毎回同じにならない): ${JSON.stringify(cnt)}`);
+    let stray = 0;
+    for (let g = 0; g < 200; g++) { const t = E.cardAiPickTrio(db, w, 'easy', E.cardAiSeededRand(`easy:${w}:${g}`), null); const out = t.filter((no) => !fav.includes(no)).length; ok(out <= 1, `助手 ${w}(EASY)でベスト4以外が2体以上`); if (out) stray += 1; }
+    ok(stray > 10 && stray < 120, `助手 ${w}(EASY)の気分屋の混ざり方がおかしい(${stray}/200)`);
+  });
+  Object.keys(E.CARD_AI_DECKS).forEach((w) => Object.keys(E.CARD_AI_LEVELS).forEach((lv) => [0, 1, 2, 3, 4].forEach((g) => {
+    const d = E.cardAiBuildDeck(db, w, lv, g ? E.cardAiSeededRand(`deck:${w}:${lv}:${g}`) : null);
     const p = E.cardDeckProblems(db, d);
     ok(!p.length, `助手 ${w}(${lv})のデッキ: ${p.join('・')}`);
     ok(d.cards.every((no) => db.cards[no].ready), `助手 ${w}(${lv})のデッキに準備中のカード`);
-  }));
+    ok(E.CARD_AI_BUILD[lv].maxWave >= 99 || d.cards.every((no) => db.cards[no].wave <= E.CARD_AI_BUILD[lv].maxWave), `助手 ${w}(${lv})のデッキに使えない弾のカード`);
+  })));
   // 保存の読み込み: 無い・壊れた値でも既定値になる
   [undefined, null, 'x', 5, [], { a: 'b' }].forEach((bad) => {
     ok(JSON.stringify(E.cardNormalizeCollection(bad)) === '{}' || cardIsObj(E.cardNormalizeCollection(bad)), 'コレクションの正規化');
