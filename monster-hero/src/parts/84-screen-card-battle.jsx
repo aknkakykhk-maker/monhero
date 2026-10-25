@@ -1750,31 +1750,32 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       </header>
       <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`}>
         <ModeSelectAssistantPanel assistant={topAssistantShown} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist}/>
-        <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+        <div data-card-top-menu className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:overflow-y-auto landscape:py-2 landscape:[&>*:first-child]:mt-auto landscape:[&>*:last-child]:mb-auto [@media(orientation:landscape)_and_(max-height:360px)]:space-y-1.5">
           {!assistShown && topAssistant && <ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="justify-end" withLabel/>}
+          {/* 横の画面は、はみ出すときは上から並べる(justify-center だと上の段が送っても見えない所へ出た。2026-10-25 ダメダシくん)。背の低い横画面ではボタンを詰める */}
           {/* いまのデッキ(小さく。押すとデッキ編成へ) */}
           {activeDeck && (
-            <button type="button" data-card-active-deck onClick={go('decks')} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]">
+            <button type="button" data-card-active-deck onClick={go('decks')} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98] [@media(orientation:landscape)_and_(max-height:360px)]:py-1">
               <small className="shrink-0 text-[10px] font-black text-slate-400">いまのデッキ</small>
               <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{activeDeck.name}</b>
-              <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
+              <span aria-hidden="true" className="flex shrink-0 -space-x-2">{activeDeck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className="h-8 w-6 [@media(orientation:landscape)_and_(max-height:360px)]:h-6 [@media(orientation:landscape)_and_(max-height:360px)]:w-[18px] rounded-[3px] border border-white/40 object-cover"/> : null; })}</span>
             </button>
           )}
-          {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
+          {notice && <p className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:360px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:360px)]:leading-snug`} style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
               <button key={c.key} type="button" {...c.attr} disabled={!!c.disabled} onClick={c.onClick}
-                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px]`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
+                className={`mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`} style={{ animationDelay: `${0.05 + idx * 0.06}s` }}>
                 <span aria-hidden="true" className="mhms-mark">{c.mark}</span>
-                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">{c.ico}</span>
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden">{c.ico}</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">{c.label}</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">{c.sub}</small></span>
               </button>
             ))}
           </div>
           <div data-card-top-shortcuts className="mhms-in grid grid-cols-4 gap-1.5" style={{ animationDelay: '.28s' }}>
             {smallButtons.map((b) => (
-              <button key={b.key} type="button" {...b.attr} onClick={b.onClick} className={`mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 ${b.tone}`}>
-                <span aria-hidden="true" className="text-lg">{b.ico}</span><b className="text-[11px] font-black">{b.label}</b>{b.sub && <small className="text-[9px] font-black text-slate-300/90">{b.sub}</small>}
+              <button key={b.key} type="button" {...b.attr} onClick={b.onClick} className={`mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[40px] [@media(orientation:landscape)_and_(max-height:360px)]:flex-row [@media(orientation:landscape)_and_(max-height:360px)]:gap-1 ${b.tone}`}>
+                <span aria-hidden="true" className="text-lg">{b.ico}</span><b className="text-[11px] font-black">{b.label}</b>{b.sub && <small className="text-[9px] font-black text-slate-300/90 [@media(orientation:landscape)_and_(max-height:360px)]:hidden">{b.sub}</small>}
               </button>
             ))}
           </div>

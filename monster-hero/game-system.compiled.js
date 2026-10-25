@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ecb444baf204569c
+// source-sha256: d7d06908779732b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 22:11";
+const BUILD_DATE = "2026-10-25 22:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -89673,7 +89673,8 @@ const CardBattleScreen = ({
     showComment: assist.modeSelectComment,
     onToggle: toggleAssist
   }), React.createElement("div", {
-    className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2"
+    "data-card-top-menu": true,
+    className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:overflow-y-auto landscape:py-2 landscape:[&>*:first-child]:mt-auto landscape:[&>*:last-child]:mb-auto [@media(orientation:landscape)_and_(max-height:360px)]:space-y-1.5"
   }, !assistShown && topAssistant && React.createElement(ModeSelectAssistToggles, {
     assistant: topAssistant,
     showArt: assist.modeSelectArt,
@@ -89685,7 +89686,7 @@ const CardBattleScreen = ({
     type: "button",
     "data-card-active-deck": true,
     onClick: go('decks'),
-    className: "mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]"
+    className: "mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98] [@media(orientation:landscape)_and_(max-height:360px)]:py-1"
   }, React.createElement("small", {
     className: "shrink-0 text-[10px] font-black text-slate-400"
   }, "いまのデッキ"), React.createElement("b", {
@@ -89699,10 +89700,10 @@ const CardBattleScreen = ({
       key: no,
       src: CARD_IMG(m.img),
       alt: "",
-      className: "h-8 w-6 rounded-[3px] border border-white/40 object-cover"
+      className: "h-8 w-6 [@media(orientation:landscape)_and_(max-height:360px)]:h-6 [@media(orientation:landscape)_and_(max-height:360px)]:w-[18px] rounded-[3px] border border-white/40 object-cover"
     }) : null;
   }))), notice && React.createElement("p", {
-    className: "text-[12px] font-bold text-amber-200",
+    className: `text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:360px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:360px)]:leading-snug`,
     style: JA_LABEL_STYLE
   }, jaWrap(notice)), React.createElement("div", {
     "data-card-top-cards": true,
@@ -89713,7 +89714,7 @@ const CardBattleScreen = ({
   }, c.attr, {
     disabled: !!c.disabled,
     onClick: c.onClick,
-    className: `mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px]`,
+    className: `mhms-card mhms-in flex min-h-[84px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br ${c.grad} px-3 text-left text-slate-950 active:scale-[.97] disabled:opacity-50 landscape:min-h-[76px] [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[58px] [@media(orientation:landscape)_and_(max-height:330px)]:min-h-[46px] [@media(orientation:landscape)_and_(max-height:360px)]:gap-0`,
     style: {
       animationDelay: `${0.05 + idx * 0.06}s`
     }
@@ -89722,7 +89723,7 @@ const CardBattleScreen = ({
     className: "mhms-mark"
   }, c.mark), React.createElement("span", {
     "aria-hidden": "true",
-    className: "mhms-ico relative text-3xl leading-none"
+    className: "mhms-ico relative text-3xl leading-none [@media(orientation:landscape)_and_(max-height:330px)]:hidden"
   }, c.ico), React.createElement("span", {
     className: "relative min-w-0"
   }, React.createElement("b", {
@@ -89740,14 +89741,14 @@ const CardBattleScreen = ({
     type: "button"
   }, b.attr, {
     onClick: b.onClick,
-    className: `mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 ${b.tone}`
+    className: `mhms-glass flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 leading-none active:scale-95 [@media(orientation:landscape)_and_(max-height:360px)]:min-h-[40px] [@media(orientation:landscape)_and_(max-height:360px)]:flex-row [@media(orientation:landscape)_and_(max-height:360px)]:gap-1 ${b.tone}`
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "text-lg"
   }, b.ico), React.createElement("b", {
     className: "text-[11px] font-black"
   }, b.label), b.sub && React.createElement("small", {
-    className: "text-[9px] font-black text-slate-300/90"
+    className: "text-[9px] font-black text-slate-300/90 [@media(orientation:landscape)_and_(max-height:360px)]:hidden"
   }, b.sub)))), debug && React.createElement("div", {
     className: `${SCREEN_PANEL_FLAT_CLASS} space-y-1`
   }, React.createElement("div", {
