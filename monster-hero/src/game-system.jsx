@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d53619f7ec0fa1b0
+// generated-sha256: 0295795027bfde0c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 22:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 23:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52761,6 +52761,62 @@ const CardBattleTeaser = ({ onClose }) => {
   );
 };
 
+// ---- 「助手と対戦」で、選んだ助手の戦い方の型と使うモンスター(2026-10-25 社長「攻撃型とかピクシーとかなになにを編成しやすいとか出して」) ----
+// どれもデータ(CARD_AI_HABITS・CARD_AI_DECKS)から作る。癖の重みや勝率などの数字は出さない(見えない強さを明かさない)
+const CARD_FOE_STYLES = Object.freeze({
+  attack: { label: '攻撃型', note: 'ちから・かしこさの技で、どんどん攻める' },
+  disrupt: { label: '邪魔型', note: 'ガッツを減らしたり、こちらのじゃまをする' },
+  big: { label: '大技型', note: 'ガッツをためて、大きな技を打つ' },
+  saveGuts: { label: 'ため型', note: 'ガッツをためてから動く' },
+  keepGuard: { label: '守り型', note: '守りのカードを残して、固く戦う' },
+  area: { label: '全体攻撃型', note: '全体攻撃で、まとめてダメージを与える' },
+  finish: { label: 'とどめ型', note: '弱ったモンスターを、確実に倒しにくる' },
+  balance: { label: 'バランス型', note: '場面に合わせて、まんべんなく戦う' },
+});
+// いちばん強い癖で型を決める。どの癖もほとんど同じ(いちばん強くても 1.2 まで)なら、バランス型
+const cardFoeStyle = (who) => {
+  const h = CARD_AI_HABITS[who];
+  if (!h) return null;
+  const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
+  return v <= 1.2 ? CARD_FOE_STYLES.balance : (CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance);
+};
+const CardFoeStyle = ({ db, who, level }) => {
+  const style = cardFoeStyle(who);
+  const recipe = CARD_AI_DECKS[who];
+  if (!style || !recipe) return null;
+  const kit = recipe.kit ? db.starters[recipe.kit] : null;
+  const mons = (recipe.monsters || (kit ? kit.monsters : [])).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+  const upper = level === 'hard' || level === 'expert' || level === 'master';
+  const lv = CARD_LEVEL_LABEL[level] || '';
+  // 強さでデッキの組み方が変わる(cardAiBuildDeck): スターターの助手は EASY・NORMAL ではスターターのまま、HARD から同じ3体で組み直す
+  const deckNote = kit && !upper ? `${lv}: スターター「${kit.name}」のままのデッキ`
+    : `${lv}: この3体に合わせて、${style.label}のデッキを組んでくる${level === 'expert' || level === 'master' ? '(いろいろな弾のカードも使う)' : ''}`;
+  return (
+    <div data-card-foe-style={who} className="space-y-1.5 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span data-card-foe-style-label className="shrink-0 rounded-full bg-amber-300 px-2.5 py-0.5 text-[12px] font-black text-slate-950">{style.label}</span>
+        <span className="min-w-0 text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>{jaWrap(style.note)}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <small className="shrink-0 text-[10px] font-black text-slate-400">使うモンスター</small>
+        {mons.map((m) => (
+          <span key={m.no} data-card-foe-mon={m.no} className="flex shrink-0 items-center gap-1">
+            <img src={cardMonArt(m) || CARD_IMG(m.img)} alt="" aria-hidden="true" className="h-7 w-7 rounded-md bg-white/10 object-contain"/>
+            <b className="whitespace-nowrap text-[12px] font-black text-white">{m.name}</b>
+          </span>
+        ))}
+      </div>
+      {Array.isArray(recipe.prefer) && recipe.prefer.length > 0 && (
+        <div data-card-foe-prefer className="text-[11px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
+          <small className="mr-1 text-[10px] font-black text-slate-400">よく使うカード</small>
+          {recipe.prefer.map((n, i) => <span key={n} className="inline-block whitespace-nowrap">{n}{i < recipe.prefer.length - 1 ? '・' : ''}</span>)}
+        </div>
+      )}
+      <div data-card-foe-deck-note className="text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(deckNote)}</div>
+    </div>
+  );
+};
+
 // ---- 詳しい画面(大きな絵・名前・種類・ガッツ・使える子・番号・文)。どこをタップしても閉じる ----
 const CardDetailModal = ({ db, no, onClose }) => {
   const c = cardOf(db, no);
@@ -54046,6 +54102,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               </div>
             </div>
           )}
+          {a && <CardFoeStyle db={db} who={a.id} level={foe.level}/>}
           <ScreenSectionLabel note="勝つと次の強さが開きます">強さ</ScreenSectionLabel>
           <div className="grid grid-cols-5 gap-1">
             {CARD_LEVEL_ORDER.map((lv) => {
