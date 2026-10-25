@@ -299,6 +299,10 @@
       "pure": true
     },
     {
+      "file": "83-card-battle-talk-ai.jsx",
+      "role": "MFバトルカードの助手のおしゃべり(AI)。中継役 card-assistant-talk を呼ぶ口・入/切(mh_card_ai_talk_v1)・山場/対戦後/デッキ相談の材料。失敗したら決まった台詞のまま"
+    },
+    {
       "file": "86-card-tutorial.jsx",
       "role": "MFバトルカードのチュートリアル(練習試合)の台本・決まった場面・段ごとに出せる操作・みゅあの決まった手・保存の形(mh_card_tutorial_v1)",
       "pure": true

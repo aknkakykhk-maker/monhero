@@ -52,7 +52,7 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
     </div>
   );
 };
-const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
+const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor = null }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
   const [sort, setSort] = useState('kind');
@@ -60,6 +60,9 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [leave, setLeave] = useState(false);
+  // デッキ相談(助手のおしゃべり AI・83-card-battle-talk-ai.jsx)。advisor … トップの助手 { id, name, accent, face }
+  //   ask … null / { busy } / { text, face, picks }。届かないときは決まった一言を出す(勧めるカードは出さない)
+  const [ask, setAsk] = useState(null);
   const press = useCardLongPress((no) => setDetail(no));
   // 背の低い画面(SE・320幅)では上の枠を小さくして、カードの一覧を広く見せる(2026-10-24 改善部の点検 V5)。縦の画面のときだけ
   const short = typeof window !== 'undefined' && window.innerHeight < 760 && window.innerHeight > window.innerWidth;
@@ -117,6 +120,13 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
     </div>
   );
   const sortLabel = (CARD_DECK_SORTS.find((x) => x.id === sort) || CARD_DECK_SORTS[0]).label;
+  const canAsk = !!advisor && cardAiTalkOn() && deck.monsters.length > 0;
+  const consult = async () => {
+    Audio_.fgSe.tap();
+    setAsk({ busy: true });
+    const r = await cardTalkFetch('deck', { who: advisor.id, facts: cardTalkDeckFacts(db, deck, col) });
+    setAsk(r ? { text: r.text, face: r.face, picks: cardTalkCheckPicks(db, deck, col, r.picks) } : { text: CARD_TALK_DECK_SORRY, face: 'troubled', picks: [] });
+  };
   return (
     <div data-mh-screen data-card-deck-edit className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキを組む" accent="text-amber-200" onBack={() => (changed ? setLeave(true) : onCancel())}/>
@@ -145,6 +155,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
           <div data-card-deck-chips className="mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible">
             {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label}</button>)}
+            {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
             <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
           </div>
@@ -158,6 +169,33 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel }) => {
         </div>
       </div>
       {!land && footer}
+      {ask && (
+        <div data-card-deck-ask-sheet className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-2 sm:items-center" onClick={() => { if (!ask.busy) setAsk(null); }}>
+          <div className="w-full max-w-[420px] rounded-2xl border border-white/15 bg-slate-900 p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-2">
+              {advisor.face && <img src={advisor.face} alt="" className="h-12 w-12 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: advisor.accent }}/>}
+              <div data-card-deck-ask-text className="min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1.5 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: advisor.accent, ...JA_WRAP_STYLE }}>{ask.busy ? 'うーん、どうしようかな…' : ask.text}</div>
+            </div>
+            {!ask.busy && ask.picks.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {ask.picks.map((p) => {
+                  const why = cardDeckAddReason(db, deck, p.no, col);
+                  return (
+                    <div key={p.no} data-card-deck-ask-pick={p.no} className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950/70 px-2 py-1">
+                      <button type="button" onClick={() => setDetail(p.no)} className="min-w-0 flex-1 text-left">
+                        <b className="block text-[12px] font-black text-white">{p.name}</b>
+                        {p.reason && <small className="block text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{p.reason}</small>}
+                      </button>
+                      <button type="button" disabled={!!why} onClick={() => add(p.no)} className={`min-h-[36px] shrink-0 rounded-full px-3 text-[11px] font-black ${why ? 'border border-white/15 bg-slate-800 text-slate-500' : 'bg-amber-300 text-slate-950 active:scale-95'}`}>{why ? '入れられない' : '入れる'}</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {!ask.busy && <button type="button" onClick={() => { Audio_.fgSe.tap(); setAsk(null); }} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-2xl border border-white/20 bg-slate-800 font-black">とじる</button>}
+          </div>
+        </div>
+      )}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {leave && <ConfirmSheet title="保存せずに戻りますか？" message="組みかえたところは消えます" confirmLabel="保存せずに戻る" danger onCancel={() => setLeave(false)} onConfirm={() => { setLeave(false); onCancel(); }}/>}
     </div>
