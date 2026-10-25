@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e395b249fda0c6a
+// source-sha256: fb3bf5747baec5ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 20:11";
+const BUILD_DATE = "2026-10-25 20:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87187,6 +87187,17 @@ const CardBattleBoard = ({
     return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
+  const stageRef = useRef(null);
+  const [stageFit, setStageFit] = useState(0);
+  const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
+  React.useLayoutEffect(() => {
+    setStageFit(0);
+  }, [stageKey]);
+  React.useLayoutEffect(() => {
+    const el = stageRef.current;
+    if (!el || stageFit >= 3) return;
+    if (el.scrollHeight > el.clientHeight + 1) setStageFit(f => Math.min(3, f + 1));
+  });
   const strip = p => {
     const pl = st.players[p];
     return React.createElement("div", {
@@ -87397,8 +87408,13 @@ const CardBattleBoard = ({
     calm: settings.shake === 'OFF',
     motion: motions[`1-${m}`] || null
   }))), React.createElement("div", {
+    ref: stageRef,
     "data-card-stage": true,
-    className: "relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1"
+    "data-card-stage-fit": stageFit,
+    className: "relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1",
+    style: {
+      justifyContent: 'safe center'
+    }
   }, bubble && React.createElement("div", {
     key: bubble.key,
     "data-card-bubble": true,
@@ -87430,11 +87446,11 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && React.createElement("div", {
+  })), action && stageFit < 3 && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     className: `relative z-[1] flex items-center gap-2 rounded-2xl border border-amber-300/50 bg-black/55 px-2 ${compact ? "py-0.5" : "py-1"} shadow-lg`
-  }, !compact && action.cards.slice(0, 3).map((no, i) => {
+  }, !compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => {
     const c = cardOf(db, no);
     return c ? React.createElement("img", {
       key: i,
@@ -87452,7 +87468,7 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, pendingText && React.createElement("div", {
     className: "text-rose-200"
-  }, pendingText), (pendingText ? [] : compact || tutorial ? logLines.slice(action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
+  }, pendingText), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), React.createElement("div", {
