@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 95b386bd3130c430
+// generated-sha256: 435d1579d5de3565
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 18:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50010,8 +50010,16 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //         onlyHit(type) その特徴の子にしか当たらない / multVs(type,n) その特徴の子にはn倍 / drain 与えたぶん回復 /
 //         chain(names) 同じターンに続けて使える / combo(names,table) 同時に使う種類の数でダメージが変わる / nonLethal とどめにならない
 //   付ける: attach(when) 技に付けて使う(攻撃の回数に数えない) / attachMult(n) 付けた技のダメージn倍
+//         when … kinds(付けられる技の種類。無ければちから・かしこさ)/ lifeMax / deckEmpty(山札0)/ area(全員に当たる技)/
+//                pure(純血の子)/ breederMaxGuts(n)(そのガッツ以下のブリーダーのカードに付ける)
+//         attachAdd(n) +n / attachCost(n) 払うガッツ-n / attachCostHalf 半分(切り上げ)/ attachFree 0 /
+//         attachNoEvade 回避されない / attachNoGuard 回避も防御もされない / attachNoBlockReduce 防御で減らない /
+//         attachNoZeroGuard 0ガッツの守りは出せない / attachNoGuardIfGuarded このターンもう守った子は守れない /
+//         attachNoEvadeHybrid 混血(派生)の子は回避できない / attachBind 守りの札を1つ名前で名指し(act.bind)/ attachSelfIfHit(n)
+//         付ける札は1回の攻撃に2枚まで(ブリーダーのカードは1枚)
 //   特殊: draw(n) / peekHand / discardOpp(n) 相手が選んで捨てる / heal(n) 味方1体 / forbidThisTurn(kinds) このターン相手は回避(防御)を使えない
 //         gutsGuard 次のターンまでガッツを減らされない / charge(kinds,n) 次のその種類の技1回をn倍(ダメージを受けると消える)
+//         freeSpeThisTurn このターン、味方の特殊技(モンスターの)は0ガッツ(友情の証)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中 /
@@ -50146,8 +50154,58 @@ const cardTakeFromHand = (st, p, idxs) => {
   return taken;
 };
 
-// 攻撃の総ガッツ(付ける札も含む)
-const cardActionCost = (db, st, p, hand, idxs) => idxs.reduce((s, i) => s + ((cardOf(db, hand[i]) || {}).guts || 0), 0);
+// 攻撃の総ガッツ(付ける札も含む)。技のぶん(組の札も)に、付けた札の「ガッツ-n・半分・0」と友情の証を効かせてから、付けた札のぶんを足す
+const cardActionCost = (db, st, p, hand, idxs) => {
+  const cards = idxs.map((i) => cardOf(db, hand[i])).filter(Boolean);
+  const att = cards.filter((c) => cardHasEff(c, 'attach'));
+  const core = cards.filter((c) => !cardHasEff(c, 'attach'));
+  let main = core.reduce((s, c) => s + (c.guts || 0), 0);
+  const fs = st && st.freeSpe;
+  if (core[0] && core[0].kind === 'spe' && core[0].user !== 'breeder' && fs && fs.p === p && fs.turn === st.turn) main = 0;
+  if (att.some((c) => cardHasEff(c, 'attachCostHalf'))) main = Math.ceil(main / 2);
+  att.forEach((c) => { const e = cardEff(c, 'attachCost'); if (e) main -= e.n; });
+  if (att.some((c) => cardHasEff(c, 'attachFree'))) main = 0;
+  return Math.max(0, main) + att.reduce((s, c) => s + (c.guts || 0), 0);
+};
+// 付けた札の効き目をまとめる(ダメージ +n・×n と、守りの縛り)。攻撃を出すときとコンピューターの見積もりで同じものを使う
+const CARD_ATTACH_FLAGS = ['attachNoEvade', 'attachNoGuard', 'attachNoBlockReduce', 'attachNoZeroGuard', 'attachNoGuardIfGuarded', 'attachNoEvadeHybrid'];
+const cardAttachMods = (cards) => {
+  const m = { add: 0, mult: 1, flags: {} };
+  cards.forEach((c) => {
+    if (!cardHasEff(c, 'attach')) return;
+    (c.effects || []).forEach((e) => {
+      if (e.t === 'attachAdd') m.add += e.n;
+      if (e.t === 'attachMult') m.mult *= e.n;
+      if (e.t === 'attachSelfIfHit') m.flags.selfIfHit = (m.flags.selfIfHit || 0) + e.n;
+      if (CARD_ATTACH_FLAGS.includes(e.t)) m.flags[e.t] = true;
+    });
+  });
+  return m;
+};
+// その札を、その技に付けられるか(main … 付ける先の技。mon … 技を出す子。ブリーダーのカードに付ける札は mon が無くてよい)
+const cardAttachOk = (db, st, p, mon, main, c) => {
+  const w = (cardEff(c, 'attach') || {}).when || {};
+  const me = st.players[p];
+  if (w.breederMaxGuts !== undefined) return main.user === 'breeder' && !cardHasEff(main, 'attach') && (main.guts || 0) <= w.breederMaxGuts;
+  if (!mon || main.user === 'breeder') return false;
+  if (!(w.kinds || ['pow', 'int']).includes(main.kind)) return false;
+  if (w.area && !cardHasEff(main, 'area')) return false;
+  if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
+  if (w.deckEmpty && me.deck.length) return false;
+  if (w.pure && (mon.main || mon.sub)) return false;
+  return c.user === 'breeder' ? !me.breederUsed : cardUsableBy(c, mon);
+};
+// 付ける札の組み合わせ(0〜2枚。ブリーダーのカードは1枚まで)
+const cardAttachSets = (db, st, p, mon, main, exclude) => {
+  const me = st.players[p];
+  const idx = me.hand.map((no, j) => ({ j, c: cardOf(db, no) })).filter(({ j, c }) => !exclude.includes(j) && c && c.ready && cardHasEff(c, 'attach') && cardAttachOk(db, st, p, mon, main, c));
+  const out = [[]];
+  idx.forEach((a) => out.push([a.j]));
+  idx.forEach((a, k) => idx.slice(k + 1).forEach((b) => { if (a.c.name !== b.c.name && !(a.c.user === 'breeder' && b.c.user === 'breeder')) out.push([a.j, b.j]); }));
+  return out;
+};
+// 影縛りで名指しできる名前(回避・防御の札の名前)
+const cardBindNames = (db) => [...new Set(Object.values(db.cards).filter((c) => c.ready && cardIsGuardKind(c.kind)).map((c) => c.name))].sort();
 
 // その子が、いまもう一度攻撃できるか(1ターン1枚。chain の続きだけはもう一度)
 const cardMonCanAttack = (db, st, p, mi, card) => {
@@ -50201,13 +50259,17 @@ const cardAttackOptions = (db, st) => {
     if (cardHasEff(card, 'attach')) return; // 付ける札は単独では出さない(下で技に付ける)
     if (card.user === 'breeder') {
       if (me.breederUsed) return;
-      if (card.guts > guts) return;
-      if (card.kind === 'spe') {
-        if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => { if (!m.ko && m.life < m.max) out.push({ type: 'breeder', hand: [hi], target: { p, m: j } }); });
-        else out.push({ type: 'breeder', hand: [hi], target: null });
-      } else {
-        me.mons.forEach((m, mi) => { if (m.ko) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn)) out.push({ type: 'breeder', hand: [hi], mon: mi, target: { p: cardOther(p), m: j } }); }); });
-      }
+      // ジョイのサポートなど、ブリーダーのカードに付ける札も一緒に(付けると払うガッツが変わる)
+      cardAttachSets(db, st, p, null, card, [hi]).forEach((att) => {
+        const hand = [hi, ...att];
+        if (cardActionCost(db, st, p, me.hand, hand) > guts) return;
+        if (card.kind === 'spe') {
+          if (cardHasEff(card, 'heal')) me.mons.forEach((m, j) => { if (!m.ko && m.life < m.max) out.push({ type: 'breeder', hand, target: { p, m: j } }); });
+          else out.push({ type: 'breeder', hand, target: null });
+        } else {
+          me.mons.forEach((m, mi) => { if (m.ko) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn)) out.push({ type: 'breeder', hand, mon: mi, target: { p: cardOther(p), m: j } }); }); });
+        }
+      });
       return;
     }
     me.mons.forEach((mon, mi) => {
@@ -50226,14 +50288,9 @@ const cardAttackOptions = (db, st) => {
         // 同じ組を別の主の札で二重に数えない(主は組の中でいちばん小さい手札の番号)
         for (let k = sets.length - 1; k >= 0; k--) if (Math.min(...sets[k]) !== hi) sets.splice(k, 1);
       }
-      // 付ける札(底力など)
-      const attachIdx = me.hand.map((n2, j) => ({ j, c: cardOf(db, n2) })).filter(({ j, c }) => j !== hi && c && c.ready && cardHasEff(c, 'attach') && cardUsableBy(c, mon) && (() => {
-        const w = cardEff(c, 'attach').when || {};
-        if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
-        return card.kind === 'pow' || card.kind === 'int';
-      })()).map((o) => o.j);
+      // 付ける札(底力・クリティカルなど。0〜2枚)
       const withAttach = [];
-      sets.forEach((s) => { withAttach.push(s); attachIdx.forEach((a) => withAttach.push([...s, a])); });
+      sets.forEach((s) => { cardAttachSets(db, st, p, mon, card, s).forEach((att) => withAttach.push([...s, ...att])); });
       withAttach.forEach((idxs) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
@@ -50264,24 +50321,31 @@ const cardGuardOptions = (db, st) => {
   const target = st.players[tgt.p].mons[tgt.m];
   const atkCard = cardOf(db, pd.main);
   const forbid = st.forbid[q] || [];
+  const fl = pd.flags || {};
+  if (fl.attachNoGuard) return []; // 瞬殺: 回避も防御も出せない
   const guts = me.guts.length;
   const out = [];
+  // 挟み撃ち: このターンもう守りを出した子は、守れない
+  const guardedNow = (m) => fl.attachNoGuardIfGuarded && m.guardTurn === st.turn;
   me.hand.forEach((no, hi) => {
     const c = cardOf(db, no);
     if (!c || !c.ready || !cardIsGuardKind(c.kind)) return;
     if (forbid.includes(c.kind)) return;
     if (c.guts > guts) return;
+    if (fl.attachNoZeroGuard && !c.guts) return; // 集中
+    if (fl.bind && c.name === fl.bind) return; // 影縛りで名指しされた札
     if (cardHasEff(c, 'cover')) {
       // 味方への1回分を自分が受ける: 狙われたのが味方で、カードの持ち主(生きている別の子)が使う
       if (pd.cover !== null && pd.cover !== undefined) return;
-      me.mons.forEach((m, mi) => { if (mi !== tgt.m && tgt.p === q && cardUsableBy(c, m)) out.push({ type: 'guard', hand: hi, mon: mi }); });
+      me.mons.forEach((m, mi) => { if (mi !== tgt.m && tgt.p === q && cardUsableBy(c, m) && !guardedNow(m)) out.push({ type: 'guard', hand: hi, mon: mi }); });
       return;
     }
-    if (tgt.p !== q || !cardUsableBy(c, target)) return;
+    if (tgt.p !== q || !cardUsableBy(c, target) || guardedNow(target)) return;
     const ev = cardEff(c, 'evade');
     if (ev) {
       if (pd.evaded) return;
-      if (cardHasEff(atkCard, 'noEvade') || pd.noEvade) return;
+      if (cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade) return;
+      if (fl.attachNoEvadeHybrid && (target.main || target.sub)) return; // 純血のスピード
       if (!ev.kinds.includes(atkCard.kind)) return;
       if (ev.minGuts && pd.cost < ev.minGuts) return;
       out.push({ type: 'guard', hand: hi, mon: tgt.m });
@@ -50331,8 +50395,8 @@ const cardStartAttack = (db, st, act) => {
   cardPayGuts(st, p, cost);
   const mi = isBreeder ? (act.mon !== undefined ? act.mon : -1) : act.mon;
   const mon = mi >= 0 ? me.mons[mi] : null;
-  if (isBreeder) me.breederUsed = true;
-  else { mon.attacks += 1; mon.lastCard = mainNo; }
+  if (isBreeder || used.some((n) => { const c = cardOf(db, n); return c && c.user === 'breeder'; })) me.breederUsed = true; // 影縛りなどブリーダーの札を付けたときも1枚に数える
+  if (!isBreeder) { mon.attacks += 1; mon.lastCard = mainNo; }
   cardLog(st, cardUseText(db, st, p, mi, used), { kind: 'use', p, cards: used });
   cardEvent(st, { t: 'use', p, mon: mi, cards: used, target: act.target || null });
   // 特殊技: 守れない。その場で効く
@@ -50348,13 +50412,15 @@ const cardStartAttack = (db, st, act) => {
     const kinds = new Set(used.map((n) => cardOf(db, n)).filter((c) => combo.names.includes(c.name)).map((c) => c.name)).size;
     if (combo.table[kinds]) dmg = combo.table[kinds];
   }
-  let mult = 1;
-  used.forEach((n) => { const am = cardEff(cardOf(db, n), 'attachMult'); if (am) mult *= am.n; });
+  const mods = cardAttachMods(used.map((n) => cardOf(db, n)).filter(Boolean));
+  dmg += mods.add;
+  let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) { mult *= mon.mult.n; mon.mult = null; }
   if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) { mult *= mon.charge.n; mon.charge = null; } // 静の構え
   const targets = cardHasEff(main, 'area') ? cardAreaTargets(st, p, mi, main) : [act.target];
   st.pending = { attacker: p, defender: cardOther(p), mon: mi, main: mainNo, used, cost, base: dmg, mult, targets, ti: 0,
-    evaded: false, reduce: 0, reduceHalf: false, reduceAll: false, reflect: null, cover: null, hitAny: false, evadedAny: false, results: [] };
+    evaded: false, reduce: 0, reduceHalf: false, reduceAll: false, reflect: null, cover: null, hitAny: false, evadedAny: false, results: [],
+    flags: { ...mods.flags, bind: act.bind || null } };
   cardAdvancePending(db, st);
 };
 
@@ -50383,7 +50449,7 @@ const cardResolveTarget = (db, st) => {
   if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
   const evaded = pd.evaded;
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-  if (!cardHasEff(main, 'noBlockReduce')) {
+  if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
     if (pd.reduceHalf) dmg -= Math.floor(dmg / 2);
     dmg = Math.max(0, dmg - pd.reduce);
@@ -50441,6 +50507,7 @@ const cardFinishAttack = (db, st) => {
   const sh = cardEff(main, 'selfDamageIfHit'); if (sh && pd.results.some((r) => !r.evaded)) self += sh.n;
   const se = cardEff(main, 'selfDamageIfEvaded'); if (se && pd.results.some((r) => r.evaded)) self += se.n;
   const sa = cardEff(main, 'selfDamage'); if (sa) self += sa.n;
+  if (pd.flags && pd.flags.selfIfHit && pd.results.some((r) => !r.evaded)) self += pd.flags.selfIfHit; // 捨て身
   if (self > 0 && atkMon && !atkMon.ko) {
     atkMon.life = Math.max(0, atkMon.life - self);
     atkMon.charge = null;
@@ -50472,6 +50539,7 @@ const cardApplySpecial = (db, st, p, mi, card, target) => {
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
     if (e.t === 'gutsGuard') { me.gutsGuardUntil = st.turn + 1; cardLog(st, `${me.name}は次のターンまでガッツを減らされない`); }
     if (e.t === 'charge' && mi >= 0) { me.mons[mi].charge = { kinds: e.kinds, n: e.n }; cardLog(st, `${me.mons[mi].name}は次の${e.kinds.includes('pow') ? 'ちから' : 'かしこさ'}技のダメージが${e.n}倍`); }
+    if (e.t === 'freeSpeThisTurn') { st.freeSpe = { p, turn: st.turn }; cardLog(st, `このターン、${me.name}の味方の特殊技は0ガッツ`); }
     if (e.t === 'forbidThisTurn') { st.forbid[cardOther(p)] = [...(st.forbid[cardOther(p)] || []), ...e.kinds]; cardLog(st, `このターン、相手は${e.kinds.includes('dge') ? '回避' : '防御'}を使えない`); }
   });
 };
@@ -50487,6 +50555,7 @@ const cardApplyGuard = (db, st, act) => {
   cardPayGuts(st, q, c.guts);
   me.discard.push(no);
   const user = me.mons[act.mon];
+  user.guardTurn = st.turn; // 挟み撃ちが見る
   cardLog(st, `${user.name}の「${c.name}」`, { kind: 'guard', p: q, cards: [no] });
   cardEvent(st, { t: 'guard', p: q, mon: act.mon, card: no });
   (c.effects || []).forEach((e) => {
@@ -50546,6 +50615,9 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
     const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null));
     if (!ok) return null;
+    // 影縛り: 名指しが要る札を付けたら、回避・防御の札の名前が1つ要る(付けていなければ名指しは持たない)
+    const needBind = act.hand.some((i) => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
+    if (needBind ? !(typeof act.bind === 'string' && cardBindNames(db).includes(act.bind)) : act.bind !== undefined && act.bind !== null) return null;
     cardStartAttack(db, st, act);
     return st;
   }
@@ -50599,11 +50671,13 @@ const cardAiPolicy = (habitId, levelId) => {
 };
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
-const cardAiEvadeChance = (db, st, p, card, target, level) => {
+const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
   if (cardHasEff(card, 'noEvade') || card.kind === 'spe') return 0;
+  if (flags.attachNoEvade || flags.attachNoGuard) return 0; // 電光石火・瞬殺など
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
+  if (flags.attachNoEvadeHybrid && (tmon.main || tmon.sub)) return 0; // 純血のスピード
   const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && c.guts <= opp.guts.length && (!ev.minGuts || card.guts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
@@ -50628,6 +50702,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
+      // 友情の証: このターン、手札のほかの特殊技を0ガッツで出せる
+      if (e.t === 'freeSpeThisTurn') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map((n) => cardOf(db, n)).filter((c) => c && c.kind === 'spe' && c.user !== 'breeder' && !cardHasEff(c, 'attach')).reduce((s2, c) => s2 + (c.guts || 0) * 0.4, 0);
       if (e.t === 'charge') {
         const m = opt.mon >= 0 ? me.mons[opt.mon] : null;
         const big = m && !m.charge ? Math.max(0, ...me.hand.map((n) => cardOf(db, n)).filter((c) => c && e.kinds.includes(c.kind) && cardUsableBy(c, m)).map((c) => c.damage || 0)) : 0;
@@ -50642,7 +50718,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     let dmg = main.damage || 0;
     const combo = cardEff(main, 'combo');
     if (combo) { const kinds = new Set(opt.hand.map((i) => cardOf(db, me.hand[i]).name).filter((n) => combo.names.includes(n))).size; dmg = combo.table[kinds] || dmg; }
-    opt.hand.forEach((i) => { const am = cardEff(cardOf(db, me.hand[i]), 'attachMult'); if (am) dmg *= am.n; });
+    const mods = cardAttachMods(opt.hand.map((i) => cardOf(db, me.hand[i])).filter(Boolean));
+    dmg = (dmg + mods.add) * mods.mult;
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
     if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
     if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
@@ -50652,7 +50729,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       let d = dmg;
       const mv = cardEff(main, 'multVs'); if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
-      const ev = cardAiEvadeChance(db, st, p, main, t, level);
+      // 影縛り: 名指しで当たりやすくなる見込み(半分)
+      const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags) * (opt.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
       const exp = d * (1 - ev) + half * ev;
       const sign = t.p === p ? -1.3 : 1;
@@ -50665,6 +50743,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
     const sh = cardEff(main, 'selfDamageIfHit'); if (sh && mon) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
+    const si = mods.flags.selfIfHit; if (si && mon) score -= si * (mon.life <= si ? 3 : 0.6); // 捨て身
     const sa = cardEff(main, 'selfDamage'); if (sa && mon) score -= sa.n * (mon.life <= sa.n ? 3 : 0.6);
   }
   // ガッツを使いすぎると、相手の番に守れない(先読み1以上・くせ「守りを残す」「ガッツをためる」)
@@ -50740,6 +50819,22 @@ const cardAiChooseGuts = (db, st, policy) => {
   return { type: 'guts', hand: pick };
 };
 
+// 影縛りを付けた手に、名指しする守りの名前を入れる。手札を読む難易度は相手の手札の守り、
+//   ほかは相手の捨て札でいちばん多い守り(見えている札だけ)、無ければ狙う子が使える回避の札
+const cardAiFillBind = (db, st, o, policy) => {
+  if (!o || !Array.isArray(o.hand)) return o;
+  const me = st.players[st.active];
+  if (!o.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) return o;
+  const opp = st.players[cardOther(st.active)];
+  const tmon = o.target && o.target.p !== st.active ? opp.mons[o.target.m] : opp.mons.find((m) => !m.ko);
+  const guardName = (no) => { const c = cardOf(db, no); return c && c.ready && cardIsGuardKind(c.kind) && (!tmon || c.user === 'any' || cardUsableBy(c, tmon)) ? c.name : null; };
+  const seen = (policy.level.readHand ? opp.hand : opp.discard).map(guardName).filter(Boolean);
+  const count = {}; seen.forEach((n) => { count[n] = (count[n] || 0) + 1; });
+  let name = Object.keys(count).sort((a, b) => count[b] - count[a] || (a < b ? -1 : 1))[0];
+  if (!name) name = Object.values(db.cards).filter((c) => c.ready && cardHasEff(c, 'evade') && (!tmon || cardUsableBy(c, tmon))).map((c) => c.name).sort()[0] || cardBindNames(db)[0];
+  return { ...o, bind: name };
+};
+
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingDiscard) {
@@ -50764,14 +50859,14 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   }
   const opts = cardAttackOptions(db, st);
   if (!opts.length) return { type: 'endAttacks' };
-  if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : opts[Math.floor(rand() * opts.length)];
+  if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
   if (rand() < policy.level.whim) {
     const pool = scored.filter((x) => x.s > 0.3).slice(0, 3);
-    return pool[Math.floor(rand() * pool.length)].o;
+    return cardAiFillBind(db, st, pool[Math.floor(rand() * pool.length)].o, policy);
   }
-  return scored[0].o;
+  return cardAiFillBind(db, st, scored[0].o, policy);
 };
 
 // ---- 助手のデッキ(5-5) ----
@@ -50790,10 +50885,29 @@ const CARD_AI_DECKS = Object.freeze({
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.3 });
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
+const CARD_AI_ATTACH_MAX = 6;
 
 // カード1枚の「入れたい度」(くせの重みを掛ける)
 const cardAiCardValue = (card, habit) => {
   const eff = (t) => cardHasEff(card, t);
+  // 技に付ける札(区切り2): 1枚では何もしないので控えめ。条件つきのものはさらに下げる
+  if (eff('attach')) {
+    let v = 0.3;
+    (card.effects || []).forEach((e) => {
+      if (e.t === 'attachAdd') v += e.n * 0.35;
+      if (e.t === 'attachMult') v += (e.n - 1) * 0.7;
+      if (e.t === 'attachCost') v += e.n * 0.3;
+      if (e.t === 'attachCostHalf' || e.t === 'attachFree') v += 0.6;
+      if (e.t === 'attachNoEvade' || e.t === 'attachNoGuard') v += 0.7;
+      if (e.t === 'attachBind' || e.t === 'attachNoEvadeHybrid' || e.t === 'attachNoBlockReduce' || e.t === 'attachNoZeroGuard' || e.t === 'attachNoGuardIfGuarded') v += 0.35;
+      if (e.t === 'attachSelfIfHit') v -= e.n * 0.3;
+    });
+    const w = cardEff(card, 'attach').when || {};
+    if (w.deckEmpty) v *= 0.2;
+    if (w.lifeMax !== undefined) v *= 0.5;
+    if (w.area) v *= 0.6 * habit.area;
+    return v - card.guts * 0.3;
+  }
   if (cardIsGuardKind(card.kind)) {
     let v = eff('evade') ? 2.2 : eff('reduceAll') ? 2.4 : eff('reflect') ? 2.3 : eff('cover') ? 1.4 : 1.6;
     const re = cardEff(card, 'reduce'); if (re) v = 1 + re.n * 0.4;
@@ -50835,7 +50949,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal') => {
   const maxWave = levelId === 'expert' || levelId === 'master' ? 4 : 1;
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
   const mons = monsters.map((no) => cardMonsterOf(db, no));
-  const pool = Object.values(db.cards).filter((c) => c.ready && c.wave <= maxWave && !cardHasEff(c, 'attach')
+  const pool = Object.values(db.cards).filter((c) => c.ready && c.wave <= maxWave
     && (c.user === 'any' || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, { ...m, ko: false }))));
   // 名前ごとに1つ(同じ名前の別番号は、入れたい度の高いほう)
   const byName = {};
@@ -50847,10 +50961,14 @@ const cardAiBuildDeck = (db, who, levelId = 'normal') => {
   // 重い技(ガッツ5以上)は、くせ「大技」に合わせて枚数を絞る(重い技ばかりだと、ガッツが足りず手札が腐る)
   const heavyMax = Math.round(8 * habit.big);
   let heavy = 0;
+  // 技に付ける札は、1枚では何もしないので6枚まで(多いと手札が腐る。区切り2で足した)
+  let attached = 0;
   const add = (c, n) => {
     for (let i = 0; i < n && cards.length < CARD_BATTLE_DECK_SIZE; i++) {
       const isHeavy = !cardIsGuardKind(c.kind) && c.guts >= 5;
       if (isHeavy && heavy >= heavyMax) return;
+      if (cardHasEff(c, 'attach') && attached >= CARD_AI_ATTACH_MAX) return;
+      if (cardHasEff(c, 'attach')) attached += 1;
       if (isHeavy) heavy += 1;
       cards.push(c.no);
     }
@@ -52204,6 +52322,7 @@ const CardDetailModal = ({ db, no, onClose }) => {
             <span className="rounded-md bg-slate-800 px-2 py-0.5 text-slate-400">No.{c.no}</span>
           </div>
           {c.text && <p className="mt-2 text-[14px] font-bold leading-relaxed">{c.text}</p>}
+          {c.note && <p data-card-detail-note className="mt-1.5 text-[12px] font-bold leading-relaxed text-sky-200" style={JA_LABEL_STYLE}>{jaWrap(c.note)}</p>}
           {!c.ready && <p className="mt-2 text-[12px] font-bold text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('このカードは準備中です(まだデッキに入れられません)')}</p>}
         </div>
       )}
@@ -52587,8 +52706,11 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   // ★マルチ対戦では、窓を出しているあいだも持ち時間は止まらない。場が変わったら(時間切れの自動の手・相手の手が届いた・自分の手)窓は閉じる。
   //   閉じずに古い「はい」が残ると、時間切れのあとに古い手を送って2台の場がずれる(ブレイブくんとの決め)。押したときにも、その手がまだ出せるかを確かめ直す
   const [confirm, setConfirm] = useState(null); // { kind: 'use' | 'end', act, label }
-  useEffect(() => { setConfirm(null); }, [st]);
+  // 影縛り(名指しの要る札)を付けた手は、名指しする守りの札を先に選ぶ。場が変わったら閉じる(確かめの窓と同じ)
+  const [bindAsk, setBindAsk] = useState(null); // 名指しを待っている手
+  useEffect(() => { setConfirm(null); setBindAsk(null); }, [st]);
   const askUse = (o) => {
+    if (o && Array.isArray(o.hand) && !o.bind && o.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) { setBindAsk(o); return; }
     if (!confirmOn('confirmUse')) { step(o); return; }
     const c = cardOf(db, me.hand[o.hand[0]]);
     const tm = o.target ? st.players[o.target.p].mons[o.target.m] : null;
@@ -52602,7 +52724,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     const cf = confirm;
     setConfirm(null);
     if (!cf) return;
-    if (cf.kind === 'use' && !cardAttackOptions(db, st).some((o) => JSON.stringify(o) === JSON.stringify(cf.act))) return;
+    if (cf.kind === 'use') { const { bind: _bind, ...bare } = cf.act; if (!cardAttackOptions(db, st).some((o) => JSON.stringify(o) === JSON.stringify(bare))) return; }
     if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
     step(cf.act);
   };
@@ -52960,6 +53082,21 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
         </div>, document.body)}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
+      {bindAsk && (
+        <div data-card-bind-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => setBindAsk(null)}>
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap('影縛り: 使えなくする守りのカードを選ぶ')}</div>
+            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('同じ名前のカードは全部、この技に使えなくなります')}</div>
+            <div className="mt-2 grid max-h-[50vh] grid-cols-2 gap-1.5 overflow-y-auto">
+              {cardBindNames(db).map((name) => (
+                <button key={name} type="button" data-card-bind-name={name} className="min-h-[40px] rounded-xl bg-slate-700 px-2 text-[13px] font-black text-white active:scale-95"
+                  onClick={() => { const o = { ...bindAsk, bind: name }; setBindAsk(null); askUse(o); }}>{name}</button>
+              ))}
+            </div>
+            <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => setBindAsk(null)}>やめる</button>
+          </div>
+        </div>
+      )}
       {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
       {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
@@ -54561,6 +54698,8 @@ const cardPvpCleanAct = (raw) => {
     if (raw.target === null) act.target = null;
     else { const p = cardPvpInt(raw.target && raw.target.p, 1); const m = cardPvpInt(raw.target && raw.target.m, 2); if (p === null || m === null) return null; act.target = { p, m }; }
   }
+  // 影縛りの名指し(守りの札の名前)。本当に名前かどうかは、当てるとき(cardApplyAction)にカードの表で確かめる
+  if (raw.bind !== undefined && raw.bind !== null) { if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null; act.bind = raw.bind; }
   return act;
 };
 // カードの番号は「061」「C-001」のような短い文字(data/card-battle-cards.js)

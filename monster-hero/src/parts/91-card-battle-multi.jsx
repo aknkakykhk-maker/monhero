@@ -174,6 +174,8 @@ const cardPvpCleanAct = (raw) => {
     if (raw.target === null) act.target = null;
     else { const p = cardPvpInt(raw.target && raw.target.p, 1); const m = cardPvpInt(raw.target && raw.target.m, 2); if (p === null || m === null) return null; act.target = { p, m }; }
   }
+  // 影縛りの名指し(守りの札の名前)。本当に名前かどうかは、当てるとき(cardApplyAction)にカードの表で確かめる
+  if (raw.bind !== undefined && raw.bind !== null) { if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null; act.bind = raw.bind; }
   return act;
 };
 // カードの番号は「061」「C-001」のような短い文字(data/card-battle-cards.js)

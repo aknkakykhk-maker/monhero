@@ -480,6 +480,103 @@ const pendingCards = () => {
       }
     }
   }
+  // ---- 区切り2: 技と同時に使う札(付ける札) ----
+  const monOf = (sp) => Object.values(db.monsters).filter((m) => m.species === sp && !m.main).map((m) => m.no).sort()[0];
+  const plainOf = (sp, kind) => Object.values(db.cards).filter((c) => c.ready && c.user === sp && c.kind === kind && !(c.effects || []).length && c.guts > 0).sort((a, b) => a.guts - b.guts || (a.no < b.no ? -1 : 1))[0];
+  // 手札の番号の組が、そのカードの番号の組と同じ手(target … 相手の何体目)
+  const optWith = (st, nos, m, type = 'attack') => find(E.cardAttackOptions(db, st), (x) => x.type === type && x.hand.length === nos.length
+    && JSON.stringify(x.hand.map((i) => st.players[st.active].hand[i]).sort()) === JSON.stringify(nos.slice().sort()) && (m === undefined || (x.target && x.target.m === m)));
+  const hitOnce = (st, a) => { const l0 = st.players[1].mons.map((x) => x.life); const s1 = act(act(st, a), { type: 'pass' }); return { st: s1, dmg: l0.map((v, i) => v - s1.players[1].mons[i].life) }; };
+  const big = (st) => { st.players[1].mons.forEach((x) => { x.life = 40; x.max = 40; }); return st; };
+  const gol = plainOf('golem', 'pow'); // でこぴんなど(ゴーレムの、文の無いちから技)
+  ok(gol, '検査の見本: ゴーレムの文の無いちから技が無い');
+  // クリティカル(121): +2
+  { ready('121'); const st = big(scene({ hands: [[gol.no, '121'], []], guts: [9, 0] })); const a = optWith(st, [gol.no, '121'], 0); ok(a, '121: 技に付けられない');
+    if (a) ok(hitOnce(st, a).dmg[0] === gol.damage + 2, '121: ダメージが+2にならない'); }
+  // 劇的な幕切れ(124): 山札0のときだけ。3倍
+  { ready('124'); const st = big(scene({ hands: [[gol.no, '124'], []], guts: [9, 0] })); ok(!optWith(st, [gol.no, '124'], 0), '124: 山札があるのに付けられる');
+    st.players[0].deck = []; const a = optWith(st, [gol.no, '124'], 0); ok(a, '124: 山札0なのに付けられない');
+    if (a) ok(hitOnce(st, a).dmg[0] === gol.damage * 3, '124: 3倍にならない'); }
+  // 必死(345): 自分のライフ2以下のときだけ +2
+  { ready('345'); const st = big(scene({ hands: [[gol.no, '345'], []], guts: [9, 0] })); ok(!optWith(st, [gol.no, '345'], 0), '345: ライフが多いのに付けられる');
+    st.players[0].mons[1].life = 2; const a = optWith(st, [gol.no, '345'], 0); ok(a, '345: ライフ2で付けられない');
+    if (a) ok(hitOnce(st, a).dmg[0] === gol.damage + 2, '345: +2にならない'); }
+  // 捨て身(330・ケンタウロス): 2倍。回避されなかったら自分も2ダメージ
+  { ready('330'); const cen = monOf('centaur'); const cp = plainOf('centaur', 'pow'); ok(cen && cp, '330: ケンタウロスの見本が無い');
+    if (cen && cp) { const st = big(scene({ mons: [[cen, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[cp.no, '330'], []], guts: [9, 0] }));
+      const a = optWith(st, [cp.no, '330'], 0); ok(a, '330: 付けられない');
+      if (a) { const l = st.players[0].mons[0].life; const r = hitOnce(st, a); ok(r.dmg[0] === cp.damage * 2, '330: 2倍にならない'); ok(r.st.players[0].mons[0].life === l - 2, '330: 自分が2ダメージ受けない'); } } }
+  // 団結(343・コロペンドラ)・光合成(209・プラント): 払うガッツ -1 / -2(ちょうど足りるガッツで出せる)
+  [['343', 'colorpandora', 1], ['209', 'plant', 2]].forEach(([no, sp, n]) => {
+    ready(no); const mo = monOf(sp); const cp = Object.values(db.cards).filter((c) => c.ready && c.user === sp && (c.kind === 'pow' || c.kind === 'int') && !(c.effects || []).some((e) => ['useWhen', 'combo', 'chain', 'area'].includes(e.t)) && c.guts > n).sort((a, b) => a.guts - b.guts)[0];
+    ok(mo && cp, `${no}: 見本が無い`); if (!mo || !cp) return;
+    const own = db.cards[no].guts;
+    const st = big(scene({ mons: [[mo, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[cp.no, no], []], guts: [cp.guts - n + own, 0] }));
+    const a = optWith(st, [cp.no, no], 0); ok(a, `${no}: ガッツ-${n}で出せない`);
+    if (a) { const g0 = st.players[0].guts.length; const s1 = act(st, a); ok(g0 - s1.players[0].guts.length === cp.guts - n + own, `${no}: 払ったガッツが合わない`); }
+    const st2 = scene({ mons: [[mo, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[cp.no, no], []], guts: [cp.guts - n + own - 1, 0] });
+    ok(!optWith(st2, [cp.no, no], 0), `${no}: ガッツが足りないのに出せる`);
+  });
+  // 急襲(347): 全員に当たる技にだけ付けて、払うガッツが半分(切り上げ)
+  { ready('347'); const ar = Object.values(db.cards).filter((c) => c.ready && (c.effects || []).some((e) => e.t === 'area' && e.who === 'enemies' && !e.only) && c.user !== 'any' && c.user !== 'breeder' && c.guts >= 3).sort((a, b) => (a.no < b.no ? -1 : 1))[0];
+    ok(ar, '347: 全員に当たる技の見本が無い');
+    if (ar) { const mo = monOf(ar.user); const want = Math.ceil(ar.guts / 2) + db.cards['347'].guts;
+      const st = big(scene({ mons: [[mo, mo === 'C-003' ? 'C-001' : 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[ar.no, '347', gol.no], []], guts: [want, 0] }));
+      ok(find(E.cardAttackOptions(db, st), (x) => JSON.stringify(x.hand.map((i) => st.players[0].hand[i]).sort()) === JSON.stringify([ar.no, '347'].sort())), '347: 半分のガッツで出せない');
+      ok(!optWith(st, [gol.no, '347'], 0), '347: 1体を狙う技にも付けられる'); } }
+  // 守りの縛り: 集中(274)・挟み撃ち(349)・影縛り(366)・渾身(362)・瞬殺(363)・電光石火(009)・跳躍(070)
+  const guardsAfter = (st, a) => { const s1 = act(st, a); return { s1, g: E.cardGuardOptions(db, s1).map((x) => s1.players[1].hand[x.hand]) }; };
+  { ready('274'); const st = scene({ hands: [[gol.no, '274'], ['109', '096']], guts: [9, 3] }); const a = optWith(st, [gol.no, '274'], 0);
+    ok(a, '274: 付けられない'); if (a) { const { g } = guardsAfter(st, a); ok(!g.includes('109'), '274: 0ガッツの守り(緊急回避)が出せてしまう'); } }
+  { ready('349'); const st = scene({ hands: [[gol.no, '349'], ['109']], guts: [9, 3] }); st.players[1].mons[0].guardTurn = st.turn; const a = optWith(st, [gol.no, '349'], 0);
+    ok(a, '349: 付けられない'); if (a) ok(!guardsAfter(st, a).g.length, '349: このターンもう守った子が守れてしまう');
+    const st2 = scene({ hands: [[gol.no, '349'], ['109']], guts: [9, 3] }); const a2 = optWith(st2, [gol.no, '349'], 0); if (a2) ok(guardsAfter(st2, a2).g.includes('109'), '349: まだ守っていない子まで守れない'); }
+  { ready('366'); const st = scene({ hands: [[gol.no, '366'], ['109']], guts: [9, 3] }); const a = optWith(st, [gol.no, '366'], 0);
+    ok(a, '366: 付けられない');
+    if (a) {
+      ok(!E.cardApplyAction(db, st, a), '366: 名指しが無いのに出せる');
+      ok(!E.cardApplyAction(db, st, { ...a, bind: 'ない名前' }), '366: 守りの札でない名前を名指しできる');
+      const { s1, g } = guardsAfter(st, { ...a, bind: '緊急回避' }); ok(!g.includes('109'), '366: 名指しした札が出せてしまう');
+      ok(s1.players[0].breederUsed, '366: ブリーダーのカード1枚に数えない');
+      const st2 = scene({ hands: [[gol.no], []], guts: [9, 3] }); ok(!E.cardApplyAction(db, st2, { ...optWith(st2, [gol.no], 0), bind: '緊急回避' }), '366: 影縛りを付けていないのに名指しを持てる');
+    } }
+  { ready('362'); const dino = monOf('dino'); const dp = plainOf('dino', 'pow'); const red = Object.values(db.cards).find((c) => c.ready && c.user === 'any' && (c.effects || []).some((e) => e.t === 'reduce' && e.kinds.includes('pow')));
+    ok(dino && dp && red, '362: 見本が無い');
+    if (dino && dp && red) { const st = big(scene({ mons: [[dino, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[dp.no, '362'], [red.no]], guts: [9, 9] }));
+      const a = optWith(st, [dp.no, '362'], 0); ok(a, '362: 付けられない');
+      if (a) { let s1 = act(st, a); const g = find(E.cardGuardOptions(db, s1), (x) => s1.players[1].hand[x.hand] === red.no); ok(g, '362: 防御は出せるはず');
+        if (g) { const l = s1.players[1].mons[0].life; s1 = act(act(s1, g), { type: 'pass' }); ok(l - s1.players[1].mons[0].life === dp.damage, '362: 防御でダメージが減った'); } } } }
+  { ready('363'); const naga = monOf('naga'); const np = plainOf('naga', 'pow'); ok(naga && np, '363: 見本が無い');
+    if (naga && np) { const st = scene({ mons: [[naga, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[np.no, '363'], ['109']], guts: [9, 9] });
+      const a = optWith(st, [np.no, '363'], 0); ok(a, '363: 付けられない'); if (a) ok(!guardsAfter(st, a).g.length, '363: 守りが出せてしまう'); } }
+  [['009', 'tiger'], ['070', 'dino']].forEach(([no, sp]) => {
+    ready(no); const mo = monOf(sp); const pw = plainOf(sp, 'pow'); ok(mo && pw, `${no}: 見本が無い`); if (!mo || !pw) return;
+    const st = scene({ mons: [[mo, mo === 'C-003' ? 'C-001' : 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[pw.no, no], ['109']], guts: [9, 9] });
+    const a = optWith(st, [pw.no, no], 0); ok(a, `${no}: 付けられない`);
+    if (a) { const { s1, g } = guardsAfter(st, a); ok(!g.includes('109'), `${no}: 回避できてしまう`); ok(s1.players[0].mons[0].attacks === 1, `${no}: 攻撃の回数が2回に数えられた`); }
+  });
+  // 純血のスピード(346): 純血の子の技に付けて、混血(派生)の子は回避できない。混血の子の技には付けられない
+  { ready('346'); const hy = Object.values(db.monsters).find((m) => m.main === 'tiger' || m.sub === 'tiger') || Object.values(db.monsters).find((m) => m.main);
+    const st = scene({ mons: [['C-003', 'C-001', 'C-005'], [hy.no, 'C-003', 'C-005']], hands: [[gol.no, '346'], ['109']], guts: [9, 9] });
+    const a = optWith(st, [gol.no, '346'], 0); ok(a, '346: 付けられない');
+    if (a) ok(!guardsAfter(st, a).g.includes('109'), '346: 混血の子が回避できてしまう');
+    const st2 = scene({ mons: [['C-003', 'C-001', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[gol.no, '346'], ['109']], guts: [9, 9] });
+    const a2 = optWith(st2, [gol.no, '346'], 0); if (a2) ok(guardsAfter(st2, a2).g.includes('109'), '346: 純血の子まで回避できない');
+    const hyAtk = Object.values(db.cards).find((c) => c.ready && c.user === hy.main && c.kind === 'pow' && !(c.effects || []).length);
+    if (hyAtk) { const st3 = scene({ mons: [[hy.no, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[hyAtk.no, '346'], []], guts: [9, 0] }); ok(!optWith(st3, [hyAtk.no, '346'], 0), '346: 混血の子の技に付けられる'); } }
+  // ジョイのサポート(276): ガッツ3以下のブリーダーのカードに付けて、そのカードは0ガッツ。1ターン1枚のまま
+  { ready('276'); const br = Object.values(db.cards).filter((c) => c.ready && c.user === 'breeder' && !(c.effects || []).some((e) => e.t === 'attach') && c.guts >= 1 && c.guts <= 3).sort((a, b) => b.guts - a.guts)[0];
+    ok(br, '276: ガッツ3以下のブリーダーのカードの見本が無い');
+    if (br) { const st = scene({ hands: [[br.no, '276'], []], guts: [0, 0] }); st.players[0].mons.forEach((m) => { m.life = Math.max(1, m.life - 2); });
+      const a = find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder' && x.hand.length === 2);
+      ok(a, `276: 0ガッツで「${br.name}」に付けて出せない`);
+      if (a) { const s1 = act(st, a); ok(s1.players[0].breederUsed && !find(E.cardAttackOptions(db, s1), (x) => x.type === 'breeder'), '276: ブリーダーのカードがもう1枚出せる'); } } }
+  // 友情の証(342・コロペンドラ): 出した子の1回に数える。そのターン、ほかの味方の特殊技は0ガッツ
+  { ready('342'); const cp = monOf('colorpandora');
+    const st = scene({ mons: [[cp, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['342', '034'], []], guts: [0, 0] });
+    ok(!optWith(st, ['034']), '342: 友情の証の前に、力をためるが0ガッツで出せる');
+    const a = optWith(st, ['342']); ok(a, '342: 出せない');
+    if (a) { const s1 = act(st, a); ok(s1.players[0].mons[0].attacks === 1, '342: 出した子の1回に数えない'); ok(optWith(s1, ['034']), '342: ほかの味方の特殊技が0ガッツにならない'); } }
 };
 scenes();
 pendingCards();
