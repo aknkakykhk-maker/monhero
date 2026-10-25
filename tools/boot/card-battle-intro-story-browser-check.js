@@ -28,7 +28,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
 // お話ごとの行の数(解放あり・なし)と、写真を撮る行(0から)と、その行に出るはずの文
 const STORY = { id: 'card_battle_intro_2026', shot: 9 };
 // 4通りの行の数と、出るはずの文(あり)・代わりの文(なし)
-const CASES = [{ atsu: true, kyuko: true, lines: 49 }, { atsu: false, kyuko: true, lines: 41 }];
+const CASES = [{ atsu: true, kyuko: true, lines: 49 }, { atsu: false, kyuko: true, lines: 42 }];
 const TEXT = {
   atsu: { on: 'モンスター甲子園にも出たことあるよ', off: 'ドラちゃんだけ知ってるの、ずるい' },
   kyuko: { on: 'もう組み方考えちゃってる', off: 'デッキの組み方なら任せて' },

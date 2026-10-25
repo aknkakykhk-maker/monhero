@@ -23,7 +23,7 @@ const load = (kyukoReleased) => {
 const on = load(true), off = load(false);
 const ATSU = ['atsu_join_2026_10_22'];
 // ① 2通り(きゅうこはいつも出る)
-const want = [[on, ATSU, 49, true, true], [on, [], 41, false, true]];
+const want = [[on, ATSU, 49, true, true], [on, [], 42, false, true]];
 for (const [e, seen, n, atsu, kyuko] of want) {
   const lines = e.eventScriptForPlayer(e.ASSISTANT_CARD_BATTLE_INTRO, seen);
   const label = `あつ${atsu ? 'あり' : 'なし'}・きゅうこ${kyuko ? 'あり' : 'なし'}`;
