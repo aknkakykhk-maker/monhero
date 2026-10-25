@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f0b7532675d1f552
+// generated-sha256: 141cbf90bbaad627
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-25 19:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-25 20:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8735,6 +8735,9 @@ const CHANGELOG_GROUPS = Object.freeze([
   // 値段の見直しや絵の調整まで引っ張られる)。確実に入れたい項目は group:'monster' と書く。
   // 一番上に置くのは、見当が上から順に決まるため(「新しい仲間…ビートP」をモンヒロビートより先に拾う)
   { id:'monster',   label:'新モンスター',   emoji:'🐣', match:/新モンスター|新しいモンスター|新しい仲間|新血統/ },
+  // MFバトルカードのお知らせ(2026-10-25 社長「お知らせで新コンテンツとバトルのとかはMFバトルカードにして」)。
+  // 「カード」「バトル」の言葉で ⚔ バトル へ入っていた。バトルより上に置き、名前そのもので拾う(これから先のお知らせも入る)
+  { id:'cardBattle', label:'MFバトルカード', emoji:'🃏', match:/MFバトルカード/ },
   { id:'rhythm',    label:'モンヒロビート', emoji:'🎵', match:/モンヒロビート|モンビー|音ゲー|譜面|ノーツ|レーン|コンボ|判定|新曲|曲えらび|演奏|リズム/ },
   { id:'masu',      label:'マスモンの育成', emoji:'💜', match:/マスモン|強化|転生|限界突破|超越|魂格|合体|絆|トレーニング|育成|再生|染色|ブリーダー|オート強化/ },
   { id:'battle',    label:'バトル',         emoji:'⚔', match:/バトル|WAVE|難易度|勇者モン|供モン|カード|AUTO|クイック|極限|種族チャレンジ|スキップ|敵/ },
