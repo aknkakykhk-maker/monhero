@@ -590,6 +590,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     const key = `turn-${id}-${Date.now()}`;
     const meNow = st.active === CARD_ME;
     setTurnBanner({ key, me: meNow, name: meNow ? 'あなた' : who.name });
+    setAction(null); // 前の番の技の帯が、番の帯のうしろに残って重なっていた
     const t = setTimeout(() => setTurnBanner((cur) => (cur && cur.key === key ? null : cur)), Math.max(500, Math.round(1000 * pace)));
     if (meNow && !tutorial && !game.demo) {
       const lines = st.log.filter((l) => l.turn === st.turn - 1 && l.kind !== 'turn').map((l) => l.text).slice(-8);
