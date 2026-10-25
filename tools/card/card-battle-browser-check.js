@@ -279,7 +279,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ⑲ まんなかの吹き出しと記録が切れない(2026-10-25 社長の実機「コメントが切れてる」)。
     //   iPhone の字(ヒラギノ)は行が高いので、まんなかの字の行の高さを 1.6 にして、実機より厳しめの条件で測る
     await page.addStyleTag({ content: '[data-card-stage], [data-card-stage] * { line-height: 1.6 !important; }' });
-    const stageClip = new Set(); let stageSamples = 0, stageBubbleSamples = 0;
+    const stageClip = new Set(); const fitSeen = new Set(); let stageSamples = 0, stageBubbleSamples = 0, logSheetOpened = false;
     const measureStage = async () => {
       const r = await page.evaluate(() => {
         const st = document.querySelector('[data-card-stage]'); if (!st) return null;
@@ -288,15 +288,36 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         const bubble = st.querySelector('[data-card-bubble]'), log = st.querySelector('[data-card-log]');
         inside(bubble, '吹き出し'); inside(log, '記録');
         if (log && log.lastElementChild) inside(log.lastElementChild, '記録の最後の行');
-        return { out, bubble: !!bubble };
+        // 相手のターンの見せ方(2026-10-25 案A・B・C): 帯・札・大きいカードの文・まとめ・記録の字が、画面の外へ出ず・箱からはみ出さない
+        const W = window.innerWidth, H = window.innerHeight; const seen = [];
+        document.querySelectorAll('[data-card-fit]').forEach((el) => {
+          const b = el.getBoundingClientRect(); if (!b.width || !b.height) return;
+          const name = el.closest('[data-card-turn-banner]') ? '番の帯' : el.closest('[data-card-big]') ? '大きいカードの文' : el.closest('[data-card-turn-summary]') ? 'まとめ' : el.closest('[data-card-log-sheet]') ? '記録の一覧' : el.closest('[data-card-action]') ? '技の帯の札' : 'ほか';
+          seen.push(name);
+          const scroller = el.closest('.overflow-y-auto');
+          if (!scroller && (b.left < -1 || b.right > W + 1 || b.top < -1 || b.bottom > H + 1)) out.push(`${name}が画面の外`);
+          if (el.scrollWidth > el.clientWidth + 1) out.push(`${name}の字が横に切れる(「${el.textContent.slice(0, 12)}」)`);
+        });
+        return { out, bubble: !!bubble, seen };
       }).catch(() => null);
-      if (!r) return; stageSamples += 1; if (r.bubble) stageBubbleSamples += 1; r.out.forEach((x) => stageClip.add(x));
+      if (!r) return; stageSamples += 1; if (r.bubble) stageBubbleSamples += 1; r.out.forEach((x) => stageClip.add(x)); (r.seen || []).forEach((x) => fitSeen.add(x));
     };
+    const fitShots = new Set();
     const deadline = Date.now() + 150000;
     while (Date.now() < deadline && (gutsTurns < 6 || (dragAttack === null && gutsTurns < 12))) {
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
       if (mode === null) break;
       await measureStage();
+      // 案C: ターンごとの記録を1回開いて測る
+      if (!logSheetOpened && mode === 'attack' && gutsTurns >= 2 && (await page.locator('[data-card-log-open]').count())) {
+        logSheetOpened = true; await page.locator('header [data-card-log-open], [data-card-battle] > div [data-card-log-open]').first().click().catch(() => {});
+        await page.locator('[data-card-log-sheet]').waitFor({ timeout: 3000 }).catch(() => {}); await measureStage();
+        if (SHOT) await shot(page, '41-log-sheet');
+        await page.getByRole('button', { name: '閉じる' }).last().click().catch(() => {});
+      }
+      if (SHOT && !fitShots.has('banner') && await page.locator('[data-card-turn-banner]').count()) { fitShots.add('banner'); await shot(page, '42-turn-banner'); }
+      if (SHOT && !fitShots.has('big') && await page.locator('[data-card-big]').count()) { fitShots.add('big'); await shot(page, '43-big-card'); }
+      if (SHOT && !fitShots.has('sum') && await page.locator('[data-card-turn-summary]').count()) { fitShots.add('sum'); await shot(page, '44-turn-summary'); }
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
@@ -394,6 +415,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
       `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
+    check(`⑲ 相手のターンの見せ方(番の帯・技の帯の札・大きいカード・まとめ・記録の一覧)が出て、字が切れない`,
+      ['番の帯', '技の帯の札', '大きいカードの文', 'まとめ', '記録の一覧'].every((x) => fitSeen.has(x)) && ![...stageClip].some((x) => /番の帯|大きいカード|まとめ|記録の一覧|技の帯の札/.test(x)),
+      `見えたもの: ${[...fitSeen].join('・')}`);
     check('⑩ 技を出すと、攻撃した子がモンヒロの技の動きをする', motionSeen || poseSeen.has('attack'), `見えた動き: ${[...poseSeen].join('・')}`);
     check('⑤ 自分の番を何ターンも進められる(技・守り・ガッツ)', gutsTurns >= 3 && errors.length === 0, `技 ${myActions} 回・守りの番 ${guards} 回・ターン終了 ${gutsTurns} 回`);
     // 捨て札の一覧
