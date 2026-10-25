@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3e24d1b6aa2b6df
+// source-sha256: 9bc64d84a38952db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 12:54";
+const BUILD_DATE = "2026-10-25 13:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84100,7 +84100,8 @@ const normalizeCardSettings = v => {
   const r = cardIsPlainObject(v) ? v : {};
   return {
     speed: r.speed === 'fast' ? 'fast' : 'normal',
-    autoPass: r.autoPass !== false
+    autoPass: r.autoPass !== false,
+    quickAutoStart: r.quickAutoStart === true
   };
 };
 const cardNormalizeLevelCounts = v => {
@@ -87042,7 +87043,9 @@ const CardBattleScreen = ({
   topAssistant = null,
   rank = null,
   bgmPreview = null,
-  quickRun = null
+  quickRun = null,
+  quickAutoReady = false,
+  onSettings = null
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -87102,6 +87105,7 @@ const CardBattleScreen = ({
       settings: normalizeCardSettings(settings)
     };
     setSave(next);
+    if (onSettings) onSettings(next.settings);
     if (!next.starter) setView('starter');
     return next;
   };
@@ -87123,6 +87127,7 @@ const CardBattleScreen = ({
       ...cur,
       ...patch
     }));
+    if (ok && patch.settings && onSettings) onSettings(patch.settings);
     return ok;
   };
   if (!db) return React.createElement("div", {
@@ -87488,7 +87493,7 @@ const CardBattleScreen = ({
     }, React.createElement("img", {
       src: assistantFaceImage(x, 'normal'),
       alt: x.name,
-      className: "h-[52px] w-[52px] rounded-lg object-cover object-top"
+      className: "h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"
     }), React.createElement("span", {
       className: "text-[13px] font-black"
     }, x.name), save.record.beaten[x.id] && React.createElement("span", {
@@ -87498,7 +87503,7 @@ const CardBattleScreen = ({
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
       alt: a.name,
-      className: "w-[42%]",
+      className: "w-[42%] landscape:hidden",
       style: {
         height: 'min(150px, 17vh)'
       }
@@ -87907,7 +87912,7 @@ const CardBattleScreen = ({
       className: "mt-2 block text-left"
     }, React.createElement("span", {
       className: "text-[11px] font-black text-slate-300"
-    }, label, k === 'pvp' ? '(準備中)' : ''), React.createElement("div", {
+    }, label, k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''), React.createElement("div", {
       className: "mt-1 flex gap-2"
     }, React.createElement("select", {
       "data-card-bgm-select": k,
@@ -87981,7 +87986,38 @@ const CardBattleScreen = ({
     }, save.settings.autoPass ? 'ON' : 'OFF')), React.createElement("p", {
       className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります')))));
+    }, jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります'))), React.createElement("div", {
+      "data-card-options-quick": true,
+      className: SCREEN_PANEL_CLASS
+    }, React.createElement("div", {
+      className: "text-[13px] font-black text-white"
+    }, "裏のクイック周回"), React.createElement("div", {
+      className: "mt-2 flex items-center gap-2"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200",
+      style: JA_LABEL_STYLE
+    }, jaWrap('MFバトルカードを開いたら自動で始める')), React.createElement("button", {
+      type: "button",
+      "data-card-quick-auto": true,
+      "aria-pressed": save.settings.quickAutoStart,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void persist({
+          settings: {
+            ...save.settings,
+            quickAutoStart: !save.settings.quickAutoStart
+          }
+        });
+      },
+      className: `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.quickAutoStart ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
+    }, save.settings.quickAutoStart ? 'ON' : 'OFF')), React.createElement("p", {
+      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ONにすると、MFバトルカードを開いたときに、裏でクイックの∞周回を始めます。負けたときは、少しおいて1周目から始め直します。編成は、AUTO設定の「モンヒロビート中に回すクイック周回」と同じです')), !quickAutoReady && React.createElement("p", {
+      "data-card-quick-auto-needs": true,
+      className: "mt-1 text-[10px] font-bold leading-snug text-amber-200",
+      style: JA_WRAP_STYLE
+    }, jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')))));
   }
   if (view === 'ranking') {
     return React.createElement(CardRankingBoard, {
@@ -96378,6 +96414,7 @@ function MonsterHeroGame() {
   const rhythmEventThanksStoryIdFor = event => event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id] || null;
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const [cardBgm, setCardBgm] = useState(null);
+  const [cardQuickAutoStart, setCardQuickAutoStart] = useState(false);
   const [cardOrigin, setCardOrigin] = useState('home');
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
   const setCardMarketEntry = next => {
@@ -108029,6 +108066,37 @@ function MonsterHeroGame() {
     }, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings]);
+  const cardAutoStartInsideRef = useRef(false);
+  const cardAutoStartTokenRef = useRef(0);
+  useEffect(() => {
+    const inside = isCardRunScreen(gameState);
+    const wasInside = cardAutoStartInsideRef.current;
+    cardAutoStartInsideRef.current = inside;
+    if (!inside || wasInside) return;
+    const token = ++cardAutoStartTokenRef.current;
+    void storeGet(CARD_SAVE_KEYS.settings, null).then(saved => {
+      const settings = normalizeCardSettings(saved);
+      setCardQuickAutoStart(settings.quickAutoStart);
+      if (token !== cardAutoStartTokenRef.current || !cardAutoStartInsideRef.current) return;
+      if (!settings.quickAutoStart || !autoQuickRunConfigured(autoSettings)) return;
+      if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+      if (runStageRef.current && !runResultFinishedRef.current) return;
+      if (!repeatTemplateFromAutoSettings()) return;
+      startQuickRunFromRhythm();
+    }).catch(() => {});
+  }, [gameState]);
+  useEffect(() => {
+    if (!quickRunProgress || !quickRunProgress.finished || quickRunProgress.reason !== 'defeat') return undefined;
+    if (!isCardRunScreen(gameState)) return undefined;
+    if (resultProcessing) return undefined;
+    if (!cardQuickAutoStart || !autoQuickRunConfigured(autoSettings)) return undefined;
+    const timer = setTimeout(() => {
+      const current = quickRunProgressRef.current;
+      if (!current || !current.finished || current.reason !== 'defeat') return;
+      startQuickRunFromRhythm();
+    }, QUICK_RUN_AUTO_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
   const cycleBattleAuto = () => {
     if (autoRepeatRef.current) {
       setAutoBattleEnabled(false);
@@ -118530,6 +118598,8 @@ function MonsterHeroGame() {
       onBgm: setCardBgm,
       onQuickLoops: awardCardQuickLoops,
       quickRun: cardQuickRunView(),
+      quickAutoReady: autoQuickRunConfigured(autoSettings),
+      onSettings: settings => setCardQuickAutoStart(!!(settings && settings.quickAutoStart)),
       onOpenMarket: () => {
         setCardMarketEntry(true);
         setMarketExchangeError('');
