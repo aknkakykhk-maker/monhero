@@ -204,7 +204,48 @@ const HYBRID_C062_IMG = "images/monsters/c062.png?v=090cdd583324";
 const HYBRID_C063_IMG = "images/monsters/c063.png?v=97693bd14c3a";
 const HYBRID_C064_IMG = "images/monsters/c064.png?v=7e039c580e69";
 const HYBRID_C065_IMG = "images/monsters/c065.png?v=651de4a99a0b";
+// 派生モンスター20体(2026-10-25 社長から。C-010〜C-019 の一部。名前は本編の図鑑の名前)
+const HYBRID_C010_IMG = "images/monsters/c010.png?v=e53142331a97";
+const HYBRID_C012_IMG = "images/monsters/c012.png?v=38661b85c0b6";
+const HYBRID_C013_IMG = "images/monsters/c013.png?v=fca923cd46e8";
+const HYBRID_C015_IMG = "images/monsters/c015.png?v=8a8916e3668f";
+const HYBRID_C016_IMG = "images/monsters/c016.png?v=197d7b651aea";
+const HYBRID_C017_IMG = "images/monsters/c017.png?v=13408279524c";
+const HYBRID_C018_IMG = "images/monsters/c018.png?v=47a9f8c64bb3";
+const HYBRID_C019_IMG = "images/monsters/c019.png?v=2ca0d628318e";
+const HYBRID_C033_IMG = "images/monsters/c033.png?v=6640e061ae35";
+const HYBRID_C034_IMG = "images/monsters/c034.png?v=994f5cc54350";
+const HYBRID_C035_IMG = "images/monsters/c035.png?v=eb9c14059560";
+const HYBRID_C036_IMG = "images/monsters/c036.png?v=d592da5899f7";
+const HYBRID_C038_IMG = "images/monsters/c038.png?v=8819b3a3dcdd";
+const HYBRID_C039_IMG = "images/monsters/c039.png?v=9dfd1759dd1a";
+const HYBRID_C040_IMG = "images/monsters/c040.png?v=143432d34282";
+const HYBRID_C041_IMG = "images/monsters/c041.png?v=1ca881589d31";
+const HYBRID_C042_IMG = "images/monsters/c042.png?v=e5a483c55e02";
+const HYBRID_C020_IMG = "images/monsters/c020.png?v=81b9fd3f3ec0";
+const HYBRID_C043_IMG = "images/monsters/c043.png?v=71b585e27dc5";
+const HYBRID_C045_IMG = "images/monsters/c045.png?v=86b2b98d136d";
 const HYBRID_MONSTER_IMGS = Object.freeze({
+  'C-010': HYBRID_C010_IMG,
+  'C-012': HYBRID_C012_IMG,
+  'C-013': HYBRID_C013_IMG,
+  'C-015': HYBRID_C015_IMG,
+  'C-016': HYBRID_C016_IMG,
+  'C-017': HYBRID_C017_IMG,
+  'C-018': HYBRID_C018_IMG,
+  'C-019': HYBRID_C019_IMG,
+  'C-033': HYBRID_C033_IMG,
+  'C-034': HYBRID_C034_IMG,
+  'C-035': HYBRID_C035_IMG,
+  'C-036': HYBRID_C036_IMG,
+  'C-038': HYBRID_C038_IMG,
+  'C-039': HYBRID_C039_IMG,
+  'C-040': HYBRID_C040_IMG,
+  'C-041': HYBRID_C041_IMG,
+  'C-042': HYBRID_C042_IMG,
+  'C-020': HYBRID_C020_IMG,
+  'C-043': HYBRID_C043_IMG,
+  'C-045': HYBRID_C045_IMG,
   'C-051': HYBRID_C051_IMG,
   'C-052': HYBRID_C052_IMG,
   'C-053': HYBRID_C053_IMG,
@@ -324,8 +365,49 @@ const HYBRID_C055_FACE_ICON = "images/monster-icons/face/c055.png?v=a71918e0b84b
 const HYBRID_C063_FACE_ICON = "images/monster-icons/face/c063.png?v=c15a3b0c53cf";
 const HYBRID_C064_FACE_ICON = "images/monster-icons/face/c064.png?v=59768761cc69";
 const HYBRID_C065_FACE_ICON = "images/monster-icons/face/c065.png?v=c0a6301e2c2a";
+// 派生モンスター8体(2026-10-25)。社長が A〜D から選んだ案(位置の直しつき)
+const HYBRID_C010_FACE_ICON = "images/monster-icons/face/c010.png?v=42dbe96e69c5";
+const HYBRID_C012_FACE_ICON = "images/monster-icons/face/c012.png?v=5722ee95967f";
+const HYBRID_C013_FACE_ICON = "images/monster-icons/face/c013.png?v=02afe2e9ef57";
+const HYBRID_C015_FACE_ICON = "images/monster-icons/face/c015.png?v=0eddb061d2fd";
+const HYBRID_C016_FACE_ICON = "images/monster-icons/face/c016.png?v=c58049c89c0a";
+const HYBRID_C017_FACE_ICON = "images/monster-icons/face/c017.png?v=d1de20f8a221";
+const HYBRID_C018_FACE_ICON = "images/monster-icons/face/c018.png?v=12c34f21808e";
+const HYBRID_C019_FACE_ICON = "images/monster-icons/face/c019.png?v=acd3ad2ca397";
+const HYBRID_C033_FACE_ICON = "images/monster-icons/face/c033.png?v=20db388e2920";
+const HYBRID_C034_FACE_ICON = "images/monster-icons/face/c034.png?v=ec1be7dcb7a6";
+const HYBRID_C035_FACE_ICON = "images/monster-icons/face/c035.png?v=895f6b37c7db";
+const HYBRID_C036_FACE_ICON = "images/monster-icons/face/c036.png?v=cb3c4f4a19a6";
+const HYBRID_C038_FACE_ICON = "images/monster-icons/face/c038.png?v=4eaeb9ce0c27";
+const HYBRID_C039_FACE_ICON = "images/monster-icons/face/c039.png?v=673f2f41e714";
+const HYBRID_C040_FACE_ICON = "images/monster-icons/face/c040.png?v=c09a8d93ef8e";
+const HYBRID_C041_FACE_ICON = "images/monster-icons/face/c041.png?v=e5b9e37dddf1";
+const HYBRID_C042_FACE_ICON = "images/monster-icons/face/c042.png?v=9331e5dd8316";
+const HYBRID_C020_FACE_ICON = "images/monster-icons/face/c020.png?v=12bdba21a409";
+const HYBRID_C043_FACE_ICON = "images/monster-icons/face/c043.png?v=656a46dd72a0";
+const HYBRID_C045_FACE_ICON = "images/monster-icons/face/c045.png?v=cbe99cc190ae";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
+  'C-010': HYBRID_C010_FACE_ICON,
+  'C-012': HYBRID_C012_FACE_ICON,
+  'C-013': HYBRID_C013_FACE_ICON,
+  'C-015': HYBRID_C015_FACE_ICON,
+  'C-016': HYBRID_C016_FACE_ICON,
+  'C-017': HYBRID_C017_FACE_ICON,
+  'C-018': HYBRID_C018_FACE_ICON,
+  'C-019': HYBRID_C019_FACE_ICON,
+  'C-033': HYBRID_C033_FACE_ICON,
+  'C-034': HYBRID_C034_FACE_ICON,
+  'C-035': HYBRID_C035_FACE_ICON,
+  'C-036': HYBRID_C036_FACE_ICON,
+  'C-038': HYBRID_C038_FACE_ICON,
+  'C-039': HYBRID_C039_FACE_ICON,
+  'C-040': HYBRID_C040_FACE_ICON,
+  'C-041': HYBRID_C041_FACE_ICON,
+  'C-042': HYBRID_C042_FACE_ICON,
+  'C-020': HYBRID_C020_FACE_ICON,
+  'C-043': HYBRID_C043_FACE_ICON,
+  'C-045': HYBRID_C045_FACE_ICON,
   'C-051': HYBRID_C051_FACE_ICON,
   'C-052': HYBRID_C052_FACE_ICON,
   'C-053': HYBRID_C053_FACE_ICON,

@@ -42,7 +42,7 @@ const dataTablePrelude = [
   (source.match(/^const DIST_APTITUDE_GRADES = \[.*$/m) || [''])[0],
   grab(source, 'const STAT_POINT_GAIN = {', 'const STAT_POINT_KEYS'),
   // 血統一覧の表は data/lineages.js・data/ally-monsters.js と血統の引き方から作るので、材料ごと持ち込む
-  allyMonstersData.replace(/\b[A-Z_]+_(?:IMG|ICON|FACE_ICON)\b/g, "''"),
+  allyMonstersData.replace(/\b[A-Z][A-Z0-9_]*_(?:IMG|ICON|FACE_ICON)\b/g, "''"),
   lineagesData,
   grab(source, 'const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
   // 種族チャレンジの表は主血統の一覧から作る(定義は本体のずっと前にあるので1行だけ持ち込む)

@@ -586,7 +586,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 図鑑のタブはパックと同じ第1〜8弾+混血(2026-10-25)。集めた種類は、持っているカードの種類と同じ数(混血を2回数えない)
     const ownedKinds = await page.evaluate(() => Object.entries(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).filter(([no, n]) => n > 0 && (CARD_BATTLE_DATA.cards[no] || CARD_BATTLE_DATA.monsters[no])).length);
     const dexTabs = await page.locator('[data-card-dex] [role="tab"]').count();
-    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 55 && haveTiles >= 1 && dexH === 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexTotal, ownedKinds, dex1, haveTiles, dexH, dexHHave }));
+    // 混血・派生の数はデータから数える(2026-10-25 に派生25枚が増えた。図鑑だけの子も並ぶ)
+    const hybridCount = await page.evaluate(() => Object.values(CARD_BATTLE_DATA.monsters).filter((m) => String(m.wave) === 'hybrid').length);
+    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
     // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する

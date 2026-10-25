@@ -14,7 +14,7 @@ const GAME = path.join(ROOT, 'monster-hero');
 const load = () => {
   const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
   const src = `${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardSimulate, cardAiBuildDeck, cardAiPolicy, CARD_AI_HABITS };';
+    + 'this.E = { CARD_BATTLE_DATA, cardSimulate, cardAiBuildDeck, cardAiPolicy, CARD_AI_HABITS, cardAiSeededRand };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -42,7 +42,9 @@ levels.forEach((lv) => {
     who.forEach((w) => {
       kits.forEach((k) => {
         for (let g = 0; g < games; g++) {
-          const st = E.cardSimulate(db, { decks: [decks[w], E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + seed++, first: g % 2 });
+          // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体・カードも少しずつ変わる。2026-10-25)。MASTER はプレイヤー役のデッキを見る
+          const mine = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) });
+          const st = E.cardSimulate(db, { decks: [mine, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + seed++, first: g % 2 });
           if (st.winner === 0) win[w] += 1;
           play[w] += 1;
         }
