@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5b1df55b6cc9083
+// source-sha256: 6300e37d8f971298
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 19:13";
+const BUILD_DATE = "2026-10-25 19:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84041,6 +84041,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   cpuUnlocked: 'mh_card_cpu_unlocked_v1',
   tutorial: 'mh_card_tutorial_v1',
   pity: 'mh_card_pack_pity_v1',
+  pitySplit: 'mh_card_pack_pity_split_v1',
   shop: 'mh_card_shop_v1',
   topAssist: 'mh_card_top_assist_v1',
   rankSync: 'mh_card_rank_sync_v1',
@@ -85159,114 +85160,129 @@ const CARD_RULE_PAGES = Object.freeze([{
   lines: ['カードに書いてある文は、ここの決まりより先に効く', '「同時に使用できる」「同一ターンに連続して使用できる」などは、その文のとおり', 'カードを長押しすると、大きな絵と文が見られる']
 }]);
 const CARD_PACKS = Object.freeze([{
-  id: 'w1',
-  wave: '1',
-  name: '第1弾パック',
+  id: 'p1',
+  no: 1,
+  species: ['dino', 'hare', 'mocchi'],
+  color: '#2f7fe0'
+}, {
+  id: 'p2',
+  no: 2,
+  species: ['golem', 'pixie', 'naga'],
+  color: '#ef4444'
+}, {
+  id: 'p3',
+  no: 3,
+  species: ['suezo', 'gali', 'tiger'],
+  color: '#e0a420'
+}, {
+  id: 'p4',
+  no: 4,
+  species: ['phoenix', 'monol', 'henger'],
+  color: '#f97316'
+}, {
+  id: 'p5',
+  no: 5,
+  species: ['plant', 'dragon', 'jell'],
+  color: '#22c55e'
+}, {
+  id: 'p6',
+  no: 6,
+  species: ['mew', 'worm', 'durahan'],
+  color: '#a855f7'
+}, {
+  id: 'p7',
+  no: 7,
+  species: ['zilla', 'metalner', 'joker'],
+  color: '#14b8a6'
+}, {
+  id: 'p8',
+  no: 8,
+  species: ['arrowhead', 'centaur', 'colorpandora'],
+  color: '#ec4899'
+}].map(p => Object.freeze({
+  ...p,
+  name: `第${p.no}弾パック`,
   price: 300,
-  bundle: {
+  bundle: Object.freeze({
     n: 5,
     price: 1350
-  },
+  }),
   tech: 7,
   mon: 1,
-  rarity: {
+  rarity: Object.freeze(p.no <= 3 ? {
     normal: 85,
     kira: 12,
     alt: 3
-  },
-  pity: true,
-  color: '#f59e0b'
-}, {
-  id: 'w2',
-  wave: '2',
-  name: '第2弾パック',
-  price: 300,
-  bundle: {
-    n: 5,
-    price: 1350
-  },
-  tech: 7,
-  mon: 1,
-  rarity: {
+  } : {
     normal: 85,
     kira: 15,
     alt: 0
-  },
-  pity: true,
-  color: '#ef4444'
-}, {
-  id: 'w3',
-  wave: '3',
-  name: '第3弾パック',
-  price: 300,
-  bundle: {
-    n: 5,
-    price: 1350
-  },
-  tech: 7,
-  mon: 1,
-  rarity: {
-    normal: 85,
-    kira: 15,
-    alt: 0
-  },
-  pity: true,
-  color: '#22c55e'
-}, {
-  id: 'w4',
-  wave: '4',
-  name: '第4弾パック',
-  price: 300,
-  bundle: {
-    n: 5,
-    price: 1350
-  },
-  tech: 7,
-  mon: 1,
-  rarity: {
-    normal: 85,
-    kira: 15,
-    alt: 0
-  },
-  pity: true,
-  color: '#3b82f6'
-}, {
-  id: 'hybrid',
-  wave: 'hybrid',
-  name: '混血パック',
-  price: 1000,
-  bundle: null,
-  tech: 0,
-  mon: 3,
-  rarity: {
-    normal: 100,
-    kira: 0,
-    alt: 0
-  },
-  pity: false,
-  color: '#a855f7'
-}]);
+  }),
+  pity: true
+})));
+const CARD_PACK_SHARED = Object.freeze({
+  p1: ['109', '112'],
+  p2: ['113', '110', '114'],
+  p3: ['111'],
+  p4: ['122', '121', '126', '123', '127', '124'],
+  p5: ['125', '128', '249', '252', '250', '253'],
+  p6: ['254', '251', '276', '273', '277', '274'],
+  p7: ['275', '278', '345', '279', '346', '280'],
+  p8: ['351', '347', '352', '348', '366', '349', '350']
+});
+const CARD_PACK_LEGACY_IDS = Object.freeze(['w1', 'w2', 'w3', 'w4', 'hybrid']);
+const CARD_PACK_PITY_FROM = Object.freeze({
+  p1: 'w1',
+  p2: 'w1',
+  p3: 'w1',
+  p4: 'w2',
+  p5: 'w2',
+  p6: 'w3',
+  p7: 'w4',
+  p8: 'w4'
+});
 const CARD_PACK_PITY_AT = 7;
 const CARD_TECH_KEEP_MAX = 3;
 const CARD_DUP_POINT = Object.freeze({
   tech: 5,
   normal: 50,
   kira: 100,
-  alt: 200,
-  hybrid: 20
+  alt: 200
 });
 const CARD_STARTER_SHOP_PRICE = 1500;
 const cardPackOf = id => CARD_PACKS.find(p => p.id === id) || null;
 const cardMonRarity = m => !m || !m.variant ? 'normal' : /別絵キラ/.test(m.variant) ? 'alt' : /キラ/.test(m.variant) ? 'kira' : 'normal';
-const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => String(c.wave) === pack.wave && c.ready).map(c => c.no).sort();
-const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => String(m.wave) === pack.wave && m.ready !== false && cardMonRarity(m) === rarity).map(m => m.no).sort();
-const cardOwnsSpecies = (db, collection, species) => Object.keys(collection || {}).some(no => collection[no] > 0 && (cardMonsterOf(db, no) || {}).species === species);
+const cardPackIdOfSpecies = species => (CARD_PACKS.find(p => p.species.includes(species)) || {}).id || null;
+const cardPackIdOf = (db, no) => {
+  const m = db.monsters[no];
+  if (m) return cardPackIdOfSpecies(String(m.wave) === 'hybrid' ? m.main : m.species);
+  const c = db.cards[no];
+  if (!c) return null;
+  if (c.user === 'any' || c.user === 'breeder') return (Object.entries(CARD_PACK_SHARED).find(([, list]) => list.includes(no)) || [])[0] || null;
+  return cardPackIdOfSpecies(c.user);
+};
+const cardPackTechPool = (db, pack) => Object.values(db.cards).filter(c => c.ready && cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort();
+const cardPackMonPool = (db, pack, rarity) => Object.values(db.monsters).filter(m => m.ready !== false && cardMonRarity(m) === rarity && cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort();
+const cardPackAllCards = (db, pack) => ({
+  monsters: Object.values(db.monsters).filter(m => cardPackIdOf(db, m.no) === pack.id).map(m => m.no).sort(),
+  cards: Object.values(db.cards).filter(c => cardPackIdOf(db, c.no) === pack.id).map(c => c.no).sort()
+});
 const cardNormalizePity = v => {
   const out = {};
   if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  [...CARD_PACKS.map(p => p.id), ...CARD_PACK_LEGACY_IDS].forEach(id => {
+    const x = Number(v[id]);
+    if (Number.isFinite(x) && x > 0) out[id] = Math.min(999, Math.floor(x));
+  });
+  return out;
+};
+const cardSplitPity = pity => {
+  const out = {
+    ...(pity || {})
+  };
   CARD_PACKS.forEach(p => {
-    const x = Number(v[p.id]);
-    if (Number.isFinite(x) && x > 0) out[p.id] = Math.min(999, Math.floor(x));
+    const from = Number(out[CARD_PACK_PITY_FROM[p.id]]);
+    if (!(out[p.id] > 0) && Number.isFinite(from) && from > 0) out[p.id] = from;
   });
   return out;
 };
@@ -85320,9 +85336,9 @@ const cardOpenPack = (db, packId, {
     const rar = Object.entries(pack.rarity).filter(([k, w]) => w > 0 && (!forced || k !== 'normal') && cardPackMonPool(db, pack, k).length);
     const rarity = cardPickWeighted(rar, ([, w]) => w, rand)[0];
     const pool = cardPackMonPool(db, pack, rarity);
-    const no = cardPickWeighted(pool, x => cardOwnsSpecies(db, col, (cardMonsterOf(db, x) || {}).species) ? 1 : 2, rand);
+    const no = pool[Math.floor(rand() * pool.length) % pool.length];
     const dup = (col[no] || 0) >= 1;
-    const dupPoint = pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : CARD_DUP_POINT[rarity];
+    const dupPoint = CARD_DUP_POINT[rarity];
     if (dup) point += dupPoint;else col[no] = 1;
     if (rarity !== 'normal') hit = true;
     cards.push({
@@ -85390,10 +85406,10 @@ const cardPackRates = (db, packId) => {
     rarity: pack.rarity
   };
 };
-const cardPackCardRates = (db, packId, collection) => {
+const cardPackCardRates = (db, packId) => {
   const pack = cardPackOf(packId);
   if (!pack) return null;
-  const techPool = pack.tech > 0 ? cardPackTechPool(db, pack) : [];
+  const techPool = cardPackTechPool(db, pack);
   const tech = techPool.map(no => ({
     no,
     p: 1 / techPool.length
@@ -85404,14 +85420,11 @@ const cardPackCardRates = (db, packId, collection) => {
   const mon = [];
   rar.forEach(([k, w]) => {
     const pool = cardPackMonPool(db, pack, k);
-    const wOf = no => cardOwnsSpecies(db, collection, (cardMonsterOf(db, no) || {}).species) ? 1 : 2;
-    const sum = pool.reduce((a, no) => a + wOf(no), 0);
     rarity[k] = w / rarTotal;
     pool.forEach(no => mon.push({
       no,
       rarity: k,
-      p: w / rarTotal * (wOf(no) / sum),
-      boosted: wOf(no) === 2
+      p: w / rarTotal / pool.length
     }));
   });
   return {
@@ -88754,16 +88767,16 @@ const CardBattleScreen = ({
     "data-card-pack-open-demo": true,
     className: "mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black",
     onClick: () => {
-      const a = cardOpenPack(db, 'w1', {
+      const a = cardOpenPack(db, 'p1', {
         collection: {},
         pity: {}
       }, Math.random);
-      const b = cardOpenPack(db, 'w1', {
+      const b = cardOpenPack(db, 'p1', {
         collection: a.collection,
         pity: {}
       }, Math.random);
-      const alt = Object.values(db.monsters).find(m => String(m.wave) === '1' && /別絵/.test(m.variant || ''));
-      const kira = Object.values(db.monsters).find(m => String(m.wave) === '1' && m.variant === 'キラ');
+      const alt = Object.values(db.monsters).find(m => cardPackIdOf(db, m.no) === 'p1' && /別絵/.test(m.variant || ''));
+      const kira = Object.values(db.monsters).find(m => cardPackIdOf(db, m.no) === 'p1' && m.variant === 'キラ');
       a.cards[a.cards.length - 1] = {
         no: alt.no,
         slot: 'mon',
@@ -88779,7 +88792,7 @@ const CardBattleScreen = ({
         point: 0
       };
       setPackDemo({
-        packId: 'w1',
+        packId: 'p1',
         packs: [a.cards, b.cards],
         dupPoint: 0,
         cost: 0,
@@ -89303,26 +89316,19 @@ const CardDeckList = ({
     }
   }));
 };
-const CARD_DEX_TABS = Object.freeze([{
-  id: '1',
-  label: '第1弾'
-}, {
-  id: '2',
-  label: '第2弾'
-}, {
-  id: '3',
-  label: '第3弾'
-}, {
-  id: '4',
-  label: '第4弾'
-}, {
+const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map(p => ({
+  id: String(p.no),
+  label: `第${p.no}弾`
+})), {
   id: 'hybrid',
   label: '混血'
 }]);
-const cardDexList = (db, wave) => {
-  const mons = Object.values(db.monsters).filter(m => String(m.wave) === wave).map(m => m.no).sort();
-  const cards = Object.values(db.cards).filter(c => String(c.wave) === wave).map(c => c.no).sort();
-  return [...mons, ...cards];
+const cardDexList = (db, tab) => {
+  if (tab === 'hybrid') return Object.values(db.monsters).filter(m => String(m.wave) === 'hybrid').map(m => m.no).sort();
+  const pack = CARD_PACKS.find(p => String(p.no) === tab);
+  if (!pack) return [];
+  const all = cardPackAllCards(db, pack);
+  return [...all.monsters, ...all.cards];
 };
 const CardDex = ({
   db,
@@ -89334,7 +89340,7 @@ const CardDex = ({
   const [detail, setDetail] = useState(null);
   const press = useCardLongPress(no => setDetail(no));
   const col = collection || {};
-  const all = CARD_DEX_TABS.flatMap(t => cardDexList(db, t.id));
+  const all = [...new Set(CARD_DEX_TABS.flatMap(t => cardDexList(db, t.id)))];
   const list = cardDexList(db, tab);
   const shown = list.filter(no => show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true);
   const haveIn = arr => arr.filter(no => col[no] > 0).length;
@@ -89467,7 +89473,7 @@ const CardRules = ({
 }, jaWrap('ドラと、みゅあ相手に5つの決まりをおさらい')))));
 const cardPackMonsters = (db, pack, n = 5) => {
   const seen = new Set();
-  const list = Object.values(db.monsters).filter(m => String(m.wave) === pack.wave && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
+  const list = Object.values(db.monsters).filter(m => cardPackIdOf(db, m.no) === pack.id && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
   if (list.length <= n) return list;
   const step = list.length / n;
   return Array.from({
@@ -89522,7 +89528,7 @@ const CardPackArt = ({
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
   const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_SLOTS.slice(5 - mons.length);
   const h = Math.round(width * 1.48);
-  const label = pack.id === 'hybrid' ? '混血' : `第${pack.wave}弾`;
+  const label = `第${pack.no}弾`;
   return React.createElement("div", {
     "data-card-pack-art": pack.id,
     className: `relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`,
@@ -89596,7 +89602,7 @@ const CardPackArt = ({
     style: {
       fontSize: Math.round(width * 0.07)
     }
-  }, pack.id === 'hybrid' ? '混血パック' : 'ブースターパック'));
+  }, "ブースターパック"));
 };
 const CARD_RARITY_LABEL = Object.freeze({
   normal: '',
@@ -89630,12 +89636,7 @@ const CardPackOpen = ({
     timers.current.push(setTimeout(fn, ms));
   };
   const press = useCardLongPress(no => setDetail(no));
-  const pack = cardPackOf(result.packId) || {
-    id: 'w1',
-    wave: '1',
-    name: 'パック',
-    color: '#f59e0b'
-  };
+  const pack = cardPackOf(result.packId) || CARD_PACKS[0];
   const cards = result.packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
   const last = pi >= result.packs.length - 1;
@@ -89980,7 +89981,7 @@ const CardPackContents = ({
   onClose
 }) => {
   const [detail, setDetail] = useState(null);
-  const r = cardPackCardRates(db, pack.id, collection);
+  const r = cardPackCardRates(db, pack.id);
   const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || String(a.no).localeCompare(String(b.no)));
   const missing = [...mons, ...r.tech].filter(x => !((collection || {})[x.no] > 0)).length;
   return React.createElement(CardShopSheet, {
@@ -90012,7 +90013,7 @@ const CardPackRateSheet = ({
   onClose
 }) => {
   const [detail, setDetail] = useState(null);
-  const r = cardPackCardRates(db, pack.id, collection);
+  const r = cardPackCardRates(db, pack.id);
   const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || b.p - a.p || String(a.no).localeCompare(String(b.no)));
   const th = 'border border-white/15 bg-amber-200/15 px-1 py-0.5 text-[11px] font-black text-amber-100';
   const td = 'border border-white/10 px-1 py-0.5 text-[11px] font-bold';
@@ -90036,12 +90037,10 @@ const CardPackRateSheet = ({
   }), React.createElement("span", {
     className: "min-w-0",
     style: JA_WRAP_STYLE
-  }, cardShopName(db, x.no)), x.boosted && React.createElement("span", {
-    className: "shrink-0 rounded bg-emerald-700 px-1 text-[9px] font-black"
-  }, "2倍"))), React.createElement("td", {
+  }, cardShopName(db, x.no)))), React.createElement("td", {
     className: `${td} text-right tabular-nums`
   }, cardShopPct(x.p))));
-  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, pack.id === 'hybrid' ? '3枚とも混血モンスターです。キラはありません。' : null, '「2倍」の印は、まだ持っていない種族のモンスターです(持っている種族の2倍出やすくなります)。表の割合は、いまの持ち物での割合です。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null, `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})。`, '準備中のカードは出ません。'].filter(Boolean);
+  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターは、キラの無い通常のモンスターとして出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null, `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '準備中のカードは出ません。'].filter(Boolean);
   return React.createElement(CardShopSheet, {
     tag: "rates",
     title: `${pack.name} 提供割合`,
@@ -90136,6 +90135,7 @@ const CardStarterContents = ({
     onTap: setDetail
   }));
 };
+const cardPackSpeciesLabel = (db, pack) => pack.species.map(sp => (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp).join('・');
 const CardShopPacks = ({
   db,
   point,
@@ -90167,6 +90167,9 @@ const CardShopPacks = ({
   }, React.createElement("div", {
     className: "text-[14px] font-black text-white"
   }, pack.name), React.createElement("div", {
+    "data-card-shop-pack-species": true,
+    className: "text-[11px] font-black text-amber-100"
+  }, cardPackSpeciesLabel(db, pack)), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)), React.createElement("div", {
@@ -100842,11 +100845,13 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawPity, rawPoint] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null)]);
+      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null), storeGet(K.pitySplit, null)]);
       const point = cardNormalizePoint(rawPoint);
+      const split = rawSplit !== true;
+      const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
       const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, {
         collection: cardNormalizeCollection(rawCol),
-        pity: cardNormalizePity(rawPity),
+        pity: pity0,
         point
       }, Math.random);
       if (!r) {
@@ -100868,7 +100873,11 @@ function MonsterHeroGame() {
         key: K.point,
         before: rawPoint,
         next: r.point
-      }], storeGet, storeSet);
+      }, ...(split ? [{
+        key: K.pitySplit,
+        before: rawSplit,
+        next: true
+      }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
         return {

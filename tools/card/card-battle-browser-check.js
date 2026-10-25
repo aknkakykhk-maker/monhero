@@ -529,17 +529,22 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-dex-show="have"]').click();
     await page.waitForTimeout(150);
     const dexHHave = await page.locator('[data-card-dex-tile]').count();
-    check('⑮ カード図鑑: 第1弾が並び、持っている種類が数えられ、混血のタブ・持っているだけの絞り込みが効く', Number(dexTotal) >= 20 && Number(dexTotal) === haveTiles && dex1 >= 100 && haveTiles >= 20 && dexH === 15 && dexHHave === 0, JSON.stringify({ dexTotal, dex1, haveTiles, dexH, dexHHave }));
+    // 図鑑のタブはパックと同じ第1〜8弾+混血(2026-10-25)。集めた種類は、持っているカードの種類と同じ数(混血を2回数えない)
+    const ownedKinds = await page.evaluate(() => Object.entries(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).filter(([no, n]) => n > 0 && (CARD_BATTLE_DATA.cards[no] || CARD_BATTLE_DATA.monsters[no])).length);
+    const dexTabs = await page.locator('[data-card-dex] [role="tab"]').count();
+    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 55 && haveTiles >= 1 && dexH === 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexTotal, ownedKinds, dex1, haveTiles, dexH, dexHHave }));
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
     // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する
     await page.evaluate(() => localStorage.setItem('mh_card_point_v1', JSON.stringify(5000)));
+    // 以前の4弾の天井の数(w1 に 4)を入れておく。買ったときに新しい8弾へ1回だけ写り、w1 は消えない
+    await page.evaluate(() => localStorage.setItem('mh_card_pack_pity_v1', JSON.stringify({ w1: 4, w3: 2 })));
     const unlockedBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
     const colBefore = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0));
     await page.locator('[data-card-market-open]').click();
     await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
     // 中身を見る(2026-10-25 社長「中身が分かるように」): 出るカードの絵が並び、持っていないものに「未取得」、押すと詳しい画面
-    await page.locator('[data-card-shop-contents="w1"]').click();
+    await page.locator('[data-card-shop-contents="p1"]').click();
     await page.locator('[data-card-shop-sheet="contents"]').waitFor({ timeout: 5000 });
     if (SHOT) await shot(page, '25-shop-contents');
     const contents = await page.evaluate(() => ({ items: document.querySelectorAll('[data-card-shop-sheet="contents"] [data-card-shop-item]').length, missing: document.querySelectorAll('[data-card-shop-sheet="contents"] [data-card-shop-missing-badge]').length }));
@@ -547,9 +552,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const contentsDetail = await page.locator('[data-card-detail]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
     await page.locator('[data-card-detail]').click().catch(() => {});
     await page.locator('[data-card-shop-sheet-close]').click();
-    check('⑯ パックの「中身を見る」: 出るカードが全部並び、持っていないものに「未取得」、押すと詳しい画面', contents.items >= 100 && contents.missing > 0 && contents.missing < contents.items && contentsDetail, JSON.stringify({ contents, contentsDetail }));
+    check('⑯ パックの「中身を見る」: 出るカードが全部並び、持っていないものに「未取得」、押すと詳しい画面', contents.items >= 20 && contents.missing > 0 && contents.missing < contents.items && contentsDetail, JSON.stringify({ contents, contentsDetail }));
     // 提供割合: レア度ごとの表と、カード1枚ずつの表(足すと100%)・天井の決まり
-    await page.locator('[data-card-shop-rates="w1"]').click();
+    await page.locator('[data-card-shop-rates="p1"]').click();
     await page.locator('[data-card-shop-sheet="rates"]').waitFor({ timeout: 5000 });
     if (SHOT) await shot(page, '25b-shop-rates');
     const rates = await page.evaluate(() => {
@@ -565,7 +570,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-shop-sheet-close]').click();
     const near = (x) => Math.abs(x - 100) < 0.05;
     check('⑯ パックの「提供割合」: レア度ごと(通常・キラ・別絵キラ)とカード1枚ずつの表がそれぞれ100%になり、天井の決まりが書いてあり、押すと詳しい画面', rates.rarRows === 3 && near(rates.rar) && near(rates.mon) && near(rates.tech) && /天井/.test(rateText) && /だぶった/.test(rateText) && ratesDetail && brokenShop.length === 0, JSON.stringify({ rar: rates.rar, mon: rates.mon, tech: rates.tech, rarRows: rates.rarRows, ratesDetail, brokenShop }));
-    await page.locator('[data-card-shop-buy="w1-5"]').click();
+    await page.locator('[data-card-shop-buy="p1-5"]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買って開ける' }).click();
     await page.locator('[data-card-pack-open]').waitFor({ timeout: 10000 });
     if (SHOT) await shot(page, '26-pack-closed');
@@ -591,7 +596,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-pack-done]').dispatchEvent('click');
     await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
     const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
-    check('⑯ 第1弾パックを5つ(1,350)買って開けると、カードが増え、カードポイントが減り、天井の数が残る', packsOpened === 5 && flippedAll === 8 && tearPhase === 'tearing' && afterPack.point <= 5000 - 1350 + 40 * 5 * 5 && afterPack.point >= 3650 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.w1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, tearPhase, afterPack, colBefore }));
+    const split = await page.evaluate(() => ({ flag: JSON.parse(localStorage.getItem('mh_card_pack_pity_split_v1') || 'null'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null') }));
+    check('⑯ 以前の天井の数(w1・w3)は消えずに残り、新しい弾へ1回だけ写る(w1→第2・3弾は 4、w3→第6弾は 2)・写した印が付く', split.flag === true && split.pity && split.pity.w1 === 4 && split.pity.w3 === 2 && split.pity.p2 === 4 && split.pity.p3 === 4 && split.pity.p6 === 2, JSON.stringify(split));
+    check('⑯ 第1弾パックを5つ(1,350)買って開けると、カードが増え、カードポイントが減り、天井の数が残る(新しい弾 p1 で数える)', packsOpened === 5 && flippedAll === 8 && tearPhase === 'tearing' && afterPack.point <= 5000 - 1350 + 40 * 5 * 5 && afterPack.point >= 3650 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.p1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, tearPhase, afterPack, colBefore }));
     await page.getByRole('tab', { name: 'スターター' }).click();
     await page.waitForTimeout(300);
     if (SHOT) await shot(page, '29-shop-starters');

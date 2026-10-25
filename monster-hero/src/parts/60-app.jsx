@@ -8108,14 +8108,18 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawPity, rawPoint] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null)]);
+      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null), storeGet(K.pitySplit, null)]);
       const point = cardNormalizePoint(rawPoint);
-      const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: cardNormalizePity(rawPity), point }, Math.random);
+      // 以前の4弾の天井の数は、新しい8弾へ1回だけ写す(印 mh_card_pack_pity_split_v1。以前の数は消さない)
+      const split = rawSplit !== true;
+      const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
+      const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
       if (!r) { setMarketExchangeError('カードポイントが足りません。'); return { ok:false, reason:'points' }; }
       const saved = await saveStoredValuesOrRollback([
         { key: K.collection, before: rawCol, next: r.collection },
         { key: K.pity, before: rawPity, next: r.pity },
         { key: K.point, before: rawPoint, next: r.point },
+        ...(split ? [{ key: K.pitySplit, before: rawSplit, next: true }] : []),
       ], storeGet, storeSet);
       if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
       setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection }));

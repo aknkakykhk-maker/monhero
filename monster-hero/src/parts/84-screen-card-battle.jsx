@@ -1593,14 +1593,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="grid grid-cols-2 gap-1">
               <button type="button" data-card-pack-art-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => { Audio_.fgSe.tap(); setView('packArt'); }}>パックの絵の見本</button>
               <button type="button" data-card-pack-open-demo className="mh-button mh-button-secondary min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black" onClick={() => {
-                // 第1弾を2パック。1パック目の最後のモンスターの枠は別絵キラ、2パック目はキラ(演出を見るため)
-                const a = cardOpenPack(db, 'w1', { collection: {}, pity: {} }, Math.random);
-                const b = cardOpenPack(db, 'w1', { collection: a.collection, pity: {} }, Math.random);
-                const alt = Object.values(db.monsters).find((m) => String(m.wave) === '1' && /別絵/.test(m.variant || ''));
-                const kira = Object.values(db.monsters).find((m) => String(m.wave) === '1' && m.variant === 'キラ');
+                // 第1弾(p1)を2パック。1パック目の最後のモンスターの枠は別絵キラ、2パック目はキラ(演出を見るため)
+                const a = cardOpenPack(db, 'p1', { collection: {}, pity: {} }, Math.random);
+                const b = cardOpenPack(db, 'p1', { collection: a.collection, pity: {} }, Math.random);
+                const alt = Object.values(db.monsters).find((m) => cardPackIdOf(db, m.no) === 'p1' && /別絵/.test(m.variant || ''));
+                const kira = Object.values(db.monsters).find((m) => cardPackIdOf(db, m.no) === 'p1' && m.variant === 'キラ');
                 a.cards[a.cards.length - 1] = { no: alt.no, slot: 'mon', rarity: 'alt', dup: false, point: 0 };
                 b.cards[b.cards.length - 1] = { no: kira.no, slot: 'mon', rarity: 'kira', dup: false, point: 0 };
-                setPackDemo({ packId: 'w1', packs: [a.cards, b.cards], dupPoint: 0, cost: 0, demo: true });
+                setPackDemo({ packId: 'p1', packs: [a.cards, b.cards], dupPoint: 0, cost: 0, demo: true });
                 setView('packOpen');
               }}>パックを開ける見本</button>
             </div>

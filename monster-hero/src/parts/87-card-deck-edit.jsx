@@ -183,13 +183,14 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
 // ==================== カード図鑑(区切り2) ====================
 // 弾ごとのタブ(第1〜4弾・混血)。持っている/持っていない・枚数・準備中。持っていないカードは暗い絵で出す(何が集まるか分かるように)
 // ★C-060C(ファンの描いた絵)はカードの表に入っていない(社長)。並べるのはカードの表にあるものだけ
-const CARD_DEX_TABS = Object.freeze([
-  { id: '1', label: '第1弾' }, { id: '2', label: '第2弾' }, { id: '3', label: '第3弾' }, { id: '4', label: '第4弾' }, { id: 'hybrid', label: '混血' },
-]);
-const cardDexList = (db, wave) => {
-  const mons = Object.values(db.monsters).filter((m) => String(m.wave) === wave).map((m) => m.no).sort();
-  const cards = Object.values(db.cards).filter((c) => String(c.wave) === wave).map((c) => c.no).sort();
-  return [...mons, ...cards];
+// 図鑑のタブはパックと同じ第1〜8弾+混血(2026-10-25 社長「パックは8弾まで」)。混血は、その弾のタブと「混血」の両方に出る
+const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map((p) => ({ id: String(p.no), label: `第${p.no}弾` })), { id: 'hybrid', label: '混血' }]);
+const cardDexList = (db, tab) => {
+  if (tab === 'hybrid') return Object.values(db.monsters).filter((m) => String(m.wave) === 'hybrid').map((m) => m.no).sort();
+  const pack = CARD_PACKS.find((p) => String(p.no) === tab);
+  if (!pack) return [];
+  const all = cardPackAllCards(db, pack);
+  return [...all.monsters, ...all.cards];
 };
 const CardDex = ({ db, collection, onBack }) => {
   const [tab, setTab] = useState('1');
@@ -197,7 +198,7 @@ const CardDex = ({ db, collection, onBack }) => {
   const [detail, setDetail] = useState(null);
   const press = useCardLongPress((no) => setDetail(no));
   const col = collection || {};
-  const all = CARD_DEX_TABS.flatMap((t) => cardDexList(db, t.id));
+  const all = [...new Set(CARD_DEX_TABS.flatMap((t) => cardDexList(db, t.id)))];   // 混血は弾のタブと「混血」の両方にあるので1回だけ数える
   const list = cardDexList(db, tab);
   const shown = list.filter((no) => (show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true));
   const haveIn = (arr) => arr.filter((no) => col[no] > 0).length;
@@ -268,7 +269,7 @@ const CardRules = ({ onBack, onTutorial }) => (
 // torn … 上のふち(ちぎれる所)を描かない(パックを開ける画面で、ちぎれた帯を別に飛ばすとき)
 const cardPackMonsters = (db, pack, n = 5) => {
   const seen = new Set();
-  const list = Object.values(db.monsters).filter((m) => String(m.wave) === pack.wave && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
+  const list = Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
   if (list.length <= n) return list;
   const step = list.length / n;
   return Array.from({ length: n }, (_, k) => list[Math.floor(k * step)]);
@@ -285,7 +286,7 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
   const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_SLOTS.slice(5 - mons.length);
   const h = Math.round(width * 1.48);
-  const label = pack.id === 'hybrid' ? '混血' : `第${pack.wave}弾`;
+  const label = `第${pack.no}弾`;
   return (
     <div data-card-pack-art={pack.id} className={`relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`} style={{ width, height: h, background: `linear-gradient(165deg, ${pack.color} 0%, ${pack.color} 38%, #0b1020 100%)` }}>
       <div aria-hidden="true" className="absolute inset-0 opacity-35" style={{ background: `repeating-conic-gradient(from 0deg at 50% 62%, rgba(255,255,255,.55) 0 6deg, transparent 6deg 18deg)` }}/>
@@ -300,7 +301,7 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
         <div className="font-black leading-none text-white" style={{ fontSize: Math.round(width * 0.2), WebkitTextStroke: `${Math.max(2, Math.round(width / 50))}px #111`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>{label}</div>
         <div className="mt-1 font-black tracking-wider text-white/90" style={{ fontSize: Math.round(width * 0.075), textShadow: '0 2px 2px rgba(0,0,0,.7)' }}>MFバトルカード</div>
       </div>
-      <div className="absolute inset-x-[18%] bottom-[3%] z-[6] rounded-full bg-black/55 py-0.5 text-center font-black text-white" style={{ fontSize: Math.round(width * 0.07) }}>{pack.id === 'hybrid' ? '混血パック' : 'ブースターパック'}</div>
+      <div className="absolute inset-x-[18%] bottom-[3%] z-[6] rounded-full bg-black/55 py-0.5 text-center font-black text-white" style={{ fontSize: Math.round(width * 0.07) }}>ブースターパック</div>
     </div>
   );
 };
@@ -331,7 +332,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   const press = useCardLongPress((no) => setDetail(no));
-  const pack = cardPackOf(result.packId) || { id: 'w1', wave: '1', name: 'パック', color: '#f59e0b' };
+  const pack = cardPackOf(result.packId) || CARD_PACKS[0];
   const cards = result.packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
   const last = pi >= result.packs.length - 1;
@@ -495,7 +496,7 @@ const CardShopHead = ({ children }) => <div className="mb-1 mt-2 rounded-md bg-s
 const cardShopPct = (x) => `${(x * 100).toFixed(3)}%`;
 const CardPackContents = ({ db, pack, collection, onClose }) => {
   const [detail, setDetail] = useState(null);
-  const r = cardPackCardRates(db, pack.id, collection);
+  const r = cardPackCardRates(db, pack.id);
   const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || String(a.no).localeCompare(String(b.no)));
   const missing = [...mons, ...r.tech].filter((x) => !((collection || {})[x.no] > 0)).length;
   return (
@@ -509,7 +510,7 @@ const CardPackContents = ({ db, pack, collection, onClose }) => {
 };
 const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
   const [detail, setDetail] = useState(null);
-  const r = cardPackCardRates(db, pack.id, collection);
+  const r = cardPackCardRates(db, pack.id);
   const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || b.p - a.p || String(a.no).localeCompare(String(b.no)));
   const th = 'border border-white/15 bg-amber-200/15 px-1 py-0.5 text-[11px] font-black text-amber-100';
   const td = 'border border-white/10 px-1 py-0.5 text-[11px] font-bold';
@@ -517,7 +518,7 @@ const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
   const rows = (list) => list.map((x) => (
     <tr key={x.no} data-card-rate-row={x.no} onClick={() => setDetail(x.no)} className="cursor-pointer active:bg-white/10">
       <td className={`${td} text-center`}>{x.rarity ? rarLabel(x.rarity) : '技など'}</td>
-      <td className={td}><span className="flex items-center gap-1"><img src={cardShopImg(db, x.no)} alt="" loading="lazy" className="h-[28px] w-[20px] shrink-0 rounded-[2px] object-cover"/><span className="min-w-0" style={JA_WRAP_STYLE}>{cardShopName(db, x.no)}</span>{x.boosted && <span className="shrink-0 rounded bg-emerald-700 px-1 text-[9px] font-black">2倍</span>}</span></td>
+      <td className={td}><span className="flex items-center gap-1"><img src={cardShopImg(db, x.no)} alt="" loading="lazy" className="h-[28px] w-[20px] shrink-0 rounded-[2px] object-cover"/><span className="min-w-0" style={JA_WRAP_STYLE}>{cardShopName(db, x.no)}</span></span></td>
       <td className={`${td} text-right tabular-nums`}>{cardShopPct(x.p)}</td>
     </tr>
   ));
@@ -525,10 +526,10 @@ const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
     `1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`,
     pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null,
     pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null,
-    pack.id === 'hybrid' ? '3枚とも混血モンスターです。キラはありません。' : null,
-    '「2倍」の印は、まだ持っていない種族のモンスターです(持っている種族の2倍出やすくなります)。表の割合は、いまの持ち物での割合です。',
+    '混血のモンスターは、キラの無い通常のモンスターとして出ます。',
+    '同じレア度のモンスターは、どれも同じ割合で出ます。',
     pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null,
-    `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${pack.id === 'hybrid' ? CARD_DUP_POINT.hybrid : `${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕`})。`,
+    `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`,
     '準備中のカードは出ません。',
   ].filter(Boolean);
   return (
@@ -572,6 +573,8 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
   );
 };
 
+// 弾に入っている種族の名前(売り場でパックの名前の下に出す。例: ディノ・ハム・モッチー)
+const cardPackSpeciesLabel = (db, pack) => pack.species.map((sp) => (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp).join('・');
 const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
   const [sheet, setSheet] = useState(null);   // { kind:'contents'|'rates', pack }
   const [confirm, setConfirm] = useState(null);
@@ -583,6 +586,7 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
             <CardPackArt db={db} pack={pack} width={58} className="shrink-0 !rounded-[8px] !border-2"/>
             <div className="min-w-0 flex-1">
               <div className="text-[14px] font-black text-white">{pack.name}</div>
+              <div data-card-shop-pack-species className="text-[11px] font-black text-amber-100">{cardPackSpeciesLabel(db, pack)}</div>
               <div className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(pack.tech ? `${pack.tech + pack.mon}枚入り(技など${pack.tech}枚・モンスター${pack.mon}枚)` : `${pack.mon}枚入り(3枚とも混血モンスター)`)}</div>
               <div className="mt-1 flex gap-1.5">
                 <button type="button" data-card-shop-contents={pack.id} onClick={() => setSheet({ kind: 'contents', pack })} className="min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>

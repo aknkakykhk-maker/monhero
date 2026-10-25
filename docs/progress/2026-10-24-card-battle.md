@@ -378,4 +378,7 @@
 - スターターキットは持っているものも「持っています」で並び(買えない)、どのキットも「中身を見る」でモンスター3枚・50枚(同じカードは ×枚数)を見られる
 - 売り場へ持ち物を渡すため、60 の loadCardShop が mh_card_collection_v1 も読む(読むだけ。保存の形は変えていない)
 - 検査: card-rules-check(値段・割合を足すと100%・持っていない種族は2倍)、card-battle-browser-check ⑯(中身・提供割合・スターターの中身と「持っています」)
-- 写真: card-battle/shop-pack-contents-390.jpg・shop-pack-rates-390.jpg・shop-pack-rates-844.jpg・shop-starters-390.jpg・shop-starter-contents-390.jpg
+- 写真: 下の8弾の写真に置き換えた
+- (続き)8弾に作り直した(社長が決めた案。設計書 4-2 の「8弾に作り直した」)。混血パックはなくし、「持っていない種族を2倍」もなくした。弾の割り当ては 89 の表(`CARD_PACKS` の species・`CARD_PACK_SHARED`)で決め、カードのデータは書き換えていない
+- 天井の数は `cardSplitPity` で1回だけ写す(印 mh_card_pack_pity_split_v1)。図鑑のタブも第1〜8弾+混血
+- 写真(8弾): card-battle/shop8-packs-390.jpg・shop8-pack-art.jpg・shop8-rates-390.jpg・shop8-rates2-390.jpg・shop8-contents-390.jpg・shop8-starters-390.jpg・shop8-starter-contents-390.jpg
