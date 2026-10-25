@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec7f61db4e6d8c89
+// source-sha256: 571922367a11072b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-25 12:31";
+const BUILD_DATE = "2026-10-25 13:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -91093,15 +91093,40 @@ const CARD_PVP = (() => {
     }
   };
 })();
-const cardPvpLineNode = text => String(text).split(/(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/).filter(x => x !== '').map((x, i) => /^\(.*\)|^٩/.test(x) ? React.createElement("span", {
+const CARD_PVP_FACE_RE = /(\([^()\s]*(?:\s[^()\s]*)*\)[0-9\u30A0-\u30FF\uFF65-\uFF9F!！]*|[\u0660-\u06FF٩][^\s、。！？]*[و])/;
+const CARD_PVP_PARTICLES = new Set(['は', 'が', 'を', 'に', 'で', 'も', 'と', 'の', 'へ', 'まで', 'から', 'けど', 'ので', '、']);
+const cardPvpSplitWords = piece => {
+  if (piece.length <= 11 || typeof Intl === 'undefined' || typeof Intl.Segmenter !== 'function') return [piece];
+  const words = [...new Intl.Segmenter('ja', {
+    granularity: 'word'
+  }).segment(piece)].map(x => x.segment);
+  const P = CARD_PVP_PARTICLES;
+  const out = [''];
+  words.forEach((w, i) => {
+    out[out.length - 1] += w;
+    const next = words[i + 1];
+    if (!next || /^[ぁぃぅぇぉっゃゅょゎー〜…！？!?wｗ笑。、]/.test(next)) return;
+    if (out[out.length - 1].length < 2 || P.has(w) && P.has(words[i - 1]) || w === 'で' && /^[つす]/.test(next)) return;
+    if (P.has(w) && !P.has(next) || /^[ぁ-ん]+$/.test(w) && /^[\u4E00-\u9FFF]/.test(next) || /^[\u4E00-\u9FFF]{2,}$/.test(w) && /^[ぁ-ん]/.test(next) && !P.has(next) || ['だけど', 'けど', 'かも', 'だから'].includes(next)) out.push('');
+  });
+  return out.filter(x => x !== '');
+};
+const cardPvpLinePieces = text => {
+  const out = [];
+  String(text).split(CARD_PVP_FACE_RE).filter(x => x !== '').forEach(part => {
+    if (CARD_PVP_FACE_RE.test(part) && /^[(٩]/.test(part)) {
+      out.push(part);
+      return;
+    }
+    part.split(/(?<=[、。！？!?…ｗw♪♡])(?![、。！？!?…ｗw♪♡])|(?<=\s)/).filter(x => x !== '').forEach(x => cardPvpSplitWords(x).forEach(y => out.push(y)));
+  });
+  return out;
+};
+const cardPvpLineNode = text => cardPvpLinePieces(text).map((x, i) => React.createElement("span", {
   key: i,
-  "data-ja-keep": true,
-  style: {
-    whiteSpace: 'nowrap'
-  }
-}, x) : React.createElement(React.Fragment, {
-  key: i
-}, jaWrap(x)));
+  "data-pvp-phrase": true,
+  className: "inline-block"
+}, /^[(٩]/.test(x) ? x : jaWrap(x)));
 const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => React.createElement("span", {
   key: i,
   className: "inline-block"
