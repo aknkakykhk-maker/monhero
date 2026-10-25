@@ -667,17 +667,17 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       const cpuSel = page.locator('[data-card-bgm-select="cpu"]');
       const bgmDefault = await cpuSel.inputValue();
       await cpuSel.selectOption('melo_toriko');
-      await page.locator('[data-card-speed="fast"]').click();
-      await page.locator('[data-card-auto-pass]').click();
+      await page.locator('[data-card-setting="think"] [data-card-setting-option="FAST"]').click();
+      await page.locator('[data-card-setting="autoPass"] [data-card-setting-option="OFF"]').click();
       await page.waitForTimeout(300);
       const optSaved = await page.evaluate(() => ({ bgm: JSON.parse(localStorage.getItem('mh_card_bgm_v1') || 'null'), settings: JSON.parse(localStorage.getItem('mh_card_settings_v1') || 'null') }));
       check('⑱ オプション: 対戦のBGMは最初「おまかせ」で、曲・速さ・自動パスを変えると mh_card_bgm_v1・mh_card_settings_v1 に残る',
-        bgmDefault === 'auto' && optSaved.bgm && optSaved.bgm.cpu === 'melo_toriko' && optSaved.settings && optSaved.settings.speed === 'fast' && optSaved.settings.autoPass === false, JSON.stringify({ bgmDefault, ...optSaved }));
+        bgmDefault === 'auto' && optSaved.bgm && optSaved.bgm.cpu === 'melo_toriko' && optSaved.settings && optSaved.settings.think === 'FAST' && optSaved.settings.speed === 'fast' && optSaved.settings.autoPass === false, JSON.stringify({ bgmDefault, ...optSaved }));
       if (SHOT) await shot(page, '38-options');
       // 元に戻す(このあとの対戦の検査を、いつもの設定のまま進めるため)
       await cpuSel.selectOption('auto');
-      await page.locator('[data-card-speed="normal"]').click();
-      await page.locator('[data-card-auto-pass]').click();
+      await page.locator('[data-card-setting="think"] [data-card-setting-option="NORMAL"]').click();
+      await page.locator('[data-card-setting="autoPass"] [data-card-setting-option="ON"]').click();
       await page.locator('[data-card-options] header button').first().click();
       await page.locator('[data-card-top="top"]').waitFor({ timeout: 10000 });
       check('⑰ 戦績は投了を負けに数える(「0勝 1敗(うち投了1)」の形)', /\d+勝 \d+敗\(うち投了\d+\)/.test(recText) && !/・投了/.test(recText), recText);

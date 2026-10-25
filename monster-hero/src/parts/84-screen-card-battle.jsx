@@ -25,29 +25,50 @@ const CardResultBanner = ({ title, sub, tone = 'win' }) => (
 // カードやモンスターの名前を1行に収める(2026-10-24 改善部の点検 V4「ぐるぐるアタッ/ク」「ストライクリパ/ー」)。
 //   名前は1つの言葉なので折らない。長い名前だけ、入れ物の幅(cqw)に合わせて字を小さくする(size が上限・min が下限)
 //   「ゴーレム(別絵キラ)」のような ( ) の付いた名前は、( ) から下の行へ分ける(名前の途中では折らない)
-// 2行に折るときの切れ目。「の」「・」の後ろか、まんなかあたり。次の行の頭に「ー」「ッ」「ン」や小さい字が来ないようにずらす
-//   例: カララギマンゴー → カララギ/マンゴー  最後のきらめき → 最後の/きらめき  フォーメーション → フォー/メーション
+// 手札の名前を2行に折るとき(狭い画面・7文字以上)の切れ目。**2つの言葉の切れ目だけで折る**(2026-10-25 カゲあつくん
+//   「フォー／メーション は1つの言葉の途中で割れている。1語のカタカナは割らない」)。
+//   ① 「の」「・」の後ろ ② ひらがな・漢字とカタカナが切り替わる所(空中回転/アタック・きりもみ/アタック)
+//   ③ カタカナだけの名前は、言葉の切れ目を機械では見分けられないので、下の表に書いた2語の名前だけ(ドラゴン/パンチ)。
+//   表に無いカタカナの名前(フォーメーション・コンビネーション など1語)は割らずに、字を小さく・字の間を詰めて1行に収める
+const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
+  'カララギマンゴー': 4, 'ファイアリバー': 4, 'フレイムビーム': 4, 'ファイアウェーブ': 4, 'パラボラビーム': 4, 'ロケットパンチ': 4,
+  'レーザーブレード': 4, 'ファイナルソード': 5, 'バーストキャノン': 4, 'フェイスドリル': 4, 'ウィングカッター': 4, 'クローアタック': 3,
+  'ドラゴンパンチ': 4, 'ドラゴンラッシュ': 4, 'ファイアブレス': 4, 'オイリーオイル': 4, 'タイムディレイ': 3, 'デススラッシュ': 2,
+  'デスファイナル': 2, 'ニードルターン': 4, 'ファイナルボム': 5, 'サテラアタック': 3, 'メテオドライブ': 3, 'マインドフレア': 4,
+  'ヒップアタック': 3, 'マッハトルネード': 3, 'デルタアタック': 3, 'スピンカッター': 3, 'ダブルチョップ': 3, 'ボディーブロー': 4,
+  'ワンツーパンチ': 4, 'マシンガンパンチ': 5,
+});
+const cardNameScript = (c) => (/[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o');
 const cardNameSplit = (text) => {
   const ch = [...text];
-  const mid = Math.ceil(ch.length / 2);
-  for (const d of [0, 1, -1, 2, -2]) { const i = mid + d; if (i > 1 && i < ch.length - 1 && /[の・]/.test(ch[i - 1])) return [ch.slice(0, i).join(''), ch.slice(i).join('')]; }
-  // まんなかから左右へ交互に探す(フォーメーション → フォー/メーション。右だけへずらすと「フォーメー/ション」になる)
-  const bad = /[ーッンャュョァィゥェォっゃゅょぁぃぅぇぉ、。]/;
-  for (let d = 0; d < ch.length; d++) {
-    for (const i of [mid - d, mid + d]) if (i >= 2 && i <= ch.length - 2 && !bad.test(ch[i])) return [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  const cut = (i) => [ch.slice(0, i).join(''), ch.slice(i).join('')];
+  if (CARD_NAME_KATAKANA_BREAKS[text]) return cut(CARD_NAME_KATAKANA_BREAKS[text]);
+  // 「の」「・」の後ろをいちばん先に(ヒノトリの/復活。「ヒノトリ/の復活」にしない)。無ければ、ひらがな・漢字とカタカナの切り替わり。まんなかに近い所から
+  const mid = ch.length / 2;
+  const near = (list) => list.sort((x, y) => Math.abs(x - mid) - Math.abs(y - mid))[0];
+  const afterNo = [];
+  const scriptTurn = [];
+  for (let i = 1; i < ch.length; i++) {
+    if (/[の・]/.test(ch[i - 1])) afterNo.push(i);
+    else if (cardNameScript(ch[i - 1]) !== cardNameScript(ch[i]) && (cardNameScript(ch[i - 1]) === 'k' || cardNameScript(ch[i]) === 'k') && ch[i] !== 'の') scriptTurn.push(i);
   }
-  return [ch.slice(0, mid).join(''), ch.slice(mid).join('')];
+  if (afterNo.length) return cut(near(afterNo));
+  if (scriptTurn.length) return cut(near(scriptTurn));
+  return null; // 1語(割らない)
 };
 // twoLine … 手札の名前。箱が狭い(56px 以下・320幅や横画面の手札)ときだけ、長い名前(7文字以上)を言葉の切れ目で2行に折る。
 //   1行のまま縮めると、いちばん小さい字(7px)でも入らず端が切れていた(2026-10-25 カゲあつくん「カララギマンゴ/ー」)。
+//   切れ目の無い1語(フォーメーション など)は、字を小さく(5pxまで)・字の間を詰めて1行に収める(CSS の mh-nf-squeeze)。
 //   狭いときは短い名前も2行ぶんの高さを取り、手札の絵の高さをそろえる(CSS の mh-nf-*。70-bootstrap.jsx)
 const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, twoLine = false }) => {
   const text = String(name == null ? '' : name);
   const m = /^(.+?)([(（].+)$/.exec(text);
   const lines = m ? [m[1], m[2]] : [text];
-  const fit = (t) => `clamp(${min}px, ${(96 / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
-  const two = twoLine && !m && [...text].length >= 7 ? cardNameSplit(text) : null;
-  const row = (t, i) => <span key={i} className="block overflow-hidden whitespace-nowrap text-center" style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
+  const long = twoLine && !m && [...text].length >= 7;
+  const two = long ? cardNameSplit(text) : null;
+  const squeeze = long && !two;
+  const fit = (t) => `clamp(${squeeze ? 5 : min}px, ${((squeeze ? 104 : 96) / Math.max(1, [...t].length)).toFixed(1)}cqw, ${size}px)`;
+  const row = (t, i) => <span key={i} className={`block overflow-hidden whitespace-nowrap text-center ${squeeze ? 'mh-nf-squeeze' : ''}`} style={{ fontSize: fit(t), textOverflow: 'clip' }}>{t}</span>;
   return (
     <span className={`block w-full ${className}`} style={{ containerType: 'inline-size', ...(style || {}) }}>
       <span className={twoLine ? `mh-nf-a block ${two ? 'mh-nf-hide' : ''}` : 'block'}>{lines.map(row)}</span>
@@ -137,12 +158,12 @@ const CARD_ME = 0;
 const cardDeciderOf = (st) => (st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st));
 
 // 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し
-const useCardLongPress = (onLong) => {
+const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
   useEffect(() => () => clearTimeout(timer.current), []);
   return (no, onTap) => ({
-    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; onLong(no); }, 450); },
+    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms); },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
     onPointerCancel: () => clearTimeout(timer.current),
@@ -217,7 +238,7 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
 };
 
 // ---- 場のモンスター1体(カードの小さい絵・名前・ライフ・特徴・モンヒロの絵) ----
-const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, wide = false, motion = null }) => {
+const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, wide = false, motion = null, calm = false }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
   const ty = cardMonType(mon, st.turn);
@@ -249,7 +270,8 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
     ? <img src={art} alt="" className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
-  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
+  // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
+  const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
     <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? 'h-[40px]' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
       style={mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : undefined}>
@@ -281,7 +303,11 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
 const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null }) => {
   // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
-  const pace = settings.speed === 'fast' ? 0.5 : 1;
+  // 対戦中の設定(オプション・社長 2026-10-25)。既定はどれも足す前の動きと同じ。練習試合は game.settings を持たないので既定のまま
+  const pace = CARD_THINK_PACE[settings.think] || 1;
+  const pressMs = CARD_PRESS_MS[settings.press] || 450;
+  // 確かめの窓は、人が遊んでいるときだけ。練習試合・動きの見本・マルチの検査の自動操作(window.__mhCardPvpAuto)では出さない(ブレイブくんとの決め)
+  const confirmOn = (key) => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
   // マルチ対戦(91-card-battle-multi.jsx)では、相手は助手ではなくブリーダー。名前とアイコンだけを出す
   const pvp = game.pvp || null;
   const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
@@ -341,14 +367,14 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const spoke = useRef({ turn: -1, n: 0 });
   const bubbleTimer = useRef(null);
   const finished = useRef(false);
-  const press = useCardLongPress((no) => setDetail(no));
+  const press = useCardLongPress((no) => setDetail(no), pressMs);
   const paused = !!detail || !!discard || quit;
 
   const say = (scene) => {
-    if (!scene || pvp) return;
+    if (!scene || pvp || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
-    if (spoke.current.n >= CARD_LINE_PER_TURN && scene !== 'win' && scene !== 'lose') return;
+    if (spoke.current.n >= (CARD_BUBBLE_PER_TURN[settings.bubble] ?? CARD_LINE_PER_TURN) && scene !== 'win' && scene !== 'lose') return;
     const line = cardPickLine(game.who, scene, lastLine.current);
     if (!line) return;
     spoke.current.n += 1;
@@ -390,13 +416,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (!tutorial && evs.some((e) => e.t === 'use' || e.t === 'guard')) { clearTimeout(bubbleTimer.current); setBubble(null); }
     const hits = evs.filter((e) => e.t === 'hit' || e.t === 'heal').map((e, i) => ({ ...e, key: `${next.log.length}-${i}-${Date.now()}`, heal: e.t === 'heal' ? e.n : 0, dmg: e.t === 'hit' ? e.dmg : 0 }));
     if (hits.length) {
-      setFx(hits);
+      if (settings.damageNum !== 'OFF') setFx(hits); // ダメージの数字(オプション)。出さなくても音とライフは今までどおり
       setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), 1000);
       if (hits.some((h) => h.dmg >= 3)) Audio_.fgSe.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.fgSe.attack(); else if (hits.some((h) => h.heal)) Audio_.fgSe.heal(); else Audio_.fgSe.guard();
     } else if (evs.some((e) => e.t === 'use')) Audio_.fgSe.card();
     // 技の動き: 攻撃した子が狙った子へ向かって動く(位置は画面で測る。全員に当たる技は相手の真ん中へ)
     const centerOf = (id) => { const el = document.querySelector(`[data-card-art="${id}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
-    evs.filter((e) => e.t === 'use' && e.mon >= 0).forEach((e, n) => {
+    // 技の動き(オプション): ふつう … 全部 / 短め … 攻める側の動きを省く / 出さない … 動きを出さない。
+    // ★動きの完了は待たない(マルチで相手の手が続けて届いても、届いた順にそのまま当てる。ブレイブくんとの決め)
+    const motionOn = settings.motion !== 'OFF';
+    evs.filter((e) => e.t === 'use' && e.mon >= 0 && settings.motion === 'FULL').forEach((e, n) => {
       const mon = next.players[e.p].mons[e.mon];
       const kind = cardMotionKindOf(db, e.cards[0], mon);
       if (!kind) return;
@@ -410,14 +439,14 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       playMotion(`${e.p}-${e.mon}`, { type: 'attack', kind, dx: Math.round(to.x - from.x), dy: Math.round(to.y - from.y), key }, cardMotionMs(kind) + 80);
     });
     // ブリーダーのカード: モンスターは動かさず、まんなかの端に使った側の助手・ブリーダーの顔を出す(設計書 5-4)
-    const breederUse = evs.find((e) => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
+    const breederUse = motionOn && evs.find((e) => e.t === 'use' && cardIsBreederCard(db, e.cards[0]));
     if (breederUse) {
       const key = `b${next.log.length}-${Date.now()}`;
       setBreederFx({ p: breederUse.p, key });
       motionTimers.current.push(setTimeout(() => setBreederFx((cur) => (cur && cur.key === key ? null : cur)), 1700));
     }
     // はね返した: 防いだ子から攻撃した子へ光線(少し遅らせて、盾のあとに出す)
-    const back = evs.find((e) => e.t === 'hit' && e.reflect);
+    const back = motionOn && evs.find((e) => e.t === 'hit' && e.reflect);
     const shield = back && evs.find((e) => e.t === 'hit' && !e.reflect && e.guarded);
     if (back && shield) {
       const a = centerOf(`${shield.p}-${shield.m}`); const b = centerOf(`${back.p}-${back.m}`);
@@ -436,12 +465,12 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       const g = lastGuard.current[`${e.p}-${e.m}`];
       const recent = g && Date.now() - g.at < 20000;
       if (type === 'dodge' && recent && g.jump) type = 'jump';
-      if (type) playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: `h${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
+      if (type && motionOn) playMotion(`${e.p}-${e.m}`, { type, label: type === 'guard' && recent ? g.label : '', key: `h${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
     });
     evs.filter((e) => e.t === 'guard').forEach((e, n) => {
       const c = cardOf(db, e.card);
       const type = c && c.kind === 'dge' ? (cardDodgeIsJump(c) ? 'jump' : 'dodge') : 'guard';
-      playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: `g${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
+      if (motionOn) playMotion(`${e.p}-${e.mon}`, { type, label: type === 'guard' ? cardGuardLabel(c) : '', key: `g${next.log.length}-${n}-${Date.now()}` }, type === 'jump' ? 920 : 720);
     });
     const use = evs.find((e) => e.t === 'use');
     if (use) {
@@ -505,7 +534,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   useEffect(() => {
     if (st.winner === null || finished.current || tutorial) return undefined; // 練習試合は、ドラの締めの台詞のあと「次へ」で終わる
     finished.current = true;
-    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), settings.speed === 'fast' ? 1200 : 2200);
+    const t = setTimeout(() => onFinish({ outcome: st.winner === CARD_ME ? 'win' : 'lose', st }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
     return () => clearTimeout(t);
   }, [st.winner]);
 
@@ -540,6 +569,44 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const finalOpts = byMon.filter((o) => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some((o) => o.target);
 
+  // ---- 技を使う前・ターン終了の確かめ(オプション。既定は確かめない) ----
+  // ★マルチ対戦では、窓を出しているあいだも持ち時間は止まらない。場が変わったら(時間切れの自動の手・相手の手が届いた・自分の手)窓は閉じる。
+  //   閉じずに古い「はい」が残ると、時間切れのあとに古い手を送って2台の場がずれる(ブレイブくんとの決め)。押したときにも、その手がまだ出せるかを確かめ直す
+  const [confirm, setConfirm] = useState(null); // { kind: 'use' | 'end', act, label }
+  useEffect(() => { setConfirm(null); }, [st]);
+  const askUse = (o) => {
+    if (!confirmOn('confirmUse')) { step(o); return; }
+    const c = cardOf(db, me.hand[o.hand[0]]);
+    const tm = o.target ? st.players[o.target.p].mons[o.target.m] : null;
+    setConfirm({ kind: 'use', act: o, label: `「${c ? c.name : ''}」を${tm ? `${tm.name}に` : ''}使いますか？` });
+  };
+  const askEnd = (act) => {
+    if (!confirmOn('confirmEnd')) { step(act); return; }
+    setConfirm({ kind: 'end', act, label: act.hand && act.hand.length ? `${act.hand.length}枚をガッツにして、ターンを終わりますか？` : 'ガッツにしないで、ターンを終わりますか？' });
+  };
+  const confirmYes = () => {
+    const cf = confirm;
+    setConfirm(null);
+    if (!cf) return;
+    if (cf.kind === 'use' && !cardAttackOptions(db, st).some((o) => JSON.stringify(o) === JSON.stringify(cf.act))) return;
+    if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
+    step(cf.act);
+  };
+  // ガッツにするカードのおすすめ(オプション): 自分のガッツの番になったら、思考(いちばん強い段・迷いなし)が選ぶカードを先に選んでおく。選び直せる
+  const gutsAdvisor = useMemo(() => cardAiPolicy('kyuko', 'master'), []);
+  const gutsPickKey = settings.gutsPick === 'ON' && mode === 'guts' && myTurn && !tutorial && !game.demo ? `${st.turn}` : '';
+  useEffect(() => {
+    if (!gutsPickKey) return;
+    try { const a = cardAiChooseGuts(db, st, gutsAdvisor); if (a && Array.isArray(a.hand) && a.hand.length) setPicks(a.hand.filter((i) => i >= 0 && i < me.hand.length)); } catch (_) { /* おすすめが出せなくても、自分で選べばよい */ }
+  }, [gutsPickKey]);
+  // 手札の並べ方(オプション): 見た目の順だけを変える。選ぶ・運ぶ・送る手は、いつも st の手札の番号(i)のまま(マルチで相手に別のカードが出ないように)
+  const handOrder = (() => {
+    const idx = me.hand.map((_, i) => i);
+    if (settings.handSort !== 'KIND') return idx;
+    const rank = (i) => { const c = cardOf(db, me.hand[i]); return c ? (c.user === 'breeder' ? 9 : (CARD_KIND_ORDER[c.kind] ?? 8)) : 10; };
+    return idx.sort((a, b) => rank(a) - rank(b) || a - b);
+  })();
+  const handLarge = settings.handText === 'LARGE' && !tiny; // 手札の字を大きく(狭い画面では、ふつうのまま)
   const tapHand = (i) => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
@@ -582,7 +649,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       return;
     }
     const o = finalOpts.find((x) => x.target && x.target.p === p && x.target.m === m);
-    if (o) step(o);
+    if (o) askUse(o);
   };
   const markOf = (p, m) => {
     if (drag && drag.active) return dropOver === `${p}-${m}` ? 'drop' : null; // 運んでいるあいだは、置ける所の上だけ光らせる
@@ -634,10 +701,11 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
-    const d = { i, no, sx: e.clientX, sy: e.clientY, active: false, long: false, targets: myTurn ? dropTargetsOf(i) : {} };
+    // 手札を運ぶ操作を使わない(オプション)ときは、置ける所を作らない(タップと長押しだけ)
+    const d = { i, no, sx: e.clientX, sy: e.clientY, active: false, long: false, targets: myTurn && settings.drag !== 'OFF' ? dropTargetsOf(i) : {} };
     dragRef.current = d;
     clearTimeout(d.timer);
-    d.timer = setTimeout(() => { if (!d.active) { d.long = true; setDetail(no); } }, 450);
+    d.timer = setTimeout(() => { if (!d.active) { d.long = true; setDetail(no); } }, pressMs);
     const onMove = (ev) => {
       const moved = Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy);
       if (!d.active && moved >= CARD_DRAG_THRESHOLD && !d.long && Object.keys(d.targets).length) {
@@ -663,6 +731,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
         const t = k ? d.targets[k] : null;
         setDrag(null); setDropOver(null);
         if (t === 'pick') { Audio_.fgSe.tap(); setPicks((cur) => (cur.includes(i) ? cur : [...cur, i])); }
+        else if (t && mode === 'attack') askUse(t);
         else if (t) step(t);
         return;
       }
@@ -722,10 +791,10 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (mode === 'setup') return <button type="button" className={`${btn} mh-button-primary`} onClick={() => step({ type: 'setupGuts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにして始める` : 'ガッツにしないで始める'}</button>;
     if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
     if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
-    if (mode === 'guts') return <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => step({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
+    if (mode === 'guts') return <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return (<>
-      {useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => step(finalOpts[0])}>使う</button> : null}
+      {useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}>使う</button> : null}
       <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
     </>);
   })();
@@ -762,7 +831,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       </div>
       {/* 吹き出し(帯の下・相手のモンスターの上。指の操作は下へ通す) */}
       <div className="flex shrink-0 items-start justify-around px-1">
-        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact} tiny={tiny} wide={wide} motion={motions[`1-${m}`] || null}/>)}
+        {opp.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_CPU} m={m} mark={markOf(CARD_CPU, m)} fx={fx.filter((f) => f.p === CARD_CPU && f.m === m)} onTap={() => tapMon(CARD_CPU, m)} press={press} compact={compact} tiny={tiny} wide={wide} calm={settings.shake === 'OFF'} motion={motions[`1-${m}`] || null}/>)}
       </div>
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
@@ -797,7 +866,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
         </div>
       </div>
       <div className="flex shrink-0 items-end justify-around px-1">
-        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} tiny={tiny} wide={wide} motion={motions[`0-${m}`] || null}/>)}
+        {me.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={CARD_ME} m={m} mark={markOf(CARD_ME, m)} fx={fx.filter((f) => f.p === CARD_ME && f.m === m)} onTap={() => tapMon(CARD_ME, m)} press={press} compact={compact} tiny={tiny} wide={wide} calm={settings.shake === 'OFF'} motion={motions[`0-${m}`] || null}/>)}
       </div>
       <div className="flex shrink-0 justify-end px-2 py-1">{strip(CARD_ME)}</div>
       </div>
@@ -837,7 +906,8 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       )}
       {/* 選んだ手札は上へ少し持ち上がる。その分の高さ(pt-2)を手札の箱の中に取っておき、上の案内の帯に重ならないようにする(2026-10-24 改善部の点検 V3) */}
       <div data-card-hand className="flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2">
-        {me.hand.map((no, i) => {
+        {handOrder.map((i) => {
+          const no = me.hand[i];
           const c = cardOf(db, no);
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
@@ -846,16 +916,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
-                <CardNameFit name={c ? c.name : no} size={compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
+                <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
                 {tiny ? <>
                   <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                   <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                 </> : compact ? <>
-                  <span className="block text-[10px] font-extrabold leading-tight text-amber-200">ガッツ{c ? c.guts : '-'}</span>
-                  <span className="block whitespace-nowrap text-[10px] font-extrabold leading-tight text-amber-200">{cardCaption(c)}</span>
+                  <span className={`block ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`}>ガッツ{c ? c.guts : '-'}</span>
+                  <span className={`block whitespace-nowrap ${handLarge ? 'text-[12px]' : 'text-[10px]'} font-extrabold leading-tight text-amber-200`}>{cardCaption(c)}</span>
                 </> : <>
-                  <span className="block text-[11px] font-extrabold text-amber-200">ガッツ{c ? c.guts : '-'}</span>
-                  <span className="block text-[11px] font-extrabold text-amber-200">{cardCaption(c)}</span>
+                  <span className={`block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`}>ガッツ{c ? c.guts : '-'}</span>
+                  <span className={`block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`}>{cardCaption(c)}</span>
                 </>}
               </div>
             </div>
@@ -876,6 +946,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
         </div>, document.body)}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
       {discard && <CardDiscardModal db={db} st={st} initial={discard.tab} onDetail={(no) => setDetail(no)} onClose={() => setDiscard(null)}/>}
+      {confirm && <ConfirmSheet title={confirm.label} message={confirm.kind === 'use' ? 'オプションで確かめないようにもできます' : ''} confirmLabel={confirm.kind === 'use' ? '使う' : '終わる'} onCancel={() => setConfirm(null)} onConfirm={confirmYes}/>}
       {quit && !tutorial && <ConfirmSheet title="投了しますか？" message={pvp ? '投了すると負けになります' : '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)'} confirmLabel="投了する" danger onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; if (pvp) CARD_PVP.surrender(); onFinish({ outcome: 'surrender', st }); }}/>}
       {quit && tutorial && <ConfirmSheet title="チュートリアルを飛ばしますか？" message={'ルールの画面からいつでもできます'} confirmLabel="飛ばす" onCancel={() => setQuit(false)} onConfirm={() => { setQuit(false); finished.current = true; onFinish({ outcome: 'tutorialSkip', st }); }}/>}
     </div>
@@ -1343,17 +1414,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   // ---- オプション(BGM・演出) ----
   if (view === 'options') {
-    return (
-      <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
-        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
-          <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[13px] font-black text-white">トップの助手</div>
-            <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
-          </div>
-          {/* 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形 */}
+    // 裏のクイック周回の自動(社長 2026-10-25「モンヒロビートと同じように」)。編成は AUTO設定の「モンヒロビート中に回すクイック周回」と同じものを使う
+    const bgmPanel = (
           <div data-card-options-bgm className={SCREEN_PANEL_CLASS}>
-            <div className="text-[13px] font-black text-white">対戦のBGM</div>
+            <div className="text-[13px] font-black text-white">音</div>
+            <b className="mt-2 block text-[12px] font-black text-slate-200">対戦のBGM</b>
             {[['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
               <label key={k} className="mt-2 block text-left">
                 <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
@@ -1368,26 +1433,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               </label>
             ))}
             <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('「おまかせ」のときは、対戦する助手ごとに決まった曲が流れます')}</p>
+            <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')}</p>
           </div>
-          <div data-card-options-settings className={SCREEN_PANEL_CLASS}>
-            <div className="text-[13px] font-black text-white">演出</div>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="min-w-0 flex-1 text-[12px] font-bold text-slate-200">対戦の進む速さ</span>
-              {[['normal', 'ふつう'], ['fast', 'はやい']].map(([v, label]) => (
-                <button key={v} type="button" data-card-speed={v} aria-pressed={save.settings.speed === v} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, speed: v } }); }}
-                  className={`min-h-[36px] rounded-full border px-3 text-[11px] font-black ${save.settings.speed === v ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`}>{label}</button>
-              ))}
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200" style={JA_LABEL_STYLE}>{jaWrap('守れるカードが無いときは、自動で「守らない」')}</span>
-              <button type="button" data-card-auto-pass aria-pressed={save.settings.autoPass} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, autoPass: !save.settings.autoPass } }); }}
-                className={`min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${save.settings.autoPass ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`}>{save.settings.autoPass ? 'ON' : 'OFF'}</button>
-            </div>
-            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('はやいにすると、相手が考える時間と、勝ち負けが決まってから結果までが短くなります')}</p>
-          </div>
-          {/* 裏のクイック周回の自動(社長 2026-10-25「モンヒロビートと同じように」)。編成は AUTO設定の「モンヒロビート中に回すクイック周回」と同じものを使う */}
-          <div data-card-options-quick className={SCREEN_PANEL_CLASS}>
-            <div className="text-[13px] font-black text-white">裏のクイック周回</div>
+    );
+    // 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形(上の bgmPanel)
+    const quickAutoPanel = (
+          <div data-card-options-quick data-card-setting="quickAutoStart" className="mt-2.5 border-t border-white/10 pt-2.5">
+            <b className="block text-[12px] font-black text-slate-200">裏のクイック周回</b>
             <div className="mt-2 flex items-center gap-2">
               <span className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-slate-200" style={JA_LABEL_STYLE}>{jaWrap('MFバトルカードを開いたら自動で始める')}</span>
               <button type="button" data-card-quick-auto aria-pressed={save.settings.quickAutoStart} onClick={() => { Audio_.fgSe.tap(); void persist({ settings: { ...save.settings, quickAutoStart: !save.settings.quickAutoStart } }); }}
@@ -1396,6 +1448,46 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ONにすると、MFバトルカードを開いたときに、裏でクイックの∞周回を始めます。負けたときは、少しおいて1周目から始め直します。編成は、AUTO設定の「モンヒロビート中に回すクイック周回」と同じです')}</p>
             {!quickAutoReady && <p data-card-quick-auto-needs className="mt-1 text-[10px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('AUTO設定で、勇者モン・配置距離・難易度の3つを決めると使えます')}</p>}
           </div>
+    );
+    return (
+      <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[13px] font-black text-white">トップの助手</div>
+            <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
+          </div>
+          {/* 対戦中の設定(社長 2026-10-25「オプションでバトル中の設定関係を各種作って」)。並べ方・名前はモンヒロバトルの「バトルの見た目」と同じ形(題・説明・選択肢の名前と一言)。
+              設定の中身は 82 の CARD_SETTING_GROUPS。保存は mh_card_settings_v1 に足した項目(前からの人は既定値で補う) */}
+          {CARD_SETTING_GROUPS.map((g) => (
+            <React.Fragment key={g.title}>
+            {/* 音(対戦のBGM)は「自動」と「表示」のあいだ(窓口の案の並び) */}
+            {g.title === '表示' && bgmPanel}
+            <div data-card-setting-group={g.title} className={SCREEN_PANEL_CLASS}>
+              <div className="text-[13px] font-black text-white">{g.title}</div>
+              {g.items.map((item) => {
+                const cur = item.bool ? (save.settings[item.key] ? 'ON' : 'OFF') : save.settings[item.key];
+                return (
+                  <div key={item.key} data-card-setting={item.key} className="mt-2.5 border-t border-white/10 pt-2.5">
+                    <b className="block text-[12px] font-black text-slate-200">{item.title}{item.only === 'cpu' && <small className="ml-1 text-[10px] font-bold text-slate-400">(助手と対戦)</small>}</b>
+                    <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(item.desc)}</p>
+                    <div className={`mt-2 grid gap-1.5 ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : item.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                      {item.options.map((o) => (
+                        <button key={o.id} type="button" data-card-setting-option={o.id} aria-pressed={cur === o.id}
+                          onClick={() => { Audio_.fgSe.tap(); void persist({ settings: normalizeCardSettings({ ...save.settings, [item.key]: item.bool ? o.id === 'ON' : o.id }) }); }}
+                          className={`flex min-h-[48px] flex-col items-center justify-center rounded-xl px-0.5 py-1 text-[11px] font-black leading-tight active:scale-95 ${cur === o.id ? 'border border-amber-300 bg-amber-500/30 text-amber-50' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                          <span className="block whitespace-pre-line text-center">{o.label}</span>
+                          <small className="mt-0.5 block text-center text-[9px] font-bold leading-tight opacity-80">{o.note}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {g.title === '自動' && quickAutoPanel}
+            </div>
+            </React.Fragment>
+          ))}
         </div>
       </div>
     );
