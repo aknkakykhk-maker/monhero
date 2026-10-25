@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1d5cea088700509f
+// generated-sha256: 2f11e31a3bc14617
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 00:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 00:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16081,8 +16081,8 @@ const assetPacksShown = () => {
   const cardOpen = assetPackOpen(assetPackOfId('card'));
   return ASSET_PACKS.filter(assetPackOpen).map((p) => (p.id === 'all' && cardOpen ? { ...p, desc: 'モンヒロビート・バトル・バトルカードの全部' } : p));
 };
-// 自動ダウンロードで、よく使う画像のあとに落とすカードの絵(小さい版だけ。大きい版は詳しい画面を開いたときに取る)
-const ASSET_CARD_AUTO_PREFIX = 'images/card-battle/s/';
+// 自動ダウンロードで、よく使う画像のあとに落とすカードの絵。小さい版を先に、大きい版をそのあとに(2026-10-25 社長「両方入れる」)
+const ASSET_CARD_AUTO_PREFIXES = ['images/card-battle/s/', 'images/card-battle/l/'];
 // 自動の前もって落としで、まず落とす「よく使う画面の画像」(背景・タイトル・画面の部品・顔アイコン)
 const ASSET_CORE_PREFIXES = ['data/images/', 'images/ui/', 'images/monster-icons/'];
 // 自動の前もって落としで1回の起動に落とす上限(バイト)。モバイル回線では少なく、わからない端末(iPhone)は控えめに
@@ -16332,8 +16332,8 @@ const ASSET_CACHE = (() => {
     if (!m) return;
     enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
-    // カードの絵(小さい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
-    if (assetPackOpen(assetPackOfId('card'))) enqueue(Object.keys(m.files).filter(p => p.startsWith(ASSET_CARD_AUTO_PREFIX)));
+    // カードの絵(小さい版→大きい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
+    if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
   };
 
   let listening = false;
