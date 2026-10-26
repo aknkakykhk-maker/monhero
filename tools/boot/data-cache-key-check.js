@@ -73,6 +73,13 @@ for (const [, relPath, key] of tags) {
 }
 
 check('本体JSはGAME_BUILDでキャッシュを更新する', /game-system\.compiled\.js\?v=' \+ GAME_BUILD/.test(index));
+// 先読み(__mhBoot.prefetch)も同じ GAME_BUILD を使う(ずれると同じ本体を2回取る)
+check('本体JSの先読みも同じGAME_BUILDを使う', /prefetch\('game-system\.compiled\.js', 'game-system\.compiled\.js\?v=' \+ GAME_BUILD\)/.test(index));
+// GAME_BUILD は本体の中身のハッシュ(2026-10-27 から。時刻だと中身が同じでも版が変わり、事前ダウンロードにためた物が使えない)
+{
+  const r = require(path.join(root, 'tools/stamp-game-build.js')).checkGameBuild();
+  check('GAME_BUILDが本体の中身のハッシュと一致', r.ok, r.ok ? r.value : r.reason);
+}
 check('stamp-version.jsが中身のハッシュでキーを打つ', fs.readFileSync(path.join(root, 'tools/stamp-version.js'), 'utf8').includes("createHash('sha256')"));
 
 // 万一データ側が古いままでも画面が真っ暗にならないよう、参照側で既定値へ落とす
