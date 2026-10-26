@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90c51718ff254154
+// generated-sha256: a5b7218b5707e87e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -34719,7 +34719,9 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
             {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
                 3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
             <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
-              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(dexEntryDescription(mon))}</p>
+              {/* 社長が改行して決めた文(プラント・ミーア・パンドラ・ギンギライガー・アンキロックス)は、改行のまま出す。
+                  以前は改行が空白になり、2行目が1行目の続きにつながっていた */}
+              <p className="font-bold leading-relaxed text-slate-200 break-words whitespace-pre-line">{helpWrap(dexEntryDescription(mon))}</p>
             </div>
             {unlocked?(<>
               <ScreenTabs className="mt-2" value={tab} onChange={onSelectTab}
