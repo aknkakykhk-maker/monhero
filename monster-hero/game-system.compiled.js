@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 873ee038aff070c6
+// source-sha256: cb68fc6a574a72d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:44";
+const BUILD_DATE = "2026-10-27 03:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85660,8 +85660,7 @@ const cardAiSameBloodScale = familySize => Math.max(0, Math.min(1, (familySize -
 const cardAiBloodOf = m => String(m.wave) === 'hybrid' ? m.main : m.species;
 const cardAiTeamValue = (db, who, team, m, maxWave) => {
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
-  const lim = Math.max(maxWave, cardAiMonWave(db, m));
-  const mine = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, {
+  const mine = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, {
     ...m,
     ko: false
   }));
@@ -85853,15 +85852,15 @@ const cardAiFavoriteCandidates = (db, who) => {
   const fav = CARD_AI_FAVORITE[who] || CARD_AI_FAVORITE.mua;
   return Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map(m => m.no).sort();
 };
-const cardAiMonWave = (db, m) => {
+const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
-  const main = Object.values(db.monsters).find(x => !x.variant && x.species === m.main && String(x.wave) !== 'hybrid');
-  return main ? Number(main.wave) || 1 : 4;
+  const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
+  const base = Object.values(db.monsters).find(x => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
+  return base ? Number(base.wave) || 1 : 4;
 };
 const cardAiMonScore = (db, who, m, maxWave) => {
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
-  const lim = Math.max(maxWave, cardAiMonWave(db, m));
-  const vals = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, {
+  const vals = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, {
     ...m,
     ko: false
   })).map(c => cardAiCardValue(c, habit));
@@ -85958,7 +85957,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
     ko: false
-  }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m)))));
+  }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)))));
   const byName = {};
   const noise = Math.max(0, cfg.noise + ((CARD_AI_DECK_TUNE[who] || {})[levelId] || 0));
   pool.forEach(c => {
@@ -93718,7 +93717,8 @@ const CardDeckPickTile = ({
   press,
   onAdd,
   onRemove,
-  onDetail = null
+  onDetail = null,
+  unusable = false
 }) => {
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
@@ -93726,11 +93726,14 @@ const CardDeckPickTile = ({
   return React.createElement("div", {
     "data-card-deck-pick": no,
     className: `relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`
-  }, React.createElement("button", _extends({
+  }, unusable && React.createElement("span", {
+    "data-card-deck-unusable-tag": no,
+    className: "pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200"
+  }, "このデッキの子は使えない"), React.createElement("button", _extends({
     type: "button",
     "data-card-deck-tile": no
   }, press(no, onAdd), {
-    className: `block w-full active:scale-95 ${!canAdd && inDeck === 0 ? 'opacity-45' : ''}`,
+    className: `block w-full active:scale-95 ${!canAdd && inDeck === 0 || unusable ? 'opacity-45' : ''}`,
     style: {
       WebkitUserSelect: 'none',
       userSelect: 'none'
@@ -93880,7 +93883,12 @@ const CardDeckEditor = ({
     const c = cardOf(db, no);
     return !usableOnly || !mons.length || c.user === 'breeder' || mons.some(m => cardUsableBy(c, m));
   };
-  const shown = view === 'mon' ? ownedMons : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort(bySort)] : ownedCards.filter(no => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
+  const unusableIn = no => {
+    const c = cardOf(db, no);
+    return !!c && mons.length > 0 && c.user !== 'any' && c.user !== 'breeder' && !mons.some(m => cardUsableBy(c, m));
+  };
+  const unusableCount = deck.cards.filter(unusableIn).length;
+  const shown = view === 'mon' ? ownedMons : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort((a, b) => unusableIn(b) - unusableIn(a) || bySort(a, b))] : ownedCards.filter(no => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
   const tile = no => {
     const inDeck = countOf(no);
     const limit = cardMonsterOf(db, no) ? 1 : Math.min(3, col[no] || 0);
@@ -93894,7 +93902,8 @@ const CardDeckEditor = ({
       press: press,
       onAdd: () => add(no),
       onRemove: () => removeOne(no),
-      onDetail: () => setDetail(no)
+      onDetail: () => setDetail(no),
+      unusable: countOf(no) > 0 && unusableIn(no)
     });
   };
   const chip = on => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
@@ -94006,7 +94015,17 @@ const CardDeckEditor = ({
     "data-card-deck-problems": true,
     className: "text-[11px] font-bold leading-snug text-rose-300",
     style: JA_WRAP_STYLE
-  }, [...rules, ...own].slice(0, 2).join(' / ')), notice && React.createElement("div", {
+  }, [...rules, ...own].slice(0, 2).join(' / ')), unusableCount > 0 && React.createElement("button", {
+    type: "button",
+    "data-card-deck-unusable": unusableCount,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setView('deck');
+      setNotice('');
+    },
+    className: "block w-full text-left text-[11px] font-black leading-snug text-rose-200 underline decoration-dotted",
+    style: JA_WRAP_STYLE
+  }, `このデッキの子が使えないカード ${unusableCount}枚(押すと先頭に並べます)`), notice && React.createElement("div", {
     "data-card-deck-notice": true,
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE

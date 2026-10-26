@@ -1473,8 +1473,7 @@ const cardAiBloodOf = (m) => (String(m.wave) === 'hybrid' ? m.main : m.species);
 // すでにえらんだ子(team)に仲間 m を足したときの、チームとして数え直した点数(cardAiMonScore と同じ目盛り)
 const cardAiTeamValue = (db, who, team, m, maxWave) => {
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
-  const lim = Math.max(maxWave, cardAiMonWave(db, m));
-  const mine = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, { ...m, ko: false }));
+  const mine = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, { ...m, ko: false }));
   const sharedBy = (c) => team.some((t) => cardUsableBy(c, { ...t, ko: false }));
   const fresh = mine.filter((c) => !sharedBy(c)).map((c) => cardAiCardValue(c, habit)).sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0);
   const atk = mine.filter((c) => !cardIsGuardKind(c.kind) && sharedBy(c)).length;
@@ -1611,16 +1610,17 @@ const cardAiFavoriteCandidates = (db, who) => {
   return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
-const cardAiMonWave = (db, m) => {
+//   card を渡すと、そのカードを見る弾: 混血の防御・回避はサブの種族の弾(サブが？？？の子はメインのまま)
+const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
-  const main = Object.values(db.monsters).find((x) => !x.variant && x.species === m.main && String(x.wave) !== 'hybrid');
-  return main ? Number(main.wave) || 1 : 4;
+  const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
+  const base = Object.values(db.monsters).find((x) => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
+  return base ? Number(base.wave) || 1 : 4;
 };
 // そのモンスターが、癖に合う技をどれだけ持っているか(入れたい度の上位10の合計+ライフ)。2体を選ぶときの「型に合う」の目安
 const cardAiMonScore = (db, who, m, maxWave) => {
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
-  const lim = Math.max(maxWave, cardAiMonWave(db, m));
-  const vals = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, { ...m, ko: false })).map((c) => cardAiCardValue(c, habit));
+  const vals = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, { ...m, ko: false })).map((c) => cardAiCardValue(c, habit));
   return vals.sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0) + (m.life || 0) * 0.3;
 };
 // 毎試合の3体: 好きな子1体(候補から少しずつ変える)+ 型に合うバランスで2体。強さごとの決めは CARD_AI_BUILD
@@ -1709,7 +1709,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const mons = monsters.map((no) => cardMonsterOf(db, no));
   // 弾の制限は技などのカードにかける。ただし、その子が使う技は、その子の弾まで使える(後の弾の好きな子も EASY から戦えるように)
   const pool = Object.values(db.cards).filter((c) => c.ready && ((c.user === 'any' || c.user === 'breeder') ? c.wave <= maxWave
-    : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m)))));
+    : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)))));
   // 名前ごとに1つ(同じ名前の別番号は、入れたい度の高いほう)。強さごとの雑さ(noise)で、毎回少しずつ違うカードが入る
   const byName = {};
   const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0));
