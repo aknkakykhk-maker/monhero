@@ -399,6 +399,7 @@ const HYBRID_C043_FACE_ICON = "images/monster-icons/face/c043.png?v=656a46dd72a0
 const HYBRID_C045_FACE_ICON = "images/monster-icons/face/c045.png?v=cbe99cc190ae";
 // 2026-10-26 社長が選んだ顔アイコン(案の子・カードの画面の HYBRID_MONSTER_FACE_ICONS へはまだ入れない)
 const HYBRID_C044_FACE_ICON = "images/monster-icons/face/c044.png?v=8c4395c28bd3";
+const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=0";
 const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=0";
 const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=0";
 const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
