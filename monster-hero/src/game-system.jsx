@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7638555df9079a8c
+// generated-sha256: ddd988a6eea75f84
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -34265,6 +34265,8 @@ function ProfileScreen({
         {/* モンヒロビートの実績: 難易度ごとのクリア・フルコンボ・オールエクセレント・オールマーベラスの数。
             フレンドのプロフィールにも同じ表が出る。1曲も遊んでいなければ出さない */}
         {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
+        {/* MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」)。一度も遊んでいなければ出さない。保存は読むだけ(90-card-rank.jsx) */}
+        {onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
@@ -44675,6 +44677,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                 const rows = sum.records.battle.filter((e) => labels[e.id]);
                 return (
                   <div data-friend-battle className="mt-2 flex flex-col gap-2">
+                    {/* MFバトルカードの戦績(ランキングの表を、その人のブリーダーの番号で読むだけ。記録が無ければ出さない。90-card-rank.jsx) */}
+                    <CardBattleStatsFriend breederId={selected.otherId}/>
                     {rows.length === 0 && <p className="px-1 py-4 text-center text-[11px] font-bold text-slate-500">まだバトルの記録がありません</p>}
                     {rows.map((e) => (
                       <div key={e.id} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
@@ -57073,6 +57077,111 @@ const cardRankSync = async (db, { record, collection, profile }) => {
     console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
     return false;
   }
+};
+
+// ---- プロフィール・フレンドの MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」) ----
+// 中身: 助手と対戦の強さごとの勝ち数・いちばん長い連勝・マルチ対戦の勝ち負けと強さの点数・カード図鑑で集めた数。
+// 自分: 端末の保存(mh_card_record_v1・mh_card_collection_v1)を読むだけ(書かない)。強さの点数は表から読む
+// フレンド: ランキングの表 card_battle_ranks・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
+const cardStatsGet = async (path) => {
+  if (typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    if (!res.ok) return null;
+    const rows = JSON.parse((await res.text()) || '[]');
+    return Array.isArray(rows) ? rows : null;
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
+const CARD_STATS_ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+// その人の強さの点数の行(マルチ対戦)。無ければ null
+const sbFetchCardPvpRatingOf = async (breederId) => {
+  if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
+  const rows = await cardStatsGet(`card_battle_pvp_ratings?select=rating,wins,loses&breeder_id=eq.${breederId}&limit=1`);
+  const r = rows && rows[0];
+  if (!r) return null;
+  const n = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
+  return { rating: Number.isFinite(Number(r.rating)) ? Math.floor(Number(r.rating)) : null, win: n(r.wins), lose: n(r.loses) };
+};
+// いまのカードの種類数(図鑑の分母。cardDexCounts と同じ数え方)
+const cardStatsDexTotal = () => { try { return cardDexCounts(CARD_BATTLE_DATA, {}).total; } catch (_) { return 0; } };
+// 自分の戦績(保存から)。何も遊んでいなければ played が 0
+const cardStatsOfSelf = async () => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  if (!db) return null;
+  const record = cardNormalizeRecord(await storeGet(CARD_SAVE_KEYS.record, null));
+  const rawCol = await storeGet(CARD_SAVE_KEYS.collection, null);
+  const dex = cardDexCounts(db, cardIsPlainObject(rawCol) ? rawCol : {});
+  const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+  const rating = await sbFetchCardPvpRatingOf(id).catch(() => null);
+  return {
+    wins: record.rank.total, bestStreak: record.rank.streak.best, dex,
+    pvp: { win: record.pvp.win, lose: record.pvp.lose, rating: rating ? rating.rating : null },
+    played: record.cpu.win + record.cpu.lose + record.cpu.surrender + record.pvp.win + record.pvp.lose,
+  };
+};
+// フレンドの戦績(表から)。表に行が無ければ null
+const cardStatsOfFriend = async (breederId) => {
+  if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
+  const rows = await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
+  const e = rows && rows[0] ? cardRankEntryFromRow(rows[0]) : null;
+  const pvp = await sbFetchCardPvpRatingOf(breederId);
+  if (!e && !pvp) return null;
+  const wins = e ? e.wins : Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, 0]));
+  return {
+    // 図鑑の分母は、表の dex_total(その人が最後に送ったときの数で、古いことがある)ではなく、いまのカードの種類数にそろえる(自分と同じ数え方)
+    wins, bestStreak: e ? e.bestStreak : 0, dex: e ? { count: e.dexCount, total: cardStatsDexTotal() || e.dexTotal } : null,
+    pvp: pvp ? { win: pvp.win, lose: pvp.lose, rating: pvp.rating } : { win: 0, lose: 0, rating: null },
+    played: CARD_LEVEL_ORDER.reduce((a, lv) => a + wins[lv], 0) + (pvp ? pvp.win + pvp.lose : 0) + (e && e.dexCount > 0 ? 1 : 0),
+  };
+};
+// 戦績の表(自分のプロフィールとフレンドのプロフィールで共用。見た目はモンヒロビートの実績の表にそろえる)
+const CardBattleStatsPanel = ({ stats, who = 'self' }) => {
+  if (!stats || !stats.played) return null;
+  const cell = 'rounded-lg bg-black/30 px-1 py-1';
+  const val = (n) => `text-[13px] font-black tabular-nums ${n > 0 ? 'text-white' : 'text-slate-500'}`;
+  return (
+    <section data-card-stats={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
+      <b className="block text-[12px] font-black text-amber-100">MFバトルカードの戦績</b>
+      <small className="mb-2 block text-[9px] font-bold text-slate-400">助手と対戦の、強さごとの勝ち数</small>
+      <div className="grid grid-cols-5 gap-1 text-center">
+        {CARD_LEVEL_ORDER.map((lv) => (
+          <div key={lv} data-card-stats-level={lv} className={cell}>
+            <span className="block whitespace-nowrap text-[9px] font-black text-slate-300">{CARD_LEVEL_LABEL[lv]}</span>
+            <b className={`block ${val(stats.wins[lv] || 0)}`}>{stats.wins[lv] || 0}</b>
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-3 gap-1 text-center">
+        <div data-card-stats-streak className={cell}>
+          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">いちばん長い連勝</span>
+          <b className={`block ${val(stats.bestStreak)}`}>{stats.bestStreak}</b>
+        </div>
+        <div data-card-stats-pvp className={cell}>
+          <span className="block whitespace-nowrap text-[9px] font-black text-sky-200">マルチ対戦</span>
+          <b className={`block ${val(stats.pvp.win + stats.pvp.lose)}`}>{stats.pvp.win}勝{stats.pvp.lose}敗</b>
+          {Number.isFinite(stats.pvp.rating) && <span className="block text-[9px] font-bold text-sky-100">強さ {stats.pvp.rating}</span>}
+        </div>
+        <div data-card-stats-dex className={cell}>
+          <span className="block whitespace-nowrap text-[9px] font-black text-emerald-200">カード図鑑</span>
+          {stats.dex ? <b className={`block ${val(stats.dex.count)}`}>{stats.dex.count}<span className="text-[9px] font-bold text-slate-400">/{stats.dex.total}</span></b> : <b className="block text-[13px] font-black text-slate-500">-</b>}
+        </div>
+      </div>
+    </section>
+  );
+};
+// 自分のプロフィールに置く版(読み込みまで含む)。MFバトルカードを一度も遊んでいなければ出さない
+const CardBattleStatsSelf = () => {
+  const [stats, setStats] = useState(null);
+  useEffect(() => { let alive = true; cardStatsOfSelf().then((x) => { if (alive) setStats(x); }).catch(() => {}); return () => { alive = false; }; }, []);
+  return <CardBattleStatsPanel stats={stats} who="self"/>;
+};
+// フレンドのプロフィールに置く版。表に記録が無ければ出さない
+const CardBattleStatsFriend = ({ breederId }) => {
+  const [stats, setStats] = useState(null);
+  useEffect(() => { let alive = true; setStats(null); cardStatsOfFriend(breederId).then((x) => { if (alive) setStats(x); }).catch(() => {}); return () => { alive = false; }; }, [breederId]);
+  return <CardBattleStatsPanel stats={stats} who="friend"/>;
 };
 
 // ---- 画面: ランキング(トップの「ランキング」から) ----
@@ -86376,7 +86485,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:calc(33% + 4px);display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:calc(33% - 40px);padding:0}.mh-home-card-battle.raised{bottom:calc(33% + 4px)}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}.mh-home-card-battle,.mh-home-card-battle.raised{bottom:12px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}.mh-home-card-battle,.mh-home-card-battle.raised{bottom:12px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
