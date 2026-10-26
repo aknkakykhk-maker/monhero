@@ -176,7 +176,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const list = JSON.parse(localStorage.getItem('mh_masu_mons') || '[]');
       return list.length === 2 && list.every((m) => m.bondXp === 300) && list[0].statPoints && list[0].statPoints.atk === 400000;
     }));
-    await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+    await page.locator('[data-raid-jack-result]').getByRole('button', { name: '戻る' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     check('デバッグ起動の結果は「もどる」でジャック確認の画面へ戻る', true);
     // オーラ: 段階1〜5で data-jack-aura が段階の数字になり、オーラの部品(4枚)が出る。RAID_SHOT_DIR があれば段階ごとに撮る
@@ -198,7 +198,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await page.getByText('降参しますか？').waitFor({ timeout: 10000 });
       await page.getByRole('button', { name: /降参|あきらめる|リタイア/ }).filter({ hasText: /降参|あきらめる|リタイア/ }).last().click();
       await page.locator('[data-raid-jack-result]').waitFor({ timeout: 30000 });
-      await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+      await page.locator('[data-raid-jack-result]').getByRole('button', { name: '戻る' }).click();
       await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     }
     // 大王を倒したあとの「ぱんぷきん」(2026-10-05): 名前・絵・オーラ無し・攻撃力は子爵・ライフは大王と同じ・降参したら与えたダメージだけ送る
@@ -222,7 +222,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await page.getByRole('button', { name: /降参|あきらめる|リタイア/ }).filter({ hasText: /降参|あきらめる|リタイア/ }).last().click();
       await page.locator('[data-raid-jack-result]').waitFor({ timeout: 30000 });
       check('ぱんぷきん: 結果の見出しも「ぱんぷきん」', /ぱんぷきん/.test(await page.locator('[data-raid-jack-result]').innerText()));
-      await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+      await page.locator('[data-raid-jack-result]').getByRole('button', { name: '戻る' }).click();
       await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     }
     // ④ AUTOで最後まで進める(A・段階1)。どんな終わり方でも結果が1回だけ出て、与ダメージが1回だけ送られる
@@ -255,7 +255,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const levelUps = Number((await page.locator('[data-raid-jack-levelups]').innerText()).replace(/[^0-9]/g, ''));
     const expectLevelUps = [3, 5, 8, 11].filter((n) => n <= turnsUsed).length;
     check('Aの固有技とアシカの成長は 3/5/8/11 ターン目に1回ずつ(使ったターンまでの回数)', levelUps === expectLevelUps, `ターン${turnsUsed} → 成長${levelUps}回(期待${expectLevelUps}回)`);
-    await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+    await page.locator('[data-raid-jack-result]').getByRole('button', { name: '戻る' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     // ⑤ B(マスモン)・初級ジャック。強い個体で倒すと、その場で終わり(倒したら終わり)・次の段階が開く・成長なし
     posts.length = 0;
@@ -278,7 +278,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // デバッグの強制表示(別のイベントID)の戦いは、本番の端末記録に「倒した段階」「累計」を書かない(書くと本番のグランドスラムが討伐済みになる・2026-10-05)
     const bStateBody = bState && bState.value ? bState.value : bState;
     check('B: デバッグの戦いは、本番の端末記録(mh_raid_jack_v1)に倒した印・累計を書かない', !bStateBody || ((!bStateBody.b || ((bStateBody.b.defeated || []).length === 0 && !(Number(bStateBody.b.total) > 0))) && (!bStateBody.a || (bStateBody.a.defeated || []).length === 0)), JSON.stringify(bStateBody));
-    await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+    await page.locator('[data-raid-jack-result]').getByRole('button', { name: '戻る' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
     check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' | '));
   } catch (error) {
