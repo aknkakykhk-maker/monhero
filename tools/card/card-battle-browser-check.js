@@ -604,6 +604,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-dex]').waitFor({ timeout: 5000 });
     const dexTotal = await page.locator('[data-card-dex-total]').innerText();
     const dex1 = await page.locator('[data-card-dex-tile]').count();
+    const dexPart1 = await page.locator('[data-card-dex-part]').innerText();   // 「(第1弾 1 / 59)」。以前は「このパック」で、どの弾か分からなかった
     const haveTiles = await page.locator('[data-card-dex-tile]:not([data-card-dex-have="0"])').count();
     if (SHOT) await shot(page, '23-dex-1');
     await page.locator('[data-card-dex-tab="hybrid"]').click();
@@ -621,7 +622,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 混血・派生の数はデータから数える(2026-10-25 に派生25枚が増えた。図鑑だけの子も並ぶ)
     const hybridCount = await page.evaluate(() => Object.values(CARD_BATTLE_DATA.monsters).filter((m) => String(m.wave) === 'hybrid').length);
     check('⑮ カード図鑑: 見かたのタブが3つ', dexModes === 3, JSON.stringify({ dexModes }));
-    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
+    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び(見出しは「第1弾 ◯ / ◯」)、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && /^\(第1弾 \d+ \/ \d+\)$/.test(dexPart1) && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexPart1, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
     // ⑮-2 血統別・種類別(2026-10-26 社長): 札の数・札ごとの集めた数・種類の言葉と並びがデッキ編成の絞り込みと同じ
     await page.locator('[data-card-dex-show="all"]').click();
     await page.getByRole('tab', { name: '血統別' }).click();
@@ -629,6 +630,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const spTabs = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').count();
     const spFirst = await page.locator('[data-card-dex-tile]').count();
     const spPart = await page.locator('[data-card-dex-part]').innerText();
+    const spLabel = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').first().evaluate((e) => e.firstChild.textContent);
     const spWant = await page.evaluate(() => CARD_PACKS.reduce((a, p) => a + p.species.length, 0));
     if (SHOT) await shot(page, '24b-dex-species');
     await page.getByRole('tab', { name: '種類別' }).click();
@@ -641,7 +643,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.waitForTimeout(150);
     const fldTiles = await page.locator('[data-card-dex-tile]').count();
     if (SHOT) await shot(page, '24c-dex-kind');
-    check('⑮-2 カード図鑑: 血統別(弾の種族の数だけ札・最初の血統に並ぶ・「この血統」の集めた数)と種類別(デッキ編成と同じ言葉と並び・モンスターは全部・全体は15枚)', spTabs === spWant && spFirst >= 10 && /この血統 \d+ \/ \d+/.test(spPart) && JSON.stringify(kindLabels) === JSON.stringify(deckLabels) && dexMonTiles === monWant && fldTiles === 15, JSON.stringify({ spTabs, spWant, spFirst, spPart, kindLabels, dexMonTiles, monWant, fldTiles }));
+    check('⑮-2 カード図鑑: 血統別(弾の種族の数だけ札・最初の血統に並ぶ・選んだ血統の名前で集めた数)と種類別(デッキ編成と同じ言葉と並び・モンスターは全部・全体は15枚)', spTabs === spWant && spFirst >= 10 && spPart.includes(`(${spLabel} `) && /\d+ \/ \d+\)/.test(spPart) && JSON.stringify(kindLabels) === JSON.stringify(deckLabels) && dexMonTiles === monWant && fldTiles === 15, JSON.stringify({ spTabs, spWant, spFirst, spPart, spLabel, kindLabels, dexMonTiles, monWant, fldTiles }));
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
     // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する
