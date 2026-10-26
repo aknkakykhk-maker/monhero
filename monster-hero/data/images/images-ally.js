@@ -194,7 +194,7 @@ const HYBRID_C052_IMG = "images/monsters/c052.png?v=ef445601b28a";
 const HYBRID_C053_IMG = "images/monsters/c053.png?v=ffa75a7fabaa";
 const HYBRID_C054_IMG = "images/monsters/c054.png?v=94f20e8b1d54";
 const HYBRID_C055_IMG = "images/monsters/c055.png?v=ce688625bfa6";
-const HYBRID_C056_IMG = "images/monsters/c056.png?v=c83f29cf8474";
+const HYBRID_C056_IMG = "images/monsters/c056.png?v=56ec6e0a965c";
 const HYBRID_C057_IMG = "images/monsters/c057.png?v=7ab1f75096ae";
 const HYBRID_C058_IMG = "images/monsters/c058.png?v=596afc1e78b0";
 const HYBRID_C059_IMG = "images/monsters/c059.png?v=1964b2187f85";
@@ -365,7 +365,7 @@ const HYBRID_C051_FACE_ICON = "images/monster-icons/face/c051.png?v=4853c5670318
 const HYBRID_C052_FACE_ICON = "images/monster-icons/face/c052.png?v=6b18c1fd8234";
 const HYBRID_C053_FACE_ICON = "images/monster-icons/face/c053.png?v=b662c2469e1b";
 const HYBRID_C054_FACE_ICON = "images/monster-icons/face/c054.png?v=3963d6c624b6";
-const HYBRID_C056_FACE_ICON = "images/monster-icons/face/c056.png?v=85ff6a92b817";
+const HYBRID_C056_FACE_ICON = "images/monster-icons/face/c056.png?v=ed4aac02295a";
 const HYBRID_C057_FACE_ICON = "images/monster-icons/face/c057.png?v=13230681ef1d";
 const HYBRID_C058_FACE_ICON = "images/monster-icons/face/c058.png?v=3bfcaaa0ceaf";
 const HYBRID_C059_FACE_ICON = "images/monster-icons/face/c059.png?v=106d33ba40e0";
