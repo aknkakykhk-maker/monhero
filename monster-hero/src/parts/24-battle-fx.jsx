@@ -1366,6 +1366,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   GinGiLiger: { body:'breathe', bodyMask:null, parts:[] },
   Ankylox: { body:'heavy', bodyMask:null, parts:[] },
   Soborobent: { body:'drift', bodyMask:null, parts:[] },
+  Kyubi: { body:'sway', bodyMask:null, parts:[] },
+  Orihime: { body:'drift', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
