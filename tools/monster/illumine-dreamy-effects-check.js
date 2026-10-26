@@ -27,7 +27,7 @@ const app = read('monster-hero/src/parts/60-app.jsx');
 // ---------- ① 登録 ----------
 const sd = {};
 vm.createContext(sd);
-vm.runInContext(`${allies.replace(/\b[A-Z_]+_(IMG|ICON|FACE_ICON)\b/g, "'img'")}\nglobalThis.M=ALL_PLAYER_MONSTERS;globalThis.N=HERO_ATK_NAMES;globalThis.D=UPCOMING_MONSTER_DRAFTS;`, sd);
+vm.runInContext(`${allies.replace(/\b[A-Z0-9_]+_(IMG|ICON|FACE_ICON)\b/g, "'img'")}\nglobalThis.M=ALL_PLAYER_MONSTERS;globalThis.N=HERO_ATK_NAMES;globalThis.D=UPCOMING_MONSTER_DRAFTS;`, sd);
 const { M, N, D } = sd;
 // 公開まではどちらか一方にいればよい(案の段階 → 公開で ALL_PLAYER_MONSTERS へ移る)
 const I = M.Illumine || D.Illumine, R = M.Dreamy || D.Dreamy;

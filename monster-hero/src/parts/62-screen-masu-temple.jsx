@@ -105,7 +105,7 @@ function MasuReincarnateScreen({
             {reincarnateError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{reincarnateError}</p>}
             <div className="mt-3 grid grid-cols-1 gap-2">
               <button type="button" disabled={busy||!preview?.ok} onClick={confirmBulk} className="mh-button mh-button-primary min-h-[52px] rounded-2xl bg-violet-600 font-black active:scale-[.98] disabled:opacity-30">{preview?.ok?`${preview.count}体を転生する`:'転生できません'}</button>
-              <ModalCloseButton onClick={()=>setBulkConfirmOpen(false)} label="キャンセル" disabled={busy}/>
+              <ModalCloseButton onClick={()=>setBulkConfirmOpen(false)} label="やめる" disabled={busy}/>
             </div>
             </div>
           </ModalFrame>}
