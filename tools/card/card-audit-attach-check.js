@@ -85,6 +85,18 @@ const lost = (st0, st, p, m) => life(st0, p, m) - life(st, p, m);
   check('集中: 突き刺しに付けられる', !!o);
   if (o) { const n = guardNames(play(st, o)); check('集中: 緊急回避(0ガッツ)は出せず、バック転(1ガッツ)は出せる', !n.includes('緊急回避') && n.includes('バック転'), n.join('・')); }
 }
+// 集中は「そのとき払うガッツ」で数える(2026-10-27 案A)。全体カードでガッツが変わったときも同じ
+{
+  const field = (st, no) => { const c = db.cards[no]; st.field = { no, p: 0, effects: (c.effects || []).map((e) => ({ ...e })) }; return st; };
+  const holy = field(scene({ hands: [['005', '274'], ['109', '011']], guts: [4, 2] }), 'F118');
+  const o = optOf(holy, 0, [0, 1]);
+  if (o) { const n = guardNames(play(holy, o)); check('集中: ホリィの声援(ガッツ−1)の場では、0ガッツになったバック転も出せない', !n.includes('緊急回避') && !n.includes('バック転'), n.join('・') || '(なし)'); }
+  else check('集中: ホリィの声援の場で、突き刺しに付けられる', false);
+  const master = field(scene({ hands: [['005', '274'], ['109', '011']], guts: [5, 2] }), 'F256');
+  const o2 = optOf(master, 0, [0, 1]);
+  if (o2) { const n = guardNames(play(master, o2)); check('集中: 師匠のまなざし(ガッツ+1)の場では、1ガッツになった緊急回避は出せる', n.includes('緊急回避'), n.join('・') || '(なし)'); }
+  else check('集中: 師匠のまなざしの場で、突き刺しに付けられる', false);
+}
 // ---- 挟み撃ち(349): このターンもう守った子は守れない ----
 {
   const st = scene({ hands: [['005', '349'], ['011', '072']], guts: [4, 3] });
