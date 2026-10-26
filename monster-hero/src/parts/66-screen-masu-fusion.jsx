@@ -141,7 +141,7 @@ function MasuFusionScreen({
               </div>
               {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[11px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
               {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[11px] leading-relaxed font-bold text-violet-200">複数副を選択順にまとめて合体します。固有技継承は確認画面で副ごとに選べ、Lv上限を超える場合は「限界突破して合体」も選べます。</div>}
-              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'副を選択してください'}</button>
+              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'合体に使う子を選んでください'}</button>
             </div>
             {fusionSortBar}
             <div className={SCREEN_LIST_CLASS}>
