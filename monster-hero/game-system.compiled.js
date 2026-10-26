@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a6db37d9161a8bd4
+// source-sha256: d4c05c6ee0b5ad5a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -66527,7 +66527,7 @@ function KikiIntroOverlay({
     className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
     style: bubbleWrapStyle()
   }, bubbleWrap(line.t))), React.createElement("p", {
-    className: "mt-2 text-center text-[8px] text-slate-500"
+    className: "mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300"
   }, step + 1, " / ", script.length), React.createElement("div", {
     className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
     style: {
@@ -66627,7 +66627,7 @@ function MomosukeIntroOverlay({
     className: "block text-[13px] font-bold leading-relaxed text-white mt-1",
     style: bubbleWrapStyle()
   }, bubbleWrap(line.t))), React.createElement("p", {
-    className: "mt-2 text-center text-[8px] text-slate-500"
+    className: "mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300"
   }, step + 1, " / ", script.length), React.createElement("div", {
     className: `relative mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
     style: {
@@ -94301,10 +94301,11 @@ const CardBattleScreen = ({
       "data-card-options-jump": label,
       onClick: () => {
         Audio_.fgSe.tap();
-        const el = document.querySelector(`[data-card-options] ${sel}`);
-        if (el) el.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
+        const box = document.querySelector('[data-card-options] .mh-scroll');
+        const el = box && box.querySelector(sel);
+        if (el) box.scrollTo({
+          top: Math.max(0, el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 4),
+          behavior: 'smooth'
         });
       },
       className: "min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100"
@@ -131698,8 +131699,17 @@ function MonsterHeroGame() {
         return first && last && first !== last ? `${first} 〜 ${last}` : first || last;
       };
       const seenOf = group => group.events.filter(isEventReplayUnlocked).length;
+      const titleWrap = t => String(t || '').split(/(\s+)/).map((x, i) => !x || /^\s+$/.test(x) ? x : [...x].length <= 12 ? React.createElement("span", {
+        key: i,
+        "data-ja-keep": true,
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }, x) : React.createElement(React.Fragment, {
+        key: i
+      }, jaWrap(x)));
       return React.createElement("div", {
-        className: "fixed inset-0 flex flex-col items-center justify-center p-5",
+        className: "fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2",
         style: {
           position: 'fixed',
           inset: 0,
@@ -131708,14 +131718,14 @@ function MonsterHeroGame() {
         }
       }, React.createElement("div", {
         "data-event-replay-page": activeGroup ? 'episodes' : 'panels',
-        className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col"
+        className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3"
       }, !activeGroup && React.createElement(React.Fragment, null, React.createElement("h3", {
         className: "shrink-0 text-base font-black text-white mb-1 text-center"
       }, "イベント回想"), React.createElement("p", {
         className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight"
       }, "見たいイベントを選んでください。", React.createElement("br", null), "見たことのある会話を、何度でも見返せます。"), React.createElement("div", {
         "data-event-replay-groups": true,
-        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3"
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2"
       }, groups.map(group => {
         const seen = seenOf(group),
           total = group.events.length;
@@ -131738,8 +131748,9 @@ function MonsterHeroGame() {
         }, group.emoji), React.createElement("span", {
           className: "min-w-0 flex-1"
         }, React.createElement("b", {
-          className: "block text-[13px] font-black text-white leading-tight"
-        }, group.label), React.createElement("small", {
+          className: "block text-[13px] font-black text-white leading-tight",
+          style: JA_LABEL_STYLE
+        }, jaWrap(group.label)), React.createElement("small", {
           className: "block text-[9px] text-slate-400 leading-tight"
         }, group.note), rangeText(group) && React.createElement("small", {
           "data-event-replay-date": true,
@@ -131779,10 +131790,11 @@ function MonsterHeroGame() {
       })), React.createElement("span", {
         className: "min-w-0 flex-1 text-center"
       }, React.createElement("b", {
-        className: "block text-[14px] font-black text-white leading-tight"
+        className: "block text-[14px] font-black text-white leading-tight",
+        style: JA_LABEL_STYLE
       }, React.createElement("span", {
         "aria-hidden": "true"
-      }, activeGroup.emoji, " "), activeGroup.label), React.createElement("small", {
+      }, activeGroup.emoji, " "), jaWrap(activeGroup.label)), React.createElement("small", {
         className: "block text-[10px] font-black tabular-nums",
         style: {
           color: activeGroup.color
@@ -131791,10 +131803,10 @@ function MonsterHeroGame() {
         className: "w-11 shrink-0",
         "aria-hidden": "true"
       })), React.createElement("p", {
-        className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight"
+        className: "shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight [@media(max-height:500px)]:mb-1.5"
       }, "お話の順に並んでいます。"), React.createElement("div", {
         "data-event-replay-episodes": true,
-        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3"
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2"
       }, activeGroup.events.map(event => {
         const eventUnlocked = isEventReplayUnlocked(event);
         if (!eventUnlocked) {
@@ -131833,8 +131845,9 @@ function MonsterHeroGame() {
         }), React.createElement("span", {
           className: "min-w-0 flex-1"
         }, React.createElement("b", {
-          className: "block text-[12px] font-black text-white"
-        }, event.title), React.createElement("small", {
+          className: "block text-[12px] font-black text-white",
+          style: JA_LABEL_STYLE
+        }, titleWrap(event.title)), React.createElement("small", {
           className: "block text-[9px] text-fuchsia-300/70"
         }, eventReplayDateText(event) && React.createElement("span", {
           "data-event-replay-date": true,
@@ -133713,7 +133726,7 @@ function MonsterHeroGame() {
       }, bubbleLines(speakText(bottomLine, bottomSpeaker)))) : React.createElement("div", {
         className: "rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400"
       }, "▲ 上のことばを読んでね"), React.createElement("p", {
-        className: "mt-2 text-center text-[8px] text-slate-500"
+        className: "mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300"
       }, step + 1, " / ", script.length)), React.createElement("div", {
         "data-story-buttons": true,
         className: `relative mt-3 grid shrink-0 ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
