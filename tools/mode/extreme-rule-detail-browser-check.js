@@ -148,7 +148,7 @@ const cardsInfo = () => [...document.querySelectorAll('[data-extreme-difficulty-
     check('難易度ごとに違う内容が出る',
       new Set(Object.values(opened).map(o => o?.text)).size === 5);
     check('INFINITYの詳細に主要ルールがすべて載る',
-      ['アシストカード効果', '距離強化', '消費ガッツ', '最低10%', '30%で停止', '25Tごと', '安全距離']
+      ['アシストカード効果', '距離強化', '消費ガッツ', '最低10%', '30%で停止', '25ターンごと', '安全距離']
         .every(text => opened.INFINITY?.text.includes(text)),
       opened.INFINITY?.groups.join(' / '));
     check('本文は縦スクロールできる入れ物に入っている（CSS未適用のため実スクロールは未確認）',
