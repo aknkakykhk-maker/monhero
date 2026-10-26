@@ -12,6 +12,7 @@
 //   ⑤ 320×568: オプションの「「守らない」」がかぎかっこの中で折れない(QA 12)
 //   ⑥ 320・375: 練習試合クリアのドラの台詞の「ひととおり」が言葉の途中で折れない(QA 10。台詞を同じ幅の吹き出しに描いて確かめる)
 //   ⑦ 実行時エラーが無い
+//   ⑧ 320・390: カードの大写しのあいだ、後ろの記録の字と助手の吹き出しが消えている(見回り2回目の新4)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -115,6 +116,7 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
   const server = await serve();
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
+  const bigLog = [];
   try {
     // ① 横の画面: 相手の番から始めて、自分の番の始めのまとめを待つ
     {
@@ -149,11 +151,21 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
     for (const [w, h] of [[320, 568], [390, 844]]) {
       // ② 番の帯のあいだ、記録の字が消えている
       const page = await openBattle(browser, { ...base, active: 1, mode: 'wait', viewport: { width: w, height: h } }, errors);
-      const seen = await page.locator('[data-card-turn-banner="me"]').waitFor({ timeout: 70000 }).then(() => true).catch(() => false);
-      // まとめが帯の上に重なるので、閉じてから帯を撮る
-      if (seen && await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
-      if (seen && await page.locator('[data-card-turn-banner]').count()) await shot(page, `qa7-turn-banner-${w}`);
-      const op = seen ? await page.evaluate(() => { const b = document.querySelector('[data-card-turn-banner]'); const l = document.querySelector('[data-card-log]'); return { banner: !!b, log: l ? Number(getComputedStyle(l).opacity) : null }; }) : null;
+      // ② 帯を見張り、出ているあいだの後ろの記録の字の濃さを取る
+      let op = null, seen = false;
+      for (let t = 0; t < 600 && !seen; t++) {
+        const r = await page.evaluate(() => {
+          const l = document.querySelector('[data-card-log]');
+          return { big: !!document.querySelector('[data-card-big]'), banner: !!document.querySelector('[data-card-turn-banner="me"]'), log: l ? (getComputedStyle(l).visibility === 'hidden' ? 0 : Number(getComputedStyle(l).opacity)) : null };
+        });
+        if (r.banner) {
+          seen = true; op = { banner: true, log: r.log };
+          // まとめが帯の上に重なるので、閉じてから帯を撮る
+          if (await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
+          if (await page.locator('[data-card-turn-banner]').count()) await shot(page, `qa7-turn-banner-${w}`);
+        }
+        if (!seen) await page.waitForTimeout(100);
+      }
       check(`② ${w}×${h}: 番の帯のあいだ、後ろの記録の字が消えている`, op && op.banner && op.log !== null && op.log < 0.2, JSON.stringify(op));
       // ③ 場のモンスターの名前(帯が消えてまとめを閉じてから)
       await page.locator('[data-card-turn-banner]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
@@ -177,6 +189,31 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       }));
       await shot(page, `qa9-discard-names-${w}`);
       check(`④ ${w}×${h}: 捨て札の一覧の名前が切れずにカードの幅に収まる`, dn.length === DISCARD.length && dn.every((x) => !x.over && x.name.length >= 5), JSON.stringify(dn.filter((x) => x.over)));
+      await page.close();
+    }
+    // ⑧ 自分の番に手札の1枚目の技を使って、カードの大写しを出す。出ているあいだの後ろの記録の字の濃さを取る
+    for (const [w, h] of [[320, 568], [390, 844]]) {
+      const page = await openBattle(browser, { ...base, active: 0, mode: 'attack', viewport: { width: w, height: h } }, errors);
+      await page.waitForTimeout(600);
+      if (await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
+      await page.locator('[data-card-hand-card="0"]').click();
+      await page.waitForTimeout(200);
+      const user = page.locator('[data-card-mon].ring-amber-300').first();
+      if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
+      // 攻撃の技は狙う相手を押す・特殊技は「使う」を押す
+      const tgt = page.locator('[data-card-mon].ring-rose-400').first();
+      if (await tgt.count()) await tgt.click();
+      else await page.getByRole('button', { name: '使う' }).click().catch(() => {});
+      for (let t = 0; t < 50; t++) {
+        const r = await page.evaluate(() => {
+          if (!document.querySelector('[data-card-big]')) return null;
+          // 記録の字と助手の吹き出しのうち、見えている物の濃さのいちばん大きい値(どちらも無ければ0)
+          const seen = [...document.querySelectorAll('[data-card-log], [data-card-bubble]')].map((l) => (getComputedStyle(l).visibility === 'hidden' ? 0 : Number(getComputedStyle(l).opacity)));
+          return Math.max(0, ...seen);
+        });
+        if (r !== null) { await page.waitForTimeout(250); bigLog.push(`${w}:${r}`); await shot(page, `qa-new4-bigcard-${w}`); break; }
+        await page.waitForTimeout(100);
+      }
       await page.close();
     }
     // ⑤ オプション(320)
@@ -204,6 +241,7 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       }
       await page.close();
     }
+    check('⑧ 320・390: カードの大写しのあいだ、後ろの記録の字と吹き出しが消えている', bigLog.length > 0 && bigLog.every((x) => Number(x.split(':')[1]) < 0.2), `${bigLog.length}回見た: ${[...new Set(bigLog)].join(' / ')}`);
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
