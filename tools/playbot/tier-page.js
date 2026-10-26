@@ -330,7 +330,7 @@ function build(d) {
       t.アシカ.使いどころ && t.アシカ.使いどころ.length ? ['使いどころ', `<ul class="bl">${t.アシカ.使いどころ.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`] : null,
     ]) : '';
     const grow = t.強化 ? kv(Object.entries(t.強化).map(([k, v]) => [k, esc(v)])) : '';
-    const real = t.実戦で確認 ? `実戦 ${t.実戦で確認.回数}回(クリア ${t.実戦で確認.クリア})` : '実戦ではまだ確かめていない';
+    const real = t.実戦で確認 ? `実戦 ${t.実戦で確認.回数}回(クリア ${t.実戦で確認.クリア})${t.実戦で確認.比べ ? `。${t.実戦で確認.比べ}` : ''}` : '実戦ではまだ確かめていない';
     return `
       <details class="party">
         <summary><span class="rk">${esc(t.順位)}位</span><span class="faces">${faces}</span></summary>
