@@ -108,8 +108,25 @@ const seed = () => {
     return {
       turn: Number((text.match(/TURN\s*(\d+)/) || [])[1] || 0),
       wave: Number((text.match(/WAVE\s*(\d+)/) || [])[1] || 0),
+      // 全部の WAVE 数(WAVE 3/10 の 10)と、何周目か(周回の帯の「2周目」)
+      waves: Number((text.match(/WAVE\s*\d+\s*\/\s*(\d+)/) || [])[1] || 0),
+      lap: Number((text.match(/(\d+)\s*周目/) || [])[1] || 0),
     };
   });
+  // 進んだか: WAVE かターンが増えた・WAVE が1へ戻った(次の周)・周が増えた
+  const advanced = (b, a) => a.wave > b.wave || a.turn > b.turn || a.wave < b.wave || a.lap > b.lap;
+  const fmt = (p) => `W${p.wave}/T${p.turn}${p.lap ? '・' + p.lap + '周目' : ''}`;
+  // 見張る: WATCH_MS 見て進んだかを返す。
+  // ★最後の WAVE(ボス)は、次の周へ入るまで 12 秒前後かかり、モンビーの帯には TURN が出ないので、
+  //   そのあいだ文字の上では何も変わらない(2026-10-26 W10/T0 → W10/T0 で落ちていた・止まってはいない)。
+  //   最後の WAVE から見始めて動かなかったときだけ、もう WATCH_MS 見る(進むことを求めるのは同じ)
+  const watchProgress = async () => {
+    const b = await readProgress();
+    await page.waitForTimeout(WATCH_MS);
+    let a = await readProgress();
+    if (!advanced(b, a) && b.waves > 0 && b.wave >= b.waves) { await page.waitForTimeout(WATCH_MS); a = await readProgress(); }
+    return { ok: advanced(b, a), detail: `${fmt(b)} → ${fmt(a)}` };
+  };
   const onRhythmHome = () => page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]'));
 
   try {
@@ -193,7 +210,7 @@ const seed = () => {
     await page.waitForTimeout(2000);
     const afterRhythm = await readProgress();
     // WAVE10のあと次の周へ入るとWAVEが1へ戻る。「減った」もまた進んだ証拠として数える
-    const advancedInRhythm = afterRhythm.wave > before.wave || afterRhythm.turn > before.turn || afterRhythm.wave < before.wave;
+    const advancedInRhythm = advanced(before, afterRhythm);
     check('モンビーを開いているあいだも周回が進む', advancedInRhythm,
       `W${before.wave}/T${before.turn} → W${afterRhythm.wave}/T${afterRhythm.turn}`);
     // AUTO ボタンは、WAVE を倒した直後の「ステータスアップ！」の画面が出ているあいだだけ消える(2026-10-21 戻った直後に重なって落ちていた)。
@@ -206,13 +223,8 @@ const seed = () => {
     //   画面(gameState)とランの段階(runStage)がずれると runProgressAllowed が
     //   false のまま戻らず、AUTOの3つのループが全部止まる。知らせは何も出ないので、
     //   「戻れた」ところまでの検査では素通りしてしまっていた。
-    const afterBack = await readProgress();
-    await page.waitForTimeout(WATCH_MS);
-    const afterBackWatched = await readProgress();
-    const advancedAfterBack = afterBackWatched.wave > afterBack.wave || afterBackWatched.turn > afterBack.turn
-      || afterBackWatched.wave < afterBack.wave;
-    check('バトルへ戻ったあとも周回が進む（戻ると止まる不具合の再発を見張る）', advancedAfterBack,
-      `W${afterBack.wave}/T${afterBack.turn} → W${afterBackWatched.wave}/T${afterBackWatched.turn}`);
+    const afterBackWatch = await watchProgress();
+    check('バトルへ戻ったあとも周回が進む（戻ると止まる不具合の再発を見張る）', afterBackWatch.ok, afterBackWatch.detail);
     // 戻ってからもう一度モンビーへ入っても進み続けること。
     // 報告では「モンビーに戻ってもオートバトル進んでなかった」ので、往復でも見る
     await clickSelector('[data-quick-to-rhythm]');
@@ -220,13 +232,8 @@ const seed = () => {
     await page.waitForSelector('[data-rhythm-mode-solo]', { timeout: 15000 }).catch(() => {});
     await clickSelector('[data-rhythm-mode-solo]');
     await page.waitForTimeout(600);
-    const backInRhythm = await readProgress();
-    await page.waitForTimeout(WATCH_MS);
-    const backInRhythmWatched = await readProgress();
-    const advancedBackInRhythm = backInRhythmWatched.wave > backInRhythm.wave || backInRhythmWatched.turn > backInRhythm.turn
-      || backInRhythmWatched.wave < backInRhythm.wave;
-    check('バトルへ戻ったあと、もう一度モンビーへ入っても進む', advancedBackInRhythm,
-      `W${backInRhythm.wave}/T${backInRhythm.turn} → W${backInRhythmWatched.wave}/T${backInRhythmWatched.turn}`);
+    const backInRhythmWatch = await watchProgress();
+    check('バトルへ戻ったあと、もう一度モンビーへ入っても進む', backInRhythmWatch.ok, backInRhythmWatch.detail);
 
     // ---- ⑤ 超省エネでもモンビーへ行ける ----
     // 超省エネは画面ごと簡易表示へ差し替わる。入口を通常のバトル画面にしか置いていなかったため
@@ -311,13 +318,8 @@ const seed = () => {
     const restarted = await startQuickInfinityRun();
     check('HOMEへ戻ったあと、もう一度クイック∞周回を始められる', restarted);
     if (restarted) {
-      const secondBefore = await readProgress();
-      await page.waitForTimeout(WATCH_MS);
-      const secondAfter = await readProgress();
-      const advancedSecond = secondAfter.wave > secondBefore.wave || secondAfter.turn > secondBefore.turn
-        || secondAfter.wave < secondBefore.wave;
-      check('2回目の周回もちゃんと進む（実行中の印の持ち越しで止まらない）', advancedSecond,
-        `W${secondBefore.wave}/T${secondBefore.turn} → W${secondAfter.wave}/T${secondAfter.turn}`);
+      const secondWatch = await watchProgress();
+      check('2回目の周回もちゃんと進む（実行中の印の持ち越しで止まらない）', secondWatch.ok, secondWatch.detail);
     }
 
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
