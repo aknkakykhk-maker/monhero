@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fe89693f80a4b0fc
+// generated-sha256: c063d13e76513608
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -20281,7 +20281,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
     <footer data-rhythm-options-actions className={`z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide?'pt-1.5':'pt-2'}`} style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>
       {message&&<p role="status" className="mb-1 text-center text-[11px] font-black text-amber-300">{message}</p>}
       {/* 横持ちでは中央寄せで細くする(横いっぱいのボタンは押しにくいだけで、場所も食う) */}
-      <div className={`mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 ${wide?'max-w-[520px]':''}`}><button type="button" onClick={resetDraft} className={`rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black ${wide?'min-h-[42px]':'min-h-[52px]'}`}>デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`rounded-xl px-3 font-black ${wide?'min-h-[42px]':'min-h-[52px]'} ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
+      <div className={`mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 ${wide?'max-w-[520px]':''}`}><button type="button" onClick={resetDraft} className={`rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black ${wide?'min-h-[42px]':'min-h-[52px]'}`}>最初の設定に戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`rounded-xl px-3 font-black ${wide?'min-h-[42px]':'min-h-[52px]'} ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
     </footer>
     {leaveAsk&&<div data-rhythm-options-leave role="dialog" aria-modal="true" aria-label="変更が保存されていません"
       className="fixed inset-0 z-[9000] flex items-center justify-center bg-slate-950/80 p-5" onClick={()=>setLeaveAsk(false)}>
@@ -38430,7 +38430,8 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
           ))}
         </div>
       )}
-      <div data-pro-pick-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+      {/* 選んだ札の光る縁が左右の端で欠けないよう、内側に少し余白(320 で左右の列の縁が切れていた。2026-10-27 ジン) */}
+      <div data-pro-pick-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-1">
       {pinnedIds.length>0&&(<>
         <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使った子</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
@@ -38519,7 +38520,8 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
         <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7">
           {m?(m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt="" masuColors={m.colors} className="h-full w-full object-contain"/>:<span className="text-xl">{m.emoji}</span>):<span className={`text-[15px] font-black ${on?'text-indigo-100':'text-slate-600'}`}>+</span>}
         </span>
-        <span className="mt-0.5 w-full truncate text-[9px] font-black leading-tight text-white">{m?m.name:(on?'ここに入る':'空き')}</span>
+        {/* 「…」で切らず、枠の幅に合わせて字を縮めて1行に収める(320 で「ここに…」「オボロゲ…」と切れていた。2026-10-27 ジン) */}
+        {(()=>{const label=m?m.name:(on?'ここに入る':'空き');return <span className="mt-0.5 w-full whitespace-nowrap overflow-hidden font-black leading-tight text-white [container-type:inline-size]"><span className="block" style={{fontSize:`min(9px, calc(100cqw / ${[...label].length+0.3}))`}}>{label}</span></span>;})()}
         {/* タイプは枠が狭いので絵文字だけ(メイン・サブ)。名前は下の詳しい情報に出る */}
         {m&&monsterTypeProtoOn()&&(()=>{const t=monsterTypeOf(m.id);const icons=[t.main,t.sub].filter(k=>k&&MONSTER_TYPES[k]).map(k=>MONSTER_TYPES[k]);return <span data-pro-party-type={t.main} title={icons.map(d=>d.label).join('・')} className="text-[9px] leading-[11px] [@media(max-height:640px)]:hidden">{icons.map(d=>d.icon).join('')}<span className="sr-only">{icons.map(d=>d.label).join('・')}</span></span>;})()}
         {m&&step==='members'&&<span aria-hidden="true" className="absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100">×</span>}
@@ -48898,7 +48900,7 @@ const useRhythmBuddyListControls = () => {
 // マスモンの一覧(1行ずつ)。onPick を渡すと「呼ぶ」ボタンが付く
 function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy = false, canPay = true, calledIds = [], settings = null }) {
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
-  if (list.length === 0) return <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません')}</p>;
+  if (list.length === 0) return <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>;
   if (settings && settings.view === 'card') {
     // バトル側と同じ3列のカード。絵・名前・ビートLv・調子の顔。呼ぶボタンは下に付ける(「マスモンを呼ぶ」のとき)
     return (
@@ -48997,7 +48999,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
               ? <div data-rhythm-buddy-picker>
                 {masuPicker.renderSortFilterBar({ singleType: true })}
                 {masuPicker.entries.length === 0
-                  ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません')}</p>
+                  ? <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>
                   : <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {masuPicker.entries.map((e) => (
                       <button key={e.key} type="button" data-rhythm-buddy-card onClick={() => setSelId(e.masu.id)} style={masuPicker.cardStyle}
@@ -54134,6 +54136,7 @@ const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'デスファイナル': 2, 'ニードルターン': 4, 'ファイナルボム': 5, 'サテラアタック': 3, 'メテオドライブ': 3, 'マインドフレア': 4,
   'ヒップアタック': 3, 'マッハトルネード': 3, 'デルタアタック': 3, 'スピンカッター': 3, 'ダブルチョップ': 3, 'ボディーブロー': 4,
   'ワンツーパンチ': 4, 'マシンガンパンチ': 5,
+  'ピコピコハンマー': 4, 'ゴーストラッシュ': 4, // ゴースト(2026-10-27)
 });
 const cardNameScript = (c) => (/[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o');
 const cardNameSplit = (text) => {
