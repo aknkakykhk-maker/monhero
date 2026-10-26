@@ -560,6 +560,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
     if (SHOT) await shot(page, '19-deck-edit');
+    // 先頭の3つ(モンスター・デッキ・技など全部)を選んだときは、絞り込みの列が左はしから始まる(2026-10-26 2回目の見回り「ター 3/3」と切れて見えた)
+    const chipsLeft = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); return el ? el.scrollLeft : -1; });
+    check('⑭ 「技など全部」を選んでも、絞り込みの列は左はしから(先頭の「モンスター」が切れない)', chipsLeft === 0, String(chipsLeft));
     const deckReady = await page.locator('[data-card-deck-ready]').getAttribute('data-card-deck-ready');
     // デッキに入れたものだけを出し、「−」で1枚外して「＋」で戻せる(外し方が見える。2026-10-25 社長「外し方がわからない」)
     await page.locator('[data-card-deck-filter="deck"]').click();

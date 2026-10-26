@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9271e272e6e9cb8d
+// generated-sha256: 8b5969893a1114cd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 14:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52539,7 +52539,7 @@ const CARD_VS_LINES = Object.freeze({
     master: { e: 'wink', t: 'いちばん強い組み合わせで来たよ。止めてみなよ？' },
   },
   momosuke: {
-    easy: { e: 'happy', t: 'ももと遊んでくれるの？ やさしくしてあげよっかな〜w' },
+    easy: { e: 'happy', t: 'ももと遊んでくれるの？ 《やさしく》して《あげよっかな〜w》' },
     normal: { e: 'wink', t: 'いじわるの準備、できてるよ？♡' },
     hard: { e: 'happy', t: 'ちくちくいくからね。泣いても知らないよ〜w' },
     expert: { e: 'wink', t: 'とっておきの意地悪、ぜんぶ持ってきたよ♡' },
@@ -52550,26 +52550,26 @@ const CARD_VS_LINES = Object.freeze({
     normal: { e: 'happy', t: 'じっくりためて、大きいのを当てまつ！' },
     hard: { e: 'excited', t: 'ガッツ、たっぷりためてきまちた。どっかんいきまつよ(˘ω˘)9' },
     expert: { e: 'excited', t: '全部の弾から大技を集めまちた。覚悟してくだちゃい！' },
-    master: { e: 'wink', t: 'いちばん強いききで、お相手しまつね。' },
+    master: { e: 'wink', t: 'いちばん強いききで、《お相手》しまつね。' },
   },
   kyuko: {
     easy: { e: 'happy', t: '気楽にいこうねぇ。数えるのは、ほどほどに笑' },
     normal: { e: 'happy', t: 'ガッツと手札の数え合い、始めよっかw' },
     hard: { e: 'wink', t: '三手先まで、もう見えてるよ笑' },
     expert: { e: 'excited', t: '全部の弾から読み筋を組んできたよw' },
-    master: { e: 'wink', t: 'きみのデッキも見て組み直したよ。読み合い、しよっか' },
+    master: { e: 'wink', t: 'きみのデッキも見て《組み直したよ。》読み合い、しよっか' },
   },
   dra: {
     easy: { e: 'happy', t: '気楽にいこうな。おでは守ってるだけだよ' },
     normal: { e: 'happy', t: 'まずは守りを固めるとこからだな' },
-    hard: { e: 'excited', t: '打ってこい。全部はね返してやるよ' },
+    hard: { e: 'excited', t: '打ってこい。全部《はね返して》やるよ' },
     expert: { e: 'excited', t: '全部の弾から一番かたい守りを持ってきた' },
     master: { e: 'wink', t: '本気の要塞だ。崩せるもんなら崩してみな' },
   },
   atsu: {
-    easy: { e: 'happy', t: 'ゆるくいこうぜ笑 全体攻撃はちょっとだけな' },
-    normal: { e: 'excited', t: 'まとめて吹っ飛ばすぞ！ 楽しもうぜ笑' },
-    hard: { e: 'excited', t: '全員まとめていくからな。覚悟しとけよ笑' },
+    easy: { e: 'happy', t: 'ゆるくいこうぜ笑 《全体攻撃》はちょっとだけな' },
+    normal: { e: 'excited', t: 'まとめて吹っ飛ばすぞ！ 《楽しもうぜ笑》' },
+    hard: { e: 'excited', t: '全員まとめていくからな。《覚悟しとけよ笑》' },
     expert: { e: 'excited', t: '全部の弾から全体攻撃を集めてきた！' },
     master: { e: 'wink', t: '本気のあつだ。一気に終わらせるぞ！' },
   },
@@ -52717,7 +52717,8 @@ const CardVsIntro = ({ db, intro, onDone }) => {
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>
-              {foe.line && foe.line.t && <p data-card-vs-line className="mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900" style={JA_WRAP_STYLE}>{helpWrap(foe.line.t)}</p>}
+              {/* 《》で囲んだ言葉は途中で折らない(《》は出さない。ルールの画面と同じ cardRuleLine。言葉の切れ目の道具が「や/さしく」と切ったため。見回り 新2) */}
+              {foe.line && foe.line.t && <p data-card-vs-line className="mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900" style={JA_WRAP_STYLE}>{cardRuleLine(foe.line.t)}</p>}
             </div>
           </div>
           <CardVsDeckName text={foe.deckName} tone="foe"/>
@@ -55600,6 +55601,22 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
 const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor = null }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  // 絞り込みの列: 「モンスター」「デッキ」「技など全部」(先頭の3つ)を選んだときは列を左はしへ戻し、種類の札を選んだときはその札が見える所まで動かす
+  //   (右はしで切れた札を押すと列が右へ流れ、左はしの「モンスター 3/3」が「ター 3/3」と切れて見えた。2026-10-26 2回目の見回り)
+  //   ★scrollIntoView は使わない(縦にも動く。viewport-height-check)。列の横の位置だけを動かす
+  const chipsRow = useRef(null);
+  useEffect(() => {
+    try {
+      const row = chipsRow.current;
+      if (!row) return;
+      const idx = CARD_DECK_VIEWS.findIndex((f) => f.id === view);
+      if (idx <= 2) { row.scrollLeft = 0; return; }
+      const el = row.querySelector(`[data-card-deck-filter="${view}"]`);
+      if (!el) return;
+      if (el.offsetLeft < row.scrollLeft) row.scrollLeft = el.offsetLeft - 8;
+      else if (el.offsetLeft + el.offsetWidth > row.scrollLeft + row.clientWidth - 24) row.scrollLeft = el.offsetLeft + el.offsetWidth - row.clientWidth + 32;
+    } catch (_) { /* 古い端末は動かさない */ }
+  }, [view]);
   const [sort, setSort] = useState('kind');
   const [usableOnly, setUsableOnly] = useState(true);
   const [notice, setNotice] = useState('');
@@ -55699,8 +55716,8 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           </div>
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
           {/* 縦の画面では右端をぼかして、横に続きがあると分かるようにする(端で札が半分に切れて、壊れて見えた。2026-10-26 見回り) */}
-          <div data-card-deck-chips className="mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0" style={land ? undefined : { WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)', maskImage: 'linear-gradient(to right, #000 82%, transparent)' }}>
-            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
+          <div ref={chipsRow} data-card-deck-chips className="mh-scroll relative mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0" style={land ? undefined : { WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)', maskImage: 'linear-gradient(to right, #000 82%, transparent)' }}>
+            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
             {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
             <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
