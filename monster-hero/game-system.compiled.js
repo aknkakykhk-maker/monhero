@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: edf8dd13ac7237e7
+// source-sha256: f8a50992d8393a9e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -59890,7 +59890,7 @@ function MasuOfferingScreen({
     className: "grid grid-cols-4 gap-1.5"
   }, OFFERING_DIAMOND_STEPS.map(step => React.createElement("button", {
     key: step,
-    className: stepBtn,
+    className: `${stepBtn} whitespace-nowrap px-1 max-[359px]:text-[11px] max-[359px]:tracking-tight`,
     onClick: () => setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount + step)))
   }, "+", fmt(step)))), React.createElement("div", {
     className: "grid grid-cols-2 gap-1.5"
@@ -109016,6 +109016,7 @@ function MonsterHeroGame() {
         point
       }, Math.random);
       if (!r) {
+        void loadCardShop();
         setMarketExchangeError('ビートPが足りません。');
         return {
           ok: false,
@@ -109090,6 +109091,7 @@ function MonsterHeroGame() {
         shop: cardNormalizeShop(rawShop)
       }, Date.now());
       if (!r) {
+        void loadCardShop();
         setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。');
         return {
           ok: false,
@@ -120311,7 +120313,8 @@ function MonsterHeroGame() {
     const power = powerOverride !== undefined ? powerOverride : monsterPowerOf(mon);
     const norm = masu ? normalizeMasuProgression(masu) : null;
     const lvl = masu ? masuBondLevelInfo(masu) : null;
-    const xpPct = lvl ? Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100)) : 0;
+    const bondMaxed = !!(lvl && norm && lvl.level >= norm.levelCap);
+    const xpPct = bondMaxed ? 100 : lvl ? Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100)) : 0;
     const fused = masu ? (masu.fusionHistory || []).length > 0 : false;
     return React.createElement("div", {
       className: "flex items-start gap-3 border-b border-white/10 pb-3 shrink-0"
@@ -120395,7 +120398,7 @@ function MonsterHeroGame() {
       }
     })), React.createElement("div", {
       className: "text-[10px] text-pink-400/70 font-mono tabular-nums"
-    }, lvl.xpIntoLevel.toLocaleString(), " / ", lvl.xpForNext.toLocaleString(), " XP")), masu && onRename && !compact && React.createElement("div", {
+    }, bondMaxed ? 'MAX' : `${lvl.xpIntoLevel.toLocaleString()} / ${lvl.xpForNext.toLocaleString()} XP`)), masu && onRename && !compact && React.createElement("div", {
       "data-masu-lock-row": true,
       className: "grid grid-cols-2 gap-1.5 pt-1"
     }, ['keep', 'rebirth'].map(kind => {
