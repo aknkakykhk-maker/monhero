@@ -415,6 +415,10 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
         </div>)}
       </div>
     </div>}
+      {item.giftHow&&<div data-market-frame-gift className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
+        <div className="text-amber-300 leading-snug" style={JA_WRAP_STYLE}>{jaWrap(`手に入れ方：${item.giftHow}`)}</div>
+        <div className="mt-1 text-[11px] text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('マーケットでは買えません。プレゼントで届きます')}</div>
+      </div>}
       {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
         <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
         <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
@@ -422,7 +426,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
       {!item.groupMembers&&<div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>}
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
-      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
+      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{item.giftOnly?'プレゼント':marketPriceText(item)}</span></div>
     </div>
     <div className="mt-3"><MarketModalClose onClick={onClose}/></div>
   </MarketModal>;

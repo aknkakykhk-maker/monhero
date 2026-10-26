@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dbbd1611367ec26d
+// generated-sha256: 33f1fbd23ae8db3d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11563,6 +11563,10 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
         </div>)}
       </div>
     </div>}
+      {item.giftHow&&<div data-market-frame-gift className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
+        <div className="text-amber-300 leading-snug" style={JA_WRAP_STYLE}>{jaWrap(`手に入れ方：${item.giftHow}`)}</div>
+        <div className="mt-1 text-[11px] text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('マーケットでは買えません。プレゼントで届きます')}</div>
+      </div>}
       {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
         <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
         <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
@@ -11570,7 +11574,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
       {!item.groupMembers&&<div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>}
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
-      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
+      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{item.giftOnly?'プレゼント':marketPriceText(item)}</span></div>
     </div>
     <div className="mt-3"><MarketModalClose onClick={onClose}/></div>
   </MarketModal>;
@@ -33347,7 +33351,9 @@ function BreederMarketScreen({
   // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
   // プレゼントで届く枠(ハロウィン・妖)も、条件だけ並べる。買えない・値段は出さない(2026-10-25 社長「ハロウィン・妖もマーケットに条件だけ出して」)
   const giftFrameItems = (typeof releasedProfileFrames==='function'?releasedProfileFrames():[]).filter(frame=>profileFrameGift(frame))
-    .map(frame=>({ id:frame.id, name:frame.name, emoji:'🖼️', type:'frame', currency:'breederPoint', cost:0, desc:frame.desc||'', giftOnly:true }));
+    // 名前・「詳細」の印・札の折り方は、ほかのフレームの札にそろえる(2026-10-26 ダメダシくんの見回り「のフレームが無い・詳細が無い・届／く」)
+    .map(frame=>({ id:frame.id, name:`${frame.name}のフレーム`, emoji:'🖼️', type:'frame', currency:'breederPoint', cost:0, desc:frame.desc||'', giftOnly:true,
+      giftHow:PROFILE_FRAME_GIFT_LABELS[profileFrameGift(frame)]||'プレゼントで届きます' }));
   const breederFrameItems = [...marketItems.filter(item=>item.type==='frame'), ...giftFrameItems];
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
@@ -33425,13 +33431,13 @@ function BreederMarketScreen({
     return (
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard previewIcon={previewIcon}
-          item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?PROFILE_FRAME_GIFT_LABELS[profileFrameGift(profileFrameById(item.id))]||'プレゼントで届きます':frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
+          item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
