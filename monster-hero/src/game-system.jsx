@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ff09f4039b272be8
+// generated-sha256: bbe20fdc4da7030f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -30206,13 +30206,25 @@ const sbFetchFriendRoster = async (selfIdRaw) => {
 const FRIEND_PLACE_TEXT = Object.freeze({
   home: 'ホームにいます', battle: 'バトル中', rhythm: 'モンヒロビートで遊び中', multi: 'みんなで対戦中',
   masu: 'マスモンのお世話中', market: 'マーケットを見ています', other: 'ログイン中',
+  // MFバトルカード(2026-10-27 社長「対戦中だけ分ける」・台帳 #235)。表の place には入れられない値なので、
+  //   表へは 'other' を送り、細かい場所は records.pl に載せる(FRIEND_SUB_PLACES・friendsPlaceFromRow)。古い版の人には「ログイン中」と出る
+  card: 'MFバトルカードで遊び中', cardBattle: 'MFバトルカードで対戦中',
 });
+// 表(friend_profiles.place)の決まり(check)に無い場所。表へは 'other' で送り、records.pl に本当の場所を載せる
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+// 受け取った行の場所。place が 'other' で records.pl があれば、そちら
+const friendsPlaceFromRow = (place, records) => {
+  if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
+  return Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : null;
+};
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、この間隔で「いま遊んでいる」と知らせる
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
 // 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
 const friendsPlaceOfScreen = (gameState) => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
+  if (name === 'CARD_BATTLE') return 'cardBattle';
+  if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
@@ -30356,6 +30368,7 @@ const friendsNormalizeRecords = (raw) => {
     ? { s: e.s.slice(0, 80), d: e.d.slice(0, 20), sc: friendsInt(e.sc), f: [0, 1, 2, 3].includes(e.f) ? e.f : 0 } : null).filter(Boolean).slice(0, FRIEND_RECORD_SONG_MAX);
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
+    pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
     battle,
     rhythm: { played: friendsInt(raw.rhythm && raw.rhythm.played), songs, ach: friendsNormalizeAchievements(raw.rhythm && raw.rhythm.ach) },
     collection: { masu: friendsInt(c.masu), dex: friendsInt(c.dex), dexTotal: friendsInt(c.dexTotal), transcended: friendsInt(c.transcended),
@@ -30399,8 +30412,9 @@ const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime, messag
 const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   const id = friendsSafeId(breederIdRaw);
   if (!id || !summary) return false;
+  const sub = FRIEND_SUB_PLACES.includes(summary.place) ? summary.place : null;
   const base = {
-    breeder_id: id, place: summary.place, started_on: summary.startedOn, play_seconds: summary.playSeconds,
+    breeder_id: id, place: sub ? 'other' : summary.place, started_on: summary.startedOn, play_seconds: summary.playSeconds,
     best_bond: summary.bestBond, best_bond_mon: summary.bestBondMon, best_power: summary.bestPower,
     best_power_mon: summary.bestPowerMon, favorite: summary.favorite,
   };
@@ -30410,7 +30424,9 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
     // message / records の列がまだ無い環境(SQL未適用)では、その2つを外して送る。ほかの情報は今までどおり届く
     if (_friendProfileExtraUnavailable) await send(base);
     else {
-      try { await send({ ...base, message: summary.message, records: summary.records }); }
+      // MFバトルカードの場所は records.pl に載せる(records が無いときも、場所だけは載せる)
+      const records = sub ? { ...(summary.records || {}), pl: sub } : summary.records;
+      try { await send({ ...base, message: summary.message, records }); }
       catch (error) {
         if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
           _friendProfileExtraUnavailable = true;
@@ -30483,7 +30499,7 @@ const sbFetchFriendSummaries = async (ids) => {
       const num = (value) => (Number.isFinite(Number(value)) && value !== null ? Number(value) : null);
       const fav = row.favorite && typeof row.favorite === 'object' && !Array.isArray(row.favorite) && typeof row.favorite.monsterId === 'string' ? row.favorite : null;
       byId[row.breeder_id] = {
-        place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, row.place) ? row.place : null,
+        place: friendsPlaceFromRow(row.place, row.records),
         startedOn: (typeof row.started_on === 'string' && FRIEND_DAY_RE.test(row.started_on)) ? row.started_on : null,
         playSeconds: num(row.play_seconds),
         bestBond: num(row.best_bond), bestBondMon: typeof row.best_bond_mon === 'string' ? row.best_bond_mon : null,
@@ -56614,7 +56630,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {foes.map((x) => (
               <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
                 <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"/>
-                <span className="text-[13px] font-black">{x.name}</span>
+                {/* 名前は折らない。横の小さい画面(568×320)では札が細く「みゅ/あ」「もも/すけ」と折れたので、入らなければ字を小さくする(2026-10-26 ソランドくん) */}
+                <span className="block w-full" style={{ containerType: 'inline-size' }}><span data-card-foe-name className="block whitespace-nowrap text-center font-black" style={{ fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))` }}>{x.name}</span></span>
                 {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
               </button>
             ))}
@@ -56659,15 +56676,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           )}
           {a && <CardFoeStyle db={db} who={a.id} level={foe.level}/>}
           </div>
-          <div className={SCREEN_PANEL_FLAT_CLASS}>
-            {/* プレイヤーが対戦に使うデッキ。「使うデッキ」だと相手の助手のデッキと読まれた(2026-10-26 社長)ので「あなたの」と書く。助手のデッキは上の欄(好きな子・よく使うカード) */}
-            <div className="text-[12px] font-bold text-slate-300">あなたのデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
-            {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
-            {!save.daily.firstWin && <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</div>}
-          </div>
           {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
+          {/* プレイヤーが対戦に使うデッキ。「使うデッキ」だと相手の助手のデッキと読まれた(2026-10-26 社長)ので「あなたの」と書く。助手のデッキは上の欄(好きな子・よく使うカード)
+              「対戦する」のすぐ上に固定する。上の一覧の終わりに置いていたら、375×667 で「対戦する」の帯の下に隠れ、だれのデッキで戦うか見ないまま押せた(2026-10-26 ソランドくん) */}
+          <div data-card-foe-mydeck className="mb-1.5 px-0.5">
+            <div className="flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300">
+              <span style={JA_LABEL_STYLE}>あなたのデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></span>
+              {!save.daily.firstWin && <span className="text-[11px] text-slate-400" style={JA_LABEL_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</span>}
+            </div>
+            {deckIssues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
+          </div>
           <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || deckIssues.length > 0} onClick={() => startBattle(foe)}>対戦する</button>
         </div>
       </div>
