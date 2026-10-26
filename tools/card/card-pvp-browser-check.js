@@ -353,6 +353,27 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await A.evaluate(() => document.getElementById('pvp-line-sheet')?.remove());
     }
     await shot(A, 'pvp-03-A-result'); await shot(B, 'pvp-03-B-result');
+    // ⑫ もう1戦(2026-10-26 社長「全部入れる」): 片方が押すと待ちになり、相手には「相手が待っています」。2人とも押すと同じ部屋で次の試合。
+    //    前の試合の封・手が混ざらず、最後まで戦えて、確かめも「正しく終わった」になる
+    const matchOf = (page) => page.evaluate(() => CARD_PVP.get().match);
+    const m1 = await matchOf(A);
+    await A.locator('[data-card-pvp-again]').click();
+    const waitMine = await A.locator('[data-card-pvp-again="waiting"]').waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    const waitFoe = await B.locator('[data-card-pvp-again="foe"]').waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    await shot(B, 'pvp-03c-again-foe');
+    check('⑫ 「もう1戦」を押すと待ちになり、相手の画面に「相手が待っています」が出る', waitMine && waitFoe);
+    await B.locator('[data-card-pvp-again]').click();
+    const rematched = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
+    const m2 = await matchOf(A);
+    check('⑫ 2人とも押すと、同じ部屋で次の試合が始まる(試合の印が新しくなる・2台で同じ)', rematched && !!m2 && m2 !== m1 && (await matchOf(B)) === m2, `${m1} → ${m2}`);
+    const end12 = Date.now() + 300000;
+    while (Date.now() < end12 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
+    const r12 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+    check('⑫ もう1戦も最後まで戦えて、片方が勝ち・片方が負け', !!r12[0] && !!r12[1] && r12[0] !== r12[1], r12.join(' / '));
+    const v12 = [await waitVerify(A), await waitVerify(B)];
+    check('⑫ もう1戦も、山札を見せ合って両方で「正しく終わった」(前の試合の封が混ざらない)', v12[0] === 'ok' && v12[1] === 'ok', v12.join(' / '));
+    const reward12 = await A.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check('⑫ もう1戦の報酬も出る', reward12);
     // ⑦ だれとでも: 2台とも部屋を出て、受付から出会う
     const reportsBefore = reports.length;
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }

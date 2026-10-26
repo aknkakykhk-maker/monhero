@@ -233,7 +233,8 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
           ))}
         </div>
       )}
-      <div data-pro-pick-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+      {/* 選んだ札の光る縁が左右の端で欠けないよう、内側に少し余白(320 で左右の列の縁が切れていた。2026-10-27 ジン) */}
+      <div data-pro-pick-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-1">
       {pinnedIds.length>0&&(<>
         <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使った子</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
@@ -322,7 +323,8 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
         <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7">
           {m?(m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt="" masuColors={m.colors} className="h-full w-full object-contain"/>:<span className="text-xl">{m.emoji}</span>):<span className={`text-[15px] font-black ${on?'text-indigo-100':'text-slate-600'}`}>+</span>}
         </span>
-        <span className="mt-0.5 w-full truncate text-[9px] font-black leading-tight text-white">{m?m.name:(on?'ここに入る':'空き')}</span>
+        {/* 「…」で切らず、枠の幅に合わせて字を縮めて1行に収める(320 で「ここに…」「オボロゲ…」と切れていた。2026-10-27 ジン) */}
+        {(()=>{const label=m?m.name:(on?'ここに入る':'空き');return <span className="mt-0.5 w-full whitespace-nowrap overflow-hidden font-black leading-tight text-white [container-type:inline-size]"><span className="block" style={{fontSize:`min(9px, calc(100cqw / ${[...label].length+0.3}))`}}>{label}</span></span>;})()}
         {/* タイプは枠が狭いので絵文字だけ(メイン・サブ)。名前は下の詳しい情報に出る */}
         {m&&monsterTypeProtoOn()&&(()=>{const t=monsterTypeOf(m.id);const icons=[t.main,t.sub].filter(k=>k&&MONSTER_TYPES[k]).map(k=>MONSTER_TYPES[k]);return <span data-pro-party-type={t.main} title={icons.map(d=>d.label).join('・')} className="text-[9px] leading-[11px] [@media(max-height:640px)]:hidden">{icons.map(d=>d.icon).join('')}<span className="sr-only">{icons.map(d=>d.label).join('・')}</span></span>;})()}
         {m&&step==='members'&&<span aria-hidden="true" className="absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100">×</span>}
@@ -805,7 +807,8 @@ function PickSlotScreen({
           <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
             <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
-            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?'この距離で':'合流後'} {formatAptPct(after)}</span>
+            {/* 従来のモードは「合流すると +◯%」(この子が足すぶん)。合流後の合計は勇者モンの詳細の「くわしく」に出す(2026-10-27 社長OK) */}
+            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?`この距離で ${formatAptPct(after)}`:`合流すると ${aptGradeToPct(grade)===0?'+':''}${formatAptPct(aptGradeToPct(grade))}`}</span>
           </>):(<>
             {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="relative w-10 h-10 object-contain drop-shadow-md"/>:<span className="relative text-2xl drop-shadow-md">{s.emoji}</span>}
             <span className="relative max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>

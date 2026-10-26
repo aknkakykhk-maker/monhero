@@ -1111,6 +1111,8 @@ const sbUpsertBreederProfile = async ({ breederId, userName, icon, profileFrame 
 // ★表がまだ無い環境(SQL未適用)では何もせず、今までどおりの表示になる。
 const BREEDER_LEVELS_TABLE = 'breeder_levels';
 const BREEDER_LEVELS_SELECT = 'breeder_id,user_name,level,icon';
+// これ未満のLvは表へ送らない(Lv.1の端末が行を積み上げないように。送る側=60-app.jsx の effect が使う)
+const BREEDER_LEVEL_PUBLISH_MIN = 2;
 const BREEDER_LEVELS_PAGE_SIZE = 1000;
 const BREEDER_LEVELS_MAX_PAGES = 30;
 let _breederLevelsUnavailable = false;
