@@ -55,3 +55,6 @@
 
 ## 2026-10-26 クイックモードを最後まで・リザルト
 → [damedashi-2026-10-26/quick-result/README.md](damedashi-2026-10-26/quick-result/README.md)(3件)
+
+## 2026-10-26 モンヒロビートを1曲演奏・リザルト
+→ [damedashi-2026-10-26/beat-result/README.md](damedashi-2026-10-26/beat-result/README.md)(1件)
