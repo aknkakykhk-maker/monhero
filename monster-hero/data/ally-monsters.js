@@ -256,13 +256,13 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C064_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'durahan', sub:'golem' }) }),
   Gigalon: Object.freeze({ id:'Gigalon', name:"ギガロン", emoji:"🐋", imgUrl:HYBRID_C065_IMG, iconUrl:HYBRID_C065_IMG,
     faceIconUrl:HYBRID_C065_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'zilla', sub:'gel' }) }),
-  // 社長から立ち絵が届いた5体(2026-10-26)。顔アイコンは A〜D の案から社長が選ぶまで付けない
+  // 社長から立ち絵が届いた5体(2026-10-26)。顔アイコンは社長が A〜D から選んだもの(まだ決まっていない子は付けない)
   BlueMountainHybrid: Object.freeze({ id:'BlueMountainHybrid', name:"ブルーマウンテン", emoji:"🏔️", imgUrl:HYBRID_C011_IMG, iconUrl:HYBRID_C011_IMG,
     draft:true, draftLineage:Object.freeze({ main:'golem', sub:'tiger' }) }),
   MagnaBeetle: Object.freeze({ id:'MagnaBeetle', name:"マグナビートル", emoji:"🪨", imgUrl:HYBRID_C032_IMG, iconUrl:HYBRID_C032_IMG,
-    draft:true, draftLineage:Object.freeze({ main:'golem', sub:'worm' }) }),
+    faceIconUrl:HYBRID_C032_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'golem', sub:'worm' }) }),
   GinGiLiger: Object.freeze({ id:'GinGiLiger', name:"ギンギライガー", emoji:"🐺", imgUrl:HYBRID_C044_IMG, iconUrl:HYBRID_C044_IMG,
-    draft:true, draftLineage:Object.freeze({ main:'tiger', sub:'unknown' }) }),
+    faceIconUrl:HYBRID_C044_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'tiger', sub:'unknown' }) }),
   // 最初は立ち絵が無く「影で並べる」予定だった2体。同じ日に絵が届いた
   Ankylox: Object.freeze({ id:'Ankylox', name:"アンキロックス", emoji:"🦕", imgUrl:HYBRID_C014_IMG, iconUrl:HYBRID_C014_IMG,
     draft:true, draftLineage:Object.freeze({ main:'dino', sub:'golem' }) }),

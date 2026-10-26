@@ -397,6 +397,9 @@ const HYBRID_C042_FACE_ICON = "images/monster-icons/face/c042.png?v=9331e5dd8316
 const HYBRID_C020_FACE_ICON = "images/monster-icons/face/c020.png?v=12bdba21a409";
 const HYBRID_C043_FACE_ICON = "images/monster-icons/face/c043.png?v=656a46dd72a0";
 const HYBRID_C045_FACE_ICON = "images/monster-icons/face/c045.png?v=cbe99cc190ae";
+// 2026-10-26 社長が選んだ顔アイコン(案の子・カードの画面の HYBRID_MONSTER_FACE_ICONS へはまだ入れない)
+const HYBRID_C044_FACE_ICON = "images/monster-icons/face/c044.png?v=8c4395c28bd3";
+const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,
