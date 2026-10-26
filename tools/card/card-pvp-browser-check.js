@@ -310,6 +310,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const end2 = Date.now() + 300000;
     while (Date.now() < end2 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
     const r2 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+    // マルチの結果の画面にも、自分と相手のアイコンの1行(2026-10-26 社長: 結果の画面にも自分のアイコンを)
+    const vsRow = await A.locator('[data-card-result-vs]').innerText().catch(() => '');
+    await shot(A, 'pvp-06-result-vs');
+    check('⑦ マルチの結果の画面に、自分と相手のアイコン・名前・勝ち負けの1行が出る', /検査ブリーダー/.test(vsRow) && /vs/.test(vsRow) && /勝ち|負け|投了/.test(vsRow), vsRow.replace(/\s+/g, ' '));
     check('⑦ だれとでもの対戦も最後まで戦えて、片方が勝ち・片方が負け', !!r2[0] && !!r2[1] && r2[0] !== r2[1], r2.join(' / '));
     for (let i = 0; i < 40 && reports.length - reportsBefore < 2; i++) await A.waitForTimeout(500);
     const mine = reports.slice(reportsBefore);

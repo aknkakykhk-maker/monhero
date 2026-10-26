@@ -15,6 +15,9 @@
 //   ⑧ 320・390: カードの大写しのあいだ、後ろの記録の字と助手の吹き出しが消えている(見回り2回目の新4)
 //   ⑨ 320×568: カララギマンゴーを選んで狙うとき・「攻撃できない」の子がいるときも、下のボタンが画面の中(最後の見回り)
 //   ⑩ 助手全員の結果の台詞で、記号だけが行頭に来ない(最後の見回り)
+//   ⑫ 対戦開始の画面(VS)の自分側にも、自分のアイコンが出る
+//   ⑬ 助手と対戦の結果の画面に「自分 vs 助手・勝ち負け」の1行(マルチの結果は card-pvp-browser-check)
+//   ⑪ 320・375・390・横844: 自分の帯に自分のアイコン(フレーム付き)と名前が出る・名前が切れない・手札にかからない
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -35,6 +38,7 @@ const serve = () => new Promise((resolve) => {
   server.listen(PORT, () => resolve(server));
 });
 let failed = 0;
+const vsSeen = [];
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 
@@ -104,6 +108,13 @@ const openBattle = async (browser, cfg, errors) => {
   await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
   await page.locator('[data-card-foe="momosuke"]').click();
   await page.locator('[data-card-start]').click();
+  // VS(対戦開始の画面)の自分側のアイコンを見る(cfg.vs のとき)
+  if (cfg.vs) {
+    const ok = await page.locator('[data-card-vs-me-icon]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    await page.waitForTimeout(1500);
+    if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `vs-me-${cfg.viewport.width}.png`) }); }
+    vsSeen.push(`${cfg.viewport.width}:${ok}`);
+  }
   await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
   await page.waitForFunction((m) => document.querySelector('[data-card-battle]') && document.querySelector('[data-card-battle]').getAttribute('data-card-mode') === m, cfg.mode || 'attack', { timeout: 20000 });
   return page;
@@ -297,6 +308,38 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
         return { count: lines.length, out };
       });
       check(`⑩ 助手全員の結果の台詞(${bad.count}本)で、記号だけが行頭に来ない(幅112〜170px)`, bad.count > 20 && bad.out.length === 0, bad.out.slice(0, 4).join(' / '));
+      await page.close();
+    }
+    // ⑪ 自分の帯に、自分のアイコン(プロフィールのアイコン+フレーム)と名前が出る。名前は切れない・手札にかからない(2026-10-26 社長「バトル中とかに自分のアイコンとかも出るようにしたいね」)
+    for (const [w, h] of [[320, 568], [375, 667], [390, 844], [844, 390]]) {
+      const page = await openBattle(browser, { ...base, active: 0, mode: 'attack', vs: true, viewport: { width: w, height: h } }, errors);
+      await page.waitForTimeout(600);
+      if (await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
+      await page.waitForTimeout(300);
+      const r = await page.evaluate(() => {
+        const ic = document.querySelector('[data-card-me-icon]'), nm = document.querySelector('[data-card-me-name]'), head = document.querySelector('[data-card-me-head]'), hand = document.querySelector('[data-card-hand]');
+        if (!ic || !nm || !head || !hand) return null;
+        const a = head.getBoundingClientRect(), b = hand.getBoundingClientRect(), q = ic.getBoundingClientRect();
+        const side = a.right <= b.left + 1 || b.right <= a.left + 1;
+        return { name: nm.innerText, cut: nm.scrollWidth > nm.clientWidth + 1, icon: !!ic.querySelector('img, span'), iconPx: Math.round(q.width), headH: Math.round(a.height), over: !side && a.bottom > b.top + 1 };
+      });
+      await shot(page, `me-icon-${w}x${h}`);
+      check(`⑪ ${w}×${h}: 自分の帯にアイコンと名前が出る・名前が切れない・手札にかからない`, r && r.icon && r.name === '検査ブリーダー' && !r.cut && !r.over && r.headH <= 32, JSON.stringify(r));
+      await page.close();
+    }
+    check('⑫ 対戦開始の画面(VS)の自分側に、自分のアイコンが出る(320・375・390・横844)', vsSeen.length === 4 && vsSeen.every((x) => x.endsWith(':true')), vsSeen.join(' / '));
+    // ⑬ 助手と対戦の結果の画面に「自分のアイコン+名前 vs 助手の顔+名前・勝ち負け」の1行が出る(投了して見る)。320 と 390
+    for (const [w, h] of [[320, 568], [390, 844]]) {
+      const page = await openBattle(browser, { ...base, active: 0, mode: 'attack', viewport: { width: w, height: h } }, errors);
+      await page.waitForTimeout(400);
+      await page.locator('[data-card-quit]').click();
+      await page.getByRole('button', { name: '投了する' }).click();
+      const ok = await page.locator('[data-card-result-vs]').waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+      await page.waitForTimeout(500);
+      const r = ok ? await page.locator('[data-card-result-vs]').evaluate((el) => ({ text: el.innerText.replace(/\s+/g, ' '), icon: !!el.querySelector('[data-card-result-me-icon] img, [data-card-result-me-icon] span'),
+        cut: [...el.querySelectorAll('span')].some((x) => getComputedStyle(x).whiteSpace === 'nowrap' && x.scrollWidth > x.clientWidth + 1), right: el.getBoundingClientRect().right <= innerWidth })) : null;
+      await shot(page, `result-vs-${w}`);
+      check(`⑬ ${w}×${h}: 助手と対戦の結果に「自分 vs 助手・勝ち負け」の1行(名前は切れない)`, r && r.icon && /検査ブリーダー/.test(r.text) && /ももすけ/.test(r.text) && /投了/.test(r.text) && !r.cut && r.right, JSON.stringify(r));
       await page.close();
     }
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));

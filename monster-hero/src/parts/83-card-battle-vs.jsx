@@ -183,7 +183,7 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
 const CardVsDeckName = ({ text, tone }) => text ? (
   <div data-card-vs-deck-name className={`mh-vs-fade max-w-full rounded-2xl px-3 py-0.5 text-center font-black leading-tight ${String(text).length > 16 ? 'text-[11px]' : 'text-[13px]'} ${tone === 'foe' ? 'bg-rose-950/80 text-rose-100' : 'bg-sky-950/80 text-sky-100'}`} style={{ ...JA_LABEL_STYLE, animationDelay: tone === 'foe' ? '450ms' : '1250ms' }}>{jaWrap(text)}</div>
 ) : null;
-const CardVsIntro = ({ db, intro, onDone }) => {
+const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
   const done = useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone && onDone(); };
   const ms = CARD_VS_MS[intro.mode] || CARD_VS_MS.assistant;
@@ -222,7 +222,11 @@ const CardVsIntro = ({ db, intro, onDone }) => {
         <div data-card-vs-side="me" className="flex min-h-0 flex-col items-center justify-start gap-1.5 px-3 pb-3 pt-2 landscape:flex-1 landscape:justify-center">
           <CardVsMonsters db={db} monsters={me.monsters} side="me" start={short ? 500 : 1100} step={step}/>
           <CardVsDeckName text={me.deckName} tone="me"/>
-          <b className="mh-vs-fade text-[14px] font-black" style={{ ...JA_LABEL_STYLE, animationDelay: short ? '600ms' : '1200ms' }}>{me.name || 'あなた'}</b>
+          {/* 自分のアイコン(プロフィールのアイコン+フレーム。盤の自分の帯と同じ部品・84 が 60-app から受け取って渡す)と名前(2026-10-26 社長) */}
+          <div className="mh-vs-fade flex max-w-full items-center gap-2" style={{ animationDelay: short ? '600ms' : '1200ms' }}>
+            {meIcon && <span data-card-vs-me-icon aria-hidden="true" className="block h-8 w-8 shrink-0">{meIcon}</span>}
+            <b className="min-w-0 text-[14px] font-black" style={JA_LABEL_STYLE}>{me.name || 'あなた'}</b>
+          </div>
         </div>
       </div>
       <p className="relative z-[1] shrink-0 pb-2 text-center text-[10px] font-bold text-white/60">タップで始める</p>

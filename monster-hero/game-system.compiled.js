@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f23817b07de9d56e
+// source-sha256: 05d709a87625a809
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 20:25";
+const BUILD_DATE = "2026-10-26 20:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86940,7 +86940,8 @@ const CardVsDeckName = ({
 const CardVsIntro = ({
   db,
   intro,
-  onDone
+  onDone,
+  meIcon = null
 }) => {
   const done = useRef(false);
   const finish = () => {
@@ -87045,13 +87046,19 @@ const CardVsIntro = ({
   }), React.createElement(CardVsDeckName, {
     text: me.deckName,
     tone: "me"
-  }), React.createElement("b", {
-    className: "mh-vs-fade text-[14px] font-black",
+  }), React.createElement("div", {
+    className: "mh-vs-fade flex max-w-full items-center gap-2",
     style: {
-      ...JA_LABEL_STYLE,
       animationDelay: short ? '600ms' : '1200ms'
     }
-  }, me.name || 'あなた'))), React.createElement("p", {
+  }, meIcon && React.createElement("span", {
+    "data-card-vs-me-icon": true,
+    "aria-hidden": "true",
+    className: "block h-8 w-8 shrink-0"
+  }, meIcon), React.createElement("b", {
+    className: "min-w-0 text-[14px] font-black",
+    style: JA_LABEL_STYLE
+  }, me.name || 'あなた')))), React.createElement("p", {
     className: "relative z-[1] shrink-0 pb-2 text-center text-[10px] font-bold text-white/60"
   }, "タップで始める"));
 };
@@ -88290,6 +88297,48 @@ const CardBattleTeaser = ({
     className: "mh-button mh-button-primary mt-3 min-h-[48px] w-full rounded-2xl text-[14px] font-black active:scale-[.98]"
   }, "閉じる")))));
 };
+const CardResultVsName = ({
+  name
+}) => React.createElement("span", {
+  className: "block min-w-0",
+  style: {
+    containerType: 'inline-size',
+    flex: `${Math.max(2, [...String(name || '')].length)} 1 0`
+  }
+}, React.createElement("span", {
+  className: "block overflow-hidden whitespace-nowrap font-black leading-tight text-white",
+  style: {
+    fontSize: `clamp(8px, ${(96 / Math.max(1, [...String(name || '')].length)).toFixed(1)}cqw, 13px)`
+  }
+}, name));
+const CardResultVsRow = ({
+  meIcon = null,
+  meName = 'あなた',
+  foeNode = null,
+  foeName = '',
+  outcome = ''
+}) => React.createElement("div", {
+  "data-card-result-vs": true,
+  className: "flex items-center gap-1.5 rounded-2xl border border-white/10 bg-slate-900/70 px-2 py-1.5"
+}, React.createElement("span", {
+  "data-card-result-me-icon": true,
+  "aria-hidden": "true",
+  className: "block h-8 w-8 shrink-0"
+}, meIcon || React.createElement("span", {
+  className: "grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-[18px]"
+}, "🧑")), React.createElement(CardResultVsName, {
+  name: meName
+}), React.createElement("span", {
+  className: "shrink-0 text-[12px] font-black italic text-amber-300"
+}, "vs"), React.createElement("span", {
+  "aria-hidden": "true",
+  className: "block h-8 w-8 shrink-0"
+}, foeNode), React.createElement(CardResultVsName, {
+  name: foeName
+}), outcome && React.createElement("span", {
+  "data-card-result-vs-outcome": true,
+  className: `shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black ${outcome === '勝ち' ? 'bg-amber-300 text-slate-950' : 'bg-slate-700 text-slate-100'}`
+}, outcome));
 const CardResultTalk = ({
   a,
   lineScene,
@@ -88819,7 +88868,8 @@ const CardBattleBoard = ({
   game,
   onFinish,
   quickRun = null,
-  meProfile = null
+  meProfile = null,
+  meIcon = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
   const pace = CARD_THINK_PACE[settings.think] || 1;
@@ -90042,8 +90092,31 @@ const CardBattleBoard = ({
     calm: settings.shake === 'OFF',
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
-    className: "flex shrink-0 justify-end px-2 py-1"
-  }, strip(CARD_ME))), React.createElement("div", {
+    "data-card-me-head": true,
+    className: "flex shrink-0 items-center gap-1.5 px-2 py-1"
+  }, React.createElement("span", {
+    "data-card-me-icon": true,
+    "aria-hidden": "true",
+    className: "relative block h-[22px] w-[22px] shrink-0"
+  }, React.createElement("span", {
+    className: "absolute left-0 top-0 block h-8 w-8 origin-top-left",
+    style: {
+      transform: `scale(${22 / 32})`
+    }
+  }, meIcon || React.createElement("span", {
+    className: "grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-[18px]"
+  }, meProfile && meProfile.icon ? cardIconNode(meProfile.icon, 22) : '🧑'))), React.createElement("span", {
+    className: "block min-w-0 flex-1",
+    style: {
+      containerType: 'inline-size'
+    }
+  }, React.createElement("span", {
+    "data-card-me-name": true,
+    className: "block overflow-hidden whitespace-nowrap font-black leading-tight text-white",
+    style: {
+      fontSize: `clamp(8px, ${(96 / Math.max(1, [...String(meProfile && meProfile.name || 'あなた')].length)).toFixed(1)}cqw, 12px)`
+    }
+  }, meProfile && meProfile.name || 'あなた')), strip(CARD_ME))), React.createElement("div", {
     "data-card-side": true,
     className: wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'
   }, tutorial && tutSay && (() => {
@@ -90796,6 +90869,7 @@ const CardBattleScreen = ({
       key: `vs-${game.key}`,
       db: db,
       intro: game.intro,
+      meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       onDone: () => setGame(g => g && g.key === game.key ? {
         ...g,
         intro: null
@@ -90806,6 +90880,7 @@ const CardBattleScreen = ({
       db: db,
       game: game,
       meProfile: rank && rank.profile,
+      meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       quickRun: quickRun ? {
         loops: quickRun.loops,
         stopped: quickRun.stopped
@@ -91166,6 +91241,7 @@ const CardBattleScreen = ({
       };
     };
     return React.createElement(CardPvpLobby, {
+      meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       deck: activeDeck,
       deckIssues: deckIssues,
       onBack: () => setView('mode'),
@@ -91501,6 +91577,19 @@ const CardBattleScreen = ({
       a: a,
       lineScene: win ? 'lose' : 'win',
       talkFacts: result.talk
+    }), a && React.createElement(CardResultVsRow, {
+      meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
+      meName: rank && rank.profile && rank.profile.name || 'あなた',
+      foeNode: React.createElement("img", {
+        src: assistantFaceImage(a, 'normal'),
+        alt: "",
+        className: "h-8 w-8 rounded-lg border-2 bg-black object-cover object-top",
+        style: {
+          borderColor: a.accent
+        }
+      }),
+      foeName: a.name,
+      outcome: win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'
     }), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
@@ -95754,6 +95843,7 @@ const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => Reac
   className: "inline-block"
 }, x));
 const CardPvpLobby = ({
+  meIcon = null,
   deck,
   deckIssues = [],
   onStart,
@@ -95963,7 +96053,15 @@ const CardPvpLobby = ({
         borderColor: a.accent,
         ...JA_WRAP_STYLE
       }
-    }, cardPvpLineNode(line.text))), React.createElement("div", {
+    }, cardPvpLineNode(line.text))), React.createElement(CardResultVsRow, {
+      meIcon: meIcon,
+      meName: profile.name,
+      foeNode: React.createElement("span", {
+        className: "grid h-8 w-8 place-items-center rounded-full border-2 border-sky-300/70 bg-black text-[18px]"
+      }, room.foe && room.foe.icon ? cardIconNode(room.foe.icon, 22) : '🙂'),
+      foeName: foeName,
+      outcome: win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'
+    }), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[14px] font-black text-white",
@@ -123370,7 +123468,18 @@ function MonsterHeroGame() {
           icon: breederIcon,
           frame: rankingProfileFrameValue(profileFrameId)
         },
-        renderBreederIcon: rankingBreederIcon
+        renderBreederIcon: rankingBreederIcon,
+        renderMeIcon: () => React.createElement(ProfileAvatar, {
+          src: resolveIconUrl(breederIcon) || undefined,
+          id: breederIcon,
+          frameId: rankingProfileFrameValue(profileFrameId),
+          fit: true,
+          small: true,
+          className: "w-8 h-8 shrink-0",
+          fallback: React.createElement("span", {
+            className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-[18px]"
+          }, typeof breederIcon === 'string' && breederIcon && !resolveIconUrl(breederIcon) && [...breederIcon].length <= 4 ? breederIcon : '👤')
+        })
       }
     }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
