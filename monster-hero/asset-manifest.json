@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "8f6974f7facd",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":122051677,"count":665},"card":{"bytes":31268880,"count":906},"all":{"bytes":260708003,"count":1664}},
+  "id": "ba01fb2073a4",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":122295622,"count":668},"card":{"bytes":31268880,"count":906},"all":{"bytes":260951948,"count":1667}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1224,6 +1224,8 @@
     "images/events/illumine-profile.jpg": {"v":"5e6ac696ca6b","size":121498,"pack":"battle"},
     "images/events/kuromy-dye-preview.jpg": {"v":"51d670dbfaab","size":74223,"pack":"battle"},
     "images/events/kuromy-profile.jpg": {"v":"4c52e8c66d0f","size":136406,"pack":"battle"},
+    "images/events/kyubi-dye-preview.jpg": {"v":"fee427cd192d","size":66926,"pack":"battle"},
+    "images/events/kyubi-orihime-notice.jpg": {"v":"b88248014de9","size":105456,"pack":"battle"},
     "images/events/mel-whip-dye-preview.jpg": {"v":"49120d3129ad","size":73862,"pack":"battle"},
     "images/events/mel-whip-profile.jpg": {"v":"56a0a312a978","size":129277,"pack":"battle"},
     "images/events/melody-dye-preview.jpg": {"v":"4d178afc6186","size":72903,"pack":"battle"},
@@ -1234,6 +1236,7 @@
     "images/events/monbeat-event-2026-09-11.jpg": {"v":"bdcbebca070b","size":146353,"pack":"battle"},
     "images/events/monbeat-event-2026-09-17-wide.jpg": {"v":"b2ff791693ca","size":153034,"pack":"battle"},
     "images/events/monbeat-event-2026-09-17.jpg": {"v":"29df7296db9b","size":146816,"pack":"battle"},
+    "images/events/orihime-dye-preview.jpg": {"v":"3ef0f1889aba","size":71563,"pack":"battle"},
     "images/events/raid-jack-2026.jpg": {"v":"457b5b91355d","size":118640,"pack":"battle"},
     "images/events/spooky-dye-preview.jpg": {"v":"5f2023b32279","size":67687,"pack":"battle"},
     "images/events/spooky-profile.jpg": {"v":"998671fd3d0b","size":134035,"pack":"battle"},
