@@ -109,6 +109,7 @@ const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=ce9b0ee85836";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
+const GOLEM_DYE_MASK = "images/monsters/golem-dye-mask.PNG?v=b6b1cf1c4bf0";
 const MONOL_IMG = "images/monsters/monol.png?v=64e141b7fbb1";
 const OBORO_IMG = "images/monsters/oboro.png?v=b9f9b77e528d";
 const PLANT_IMG = "images/monsters/plant.PNG?v=398cacbadab3";

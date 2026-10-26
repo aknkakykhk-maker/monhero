@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "314a05d76488",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117795833,"count":696},"card":{"bytes":32187692,"count":934},"all":{"bytes":257370971,"count":1723},"core":{"bytes":14205468,"count":22}},
+  "id": "12d328188c26",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117810930,"count":697},"card":{"bytes":32187692,"count":934},"all":{"bytes":257386068,"count":1724},"core":{"bytes":14205609,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1475,6 +1475,7 @@
     "images/monsters/gali.png": {"v":"802cb6ce6f64","size":109997,"pack":"battle"},
     "images/monsters/ghost-dye-mask.PNG": {"v":"253996bd5187","size":5634,"pack":"battle"},
     "images/monsters/ghost.png": {"v":"a8ded23fd634","size":95183,"pack":"battle"},
+    "images/monsters/golem-dye-mask.PNG": {"v":"b6b1cf1c4bf0","size":15097,"pack":"battle"},
     "images/monsters/golem.png": {"v":"8106dff84f6b","size":168784,"pack":"battle"},
     "images/monsters/ham.png": {"v":"106321d09a72","size":132953,"pack":"battle"},
     "images/monsters/henger.png": {"v":"87f6df286ad0","size":161077,"pack":"battle"},
@@ -1728,8 +1729,8 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"614c4c60eea8","size":241402,"pack":"core"},
-    "data/images/images-ally.js": {"v":"fffc0b9f61e5","size":46817,"pack":"core"},
+    "tailwind.css": {"v":"19c2c4721583","size":241402,"pack":"core"},
+    "data/images/images-ally.js": {"v":"07163edb6014","size":46893,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"25dd394dfdbe","size":57619,"pack":"core"},
     "data/lineages.js": {"v":"1c389c9822bb","size":25432,"pack":"core"},
@@ -1747,6 +1748,6 @@
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"8b6853a925e5","size":837463,"pack":"core"},
     "data/card-battle-cards.js": {"v":"c2b5285eda05","size":112387,"pack":"core"},
-    "game-system.compiled.js": {"v":"cfc4c4c0e9a5","size":6507326,"pack":"core"}
+    "game-system.compiled.js": {"v":"4969a9796994","size":6507391,"pack":"core"}
   }
 }

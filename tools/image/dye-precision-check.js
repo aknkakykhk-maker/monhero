@@ -53,6 +53,7 @@ const APPROVED_MASKS = {
   Undine: 'images/monsters/undine-dye-mask.PNG',
   Tiger: 'images/monsters/tiger-dye-mask.PNG',
   Suezo: 'images/monsters/suezo-dye-mask.PNG',
+  Golem: 'images/monsters/golem-dye-mask.PNG',
 };
 // これ未満しか染まらない画素を「染まっていない」とみなす
 const COVER_MIN = 0.5;

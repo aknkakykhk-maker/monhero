@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 83e3f077b33fc3f9
+// source-sha256: 4c4863dc79b3c839
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9092,12 +9092,17 @@ const MASU_COLOR_REGION_HUES = {
     noEdgeGuard: true
   }],
   Golem: [{
-    hue: 30,
-    sMin: 0.08
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
   }, {
-    posBbox: [[0.0, 0.20, 0.30, 0.82], [0.70, 0.20, 1.0, 0.82]]
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
   }, {
-    posBbox: [[0.0, 0.82, 1.0, 1.0]]
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
   }],
   Tiger: [{
     hue: 235,
@@ -9844,7 +9849,8 @@ const EXACT_DYE_MASKS = Object.freeze({
   Dreamy: DREAMY_DYE_MASK,
   Undine: UNDINE_DYE_MASK,
   Tiger: TIGER_DYE_MASK,
-  Suezo: SUEZO_DYE_MASK
+  Suezo: SUEZO_DYE_MASK,
+  Golem: GOLEM_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
