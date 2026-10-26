@@ -96,6 +96,14 @@ node tools/monster/monster-stats-table.js --hp 420 --guts 140 --atk 200 --def 40
 > 丸枠に切り抜いて A〜D の字を付けた1枚にして送り、`AskUserQuestion` で選んでもらう。
 > 比較用に既存の子の顔アイコンを1〜2枚並べてもよい。選ばれた案の範囲を `FACE_BOXES` に書く。
 > 作り直し(位置の調整を頼まれたとき)も同じで、1案だけ直して出さない
+>
+> **顔のまんなかの基準(`ART_ANCHORS`)も必ず書く**(2026-10-26 社長「顔アイコンと全身絵のずれが出ない仕組みを作って」)。
+> 全身絵で顔(目のあいだ・鼻)のまんなかを測り、`data/images/images-ally.js` の `ART_ANCHORS` に `<名前>: { face: [x, y] }`(0〜1)で書く。
+> `make-face-icons.js` はこの点を丸のまんなかに置いて作るので、`FACE_BOXES` は大きさ(寄り・引き)だけを決める。
+> 範囲を左右対称に取らなくても顔はずれない(アークは範囲が羽を含んで右へ約9%ずれていた)。
+> 案(A〜D)は大きさ違いで作り、どれも基準の点がまんなかに来る。顔アイコンを作らず全身絵のまま使う子は `ART_FACE_FULL_BODY` に書く。
+> マーケット・プロフィール(`MARKET_PROFILE_ICON_STYLES`)やアシストカード(`ASSIST_CARD_ICON_STYLES`)に**手書きの寄せを足さない**。
+> 足りなければ顔アイコンを基準で作り直す。`node tools/image/art-anchor-check.js` が、基準の書き忘れ・基準どおりでない顔アイコン・寄せの増加を止める
 
 ## 1. 必要なデータの全体像
 
@@ -150,8 +158,11 @@ node tools/image/import-monster-art.js <元画像> <モンスターid> --size 10
 node tools/image/trim-art-margin.js monster-hero/images/monsters/<id>.png
 
 # ③ 顔アイコン(faceIconUrl)。範囲を変えて3〜4案作り、選んでもらってから本番(§0④の注記)
+#    先に ART_ANCHORS(images-ally.js)へ顔のまんなかを書く。書いた点が丸のまんなかに来る
 node tools/image/make-face-icons.js --preview
 node tools/image/make-face-icons.js
+node tools/image/art-anchor-check.js          # 基準の書き忘れ・ずれを止める
+node tools/image/art-anchor-sheet.js          # 全員を丸に入れて並べた一覧(tools/out/art-anchor-sheet.png)を目で見る
 
 # ④ 円盤石アイコン。共通の土台へ重ねる
 node tools/image/make-disc-icon.js monster-hero/images/monsters/<id>.png monster-hero/images/disc-icons/<id>-disc.PNG
@@ -364,6 +375,7 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
 | `monster/monster-art-fit-check.js` | 立ち絵が枠へ収まるか(`MONSTER_ART_CONTAIN_IDS`) |
 | `monster/market-icon-check.js` | マーケットのアイコン商品の綴り |
 | `image/market-icon-framing-check.js` | 丸枠への収まり(`MARKET_ICON_FRAMING`) |
+| `image/art-anchor-check.js` | 顔のまんなかの基準(`ART_ANCHORS`)の書き忘れ・顔アイコンが基準どおりか・手書きの寄せが増えていないか |
 | `image/monster-image-quality-check.js` | 寸法・透過・背景の残り |
 | `image-asset-check.js` | 参照先の綴り・キャッシュキー |
 | `image/dye-report.js` | 染色の塗り分けの下見(レポート) |
