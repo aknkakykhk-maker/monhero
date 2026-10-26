@@ -31,3 +31,6 @@
 
 ## 2026-10-26 タクティクスバトルの戦いの画面
 → [damedashi-2026-10-26/tactics-play/README.md](damedashi-2026-10-26/tactics-play/README.md)(5件)
+
+## 2026-10-26 イベント・カボチャの大王ジャック
+→ [damedashi-2026-10-26/raid/README.md](damedashi-2026-10-26/raid/README.md)(4件。1は横で挑戦できない)
