@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a421049bb570f15
+// source-sha256: 0a325216855ac28f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:21";
+const BUILD_DATE = "2026-10-27 02:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12065,7 +12065,22 @@ const CustomColorPicker = ({
       height: '18px',
       transform: 'translate(-50%,-50%)'
     }
-  })));
+  })), React.createElement("div", {
+    "data-custom-color-numbers": true,
+    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "h-6 w-6 shrink-0 rounded-full border border-white/30",
+    style: {
+      backgroundColor: previewColor
+    },
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block font-mono text-[12px] font-black leading-tight text-white"
+  }, `#${[pr, pg, pb].map(n => n.toString(16).padStart(2, '0')).join('').toUpperCase()}`), React.createElement("small", {
+    className: "block text-[10px] font-bold leading-tight text-slate-300"
+  }, "色相 ", Math.round(h), "°・鮮やかさ ", Math.round(s * 100), "%・明るさ ", Math.round(v * 100), "%"))));
 };
 const VolumeSlider = ({
   label,
@@ -127474,7 +127489,12 @@ function MonsterHeroGame() {
           s: ns,
           v: nv
         } : prev)
-      }), React.createElement("div", {
+      }), React.createElement("p", {
+        "data-custom-color-alpha": true,
+        className: "-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, "この部位の濃さ ", colorAlphaOf(sourceColors[idx]), "%", React.createElement("span", {
+        className: "text-slate-500"
+      }, "(濃さは染色の画面のつまみで変えられます)")), React.createElement("div", {
         className: "flex gap-2 mt-1 shrink-0"
       }, React.createElement("button", {
         onClick: () => setCustomColorPicker(null),

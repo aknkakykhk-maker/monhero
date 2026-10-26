@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1006a3a48daf12d1
+// generated-sha256: 10d1604fe0ddd594
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 02:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8495,6 +8495,15 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
           className="absolute top-1/2 rounded-full bg-white border-2 border-slate-900 shadow-[0_0_6px_rgba(0,0,0,0.8)]"
           style={{ left: `${(h / 360) * 100}%`, width: '18px', height: '18px', transform: 'translate(-50%,-50%)' }}
         ></div>
+      </div>
+      {/* いま選んでいる色の数字(2026-10-27 社長「染色のやつはどの色と透明度とかわかるようにして」。前の「数字は出さない」を変えた)。
+          見せるだけで、保存する色の形(custom:… の色id)は変えない */}
+      <div data-custom-color-numbers className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5">
+        <span className="h-6 w-6 shrink-0 rounded-full border border-white/30" style={{ backgroundColor: previewColor }} aria-hidden="true"></span>
+        <span className="min-w-0 flex-1">
+          <b className="block font-mono text-[12px] font-black leading-tight text-white">{`#${[pr, pg, pb].map((n) => n.toString(16).padStart(2, '0')).join('').toUpperCase()}`}</b>
+          <small className="block text-[10px] font-bold leading-tight text-slate-300">色相 {Math.round(h)}°・鮮やかさ {Math.round(s * 100)}%・明るさ {Math.round(v * 100)}%</small>
+        </span>
       </div>
     </div>
   );
@@ -79658,6 +79667,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={previewColors} className="w-full h-full object-cover"/></div>
                 )}
                 <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
+                {/* この部位の濃さ(透け具合)も数字で出す。濃さは染色の画面のつまみで変える(色を決めても引き継ぐ) */}
+                <p data-custom-color-alpha className="-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">この部位の濃さ {colorAlphaOf(sourceColors[idx])}%<span className="text-slate-500">(濃さは染色の画面のつまみで変えられます)</span></p>
                 <div className="flex gap-2 mt-1 shrink-0">
                   <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
                   <button onClick={applyCustom} className="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95">この色に決定</button>

@@ -394,6 +394,15 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
           style={{ left: `${(h / 360) * 100}%`, width: '18px', height: '18px', transform: 'translate(-50%,-50%)' }}
         ></div>
       </div>
+      {/* いま選んでいる色の数字(2026-10-27 社長「染色のやつはどの色と透明度とかわかるようにして」。前の「数字は出さない」を変えた)。
+          見せるだけで、保存する色の形(custom:… の色id)は変えない */}
+      <div data-custom-color-numbers className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5">
+        <span className="h-6 w-6 shrink-0 rounded-full border border-white/30" style={{ backgroundColor: previewColor }} aria-hidden="true"></span>
+        <span className="min-w-0 flex-1">
+          <b className="block font-mono text-[12px] font-black leading-tight text-white">{`#${[pr, pg, pb].map((n) => n.toString(16).padStart(2, '0')).join('').toUpperCase()}`}</b>
+          <small className="block text-[10px] font-bold leading-tight text-slate-300">色相 {Math.round(h)}°・鮮やかさ {Math.round(s * 100)}%・明るさ {Math.round(v * 100)}%</small>
+        </span>
+      </div>
     </div>
   );
 };
