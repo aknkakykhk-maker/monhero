@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6769c0b2b315df62
+// generated-sha256: 566fe5a86cc80200
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 14:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 15:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7520,7 +7520,8 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // 立ち絵が縦長(2:3〜5:6)のモンスター(ユグドラシル以降の新しい子も含む。2026-10-07に追加。メロディー・クロミーは本体登録後に効く)。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy']);
+// イルミネ・ドリーミィ(2026-10-22 公開)は足し忘れていて、マスモンの詳細の丸で上下が切られ「大きく・中心がずれて」見えていた(2026-10-26 社長の指摘)
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -74093,7 +74094,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 間合い適性は「距離ごとの与ダメージ補正(%)」。グレードは目安で、実際に効くのは%のほう。
           aptCurrentPctを渡すと、いまの距離補正値からこのモンスターを加えた後の値まで出す。 */}
       <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30 min-w-0"><div className="flex items-center justify-between gap-2 mb-0.5 flex-wrap"><div className="text-[10px] text-cyan-400 uppercase font-bold">間合い適性（距離補正）{growth&&<span className="ml-1 text-slate-500 normal-case">タップで詳細</span>}</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; const gain=growth?growth.apt[idx]:null; const openKey=`${monGrowthKey}:${idx}`; const aptOpen=!!gain&&growthAptOpen===openKey;
-        const cell=(<><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[10px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[10px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{gain&&(gain.baseUp>0||gain.enhance>0)&&<span className="flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5">{growthGainBadge('base',gain.baseUp)}{growthGainBadge('enhance',gain.enhance)}</span>}</>);
+        const cell=(<><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span data-dist-apt-grade className={`flex h-[22px] w-full items-center justify-center rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[10px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[10px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{gain&&(gain.baseUp>0||gain.enhance>0)&&<span className="flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5">{growthGainBadge('base',gain.baseUp)}{growthGainBadge('enhance',gain.enhance)}</span>}</>);
         return(<div key={idx} className="flex flex-col items-center gap-0.5 min-w-0">{gain
           ? <button type="button" data-growth-apt-cell={idx} aria-expanded={aptOpen} aria-label={`${label}距離の間合い適性の内訳を${aptOpen?'閉じる':'開く'}`} onClick={()=>setGrowthAptOpen(aptOpen?null:openKey)} className={`w-full min-w-0 flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1 active:scale-95 ${aptOpen?'border-fuchsia-400/70 bg-fuchsia-950/40':'border-white/10 bg-black/20'}`}>{cell}</button>
           : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}<div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
