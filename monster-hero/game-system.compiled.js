@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e52a1b0561beb78
+// source-sha256: 51aee7632ecd596e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 10:28";
+const BUILD_DATE = "2026-10-26 10:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16184,7 +16184,7 @@ const MarketProductCard = ({
   const usesHeroProofShard = item.currency === 'heroProofShard';
   const usesBeatPoint = item.currency === 'beatPoint';
   const usesCardPoint = item.currency === 'cardPoint';
-  const priceLabel = usesCardPoint ? `${item.cost}カードポイント` : usesBeatPoint ? `${item.cost}ビートP` : usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
+  const priceLabel = usesCardPoint ? `${item.cost}ビートP` : usesBeatPoint ? `${item.cost}ビートP` : usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
   return React.createElement("div", _extends({}, dataAttrs || {}, {
     className: `rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/60' : comingSoon ? 'bg-slate-900/60 border-white/10' : 'bg-slate-900 border-white/10'}`
   }), React.createElement(MarketProductIcon, {
@@ -16326,16 +16326,16 @@ const MARKET_CURRENCY_META = Object.freeze({
     max: 'bg-violet-800'
   }),
   cardPoint: Object.freeze({
-    have: '所持カードポイント',
-    label: 'カードポイント',
-    emoji: '🃏',
+    have: '所持ビートP',
+    label: 'ビートP',
+    emoji: '🎟️',
     verb: '交換',
-    format: n => `${n}カードポイント`,
-    text: 'text-orange-200',
-    bar: 'text-orange-100 border-orange-500/30 bg-orange-950/30',
-    border: 'border-orange-400/70',
-    button: 'bg-orange-500 text-white',
-    max: 'bg-orange-800'
+    format: n => `${n}ビートP`,
+    text: 'text-violet-200',
+    bar: 'text-violet-100 border-violet-500/30 bg-violet-950/30',
+    border: 'border-violet-400/70',
+    button: 'bg-violet-500 text-white',
+    max: 'bg-violet-800'
   })
 });
 const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
@@ -52982,7 +52982,7 @@ function BreederMarketScreen({
       emoji: '🎟️'
     },
     card: {
-      label: 'カードポイント',
+      label: 'MFバトルカード',
       emoji: '🃏'
     }
   };
@@ -53186,10 +53186,10 @@ function BreederMarketScreen({
   }, ...(cardShop ? [{
     key: 'card',
     emoji: '🃏',
-    label: 'カードポイント',
-    titleLines: ['カード', 'ポイント'],
-    value: compactCount(cardShop.point),
-    hint: 'MFバトルカードでためる',
+    label: 'MFバトルカード',
+    titleLines: ['MFバトル', 'カード'],
+    value: `🎟️${compactCount(cardShop.point)}`,
+    hint: 'ビートPでパックなど',
     border: 'border-orange-400/35',
     title: 'text-orange-200',
     arrow: 'text-orange-300/80'
@@ -85460,6 +85460,41 @@ const CARD_SAVE_KEYS = Object.freeze({
   settings: 'mh_card_settings_v1',
   aiTalk: 'mh_card_ai_talk_v1'
 });
+const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
+const CARD_POINT_MIGRATED_KEY = 'mh_card_points_to_beatp_migrated_v1';
+const cardPointMigrationAmount = (legacyRaw, migrated) => {
+  if (migrated === true) return 0;
+  if (typeof legacyRaw !== 'number' && typeof legacyRaw !== 'string') return 0;
+  const n = Number(legacyRaw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+};
+const cardMigratePointsOnce = async (getValue, setValue, saveAll) => {
+  const migrated = await getValue(CARD_POINT_MIGRATED_KEY, null, false);
+  if (migrated === true) return {
+    added: 0,
+    saved: false
+  };
+  const legacy = await getValue(CARD_SAVE_KEYS.point, null, false);
+  const add = cardPointMigrationAmount(legacy, migrated);
+  const entries = [{
+    key: CARD_POINT_MIGRATED_KEY,
+    before: migrated,
+    next: true
+  }];
+  if (add > 0) {
+    const beatBefore = await getValue(CARD_POINT_STORE_KEY, null, false);
+    entries.push({
+      key: CARD_POINT_STORE_KEY,
+      before: beatBefore,
+      next: Math.min(Number.MAX_SAFE_INTEGER, cardNormalizePoint(beatBefore) + add)
+    });
+  }
+  const saved = await saveAll(entries, getValue, setValue);
+  return {
+    added: saved ? add : 0,
+    saved
+  };
+};
 const cardIsPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = v => {
   const out = {};
@@ -89634,7 +89669,7 @@ const CardBattleBoard = ({
     onConfirm: confirmYes
   }), quit && !tutorial && React.createElement(ConfirmSheet, {
     title: "投了しますか？",
-    message: pvp ? '投了すると負けになります' : '投了すると負けになります(カードポイントとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
+    message: pvp ? '投了すると負けになります' : '投了すると負けになります(ビートPとクイック周回は、倒した相手のモンスターの数に応じて少しだけ)',
     confirmLabel: "投了する",
     danger: true,
     onCancel: () => setQuit(false),
@@ -89850,7 +89885,10 @@ const CardBattleScreen = ({
   };
   const load = async () => {
     const K = CARD_SAVE_KEYS;
-    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null)]);
+    try {
+      await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
+    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null)]);
     const next = {
       collection: cardNormalizeCollection(collection),
       decks: cardNormalizeDecks(decks),
@@ -89880,15 +89918,28 @@ const CardBattleScreen = ({
   }, [screen]);
   const persist = async patch => {
     const K = CARD_SAVE_KEYS;
-    const entries = Object.entries(patch).map(([k, next]) => ({
+    let fixed = patch;
+    let pointBefore = null;
+    if ('point' in patch) {
+      pointBefore = await storeGet(CARD_POINT_STORE_KEY, 0, false);
+      fixed = {
+        ...patch,
+        point: Math.max(0, cardNormalizePoint(pointBefore) + (cardNormalizePoint(patch.point) - save.point))
+      };
+    }
+    const entries = Object.entries(fixed).map(([k, next]) => k === 'point' ? {
+      key: CARD_POINT_STORE_KEY,
+      next,
+      before: pointBefore
+    } : {
       key: K[k],
       next,
       before: save[k] === undefined ? null : save[k]
-    }));
+    });
     const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
     if (ok) setSave(cur => ({
       ...cur,
-      ...patch
+      ...fixed
     }));
     if (ok && patch.settings && onSettings) onSettings(patch.settings);
     return ok;
@@ -90072,7 +90123,7 @@ const CardBattleScreen = ({
       title: "スターターをえらぶ",
       accent: "text-amber-200",
       onBack: save.starter ? () => setView('top') : onExit,
-      note: "最初の1つは無料。えらばなかった2つは、あとでカードポイントで買えます"
+      note: "最初の1つは無料。えらばなかった2つは、あとでビートPで買えます"
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, kits.map(k => React.createElement("button", {
@@ -90109,7 +90160,7 @@ const CardBattleScreen = ({
           return;
         }
         const ok = await persist(g);
-        setNotice(ok ? `「${pick.name}」を受け取りました。カードポイント${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
+        setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
         if (ok) {
           setView('top');
           if (!save.tutorial.done && !save.tutorial.skipped) startTutorial();
@@ -90499,12 +90550,12 @@ const CardBattleScreen = ({
       className: SCREEN_PANEL_CLASS
     }, result.done && result.reward > 0 && React.createElement("div", {
       className: "text-[15px] font-black text-amber-200"
-    }, "カードポイント ", result.reward), React.createElement("div", {
+    }, "ビートP ", result.reward), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300",
       style: JA_LABEL_STYLE
     }, jaWrap(result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, "いまのカードポイント: ", save.point), !result.saved && React.createElement("div", {
+    }, "いまのビートP: ", save.point), !result.saved && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300"
     }, "保存できませんでした"))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
@@ -90542,14 +90593,14 @@ const CardBattleScreen = ({
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[13px] font-black text-amber-200"
-    }, "もらったカードポイント: ", r.total), React.createElement("div", {
+    }, "もらったビートP: ", r.total), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got), r.bonus > 0 && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
     }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')), !r.short && result.loops > 0 && React.createElement("div", {
+    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && React.createElement("div", {
       "data-card-quick-loops": result.quick ? result.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
     }, result.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
@@ -90565,12 +90616,12 @@ const CardBattleScreen = ({
       style: JA_LABEL_STYLE
     }, jaWrap('クイック周回をしていないときは入りません'))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, "いまのカードポイント: ", save.point), result.opened && React.createElement("div", {
+    }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
     }, CARD_LEVEL_LABEL[result.opened], "が選べるようになりました！"), !result.saved && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
-    }, jaWrap('保存できませんでした(カードポイントは増えていません)')), result.demo && React.createElement("div", {
+    }, jaWrap('保存できませんでした(ビートPは増えていません)')), result.demo && React.createElement("div", {
       className: "mt-1 text-[11px] font-bold text-slate-400"
     }, "(デバッグの見本です。何も保存していません)"))), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`
@@ -90959,7 +91010,7 @@ const CardBattleScreen = ({
     className: "shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"
   }, React.createElement("span", {
     "aria-hidden": "true"
-  }, "🃏"), " ", React.createElement("span", {
+  }, "🎟️"), " ", React.createElement("span", {
     "data-card-point": true
   }, save.point))), React.createElement("div", {
     className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`
@@ -91165,7 +91216,7 @@ const CardBattleScreen = ({
     onClose: () => setDetail(null)
   }), confirmReset && React.createElement(ConfirmSheet, {
     title: "カードバトルの記録を消しますか？",
-    message: '持っているカード・デッキ・カードポイント・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。',
+    message: '持っているカード・デッキ・ビートP・戦績・スターターの印を消します。\nほかのモードの保存データには触れません。',
     confirmLabel: "消す",
     danger: true,
     onCancel: () => setConfirmReset(false),
@@ -92399,7 +92450,7 @@ const CardPackOpen = ({
     className: "mt-3 text-center text-[12px] font-bold text-slate-300"
   }, packPoint > 0 ? React.createElement(React.Fragment, null, "だぶったカードは ", React.createElement("b", {
     className: "text-amber-200"
-  }, "カードポイント +", packPoint), " になりました") : 'だぶったカードはありません', last && result.packs.length > 1 && React.createElement("div", {
+  }, "ビートP +", packPoint), " になりました") : 'だぶったカードはありません', last && result.packs.length > 1 && React.createElement("div", {
     className: "mt-0.5"
   }, "(", result.packs.length, "パックで +", result.dupPoint, ")"))), phase === 'tearing' && React.createElement("div", {
     "aria-hidden": "true",
@@ -92626,7 +92677,7 @@ const CardPackRateSheet = ({
   }, cardShopName(db, x.no)))), React.createElement("td", {
     className: `${td} text-right tabular-nums`
   }, cardShopPct(x.p))));
-  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターは、キラの無い通常のモンスターとして出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null, `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
+  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターは、キラの無い通常のモンスターとして出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null, `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
   return React.createElement(CardShopSheet, {
     tag: "rates",
     title: `${pack.name} 提供割合`,
@@ -92810,7 +92861,7 @@ const CardShopPacks = ({
     onClose: () => setSheet(null)
   }), confirm && React.createElement(ConfirmSheet, {
     title: `${confirm.pack.name}を${confirm.count}パック買いますか？`,
-    message: `カードポイント ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
+    message: `ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
     confirmLabel: "買って開ける",
     onCancel: () => setConfirm(null),
     onConfirm: () => {
@@ -92844,7 +92895,7 @@ const CardShopStarters = ({
   }, jaWrap(done)), React.createElement("p", {
     className: "text-[11px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(`スターターキットは1つにつき1回、${price}カードポイントで買えます。買うとデッキも1つ増えます。どのキットも中身を見られます。`)), kits.map(k => {
+  }, jaWrap(`スターターキットは1つにつき1回、${price}ビートPで買えます。買うとデッキも1つ増えます。どのキットも中身を見られます。`)), kits.map(k => {
     const owned = !!(starter && starter.kit === k.id || shop && shop.starters && shop.starters[k.id]);
     return React.createElement("div", {
       key: k.id,
@@ -92885,7 +92936,7 @@ const CardShopStarters = ({
       disabled: owned || busy || point < CARD_STARTER_SHOP_PRICE,
       onClick: () => setConfirm(k),
       className: "mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
-    }, owned ? '持っています' : `${price}カードポイント`));
+    }, owned ? '持っています' : `${price}ビートP`));
   }), view && React.createElement(CardStarterContents, {
     db: db,
     kit: view,
@@ -92893,14 +92944,14 @@ const CardShopStarters = ({
     onClose: () => setView(null)
   }), confirm && React.createElement(ConfirmSheet, {
     title: `「${confirm.name}」を買いますか？`,
-    message: `カードポイント ${price} を使います(いま ${point.toLocaleString()})。だぶったカードはカードポイントになります`,
+    message: `ビートP ${price} を使います(いま ${point.toLocaleString()})。だぶったカードはビートPになります`,
     confirmLabel: "買う",
     onCancel: () => setConfirm(null),
     onConfirm: async () => {
       const k = confirm;
       setConfirm(null);
       const r = await onBuyStarter(k.id);
-      if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`);
+      if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはビートP +${r.dupPoint})` : ''}`);
     }
   }));
 };
@@ -94771,13 +94822,13 @@ const CardPvpLobby = ({
       className: "text-[12px] font-bold text-slate-300"
     }, "ごほうびを確かめています…"), r.verify === 'ng' && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
-    }, "無効の試合なので、カードポイントとクイック周回は入りません"), got && React.createElement(React.Fragment, null, React.createElement("div", {
+    }, "無効の試合なので、ビートPとクイック周回は入りません"), got && React.createElement(React.Fragment, null, React.createElement("div", {
       "data-card-pvp-reward": true,
       className: "text-[13px] font-black text-amber-200"
-    }, "もらったカードポイント: ", got.point), got.short && React.createElement("div", {
+    }, "もらったビートP: ", got.point), got.short && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')), !got.short && got.loops > 0 && React.createElement("div", {
+    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !got.short && got.loops > 0 && React.createElement("div", {
       "data-card-quick-loops": got.quick ? got.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
     }, got.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
@@ -94790,10 +94841,10 @@ const CardPvpLobby = ({
       style: JA_LABEL_STYLE
     }, jaWrap('クイック周回をしていないときは入りません'))), point !== null && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, "いまのカードポイント: ", point), got.saved === false && React.createElement("div", {
+    }, "いまのビートP: ", point), got.saved === false && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
-    }, jaWrap('保存できませんでした(カードポイントは増えていません)'))))), React.createElement("div", {
+    }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
     }, React.createElement("button", {
       type: "button",
@@ -103448,7 +103499,10 @@ function MonsterHeroGame() {
   };
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
-    const [point, starter, shop, collection] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    try {
+      await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
+    const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
     const next = {
       point: cardNormalizePoint(point),
       starter: cardNormalizeStarter(starter),
@@ -103456,6 +103510,7 @@ function MonsterHeroGame() {
       collection: cardNormalizeCollection(collection)
     };
     setCardShopState(next);
+    setRhythmEventPoints(next.point);
     return next;
   };
   const buyCardPacks = async (packId, count) => {
@@ -103467,7 +103522,7 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null), storeGet(K.pitySplit, null)]);
+      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]);
       const point = cardNormalizePoint(rawPoint);
       const split = rawSplit !== true;
       const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
@@ -103477,7 +103532,7 @@ function MonsterHeroGame() {
         point
       }, Math.random);
       if (!r) {
-        setMarketExchangeError('カードポイントが足りません。');
+        setMarketExchangeError('ビートPが足りません。');
         return {
           ok: false,
           reason: 'points'
@@ -103492,7 +103547,7 @@ function MonsterHeroGame() {
         before: rawPity,
         next: r.pity
       }, {
-        key: K.point,
+        key: CARD_POINT_STORE_KEY,
         before: rawPoint,
         next: r.point
       }, ...(split ? [{
@@ -103501,7 +103556,7 @@ function MonsterHeroGame() {
         next: true
       }] : [])], storeGet, storeSet);
       if (!saved) {
-        setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+        setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
         return {
           ok: false,
           reason: 'save'
@@ -103512,6 +103567,7 @@ function MonsterHeroGame() {
         point: r.point,
         collection: r.collection
       }));
+      setRhythmEventPoints(r.point);
       setCardPackOpen({
         packId,
         packs: r.packs,
@@ -103523,7 +103579,7 @@ function MonsterHeroGame() {
         ok: true
       };
     } catch {
-      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
       return {
         ok: false,
         reason: 'save'
@@ -103541,7 +103597,7 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
+      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]);
       const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, {
         collection: cardNormalizeCollection(rawCol),
         decks: cardNormalizeDecks(rawDecks),
@@ -103550,7 +103606,7 @@ function MonsterHeroGame() {
         shop: cardNormalizeShop(rawShop)
       }, Date.now());
       if (!r) {
-        setMarketExchangeError('買えませんでした(カードポイントが足りないか、もう持っています)。');
+        setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。');
         return {
           ok: false,
           reason: 'points'
@@ -103565,7 +103621,7 @@ function MonsterHeroGame() {
         before: rawDecks,
         next: r.decks
       }, {
-        key: K.point,
+        key: CARD_POINT_STORE_KEY,
         before: rawPoint,
         next: r.point
       }, {
@@ -103574,7 +103630,7 @@ function MonsterHeroGame() {
         next: r.shop
       }], storeGet, storeSet);
       if (!saved) {
-        setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+        setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
         return {
           ok: false,
           reason: 'save'
@@ -103586,12 +103642,13 @@ function MonsterHeroGame() {
         shop: r.shop,
         collection: r.collection
       }));
+      setRhythmEventPoints(r.point);
       return {
         ok: true,
         dupPoint: r.dupPoint
       };
     } catch {
-      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
       return {
         ok: false,
         reason: 'save'
@@ -103609,7 +103666,7 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const rawPoint = await storeGet(K.point, null);
+      const rawPoint = await storeGet(CARD_POINT_STORE_KEY, 0, false);
       const point = cardNormalizePoint(rawPoint);
       const isDisc = offer?.kind === 'disc';
       const isAssist = offer?.kind === 'assist';
@@ -103629,11 +103686,11 @@ function MonsterHeroGame() {
         unlockedTeachingIds: Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'カードポイントが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : 'このモンスターはもう持っています。' : '交換できませんでした。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : 'このモンスターはもう持っています。' : '交換できませんでした。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
-        key: K.point,
+        key: CARD_POINT_STORE_KEY,
         before: rawPoint,
         next: exchange.eventPoints
       }, ...(isDisc ? [{
@@ -103646,7 +103703,7 @@ function MonsterHeroGame() {
         next: exchange.unlockedTeachingIds
       }] : [])], storeGet, storeSet);
       if (!saved) {
-        setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。');
+        setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
         return {
           ok: false,
           reason: 'save'
@@ -103656,6 +103713,7 @@ function MonsterHeroGame() {
         ...(cur || {}),
         point: exchange.eventPoints
       }));
+      setRhythmEventPoints(exchange.eventPoints);
       if (isDisc) {
         setUnlockedMonsterIds(exchange.unlockedMonsterIds);
         if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
@@ -103677,7 +103735,7 @@ function MonsterHeroGame() {
       }
       return exchange;
     } catch {
-      setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。');
+      setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
       return {
         ok: false,
         reason: 'save'

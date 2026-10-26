@@ -2,13 +2,13 @@
 // 設計: docs/spec/CARD_BATTLE.md 4-2(社長: 種族3つずつで8弾・混血はメインの種族の弾へ・C-060C は入れない。台帳 #3558 ほか)
 // ここは pure(画面・保存・乱数の元を持たない)。乱数は rand(0〜1 を返す関数)を外から渡す(検査で同じ並びを作れるように)
 //
-// 1パックの中身(どの弾も同じ): 8枚・300カードポイント(5パックまとめて 1,350)。技などの枠7・モンスターの枠1(最後にめくる)
+// 1パックの中身(どの弾も同じ): 8枚・300ビートP(5パックまとめて 1,350)。技などの枠7・モンスターの枠1(最後にめくる)
 // 技などの枠: その弾の「準備中でない」カード(その弾の種族の技・配った全モンスター/ブリーダーのカード)から同じ確率で1枚
 // モンスターの枠: まずレア度(第1〜3弾 通常85%/キラ12%/別絵キラ3%・第4〜8弾 通常85%/キラ15%)、そのレア度のモンスターから同じ確率で1枚
 //   (「まだ持っていない種族を2倍」は社長の決めでなくした。混血はキラの無い通常のモンスターとして通常に入る)
 // 天井: その弾のパックでキラも別絵キラも出ないまま7パック開けたら、8パック目のモンスターの枠はキラ以上(弾ごとに数える)
-// だぶり(自動でカードポイントへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血も 50
-//   ★持てる枚数を超えた分だけをカードポイントにする(持っている分は減らさない)
+// だぶり(自動でビートPへ): 技カードは4枚目から1枚 5 / モンスターは2枚目から 50(キラ 100・別絵キラ 200)/ 混血も 50
+//   ★持てる枚数を超えた分だけをビートPにする(持っている分は減らさない)
 //
 // ★弾の割り当ては、カードのデータ(data/card-battle-cards.js の wave)を書き換えずに、ここの表で決める
 //   (wave は図鑑の「混血」・練習試合・助手のデッキなどが使っている。準備中のカードの効き目づくりとぶつからないように)
@@ -38,7 +38,7 @@ const CARD_PACK_LEGACY_IDS = Object.freeze(['w1', 'w2', 'w3', 'w4', 'hybrid']);
 // 以前の天井の数を新しい弾へ1回だけ写す元(w1 → 第1〜3弾 / w2 → 第4・5弾 / w3 → 第6弾 / w4 → 第7・8弾)
 const CARD_PACK_PITY_FROM = Object.freeze({ p1: 'w1', p2: 'w1', p3: 'w1', p4: 'w2', p5: 'w2', p6: 'w3', p7: 'w4', p8: 'w4' });
 const CARD_PACK_PITY_AT = 7;          // キラなしでこの数だけ開けたら、次のパックはキラ以上
-const CARD_TECH_KEEP_MAX = 3;         // 技カードは3枚まで持つ(4枚目からカードポイントへ)
+const CARD_TECH_KEEP_MAX = 3;         // 技カードは3枚まで持つ(4枚目からビートPへ)
 const CARD_DUP_POINT = Object.freeze({ tech: 5, normal: 50, kira: 100, alt: 200 });
 // 保存は CARD_SAVE_KEYS.pity(mh_card_pack_pity_v1 { パックid: 数 })・CARD_SAVE_KEYS.pitySplit(写した印)・CARD_SAVE_KEYS.shop(mh_card_shop_v1 { starters: { キット: 時刻 } })
 const CARD_STARTER_SHOP_PRICE = 1500;   // 2026-10-25 社長(以前は500)
@@ -94,7 +94,7 @@ const cardPickWeighted = (items, weightOf, rand) => {
   return items[items.length - 1];
 };
 
-// 1パック開ける。返す: { cards:[{ no, slot:'tech'|'mon', rarity, dup, point }], collection, pity, point(だぶりのカードポイント), hit(キラ以上が出たか) }
+// 1パック開ける。返す: { cards:[{ no, slot:'tech'|'mon', rarity, dup, point }], collection, pity, point(だぶりのビートP), hit(キラ以上が出たか) }
 const cardOpenPack = (db, packId, { collection, pity }, rand) => {
   const pack = cardPackOf(packId);
   if (!pack) return null;
@@ -126,7 +126,7 @@ const cardOpenPack = (db, packId, { collection, pity }, rand) => {
   return { cards, collection: col, pity: nextPity, point, hit };
 };
 
-// まとめて買う(1つ・5つ)。カードポイントが足りなければ null。返す: { packs:[1パックぶん…], collection, pity, point(残り), cost, dupPoint }
+// まとめて買う(1つ・5つ)。ビートPが足りなければ null。返す: { packs:[1パックぶん…], collection, pity, point(残り), cost, dupPoint }
 const cardPackPrice = (pack, count) => (pack.bundle && count === pack.bundle.n ? pack.bundle.price : pack.price * count);
 const cardBuyPacks = (db, packId, count, { collection, pity, point }, rand) => {
   const pack = cardPackOf(packId);
@@ -175,7 +175,7 @@ const cardPackCardRates = (db, packId) => {
   return { pack, tech, mon, rarity };
 };
 
-// 選ばなかったスターターキットを買う(1つにつき1回・CARD_STARTER_SHOP_PRICE)。持っていた分を超えるカードは、パックと同じ決まりでカードポイントへ
+// 選ばなかったスターターキットを買う(1つにつき1回・CARD_STARTER_SHOP_PRICE)。持っていた分を超えるカードは、パックと同じ決まりでビートPへ
 //   デッキも1つ足す(5つに満たないとき)。返す: { collection, decks, point, shop, dupPoint } / 買えないとき null
 const cardBuyStarter = (db, kitId, { collection, decks, point, starter, shop }, now) => {
   const kit = db.starters[kitId];
