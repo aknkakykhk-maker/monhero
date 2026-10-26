@@ -8,7 +8,7 @@
 //   ① HOME の入口 → はじめのスターター → 練習試合を飛ばす → トップ → 記録 →「過去の対戦」が開く(はじめは「まだありません」)
 //   ② 試合の記録を55試合ぶん足すと、一覧には新しい50試合が出る(日時・相手・種類・勝ち負け・◯番まで)
 //   ③ ★を付けると保存され、開き直しても付いている。11試合目の★は付かず、案内が出る
-//   ④ 行を押すと見返しが開き、「とじる」で一覧へ戻る
+//   ④ 行を押すと見返しが開き、「とじる」で一覧へ戻る。はじまりと1手目の上の帯は「はじまり」・上下の帯の番がそろう・吹き出しは出ない
 //   ⑤ 保存の場所がいっぱいのとき: ほかのセーブ(mh_ のキー)を書き換えず、ゲーム全体の「保存できない」の数も増やさない。
 //      古い試合(★は残す)から消して入れ、書いたあとも空きを残す
 //   ⑥ 実行時エラーが無い
@@ -135,7 +135,19 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-replay-open]').nth(3).click();
     await page.locator('[data-card-replay-bar]').waitFor({ timeout: 15000 });
     const step0 = await page.locator('[data-card-replay-step]').innerText();
+    // はじまりと1手目(始める前のガッツ)は、上の帯も下の帯も「はじまり」。見返しでは助手の吹き出しを出さない(2026-10-27 カゲあつくんの見直し)
+    const head0 = await page.locator('[data-card-head-turn]').innerText();
+    await page.locator('[data-card-replay-next]').click();
+    const head1 = await page.locator('[data-card-head-turn]').innerText();
+    const bar1 = await page.locator('[data-card-replay-turn]').innerText();
+    await page.waitForTimeout(1500);
+    const bubbles = await page.locator('[data-card-bubble]').count();
+    check('④ はじまりと1手目は、上の帯・下の帯とも「はじまり」・吹き出しは出ない', /はじまり/.test(head0) && /はじまり/.test(head1) && /はじまり/.test(bar1) && bubbles === 0, `${head0} / ${head1} / ${bar1} / 吹き出し${bubbles}`);
     await page.locator('[data-card-replay-next-turn]').click();
+    const headN = await page.locator('[data-card-head-turn]').innerText();
+    const barN = await page.locator('[data-card-replay-turn]').innerText();
+    const turnOf = (t) => (t.match(/(\d+)/) || [])[1];
+    check('④ 番を進めると、上の帯の番と下の帯の番がそろう', !!turnOf(headN) && /番目の番/.test(barN) && barN.includes(`${turnOf(headN)}番目の番`), `${headN} / ${barN}`);
     await shot(page, 'replay-open');
     await page.locator('[data-card-replay-exit]').click();
     const back = await page.locator('[data-card-replay-list]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
