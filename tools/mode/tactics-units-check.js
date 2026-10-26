@@ -1209,7 +1209,7 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   //   ①を直したので、ちから・丈夫さはもうどこの判断にも使われていない
   check('バトルの詳細に「パーティ全体」の欄を出さない',
     !has('パーティ全体（カードの効きめを決める値）')
-      && has('{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left">'));
+      && has('{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-x-3 gap-y-6 text-left">'));
   // ★固有技の強化画面のガッツも1体ずつ。押せるかは前から1体ずつで見ていた
   const upgradeScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/68-screen-run-result.jsx'), 'utf8');
   check('固有技の強化画面のガッツを枠ごとに出す',
