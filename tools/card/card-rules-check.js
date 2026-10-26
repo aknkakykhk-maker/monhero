@@ -731,6 +731,11 @@ const pendingCards = () => {
     const a = find(E.cardAttackOptions(db, st), (x) => x.type === 'breeder' && st.players[0].hand[x.hand[0]] === '254');
     ok(a && a.target && a.target.m === 1, '254: 攻撃したゴーレムを選べない');
     if (a) { st = act(st, a); ok(canHit(st, [gol.no], 0), '254: もう1回攻撃できない'); } }
+  // 意味不明(277・特殊・ダメージなし): 相手1体を選び、その子は次のターン攻撃できない(前は何も起きていなかった。2026-10-27 社長)
+  { ready('277'); let st = scene({ hands: [['277'], [gol.no]], guts: [9, 9] });
+    const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '277' && x.target && x.target.p === 1 && x.target.m === 1);
+    ok(a, '277: 相手を選べない');
+    if (a) { st = act(st, a); const s2 = nextTurnOf(st, 1); ok(!canHit(s2, [gol.no], 0), '277: 意味不明を受けた子が、次のターン攻撃できる'); } }
   // 吹き飛ばし(273)・吠え(010): 相手は次のターン攻撃できない(守りとブリーダーのカードは出せる)。夏美草(351)でその印を消せる
   { ready('273'); ready('351'); let st = scene({ hands: [['273'], [gol.no, '351']], guts: [9, 9] });
     const a = find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '273' && x.target && x.target.m === 1);
