@@ -265,7 +265,7 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C044_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'tiger', sub:'unknown' }) }),
   // 最初は立ち絵が無く「影で並べる」予定だった2体。同じ日に絵が届いた
   Ankylox: Object.freeze({ id:'Ankylox', name:"アンキロックス", emoji:"🦕", imgUrl:HYBRID_C014_IMG, iconUrl:HYBRID_C014_IMG,
-    draft:true, draftLineage:Object.freeze({ main:'dino', sub:'golem' }) }),
+    faceIconUrl:HYBRID_C014_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'dino', sub:'golem' }) }),
   Soborobent: Object.freeze({ id:'Soborobent', name:"ソボロベント", emoji:"📦", imgUrl:HYBRID_C037_IMG, iconUrl:HYBRID_C037_IMG,
-    draft:true, draftLineage:Object.freeze({ main:'monol', sub:'worm' }) }),
+    faceIconUrl:HYBRID_C037_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'monol', sub:'worm' }) }),
 });
