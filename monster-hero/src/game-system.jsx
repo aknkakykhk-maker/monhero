@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a7c9f6d4da89cdc
+// generated-sha256: 957bbe76211a7b4d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 02:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -34513,22 +34513,30 @@ const DexMasuColorSheet = ({ masuMons, mon, value, onSelect, onClose }) => {
 const DexTryDyeSheet = ({ mon, draft, onChange, onCustom, onApply, onReset, onClose }) => (
   <div data-dex-try-dye className="fixed inset-0 flex items-center justify-center p-4" style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.9)', zIndex:31500,
     paddingTop:'calc(1rem + env(safe-area-inset-top))', paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }} role="dialog" aria-modal="true" aria-label={`${mon.name}を染めてみる`}>
-    <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden">
+    <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:500px)]:p-3 flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden">
       <div className="flex items-center justify-between shrink-0">
         <h3 className="text-sm font-black text-white">🎨 {mon.name}を染めてみる</h3>
         <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
       </div>
-      <div className="h-36 shrink-0 flex items-center justify-center rounded-2xl bg-black/30 border border-white/5">
-        <DyedMonsterImage baseId={mon.id} src={mon.imgUrl || mon.iconUrl} alt={mon.name} masuColors={draft} draggable={false} className="h-full aspect-square max-w-full object-contain"/>
-      </div>
-      <div className="text-[10px] text-fuchsia-200 font-bold text-center shrink-0">見るだけの機能です。マスモンの色は変わらず、アイテムも使いません。</div>
-      {dyeRegionCount(mon.id) === 1 && <div className="text-[9px] text-slate-400 font-bold text-center shrink-0">このモンスターは全身をまとめて染めます</div>}
-      <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-        <DyeRegionColorControls baseId={mon.id} colors={draft} onChange={onChange} onCustom={onCustom}/>
-      </div>
-      <div className="flex gap-2 shrink-0">
-        <button type="button" onClick={onReset} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">元の色に戻す</button>
-        <button type="button" data-dex-try-apply onClick={onApply} className="flex-1 min-h-[44px] rounded-xl font-black text-xs bg-fuchsia-600 text-white active:scale-95">この色で見る</button>
+      {/* 高さ500px以下の横画面では、絵と注意書きを左、色の札とボタンを右に並べる。
+          縦に積むと絵の枠だけで窓の半分を使い、色の札が1段しか見えなかった(2026-10-27 見回り・844×390) */}
+      <div data-dex-try-dye-body className="flex-1 min-h-0 flex flex-col gap-2.5 [@media(orientation:landscape)_and_(max-height:500px)]:flex-row [@media(orientation:landscape)_and_(max-height:500px)]:gap-3">
+        <div className="shrink-0 flex flex-col gap-2.5 [@media(orientation:landscape)_and_(max-height:500px)]:w-[40%] [@media(orientation:landscape)_and_(max-height:500px)]:min-h-0">
+          <div className="h-36 shrink-0 flex items-center justify-center rounded-2xl bg-black/30 border border-white/5 [@media(orientation:landscape)_and_(max-height:500px)]:h-auto [@media(orientation:landscape)_and_(max-height:500px)]:flex-1 [@media(orientation:landscape)_and_(max-height:500px)]:min-h-0">
+            <DyedMonsterImage baseId={mon.id} src={mon.imgUrl || mon.iconUrl} alt={mon.name} masuColors={draft} draggable={false} className="h-full aspect-square max-w-full object-contain"/>
+          </div>
+          <div className="text-[10px] text-fuchsia-200 font-bold text-center shrink-0">見るだけの機能です。マスモンの色は変わらず、アイテムも使いません。</div>
+          {dyeRegionCount(mon.id) === 1 && <div className="text-[9px] text-slate-400 font-bold text-center shrink-0">このモンスターは全身をまとめて染めます</div>}
+        </div>
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col gap-2.5">
+          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+            <DyeRegionColorControls baseId={mon.id} colors={draft} onChange={onChange} onCustom={onCustom}/>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button type="button" onClick={onReset} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">元の色に戻す</button>
+            <button type="button" data-dex-try-apply onClick={onApply} className="flex-1 min-h-[44px] rounded-xl font-black text-xs bg-fuchsia-600 text-white active:scale-95">この色で見る</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -34618,7 +34626,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
       const filters=dexScreenMainLineages();
       const shown=dexLineageFilter==='all'?entries:entries.filter(mon=>dexEntryLineageOf(mon).main.id===dexLineageFilter);
       const sections=DEX_ENTRY_STATUSES.map(s=>({...s,list:shown.filter(mon=>dexEntryStatusOf(mon,unlockedMonsterIds)===s.id)})).filter(s=>s.list.length>0);
-      const chipClass=(on)=>`shrink-0 min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-white/10 text-amber-200/80'}`;
+      const chipClass=(on)=>`shrink-0 snap-start min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-white/10 text-amber-200/80'}`;
       return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="モンスター図鑑" accent="text-amber-300" onBack={onBackToManagement} backLabel="M/B管理へ戻る"/>
@@ -34627,11 +34635,16 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
           <span className="text-[10px] font-black text-amber-300 shrink-0">図鑑登録数</span>
           <span className="text-[15px] font-mono font-black text-amber-100 tabular-nums">{unlockedCount}<span className="text-slate-400 text-[10px]"> / {monsters.length}</span></span>
         </div>
-        <div className="shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="主血統で絞り込む">
+        {/* 選んだ札まで送ったとき、左はしに札の切れはし(「・」だけ)が残らないよう、札の頭で止める(2026-10-27 見回り) */}
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-1" role="group" aria-label="主血統で絞り込む">
           <button type="button" aria-pressed={dexLineageFilter==='all'} onClick={()=>onSelectLineage('all')} className={chipClass(dexLineageFilter==='all')}>すべて</button>
           {filters.map(lineage=>(
             <button key={lineage.id} type="button" aria-pressed={dexLineageFilter===lineage.id} onClick={()=>onSelectLineage(lineage.id)} className={chipClass(dexLineageFilter===lineage.id)}>{lineage.name}</button>
           ))}
+          {/* いちばん右まで送り切っても札の頭で止まれるよう、最後に見えない余白を置く(無いと左はしに切れはしが残った)。
+              幅は「列の幅 − 最後の札の幅 − 札のあいだ(6px)」。これで送り切った位置がちょうど最後の札の頭になる */}
+          <span aria-hidden="true" className="shrink-0" ref={el=>{ if(!el||!el.parentElement||!el.previousElementSibling) return;
+            el.style.width=`${Math.max(0, el.parentElement.clientWidth-el.previousElementSibling.offsetWidth-6)}px`; }}/>
         </div>
         <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}>
           {sections.map(section=>(
@@ -34733,6 +34746,9 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
         <ScreenHead title="モンスター図鑑" accent="text-amber-300"
           onBack={()=>{stopDexAttackPreview();onBackToList();}} backLabel="図鑑一覧へ戻る"
           right={<span className="text-[11px] font-mono font-black text-amber-200/80 tabular-nums">{index+1} / {monsters.length}</span>}/>
+        {/* 高さ500px以下の横画面(スマホの横持ち)では、上の絵の段と下の情報の欄を左右に並べる。
+            縦に積むと絵の段だけで画面の半分を使い、名前の欄から下がはみ出していた(2026-10-27 見回り・844×390) */}
+        <div data-dex-body className="flex-1 min-h-0 flex flex-col [@media(orientation:landscape)_and_(max-height:500px)]:flex-row [@media(orientation:landscape)_and_(max-height:500px)]:items-center [@media(orientation:landscape)_and_(max-height:500px)]:gap-2">
         {/* 上半分: 立ち絵。左右のボタンと横スワイプで前後へ移る */}
         {/* 立ち絵の左右の空きに、前後へ移る矢印と操作ボタンを縦に並べる(2026-09-24 ユーザー指摘
             「ボタン追加してるから図鑑の説明画面が小さくなってる。両サイドの空いたスペース使って説明画面の縦幅は小さくしないで」)。
@@ -34742,7 +34758,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
               左: 動きを止める / ← / 色(マスモンを選ぶ)
               右: 攻撃アクション / → / 染めてみる
             ボタンは立ち絵の枠(data-dex-art)の外の列に置くので、絵には重ならない。 */}
-        <div data-dex-stage className="shrink-0 w-full max-w-md mx-auto flex items-center gap-1 px-1.5 py-1.5" style={{height:'clamp(176px, 26dvh, 226px)'}}
+        <div data-dex-stage className="shrink-0 w-full max-w-md mx-auto flex items-center gap-1 px-1.5 py-1.5 h-[clamp(176px,26dvh,226px)] [@media(orientation:landscape)_and_(max-height:500px)]:w-[46%] [@media(orientation:landscape)_and_(max-height:500px)]:h-[clamp(176px,70dvh,240px)]"
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
           <div data-dex-side="left" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
@@ -34795,7 +34811,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           onReset={()=>{Audio_.se.tap();onTryDyeReset();}} onClose={onCloseTryDye}
           onApply={()=>{Audio_.se.tap();onSelectColor(dexHasColors(tryDyeDraft)?{colors:tryDyeDraft.slice()}:null);onCloseTryDye();}}/>}
         {/* 下半分: 情報カード */}
-        <div className="flex-1 min-h-0 pt-3">
+        <div className="flex-1 min-h-0 pt-3 [@media(orientation:landscape)_and_(max-height:500px)]:pt-0 [@media(orientation:landscape)_and_(max-height:500px)]:self-stretch [@media(orientation:landscape)_and_(max-height:500px)]:py-1 [@media(orientation:landscape)_and_(max-height:500px)]:min-w-0">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{mon.name}</div>
             {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
@@ -34876,6 +34892,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>);}
 
