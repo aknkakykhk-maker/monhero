@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 94622165b245a8a2
+// source-sha256: ad40c773985d8320
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -85599,7 +85599,8 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     level: {
       ...level,
       sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add))
-    }
+    },
+    playerRole: !!(opts && opts.playerRole)
   };
 };
 const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
@@ -85796,7 +85797,19 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const {
     habit
   } = policy;
-  const opts = cardGuardOptions(db, st);
+  const loseAfter = a => {
+    try {
+      const s = cardAiSettle(db, cardApplyAction(db, st, a));
+      return !!s && s.winner !== null && s.winner !== undefined && s.winner !== q;
+    } catch (_) {
+      return false;
+    }
+  };
+  const few = me.mons.filter(m => !m.ko).length <= 2;
+  const passLoses = few && loseAfter({
+    type: 'pass'
+  });
+  const opts = cardGuardOptions(db, st).filter(o => !few || passLoses || !loseAfter(o));
   if (!opts.length) return {
     type: 'pass'
   };
@@ -85896,8 +85909,53 @@ const cardAiChooseGuts = (db, st, policy) => {
   const gm = cardFieldEff(st, 'fieldGutsMax');
   return {
     type: 'guts',
-    hand: gm ? pick.slice(0, gm.n) : pick
+    hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me))
   };
+};
+const cardAiGutsCap = me => me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length));
+const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse', 'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
+const cardAiDrawNeed = pl => pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length;
+const cardAiSettle = (db, st) => {
+  let s = st;
+  for (let i = 0; i < 40 && s && s.winner === null; i++) {
+    let a = null;
+    if (s.pendingPray) a = {
+      type: 'pray'
+    };else if (s.pendingReveal) a = {
+      type: 'reveal'
+    };else if (s.pendingChoice) a = {
+      type: 'choose',
+      pick: s.pendingChoice.cands[0]
+    };else if (s.pendingDiscard) a = {
+      type: 'discard',
+      hand: s.players[s.pendingDiscard.p].hand.map((_, k) => k).slice(0, s.pendingDiscard.n)
+    };else if (s.pending) a = {
+      type: 'pass'
+    };
+    if (!a) break;
+    s = cardApplyAction(db, s, a) || null;
+  }
+  return s;
+};
+const cardAiLosesBy = (db, st, opt, p = st.active, policy = null) => {
+  if (!opt || !Array.isArray(opt.hand) || opt.type !== 'attack' && opt.type !== 'breeder') return false;
+  const me = st.players[p];
+  const risky = opt.hand.some(i => {
+    const c = cardOf(db, me.hand[i]);
+    return c && (c.effects || []).some(e => CARD_AI_RISKY_EFFS.includes(e.t));
+  });
+  if (!risky) return false;
+  let s;
+  try {
+    s = cardAiSettle(db, cardApplyAction(db, st, opt));
+  } catch (_) {
+    return false;
+  }
+  if (!s) return false;
+  if (s.winner !== null && s.winner !== undefined) return s.winner !== p;
+  const after = s.players[p];
+  if (!(policy && policy.playerRole) && after.deck.length < me.deck.length && after.deck.length < cardAiDrawNeed(after) && me.deck.length >= cardAiDrawNeed(me)) return true;
+  return false;
 };
 const cardAiFillBind = (db, st, o, policy) => {
   if (!o || !Array.isArray(o.hand)) return o;
@@ -85981,10 +86039,10 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     const gm = cardFieldEff(st, 'fieldGutsMax');
     return {
       type: 'guts',
-      hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, gm ? gm.n : 99)
+      hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active])))
     };
   }
-  const opts = cardAttackOptions(db, st);
+  const opts = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
   if (!opts.length) return {
     type: 'endAttacks'
   };
@@ -91374,7 +91432,7 @@ const CardBattleBoard = ({
     className: "shrink-0 text-rose-300"
   }, "▸ 見る")), React.createElement("div", {
     "data-card-log": true,
-    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
+    className: `relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && (guardAtk ? React.createElement("button", _extends({
     type: "button",
@@ -91447,7 +91505,7 @@ const CardBattleBoard = ({
     "data-card-tutor-arrow": true,
     className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900",
     style: JA_LABEL_STYLE
-  }, "👇 ", jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')), guide && !tutorial && !(mode === 'guard' && !guardOpts.length && !hint) && React.createElement("div", {
+  }, "👇 ", jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')), guide && !tutorial && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
     style: JA_LABEL_STYLE
   }, jaWrap(hint || guide)), mode === 'guard' && tutorial && st.pending && st.pending.evaded && React.createElement("div", {
