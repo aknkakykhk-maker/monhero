@@ -137,7 +137,7 @@ if (powA && intA && powCheap && intCheap) {
       if (re) want = Math.max(0, d - re.n);
       if (rh) want = d - Math.floor(d / 2);
       if (ra) want = 0;
-      if (rf) { if (rf.keep) { want = d; wantBack = Math.floor(d * rf.frac); } else { want = 0; wantBack = d; } }
+      if (rf) { if (rf.keep) { wantBack = Math.floor(d * rf.frac); want = d - wantBack; } else { want = 0; wantBack = d; } }
       check(`B ${g.no} ${g.name}: ${kind === 'pow' ? 'ちから技' : 'かしこさ技'}(${d})のダメージが ${want}${wantBack ? `・はね返し ${wantBack}` : ''}`, r.dmg === want && r.back === wantBack, `受けた ${r.dmg}・はね返し ${r.back}`);
     });
     // N以上のガッツ: 安い技には出せない
@@ -213,9 +213,13 @@ C('はね返しで、攻撃した子のライフが0になったら倒れる', (
   st = passAll(r.st);
   check('C はね返しでライフ0になった攻撃側は KO', st.players[0].mons[0].ko === true && lifeOf(st, 0, 0) === 0);
 });
-C('カウンター(半分はね返す)の読み方: 守った子は全部受け、半分(切り捨て)を返す', () => {
+C('カウンター(半分はね返す)の読み方: 半分(切り捨て)を返し、残りだけ受ける(2026-10-27 社長)', () => {
   const r = tryGuard(byNo('084'), powA);
-  check(`C カウンター: 受ける ${powA.damage}・返す ${Math.floor(powA.damage / 2)}`, r.offered && r.dmg === powA.damage && r.back === Math.floor(powA.damage / 2), JSON.stringify(r));
+  check(`C カウンター: 受ける ${powA.damage - Math.floor(powA.damage / 2)}・返す ${Math.floor(powA.damage / 2)}`, r.offered && r.dmg === powA.damage - Math.floor(powA.damage / 2) && r.back === Math.floor(powA.damage / 2), JSON.stringify(r));
+  // 社長の例: 5ダメージなら2を返して3を受ける(奇数の切り捨て)
+  const pow5 = cards.find((c) => c.ready && c.kind === 'pow' && c.damage === 5 && !(c.effects || []).length);
+  const r5 = pow5 ? tryGuard(byNo('084'), pow5) : null;
+  check('C カウンター: 5ダメージなら3を受け、2を返す', !!r5 && r5.dmg === 3 && r5.back === 2, JSON.stringify(r5));
 });
 C('根性: 残りのライフ以上のダメージでも、ライフ1で残る', () => {
   let st = scene({ mons: [[monOf[powA.user], 'C-003', 'C-006'], [anyMon, 'C-003', 'C-006']], hands: [[powA.no], ['111']] });
