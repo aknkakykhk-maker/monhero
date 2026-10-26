@@ -16952,7 +16952,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     </div>,
     document.body
   ) : null;
-  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
+  // お話や大事な窓が出ているあいだは出さずに待ち、閉じてから出す(WaitForOverlayClose・41-screen-ui.jsx)
+  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(<WaitForOverlayClose>{
     updateNoticeSmall ? (
       <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
         className="fixed z-[100000] right-3 flex items-stretch gap-1"
@@ -16962,10 +16963,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     ) : (
       <div aria-live="assertive" data-update-notice="full" data-update-notice-place="top" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
-        <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
+        <button type="button" onClick={reloadLatestVersion} className="flex-1 min-w-0 flex items-center justify-center gap-2 min-h-[48px] px-3 py-2 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[13px] leading-tight shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18} className="shrink-0"/>{/* 「更新す/る」のように言葉の途中で折れないよう、2つの言葉をそれぞれ折れない塊にする。
+            狭い画面で折れるのは2つのあいだだけ。「更新する」は右のボタンに見えるよう分ける(2026-10-27 カゲあつくんの指摘) */}<span className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1"><span className="whitespace-nowrap">新しいバージョンがあります</span><span className="whitespace-nowrap rounded-lg bg-slate-950/15 px-2 py-0.5">更新する</span></span></button>
         <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
       </div>
-    ),
+    )
+  }</WaitForOverlayClose>,
     document.body
   ) : null;
   const titleModal = showChangelog ? (

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a22c2880e3940100
+// source-sha256: 2f0357777e4638b1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -48745,13 +48745,22 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   multi: 'みんなで対戦中',
   masu: 'マスモンのお世話中',
   market: 'マーケットを見ています',
-  other: 'ログイン中'
+  other: 'ログイン中',
+  card: 'MFバトルカードで遊び中',
+  cardBattle: 'MFバトルカードで対戦中'
 });
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+const friendsPlaceFromRow = (place, records) => {
+  if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
+  return Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : null;
+};
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
+  if (name === 'CARD_BATTLE') return 'cardBattle';
+  if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
@@ -48946,6 +48955,7 @@ const friendsNormalizeRecords = raw => {
   } : null).filter(Boolean).slice(0, FRIEND_RECORD_SONG_MAX);
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
+    pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
@@ -49022,9 +49032,10 @@ const friendsBuildSummary = ({
 const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   const id = friendsSafeId(breederIdRaw);
   if (!id || !summary) return false;
+  const sub = FRIEND_SUB_PLACES.includes(summary.place) ? summary.place : null;
   const base = {
     breeder_id: id,
-    place: summary.place,
+    place: sub ? 'other' : summary.place,
     started_on: summary.startedOn,
     play_seconds: summary.playSeconds,
     best_bond: summary.bestBond,
@@ -49041,11 +49052,15 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   });
   try {
     if (_friendProfileExtraUnavailable) await send(base);else {
+      const records = sub ? {
+        ...(summary.records || {}),
+        pl: sub
+      } : summary.records;
       try {
         await send({
           ...base,
           message: summary.message,
-          records: summary.records
+          records
         });
       } catch (error) {
         if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
@@ -49135,7 +49150,7 @@ const sbFetchFriendSummaries = async ids => {
       const num = value => Number.isFinite(Number(value)) && value !== null ? Number(value) : null;
       const fav = row.favorite && typeof row.favorite === 'object' && !Array.isArray(row.favorite) && typeof row.favorite.monsterId === 'string' ? row.favorite : null;
       byId[row.breeder_id] = {
-        place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, row.place) ? row.place : null,
+        place: friendsPlaceFromRow(row.place, row.records),
         startedOn: typeof row.started_on === 'string' && FRIEND_DAY_RE.test(row.started_on) ? row.started_on : null,
         playSeconds: num(row.play_seconds),
         bestBond: num(row.best_bond),
@@ -52348,6 +52363,20 @@ const PhaseSteps = ({
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-[#c9ae6a]"
   }, "⚔ WAVE ", nextWave)));
 };
+const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"],[role="dialog"]';
+const overlayOpenNow = () => typeof document !== 'undefined' && !!document.querySelector(OVERLAY_WAIT_SELECTOR);
+function WaitForOverlayClose({
+  children
+}) {
+  const [blocked, setBlocked] = useState(overlayOpenNow);
+  useEffect(() => {
+    const tick = () => setBlocked(overlayOpenNow());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return blocked ? null : children;
+}
 const PickerSheet = ({
   title,
   note = '',
@@ -93245,8 +93274,17 @@ const CardBattleScreen = ({
       alt: x.name,
       className: "h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"
     }), React.createElement("span", {
-      className: "text-[13px] font-black"
-    }, x.name), save.record.beaten[x.id] && React.createElement("span", {
+      className: "block w-full",
+      style: {
+        containerType: 'inline-size'
+      }
+    }, React.createElement("span", {
+      "data-card-foe-name": true,
+      className: "block whitespace-nowrap text-center font-black",
+      style: {
+        fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))`
+      }
+    }, x.name)), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
     }, "勝")))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"
@@ -93310,24 +93348,27 @@ const CardBattleScreen = ({
       db: db,
       who: a.id,
       level: foe.level
-    })), React.createElement("div", {
-      className: SCREEN_PANEL_FLAT_CLASS
-    }, React.createElement("div", {
-      className: "text-[12px] font-bold text-slate-300"
-    }, "あなたのデッキ: ", React.createElement("b", {
-      className: "text-white"
-    }, activeDeck ? activeDeck.name : 'なし')), deckIssues.length > 0 && React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-rose-300",
-      style: JA_WRAP_STYLE
-    }, jaWrap(deckIssues.join('・'))), !save.daily.firstWin && React.createElement("div", {
-      className: "mt-1 text-[11px] font-bold text-slate-400",
-      style: JA_WRAP_STYLE
-    }, cardRuleLine('《今日はじめての勝ちで +50》'))), notice && React.createElement("p", {
+    })), notice && React.createElement("p", {
       className: "text-[12px] font-bold text-amber-200",
       style: JA_LABEL_STYLE
     }, jaWrap(notice))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
-    }, React.createElement("button", {
+    }, React.createElement("div", {
+      "data-card-foe-mydeck": true,
+      className: "mb-1.5 px-0.5"
+    }, React.createElement("div", {
+      className: "flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"
+    }, React.createElement("span", {
+      style: JA_LABEL_STYLE
+    }, "あなたのデッキ: ", React.createElement("b", {
+      className: "text-white"
+    }, activeDeck ? activeDeck.name : 'なし')), !save.daily.firstWin && React.createElement("span", {
+      className: "text-[11px] text-slate-400",
+      style: JA_LABEL_STYLE
+    }, cardRuleLine('《今日はじめての勝ちで +50》'))), deckIssues.length > 0 && React.createElement("div", {
+      className: "mt-0.5 text-[12px] font-bold text-rose-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap(deckIssues.join('・')))), React.createElement("button", {
       type: "button",
       "data-card-start": true,
       className: `${btn} mh-button-primary`,
@@ -120587,7 +120628,7 @@ function MonsterHeroGame() {
     onClick: () => setStorageTrouble(null),
     className: "shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black"
   }, "×"))), document.body) : null;
-  const updateNotice = updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay ? ReactDOM.createPortal(updateNoticeSmall ? React.createElement("div", {
+  const updateNotice = updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay ? ReactDOM.createPortal(React.createElement(WaitForOverlayClose, null, updateNoticeSmall ? React.createElement("div", {
     "aria-live": "assertive",
     "data-update-notice": "mini",
     "data-update-notice-place": "top",
@@ -120619,17 +120660,24 @@ function MonsterHeroGame() {
   }, React.createElement("button", {
     type: "button",
     onClick: reloadLatestVersion,
-    className: "flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
+    className: "flex-1 min-w-0 flex items-center justify-center gap-2 min-h-[48px] px-3 py-2 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[13px] leading-tight shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
   }, React.createElement(RefreshCcw, {
-    size: 18
-  }), React.createElement("span", null, "新しいバージョンがあります\u3000更新する")), React.createElement("button", {
+    size: 18,
+    className: "shrink-0"
+  }), React.createElement("span", {
+    className: "flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "新しいバージョンがあります"), React.createElement("span", {
+    className: "whitespace-nowrap rounded-lg bg-slate-950/15 px-2 py-0.5"
+  }, "更新する"))), React.createElement("button", {
     type: "button",
     "aria-label": "あとで更新する（この通知を閉じる）",
     onClick: () => setDismissedUpdateBuild(latestBuild || BUILD_DATE),
     className: "shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
   }, React.createElement(X, {
     size: 18
-  }))), document.body) : null;
+  })))), document.body) : null;
   const titleModal = showChangelog ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(closeChangelog)), React.createElement("div", {
