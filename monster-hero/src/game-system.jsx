@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f380cca81bfc4eff
+// generated-sha256: 7b1bfda1176a5d09
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 23:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31862,6 +31862,9 @@ const JA_WRAP_LINE = 10;
 // 文節の終わりになる言葉(このあとでは折ってよい)。助詞・句読点・閉じかっこ
 // (「な」「か」「って」は「強くな|ければ」「いって|らっしゃい」のように言葉の途中にも来るので入れない)
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/; // 記号は、ブラウザがそのあとを印が無くても折るので入れる
+// 道具(Intl.Segmenter)が読み違えて途中で切る、よく使う言葉(この中では折らない。2026-10-26 社長「ストーリーやバトルカードとかでも変なとこで切れる」
+//   「や/さしく」「ひと/とおり」「はね/返す」「しと/け」。検査 tools/boot/ja-wrap-word-check.js)
+const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
 const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -31887,6 +31890,9 @@ const jaWrapPoints = (text) => {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = (pos) => kao.some(([a, b]) => pos > a && pos < b);
+    const keepWords = [];
+    for (const w of JA_WORDS_KEEP) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) keepWords.push([i, i + w.length]);
+    const inKeepWord = (pos) => keepWords.some(([a, b]) => pos > a && pos < b);
     // 道具が空白と「(」を1つの区切りにすることがあるので、空白のすぐあとから顔文字が始まる所も「始まり」とみなす
     const kaoStart = (pos) => kao.some(([a]) => pos === a || (a > pos && /^\s+$/.test(s.slice(pos, a))));
     const segs = [];
@@ -31903,10 +31909,18 @@ const jaWrapPoints = (text) => {
       const seg = segs[i];
       if (i === 0) { groups.push({ parts: [seg], hard: [] }); pos += seg.length; continue; }
       const prev = segs[i - 1], g = groups[groups.length - 1], cur = g.parts.join('');
-      const hard = inKao(pos) || (!kaoStart(pos) && (
+      const hard = inKao(pos) || inKeepWord(pos) || (!kaoStart(pos) && (
         /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev)
-        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))
-        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))));
+        // 「お」「ご」のあとは、ひらがなでも漢字でも離さない(「〜のご／ほうび」「お／相手」2026-10-26)
+        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg))
+        // 笑いの「笑」「w」だけを次の行の頭に落とさない(「楽しもうぜ／笑」「〜だって！／w」)
+        //   (「笑っちゃう」の「笑」は言葉なので、あとが文の終わり・空白・記号・w のときだけ)
+        || (/^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)))
+        // くっついた言葉(「読み|合い」「組み|直した」「起き|上がる」「吹っ|飛ばす」)。漢字+送り仮名のすぐあとの漢字は離さない(「少し」は1語なので除く)。
+        //   長い文節を分ける②でもここでは分けない(柔らかくつなぐと「噛み／合わない」と分けられた)
+        //   道具は「噛|み|合わ」と細かく分けるので、すぐ前の区切りではなく、それまでにまとめた文節(cur)の終わりで見る
+        || (/[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg))
+        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg))));
       const soft = !hard && !kaoStart(pos) && (
         (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
         || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
@@ -31918,6 +31932,8 @@ const jaWrapPoints = (text) => {
         || (/(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg))
         // 「ビートP」「ブリーダーP」も1語(2026-10-26 見回り「ビート/P」と折れた。カードの売り場の吹き出し)
         || (/(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg))
+        // カタカナのすぐあとの英字も1語(「ビート|Lv」2026-10-26)
+        || (/[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg))
         // 1字の漢字のすぐあとの1字のひらがなは、助詞ではなく送り仮名(「強|が|らなくても」「強|く|なければ」)
         || (/^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || ''))
         // 「です・でつ・でしょ」の「で」は助詞ではない(「なんで|すか」「しないで|つよ」と折れた)
@@ -31985,13 +32001,13 @@ const jaWrapPoints = (text) => {
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
 const jaKeepWhole = (seg) => ([...seg].length <= JA_WRAP_LINE || (!/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14))
-  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
+  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
   || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 // かたまり1つを、折らない枠で包む所([字, true])とそのままの所([字, false])に分ける(jaWrap と検査 ja-wrap-lines-check.js が使う)。
 // 空白で分けてから部分ごとに決める(空白をまたいで包むと、「大丈夫！ いってらっしゃい〜」が1行のまま吹き出しからはみ出した。2026-10-24)。
 // 長い部分(「『MONSTERS』で」)は、かぎかっこの名前や、閉じかっこ・？・！とその前後の字だけを包む。「。って」「、っぽい」も(ブラウザは句点のあとを折る)。
 // 「でつ……。」の三点リーダー、「……？💦」の終わりの絵文字も、手前の数字といっしょに包む(ブラウザはその手前を折る)
-const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
 const jaWrapPieces = (seg) => {
   const out = [];
   // 顔文字のかっこの中の空白((｡ ˘ω˘))では分けない
@@ -32000,7 +32016,7 @@ const jaWrapPieces = (seg) => {
     if (/^\s+$/.test(part)) out.push([part, false]);
     else if (jaKeepWhole(part)) out.push([part, true]);
     // かぎかっこの名前は「「」からまとめて包む(「「ドラシ／ル」だって」と名前の中で折れた)。1行(10字)に入らないものは包まず、閉じかっこのあとで折れるのに任せる
-    else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+    else if (/[」』？！?!][ぁ-ゖ笑ｗwW]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
       if (!t) return;
       if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) { out.push([t, k % 2 === 1]); return; }
       // 10字を超える「かぎかっこの名前+あとの字」は、名前だけを包む(「「チュートリア／ル」から」と名前の中で折れた)
@@ -46424,6 +46440,10 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-title{background:linear-gradient(90deg,#67e8f9,#f0abfc 55%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(240,171,252,.45))}
 .mhms-glow{position:absolute;left:50%;top:46%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(244,114,182,.45),rgba(168,85,247,.18) 55%,transparent 75%);animation:mhmsPulse 3.6s ease-in-out infinite}
 .mhms-float{animation:mhmsFloat 4.5s ease-in-out infinite}
+.mhms-art-box{container-type:size}
+.mhms-art-img{width:var(--mhms-w)}
+@supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
+@container (max-height:120px){.mhms-art-img{left:30%!important}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
 .mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
 .mhms-card.free::after{animation-delay:1.9s}
@@ -46526,20 +46546,22 @@ const RHYTHM_MODE_SELECT_CSS = `
 // ももすけ・ドラの絵は正方形で、ももすけは右端に別の絵のかけらが入っている。顔の位置(cx, cy・絵の幅と高さに対する割合)を
 // 枠の真ん中(横)・top(縦)に合わせ、枠の幅の zoom 倍に広げて、かけらを枠の外へ出す
 // (高さで合わせると、縦画面の縦長の枠で大きくなりすぎて耳が切れた)
+// show … 枠の背が低いときも、絵の高さのうち少なくともこの割合は枠に入れる(2026-10-26 社長「小さいスマホで立ち絵が頭だけ」)。
+//   絵の幅は「いつもの幅(zoom)」と「絵の高さ×show が枠の高さに収まる幅」の小さいほう。枠が十分に高ければ今までと同じ見え方
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   // ももすけは表情ごとに体の位置が違い、かけらも左(angry・happy)と右(crying・wink)にある。
   // 透明でない部分を数えて決めた体の真ん中(cxBy)へ合わせ、体の幅だけが入る 1.5 倍に広げる(2026-10-03)
-  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42,
+  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42, show: 0.55,
     cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
-  dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
+  dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4, show: 0.75 },
   // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上・頭に王冠)。絵の上端(王冠のてっぺん)を枠の上から3%に置き、頭の中心(絵の幅の48%)を真ん中へ。
   // 社長「左肩切れてるように見える」→ 引いて下と左右をぼかした形 →「もっとアップにして切れてる感じ無くしたほうがいい」で、
   // 絵の端がすべて枠の外へ出るよう 1.1 倍に広げた(切れるのは枠の左右と下だけ・両肩は同じくらい・王冠は枠の中)。
   // 顔の大きさと高さは みゅあ・きき と並べて合わせた(1.25 倍はききより顔が大きくなった)
-  atsu: { zoom: 1.1, cx: 0.48, cy: 0, top: 0.02 },
+  atsu: { zoom: 1.1, cx: 0.48, cy: 0, top: 0.02, show: 0.6 },
   // きゅうこ(2026-10-22)。大きい絵は 384x512(胸から上・髪のてっぺんが絵の上端近く)。
   // 社長「立ち絵もうちょい引かせたい」(2026-10-23)で、3案から「もう少し引く」を選んだ: 枠の幅の0.75倍。髪全体と胸元のフリルまで入る
-  kyuko: { zoom: 0.75, cx: 0.5, cy: 0, top: 0.06 },
+  kyuko: { zoom: 0.75, cx: 0.5, cy: 0, top: 0.06, show: 0.8 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -46601,18 +46623,27 @@ function ModeSelectAssistToggles({ assistant, showArt, showComment, onToggle, cl
 }
 // 助手の枠。上に立ち絵、その下にコメント(絵に重ねない。2026-10-04・ユーザー指摘「助手コメントが助手に被ってる」)。
 // 立ち絵とコメントは別々にオン・オフできる。両方オフなら枠ごと出さない
+// 表に無い助手(みゅあ・きき・ハロウィンの衣装など)は、枠いっぱいに広げて上から22%(横向きは30%)の所を中心に見せる。背の低い枠でも絵の高さの8割は入れる
+const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle }) {
+  // 絵の縦横の比(読み込んでから分かる)。分かるまでは、いつもの幅で出す
+  const [artRatio, setArtRatio] = React.useState(null);
+  const artSrc = assistant && assistant.image;
+  React.useEffect(() => { setArtRatio(null); }, [artSrc]);
   if (!assistant || !(showArt || showComment)) return null;
+  const onArtLoad = (e) => { const im = e.currentTarget; if (im.naturalWidth > 0) setArtRatio(im.naturalHeight / im.naturalWidth); };
+  // 背の低い枠の上限(絵の高さ×show が枠の高さ)。cqh は枠の高さ(mhms-art-box の container-type:size)
+  const capOf = (show) => (artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px');
   return (
     <div data-rhythm-mode-assistant className={`mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`}>
       {showArt && (
-        <div data-rhythm-mode-assistant-art-box className="relative min-h-0 flex-1 overflow-hidden">
+        <div data-rhythm-mode-assistant-art-box className="mhms-art-box relative min-h-0 flex-1 overflow-hidden">
           <span aria-hidden="true" className="mhms-glow" />
           <ModeSelectAssistToggles assistant={assistant} showArt={showArt} showComment={showComment} onToggle={onToggle} cls="absolute bottom-1.5 right-1.5 z-20" withLabel={false} />
           <div className="mhms-float pointer-events-none absolute inset-0">
             {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
-              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} className="absolute max-w-none" style={{ width: `${fr.zoom * 100}%`, height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
-              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />}
+              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
+              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
         </div>
       )}
