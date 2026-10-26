@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a1fab66e84bfc93d
+// generated-sha256: d71ccb608abb1f4e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4642,6 +4642,8 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
 // 横向きの道の幅(2026-09-27)。値の倍率は RHYTHM_ROAD_WIDTHS(data/rhythm-mode.js)
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE','広い'],['STANDARD','ふつう'],['NARROW','細い']]);
+// 道の奥行き(2026-10-27 社長の選択「案A」: 案3のカメラを寝かせる形をオプションで選べるように)。「深い」は道が奥へ長く伸び、遠くのノーツほど小さく、手前で速く近づく
+const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','深い']]);
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
@@ -4837,6 +4839,7 @@ const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LE
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_ROAD_WIDTH_LEVELS = Object.freeze(['WIDE','STANDARD','NARROW']);
+const RHYTHM_ROAD_DEPTH_LEVELS = Object.freeze(['NORMAL','DEEP']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色。
 // このゲームは間合い適性(DIST_APTITUDE_COLOR)でも同じ G〜M の記号を使っていて、
@@ -4924,6 +4927,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
   // 横向きの道の幅(2026-09-27)。既定は「広い」(=これまでの幅)。既存の保存値には無いので、読み込み時は既定で補われる
   roadWidth:'WIDE',
+  // 道の奥行き(2026-10-27)。既定は「いまの」(=これまでの遠近)。新しい項目なので、保存値に無い人は既定で補われる
+  roadDepth:'NORMAL',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode:false, mirrorChart:false,
@@ -4965,6 +4970,7 @@ const normalizeRhythmSettings = value => {
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
     roadWidth:RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth)?source.roadWidth:DEFAULT_RHYTHM_SETTINGS.roadWidth,
+    roadDepth:RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth)?source.roadDepth:DEFAULT_RHYTHM_SETTINGS.roadDepth,
     // タップ音量だけ上限を400へ広げた(2026-09-26)。広げただけなので、保存してある0〜200はそのまま読める
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_NOTE_SE_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType:rhythmNoteSeTypeOf(source.noteSeType),
@@ -20167,6 +20173,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {/* 演奏中は曲名を薄くする(2026-09-27)。既定は ON */}
 {field('演奏中は曲名を薄くする',toggle('hudSongFade'),
               '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。')}
+{field('道の奥行き',segments('roadDepth',RHYTHM_ROAD_DEPTH_LABELS),
+              '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。',{full:true})}
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
@@ -22521,7 +22529,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 判定ラインの高さは描くたびに測る(下の measure)。測った高さが変わったら、空中の面を描き直す(skyLineTick)
   RHYTHM_ROAD_WIDTH.set(orientationIsLandscape()?(RHYTHM_ROAD_WIDTHS[settings.roadWidth]||1):1);
   // 案3の2段目(試作・2026-10-16): カメラを寝かせる。道の幅と同じく、描き始めより前に入れる(判定・入力・見た目がそろって変わる)
-  const cameraDeep=useState(()=>rhythmCameraDeepActive())[0];
+  // 道の奥行き(オプション「深い」・2026-10-27)か、デバッグの試作 c3b のとき、カメラを寝かせる。演奏を始めるときに1回だけ決める(途中で変えると押す場所が変わるため)
+  const cameraDeep=useState(()=>settings.roadDepth==='DEEP'||rhythmCameraDeepActive())[0];
   RHYTHM_PROJECTION_CAMERA.set(cameraDeep);
   const [skyLineTick,setSkyLineTick]=useState(0);
   if(skyChart)RHYTHM_SKY_LIFT.set(orientationIsLandscape());
@@ -36589,6 +36598,8 @@ function MasuDonationScreen({
       const sorted=sortDonationMasuMons(masuMons,donationSortKey,donationSortDir,monsterRosterIds);
       return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="寄付" accent="text-violet-300" onBack={onLeaveDonation} backLabel="神殿へ戻る" disabled={donationProcessing}/>
+        {/* 寄付の台詞(donation)は用意してあったのに、画面に吹き出しが無かった(2026-10-27) */}
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="donation" compact/></div>
         <p className="shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
         {/* 並べ替えは合体と同じ「並べ替え＋横に流れるボタン」の形にそろえる(2026-10-05。7つを4列に詰めて総合力だけ2列ぶんの幅だった)。
             右端のぼかしと末尾の余白は合体と同じ(2026-10-27・320で続きがあると気づけなかった) */}
@@ -36846,7 +36857,7 @@ function MasuSoulRankScreen({
           .filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
         return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
           <ScreenHead title="魂格進化" accent="text-sky-200" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="soulRank" compact/></div>
           <ScreenLead>超越後、現在のLv上限まで育ったマスモンを次の魂格へ進化できます。進化しても現在Lvは上がらず、Lv上限だけが100解放されます。</ScreenLead>
           <div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2"><span className="flex items-center gap-1 text-[10px] font-black text-amber-200"><span aria-hidden="true">🏅</span>勇者の証</span><span className="text-[11px] font-mono font-black text-white">所持 {heroProofHave.toLocaleString()}</span></div>
           {renderMonsterSortFilterBar({singleType:true})}
@@ -37099,7 +37110,7 @@ function MasuOfferingScreen({
     const entries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
     return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="お布施" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact/></div>
       {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3">
         <div className="text-[11px] font-black text-violet-200">お布施の使い方</div>
         <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"><li>お布施をするマスモンを選びます。</li><li>「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。</li><li>見積もりを見て「お布施する」を押します。</li></ol>
@@ -40412,6 +40423,42 @@ return(
 // ---- part: 71-screen-battle.jsx ----
 // ==== 画面: バトル ====
 //
+// 【横向きで背の低い画面の並べ方】(2026-10-26 社長が案Aを選んだ。docs/progress/battle-landscape/)
+// 縦持ち用の1列(幅=画面の高さ)のままだと、844×390 では敵の絵が潰れ、手札が画面の下に隠れて
+// 「手札と敵を同時に見られない」。横で背の低いときだけ、左に 上の帯・敵の帯・敵の絵と予告・バフ・4枠
+// (タクティクスも横1列)、右に 手札とボタン の2列にする。条件は難易度えらびの2列(#3790)と同じ。
+// 縦画面には効かない(@media の外には何も書かない)。クラシックとタクティクスは同じ組み方。
+// 画面の真ん中に出す札(data-battle-float)は左の列の真ん中へ、列の右端に寄せる札
+// (data-battle-float-right="右からの余白")は左の列の右端へ寄せる(右の手札にかからないように)。
+// 右の列の幅は MFバトルカードの横向き(カード部ブレイブくん)にそろえて、画面の幅の42%・最大420px(844 で約354px)。
+const BATTLE_LANDSCAPE_HAND_W = 'min(42vw, 420px)';
+const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 520px) {
+#root > div[data-mh-portrait-layout="true"]:has([data-battle-speed]) { max-width: none !important; }
+[data-battle-speed] { display: grid !important; grid-template-columns: minmax(0,1fr) ${BATTLE_LANDSCAPE_HAND_W};
+  grid-template-rows: auto auto minmax(0,1fr) auto auto auto; }
+[data-battle-speed] > * { grid-column: 1; }
+[data-battle-speed] > [data-battle-stage-bg] { grid-column: 1 / -1; grid-row: 1 / -1; }
+[data-battle-speed] > [data-battle-header] { grid-row: 1; }
+[data-battle-speed] > [data-enemy-bar] { grid-row: 2; }
+[data-battle-speed] > [data-battle-stage] { grid-row: 3; min-height: 0 !important; overflow: hidden !important; }
+[data-battle-speed] > [data-battle-buffs] { grid-row: 4; }
+[data-battle-speed] > [data-tactics-board-band] { grid-row: 5; padding-top: 2px !important; padding-bottom: 2px !important; }
+[data-battle-speed] > [data-tactics-ex-intro] { grid-row: 6; }
+[data-tactics-board-band] .grid.grid-cols-4, [data-tactics-debug-layout] { height: 112px !important; }
+[data-tactics-debug-layout] { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-template-rows: minmax(0,1fr) !important; }
+[data-battle-speed] > [data-battle-hand] { grid-column: 2; grid-row: 1 / -1; height: auto !important; min-height: 0;
+  border-top: 0 !important; border-left: 1px solid rgba(255,255,255,.14); overflow-x: hidden; overflow-y: auto; }
+[data-battle-hand] > div:first-child { flex-wrap: wrap; row-gap: 4px; margin-bottom: 6px !important; }
+[data-battle-hand] > div:first-child > span:first-child { flex: 0 0 100% !important; }
+[data-battle-hand] > div:last-child { flex: 0 1 auto !important; flex-wrap: wrap !important; overflow: visible !important;
+  align-content: flex-start; justify-content: center; row-gap: 6px; }
+[data-battle-hand] > div:last-child > * { flex: 0 0 31% !important; max-width: 31% !important; height: 116px !important; }
+[data-battle-float] { left: calc((100vw - ${BATTLE_LANDSCAPE_HAND_W}) / 2) !important; }
+[data-battle-float-right] { left: auto !important; transform: none !important; }
+[data-battle-float-right="8"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 8px) !important; }
+[data-battle-float-right="76"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 76px) !important; }
+}`;
+//
 // 【誰が攻撃を食らったか】
 // 枠ごとに何が起きたか(tacticsSlotFx)を、浮かぶ数字だけでなく**枠そのもの**でも出す
 // (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい
@@ -41948,6 +41995,7 @@ function BattleScreen({
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-enemy-down={enemyDefeating?'true':undefined} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined} data-fx-auto={autoLoadOn?'watch':undefined}>
+        <style>{BATTLE_LANDSCAPE_CSS}</style>
         {/* 性能計測(デバッグ限定)。デバッグ設定で ON にしたときだけ出る。触っても戦闘の邪魔をしないよう、指は素通りさせる */}
         {perfOn&&tacticsNewLayout&&perfSnap&&(
           <div data-battle-perf-panel className="pointer-events-none fixed left-1 z-[65000] rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold leading-tight text-amber-100" style={{top:'calc(env(safe-area-inset-top) + 2px)'}}>
@@ -42095,7 +42143,7 @@ function BattleScreen({
         )}
         {/* レイドバトルの強化が入ったターンの帯(数秒で消える。操作の邪魔をしない) */}
         {raidGrowth&&raidGrowthBanner&&(
-          <div key={raidGrowthBanner.key} data-raid-growth-banner aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
+          <div key={raidGrowthBanner.key} data-raid-growth-banner data-battle-float aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
             <div className="text-[13px] font-black text-emerald-300">⬆ {raidGrowth.turn}ターン目 強化！</div>
             <div className="mt-0.5 text-[11px] font-black text-white">味方の全ステータス +{raidGrowth.stepPct}%<span className="text-slate-300">(ここまで合計 +{raidGrowth.statPct}%)</span></div>
             <div className="text-[10px] font-black text-sky-200">自動回復 ライフ{raidGrowth.lifeRate}%・ガッツ{raidGrowth.gutsRate}%</div>
@@ -42120,7 +42168,7 @@ function BattleScreen({
             強化の札が増えて舞台が絵より低くなったときは、safe が上そろえへ戻してくれる
             (中央のままだと上へスクロールできず、頭の「!」や技名が読めなくなる)。
             safe を知らないブラウザは宣言ごと捨てるので、クラスの justify-start が残る */}
-        <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center',...(enemyImageOnlyAttack?{overflow:'visible',zIndex:70}:{})}}>
+        <main data-battle-stage className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center',...(enemyImageOnlyAttack?{overflow:'visible',zIndex:70}:{})}}>
           {/* 敵のまわりのボタンは左の1列にまとめる(2026-09-22 ユーザー指示
               「敵周りのボタンを整理したほうがいい。添付イメージ画像のように左にきれいに並べるなど」)。
               ★もとは左(ステータス・緊急)と右(解析・ログ・魂格効果)に分かれていて、敵の絵を両側から
@@ -42244,7 +42292,7 @@ function BattleScreen({
             {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.raidJackPumpkin?'Pumpkin':enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
               </div>,document.body
             )}
@@ -42252,7 +42300,7 @@ function BattleScreen({
                 「ランダム効果のものが何が発動したかわからない」)。技名の札(上の14%)と重ならないよう、その下へ縦に並べる。
                 押せる場所は塞がない。body へ出すのは技名の札と同じ理由(画面の揺れで位置がずれないように) */}
             {Array.isArray(luckBanners)&&luckBanners.length>0&&ReactDOM.createPortal(
-              <div data-battle-luck-banners className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
+              <div data-battle-luck-banners data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
                 {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
                   className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
                   style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
@@ -42262,13 +42310,13 @@ function BattleScreen({
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]">☠️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]">必 殺 技</div>
               </div>
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='CHARGE'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
@@ -42280,7 +42328,7 @@ function BattleScreen({
                 貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
                 出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='PIERCE_CHARGE'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>
@@ -42298,7 +42346,7 @@ function BattleScreen({
               // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
               // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
               // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
-              <div className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
+              <div data-battle-float-right="8" className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
                 <div className="mh-enemy-move-hint">
                   <span aria-hidden="true">🏃</span>
                   <span>{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？</span>
@@ -42354,7 +42402,7 @@ function BattleScreen({
                 必殺技の警告・移動の予告と同じこの階層＝丸枠の外なら前面に出る。
                 寄せ先は画面の右端ではなく遊ぶ列(最大600px)の右端にして、広い画面でも列に収める */}
             {enemyNoticeShown&&isMooBoss(enemy?.id)&&(
-              <div data-enemy-notice-moo className="fixed left-1/2 pointer-events-none"
+              <div data-enemy-notice-moo data-battle-float-right="76" className="fixed left-1/2 pointer-events-none"
                 style={{top:'max(112px,16dvh)',transform:'translateX(calc(min(50vw, 300px) - 100% - 76px))',zIndex:focusedCard?5:40}}>
                 {enemyNoticeCard()}
               </div>
@@ -43329,7 +43377,7 @@ function BattleScreen({
         {/* 手札の帯(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
             まっ黒なべた塗りだったので、上から下へわずかに起こし、上端に細い光を引いて
             板が1枚手前にあるように見せる。塗りだけなので描き直しは起きない */}
-        <div className="shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm" style={{height:'clamp(172px,23dvh,196px)',
+        <div data-battle-hand className="shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm" style={{height:'clamp(172px,23dvh,196px)',
           backgroundImage:'linear-gradient(180deg, rgba(20,29,52,.94) 0%, rgba(12,18,34,.97) 52%, rgba(7,11,22,.99) 100%)',
           boxShadow:'inset 0 1px 0 rgba(255,255,255,.07), 0 -10px 28px rgba(0,0,0,.16)'}}>
           <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
@@ -51449,7 +51497,8 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll');
-    if (re) { if (re.kinds.includes(atkCard.kind)) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
+    // 防御でマイナスされない技(技そのもの・渾身を付けたちから技)には、−N・半分・0 の防御の札は出せない(効かないので。社長の答え 2026-10-27・案A。回避されない技の回避の札と同じ扱い)
+    if (re) { if (re.kinds.includes(atkCard.kind) && !cardHasEff(atkCard, 'noBlockReduce') && !fl.attachNoBlockReduce) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
     const rf = cardEff(c, 'reflect');
     if (rf) { if (rf.kinds.includes(atkCard.kind) && !pd.reflect) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
   });
@@ -52181,9 +52230,11 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const c = cardOf(db, me.hand[o.hand]);
     let after = dmg;
     if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-    const re = cardEff(c, 'reduce'); if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
-    if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
-    if (cardHasEff(c, 'reduceAll') && !cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
+    // 防御でマイナスされない技(技そのもの・渾身を付けたちから技)には、−N・半分・0 のどの防御も効かない(2026-10-26 総点検A: −N と半分は渾身を見ていなかった)
+    const noReduce = cardHasEff(main, 'noBlockReduce') || !!(pd.flags || {}).attachNoBlockReduce;
+    const re = cardEff(c, 'reduce'); if (re && !noReduce) after = Math.max(0, dmg - re.n);
+    if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
+    if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
     const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg : 0;
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
@@ -54541,6 +54592,8 @@ const cardGuardBlockReasons = (db, st) => {
     else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
     else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;
     else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
+    // 防御でマイナスされない技(技そのもの・渾身つき)には −N・半分・0 の防御は出せない(案A)。はね返す防御は別
+    else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
     if (why && !out.includes(why)) out.push(why);
   });
   return out.slice(0, 2);
@@ -54550,18 +54603,51 @@ const CARD_DRAG_THRESHOLD = 10; // 指がこれだけ動いたら「運ぶ」(�
 const CARD_ME = 0;
 const cardDeciderOf = (st) => (st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st));
 
-// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し
+// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し。
+// 2回続けてタップ(CARD_DOUBLE_TAP_MS の内。モンヒロバトルの手札と同じ間・10-core)でも詳しい画面(2026-10-26 社長「ダブルタップでも見られるように」)。
+//   press(no, onTap, opt) の opt:
+//     double … false ならダブルタップを使わない(デッキ編成。1タップで入れる・続けて入れられるを残す。社長の決め)
+//     hold   … true なら1回目のタップを CARD_DOUBLE_TAP_MS 待ってから動かす(押すと技が決まってしまう所。2回目が来たら動かさずに詳しい画面)
+//     undo   … 1回目をすぐ動かす所で、2回目が来たときに1回目を取り消す関数
+//   iPhone の Safari がダブルタップで画面を拡大しないよう、押せるカードには data-card-press を付け、その印にだけ touch-action: manipulation を当てる
+if (typeof document !== 'undefined' && document.head && !document.getElementById('mh-card-press-css')) {
+  const el = document.createElement('style');
+  el.id = 'mh-card-press-css';
+  el.textContent = '[data-card-press]{touch-action:manipulation}';
+  document.head.appendChild(el);
+}
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return (no, onTap) => ({
-    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms); },
+  const last = useRef(null);    // 前のタップ { no, at }
+  const pending = useRef(null); // hold で待っている1回目
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(pending.current); }, []);
+  return (no, onTap, opt = {}) => ({
+    'data-card-press': true,
+    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; clearTimeout(pending.current); onLong(no); }, ms); },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
     onPointerCancel: () => clearTimeout(timer.current),
     onContextMenu: (e) => e.preventDefault(),
-    onClick: (e) => { if (fired.current) { fired.current = false; return; } if (onTap) onTap(e); },
+    onClick: (e) => {
+      if (fired.current) { fired.current = false; return; }
+      const now = Date.now();
+      if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
+        last.current = null;
+        if (pending.current) { clearTimeout(pending.current); pending.current = null; }
+        else if (opt.undo) opt.undo();
+        onLong(no);
+        return;
+      }
+      last.current = { no, at: now };
+      if (!onTap) return;
+      if (opt.hold && opt.double !== false) {
+        clearTimeout(pending.current);
+        pending.current = setTimeout(() => { pending.current = null; onTap(); }, CARD_DOUBLE_TAP_MS);
+        return;
+      }
+      onTap(e);
+    },
   });
 };
 
@@ -54879,7 +54965,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return (
-    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
+    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap, { hold: mark === 'target' || mark === 'user' }) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
       {opp ? <>{info}{artEl}</> : <>{artEl}{info}</>}
     </div>
   );
@@ -55514,6 +55600,31 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const mon = el.closest('[data-card-mon]');
     return mon ? mon.getAttribute('data-card-mon') : null;
   };
+  // 手札を2回続けてタップ(CARD_DOUBLE_TAP_MS の内)したら、詳しい画面(社長 2026-10-26)。
+  //   1回目は、選ぶ・ガッツに選ぶ(2回目で元に戻せる)はすぐ動かし、2回目が来たら1回目の前の選び方へ戻す。
+  //   守りの番は、1回押すと守りが決まることがあるので、1回目を待ってから動かす(2回目が来たら動かさない)
+  const handTap = useRef({ last: null, pending: null });
+  useEffect(() => () => clearTimeout(handTap.current.pending), []);
+  const tapHandOrDouble = (i, no) => {
+    const h = handTap.current;
+    const now = Date.now();
+    if (h.last && h.last.i === i && h.last.no === no && now - h.last.at < CARD_DOUBLE_TAP_MS) {
+      const before = h.last.before;
+      h.last = null;
+      if (h.pending) { clearTimeout(h.pending); h.pending = null; }
+      else if (before) { setSel(before.sel); setPicks(before.picks); setHint(before.hint); }
+      setDetail(no);
+      return;
+    }
+    if (mode === 'guard') {
+      h.last = { i, no, at: now, before: null };
+      clearTimeout(h.pending);
+      h.pending = setTimeout(() => { h.pending = null; tapHand(i); }, CARD_DOUBLE_TAP_MS);
+      return;
+    }
+    h.last = { i, no, at: now, before: { sel, picks, hint } };
+    tapHand(i);
+  };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
     // 手札を運ぶ操作を使わない(オプション)ときは、置ける所を作らない(タップと長押しだけ)
@@ -55551,7 +55662,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHand(i);
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);
     };
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
@@ -55847,7 +55958,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
@@ -56893,7 +57004,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
               <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{CARD_LEVEL_LABEL[lv]}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
             </table>
-            <p className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この記録ができてからのぶんです')}</p>
+            {/* 難易度別は 2026-10-24 から数えている。それより前から遊んでいて、合計と合わない人にだけ断る(はじめての人には出さない) */}
+            {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
@@ -56902,7 +57014,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div key={label} className="rounded-xl bg-black/30 py-1.5"><small className="block text-[10px] font-bold text-slate-400">{label}</small><b className="text-[16px] font-black text-amber-200">{v}</b><small className="text-[10px] font-bold text-slate-400">{u}</small></div>
               ))}
             </div>
-            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')}</p>
+            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
           </div>
         </div>
       </div>
@@ -57197,7 +57309,7 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
   const name = c ? c.name : m ? m.name : no;
   return (
-    <button type="button" data-card-deck-tile={no} {...press(no, onTap)} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+    <button type="button" data-card-deck-tile={no} {...press(no, onTap, { double: false })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
       {/* 「入/持」の札は絵の右下(カードの名前は絵の上にあるので、上に置くと名前が隠れた。2026-10-24 改善部の点検 V5) */}
       <span className="relative block w-full">
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
@@ -57215,6 +57327,7 @@ const CARD_DECK_VIEWS = Object.freeze([{ id: 'mon', label: 'モンスター' }, 
 const CARD_DECK_SORTS = Object.freeze([{ id: 'kind', label: '種類順' }, { id: 'guts', label: 'ガッツ順' }, { id: 'no', label: '番号順' }]);
 // 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」
 // onDetail … 名前の右の「i」を押したときに詳しい画面を開く(長押しに気づかない人のため。2026-10-26)
+// デッキ編成はダブルタップを使わない(続けて押すと続けて入れる。2026-10-26 社長「デッキ編成は詳細ボタンを作る」)
 // unusable … デッキの3体のだれも使えない技(混血のメイン・サブの直しで、前に組んだデッキに残ることがある)。保存の中身は変えず、帯で見せるだけ
 const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove, onDetail = null, unusable = false }) => {
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
@@ -57222,7 +57335,7 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
   return (
     <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
       {unusable && <span data-card-deck-unusable-tag={no} className="pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200">このデッキの子は使えない</span>}
-      <button type="button" data-card-deck-tile={no} {...press(no, onAdd)} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
+      <button type="button" data-card-deck-tile={no} {...press(no, onAdd, { double: false })} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
@@ -57346,7 +57459,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
                 const m = no ? cardMonsterOf(db, no) : null;
                 const size = short ? { maxWidth: 'min(52px, 6vh)' } : undefined;
                 return m
-                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
+                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no), { double: false })} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
                   : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setView('mon')} style={size} className="flex aspect-[5/7] w-[15%] max-w-[52px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[18px] text-white/50 landscape:max-w-[40px]">＋</button>;
               })}
               <div className="min-w-0 flex-1 text-right">
@@ -58642,6 +58755,8 @@ const cardPvpCleanAct = (raw) => {
   if (raw.split !== undefined) { if (!Array.isArray(raw.split) || raw.split.length !== 3) return null; act.split = raw.split.map((x) => cardPvpInt(x, 30)); if (act.split.some((x) => x === null)) return null; }
   // 合体の組(メインを出す子・サブを出す子・出る混血)
   if (raw.fuse !== undefined) { const f = raw.fuse || {}; const a = cardPvpInt(f.a, 2), b = cardPvpInt(f.b, 2); if (a === null || b === null || typeof f.no !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(f.no)) return null; act.fuse = { a, b, no: f.no }; }
+  // カード投げ(169): 捨てる手札の番号。落とすと、受ける側で手が合わずにはねて試合が止まった(2026-10-27 総点検D)。0枚([])も手の一部
+  if (raw.toss !== undefined) { if (!Array.isArray(raw.toss)) return null; act.toss = raw.toss.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.toss.some((i) => i === null)) return null; }
   if (raw.form !== undefined) { if (raw.form !== 'air' && raw.form !== 'ground') return null; act.form = raw.form; } // 変形・トランスフォーム
   if (raw.bind !== undefined && raw.bind !== null) { if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null; act.bind = raw.bind; }
   return act;
@@ -60047,7 +60162,8 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
 //   2 → 3: 必殺技の応酬・封印でカード投げとボンバなどの出せる手・ガッツにする手札の番号の確かめ(#3821)
 //   3 → 4: ドレインは実際に減ったライフだけ回復(2026-10-27)
-const CARD_REPLAY_RULES = 4; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン
+//   4 → 5: 防御でマイナスされない技には −N・半分・0 の防御の札を出せない(社長の答え 案A・2026-10-27)
+const CARD_REPLAY_RULES = 5; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -60944,16 +61060,8 @@ const DEBUG_TRIALS = [
     title: '🎵 床と空中の見た目(試作3・立体)',
     note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
     when: '次の演奏から' },
-  // 案3の2段目(2026-10-16)。同じキーの値 c3b。道の遠近と押す場所の計算を一緒に替える
-  { id: 'rhythm_floor3d_c3b', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'c3b',
-    title: '🎵 空中の見た目(案3+カメラを寝かせる)',
-    note: '案3の見た目に加えて、カメラを寝かせて道を奥へ深くします(遠くのノーツは小さく、手前で速く近づきます)。押す場所も同じ計算でそろって変わるので、見た目と押す場所はずれません。判定の時刻・色は変わりません',
-    when: '次の演奏から' },
-  // 案3の1段目(2026-10-16 社長「案3までやる」)。同じキーの値 c3。2段目(カメラを寝かせる)はこのあと
-  { id: 'rhythm_floor3d_c3', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'c3',
-    title: '🎵 空中の見た目(案3・明るい板と光の帯)',
-    note: '空中のタップを明るく薄い板と光る縁に、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。地上と道は今のまま。色・判定は変わりません',
-    when: '次の演奏から' },
+  // 案3(値 c3・c3b)は 2026-10-27 社長の選択「案A」で、c3 の見た目を既定に、c3b のカメラを普通の設定「道の奥行き」(roadDepth)へ移したので、ここから外した。
+  // キーの値 c3b は今も読む(rhythmCameraDeepActive)。c3 は既定と同じ
   // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
