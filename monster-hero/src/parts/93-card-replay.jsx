@@ -86,6 +86,8 @@ const cardReplayNormalizeOne = (raw) => {
     fav: raw.fav === true,
     // 最後の番(一覧の「◯番まで」。2026-10-27 に足した項目。前の記録には無いので null)
     turn: Number.isInteger(raw.turn) && raw.turn >= 0 && raw.turn < 10000 ? raw.turn : null,
+    // 助手と対戦の難易度(2026-10-27 に足した項目。前の記録には無いので null。見返しでは「助手と対戦」とだけ出す)
+    level: typeof raw.level === 'string' && /^[a-z]{3,12}$/.test(raw.level) ? raw.level : null,
   };
 };
 // 保存の全体 { v:1, list:[記録…](新しい順) }。壊れていたら空・壊れた1件は捨てる・同じ id は前の1件だけ
@@ -185,9 +187,19 @@ const cardReplayCaption = (states, i) => {
   return lines.filter((l) => l.kind !== 'turn').map((l) => l.text).filter(Boolean).slice(-2).join(' / ');
 };
 
+// ログに一言が無い手(攻撃おわり・ガッツにしない・守らない など)の文
+const cardReplayActText = (type, name) => {
+  if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'pass') return `${name}は守らなかった`;
+  if (type === 'reveal') return `${name}は手札を見せた`;
+  if (type === 'pray') return `${name}はおいのりをした`;
+  // ガッツにした手はログに一言が出るので、ここへ来るのはガッツにしなかったとき
+  if (type === 'guts' || type === 'setupGuts') return `${name}は${type === 'setupGuts' ? '始める前に' : ''}ガッツにしなかった`;
+  return '';
+};
 // 記録を作る。指紋は、いまのルールでなぞり直して作る(途中で当たらなければ、記録しない)
 // history … [{ by, act(自分の見え方) }]。seeds … マルチは [自分, 相手]、助手と対戦は [種, 0]
-const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe, outcome, reason }) => {
+const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe, outcome, reason, level = null }) => {
   const rec = {
     v: 1, id: String(match || ''), kind, at: at || Date.now(), rules: CARD_REPLAY_RULES, first,
     names: ['あなた', (foe && foe.name) || 'あいて'],
@@ -196,7 +208,7 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
     decks: decks.map((d) => ({ monsters: d.monsters.slice(), cards: d.cards.slice() })),
     seeds: seeds.map((n) => n >>> 0),
     acts: (history || []).map((e) => [e.by, e.act]),
-    prints: '', fav: false,
+    prints: '', fav: false, level,
   };
   const one = cardReplayNormalizeOne(rec);
   if (!one) return null;
@@ -210,8 +222,8 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
 const cardReplayFromPvp = (db, { match, at, myDeck, mySeed, foeDeck, foeSeed, first, history, foe, outcome, reason }) => cardReplayMake(db, {
   kind: 'pvp', match, at, decks: [myDeck, foeDeck], seeds: [mySeed, foeSeed], first, history, foe, outcome, reason });
 // 助手と対戦から(84 の CardBattleScreen で、結果を書いたあと)。foe.who … 助手の id
-const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, foe, outcome, reason }) => cardReplayMake(db, {
-  kind: 'cpu', match: id, at, decks: [myDeck, cpuDeck], seeds: [seed, 0], first, history, foe, outcome, reason });
+const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, foe, outcome, reason, level = null }) => cardReplayMake(db, {
+  kind: 'cpu', match: id, at, decks: [myDeck, cpuDeck], seeds: [seed, 0], first, history, foe, outcome, reason, level });
 
 // ---- 保存(端末の中だけ) ----
 // 取ってある試合の番号の控え(履歴の画面の行ごとに、すぐ答えるため)。読み込み・書き込みのたびに作り直す
@@ -283,8 +295,10 @@ const cardReplayGameOf = (db, rec) => {
   const built = cardReplayBuild(db, rec);
   if (!built.states.length) return null;
   return {
-    key: `replay-${rec.id}-${Date.now()}`, st: built.states[0], who: rec.kind === 'cpu' && rec.foe.who ? rec.foe.who : 'pvp', level: 'normal',
+    key: `replay-${rec.id}-${Date.now()}`, st: built.states[0], who: rec.kind === 'cpu' && rec.foe.who ? rec.foe.who : 'pvp', level: rec.level,
+    // by … 1手ごとの、その手を打った人(0 = あなた)。下の帯は「その手を打った人・打ったときの番」で書く(動いたあとの場の番では書かない)
     replay: { id: rec.id, kind: rec.kind, states: built.states, stop: built.stop, total: rec.acts.length, turns: cardReplayTurnStarts(built.states),
+      by: rec.acts.map((a) => a[0]), types: rec.acts.map((a) => a[1].type),
       foe: { name: rec.foe.name, icon: rec.foe.icon || '🙂', frame: rec.foe.frame, deckName: rec.foe.deckName } },
   };
 };
@@ -307,13 +321,18 @@ const CardReplayBar = ({ replay, at, onSeek }) => {
     return () => clearTimeout(t);
   }, [auto, at, speed]);
   const st = replay.states[at];
-  const caption = cardReplayCaption(replay.states, at);
+  const prev = at > 0 ? replay.states[at - 1] : null;
+  const by = at > 0 && replay.by ? replay.by[at - 1] : null;
+  const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
+  // その手を打ったときの番(動いたあとの場ではなく、手を打つ前の場で数える)
+  const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `${prev.turn}番目の番` : 'はじまり'}・${byName}`;
+  const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
   const btn = 'mh-button mh-button-secondary min-h-[40px] flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40';
   const go = (n) => { Audio_.fgSe.tap(); onSeek(Math.max(0, Math.min(last, n))); };
   return (
     <div data-card-replay-bar className="pointer-events-auto w-full rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 shadow-lg">
       <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-sky-100">
-        <span data-card-replay-turn>{st && st.turn >= 1 ? `${st.turn}番目の番・${st.active === 0 ? 'あなた' : replay.foe.name}` : 'はじまり'}</span>
+        <span data-card-replay-turn data-card-replay-by={by === null ? undefined : by}>{label}</span>
         <span data-card-replay-step className="text-slate-300">{at}/{replay.total}手</span>
       </div>
       <div data-card-replay-caption className="mt-0.5 min-h-[16px] break-words text-[11px] font-bold leading-snug text-white">{caption || ' '}</div>
