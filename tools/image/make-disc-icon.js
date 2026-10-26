@@ -29,8 +29,10 @@ const { loadImage } = require('canvas');
 const REPO_ROOT = path.resolve(TOOLS_DIR, '..');
 const WEB_ROOT = path.join(REPO_ROOT, 'monster-hero');
 const BASE_REL = 'images/disc-icons/disc-stone-base.PNG';
-// 出来上がりの一辺(px)。既存の円盤石(パンドラ1254x1254・エイキ1261x1247)と同じ大きさにそろえる
-const SIZE = 1254;
+// 出来上がりの一辺(px)。画面での最大(枠112px × 見せ方の拡大1.49倍 × 3倍の画面 ≒ 500px)に足りる大きさ。
+// 以前は 1254 だったが、1枚0.5MB超になり HOME の裏の先読みが重かったので、既存の絵もそろえて縮めた
+// (2026-10-27 速さ部・image/shrink-disc-icons.js)
+const SIZE = 768;
 const ALPHA_MIN = 16; // これ未満は「何も描かれていない」とみなす
 
 const resolveRel = (rel) => (path.isAbsolute(rel) ? rel : path.join(WEB_ROOT, String(rel).split('?')[0]));
