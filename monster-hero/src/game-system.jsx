@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42448798a592a8dd
+// generated-sha256: a67a51b8d053bf33
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 22:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 22:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54938,24 +54938,60 @@ const cardArtBox = (src) => new Promise((resolve) => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
-const CardAssistantArt = ({ src, alt, className = '', style = null }) => {
+// 測ってある立ち絵の輪郭(透明な余白を除いた範囲)。canvas で調べられない端末でも枠に合わせるため(2026-10-26 社長「みゅあだけ小さい」)。
+//   キーは `${imagePrefix}_${表情}`。標準の服の絵だけ(着替えの絵には当てない)。nw・nh が実際の絵の大きさと合うときだけ使う
+//   myua_wink … 1536×1024 の絵(images/assistant)を、cardArtBox と同じ決まり(列・行に透明でない点が3つ以上)で測った
+const CARD_ART_KNOWN_BOX = Object.freeze({
+  myua_wink: Object.freeze({ nw: 1536, nh: 1024, x: 379, y: 28, w: 760, h: 996 }),
+});
+// その助手の標準の服の絵のときだけ、測ってある輪郭を返す(着替え・まだ大きい絵の無い助手は null)
+const cardArtKnownBox = (who, expression, src) => {
+  if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
+  const ex = assistantExpressionName(who, expression);
+  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
+  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
+};
+// 測ってある輪郭が、読み込んだ絵の大きさと合うか(絵が差し替わっていたら使わない)
+const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
+  if (!known) { resolve(null); return; }
+  const img = new Image();
+  img.onload = () => resolve(img.naturalWidth === known.nw && img.naturalHeight === known.nh ? known : null);
+  img.onerror = () => resolve(null);
+  img.src = src;
+});
+// knownBox … 測ってある輪郭(cardArtKnownBox)。あれば canvas で調べずに使う
+// 枠の大きさが決まったとき・変わったとき(画面の向き・大きさ)も ResizeObserver で合わせ直す(最初に 0 だと合わせないままだった)
+const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = null }) => {
   const ref = useRef(null);
-  const [fit, setFit] = useState(null);
+  const [box, setBox] = useState(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
     let alive = true;
-    setFit(null);
-    void cardArtBox(src).then((box) => {
-      const el = ref.current;
-      if (!alive || !box || !el) return;
-      const W = el.clientWidth, H = el.clientHeight;
-      if (!W || !H) return;
-      const sc = Math.min(H / box.h, W / box.w);
-      setFit({ width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) });
-    });
+    setBox(null);
+    void cardArtKnownBoxFor(src, knownBox).then((known) => (known ? { ...known, known: true } : cardArtBox(src))).then((b) => { if (alive) setBox(b || null); });
     return () => { alive = false; };
-  }, [src]);
+  }, [src, knownBox]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setSize((cur) => (cur.w === el.clientWidth && cur.h === el.clientHeight ? cur : { w: el.clientWidth, h: el.clientHeight }));
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const fit = (() => {
+    const W = size.w, H = size.h;
+    if (!box || !W || !H) return null;
+    const sc = Math.min(H / box.h, W / box.w);
+    return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };
+  })();
   return (
-    <div ref={ref} data-card-assistant-art data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
+    <div ref={ref} data-card-assistant-art data-card-art-known={box && box.known ? '1' : undefined} data-card-art-h={fit ? fit.artH : undefined} data-card-art-w={fit ? fit.artW : undefined} className={`relative shrink-0 overflow-hidden ${className}`} style={style || undefined}>
       {fit
         ? <img src={src} alt={alt} draggable={false} className="absolute max-w-none" style={{ width: `${fit.width}px`, left: `${fit.left}px`, top: `${fit.top}px` }}/>
         : <img src={src} alt={alt} draggable={false} className="h-full w-full object-contain object-bottom"/>}
@@ -55324,7 +55360,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
               {/* 背の低い画面(SE)では絵を低くして、下の「あなたのデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
               {/* 横画面では絵を外して、強さのボタンまでスクロールなしで見せる(2026-10-25 カゲあつくん「EASY〜が下で切れている」) */}
-              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%] landscape:hidden" style={{ height: 'min(150px, 17vh)' }}/>
+              <CardAssistantArt src={assistantFullImage(a, 'wink')} knownBox={cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink'))} alt={a.name} className="w-[42%] landscape:hidden" style={{ height: 'min(150px, 17vh)' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
                 <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
