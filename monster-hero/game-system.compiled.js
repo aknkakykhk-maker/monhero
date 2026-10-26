@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9393152f33afdec4
+// source-sha256: 6527223be07eabda
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 10:32";
+const BUILD_DATE = "2026-10-26 10:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -91846,13 +91846,13 @@ const CardDeckList = ({
 };
 const CARD_DEX_MODES = Object.freeze([{
   id: 'pack',
-  label: '弾ごと'
+  label: 'パック別'
 }, {
   id: 'species',
-  label: '血統ごと'
+  label: '血統別'
 }, {
   id: 'kind',
-  label: '種類ごと'
+  label: '種類別'
 }]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map(p => ({
   id: String(p.no),
@@ -91893,7 +91893,7 @@ const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   return cardDexList(db, tab);
 };
 const CARD_DEX_UNIT = Object.freeze({
-  pack: 'この弾',
+  pack: 'このパック',
   species: 'この血統',
   kind: 'この種類'
 });

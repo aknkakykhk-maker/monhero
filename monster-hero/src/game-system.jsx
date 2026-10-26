@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f8399f10133d8ad
+// generated-sha256: 1439c2b73fcf508f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 10:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -55334,12 +55334,12 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
 // ==================== カード図鑑(区切り2) ====================
 // 持っている/持っていない・枚数・準備中。持っていないカードは暗い絵で出す(何が集まるか分かるように)
 // ★C-060C(ファンの描いた絵)はカードの表に入っていない(社長)。並べるのはカードの表にあるものだけ
-// 見かたは3つ(2026-10-26 社長「血統ごと・種類ごとでも見られるように」):
-//   弾ごと   … パックと同じ第1〜8弾+混血(2026-10-25 社長「パックは8弾まで」)。混血は、その弾と「混血」の両方に出る
-//   血統ごと … パックの弾の順に種族を並べる。混血はメインの種族に出る。全モンスター・ブリーダー・全体のカードは「種類ごと」で見る
-//   種類ごと … デッキ編成の絞り込み(CARD_DECK_FILTERS)と同じ言葉と並び。先頭に「モンスター」
+// 見かたは3つ(2026-10-26 社長「血統ごと・種類ごとでも見られるように」。名前は社長が選んだ「パック別・血統別・種類別」):
+//   パック別 … パックと同じ第1〜8弾+混血(2026-10-25 社長「パックは8弾まで」)。混血は、その弾と「混血」の両方に出る
+//   血統別   … パックの弾の順に種族を並べる。混血はメインの種族に出る。全モンスター・ブリーダー・全体のカードは「種類別」で見る
+//   種類別   … デッキ編成の絞り込み(CARD_DECK_FILTERS)と同じ言葉と並び。先頭に「モンスター」
 // どの見かたでも、並べるカードは弾ごとの図鑑と同じもの(数え方がずれないように、全部の集まりから絞る)
-const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: '弾ごと' }, { id: 'species', label: '血統ごと' }, { id: 'kind', label: '種類ごと' }]);
+const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: 'パック別' }, { id: 'species', label: '血統別' }, { id: 'kind', label: '種類別' }]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map((p) => ({ id: String(p.no), label: `第${p.no}弾` })), { id: 'hybrid', label: '混血' }]);
 const CARD_DEX_KINDS = Object.freeze([{ id: 'mon', label: 'モンスター' }, ...CARD_DECK_FILTERS.filter((f) => f.id !== 'all')]);
 const cardDexList = (db, tab) => {
@@ -55367,7 +55367,7 @@ const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   if (mode === 'kind') return all.filter((no) => (tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab)));
   return cardDexList(db, tab);
 };
-const CARD_DEX_UNIT = Object.freeze({ pack: 'この弾', species: 'この血統', kind: 'この種類' });
+const CARD_DEX_UNIT = Object.freeze({ pack: 'このパック', species: 'この血統', kind: 'この種類' });
 const CardDex = ({ db, collection, onBack }) => {
   const [mode, setMode] = useState('pack');
   const [tabs, setTabs] = useState({ pack: '1', species: CARD_PACKS[0].species[0], kind: 'mon' });
