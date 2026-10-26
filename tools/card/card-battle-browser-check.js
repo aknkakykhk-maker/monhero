@@ -479,7 +479,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-discard]').waitFor({ timeout: 5000 });
     await shot(page, '08-discard');
     check('⑥ 捨て札の一覧が開く(自分/相手のタブ)', await page.getByRole('button', { name: /相手の捨て札/ }).count() === 1);
-    await page.getByRole('button', { name: '閉じる' }).click();
+    // 「閉じる」はちょうどその名前のボタンだけ(相手の番のまとめの「タップで閉じる」にも当たっていた)
+    await page.locator('[data-card-discard]').getByRole('button', { name: '閉じる', exact: true }).click();
     // ⑦ 投了
     const result = await page.locator('[data-card-top="result"]').count();
     if (!result) {
