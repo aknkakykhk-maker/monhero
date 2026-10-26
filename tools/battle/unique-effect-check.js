@@ -80,12 +80,12 @@ const RULES = [
   {
     monId: 'Mocchi', label: 'モッチー(モッチ砲)',
     impl: [
-      { re: /addPermaBuff\('dmgCutPct',([\d.]+)\*effMul\)/, mustSay: '被ダメージ', unit: '%', note: '被ダメージの割合軽減' },
+      { re: /addPermaBuff\('dmgCutPct',([\d.]+)\*effMul\)/, mustSay: '味方が受けるダメージ', unit: '%', note: '被ダメージの割合軽減' },
       // 敵被ダメ増は「使ったターンからすぐ効く」ため、値は共有関数 localBoostFromCard に
       // 集約されている(processTurnとカード選択中のプレビューの両方がここを参照する)。
       // branch(processTurnのモッチー分岐)ではなく、その定義側で値を確かめる
       // ここも同じ理由でidを並べない([^)\n]* が「||card.monId==='…'」の並びを丸ごと飲む)
-      { re: /monId==='Mocchi'[^)\n]*\)\) return \{ dmgMod: ([\d.]+) \};/, mustSay: '敵被ダメ', unit: '%', note: '敵の被ダメージ増加', target: 'source' },
+      { re: /monId==='Mocchi'[^)\n]*\)\) return \{ dmgMod: ([\d.]+) \};/, mustSay: '敵が受けるダメージ', unit: '%', note: '敵の被ダメージ増加', target: 'source' },
     ],
     forbid: [{ re: /addPermaBuff\('defPct'/, why: 'モッチーは丈夫さは上げない(被ダメージ軽減)' }],
     usesSharedBoost: 'dmgMod',
@@ -94,7 +94,7 @@ const RULES = [
     monId: 'Monol', label: 'モノリス(トリオビームX)',
     impl: [
       { re: /addPermaBuff\('defPct',([\d.]+)\*effMul\)/, mustSay: '丈夫さ', unit: '%', note: '丈夫さのバフ(defPct)' },
-      { re: /addWaveBuff\('enemyAtkDebuffPct',([\d.]+)\*effMul\)/, mustSay: '敵攻', unit: '%', note: '敵攻撃力の低下' },
+      { re: /addWaveBuff\('enemyAtkDebuffPct',([\d.]+)\*effMul\)/, mustSay: '敵の攻撃', unit: '%', note: '敵攻撃力の低下' },
     ],
     forbid: [
       { re: /addPermaBuff\('dmgCutPct'/, why: 'モノリスは被ダメージ軽減ではなく丈夫さアップ' },
@@ -104,13 +104,13 @@ const RULES = [
   {
     monId: 'Golem', label: 'ゴーレム(合掌)',
     // 与ダメージ増も「使ったターンからすぐ効く」ため、モッチーと同じく localBoostFromCard 側で確かめる
-    impl: [{ re: /monId==='Golem'\) return \{ oryo: ([\d.]+) \};/, mustSay: '与ダメージ', unit: '%', note: '与ダメージの増加', target: 'source' }],
+    impl: [{ re: /monId==='Golem'\) return \{ oryo: ([\d.]+) \};/, mustSay: '与えるダメージ', unit: '%', note: '与ダメージの増加', target: 'source' }],
     forbid: [],
     usesSharedBoost: 'oryo',
   },
   {
     monId: 'Zan', label: 'ザン(リバースレイド)',
-    impl: [{ re: /addPermaBuff\('comboDmgPct',([\d.]+)\*effMul\)/, mustSay: '連撃ダメージ', unit: '%', note: '連撃ダメージの増加' }],
+    impl: [{ re: /addPermaBuff\('comboDmgPct',([\d.]+)\*effMul\)/, mustSay: '連撃のダメージ', unit: '%', note: '連撃ダメージの増加' }],
     forbid: [],
   },
   {
@@ -118,7 +118,7 @@ const RULES = [
     // 連撃パワーと永久追加連撃は割合ではないので、ここでは説明文に載っているかだけを見る
     // (数値の実測は tools/monster/kenshi-mocchi-check.js がヒット列から行う)
     monId: 'KenshiMocchi', label: '剣士モッチー(ソニック・リープ)',
-    impl: [{ re: /addPermaBuff\('comboDmgPct',([\d.]+)\*effMul\)/, mustSay: '連撃ダメージ', unit: '%', note: '連撃ダメージの増加' }],
+    impl: [{ re: /addPermaBuff\('comboDmgPct',([\d.]+)\*effMul\)/, mustSay: '連撃のダメージ', unit: '%', note: '連撃ダメージの増加' }],
     forbid: [
       { re: /addPermaBuff\('dmgCutPct'/, why: '剣士モッチーはモッチー系の被ダメージ軽減を持たない(攻撃特化)' },
       { re: /kenshiComboPower[^\n]*\*effMul/, why: '連撃パワーは回数なので2枚目でも半減させない' },
@@ -234,7 +234,7 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
     && /const liveEffectiveMaxGuts = \(\) => resolveEffectiveMaxStat\(maxGutsRef\.current, livePermaBuff\('muaGutsPct'\)\);/.test(source));
 
   // 次のターンから効くもの(持ち回っていない＝そのターンの計算には乗らない)。
-  // 説明文へ「次のターンから」と書いてあることまで確かめる
+  // 説明文へ「次のターンから」と書いてあることまで確かめる(2026-10-27 説明文を遊ぶ人の言葉に言い換えた。社長「この形で全部」)
   const monsters = fs.readFileSync('monster-hero/data/ally-monsters.js', 'utf8');
   const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
   const nextTurnKeys = ['defPct','dmgCutPct','critRatePct','critDmgPct','comboDmgPct',
@@ -243,10 +243,10 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
     check(`次のターンから効く(持ち回っていない): ${key}`, !new RegExp(`local[A-Za-z]*\\+=[^\\n]*${key}`).test(source));
   }
   check('モノリスの障壁が「次のターンから」と書いてある', /障壁：次のターンから/.test(monsters));
-  check('モッチー・ミタラシの被ダメ軽減が「次のターンから」と書いてある', /味方の被ダメージ3%軽減\(永続\/次のターンから\)/.test(monsters));
-  check('ライガーの会心アップが「次のターンから」と書いてある', /会心ダメージ\+2%\(永続\/重複可\/次のターンから\)/.test(monsters));
-  check('ザンの連撃ダメージが「次のターンから」と書いてある', /連撃ダメージ\+3%\(永続\/重複可\/次のターンから\)/.test(monsters));
-  check('絶氷の楔の消費ガッツ減が「次のターンから」と書いてある', /消費ガッツ3%減（永続・重複可・次のターンから）/.test(monsters));
+  check('モッチー・ミタラシの被ダメ軽減が「次のターンから」と書いてある', /味方が受けるダメージが3%へる\(次のターンから、バトルの終わりまで\)/.test(monsters));
+  check('ライガーの会心アップが「次のターンから」と書いてある', /会心のダメージ\+2%\(次のターンから、バトルの終わりまで。使うたびに重なる\)/.test(monsters));
+  check('ザンの連撃ダメージが「次のターンから」と書いてある', /連撃のダメージ\+3%\(次のターンから、バトルの終わりまで。使うたびに重なる\)/.test(monsters));
+  check('絶氷の楔の消費ガッツ減が「次のターンから」と書いてある', /要るガッツが3%へる\(次のターンから、バトルの終わりまで。重なる\)/.test(monsters));
   check('中二病の消費ガッツ増が「次のターンから」と書いてある', /ダメージ倍率\+0\.1\(永続\/重複可\/次のターンから\)/.test(monsters));
   check('ドラの被ダメージダウンが「次のターンから」と書いてある', /%ダウン（次のターンから）/.test(source));
   check('かどみうむの自動回復が「次のターンから」と書いてある', /自動回復 \$\{pct\(tier\.auto(Hp|Guts)\)\}%アップ（次のターンから）/.test(source));
