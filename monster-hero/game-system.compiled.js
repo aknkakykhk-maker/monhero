@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6dfa5a3115af6c4e
+// source-sha256: 3134a9e2392be092
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 23:14";
+const BUILD_DATE = "2026-10-26 23:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16051,14 +16051,15 @@ const DexLineageChip = ({
   iconUrl
 }) => React.createElement("span", {
   "data-dex-lineage": true,
-  className: "flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
+  className: "flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1"
 }, iconUrl ? React.createElement(DexMonsterIcon, {
   src: iconUrl,
   lineage: true
 }) : React.createElement("span", {
   className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
 }, "血"), React.createElement("span", {
-  className: "text-[11px] font-black text-amber-100 truncate"
+  "data-dex-lineage-name": true,
+  className: `${String(lineage.name || '').length >= 5 ? 'text-[10px]' : 'text-[11px]'} min-w-0 font-black text-amber-100 leading-[1.2] line-clamp-2 [overflow-wrap:anywhere]`
 }, lineage.name));
 const dexMonsterArtImage = (mon, alt, hidden = false, colors = null) => React.createElement(DyedMonsterImage, {
   baseId: mon.id,
