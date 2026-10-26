@@ -210,7 +210,7 @@ const check = (name, ok, detail = '') => {
     // --- ⑥ 勇者モン選択まで進む ---
     for (let i = 0; i < 4; i++) if (!(await tapNext())) break;
     await startOfDiff('Beginner').dispatchEvent('click');
-    await page.getByRole('heading', { name: '勇者モンを選択' }).waitFor({ timeout: 15000 });
+    await page.getByRole('heading', { name:'勇者モンをえらぶ' }).waitFor({ timeout: 15000 });
     check('練習のまま勇者モン選択まで進む', true);
     // ★練習は記録を残さないために debugBattleRef を立てるので、その副作用で
     //   勇者モン選択へ「🛠 デバッグ最強モン」(Mocchiのコピーでidも同じ)が割り込み、
