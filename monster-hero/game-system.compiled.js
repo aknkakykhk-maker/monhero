@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 71a19393bc99a73e
+// source-sha256: 2332691769f03ea9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84973,7 +84973,9 @@ const cardResolveTarget = (db, st) => {
   const ar = cardEff(main, 'area');
   const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || ar && ar.only && cardMonType(target, st.turn) !== ar.only);
   if (missed) dmg = 0;
-  const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker;
+  const atkMon1 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  const noEvadeHere = cardIsHybridMon(target) && (!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && !cardIsHybridMon(atkMon1) || !!(pd.flags || {}).attachNoEvadeHybrid);
+  const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker && !noEvadeHere;
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
@@ -100206,7 +100208,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 7;
+const CARD_REPLAY_RULES = 8;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
