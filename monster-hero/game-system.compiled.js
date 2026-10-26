@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 37d70891bc26f7f8
+// source-sha256: 7929d7b80baec8cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 09:01";
+const BUILD_DATE = "2026-10-26 09:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -91776,6 +91776,16 @@ const CardDeckList = ({
     }
   }));
 };
+const CARD_DEX_MODES = Object.freeze([{
+  id: 'pack',
+  label: '弾ごと'
+}, {
+  id: 'species',
+  label: '血統ごと'
+}, {
+  id: 'kind',
+  label: '種類ごと'
+}]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map(p => ({
   id: String(p.no),
   label: `第${p.no}弾`
@@ -91783,6 +91793,10 @@ const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map(p => ({
   id: 'hybrid',
   label: '混血'
 }]);
+const CARD_DEX_KINDS = Object.freeze([{
+  id: 'mon',
+  label: 'モンスター'
+}, ...CARD_DECK_FILTERS.filter(f => f.id !== 'all')]);
 const cardDexList = (db, tab) => {
   if (tab === 'hybrid') return Object.values(db.monsters).filter(m => String(m.wave) === 'hybrid').map(m => m.no).sort();
   const pack = CARD_PACKS.find(p => String(p.no) === tab);
@@ -91790,20 +91804,68 @@ const cardDexList = (db, tab) => {
   const all = cardPackAllCards(db, pack);
   return [...all.monsters, ...all.cards];
 };
+const cardDexAll = db => [...new Set(CARD_DEX_TABS.flatMap(t => cardDexList(db, t.id)))];
+const cardDexSpeciesOf = (db, no) => {
+  const m = cardMonsterOf(db, no);
+  if (m) return String(m.wave) === 'hybrid' ? m.main : m.species;
+  const c = cardOf(db, no);
+  return c && c.user !== 'any' && c.user !== 'breeder' ? c.user : null;
+};
+const cardDexTabsOf = (db, mode) => {
+  if (mode === 'species') return CARD_PACKS.flatMap(p => p.species).map(sp => ({
+    id: sp,
+    label: (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp
+  }));
+  if (mode === 'kind') return CARD_DEX_KINDS;
+  return CARD_DEX_TABS;
+};
+const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
+  if (mode === 'species') return all.filter(no => cardDexSpeciesOf(db, no) === tab);
+  if (mode === 'kind') return all.filter(no => tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab));
+  return cardDexList(db, tab);
+};
+const CARD_DEX_UNIT = Object.freeze({
+  pack: 'この弾',
+  species: 'この血統',
+  kind: 'この種類'
+});
 const CardDex = ({
   db,
   collection,
   onBack
 }) => {
-  const [tab, setTab] = useState('1');
+  const [mode, setMode] = useState('pack');
+  const [tabs, setTabs] = useState({
+    pack: '1',
+    species: CARD_PACKS[0].species[0],
+    kind: 'mon'
+  });
   const [show, setShow] = useState('all');
   const [detail, setDetail] = useState(null);
   const press = useCardLongPress(no => setDetail(no));
   const col = collection || {};
-  const all = [...new Set(CARD_DEX_TABS.flatMap(t => cardDexList(db, t.id)))];
-  const list = cardDexList(db, tab);
+  const all = useMemo(() => cardDexAll(db), [db]);
+  const tabList = useMemo(() => cardDexTabsOf(db, mode).map(t => ({
+    ...t,
+    list: cardDexListOf(db, mode, t.id, all)
+  })), [db, mode, all]);
+  const tab = tabs[mode];
+  const list = (tabList.find(t => t.id === tab) || tabList[0] || {
+    list: []
+  }).list;
   const shown = list.filter(no => show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true);
   const haveIn = arr => arr.filter(no => col[no] > 0).length;
+  const chip = on => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
+  const unit = CARD_DEX_UNIT[mode];
+  const tabRow = useRef(null);
+  useEffect(() => {
+    try {
+      const row = tabRow.current;
+      const el = row && row.querySelector('[aria-pressed="true"]');
+      if (!el) return;
+      if (el.offsetLeft < row.scrollLeft) row.scrollLeft = el.offsetLeft - 8;else if (el.offsetLeft + el.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollLeft = el.offsetLeft + el.offsetWidth - row.clientWidth + 8;
+    } catch (_) {}
+  }, [mode, tab]);
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-dex": true,
@@ -91818,22 +91880,42 @@ const CardDex = ({
     "data-card-dex-total": true,
     className: "text-[15px] text-amber-200"
   }, haveIn(all)), " / ", all.length, React.createElement("span", {
+    "data-card-dex-part": true,
     className: "ml-2 text-slate-400"
-  }, "(この弾 ", haveIn(list), " / ", list.length, ")")), React.createElement(ScreenTabs, {
-    value: tab,
-    onChange: setTab,
-    items: CARD_DEX_TABS.map(t => ({
+  }, "(", unit, " ", haveIn(list), " / ", list.length, ")")), React.createElement(ScreenTabs, {
+    value: mode,
+    onChange: m => {
+      setMode(m);
+    },
+    items: CARD_DEX_MODES.map(t => ({
       id: t.id,
       label: t.label
     }))
   }), React.createElement("div", {
+    key: mode,
+    ref: tabRow,
+    "data-card-dex-tabs": mode,
+    className: "mh-scroll relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible"
+  }, tabList.map(t => React.createElement("button", {
+    key: t.id,
+    type: "button",
+    "data-card-dex-tab": t.id,
+    "aria-pressed": t.id === tab,
+    onClick: () => setTabs(v => ({
+      ...v,
+      [mode]: t.id
+    })),
+    className: chip(t.id === tab)
+  }, t.label, React.createElement("span", {
+    className: `ml-1 text-[10px] ${t.id === tab ? 'text-slate-800' : 'text-slate-500'}`
+  }, haveIn(t.list), "/", t.list.length)))), React.createElement("div", {
     className: "mb-1.5 flex shrink-0 gap-1"
   }, [['all', '全部'], ['have', '持っている'], ['miss', 'まだ']].map(([k, label]) => React.createElement("button", {
     key: k,
     type: "button",
     "data-card-dex-show": k,
     onClick: () => setShow(k),
-    className: `rounded-full px-2.5 py-1 text-[11px] font-black ${show === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`
+    className: chip(show === k)
   }, label))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} pb-2`
   }, shown.length ? React.createElement("div", {
@@ -91874,7 +91956,7 @@ const CardDex = ({
     }, "No.", no));
   })) : React.createElement(ScreenEmpty, {
     emoji: "🃏",
-    lines: [show === 'have' ? 'この弾のカードはまだ持っていません' : 'この弾は全部集まっています']
+    lines: [show === 'have' ? `${unit}のカードはまだ持っていません` : `${unit}は全部集まっています`]
   })), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
@@ -125263,7 +125345,11 @@ function MonsterHeroGame() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        color: '#fff'
+        color: '#fff',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)'
       };
       if (lookDexZoom != null && list[lookDexZoom]) {
         const x = list[lookDexZoom];
@@ -125271,7 +125357,7 @@ function MonsterHeroGame() {
         const go = d => setLookDexZoom((lookDexZoom + d + n) % n);
         const vw = typeof window !== 'undefined' ? window.innerWidth : 390,
           vh = typeof window !== 'undefined' ? window.innerHeight : 664;
-        const box = Math.max(120, Math.min(vw - 40, 360, Math.round(vh * 0.42)));
+        const box = Math.max(120, Math.min(vw - 96, 340, Math.round(vh * 0.42)));
         const selected = isFrame ? normalizeProfileFrameId(profileFrameId) === x.id : breederIcon === x.id;
         const choose = () => {
           if (!x.owned) return;
@@ -125314,17 +125400,19 @@ function MonsterHeroGame() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '12px 0'
+            padding: '12px 0 4px'
           }
-        }, React.createElement("span", {
-          className: "text-[12px] font-bold text-slate-400"
-        }, lookDexZoom + 1, " / ", n), React.createElement("button", {
+        }, React.createElement("button", {
           type: "button",
           "data-dex-zoom-close": true,
-          "aria-label": "一覧へもどる",
+          "aria-label": "一覧へ戻る",
           onClick: () => setLookDexZoom(null),
-          className: "rounded-full px-3 py-1 text-[20px] leading-none text-white active:scale-95"
-        }, "✕")), React.createElement("div", {
+          className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+        }, React.createElement(ArrowLeft, {
+          size: 20
+        })), React.createElement("span", {
+          className: "text-[12px] font-bold text-slate-400"
+        }, lookDexZoom + 1, " / ", n)), React.createElement("div", {
           style: {
             position: 'relative',
             display: 'flex',
@@ -125397,15 +125485,17 @@ function MonsterHeroGame() {
           minHeight: 0
         }
       }, React.createElement("div", {
-        className: "flex items-center gap-2 px-3.5 pt-3.5 pb-2"
+        className: "flex items-center gap-1.5 px-3.5 pt-3 pb-2"
       }, React.createElement("button", {
         type: "button",
         "data-dex-close": true,
-        "aria-label": "閉じる",
+        "aria-label": "プロフィールへ戻る",
         onClick: closeDex,
-        className: "px-1 text-[22px] leading-none text-white active:scale-90"
-      }, "‹"), React.createElement("b", {
-        className: "flex-1 text-[17px] font-black"
+        className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+      }, React.createElement(ArrowLeft, {
+        size: 20
+      })), React.createElement("b", {
+        className: "min-w-0 flex-1 text-[17px] font-black"
       }, jaWrap('アイコン・フレーム図鑑'))), React.createElement("div", {
         className: "flex gap-2 px-3.5"
       }, tabButton('icon', 'アイコン'), tabButton('frame', 'フレーム')), React.createElement("p", {
