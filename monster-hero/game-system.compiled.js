@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca9c27b63e563904
+// source-sha256: 3c9ab3c1fdba4f51
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40232,8 +40232,8 @@ const RhythmTapTest = ({
       }, React.createElement("b", {
         className: "shrink-0 text-lg font-black leading-none"
       }, failed ? 'FAILED' : 'CLEAR'), React.createElement("small", {
-        className: "min-w-0 text-[9px] font-black leading-snug"
-      }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
+        className: "min-w-0 break-keep text-[9px] font-black leading-snug"
+      }, failed ? React.createElement(React.Fragment, null, "ライフが0に", React.createElement("wbr", null), "なったまま", React.createElement("wbr", null), "曲が", React.createElement("wbr", null), "終わりました", React.createElement("wbr", null), "（DOWN）") : React.createElement(React.Fragment, null, "ライフを", React.createElement("wbr", null), "残して", React.createElement("wbr", null), "最後まで", React.createElement("wbr", null), "演奏しました")));
     })())), !tutorialProp && React.createElement("div", {
       className: "mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"
     }, React.createElement("span", {
@@ -40453,9 +40453,9 @@ const RhythmTapTest = ({
         "data-rhythm-live-log": true,
         className: "mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2"
       }, React.createElement("div", {
-        className: "flex items-baseline justify-between"
+        className: "flex items-baseline justify-between gap-2"
       }, React.createElement("b", {
-        className: "text-[11px] font-black tracking-wider text-cyan-200"
+        className: "shrink-0 whitespace-nowrap text-[11px] font-black tracking-wider text-cyan-200"
       }, "ライブログ"), React.createElement("small", {
         className: "text-[9px] font-bold text-slate-400"
       }, "棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS")), React.createElement("div", {
@@ -84973,7 +84973,9 @@ const cardResolveTarget = (db, st) => {
   const ar = cardEff(main, 'area');
   const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || ar && ar.only && cardMonType(target, st.turn) !== ar.only);
   if (missed) dmg = 0;
-  const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker;
+  const atkMon1 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  const noEvadeHere = cardIsHybridMon(target) && (!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && !cardIsHybridMon(atkMon1) || !!(pd.flags || {}).attachNoEvadeHybrid);
+  const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker && !noEvadeHere;
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
@@ -100206,7 +100208,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 7;
+const CARD_REPLAY_RULES = 8;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
