@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-27 04:02", type:'update', group:'rhythm', title:'モンヒロビートの HELL の一部で、表示の Lv. を実際の難しさに合わせました', status:'new',
+    items:[
+      '押さえながら叩く所や、手が重なる所が多い HELL の Lv. を上げました(Stay With Me ～Locked Fate～ など)。譜面・スコア・ランキングは変わりません。',
+    ],
+  },
+  {
     date: "2026-10-27 03:54", type:'update', group:'monster', title:'新血統「キュービ」実装予告', status:'new',
     image: 'images/events/kyubi-orihime-notice.jpg?v=b88248014de9',
     items:[
@@ -621,7 +627,7 @@ const CHANGELOG = [
     items:[
       '「Toward the Stars, Paradise or Truth」「ROSE」「ROSE short ver.」「SAD SONG」「SAD SONG short ver.」の HELL の譜面を作り直しました。',
       '近いレーンで地上と空中のノーツが立て続けに来て、どちらの高さか見分けにくい所をなくしました。地上と空中の行き来は、指を離した位置へ移る形が中心です。',
-      'レベルは「Toward the Stars, Paradise or Truth」Lv.50 ／「ROSE」Lv.51 ／「ROSE short ver.」Lv.49 ／「SAD SONG」Lv.39 ／「SAD SONG short ver.」Lv.42 です。',
+      'レベルは「Toward the Stars, Paradise or Truth」Lv.50 ／「ROSE」Lv.51 ／「ROSE short ver.」Lv.49 ／「SAD SONG」Lv.43 ／「SAD SONG short ver.」Lv.43 です。',
       'これまでの HELL のスコアやランキングの記録は、そのまま残ります。',
     ],
   },
@@ -790,7 +796,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「SAD SONG」の全編（3分39秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.39 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.43 です。',
       'ノーツ数は 350 ／ 394 ／ 536 ／ 652 ／ 742 です。',
     ],
     assistantNotice:{ id:'update_notice_sad_song_v1', type:'content' },
@@ -3198,7 +3204,7 @@ const CHANGELOG = [
       'クイックの∞周回を回しながらモンヒロビートを演奏したときに入る周回数も、期間中はどの曲でも、いつもの5倍になります。',
       'ランキングはありません。好きな曲を自分のペースで遊んでください。',
       '新曲「Crazy Party Night ～ぱんぷきんの逆襲～」を、イベントの開始と同時に追加します。イベントのBGMです。',
-      '10/5(月) 4:00 から、レイドボス戦「カボチャの大王ジャック」も開催中です。HOMEの真ん中にあらわれ、タップするとレイド画面が開きます。ベースモンで挑む協力戦「レイドバトル」と、育てたマスモンで挑む個人戦「グランドスラム」があります。',
+      '10/5(月) 4:00 から、レイドボス戦「カボチャの大王ジャック」も同時開催(ハロウィン・ナイトの期間中)。HOMEの真ん中にあらわれ、タップするとレイド画面が開きます。ベースモンで挑む協力戦「レイドバトル」と、育てたマスモンで挑む個人戦「グランドスラム」があります。',
       'ジャックを倒したときの討伐報酬と、ランキング上位の順位報酬があり、1回でも挑戦すれば参加賞がもらえます。どの報酬も「ギフト」で届きます。くわしくは、レイドボス戦のお知らせを見てください。',
       'ハロウィンのお話の第1部は、開始と同時にHOMEで流れます。お話は、このあとも続いていきます。見のがしても、プロフィールの「イベント回想」から見返せます。',
       'みゅあ・きき・ももが、ハロウィンのコスプレ衣装で登場します。衣装はマーケットで買えて、プロフィールの「着替え」から着られます。',
