@@ -18552,7 +18552,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const resetPattern=()=>{setPatternStep('attach');setPatternSettings(makePatternSettings());setPatternCustomColor({open:false,h:198,s:.77,v:.97});setPatternSizePreview(false);};
           return <main className="flex-1 min-h-0 flex flex-col bg-slate-950" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}}>
             <div className="mh-debug-banner">DEBUG・模様は保存されません</div>
-            <header className="flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"><button aria-label="戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="block text-[8px] font-black text-fuchsia-400">PATTERN CUSTOM TEST</small><h2 className="truncate text-xs font-black">{selected?selected.name:'マスモン模様カスタム'}</h2></div>{selected&&<button onClick={()=>setPatternMasuId(null)} className="ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}</header>
+            <div className="px-2 pt-1 border-b border-white/10"><DebugScreenHead title={selected?selected.name:'マスモン模様カスタムテスト'} note="模様は保存されません" onBack={()=>setGameState('DEBUG_SETTINGS')}
+              right={selected&&<button onClick={()=>setPatternMasuId(null)} className="min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}/></div>
             {eligible.length===0?<section className="flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300">カスタマイズできる所持マスモンがいません</section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">模様を試すモンスターを1体選んでください（所持していない種もそのまま試せます）。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);resetPattern();}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b></button>})}</div></section>:(()=>{
               const base=ALL_PLAYER_MONSTERS[selected.baseId],regions=dyeRegionCount(selected.baseId),colors=getMasuColors(selected);
               const mode=patternSettings.mode,selectedKey=patternSettings.selectedLayer;
@@ -18605,7 +18606,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const slider=(key,label,min,max,step)=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-2 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{values[key]}</output></span><input className="w-full accent-fuchsia-500" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>patchValue(key,e.target.value)}/></label>;
           const copyText=`${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">プロフィールの見た目</h2></div></header>
+            <DebugScreenHead title="プロフィールの見た目" note="顔アイコンの拡大・位置を決めてコピー／フレームとの相性" onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
               <input type="search" value={iconAdjustQuery} onChange={e=>setIconAdjustQuery(e.target.value)} placeholder="名前・内部IDで検索" className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"/>
               <select value={filteredItems.some(entry=>entry.id===item.id)?item.id:''} onChange={e=>e.target.value&&setIconAdjustId(e.target.value)} size={Math.min(6,Math.max(2,filteredItems.length))} className="w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black">{!filteredItems.length&&<option value="">一致するアイコンはありません</option>}{filteredItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
@@ -18668,7 +18669,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const look=looks.some(([id])=>id===masuLookTab)?masuLookTab:'reincarnate';
           if(!previewBase)return null;
           return <main data-mh-screen data-masu-look-debug className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-300">DEBUG・本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します</small><h2 className="text-sm font-black">育成マークの見た目</h2></div></header>
+            <DebugScreenHead title="育成マークの見た目" note="本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します" saves onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div role="tablist" aria-label="見る段階" className="shrink-0 mb-2 grid grid-cols-4 gap-1">
               {looks.map(([id,label])=><button key={id} type="button" role="tab" aria-selected={look===id} data-masu-look-tab={id} onClick={()=>setMasuLookTab(id)} className={`min-h-[42px] rounded-xl border px-0.5 text-[10px] font-black active:scale-95 ${look===id?(id==='prepare'?'border-rose-300 bg-rose-700 text-white':'border-amber-300 bg-amber-600 text-white'):'border-amber-500/30 bg-slate-900 text-amber-200/80'}`}>{label}</button>)}
             </div>
@@ -19731,7 +19732,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const useFruit=async(amount)=>{if(!selectedMasu)return;const before=Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0));const result=useTranscendFruitOnMasu(selectedMasu,ownedItems,selectedFruitId,amount);setTranscendFruitDebugResult({ok:result.ok,before,after:Math.max(0,Math.floor(Number(result.nextMasu?.transcendPoints)||0))});if(!result.ok)return;const nextMasuMons=masuMons.map(m=>String(m.id)===String(selectedMasu.id)?result.nextMasu:m);setMasuMons(nextMasuMons);setOwnedItems(result.nextOwnedItems);await Promise.all([storeSet('mh_masu_mons',nextMasuMons,false),storeSet('mh_owned_items',result.nextOwnedItems,false)]);};
           const grantFruit=async(itemId)=>{const result=changeTranscendFruitOwnedCount(ownedItems,itemId,10);if(!result.ok)return;setOwnedItems(result.ownedItems);await storeSet('mh_owned_items',result.ownedItems,false);};
           return <main data-species-challenge-debug className="flex-1 flex flex-col min-h-0 bg-slate-950 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-emerald-300">DEBUG・保存先 {SPECIES_CHALLENGE_PROGRESS_KEY}</small><h2 className="text-sm font-black">種族チャレンジ進行確認</h2></div></header>
+            <DebugScreenHead title="種族チャレンジ進行確認" note={`保存先 ${SPECIES_CHALLENGE_PROGRESS_KEY}`} saves onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <section className="shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3">
               <button data-species-challenge-production-flow onClick={()=>openSpeciesChallengeSelection({fromDebug:true})} className="min-h-[52px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-950 text-[11px] font-black text-cyan-100">⚔️ 実戦フロー確認<small className="block text-[8px] text-cyan-300">本番用の選択フロー（バトル開始なし）</small></button>
               <label className="block text-[9px] font-black text-emerald-200">種族（主血統）<select aria-label="種族" value={speciesId} onChange={e=>{setSpeciesChallengeDebugSpeciesId(e.target.value);setSpeciesChallengeDebugHeroId('');setSpeciesChallengeDebugAllyIds([]);setSpeciesChallengeDebugRun(null);setSpeciesChallengeDebugWaveLog([]);}} className="mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white">{speciesEntries.map(lineage=><option key={lineage.id} value={lineage.id}>{lineage.name}種／{dexMonsterList().filter(mon=>monsterLineageOf(mon.id).main.id===lineage.id).map(mon=>mon.name).join('・')}</option>)}</select></label>
@@ -20085,7 +20086,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     操作の説明は助手の吹き出し(scene="roster")が受け持つ。 */}
                 {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={['表示するモンスターがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
+                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するモンスターがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {unifiedMonsterEntriesDraft.map(e=>{
                       if (e.type==='base') {
@@ -20204,7 +20205,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
             <div className={SCREEN_LIST_CLASS}>
-              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={['表示するベースモンがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
+              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するベースモンがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').map(e=>{
                   const m = e.base;
@@ -20235,7 +20236,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="放牧設定" accent="text-emerald-300" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"
               right={<span className="rounded-full border border-emerald-400/60 px-2 py-1 text-[12px] font-black text-emerald-200">{draftHomePastureIds.length} / 5</span>}/>
             <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pasture" compact/></div>
-            <ScreenLead>HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。</ScreenLead>
+            {/* 言葉の切れ目で折る(320 で「0体で/も保存」、375・390 で「見直/して」と折れていた。2026-10-27 育成の見回り) */}<ScreenLead><span style={JA_WRAP_STYLE}>{jaWrap('HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。')}</span></ScreenLead>
             <div className="grid grid-cols-5 gap-2 mb-2 shrink-0" aria-label="選択中の放牧マスモン">
               {Array.from({length:5},(_,index)=>{const id=draftHomePastureIds[index],masu=id?masuMons.find(m=>String(m.id)===id):null,base=masu&&ALL_PLAYER_MONSTERS[masu.baseId];return masu&&base?(
                 <button key={id} onClick={()=>toggleDraftPasture(id)} aria-label={`${masu.name}を放牧から外す`} className="relative min-w-0 aspect-square rounded-full border-2 border-emerald-300 bg-emerald-950 active:scale-90 overflow-hidden">
@@ -20246,7 +20247,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             {renderMonsterSortFilterBar({singleType:true})}
             <div className={SCREEN_LIST_CLASS}>
-              {pastureEntries.length===0&&<ScreenEmpty emoji="🌱" lines={['放牧できるマスモンがいません。','バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。']}/>}
+              {pastureEntries.length===0&&<ScreenEmpty emoji="🌱" lines={[jaWrap('放牧できるマスモンがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。')}</span>]}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {pastureEntries.map(({masu,base})=>{
                   const id=String(masu.id), selected=draftHomePastureIds.includes(id), disabled=!selected&&draftHomePastureIds.length>=5;
@@ -20618,7 +20619,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="mb-1.5 px-1 text-[10px] font-black tracking-wider text-slate-400">育成・カスタム</div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button type="button" aria-label={`${masu.name}を強化`} onClick={()=>{setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE');}} className={`${MASU_DETAIL_ACTION_CLASS} border-amber-400/45 bg-amber-950/60 text-amber-100`}><Sparkles size={15}/><span>強化</span>{(masu.distAptPoints||0)>0&&<small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-amber-400/20 text-amber-200`}>{masu.distAptPoints}P</small>}</button>
-                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span><span>トレーニング</span></button>
+                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span>{/* 320 で「トレーニ/ング」と折れていた(2026-10-27 育成の見回り)。折らずに、狭い幅だけ字を小さくする */}<span className="whitespace-nowrap max-[359px]:text-[10px]">トレーニング</span></button>
                   <button type="button" aria-label={`${masu.name}を染色`} onClick={()=>{const n=dyeRegionCount(masu.baseId),cur=getMasuColors(masu);setDyeTargetMasuId(masu.id);setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null));}} className={`${MASU_DETAIL_ACTION_CLASS} border-fuchsia-400/45 bg-fuchsia-950/60 text-fuchsia-100`}><span className="text-[15px] leading-none">🎨</span><span>染色</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-fuchsia-400/20 text-fuchsia-200`}>所持 {ownedItems.dye_mock||0}</small></button>
                 </div>
                 <button type="button" data-soul-trait-entry aria-label={`${masu.name}の魂格特性を開く`} onClick={()=>{setSoulTraitReturnState(gameState);setSoulTraitTab('attack');setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState('MASU_SOUL_TRAITS');}} className="mt-1.5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-sky-400/45 bg-sky-950/60 text-[12px] font-black text-sky-100 active:scale-[.98]"><Sparkles size={15}/><span>魂格特性</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} ${masuNorm.soulRankStage>=1?'bg-sky-400/20 text-sky-200':'bg-black/40 text-slate-300'}`}>{masuNorm.soulRankStage>=1?`未使用 ${soulTraitAvailablePoints(masuNorm)}P`:'未解放'}</small></button>

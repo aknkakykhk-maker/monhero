@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 33a00e22a7adb1ad
+// generated-sha256: eb15a03035db387c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24743,7 +24743,7 @@ const DebugScreenHead = ({ title, note = '', saves = false, onBack, backLabel = 
     <button aria-label={backLabel} onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
     <div className="min-w-0">
       <h2 className="truncate text-sm font-black text-white">{title}</h2>
-      {note && <small className="block truncate text-[9px] font-bold text-slate-400">{note}</small>}
+      {note && <small className="block text-[9px] font-bold leading-snug text-slate-400 [overflow-wrap:anywhere]">{note}</small>}
     </div>
     <span data-debug-saves={saves ? 'yes' : 'no'}
       className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black ${saves ? 'bg-rose-700 text-white' : 'border border-white/15 bg-slate-900 text-slate-300'}`}>
@@ -44329,7 +44329,7 @@ function MonsterCheckDebugScreen({
   if (!mon) {
     return (
       <main data-monster-check-debug data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-        <header className="flex items-center gap-2"><button aria-label="デバッグ設定へ戻る" onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-lg font-black italic text-emerald-300 uppercase tracking-widest">新モンスター確認</h2></header>
+        <DebugScreenHead title="新モンスター確認" note="全種を所持・解放に関係なく表示" onBack={onBack}/>
         <div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><p className="p-6 text-center text-[11px] font-bold text-slate-400">ALL_PLAYER_MONSTERS が読み込めていません。</p></div>
       </main>
     );
@@ -44380,10 +44380,7 @@ function MonsterCheckDebugScreen({
     const needsFix = monsters.filter(entry => monsterCheckNgCount(entry) > 0).length;
     return (
       <div data-monster-check-debug data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
-        <div className="flex items-center gap-2 mb-2 shrink-0">
-          <button onClick={onBack} className="p-3 text-slate-400 active:scale-90" aria-label="デバッグ設定へ戻る"><ArrowLeft size={20}/></button>
-          <h2 className="text-lg font-black italic text-emerald-300 uppercase tracking-widest">新モンスター確認</h2>
-        </div>
+        <DebugScreenHead title="新モンスター確認" note="全種を所持・解放に関係なく表示" onBack={onBack}/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/70 to-slate-950 px-3 py-2 flex items-center justify-between gap-2">
           <span className="text-[9px] font-black text-emerald-300 uppercase tracking-widest shrink-0">確認できる種</span>
           <span className="text-[15px] font-mono font-black text-emerald-100 tabular-nums">{monsters.length}<span className="text-slate-400 text-[10px]"> 種（所持・解放に関係なく全部）</span></span>
@@ -51565,7 +51562,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach((e) => {
-    if (e.t === 'draw') { for (let i = 0; i < e.n; i++) { if (!me.deck.length) break; me.hand.push(me.deck.pop()); } cardLog(st, `${me.name}は${e.n}枚引いた`); }
+    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); } // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
     if (e.t === 'peekHand') { cardEvent(st, { t: 'peek', p, hand: opp.hand.slice() }); cardLog(st, `${me.name}は相手の手札を見た`); }
     if (e.t === 'discardOpp') { st.pendingDiscard = { p: cardOther(p), n: Math.min(e.n, opp.hand.length) }; if (!st.pendingDiscard.n) st.pendingDiscard = null; }
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
@@ -54750,6 +54747,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [turnBanner, setTurnBanner] = useState(null);
   const [bigCard, setBigCard] = useState(null);
   const [turnSummary, setTurnSummary] = useState(null);
+  // まとめは、まず小さな1行(まんなかの下)で知らせ、押したら開く(毎回まんなかに大きく開くと、相手のライフに重なってテンポも落ちた。2026-10-26 カゲあつくんの通しの点検)
+  const [sumOpen, setSumOpen] = useState(false);
+  useEffect(() => { setSumOpen(false); }, [turnSummary && turnSummary.key]);
   const [logSheet, setLogSheet] = useState(false);
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
@@ -55068,10 +55068,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   手札を運び始めたとき(運んだ先にまとめが重なる)と、しばらくたったときも閉じる
   useEffect(() => { if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null); }, [sel, picks.length, drag]);
   useEffect(() => {
-    if (!turnSummary) return undefined;
+    if (!turnSummary || sumOpen) return undefined;
     const t = setTimeout(() => setTurnSummary((cur) => (cur && cur.key === turnSummary.key ? null : cur)), Math.max(3500, turnSummary.lines.length * 1200));
     return () => clearTimeout(t);
-  }, [turnSummary && turnSummary.key]);
+  }, [turnSummary && turnSummary.key, sumOpen]);
 
   // マルチ対戦: 届いた相手の手を当てる・相手の捨て札の並びを本物にする・相手の投了や抜けたで終える(91 の CARD_PVP)
   const stRef = useRef(st);
@@ -55555,7 +55555,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               : pvp ? <CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/> : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
-        {action && stageFit < 3 && !turnSummary && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
+        {action && stageFit < 3 && !(turnSummary && sumOpen) && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
           <div key={action.key} data-card-action data-card-action-side={action.side} className={`relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
             {/* 案A: どちらが使った技か(相手=赤・自分=金) */}
             <span data-card-fit className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? '相手' : '自分'}</span>
@@ -55570,6 +55570,13 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             className="relative z-[1] flex max-w-full items-center gap-1.5 rounded-xl border-2 border-emerald-300/80 bg-emerald-950/80 px-2 py-0.5 text-left active:scale-[.98]">
             <span className="shrink-0 whitespace-nowrap rounded-md bg-emerald-400 px-1 py-0.5 text-[10px] font-black text-emerald-950">全体</span>
             <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
+          </button>
+        )}
+        {/* 案C: 相手の番のまとめの1行。押すと開く(開いた窓は下の data-card-turn-summary) */}
+        {turnSummary && !sumOpen && !bigCard && (
+          <button type="button" key={turnSummary.key} data-card-turn-summary-chip onClick={() => { Audio_.fgSe.tap(); setSumOpen(true); }}
+            className="absolute bottom-1 left-1/2 z-[7] flex max-w-[92%] -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-rose-300/70 bg-slate-950/90 px-2.5 py-0.5 text-[11px] font-black text-rose-100 shadow active:scale-95">
+            <span className="min-w-0 truncate">{`${who.name}のターンにしたこと(${turnSummary.lines.length})`}</span><span className="shrink-0 text-rose-300">▸ 見る</span>
           </button>
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
@@ -55704,7 +55711,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             style={{ fontSize: 'clamp(26px, 9vw, 44px)', ...JA_LABEL_STYLE }}>{turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`}</button>
         </div>
       )}
-      {turnSummary && !bigCard && (
+      {turnSummary && sumOpen && !bigCard && (
         <button type="button" key={turnSummary.key} data-card-turn-summary onClick={() => setTurnSummary(null)}
           // 横の画面は、左の盤のまんなかへ小さく出す(右の手札にかからない。もとは盤の上の段と案内に大きく重なった。QA 2)
           className={`mh-card-big absolute z-[54] overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 text-left shadow-2xl ${wide ? 'left-2 top-[34%] max-h-[42%] p-2' : 'inset-x-3 top-[18%] mx-auto max-h-[56%] max-w-md p-3'}`}
@@ -78825,7 +78832,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const resetPattern=()=>{setPatternStep('attach');setPatternSettings(makePatternSettings());setPatternCustomColor({open:false,h:198,s:.77,v:.97});setPatternSizePreview(false);};
           return <main className="flex-1 min-h-0 flex flex-col bg-slate-950" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}}>
             <div className="mh-debug-banner">DEBUG・模様は保存されません</div>
-            <header className="flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"><button aria-label="戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="block text-[8px] font-black text-fuchsia-400">PATTERN CUSTOM TEST</small><h2 className="truncate text-xs font-black">{selected?selected.name:'マスモン模様カスタム'}</h2></div>{selected&&<button onClick={()=>setPatternMasuId(null)} className="ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}</header>
+            <div className="px-2 pt-1 border-b border-white/10"><DebugScreenHead title={selected?selected.name:'マスモン模様カスタムテスト'} note="模様は保存されません" onBack={()=>setGameState('DEBUG_SETTINGS')}
+              right={selected&&<button onClick={()=>setPatternMasuId(null)} className="min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}/></div>
             {eligible.length===0?<section className="flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300">カスタマイズできる所持マスモンがいません</section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">模様を試すモンスターを1体選んでください（所持していない種もそのまま試せます）。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);resetPattern();}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b></button>})}</div></section>:(()=>{
               const base=ALL_PLAYER_MONSTERS[selected.baseId],regions=dyeRegionCount(selected.baseId),colors=getMasuColors(selected);
               const mode=patternSettings.mode,selectedKey=patternSettings.selectedLayer;
@@ -78878,7 +78886,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const slider=(key,label,min,max,step)=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-2 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{values[key]}</output></span><input className="w-full accent-fuchsia-500" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>patchValue(key,e.target.value)}/></label>;
           const copyText=`${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">プロフィールの見た目</h2></div></header>
+            <DebugScreenHead title="プロフィールの見た目" note="顔アイコンの拡大・位置を決めてコピー／フレームとの相性" onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
               <input type="search" value={iconAdjustQuery} onChange={e=>setIconAdjustQuery(e.target.value)} placeholder="名前・内部IDで検索" className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"/>
               <select value={filteredItems.some(entry=>entry.id===item.id)?item.id:''} onChange={e=>e.target.value&&setIconAdjustId(e.target.value)} size={Math.min(6,Math.max(2,filteredItems.length))} className="w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black">{!filteredItems.length&&<option value="">一致するアイコンはありません</option>}{filteredItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
@@ -78941,7 +78949,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const look=looks.some(([id])=>id===masuLookTab)?masuLookTab:'reincarnate';
           if(!previewBase)return null;
           return <main data-mh-screen data-masu-look-debug className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-300">DEBUG・本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します</small><h2 className="text-sm font-black">育成マークの見た目</h2></div></header>
+            <DebugScreenHead title="育成マークの見た目" note="本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します" saves onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div role="tablist" aria-label="見る段階" className="shrink-0 mb-2 grid grid-cols-4 gap-1">
               {looks.map(([id,label])=><button key={id} type="button" role="tab" aria-selected={look===id} data-masu-look-tab={id} onClick={()=>setMasuLookTab(id)} className={`min-h-[42px] rounded-xl border px-0.5 text-[10px] font-black active:scale-95 ${look===id?(id==='prepare'?'border-rose-300 bg-rose-700 text-white':'border-amber-300 bg-amber-600 text-white'):'border-amber-500/30 bg-slate-900 text-amber-200/80'}`}>{label}</button>)}
             </div>
@@ -80004,7 +80012,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const useFruit=async(amount)=>{if(!selectedMasu)return;const before=Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0));const result=useTranscendFruitOnMasu(selectedMasu,ownedItems,selectedFruitId,amount);setTranscendFruitDebugResult({ok:result.ok,before,after:Math.max(0,Math.floor(Number(result.nextMasu?.transcendPoints)||0))});if(!result.ok)return;const nextMasuMons=masuMons.map(m=>String(m.id)===String(selectedMasu.id)?result.nextMasu:m);setMasuMons(nextMasuMons);setOwnedItems(result.nextOwnedItems);await Promise.all([storeSet('mh_masu_mons',nextMasuMons,false),storeSet('mh_owned_items',result.nextOwnedItems,false)]);};
           const grantFruit=async(itemId)=>{const result=changeTranscendFruitOwnedCount(ownedItems,itemId,10);if(!result.ok)return;setOwnedItems(result.ownedItems);await storeSet('mh_owned_items',result.ownedItems,false);};
           return <main data-species-challenge-debug className="flex-1 flex flex-col min-h-0 bg-slate-950 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-emerald-300">DEBUG・保存先 {SPECIES_CHALLENGE_PROGRESS_KEY}</small><h2 className="text-sm font-black">種族チャレンジ進行確認</h2></div></header>
+            <DebugScreenHead title="種族チャレンジ進行確認" note={`保存先 ${SPECIES_CHALLENGE_PROGRESS_KEY}`} saves onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <section className="shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3">
               <button data-species-challenge-production-flow onClick={()=>openSpeciesChallengeSelection({fromDebug:true})} className="min-h-[52px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-950 text-[11px] font-black text-cyan-100">⚔️ 実戦フロー確認<small className="block text-[8px] text-cyan-300">本番用の選択フロー（バトル開始なし）</small></button>
               <label className="block text-[9px] font-black text-emerald-200">種族（主血統）<select aria-label="種族" value={speciesId} onChange={e=>{setSpeciesChallengeDebugSpeciesId(e.target.value);setSpeciesChallengeDebugHeroId('');setSpeciesChallengeDebugAllyIds([]);setSpeciesChallengeDebugRun(null);setSpeciesChallengeDebugWaveLog([]);}} className="mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white">{speciesEntries.map(lineage=><option key={lineage.id} value={lineage.id}>{lineage.name}種／{dexMonsterList().filter(mon=>monsterLineageOf(mon.id).main.id===lineage.id).map(mon=>mon.name).join('・')}</option>)}</select></label>
@@ -80358,7 +80366,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     操作の説明は助手の吹き出し(scene="roster")が受け持つ。 */}
                 {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={['表示するモンスターがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
+                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するモンスターがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {unifiedMonsterEntriesDraft.map(e=>{
                       if (e.type==='base') {
@@ -80477,7 +80485,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
             <div className={SCREEN_LIST_CLASS}>
-              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={['表示するベースモンがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
+              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するベースモンがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').map(e=>{
                   const m = e.base;
@@ -80508,7 +80516,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="放牧設定" accent="text-emerald-300" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"
               right={<span className="rounded-full border border-emerald-400/60 px-2 py-1 text-[12px] font-black text-emerald-200">{draftHomePastureIds.length} / 5</span>}/>
             <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pasture" compact/></div>
-            <ScreenLead>HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。</ScreenLead>
+            {/* 言葉の切れ目で折る(320 で「0体で/も保存」、375・390 で「見直/して」と折れていた。2026-10-27 育成の見回り) */}<ScreenLead><span style={JA_WRAP_STYLE}>{jaWrap('HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。')}</span></ScreenLead>
             <div className="grid grid-cols-5 gap-2 mb-2 shrink-0" aria-label="選択中の放牧マスモン">
               {Array.from({length:5},(_,index)=>{const id=draftHomePastureIds[index],masu=id?masuMons.find(m=>String(m.id)===id):null,base=masu&&ALL_PLAYER_MONSTERS[masu.baseId];return masu&&base?(
                 <button key={id} onClick={()=>toggleDraftPasture(id)} aria-label={`${masu.name}を放牧から外す`} className="relative min-w-0 aspect-square rounded-full border-2 border-emerald-300 bg-emerald-950 active:scale-90 overflow-hidden">
@@ -80519,7 +80527,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             {renderMonsterSortFilterBar({singleType:true})}
             <div className={SCREEN_LIST_CLASS}>
-              {pastureEntries.length===0&&<ScreenEmpty emoji="🌱" lines={['放牧できるマスモンがいません。','バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。']}/>}
+              {pastureEntries.length===0&&<ScreenEmpty emoji="🌱" lines={[jaWrap('放牧できるマスモンがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。')}</span>]}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {pastureEntries.map(({masu,base})=>{
                   const id=String(masu.id), selected=draftHomePastureIds.includes(id), disabled=!selected&&draftHomePastureIds.length>=5;
@@ -80891,7 +80899,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="mb-1.5 px-1 text-[10px] font-black tracking-wider text-slate-400">育成・カスタム</div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button type="button" aria-label={`${masu.name}を強化`} onClick={()=>{setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE');}} className={`${MASU_DETAIL_ACTION_CLASS} border-amber-400/45 bg-amber-950/60 text-amber-100`}><Sparkles size={15}/><span>強化</span>{(masu.distAptPoints||0)>0&&<small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-amber-400/20 text-amber-200`}>{masu.distAptPoints}P</small>}</button>
-                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span><span>トレーニング</span></button>
+                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span>{/* 320 で「トレーニ/ング」と折れていた(2026-10-27 育成の見回り)。折らずに、狭い幅だけ字を小さくする */}<span className="whitespace-nowrap max-[359px]:text-[10px]">トレーニング</span></button>
                   <button type="button" aria-label={`${masu.name}を染色`} onClick={()=>{const n=dyeRegionCount(masu.baseId),cur=getMasuColors(masu);setDyeTargetMasuId(masu.id);setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null));}} className={`${MASU_DETAIL_ACTION_CLASS} border-fuchsia-400/45 bg-fuchsia-950/60 text-fuchsia-100`}><span className="text-[15px] leading-none">🎨</span><span>染色</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-fuchsia-400/20 text-fuchsia-200`}>所持 {ownedItems.dye_mock||0}</small></button>
                 </div>
                 <button type="button" data-soul-trait-entry aria-label={`${masu.name}の魂格特性を開く`} onClick={()=>{setSoulTraitReturnState(gameState);setSoulTraitTab('attack');setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState('MASU_SOUL_TRAITS');}} className="mt-1.5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-sky-400/45 bg-sky-950/60 text-[12px] font-black text-sky-100 active:scale-[.98]"><Sparkles size={15}/><span>魂格特性</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} ${masuNorm.soulRankStage>=1?'bg-sky-400/20 text-sky-200':'bg-black/40 text-slate-300'}`}>{masuNorm.soulRankStage>=1?`未使用 ${soulTraitAvailablePoints(masuNorm)}P`:'未解放'}</small></button>
