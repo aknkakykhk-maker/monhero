@@ -684,6 +684,25 @@ const helpDataRows = (id) => {
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
         `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    // MFバトルカードの1戦でもらえるビートP(2026-10-26 にカードポイントをやめてビートPにした)。強さごとの勝ち・負けとマルチ対戦を 82-card-battle-core.jsx の数から作る
+    // (数を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く・help-render-check)
+    case 'cardBeatPointRewards': {
+      if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
+      const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
+      const lose = typeof CARD_CPU_LOSE_POINT !== 'undefined' ? CARD_CPU_LOSE_POINT : 0;
+      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose}`]);
+      if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
+      return rows;
+    }
+    // MFバトルカードのパック。弾ごとの種族とキラの割合を 89-card-pack.jsx の CARD_PACKS から作る(弾を足しても自動で並ぶ)
+    case 'cardPacks':
+      if (typeof CARD_PACKS === 'undefined') return [];
+      return CARD_PACKS.map(pack => {
+        const species = typeof cardPackSpeciesLabel === 'function' && typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA
+          ? cardPackSpeciesLabel(CARD_BATTLE_DATA, pack) : pack.species.join('・');
+        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・別絵キラ${pack.rarity.alt}%` : ''}`;
+        return [pack.name, `${species} ／ ${kira}`];
+      });
     // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
     case 'monsterLineages':
       return dexMonsterList().map(mon => {
@@ -946,6 +965,8 @@ const helpDataRows = (id) => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  cardBeatPointRewards: 'MFバトルカードの1戦でもらえるビートP',
+  cardPacks: 'パックの弾と入っている種族',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
   raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
   raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',

@@ -21,6 +21,8 @@ const lineagesData = fs.readFileSync(path.join(root, 'monster-hero/data/lineages
 const allyMonstersData = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
 const rhythmModeData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-mode.js'), 'utf8');
 const rhythmEventData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-event.js'), 'utf8');
+const cardCore = fs.readFileSync(path.join(root, 'monster-hero/src/parts/82-card-battle-core.jsx'), 'utf8');
+const cardPack = fs.readFileSync(path.join(root, 'monster-hero/src/parts/89-card-pack.jsx'), 'utf8');
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
@@ -80,6 +82,13 @@ const dataTablePrelude = [
   grab(source, 'const TACTICS_TARGET_LOW_HP_BIAS', '// hate … ヘイト(試作)の配列。'),
   grab(source, '// ===== ヘイト(確認待ちの試作', '// ===== ヘイトの数字ここまで'),
   grab(source, '// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
+  // MFバトルカードのカードポイント・パックの表(2026-10-26)。強さごとの数・マルチの数・弾の表を持ち込む
+  // (カードのデータ本体 CARD_BATTLE_DATA は持ち込まない。種族名は表の id で並ぶ)
+  grab(cardCore, 'const CARD_AI_LEVELS = Object.freeze({', '// くせの重み'),
+  (cardCore.match(/^const CARD_LEVEL_ORDER = .*$/m) || [''])[0],
+  (cardCore.match(/^const CARD_CPU_LOSE_POINT = .*$/m) || [''])[0],
+  (cardCore.match(/^const CARD_PVP_REWARD = .*$/m) || [''])[0],
+  grab(cardPack, 'const CARD_PACKS = Object.freeze([', '// 全モンスター(any)'),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
