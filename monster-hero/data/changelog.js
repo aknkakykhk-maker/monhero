@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-10-27 02:36", type:'update', group:'rhythm', title:'モンヒロビートの HELL の一部で、表示の Lv. を実際の難しさに合わせました', status:'new',
+    date: "2026-10-27 04:02", type:'update', group:'rhythm', title:'モンヒロビートの HELL の一部で、表示の Lv. を実際の難しさに合わせました', status:'new',
     items:[
       '押さえながら叩く所や、手が重なる所が多い HELL の Lv. を上げました(Stay With Me ～Locked Fate～ など)。譜面・スコア・ランキングは変わりません。',
     ],
