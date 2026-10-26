@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fbb220d9973d7eb
+// source-sha256: e198a52486c04d0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 23:16";
+const BUILD_DATE = "2026-10-26 23:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -42302,7 +42302,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'spooky_trick_confuse',
     name: 'トリックコンフューズ',
     useNote: '全員ライフ・ガッツ30%回復・3ターン 全員ちから丈夫さ+10%・当てると乱心',
-    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「意味不明」になる（次の行動に出る）。意味不明のターン、敵は動けず、味方の攻撃は会心が確定する',
+    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「混乱中」になる（次の行動に出る）。混乱中のターン、敵は動けず、味方の攻撃は会心が確定する',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -109781,7 +109781,7 @@ function MonsterHeroGame() {
       if (upcoming?.type === 'CONFUSED') showLuckBanner({
         icon: '❓',
         title: '乱心',
-        result: '敵の次の行動が「意味不明」に！ 動けず、味方の攻撃は会心確定',
+        result: '敵の次の行動が「混乱中」に！ 動けず、味方の攻撃は会心確定',
         tone: 'enemy'
       });else showLuckBanner({
         icon: '🌀',
@@ -109809,7 +109809,7 @@ function MonsterHeroGame() {
     });
     if (!enemy) return list;
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
-    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
+    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は混乱中になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, {
       wave,
       turn: turnCount
@@ -111044,8 +111044,8 @@ function MonsterHeroGame() {
       pushBattleLog('⏳ 時間が止まっている。敵は行動しない', 'info');
       await battleWait(1000);
     } else if (intent && intent.type === 'CONFUSED') {
-      addPopup('❓ 意味不明！ 敵は動けない', 'enemy', 'text-violet-300 font-black text-xl drop-shadow-md');
-      pushBattleLog('❓ 敵は乱心して、意味不明な動きをした', 'info');
+      addPopup('❓ 混乱中！ 敵は動けない', 'enemy', 'text-violet-300 font-black text-xl drop-shadow-md');
+      pushBattleLog('❓ 敵は乱心して混乱中。動けなかった', 'info');
       await battleWait(1000);
     } else if (getTurnBuff('invincible', false) || immediateEffects.invincible) {
       addPopup("無効化！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-md');
@@ -112786,7 +112786,7 @@ function MonsterHeroGame() {
           showLuckBanner({
             icon: '🌀',
             title: `${battleActorName(slotIdx)}のトリックコンフューズ`,
-            result: `敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`,
+            result: `敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で混乱中になる`,
             tone: 'enemy'
           });
         }
@@ -129746,7 +129746,7 @@ function MonsterHeroGame() {
         className: "text-center py-6"
       }, React.createElement("div", {
         className: "text-[11px] text-slate-500"
-      }, "編成情報なし（過去の記録）"), React.createElement("div", {
+      }, "編成の記録なし（過去の記録）"), React.createElement("div", {
         className: "mt-2 flex items-center justify-center gap-1"
       }, React.createElement(Crown, {
         size: 11,
@@ -129755,7 +129755,7 @@ function MonsterHeroGame() {
         className: "text-[8px] text-amber-300"
       }, "勇者モン:"), React.createElement("span", {
         className: "text-[11px] font-black text-white"
-      }, entry?.hero || '勇者モン情報なし'))) : React.createElement("div", {
+      }, entry?.hero || '勇者モンの記録なし'))) : React.createElement("div", {
         className: "space-y-2"
       }, members.map((m, i) => {
         const art = monArt(m);
@@ -129792,7 +129792,7 @@ function MonsterHeroGame() {
           className: "text-[12px] font-black text-white truncate"
         }, m?.name || '不明')), React.createElement("div", {
           className: "text-[9px] font-black text-pink-300 mt-0.5"
-        }, bond != null ? `絆Lv.${bond}` : '絆Lv情報なし'), React.createElement("div", {
+        }, bond != null ? `絆Lv.${bond}` : '絆Lvの記録なし'), React.createElement("div", {
           className: "flex items-center gap-1 mt-1"
         }, m?.slotIndex != null && React.createElement("span", {
           className: `text-[8px] font-black px-2 py-0.5 rounded-full border ${RANGE_STYLES[m.slotIndex].bg} ${RANGE_STYLES[m.slotIndex].border}`

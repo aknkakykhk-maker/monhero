@@ -514,9 +514,9 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExConfusesOnHit(c, team, 1, A(1, 5)) === false);
   const atk = { type: 'ATTACK', label: '体当たり', value: 100, targetSlot: 1, targetName: 'スプーキー' };
   const hit = ex.rollEnemyConfusion(atk, 3, () => 0.49), miss = ex.rollEnemyConfusion(atk, 3, () => 0.5), none = ex.rollEnemyConfusion(atk, 0, () => 0);
-  check('乱心: 残りがあれば予告ごとに1つ使い、50%未満で「意味不明」(狙いなし・ダメージなし)。残りが0なら何もしない',
+  check('乱心: 残りがあれば予告ごとに1つ使い、50%未満で「混乱中」(狙いなし・ダメージなし)。残りが0なら何もしない',
     ex.ENEMY_CONFUSE_TURNS === 3 && ex.ENEMY_CONFUSE_CHANCE === 0.5
-    && hit.turns === 2 && hit.intent.type === 'CONFUSED' && hit.intent.label === '意味不明' && hit.intent.targetSlot === undefined && hit.intent.value === 0
+    && hit.turns === 2 && hit.intent.type === 'CONFUSED' && hit.intent.label === '混乱中' && hit.intent.targetSlot === undefined && hit.intent.value === 0
     && miss.turns === 2 && miss.intent === atk && none.turns === 0 && none.intent === atk, JSON.stringify(hit));
   // 本体への結線
   check('本体: 完全回避は狙われた枠ごとに1つ使う(ほかの回避でかわせたときは使わない)',
