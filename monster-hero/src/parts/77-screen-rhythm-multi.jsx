@@ -1304,9 +1304,10 @@ function RhythmMultiLobbyCount() {
   const [count, setCount] = React.useState(null);
   React.useEffect(() => RHYTHM_MULTI.watchLobby('free', (people) => setCount(people)), []);
   return (
-    // 320幅では札の右の斜めの角に字がかかっていた。「…」で切らず、言葉の切れ目で2行に折る(2026-10-26 ダメダシ)
-    <small data-rhythm-multi-lobby-count className="block pr-2 text-[10px] font-black leading-tight text-slate-950/80" style={JA_WRAP_STYLE}>
-      {jaWrap(count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません')}
+    // 320幅では札の右の斜めの角に字がかかっていた(2026-10-26 ダメダシ)。札は3行目が入らない高さなので、細い端末では字を少し小さくして
+    // 角の手前で1行に収める(折ると札の下で切れた)
+    <small data-rhythm-multi-lobby-count className="block truncate pr-2.5 text-[10px] font-black leading-tight text-slate-950/80 max-[359px]:text-[8.5px]">
+      {count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません'}
     </small>
   );
 }
