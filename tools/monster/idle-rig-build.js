@@ -240,6 +240,9 @@ const RIGS = [
   { id:'Gentle', img:'images/monsters/c020.png', body:'breathe', parts:[] },
   { id:'Vesuvios', img:'images/monsters/c043.png', body:'breathe', parts:[] },
   { id:'MooHybrid', img:'images/monsters/c045.png', body:'breathe', parts:[] },
+  // キュービ・オリヒメ(2026-10-27・案の子)。まずは体の動きだけ(しっぽ・羽衣の揺れは正式実装のときに足す)
+  { id:'Kyubi', img:'images/monsters/kyubi.png', body:'sway', parts:[] },
+  { id:'Orihime', img:'images/monsters/orihime.png', body:'drift', parts:[] },
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

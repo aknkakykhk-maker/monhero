@@ -170,6 +170,9 @@ const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
 // 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
 // ケンタウロスは背景に散ったごく薄い光の画素(不透明度64未満)を消してから取り込んだ
+// キュービ・オリヒメ(2026-10-27・案の段階)。元絵は tools/art-sources/kyubi-orihime-2026-10-27/。高さ916px・256色(sharp)
+const KYUBI_IMG = "images/monsters/kyubi.png?v=89e4593c5221";
+const ORIHIME_IMG = "images/monsters/orihime.png?v=5dbd0df64bbb";
 const MF_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
 const MF_GALI_IMG = "images/monsters/gali.png?v=802cb6ce6f64";
 const MF_NAGA_IMG = "images/monsters/naga.png?v=07114a6c8886";
@@ -509,5 +512,6 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   metalner: LINEAGE_ICON_METALNER,
   worm: LINEAGE_ICON_WORM,
   centaur: LINEAGE_ICON_CENTAUR,
+  kyubi: LINEAGE_ICON_KYUBI,
   unknown: LINEAGE_ICON_RAREMON,
 });
