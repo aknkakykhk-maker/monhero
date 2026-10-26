@@ -68,6 +68,21 @@ const CONFIGS = {
     { from: 0, to: 4, diff: 90, hue: [170, 358], box: [232, 160, 275, 220] },
     { from: 2, to: 1, diff: 30, box: [185, 160, 255, 220] },
   ] },
+  // エイキ(区分け: ①=髪・腹のリボン・桜系の飾り / ②=刀身・足元のオーラ / ③=鎧)。2026-10-27 部長・社長の答え:
+  // 羽の内側の濃い紫の板は③(色相295〜330・明るさ0.62以下)、桃色の房飾り・結び目は①(色相326〜352・彩度0.55以上・明るさ0.62以上。紫の板は色相317前後で明るさ0.6以下なので分かれる)、
+  // 足元の桃色の花びらも①(淡いので彩度0.3以上)。
+  // 範囲(房飾り7本と足元のまわり)はゆるく取り、境目は色の条件で決める。足元のオーラ(②)は from に入れないので動かない
+  Eiki: { edgeFill: false, pre: [
+    { from: [-1, 0], to: 2, hue: [295, 330], sat: [0.3, 1], val: [0, 0.62], poly: [[0, 300], [1024, 300], [1024, 1130], [0, 1130]] },
+    { from: [-1, 2], to: 0, hue: [326, 352], sat: [0.55, 1], val: [0.62, 1], poly: [[150, 520], [210, 520], [210, 700], [150, 700]] },
+    { from: [-1, 2], to: 0, hue: [326, 352], sat: [0.55, 1], val: [0.62, 1], poly: [[20, 780], [100, 780], [100, 920], [20, 920]] },
+    { from: [-1, 2], to: 0, hue: [326, 352], sat: [0.55, 1], val: [0.62, 1], poly: [[290, 720], [380, 720], [380, 980], [290, 980]] },
+    { from: [-1, 2], to: 0, hue: [326, 352], sat: [0.55, 1], val: [0.62, 1], poly: [[375, 520], [450, 520], [450, 680], [375, 680]] },
+    { from: [-1, 2], to: 0, hue: [326, 352], sat: [0.55, 1], val: [0.62, 1], poly: [[525, 520], [600, 520], [600, 680], [525, 680]] },
+    { from: [-1, 2], to: 0, hue: [326, 352], sat: [0.55, 1], val: [0.62, 1], poly: [[720, 520], [810, 520], [810, 700], [720, 700]] },
+    { from: [-1, 2], to: 0, hue: [326, 352], sat: [0.55, 1], val: [0.62, 1], poly: [[860, 780], [950, 780], [950, 930], [860, 930]] },
+    { from: [-1, 2], to: 0, hue: [318, 352], sat: [0.3, 1], val: [0.6, 1], poly: [[380, 980], [600, 980], [600, 1135], [380, 1135]] },
+  ] },
   // 黒目は彩度1.0、まぶたの黄色は0.57なので、彩度0.85以上の画素だけ進む
   // 黒目のふちの暗い帯も黒目なので、暗い画素(線の扱い)も進む(lines)
   Suezo: { grow: [{ from: 0, to: 1, diff: 40, sat: [0.85, 1], lines: true, box: [400, 360, 760, 690] }] },
@@ -129,6 +144,7 @@ const refine = (srcData, Lin, W, H, cfg) => {
       // hue: [下, 上] … その色相の画素だけ(肌色とひれの緑のように、ぼかしで続く2色を色で分けるとき)
       // sat: [下, 上] … その彩度の画素だけ(陰で暗くなった白い毛と、紫の毛を分けるとき)
       if (pr.sat) { const sat = hsvOf(srcData, i)[1]; if (sat < pr.sat[0] || sat > pr.sat[1]) continue; }
+      if (pr.val) { const va = hsvOf(srcData, i)[2]; if (va < pr.val[0] || va > pr.val[1]) continue; }
       if (pr.hue) { const [h, sat] = hsvOf(srcData, i); if (sat < 0.06 || !(pr.hue[0] <= pr.hue[1] ? (h >= pr.hue[0] && h <= pr.hue[1]) : (h >= pr.hue[0] || h <= pr.hue[1]))) continue; }
       L0[i] = pr.to;
     }
@@ -422,7 +438,8 @@ const labelsFromPng = async (file, srcData, W, H) => {
   const r = refine(srcData, L0, W, H, cfg);
   // 絵の外周の半透明のふち(不透明度20〜127)は部位図では透明扱いなので、となりの部位で埋める。
   // 埋めないと、染めたとき外周に元の色の縁が残る(tools/image/dye-edge-check.js が見張る)
-  for (let pass = 0; pass < 3; pass++) {
+  // edgeFill:false の子は埋めない(エイキ: 足元のオーラの半透明のぼかしまで②になり、見本比べの検査で取り違えと数えられた)
+  for (let pass = 0; pass < (cfg.edgeFill === false ? 0 : 3); pass++) {
     const next = new Int8Array(r.L);
     for (let i = 0; i < W * H; i++) {
       if (r.L[i] !== -2 || srcData[i * 4 + 3] < 20) continue;
@@ -432,6 +449,26 @@ const labelsFromPng = async (file, srcData, W, H) => {
       }
     }
     r.L.set(next);
+  }
+  // まわりが透明な、ごく小さい点(9px未満。オーラの粒など)は染めない。ゲームはマスクを解析サイズ(最大768px)へ縮めて読むので、
+  // 原寸で1〜2pxの点は縮めると消えたり、となりへずれたりする(エイキの見本比べで「境目の外の取り違え」になった)
+  {
+    const seen = new Uint8Array(W * H);
+    for (let s0 = 0; s0 < W * H; s0++) {
+      if (seen[s0] || r.L[s0] < 0) continue;
+      const lab = r.L[s0], comp = [s0];
+      seen[s0] = 1;
+      let alone = true;
+      for (let q = 0; q < comp.length && comp.length < 9; q++) {
+        const p = comp[q], x = p % W;
+        for (const n of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, p - W, p + W]) {
+          if (n < 0 || n >= W * H) continue;
+          if (r.L[n] === lab) { if (!seen[n]) { seen[n] = 1; comp.push(n); } }
+          else if (r.L[n] !== -2) alone = false;
+        }
+      }
+      if (comp.length < 9 && alone) for (const p of comp) r.L[p] = -2;
+    }
   }
   let changed = 0; for (let i = 0; i < W * H; i++) if (r.L[i] !== L0[i]) changed++;
   const out = outArg || path.join(TOOLS_DIR, 'out', 'dye-mask-review', `${id}-refined.png`);
