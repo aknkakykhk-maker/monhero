@@ -8,6 +8,16 @@
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
+  // 2026-10-27 モンスターノーツのかくつきの犯人さがし。1曲の中のモンスターノーツごとに演出を1つずつ止め、止めた物を記録(stats.mon の i.ab)に控える。
+  // 同じキーの値 '1' と '2'。どちらも見た目と音だけで、判定・スコア・ライフ・能力の効き目は変わらない
+  { id: 'rhythm_mon_ab1', added: '2026-10-27', area: 'モンヒロビート', key: 'mh_rhythm_mon_ab_v1', on: '1',
+    title: '🎵 モンスターノーツのかくつき調べ(1)',
+    note: 'モンスターノーツを取ったときの演出を、1回目は跳ね・2回目は能力名・3回目は光の輪だけ出さず、4回目はいつもどおりにします。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+    when: '次の演奏から' },
+  { id: 'rhythm_mon_ab2', added: '2026-10-27', area: 'モンヒロビート', key: 'mh_rhythm_mon_ab_v1', on: '2',
+    title: '🎵 モンスターノーツのかくつき調べ(2)',
+    note: 'モンスターノーツを取ったときの演出を、1回目は金色の光・2回目は音・3回目はカットインだけ出さず、4回目は全部出しません。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+    when: '次の演奏から' },
   // 2026-10-16 社長「モンスターノーツでかくつくの直ってない」。見た目は変わらない。入と切で同じ曲を1回ずつ遊ぶと、記録(stats.mon)で比べられる
   { id: 'rhythm_mon_layers', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_mon_layers_v1', on: 'on',
     title: '🎵 モンスターノーツのかくつきの手当て',
@@ -57,15 +67,16 @@ const debugTrialsOrdered = (seen) => DEBUG_TRIALS.map((t, i) => ({ t, i, fresh: 
   .sort((a, b) => (Number(b.fresh) - Number(a.fresh)) || String(b.t.added).localeCompare(String(a.t.added)) || (a.i - b.i)).map((x) => ({ ...x.t, fresh: x.fresh }));
 
 // onChange … 入/切を押したあとに呼ぶ(本体の画面が同じキーを覚えている state を読み直すため)
-function DebugTrialsPanel({ onChange }) {
+// bare … デバッグメニューのまとまり(DebugMenuGroup)の中に置くとき。見出しと枠はまとまりの側が持つので出さない
+function DebugTrialsPanel({ onChange, bare = false }) {
   const [, setTick] = useState(0);
   const seen = debugTrialsSeen();
   const list = debugTrialsOrdered(seen);
   if (!list.length) return null;
   const toggle = (trial, on) => { debugTrialWrite(trial, on); debugTrialsMarkSeen(trial.id); setTick((n) => n + 1); try { if (onChange) onChange(trial, on); } catch (e) {} };
   return (
-    <section data-debug-trials className="rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3">
-      <h3 className="text-[12px] font-black text-lime-200">🧪 確認待ちの試作<small className="ml-1 text-[9px] font-bold text-lime-100/70">({list.length})</small></h3>
+    <section data-debug-trials className={bare ? '' : 'rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3'}>
+      {!bare && <h3 className="text-[12px] font-black text-lime-200">🧪 確認待ちの試作<small className="ml-1 text-[9px] font-bold text-lime-100/70">({list.length})</small></h3>}
       <p className="mt-0.5 text-[9px] font-bold leading-relaxed text-lime-100/75">iPhone で確かめてほしい試作です。「入」にして遊び、気になる所があれば「切」で元に戻せます。新しいものほど上に出ます。</p>
       <div className="mt-2 space-y-2">
         {list.map((trial) => {

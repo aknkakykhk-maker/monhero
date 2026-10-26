@@ -1717,7 +1717,7 @@ const ASSISTANT_SCENES = {
       lowGold: [
         { e:'troubled', t:'ダイヤがちょっと心もとないかも…！' },
         { e:'normal',   t:'バトルで稼いでからまた来よ！ 逃げないから大丈夫だよ〜。' },
-        { e:'troubled', t:'今日は見るだけにしとく？ next timeってことで♪' },
+        { e:'troubled', t:'今日は見るだけにしとく？ また今度ってことで♪' },
         { e:'wink',     t:'寄付でもダイヤになるよ。無理はしないでね〜！' },
         { e:'happy',    t:'欲しいものメモっといて、貯まったら来よ〜。' },
       ],
@@ -4950,8 +4950,13 @@ addAssistantLinePack({
   label: 'フレンド',
   lines: {
     friends: [
+<<<<<<< HEAD
       { e:'happy',   t:'フレンドコードを伝えあうと、フレンドになれるよ♪' },
       { e:'normal',  t:'「追加」のタブに、あなたのコードがあるよ。フレンドに教えてあげて〜' },
+=======
+      { e:'happy',   t:'フレンドコードを伝えあうと、フレンドとつながれるよ♪' },
+      { e:'normal',  t:'「追加」のタブに、あなたのコードがあるよ。相手に教えてあげて〜' },
+>>>>>>> origin/main
       { e:'wink',    t:'申請が来たら、「申請」のタブで承認してね。バッジ付いてるからすぐわかるよ' },
       { e:'excited', t:'フレンドになると、プロフィール見せ合えるんだよ！ いいぢゃん✨' },
       { e:'happy',   t:'みんなで対戦の部屋にも、フレンド誘えるよ。一緒に遊ぼ«٩(*´ ꒳ `*)۶»ﾜｸﾜｸ' },
@@ -4965,8 +4970,13 @@ addAssistantLinePack({
   label: 'きき・フレンド',
   lines: {
     friends: [
+<<<<<<< HEAD
       { e:'happy',   t:'フレンドコードを伝えあうと、フレンドになれまつよ。' },
       { e:'normal',  t:'「追加」のタブに、{name}のコードがありまつ。フレンドに教えてあげてほしいでつ。' },
+=======
+      { e:'happy',   t:'フレンドコードを伝えあうと、フレンドとつながれまつよ。' },
+      { e:'normal',  t:'「追加」のタブに、{name}のコードがありまつ。相手に教えてあげてほしいでつ。' },
+>>>>>>> origin/main
       { e:'normal',  t:'申請が届いたら、「申請」のタブで承認を押してほしいでつ。' },
       { e:'wink',    t:'フレンドになると、プロフィールを見せ合えまつよ♪' },
       { e:'happy',   t:'みんなで対戦の部屋にも、フレンドを誘えまつ。' },
@@ -4980,8 +4990,13 @@ addAssistantLinePack({
   label: 'ももすけ・フレンド',
   lines: {
     friends: [
+<<<<<<< HEAD
       { e:'happy',   t:'フレンドコード交換したら、フレンドになれるよw' },
       { e:'normal',  t:'「追加」のタブにコードがあるから、フレンドに教えてあげて。' },
+=======
+      { e:'happy',   t:'フレンドコード交換したら、フレンドとつながれるよw' },
+      { e:'normal',  t:'「追加」のタブにコードがあるから、相手に教えてあげて。' },
+>>>>>>> origin/main
       { e:'normal',  t:'申請が来たら、「申請」のタブで承認するだけ。簡単でしょ？' },
       { e:'wink',    t:'フレンドになったら、プロフィールの見せ合いっこができるよ。' },
       { e:'happy',   t:'対戦の部屋にも誘えるから、一緒にやろ(´ー`*)ｳﾝｳﾝ' },
@@ -4996,7 +5011,11 @@ addAssistantLinePack({
   lines: {
     friends: [
       { e:'normal',  t:'フレンドコードを教えあえば、つながれるわ' },
+<<<<<<< HEAD
       { e:'normal',  t:'「追加」のタブに、{name}のコードがある。フレンドに教えてやってな' },
+=======
+      { e:'normal',  t:'「追加」のタブに、{name}のコードがある。相手に教えてやってな' },
+>>>>>>> origin/main
       { e:'happy',   t:'申請が来たら「申請」のタブから承認だ。すぐ終わるからな' },
       { e:'normal',  t:'フレンドになれば、プロフィールを見せあえるわ' },
       { e:'happy',   t:'対戦の部屋にも誘えるで。おでも一緒に遊びたいわ' },
@@ -6702,7 +6721,11 @@ addAssistantLinePack({
     ],
     friends: [
       { e:'normal',   t:'フレンドコードを教えあえば、つながれるよ！' },
+<<<<<<< HEAD
       { e:'normal',   t:'「追加」のタブに、{name}のコードがあるよ。フレンドに教えてあげて！' },
+=======
+      { e:'normal',   t:'「追加」のタブに、{name}のコードがあるよ。相手に教えてあげて！' },
+>>>>>>> origin/main
       { e:'happy',    t:'申請が来たら「申請」のタブから承認ね。すぐ終わるよ！' },
       { e:'normal',   t:'フレンドになれば、プロフィールを見せあえるよ！' },
       { e:'happy',    t:'対戦の部屋にも誘えるよ。パーティは多いほうが楽しいでしょ！' },
@@ -7428,7 +7451,11 @@ addAssistantLinePack({
     ],
     friends: [
       { e:'normal',   t:'フレンドコードを教えあえば、つながれるよ' },
+<<<<<<< HEAD
       { e:'normal',   t:'「追加」のタブに、{name}のコードがあるよ。フレンドに教えてあげてねぇ' },
+=======
+      { e:'normal',   t:'「追加」のタブに、{name}のコードがあるよ。相手に教えてあげてねぇ' },
+>>>>>>> origin/main
       { e:'happy',    t:'申請が来たら「申請」のタブから承認ね。すぐ終わるよ笑' },
       { e:'normal',   t:'フレンドになれば、プロフィールを見せあえるよ' },
       { e:'happy',    t:'対戦の部屋にも誘えるよ。セッションは人数いたほうが楽しいw' },
@@ -7614,6 +7641,93 @@ addAssistantLinePack({
     ],
   },
 });
+
+// マーケットの売り場ごとのひとこと(2026-10-26 カゲあつくん「どの店でも同じ台詞・英語まじり」)。
+// ダイヤが足りないときの台詞(lowGold)は、入口とダイヤショップだけで出す。ほかの売り場はここから(55-screen-breeder-market.jsx の condition)。
+// みゅあの分だけ。ほかの助手は、いつものマーケットの台詞に落ちる
+addAssistantLinePack({
+  id: 'marketShopsMua',
+  label: 'マーケットの売り場ごとのひとこと',
+  lines: {},
+  conditions: {
+    market: {
+      shopBreeder: [
+        { e:'happy',   t:'ブリーダーPは、レベルが上がるともらえるよ♪' },
+        { e:'excited', t:'アイコンもフレームも、プロフィールで使えるんだ〜！' },
+        { e:'wink',    t:'アイコンは「詳細」で、中身を全部見られるよ。' },
+        { e:'normal',  t:'フレームには、条件を達成すると買えるのもあるからね。' },
+        { e:'happy',   t:'お気に入りの顔、見つかった？ (ΦωΦ)ﾌﾌﾌ…' },
+      ],
+      shopExchange: [
+        { e:'normal',  t:'虹のプシュケーと勇者の証は、ここで交換できるよ。' },
+        { e:'happy',   t:'持ってる数は、上に出てるからね〜♪' },
+        { e:'wink',    t:'交換したものは、マスモンを強くするのに使うんだ！' },
+        { e:'excited', t:'素材が貯まったら、一気に交換しちゃお！' },
+        { e:'normal',  t:'足りない素材は、バトルやミッションで集めよ〜。' },
+      ],
+      shopEvent: [
+        { e:'excited', t:'ビートPは、モンヒロビートやバトルカードで貯まるよ♪' },
+        { e:'happy',   t:'ここはイベントがないときも交換できるんだ〜！' },
+        { e:'wink',    t:'円盤石とアシストは、1つにつき1回だけ交換できるよ。' },
+        { e:'normal',  t:'欲しいもの、ゆっくり選んでいいからね。' },
+        { e:'happy',   t:'新しい子の円盤石も、ここに並ぶよ♪' },
+      ],
+    },
+  },
+});
+
+// ほかの助手も、アイテム交換所・ビートP交換所では「アイコンはブリーダーP、ほかはダイヤ」と言わないよう、その売り場の話を足す(2026-10-26 ダメダシくん)。
+// ブリーダーP交換所は、いつもの台詞(アイコンはブリーダーP)が合っているので足さない。呼び方の決め: きき・きゅうこ・あつはモンヒロビート、ドラはモンビー、ももすけはモンビート
+addAssistantLinePack({ id: 'marketShopsKiki', assistantId: 'kiki', label: 'マーケットの売り場ごとのひとこと(kiki)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'虹のプシュケーと勇者の証は、ここで交換できまつよ。' },
+    { e:'happy',   t:'持ってる素材の数は、上に出てるでつ。' },
+  ],
+  shopEvent: [
+    { e:'excited', t:'ビートPは、モンヒロビートやバトルカードで貯まりまつよ。' },
+    { e:'happy',   t:'ここはイベントがないときも交換できるでつ♪' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsDra', assistantId: 'dra', label: 'マーケットの売り場ごとのひとこと(dra)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここだな。持ってる数は上に出てるぞ' },
+    { e:'wink',    t:'交換したもので、マスモンを強くしていけ' },
+  ],
+  shopEvent: [
+    { e:'normal',  t:'ビートPはモンビーやバトルカードで貯まるぞ' },
+    { e:'wink',    t:'円盤石とアシストは、1つにつき1回だけだな' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsMomosuke', assistantId: 'momosuke', label: 'マーケットの売り場ごとのひとこと(momosuke)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここ。足りない分はバトルで集めなよw' },
+    { e:'wink',    t:'持ってる数は上に出てるからね' },
+  ],
+  shopEvent: [
+    { e:'happy',   t:'ビートPはモンビートとかバトルカードで貯まるよw' },
+    { e:'normal',  t:'ここ、イベントない日も交換できるんだよね' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsAtsu', assistantId: 'atsu', label: 'マーケットの売り場ごとのひとこと(atsu)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここだね！ 持ってる数は上に出てるよ笑' },
+    { e:'excited', t:'交換したら、マスモンを鍛えにいこう！' },
+  ],
+  shopEvent: [
+    { e:'happy',   t:'ビートPはモンヒロビートやバトルカードで貯まるよ！' },
+    { e:'normal',  t:'円盤石とアシストは、1つにつき1回だけ交換できるんだ！' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsKyuko', assistantId: 'kyuko', label: 'マーケットの売り場ごとのひとこと(kyuko)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はこちらですね。持っている数は上に出ています' },
+    { e:'happy',   t:'交換したものは、マスモンを強くするのに使います' },
+  ],
+  shopEvent: [
+    { e:'normal',  t:'ビートPは、モンヒロビートやバトルカードで貯まります' },
+    { e:'happy',   t:'ここはイベントがないときも交換できますよ' },
+  ],
+} } });
 
 const ASSISTANT_PACKS_APPLIED = {};
 const applyAssistantLinePacks = () => {
@@ -8426,7 +8540,11 @@ const ASSISTANT_RHYTHM_MULTI_FRIENDS = [
   // ② フレンド
   { who:'dra',      e:'troubled', t:'でもなあ。知らない人とルームに入るの、ちょっと緊張するな' },
   { who:'mua',      e:'excited',  t:'そう言うと思った！ そこで「フレンド」の出番だよ〜' },
+<<<<<<< HEAD
   { who:'kiki',     e:'normal',   t:'プロフィールの「フレンド」から、フレンドを増やせまつ。' },
+=======
+  { who:'kiki',     e:'normal',   t:'プロフィールの「フレンド」から、ほかのブリーダーとフレンドになれまつ。' },
+>>>>>>> origin/main
   { who:'kiki',     e:'normal',   t:'自分のフレンドコードを相手に伝えるか、相手のコードを入れて申請しまつ。ランキングのアイコンからも申請できまつよ。' },
   { who:'momosuke', e:'happy',    t:'フレンドになると、その子のプロフィールが見られるの。好きなモンスターとか、プレイ時間とか♡' },
   { who:'dra',      e:'surprise', t:'プレイ時間まで！？ おでがどれだけ交換所の前にいたか、ばれるじゃないか' },

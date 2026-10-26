@@ -11,6 +11,7 @@
 | 設定の画面 | `51-screen-settings.jsx` の `AssetDownloadPage`(設定 → ダウンロード) |
 | デバッグの切り替え | DEBUG MENU → ⑤その他 →「📥 事前ダウンロード」(`data-asset-cache-toggle`) |
 | 検査 | `node tools/boot/asset-prefetch-check.js`(実ブラウザ。`build.js --check` も一覧の古さを見る) |
+| 検査(本体・データ) | `node tools/boot/code-prefetch-check.js`(実ブラウザ。版を出し直すと必ず新しい本体が動くか。案は [`download-plan.md`](../progress/speed/download-plan.md)) |
 
 ## 仕組み
 
