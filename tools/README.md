@@ -111,7 +111,7 @@ node tools/build.js --check
 | `node compiled-runtime-check.js` | 配信用コードが `jsxDEV` / automatic JSX runtime など、`index.html` が用意していないランタイムを参照していないことと、React / ReactDOM の読込順を確認する。 |
 | `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
 | `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |
-| `node stamp-version.js` | BUILD_DATE と version.json を現在の日本時間に揃える(data/*.js・tailwind.css・画像のキーは中身のハッシュ)。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node stamp-version.js` | BUILD_DATE(index.html の `window.__mhBuildDate`。本体の中には書かない)と version.json を現在の日本時間に揃える(data/*.js・tailwind.css・画像のキーは中身のハッシュ)。手で書くと未来の時刻が入るので必ずこれを使う。 |
 | `node stamp-game-build.js [--check]` | 本体JSのキャッシュキー(index.html の `GAME_BUILD`)を、`game-system.compiled.js` の中身のハッシュ(12桁)に合わせる(2026-10-27 速さ部。それまではビルドの時刻)。build.js が本体を書き出した直後に呼び、`build.js --check` と `boot/data-cache-key-check.js` が一致を見張る。版が同じなら中身も同じになるので、事前ダウンロードに本体をためる土台になる(docs/progress/speed/download-plan.md)。 |
 | `node run-checks.js --changed` | **変更したファイルから要る検査を選んで回す**(上の節を参照)。何を通すか毎回考えずに済み、選び漏れも無くなる。 |
 | `node run-checks.js --area required` | **検査を領域ごとにまとめて回す入口。**`required` は CLAUDE.md ⑤⑥ の必須検査、`ci` は `compiled-check.yml` と同じ並び、`battle` `masu` `mode` などはフォルダ単位、`all` は全部(30分以上)。`--list` で一覧、`--json <出力先>` で結果を保存。実ブラウザ検査に必要な配信(`serve.py`)は自動で起動し、playwright が無い環境ではそれを要る検査を SKIP にする。検査の中身や判定は変えず、既存スクリプトを順に呼ぶだけ。 |
