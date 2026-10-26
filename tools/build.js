@@ -118,6 +118,11 @@ if (process.argv.includes('--check')) {
     const r = require('./build-assistant-chat-digest').run({ check: true });
     if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
   }
+  // 本体JSのキャッシュキーが本体の中身と合っているか(合わないと、端末に古い本体が残ったり、ためた物を使えなかったりする)
+  {
+    const r = require('./stamp-game-build').checkGameBuild();
+    if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
+  }
   console.log('OK: game-system.compiled.js は game-system.jsx の正規ビルドと一致しています');
   process.exit(0);
 }
@@ -190,6 +195,13 @@ fs.writeFileSync(OUT_FILE, buildFileContents(hash, code));
 const kb = (fs.statSync(OUT_FILE).size / 1024).toFixed(0);
 console.log(`書き出しました: ${path.relative(process.cwd(), OUT_FILE)} (${kb} KB)`);
 console.log(`source-sha256: ${hash}`);
+
+// 本体JSのキャッシュキー(index.html の GAME_BUILD)を、書き出した本体の中身のハッシュにする(stamp-game-build.js)。
+// 本体を書き出したあとに打つ。下の stampBootSizes は index.html の別の行(大きさ)なので順は問わない
+{
+  const r = require('./stamp-game-build').stampGameBuild();
+  console.log(`本体JSのキャッシュキー: ${r.value}`);
+}
 
 // ローディングのゲージが使う「起動時に読み込むファイルの実サイズ」を測り直す。
 // game-system.compiled.js 自身も対象なので、必ず書き出したあとに行う。
