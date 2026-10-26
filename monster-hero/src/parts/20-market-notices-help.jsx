@@ -312,6 +312,20 @@ const marketLabelFitSize = (label) => {
 };
 const marketLabelNodes = (label) => marketLabelSegments(label)
   .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
+// 着替え(ダイヤショップ)の予告の札(2026-10-26 開発部クラフト「近日追加を開始日にする。ハロウィン中はビートP交換所で買えることも一言」)。
+// ダイヤで売り始める日は服の saleWindows(diamond の from)から出す(日本時間の月/日。手で書かない)。
+// いまビートP交換所で買える窓が開いていれば、その一言も添える。窓が読めないときは undefined(ふつうの「近日追加」)
+const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
+  const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
+  const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
+  const fromMs = diamond ? Date.parse(diamond.from) : NaN;
+  if (!Number.isFinite(fromMs)) return undefined;
+  const jst = new Date(fromMs + 9 * 3600 * 1000);
+  const lines = [`${jst.getUTCMonth() + 1}/${jst.getUTCDate()}から`];
+  if (typeof assistantCostumeSaleIn === 'function' && assistantCostumeSaleIn(costume, 'beatPoint')) lines.push('いまはビートP', '交換所で買えます');
+  return lines;
+};
 // comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
 // ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
 // dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
