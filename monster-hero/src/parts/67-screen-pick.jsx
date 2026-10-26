@@ -746,8 +746,9 @@ function PickSlotScreen({
       {/* 供モンの合流では、強化フェーズのどこにいるかを出す(ラン開始時の配置では出さない) */}
       {phasePlan&&<PhaseSteps plan={phasePlan} current="slot" nextWave={wave>0?wave+1:null} className="shrink-0 mb-2"/>}
       <div className="shrink-0 flex flex-col items-center">
-        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ) */}
-        <div className="relative mb-2 flex items-center justify-center">
+        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ)。
+            はずむ動き(animate-bounce)は絵の高さの1/4ほど上へ跳ぶので、そのぶん上に余白を置く(.mh-phase-bounce-room。絵が小さくなる背の低い画面では余白も小さく。70-bootstrap.jsx)(はずんだときに頭が画面の上で切れていた。2026-10-26 カゲあつくんの見回り) */}
+        <div data-pick-hero className="mh-phase-bounce-room relative mb-2 flex items-center justify-center">
           <span aria-hidden="true" className="mh-ph-rune"/>
           <span aria-hidden="true" className="mh-ph-floor"/>
           {mon?.imgUrl?(<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="mon" masuColors={mon.colors} className="mh-phase-hero relative z-10 shrink-0 w-24 h-24 object-contain animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"/>):(<div className="mh-phase-hero relative z-10 text-6xl animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]">{mon?.emoji}</div>)}
@@ -847,7 +848,7 @@ function PickTeachingScreen({
           ? <PhaseSteps plan={phasePlan} current="teaching" nextWave={wave>0?wave+1:null}/>
           : <span className="mh-ph-plate">ASSIST CARD</span>}
         {/* 題名と説明は言葉の切れ目で折る(2026-10-20 改善部 M3「継/承」) */}
-        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl font-black italic" style={JA_WRAP_STYLE}>{jaWrap('アシストカードの継承・強化')}</h2></div>
+        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl max-[359px]:text-lg font-black italic" style={JA_WRAP_STYLE}>{jaWrap('アシストカードの継承・強化')}</h2></div>
         <p className="mh-phase-tall text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('1枚選んで、新しく覚えるか、持っているカードを強化します')}</p>
       </div>
       <div className="mh-phase-tall shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
@@ -883,7 +884,8 @@ function PickTeachingScreen({
             <span style={{fontSize:'44px'}} className="mh-ph-medal relative rounded-2xl p-1 leading-none">{cardIconNode(t.icon,52,t.id)}</span>
             <div className="relative text-[11px] font-black leading-tight flex flex-col items-center justify-center" style={{textShadow:'0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6)'}}>{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":"text-slate-100"}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
             {levelPips(owned?level+1:0, isMax?-1:shownLevel)}
-            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden',...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}</div>
+            {/* 5行まで出す(3行で切ると320で「ガッツ上…」と効き目が読めなかった。2026-10-27 ジン) */}
+            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:5,WebkitBoxOrient:'vertical',overflow:'hidden',...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}</div>
             {/* 新規 / 強化 / MAX の札。文字はカード名の後ろに置く(名前で探す検査がある) */}
             <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white"
               style={{border:'1px solid #f3d27a',background:'linear-gradient(180deg, rgb(var(--mh-rc2)), rgb(var(--mh-rc)) 55%, rgba(var(--mh-rc),.7))',boxShadow:'0 0 0 1px rgba(30,18,4,.9), 0 0 10px rgba(var(--mh-rc),.7)',textShadow:'0 1px 2px rgba(0,0,0,.9)'}}>{owned?(isMax?"MAXレベル":`強化 Lv.${level}→${level+1}`):"新規習得"}</span>
