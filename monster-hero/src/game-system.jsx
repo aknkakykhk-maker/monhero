@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 83a7efc3a0b895c5
+// generated-sha256: 609496438ada3ab8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 01:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 01:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54197,7 +54197,8 @@ const CardGutsFlight = ({ g, still = false }) => {
 };
 
 // ---- 対戦の盤面 ----
-const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null, meIcon = null }) => {
+// onProgress … 場が進むたびに呼ぶ(途中で閉じた対戦の印を書き直す。84 の CardBattleScreen の cpuOpenProgress)
+const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = null, meProfile = null, meIcon = null }) => {
   // 演出の設定(オプション)。はやい … 相手が考える時間と、決着から結果までを短くする
   const settings = normalizeCardSettings(game.settings);
   // 対戦中の設定(オプション・社長 2026-10-25)。既定はどれも足す前の動きと同じ。練習試合は game.settings を持たないので既定のまま
@@ -54210,6 +54211,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
   const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
   const policy = useMemo(() => cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood }), [game.who, game.level, game.cpuSameBlood]);
   const [st, setSt] = useState(game.st);
+  useEffect(() => { if (onProgress) onProgress(st); }, [st]);
   const [sel, setSel] = useState(null);      // 攻撃: { hand, mon, set } / 守り: { hand }
   const [picks, setPicks] = useState([]);    // ガッツへ・捨てる・始める前のガッツで選んだ手札
   const [fx, setFx] = useState([]);          // ダメージの数字
@@ -55429,6 +55431,20 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
     </div>
   );
 };
+// ---- 途中で閉じた助手との対戦(2026-10-26 社長「負け扱いにする」) ----
+// 助手と対戦を始めたときに印(新しいキー mh_card_cpu_open_v1)を書き、ふつうに終わったら結果と同じ取引で消す。
+// 次に開いたとき、印が残っていて beat(対戦の画面が生きていた時刻)が古ければ、投了と同じ計算で数え、同じ取引で印を消す(二重に数えない)。
+// beat が新しいあいだは、ほかのタブで対戦中とみて数えない
+const CARD_CPU_OPEN_KEY = 'mh_card_cpu_open_v1';
+const CARD_CPU_OPEN_BEAT_MS = 5000;
+const CARD_CPU_OPEN_STALE_MS = 15000;
+const cardNormalizeCpuOpen = (v) => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  if (typeof v.id !== 'string' || !v.id || typeof v.who !== 'string' || !CARD_LEVEL_ORDER.includes(v.level)) return null;
+  const n = (x) => (Number.isFinite(x) && x >= 0 ? Math.floor(x) : 0);
+  const f = v.facts && typeof v.facts === 'object' ? v.facts : {};
+  return { id: v.id, who: v.who, level: v.level, rankable: v.rankable === true, at: n(v.at), beat: n(v.beat), facts: { ownTurns: n(f.ownTurns), kos: n(f.kos) } };
+};
 const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -55500,7 +55516,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const topBgm = save && save.bgm ? save.bgm.top : null;
   useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm); }, [screen, topBgm]);
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
-  useEffect(() => { if (screen === 'CARD_TOP' && game && !result) setGame(null); }, [screen]);
+  // アプリの中の戻るなどで助手との対戦を抜けたら、その場で投了として数える(途中で閉じた対戦と同じ。印があるときだけ)
+  useEffect(() => {
+    if (screen === 'CARD_TOP' && game && !result) {
+      if (openIdRef.current === game.key) void settleOpenCpu({ force: true });
+      setGame(null);
+    }
+  }, [screen]);
 
   // 対戦の結果を書く直前に、その日の数・記録・解放を保存から読み直す(2026-10-26 社長「ハード解放したのに、いつのまにか消えてた」)。
   //   この画面は開いたときに1回だけ読んだ中身(save)を持ち続けるので、同じ端末でゲームを2つ開いていたり、
@@ -55523,7 +55545,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // 保存はまとめて1つの取引で(失敗したら全部戻す)
   // ポイントはビートP(CARD_POINT_STORE_KEY)。モンヒロビートでも増えるので、書く直前に読み直し、この画面で足した分(差)だけを足す
   // befores … 失敗したときに戻す値(読み直した値)。無い項目は手元の save の値に戻す
-  const persist = async (patch, befores = {}) => {
+  // extra … 同じ取引で書くほかのキー([{ key, next, before }]。途中で閉じた対戦の印 mh_card_cpu_open_v1 を消すときなど)
+  const persist = async (patch, befores = {}, extra = []) => {
     const K = CARD_SAVE_KEYS;
     let fixed = patch;
     let pointBefore = null;
@@ -55533,12 +55556,71 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     }
     const entries = Object.entries(fixed).map(([k, next]) => (k === 'point'
       ? { key: CARD_POINT_STORE_KEY, next, before: pointBefore }
-      : { key: K[k], next, before: k in befores ? befores[k] : save[k] === undefined ? null : save[k] }));
+      : { key: K[k], next, before: k in befores ? befores[k] : save[k] === undefined ? null : save[k] })).concat(extra);
     const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
     if (ok) setSave((cur) => ({ ...cur, ...fixed }));
     if (ok && patch.settings && onSettings) onSettings(patch.settings); // 周回の自動(quickAutoStart)は 60-app が見る
     return ok;
   };
+
+  // 途中で閉じた助手との対戦を、投了として数える(印 mh_card_cpu_open_v1。上の CARD_CPU_OPEN_KEY の説明)。
+  // force … この画面で対戦を抜けたとき(beat を待たずに数える)。数えたら { reward, loops } を返す
+  const openIdRef = useRef(null); // この画面で書いた印の試合の鍵(書けなかったら null。そのときは終わりに印を見ない)
+  const settleOpenCpu = async ({ force = false, skipId = null } = {}) => {
+    let raw = null;
+    try { raw = await storeGet(CARD_CPU_OPEN_KEY, null); } catch (_) { return null; }
+    const open = cardNormalizeCpuOpen(raw);
+    if (!open) { if (raw !== null) await storeSet(CARD_CPU_OPEN_KEY, null).catch(() => {}); return null; } // 壊れた印は消すだけ
+    if (open.id === skipId) return null;
+    if (!force && Date.now() - open.beat < CARD_CPU_OPEN_STALE_MS) return null; // ほかのタブで対戦中
+    const fresh = await freshCardSave();
+    const reward = cardCpuReward(fresh.daily, open.level, 'surrender', open.facts);
+    const loops = cardCpuLoops(open.level, 'surrender', open.facts);
+    const nextRecord = cardRecordAfter(fresh.record, { who: open.who, level: open.level, outcome: 'surrender', at: Date.now(), rankable: open.rankable });
+    const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord }, fresh.raw, [{ key: CARD_CPU_OPEN_KEY, next: null, before: raw }]);
+    if (!ok) return null;
+    if (openIdRef.current === open.id) openIdRef.current = null;
+    if (open.rankable && rank && rank.send) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
+    let quick = null;
+    if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
+    if (quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
+    setNotice(`前回の対戦は途中で終わったので、投了として数えました${reward.total > 0 ? `(ビートP +${reward.total.toLocaleString()})` : ''}`);
+    return { reward, loops };
+  };
+  // 印を書く(first … 始めたとき)。対戦中は、番が進んだら facts を、CARD_CPU_OPEN_BEAT_MS ごとに beat を書き直す
+  const openRef = useRef(null);
+  const writeCpuOpen = async (open, first = false) => {
+    if (!first && (!openRef.current || openRef.current.id !== open.id || openIdRef.current !== open.id)) return;
+    openRef.current = open;
+    try {
+      await storeSet(CARD_CPU_OPEN_KEY, open);
+      if (first) openIdRef.current = open.id;
+    } catch (_) { if (first) openIdRef.current = null; }
+  };
+  const cpuOpenProgress = (st) => {
+    const cur = openRef.current;
+    if (!cur || !game || cur.id !== game.key) return;
+    const facts = cardResultFacts(st, CARD_ME);
+    if (facts.ownTurns === cur.facts.ownTurns && facts.kos === cur.facts.kos) return;
+    void writeCpuOpen({ ...cur, facts, beat: Date.now() });
+  };
+  useEffect(() => {
+    if (screen !== 'CARD_BATTLE' || !game || game.tutorial || game.pvp || game.demo) return undefined;
+    const t = setInterval(() => { const cur = openRef.current; if (cur && cur.id === game.key) void writeCpuOpen({ ...cur, beat: Date.now() }); }, CARD_CPU_OPEN_BEAT_MS);
+    return () => clearInterval(t);
+  }, [screen, game ? game.key : '']);
+  // 開いたときに1回。トップにいるあいだも、ほかのタブの対戦が止まったかを見る
+  const settledOnce = useRef(false);
+  useEffect(() => {
+    if (!save || !db || settledOnce.current) return;
+    settledOnce.current = true;
+    void settleOpenCpu();
+  }, [save]);
+  useEffect(() => {
+    if (!save || !db || screen !== 'CARD_TOP') return undefined;
+    const t = setInterval(() => { void settleOpenCpu({ skipId: openIdRef.current }); }, CARD_CPU_OPEN_STALE_MS);
+    return () => clearInterval(t);
+  }, [save ? 1 : 0, screen]);
 
   if (!db) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="🃏" lines={['カードのデータを読み込めませんでした']}/></div>;
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
@@ -55546,7 +55628,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (screen === 'CARD_BATTLE' && game) {
     // 対戦開始の画面(83-card-battle-vs.jsx)。出し終わるかタップしたら、対戦の画面へ(場はもう作ってあり、見せるだけ)
     if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
-    return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
+    return <CardBattleBoard key={game.key} db={db} game={game} onProgress={cpuOpenProgress} meProfile={rank && rank.profile} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
@@ -55572,6 +55654,23 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView('result');
         return;
       }
+      // 途中で閉じた対戦の印(CARD_CPU_OPEN_KEY)。この画面で書いた印なら、結果と同じ取引で消す。
+      // もう無い(ほかのタブで投了として数えた)ときは、二重に数えない
+      const openExtra = [];
+      if (openIdRef.current === game.key) {
+        let raw = null;
+        try { raw = await storeGet(CARD_CPU_OPEN_KEY, null); } catch (_) { raw = null; }
+        const open = cardNormalizeCpuOpen(raw);
+        if (!open || open.id !== game.key) {
+          openIdRef.current = null; openRef.current = null;
+          setNotice('この対戦は、ほかの画面で投了として数えました');
+          onBgm && onBgm(save.bgm.top);
+          onNavigate('CARD_TOP');
+          setView('top');
+          return;
+        }
+        openExtra.push({ key: CARD_CPU_OPEN_KEY, next: null, before: raw });
+      }
       // 自分の番の数・倒した数で決める(かかった時間は見ない)。案A・台帳 #3484
       const facts = cardResultFacts(st, CARD_ME);
       const fresh = await freshCardSave();
@@ -55582,7 +55681,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const nextRecord = cardRecordAfter(fresh.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
       const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
       const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
-      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw);
+      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, openExtra);
+      if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
@@ -55634,6 +55734,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
     setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood });
+    // 途中で閉じたときに投了として数えるための印(CARD_CPU_OPEN_KEY)。書けなかったら、終わりにも印を見ない
+    void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
     onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
     onNavigate('CARD_BATTLE');
@@ -55934,10 +56036,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const plSave = (assistants) => { void persist({ cpuPlaylist: cardNormalizeCpuPlaylist({ v: 1, assistants }, cardIsBgmTrack) }); };
     const plList = cardCpuPlaylistOf(save.cpuPlaylist, plCur);
     const plIsDefault = plList.length === 1 && plList[0] === CARD_AI_BGM[plCur];
+    const plCurName = ((plWhoList.find((a) => a.id === plCur) || {}).name) || '';
     const cpuPlaylistPanel = (
           <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">助手と対戦</b>
-            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手ごとに5曲まで選べます。対戦中は、選んだ曲を1曲ずつ、毎回ちがう順番で流します')}</p>
+            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {plWhoList.map((a) => (
                 <button key={a.id} type="button" data-card-playlist-who={a.id} aria-pressed={a.id === plCur} onClick={() => { Audio_.fgSe.tap(); setPlWho(a.id); }}
@@ -55952,19 +56055,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <button type="button" data-card-playlist-reset disabled={plIsDefault} onClick={() => plSave({ ...save.cpuPlaylist.assistants, [plCur]: [...CARD_CPU_PLAYLIST_DEFAULT[plCur]] })}
                     className={`min-h-[44px] rounded-xl px-1 text-[11px] font-black ${plIsDefault ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-white'}`}>{jaWrap('はじめの曲に戻す')}</button>
-                  <button type="button" data-card-playlist-copy-open onClick={() => { Audio_.fgSe.tap(); setPlCopy({ list: [...plList], confirm: false }); }}
-                    className="min-h-[44px] rounded-xl bg-indigo-800 px-1 text-[11px] font-black text-white">{jaWrap('全員に同じ曲を入れる')}</button>
+                  <button type="button" data-card-playlist-copy-open onClick={() => { Audio_.fgSe.tap(); setPlCopy({ list: [...plList], confirm: false, from: plCurName }); }}
+                    className="min-h-[44px] rounded-xl bg-indigo-800 px-1 text-[11px] font-black text-white">{jaWrap(`${plCurName}の曲を全員に写す`)}</button>
                 </div>
               </div>
             )}
             {plCopy && (
               <div data-card-playlist-copy className="mt-2.5 rounded-xl border border-indigo-300/40 bg-indigo-950/60 p-2.5">
-                <b className="block text-[12px] font-black text-white">{jaWrap('全員に同じ曲を入れる')}</b>
-                <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ここで選んだ1〜5曲を、助手みんなの曲にします。あとから助手ごとに直せます')}</p>
-                <CardPlaylistRows tag="copy" list={plCopy.list} bgmPreview={bgmPreview} onChange={(next) => setPlCopy({ list: next, confirm: false })}/>
+                <b className="block text-[12px] font-black text-white">{jaWrap(`${plCopy.from}の曲を全員に写す`)}</b>
+                <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`はじめは${plCopy.from}の曲が入っています。ここで1〜5曲に直してから、助手みんなの曲にできます。あとから助手を選んで直せます`)}</p>
+                <CardPlaylistRows tag="copy" list={plCopy.list} bgmPreview={bgmPreview} onChange={(next) => setPlCopy({ ...plCopy, list: next, confirm: false })}/>
                 {plCopy.confirm
                   ? <div data-card-playlist-copy-confirm className="mt-2">
-                      <p className="text-[11px] font-black leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('助手ごとに選んでいた曲は、この曲に置き換わります。よろしいですか?')}</p>
+                      <p className="text-[11px] font-black leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('助手みんなの曲が、この曲に置き換わります。よろしいですか?')}</p>
                       <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                         <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
                         <button type="button" data-card-playlist-copy-ok onClick={() => { const list = [...plCopy.list]; plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).map((who) => [who, list]))); setPlCopy(null); }}
@@ -55973,7 +56076,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                     </div>
                   : <div className="mt-2 grid grid-cols-2 gap-1.5">
                       <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
-                      <button type="button" data-card-playlist-copy-go onClick={() => setPlCopy({ ...plCopy, confirm: true })} className="min-h-[44px] rounded-xl bg-indigo-600 text-[12px] font-black text-white">{jaWrap('全員に入れる')}</button>
+                      <button type="button" data-card-playlist-copy-go onClick={() => setPlCopy({ ...plCopy, confirm: true })} className="min-h-[44px] rounded-xl bg-indigo-600 text-[12px] font-black text-white">{jaWrap('全員に写す')}</button>
                     </div>}
               </div>
             )}
@@ -56499,11 +56602,12 @@ const CardDex = ({ db, collection, onBack }) => {
   const all = useMemo(() => cardDexAll(db), [db]);
   const tabList = useMemo(() => cardDexTabsOf(db, mode).map((t) => ({ ...t, list: cardDexListOf(db, mode, t.id, all) })), [db, mode, all]);
   const tab = tabs[mode];
-  const list = (tabList.find((t) => t.id === tab) || tabList[0] || { list: [] }).list;
+  const curTab = tabList.find((t) => t.id === tab) || tabList[0] || { list: [] };
+  const list = curTab.list;
   const shown = list.filter((no) => (show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true));
   const haveIn = (arr) => arr.filter((no) => col[no] > 0).length;
   const chip = (on) => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
-  const unit = CARD_DEX_UNIT[mode];
+  const unit = curTab.label || CARD_DEX_UNIT[mode];   // 選んでいるタブの名前(「第1弾 1/59」)。2026-10-26 カゲあつくんの通しの点検
   // 選んでいる札を見える所へ(見かたを替えたとき、前の見かたの横の位置が残って選んだ札が隠れていた)
   const tabRow = useRef(null);
   //   ★scrollIntoView は使わない(縦にも動いて画面ごとずれる。viewport-height-check)。列の横の位置だけを動かす
@@ -76673,15 +76777,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
                         <span aria-hidden="true" className="mhms-mark">{look.mark}</span>
                         <span aria-hidden="true" className="mhms-ico relative shrink-0 text-3xl leading-none">{sys.emoji}</span>
-                        <span className="relative min-w-0 flex-1">
+                        <span className="relative min-w-0 flex-1" style={{containerType:'inline-size'}}>
                           <span className="flex items-center gap-1.5">
-                            <b className="block min-w-0 truncate text-[18px] font-black italic leading-tight">{sys.label}</b>
+                            {/* 名前は「…」で切らずに、カードの幅に合わせて字を縮める(320で「タクティクス…」と切れていた。札のぶんは幅から引く) */}
+                            <b data-battle-system-title className="block min-w-0 whitespace-nowrap font-black italic leading-tight" style={{fontSize:`min(18px, calc((100cqw - ${(soon||beta||(sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE))?46:0}px) / ${[...String(sys.label)].length+0.8}))`}}>{sys.label}</b>
                             {soon&&<span className="shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black">準備中</span>}
                             {beta&&<span data-battle-system-beta className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-amber-200">β版</span>}
                             {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&<span className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300">DEBUG</span>}
                           </span>
                           <small className="block text-[10px] font-black leading-tight text-slate-900/80" style={JA_LABEL_STYLE}>{jaWrap(sys.tagline)}</small>
-                          {(soon||beta)&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">{soon?'いま準備しています。遊べるようになったらお知らせします':'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'}</small>}
+                          {/* β版の札には中の言葉(「ほかのモードは準備中」)を書かない。出せるようになってから書く(2026-10-26 カゲあつくんの見回り) */}
+                          {soon&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">いま準備しています。遊べるようになったらお知らせします</small>}
                         </span>
                       </button>
                       <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
@@ -78492,7 +78598,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
-            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
+            /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
+               ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}

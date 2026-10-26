@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa2eb6cfec1edcd9
+// source-sha256: 82f9a005ce3f00cb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:13";
+const BUILD_DATE = "2026-10-27 01:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -89293,6 +89293,7 @@ const CardBattleBoard = ({
   db,
   game,
   onFinish,
+  onProgress = null,
   quickRun = null,
   meProfile = null,
   meIcon = null
@@ -89311,6 +89312,9 @@ const CardBattleBoard = ({
     sameBlood: !!game.cpuSameBlood
   }), [game.who, game.level, game.cpuSameBlood]);
   const [st, setSt] = useState(game.st);
+  useEffect(() => {
+    if (onProgress) onProgress(st);
+  }, [st]);
   const [sel, setSel] = useState(null);
   const [picks, setPicks] = useState([]);
   const [fx, setFx] = useState([]);
@@ -91356,6 +91360,27 @@ const CardQuickRunDetail = ({
     className: "mh-button mt-3 min-h-[44px] w-full rounded-2xl border border-white/15 bg-slate-800 text-[14px] font-black text-white active:scale-[.98]"
   }, "閉じる")));
 };
+const CARD_CPU_OPEN_KEY = 'mh_card_cpu_open_v1';
+const CARD_CPU_OPEN_BEAT_MS = 5000;
+const CARD_CPU_OPEN_STALE_MS = 15000;
+const cardNormalizeCpuOpen = v => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  if (typeof v.id !== 'string' || !v.id || typeof v.who !== 'string' || !CARD_LEVEL_ORDER.includes(v.level)) return null;
+  const n = x => Number.isFinite(x) && x >= 0 ? Math.floor(x) : 0;
+  const f = v.facts && typeof v.facts === 'object' ? v.facts : {};
+  return {
+    id: v.id,
+    who: v.who,
+    level: v.level,
+    rankable: v.rankable === true,
+    at: n(v.at),
+    beat: n(v.beat),
+    facts: {
+      ownTurns: n(f.ownTurns),
+      kos: n(f.kos)
+    }
+  };
+};
 const CardBattleScreen = ({
   screen,
   onNavigate,
@@ -91484,7 +91509,12 @@ const CardBattleScreen = ({
     if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm);
   }, [screen, topBgm]);
   useEffect(() => {
-    if (screen === 'CARD_TOP' && game && !result) setGame(null);
+    if (screen === 'CARD_TOP' && game && !result) {
+      if (openIdRef.current === game.key) void settleOpenCpu({
+        force: true
+      });
+      setGame(null);
+    }
   }, [screen]);
   const freshCardSave = async () => {
     const K = CARD_SAVE_KEYS;
@@ -91511,7 +91541,7 @@ const CardBattleScreen = ({
       raw
     };
   };
-  const persist = async (patch, befores = {}) => {
+  const persist = async (patch, befores = {}, extra = []) => {
     const K = CARD_SAVE_KEYS;
     let fixed = patch;
     let pointBefore = null;
@@ -91530,7 +91560,7 @@ const CardBattleScreen = ({
       key: K[k],
       next,
       before: k in befores ? befores[k] : save[k] === undefined ? null : save[k]
-    });
+    }).concat(extra);
     const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
     if (ok) setSave(cur => ({
       ...cur,
@@ -91539,6 +91569,120 @@ const CardBattleScreen = ({
     if (ok && patch.settings && onSettings) onSettings(patch.settings);
     return ok;
   };
+  const openIdRef = useRef(null);
+  const settleOpenCpu = async ({
+    force = false,
+    skipId = null
+  } = {}) => {
+    let raw = null;
+    try {
+      raw = await storeGet(CARD_CPU_OPEN_KEY, null);
+    } catch (_) {
+      return null;
+    }
+    const open = cardNormalizeCpuOpen(raw);
+    if (!open) {
+      if (raw !== null) await storeSet(CARD_CPU_OPEN_KEY, null).catch(() => {});
+      return null;
+    }
+    if (open.id === skipId) return null;
+    if (!force && Date.now() - open.beat < CARD_CPU_OPEN_STALE_MS) return null;
+    const fresh = await freshCardSave();
+    const reward = cardCpuReward(fresh.daily, open.level, 'surrender', open.facts);
+    const loops = cardCpuLoops(open.level, 'surrender', open.facts);
+    const nextRecord = cardRecordAfter(fresh.record, {
+      who: open.who,
+      level: open.level,
+      outcome: 'surrender',
+      at: Date.now(),
+      rankable: open.rankable
+    });
+    const ok = await persist({
+      point: save.point + reward.total,
+      daily: reward.daily,
+      record: nextRecord
+    }, fresh.raw, [{
+      key: CARD_CPU_OPEN_KEY,
+      next: null,
+      before: raw
+    }]);
+    if (!ok) return null;
+    if (openIdRef.current === open.id) openIdRef.current = null;
+    if (open.rankable && rank && rank.send) void cardRankSync(db, {
+      record: nextRecord,
+      collection: save.collection,
+      profile: rank.profile
+    });
+    let quick = null;
+    if (loops > 0 && onQuickLoops) {
+      try {
+        quick = await onQuickLoops(loops);
+      } catch (_) {
+        quick = null;
+      }
+    }
+    if (quick) await persist({
+      daily: {
+        ...reward.daily,
+        quickLoops: (reward.daily.quickLoops || 0) + loops
+      }
+    }, {
+      daily: reward.daily
+    });
+    setNotice(`前回の対戦は途中で終わったので、投了として数えました${reward.total > 0 ? `(ビートP +${reward.total.toLocaleString()})` : ''}`);
+    return {
+      reward,
+      loops
+    };
+  };
+  const openRef = useRef(null);
+  const writeCpuOpen = async (open, first = false) => {
+    if (!first && (!openRef.current || openRef.current.id !== open.id || openIdRef.current !== open.id)) return;
+    openRef.current = open;
+    try {
+      await storeSet(CARD_CPU_OPEN_KEY, open);
+      if (first) openIdRef.current = open.id;
+    } catch (_) {
+      if (first) openIdRef.current = null;
+    }
+  };
+  const cpuOpenProgress = st => {
+    const cur = openRef.current;
+    if (!cur || !game || cur.id !== game.key) return;
+    const facts = cardResultFacts(st, CARD_ME);
+    if (facts.ownTurns === cur.facts.ownTurns && facts.kos === cur.facts.kos) return;
+    void writeCpuOpen({
+      ...cur,
+      facts,
+      beat: Date.now()
+    });
+  };
+  useEffect(() => {
+    if (screen !== 'CARD_BATTLE' || !game || game.tutorial || game.pvp || game.demo) return undefined;
+    const t = setInterval(() => {
+      const cur = openRef.current;
+      if (cur && cur.id === game.key) void writeCpuOpen({
+        ...cur,
+        beat: Date.now()
+      });
+    }, CARD_CPU_OPEN_BEAT_MS);
+    return () => clearInterval(t);
+  }, [screen, game ? game.key : '']);
+  const settledOnce = useRef(false);
+  useEffect(() => {
+    if (!save || !db || settledOnce.current) return;
+    settledOnce.current = true;
+    void settleOpenCpu();
+  }, [save]);
+  useEffect(() => {
+    if (!save || !db || screen !== 'CARD_TOP') return undefined;
+    const t = setInterval(() => {
+      void settleOpenCpu({
+        skipId: openIdRef.current
+      });
+    }, CARD_CPU_OPEN_STALE_MS);
+    return () => clearInterval(t);
+  }, [save ? 1 : 0, screen]);
   if (!db) return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -91574,6 +91718,7 @@ const CardBattleScreen = ({
       key: game.key,
       db: db,
       game: game,
+      onProgress: cpuOpenProgress,
       meProfile: rank && rank.profile,
       meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       quickRun: quickRun ? {
@@ -91615,6 +91760,30 @@ const CardBattleScreen = ({
           setView('result');
           return;
         }
+        const openExtra = [];
+        if (openIdRef.current === game.key) {
+          let raw = null;
+          try {
+            raw = await storeGet(CARD_CPU_OPEN_KEY, null);
+          } catch (_) {
+            raw = null;
+          }
+          const open = cardNormalizeCpuOpen(raw);
+          if (!open || open.id !== game.key) {
+            openIdRef.current = null;
+            openRef.current = null;
+            setNotice('この対戦は、ほかの画面で投了として数えました');
+            onBgm && onBgm(save.bgm.top);
+            onNavigate('CARD_TOP');
+            setView('top');
+            return;
+          }
+          openExtra.push({
+            key: CARD_CPU_OPEN_KEY,
+            next: null,
+            before: raw
+          });
+        }
         const facts = cardResultFacts(st, CARD_ME);
         const fresh = await freshCardSave();
         const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
@@ -91634,7 +91803,11 @@ const CardBattleScreen = ({
           daily: reward.daily,
           record: nextRecord,
           unlocked: nextUnlocked
-        }, fresh.raw);
+        }, fresh.raw, openExtra);
+        if (ok && openExtra.length) {
+          openIdRef.current = null;
+          openRef.current = null;
+        }
         if (ok && rankable) void cardRankSync(db, {
           record: nextRecord,
           collection: save.collection,
@@ -91765,6 +91938,15 @@ const CardBattleScreen = ({
       intro,
       cpuSameBlood: !!cpuDeck.sameBlood
     });
+    void writeCpuOpen({
+      id: `${seed}`,
+      who: pick.who,
+      level: pick.level,
+      rankable: !!(rank && rank.send) && !debug,
+      at: Date.now(),
+      beat: Date.now(),
+      facts: cardResultFacts(st, CARD_ME)
+    }, true);
     onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who));
     onNavigate('CARD_BATTLE');
   };
@@ -92434,6 +92616,7 @@ const CardBattleScreen = ({
     };
     const plList = cardCpuPlaylistOf(save.cpuPlaylist, plCur);
     const plIsDefault = plList.length === 1 && plList[0] === CARD_AI_BGM[plCur];
+    const plCurName = (plWhoList.find(a => a.id === plCur) || {}).name || '';
     const cpuPlaylistPanel = React.createElement("div", {
       "data-card-playlist": true,
       className: "mt-3 border-t border-white/10 pt-2.5"
@@ -92442,7 +92625,7 @@ const CardBattleScreen = ({
     }, "助手と対戦"), React.createElement("p", {
       className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('助手ごとに5曲まで選べます。対戦中は、選んだ曲を1曲ずつ、毎回ちがう順番で流します')), React.createElement("div", {
+    }, jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')), React.createElement("div", {
       className: "mt-2 grid grid-cols-3 gap-1.5"
     }, plWhoList.map(a => React.createElement("button", {
       key: a.id,
@@ -92485,23 +92668,25 @@ const CardBattleScreen = ({
         Audio_.fgSe.tap();
         setPlCopy({
           list: [...plList],
-          confirm: false
+          confirm: false,
+          from: plCurName
         });
       },
       className: "min-h-[44px] rounded-xl bg-indigo-800 px-1 text-[11px] font-black text-white"
-    }, jaWrap('全員に同じ曲を入れる')))), plCopy && React.createElement("div", {
+    }, jaWrap(`${plCurName}の曲を全員に写す`)))), plCopy && React.createElement("div", {
       "data-card-playlist-copy": true,
       className: "mt-2.5 rounded-xl border border-indigo-300/40 bg-indigo-950/60 p-2.5"
     }, React.createElement("b", {
       className: "block text-[12px] font-black text-white"
-    }, jaWrap('全員に同じ曲を入れる')), React.createElement("p", {
+    }, jaWrap(`${plCopy.from}の曲を全員に写す`)), React.createElement("p", {
       className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-300",
       style: JA_WRAP_STYLE
-    }, jaWrap('ここで選んだ1〜5曲を、助手みんなの曲にします。あとから助手ごとに直せます')), React.createElement(CardPlaylistRows, {
+    }, jaWrap(`はじめは${plCopy.from}の曲が入っています。ここで1〜5曲に直してから、助手みんなの曲にできます。あとから助手を選んで直せます`)), React.createElement(CardPlaylistRows, {
       tag: "copy",
       list: plCopy.list,
       bgmPreview: bgmPreview,
       onChange: next => setPlCopy({
+        ...plCopy,
         list: next,
         confirm: false
       })
@@ -92511,7 +92696,7 @@ const CardBattleScreen = ({
     }, React.createElement("p", {
       className: "text-[11px] font-black leading-snug text-amber-200",
       style: JA_WRAP_STYLE
-    }, jaWrap('助手ごとに選んでいた曲は、この曲に置き換わります。よろしいですか?')), React.createElement("div", {
+    }, jaWrap('助手みんなの曲が、この曲に置き換わります。よろしいですか?')), React.createElement("div", {
       className: "mt-1.5 grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {
       type: "button",
@@ -92542,7 +92727,7 @@ const CardBattleScreen = ({
         confirm: true
       }),
       className: "min-h-[44px] rounded-xl bg-indigo-600 text-[12px] font-black text-white"
-    }, jaWrap('全員に入れる')))));
+    }, jaWrap('全員に写す')))));
     const bgmPanel = React.createElement("div", {
       "data-card-options-bgm": true,
       className: SCREEN_PANEL_CLASS
@@ -93754,13 +93939,14 @@ const CardDex = ({
     list: cardDexListOf(db, mode, t.id, all)
   })), [db, mode, all]);
   const tab = tabs[mode];
-  const list = (tabList.find(t => t.id === tab) || tabList[0] || {
+  const curTab = tabList.find(t => t.id === tab) || tabList[0] || {
     list: []
-  }).list;
+  };
+  const list = curTab.list;
   const shown = list.filter(no => show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true);
   const haveIn = arr => arr.filter(no => col[no] > 0).length;
   const chip = on => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
-  const unit = CARD_DEX_UNIT[mode];
+  const unit = curTab.label || CARD_DEX_UNIT[mode];
   const tabRow = useRef(null);
   useEffect(() => {
     try {
@@ -120666,11 +120852,18 @@ function MonsterHeroGame() {
           "aria-hidden": "true",
           className: "mhms-ico relative shrink-0 text-3xl leading-none"
         }, sys.emoji), React.createElement("span", {
-          className: "relative min-w-0 flex-1"
+          className: "relative min-w-0 flex-1",
+          style: {
+            containerType: 'inline-size'
+          }
         }, React.createElement("span", {
           className: "flex items-center gap-1.5"
         }, React.createElement("b", {
-          className: "block min-w-0 truncate text-[18px] font-black italic leading-tight"
+          "data-battle-system-title": true,
+          className: "block min-w-0 whitespace-nowrap font-black italic leading-tight",
+          style: {
+            fontSize: `min(18px, calc((100cqw - ${soon || beta || sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE ? 46 : 0}px) / ${[...String(sys.label)].length + 0.8}))`
+          }
         }, sys.label), soon && React.createElement("span", {
           className: "shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black"
         }, "準備中"), beta && React.createElement("span", {
@@ -120681,9 +120874,9 @@ function MonsterHeroGame() {
         }, "DEBUG")), React.createElement("small", {
           className: "block text-[10px] font-black leading-tight text-slate-900/80",
           style: JA_LABEL_STYLE
-        }, jaWrap(sys.tagline)), (soon || beta) && React.createElement("small", {
+        }, jaWrap(sys.tagline)), soon && React.createElement("small", {
           className: "mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70"
-        }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'))), React.createElement("button", {
+        }, "いま準備しています。遊べるようになったらお知らせします"))), React.createElement("button", {
           "data-battle-system-info": sys.id,
           disabled: !!battleTutorial,
           onClick: () => setModeInfoId(sys.id),
@@ -125470,7 +125663,7 @@ function MonsterHeroGame() {
         mode: mode || BATTLE_MODE_SPECIES_CHALLENGE
       }),
       rhythmHistoryCount: rhythmHistoryCount,
-      unlockedAssistants: assistantsUnlockedFrom(rhythmEventStorySeen),
+      unlockedAssistants: assistantsUnlockedFrom(rhythmEventStorySeen).filter(who => who.id !== 'momosuke' || momosukeIntroSeenFlag),
       onOpenRhythmHistory: openRhythmHistory,
       friendsEnabled: RELEASE_FLAGS.friends === true,
       onOpenFriends: () => openFriends(null),
