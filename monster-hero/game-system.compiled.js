@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b0f0dfcc9aad8f3
+// source-sha256: ab04c10ef0ece104
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:10";
+const BUILD_DATE = "2026-10-27 00:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -89104,6 +89104,9 @@ const CardBattleBoard = ({
   const [drag, setDrag] = useState(null);
   const [dropOver, setDropOver] = useState(null);
   const dragRef = useRef(null);
+  useEffect(() => () => {
+    if (dragRef.current) clearTimeout(dragRef.current.timer);
+  }, []);
   const ghostRef = useRef(null);
   const tutorial = game.tutorial === true;
   const [tutI, setTutI] = useState(0);
@@ -89154,6 +89157,10 @@ const CardBattleBoard = ({
     n: 0
   });
   const bubbleTimer = useRef(null);
+  const hideBubbleLater = () => {
+    clearTimeout(bubbleTimer.current);
+    bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+  };
   const finished = useRef(false);
   const talk = useRef({
     n: 0,
@@ -89183,8 +89190,7 @@ const CardBattleBoard = ({
       key,
       face: line.face
     });
-    clearTimeout(bubbleTimer.current);
-    bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+    hideBubbleLater();
     if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
       talk.current.n += 1;
       void cardTalkFetch('moment', {
@@ -89237,6 +89243,10 @@ const CardBattleBoard = ({
   };
   const bigTimer = useRef(null);
   const bigThen = useRef(null);
+  useEffect(() => () => {
+    clearTimeout(bigTimer.current);
+    bigThen.current = null;
+  }, []);
   const bigMs = settings.motion === 'OFF' ? 0 : Math.round((settings.motion === 'SHORT' ? 500 : 700) * Math.min(1.2, Math.max(0.6, pace)));
   const finishBig = () => {
     clearTimeout(bigTimer.current);
@@ -89311,7 +89321,7 @@ const CardBattleBoard = ({
     if (!out.length) return;
     setGutsFly(cur => [...cur, ...out]);
     const life = 650 + 90 * Math.max(...out.map(o => o.n)) + 500;
-    setTimeout(() => setGutsFly(cur => cur.filter(g => !out.some(o => o.key === g.key))), life);
+    motionTimers.current.push(setTimeout(() => setGutsFly(cur => cur.filter(g => !out.some(o => o.key === g.key))), life));
   };
   const step = (act, forced = null, shown = false) => {
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
@@ -89348,7 +89358,7 @@ const CardBattleBoard = ({
     }));
     if (hits.length) {
       if (settings.damageNum !== 'OFF') setFx(hits);
-      setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000);
+      motionTimers.current.push(setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000));
       if (hits.some(h => h.dmg >= 3)) Audio_.fgSe.crit();else if (hits.some(h => h.dmg > 0)) Audio_.fgSe.attack();else if (hits.some(h => h.heal)) Audio_.fgSe.heal();else Audio_.fgSe.guard();
     } else if (evs.some(e => e.t === 'use')) Audio_.fgSe.card();
     const centerOf = id => {
@@ -89444,7 +89454,7 @@ const CardBattleBoard = ({
         who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who,
         side: use.p === CARD_ME ? 'me' : 'foe'
       });
-      setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
+      motionTimers.current.push(setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200));
     } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI(i => i + 1);
     const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
@@ -89561,8 +89571,7 @@ const CardBattleBoard = ({
           text,
           key: `chat-${Date.now()}`
         });
-        clearTimeout(bubbleTimer.current);
-        bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+        hideBubbleLater();
       }
     });
   }, []);
@@ -113548,11 +113557,12 @@ function MonsterHeroGame() {
     if (!isCardRunScreen(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!cardQuickAutoStart || !autoQuickRunConfigured(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retry = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS);
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
   const cycleBattleAuto = () => {
