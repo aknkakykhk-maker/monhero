@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e8f8b1b6037c7a3a
+// generated-sha256: f16c7ecc7c3f6f1e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7940,6 +7940,16 @@ const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
           aria-label={`染色${regionLabels[idx]||idx+1}の濃さ`} className="flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"/>
         <span className="text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0">{colorAlphaOf(colors[idx])}%</span>
       </div>}
+      {/* 濃さも1ずつ動かせる(2026-10-27 社長。表の「濃さ100%」などにぴったり合わせるため)。押しっぱなしで続けて動く */}
+      {colors[idx]&&<div data-dye-alpha-steppers className="mt-1 flex items-center justify-end gap-1.5">
+        <RepeatStepButton data-dye-alpha-step="down" aria-label={`染色${regionLabels[idx]||idx+1}の濃さを1下げる`} disabled={colorAlphaOf(colors[idx])<=MASU_COLOR_ALPHA_MIN}
+          onStep={()=>onChange(idx,withColorAlpha(colors[idx],colorAlphaOf(colors[idx])-1))}
+          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">−</RepeatStepButton>
+        <span className="w-14 text-center text-[11px] font-black text-white tabular-nums">濃さ{colorAlphaOf(colors[idx])}%</span>
+        <RepeatStepButton data-dye-alpha-step="up" aria-label={`染色${regionLabels[idx]||idx+1}の濃さを1上げる`} disabled={colorAlphaOf(colors[idx])>=MASU_COLOR_ALPHA_MAX}
+          onStep={()=>onChange(idx,withColorAlpha(colors[idx],colorAlphaOf(colors[idx])+1))}
+          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">+</RepeatStepButton>
+      </div>}
     </div>
   ))}</div>;
 };
@@ -8434,6 +8444,24 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
 // 自前のスペクトラムピッカー。端末のOS標準カラーピッカー(<input type="color">)はiOS/Android/PCで
 // 見た目も操作感もバラバラで、アプリのテーマにも合わせられず自動テストもできないため使わず、
 // 既存のVolumeSliderと同じくpointerdown/move/upでドラッグを自前実装している
+// 1ずつ動かす「−」「+」ボタン(2026-10-27 染色の数字を表のとおりに合わせるため)。押しっぱなしにすると、少し待ってから続けて動く。
+// 押した瞬間に1回動かし、そのあとの click は無視する(二重に動かさない)。キーボードの決定(click だけ)でも1回動く
+const RepeatStepButton = ({ onStep, disabled = false, className = '', children, ...rest }) => {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  const timers = useRef({ wait: null, loop: null, pressed: false });
+  const stop = () => { clearTimeout(timers.current.wait); clearInterval(timers.current.loop); timers.current.wait = null; timers.current.loop = null; };
+  useEffect(() => stop, []);
+  useEffect(() => { if (disabled) stop(); }, [disabled]);
+  return (
+    <button type="button" disabled={disabled} className={className} {...rest}
+      onPointerDown={(e) => { if (disabled) return; e.preventDefault(); timers.current.pressed = true; stepRef.current(); stop();
+        timers.current.wait = setTimeout(() => { timers.current.loop = setInterval(() => stepRef.current(), 70); }, 400); }}
+      onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}
+      onClick={() => { if (timers.current.pressed) { timers.current.pressed = false; return; } if (!disabled) stepRef.current(); }}
+      onContextMenu={(e) => e.preventDefault()}>{children}</button>
+  );
+};
 const CustomColorPicker = ({ h, s, v, onChange }) => {
   const squareRef = useRef(null);
   const hueRef = useRef(null);
@@ -8518,11 +8546,11 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
           return (
             <div key={key} className="flex items-center gap-1.5">
               <span className="w-12 shrink-0 text-[10px] font-black text-slate-300">{label}</span>
-              <button type="button" data-custom-color-step={`${key}-down`} aria-label={`${label}を1下げる`} disabled={value <= 0} onClick={() => step(-1)}
-                className="min-h-[36px] w-11 shrink-0 rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">−</button>
+              <RepeatStepButton data-custom-color-step={`${key}-down`} aria-label={`${label}を1下げる`} disabled={value <= 0} onStep={() => step(-1)}
+                className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">−</RepeatStepButton>
               <span className="min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white">{value}</span>
-              <button type="button" data-custom-color-step={`${key}-up`} aria-label={`${label}を1上げる`} disabled={value >= max} onClick={() => step(1)}
-                className="min-h-[36px] w-11 shrink-0 rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">+</button>
+              <RepeatStepButton data-custom-color-step={`${key}-up`} aria-label={`${label}を1上げる`} disabled={value >= max} onStep={() => step(1)}
+                className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">+</RepeatStepButton>
             </div>
           );
         })}

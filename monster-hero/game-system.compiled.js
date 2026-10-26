@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b9c004fd2be0cb7
+// source-sha256: 4b401e2e6aef6d72
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:54";
+const BUILD_DATE = "2026-10-27 03:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10946,7 +10946,24 @@ const DyeRegionColorControls = ({
     className: "flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"
   }), React.createElement("span", {
     className: "text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0"
-  }, colorAlphaOf(colors[idx]), "%")))));
+  }, colorAlphaOf(colors[idx]), "%")), colors[idx] && React.createElement("div", {
+    "data-dye-alpha-steppers": true,
+    className: "mt-1 flex items-center justify-end gap-1.5"
+  }, React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "down",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1下げる`,
+    disabled: colorAlphaOf(colors[idx]) <= MASU_COLOR_ALPHA_MIN,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) - 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "−"), React.createElement("span", {
+    className: "w-14 text-center text-[11px] font-black text-white tabular-nums"
+  }, "濃さ", colorAlphaOf(colors[idx]), "%"), React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "up",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1上げる`,
+    disabled: colorAlphaOf(colors[idx]) >= MASU_COLOR_ALPHA_MAX,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) + 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "+")))));
 };
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
 const makePatternLayer = (patch = {}) => ({
@@ -11980,6 +11997,58 @@ const HomeWalkingMasumon = ({
     className: "mh-home-masumon-stars"
   })));
 };
+const RepeatStepButton = ({
+  onStep,
+  disabled = false,
+  className = '',
+  children,
+  ...rest
+}) => {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  const timers = useRef({
+    wait: null,
+    loop: null,
+    pressed: false
+  });
+  const stop = () => {
+    clearTimeout(timers.current.wait);
+    clearInterval(timers.current.loop);
+    timers.current.wait = null;
+    timers.current.loop = null;
+  };
+  useEffect(() => stop, []);
+  useEffect(() => {
+    if (disabled) stop();
+  }, [disabled]);
+  return React.createElement("button", _extends({
+    type: "button",
+    disabled: disabled,
+    className: className
+  }, rest, {
+    onPointerDown: e => {
+      if (disabled) return;
+      e.preventDefault();
+      timers.current.pressed = true;
+      stepRef.current();
+      stop();
+      timers.current.wait = setTimeout(() => {
+        timers.current.loop = setInterval(() => stepRef.current(), 70);
+      }, 400);
+    },
+    onPointerUp: stop,
+    onPointerLeave: stop,
+    onPointerCancel: stop,
+    onClick: () => {
+      if (timers.current.pressed) {
+        timers.current.pressed = false;
+        return;
+      }
+      if (!disabled) stepRef.current();
+    },
+    onContextMenu: e => e.preventDefault()
+  }), children);
+};
 const CustomColorPicker = ({
   h,
   s,
@@ -12095,22 +12164,20 @@ const CustomColorPicker = ({
       className: "flex items-center gap-1.5"
     }, React.createElement("span", {
       className: "w-12 shrink-0 text-[10px] font-black text-slate-300"
-    }, label), React.createElement("button", {
-      type: "button",
+    }, label), React.createElement(RepeatStepButton, {
       "data-custom-color-step": `${key}-down`,
       "aria-label": `${label}を1下げる`,
       disabled: value <= 0,
-      onClick: () => step(-1),
-      className: "min-h-[36px] w-11 shrink-0 rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+      onStep: () => step(-1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
     }, "−"), React.createElement("span", {
       className: "min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white"
-    }, value), React.createElement("button", {
-      type: "button",
+    }, value), React.createElement(RepeatStepButton, {
       "data-custom-color-step": `${key}-up`,
       "aria-label": `${label}を1上げる`,
       disabled: value >= max,
-      onClick: () => step(1),
-      className: "min-h-[36px] w-11 shrink-0 rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+      onStep: () => step(1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
     }, "+"));
   })));
 };
