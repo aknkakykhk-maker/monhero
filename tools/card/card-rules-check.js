@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardUnlockedWithRecord, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -342,6 +342,26 @@ const decksAndSaves = () => {
   const u = E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'normal');
   ok(u.hard && !u.expert, 'NORMAL で勝っても HARD が開かない');
   ok(!E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'easy').hard, 'EASY の勝ちで HARD が開いてしまう');
+  // 記録から開いているはずの強さを足す(2026-10-26 社長「ハード解放したのにできてない」)。保存値は書き換えない
+  {
+    const W = E.cardUnlockedWithRecord;
+    const recWins = (win) => ({ byLevel: { win, lose: {} } });
+    const r1 = W(null, recWins({ normal: 2 }));
+    ok(r1.hard && !r1.expert && !r1.master, 'NORMAL で勝った記録があるのに HARD が開かない(または開きすぎる)');
+    const r2 = W({ hard: true }, recWins({ normal: 1, hard: 1, expert: 3 }));
+    ok(r2.hard && r2.expert && r2.master, 'HARD・EXPERT の勝ちの記録から EXPERT・MASTER が開かない');
+    const r3 = W(null, { recent: [{ at: 1, who: 'mua', level: 'normal', outcome: 'win' }] });
+    ok(r3.hard && !r3.expert, '最近の対戦の勝ち(NORMAL)から HARD が開かない');
+    const r4 = W(null, recWins({ easy: 5 }));
+    ok(!r4.hard && !r4.expert && !r4.master, 'EASY の勝ちだけで HARD が開いてしまう');
+    const r5 = W({ hard: true, expert: true, master: true }, null);
+    ok(r5.hard && r5.expert && r5.master, '開いていた強さが、記録が無いと閉じてしまう');
+    ok(JSON.stringify(W('こわれた', 'こわれた')) === JSON.stringify({ hard: false, expert: false, master: false }), '壊れた保存値で落ちる・開いてしまう');
+    const saved = { hard: false };
+    W(saved, recWins({ normal: 1 }));
+    ok(saved.hard === false, '保存値(引数)を書き換えてしまう');
+    ok(/unlocked: cardUnlockedWithRecord\(unlocked, record\)/.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '84-screen-card-battle.jsx'), 'utf8')), 'カードの画面の読み込みで、記録から開いている強さを足していない');
+  }
 };
 const cardIsObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
