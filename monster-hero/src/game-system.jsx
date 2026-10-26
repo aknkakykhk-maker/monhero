@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8332833d8c862b91
+// generated-sha256: 24268e5e380681fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26023,7 +26023,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'spooky_trick_confuse',
     name: 'トリックコンフューズ',
     useNote: '全員ライフ・ガッツ30%回復・3ターン 全員ちから丈夫さ+10%・当てると乱心',
-    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「混乱中」になる（次の行動に出る）。混乱中のターン、敵は動けず、味方の攻撃は会心が確定する',
+    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「意味不明」になる（次の行動に出る）。意味不明のターン、敵は動けず、味方の攻撃は会心が確定する',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     partyHealRate: 0.3, partyStatRate: 0.1,
     effect: 'trickConfuse',
@@ -27038,7 +27038,7 @@ const tacticsExConfusesOnHit = (state, units, slot, now) => {
 const ENEMY_CONFUSE_TURNS = 3;
 const ENEMY_CONFUSE_CHANCE = 0.5;
 // 予告を「意味不明」へ差し替えたもの。狙い(targetSlot)は持たせない(だれも狙われない)
-const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '混乱中', icon: '❓', value: 0, notice: '乱心',
+const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '意味不明', icon: '❓', value: 0, notice: '乱心',
   confusedFrom: intent && typeof intent.label === 'string' ? intent.label : null });
 // 次の予告を決めるときの乱心。turns が残っていれば1つ使い、rnd() が確率未満なら意味不明にする
 const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
@@ -69463,7 +69463,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const upcoming = confusion.intent;
     // 乱心の抽選をしたときは、どちらになったかを帯で見せる(意味不明は「次の行動」の札にも出る)
     if (aimed && confuseBefore > 0) {
-      if (upcoming?.type==='CONFUSED') showLuckBanner({ icon:'❓', title:'乱心', result:'敵の次の行動が「混乱中」に！ 動けず、味方の攻撃は会心確定', tone:'enemy' });
+      if (upcoming?.type==='CONFUSED') showLuckBanner({ icon:'❓', title:'乱心', result:'敵の次の行動が「意味不明」に！ 動けず、味方の攻撃は会心確定', tone:'enemy' });
       else showLuckBanner({ icon:'🌀', title:'乱心', result:confusion.turns>0 ? `敵は持ちこたえた(乱心はあと${confusion.turns}回)` : '敵は持ちこたえた(乱心が解けた)', tone:'bad' });
     }
     setEnemyIntent(upcoming);
@@ -69483,7 +69483,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const add = (key, mark, label, value, tone, note, short = '') => list.push({ key, mark, label, value, tone, note, short });
     if (!enemy) return list;
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
-    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は混乱中になって動けない', `${enemyConfuseTurns}T`);
+    if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, { wave, turn: turnCount }) : null;
     const aquaNow = isTacticsMode(runMode) ? tacticsExAquaOf(tacticsExState, tacticsUnits, { wave, turn: turnCount }) : null;
     if (aquaNow && aquaNow.active && aquaNow.route === 'prison' && aquaNow.stacks > 0) add('aquaPrison', '🌊', '水牢', `${aquaNow.stacks}つ・あと${aquaNow.turnsLeft}T`, 'text-sky-200 border-sky-400/60', `敵の与ダメージ-${Math.round((1 - aquaNow.enemyDmgMult) * 100)}%(水牢1つごとに-10%)`, `${aquaNow.turnsLeft}T`);
@@ -70607,7 +70607,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       addPopup('⏳ 時間停止！ 敵は動けない','enemy','text-sky-300 font-black text-xl drop-shadow-md'); pushBattleLog('⏳ 時間が止まっている。敵は行動しない','info'); await battleWait(1000);
     } else if (intent && intent.type==='CONFUSED') {
       // 乱心で「意味不明」になったターン。敵は何もしない(行動しなかった扱い)
-      addPopup('❓ 混乱中！ 敵は動けない','enemy','text-violet-300 font-black text-xl drop-shadow-md'); pushBattleLog('❓ 敵は乱心して混乱中。動けなかった','info'); await battleWait(1000);
+      addPopup('❓ 意味不明！ 敵は動けない','enemy','text-violet-300 font-black text-xl drop-shadow-md'); pushBattleLog('❓ 敵は乱心して、意味不明な動きをした','info'); await battleWait(1000);
     } else if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible',false); await battleWait(1000);
@@ -72032,7 +72032,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
           && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
-          showLuckBanner({ icon:'🌀', title:`${battleActorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で混乱中になる`, tone:'enemy' });
+          showLuckBanner({ icon:'🌀', title:`${battleActorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`, tone:'enemy' });
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ

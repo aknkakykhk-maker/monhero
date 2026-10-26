@@ -1602,7 +1602,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'spooky_trick_confuse',
     name: 'トリックコンフューズ',
     useNote: '全員ライフ・ガッツ30%回復・3ターン 全員ちから丈夫さ+10%・当てると乱心',
-    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「混乱中」になる（次の行動に出る）。混乱中のターン、敵は動けず、味方の攻撃は会心が確定する',
+    desc: '味方全員を回復し、3ターンのあいだ敵を惑わせる。\n・使った瞬間に、味方全員のライフとガッツが上限の30%回復\n・3ターンのあいだ、味方全員のちから・丈夫さ+10%\n・3ターンのあいだにスプーキーの攻撃を当てると、敵が3ターン「乱心」になる（乱心中にまた当てたら3ターンに数え直す）\n・乱心: 敵の行動が50%の確率で「意味不明」になる（次の行動に出る）。意味不明のターン、敵は動けず、味方の攻撃は会心が確定する',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     partyHealRate: 0.3, partyStatRate: 0.1,
     effect: 'trickConfuse',
@@ -2617,7 +2617,7 @@ const tacticsExConfusesOnHit = (state, units, slot, now) => {
 const ENEMY_CONFUSE_TURNS = 3;
 const ENEMY_CONFUSE_CHANCE = 0.5;
 // 予告を「意味不明」へ差し替えたもの。狙い(targetSlot)は持たせない(だれも狙われない)
-const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '混乱中', icon: '❓', value: 0, notice: '乱心',
+const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '意味不明', icon: '❓', value: 0, notice: '乱心',
   confusedFrom: intent && typeof intent.label === 'string' ? intent.label : null });
 // 次の予告を決めるときの乱心。turns が残っていれば1つ使い、rnd() が確率未満なら意味不明にする
 const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {

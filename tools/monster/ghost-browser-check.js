@@ -84,7 +84,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       document.addEventListener('DOMContentLoaded', () => {
         window.__pops = [];
         // 運しだいの結果は画面上の帯(data-battle-luck-banner)に出る。「帯:見出し 結果」の形でためる(2026-10-06)
-        new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { if (n.nodeType === 1) n.querySelectorAll?.('[data-battle-luck-banner]').forEach(b => { if (!b.__seen) { b.__seen = true; window.__pops.push(`帯:${b.querySelector('[data-battle-luck-title]')?.textContent} ${b.querySelector('[data-battle-luck-result]')?.textContent}`); window.__bannerGeo = window.__bannerGeo || []; const r = b.getBoundingClientRect(), res = b.querySelector('[data-battle-luck-result]'); window.__bannerGeo.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight, cut: !!res && res.scrollWidth > res.clientWidth + 1 }); } }); if (n.nodeType === 1 && n.matches?.('[data-battle-luck-banner]') && !n.__seen) { n.__seen = true; window.__pops.push(`帯:${n.querySelector('[data-battle-luck-title]')?.textContent} ${n.querySelector('[data-battle-luck-result]')?.textContent}`); window.__bannerGeo = window.__bannerGeo || []; const r = n.getBoundingClientRect(), res = n.querySelector('[data-battle-luck-result]'); window.__bannerGeo.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight, cut: !!res && res.scrollWidth > res.clientWidth + 1 }); } const t = (n.textContent || '').trim(); if (t && t.length < 120 && /🎩|トリックスタート|コイン|運命の輪|乱心|オフリィアボイド|トリックコンフューズ|完全回避|意味不明|混乱中/.test(t)) window.__pops.push(t); } })
+        new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { if (n.nodeType === 1) n.querySelectorAll?.('[data-battle-luck-banner]').forEach(b => { if (!b.__seen) { b.__seen = true; window.__pops.push(`帯:${b.querySelector('[data-battle-luck-title]')?.textContent} ${b.querySelector('[data-battle-luck-result]')?.textContent}`); window.__bannerGeo = window.__bannerGeo || []; const r = b.getBoundingClientRect(), res = b.querySelector('[data-battle-luck-result]'); window.__bannerGeo.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight, cut: !!res && res.scrollWidth > res.clientWidth + 1 }); } }); if (n.nodeType === 1 && n.matches?.('[data-battle-luck-banner]') && !n.__seen) { n.__seen = true; window.__pops.push(`帯:${n.querySelector('[data-battle-luck-title]')?.textContent} ${n.querySelector('[data-battle-luck-result]')?.textContent}`); window.__bannerGeo = window.__bannerGeo || []; const r = n.getBoundingClientRect(), res = n.querySelector('[data-battle-luck-result]'); window.__bannerGeo.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight, cut: !!res && res.scrollWidth > res.clientWidth + 1 }); } const t = (n.textContent || '').trim(); if (t && t.length < 120 && /🎩|トリックスタート|コイン|運命の輪|乱心|オフリィアボイド|トリックコンフューズ|完全回避|意味不明/.test(t)) window.__pops.push(t); } })
           .observe(document.documentElement, { childList: true, subtree: true });
       });
     });
@@ -361,7 +361,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       }
       const p2 = await pops();
       check('スプーキーのEX「トリックコンフューズ」を使える', exUsed && p2.some(t => /EX トリックコンフューズ！/.test(t)), p2.slice(-6).join(' / '));
-      check('効いているあいだにスプーキーの攻撃を当てると、敵が乱心になる', p2.some(t => /^帯:🌀 スプーキーのトリックコンフューズ 敵が乱心！ 次の3回の行動が、50%で混乱中になる/.test(t)), p2.slice(-6).join(' / '));
+      check('効いているあいだにスプーキーの攻撃を当てると、敵が乱心になる', p2.some(t => /^帯:🌀 スプーキーのトリックコンフューズ 敵が乱心！ 次の3回の行動が、50%で意味不明になる/.test(t)), p2.slice(-6).join(' / '));
       // 乱心の振り方を確かめるため、次の予告を決めるあいだだけ乱数を小さくする(50%未満 → 意味不明)
       if (p2.some(t => /敵が乱心！/.test(t)) && !/CLEAR|GAME OVER/.test(await text())) {
         const confusedShown = await page.evaluate(() => !!document.querySelector('[data-enemy-confused]'));
@@ -375,11 +375,11 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
           await page.evaluate(() => { if (window.__realRandom) Math.random = window.__realRandom; });
         }
         const intentText = await page.evaluate(() => document.querySelector('[data-enemy-intent]')?.innerText.replace(/\s+/g, ' ') || '');
-        check('乱心で「混乱中」になった行動が、次の行動の札に出る', /混乱中/.test(intentText) && /動けない・会心確定/.test(intentText), intentText);
-        if (/混乱中/.test(intentText) && !/CLEAR|GAME OVER/.test(await text())) {
+        check('乱心で「意味不明」になった行動が、次の行動の札に出る', /意味不明/.test(intentText) && /動けない・会心確定/.test(intentText), intentText);
+        if (/意味不明/.test(intentText) && !/CLEAR|GAME OVER/.test(await text())) {
           await playAttackTurn(false);
-          check('混乱中になったことが帯にも出る', (await pops()).some(t => /^帯:❓ 乱心 敵の次の行動が「混乱中」に！/.test(t)), (await pops()).filter(t => /^帯:/.test(t)).slice(-3).join(' / '));
-          check('混乱中のターン、敵は動かない', (await pops()).some(t => /❓ 混乱中！ 敵は動けない/.test(t)), (await pops()).slice(-4).join(' / '));
+          check('意味不明になったことが帯にも出る', (await pops()).some(t => /^帯:❓ 乱心 敵の次の行動が「意味不明」に！/.test(t)), (await pops()).filter(t => /^帯:/.test(t)).slice(-3).join(' / '));
+          check('意味不明のターン、敵は動かない', (await pops()).some(t => /❓ 意味不明！ 敵は動けない/.test(t)), (await pops()).slice(-4).join(' / '));
         }
       }
       check('スプーキーの固有技で運命の輪が出る(6つのどれか)', p2.some(t => /^帯:🎡 スプーキーの運命の輪 (敵の与ダメ−30%\(2ターン\)|敵の被ダメ\+30%\(2ターン\)|ダメージ3倍|ダメージ2倍|連撃\+10%|ちから\+15%)/.test(t)), p2.slice(-6).join(' / '));
