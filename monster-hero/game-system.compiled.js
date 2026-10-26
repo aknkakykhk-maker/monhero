@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dafb334274b18c20
+// source-sha256: 106ef6c05ad2deed
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -32277,7 +32277,7 @@ const RhythmOptions = ({
     type: "button",
     onClick: resetDraft,
     className: `rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black ${wide ? 'min-h-[42px]' : 'min-h-[52px]'}`
-  }, "デフォルトに戻す"), React.createElement("button", {
+  }, "最初の設定に戻す"), React.createElement("button", {
     type: "button",
     onClick: saveDraft,
     "data-rhythm-options-save": true,
@@ -80896,7 +80896,7 @@ function RhythmBuddyList({
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
   if (list.length === 0) return React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
-  }, helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません'));
+  }, helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます'));
   if (settings && settings.view === 'card') {
     return React.createElement("div", {
       "data-rhythm-buddy-cards": true,
@@ -81067,7 +81067,7 @@ function RhythmBuddySheet({
     singleType: true
   }), masuPicker.entries.length === 0 ? React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
-  }, helpWrap((masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません')) : React.createElement("div", {
+  }, helpWrap((masuMons || []).length ? '表示設定に当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')) : React.createElement("div", {
     className: "grid grid-cols-3 gap-2.5 pb-4"
   }, masuPicker.entries.map(e => React.createElement("button", {
     key: e.key,
