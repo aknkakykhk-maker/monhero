@@ -90,9 +90,14 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
         </div>
         <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter} onComplete={()=>markPresented('breeder')}/>
       </div>
-      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-        <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
-        <span className="text-white font-mono font-bold flex items-baseline gap-1"><span className="text-slate-500 text-[10px]">{summary.goldBefore.toLocaleString()} →</span><CountUpNumber from={summary.goldBefore} to={summary.goldAfter} onComplete={()=>markPresented('gold')}/>{summary.goldAfter>summary.goldBefore&&<span className="text-amber-300 text-[10px]">(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})</span>}</span>
+      {/* 数の出し方をブリーダー経験値の行とそろえる: 右に「+もらった数」、下の小さい行に持っている数の変化(2026-10-27 ダメダシくん。
+          前は「100,000 → 100,374 (+374)」で、経験値の「+38」と並び方が違い、前の数も薄くて読みにくかった) */}
+      <div data-reward-gold className="pt-2 border-t border-white/10 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
+          <span className="text-white font-mono font-bold">+<CountUpNumber from={0} to={Math.max(0, summary.goldAfter-summary.goldBefore)} onComplete={()=>markPresented('gold')}/></span>
+        </div>
+        <div className="mt-0.5 text-right text-[9px] font-mono font-bold text-slate-300">所持 {summary.goldBefore.toLocaleString()} → {summary.goldAfter.toLocaleString()}</div>
       </div>
       {/* クリアしたときだけ入る限界突破アイテム。1行だけ足して、リザルトの高さを崩さない */}
       {summary.psycheGain > 0 && (
