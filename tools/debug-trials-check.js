@@ -39,6 +39,10 @@ check('新しいキーが保存データの一覧に載っている', ['mh_debug
     if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
     const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
+    // ★本物の Supabase へは何も届けない(2026-10-27)。下で __mhSupabaseStubbed = true を立てると、ゲームの「自動操作のブラウザは
+    //   本物へ書かない」止めが外れる。差し替えが無いまま立てていたため、名前「テスト」・アイコン Mocchi の端末が
+    //   本番の breeder_levels / breeder_profiles / friend_profiles へ行を足していた(実際に起きた)。読み込みも空で返す
+    await page.route(/\.supabase\.co\//, (route) => route.fulfill({ status: route.request().method() === 'GET' ? 200 : 201, contentType: 'application/json', body: '[]' }));
     await page.addInitScript(require('./boot/quiet-boot-seed').quietBootSeed());
     await page.addInitScript(() => { const put = (k, v) => { if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v)); }; put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); window.__mhSupabaseStubbed = true; });
     const shot = async (name) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name) }); };
