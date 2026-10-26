@@ -2628,8 +2628,10 @@ function MonsterHeroGame() {
   const [helpTopicId, setHelpTopicId] = useState(null);
   // 助手の吹き出しの開閉。今は絵文字と一言だけだが、助手キャラを実装したら
   // HELP_ASSISTANT(data/help.js)に絵や音声を足すだけでここはそのまま使える
-  const [helpAssistantOpen, setHelpAssistantOpen] = useState(true);
-  const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setHelpAssistantOpen(true); setShowHelp(true); };
+  // ヘルプの上の助手の吹き出し。開閉は「小さくたたむ」と同じ記憶(mh_bubble_collapsed_v1 の 'help')。顔を押すと開閉する(2026-10-26 開発部 e01・e02)
+  const [helpBubbleFolded, setHelpBubbleFolded] = useBubbleCollapse('help');
+  const helpAssistantOpen = !helpBubbleFolded;
+  const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setShowHelp(true); };
   // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
   // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
   const [trainingPicks, setTrainingPicks] = useState([]);
@@ -22438,15 +22440,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const helpNewBadge = <span data-help-new aria-label="新しい項目" className="shrink-0 text-[17px] leading-none">🆕</span>;
         return (
         <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#000000',zIndex:99999}}>
-          <header className="shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
+          <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} className="shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>setHelpAssistantOpen(v=>!v)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={48} accent={accent} expression={assistantExpression}/></button>
+            <button onClick={()=>setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
           </header>
           {helpAssistantOpen&&(
-            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1.5 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
+            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
-              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight}/>
+              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey="help" collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
