@@ -377,11 +377,12 @@ const CardRules = ({ onBack, onTutorial }) => (
 );
 
 // ==================== パックの絵(社長「パックの絵に出る奴らをいい感じにのせて」台帳 #3503) ====================
-// 新しい画像ファイルは作らない。弾の色の袋に、その弾で出るモンスターの立ち絵(84 の cardMonArt。無ければカードの絵)を5体まで並べて描く
+// 新しい画像ファイルは作らない。弾の色の袋に、その弾で出るモンスターの立ち絵(84 の cardMonArt)を5体まで並べて描く。
+// 立ち絵の無い子は並べない(カードの絵を貼ると浮く。2026-10-26 社長「立ち絵ないやつはパケ画像にいれなくていいよ」)。1〜4体のときは、その数で左右がそろう形に並べる
 // torn … 上のふち(ちぎれる所)を描かない(パックを開ける画面で、ちぎれた帯を別に飛ばすとき)
 const cardPackMonsters = (db, pack, n = 5) => {
   const seen = new Set();
-  const list = Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
+  const list = Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id && !m.variant && m.ready !== false && !!cardMonArt(m) && !seen.has(m.species) && seen.add(m.species));
   if (list.length <= n) return list;
   const step = list.length / n;
   return Array.from({ length: n }, (_, k) => list[Math.floor(k * step)]);
@@ -392,11 +393,18 @@ const CARD_PACK_SLOTS = Object.freeze([
   { left: '-6%', w: '46%', h: '48%', b: '10%', z: 2, o: 1 }, { right: '-6%', w: '46%', h: '48%', b: '10%', z: 2, o: 1 },
   { left: '50%', w: '62%', h: '58%', b: '2%', z: 3, o: 1, center: true },
 ]);
+// 立ち絵が5体に足りない弾の並べ方(数ごと。左右がそろうように)
+const CARD_PACK_FEW_SLOTS = Object.freeze({
+  1: [{ left: '50%', w: '84%', h: '66%', b: '6%', z: 3, o: 1, center: true }],
+  2: [{ left: '-4%', w: '62%', h: '60%', b: '8%', z: 2, o: 1 }, { right: '-4%', w: '62%', h: '60%', b: '8%', z: 3, o: 1 }],
+  3: CARD_PACK_SLOTS.slice(2),
+  4: [CARD_PACK_SLOTS[0], CARD_PACK_SLOTS[1], { left: '-2%', w: '54%', h: '54%', b: '8%', z: 2, o: 1 }, { right: '-2%', w: '54%', h: '54%', b: '8%', z: 3, o: 1 }],
+});
 const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) => {
   const mons = cardPackMonsters(db, pack);
   // 真ん中を最後に(いちばん手前)。並べる順: 奥の左右 → 中の左右 → 真ん中
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
-  const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_SLOTS.slice(5 - mons.length);
+  const slots = mons.length >= 5 ? CARD_PACK_SLOTS : (CARD_PACK_FEW_SLOTS[mons.length] || []);
   const h = Math.round(width * 1.48);
   const label = `第${pack.no}弾`;
   return (
@@ -405,7 +413,7 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
       <div aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,.28) 45%, transparent 60%)' }}/>
       {!torn && <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[7%]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)' }}/>}
       {order.map((m, k) => {
-        const sl = slots[k]; const src = cardMonArt(m) || CARD_IMG(m.img);
+        const sl = slots[k]; const src = cardMonArt(m);
         return <img key={m.no} src={src} alt="" aria-hidden="true" draggable={false} className="absolute object-contain object-bottom drop-shadow-[0_4px_6px_rgba(0,0,0,.6)]"
           style={{ width: sl.w, height: sl.h, bottom: sl.b, zIndex: sl.z, opacity: sl.o, ...(sl.center ? { left: sl.left, transform: 'translateX(-50%)' } : sl.left ? { left: sl.left } : { right: sl.right }) }}/>;
       })}
@@ -419,7 +427,7 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
 };
 
 // ==================== パックを開ける画面(区切り2・CARD_PACK_OPEN) ====================
-// マーケットの「カードポイント」の売り場で買ったら、ここへ来る(買うのと保存は 60-app。この部品は見せるだけ)
+// マーケットの「MFバトルカード」の売り場で買ったら、ここへ来る(買うのと保存は 60-app。この部品は見せるだけ)
 // result: { packId, packs:[[{ no, slot, rarity, dup, point }…]…], dupPoint, cost }
 // 演出(社長「派手に」台帳 #3503): パックをタップ → 上の帯がちぎれて飛び、光があふれる → カードが配られる → タップで1枚ずつ裏返る(音)
 //   破れた所から光の柱が立ち、画面が一瞬白く光ってからカードが配られる(カゲあつくん「開ける瞬間を大きく」)
@@ -531,7 +539,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         )}
         {phase === 'open' && allOpen && (
           <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
-            {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">カードポイント +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
+            {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
             {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
           </div>
         )}
@@ -564,8 +572,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
   );
 };
 
-// ==================== マーケットの「カードポイント」の売り場: パックとスターターキット(区切り2) ====================
-// 55-screen-breeder-market.jsx の「カードポイント」の売り場から出す。円盤石・アシストカードは 55 側(ビートP交換所と同じ並べ方)
+// ==================== マーケットの「MFバトルカード」の売り場: パックとスターターキット(区切り2) ====================
+// 55-screen-breeder-market.jsx の「MFバトルカード」の売り場から出す。円盤石・アシストカードは 55 側(ビートP交換所と同じ並べ方)
 // onBuyPack(packId, count) / onBuyStarter(kitId) … 60-app が保存して、パックならパックを開ける画面へ進む
 // ---- パック・スターターキットの中身と提供割合(2026-10-25 社長「中身が分かるように」。手本はガチャのピックアップ詳細・提供割合) ----
 // どれもカードを押すと詳しい画面(CardDetailModal)。持っていないカードには「未取得」の印
@@ -641,7 +649,7 @@ const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
     '混血のモンスターは、キラの無い通常のモンスターとして出ます。',
     '同じレア度のモンスターは、どれも同じ割合で出ます。',
     pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null,
-    `だぶったカードはカードポイントになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`,
+    `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`,
     '新しいカードは、できしだい追加されます。',
   ].filter(Boolean);
   return (
@@ -714,7 +722,7 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
       ))}
       {sheet && sheet.kind === 'contents' && <CardPackContents db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
       {sheet && sheet.kind === 'rates' && <CardPackRateSheet db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
-      {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`カードポイント ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
+      {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
     </div>
   );
 };
@@ -728,7 +736,7 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
   return (
     <div data-card-shop-starters className="space-y-2 pb-2">
       {done && <div data-card-shop-starter-done className="rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-3 py-2 text-[12px] font-black text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(done)}</div>}
-      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`スターターキットは1つにつき1回、${price}カードポイントで買えます。買うとデッキも1つ増えます。どのキットも中身を見られます。`)}</p>
+      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`スターターキットは1つにつき1回、${price}ビートPで買えます。買うとデッキも1つ増えます。どのキットも中身を見られます。`)}</p>
       {kits.map((k) => {
         const owned = !!((starter && starter.kit === k.id) || (shop && shop.starters && shop.starters[k.id]));
         return (
@@ -744,12 +752,12 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
                 <button type="button" data-card-shop-starter-contents={k.id} onClick={() => setView(k)} className="mt-1 min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>
               </div>
             </div>
-            <button type="button" data-card-shop-starter-buy={k.id} disabled={owned || busy || point < CARD_STARTER_SHOP_PRICE} onClick={() => setConfirm(k)} className="mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{owned ? '持っています' : `${price}カードポイント`}</button>
+            <button type="button" data-card-shop-starter-buy={k.id} disabled={owned || busy || point < CARD_STARTER_SHOP_PRICE} onClick={() => setConfirm(k)} className="mh-button mt-2 min-h-[44px] w-full rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{owned ? '持っています' : `${price}ビートP`}</button>
           </div>
         );
       })}
       {view && <CardStarterContents db={db} kit={view} collection={collection} onClose={() => setView(null)}/>}
-      {confirm && <ConfirmSheet title={`「${confirm.name}」を買いますか？`} message={`カードポイント ${price} を使います(いま ${point.toLocaleString()})。だぶったカードはカードポイントになります`} confirmLabel="買う" onCancel={() => setConfirm(null)} onConfirm={async () => { const k = confirm; setConfirm(null); const r = await onBuyStarter(k.id); if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはカードポイント +${r.dupPoint})` : ''}`); }}/>}
+      {confirm && <ConfirmSheet title={`「${confirm.name}」を買いますか？`} message={`ビートP ${price} を使います(いま ${point.toLocaleString()})。だぶったカードはビートPになります`} confirmLabel="買う" onCancel={() => setConfirm(null)} onConfirm={async () => { const k = confirm; setConfirm(null); const r = await onBuyStarter(k.id); if (r && r.ok) setDone(`「${k.name}」を買いました。デッキ編成に1つ増えています${r.dupPoint > 0 ? `(だぶったカードはビートP +${r.dupPoint})` : ''}`); }}/>}
     </div>
   );
 };

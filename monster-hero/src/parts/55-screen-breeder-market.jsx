@@ -29,14 +29,14 @@ function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
   onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail, frameConditionOf=null,
-  // MFバトルカードの「カードポイント」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
+  // MFバトルカードの「MFバトルカード」の売り場(区切り2)。いまはMFバトルカードのトップの「マーケットへ」から入ったときだけ渡す(デバッグ専用のあいだ)。
   // { point, starter, shop, busy, onBuyPack(packId,count), onBuyStarter(kit), onExchange(offer) }。initialSection … 最初に開く売り場
   cardShop=null, initialSection=null,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection,setMarketSection]=useState(initialSection);
-  // カードポイントの売り場の、みゅあのひとこと(開いたときに1本選ぶ。台詞は data/assistants.js の MUA_CARD_SHOP_LINES)
+  // MFバトルカードの売り場の、みゅあのひとこと(開いたときに1本選ぶ。台詞は data/assistants.js の MUA_CARD_SHOP_LINES)
   const [cardShopLine]=useState(()=>typeof MUA_CARD_SHOP_LINES!=='undefined'&&MUA_CARD_SHOP_LINES.length?MUA_CARD_SHOP_LINES[Math.floor(Math.random()*MUA_CARD_SHOP_LINES.length)]:{e:'normal',t:''});
   // 開いている購入/交換の確認窓。{ item, balance, stackable, countUnit, grantAmount, grantUnit, confirm(count) }
   const [sheet,setSheet]=useState(null);
@@ -108,7 +108,7 @@ function BreederMarketScreen({
     breeder:{label:'ブリーダーP交換所',emoji:'🪙'},
     exchange:{label:'アイテム交換所',emoji:'🔄'},
     event:{label:'ビートP交換所',emoji:'🎟️'},
-    card:{label:'カードポイント',emoji:'🃏'},
+    card:{label:'MFバトルカード',emoji:'🃏'},
   };
   const balanceOf = (currency) => currency==='psyche' ? psycheHave : currency==='heroProofShard' ? shardHave : currency==='heroProof' ? proofHave
     : currency==='beatPoint' ? safeEventPoints : currency==='cardPoint' ? (cardShop ? cardShop.point : 0) : currency==='breederPoint' ? breederPoints : gold;
@@ -208,7 +208,7 @@ function BreederMarketScreen({
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
             {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
             {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
-            ...(cardShop?[{key:'card',emoji:'🃏',label:'カードポイント',titleLines:['カード','ポイント'],value:compactCount(cardShop.point),hint:'MFバトルカードでためる',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
+            ...(cardShop?[{key:'card',emoji:'🃏',label:'MFバトルカード',titleLines:['MFバトル','カード'],value:`🎟️${compactCount(cardShop.point)}`,hint:'ビートPでパックなど',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
           ].map(section=>(
             <button
               key={section.key}
