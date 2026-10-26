@@ -1304,8 +1304,9 @@ function RhythmMultiLobbyCount() {
   const [count, setCount] = React.useState(null);
   React.useEffect(() => RHYTHM_MULTI.watchLobby('free', (people) => setCount(people)), []);
   return (
-    <small data-rhythm-multi-lobby-count className="block truncate text-[10px] font-black leading-tight text-slate-950/80">
-      {count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません'}
+    // 320幅では札の右の斜めの角に字がかかっていた。「…」で切らず、言葉の切れ目で2行に折る(2026-10-26 ダメダシ)
+    <small data-rhythm-multi-lobby-count className="block pr-2 text-[10px] font-black leading-tight text-slate-950/80" style={JA_WRAP_STYLE}>
+      {jaWrap(count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません')}
     </small>
   );
 }
@@ -1754,8 +1755,9 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle })
       )}
       {!showArt && <ModeSelectAssistToggles assistant={assistant} showArt={showArt} showComment={showComment} onToggle={onToggle} cls="mx-2 mt-2 justify-end" withLabel />}
       {showComment && (
-        <p data-rhythm-mode-assistant-line className={`mhms-bubble ${showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`} style={{ borderColor: assistant.accent }}>
-          <b className="mb-0.5 block text-[10px]" style={{ color: assistant.accent }}>{assistant.name}</b>{assistant.text}
+        <p data-rhythm-mode-assistant-line className={`mhms-bubble ${showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`} style={{ ...JA_WRAP_STYLE, borderColor: assistant.accent }}>
+          {/* 台詞は言葉の切れ目で折る(320幅で「協力ラ／イブ」と折れていた・2026-10-26) */}
+          <b className="mb-0.5 block text-[10px]" style={{ color: assistant.accent }}>{assistant.name}</b>{jaWrap(assistant.text)}
         </p>
       )}
     </div>

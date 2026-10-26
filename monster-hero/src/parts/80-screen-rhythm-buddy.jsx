@@ -848,8 +848,8 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       <ScreenHead title="マスモン一覧(モンヒロビート)" accent="text-lime-300" note="マスモン＝自分で育てた子。マルチに呼ぶと一緒に演奏する" wrapTitle onBack={detail ? () => setDetailId('') : onBack} backLabel={detail ? '一覧へ戻る' : backLabel} />
       <section className="mb-2 shrink-0 rounded-2xl border border-lime-300/30 bg-slate-900/80 p-2.5">
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="text-slate-200" />
-        <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
-          モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。
+        <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
+          {jaWrap('モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。')}
         </p>
       </section>
       {!detail && <div className="mb-2 shrink-0">{listControls.bar}</div>}
