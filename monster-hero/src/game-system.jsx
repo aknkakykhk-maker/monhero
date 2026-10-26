@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 073a0225e664ed4f
+// generated-sha256: 774f8a7202cd1132
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 20:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 21:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52747,7 +52747,8 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
             <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, 30vh, 150px)' }}>
               {who
                 ? <img src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} draggable={false} className="w-full object-contain object-bottom" style={{ aspectRatio: '3 / 4' }}/>
-                : <span className="flex aspect-square w-full items-center justify-center rounded-full bg-slate-900/70 leading-none" style={{ fontSize: 'min(16vw, 15vh, 72px)' }}>{typeof cardIconNode === 'function' ? cardIconNode(foe.icon || '🙂', 72) : '🙂'}</span>}
+                                // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
+                : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>
@@ -54622,7 +54623,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       {pvp && <CardPvpSignal clock={pvpClock}/>}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {pvp ? <span data-card-pvp-foe className="grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]" style={{ borderColor: who.accent }}>{cardIconNode(pvp.icon, 30)}</span>
+        {pvp ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
         <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
@@ -54658,7 +54659,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             style={breederFx.p === CARD_ME ? undefined : { borderColor: who.accent }}>
             {breederFx.p === CARD_ME
               ? (meProfile && meProfile.icon ? cardIconNode(meProfile.icon, 34) : <span className="text-[26px]">🧑</span>)
-              : pvp ? cardIconNode(pvp.icon, 34) : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
+              : pvp ? <CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/> : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
         {action && stageFit < 3 && !turnSummary && (
@@ -55237,11 +55238,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } });
       return { ...got, saved: ok, quick };
     };
-    return <CardPvpLobby meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
+    return <CardPvpLobby meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       // 対戦開始の画面: 相手の名前・アイコン・相手がデッキ編成で付けたデッキ名(古い版の相手は送ってこないので出さない)
       const pv = g.pvp || {};
-      const intro = { mode: 'pvp', foe: { name: pv.name || 'あいて', icon: pv.icon || '🙂', deckName: pv.deckName || null, monsters: vsMons(g.st, CARD_CPU) },
+      const intro = { mode: 'pvp', foe: { name: pv.name || 'あいて', icon: pv.icon || '🙂', frame: pv.frame || null, deckName: pv.deckName || null, monsters: vsMons(g.st, CARD_CPU) },
         me: { name: myName, deckName: (activeDeck && activeDeck.name) || null, monsters: vsMons(g.st, CARD_ME) } };
       setGame({ ...g, settings: save.settings, intro });
       onBgm && onBgm(save.bgm.pvp || null);
@@ -56889,7 +56890,7 @@ const cardPvpCleanMessage = (raw) => {
   const from = raw.from.slice(0, 40);
   if (raw.t === 'hb') {
     const mons = cardPvpCleanCards(raw.mons, 3);
-    return { t: 'hb', from, name: rhythmMultiText(raw.name, CARD_PVP_NAME_MAX), icon: rhythmMultiText(raw.icon, 8), at: Number.isFinite(raw.at) ? raw.at : 0,
+    return { t: 'hb', from, name: rhythmMultiText(raw.name, CARD_PVP_NAME_MAX), icon: rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX), fr: typeof raw.fr === 'string' ? raw.fr.slice(0, 40) : null, at: Number.isFinite(raw.at) ? raw.at : 0,
       mons: mons && mons.length === 3 && !mons.includes(null) ? mons : null, count: cardPvpInt(raw.count, 60),
       seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null,
       bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
@@ -56965,6 +56966,47 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
 const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => ((a * 31) + ch.charCodeAt(0)) >>> 0, 7);
 
 // ---- 部屋と通信(ここから下は画面と通信。区切り1)
+// ---- 相手のアイコン(2026-10-26 社長といちかさんの対戦で「sneguroc」と字が出た) ----
+// アイコンの値は、プロフィールのアイコンの id(モンスターの顔・マーケットのアイコン)・絵の道・絵文字のどれか。
+// 前は送るときに8文字で切っていた(「snegurochka」→「sneguroc」)ので id として読めず、字のまま出ていた。いまは CARD_PVP_ICON_MAX まで送る
+const CARD_PVP_ICON_MAX = 64;
+const cardPvpIconIds = () => {
+  const out = [];
+  try { Object.keys(ALL_PLAYER_MONSTERS).forEach((k) => { if (ALL_PLAYER_MONSTERS[k] && ALL_PLAYER_MONSTERS[k].iconUrl) out.push(k); }); } catch (_) { /* 無い環境 */ }
+  try { BREEDER_MARKET_ITEMS.forEach((m) => { if (m && m.type === 'icon' && typeof m.id === 'string') out.push(m.id); }); } catch (_) { /* 無い環境 */ }
+  return out;
+};
+// 値をアイコンの id にそろえる。古い版が8文字で切って送った値は、先頭が同じ id と見なす(本番の表に残っている値も同じ)
+const cardPvpIconId = (v) => {
+  if (typeof v !== 'string' || !v) return '';
+  if (isImageIconValue(v)) return v;
+  const ids = cardPvpIconIds();
+  if (ids.includes(v)) return v;
+  // 先頭が同じ id がいくつかあるとき(「sneguroc」→ snegurochka_icon・snegurochka_halloween など)は、いちばん短いもの(同じキャラクターのもとの絵)
+  if ([...v].length === 8 && /^[A-Za-z0-9_-]+$/.test(v)) { const hit = ids.filter((k) => k.startsWith(v)).sort((a, b) => a.length - b.length || (a < b ? -1 : 1)); if (hit.length) return hit[0]; }
+  return v;
+};
+// 絵の道(本編の resolveIconUrl と同じ: モンスターの顔 → マーケットのアイコン)。絵にならなければ null
+const cardPvpIconSrc = (v) => {
+  const id = cardPvpIconId(v);
+  if (!id) return null;
+  if (isImageIconValue(id)) return id;
+  try { const m = ALL_PLAYER_MONSTERS[id]; if (m && m.iconUrl) return m.faceIconUrl || m.iconUrl; } catch (_) { /* 無い環境 */ }
+  try { const it = BREEDER_MARKET_ITEMS.find((x) => x.id === id && x.type === 'icon'); if (it) return it.icon; } catch (_) { /* 無い環境 */ }
+  return null;
+};
+// 絵文字のアイコン(英数字だけの値は、読めない id なので絵文字とは見なさない)
+const cardPvpIconEmoji = (v) => (typeof v === 'string' && v && !/^[\x20-\x7e]+$/.test(v) && [...v].length <= 4 ? v : '');
+// 相手(とマルチの自分)のアイコン。プロフィールと同じ部品(ProfileAvatar・フレーム付き)。分からない値は字を出さず、人型のアイコン
+const CardPvpAvatar = ({ icon, frame = null, className = 'h-8 w-8' }) => {
+  const src = cardPvpIconSrc(icon);
+  const emoji = src ? '' : cardPvpIconEmoji(icon);
+  return (
+    <ProfileAvatar src={src || undefined} id={cardPvpIconId(icon) || undefined} frameId={frame || null} fit small className={`${className} shrink-0`}
+      fallback={<span data-card-pvp-avatar-fallback className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-[18px] leading-none">{emoji || '👤'}</span>}/>
+  );
+};
+
 // ---- 強さの点数(表 card_battle_pvp_ratings・関数 card_battle_pvp_report)。表がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない) ----
 let _cardPvpRatingsUnavailable = false;
 const sbCardPvpReport = async ({ match, me, foe, winner, reason, turns, name, icon, frame }) => {
@@ -57157,7 +57199,7 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null });
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
   const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
   const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
@@ -57177,7 +57219,7 @@ const CARD_PVP = (() => {
     const first = (iHost === msg.hostFirst) ? 0 : 1;
     const st = cardPvpNewGame(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeMonsters: s.foe.mons, foeCount: s.foe.count || CARD_BATTLE_DECK_SIZE, first, names: ['あなた', s.foe.name || 'あいて'] });
     closeLobby();
-    set({ phase: 'playing', match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂', deckName: s.foe.dn || null } } });
+    set({ phase: 'playing', match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂', frame: s.foe.fr || null, deckName: s.foe.dn || null } } });
   };
   const deliver = () => {
     // 届いた順にそろえて、つぎの番号のものから当てる(抜けがあれば待つ)
@@ -57211,7 +57253,7 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
-      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, bid: msg.bid, dn: msg.dn || null, seen: now };
+      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, bid: msg.bid, dn: msg.dn || null, seen: now };
       if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
       s = { ...s, foe: { ...(s.foe || {}), ...foe } };
       // ホストが、2人そろったら先攻・後攻のくじを引く
@@ -57305,7 +57347,7 @@ const CARD_PVP = (() => {
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
     s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
-      me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', 8), at: Date.now(), bid: typeof bid === 'string' ? bid : null,
+      me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', CARD_PVP_ICON_MAX), fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null, at: Date.now(), bid: typeof bid === 'string' ? bid : null,
         // 相手の対戦開始の画面に出す、こちらのデッキ名(デッキ編成で付けた名前。試合の中身には入れない)
         dn: rhythmMultiText(typeof deck.name === 'string' ? deck.name : '', 30) || null } };
     emit();
@@ -57375,6 +57417,7 @@ const CARD_PVP = (() => {
     markRewarded: (got) => { if (s && s.result) set({ result: { ...s.result, rewarded: true, got } }); },
     // 強さの点数へ届ける(確かめが済んだ試合だけ・1試合1回)。2人の届けが合ったときだけ、データベースの関数が点数を動かす
     report: async ({ frame = null } = {}) => {
+      if (!frame && s && s.me && s.me.fr) frame = s.me.fr;
       if (!s || !s.result || s.reported === s.match || !s.match || !s.me.bid || !s.foe || !s.foe.bid) return null;
       if (s.result.verify !== 'ok' && s.result.verify !== 'skip') return null;
       s = { ...s, reported: s.match };
@@ -57426,7 +57469,7 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
 // onAssistant … 「助手と対戦へ」(だれとでもで、だれも来なかったとき)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
-const CardPvpLobby = ({ meIcon = null, deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false }) => {
+const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
@@ -57520,7 +57563,7 @@ const CardPvpLobby = ({ meIcon = null, deck, deckIssues = [], onStart, onBack, o
   useEffect(() => {
     let alive = true;
     Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)])
-      .then(([name, icon]) => { if (alive) { setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' }); setProfileReady(true); } }).catch(() => { if (alive) setProfileReady(true); });
+      .then(([name, icon]) => { if (alive) { setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂', frame: typeof meFrame === 'string' && meFrame ? meFrame : null }); setProfileReady(true); } }).catch(() => { if (alive) setProfileReady(true); });
     return () => { alive = false; };
   }, []);
   // 始まったら対戦の画面へ(1回だけ)
@@ -57555,7 +57598,7 @@ const CardPvpLobby = ({ meIcon = null, deck, deckIssues = [], onStart, onBack, o
             </div>
           )}
           {/* 自分と相手のアイコン(2026-10-26 社長: 結果の画面にも自分のアイコンを。助手と対戦の結果と同じ1行) */}
-          <CardResultVsRow meIcon={meIcon} meName={profile.name} foeNode={<span className="grid h-8 w-8 place-items-center rounded-full border-2 border-sky-300/70 bg-black text-[18px]">{room.foe && room.foe.icon ? cardIconNode(room.foe.icon, 22) : '🙂'}</span>}
+          <CardResultVsRow meIcon={meIcon} meName={profile.name} foeNode={<CardPvpAvatar icon={room.foe && room.foe.icon} frame={room.foe && room.foe.fr}/>}
             foeName={foeName} outcome={win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'}/>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[14px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(`${foeName}さんとのマルチ対戦`)}</div>
@@ -57802,7 +57845,8 @@ const CardPvpRankingList = ({ renderBreederIcon = null, selfId = '' }) => {
       {state.entries.map((e, i) => (
         <li key={e.breederId} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${e.breederId === selfId ? 'bg-amber-500/15' : 'bg-black/25'}`}>
           <b className="w-7 text-right text-[13px] font-black text-amber-200">{i + 1}</b>
-          {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true">{cardIconNode(e.icon || '🙂', 22)}</span>}
+          {/* アイコンは id にそろえてから渡す(古い版は8文字で切って送っていた。絵文字・分からない値は人型) */}
+          {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: cardPvpIconId(e.icon), profileFrame: e.profileFrame, breederId: e.breederId }) : <CardPvpAvatar icon={e.icon} frame={e.profileFrame}/>}
           <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{e.userName || 'ブリーダー'}</span>
           <span className="text-[11px] font-bold text-slate-300">{e.wins}勝{e.loses}敗</span>
           <b className="w-12 text-right text-[15px] font-black text-sky-200">{e.rating}</b>
