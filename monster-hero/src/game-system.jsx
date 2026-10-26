@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e878841a4e7686e0
+// generated-sha256: 3355d354efd17d8a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 01:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 01:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24501,6 +24501,82 @@ const DebugMenuRow = ({ icon = '', label, desc = '', tone = 'go', onClick, ...re
   </button>
 );
 
+// デバッグメニューのまとまり(2026-10-27 社長「デバッグモードがまたごちゃついてきてるから、使いやすく見やすく整備して」)。
+// 見出しを押すと開く。開いているまとまりは、この端末だけに覚える(デバッグ専用の新しいキー。ほかの保存には触らない)。
+//   id   … 覚えるときの名前(data-debug-group にも出す)
+//   open … true ならいつも開いた状態で始める(「よく使う」用)
+const DEBUG_MENU_OPEN_KEY = 'mh_debug_menu_open_v1';
+const debugMenuOpenRead = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_MENU_OPEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };
+const debugMenuOpenWrite = (id, open) => {
+  try { const set = new Set(debugMenuOpenRead()); if (open) set.add(id); else set.delete(id); localStorage.setItem(DEBUG_MENU_OPEN_KEY, JSON.stringify([...set].slice(-40))); } catch (e) {}
+};
+// 絞り込んでいるあいだに開け閉めしたものは覚えない(toggle の知らせはあとから届くので、印は絞り込みの間ずっと立てておく)
+let debugMenuFiltering = false;
+const DebugMenuGroup = ({ id, icon = '', title, desc = '', open = false, tone = 'slate', children }) => {
+  const [startOpen] = useState(() => open || debugMenuOpenRead().includes(id));
+  const toneClass = tone === 'pin' ? 'border-amber-400/60 bg-amber-950/25' : tone === 'trial' ? 'border-lime-400/50 bg-lime-950/20' : 'border-white/10 bg-slate-900/70';
+  return (
+    <details data-debug-group={id} open={startOpen} onToggle={(e) => { if (!open && !debugMenuFiltering) debugMenuOpenWrite(id, e.currentTarget.open); }}
+      className={`rounded-2xl border ${toneClass}`}>
+      <summary className="flex min-h-[52px] cursor-pointer select-none items-center gap-2 px-3 py-2">
+        {icon && <span className="shrink-0 text-[16px]" aria-hidden="true">{icon}</span>}
+        <span className="min-w-0 flex-1">
+          <b className="block text-[13px] font-black leading-tight text-white">{title}</b>
+          {desc && <small className="mt-0.5 block text-[9px] font-bold leading-snug text-slate-400">{desc}</small>}
+        </span>
+      </summary>
+      <div className="space-y-2 px-3 pb-3">{children}</div>
+    </details>
+  );
+};
+
+// 名前で絞り込む欄。打った字を含む項目だけを残し、当たったまとまりは開く。消すと元の開き方へ戻す。
+// 項目はまとまりの中のボタン(と試作の札)。画面の作りには触らず、表示するかどうかだけを切り替える
+const debugMenuApplyFilter = (root, query) => {
+  if (!root) return 0;
+  const q = String(query || '').trim().toLowerCase();
+  const remembered = debugMenuOpenRead();
+  debugMenuFiltering = !!q;
+  let hits = 0;
+  root.querySelectorAll('[data-debug-group]').forEach((group) => {
+    const items = [...group.querySelectorAll(':scope > div button, :scope > div [data-debug-trial]')]
+      .filter((el) => !el.closest('[data-debug-trial]') || el.matches('[data-debug-trial]'));
+    let groupHits = 0;
+    items.forEach((el) => {
+      const ok = !q || (el.innerText || el.textContent || '').toLowerCase().includes(q);
+      el.hidden = !ok;
+      if (ok) groupHits += 1;
+    });
+    // 中のたたみ(チュートリアルと旧画面など)も、当たりがあれば開く
+    group.querySelectorAll(':scope > div details').forEach((d) => {
+      const any = [...d.querySelectorAll('button')].some((b) => !b.hidden);
+      d.hidden = !!q && !any;
+      if (q && any) d.open = true;
+    });
+    group.hidden = !!q && groupHits === 0;
+    if (q) group.open = groupHits > 0;
+    else group.open = group.dataset.debugGroup === 'pinned' || remembered.includes(group.dataset.debugGroup);
+    hits += groupHits;
+  });
+  return hits;
+};
+const DebugMenuSearch = ({ rootRef }) => {
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState(null);
+  useEffect(() => { const n = debugMenuApplyFilter(rootRef.current, query); setHits(query.trim() ? n : null); }, [query]);
+  return (
+    <div className="mb-2 shrink-0">
+      <label className="flex min-h-[44px] items-center gap-2 rounded-2xl border border-white/15 bg-slate-900 px-3">
+        <span aria-hidden="true" className="text-[14px]">🔎</span>
+        <input data-debug-menu-search type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="名前で探す(例: 染色・ジャック・未読)"
+          className="min-w-0 flex-1 bg-transparent text-[13px] font-bold text-white outline-none placeholder:text-slate-500"/>
+        {query && <button type="button" data-debug-menu-search-clear onClick={() => setQuery('')} className="shrink-0 rounded-full bg-slate-700 px-2 py-1 text-[10px] font-black text-slate-100">消す</button>}
+      </label>
+      {hits !== null && <p data-debug-menu-search-hits className="mt-1 text-[10px] font-bold text-slate-400">{hits ? `${hits}件 見つかりました` : '見つかりませんでした'}</p>}
+    </div>
+  );
+};
+
 // ---- part: 32-tactics-units.jsx ----
 // ==== 新モード(id: tactics)の「1体ぶん」の値と盤面 ====
 //
@@ -33563,7 +33639,8 @@ function BreederMarketScreen({
         icon={marketSection?<span aria-hidden="true">{sectionMeta[marketSection].emoji}</span>:<ShoppingBag size={20}/>}/>
       <div className="shrink-0 w-full max-w-md mx-auto mb-2">{marketSection==='card'
         ? <AssistantBubble key="card-shop" assistantId="mua" line={cardShopLine.t} expression={cardShopLine.e} compact/>
-        : <AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/>}</div>
+        // 売り場ごとにひとことを変える(ダイヤが足りない話は、入口とダイヤショップだけ。2026-10-26)。key で売り場を替えたときに選び直す
+        : <AssistantBubble key={`market-${marketSection||'top'}`} scene="market" compact condition={({breeder:'shopBreeder',exchange:'shopExchange',event:'shopEvent'})[marketSection]||(Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null)}/>}</div>
 
       {!marketSection&&<div data-market-top className={`relative ${SCREEN_LIST_CLASS}`}>
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>
@@ -38599,8 +38676,9 @@ function PickSlotScreen({
       {/* 供モンの合流では、強化フェーズのどこにいるかを出す(ラン開始時の配置では出さない) */}
       {phasePlan&&<PhaseSteps plan={phasePlan} current="slot" nextWave={wave>0?wave+1:null} className="shrink-0 mb-2"/>}
       <div className="shrink-0 flex flex-col items-center">
-        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ) */}
-        <div className="relative mb-2 flex items-center justify-center">
+        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ)。
+            はずむ動き(animate-bounce)は絵の高さの1/4ほど上へ跳ぶので、そのぶん上に余白を置く(.mh-phase-bounce-room。絵が小さくなる背の低い画面では余白も小さく。70-bootstrap.jsx)(はずんだときに頭が画面の上で切れていた。2026-10-26 カゲあつくんの見回り) */}
+        <div data-pick-hero className="mh-phase-bounce-room relative mb-2 flex items-center justify-center">
           <span aria-hidden="true" className="mh-ph-rune"/>
           <span aria-hidden="true" className="mh-ph-floor"/>
           {mon?.imgUrl?(<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="mon" masuColors={mon.colors} className="mh-phase-hero relative z-10 shrink-0 w-24 h-24 object-contain animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"/>):(<div className="mh-phase-hero relative z-10 text-6xl animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]">{mon?.emoji}</div>)}
@@ -54947,9 +55025,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {/* 案A: 番が替わったときの帯は、盤全体の真ん中へ移した(下の data-card-turn-banner。2026-10-26 ソラシドさん) */}
         {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。指の操作は下へ通す。
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
+            番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && (
-          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`${bigCard ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`${bigCard || turnBanner ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
             {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
               : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>}
@@ -58444,7 +58523,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'}</p>
             {/* 自分は数えない(「1人」が自分のことか分からない。カゲあつくん) */}
             <p data-card-pvp-waiting={Math.max(0, room.lobbyCount - 1)} className="mt-1 text-[13px] font-bold text-sky-100">{room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'}</p>
-            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000))}秒</p>}
+            {/* now は1秒ごとの時計なので、さがし始めた直後は seekAt より古い(経過が負になり「あと91秒」と出ていた。2026-10-27) */}
+            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000))}秒</p>}
             {!room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && (
               <div data-card-pvp-nobody className="mt-3 space-y-2">
                 <p className="text-[13px] font-bold text-amber-100">いまは、だれも来ませんでした</p>
@@ -58671,15 +58751,16 @@ const debugTrialsOrdered = (seen) => DEBUG_TRIALS.map((t, i) => ({ t, i, fresh: 
   .sort((a, b) => (Number(b.fresh) - Number(a.fresh)) || String(b.t.added).localeCompare(String(a.t.added)) || (a.i - b.i)).map((x) => ({ ...x.t, fresh: x.fresh }));
 
 // onChange … 入/切を押したあとに呼ぶ(本体の画面が同じキーを覚えている state を読み直すため)
-function DebugTrialsPanel({ onChange }) {
+// bare … デバッグメニューのまとまり(DebugMenuGroup)の中に置くとき。見出しと枠はまとまりの側が持つので出さない
+function DebugTrialsPanel({ onChange, bare = false }) {
   const [, setTick] = useState(0);
   const seen = debugTrialsSeen();
   const list = debugTrialsOrdered(seen);
   if (!list.length) return null;
   const toggle = (trial, on) => { debugTrialWrite(trial, on); debugTrialsMarkSeen(trial.id); setTick((n) => n + 1); try { if (onChange) onChange(trial, on); } catch (e) {} };
   return (
-    <section data-debug-trials className="rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3">
-      <h3 className="text-[12px] font-black text-lime-200">🧪 確認待ちの試作<small className="ml-1 text-[9px] font-bold text-lime-100/70">({list.length})</small></h3>
+    <section data-debug-trials className={bare ? '' : 'rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3'}>
+      {!bare && <h3 className="text-[12px] font-black text-lime-200">🧪 確認待ちの試作<small className="ml-1 text-[9px] font-bold text-lime-100/70">({list.length})</small></h3>}
       <p className="mt-0.5 text-[9px] font-bold leading-relaxed text-lime-100/75">iPhone で確かめてほしい試作です。「入」にして遊び、気になる所があれば「切」で元に戻せます。新しいものほど上に出ます。</p>
       <div className="mt-2 space-y-2">
         {list.map((trial) => {
@@ -58741,6 +58822,7 @@ function MonsterHeroGame() {
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
   const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
+  const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -78167,59 +78249,61 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">DEBUG MENU</h2></div>
-            <p className="mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。見出しを押すと開きます。</p>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-2">
-              {/* 確認待ちの試作(81-debug-trials.jsx の DEBUG_TRIALS)。いちばん上に出す。同じキーを覚えている本体の state も読み直す */}
-              <DebugTrialsPanel onChange={(trial)=>{if(/^rhythm_floor3d/.test(trial.id))setRhythmFloor3dPref(rhythmFloor3dPreference());}}/>
-
-              {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
-                  本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
-              <button data-debug-assistant-chat onClick={()=>setAssistantChatOpen(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">💬 助手とおしゃべり(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います</small></button>
-
-              {/* ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。公開の印 assistantDailyLines が立つまでの試し口。
-                  押すと、日付に関係なく今の助手のぶんを作り直し、この起動のあいだだけ今のセリフにまぜて出す。
-                  本物の中継役へ送るので、1回ごとに回数を使う(1人1日3回まで)。デバッグ専用なので更新履歴・ヘルプには載せない */}
-              <button data-debug-assistant-daily-lines onClick={async()=>{if(typeof assistantDailyLinesDebugOn!=='undefined')assistantDailyLinesDebugOn=true;setAssistantDailyLinesDebugMsg('作っています…');const r=await requestAssistantDailyLines(true);const st=typeof assistantDailyLinesState!=='undefined'?assistantDailyLinesState:null;const n=st?Object.values(st.lines).reduce((s,l)=>s+l.length,0):0;setAssistantDailyLinesDebugMsg(r==='ok'?`${n}個できました。HOMEなどの吹き出しに3回に1回くらいまざります`:'作れませんでした(今までどおりのセリフだけが出ます)');}} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🗨️ ふだんの吹き出しを作る(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">{assistantDailyLinesDebugMsg||'今の助手のひとことを今日のぶんまとめて作り、この起動のあいだ今のセリフにまぜて出します'}</small></button>
-
-              {/* ---------- ① モンスター ---------- */}
-              <details className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200">🧬 モンスター<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">新モンスター確認・画像と染色・転生／限界突破／超越の見た目・アイコン調整</small></summary>
-                <div className="space-y-2 border-t border-emerald-500/30 p-3">
+            <p className="mb-2 shrink-0 text-[9px] leading-relaxed text-slate-500">用途ごとに畳んであります。よく使うものはいちばん上、名前でも探せます。開いた見出しはこの端末に覚えます。</p>
+            {/* 名前で絞り込む欄(2026-10-27)。打った字を含む項目だけ残す。中の道具の動きには触らない */}
+            <DebugMenuSearch rootRef={debugMenuRootRef}/>
+            <div ref={debugMenuRootRef} className="flex-1 overflow-y-auto mh-scroll space-y-2">
+              {/* デバッグメニューの並び(2026-10-27 社長「デバッグモードがまたごちゃついてきてるから、使いやすく見やすく整備して」)。
+                  よく使うものを上に出し、あとは目的別のまとまりへ。並べ方と見出しだけを変え、どのボタンの動きも変えていない。
+                  棚卸しの表: docs/progress/debug-cleanup/README.md */}
+              <DebugMenuGroup id="pinned" title="⭐ よく使う" desc="新モンスター確認・染色マスク・MFバトルカード・ビート・データの用意・デバッグ戦" open tone="pin">
                   {/* 新モンスターを足したとき、確認すべきものが1枚で全部見られる画面。
                       所持・解放・debugOnly を問わず全種を並べるので、実装したあとも消えない */}
                   <button data-debug-monster-check onClick={()=>setGameState('MONSTER_CHECK_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🆕 新モンスター確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全種を所持に関係なく表示。画像・染色・モーション・能力・技・血統・マーケットと実装チェック</small></button>
                   <button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🖌️ 染色マスク編集<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全ベースモンを選択して直接描画・PNG出力</small></button>
-                  <button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎨 マスモン模様カスタムテスト<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">模様は保存されません</small></button>
-                  {/* 転生・限界突破★・超越の見た目は1画面のタブへまとめた(2026-09-17)。入口もここ1つだけにする */}
-                  <button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setMasuLookTab('reincarnate');setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⭐ 育成マークの見た目<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">転生のオーラ・限界突破の★・超越マークを1画面で見比べる／超越を試す準備もここ</small></button>
-                  <button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🙂 プロフィールの見た目<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">顔アイコンの拡大・位置を決めてコピー／フレームとの相性もここで見る</small></button>
-                </div>
-              </details>
-
-              {/* ---------- ② バトル ---------- */}
-              <details className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">⚔️ バトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">モード選択・デバッグ戦・種族チャレンジ・ダンジョンRPG・チュートリアル</small></summary>
-                <div className="space-y-2 border-t border-fuchsia-500/30 p-3">
-                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
-                  {/* 全モンスター・全アシストカードを選べる状態で、ふつうの入口(仕組みえらび)から遊ぶ。解放は保存せず、記録・ランキング・報酬は止める。
-                      ボット(タクティクスくん)のバランス確認と、人が同じ条件を試すための入口(2026-10-09 ユーザー指示) */}
-                  <button data-debug-unlock-all-battle onClick={()=>{debugUnlockAllRef.current=true;debugBattleRef.current=true;debugMonsterPreviewRef.current=false;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🔓 すべて解放してバトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全モンスター・全アシストカード・全難易度を選べます・解放は保存されず、記録・ランキング・報酬もつきません</small></button>
-                  {/* バトルの性能計測(2026-09-28)。ONにするとタクティクス新画面の左上に、コマの速さ・遅いコマの割合・
-                      長い処理・動き続けているアニメーションの数・自動で軽さを下げた記録を出す。OFFのあいだは数えない。
-                      プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-                  {/* 行動カードの絵(2026-10-15)。公開前に、社長が今のカードと見比べるための切り替え。この端末だけに効く。
-                      公開の印(RELEASE_FLAGS.battleCardArt)が真になったら、切り替えに関係なく出る。更新履歴・ヘルプには公開のときに書く */}
-                  <button type="button" data-battle-card-art-toggle aria-pressed={battleCardArtDebug} onClick={()=>setBattleCardArtDebug(BATTLE_CARD_ART_DEBUG.set(!battleCardArtDebug))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battleCardArtDebug?'border-2 border-fuchsia-300 bg-fuchsia-500 text-slate-900':'border-2 border-fuchsia-400/40 bg-fuchsia-950/30 text-fuchsia-100'}`}>🃏 行動カードの絵(試作): {battleCardArtDebug?'新しい絵':'今のカード'}<span className="block text-[10px] font-bold opacity-80">押すと切り替わります。タクティクスの手札に出ます(この端末だけ)</span></button>
-                  <button type="button" data-battle-perf-toggle aria-pressed={battlePerfOn} onClick={()=>setBattlePerfOn(BATTLE_PERF.setEnabled(!battlePerfOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battlePerfOn?'border-2 border-amber-300 bg-amber-500 text-slate-900':'border-2 border-amber-400/40 bg-amber-950/30 text-amber-100'}`}>📈 バトルの性能計測：{battlePerfOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">タクティクス新画面の左上に、コマの速さ・かくつき・自動で軽くした記録を出します（次のバトルから）</small></button>
+                  {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
+                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
+                  <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>
+                  {/* 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を用意する。
+                      セーブデータを書き換えるので赤にしてある */}
+                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す</small></button>
                   {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
                       **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
                   <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
-                  {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
-                  <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
-                  {/* MFバトルカード(公開の区切りまでは、入口はここだけ。デバッグ専用なので更新履歴・ヘルプには載せない) */}
-                  <DebugMenuRow data-debug-card-battle icon="🃏" label="MFバトルカード" desc="助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます" tone="save" onClick={()=>{setCardOrigin('debug');setGameState('CARD_TOP');}}/>
+              </DebugMenuGroup>
+
+              <DebugMenuGroup id="monster-look" title="🧬 モンスターの見た目" desc="育成マーク(転生・限界突破・超越)・模様・プロフィールの顔アイコン">
+                  {/* 転生・限界突破★・超越の見た目は1画面のタブへまとめた(2026-09-17)。入口もここ1つだけにする */}
+                  <button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setMasuLookTab('reincarnate');setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⭐ 育成マークの見た目<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">転生のオーラ・限界突破の★・超越マークを1画面で見比べる／超越を試す準備もここ</small></button>
+                  <button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎨 マスモン模様カスタムテスト<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">模様は保存されません</small></button>
+                  <button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🙂 プロフィールの見た目<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">顔アイコンの拡大・位置を決めてコピー／フレームとの相性もここで見る</small></button>
+              </DebugMenuGroup>
+
+              <DebugMenuGroup id="rhythm" title="🎵 モンヒロビート・お話" desc="体験版・全ストーリー・イベントの会話と告知の再生">
+                  <button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎼 モンヒロビート 体験版（正式導線）<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button>
+                  {/* 全ストーリーの確認(2026-10-04)。公開フラグ・見たかどうかに関係なく、すべてのイベント回想を開ける。見たことにはしない */}
+                  <button data-debug-story-list onClick={()=>setShowDebugStoryList(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">📖 全ストーリーを確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-fuchsia-200/80">公開前・未閲覧のものも含め、すべてのイベント回想を日付順に開けます(見たことにはしません)</small></button>
+                  {/* モンヒロビートのイベント(週末ゲリラ杯)の確認。開催の時刻を待たずに見られる。
+                      どれも「見た」にしないので、本番のときにちゃんと出る。
+                      デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
+                    <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベント会話だけ再生</button>
+                    <button data-debug-rhythm-event-thanks onClick={debugPlayRhythmEventThanks} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">閉幕とお礼の会話を再生</button>
+                    <button data-debug-rhythm-event-thanks-symphony onClick={debugPlayRhythmEventThanksSymphony} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">閉幕とお礼(第2回)を再生</button>
+                    <button data-debug-rhythm-event-notice onClick={debugPlayRhythmEventNotice} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベント告知だけ再生</button>
+                    <button data-debug-rhythm-event-reward onClick={debugPlayRhythmEventReward} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">入賞の受け取り画面を見る</button>
+                    <button data-debug-rhythm-event-reset onClick={debugResetRhythmEventSeen} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベントを未読へ戻す</button>
+                  </div>
+              </DebugMenuGroup>
+
+              <DebugMenuGroup id="battle" title="⚔️ バトル" desc="モードえらび・すべて解放・種族チャレンジ・RPGの試作・チュートリアルと旧画面">
+                  <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+                  {/* 全モンスター・全アシストカードを選べる状態で、ふつうの入口(仕組みえらび)から遊ぶ。解放は保存せず、記録・ランキング・報酬は止める。
+                      ボット(タクティクスくん)のバランス確認と、人が同じ条件を試すための入口(2026-10-09 ユーザー指示) */}
+                  <button data-debug-unlock-all-battle onClick={()=>{debugUnlockAllRef.current=true;debugBattleRef.current=true;debugMonsterPreviewRef.current=false;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🔓 すべて解放してバトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">全モンスター・全アシストカード・全難易度を選べます・解放は保存されず、記録・ランキング・報酬もつきません</small></button>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -78239,36 +78323,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','tactics')} className="min-h-[50px] rounded-xl border border-orange-400/50 bg-orange-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95">タクティクスのれんしゅうを見る（公開前・記録は残りません）</button>
                     </div>
                   </details>
-                </div>
-              </details>
+              </DebugMenuGroup>
 
-              {/* ---------- ③ モンヒロビート ---------- */}
-              <details className="rounded-2xl border border-indigo-400/40 bg-indigo-950/30">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200">🎵 モンヒロビート<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">音ゲーデバッグ・体験版の導線・イベントの会話と告知</small></summary>
-                <div className="space-y-2 border-t border-indigo-400/30 p-3">
-                  <button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎵 モンヒロビート デバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">曲・難易度・設定・BEST保存基盤を確認</small></button>
-                  <button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎼 モンヒロビート 体験版（正式導線）<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button>
-                  {/* モンヒロビートのイベント(週末ゲリラ杯)の確認。開催の時刻を待たずに見られる。
-                      どれも「見た」にしないので、本番のときにちゃんと出る。
-                      デバッグ専用なので更新履歴・ヘルプには載せない(CLAUDE.md ⑤の但し書き) */}
-                  {/* 全ストーリーの確認(2026-10-04)。公開フラグ・見たかどうかに関係なく、すべてのイベント回想を開ける。見たことにはしない */}
-                  <button data-debug-story-list onClick={()=>setShowDebugStoryList(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">📖 全ストーリーを確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-fuchsia-200/80">公開前・未閲覧のものも含め、すべてのイベント回想を日付順に開けます(見たことにはしません)</small></button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button data-debug-rhythm-event-intro onClick={debugPlayRhythmEventIntro} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">🏆 イベント開催を再生（会話→告知）</button>
-                    <button data-debug-rhythm-event-story onClick={debugPlayRhythmEventStory} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベント会話だけ再生</button>
-                    <button data-debug-rhythm-event-thanks onClick={debugPlayRhythmEventThanks} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">閉幕とお礼の会話を再生</button>
-                    <button data-debug-rhythm-event-thanks-symphony onClick={debugPlayRhythmEventThanksSymphony} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">閉幕とお礼(第2回)を再生</button>
-                    <button data-debug-rhythm-event-notice onClick={debugPlayRhythmEventNotice} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベント告知だけ再生</button>
-                    <button data-debug-rhythm-event-reward onClick={debugPlayRhythmEventReward} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">入賞の受け取り画面を見る</button>
-                    <button data-debug-rhythm-event-reset onClick={debugResetRhythmEventSeen} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">イベントを未読へ戻す</button>
-                  </div>
-                </div>
-              </details>
-
-              {/* ---------- ④ 助手・案内 ---------- */}
-              <details className="rounded-2xl border border-pink-500/50 bg-pink-950/25">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-pink-200">💖 みゅあデバッグ<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">初回プレイの再生・セリフと表情・親密度・アップデート通知・ワンポイント案内</small></summary>
-                <div className="space-y-2 border-t border-pink-500/30 p-3">
+              <DebugMenuGroup id="assistant" title="💬 助手" desc="おしゃべり・吹き出し・初回プレイ・セリフと表情・仲良し度・お知らせ・ワンポイント">
+                  {/* 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでの試し口。
+                      本物の中継役へ送るので、1回ごとに社長のAPIクレジットと回数を使う。デバッグ専用なので更新履歴・ヘルプには載せない */}
+                  <button data-debug-assistant-chat onClick={()=>setAssistantChatOpen(true)} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">💬 助手とおしゃべり(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います</small></button>
+                  {/* ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。公開の印 assistantDailyLines が立つまでの試し口。
+                      押すと、日付に関係なく今の助手のぶんを作り直し、この起動のあいだだけ今のセリフにまぜて出す。
+                      本物の中継役へ送るので、1回ごとに回数を使う(1人1日3回まで)。デバッグ専用なので更新履歴・ヘルプには載せない */}
+                  <button data-debug-assistant-daily-lines onClick={async()=>{if(typeof assistantDailyLinesDebugOn!=='undefined')assistantDailyLinesDebugOn=true;setAssistantDailyLinesDebugMsg('作っています…');const r=await requestAssistantDailyLines(true);const st=typeof assistantDailyLinesState!=='undefined'?assistantDailyLinesState:null;const n=st?Object.values(st.lines).reduce((s,l)=>s+l.length,0):0;setAssistantDailyLinesDebugMsg(r==='ok'?`${n}個できました。HOMEなどの吹き出しに3回に1回くらいまざります`:'作れませんでした(今までどおりのセリフだけが出ます)');}} className="w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🗨️ ふだんの吹き出しを作る(試す)<small className="mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80">{assistantDailyLinesDebugMsg||'今の助手のひとことを今日のぶんまとめて作り、この起動のあいだ今のセリフにまぜて出します'}</small></button>
                   {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
                   <div className="grid grid-cols-2 gap-2">
                     {/* 初回導線の通し確認。助手選択から村の案内まで、本番と同じ画面・同じ台本を順に出す。
@@ -78292,26 +78356,38 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
                       セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
                   <button onClick={async()=>{ if(!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return; try{ await storeSet(TUTORIAL_SEEN_KEY,false,false); }catch{} tutorialShownRef.current=false; window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。'); }} className="min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">初回状態へ戻す（セーブは消えません）</button>
-                </div>
-              </details>
+              </DebugMenuGroup>
 
-              {/* ---------- ⑤ その他 ---------- */}
-              <details className="rounded-2xl border border-slate-500/40 bg-slate-900/50">
-                <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200">🛠 その他<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">修行テスト・画面エラーの受け止め</small></summary>
-                <div className="space-y-2 border-t border-slate-500/30 p-3">
-                  {/* 条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)を用意する。
-                      セーブデータを書き換えるので赤にしてある */}
-                  <button data-debug-data-setup onClick={()=>setGameState('DEBUG_DATA_SETUP')} className="w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧰 データを用意する<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す</small></button>
+              <DebugMenuGroup id="save" title="💾 保存データ・端末" desc="修行テスト・事前ダウンロード(OFFにすると端末の曲と絵を消す)">
                   <button onClick={openDebugTraining} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🎲 修行テスト<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">報酬・進行は保存されません</small></button>
-                  {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
-                  <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>
-                  {debugThrowScreenError&&<DebugThrowScreenError/>}
                   {/* 事前ダウンロード(2026-10-11)。ONにすると Service Worker を登録し、設定に「ダウンロード」が出る。
                       OFFにすると Service Worker を外し、端末にためた曲・画像を消す(セーブデータ・ランキングには触れない)。
                       既定は ON(2026-10-11 公開)。この切り替えボタン自体はデバッグ専用 */}
                   <button type="button" data-asset-cache-toggle aria-pressed={assetCacheOn} onClick={async()=>setAssetCacheOn(await ASSET_CACHE.setEnabled(!assetCacheOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${assetCacheOn?'border-2 border-emerald-300 bg-emerald-500 text-slate-900':'border-2 border-emerald-400/40 bg-emerald-950/30 text-emerald-100'}`}>📥 事前ダウンロード：{assetCacheOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します</small></button>
-                </div>
-              </details>
+              </DebugMenuGroup>
+
+              <DebugMenuGroup id="online" title="🌐 イベント・通信" desc="ジャック(レイド)の定義・期間・端末とサーバーの記録">
+                  {/* イベント・レイドボス「ジャック」の確認(デバッグ専用。更新履歴・ヘルプには載せない)。実装した段階ごとに、この画面へ確認の入口を足す */}
+                  <DebugMenuRow data-debug-raid-jack icon="🎃" label="ジャック確認" desc="定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります" tone="save" onClick={()=>setGameState('RAID_JACK_DEBUG')}/>
+              </DebugMenuGroup>
+
+              <DebugMenuGroup id="view" title="📐 表示の確認" desc="バトルの性能計測・行動カードの絵(試作)・画面エラーの受け止め">
+                  {/* バトルの性能計測(2026-09-28)。ONにするとタクティクス新画面の左上に、コマの速さ・遅いコマの割合・
+                      長い処理・動き続けているアニメーションの数・自動で軽さを下げた記録を出す。OFFのあいだは数えない。
+                      プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
+                  <button type="button" data-battle-perf-toggle aria-pressed={battlePerfOn} onClick={()=>setBattlePerfOn(BATTLE_PERF.setEnabled(!battlePerfOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battlePerfOn?'border-2 border-amber-300 bg-amber-500 text-slate-900':'border-2 border-amber-400/40 bg-amber-950/30 text-amber-100'}`}>📈 バトルの性能計測：{battlePerfOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">タクティクス新画面の左上に、コマの速さ・かくつき・自動で軽くした記録を出します（次のバトルから）</small></button>
+                  {/* 行動カードの絵(2026-10-15)。公開前に、社長が今のカードと見比べるための切り替え。この端末だけに効く。
+                      公開の印(RELEASE_FLAGS.battleCardArt)が真になったら、切り替えに関係なく出る。更新履歴・ヘルプには公開のときに書く */}
+                  <button type="button" data-battle-card-art-toggle aria-pressed={battleCardArtDebug} onClick={()=>setBattleCardArtDebug(BATTLE_CARD_ART_DEBUG.set(!battleCardArtDebug))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battleCardArtDebug?'border-2 border-fuchsia-300 bg-fuchsia-500 text-slate-900':'border-2 border-fuchsia-400/40 bg-fuchsia-950/30 text-fuchsia-100'}`}>🃏 行動カードの絵(試作): {battleCardArtDebug?'新しい絵':'今のカード'}<span className="block text-[10px] font-bold opacity-80">押すと切り替わります。タクティクスの手札に出ます(この端末だけ)</span></button>
+                  {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
+                  <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95">⚠️ 画面エラーの受け止めを試す</button>
+                  {debugThrowScreenError&&<DebugThrowScreenError/>}
+              </DebugMenuGroup>
+
+              <DebugMenuGroup id="trials" title="🧪 確認待ちの試作" desc="iPhone で確かめてほしい試作の入/切" tone="trial">
+                  {/* 確認待ちの試作(81-debug-trials.jsx の DEBUG_TRIALS)。いちばん上に出す。同じキーを覚えている本体の state も読み直す */}
+                  <DebugTrialsPanel bare onChange={(trial)=>{if(/^rhythm_floor3d/.test(trial.id))setRhythmFloor3dPref(rhythmFloor3dPreference());}}/>
+              </DebugMenuGroup>
 
             </div>
           </div>
@@ -85998,16 +86074,20 @@ const createAnimationStyle = () => {
     .mh-phase { container-type: size; }
     /* .mh-phase-card は min-h-[112px] と一緒に付ける。背の低い器ではその下限だけを外す */
     .mh-phase-gain { font-size: clamp(20px, 7vw, 30px); }
+    /* 配置の画面ではずむ絵の上の余白(絵の高さ96pxの1/4。背の低い器では絵といっしょに小さく。67-screen-pick.jsx) */
+    .mh-phase-bounce-room { padding-top: 24px; }
     /* .mh-phase-mid … SE(667px)くらいから畳むもの(補足の説明文)。絵も一回り小さくする */
     @container (max-height: 720px) {
       .mh-phase-mid { display: none !important; }
       .mh-phase-hero { width: 64px !important; height: 64px !important; margin-bottom: 4px !important; font-size: 44px; }
+      .mh-phase-bounce-room { padding-top: 16px; }
     }
     @container (max-height: 560px) {
       .mh-phase-tall { display: none !important; }
       .mh-phase-card { min-height: 0 !important; }
       .mh-phase-gain { font-size: 18px; }
       .mh-phase-hero { width: 44px !important; height: 44px !important; font-size: 32px; }
+      .mh-phase-bounce-room { padding-top: 11px; }
       /* トレーニングの4枚は横1列に並べ替える(2列2行だと1枚の高さが60px台になり名前しか見えなかった) */
       .mh-phase-cards { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; grid-template-rows: minmax(0, 1fr) !important; }
       .mh-phase-card-icon, .mh-phase-stat-label, .mh-phase-bar { display: none !important; }

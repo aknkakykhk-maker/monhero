@@ -55,3 +55,79 @@ const DebugMenuRow = ({ icon = '', label, desc = '', tone = 'go', onClick, ...re
     {desc && <small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">{desc}</small>}
   </button>
 );
+
+// デバッグメニューのまとまり(2026-10-27 社長「デバッグモードがまたごちゃついてきてるから、使いやすく見やすく整備して」)。
+// 見出しを押すと開く。開いているまとまりは、この端末だけに覚える(デバッグ専用の新しいキー。ほかの保存には触らない)。
+//   id   … 覚えるときの名前(data-debug-group にも出す)
+//   open … true ならいつも開いた状態で始める(「よく使う」用)
+const DEBUG_MENU_OPEN_KEY = 'mh_debug_menu_open_v1';
+const debugMenuOpenRead = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_MENU_OPEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };
+const debugMenuOpenWrite = (id, open) => {
+  try { const set = new Set(debugMenuOpenRead()); if (open) set.add(id); else set.delete(id); localStorage.setItem(DEBUG_MENU_OPEN_KEY, JSON.stringify([...set].slice(-40))); } catch (e) {}
+};
+// 絞り込んでいるあいだに開け閉めしたものは覚えない(toggle の知らせはあとから届くので、印は絞り込みの間ずっと立てておく)
+let debugMenuFiltering = false;
+const DebugMenuGroup = ({ id, icon = '', title, desc = '', open = false, tone = 'slate', children }) => {
+  const [startOpen] = useState(() => open || debugMenuOpenRead().includes(id));
+  const toneClass = tone === 'pin' ? 'border-amber-400/60 bg-amber-950/25' : tone === 'trial' ? 'border-lime-400/50 bg-lime-950/20' : 'border-white/10 bg-slate-900/70';
+  return (
+    <details data-debug-group={id} open={startOpen} onToggle={(e) => { if (!open && !debugMenuFiltering) debugMenuOpenWrite(id, e.currentTarget.open); }}
+      className={`rounded-2xl border ${toneClass}`}>
+      <summary className="flex min-h-[52px] cursor-pointer select-none items-center gap-2 px-3 py-2">
+        {icon && <span className="shrink-0 text-[16px]" aria-hidden="true">{icon}</span>}
+        <span className="min-w-0 flex-1">
+          <b className="block text-[13px] font-black leading-tight text-white">{title}</b>
+          {desc && <small className="mt-0.5 block text-[9px] font-bold leading-snug text-slate-400">{desc}</small>}
+        </span>
+      </summary>
+      <div className="space-y-2 px-3 pb-3">{children}</div>
+    </details>
+  );
+};
+
+// 名前で絞り込む欄。打った字を含む項目だけを残し、当たったまとまりは開く。消すと元の開き方へ戻す。
+// 項目はまとまりの中のボタン(と試作の札)。画面の作りには触らず、表示するかどうかだけを切り替える
+const debugMenuApplyFilter = (root, query) => {
+  if (!root) return 0;
+  const q = String(query || '').trim().toLowerCase();
+  const remembered = debugMenuOpenRead();
+  debugMenuFiltering = !!q;
+  let hits = 0;
+  root.querySelectorAll('[data-debug-group]').forEach((group) => {
+    const items = [...group.querySelectorAll(':scope > div button, :scope > div [data-debug-trial]')]
+      .filter((el) => !el.closest('[data-debug-trial]') || el.matches('[data-debug-trial]'));
+    let groupHits = 0;
+    items.forEach((el) => {
+      const ok = !q || (el.innerText || el.textContent || '').toLowerCase().includes(q);
+      el.hidden = !ok;
+      if (ok) groupHits += 1;
+    });
+    // 中のたたみ(チュートリアルと旧画面など)も、当たりがあれば開く
+    group.querySelectorAll(':scope > div details').forEach((d) => {
+      const any = [...d.querySelectorAll('button')].some((b) => !b.hidden);
+      d.hidden = !!q && !any;
+      if (q && any) d.open = true;
+    });
+    group.hidden = !!q && groupHits === 0;
+    if (q) group.open = groupHits > 0;
+    else group.open = group.dataset.debugGroup === 'pinned' || remembered.includes(group.dataset.debugGroup);
+    hits += groupHits;
+  });
+  return hits;
+};
+const DebugMenuSearch = ({ rootRef }) => {
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState(null);
+  useEffect(() => { const n = debugMenuApplyFilter(rootRef.current, query); setHits(query.trim() ? n : null); }, [query]);
+  return (
+    <div className="mb-2 shrink-0">
+      <label className="flex min-h-[44px] items-center gap-2 rounded-2xl border border-white/15 bg-slate-900 px-3">
+        <span aria-hidden="true" className="text-[14px]">🔎</span>
+        <input data-debug-menu-search type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="名前で探す(例: 染色・ジャック・未読)"
+          className="min-w-0 flex-1 bg-transparent text-[13px] font-bold text-white outline-none placeholder:text-slate-500"/>
+        {query && <button type="button" data-debug-menu-search-clear onClick={() => setQuery('')} className="shrink-0 rounded-full bg-slate-700 px-2 py-1 text-[10px] font-black text-slate-100">消す</button>}
+      </label>
+      {hits !== null && <p data-debug-menu-search-hits className="mt-1 text-[10px] font-bold text-slate-400">{hits ? `${hits}件 見つかりました` : '見つかりませんでした'}</p>}
+    </div>
+  );
+};
