@@ -37,7 +37,7 @@ async function enterQuickBattle(s, { system = 'systemQuick', mode = 'challenge' 
     if (!(await s.tapLabel(/^前の難易度$/, 700))) break;
   }
   await s.inspect();
-  // 勇者モンは毎回ちがう子を選ぶ。カードは「総合力」と「詳細を見る」を含む枠で見分ける
+  // 勇者モンは毎回ちがう子を選ぶ。カードは「総合力」と「くわしく見る」(2026-10-27 までは「詳細を見る」)を含む枠で見分ける
   // ★画像の有無で探すと、助手の顔(吹き出しの横)を勇者モンと取り違える
   const pick = Math.floor(rand() * 8);
   // --hero で指定があれば、その子たち(のどれか)を勇者モンにする
@@ -45,14 +45,14 @@ async function enterQuickBattle(s, { system = 'systemQuick', mode = 'challenge' 
   const want = wantIds.length ? wantIds[pick % wantIds.length] : '';
   const heroName = await page.evaluate(([n, wantId]) => {
     const cards = [...document.querySelectorAll('article,button,[role="button"],div')]
-      .filter((x) => /総合力/.test(x.innerText || '') && /詳細を見る/.test(x.innerText || '') && x.querySelectorAll('img').length === 1);
+      .filter((x) => /総合力/.test(x.innerText || '') && /詳細を見る|くわしく見る/.test(x.innerText || '') && x.querySelectorAll('img').length === 1);
     // eslint-disable-next-line no-undef
     const wantName = wantId && typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[wantId] ? ALL_PLAYER_MONSTERS[wantId].name : '';
     const named = wantName ? cards.find((x) => (x.innerText || '').split('\n')[0].trim() === wantName) : null;
     const card = named || cards[n % Math.max(1, cards.length)];
     if (!card) return '';
     card.scrollIntoView({ block: 'center' });
-    const detail = [...card.querySelectorAll('button')].find((b) => /詳細を見る/.test(b.innerText || ''));
+    const detail = [...card.querySelectorAll('button')].find((b) => /詳細を見る|くわしく見る/.test(b.innerText || ''));
     (detail || card).click();
     return (card.innerText || '').split('\n')[0].trim();
   }, [pick, want]);
@@ -85,7 +85,7 @@ const readBattle = (s) => s.page.evaluate(() => {
 
 // WAVE の合間(結果 → 報酬えらび など)。人と同じく「次へ進む」を押し、選ぶ画面では1つ選ぶ。
 // バトルへ戻れば 'battle'、ランが終われば 'over'
-const BACKWARD = /^(キャンセル|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる/;
+const BACKWARD = /^(キャンセル|やめる|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる/;
 async function betweenWaves(s) {
   for (let i = 0; i < 20; i++) {
     const st = await readBattle(s);

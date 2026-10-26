@@ -320,7 +320,7 @@ check('バトル初回案内は表示時に記録し、完了時だけ練習を�
     && has("if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }")
     && has('if(last) endBattleTutorial(true)') && has('endBattleTutorial(false)'));
 check('デバッグはデバッグ設定からだけ開ける',
-  has('💖 みゅあデバッグ') && source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
+  has('💬 助手') && source.indexOf('💬 助手') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 // デバッグから「名前入力のところ」を含めて通しで見られること。
 // 見るだけなので、名前・アイコン・完了フラグのどれも保存しない
 // 初回導線は「助手えらび」から通しで再生できる(以前は名前入力からだけだったのを統合した)

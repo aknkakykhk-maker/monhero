@@ -53,7 +53,7 @@ assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(
   && source.includes("const powerOverride=extreme?extremePreviewSetting.power:null")
   // 2026-09-21 にタクティクス専用の敵が入り、どちらの並びを使うかを options.mode で渡すようになった
   && source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode})'), 'EXTREME must open the shared WAVE details with its battle power override');
-assert(source.includes("{previewable?'全WAVE詳細':'詳細 ？？？'}"), 'only unlocked previewable tiers may open WAVE details');
+assert(source.includes("{previewable?'全WAVE詳細':'まだ見られません'}"), 'only unlocked previewable tiers may open WAVE details');
 
 // --- ③ EXTREME固有ルール ---
 assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"), 'only breeder cards must receive the selected EXTREME difficulty rule');
@@ -145,7 +145,7 @@ assert(source.includes("Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS
 assert(source.includes('data-extreme-difficulties'), 'dedicated EXTREME difficulty screen must be rendered');
 assert(source.includes("isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT'"), 'EXTREME mode must lead to its dedicated difficulty screen');
 assert(source.includes("EXTREME_DIFFICULTY_SELECT: 'enhance'"), 'EXTREME difficulty selection must reuse the challenge selection BGM');
-assert(source.includes('左右にスワイプして難易度を選択') && source.includes('snap-x snap-mandatory'), 'EXTREME must reuse the challenge difficulty carousel structure');
+assert(source.includes('左右にスワイプして難易度をえらぶ') && source.includes('snap-x snap-mandatory'), 'EXTREME must reuse the challenge difficulty carousel structure');
 assert(source.includes('mh-extreme-enemy-image') && source.includes("extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'"), 'all EXTREME enemies must receive the image-bound dedicated aura');
 assert(source.includes('mh-nightmare-enemy-aura-shell') && source.includes('@keyframes mhNightmareMist') && source.includes('mh-extreme-enemy-aura-shell') && source.includes('@keyframes mhExtremeEnemyMist') && source.includes('@keyframes mhExtremeEnemyFloor'), 'EXTREME and NIGHTMARE auras must remain distinct; EXTREME must combine silhouette glow, rising evil energy, and a foot glow with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');

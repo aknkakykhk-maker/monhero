@@ -73,7 +73,7 @@ check('予告の数字にも使ったターンぶんが入る',
   && /if \(!isLifeTreeGuardCard\(card\)\) return;/.test(screen));
 check('説明文(effectDesc)と数値が合っている',
   (allies.match(/effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減\(このターンから2ターン\)"/g) || []).length === 2
-  && (allies.match(/traitDesc:"勇者モン選択時：1〜5ターン目は被ダメージ30%軽減。6ターン目以降、3ターン毎にガッツ30%回復\(ターン数はWAVE毎にリセット\)"/g) || []).length === 2);
+  && (allies.match(/traitDesc:"勇者モンにすると：1〜5ターン目は被ダメージ30%軽減。6ターン目以降、3ターン毎にガッツ30%回復\(ターン数はWAVE毎にリセット\)"/g) || []).length === 2);
 
 // --- ③ 必死 ---
 const abilitySrc = slice(rhythm, 'const RHYTHM_MONSTER_ABILITIES=', '// 能力を通したライフ計算。');
