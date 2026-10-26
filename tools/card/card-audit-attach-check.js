@@ -65,7 +65,7 @@ const lost = (st0, st, p, m) => life(st0, p, m) - life(st, p, m);
   check('瞬殺: ナーガのボディーブローに付けられる', !!o);
   if (o) check('瞬殺: 相手は踏ん張る(防御)も緊急回避(回避)も出せない', guardNames(play(st, o)).length === 0, guardNames(play(st, o)).join('・'));
 }
-// ---- 渾身(362): 防御で減らない(防御そのものは出せる) ----
+// ---- 渾身(362): 防御で減らない(効かない防御の札は出せない。社長の答え 案A・2026-10-27) ----
 {
   const st = scene({ hands: [['061', '362'], ['035']], guts: [3, 2] });
   const o = optOf(st, 1, [0, 1], 2);
@@ -73,9 +73,9 @@ const lost = (st0, st, p, m) => life(st0, p, m) - life(st, p, m);
   if (o) {
     const s1 = play(st, o);
     const g = E.cardGuardOptions(db, s1).find((x) => x.type === 'guard');
-    check('渾身: 相手は堅い守り(防御)を出せる', !!g);
-    const s2 = g ? passAll(play(s1, g)) : s1;
-    check('渾身: 堅い守り(−5)でもパンチの3がそのまま当たる', lost(st, s2, 1, 2) === 3, String(lost(st, s2, 1, 2)));
+    check('渾身: 相手は効かない堅い守り(防御)を出せない', !g);
+    const s2 = passAll(s1);
+    check('渾身: 堅い守り(−5)を持っていてもパンチの3がそのまま当たる', lost(st, s2, 1, 2) === 3, String(lost(st, s2, 1, 2)));
   }
 }
 // ---- 集中(274): 消費ガッツ0の守りは出せない ----
