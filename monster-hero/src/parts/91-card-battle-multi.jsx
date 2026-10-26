@@ -211,7 +211,9 @@ const cardPvpCleanMessage = (raw) => {
     return { t: 'hb', from, name: rhythmMultiText(raw.name, CARD_PVP_NAME_MAX), icon: rhythmMultiText(raw.icon, 8), at: Number.isFinite(raw.at) ? raw.at : 0,
       mons: mons && mons.length === 3 && !mons.includes(null) ? mons : null, count: cardPvpInt(raw.count, 60),
       seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null,
-      bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null };
+      bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
+      // デッキ名(対戦開始の画面に出すだけ。2026-10-26 で足した項目。古い版は送らないので null)
+      dn: typeof raw.dn === 'string' ? (rhythmMultiText(raw.dn, 30) || null) : null };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -373,7 +375,7 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null });
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
   const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
   const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
@@ -393,7 +395,7 @@ const CARD_PVP = (() => {
     const first = (iHost === msg.hostFirst) ? 0 : 1;
     const st = cardPvpNewGame(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeMonsters: s.foe.mons, foeCount: s.foe.count || CARD_BATTLE_DECK_SIZE, first, names: ['あなた', s.foe.name || 'あいて'] });
     closeLobby();
-    set({ phase: 'playing', match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂' } } });
+    set({ phase: 'playing', match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂', deckName: s.foe.dn || null } } });
   };
   const deliver = () => {
     // 届いた順にそろえて、つぎの番号のものから当てる(抜けがあれば待つ)
@@ -427,7 +429,7 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
-      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, bid: msg.bid, seen: now };
+      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, bid: msg.bid, dn: msg.dn || null, seen: now };
       if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
       s = { ...s, foe: { ...(s.foe || {}), ...foe } };
       // ホストが、2人そろったら先攻・後攻のくじを引く
@@ -521,7 +523,9 @@ const CARD_PVP = (() => {
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
     s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
-      me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', 8), at: Date.now(), bid: typeof bid === 'string' ? bid : null } };
+      me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', 8), at: Date.now(), bid: typeof bid === 'string' ? bid : null,
+        // 相手の対戦開始の画面に出す、こちらのデッキ名(デッキ編成で付けた名前。試合の中身には入れない)
+        dn: rhythmMultiText(typeof deck.name === 'string' ? deck.name : '', 30) || null } };
     emit();
     if (!seal) { set({ phase: 'error', error: 'この端末では、マルチ対戦の封を作れませんでした' }); return; }
     connect();

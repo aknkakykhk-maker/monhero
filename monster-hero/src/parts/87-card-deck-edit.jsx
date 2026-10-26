@@ -154,8 +154,9 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
             {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
           </div>
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
-          <div data-card-deck-chips className="mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible">
-            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label}</button>)}
+          {/* 縦の画面では右端をぼかして、横に続きがあると分かるようにする(端で札が半分に切れて、壊れて見えた。2026-10-26 見回り) */}
+          <div data-card-deck-chips className="mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0" style={land ? undefined : { WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)', maskImage: 'linear-gradient(to right, #000 82%, transparent)' }}>
+            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
             {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
             <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
@@ -193,7 +194,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
                 })}
               </div>
             )}
-            {!ask.busy && <button type="button" onClick={() => { Audio_.fgSe.tap(); setAsk(null); }} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-2xl border border-white/20 bg-slate-800 font-black">とじる</button>}
+            {!ask.busy && <button type="button" onClick={() => { Audio_.fgSe.tap(); setAsk(null); }} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-2xl border border-white/20 bg-slate-800 font-black">閉じる</button>}
           </div>
         </div>
       )}
@@ -221,7 +222,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
               <div className="flex items-center gap-2">
                 <div className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = cardMonsterOf(db, d.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <div key={i} className="h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/25"/>; })}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-black text-white">{on ? '★ ' : ''}{d.name}</div>
+                  <div className="text-[14px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{on ? '★ ' : ''}{jaWrap(d.name)}</div>
                   <div className={`text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{d.cards.length}/{CARD_BATTLE_DECK_SIZE}枚・{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
                 </div>
               </div>
@@ -314,8 +315,9 @@ const CardDex = ({ db, collection, onBack }) => {
         <span data-card-dex-part className="ml-2 text-slate-400">({unit} {haveIn(list)} / {list.length})</span>
       </div>
       <ScreenTabs value={mode} onChange={(m) => { setMode(m); }} items={CARD_DEX_MODES.map((t) => ({ id: t.id, label: t.label }))}/>
-      {/* 見かたの中の札は1列(デッキ編成の絞り込みと同じ。縦は横に流す・横の画面は折り返す)。札ごとに集めた数を出す */}
-      <div key={mode} ref={tabRow} data-card-dex-tabs={mode} className="mh-scroll relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible">
+      {/* 見かたの中の札は1列で横に流す(横の画面でも折り返さない。血統別の24個を折り返すと左の列からはみ出し、下の「全部・持っている・まだ」が画面の外に出た)。札ごとに集めた数を出す
+          ★mh-scroll を付けない。横画面では「mh-scroll の付いた子」を右の列いっぱいの一覧として置くので、札が一覧に重なって押せなくなった(2026-10-26 見回り) */}
+      <div key={mode} ref={tabRow} data-card-dex-tabs={mode} className="relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1">
         {tabList.map((t) => (
           <button key={t.id} type="button" data-card-dex-tab={t.id} aria-pressed={t.id === tab} onClick={() => setTabs((v) => ({ ...v, [mode]: t.id }))} className={chip(t.id === tab)}>
             {t.label}<span className={`ml-1 text-[10px] ${t.id === tab ? 'text-slate-800' : 'text-slate-500'}`}>{haveIn(t.list)}/{t.list.length}</span>
@@ -516,12 +518,11 @@ const CardPackOpen = ({ db, result, onDone }) => {
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
                   <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className="mh-pack-card relative w-full active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
-                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] border-2 border-white/50 ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ background: `repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px), linear-gradient(160deg, ${pack.color}, #0f172a)`, containerType: 'inline-size' }}>
-                        {/* カードの裏の柄(2026-10-24 改善部の点検 V7「無地に🃏だけ」): 内側の枠・斜めの模様・まんなかの紋。モンスターの枠は金の★ */}
-                        <span aria-hidden="true" className="pointer-events-none absolute inset-[6%] rounded-[4px] border border-white/40"/>
-                        <span aria-hidden="true" className="relative grid aspect-square w-[58%] place-items-center rounded-full border-2 border-amber-200/80 bg-black/40 shadow-[0_0_10px_rgba(0,0,0,.5)]">
-                          <span className="text-center font-black leading-none text-amber-100" style={{ fontSize: '17cqw', textShadow: '0 1px 2px #000' }}>{c.slot === 'mon' ? '★' : 'MF'}<span className="block font-black tracking-tight text-white/80" style={{ fontSize: '7cqw' }}>BATTLE CARD</span></span>
-                        </span></div>
+                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ containerType: 'inline-size' }}>
+                        {/* カードの裏面(2026-10-26 社長から届いた絵)。キラ・別絵キラは今までどおり光って揺れる。モンスターの枠は金の★を重ねる */}
+                        <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
+                        {c.slot === 'mon' && <span aria-hidden="true" className="relative mt-[62%] grid aspect-square w-[30%] place-items-center rounded-full border-2 border-amber-200/90 bg-black/55 font-black leading-none text-amber-200 shadow-[0_0_10px_rgba(0,0,0,.5)]" style={{ fontSize: '14cqw', textShadow: '0 1px 2px #000' }}>★</span>}
+                      </div>
                       <div className={`mh-pack-face mh-pack-front ${rare ? (c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front') : ''}`}>
                         <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="h-full w-full rounded-[5px] object-cover"/>
                       </div>
@@ -587,7 +588,7 @@ const CardShopSheet = ({ title, onClose, children, detail, setDetail, db, tag })
     <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-amber-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
       <div className="shrink-0 rounded-t-[22px] bg-amber-300/15 px-3 py-2 text-center text-[15px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(title)}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{children}</div>
-      <div className="shrink-0 p-2"><button type="button" data-card-shop-sheet-close onClick={onClose} className="mh-button mh-button-primary min-h-[46px] w-full rounded-2xl text-[14px] font-black active:scale-[.98] landscape:min-h-[40px]">とじる</button></div>
+      <div className="shrink-0 p-2"><button type="button" data-card-shop-sheet-close onClick={onClose} className="mh-button mh-button-primary min-h-[46px] w-full rounded-2xl text-[14px] font-black active:scale-[.98] landscape:min-h-[40px]">閉じる</button></div>
     </div>
   </div>
   {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
@@ -643,18 +644,18 @@ const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
     </tr>
   ));
   const notes = [
-    `1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`,
+    `1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つあたりの割合です。`,
     pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null,
     pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null,
-    '混血のモンスターは、キラの無い通常のモンスターとして出ます。',
+    '混血のモンスターも、ほかのモンスターと同じく、そのカードのレア度(通常・キラ・別絵キラ)の割合の中から出ます。',
     '同じレア度のモンスターは、どれも同じ割合で出ます。',
-    pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null,
+    pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(キラが出ないまま続くのを止める決まり。「天井」と呼びます)。` : null,
     `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`,
     '新しいカードは、できしだい追加されます。',
   ].filter(Boolean);
   return (
     <CardShopSheet tag="rates" title={`${pack.name} 提供割合`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>
-      <CardShopHead>レア度ごとの割合(モンスターの枠)</CardShopHead>
+      <CardShopHead>レア度別の割合(モンスターの枠)</CardShopHead>
       <table data-card-rate-rarity className="w-full border-collapse text-slate-100">
         <thead><tr><th className={th}>レア度</th><th className={th}>割合</th></tr></thead>
         <tbody>{['normal', 'kira', 'alt'].filter((k) => r.rarity[k] > 0).map((k) => <tr key={k}><td className={`${td} text-center`}>{rarLabel(k)}</td><td className={`${td} text-right tabular-nums`}>{cardShopPct(r.rarity[k])}</td></tr>)}</tbody>

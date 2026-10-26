@@ -195,11 +195,19 @@ for (let n = 0; n < N; n++) runOne(n);
   N += extra;
 }
 // 派生(混血)のモンスターも全員、マルチの場がずれないか(2026-10-25 統括部長の公開前の確認)。派生を3体ずつ組にし、相手はふつうの3体。追加の試合も①〜④に数える
-const hybrids = Object.values(db.monsters).filter((m) => m.main && m.ready !== false).map((m) => m.no).sort();
+// キラ・別絵キラ(variant)は同じ種族なので入れない(同じ組に入ると「同じモンスターが2体」のデッキになる。剣士モッチーのキラ C-066S など)
+const hybrids = Object.values(db.monsters).filter((m) => m.main && m.ready !== false && !m.variant && !m.dexOnly).map((m) => m.no).sort();
 {
   let k = 0;
-  for (let i = 0; i < hybrids.length; i += 3) {
-    const trio = hybrids.slice(i, i + 3);
+  // 3体ずつの組に、同じ子(キラ・別絵キラ。剣士モッチー C-066・C-066S・C-066V は species が同じ)を入れない。
+  //   番号順に3つずつ切ると C-065・C-066・C-066S が同じ組になり、「同じモンスターが2体」でデッキの決まりに合わなかった(2026-10-26)
+  const trios = [];
+  hybrids.forEach((no) => {
+    const sp = db.monsters[no].species;
+    const t = trios.find((x) => x.length < 3 && !x.some((y) => db.monsters[y].species === sp));
+    if (t) t.push(no); else trios.push([no]);
+  });
+  for (const trio of trios) {
     ['C-003', 'C-001', 'C-005'].forEach((x) => { if (trio.length < 3) trio.push(x); });
     runOne(N + k, [trio, ['C-005', 'C-001', 'C-003']]); k++;
     runOne(N + k, [['C-005', 'C-001', 'C-003'], trio]); k++; // 後攻・相手側でも
@@ -216,6 +224,16 @@ const fieldSeen = new Set(); let prayUsed = 0;
     for (const side of [0, 1]) {
       const n0 = N + k;
       runOne(n0, side ? [['C-005', 'C-001', 'C-003'], ['C-003', 'C-027', 'C-029']] : [['C-003', 'C-027', 'C-029'], ['C-005', 'C-001', 'C-003']], must, { attack: true, must });
+      const g = games[games.length - 1];
+      g.hA.forEach((e) => { if (e.act && e.act.type === 'pray' && e.act.hand) prayUsed++; });
+      [g.A, g.B].forEach((st) => (st.log || []).forEach((l) => { const m = /全体カード「([^」]+)」が場に出た/.exec(l.text); if (m) fieldSeen.add(m[1]); }));
+      k++;
+    }
+  }
+  // まだ場に出ていない全体カードは、その札だけを入れた試合を足す(1枚につき4戦まで)。出るかどうかは助手の見積もりしだいなので、目当ての札を出す手を選ばせる
+  for (const no of fieldNos.filter((x) => !fieldSeen.has(db.cards[x].name))) {
+    for (let t = 0; t < 4 && !fieldSeen.has(db.cards[no].name); t++) {
+      runOne(N + k, [['C-003', 'C-027', 'C-029'], ['C-005', 'C-001', 'C-003']], [no, '280'], { attack: true, must: [no, '280'] });
       const g = games[games.length - 1];
       g.hA.forEach((e) => { if (e.act && e.act.type === 'pray' && e.act.hand) prayUsed++; });
       [g.A, g.B].forEach((st) => (st.log || []).forEach((l) => { const m = /全体カード「([^」]+)」が場に出た/.exec(l.text); if (m) fieldSeen.add(m[1]); }));

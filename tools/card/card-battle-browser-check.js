@@ -19,7 +19,7 @@ const fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const root = path.resolve(__dirname, '..', '..');
-const PORT = 8994;
+const PORT = Number(process.env.CARD_PORT) || 8994; // 別の検査と同時に回すときは CARD_PORT で変える
 const SHOT = process.env.CARD_SHOT_DIR || '';
 // 画面の大きさ(既定は iPhone 13 の 390×844。SE は CARD_VIEWPORT=375x667)
 const [VW, VH] = (process.env.CARD_VIEWPORT || '390x844').split('x').map(Number);
@@ -47,15 +47,20 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   let browser;
   // 対戦の画面で、相手の場・まんなか・自分の場・手札・下のボタンが上から順に並び、重なっていないか
 const layoutIssues = async (page) => page.evaluate(() => {
-  const box = (sel) => { const els = [...document.querySelectorAll(sel)]; if (!els.length) return null; const r = els.map((e) => e.getBoundingClientRect()); return { top: Math.min(...r.map((x) => x.top)), bottom: Math.max(...r.map((x) => x.bottom)) }; };
+  const box = (sel) => { const els = [...document.querySelectorAll(sel)]; if (!els.length) return null; const r = els.map((e) => e.getBoundingClientRect()); return { top: Math.min(...r.map((x) => x.top)), bottom: Math.max(...r.map((x) => x.bottom)), left: Math.min(...r.map((x) => x.left)), right: Math.max(...r.map((x) => x.right)) }; };
+  // 横の画面は、盤(左)と手札(右)が横に並ぶ。上下の重なりは、左右も重なるときだけ数える(横並びを「かぶる」と数えていた。QA 2)
+  const sideBySide = (a, b) => a.right <= b.left + 1 || b.right <= a.left + 1;
   const opp = box('[data-card-mon^="1-"]'), stage = box('[data-card-stage]'), me = box('[data-card-mon^="0-"]'), hand = box('[data-card-hand]'), foot = box('[data-card-footer]');
   const out = [];
   if (!opp || !stage || !me || !hand || !foot) return ['部品が見つからない'];
   if (opp.bottom > stage.top + 1) out.push('相手の場がまんなかにかかる');
   if (stage.bottom > me.top + 1) out.push('まんなかが自分の場にかかる');
-  if (me.bottom > hand.top + 1) out.push(`自分の場が手札にかかる(${Math.round(me.bottom - hand.top)}px)`);
+  if (me.bottom > hand.top + 1 && !sideBySide(me, hand)) out.push(`自分の場が手札にかかる(${Math.round(me.bottom - hand.top)}px)`);
   if (hand.bottom > foot.top + 1) out.push('手札がボタンにかかる');
   if (foot.bottom > window.innerHeight + 1) out.push('ボタンが画面の外');
+  // 自分の番の始めのまとめは、手札にかからない(横の画面は左の盤のまんなかへ出す)
+  const sum = box('[data-card-turn-summary]');
+  if (sum && sum.bottom > hand.top + 1 && !sideBySide(sum, hand)) out.push('始まりのまとめが手札にかかる');
   if (stage.bottom - stage.top < 60) out.push(`まんなかが狭い(${Math.round(stage.bottom - stage.top)}px)`);
   return out;
 });
@@ -329,6 +334,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
+      // カードの大写し(2026-10-26)が出ているあいだは、画面のタップが「先へ進む」になる。消えるのを待ってから次の手
+      if (await page.locator('[data-card-big]').count()) { await page.waitForFunction(() => !document.querySelector('[data-card-big]'), null, { timeout: 5000 }).catch(() => {}); continue; }
       if (mode === 'setup') { await page.getByRole('button', { name: /始める$/ }).click(); continue; }
       if (mode === 'discard') { const n = await page.locator('[data-card-hand-card]').count(); for (let i = 0; i < n; i++) await page.locator(`[data-card-hand-card="${i}"]`).click(); await page.getByRole('button', { name: /捨てる$/ }).click().catch(() => {}); continue; }
       if (mode === 'guard') {
@@ -381,7 +388,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
               await page.mouse.up();
               tried = true;
               await page.waitForTimeout(300);
-              const changed = (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              // 自分の手は、先にカードを大きく出してから効く(2026-10-26)。大写しが出たら「使えた」、消えるまで待つ
+              const bigMine = (await page.locator('[data-card-big="me"]').count()) > 0;
+              const changed = bigMine || (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              if (bigMine) await page.waitForTimeout(1000);
               if (changed) { myActions += 1; dragAttack = true; dragNoGlow = midGlow === 0; }
               break;
             }
@@ -562,7 +572,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const afterPlus = await page.locator('[data-card-deck-count]').innerText();
     const monMinus = await page.locator('[data-card-deck-mon="0"] span').innerText().catch(() => '');
     const chipsRows = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); const ys = new Set([...el.children].map((b) => Math.round(b.getBoundingClientRect().top))); return ys.size; });
-    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && chipsRows === 1, JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows }));
+    // 絞り込みは、縦の画面では1列(横に流す)、横の画面では折り返して並べる作り(87 の data-card-deck-chips)。1列は縦のときだけ見る
+    const portrait = VH > VW;
+    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは縦で1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && (!portrait || chipsRows === 1), JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows, portrait }));
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));

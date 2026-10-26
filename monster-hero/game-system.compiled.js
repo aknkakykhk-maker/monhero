@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f75747c592a18654
+// source-sha256: cf5814308ce7d73b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 10:45";
+const BUILD_DATE = "2026-10-26 13:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50568,7 +50568,7 @@ const jaWrapPoints = text => {
         g = groups[groups.length - 1],
         cur = g.parts.join('');
       const hard = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
-      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
         g.hard.push(hard);
@@ -84564,8 +84564,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({
 });
 const CARD_AI_PLAY_TUNE = Object.freeze({
   mua: {
-    easy: -0.035,
-    normal: -0.105,
+    easy: 0.1,
+    normal: -0.04,
     hard: -0.11,
     expert: 0.075,
     master: 0.12
@@ -85030,6 +85030,36 @@ const CARD_AI_FAVORITE = Object.freeze({
   dra: 'zilla',
   atsu: 'dragon'
 });
+const CARD_AI_SAME_BLOOD = Object.freeze({
+  easy: 0.3,
+  normal: 0.28
+});
+const CARD_AI_TEAM = Object.freeze({
+  atk: 0.04,
+  guard: 0.06,
+  type: 0.8,
+  blood: 0.5
+});
+const cardAiSameBloodScale = familySize => Math.max(0, Math.min(1, (familySize - 1) / 4));
+const cardAiBloodOf = m => String(m.wave) === 'hybrid' ? m.main : m.species;
+const cardAiTeamValue = (db, who, team, m, maxWave) => {
+  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const lim = Math.max(maxWave, cardAiMonWave(db, m));
+  const mine = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, {
+    ...m,
+    ko: false
+  }));
+  const sharedBy = c => team.some(t => cardUsableBy(c, {
+    ...t,
+    ko: false
+  }));
+  const fresh = mine.filter(c => !sharedBy(c)).map(c => cardAiCardValue(c, habit)).sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0);
+  const atk = mine.filter(c => !cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const guard = mine.filter(c => cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const sameType = team.length >= 2 && team.every(t => t.type === m.type) ? 1 : 0;
+  const sameBlood = team.filter(t => cardAiBloodOf(t) === cardAiBloodOf(m)).length;
+  return fresh + (m.life || 0) * 0.3 + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
+};
 const CARD_AI_BUILD = Object.freeze({
   easy: {
     maxWave: 1,
@@ -85237,14 +85267,33 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       ko: false
     })).length * 1.2;
   }
-  const scored = cands.map(m => ({
+  const family = favs.filter(m => m.species !== fav.species);
+  const familySize = new Set(favs.map(m => m.species)).size;
+  const byScore = !CARD_AI_SAME_BLOOD[levelId];
+  const sameRate = byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
+  const isFamily = new Set(family.map(m => m.no));
+  const pool = byScore ? [...cands, ...family.filter(m => !m.variant)] : cands;
+  const scored = pool.map(m => ({
     m,
     v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m)
   }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  const usedNos = new Set([fav.species]);
   for (let k = 0; k < 2; k++) {
-    const left = scored.filter(x => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    const famLeft = family.filter(m => !usedNos.has(m.species));
+    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+      const w = famLeft.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
+      const m = famLeft[cardAiPickIndex(w, rand)];
+      out.push(m.no);
+      usedNos.add(m.species);
+      continue;
+    }
+    const team = out.map(no => cardMonsterOf(db, no));
+    const left = scored.filter(x => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))).map(x => isFamily.has(x.m.no) ? {
+      ...x,
+      v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave) + counter(x.m)
+    } : x);
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 1 && cfg.lastTop > 1) {
@@ -85256,6 +85305,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     }
     out.push(pick.m.no);
     usedSpecies.add(pick.m.species);
+    usedNos.add(pick.m.species);
   }
   return out;
 };
@@ -86510,6 +86560,441 @@ const cardTalkCheckPicks = (db, deck, collection, picks) => {
     reason: String(p.reason || '').slice(0, 30)
   }));
 };
+const CARD_DECK_NAME_TAILS = Object.freeze({
+  mua: ['まっしぐら隊', '全力ダッシュ団', 'ガンガン突撃隊', '先手必勝隊'],
+  momosuke: ['いじわる劇場', 'ちくちく作戦', 'こまらせ隊', 'ずるっこ団'],
+  kiki: ['ため撃ち砲台', 'どっかん計画', '大技まつり', 'じっくり砲'],
+  kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
+  dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
+  atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団']
+});
+const CARD_DECK_NAME_MAX = 18;
+const CARD_DECK_STYLE = Object.freeze({
+  area: 4,
+  guard: 19,
+  heal: 4,
+  powOverInt: 12,
+  intMaxRatio: 2.5
+});
+const CARD_VS_LINES = Object.freeze({
+  mua: {
+    easy: {
+      e: 'happy',
+      t: 'きょうはゆるっと遊ぼ♪ でも攻めるのはやめないよ！'
+    },
+    normal: {
+      e: 'wink',
+      t: '先に攻めたもん勝ちぢゃん！ いっくよー！'
+    },
+    hard: {
+      e: 'excited',
+      t: 'まぢでガンガンいくから、ついてきてね！'
+    },
+    expert: {
+      e: 'excited',
+      t: '全部の弾から選んだ子たちだよ！ 本気ダッシュぢゃん！'
+    },
+    master: {
+      e: 'wink',
+      t: 'いちばん強い組み合わせで来たよ。止めてみなよ？'
+    }
+  },
+  momosuke: {
+    easy: {
+      e: 'happy',
+      t: 'ももと遊んでくれるの？ やさしくしてあげよっかな〜w'
+    },
+    normal: {
+      e: 'wink',
+      t: 'いじわるの準備、できてるよ？♡'
+    },
+    hard: {
+      e: 'happy',
+      t: 'ちくちくいくからね。泣いても知らないよ〜w'
+    },
+    expert: {
+      e: 'wink',
+      t: 'とっておきの意地悪、ぜんぶ持ってきたよ♡'
+    },
+    master: {
+      e: 'excited',
+      t: '本気のもも、見せてあげる。逃げちゃだめだよ？'
+    }
+  },
+  kiki: {
+    easy: {
+      e: 'happy',
+      t: 'のんびりいきまつね。大技はちょっとだけ♪'
+    },
+    normal: {
+      e: 'happy',
+      t: 'じっくりためて、大きいのを当てまつ！'
+    },
+    hard: {
+      e: 'excited',
+      t: 'ガッツ、たっぷりためてきまちた。どっかんいきまつよ(˘ω˘)9'
+    },
+    expert: {
+      e: 'excited',
+      t: '全部の弾から大技を集めまちた。覚悟してくだちゃい！'
+    },
+    master: {
+      e: 'wink',
+      t: 'いちばん強いききで、お相手しまつね。'
+    }
+  },
+  kyuko: {
+    easy: {
+      e: 'happy',
+      t: '気楽にいこうねぇ。数えるのは、ほどほどに笑'
+    },
+    normal: {
+      e: 'happy',
+      t: 'ガッツと手札の数え合い、始めよっかw'
+    },
+    hard: {
+      e: 'wink',
+      t: '三手先まで、もう見えてるよ笑'
+    },
+    expert: {
+      e: 'excited',
+      t: '全部の弾から読み筋を組んできたよw'
+    },
+    master: {
+      e: 'wink',
+      t: 'きみのデッキも見て組み直したよ。読み合い、しよっか'
+    }
+  },
+  dra: {
+    easy: {
+      e: 'happy',
+      t: '気楽にいこうな。おでは守ってるだけだよ'
+    },
+    normal: {
+      e: 'happy',
+      t: 'まずは守りを固めるとこからだな'
+    },
+    hard: {
+      e: 'excited',
+      t: '打ってこい。全部はね返してやるよ'
+    },
+    expert: {
+      e: 'excited',
+      t: '全部の弾から一番かたい守りを持ってきた'
+    },
+    master: {
+      e: 'wink',
+      t: '本気の要塞だ。崩せるもんなら崩してみな'
+    }
+  },
+  atsu: {
+    easy: {
+      e: 'happy',
+      t: 'ゆるくいこうぜ笑 全体攻撃はちょっとだけな'
+    },
+    normal: {
+      e: 'excited',
+      t: 'まとめて吹っ飛ばすぞ！ 楽しもうぜ笑'
+    },
+    hard: {
+      e: 'excited',
+      t: '全員まとめていくからな。覚悟しとけよ笑'
+    },
+    expert: {
+      e: 'excited',
+      t: '全部の弾から全体攻撃を集めてきた！'
+    },
+    master: {
+      e: 'wink',
+      t: '本気のあつだ。一気に終わらせるぞ！'
+    }
+  }
+});
+const CARD_VS_TUTORIAL_LINE = Object.freeze({
+  e: 'happy',
+  t: '練習だよ！ ゆっくりいこ♪'
+});
+const CARD_VS_MS = Object.freeze({
+  assistant: 2600,
+  pvp: 2600,
+  tutorial: 1300
+});
+const cardLineageOf = m => m && (m.main || m.species) || null;
+const cardLineageName = (db, species) => {
+  const list = Object.values(db && db.monsters || {});
+  const m = list.find(x => x && x.species === species && !x.main && !x.variant) || list.find(x => x && x.species === species);
+  return m ? m.name : '';
+};
+const cardDeckFacts = (db, deck) => {
+  const mons = (deck && deck.monsters || []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  const lineCount = {};
+  mons.forEach(m => {
+    const l = cardLineageOf(m);
+    if (l) lineCount[l] = (lineCount[l] || 0) + 1;
+  });
+  const topLine = Object.entries(lineCount).sort((a, b) => b[1] - a[1])[0] || null;
+  const cards = (deck && deck.cards || []).map(no => cardOf(db, no)).filter(Boolean);
+  const has = (c, t) => Array.isArray(c.effects) && c.effects.some(e => e && e.t === t);
+  return {
+    mons,
+    sameLine: topLine && topLine[1] >= 2 ? {
+      species: topLine[0],
+      n: topLine[1]
+    } : null,
+    area: cards.filter(c => has(c, 'area')).length,
+    guard: cards.filter(c => c.kind === 'blk' || c.kind === 'dge').length,
+    heal: cards.filter(c => has(c, 'heal') || has(c, 'revive')).length,
+    pow: cards.filter(c => c.kind === 'pow').length,
+    int: cards.filter(c => c.kind === 'int').length
+  };
+};
+const cardDeckNameMiddle = (db, facts, {
+  favorite = null,
+  preferFavorite = false
+} = {}) => {
+  if (facts.sameLine && facts.sameLine.n >= 3) return `${cardLineageName(db, facts.sameLine.species)}一家`;
+  if (facts.sameLine) return `${cardLineageName(db, facts.sameLine.species)}コンビ`;
+  const favName = favorite && facts.mons.some(m => cardLineageOf(m) === favorite) ? cardLineageName(db, favorite) : '';
+  if (preferFavorite && favName) return favName;
+  if (facts.area >= CARD_DECK_STYLE.area) return 'まとめて';
+  if (facts.guard >= CARD_DECK_STYLE.guard) return 'カチコチ';
+  if (facts.heal >= CARD_DECK_STYLE.heal) return 'しぶとい';
+  if (facts.pow > 0 && facts.pow >= facts.int * CARD_DECK_STYLE.powOverInt) return 'パワー';
+  if (facts.int > 0 && facts.pow <= facts.int * CARD_DECK_STYLE.intMaxRatio) return 'かしこ';
+  if (favName) return favName;
+  return facts.mons[0] ? cardLineageName(db, cardLineageOf(facts.mons[0])) : '';
+};
+const cardDeckWordsOverlap = (x, y) => {
+  const a = String(x || ''),
+    b = String(y || '');
+  for (let i = 0; i + 2 <= a.length; i++) if (b.includes(a.slice(i, i + 2))) return true;
+  return false;
+};
+const cardDeckNamePick = (db, facts, who, {
+  favorite = null,
+  preferFavorite = false,
+  last = null,
+  rnd = Math.random
+} = {}) => {
+  const tails = CARD_DECK_NAME_TAILS[who] || CARD_DECK_NAME_TAILS.kyuko;
+  const choose = middle => {
+    const ok = tails.filter(t => !cardDeckWordsOverlap(middle, t));
+    const pool = ok.length > 1 ? ok.filter(t => t !== last) : ok;
+    return pool.length ? pool[Math.floor(rnd() * pool.length) % pool.length] : null;
+  };
+  let middle = cardDeckNameMiddle(db, facts, {
+    favorite,
+    preferFavorite
+  });
+  let tail = choose(middle);
+  if (!tail) {
+    const fav = favorite && facts.mons.some(m => cardLineageOf(m) === favorite) ? cardLineageName(db, favorite) : '';
+    middle = fav || (facts.mons[0] ? cardLineageName(db, cardLineageOf(facts.mons[0])) : '');
+    tail = choose(middle) || tails[0];
+  }
+  return {
+    middle,
+    tail
+  };
+};
+const cardDeckNameLastTail = {};
+const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
+  const a = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === who) : null;
+  const owner = a ? a.name : 'あいて';
+  const favorite = typeof CARD_AI_FAVORITE !== 'undefined' ? CARD_AI_FAVORITE[who] : null;
+  const {
+    middle,
+    tail
+  } = cardDeckNamePick(db, cardDeckFacts(db, deck), who, {
+    favorite,
+    preferFavorite: rnd() < 0.5,
+    last: cardDeckNameLastTail[who],
+    rnd
+  });
+  cardDeckNameLastTail[who] = tail;
+  const plain = `${owner}の${middle}${tail}`;
+  if (level !== 'master') return plain;
+  const strong = `${owner}の本気の${middle}${tail}`;
+  return strong.length <= CARD_DECK_NAME_MAX ? strong : plain;
+};
+const CARD_VS_CSS = `
+@keyframes mhVsFoeIn { from { transform: translateX(60%); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes mhVsMonFoe { 0% { transform: translateX(140%) scale(.6); opacity: 0 } 70% { transform: translateX(-6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
+@keyframes mhVsMonMe { 0% { transform: translateX(-140%) scale(.6); opacity: 0 } 70% { transform: translateX(6%) scale(1.06); opacity: 1 } 100% { transform: none; opacity: 1 } }
+@keyframes mhVsPop { 0% { transform: scale(2.4); opacity: 0 } 60% { transform: scale(.9); opacity: 1 } 100% { transform: scale(1); opacity: 1 } }
+@keyframes mhVsFade { from { opacity: 0 } to { opacity: 1 } }
+.mh-vs-foe { animation: mhVsFoeIn .38s cubic-bezier(.2,.9,.3,1.2) both }
+.mh-vs-mon-foe { animation: mhVsMonFoe .34s ease-out both }
+.mh-vs-mon-me { animation: mhVsMonMe .34s ease-out both }
+.mh-vs-pop { animation: mhVsPop .36s ease-out both }
+.mh-vs-fade { animation: mhVsFade .3s ease-out both }
+@media (prefers-reduced-motion: reduce) { .mh-vs-foe, .mh-vs-mon-foe, .mh-vs-mon-me, .mh-vs-pop, .mh-vs-fade { animation-duration: .01s } }
+`;
+const CardVsMonsters = ({
+  db,
+  monsters,
+  side,
+  start,
+  step
+}) => React.createElement("div", {
+  className: "flex w-full items-end justify-center gap-1.5"
+}, (monsters || []).slice(0, 3).map((no, i) => {
+  const m = cardMonsterOf(db, no);
+  if (!m) return null;
+  const art = cardMonArt(m);
+  return React.createElement("div", {
+    key: `${no}-${i}`,
+    "data-card-vs-mon": no,
+    className: `${side === 'foe' ? 'mh-vs-mon-foe' : 'mh-vs-mon-me'} flex min-w-0 flex-1 flex-col items-center`,
+    style: {
+      animationDelay: `${start + i * step}ms`,
+      maxWidth: 140
+    }
+  }, React.createElement("img", {
+    src: art || CARD_IMG(m.img),
+    alt: m.name,
+    draggable: false,
+    className: `${art ? 'object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]' : 'rounded-md object-cover'} w-full`,
+    style: {
+      aspectRatio: art ? '1 / 1' : '63 / 88',
+      maxHeight: 'min(19vh, 140px)'
+    }
+  }), React.createElement("span", {
+    className: "mt-0.5 w-full truncate text-center text-[10px] font-black text-white",
+    style: {
+      textShadow: '0 1px 2px #000'
+    }
+  }, m.name));
+}));
+const CardVsDeckName = ({
+  text,
+  tone
+}) => text ? React.createElement("div", {
+  "data-card-vs-deck-name": true,
+  className: `mh-vs-fade max-w-full rounded-2xl px-3 py-0.5 text-center font-black leading-tight ${String(text).length > 16 ? 'text-[11px]' : 'text-[13px]'} ${tone === 'foe' ? 'bg-rose-950/80 text-rose-100' : 'bg-sky-950/80 text-sky-100'}`,
+  style: {
+    ...JA_LABEL_STYLE,
+    animationDelay: tone === 'foe' ? '450ms' : '1250ms'
+  }
+}, jaWrap(text)) : null;
+const CardVsIntro = ({
+  db,
+  intro,
+  onDone
+}) => {
+  const done = useRef(false);
+  const finish = () => {
+    if (done.current) return;
+    done.current = true;
+    onDone && onDone();
+  };
+  const ms = CARD_VS_MS[intro.mode] || CARD_VS_MS.assistant;
+  useEffect(() => {
+    const t = setTimeout(finish, ms);
+    return () => clearTimeout(t);
+  }, []);
+  const foe = intro.foe || {};
+  const me = intro.me || {};
+  const who = foe.who && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === foe.who) : null;
+  const short = intro.mode === 'tutorial';
+  const step = short ? 90 : 170;
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-vs": intro.mode,
+    role: "button",
+    tabIndex: 0,
+    "aria-label": "対戦開始(タップで始める)",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      finish();
+    },
+    className: "relative flex h-full min-h-0 flex-1 cursor-pointer select-none flex-col overflow-hidden text-white",
+    style: {
+      background: 'linear-gradient(170deg, #4c0519 0%, #1e1b4b 48%, #0c4a6e 100%)'
+    }
+  }, React.createElement("style", null, CARD_VS_CSS), React.createElement("div", {
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0 opacity-30",
+    style: {
+      background: 'repeating-linear-gradient(115deg, rgba(255,255,255,.18) 0 2px, transparent 2px 22px)'
+    }
+  }), React.createElement("div", {
+    className: "relative z-[1] flex min-h-0 flex-1 flex-col justify-center landscape:flex-row-reverse"
+  }, React.createElement("div", {
+    "data-card-vs-side": "foe",
+    className: "flex min-h-0 flex-col items-center justify-end gap-1.5 px-3 pb-2 pt-3 landscape:flex-1 landscape:justify-center"
+  }, React.createElement("div", {
+    className: "flex w-full max-w-[420px] items-end gap-2"
+  }, React.createElement("div", {
+    className: "mh-vs-foe shrink-0",
+    style: {
+      width: 'min(34vw, 30vh, 150px)'
+    }
+  }, who ? React.createElement("img", {
+    src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
+    alt: who.name,
+    draggable: false,
+    className: "w-full object-contain object-bottom",
+    style: {
+      aspectRatio: '3 / 4'
+    }
+  }) : React.createElement("span", {
+    className: "flex aspect-square w-full items-center justify-center rounded-full bg-slate-900/70 leading-none",
+    style: {
+      fontSize: 'min(16vw, 15vh, 72px)'
+    }
+  }, typeof cardIconNode === 'function' ? cardIconNode(foe.icon || '🙂', 72) : '🙂')), React.createElement("div", {
+    className: "mh-vs-fade min-w-0 flex-1 pb-1",
+    style: {
+      animationDelay: '250ms'
+    }
+  }, React.createElement("b", {
+    className: "block text-[16px] font-black leading-tight",
+    style: JA_LABEL_STYLE
+  }, foe.name || 'あいて'), foe.line && foe.line.t && React.createElement("p", {
+    "data-card-vs-line": true,
+    className: "mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900",
+    style: JA_WRAP_STYLE
+  }, helpWrap(foe.line.t)))), React.createElement(CardVsDeckName, {
+    text: foe.deckName,
+    tone: "foe"
+  }), React.createElement(CardVsMonsters, {
+    db: db,
+    monsters: foe.monsters,
+    side: "foe",
+    start: short ? 200 : 500,
+    step: step
+  })), React.createElement("div", {
+    "aria-hidden": "true",
+    "data-card-vs-mark": true,
+    className: "mh-vs-pop flex shrink-0 items-center justify-center py-1 text-[44px] font-black italic leading-none text-amber-300 landscape:px-2",
+    style: {
+      animationDelay: short ? '400ms' : '1000ms',
+      WebkitTextStroke: '2px #7c2d12',
+      textShadow: '0 4px 0 rgba(0,0,0,.45)'
+    }
+  }, "VS"), React.createElement("div", {
+    "data-card-vs-side": "me",
+    className: "flex min-h-0 flex-col items-center justify-start gap-1.5 px-3 pb-3 pt-2 landscape:flex-1 landscape:justify-center"
+  }, React.createElement(CardVsMonsters, {
+    db: db,
+    monsters: me.monsters,
+    side: "me",
+    start: short ? 500 : 1100,
+    step: step
+  }), React.createElement(CardVsDeckName, {
+    text: me.deckName,
+    tone: "me"
+  }), React.createElement("b", {
+    className: "mh-vs-fade text-[14px] font-black",
+    style: {
+      ...JA_LABEL_STYLE,
+      animationDelay: short ? '600ms' : '1200ms'
+    }
+  }, me.name || 'あなた'))), React.createElement("p", {
+    className: "relative z-[1] shrink-0 pb-2 text-center text-[10px] font-bold text-white/60"
+  }, "タップで始める"));
+};
 const CARD_TUTORIAL_LINES = Object.freeze({
   D1: 'よし、練習試合だ。相手はみゅあ、デッキはおでが貸すからな',
   M1: '手加減しないって言ったでしょ♪ よろしくね！',
@@ -86805,7 +87290,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'guts',
   emoji: '💰',
   title: 'ガッツ',
-  lines: ['技を使うためのもの。カード1枚で1ガッツ', 'ガッツはプレイヤーごと(モンスターごとではない)。何枚あるかは相手にも見える', '使ったガッツは捨て札へ。ガッツにしたカードは技として使い直せない', 'ガッツをためすぎると山札が減る。山札切れに気をつけよう']
+  lines: ['技を使うためのもの。カード1枚で1ガッツ', 'ガッツはプレイヤーが持つもの(モンスターそれぞれではない)。何枚あるかは相手にも見える', '使ったガッツは捨て札へ。ガッツにしたカードは技として使い直せない', 'ガッツをためすぎると山札が減る。山札切れに気をつけよう']
 }, {
   id: 'field',
   emoji: '☁️',
@@ -87455,6 +87940,7 @@ const CARD_IMAGE_SET = Object.freeze({
   imageDir: 'images/card-battle'
 });
 const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}.jpg`;
+const CARD_BACK_IMG = (size = 's') => CARD_IMG('back', size);
 const CARD_KIND_LABEL = Object.freeze({
   pow: 'ちから',
   int: 'かしこさ',
@@ -87982,15 +88468,18 @@ const CardDiscardModal = ({
     return React.createElement("div", _extends({
       key: `${no}-${i}`
     }, press(no), {
-      className: "flex flex-col items-center"
+      className: "flex flex-col items-center",
+      style: {
+        containerType: 'inline-size'
+      }
     }), React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
       alt: c ? c.name : no,
       loading: "lazy",
       className: "w-full rounded-md"
-    }), React.createElement("span", {
-      className: "mt-0.5 w-full truncate text-center text-[11px] font-bold text-slate-200"
-    }, c ? c.name : no));
+    }), React.createElement(CardDiscardName, {
+      name: c ? c.name : no
+    }));
   })), React.createElement("p", {
     className: "mt-2 text-center text-[11px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
@@ -88026,7 +88515,7 @@ const CardTurnLogSheet = ({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "mb-2 text-[15px] font-black text-amber-200"
-  }, "ターンごとの記録"), React.createElement("div", {
+  }, "ターンの記録"), React.createElement("div", {
     className: "min-h-0 flex-1 space-y-2 overflow-y-auto mh-scroll"
   }, list.map(t => React.createElement("div", {
     key: t.turn,
@@ -88048,6 +88537,51 @@ const CardTurnLogSheet = ({
     onClick: onClose,
     className: "mh-button mh-button-secondary mt-2 min-h-[44px] rounded-xl font-black"
   }, "閉じる")));
+};
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*)/;
+const cardJaWrap = text => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => i % 2 === 1 ? React.createElement("span", {
+  key: i,
+  "data-ja-keep": true,
+  style: {
+    whiteSpace: 'nowrap'
+  }
+}, t) : React.createElement(React.Fragment, {
+  key: i
+}, jaWrap(t)));
+const CardMonName = ({
+  name,
+  w
+}) => {
+  const len = Math.max(1, String(name || '').length);
+  const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
+  const k = Math.min(1, w / (len * fs));
+  return React.createElement("div", {
+    "data-card-mon-name": true,
+    className: "whitespace-nowrap font-black leading-tight",
+    style: {
+      fontSize: fs,
+      transform: k < 1 ? `scaleX(${k})` : undefined,
+      transformOrigin: 'left',
+      width: k < 1 ? `${w / k}px` : undefined
+    }
+  }, name);
+};
+const CardDiscardName = ({
+  name
+}) => {
+  const one = !String(jaWrapPoints(name)).includes('\u200B');
+  const len = Math.max(1, String(name).length);
+  return React.createElement("span", {
+    "data-card-discard-name": true,
+    className: "mt-0.5 w-full text-center font-bold leading-tight text-slate-200",
+    style: one ? {
+      fontSize: `min(10px, calc(100cqw / ${len + 0.5}))`,
+      whiteSpace: 'nowrap'
+    } : {
+      fontSize: 10,
+      ...JA_WRAP_STYLE
+    }
+  }, one ? name : jaWrap(name));
 };
 const CardMonSlot = ({
   db,
@@ -88081,12 +88615,18 @@ const CardMonSlot = ({
     className: `mh-card-flip-face ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
   }), mon.ko && React.createElement("span", {
     className: "mh-card-flip-back",
-    "aria-hidden": "true"
+    "aria-hidden": "true",
+    style: {
+      backgroundImage: `url(${CARD_BACK_IMG()})`,
+      backgroundSize: '100% 100%',
+      border: 0
+    }
   })), React.createElement("div", {
     className: `${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`
-  }, React.createElement("div", {
-    className: "truncate text-[12px] font-black leading-tight"
-  }, mon.name), React.createElement("div", {
+  }, React.createElement(CardMonName, {
+    name: mon.name,
+    w: tiny ? 56 : 62
+  }), React.createElement("div", {
     className: "flex items-center gap-1 whitespace-nowrap text-[13px] font-black leading-tight"
   }, mon.life, React.createElement("span", {
     className: "text-[10px] text-slate-400"
@@ -88169,6 +88709,49 @@ const CardMonSlot = ({
       zIndex: 40
     } : undefined
   }), opp ? React.createElement(React.Fragment, null, info, artEl) : React.createElement(React.Fragment, null, artEl, info));
+};
+const CardGutsFlight = ({
+  g,
+  still = false
+}) => {
+  const [go, setGo] = useState(false);
+  useEffect(() => {
+    const r = requestAnimationFrame(() => requestAnimationFrame(() => setGo(true)));
+    return () => cancelAnimationFrame(r);
+  }, []);
+  const w = 30,
+    h = 42;
+  const tx = g.to.x + g.to.w / 2 - w / 2,
+    ty = g.to.y + g.to.h / 2 - h / 2;
+  return React.createElement(React.Fragment, null, !still && g.items.map((it, k) => {
+    const fx = it.from.x + it.from.w / 2 - w / 2,
+      fy = it.from.y + it.from.h / 2 - h / 2;
+    return React.createElement("span", {
+      key: k,
+      "data-card-guts-fly": g.p,
+      className: "absolute left-0 top-0 block overflow-hidden rounded-[4px] border border-amber-200/80 shadow-[0_4px_10px_rgba(0,0,0,.6)]",
+      style: {
+        width: w,
+        height: h,
+        transform: `translate(${go ? tx : fx}px, ${go ? ty : fy}px) scale(${go ? 0.55 : 1})`,
+        opacity: go ? 0.2 : 1,
+        transition: `transform 480ms cubic-bezier(.5,0,.75,.4) ${it.delay}ms, opacity 480ms ease-in ${it.delay}ms`
+      }
+    }, React.createElement("img", {
+      src: it.img || CARD_BACK_IMG(),
+      alt: "",
+      className: "h-full w-full object-cover"
+    }));
+  }), React.createElement("span", {
+    "data-card-guts-plus": g.p,
+    className: "absolute rounded-full bg-amber-400 px-1.5 py-0.5 text-[12px] font-black text-slate-950 shadow-lg",
+    style: {
+      left: g.to.x + g.to.w - 6,
+      top: g.to.y - 14,
+      opacity: go ? 1 : 0,
+      transition: `opacity 200ms ease-out ${still ? 0 : 420 + 90 * (g.n - 1)}ms`
+    }
+  }, "+", g.n));
 };
 const CardBattleBoard = ({
   db,
@@ -88341,23 +88924,104 @@ const CardBattleBoard = ({
     setHint(CARD_TUTORIAL_LINES[id]);
   };
   const bigTimer = useRef(null);
-  const showBigCard = (cards, by, ms = 800) => {
+  const bigThen = useRef(null);
+  const bigMs = settings.motion === 'OFF' ? 0 : Math.round((settings.motion === 'SHORT' ? 500 : 700) * Math.min(1.2, Math.max(0.6, pace)));
+  const finishBig = () => {
+    clearTimeout(bigTimer.current);
+    setBigCard(null);
+    const f = bigThen.current;
+    bigThen.current = null;
+    if (f) f();
+  };
+  const showBigCard = (cards, by, ms = bigMs, side = 'foe', then = null) => {
     const key = `big-${Date.now()}`;
+    clearTimeout(bigTimer.current);
+    bigThen.current = then;
     setBigCard({
       key,
       cards: cards.slice(0, 3),
-      who: by
+      who: by,
+      side
     });
-    setTimeout(() => setBigCard(cur => cur && cur.key === key ? null : cur), ms);
+    bigTimer.current = setTimeout(() => {
+      setBigCard(cur => cur && cur.key === key ? null : cur);
+      const f = bigThen.current;
+      bigThen.current = null;
+      if (f) f();
+    }, ms);
   };
-  const step = (act, forced = null) => {
+  const cardsOfAct = (s0, p, act) => {
+    const hand = s0.players[p].hand;
+    if (!act) return [];
+    if (act.type === 'guard') return Number.isInteger(act.hand) && hand[act.hand] ? [hand[act.hand]] : [];
+    if (['attack', 'breeder', 'pray'].includes(act.type) && Array.isArray(act.hand)) return act.hand.map(i => hand[i]).filter(no => no && no !== CARD_PVP_HIDDEN);
+    return [];
+  };
+  const [gutsFly, setGutsFly] = useState([]);
+  const flyGuts = (s0, s1, act) => {
+    const rectOf = sel => {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return r.width ? {
+        x: r.left,
+        y: r.top,
+        w: r.width,
+        h: r.height
+      } : null;
+    };
+    const out = [];
+    [CARD_ME, CARD_CPU].forEach(p => {
+      const d = s1.players[p].guts.length - s0.players[p].guts.length;
+      if (d <= 0) return;
+      const to = rectOf(`[data-card-guts-of="${p}"]`);
+      if (!to) return;
+      const fromHand = s0.players[p].hand.length - s1.players[p].hand.length >= d && act && ['guts', 'setupGuts'].includes(act.type);
+      const items = [];
+      for (let k = 0; k < d; k++) {
+        const idx = fromHand && Array.isArray(act.hand) ? act.hand[k] : -1;
+        const from = p === CARD_ME && fromHand && rectOf(`[data-card-hand-card="${idx}"]`) || rectOf(fromHand ? `[data-card-hand-of="${p}"]` : `[data-card-deck-of="${p}"]`) || to;
+        const no = p === CARD_ME && fromHand && idx >= 0 ? s0.players[p].hand[idx] : null;
+        items.push({
+          from,
+          img: no && cardOf(db, no) ? CARD_IMG(cardOf(db, no).img) : null,
+          delay: k * 90
+        });
+      }
+      out.push({
+        key: `gf-${p}-${s1.log.length}-${Date.now()}`,
+        p,
+        to,
+        n: d,
+        items
+      });
+    });
+    if (!out.length) return;
+    setGutsFly(cur => [...cur, ...out]);
+    const life = 650 + 90 * Math.max(...out.map(o => o.n)) + 500;
+    setTimeout(() => setGutsFly(cur => cur.filter(g => !out.some(o => o.key === g.key))), life);
+  };
+  const step = (act, forced = null, shown = false) => {
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
       tutWrongSay();
       return false;
     }
+    if (!forced && !shown && !pvp && !tutorial && !game.demo && bigMs > 0 && cardDeciderOf(st) === CARD_ME) {
+      const cards = cardsOfAct(st, CARD_ME, act);
+      if (cards.length && cardApplyAction(db, st, act)) {
+        showBigCard(cards, 'あなた', bigMs, 'me', () => step(act, null, true));
+        return true;
+      }
+    }
     const next = forced || cardApplyAction(db, st, act);
     if (!next) return false;
     if (pvp && !forced) CARD_PVP.local(st, act, next);
+    flyGuts(st, next, act);
+    if (pvp && bigMs > 0) {
+      const p0 = forced ? CARD_CPU : CARD_ME;
+      const shownCards = forced ? (next.events || []).filter(e => (e.t === 'use' || e.t === 'guard') && e.p === CARD_CPU).flatMap(e => e.t === 'use' ? e.cards : [e.card]) : cardsOfAct(st, CARD_ME, act);
+      if (shownCards.length) showBigCard(shownCards, p0 === CARD_ME ? 'あなた' : who.name, bigMs, p0 === CARD_ME ? 'me' : 'foe');
+    }
     stRef.current = next;
     const evs = next.events || [];
     if (!tutorial && evs.some(e => e.t === 'use' || e.t === 'guard')) {
@@ -88468,7 +89132,6 @@ const CardBattleBoard = ({
         who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who,
         side: use.p === CARD_ME ? 'me' : 'foe'
       });
-      if (pvp && use.p === CARD_CPU) showBigCard(use.cards, ul.by ? `${ul.who}(${ul.by}で)` : ul.who);
       setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
     } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI(i => i + 1);
@@ -88505,18 +89168,15 @@ const CardBattleBoard = ({
           hand: []
         });
       };
-      const shown = !tutorial && ['attack', 'guard'].includes(act.type) && Array.isArray(act.hand) && act.hand.length ? act.hand.map(i => st.players[CARD_CPU].hand[i]).filter(Boolean) : [];
+      const shown = !tutorial && bigMs > 0 ? cardsOfAct(st, CARD_CPU, act) : [];
       if (!shown.length) {
         go();
         return;
       }
-      const ms = Math.max(250, Math.round(800 * pace));
-      showBigCard(shown, who.name, ms);
-      bigTimer.current = setTimeout(go, ms);
+      showBigCard(shown, who.name, bigMs, 'foe', go);
     }, wait);
     return () => {
       clearTimeout(t);
-      clearTimeout(bigTimer.current);
     };
   }, [st, paused, tutI]);
   const turnSeen = useRef(null);
@@ -88957,13 +89617,19 @@ const CardBattleBoard = ({
     return React.createElement("div", {
       className: `flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`
     }, p === CARD_CPU && React.createElement("span", {
+      "data-card-hand-of": p,
       className: "flex"
-    }, pl.hand.map((_, i) => React.createElement("b", {
+    }, pl.hand.map((_, i) => React.createElement("img", {
       key: i,
-      className: "-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"
+      src: CARD_BACK_IMG(),
+      alt: "",
+      className: "-ml-1 h-[18px] w-[13px] rounded-[2px] object-cover shadow-[0_0_0_1px_rgba(255,255,255,.35)] first:ml-0"
     }))), React.createElement("span", {
+      "data-card-deck-of": p,
       className: `rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`
-    }, "山札 ", pl.deck.length), React.createElement("span", _extends({}, p === CARD_ME ? {
+    }, "山札 ", pl.deck.length), React.createElement("span", _extends({
+      "data-card-guts-of": p
+    }, p === CARD_ME ? {
       'data-card-guts-drop': true
     } : {}, {
       className: `flex items-center gap-0.5 rounded-md border ${tiny ? 'px-1' : 'px-1.5'} py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`
@@ -89130,7 +89796,7 @@ const CardBattleBoard = ({
     "data-card-log-open": true,
     onClick: () => setLogSheet(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
-    "aria-label": "ターンごとの記録を見る"
+    "aria-label": "ターンの記録を見る"
   }, "記録")), pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
   }) : React.createElement("span", {
@@ -89288,7 +89954,7 @@ const CardBattleBoard = ({
     className: "ml-1 text-[10px] font-bold text-emerald-200"
   }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), React.createElement("div", {
     "data-card-log": true,
-    className: "relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
+    className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug transition-opacity ${turnBanner ? 'opacity-0' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && React.createElement("div", {
     className: "text-rose-200"
@@ -89478,14 +90144,32 @@ const CardBattleBoard = ({
       width: b.len,
       transform: `rotate(${b.deg}deg)`
     }
+  }))), document.body), gutsFly.length > 0 && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
+    "data-card-guts-fly-layer": true,
+    className: "pointer-events-none fixed inset-0",
+    style: {
+      zIndex: MODAL_Z.dialog - 3
+    }
+  }, gutsFly.map(g => React.createElement(CardGutsFlight, {
+    key: g.key,
+    g: g,
+    still: settings.motion === 'OFF'
   }))), document.body), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
   }), bigCard && React.createElement("div", {
+    key: `${bigCard.key}-tap`,
+    "data-card-big-skip": true,
+    role: "button",
+    "aria-label": "先へ進む",
+    onClick: finishBig,
+    className: "absolute inset-0 z-[54]"
+  }), bigCard && React.createElement("div", {
     key: bigCard.key,
-    "data-card-big": true,
-    className: "mh-card-big pointer-events-none absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4"
+    "data-card-big": bigCard.side,
+    onClick: finishBig,
+    className: "mh-card-big absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4"
   }, React.createElement("div", {
     className: "flex items-end justify-center gap-1.5"
   }, bigCard.cards.map((no, i) => {
@@ -89494,7 +90178,7 @@ const CardBattleBoard = ({
       key: i,
       src: CARD_IMG(c.img, 'l'),
       alt: c.name,
-      className: "rounded-[8px] border-[3px] border-rose-400 object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]",
+      className: `rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`,
       style: {
         height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`,
         aspectRatio: '5 / 7'
@@ -89505,13 +90189,16 @@ const CardBattleBoard = ({
     className: "max-w-full rounded-xl border border-rose-300/60 bg-black/80 px-3 py-1 text-center text-[14px] font-black leading-snug text-white",
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
-    className: "mr-1 rounded bg-rose-500 px-1 text-[11px]"
-  }, "相手"), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnSummary && !bigCard && React.createElement("button", {
+    className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
+  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnSummary && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary": true,
     onClick: () => setTurnSummary(null),
-    className: "mh-card-big absolute inset-x-3 top-[18%] z-[54] mx-auto max-h-[56%] max-w-md overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 p-3 text-left shadow-2xl"
+    className: `mh-card-big absolute z-[54] overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 text-left shadow-2xl ${wide ? 'left-2 top-[34%] max-h-[42%] p-2' : 'inset-x-3 top-[18%] mx-auto max-h-[56%] max-w-md p-3'}`,
+    style: wide ? {
+      right: 'calc(min(42%, 420px) + 8px)'
+    } : undefined
   }, React.createElement("div", {
     "data-card-fit": true,
     className: "text-[14px] font-black text-rose-200",
@@ -89616,7 +90303,7 @@ const CardBattleBoard = ({
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
-  }, "やめる"))), mode === 'pray' && prayUse && (() => {
+  }, "やめる"))), mode === 'pray' && prayUse && !bigCard && (() => {
     const fc = cardOf(db, st.pendingPray.no);
     return React.createElement("div", {
       "data-card-pray": true,
@@ -89984,6 +90671,15 @@ const CardBattleScreen = ({
     lines: ['読み込み中…']
   }));
   if (screen === 'CARD_BATTLE' && game) {
+    if (game.intro) return React.createElement(CardVsIntro, {
+      key: `vs-${game.key}`,
+      db: db,
+      intro: game.intro,
+      onDone: () => setGame(g => g && g.key === game.key ? {
+        ...g,
+        intro: null
+      } : g)
+    });
     return React.createElement(CardBattleBoard, {
       key: game.key,
       db: db,
@@ -90083,14 +90779,32 @@ const CardBattleScreen = ({
   const activeDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
+  const myName = rank && rank.profile && rank.profile.name || 'あなた';
+  const vsMons = (st, side) => (st && st.players && st.players[side] && st.players[side].mons || []).map(m => m.no);
   const startTutorial = () => {
     setResult(null);
+    const tst = cardTutorialGame(db);
+    const mua = allAssistants.find(a => a.id === 'mua');
+    const intro = {
+      mode: 'tutorial',
+      foe: {
+        who: 'mua',
+        name: mua ? mua.name : 'みゅあ',
+        line: CARD_VS_TUTORIAL_LINE,
+        monsters: vsMons(tst, CARD_CPU)
+      },
+      me: {
+        name: '練習試合',
+        monsters: vsMons(tst, CARD_ME)
+      }
+    };
     setGame({
       key: `tutorial-${Date.now()}`,
-      st: cardTutorialGame(db),
+      st: tst,
       who: 'mua',
       level: 'easy',
-      tutorial: true
+      tutorial: true,
+      intro
     });
     onBgm && onBgm(CARD_AI_BGM.mua);
     onNavigate('CARD_BATTLE');
@@ -90121,12 +90835,28 @@ const CardBattleScreen = ({
       } catch (_) {}
     }
     setResult(null);
+    const intro = {
+      mode: 'assistant',
+      foe: {
+        who: pick.who,
+        name: assistant ? assistant.name : 'あいて',
+        line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null,
+        deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level),
+        monsters: vsMons(st, CARD_CPU)
+      },
+      me: {
+        name: myName,
+        deckName: activeDeck.name || null,
+        monsters: vsMons(st, CARD_ME)
+      }
+    };
     setGame({
       key: `${seed}`,
       st,
       who: pick.who,
       level: pick.level,
-      settings: save.settings
+      settings: save.settings,
+      intro
     });
     onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
@@ -90304,9 +91034,25 @@ const CardBattleScreen = ({
       rankSend: !!(rank && rank.send) && !debug,
       onStart: g => {
         setResult(null);
+        const pv = g.pvp || {};
+        const intro = {
+          mode: 'pvp',
+          foe: {
+            name: pv.name || 'あいて',
+            icon: pv.icon || '🙂',
+            deckName: pv.deckName || null,
+            monsters: vsMons(g.st, CARD_CPU)
+          },
+          me: {
+            name: myName,
+            deckName: activeDeck && activeDeck.name || null,
+            monsters: vsMons(g.st, CARD_ME)
+          }
+        };
         setGame({
           ...g,
-          settings: save.settings
+          settings: save.settings,
+          intro
         });
         onBgm && onBgm(save.bgm.pvp || null);
         onNavigate('CARD_BATTLE');
@@ -90352,9 +91098,14 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black"
     }, x.name), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
-    }, "勝")))), React.createElement(ScreenSectionLabel, {
-      note: "勝つと次の強さが開きます"
-    }, "強さ"), React.createElement("div", {
+    }, "勝")))), React.createElement("div", {
+      className: "flex items-baseline gap-2 px-0.5 pt-1"
+    }, React.createElement("span", {
+      className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
+    }, "強さ"), React.createElement("span", {
+      className: "text-[11px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, "勝つと次の強さが開きます")), React.createElement("div", {
       className: "grid grid-cols-5 gap-1"
     }, CARD_LEVEL_ORDER.map(lv => {
       const open = cardLevelOpen(save.unlocked, lv) || debug;
@@ -90564,7 +91315,7 @@ const CardBattleScreen = ({
           borderColor: dra.accent,
           ...JA_WRAP_STYLE
         }
-      }, jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ'))) : null;
+      }, cardJaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ'))) : null;
     })(), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, result.done && result.reward > 0 && React.createElement("div", {
@@ -90706,7 +91457,7 @@ const CardBattleScreen = ({
     }, rec.byLevel.lose[lv]))))), React.createElement("p", {
       className: "mt-1 text-[10px] font-bold text-slate-500",
       style: JA_LABEL_STYLE
-    }, jaWrap('難易度ごとの数は、この記録ができてからのぶんです'))), React.createElement("div", {
+    }, jaWrap('難易度別の数は、この記録ができてからのぶんです'))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -90767,7 +91518,7 @@ const CardBattleScreen = ({
     }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴')))), React.createElement("p", {
       className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('「おまかせ」のときは、対戦する助手ごとに決まった曲が流れます')), React.createElement("p", {
+    }, jaWrap('「おまかせ」のときは、対戦する助手に合わせて決まった曲が流れます')), React.createElement("p", {
       "data-card-options-se": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
@@ -90868,7 +91619,7 @@ const CardBattleScreen = ({
       }, "(助手と対戦)")), React.createElement("p", {
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
         style: JA_WRAP_STYLE
-      }, jaWrap(item.desc)), React.createElement("div", {
+      }, cardJaWrap(item.desc)), React.createElement("div", {
         className: `mt-2 grid gap-1.5 ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : item.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`
       }, item.options.map(o => React.createElement("button", {
         key: o.id,
@@ -91612,7 +92363,11 @@ const CardDeckEditor = ({
     style: JA_LABEL_STYLE
   }, jaWrap(notice))), React.createElement("div", {
     "data-card-deck-chips": true,
-    className: "mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible"
+    className: "mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0",
+    style: land ? undefined : {
+      WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)',
+      maskImage: 'linear-gradient(to right, #000 82%, transparent)'
+    }
   }, CARD_DECK_VIEWS.map(f => React.createElement("button", {
     key: f.id,
     type: "button",
@@ -91622,7 +92377,7 @@ const CardDeckEditor = ({
       setNotice('');
     },
     className: chip(view === f.id)
-  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label)), canAsk && React.createElement("button", {
+  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length}枚+${deck.monsters.length}体` : f.label)), canAsk && React.createElement("button", {
     type: "button",
     "data-card-deck-ask": true,
     onClick: () => {
@@ -91708,7 +92463,7 @@ const CardDeckEditor = ({
       setAsk(null);
     },
     className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-2xl border border-white/20 bg-slate-800 font-black"
-  }, "とじる"))), detail && React.createElement(CardDetailModal, {
+  }, "閉じる"))), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
@@ -91775,8 +92530,9 @@ const CardDeckList = ({
     })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("div", {
-      className: "truncate text-[14px] font-black text-white"
-    }, on ? '★ ' : '', d.name), React.createElement("div", {
+      className: "text-[14px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, on ? '★ ' : '', jaWrap(d.name)), React.createElement("div", {
       className: `text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`
     }, d.cards.length, "/", CARD_BATTLE_DECK_SIZE, "枚・", ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
       className: "mt-2 grid grid-cols-4 gap-1"
@@ -91967,7 +92723,7 @@ const CardDex = ({
     key: mode,
     ref: tabRow,
     "data-card-dex-tabs": mode,
-    className: "mh-scroll relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible"
+    className: "relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1"
   }, tabList.map(t => React.createElement("button", {
     key: t.id,
     type: "button",
@@ -92422,29 +93178,23 @@ const CardPackOpen = ({
     }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
     }, React.createElement("div", {
-      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] border-2 border-white/50 ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
       style: {
-        background: `repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px), linear-gradient(160deg, ${pack.color}, #0f172a)`,
         containerType: 'inline-size'
       }
-    }, React.createElement("span", {
+    }, React.createElement("img", {
+      src: CARD_BACK_IMG(),
+      alt: "",
+      draggable: false,
+      className: "absolute inset-0 h-full w-full rounded-[5px] object-cover"
+    }), c.slot === 'mon' && React.createElement("span", {
       "aria-hidden": "true",
-      className: "pointer-events-none absolute inset-[6%] rounded-[4px] border border-white/40"
-    }), React.createElement("span", {
-      "aria-hidden": "true",
-      className: "relative grid aspect-square w-[58%] place-items-center rounded-full border-2 border-amber-200/80 bg-black/40 shadow-[0_0_10px_rgba(0,0,0,.5)]"
-    }, React.createElement("span", {
-      className: "text-center font-black leading-none text-amber-100",
+      className: "relative mt-[62%] grid aspect-square w-[30%] place-items-center rounded-full border-2 border-amber-200/90 bg-black/55 font-black leading-none text-amber-200 shadow-[0_0_10px_rgba(0,0,0,.5)]",
       style: {
-        fontSize: '17cqw',
+        fontSize: '14cqw',
         textShadow: '0 1px 2px #000'
       }
-    }, c.slot === 'mon' ? '★' : 'MF', React.createElement("span", {
-      className: "block font-black tracking-tight text-white/80",
-      style: {
-        fontSize: '7cqw'
-      }
-    }, "BATTLE CARD")))), React.createElement("div", {
+    }, "★")), React.createElement("div", {
       className: `mh-pack-face mh-pack-front ${rare ? c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front' : ''}`
     }, React.createElement("img", {
       src: CARD_IMG(card ? card.img : m ? m.img : c.no),
@@ -92581,7 +93331,7 @@ const CardShopSheet = ({
   "data-card-shop-sheet-close": true,
   onClick: onClose,
   className: "mh-button mh-button-primary min-h-[46px] w-full rounded-2xl text-[14px] font-black active:scale-[.98] landscape:min-h-[40px]"
-}, "とじる")))), detail && React.createElement(CardDetailModal, {
+}, "閉じる")))), detail && React.createElement(CardDetailModal, {
   db: db,
   no: detail,
   onClose: () => setDetail(null)
@@ -92696,7 +93446,7 @@ const CardPackRateSheet = ({
   }, cardShopName(db, x.no)))), React.createElement("td", {
     className: `${td} text-right tabular-nums`
   }, cardShopPct(x.p))));
-  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターは、キラの無い通常のモンスターとして出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null, `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
+  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つあたりの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターも、ほかのモンスターと同じく、そのカードのレア度(通常・キラ・別絵キラ)の割合の中から出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(キラが出ないまま続くのを止める決まり。「天井」と呼びます)。` : null, `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
   return React.createElement(CardShopSheet, {
     tag: "rates",
     title: `${pack.name} 提供割合`,
@@ -92704,7 +93454,7 @@ const CardPackRateSheet = ({
     detail: detail,
     setDetail: setDetail,
     db: db
-  }, React.createElement(CardShopHead, null, "レア度ごとの割合(モンスターの枠)"), React.createElement("table", {
+  }, React.createElement(CardShopHead, null, "レア度別の割合(モンスターの枠)"), React.createElement("table", {
     "data-card-rate-rarity": true,
     className: "w-full border-collapse text-slate-100"
   }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
@@ -93253,13 +94003,13 @@ const CardRankingBoard = ({
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
   }, period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数')), React.createElement("div", {
-    className: "flex gap-1.5 overflow-x-auto"
+    className: "grid grid-cols-5 gap-1"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
     type: "button",
     "data-card-ranking-level": lv,
     onClick: () => setLevel(lv),
-    className: chip(level === lv)
+    className: `${chip(level === lv)} min-w-0 !px-0.5 max-[359px]:text-[10px]`
   }, levelLabel(lv))))), kind !== 'multi' && React.createElement("div", {
     "data-card-ranking-mine": true,
     className: `${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex shrink-0 items-center gap-2 text-[12px] font-bold`
@@ -93288,7 +94038,7 @@ const CardRankingBoard = ({
   }, "準備中"), !cardPvpOpen() && React.createElement("p", {
     className: "mt-2 text-[12px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), React.createElement(CardPvpRankingList, {
+  }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), cardPvpOpen() && React.createElement(CardPvpRankingList, {
     renderBreederIcon: renderBreederIcon,
     selfId: selfId
   })), kind !== 'multi' && state.status === 'loading' && React.createElement("p", {
@@ -93675,7 +94425,8 @@ const cardPvpCleanMessage = raw => {
       count: cardPvpInt(raw.count, 60),
       seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null,
       match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null,
-      bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null
+      bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
+      dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null
     };
   }
   if (raw.t === 'start') return {
@@ -94022,7 +94773,8 @@ const CARD_PVP = (() => {
     count: s.deck.cards.length,
     seal: s.seal,
     match: s.match || null,
-    bid: s.me.bid || null
+    bid: s.me.bid || null,
+    dn: s.me.dn || null
   });
   const closeLobby = () => {
     lobbyAlive = false;
@@ -94085,7 +94837,8 @@ const CARD_PVP = (() => {
         level: 'normal',
         pvp: {
           name: s.foe.name || 'あいて',
-          icon: s.foe.icon || '🙂'
+          icon: s.foe.icon || '🙂',
+          deckName: s.foe.dn || null
         }
       }
     });
@@ -94184,6 +94937,7 @@ const CARD_PVP = (() => {
         count: msg.count,
         seal: msg.seal,
         bid: msg.bid,
+        dn: msg.dn || null,
         seen: now
       };
       if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return;
@@ -94427,7 +95181,8 @@ const CARD_PVP = (() => {
         name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX),
         icon: rhythmMultiText(profile.icon || '🙂', 8),
         at: Date.now(),
-        bid: typeof bid === 'string' ? bid : null
+        bid: typeof bid === 'string' ? bid : null,
+        dn: rhythmMultiText(typeof deck.name === 'string' ? deck.name : '', 30) || null
       }
     };
     emit();

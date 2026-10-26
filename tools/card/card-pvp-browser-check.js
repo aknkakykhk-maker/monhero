@@ -5,7 +5,8 @@
 //   node tools/card/card-pvp-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、2つの画面の写真を残す(自分の番・あいての番・守りの番・結果)
 //
-// ★外へはつながない。WebSocket を偽物に差し替え、同じブラウザの2つのページのあいだを BroadcastChannel で中継する(rhythm-multi-layout-check.js と同じ)
+// ★外へはつながない。WebSocket を偽物に差し替え、2台のページのあいだを Node が中継する(window.__fakeWsRelay → 全部のページの __fakeWsRecv)。
+//   2台は別々の保存先(Playwright の別の browser context)で開く(2026-10-26。同じ保存先だと、ビートPを2台がほぼ同時に書いて片方が消えていた。実際の2台と同じ条件にする)
 //   自分の番は、検査のときだけの口(window.__mhCardPvpAuto)で、コンピューターの考え方で自動で打つ
 //   ① デバッグ設定 → MFバトルカード → 対戦 → マルチ対戦 が押せて、合言葉の部屋を作れる・もう1台が合言葉で入れる
 //   ② 2台とも対戦の画面になり、相手の名前とアイコン(助手ではない)が出る・相手の手札は裏のまま
@@ -30,15 +31,22 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
   const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
-// ページの中の偽の WebSocket(topic ごとに BroadcastChannel。Realtime と同じく自分にも返す)
+// ページの中の偽の WebSocket(topic ごとに、Node の中継で全部のページへ配る。Realtime と同じく自分にも返す)
 const FAKE_WS = () => {
   // __fakeWsDrop(ms) … いまのつながりを切り、ms のあいだは新しくつながらない(電波が切れたふり)
   const all = new Set();
+  const subs = {}; // topic → その topic につないでいる偽の WebSocket
+  const pageId = `${Date.now()}-${Math.random()}`;
+  let nextId = 1;
+  // 中継から届いた知らせ。送った本人(同じページの同じつながり)には返さない(自分への返しは send の中で別に出す)
+  window.__fakeWsRecv = (topic, payload, fromId, fromPage) => {
+    (subs[topic] || []).forEach((w) => { if (!(fromPage === pageId && w.id === fromId)) w.deliver({ topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload } }); });
+  };
   window.__fakeWsBlockUntil = 0;
   window.__fakeWsDrop = (ms) => { window.__fakeWsBlockUntil = Date.now() + ms; [...all].forEach((w) => w.close()); };
   class FakeWS {
     constructor() {
-      this.readyState = 0; this.topic = null; this.ch = null; all.add(this);
+      this.readyState = 0; this.topic = null; this.id = nextId++; all.add(this);
       if (Date.now() < window.__fakeWsBlockUntil) { setTimeout(() => { this.readyState = 3; all.delete(this); if (this.onclose) this.onclose({}); }, 50); return; }
       setTimeout(() => { this.readyState = 1; if (this.onopen) this.onopen({}); }, 0);
     }
@@ -47,17 +55,16 @@ const FAKE_WS = () => {
       const m = JSON.parse(data);
       if (m.event === 'phx_join') {
         this.topic = m.topic;
-        this.ch = new BroadcastChannel(`fake-ws:${m.topic}`);
-        this.ch.onmessage = (e) => this.deliver({ topic: this.topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload: e.data } });
+        (subs[m.topic] = subs[m.topic] || []).push(this);
         this.deliver({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: 'ok', response: {} } });
         return;
       }
       if (m.event !== 'broadcast') return;
       const payload = m.payload && m.payload.payload;
-      if (this.ch) this.ch.postMessage(payload);
+      if (this.topic && window.__fakeWsRelay) window.__fakeWsRelay(this.topic, payload, this.id, pageId);
       this.deliver({ topic: this.topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload } });
     }
-    close() { if (this.readyState === 3) return; this.readyState = 3; all.delete(this); if (this.ch) this.ch.close(); if (this.onclose) this.onclose({}); }
+    close() { if (this.readyState === 3) return; this.readyState = 3; all.delete(this); if (this.topic && subs[this.topic]) subs[this.topic] = subs[this.topic].filter((w) => w !== this); if (this.onclose) this.onclose({}); }
   }
   window.WebSocket = FakeWS;
   window.__mhCardPvpAuto = true;
@@ -77,15 +84,23 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
   try {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+    // 2台は別々の保存先(context)。偽の Supabase・はじめの保存・偽の WebSocket は、どちらにも同じものを入れる
     const reports = [];
     const invites = [];
+    const livePages = [];
+    let relayQueue = Promise.resolve(); // 届いた順に配る(2台の手の順番を入れ替えない)
+    const makeCtx = async () => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+    await ctx.exposeBinding('__fakeWsRelay', (_src, topic, payload, id, pid) => {
+      relayQueue = relayQueue.then(() => Promise.all(livePages.filter((pg) => !pg.isClosed()).map((pg) => pg.evaluate(([t, pl, i, pi]) => { if (window.__fakeWsRecv) window.__fakeWsRecv(t, pl, i, pi); }, [topic, payload, id, pid]).catch(() => {}))));
+      return relayQueue;
+    });
     await ctx.route(/supabase\.co/, (route) => {
       const req = route.request();
       if (process.env.DEBUG_PVP && /invite/.test(req.url())) console.log('REQ', req.method(), req.url().slice(0, 140), (req.postData() || '').slice(0, 120));
       if (/\/card_battle_invites/.test(req.url())) {
         if (req.method() === 'POST') { try { const row = JSON.parse(req.postData() || '[]')[0]; invites.push({ ...row, created_at: new Date().toISOString() }); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 201, body: '' }); }
-        // 同じブラウザで2台を動かすので、届いた側からは「名簿のフレンド(friend-x)から」の招待に見せる
+        // 届いた側からは「名簿のフレンド(friend-x)から」の招待に見せる(2台とも同じ偽の表を見る)
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(invites.map((x) => ({ sender_id: 'friend-x', room_code: x.room_code, created_at: x.created_at }))) });
       }
       if (/\/rpc\/card_battle_pvp_report/.test(req.url())) { try { reports.push(JSON.parse(req.postData() || '{}')); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 200, contentType: 'application/json', body: '"wait"' }); }
@@ -100,7 +115,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     });
     await ctx.addInitScript(eventStorySeed());
     await ctx.addInitScript(FAKE_WS);
+    return ctx;
+    };
+    const ctxA = await makeCtx(), ctxB = await makeCtx();
     const boot = async (page) => {
+      livePages.push(page);
       page.on('pageerror', (e) => errors.push(String(e)));
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
@@ -122,18 +141,21 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
       await page.locator('[data-debug-card-battle]').dispatchEvent('click');
     };
-    // 1台目: スターターを選び、練習試合は飛ばす(同じブラウザなので、保存は2台目にも効く)
-    const A = await ctx.newPage();
+    // それぞれの台で: スターターを選び、練習試合は飛ばす(保存先が別なので、2台とも)
+    const starter = async (page, kit) => {
+      await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
+      await page.locator(`[data-card-kit="${kit}"]`).click();
+      await page.getByRole('button', { name: /にする$/ }).click();
+      await page.locator('[data-card-quit]').waitFor({ timeout: 20000 });
+      await page.locator('[data-card-quit]').click();
+      await page.getByRole('button', { name: '飛ばす' }).last().click();
+      await page.waitForTimeout(800);
+    };
+    const A = await ctxA.newPage();
     await boot(A);
     const before = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     await openCard(A);
-    await A.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
-    await A.locator('[data-card-kit="speed"]').click();
-    await A.getByRole('button', { name: /にする$/ }).click();
-    await A.locator('[data-card-quit]').waitFor({ timeout: 20000 });
-    await A.locator('[data-card-quit]').click();
-    await A.getByRole('button', { name: '飛ばす' }).last().click();
-    await A.waitForTimeout(800);
+    await starter(A, 'speed');
     const toLobby = async (page) => {
       if (await page.locator('[data-card-top="result"]').count()) await page.getByRole('button', { name: /トップへ|戻る|閉じる/ }).first().click().catch(() => {});
       await page.locator('[data-card-cpu]').first().click({ timeout: 20000 });
@@ -151,9 +173,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const code = (await A.locator('[data-card-pvp-room]').innerText()).trim();
     check('① デバッグから「マルチ対戦」が押せて、合言葉の部屋を作れる', enabled && /^[A-Z2-9]{4}$/.test(code), code);
     await shot(A, 'pvp-01-room');
-    const B = await ctx.newPage();
+    const B = await ctxB.newPage();
     await boot(B);
     await openCard(B);
+    await starter(B, 'powerful');
+    if (await B.locator('[data-card-top="result"]').count()) await B.getByRole('button').filter({ hasText: /トップ/ }).first().click().catch(() => {});
     await B.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
     await toLobby(B);
     await B.locator('[data-card-pvp-code]').fill(code);
@@ -174,7 +198,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const chatSeen = await B.locator('[data-card-bubble]').filter({ hasText: 'よろしく！' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
     check('⑥ 定型のチャットが、相手の画面の吹き出しに出る', chatSeen);
     await shot(B, 'pvp-04-chat');
-    const pointBefore = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
+    const beatP = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
+    const pointBefore = [await beatP(A), await beatP(B)];
     await B.evaluate(() => window.__fakeWsDrop(9000));
     const offSeen = await B.locator('[data-card-pvp-signal]').filter({ hasText: '電波が途切れています' }).waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
     const foeQuietSeen = await A.locator('[data-card-pvp-signal]').filter({ hasText: '相手の電波が途切れています' }).waitFor({ timeout: 12000 }).then(() => true).catch(() => false);
@@ -206,13 +231,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('④ 終わってから山札を見せ合って、両方で「正しく終わった」', vA === 'ok' && vB === 'ok', `${vA} / ${vB} ${vA !== 'ok' ? await A.locator('[data-card-pvp-verify]').innerText().catch(() => '') : ''}`);
     const rewardA = await A.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => A.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
     const rewardB = await B.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => B.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
-    const pointAfter = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
+    const pointAfter = [await beatP(A), await beatP(B)];
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
-    // ★この検査は2台が同じブラウザの保存を使うので、あとから書いた側(+200 か +50)が残る。実際は別の端末なので、両方それぞれに入る
-    // ★A と B は同じ ctx(保存先を共有)なので、2台が同じビートPへほぼ同時に書く(本当の2台では保存先が別なので起きない)。
-    //   書く直前に読み直して差を足す(2026-10-26)ので、ふつうは2台ぶん(+250)が残るが、読み直しと書き込みの間に
-    //   もう片方が割り込むと、あとから書いたほうだけ(+200 か +50)が残る。どれも「報酬が入った」ことに変わりはない
-    check('⑥ ビートPが増えている(同じ保存先の2台ぶん+250、割り込まれたときは片方の+200か+50)', [250, 200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
+    // 2台は保存先が別なので、それぞれに入る(勝った台 +200・負けた台 +50。台帳 #119 の対人戦)
+    const gain = pointAfter.map((v, i) => v - pointBefore[i]);
+    const want = [rA, rB].map((r) => (r === 'win' ? 200 : r === 'lose' ? 50 : null));
+    check('⑥ ビートPが、2台それぞれに増えている(勝ち+200・負け+50)', gain[0] === want[0] && gain[1] === want[1], `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
     const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
     check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
     // ⑥ 54本の台詞を、いまの吹き出しと同じ幅・同じ文字に入れて、言葉の途中で折れていないか測る(かたまり1つが2行にまたがっていない)
@@ -299,7 +323,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));
-    await ctx.close();
+    await ctxA.close(); await ctxB.close();
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);

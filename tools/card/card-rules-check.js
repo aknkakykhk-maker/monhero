@@ -273,6 +273,16 @@ const decksAndSaves = () => {
       // オプションに並べる項目は、どれも normalizeCardSettings が持つ名前・選択肢
       && E.CARD_SETTING_GROUPS.every((g) => g.items.every((it) => it.bool ? typeof E.normalizeCardSettings(null)[it.key] === 'boolean' : it.options.some((o) => o.id === E.normalizeCardSettings(null)[it.key]) && it.options.every((o) => E.normalizeCardSettings({ [it.key]: o.id })[it.key] === o.id))) && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).autoPass === false && E.normalizeCardSettings({ speed: 'x' }).speed === 'normal', '演出の設定の読み込みが合わない');
   }
+  // 同じ血統の2体・3体(2026-10-26 社長「3体編成も実際あるから組まれるようにして」): 仲間の多いみゅあは出る・仲間のいないももすけは出ない・同じ子は2体入らない
+  {
+    const blood = (no) => { const m = db.monsters[no]; return String(m.wave) === 'hybrid' ? m.main : m.species; };
+    const count = (who, lv) => { let two = 0, three = 0, dup = 0; for (let g = 0; g < 60; g++) { const d = E.cardAiBuildDeck(db, who, lv, E.cardAiSeededRand(`same:${who}:${lv}:${g}`)); const b = d.monsters.map(blood); const same = b.filter((x) => x === b[0]).length; if (same === 2) two += 1; if (same === 3) three += 1; if (new Set(d.monsters.map((no) => db.monsters[no].species)).size < 3) dup += 1; } return { two, three, dup }; };
+    const mua = count('mua', 'normal');
+    ok(mua.two > 0 && mua.three > 0, `みゅあ(モッチーの仲間が多い)のデッキに同じ血統の2体・3体が出ない(${JSON.stringify(mua)})`);
+    const momo = count('momosuke', 'normal');
+    ok(momo.two === 0 && momo.three === 0, `ももすけ(メタルナーの仲間がいない)のデッキに同じ血統が出た(${JSON.stringify(momo)})`);
+    ok(['mua', 'kyuko', 'dra', 'atsu'].every((w) => ['easy', 'expert', 'master'].every((lv) => count(w, lv).dup === 0)), '助手のデッキに同じ子(キラ・別絵キラを含む)が2体入った');
+  }
   // ポイントはビートPと同じ財布(2026-10-26 社長)。保存先はビートPのキーで、CARD_SAVE_KEYS には入れない
   // (デバッグの「カードバトルの記録を消す」が CARD_SAVE_KEYS を全部消すので、入っているとビートPまで消える)
   ok(E.CARD_POINT_STORE_KEY === 'mh_rhythm_event_points_v1', `ポイントの保存先がビートPのキーではない(${E.CARD_POINT_STORE_KEY})`);
@@ -373,7 +383,8 @@ const packs = () => {
   // 8弾の分け方(2026-10-25 社長が決めた案。種族3つずつ・第1〜3弾はスターターキットの顔ぶれ・混血はメインの種族の弾)
   const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
   // 混血・派生は主の種族の弾へ(#3575)。2026-10-25 の派生25枚も同じ決め(立ち絵の無い5枚は図鑑だけで、パックには出ない)
-  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
+  // 剣士モッチー(2026-10-26)はふつう・キラ・別絵キラの3枚。名前は1つとして数える
+  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス', '剣士モッチー'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
   const DEX_ONLY = ['C-011', 'C-014', 'C-032', 'C-037', 'C-044'];
   ok(DEX_ONLY.every((no) => db.monsters[no] && db.monsters[no].dexOnly) && Object.values(db.monsters).filter((m) => m.dexOnly).length === DEX_ONLY.length, '立ち絵の無い5枚だけが「図鑑だけ」になっていない');
   ok(['C-020', 'C-044', 'C-045'].every((no) => db.monsters[no].sub === 'unknown'), '副が ??? の3枚の副が unknown でない');
@@ -383,8 +394,9 @@ const packs = () => {
   E.CARD_PACKS.forEach((p) => {
     const all = E.cardPackAllCards(db, p);
     const n = all.monsters.length + all.cards.length;
-    ok(n >= 48 && n <= 58, `${p.name}の種類が50前後でない(${n})`);   // 派生25枚(2026-10-25)で、第1〜3・5弾は少し増えた
-    const hy = all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name).sort();
+    // 派生25枚(2026-10-25)で、第1〜3・5弾は少し増えた。第1弾は剣士モッチー3枚(2026-10-26)で59(社長「このまま59にする」)
+    ok(n >= 48 && n <= 59, `${p.name}の種類が50前後でない(${n})`);
+    const hy = [...new Set(all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name))].sort();
     ok(JSON.stringify(hy) === JSON.stringify(HYBRID[p.id].slice().sort()), `${p.name}の混血が決めた案と違う(${hy.join('・')})`);
     const shared = all.cards.filter((no) => db.cards[no].user === 'any' || db.cards[no].user === 'breeder').length;
     ok(shared >= 1, `${p.name}に全モンスター・ブリーダーのカードが無い`);
