@@ -69,7 +69,7 @@ const CARD_SPECIAL_MOTION_RULES = Object.freeze([
 ]);
 // カード番号ごとの上書き(社長が見て「この技はこう動いてほしい」と言ったら、その1枚だけここに足す)
 const CARD_MOTION_BY_NO = Object.freeze({});
-const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant' });
+const CARD_MOTION_GAME_ID = Object.freeze({ tiger: 'Tiger', golem: 'Golem', suezo: 'Suezo', pixie: 'Pixie', hare: 'Ham', mocchi: 'Mocchi', monol: 'Monol', plant: 'Plant', ghost: 'Ghost' });
 
 // そのカードの技を、その子が出すときの動き(SkillFxMotion の kind)。特殊技・ブリーダーは体を動かさない(null)
 const cardMotionKindOf = (db, cardNo, mon) => {
