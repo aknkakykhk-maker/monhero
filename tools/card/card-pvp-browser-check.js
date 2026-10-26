@@ -22,6 +22,7 @@
 //   ⑩ もう一度送ると知らせがまた出て、「参加する」でマルチの入口へ移って同じ部屋に入り、対戦が始まる
 //   ⑪ 招待のようすの見分け(届いている・時間切れ・断られた)
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
+//   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
 //   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -407,9 +408,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const histOf = (page) => page.evaluate(async () => (typeof cardPvpHistoryLoad === 'function' ? cardPvpHistoryLoad() : null));
     let histA = null;
     for (let i = 0; i < 70; i++) { histA = await histOf(A); if (histA && histA.length >= 2 && histA[0].rating) break; await A.waitForTimeout(500); }
+    // 試合の数は、ここまでに遊んだ数(合言葉・もう1戦・だれとでも)。前の区切りで試合が増えても落ちないよう、2台で同じ数か・2試合以上かで見る
     const histB = await histOf(B);
-    check('⑬ マルチの履歴: 2台とも2試合が残り、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
-      !!histA && histA.length === 2 && !!histB && histB.length === 2 && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
+    check('⑬ マルチの履歴: 2台とも遊んだ試合が残り(同じ数)、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
+      !!histA && histA.length >= 2 && !!histB && histB.length === histA.length && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
       JSON.stringify((histA || []).map((x) => [x.match, x.outcome, x.verify, x.foeDeck && x.foeDeck.cards.length, x.rating])));
     const deltaA = histA && histA[0].rating ? histA[0].rating.after - histA[0].rating.before : null;
     check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +16・負け -16。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 16 : -16), JSON.stringify(histA && histA[0].rating));
@@ -418,7 +420,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     const rowsText = await A.locator('[data-card-pvp-history-row]').allInnerTexts();
     await shot(A, 'pvp-09-history');
-    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === 2 && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
+    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === histA.length && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
     await A.locator('[data-card-pvp-history-row]').first().click();
     await A.locator('[data-card-pvp-history="detail"]').waitFor({ timeout: 10000 });
     const foeTiles = await A.evaluate(() => ({ mons: document.querySelectorAll('[data-card-pvp-history-mon]').length, total: [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }));
@@ -471,6 +473,16 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));
+    // ⑭ 相手が試合の途中で画面を閉じた(「抜けます」が届かないことがある): 相手の時間切れや電波切れで終わっても「相手が抜けた」と出し、「もう1戦」は出さない(2026-10-27 部長)
+    //   ⑩ で始まった試合のまま、A の画面を閉じる。閉じる前に、閉じたときの知らせ(bye)が出ないようにしておく
+    await A.evaluate(() => { window.__mhCardPvpAuto = false; window.addEventListener('pagehide', (e) => e.stopImmediatePropagation(), true); window.addEventListener('beforeunload', (e) => e.stopImmediatePropagation(), true); }).catch(() => {});
+    await A.close({ runBeforeUnload: false });
+    for (let i = 0; i < 240 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
+    await B.waitForTimeout(1500);
+    const leftText = (await B.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
+    await shot(B, 'pvp-14-foe-left');
+    check('⑭ 相手が画面を閉じて抜けたら、「相手が抜けた」と出る(時間切れと出さない)', /相手が抜けた/.test(leftText) && !/相手の時間切れ/.test(leftText), leftText.replace(/\n/g, ' ').slice(0, 120));
+    check('⑭ そのとき「もう1戦」は出ない(待ち続けない)・「部屋を出る」が押せる', (await B.locator('[data-card-pvp-again]').count()) === 0 && (await B.locator('[data-card-pvp-leave]').count()) === 1);
     await ctxA.close(); await ctxB.close();
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
