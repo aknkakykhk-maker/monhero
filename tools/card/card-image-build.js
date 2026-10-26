@@ -36,6 +36,10 @@ const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // �
 const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9, x1: 678, y1: 725, frame: { below: 728, right: 679, x1: 692, y1: 734 } };
 const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT, blur: 9, x1: 674 };
 
+// © と URL の字が無い絵(2026-10-26 社長が送った剣士モッチー C-066・パンドラ C-067 の3枚ずつ)。
+// 前は帯を塗っていて、パンドラは赤い帯・別絵キラは縞の四角が出ていた(2026-10-27 カード追加部パックくんの見回り)
+const NO_COPYRIGHT = ['C066.jpg', 'C066S.jpg', 'C066V.jpg', 'C067.jpg', 'C067S.jpg', 'C067V.jpg'];
+
 // 日本語にした絵に残った英語の字の欠片。ヨロイモッチー(C-035)のサブの札で「デュラハン」の左に白い欠片が残っていた
 // (英語の DURAHAN が札の左端近くまであり、札の丸い角を守る所に重なっていた。2026-10-27 カード追加部パックくんの見回り)
 const PATCH = {
@@ -100,6 +104,8 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   // 文字を描き直した版(card-battle-ja/F*.jpg・カード部)は、もう枠にそろえてあるので切り出さない
   const { data, info } = await sharp(isField(file) && !file.startsWith(JA) ? await normalizeField(file) : file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
+  // © と URL の字がもともと無い絵(社長が作った剣士モッチー・パンドラ)は、塗るとまだらの四角だけが残るので消さない
+  if (NO_COPYRIGHT.includes(path.basename(file))) return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
   // 全体カードの © は場所がほかの技カードと違う(絵の右下 y≈708〜722)ので、文字を描き直す段(card-image-ja.js の field)で消してある。ここでは消さない
   if (artCopyright && !isMonster(file) && !(isField(file) && file.startsWith(JA))) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
