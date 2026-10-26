@@ -215,8 +215,10 @@ const DEX_STATUS_STYLE = {
   locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
   draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100',
 };
-const DexStatusTag = ({ status, size = 'sm' }) => {
-  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+// announced: 実装予告を出した案の子。「未実装」の代わりに「近日実装」と出す(色は未実装と同じ)
+const DexStatusTag = ({ status, size = 'sm', announced = false }) => {
+  const found = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  const def = announced && found.id === 'draft' ? { ...found, label:'近日実装' } : found;
   return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
 };
 
@@ -274,7 +276,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                       <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{mon.name}</div>
                       {unlocked
                         ? <div className="text-[10px] font-black text-amber-400/80 leading-tight">{monsterCategoryName(category)}</div>
-                        : <DexStatusTag status={section.id}/>}
+                        : <DexStatusTag status={section.id} announced={dexDraftAnnounced(mon)}/>}
                       {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
                     </button>
                   );
@@ -419,7 +421,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{mon.name}</div>
             {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
-            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md"/></div>}
+            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md" announced={dexDraftAnnounced(mon)}/></div>}
             {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
                 左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
             <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
