@@ -188,9 +188,14 @@ for (let n = 0; n < N; n++) runOne(n);
       : (c.effects || []).some((e) => e.t === 'noGutsLoss') ? [bNeed((x) => (x.effects || []).some((e) => e.t === 'gutsLossOnHit'))] : [];
     // 盾になる・吹き上げる(ほかの子が狙われたときに出す守り)は、相手が先頭の子(カードの持ち主)以外を狙う
     const avoidLead = (c.effects || []).some((e) => e.t === 'shield' || e.t === 'liftAllies' || e.t === 'cover');
-    const extraB = isGuard ? { attack: true, must: bMust.filter(Boolean), avoidLead } : null;
+    // 夏美草(攻撃できない子を攻撃できるようにする)は、相手に「当たると次のターン攻撃できない」技を持たせて攻撃させる(その場面が来ないと出せない)
+    const unstun = (c.effects || []).some((e) => e.t === 'unstunTarget');
+    const extraB = isGuard ? { attack: true, must: bMust.filter(Boolean), avoidLead } : unstun ? { attack: true, must: [bNeed((x) => (x.effects || []).some((e) => e.t === 'stunOnHit'))].filter(Boolean) } : null;
     // 盾になる・吹き上げる など、ほかの子が狙われたときに出す守りは、先頭の子をカードの持ち主にして、ほかの2体も並べる
-    for (let k = 0; k < (special.length ? 10 : 5) && extra < 80 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, bMons], [no, ...special, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])], extraB, special.length > 0); }
+    // 出せる場面が来にくい札(ガッツ6以上の重い技・攻撃できない子がいるときだけ出せる札)は15戦まで
+    //   (2026-10-27 意味不明(277)が効くようになって試合の流れが変わり、魔神ファイナル(358)・夏美草(351)が5戦では出なくなった。ナガメくん)
+    const hard = (c.guts || 0) >= 6 || (c.effects || []).some((e) => e.t === 'unstunTarget');
+    for (let k = 0; k < (hard ? 15 : special.length ? 10 : 5) && extra < 80 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, bMons], [no, ...special, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])], extraB, special.length > 0); }
   }
   N += extra;
 }

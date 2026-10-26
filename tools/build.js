@@ -169,13 +169,6 @@ if (process.argv.includes('--check')) {
   if (t.status !== 0) { process.stderr.write(t.stderr || t.stdout || ''); process.exit(1); }
 }
 
-// 事前ダウンロード(Service Worker)が使う音源・画像の一覧と版の印を作り直す(build-asset-manifest.js)
-{
-  const r = require('./build-asset-manifest').run();
-  if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
-  if (r.changed) console.log(`事前ダウンロードの一覧を書き直しました(${r.manifest.id} / ${Object.keys(r.manifest.files).length}件)`);
-}
-
 // 助手とおしゃべりの材料(ヘルプの中身・助手の人柄)を、いまの data/help.js・data/assistants.js から作り直す。
 // 中継役(supabase/functions/assistant-chat)は公開中のサイトからこれを読むので、ヘルプを直せば次の公開で追従する
 {
@@ -201,6 +194,14 @@ console.log(`source-sha256: ${hash}`);
 {
   const r = require('./stamp-game-build').stampGameBuild();
   console.log(`本体JSのキャッシュキー: ${r.value}`);
+}
+
+// 事前ダウンロード(Service Worker)が使う音源・画像と、本体・データ(core)の一覧と版の印を作り直す(build-asset-manifest.js)。
+// 本体の版(GAME_BUILD)は本体を書き出したあとに決まるので、いちばん最後に作る
+{
+  const r = require('./build-asset-manifest').run();
+  if (!r.ok) { console.error(`NG: ${r.reason}`); process.exit(1); }
+  if (r.changed) console.log(`事前ダウンロードの一覧を書き直しました(${r.manifest.id} / ${Object.keys(r.manifest.files).length}件)`);
 }
 
 // ローディングのゲージが使う「起動時に読み込むファイルの実サイズ」を測り直す。
