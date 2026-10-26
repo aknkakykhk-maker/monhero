@@ -5190,6 +5190,8 @@ function MonsterHeroGame() {
     return {
       live: cardBackgroundRun,
       loops: quickRunProgress.loops,
+      // いま回している難易度の名前(トップの周回の札の詳細に出す)
+      difficulty: (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || null,
       stopped: finished || !cardBackgroundRun,
       xp: Math.floor(quickRunProgress.xp + pending.xp),
       gold: Math.floor(quickRunProgress.gold + pending.gold),
@@ -19598,7 +19600,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
-          quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
+          quickAutoReady={autoQuickRunConfigured(autoSettings)} quickAutoDifficulty={autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
           /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */

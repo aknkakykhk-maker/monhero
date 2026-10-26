@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f6be83a312352aa3
+// generated-sha256: 01e7b27742bce79b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 19:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51967,10 +51967,11 @@ const cardNormalizeDecks = (v) => {
   const active = cardIsPlainObject(v) && decks.some((d) => d.id === v.active) ? v.active : (decks[0] ? decks[0].id : null);
   return { active, decks };
 };
+// quickLoops … その日にバトルカードの対戦でクイック周回へ足した周の数(2026-10-26 で足した項目。トップの周回の札の詳細に出す。無い人は0)
 const cardNormalizeDaily = (v, today) => {
-  const base = { day: today, cpuPoint: 0, pvpPoint: 0, firstWin: false, foes: {} };
+  const base = { day: today, cpuPoint: 0, pvpPoint: 0, firstWin: false, foes: {}, quickLoops: 0 };
   if (!cardIsPlainObject(v) || v.day !== today) return base;
-  return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
+  return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {}, quickLoops: cardNormalizePoint(v.quickLoops) };
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
 // MFバトルカードの BGM。top … トップ画面(練習試合の外)/ cpu … 'auto'(相手の助手に合わせる)か曲id / pvp … 曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
@@ -54910,7 +54911,43 @@ const CardAssistantArt = ({ src, alt, className = '', style = null }) => {
 // topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
 // rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
 // bgmPreview … オプションの BGM の試聴({ toggle(曲id), playing: 鳴らしている曲id }。60-app の BGM アレンジと同じもの)
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
+// トップの周回の札を押したときの詳細(2026-10-26)。数は本編の帯・対戦の盤と同じ所(60-app の cardQuickRunView)から読む
+// quickRun … { live, loops, stopped, xp, gold, difficulty, info:{ wave, reason } } か null(一度も回していない)
+const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 0, onClose }) => {
+  const live = !!quickRun && !quickRun.stopped;
+  const row = (label, value, tone = 'text-white') => (
+    <div className="flex items-baseline justify-between gap-3 border-b border-white/10 py-1.5 last:border-b-0">
+      <span className="shrink-0 text-[11px] font-black text-slate-400">{label}</span>
+      <span className={`min-w-0 text-right text-[13px] font-black ${tone}`} style={JA_LABEL_STYLE}>{typeof value === 'string' ? jaWrap(value) : value}</span>
+    </div>
+  );
+  const wave = quickRun && quickRun.info && quickRun.info.wave;
+  return (
+    <div data-card-quick-detail className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 p-4 landscape:py-2" role="dialog" aria-modal="true" aria-label="クイック周回" onClick={onClose}>
+      <div className="w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-fuchsia-400/60 bg-slate-900 p-4 text-white shadow-2xl landscape:p-3" style={{ maxHeight: 'calc(100% - 8px)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-xl">⚔</span>
+          <b className="flex-1 text-[16px] font-black">クイック周回</b>
+          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-black ${!quickRun ? 'border-white/20 text-slate-300' : live ? 'border-fuchsia-300/50 text-fuchsia-100' : 'border-rose-400/70 text-rose-200'}`}>{!quickRun ? '回していません' : live ? `${quickRun.loops}周目` : '止まっています'}</span>
+        </div>
+        <div className="mt-2 rounded-2xl bg-black/30 px-3 py-1">
+          {row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200')}
+          {quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200')}
+          {row('難易度', (quickRun && quickRun.difficulty) || autoDifficulty || 'AUTO設定でまだ決まっていません', (quickRun && quickRun.difficulty) || autoDifficulty ? 'text-white' : 'text-amber-200')}
+          {quickRun && row('何周目', `${quickRun.loops}周目`)}
+          {quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200')}
+          {quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200')}
+          {row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
+        </div>
+        <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(autoReady
+          ? '助手と対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
+          : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')}</p>
+        <button type="button" data-card-quick-detail-close onClick={onClose} className="mh-button mt-3 min-h-[44px] w-full rounded-2xl border border-white/15 bg-slate-800 text-[14px] font-black text-white active:scale-[.98]">閉じる</button>
+      </div>
+    </div>
+  );
+};
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, quickAutoDifficulty = null, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -54919,6 +54956,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [kitPick, setKitPick] = useState(null);
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
   const [game, setGame] = useState(null);
+  const [showQuick, setShowQuick] = useState(false); // トップの周回の札の詳細
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
@@ -55030,6 +55068,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
+      // 足せた周の数を、その日の数へ足す(トップの周回の札の詳細「今日バトルカードで足した周回」)
+      if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } });
       // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
       const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts });
@@ -55146,6 +55186,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } });
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
+      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } });
       return { ...got, saved: ok, quick };
     };
     return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
@@ -55476,11 +55517,19 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <button type="button" aria-label={exitLabel} onClick={onExit} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90">←</button>
         <div className="min-w-0 flex-1 leading-none">
           <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MF BATTLE CARD ・ TOP</small>
-          <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">MFバトルカード</b>
+          <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider max-[359px]:text-[14px] max-[359px]:tracking-normal">MFバトルカード</b>
           <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう'}</small>
         </div>
+        {/* 裏のクイック周回の札(2026-10-26 社長「クイック何周してるかわかるようにしてほしい。押したら詳細見れるような作り」)。
+            対戦の盤の「⚔ ◯周目」と同じ言葉・色。押すと詳細の窓 */}
+        <button type="button" data-card-quick-pill={!quickRun ? 'none' : quickRun.stopped ? 'stopped' : 'live'} onClick={() => { Audio_.fgSe.tap(); setShowQuick(true); }}
+          aria-label={!quickRun ? 'クイック周回のようすを見る' : quickRun.stopped ? '裏のクイック周回は止まっています。詳しく見る' : `裏のクイック周回 ${quickRun.loops}周目。詳しく見る`}
+          className={`min-h-[32px] min-w-[32px] shrink-0 whitespace-nowrap rounded-full border px-2 text-[11px] font-black active:scale-95 max-[359px]:px-1.5 ${!quickRun ? 'border-white/20 bg-slate-950/70 text-slate-300' : quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/70 text-fuchsia-100'}`}>
+          ⚔{!quickRun ? <span className="max-[359px]:hidden"> クイック</span> : ` ${quickRun.loops}周目`}
+        </button>
         <span data-card-point-pill className="shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"><span aria-hidden="true">🎟️</span> <span data-card-point>{save.point}</span></span>
       </header>
+      {showQuick && <CardQuickRunDetail quickRun={quickRun} autoReady={quickAutoReady} autoDifficulty={quickAutoDifficulty} todayLoops={cardNormalizeDaily(save.daily, cardTodayJst()).quickLoops} onClose={() => setShowQuick(false)}/>}
       <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`}>
         <ModeSelectAssistantPanel assistant={topAssistantShown} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist}/>
         <div data-card-top-menu className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:overflow-y-auto landscape:py-2 landscape:[&>*:first-child]:mt-auto landscape:[&>*:last-child]:mb-auto [@media(orientation:landscape)_and_(max-height:360px)]:space-y-1.5">
@@ -63006,6 +63055,8 @@ function MonsterHeroGame() {
     return {
       live: cardBackgroundRun,
       loops: quickRunProgress.loops,
+      // いま回している難易度の名前(トップの周回の札の詳細に出す)
+      difficulty: (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || null,
       stopped: finished || !cardBackgroundRun,
       xp: Math.floor(quickRunProgress.xp + pending.xp),
       gold: Math.floor(quickRunProgress.gold + pending.gold),
@@ -77414,7 +77465,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
-          quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
+          quickAutoReady={autoQuickRunConfigured(autoSettings)} quickAutoDifficulty={autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
           /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
