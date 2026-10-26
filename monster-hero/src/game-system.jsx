@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 611c786a6eb4ebca
+// generated-sha256: 2bb7b2e2f14ab71a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6604,6 +6604,24 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 60, noAAGuard: true, noEdgeGuard: true },
     { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
+  // キュービ・オリヒメ(2026-10-27・案の段階・5部位)。
+  // キュービ(社長「案のとおりでOK。提灯の紫の房だけ帯・下駄と同じ部位に。提灯の本体は染めない」):
+  //   ①髪 / ②しっぽ・耳の毛 / ③服の白・胸元の毛・首の襟 / ④胸の紫・下駄・提灯の紫の房 / ⑤手袋・脚。顔と腕の肌・目・頭の葉・提灯は対象外
+  // オリヒメ(分け方は社長が確かめ中): ①髪・耳 / ②しっぽ・羽衣 / ③上の着物(帯・リボン) / ④外の羽織 / ⑤手袋・紫の靴下。顔・首・太もも・目・風鈴は対象外
+  Kyubi: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
+  Orihime: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -7052,7 +7070,9 @@ const _getUndineExactRegion = (nx, ny) => {
 const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK,
   // 2026-10-26 から、色相ルール・埋め込み部位マップで分けていた子も、境目を絵の線へ寄せ直した配信マスクで染める
   // (tools/image/refine-dye-mask.js。分け方は前と同じ)。配信マスクは下の色相ルール・埋め込み部位マップより優先される
-  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK });
+  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK,
+  // キュービ・オリヒメ(2026-10-27・案の段階・5部位)
+  Kyubi:KYUBI_DYE_MASK, Orihime:ORIHIME_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -7381,6 +7401,12 @@ const MASU_COLOR_REGION_DYE = {
   // ③帽子は付けない。付けると白いてっぺんが灰色に濁って、染めると帽子が透けて見えた(2026-10-22 社長「直す」。元の絵は不透明)
   // ④玉(0.58/0.71)と⑤ピンクの飾り(0.48/0.55)は上のほうに合わせて玉のつやを残す
   Dreamy: [{ gloss: 0.15 }, { gloss: 0.22 }, {}, { gloss: 0.71 }, { gloss: 0.55 }],
+  // キュービ(2026-10-27・案の段階): ①髪(彩度の中央値0.32・上のほう0.39)・②しっぽと耳(0.14/0.53。橙とクリームの毛)・④胸の紫・下駄・房(0.57/0.79)・
+  // ⑤手袋と脚の茶(0.52/0.53)は上のほうに合わせて陰影を残す。③服の白(0.15)は付けない
+  Kyubi: [{ gloss: 0.39 }, { gloss: 0.53 }, {}, { gloss: 0.79 }, { gloss: 0.53 }],
+  // オリヒメ(2026-10-27・案の段階): ①髪(0.43/0.51)・③着物(0.26/0.44)・④羽織(0.49/0.55)・⑤手袋と靴下(0.44/0.49)は上のほう。
+  // ②しっぽと羽衣は淡い(0.18/0.25)が、ドリーミィの雲と同じく付けないと桃・水色・黄の縞が消えて1色になるので上のほうに合わせる
+  Orihime: [{ gloss: 0.51 }, { gloss: 0.25 }, { gloss: 0.44 }, { gloss: 0.55 }, { gloss: 0.49 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -7607,7 +7633,7 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
 // イルミネ・ドリーミィ(2026-10-22 公開)は足し忘れていて、マスモンの詳細の丸で上下が切られ「大きく・中心がずれて」見えていた(2026-10-26 社長の指摘)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -15603,6 +15629,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   GinGiLiger: { body:'breathe', bodyMask:null, parts:[] },
   Ankylox: { body:'heavy', bodyMask:null, parts:[] },
   Soborobent: { body:'drift', bodyMask:null, parts:[] },
+  Kyubi: { body:'sway', bodyMask:null, parts:[] },
+  Orihime: { body:'drift', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -37103,7 +37131,8 @@ function MasuOfferingScreen({
         {mode==='diamonds'&&<>
           <div className="text-[11px] font-black text-slate-300">使うダイヤ（自由に入力できます）</div>
           <input type="text" inputMode="numeric" aria-label="お布施に使うダイヤ" value={diamondText===''?'':diamondAmount.toLocaleString()} placeholder="0" onChange={e=>setDiamondText(e.target.value)} className="w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"/>
-          <div className="grid grid-cols-4 gap-1.5">{OFFERING_DIAMOND_STEPS.map(step=><button key={step} className={stepBtn} onClick={()=>setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount+step)))}>+{fmt(step)}</button>)}</div>
+          {/* 320 幅で「+100,000」が枠の端まで届いていた(2026-10-27 ダメダシの見回り)。狭い幅だけ、字を少し小さく・横の余白を詰める */}
+          <div className="grid grid-cols-4 gap-1.5">{OFFERING_DIAMOND_STEPS.map(step=><button key={step} className={`${stepBtn} whitespace-nowrap px-1 max-[359px]:text-[11px] max-[359px]:tracking-tight`} onClick={()=>setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount+step)))}>+{fmt(step)}</button>)}</div>
           <div className="grid grid-cols-2 gap-1.5"><button className={stepBtn} onClick={()=>setDiamondText('')}>クリア</button><button className={stepBtn} disabled={limits.maxDiamonds<=0} onClick={()=>setDiamondText(String(limits.maxDiamonds))}>MAX（{fmt(limits.maxDiamonds)}）</button></div>
         </>}
         {mode==='levels'&&<>
@@ -56629,7 +56658,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {foes.map((x) => (
               <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
                 <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"/>
-                <span className="text-[13px] font-black">{x.name}</span>
+                {/* 名前は折らない。横の小さい画面(568×320)では札が細く「みゅ/あ」「もも/すけ」と折れたので、入らなければ字を小さくする(2026-10-26 ソランドくん) */}
+                <span className="block w-full" style={{ containerType: 'inline-size' }}><span data-card-foe-name className="block whitespace-nowrap text-center font-black" style={{ fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))` }}>{x.name}</span></span>
                 {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
               </button>
             ))}
@@ -56674,15 +56704,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           )}
           {a && <CardFoeStyle db={db} who={a.id} level={foe.level}/>}
           </div>
-          <div className={SCREEN_PANEL_FLAT_CLASS}>
-            {/* プレイヤーが対戦に使うデッキ。「使うデッキ」だと相手の助手のデッキと読まれた(2026-10-26 社長)ので「あなたの」と書く。助手のデッキは上の欄(好きな子・よく使うカード) */}
-            <div className="text-[12px] font-bold text-slate-300">あなたのデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></div>
-            {deckIssues.length > 0 && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
-            {!save.daily.firstWin && <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</div>}
-          </div>
           {notice && <p className="text-[12px] font-bold text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</p>}
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
+          {/* プレイヤーが対戦に使うデッキ。「使うデッキ」だと相手の助手のデッキと読まれた(2026-10-26 社長)ので「あなたの」と書く。助手のデッキは上の欄(好きな子・よく使うカード)
+              「対戦する」のすぐ上に固定する。上の一覧の終わりに置いていたら、375×667 で「対戦する」の帯の下に隠れ、だれのデッキで戦うか見ないまま押せた(2026-10-26 ソランドくん) */}
+          <div data-card-foe-mydeck className="mb-1.5 px-0.5">
+            <div className="flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300">
+              <span style={JA_LABEL_STYLE}>あなたのデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></span>
+              {!save.daily.firstWin && <span className="text-[11px] text-slate-400" style={JA_LABEL_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</span>}
+            </div>
+            {deckIssues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
+          </div>
           <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || deckIssues.length > 0} onClick={() => startBattle(foe)}>対戦する</button>
         </div>
       </div>
@@ -68642,7 +68675,7 @@ function MonsterHeroGame() {
       const split = rawSplit !== true;
       const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
       const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
-      if (!r) { setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; }
+      if (!r) { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; } // 別のタブで使ったあとなど、表示が古いことがあるので読み直す
       const saved = await saveStoredValuesOrRollback([
         { key: K.collection, before: rawCol, next: r.collection },
         { key: K.pity, before: rawPity, next: r.pity },
@@ -68668,7 +68701,7 @@ function MonsterHeroGame() {
       const K = CARD_SAVE_KEYS;
       const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]);
       const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, { collection: cardNormalizeCollection(rawCol), decks: cardNormalizeDecks(rawDecks), point: cardNormalizePoint(rawPoint), starter: cardNormalizeStarter(rawStarter), shop: cardNormalizeShop(rawShop) }, Date.now());
-      if (!r) { setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。'); return { ok:false, reason:'points' }; }
+      if (!r) { void loadCardShop(); setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。'); return { ok:false, reason:'points' }; }
       const saved = await saveStoredValuesOrRollback([
         { key: K.collection, before: rawCol, next: r.collection },
         { key: K.decks, before: rawDecks, next: r.decks },
@@ -77130,7 +77163,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const power = powerOverride !== undefined ? powerOverride : monsterPowerOf(mon);
     const norm = masu ? normalizeMasuProgression(masu) : null;
     const lvl = masu ? masuBondLevelInfo(masu) : null;
-    const xpPct = lvl ? Math.max(0, Math.min(100, (lvl.xpIntoLevel / Math.max(1, lvl.xpForNext)) * 100)) : 0;
+    // 絆Lvが上限(levelCap)に届いたら、経験値の欄は数字ではなく「MAX」と満タンのゲージにする
+    // (「Lv.30 / 30 MAX」なのに「0 / 146 XP」と出て、まだ上がるように見えていた。2026-10-27 ダメダシの見回り。表示だけで保存は変えない)
+    const bondMaxed = !!(lvl && norm && lvl.level >= norm.levelCap);
+    const xpPct = bondMaxed ? 100 : lvl ? Math.max(0, Math.min(100, (lvl.xpIntoLevel / Math.max(1, lvl.xpForNext)) * 100)) : 0;
     const fused = masu ? (masu.fusionHistory || []).length > 0 : false;
     return (
       <div className="flex items-start gap-3 border-b border-white/10 pb-3 shrink-0">
@@ -77165,7 +77201,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </span>
             </div>
             <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${xpPct}%`}}></div></div>
-            <div className="text-[10px] text-pink-400/70 font-mono tabular-nums">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
+            <div className="text-[10px] text-pink-400/70 font-mono tabular-nums">{bondMaxed ? 'MAX' : `${lvl.xpIntoLevel.toLocaleString()} / ${lvl.xpForNext.toLocaleString()} XP`}</div>
           </>)}
           {/* ロックの切り替え(2026-10-01)。右上の✕から離し、見出しの下に幅いっぱいの2つのボタンで置く。
               お気に入り=削除・合体の副・寄付を防ぐ / 転生ロック=転生を防ぐ。自分のマスモン(名前を変えられる画面)でだけ出す */}
