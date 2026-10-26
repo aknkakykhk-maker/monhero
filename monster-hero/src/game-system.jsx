@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 78533a29a8310d8a
+// generated-sha256: 17cd5b9cb96a67b8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 10:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 11:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51158,8 +51158,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 // ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
 const CARD_AI_PLAY_TUNE = Object.freeze({
   mua: { easy: -0.035, normal: -0.105, hard: -0.11, expert: 0.075, master: 0.12 },
-  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.165 },
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.345 },
+  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.14 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.3 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
   atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0.03, master: 0 },
 });
@@ -51485,7 +51485,9 @@ const CARD_AI_BUILD = Object.freeze({
   normal: { maxWave: 1, noise: 0.8, temp: 1.5, stray: 0 },                // 型に合う子が中心・カードは適当に
   hard:   { maxWave: 1, noise: 0.3, temp: 0.8, stray: 0 },                // 好きな子と相性のいい子・癖どおりにしっかり
   expert: { maxWave: 99, noise: 0.15, temp: 0.5, stray: 0 },              // 全部の弾から・強いカードを優先
-  master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
+  // lastTop … 3体目を、点の高い上位◯体から毎試合えらぶ(2026-10-26 社長「MASTER も少しだけ揺らす」)。いちばんの子は2倍えらばれやすい。
+  //   2体目はいちばん強い子のまま。上位4組からえらぶ形や3体目を上位3体からにすると、点は近くても勝率が9〜17点下がる助手が出た(card-ai-balance で測った)
+  master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true, lastTop: 2 },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
 });
 // 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
 // tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
@@ -51644,6 +51646,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];   // 気まぐれ
+    else if (cfg.best && k === 1 && cfg.lastTop > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best) pick = left.reduce((x, y) => (y.v > x.v ? y : x));
     else { const top = Math.max(...left.map((x) => x.v)); pick = left[cardAiPickIndex(left.map((x) => Math.exp((x.v - top) / cfg.temp)), rand)]; }
     out.push(pick.m.no);
@@ -55423,12 +55426,12 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
 // ==================== カード図鑑(区切り2) ====================
 // 持っている/持っていない・枚数・準備中。持っていないカードは暗い絵で出す(何が集まるか分かるように)
 // ★C-060C(ファンの描いた絵)はカードの表に入っていない(社長)。並べるのはカードの表にあるものだけ
-// 見かたは3つ(2026-10-26 社長「血統ごと・種類ごとでも見られるように」):
-//   弾ごと   … パックと同じ第1〜8弾+混血(2026-10-25 社長「パックは8弾まで」)。混血は、その弾と「混血」の両方に出る
-//   血統ごと … パックの弾の順に種族を並べる。混血はメインの種族に出る。全モンスター・ブリーダー・全体のカードは「種類ごと」で見る
-//   種類ごと … デッキ編成の絞り込み(CARD_DECK_FILTERS)と同じ言葉と並び。先頭に「モンスター」
+// 見かたは3つ(2026-10-26 社長「血統ごと・種類ごとでも見られるように」。名前は社長が選んだ「パック別・血統別・種類別」):
+//   パック別 … パックと同じ第1〜8弾+混血(2026-10-25 社長「パックは8弾まで」)。混血は、その弾と「混血」の両方に出る
+//   血統別   … パックの弾の順に種族を並べる。混血はメインの種族に出る。全モンスター・ブリーダー・全体のカードは「種類別」で見る
+//   種類別   … デッキ編成の絞り込み(CARD_DECK_FILTERS)と同じ言葉と並び。先頭に「モンスター」
 // どの見かたでも、並べるカードは弾ごとの図鑑と同じもの(数え方がずれないように、全部の集まりから絞る)
-const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: '弾ごと' }, { id: 'species', label: '血統ごと' }, { id: 'kind', label: '種類ごと' }]);
+const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: 'パック別' }, { id: 'species', label: '血統別' }, { id: 'kind', label: '種類別' }]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map((p) => ({ id: String(p.no), label: `第${p.no}弾` })), { id: 'hybrid', label: '混血' }]);
 const CARD_DEX_KINDS = Object.freeze([{ id: 'mon', label: 'モンスター' }, ...CARD_DECK_FILTERS.filter((f) => f.id !== 'all')]);
 const cardDexList = (db, tab) => {
@@ -55456,7 +55459,7 @@ const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   if (mode === 'kind') return all.filter((no) => (tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab)));
   return cardDexList(db, tab);
 };
-const CARD_DEX_UNIT = Object.freeze({ pack: 'この弾', species: 'この血統', kind: 'この種類' });
+const CARD_DEX_UNIT = Object.freeze({ pack: 'このパック', species: 'この血統', kind: 'この種類' });
 const CardDex = ({ db, collection, onBack }) => {
   const [mode, setMode] = useState('pack');
   const [tabs, setTabs] = useState({ pack: '1', species: CARD_PACKS[0].species[0], kind: 'mon' });

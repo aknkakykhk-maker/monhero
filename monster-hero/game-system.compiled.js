@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5271cd7ee07999b
+// source-sha256: 40145499580a51a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 10:37";
+const BUILD_DATE = "2026-10-26 11:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84575,14 +84575,14 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: 0.06,
     hard: 0,
     expert: 0.1,
-    master: 0.165
+    master: 0.14
   },
   kiki: {
     easy: -0.045,
     normal: 0.06,
     hard: 0.15,
     expert: 0,
-    master: 0.345
+    master: 0.3
   },
   dra: {
     easy: -0.075,
@@ -85060,7 +85060,8 @@ const CARD_AI_BUILD = Object.freeze({
     noise: 0.05,
     temp: 0.2,
     stray: 0,
-    best: true
+    best: true,
+    lastTop: 2
   }
 });
 const CARD_AI_DECK_TUNE = Object.freeze({
@@ -85246,7 +85247,10 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     const left = scored.filter(x => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
     if (!left.length) break;
     let pick;
-    if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best) pick = left.reduce((x, y) => y.v > x.v ? y : x);else {
+    if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 1 && cfg.lastTop > 1) {
+      const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop);
+      pick = top[cardAiPickIndex(top.map((_, i) => i === 0 ? 2 : 1), rand)];
+    } else if (cfg.best) pick = left.reduce((x, y) => y.v > x.v ? y : x);else {
       const top = Math.max(...left.map(x => x.v));
       pick = left[cardAiPickIndex(left.map(x => Math.exp((x.v - top) / cfg.temp)), rand)];
     }
@@ -91989,13 +91993,13 @@ const CardDeckList = ({
 };
 const CARD_DEX_MODES = Object.freeze([{
   id: 'pack',
-  label: '弾ごと'
+  label: 'パック別'
 }, {
   id: 'species',
-  label: '血統ごと'
+  label: '血統別'
 }, {
   id: 'kind',
-  label: '種類ごと'
+  label: '種類別'
 }]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map(p => ({
   id: String(p.no),
@@ -92036,7 +92040,7 @@ const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
   return cardDexList(db, tab);
 };
 const CARD_DEX_UNIT = Object.freeze({
-  pack: 'この弾',
+  pack: 'このパック',
   species: 'この血統',
   kind: 'この種類'
 });
