@@ -63,7 +63,7 @@ for (const [id, spec] of Object.entries(SPEC)) {
   check(`${spec.name}の固有技は倍率2.2・消費44`, m.unique.baseMult === 2.2 && m.unique.baseGuts === 44);
   check(`${spec.name}は専用モーション waterBurst`, m.atkMotion === 'waterBurst');
   check(`${spec.name}の勇者特性は氷海の支配者`, m.trait === '氷海の支配者');
-  check(`${spec.name}の勇者特性説明`, m.traitDesc === '勇者モン選択時：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率+50%（上限100%）');
+  check(`${spec.name}の勇者特性説明`, m.traitDesc === '勇者モンにすると：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率+50%（上限100%）');
   check(`${spec.name}の固有効果は絶氷の楔`, /絶氷の楔/.test(m.unique.effectDesc) && /30%減少/.test(m.unique.effectDesc) && /消費ガッツ3%減/.test(m.unique.effectDesc));
   check(`${spec.name}の固有技IDが自分を指す`, m.unique.monId === id);
 }

@@ -367,7 +367,7 @@ function RhythmBuddyScoreChart({ recent, songName }) {
         {songName(picked.songId)} {picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : ''} <b className="text-lime-200">{picked.score.toLocaleString()}点</b>
         <span className="text-slate-400">(満点の{pct(picked)}%)</span>
       </p>
-      <button type="button" onClick={() => setTable((v) => !v)} className="mt-1 min-h-[36px] rounded-lg bg-slate-800 px-2 text-[10px] font-black text-slate-200">{table ? '数字の一覧をとじる' : '数字の一覧で見る'}</button>
+      <button type="button" onClick={() => setTable((v) => !v)} className="mt-1 min-h-[36px] rounded-lg bg-slate-800 px-2 text-[10px] font-black text-slate-200">{table ? '数字の一覧を閉じる' : '数字の一覧で見る'}</button>
       {table && (
         <ol data-rhythm-buddy-chart-table className="mt-1 space-y-0.5">
           {list.slice().reverse().map((x, i) => (
@@ -460,7 +460,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
         </small>
       </section>
       <button data-rhythm-buddy-traits-toggle type="button" onClick={() => setTraitsOpen((v) => !v)} className="min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
-        {traitsOpen ? '性格の一覧をとじる' : '性格の一覧を見る(9つ)'}
+        {traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'}
       </button>
       {traitsOpen && (
         <ul data-rhythm-buddy-traits className="space-y-1 rounded-xl bg-slate-950/60 p-2">
@@ -506,7 +506,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
           </button>
         )}
       </section>
-      {onBack && <button type="button" onClick={onBack} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">一覧へもどる</button>}
+      {onBack && <button type="button" onClick={onBack} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">一覧へ戻る</button>}
     </div>
   );
 }
@@ -925,7 +925,7 @@ function RhythmBuddyRankDetail({ entry, onClose, renderBreederIcon = null, songN
         </div>
       </div>
       <section data-rhythm-buddy-rank-detail-scores className="rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2">
-        <b className="mb-1 block text-[12px] font-black text-lime-100">難易度ごとの最高スコア</b>
+        <b className="mb-1 block text-[12px] font-black text-lime-100">難易度別の最高スコア</b>
         <ul className="space-y-1">
           {rhythmBuddyShownDiffIds().map((id) => (
             <li key={id} className="flex items-center gap-2 text-[11px] font-bold">
