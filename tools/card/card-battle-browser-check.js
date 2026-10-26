@@ -367,7 +367,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
             const r = el.getBoundingClientRect();
             const over = ['[data-card-hand]', '[data-card-footer]'].filter((s) => { const q = document.querySelector(s); if (!q) return false; const b = q.getBoundingClientRect(); return r.bottom > b.top + 1 && r.top < b.bottom - 1 && r.right > b.left + 1 && r.left < b.right - 1; });
             const img = el.querySelector('img'); const fit = Number(document.querySelector('[data-card-stage]').getAttribute('data-card-stage-fit'));
-            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
+            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, bubbleShown: !!document.querySelector('[data-card-bubble]:not(.invisible)'), actionBand: !!document.querySelector('[data-card-action]'), logZ: Number(getComputedStyle(document.querySelector('[data-card-log]')).zIndex) || 0, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
           });
           if (guardAtk.shown) {
             await page.locator('[data-card-guard-attack]').click();
@@ -466,7 +466,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ 技を相手のモンスターまで運んで離すと使える(置ける所の上で光る)', dragAttack === true, `${dragAttack}(試した回数 ${dragTries + (dragAttack === true ? 1 : 0)})`);
     check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
     check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
-    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
+    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面。吹き出しと上の技の札は出さず、攻撃の動きより前)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.bubbleShown && !guardAtk.actionBand && guardAtk.logZ > 40 && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
       `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
@@ -616,6 +616,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 絞り込みは、縦の画面では1列(横に流す)、横の画面では折り返して並べる作り(87 の data-card-deck-chips)。1列は縦のときだけ見る
     const portrait = VH > VW;
     check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは縦で1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && (!portrait || chipsRows === 1), JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows, portrait }));
+    // ⑭ カードの名前の右の「i」で詳しい画面が開く(長押しに気づかない人のため・2026-10-26)。押してもデッキの枚数は変わらない
+    const infoBefore = await page.locator('[data-card-deck-count]').innerText();
+    await page.locator(`[data-card-deck-info="${firstIn}"]`).click();
+    const infoOpen = await page.locator('[data-card-detail]').count();
+    const infoAfter = await page.locator('[data-card-deck-count]').innerText();
+    await page.locator('[data-card-detail]').getByRole('button', { name: /閉じる/ }).first().click().catch(() => {});
+    await page.waitForTimeout(200);
+    check('⑭ カードの名前の右の「i」を押すと詳しい画面が開き、デッキには入らない', infoOpen === 1 && infoAfter === infoBefore && (await page.locator('[data-card-detail]').count()) === 0, `${infoOpen} ${infoBefore}→${infoAfter}`);
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));
