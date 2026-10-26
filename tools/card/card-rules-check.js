@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardUnlockedWithRecord, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardUnlockedWithRecord, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardIsHybridMon, cardDeckDeadCount, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -1001,6 +1001,22 @@ const pendingCards = () => {
     const a = find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no);
     ok(a && a.hand.some((i) => st.players[0].hand[i] === '150'), '150: ゲルがゴーレムの技を出せない');
     ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no && x.hand.length === 1), '150: ものまねを付けずに出せてしまう'); }
+  // ---- 混血のメイン・サブ(2026-10-27 社長「ヘルファットがモッチーの守備技使ってきます」「サブが？？？は純血扱い」) ----
+  //   混血: 攻撃・特殊はメインの種族だけ、防御・回避はサブの種族だけ。サブが？？？の子は純血と同じ(メインの種族の札を全部)
+  { const mon = (no) => ({ ...db.monsters[no], ko: false });
+    const hf = mon('C-056'), km = mon('C-066'), pd = mon('C-067');
+    ok(!E.cardUsableBy(db.cards['106'], hf) && !E.cardUsableBy(db.cards['107'], hf), '混血: ヘルファット(メイン モッチー)がモッチーの守りを使える');
+    ok(E.cardUsableBy(db.cards['307'], hf) && E.cardUsableBy(db.cards['308'], hf), '混血: ヘルファットがサブ(ジョーカー)の守りを使えない');
+    ok(E.cardUsableBy(db.cards['100'], hf) && !E.cardUsableBy(db.cards['297'], hf), '混血: ヘルファットの攻撃がメイン(モッチー)だけになっていない');
+    ok(E.cardIsHybridMon(hf) && !E.cardIsHybridMon(km) && !E.cardIsHybridMon(pd), 'サブが？？？の子が純血あつかいになっていない');
+    ok(E.cardUsableBy(db.cards['106'], km) && E.cardUsableBy(db.cards['100'], km), 'サブが？？？の剣士モッチーが、モッチーの攻撃・守りを使えない');
+    // デッキの3体のだれも使えない札の数(ヘルファットだけのモッチーの守り)
+    ok(E.cardDeckDeadCount(db, { monsters: ['C-056', 'C-003', 'C-005'], cards: ['106', '106', '307', '100'] }) === 2 && E.cardDeckDeadCount(db, { monsters: ['C-056', 'C-009', 'C-005'], cards: ['106'] }) === 0, '使えないカードの数え方が違う');
+    // 守るとき: ヘルファットはモッチーの守りを出せず、ジョーカーの守りは出せる
+    let st = scene({ mons: [['C-001', 'C-003', 'C-005'], ['C-056', 'C-003', 'C-005']], hands: [[plainOf('tiger', 'pow').no], ['106', '307']], guts: [9, 9] });
+    const a = find(E.cardAttackOptions(db, st), (x) => x.target && x.target.p === 1 && x.target.m === 0);
+    if (a) { st = act(st, a); const gs = E.cardGuardOptions(db, st).map((o) => st.players[1].hand[o.hand]);
+      ok(!gs.includes('106') && gs.includes('307'), `混血: ヘルファットの守りの候補が違う(${JSON.stringify(gs)})`); } }
   // ---- 区切り7: モンスターが入れ替わる ----
   // ヒノトリの復活(128): 倒れたヒノトリをライフ4で戻す。そのターンは攻撃できない
   { ready('128'); const ph = monOf('phoenix'); let st = scene({ mons: [[ph, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['128', plainOf('phoenix', 'pow') ? plainOf('phoenix', 'pow').no : gol.no], []], guts: [9, 0] });

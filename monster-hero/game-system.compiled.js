@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e31f17020a7dae1
+// source-sha256: c5d7402776184e83
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:44";
+const BUILD_DATE = "2026-10-27 02:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83347,6 +83347,17 @@ const cardUsableBy = (card, mon) => {
   if (!cardIsHybridMon(mon)) return card.user === mon.main;
   return card.user === (cardIsGuardKind(card.kind) ? mon.sub : mon.main);
 };
+const cardDeckDeadCount = (db, deck) => {
+  const mons = (deck && deck.monsters || []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  if (!mons.length) return 0;
+  return (deck && deck.cards || []).filter(no => {
+    const c = cardOf(db, no);
+    return c && c.user !== 'breeder' && c.user !== 'any' && c.kind !== 'fld' && !mons.some(m => cardUsableBy(c, {
+      ...m,
+      ko: false
+    }));
+  }).length;
+};
 const cardMonType = (mon, turn) => mon.fieldType ? mon.fieldType : mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type;
 const cardLog = (st, text, extra) => {
   st.log.push({
@@ -85746,7 +85757,8 @@ const CARD_AI_DECK_TUNE = Object.freeze({
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
-  dra: 0.3
+  dra: 0.3,
+  kyuko: 1.5
 });
 const CARD_DECK_COPY_MAX = 3;
 const CARD_AI_ATTACH_MAX = 6;
@@ -94023,7 +94035,11 @@ const CardDeckEditor = ({
     "data-card-deck-problems": true,
     className: "text-[11px] font-bold leading-snug text-rose-300",
     style: JA_WRAP_STYLE
-  }, [...rules, ...own].slice(0, 2).join(' / ')), notice && React.createElement("div", {
+  }, [...rules, ...own].slice(0, 2).join(' / ')), cardDeckDeadCount(db, deck) > 0 && React.createElement("div", {
+    "data-card-deck-dead": true,
+    className: "text-[11px] font-bold leading-snug text-amber-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`3体のどの子も使えないカードが${cardDeckDeadCount(db, deck)}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます)`)), notice && React.createElement("div", {
     "data-card-deck-notice": true,
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE
@@ -94201,7 +94217,10 @@ const CardDeckList = ({
       style: JA_LABEL_STYLE
     }, on ? '★ ' : '', jaWrap(d.name)), React.createElement("div", {
       className: `text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`
-    }, d.cards.length, "/", CARD_BATTLE_DECK_SIZE, "枚・", ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
+    }, d.cards.length, "/", CARD_BATTLE_DECK_SIZE, "枚・", ready ? '対戦に使えます' : 'まだ対戦に使えません'), cardDeckDeadCount(db, d) > 0 && React.createElement("div", {
+      "data-card-deck-dead": d.id,
+      className: "text-[11px] font-bold text-amber-200"
+    }, `使えないカード ${cardDeckDeadCount(db, d)}枚`))), React.createElement("div", {
       className: "mt-2 grid grid-cols-4 gap-1"
     }, React.createElement("button", {
       type: "button",
