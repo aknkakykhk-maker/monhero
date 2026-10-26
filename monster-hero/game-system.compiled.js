@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56b61bc5fd4ea27b
+// source-sha256: 836ea0767cdab39d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10957,7 +10957,24 @@ const DyeRegionColorControls = ({
     className: "flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"
   }), React.createElement("span", {
     className: "text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0"
-  }, colorAlphaOf(colors[idx]), "%")))));
+  }, colorAlphaOf(colors[idx]), "%")), colors[idx] && React.createElement("div", {
+    "data-dye-alpha-steppers": true,
+    className: "mt-1 flex items-center justify-end gap-1.5"
+  }, React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "down",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1下げる`,
+    disabled: colorAlphaOf(colors[idx]) <= MASU_COLOR_ALPHA_MIN,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) - 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "−"), React.createElement("span", {
+    className: "w-14 text-center text-[11px] font-black text-white tabular-nums"
+  }, "濃さ", colorAlphaOf(colors[idx]), "%"), React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "up",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1上げる`,
+    disabled: colorAlphaOf(colors[idx]) >= MASU_COLOR_ALPHA_MAX,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) + 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "+")))));
 };
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
 const makePatternLayer = (patch = {}) => ({
@@ -11991,6 +12008,58 @@ const HomeWalkingMasumon = ({
     className: "mh-home-masumon-stars"
   })));
 };
+const RepeatStepButton = ({
+  onStep,
+  disabled = false,
+  className = '',
+  children,
+  ...rest
+}) => {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  const timers = useRef({
+    wait: null,
+    loop: null,
+    pressed: false
+  });
+  const stop = () => {
+    clearTimeout(timers.current.wait);
+    clearInterval(timers.current.loop);
+    timers.current.wait = null;
+    timers.current.loop = null;
+  };
+  useEffect(() => stop, []);
+  useEffect(() => {
+    if (disabled) stop();
+  }, [disabled]);
+  return React.createElement("button", _extends({
+    type: "button",
+    disabled: disabled,
+    className: className
+  }, rest, {
+    onPointerDown: e => {
+      if (disabled) return;
+      e.preventDefault();
+      timers.current.pressed = true;
+      stepRef.current();
+      stop();
+      timers.current.wait = setTimeout(() => {
+        timers.current.loop = setInterval(() => stepRef.current(), 70);
+      }, 400);
+    },
+    onPointerUp: stop,
+    onPointerLeave: stop,
+    onPointerCancel: stop,
+    onClick: () => {
+      if (timers.current.pressed) {
+        timers.current.pressed = false;
+        return;
+      }
+      if (!disabled) stepRef.current();
+    },
+    onContextMenu: e => e.preventDefault()
+  }), children);
+};
 const CustomColorPicker = ({
   h,
   s,
@@ -12044,8 +12113,9 @@ const CustomColorPicker = ({
       setDragTarget('square');
       updateFromSquare(e.clientX, e.clientY);
     },
-    className: "relative w-full aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10",
+    className: "relative mx-auto aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10",
     style: {
+      width: 'min(100%, calc(var(--mh-vh) * 0.34))',
       backgroundColor: pureHueColor,
       backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))'
     }
@@ -12077,6 +12147,49 @@ const CustomColorPicker = ({
       height: '18px',
       transform: 'translate(-50%,-50%)'
     }
+  })), React.createElement("div", {
+    "data-custom-color-numbers": true,
+    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "h-6 w-6 shrink-0 rounded-full border border-white/30",
+    style: {
+      backgroundColor: previewColor
+    },
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black leading-tight text-white [word-break:keep-all]"
+  }, "カスタム(色相", Math.round(h), "・", React.createElement("wbr", null), "彩度", Math.round(s * 100), "・", React.createElement("wbr", null), "明るさ", Math.round(v * 100), ")"), React.createElement("small", {
+    className: "block text-[9px] font-bold leading-tight text-slate-400 [word-break:keep-all]"
+  }, "色相 0〜360・", React.createElement("wbr", null), "彩度 0〜100・", React.createElement("wbr", null), "明るさ 0〜100"))), React.createElement("div", {
+    "data-custom-color-steppers": true,
+    className: "space-y-1"
+  }, [['h', '色相', Math.round(h), 360], ['s', '彩度', Math.round(s * 100), 100], ['v', '明るさ', Math.round(v * 100), 100]].map(([key, label, value, max]) => {
+    const step = d => {
+      const next = Math.max(0, Math.min(max, value + d));
+      onChange(key === 'h' ? next : Math.round(h), (key === 's' ? next : Math.round(s * 100)) / 100, (key === 'v' ? next : Math.round(v * 100)) / 100);
+    };
+    return React.createElement("div", {
+      key: key,
+      className: "flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: "w-12 shrink-0 text-[10px] font-black text-slate-300"
+    }, label), React.createElement(RepeatStepButton, {
+      "data-custom-color-step": `${key}-down`,
+      "aria-label": `${label}を1下げる`,
+      disabled: value <= 0,
+      onStep: () => step(-1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    }, "−"), React.createElement("span", {
+      className: "min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white"
+    }, value), React.createElement(RepeatStepButton, {
+      "data-custom-color-step": `${key}-up`,
+      "aria-label": `${label}を1上げる`,
+      disabled: value >= max,
+      onStep: () => step(1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    }, "+"));
   })));
 };
 const VolumeSlider = ({
@@ -91063,6 +91176,7 @@ const CardBattleBoard = ({
   }, React.createElement("button", {
     type: "button",
     "data-card-quit": true,
+    "data-card-replay-exit": replay ? '' : undefined,
     onClick: () => replay ? onFinish({
       outcome: 'replayExit',
       st
@@ -91416,11 +91530,7 @@ const CardBattleBoard = ({
   }, replay ? React.createElement(CardReplayBar, {
     replay: replay,
     at: replayAt,
-    onSeek: replaySeek,
-    onExit: () => onFinish({
-      outcome: 'replayExit',
-      st
-    })
+    onSeek: replaySeek
   }) : footer))), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
     "data-drag-card-layer": true,
     className: "pointer-events-none fixed inset-0",
@@ -93382,6 +93492,12 @@ const CardBattleScreen = ({
       onClick: () => setView('foe')
     }, "相手をえらぶ")));
   }
+  if (view === 'replays') return React.createElement(CardReplayList, {
+    onOpen: id => {
+      void openReplay(id, 'replays');
+    },
+    onBack: () => setView('record')
+  });
   if (view === 'record') {
     const rec = save.record;
     const r = rec.rank;
@@ -93397,7 +93513,21 @@ const CardBattleScreen = ({
       note: "MFバトルカード"
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, React.createElement("div", {
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-replays-open": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setView('replays');
+      },
+      className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+    }, React.createElement("span", null, React.createElement("b", {
+      className: "block text-[14px] font-black text-sky-100"
+    }, "▶ 過去の対戦"), React.createElement("small", {
+      className: "block text-[11px] font-bold text-slate-400"
+    }, "遊んだ試合を、はじめから見返せます")), React.createElement("span", {
+      className: "text-[18px] text-slate-400"
+    }, "›")), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -99502,9 +99632,9 @@ const CardPvpHistory = ({
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 const CARD_REPLAY_RULES = 1;
-const CARD_REPLAY_MAX = 10;
-const CARD_REPLAY_FAV_MAX = 3;
-const CARD_REPLAY_BYTES_MAX = 150000;
+const CARD_REPLAY_MAX = 50;
+const CARD_REPLAY_FAV_MAX = 10;
+const CARD_REPLAY_BYTES_MAX = 750000;
 const CARD_REPLAY_ACTS_MAX = 2000;
 const CARD_REPLAY_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const cardReplayPrint = st => {
@@ -99572,7 +99702,8 @@ const cardReplayNormalizeOne = raw => {
     seeds,
     acts,
     prints: typeof raw.prints === 'string' && /^[0-9a-z]*$/.test(raw.prints) && raw.prints.length === acts.length * 4 ? raw.prints : '',
-    fav: raw.fav === true
+    fav: raw.fav === true,
+    turn: Number.isInteger(raw.turn) && raw.turn >= 0 && raw.turn < 10000 ? raw.turn : null
   };
 };
 const cardReplayNormalize = raw => {
@@ -99769,6 +99900,7 @@ const cardReplayMake = (db, {
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
+  one.turn = built.states[built.states.length - 1].turn;
   return one;
 };
 const cardReplayFromPvp = (db, {
@@ -99824,14 +99956,68 @@ const cardReplayNoteIds = box => {
   return box;
 };
 const cardReplayLoad = async () => cardReplayNoteIds(cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null)));
+const CARD_REPLAY_PROBE_KEY = '__mh_card_replay_probe__';
+const CARD_REPLAY_ROOM = 131072;
+const cardReplayWrite = async box => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true;
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_REPLAY_KEY, box);
+  try {
+    window.localStorage.setItem(CARD_REPLAY_KEY, JSON.stringify(box));
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+const cardReplayRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try {
+    window.localStorage.setItem(CARD_REPLAY_PROBE_KEY, 'x'.repeat(CARD_REPLAY_ROOM));
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    try {
+      window.localStorage.removeItem(CARD_REPLAY_PROBE_KEY);
+    } catch (_) {}
+  }
+};
+const cardReplayStore = async (box, keepId = null) => {
+  const b = {
+    v: 1,
+    list: box.list.slice()
+  };
+  for (let n = 0; n <= CARD_REPLAY_MAX + 1; n++) {
+    const ok = await cardReplayWrite(b);
+    if (ok && cardReplayRoomLeft()) return b;
+    let drop = -1;
+    for (let i = b.list.length - 1; i >= 0; i--) {
+      if (!b.list[i].fav && b.list[i].id !== keepId) {
+        drop = i;
+        break;
+      }
+    }
+    if (drop < 0) {
+      const rest = keepId ? b.list.filter(r => r.id !== keepId) : b.list;
+      if (rest.length === b.list.length) return ok ? b : null;
+      const back = {
+        v: 1,
+        list: rest
+      };
+      return (await cardReplayWrite(back)) ? back : null;
+    }
+    b.list.splice(drop, 1);
+  }
+  return null;
+};
 const cardReplaySave = async rec => {
   if (!rec) return false;
   try {
     const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
     if (!box.list.some(r => r.id === rec.id)) return false;
-    const ok = await storeSet(CARD_REPLAY_KEY, box);
-    if (ok) cardReplayNoteIds(box);
-    return ok;
+    const done = await cardReplayStore(box, rec.id);
+    if (!done) return false;
+    cardReplayNoteIds(done);
+    return done.list.some(r => r.id === rec.id);
   } catch (_) {
     return false;
   }
@@ -99842,11 +100028,10 @@ const cardReplayFav = async (id, on) => {
       box,
       ok
     } = cardReplaySetFav(await storeGet(CARD_REPLAY_KEY, null), id, on);
-    if (ok) {
-      await storeSet(CARD_REPLAY_KEY, box);
-      cardReplayNoteIds(box);
-    }
-    return ok;
+    if (!ok) return false;
+    const done = await cardReplayStore(box);
+    if (done) cardReplayNoteIds(done);
+    return !!done;
   } catch (_) {
     return false;
   }
@@ -99901,8 +100086,7 @@ const CARD_REPLAY_SPEEDS = Object.freeze([{
 const CardReplayBar = ({
   replay,
   at,
-  onSeek,
-  onExit
+  onSeek
 }) => {
   const [auto, setAuto] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -100012,15 +100196,134 @@ const CardReplayBar = ({
       Audio_.fgSe.tap();
       setSpeed(v => v === 1 ? 2 : 1);
     }
-  }, (CARD_REPLAY_SPEEDS.find(x => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label), React.createElement("button", {
-    type: "button",
-    "data-card-replay-exit": true,
-    className: btn,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      onExit();
+  }, (CARD_REPLAY_SPEEDS.find(x => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label)));
+};
+const CARD_REPLAY_OUTCOME = Object.freeze({
+  win: '勝ち',
+  lose: '負け',
+  surrender: '投了',
+  foeSurrender: '勝ち',
+  timeout: '負け',
+  foeTimeout: '勝ち',
+  foeLeft: '勝ち',
+  left: '負け',
+  draw: '引き分け'
+});
+const cardReplayWhen = at => {
+  if (!Number.isFinite(at) || at <= 0) return '';
+  const d = new Date(at + 9 * 3600 * 1000);
+  const p2 = n => String(n).padStart(2, '0');
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+};
+const CardReplayList = ({
+  onOpen,
+  onBack
+}) => {
+  const [box, setBox] = useState(null);
+  const [note, setNote] = useState('');
+  useEffect(() => {
+    let live = true;
+    void cardReplayLoad().then(b => {
+      if (live) setBox(b);
+    }).catch(() => {
+      if (live) setBox({
+        v: 1,
+        list: []
+      });
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const favs = box ? box.list.filter(r => r.fav).length : 0;
+  const toggleFav = async r => {
+    Audio_.fgSe.tap();
+    if (!r.fav && favs >= CARD_REPLAY_FAV_MAX) {
+      setNote(`★は${CARD_REPLAY_FAV_MAX}試合までです。ほかの★を外してから付けてください`);
+      return;
     }
-  }, "とじる")));
+    const ok = await cardReplayFav(r.id, !r.fav);
+    if (!ok) {
+      setNote('★を保存できませんでした');
+      return;
+    }
+    setNote('');
+    setBox(await cardReplayLoad());
+  };
+  const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-replay-list": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "過去の対戦",
+    accent: "text-sky-200",
+    onBack: onBack,
+    note: `新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-1.5 pb-4`
+  }, note && React.createElement("p", {
+    "data-card-replay-note": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, note), !box && React.createElement("div", {
+    className: "py-6 text-center text-[13px] font-bold text-slate-400"
+  }, "読み込み中…"), box && !box.list.length && React.createElement("div", {
+    "data-card-replay-empty": true,
+    className: "py-6 text-center text-[13px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだありません。助手と対戦かマルチ対戦を遊ぶと、ここに残ります')), box && box.list.map(r => {
+    const a = r.kind === 'cpu' && r.foe.who ? assistants.find(x => x.id === r.foe.who) : null;
+    const res = CARD_REPLAY_OUTCOME[r.outcome] || '';
+    const win = res === '勝ち';
+    return React.createElement("div", {
+      key: r.id,
+      "data-card-replay-row": r.id,
+      className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-2 py-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-replay-open": r.id,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        onOpen(r.id);
+      },
+      className: "flex min-w-0 flex-1 items-center gap-2 text-left"
+    }, React.createElement("span", {
+      className: "block h-[38px] w-[38px] shrink-0 overflow-hidden rounded-xl bg-black/40"
+    }, a ? React.createElement("img", {
+      src: assistantFaceImage(a, 'normal'),
+      alt: "",
+      className: "h-full w-full object-cover object-top"
+    }) : typeof CardPvpAvatar === 'function' ? React.createElement(CardPvpAvatar, {
+      icon: r.foe.icon || '🙂',
+      frame: r.foe.frame,
+      className: "h-full w-full"
+    }) : React.createElement("span", {
+      className: "text-[20px]"
+    }, "🙂")), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "flex items-center gap-1.5"
+    }, React.createElement("b", {
+      className: "truncate text-[13px] font-black text-white"
+    }, r.foe.name), React.createElement("small", {
+      className: `shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`
+    }, r.kind === 'pvp' ? 'マルチ' : '助手と対戦')), React.createElement("span", {
+      className: "block text-[11px] font-bold text-slate-400"
+    }, cardReplayWhen(r.at), r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`)), React.createElement("span", {
+      "data-card-replay-result": r.outcome || '',
+      className: `shrink-0 text-[13px] font-black ${win ? 'text-amber-200' : 'text-slate-300'}`
+    }, res)), React.createElement("button", {
+      type: "button",
+      "data-card-replay-fav": r.id,
+      "aria-pressed": r.fav,
+      "aria-label": r.fav ? '★を外す' : '★を付ける',
+      onClick: () => {
+        void toggleFav(r);
+      },
+      className: `min-h-[40px] min-w-[40px] shrink-0 rounded-lg text-[20px] ${r.fav ? 'text-amber-300' : 'text-slate-600'}`
+    }, "★"));
+  })));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
@@ -129573,7 +129876,7 @@ function MonsterHeroGame() {
           zIndex: 32000
         }
       }, React.createElement("div", {
-        className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl"
+        className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs max-h-full overflow-y-auto mh-scroll flex flex-col gap-3 shadow-2xl"
       }, React.createElement("div", {
         className: "flex items-center justify-between shrink-0"
       }, React.createElement("h3", {
@@ -129601,7 +129904,12 @@ function MonsterHeroGame() {
           s: ns,
           v: nv
         } : prev)
-      }), React.createElement("div", {
+      }), React.createElement("p", {
+        "data-custom-color-alpha": true,
+        className: "-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, "濃さ", colorAlphaOf(sourceColors[idx]), "%", React.createElement("span", {
+        className: "text-slate-500"
+      }, "(濃さは染色の画面のつまみで変えられます)")), React.createElement("div", {
         className: "flex gap-2 mt-1 shrink-0"
       }, React.createElement("button", {
         onClick: () => setCustomColorPicker(null),
