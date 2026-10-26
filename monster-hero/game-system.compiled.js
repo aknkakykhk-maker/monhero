@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b2ea3d967e491909
+// source-sha256: 45acb992713cc460
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122761,7 +122761,7 @@ function MonsterHeroGame() {
           disabled: soon || tutorialLocked,
           onClick: () => openBattleSystem(sys.id),
           "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
-          className: `mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon ? 'opacity-60 grayscale' : ''}`,
+          className: `mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] portrait:[@media(max-height:600px)]:min-h-[70px] ${soon ? 'opacity-60 grayscale' : ''}`,
           style: {
             animationDelay: `${.05 + idx * .07}s`
           }
