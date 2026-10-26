@@ -7649,6 +7649,59 @@ addAssistantLinePack({
   },
 });
 
+// ほかの助手も、アイテム交換所・ビートP交換所では「アイコンはブリーダーP、ほかはダイヤ」と言わないよう、その売り場の話を足す(2026-10-26 ダメダシくん)。
+// ブリーダーP交換所は、いつもの台詞(アイコンはブリーダーP)が合っているので足さない。呼び方の決め: きき・きゅうこ・あつはモンヒロビート、ドラはモンビー、ももすけはモンビート
+addAssistantLinePack({ id: 'marketShopsKiki', assistantId: 'kiki', label: 'マーケットの売り場ごとのひとこと(kiki)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'虹のプシュケーと勇者の証は、ここで交換できまつよ。' },
+    { e:'happy',   t:'持ってる素材の数は、上に出てるでつ。' },
+  ],
+  shopEvent: [
+    { e:'excited', t:'ビートPは、モンヒロビートやバトルカードで貯まりまつよ。' },
+    { e:'happy',   t:'ここはイベントがないときも交換できるでつ♪' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsDra', assistantId: 'dra', label: 'マーケットの売り場ごとのひとこと(dra)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここだな。持ってる数は上に出てるぞ' },
+    { e:'wink',    t:'交換したもので、マスモンを強くしていけ' },
+  ],
+  shopEvent: [
+    { e:'normal',  t:'ビートPはモンビーやバトルカードで貯まるぞ' },
+    { e:'wink',    t:'円盤石とアシストは、1つにつき1回だけだな' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsMomosuke', assistantId: 'momosuke', label: 'マーケットの売り場ごとのひとこと(momosuke)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここ。足りない分はバトルで集めなよw' },
+    { e:'wink',    t:'持ってる数は上に出てるからね' },
+  ],
+  shopEvent: [
+    { e:'happy',   t:'ビートPはモンビートとかバトルカードで貯まるよw' },
+    { e:'normal',  t:'ここ、イベントない日も交換できるんだよね' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsAtsu', assistantId: 'atsu', label: 'マーケットの売り場ごとのひとこと(atsu)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここだね！ 持ってる数は上に出てるよ笑' },
+    { e:'excited', t:'交換したら、マスモンを鍛えにいこう！' },
+  ],
+  shopEvent: [
+    { e:'happy',   t:'ビートPはモンヒロビートやバトルカードで貯まるよ！' },
+    { e:'normal',  t:'円盤石とアシストは、1つにつき1回だけ交換できるんだ！' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsKyuko', assistantId: 'kyuko', label: 'マーケットの売り場ごとのひとこと(kyuko)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はこちらですね。持っている数は上に出ています' },
+    { e:'happy',   t:'交換したものは、マスモンを強くするのに使います' },
+  ],
+  shopEvent: [
+    { e:'normal',  t:'ビートPは、モンヒロビートやバトルカードで貯まります' },
+    { e:'happy',   t:'ここはイベントがないときも交換できますよ' },
+  ],
+} } });
+
 const ASSISTANT_PACKS_APPLIED = {};
 const applyAssistantLinePacks = () => {
   for (const pack of ASSISTANT_LINE_PACKS) {
