@@ -98,7 +98,8 @@ check('DyedMonsterImageは表示のたびにmonsterArtFitStyleを通す',
 // --- ベース種(マスモン化していない個体)を出す箇所は、DyedMonsterImageを使わないぶん
 //     各所で明示的にmonsterArtFitStyleを呼ぶ必要がある。ここが漏れていた ---
 check('編成/一覧共通カード(renderMonsterCardBody)のベース種分岐がmonsterArtFitStyleを通す(供モンを選択 画面などで頭が切れる不具合の修正箇所)',
-  has('<img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>'));
+  // 2026-10-27 から 48px の枠には小さい版(smallIconSrc・monsterSmallIconUrl)を出す。収め方を通すことは変わらない
+  has('<img src={smallIconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>'));
 check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyleを通す',
   // 見た目のクラス(大きさ・枠)は作り替えで変わるので、monsterArtFitStyle(ownerMon.id) を通していることだけを見る
   has('<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className='));

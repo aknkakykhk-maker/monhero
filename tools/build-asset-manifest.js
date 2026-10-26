@@ -70,6 +70,23 @@ function beatAudioSet() {
   return { set, missing, trackCount: trackIds.size };
 }
 
+// ゲーム本体とデータ(core)。index.html が ?v=<版> 付きで読む同じサイトの JS・CSS を、その版のまま載せる
+// (2026-10-27 社長「本体とデータもダウンロードに入れる」)。版を決めるのは index.html(毎回ネットから取る)で、
+// SW は URL の版が一覧とぴったり同じときだけ、置き場 mh-code-v1 から返す。本体の版は GAME_BUILD(中身のハッシュ)
+function coreFiles() {
+  const index = fs.readFileSync(path.join(GAME_DIR, 'index.html'), 'utf8');
+  const out = {};
+  const add = (rel, v) => {
+    const full = path.join(GAME_DIR, rel);
+    if (!fs.existsSync(full) || !v) return;
+    out[rel] = { v, size: fs.statSync(full).size, pack: 'core' };
+  };
+  for (const m of index.matchAll(/(?:src|href)="([a-z0-9][a-z0-9_\/.-]*\.(?:js|css))\?v=([0-9A-Za-z._-]+)"/gi)) add(m[1], m[2]);
+  const build = (index.match(/var GAME_BUILD = '([^']+)';/) || [])[1];
+  add('game-system.compiled.js', build);
+  return out;
+}
+
 function buildManifest() {
   const beat = beatAudioSet();
   const files = {};
@@ -84,10 +101,15 @@ function buildManifest() {
     const isCard = r.startsWith('images/card-battle/');
     files[r] = { v: hashOf(full), size: fs.statSync(full).size, pack: isCard ? 'card' : isBeat ? 'beat' : 'battle' };
   }
-  const packs = { beat: { bytes: 0, count: 0 }, battle: { bytes: 0, count: 0 }, card: { bytes: 0, count: 0 }, all: { bytes: 0, count: 0 } };
+  const packs = { beat: { bytes: 0, count: 0 }, battle: { bytes: 0, count: 0 }, card: { bytes: 0, count: 0 }, all: { bytes: 0, count: 0 }, core: { bytes: 0, count: 0 } };
   for (const f of Object.values(files)) {
     packs[f.pack].bytes += f.size; packs[f.pack].count++;
     packs.all.bytes += f.size; packs.all.count++;
+  }
+  // 本体とデータは「全部」に数えない(設定の「ダウンロード」のまとまりではなく、遊んだときに SW がためる)
+  for (const [k, f] of Object.entries(coreFiles())) {
+    files[k] = f;
+    packs.core.bytes += f.size; packs.core.count++;
   }
   const id = crypto.createHash('sha256')
     .update(Object.entries(files).map(([k, f]) => `${k}=${f.v}`).join('\n'))
@@ -118,7 +140,7 @@ function run({ check = false } = {}) {
   return { ok: true, changed, manifest };
 }
 
-module.exports = { run, buildManifest, OUT_FILE };
+module.exports = { run, buildManifest, coreFiles, OUT_FILE };
 
 if (require.main === module) {
   const check = process.argv.includes('--check');
@@ -126,5 +148,5 @@ if (require.main === module) {
   if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
   const mb = (n) => (n / 1024 / 1024).toFixed(1);
   const p = r.manifest.packs;
-  console.log(`${check ? 'OK' : (r.changed ? '書き出しました' : '最新でした')}: asset-manifest.json (${r.manifest.id}) モンヒロビート ${p.beat.count}件 ${mb(p.beat.bytes)}MB / バトル ${p.battle.count}件 ${mb(p.battle.bytes)}MB / バトルカード ${p.card.count}件 ${mb(p.card.bytes)}MB / 全部 ${mb(p.all.bytes)}MB`);
+  console.log(`${check ? 'OK' : (r.changed ? '書き出しました' : '最新でした')}: asset-manifest.json (${r.manifest.id}) モンヒロビート ${p.beat.count}件 ${mb(p.beat.bytes)}MB / バトル ${p.battle.count}件 ${mb(p.battle.bytes)}MB / バトルカード ${p.card.count}件 ${mb(p.card.bytes)}MB / 全部 ${mb(p.all.bytes)}MB / 本体とデータ ${p.core.count}件 ${mb(p.core.bytes)}MB`);
 }

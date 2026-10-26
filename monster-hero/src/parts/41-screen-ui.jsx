@@ -288,7 +288,9 @@ const jaWrapPoints = (text) => {
         //   かぎかっこの中は名前ごと包む決まり(jaWrapPieces)に任せる(つなぐと「「フリーマッチ」／と……」と最後の行に字が残った)
         || (/[ァ-ヶー]$/.test(prev) && /^[ァ-ヶ]/.test(seg) && !/[「『][^」』]*$/.test(cur) && (cur.match(/[ァ-ヶー]+$/) || [''])[0].length + (seg.match(/^[ァ-ヶー]+/) || [''])[0].length <= 7)));
       const soft = !hard && !kaoStart(pos) && (
-        (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
+        // 数の並び「2・4・6」は「・」のあとでも折らない(「WAVE2・／4・6で」と折れた。2026-10-26 見回り ヘルプ記事 320)。長い並び(「3・5・7・9・10」)は②で中を分ける
+        (/[0-9０-９]・$/.test(cur) && /^[0-9０-９]/.test(seg))
+        ||         (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
         || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
         // ひらがなで始まる区切りは、手前が助詞・句読点のときだけ折る(文節で折る)。活用の途中(「いけ|ませ|ん」「強|く|な|け|れ|ば」「聞い|てい」)では折らない
         || (/^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev))
@@ -330,13 +332,15 @@ const jaWrapPoints = (text) => {
     //   ブラウザに好きな所で折られる(「冷めてしまいます／ぞ」)。柔らかい区切りのうち、「て・で」のあと(冷めて|しまいますぞ)、
     //   漢字・カタカナの前、の順に選ぶ。どちらの側も3字以上残し、なるべく真ん中で。空白は元から折れるので、空白で分けた部分ごとに数える
     const runLetters = (parts) => Math.max(...parts.join('').split(/\s+/).map(visible));
+    // 小さい「っ」のあとにひらがなが続く所(「終わっちゃっ|たら」「なっ|た」)は言葉の途中なので、ここでは分けない(2026-10-26 カゲあつくんの点検)
+    const midSokuon = (parts, k) => /っ$/.test(parts[k - 1]) && /^[ぁ-ゖ]/.test(parts[k]);
     const chunks = [];
     const split = (g) => {
       if (runLetters(g.parts) <= JA_WRAP_LINE || g.parts.length < 2) { chunks.push(g.parts.join('')); return; }
       const total = visible(g.parts.join(''));
       let best = -1, bestScore = -1;
       for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')), right = total - left;
         // どちらの側にも字(かな・漢字)を3字以上残す。決まった言い方(「いって|らっしゃい」)の中では分けない
         if (letters(g.parts.slice(0, k).join('')) < 3 || letters(g.parts.slice(k).join('')) < 3 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -345,7 +349,7 @@ const jaWrapPoints = (text) => {
       }
       // 3字ずつ残せる所が無ければ、前だけ2字まで許す(「二度|おいしいってやつ。」)。後ろ(語尾)は3字を守る
       if (best < 0) for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')), right = total - left;
         // 後ろは字が3字以上か、句読点も入れて4字以上(「せいいっぱい|でつ……。」)
         if (letters(g.parts.slice(0, k).join('')) < 2 || (letters(g.parts.slice(k).join('')) < 3 && right < 4) || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -367,7 +371,7 @@ const jaWrapPoints = (text) => {
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
 const jaKeepWhole = (seg) => ([...seg].length <= JA_WRAP_LINE || (!/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14))
-  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
+  && (/[…‥～〜♡]/u.test(seg) || /[0-9０-９]・[0-9０-９]/.test(seg) /* 数の並び「2・4・6」。ブラウザは「・」のあとで折る */ || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
   || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 // かたまり1つを、折らない枠で包む所([字, true])とそのままの所([字, false])に分ける(jaWrap と検査 ja-wrap-lines-check.js が使う)。
 // 空白で分けてから部分ごとに決める(空白をまたいで包むと、「大丈夫！ いってらっしゃい〜」が1行のまま吹き出しからはみ出した。2026-10-24)。
@@ -394,6 +398,12 @@ const jaWrapPieces = (seg) => {
   return out;
 };
 const jaWrap = (text) => {
+  // 文字でない物が来たときの守り(2026-10-27 MFバトルカードのトップの吹き出しに「[object Object]」が出た)。
+  //   画面の部品(React の要素)はそのまま出す。{ text } の形なら text を使う。ほかは出さない
+  if (text && typeof text === 'object') {
+    if (React.isValidElement(text) || Array.isArray(text)) return text;
+    text = typeof text.text === 'string' ? text.text : '';
+  }
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   // ブラウザは「…」「～」「♡」・絵文字・顔文字の手前や中を、印が無くても折り目として扱う。「入れんのじゃ／……」「(っ`･／ω･´)」と

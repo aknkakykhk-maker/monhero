@@ -29,7 +29,7 @@ assert(breederSource.includes(`images/breeder-icons/kiki.PNG?v=35362d7b6e3e`));
 assert((gameSource.match(/slotMaxUses\((?:targetMon|s|monster)\s*,\s*(?:slotIdx|i)\)/g)||[]).length===4,
   'カード割当のチェック箇所(ドラッグ・予測・スロット表示・AUTO)がslotMaxUsesに揃っていない');
 // カードをタップしたときの説明文(getDynamicDesc)も、バランス調整後の継続ターン数と一致していること
-assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;"),
+assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 使えるカード +1枚・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;"),
   'ききのカード説明(getDynamicDesc)が継続ターン数の変更に追随していない');
 [
   "getPermaBuff('globalComboDmgPct')",

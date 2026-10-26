@@ -111,7 +111,8 @@ node tools/build.js --check
 | `node compiled-runtime-check.js` | 配信用コードが `jsxDEV` / automatic JSX runtime など、`index.html` が用意していないランタイムを参照していないことと、React / ReactDOM の読込順を確認する。 |
 | `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
 | `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |
-| `node stamp-version.js` | BUILD_DATE、version.json、本体JSのキャッシュキーを現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node stamp-version.js` | BUILD_DATE(index.html の `window.__mhBuildDate`。本体の中には書かない)と version.json を現在の日本時間に揃える(data/*.js・tailwind.css・画像のキーは中身のハッシュ)。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node stamp-game-build.js [--check]` | 本体JSのキャッシュキー(index.html の `GAME_BUILD`)を、`game-system.compiled.js` の中身のハッシュ(12桁)に合わせる(2026-10-27 速さ部。それまではビルドの時刻)。build.js が本体を書き出した直後に呼び、`build.js --check` と `boot/data-cache-key-check.js` が一致を見張る。版が同じなら中身も同じになるので、事前ダウンロードに本体をためる土台になる(docs/progress/speed/download-plan.md)。 |
 | `node run-checks.js --changed` | **変更したファイルから要る検査を選んで回す**(上の節を参照)。何を通すか毎回考えずに済み、選び漏れも無くなる。 |
 | `node run-checks.js --area required` | **検査を領域ごとにまとめて回す入口。**`required` は CLAUDE.md ⑤⑥ の必須検査、`ci` は `compiled-check.yml` と同じ並び、`battle` `masu` `mode` などはフォルダ単位、`all` は全部(30分以上)。`--list` で一覧、`--json <出力先>` で結果を保存。実ブラウザ検査に必要な配信(`serve.py`)は自動で起動し、playwright が無い環境ではそれを要る検査を SKIP にする。検査の中身や判定は変えず、既存スクリプトを順に呼ぶだけ。 |
 | `node run-checks.js --area all --parallel 5` | **全部の検査を5組に分けて同時に回す**(1本ずつだと2時間を超える。5組で1時間弱)。同時に回して落ちたものは最後に1本で回し直し、通ったら分けて出す。組は前回の時間 `run-checks-times.json` で平らに分け、同じポートを使う検査は同じ組へ、自分で :8899 を立てる検査と時間を測る検査は最後に1本ずつ。`--plan` で組み分けだけ出す・`--save-times` で時間の記録を書き直す |
@@ -547,6 +548,7 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 | `node help-coverage-check.js` | 「機能を足したのにヘルプに載っていない」を検出する。全画面(gameState)が HELP_SCREEN_COVERAGE に載っているか、難易度・アイテム・ログボ・ミッション・教えが実データから全件出ているかを確認する。 |
 | `node help-guide-check.js` | ヘルプ(攻略情報局)を確認する。data/help.js のデータの形、全項目に助手のひとことがあること、カテゴリ→項目→本文の3階層で描かれていること、本文の数値が実際の計算と一致することを見る。 |
 | `node help-render-check.js` | ヘルプ画面のJSXを切り出してReactで実際に描画し、カテゴリ一覧・項目一覧・全項目の本文が最後まで描けることを確認する(未定義の変数を参照していれば失敗する)。 |
+| `node help-bubble-fold-check.js` | ヘルプの上の助手の吹き出しを「たためる」ことを実際の画面(横844×390)で確認する。はじめはひらいている・「▴」でたたむと何も出ず `mh_bubble_collapsed_v1` に `help` が入る・読み込み直してもたたんだまま・上の助手の顔でひらける・壊れた値でも落ちない。配信は `tools/serve.py` を :8899 で |
 
 ### 見た目・レイアウト
 
