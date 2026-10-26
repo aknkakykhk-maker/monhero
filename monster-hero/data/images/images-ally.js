@@ -173,6 +173,11 @@ const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
 // 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
 // ケンタウロスは背景に散ったごく薄い光の画素(不透明度64未満)を消してから取り込んだ
+// キュービ・オリヒメ(2026-10-27・案の段階)。元絵は tools/art-sources/kyubi-orihime-2026-10-27/。高さ916px・256色(sharp)
+const KYUBI_IMG = "images/monsters/kyubi.png?v=f3711a72a817";
+const KYUBI_DYE_MASK = "images/monsters/kyubi-dye-mask.PNG?v=fc6210422555";
+const ORIHIME_DYE_MASK = "images/monsters/orihime-dye-mask.PNG?v=5868e56697c0";
+const ORIHIME_IMG = "images/monsters/orihime.png?v=86ff26c44dcb";
 const MF_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
 const MF_GALI_IMG = "images/monsters/gali.png?v=802cb6ce6f64";
 const MF_NAGA_IMG = "images/monsters/naga.png?v=07114a6c8886";
@@ -406,6 +411,8 @@ const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=b3722ab1b74e
 const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=9fcfee53438b";
 const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=4ee1ce8f7085";
 const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
+const KYUBI_FACE_ICON = "images/monster-icons/face/kyubi.png?v=6648b970a72f";
+const ORIHIME_FACE_ICON = "images/monster-icons/face/orihime.png?v=887beb2d000f";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,
@@ -525,6 +532,7 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   metalner: LINEAGE_ICON_METALNER,
   worm: LINEAGE_ICON_WORM,
   centaur: LINEAGE_ICON_CENTAUR,
+  kyubi: LINEAGE_ICON_KYUBI,
   unknown: LINEAGE_ICON_RAREMON,
 });
 
