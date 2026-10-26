@@ -2076,20 +2076,23 @@ const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now)
 };
 
 // コンピューター戦の結果(4-1・社長が案Aに決めた 台帳 #3484)
-//   ビートP: 勝ち … 難易度の点 / 負け(最後まで)… どの難易度も 25 / 降参 … 倒した相手のモンスター × 10(25まで。0体なら0)
-//   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの半分 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
+//   ビートP: 勝ち … 難易度の点 / 負け(最後まで)… 勝ちの 3/4(切り捨て)/ 降参 … 倒した相手のモンスター × 10(負けの数まで。0体なら0)
+//   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの 3/4 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
+//   ★負けを勝ちの 3/4 にしたのは 2026-10-26 社長「助手とのバトルも負けても報酬もっとあげよう」(前はビートP 25・周回は勝ちの半分)
 //   ★かかった時間は見ない(止めて放っておいても増えない)。自分の番を3回やる前に終わった試合は、どちらも0(すぐ降参・すぐ負けで回せないように)
-//   ★負けのポイントを難易度で増やさないのは、MASTER でわざと早く負けるのがいちばん得にならないようにするため
 //   1日の上限は設けない(社長 2026-10-24。#3531 で取り消し)。その日はじめての勝ちの +50 だけは1日1回
-const CARD_CPU_LOSE_POINT = 25;
+// 負けでもらえる割合(勝ちの 3/4)。ビートPもクイック周回も、勝ちの数にこれを掛けて切り捨てる
+const CARD_LOSE_SHARE = 3 / 4;
+const cardLosePoint = (level) => Math.floor(level.point * CARD_LOSE_SHARE);
+const cardLoseLoops = (level) => Math.floor(level.loops * CARD_LOSE_SHARE);
 const CARD_SURRENDER_POINT_PER_KO = 10;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
 // マルチ対戦: 勝ち・負け(最後まで)・途中で抜けた で分かれる。
-//   2026-10-26 社長: 勝ちは MASTER の2倍(ビートP 400・44周)、負けは MASTER と同じ(25・自分の番10回で11周。投了も MASTER と同じ)、抜けたら0。
+//   2026-10-26 社長: 勝ちは MASTER の2倍(ビートP 400・44周)、負けは MASTER と同じ(150・自分の番10回で16周。投了も MASTER と同じ)、抜けたら0。
 //   1日の上限(dailyMax)も、同じ相手と1日3戦まで(sameFoePerDay)もなくした(社長「同じ相手の縛りもいらないよ」)
-const CARD_PVP_REWARD = Object.freeze({ win: { point: CARD_AI_LEVELS.master.point * 2, loops: CARD_AI_LEVELS.master.loops * 2 }, lose: { point: CARD_CPU_LOSE_POINT, loops: Math.floor(CARD_AI_LEVELS.master.loops / 2) }, left: { point: 0, loops: 0 } });
+const CARD_PVP_REWARD = Object.freeze({ win: { point: CARD_AI_LEVELS.master.point * 2, loops: CARD_AI_LEVELS.master.loops * 2 }, lose: { point: cardLosePoint(CARD_AI_LEVELS.master), loops: cardLoseLoops(CARD_AI_LEVELS.master) }, left: { point: 0, loops: 0 } });
 // その人が自分の番を何回やったか(1ターン目は先攻の番)
 const cardOwnTurns = (st, p) => {
   const t = Math.max(0, Number(st && st.turn) || 0);
@@ -2103,15 +2106,15 @@ const cardCpuBasePoint = (levelId, outcome, facts) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
   if (outcome === 'win') return level.point;
-  if (outcome === 'lose') return CARD_CPU_LOSE_POINT;
-  if (outcome === 'surrender') return Math.min(CARD_CPU_LOSE_POINT, facts.kos * CARD_SURRENDER_POINT_PER_KO);
+  if (outcome === 'lose') return cardLosePoint(level);
+  if (outcome === 'surrender') return Math.min(cardLosePoint(level), facts.kos * CARD_SURRENDER_POINT_PER_KO);
   return 0;
 };
 // コンピューター戦のクイック周回(◯周ぶん)。周回クリア扱いにするかどうか(クイックで通したことがあるか)は、配る側(60-app)が決める
 const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
-  const loseFull = Math.floor(level.loops / 2);
+  const loseFull = cardLoseLoops(level);
   if (outcome === 'win') return level.loops;
   if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
   if (outcome === 'surrender') return Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));

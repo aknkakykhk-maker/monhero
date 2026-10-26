@@ -298,14 +298,16 @@ const decksAndSaves = () => {
   ok(r2.got === 200 && !r2.capped && r2.bonus === 0 && r2.total === 200, '1日の上限が残っている(1,480 もらったあとでも満額のはず)');
   ok(E.cardCpuReward(daily, 'easy', 'surrender', { ownTurns: 5, kos: 0 }).total === 0, '倒さずに降参でカードポイントが出てしまう');
   ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 2 }).total === 20, '2体倒して降参は20のはず');
-  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 5 }).total === 25, '降参は負けの25を超えない');
-  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'lose', full).total === 25, '負けはどの難易度も25のはず');
+  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 7 }).total === 60, '降参は負けの数(EASY 60)を超えない');
+  // 負けは勝ちの 3/4(切り捨て)。2026-10-26 社長「助手とのバトルも負けても報酬もっとあげよう」
+  const loseWant = { easy: [60, 10], normal: [82, 12], hard: [105, 13], expert: [127, 15], master: [150, 16] };
+  ok(Object.entries(loseWant).every(([lv, [pt]]) => E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), lv, 'lose', full).total === pt), '負けは勝ちの 3/4(60・82・105・127・150)のはず');
   const sh = E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'win', { ownTurns: 2, kos: 3 });
   ok(sh.total === 0 && sh.short && !sh.daily.firstWin, '自分の番を3回やる前に終わった試合でカードポイントが出る');
   const L = (lv, o, f) => E.cardCpuLoops(lv, o, f);
   ok([['easy', 14], ['normal', 16], ['hard', 18], ['expert', 20], ['master', 22]].every(([lv, n]) => L(lv, 'win', full) === n), '勝ちの周回が案Aと違う');
-  ok(L('normal', 'lose', full) === 8 && L('normal', 'lose', { ownTurns: 5, kos: 0 }) === 4, '負けの周回は勝ちの半分×(自分の番÷10)のはず');
-  ok(L('normal', 'surrender', { ownTurns: 5, kos: 0 }) === 0 && L('normal', 'surrender', { ownTurns: 5, kos: 1 }) === 3 && L('normal', 'surrender', { ownTurns: 5, kos: 2 }) === 5, '降参の周回は倒した数×負けの3分の1のはず');
+  ok(Object.entries(loseWant).every(([lv, [, n]]) => L(lv, 'lose', full) === n) && L('normal', 'lose', { ownTurns: 5, kos: 0 }) === 6, '負けの周回は勝ちの 3/4(10・12・13・15・16)×(自分の番÷10)のはず');
+  ok(L('normal', 'surrender', { ownTurns: 5, kos: 0 }) === 0 && L('normal', 'surrender', { ownTurns: 5, kos: 1 }) === 4 && L('normal', 'surrender', { ownTurns: 5, kos: 2 }) === 8, '降参の周回は倒した数×負けの3分の1のはず');
   ok(L('master', 'win', { ownTurns: 2, kos: 3 }) === 0, '自分の番を3回やる前に終わった試合で周回が出る');
   const g = E.cardCreateGame(db, { decks: [E.cardAiBuildDeck(db, 'speed'), E.cardAiBuildDeck(db, 'speed')], first: 1 });
   g.turn = 7;

@@ -233,11 +233,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const rewardB = await B.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => B.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
     const pointAfter = [await beatP(A), await beatP(B)];
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
-    // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +25 は MASTER と同じ)。
+    // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4)。
     // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回)。この検査の端末はその日まだ勝っていないので +450
     const gain = pointAfter.map((v, i) => v - pointBefore[i]);
-    const want = [rA, rB].map((r) => (r === 'win' ? 450 : r === 'lose' ? 25 : null));
-    check('⑥ ビートPが、2台それぞれに増えている(勝ち+400とその日はじめての+50・負け+25)', gain[0] === want[0] && gain[1] === want[1], `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
+    const want = [rA, rB].map((r) => (r === 'win' ? 450 : r === 'lose' ? 150 : null));
+    check('⑥ ビートPが、2台それぞれに増えている(勝ち+400とその日はじめての+50・負け+150)', gain[0] === want[0] && gain[1] === want[1], `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
     // 結果の画面の「もらったビートP」も、+50 を足した合計
     const shown = [rewardA, rewardB].map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
     check('⑥ 結果の画面の「もらったビートP」が、増えた数と同じ', shown[0] === gain[0] && shown[1] === gain[1], `${rewardA} / ${rewardB}`);
