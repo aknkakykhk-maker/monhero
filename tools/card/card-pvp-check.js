@@ -188,9 +188,14 @@ for (let n = 0; n < N; n++) runOne(n);
       : (c.effects || []).some((e) => e.t === 'noGutsLoss') ? [bNeed((x) => (x.effects || []).some((e) => e.t === 'gutsLossOnHit'))] : [];
     // 盾になる・吹き上げる(ほかの子が狙われたときに出す守り)は、相手が先頭の子(カードの持ち主)以外を狙う
     const avoidLead = (c.effects || []).some((e) => e.t === 'shield' || e.t === 'liftAllies' || e.t === 'cover');
-    const extraB = isGuard ? { attack: true, must: bMust.filter(Boolean), avoidLead } : null;
+    // 夏美草(攻撃できない子を攻撃できるようにする)は、相手に「当たると次のターン攻撃できない」技を持たせて攻撃させる(その場面が来ないと出せない)
+    const unstun = (c.effects || []).some((e) => e.t === 'unstunTarget');
+    const extraB = isGuard ? { attack: true, must: bMust.filter(Boolean), avoidLead } : unstun ? { attack: true, must: [bNeed((x) => (x.effects || []).some((e) => e.t === 'stunOnHit'))].filter(Boolean) } : null;
     // 盾になる・吹き上げる など、ほかの子が狙われたときに出す守りは、先頭の子をカードの持ち主にして、ほかの2体も並べる
-    for (let k = 0; k < (special.length ? 10 : 5) && extra < 80 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, bMons], [no, ...special, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])], extraB, special.length > 0); }
+    // 出せる場面が来にくい札(ガッツ6以上の重い技・攻撃できない子がいるときだけ出せる札)は15戦まで
+    //   (2026-10-27 意味不明(277)が効くようになって試合の流れが変わり、魔神ファイナル(358)・夏美草(351)が5戦では出なくなった。ナガメくん)
+    const hard = (c.guts || 0) >= 6 || (c.effects || []).some((e) => e.t === 'unstunTarget');
+    for (let k = 0; k < (hard ? 15 : special.length ? 10 : 5) && extra < 80 && !usedNow().has(no); k++, extra++) { runOne(N + extra, [trioA, bMons], [no, ...special, ...(areaCard ? [areaCard] : []), ...(baseAtk ? [baseAtk] : []), ...(dgeCard ? [dgeCard] : [])], extraB, special.length > 0); }
   }
   N += extra;
 }
@@ -350,6 +355,28 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   const p60 = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
   check('⑨ ランキングへ送るかは公開の印だけで決め、合言葉の端末をまるごと外さない(デバッグ設定の入口は 84 の debug で外す)',
     /rank=\{\{send:EVENT_REPLAY_RELEASE_FLAGS\.cardBattle===true,/.test(p60) && /debug=\{cardOrigin==='debug'\}/.test(p60) && /const rankable = !!\(rank && rank\.send\) && !debug;/.test(p84));
+  // ⑩ 捨て札から選ぶ段(2026-10-27 総点検D): 相手が「回避プログラム」(186・ガッツ1)を使い、払ったガッツの札が回避カードのとき、
+  //   受ける側では払った札が仮の札のまま候補が作られ、候補が1枚少なくなって、相手が選んだ手をはねて試合が止まっていた
+  [['186', (c, m) => c.kind === 'dge' && E.cardUsableBy(c, m)], ['303', (c, m) => ['pow', 'int'].includes(c.kind) && E.cardUsableBy(c, m)]].forEach(([no, fit]) => {
+    const H = E.CARD_PVP_HIDDEN;
+    const mon = Object.values(db.monsters).find((m) => m.species === db.cards[no].user && !m.main).no;
+    const dA = { monsters: [mon, 'C-003', 'C-005'], cards: Array(50).fill('100') }, dB = { monsters: ['C-001', 'C-003', 'C-009'], cards: Array(50).fill('100') };
+    const A = E.cardPvpNewGame(db, { myDeck: dA, mySeed: 1, foeMonsters: dB.monsters, first: 0, names: ['A', 'B'] });
+    const B = E.cardPvpNewGame(db, { myDeck: dB, mySeed: 2, foeMonsters: dA.monsters, first: 1, names: ['B', 'A'] });
+    const good = Object.values(db.cards).find((c) => c.ready && fit(c, A.players[0].mons[0]));
+    [A, B].forEach((s0, i) => { s0.phase = 'main'; s0.turn = 1; s0.active = i; });
+    A.players[0].hand = [no]; A.players[0].guts = Array(Math.max(1, db.cards[no].guts)).fill(good.no); A.players[0].discard = ['100', good.no];
+    B.players[1].hand = [H]; B.players[1].guts = Array(Math.max(1, db.cards[no].guts)).fill(H); B.players[1].discard = ['100', good.no];
+    const send = (from, to, act, seq) => { const n = E.cardApplyAction(db, from, act); return [n, n && E.cardPvpApplyRemote(db, to, E.cardPvpCleanMessage(JSON.parse(JSON.stringify({ t: 'act', from: 'x', seq, act, reveal: E.cardPvpRevealOf(from, act), discard: n.players[0].discard }))))]; };
+    const o = E.cardLegalActions(db, A).find((a) => a.type === 'attack' && a.hand.length === 1);
+    if (!o) return check(`⑩ ${no}: 場面が作れる`, false);
+    const [A2, B2] = send(A, B, o, 1);
+    check(`⑩ ${no}「${db.cards[no].name}」: 選ぶ段の候補が2台で同じ(払ったガッツの札も入る)`, !!B2 && JSON.stringify(A2.pendingChoice.cands) === JSON.stringify(B2.pendingChoice && B2.pendingChoice.cands),
+      `${JSON.stringify(A2.pendingChoice.cands)} / ${JSON.stringify(B2 && B2.pendingChoice && B2.pendingChoice.cands)}`);
+    const pick = A2.pendingChoice.cands[A2.pendingChoice.cands.length - 1];
+    const [A3, B3] = send(A2, B2, { type: 'choose', pick }, 2);
+    check(`⑩ ${no}「${db.cards[no].name}」: 払ったガッツの札を選んでも、相手の端末で当てられる`, !!B3 && same(A3, B3));
+  });
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();

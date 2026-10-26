@@ -1,0 +1,4 @@
+/* 案C: 横向きでは「縦にしてね」の案内を出す */
+body::after{content:"📱\A スマホを縦にしてあそんでね\A\A 横向きだと、手札と敵がいっしょに見えません";white-space:pre;text-align:center;
+  position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;
+  background:rgba(10,8,30,.92);color:#fff;font-weight:900;font-size:20px;line-height:1.6;letter-spacing:.04em}

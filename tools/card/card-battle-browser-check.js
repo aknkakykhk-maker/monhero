@@ -343,6 +343,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (!r) return; stageSamples += 1; if (r.bubble) stageBubbleSamples += 1; r.out.forEach((x) => stageClip.add(x)); (r.seen || []).forEach((x) => fitSeen.add(x));
     };
     const fitShots = new Set();
+    let sumChip = null;   // 相手の番のまとめの1行(出たときだけ見る)
     const deadline = Date.now() + 150000;
     while (Date.now() < deadline && (gutsTurns < 6 || (dragAttack === null && gutsTurns < 12))) {
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
@@ -357,7 +358,20 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       }
       if (SHOT && !fitShots.has('banner') && await page.locator('[data-card-turn-banner]').count()) { fitShots.add('banner'); await page.waitForTimeout(300); await shot(page, '42-turn-banner'); }
       if (SHOT && !fitShots.has('big') && await page.locator('[data-card-big]').count()) { fitShots.add('big'); await page.waitForTimeout(300); await shot(page, '43-big-card'); }
-      if (SHOT && !fitShots.has('sum') && await page.locator('[data-card-turn-summary]').count()) { fitShots.add('sum'); await page.waitForTimeout(300); await shot(page, '44-turn-summary'); }
+      if (!fitShots.has('sum') && await page.locator('[data-card-turn-summary-chip]').count()) {
+        // 相手の番のまとめは、まず小さな1行(相手と自分のモンスターにかぶらない)。押すと窓が開く(2026-10-26 カゲあつくんの通しの点検)
+        fitShots.add('sum');
+        sumChip = await page.evaluate(() => {
+          const c = document.querySelector('[data-card-turn-summary-chip]').getBoundingClientRect();
+          const over = [...document.querySelectorAll('[data-card-mon]')].filter((x) => { const q = x.getBoundingClientRect(); return q.height > 0 && c.bottom > q.top + 1 && c.top < q.bottom - 1 && c.right > q.left + 1 && c.left < q.right - 1; }).map((x) => x.getAttribute('data-card-mon'));
+          return { h: Math.round(c.height), over };
+        });
+        if (SHOT) await shot(page, '44a-turn-summary-chip');
+        await page.locator('[data-card-turn-summary-chip]').click().catch(() => {});
+        await page.waitForTimeout(300);
+        sumChip.opened = await page.locator('[data-card-turn-summary]').count();
+        if (SHOT) await shot(page, '44-turn-summary');
+      }
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
@@ -375,7 +389,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
             const r = el.getBoundingClientRect();
             const over = ['[data-card-hand]', '[data-card-footer]'].filter((s) => { const q = document.querySelector(s); if (!q) return false; const b = q.getBoundingClientRect(); return r.bottom > b.top + 1 && r.top < b.bottom - 1 && r.right > b.left + 1 && r.left < b.right - 1; });
             const img = el.querySelector('img'); const fit = Number(document.querySelector('[data-card-stage]').getAttribute('data-card-stage-fit'));
-            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, bubbleShown: !!document.querySelector('[data-card-bubble]:not(.invisible)'), actionBand: !!document.querySelector('[data-card-action]'), logZ: Number(getComputedStyle(document.querySelector('[data-card-log]')).zIndex) || 0, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
+            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, bubbleShown: !!document.querySelector('[data-card-bubble]:not(.invisible)'), actionBand: !!document.querySelector('[data-card-action]'), logZ: Number(getComputedStyle(document.querySelector('[data-card-log]')).zIndex) || 0, logBgA: (() => { const m = getComputedStyle(document.querySelector('[data-card-log]')).backgroundColor.match(/rgba?\(([^)]+)\)/); const v = m ? m[1].split(',').map(Number) : []; return v.length === 4 ? v[3] : 1; })(), inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
           });
           if (guardAtk.shown) {
             await page.locator('[data-card-guard-attack]').click();
@@ -474,13 +488,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ 技を相手のモンスターまで運んで離すと使える(置ける所の上で光る)', dragAttack === true, `${dragAttack}(試した回数 ${dragTries + (dragAttack === true ? 1 : 0)})`);
     check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
     check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
-    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面。吹き出しと上の技の札は出さず、攻撃の動きより前)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.bubbleShown && !guardAtk.actionBand && guardAtk.logZ > 40 && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
+    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面。吹き出しと上の技の札は出さず、攻撃の動きより前)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.bubbleShown && !guardAtk.actionBand && guardAtk.logZ > 40 && guardAtk.logBgA > 0.9 && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
       `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
     check(`⑲ 相手のターンの見せ方(番の帯・技の帯の札・大きいカード・まとめ・記録の一覧)が出て、字が切れない`,
       ['番の帯', '技の帯の札', '大きいカードの文', 'まとめ', '記録の一覧'].every((x) => fitSeen.has(x)) && ![...stageClip].some((x) => /番の帯|大きいカード|まとめ|記録の一覧|技の帯の札/.test(x)),
       `見えたもの: ${[...fitSeen].join('・')}`);
+    check('⑩-2 相手の番のまとめは小さな1行で、モンスターにかぶらず、押すと開く', !sumChip || (sumChip.h <= 28 && !sumChip.over.length && sumChip.opened === 1), JSON.stringify(sumChip));
     check('⑩ 技を出すと、攻撃した子がモンヒロの技の動きをする', motionSeen || poseSeen.has('attack'), `見えた動き: ${[...poseSeen].join('・')}`);
     check('⑤ 自分の番を何ターンも進められる(技・守り・ガッツ)', gutsTurns >= 3 && errors.length === 0, `技 ${myActions} 回・守りの番 ${guards} 回・ターン終了 ${gutsTurns} 回`);
     // 捨て札の一覧
