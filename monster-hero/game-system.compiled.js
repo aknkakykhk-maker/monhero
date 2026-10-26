@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 115538329f6e0655
+// source-sha256: 8752d324dcaab3c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56555,7 +56555,7 @@ function RhythmSongSelectScreen({
         "aria-checked": on,
         "data-rhythm-debug-song-filter-option": id,
         onClick: () => setDebugSongFilter(id),
-        className: `min-h-[40px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on ? 'border-amber-300 bg-amber-500/80 text-slate-950' : 'border-white/15 bg-slate-900/80 text-amber-100'}`
+        className: `min-h-[44px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on ? 'border-amber-300 bg-amber-500/80 text-slate-950' : 'border-white/15 bg-slate-900/80 text-amber-100'}`
       }, label);
     }));
   })(), raidChallenge && React.createElement("div", {
