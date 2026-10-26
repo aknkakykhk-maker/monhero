@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4f2492e60a06cd96
+// source-sha256: 135f85c28188704d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62951,7 +62951,7 @@ function ProMonsterGridPicker({
     className: "ml-1 text-[9px] font-mono opacity-70"
   }, t.count)))), React.createElement("div", {
     "data-pro-pick-scroll": true,
-    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-1"
   }, pinnedIds.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
     className: `px-1 mb-1 text-[9px] font-black ${ac.head}`
   }, "★お気に入り・前回使った子"), React.createElement("div", {
@@ -63134,9 +63134,17 @@ function ProPartyPicker({
       className: "text-xl"
     }, m.emoji) : React.createElement("span", {
       className: `text-[15px] font-black ${on ? 'text-indigo-100' : 'text-slate-600'}`
-    }, "+")), React.createElement("span", {
-      className: "mt-0.5 w-full truncate text-[9px] font-black leading-tight text-white"
-    }, m ? m.name : on ? 'ここに入る' : '空き'), m && monsterTypeProtoOn() && (() => {
+    }, "+")), (() => {
+      const label = m ? m.name : on ? 'ここに入る' : '空き';
+      return React.createElement("span", {
+        className: "mt-0.5 w-full whitespace-nowrap overflow-hidden font-black leading-tight text-white [container-type:inline-size]"
+      }, React.createElement("span", {
+        className: "block",
+        style: {
+          fontSize: `min(9px, calc(100cqw / ${[...label].length + 0.3}))`
+        }
+      }, label));
+    })(), m && monsterTypeProtoOn() && (() => {
       const t = monsterTypeOf(m.id);
       const icons = [t.main, t.sub].filter(k => k && MONSTER_TYPES[k]).map(k => MONSTER_TYPES[k]);
       return React.createElement("span", {
