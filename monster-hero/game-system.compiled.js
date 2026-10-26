@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b38bc8a46a634b07
+// source-sha256: a095f3fd464ad598
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:30";
+const BUILD_DATE = "2026-10-27 01:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -97505,7 +97505,7 @@ const CardPvpLobby = ({
     className: "mt-1 text-[13px] font-bold text-sky-100"
   }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
     className: "mt-1 text-[12px] font-bold text-slate-300 tabular-nums"
-  }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
+  }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
     "data-card-pvp-nobody": true,
     className: "mt-3 space-y-2"
   }, React.createElement("p", {

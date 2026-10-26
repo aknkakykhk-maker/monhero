@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7deb7f16042640fc
+// generated-sha256: 91a02e439fd377cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 01:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 01:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -58427,7 +58427,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'}</p>
             {/* 自分は数えない(「1人」が自分のことか分からない。カゲあつくん) */}
             <p data-card-pvp-waiting={Math.max(0, room.lobbyCount - 1)} className="mt-1 text-[13px] font-bold text-sky-100">{room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'}</p>
-            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000))}秒</p>}
+            {/* now は1秒ごとの時計なので、さがし始めた直後は seekAt より古い(経過が負になり「あと91秒」と出ていた。2026-10-27) */}
+            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000))}秒</p>}
             {!room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && (
               <div data-card-pvp-nobody className="mt-3 space-y-2">
                 <p className="text-[13px] font-bold text-amber-100">いまは、だれも来ませんでした</p>
