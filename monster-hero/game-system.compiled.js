@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ea291714f709ddb
+// source-sha256: e03fcf0353978eea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:32";
+const BUILD_DATE = "2026-10-27 00:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -2888,6 +2888,66 @@ const dexMainLineages = () => {
     seen.add(lineage.id);
     return true;
   });
+};
+const DEX_ENTRY_STATUSES = Object.freeze([Object.freeze({
+  id: 'owned',
+  label: '入手済み'
+}), Object.freeze({
+  id: 'locked',
+  label: '未入手'
+}), Object.freeze({
+  id: 'draft',
+  label: '未実装'
+})]);
+const dexDraftMonsterList = () => {
+  if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+};
+const dexEntryLineageOf = mon => {
+  if (!mon) return monsterLineageOf(null);
+  const draft = mon.draft && mon.draftLineage && !lineageEntryMap()[mon.id] ? mon.draftLineage : null;
+  if (!draft) return monsterLineageOf(mon.id);
+  return {
+    main: lineageById(draft.main),
+    sub: lineageById(draft.sub != null ? draft.sub : draft.main),
+    known: true
+  };
+};
+const dexEntryCategoryOf = mon => {
+  const {
+    main,
+    sub
+  } = dexEntryLineageOf(mon);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const dexEntryStatusOf = (mon, unlockedIds) => {
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  if (!mon || !playable[mon.id]) return 'draft';
+  return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+const dexEntryDescription = mon => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
+};
+const dexScreenEntries = unlockedIds => {
+  const base = dexMonsterList();
+  const all = [...base, ...dexDraftMonsterList()];
+  return DEX_ENTRY_STATUSES.flatMap(s => all.filter(mon => dexEntryStatusOf(mon, unlockedIds) === s.id));
+};
+const dexScreenMainLineages = () => {
+  const list = dexMainLineages().slice();
+  const seen = new Set(list.map(l => l.id));
+  for (const mon of dexDraftMonsterList()) {
+    const main = dexEntryLineageOf(mon).main;
+    if (main && main.id !== 'unknown' && !seen.has(main.id)) {
+      seen.add(main.id);
+      list.push(main);
+    }
+  }
+  return list;
 };
 const MONSTER_POWER_STAT_WEIGHT = {
   hp: 1,
@@ -25283,6 +25343,106 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   },
   MooHybrid: {
     body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Baron: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Aquarius: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Plumler: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  StrikeReaper: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  DarkHam: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  HellFat: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  UrokoGel: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  WakakusaKenzai: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Garant: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  MimiNyaa: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  BenihimeSou: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  MurasakiChu: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  ArmorDragon: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Kermadix: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Gigalon: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  BlueMountainHybrid: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  MagnaBeetle: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  GinGiLiger: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Ankylox: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Soborobent: {
+    body: 'drift',
     bodyMask: null,
     parts: []
   }
@@ -54964,6 +55124,21 @@ function MonsterTypeBadge({
     className: `inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`
   }, chip(t.main, false), t.sub && chip(t.sub, true));
 }
+const DEX_STATUS_STYLE = {
+  owned: 'border-amber-300/60 bg-amber-500/15 text-amber-100',
+  locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
+  draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100'
+};
+const DexStatusTag = ({
+  status,
+  size = 'sm'
+}) => {
+  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  return React.createElement("span", {
+    "data-dex-status-tag": def.id,
+    className: `inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`
+  }, def.label);
+};
 function MonsterDexScreen({
   dexLineageFilter,
   unlockedMonsterIds,
@@ -54973,8 +55148,13 @@ function MonsterDexScreen({
 }) {
   const monsters = dexMonsterList();
   const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;
-  const filters = dexMainLineages();
-  const shown = dexLineageFilter === 'all' ? monsters : monsters.filter(mon => monsterLineageOf(mon.id).main.id === dexLineageFilter);
+  const entries = dexScreenEntries(unlockedMonsterIds);
+  const filters = dexScreenMainLineages();
+  const shown = dexLineageFilter === 'all' ? entries : entries.filter(mon => dexEntryLineageOf(mon).main.id === dexLineageFilter);
+  const sections = DEX_ENTRY_STATUSES.map(s => ({
+    ...s,
+    list: shown.filter(mon => dexEntryStatusOf(mon, unlockedMonsterIds) === s.id)
+  })).filter(s => s.list.length > 0);
   const chipClass = on => `shrink-0 min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-white/10 text-amber-200/80'}`;
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -55015,31 +55195,50 @@ function MonsterDexScreen({
     className: chipClass(dexLineageFilter === lineage.id)
   }, lineage.name))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`
+  }, sections.map(section => React.createElement("section", {
+    key: section.id,
+    "data-dex-section": section.id,
+    className: "pb-3"
   }, React.createElement("div", {
-    className: "grid grid-cols-3 gap-2.5 pb-4"
-  }, shown.map(mon => {
-    const unlocked = unlockedMonsterIds.includes(mon.id);
+    className: "flex items-center gap-2 mb-1.5"
+  }, React.createElement(DexStatusTag, {
+    status: section.id,
+    size: "md"
+  }), React.createElement("span", {
+    "data-dex-section-count": true,
+    className: "text-[11px] font-mono font-black text-amber-100 tabular-nums"
+  }, section.list.length, React.createElement("span", {
+    className: "text-slate-400 text-[10px]"
+  }, " / ", shown.length)), React.createElement("span", {
+    className: "flex-1 h-px bg-amber-500/25",
+    "aria-hidden": "true"
+  })), React.createElement("div", {
+    className: "grid grid-cols-3 gap-2.5"
+  }, section.list.map(mon => {
+    const unlocked = section.id === 'owned';
     const iconSrc = mon.iconUrl || mon.imgUrl || '';
-    const category = monsterCategoryOf(mon.id);
+    const category = unlocked ? monsterCategoryOf(mon.id) : null;
     return React.createElement("button", {
       key: mon.id,
       type: "button",
       "data-dex-entry": true,
-      "aria-label": unlocked ? `${mon.name}の図鑑を見る` : 'まだ出会っていないモンスター',
+      "data-dex-entry-status": section.id,
+      "aria-label": `${mon.name}の図鑑を見る`,
       onClick: () => onOpenDetail(mon.id),
-      className: "w-full min-h-[124px] rounded-2xl border border-white/10 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none"
+      className: `w-full min-h-[124px] rounded-2xl border ${section.id === 'draft' ? 'border-dashed border-fuchsia-300/30' : 'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`
     }, React.createElement(DexMonsterIcon, {
-      src: iconSrc,
-      hidden: !unlocked
+      src: iconSrc
     }), React.createElement("div", {
       className: "text-[11px] font-black truncate w-full text-center leading-tight text-amber-100"
-    }, unlocked ? mon.name : '？？？'), React.createElement("div", {
+    }, mon.name), unlocked ? React.createElement("div", {
       className: "text-[10px] font-black text-amber-400/80 leading-tight"
-    }, unlocked ? monsterCategoryName(category) : '未発見'), unlocked && React.createElement(MonsterTypeBadge, {
+    }, monsterCategoryName(category)) : React.createElement(DexStatusTag, {
+      status: section.id
+    }), unlocked && React.createElement(MonsterTypeBadge, {
       monId: mon.id,
       compact: true
     }));
-  })), shown.length === 0 && React.createElement(ScreenEmpty, {
+  })))), shown.length === 0 && React.createElement(ScreenEmpty, {
     emoji: "📖",
     lines: ['この血統のモンスターはまだいません。']
   })));
@@ -55068,7 +55267,7 @@ function MonsterDexDetailScreen({
   onStopPreview
 }) {
   const [idleMotion, toggleIdleMotion] = useDexIdleMotion();
-  const monsters = dexMonsterList();
+  const monsters = dexScreenEntries(unlockedMonsterIds);
   const [colorSheetOpen, setColorSheetOpen] = useState(false);
   const index = monsters.findIndex(m => m.id === dexMonsterId);
   const mon = index >= 0 ? monsters[index] : null;
@@ -55076,12 +55275,13 @@ function MonsterDexDetailScreen({
     onMissing();
     return null;
   }
-  const unlocked = unlockedMonsterIds.includes(mon.id);
+  const status = dexEntryStatusOf(mon, unlockedMonsterIds);
+  const unlocked = status === 'owned';
   const {
     main,
     sub
-  } = monsterLineageOf(mon.id);
-  const category = monsterCategoryOf(mon.id);
+  } = dexEntryLineageOf(mon);
+  const category = dexEntryCategoryOf(mon);
   const categoryClass = category === 'rare' ? 'bg-amber-600 text-white' : category === 'pure' ? 'bg-emerald-700 text-white' : 'bg-indigo-700 text-white';
   const stopDexAttackPreview = onStopPreview;
   const go = delta => {
@@ -55166,7 +55366,7 @@ function MonsterDexDetailScreen({
   }, React.createElement("div", {
     "data-dex-side": "left",
     className: "flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1"
-  }, unlocked && monsterIdleRigOf(mon.id) ? React.createElement("button", {
+  }, mon.imgUrl && monsterIdleRigOf(mon.id) ? React.createElement("button", {
     type: "button",
     "data-dex-idle-toggle": true,
     "aria-pressed": idleMotion,
@@ -55207,9 +55407,13 @@ function MonsterDexDetailScreen({
     alt: mon.name,
     motion: idleMotion,
     colors: dexSelectedColors(masuMons, mon.id, dexColorKey)
+  }) : mon.imgUrl ? React.createElement(DexMonsterIdleArt, {
+    mon: mon,
+    alt: mon.name,
+    motion: idleMotion
   }) : React.createElement(DexMonsterArt, {
     mon: mon,
-    alt: "まだ出会っていないモンスター",
+    alt: "立ち絵のないモンスター",
     hidden: true
   })), React.createElement("div", {
     "data-dex-side": "right",
@@ -55278,13 +55482,19 @@ function MonsterDexDetailScreen({
     className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
   }, React.createElement("div", {
     className: "shrink-0 text-center text-[17px] font-black text-amber-100 truncate"
-  }, unlocked ? mon.name : '？？？'), unlocked && monsterTypeProtoOn() && React.createElement("div", {
+  }, mon.name), unlocked && monsterTypeProtoOn() && React.createElement("div", {
     "data-dex-type-row": true,
     className: "shrink-0 mt-1 flex justify-center"
   }, React.createElement(MonsterTypeBadge, {
     monId: mon.id,
     size: "md"
-  })), unlocked ? React.createElement(React.Fragment, null, React.createElement("div", {
+  })), !unlocked && React.createElement("div", {
+    "data-dex-status-row": true,
+    className: "shrink-0 mt-1 flex justify-center"
+  }, React.createElement(DexStatusTag, {
+    status: status,
+    size: "md"
+  })), React.createElement("div", {
     "data-dex-lineage-row": true,
     className: "shrink-0 mt-2 grid items-center gap-1.5",
     style: {
@@ -55305,7 +55515,7 @@ function MonsterDexDetailScreen({
     }
   }, React.createElement("p", {
     className: "font-bold leading-relaxed text-slate-200 break-words"
-  }, helpWrap(monsterDexDescription(mon.id)))), React.createElement(ScreenTabs, {
+  }, helpWrap(dexEntryDescription(mon)))), unlocked ? React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     className: "mt-2",
     value: tab,
     onChange: onSelectTab,
@@ -55388,8 +55598,8 @@ function MonsterDexDetailScreen({
   })()))) : React.createElement("div", {
     className: "flex-1 min-h-0 flex items-center justify-center"
   }, React.createElement(ScreenEmpty, {
-    emoji: "❓",
-    lines: ['まだ出会っていないモンスターです', 'マーケットで円盤石を手に入れて解放すると、血統・能力・技が図鑑に記録されます。']
+    emoji: status === 'draft' ? '🛠️' : '🔒',
+    lines: status === 'draft' ? ['まだ仲間にできないモンスターです', '能力・技・特性は、まだ記録されていません。'] : ['まだ入手していないモンスターです', 'マーケットで円盤石を手に入れて解放すると、能力・技・特性が図鑑に記録されます。']
   })))));
 }
 function RhythmInfoScreen({
