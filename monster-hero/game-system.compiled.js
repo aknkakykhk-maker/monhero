@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c73b2205a08d703
+// source-sha256: c42e992f76b49ddf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -488,7 +488,7 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   emoji: '🧬',
   color: '#67e8f9',
   tagline: 'ひとつの種族だけで挑む、しばりプレイのモード',
-  highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族ごとに難易度を解放していく'], ['🏅', '記録は種族ごとに別々に残る']],
+  highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族別に難易度を解放していく'], ['🏅', '記録は種族別に残る']],
   points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🔁', 'AUTO', 'AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
 });
 const TACTICS_MODE = Object.freeze({
@@ -510,7 +510,7 @@ const TACTICS_SPECIES_MODE = Object.freeze({
   emoji: '🧬',
   color: '#67e8f9',
   tagline: 'ひとつの種族だけで挑む、しばりプレイのモード',
-  highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族ごとに難易度を解放していく'], ['🏅', '記録は種族ごとに別々に残る']],
+  highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族別に難易度を解放していく'], ['🏅', '記録は種族別に残る']],
   points: [['🧬', 'どんなモード', '挑む前に種族をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。クラシックバトルの種族チャレンジと同じしばりで、戦い方だけがタクティクスバトルになります。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。同じモンスターは1体までですが、同じ種族の別のモンスターなら一緒に連れていけます。'], ['❤️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、WAVE2・4・6をクリアしたときに1体ずつ加わります。加わるとそのぶん敵も強くなります。'], ['👹', '難しさ', '難易度は14段階です。最初の5段階は最初から挑めます。その先は、同じ種族で1つ前の難易度をクリアすると順に解放されます。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。クラシックバトルの種族チャレンジの記録は書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '特定の種族を育てている人で、押し切りではなく読み合いで勝ちたい人向けです。']]
 });
 const TACTICS_PRO_MODE = Object.freeze({
@@ -695,7 +695,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   emoji: '⚔️',
   color: '#818cf8',
   tagline: 'モンヒロバトルの基本。育てたモンスターで10WAVEに挑む',
-  highlights: Object.freeze([Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']), Object.freeze(['🃏', 'カードと間合いを選んで戦う']), Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる'])]),
+  highlights: Object.freeze([Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']), Object.freeze(['🃏', 'カードと間合いを選んで戦う']), Object.freeze(['📈', 'WAVEのたびに強化を選んで積み上げる'])]),
   note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
   points: Object.freeze([Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']), Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']), Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
@@ -10957,7 +10957,24 @@ const DyeRegionColorControls = ({
     className: "flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"
   }), React.createElement("span", {
     className: "text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0"
-  }, colorAlphaOf(colors[idx]), "%")))));
+  }, colorAlphaOf(colors[idx]), "%")), colors[idx] && React.createElement("div", {
+    "data-dye-alpha-steppers": true,
+    className: "mt-1 flex items-center justify-end gap-1.5"
+  }, React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "down",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1下げる`,
+    disabled: colorAlphaOf(colors[idx]) <= MASU_COLOR_ALPHA_MIN,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) - 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "−"), React.createElement("span", {
+    className: "w-14 text-center text-[11px] font-black text-white tabular-nums"
+  }, "濃さ", colorAlphaOf(colors[idx]), "%"), React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "up",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1上げる`,
+    disabled: colorAlphaOf(colors[idx]) >= MASU_COLOR_ALPHA_MAX,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) + 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "+")))));
 };
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
 const makePatternLayer = (patch = {}) => ({
@@ -11991,6 +12008,58 @@ const HomeWalkingMasumon = ({
     className: "mh-home-masumon-stars"
   })));
 };
+const RepeatStepButton = ({
+  onStep,
+  disabled = false,
+  className = '',
+  children,
+  ...rest
+}) => {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  const timers = useRef({
+    wait: null,
+    loop: null,
+    pressed: false
+  });
+  const stop = () => {
+    clearTimeout(timers.current.wait);
+    clearInterval(timers.current.loop);
+    timers.current.wait = null;
+    timers.current.loop = null;
+  };
+  useEffect(() => stop, []);
+  useEffect(() => {
+    if (disabled) stop();
+  }, [disabled]);
+  return React.createElement("button", _extends({
+    type: "button",
+    disabled: disabled,
+    className: className
+  }, rest, {
+    onPointerDown: e => {
+      if (disabled) return;
+      e.preventDefault();
+      timers.current.pressed = true;
+      stepRef.current();
+      stop();
+      timers.current.wait = setTimeout(() => {
+        timers.current.loop = setInterval(() => stepRef.current(), 70);
+      }, 400);
+    },
+    onPointerUp: stop,
+    onPointerLeave: stop,
+    onPointerCancel: stop,
+    onClick: () => {
+      if (timers.current.pressed) {
+        timers.current.pressed = false;
+        return;
+      }
+      if (!disabled) stepRef.current();
+    },
+    onContextMenu: e => e.preventDefault()
+  }), children);
+};
 const CustomColorPicker = ({
   h,
   s,
@@ -12044,8 +12113,9 @@ const CustomColorPicker = ({
       setDragTarget('square');
       updateFromSquare(e.clientX, e.clientY);
     },
-    className: "relative w-full aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10",
+    className: "relative mx-auto aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10",
     style: {
+      width: 'min(100%, calc(var(--mh-vh) * 0.34))',
       backgroundColor: pureHueColor,
       backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))'
     }
@@ -12077,6 +12147,49 @@ const CustomColorPicker = ({
       height: '18px',
       transform: 'translate(-50%,-50%)'
     }
+  })), React.createElement("div", {
+    "data-custom-color-numbers": true,
+    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "h-6 w-6 shrink-0 rounded-full border border-white/30",
+    style: {
+      backgroundColor: previewColor
+    },
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black leading-tight text-white [word-break:keep-all]"
+  }, "カスタム(色相", Math.round(h), "・", React.createElement("wbr", null), "彩度", Math.round(s * 100), "・", React.createElement("wbr", null), "明るさ", Math.round(v * 100), ")"), React.createElement("small", {
+    className: "block text-[9px] font-bold leading-tight text-slate-400 [word-break:keep-all]"
+  }, "色相 0〜360・", React.createElement("wbr", null), "彩度 0〜100・", React.createElement("wbr", null), "明るさ 0〜100"))), React.createElement("div", {
+    "data-custom-color-steppers": true,
+    className: "space-y-1"
+  }, [['h', '色相', Math.round(h), 360], ['s', '彩度', Math.round(s * 100), 100], ['v', '明るさ', Math.round(v * 100), 100]].map(([key, label, value, max]) => {
+    const step = d => {
+      const next = Math.max(0, Math.min(max, value + d));
+      onChange(key === 'h' ? next : Math.round(h), (key === 's' ? next : Math.round(s * 100)) / 100, (key === 'v' ? next : Math.round(v * 100)) / 100);
+    };
+    return React.createElement("div", {
+      key: key,
+      className: "flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: "w-12 shrink-0 text-[10px] font-black text-slate-300"
+    }, label), React.createElement(RepeatStepButton, {
+      "data-custom-color-step": `${key}-down`,
+      "aria-label": `${label}を1下げる`,
+      disabled: value <= 0,
+      onStep: () => step(-1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    }, "−"), React.createElement("span", {
+      className: "min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white"
+    }, value), React.createElement(RepeatStepButton, {
+      "data-custom-color-step": `${key}-up`,
+      "aria-label": `${label}を1上げる`,
+      disabled: value >= max,
+      onStep: () => step(1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    }, "+"));
   })));
 };
 const VolumeSlider = ({
@@ -119008,7 +119121,7 @@ function MonsterHeroGame() {
         d = pct(myaruSelfDamageRate(t, level));
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
-    if (t.id === 'kiki') return `次の${level + 2}ターン 使用可能カード枚数 +1・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
+    if (t.id === 'kiki') return `次の${level + 2}ターン 使えるカード +1枚・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
     if (t.id === 'kyuko') {
       const tier = KYUKO_TIERS[Math.min(level, KYUKO_TIERS.length - 1)];
       return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
@@ -128434,7 +128547,7 @@ function MonsterHeroGame() {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))'
         }
       }, React.createElement(ScreenHead, {
-        title: `${item?.name || ''}を使う対象を選択`,
+        title: `${item?.name || ''}を使う相手を選ぶ`,
         accent: "text-teal-400",
         onBack: () => setPendingItemUse(null),
         backLabel: "アイテムへ戻る"
@@ -129367,7 +129480,7 @@ function MonsterHeroGame() {
           zIndex: 32000
         }
       }, React.createElement("div", {
-        className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl"
+        className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs max-h-full overflow-y-auto mh-scroll flex flex-col gap-3 shadow-2xl"
       }, React.createElement("div", {
         className: "flex items-center justify-between shrink-0"
       }, React.createElement("h3", {
@@ -129395,7 +129508,12 @@ function MonsterHeroGame() {
           s: ns,
           v: nv
         } : prev)
-      }), React.createElement("div", {
+      }), React.createElement("p", {
+        "data-custom-color-alpha": true,
+        className: "-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, "濃さ", colorAlphaOf(sourceColors[idx]), "%", React.createElement("span", {
+        className: "text-slate-500"
+      }, "(濃さは染色の画面のつまみで変えられます)")), React.createElement("div", {
         className: "flex gap-2 mt-1 shrink-0"
       }, React.createElement("button", {
         onClick: () => setCustomColorPicker(null),
@@ -132995,7 +133113,7 @@ function MonsterHeroGame() {
           });
         }
       }
-      const title = card.type === 'atk' ? '通常技を選択' : card.type === 'range_atk' ? '距離技を選択' : '固有技を選択';
+      const title = card.type === 'atk' ? '通常技をえらぶ' : card.type === 'range_atk' ? '距離技をえらぶ' : '固有技をえらぶ';
       return React.createElement("div", {
         className: "fixed inset-0 z-[60000] flex items-end justify-center",
         style: {
