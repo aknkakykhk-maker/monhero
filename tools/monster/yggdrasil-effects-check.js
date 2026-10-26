@@ -72,7 +72,7 @@ check('予告の数字にも使ったターンぶんが入る',
   /if \(hit\.taken > 0\) hit\.taken \*= plannedLifeTreeMult\(slotIdx\);\n    const taken = applyTurnDamageReduction\(hit\.taken, slotIdx\);/.test(screen)
   && /if \(!isLifeTreeGuardCard\(card\)\) return;/.test(screen));
 check('説明文(effectDesc)と数値が合っている',
-  (allies.match(/effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減\(このターンから2ターン\)"/g) || []).length === 2
+  (allies.match(/effectDesc:"大樹の加護：ガッツを上限の20%ぶん回復し、受けるダメージが30%へる\(このターンから2ターン\)"/g) || []).length === 2
   && (allies.match(/traitDesc:"勇者モンにすると：1〜5ターン目は被ダメージ30%軽減。6ターン目以降、3ターン毎にガッツ30%回復\(ターン数はWAVE毎にリセット\)"/g) || []).length === 2);
 
 // --- ③ 必死 ---
