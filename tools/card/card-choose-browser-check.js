@@ -146,6 +146,29 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
       check('② 選ぶと窓が閉じて、相手がその札を捨てる', (await page.locator('[data-card-choose]').count()) === 0 && /「でこぴん」を捨てた/.test(log), log.replace(/\s+/g, ' ').slice(-120));
       await page.close();
     }
+    // ④ カード投げ(ゴースト 169): 技を出すときに捨てる手札を選ぶ窓が出て、選んだ枚数がダメージに足される(2026-10-27)
+    {
+      const page = await openBattle(browser, { sp: 'ghost', hand: ['169', '100', '101', '177'], discard: [], opp: ['100', '100', '100', '100', '100'] }, errors);
+      await page.locator('[data-card-hand-card="0"]').click();
+      await page.waitForTimeout(200);
+      const user = page.locator('[data-card-mon].ring-amber-300').first();
+      if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
+      await page.locator('[data-card-mon="1-0"]').click();
+      await page.locator('[data-card-throw-pick]').waitFor({ timeout: 5000 }).catch(() => {});
+      const cards = await page.locator('[data-card-throw-card]').count();
+      if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'throw-pick.png') }); }
+      await page.locator('[data-card-throw-card="1"]').click();
+      await page.locator('[data-card-throw-card="3"]').click();
+      const go = await page.locator('[data-card-throw-go]').innerText().catch(() => '');
+      await page.locator('[data-card-throw-go]').click().catch(() => {});
+      // 自分の手は、カードを大きく見せてから当たる(消えるまで待つ)
+      await page.waitForFunction(() => document.querySelectorAll('[data-card-hand-card]').length === 1, null, { timeout: 8000 }).catch(() => {});
+      await page.waitForTimeout(300);
+      const st = await page.evaluate(() => { const el = document.querySelector('[data-card-log]'); return el ? el.innerText : ''; });
+      const hand = await page.locator('[data-card-hand-card]').count();
+      check('④ カード投げ: 捨てる手札の窓に、技に使う札のほかの3枚が並び、2枚選ぶと「2枚捨てて使う(ダメージ+2)」で出せて、手札が1枚になる', cards === 3 && /2枚捨てて使う\(ダメージ\+2\)/.test(go) && hand === 1, JSON.stringify({ cards, go, hand, log: st.replace(/\s+/g, ' ').slice(-80) }));
+      await page.close();
+    }
     check('③ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
