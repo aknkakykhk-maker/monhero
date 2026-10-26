@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b0f0dfcc9aad8f3
+// source-sha256: 8a6a1e065c8a23e1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:10";
+const BUILD_DATE = "2026-10-27 00:24";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86407,6 +86407,8 @@ const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) =
   const base = cardCpuBasePoint(levelId, outcome, facts);
   const got = base;
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+  const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
+  const full = outcome === 'win' ? level.point : cardLosePoint(level);
   return {
     base,
     got,
@@ -86414,6 +86416,9 @@ const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) =
     bonus,
     total: got + bonus,
     short: facts.ownTurns < CARD_MIN_OWN_TURNS,
+    full,
+    ownTurns: facts.ownTurns,
+    kos: facts.kos,
     daily: {
       ...daily,
       cpuPoint: daily.cpuPoint + got,
@@ -88617,6 +88622,13 @@ const cardFoeStyle = who => {
   if (!h) return null;
   const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
   return v <= 1.2 ? CARD_FOE_STYLES.balance : CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance;
+};
+const cardResultCut = r => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
+const cardResultCutWhy = (outcome, r) => {
+  const turns = `自分の番が${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
+  if (outcome !== 'surrender') return turns;
+  const byKo = (Number(r.kos) || 0) * CARD_SURRENDER_POINT_PER_KO;
+  return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
 };
 const CARD_FOE_BUILD_NOTE = Object.freeze({
   easy: '残りの2体は気分でえらぶ(気まぐれな子が混ざることも)。カードは第1弾だけで、組み方は雑',
@@ -92002,15 +92014,19 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-amber-200"
     }, "もらったビートP: ", r.total), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got), r.bonus > 0 && React.createElement("div", {
+    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", cardResultCut(r) ? `${r.full} → ${r.got}` : r.got), cardResultCut(r) && React.createElement("div", {
+      "data-card-result-cut": true,
+      className: "text-[11px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap(cardResultCutWhy(result.outcome, r))), r.bonus > 0 && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
     }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && React.createElement("div", {
+    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && result.quick && React.createElement("div", {
       "data-card-quick-loops": result.quick ? result.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
-    }, result.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
+    }, result.quick && React.createElement(React.Fragment, null, React.createElement("div", {
       className: "text-[13px] font-black text-sky-200"
     }, "クイック周回 ", result.loops, "周ぶん"), React.createElement("div", {
       className: "mt-0.5 text-[11px] font-bold text-slate-300",
@@ -92018,10 +92034,7 @@ const CardBattleScreen = ({
     }, "裏のクイック周回(", result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase() || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
       "data-card-quick-loops-range": true,
       className: "mt-0.5 text-[11px] font-bold text-sky-100"
-    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目")) : React.createElement("div", {
-      className: "text-[12px] font-bold text-slate-300",
-      style: JA_LABEL_STYLE
-    }, jaWrap('クイック周回をしていないときは入りません'))), React.createElement("div", {
+    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目"))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"

@@ -304,6 +304,11 @@ const decksAndSaves = () => {
   ok(Object.entries(loseWant).every(([lv, [pt]]) => E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), lv, 'lose', full).total === pt), '負けは勝ちの 3/4(60・82・105・127・150)のはず');
   // 負けのビートPも自分の番の数で減る(10回で満額・切り捨て)。投了の最大も減ったあとの負けの数(2026-10-26 社長)
   const d0 = () => E.cardNormalizeDaily(null, 'd');
+  {
+    // 結果の画面で「60 → 42(自分の番が7回。10回で満額)」を出すもと(2026-10-26)
+    const rc = E.cardCpuReward(d0(), 'easy', 'lose', { ownTurns: 7, kos: 1 });
+    ok(rc.full === 60 && rc.got === 42 && rc.ownTurns === 7 && rc.kos === 1, `負けの満額・番の数・倒した数が結果に入っていない(${JSON.stringify({ full: rc.full, got: rc.got, ownTurns: rc.ownTurns, kos: rc.kos })})`);
+  }
   ok(E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 3, kos: 0 }).total === 45 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 7, kos: 0 }).total === 105 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 15, kos: 0 }).total === 150, '負けのビートPが自分の番の数で減らない(MASTER 3回で45・7回で105・10回以上で150のはず)');
   ok(E.cardCpuReward(d0(), 'easy', 'surrender', { ownTurns: 3, kos: 3 }).total === 18, '投了の最大が、減ったあとの負けの数(EASY 3回で18)になっていない');
   const sh = E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'win', { ownTurns: 2, kos: 3 });
