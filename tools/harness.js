@@ -194,6 +194,10 @@ const EXPORTED_NAMES = [
   'MASU_COLOR_EXCLUDE',
   'MASU_COLOR_SMOOTH',
   'MASU_COLOR_REGION_SIZE_OVERRIDES',
+  // 染色イメージに「どの色の札・どの濃さで染めたか」の表を描くとき、画面と同じ名前・見本の色を読む(2026-10-27)
+  'MASU_COLOR_LABELS',
+  'MASU_COLOR_SWATCH',
+  'splitColorAlpha',
   'EXACT_DYE_MASKS',
   'dyeRegionCount',
   'getDyeRegionMasks',

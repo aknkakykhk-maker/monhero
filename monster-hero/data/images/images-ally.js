@@ -21,7 +21,7 @@ const HAM_IMG = "images/monsters/ham.png?v=106321d09a72";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=38f7f50cd68b";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
-const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=e6c4b23ee988";
+const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=ac56746b5791";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
@@ -168,11 +168,16 @@ const KUROMY_DYE_MASK = "images/monsters/kuromy-dye-mask.PNG?v=7e06f8e564b2";
 // 元絵は tools/art-sources/new-monsters-2026-10-22/。透明な余白を切って高さ916pxへ縮め、256色へ減色(グラデーションの段が出ないよう誤差拡散)
 const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
 const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=ecdc51013525";
-const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
+const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=c6419eaba43c";
 const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
 // 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
 // ケンタウロスは背景に散ったごく薄い光の画素(不透明度64未満)を消してから取り込んだ
+// キュービ・オリヒメ(2026-10-27・案の段階)。元絵は tools/art-sources/kyubi-orihime-2026-10-27/。高さ916px・256色(sharp)
+const KYUBI_IMG = "images/monsters/kyubi.png?v=f3711a72a817";
+const KYUBI_DYE_MASK = "images/monsters/kyubi-dye-mask.PNG?v=fc6210422555";
+const ORIHIME_DYE_MASK = "images/monsters/orihime-dye-mask.PNG?v=5868e56697c0";
+const ORIHIME_IMG = "images/monsters/orihime.png?v=86ff26c44dcb";
 const MF_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
 const MF_GALI_IMG = "images/monsters/gali.png?v=802cb6ce6f64";
 const MF_NAGA_IMG = "images/monsters/naga.png?v=07114a6c8886";
@@ -406,6 +411,8 @@ const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=b3722ab1b74e
 const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=9fcfee53438b";
 const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=4ee1ce8f7085";
 const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
+const KYUBI_FACE_ICON = "images/monster-icons/face/kyubi.png?v=6648b970a72f";
+const ORIHIME_FACE_ICON = "images/monster-icons/face/orihime.png?v=887beb2d000f";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,
@@ -525,6 +532,7 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   metalner: LINEAGE_ICON_METALNER,
   worm: LINEAGE_ICON_WORM,
   centaur: LINEAGE_ICON_CENTAUR,
+  kyubi: LINEAGE_ICON_KYUBI,
   unknown: LINEAGE_ICON_RAREMON,
 });
 
