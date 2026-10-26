@@ -41,7 +41,9 @@ const sceneScript = (cfg) => {
     const m = Object.values(db.monsters).filter((x) => x.species === cfg.sp && !x.main).sort((a, b) => (a.no < b.no ? -1 : 1))[0];
     me.mons[0] = { ...me.mons[0], no: m.no, species: m.species, name: m.name, type: m.type, life: m.life, max: m.life, main: null, sub: null };
     me.hand = cfg.hand.slice(); me.discard = cfg.discard.slice(); me.guts = Array(9).fill('100');
-    opp.hand = cfg.opp.slice(); opp.guts = Array(3).fill('100');
+    opp.hand = cfg.opp.slice(); opp.guts = Array(cfg.oppGuts || 3).fill('100');
+    // 相手の先頭も決めた種族にする(相手の手札の技を、相手が必ず使えるように)
+    if (cfg.oppSp) { const om = Object.values(db.monsters).filter((x) => x.species === cfg.oppSp && !x.main).sort((a, b) => (a.no < b.no ? -1 : 1))[0]; opp.mons[0] = { ...opp.mons[0], no: om.no, species: om.species, name: om.name, type: om.type, life: om.life, max: om.life, main: null, sub: null }; }
     st.phase = 'main'; st.pending = null; st.pendingDiscard = null; st.active = cfg.active || 0; st.turn = 2; st.first = 0;
     if (cfg.field) st.field = { no: cfg.field, p: 1, effects: (db.cards[cfg.field].effects || []).map((e) => ({ ...e })) };
     if (cfg.pray) st.pendingPray = { p: 0, by: 1, no: cfg.pray };
@@ -118,7 +120,7 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
   const snap = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`) }); } };
   const foeLife = (page) => page.locator('[data-card-mon="1-0"]').innerText().then((t) => t.replace(/\s+/g, ' '));
   try {
-    const page = await openBattle(browser, { sp: 'golem', hand: ['026', '026', '100', '100', '100'], discard: [], opp: ['026', '100', '100', '100', '100'] }, errors);
+    const page = await openBattle(browser, { sp: 'golem', hand: ['026', '026', '100', '100', '100'], discard: [], opp: ['026', '026', '026', '100', '100'], oppSp: 'golem', oppGuts: 9 }, errors);
     // ① 自分の技: 大写しが先・あとで効く
     const life0 = await foeLife(page);
     await page.locator('[data-card-hand-card="0"]').click(); await page.waitForTimeout(200);
@@ -159,7 +161,7 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
     check('④ 手札を2枚ガッツにすると、2枚がガッツの山へ飛び「+2」が出る', fly === 2 && plus === '+2', `${fly}枚・${plus}`);
     // ③ 相手の番: 技の大写し(相手)・相手のガッツも飛ぶ
     let bigFoe = '', foeFly = 0;
-    for (let i = 0; i < 80 && (!bigFoe || !foeFly); i++) {
+    for (let i = 0; i < 300 && (!bigFoe || !foeFly); i++) {
       // 有るか無いかだけをその場で見る(locator.innerText は、無いと30秒待つ)
       if (!bigFoe) bigFoe = await page.evaluate(() => { const el = document.querySelector('[data-card-big="foe"]'); return el ? el.innerText : ''; });
       if (bigFoe && !fs.existsSync(path.join(SHOT || '/nonexistent', 'big-3-foe.png'))) await snap(page, 'big-3-foe');
