@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cc7523e99fdd9be5
+// generated-sha256: e6435e8ab0d33119
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -50926,6 +50926,9 @@ const cardLoseGuts = (st, p, n) => {
   for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
   return k;
 };
+// 手札の番号の組が正しいか(整数・手札の中・重ならない)。ガッツにする手・捨てる手で使う
+//   2026-10-27 総点検 E: 確かめていなかったので、手札に無い番号を送ると、何も無いガッツが増えた(マルチで相手が送る手も同じ)
+const cardHandIdxsOk = (hand, idxs) => Array.isArray(idxs) && idxs.every((i) => Number.isInteger(i) && i >= 0 && i < hand.length) && new Set(idxs).size === idxs.length;
 const cardTakeFromHand = (st, p, idxs) => {
   const me = st.players[p];
   const sorted = [...new Set(idxs)].sort((a, b) => b - a);
@@ -50965,7 +50968,9 @@ const cardAttachMods = (cards) => {
 };
 // 全体カードで、その手が出せないか(がんじがらめ: モンスターの特殊技 / 必殺技の応酬・封印: 最終的なダメージで決める)
 //   最終的なダメージ … 書いてある数・同時に使う組・付けた札(+n・×n)・次のターンn倍・静の構え・全体カードの足し引き(守る前の数)
-const cardFieldBanned = (db, st, p, mi, card, idxs) => {
+//   extra … カード投げで捨てる枚数(ダメージに足す)/ target … 狙う子(ボンバのように「空中の子には2倍」の技は、狙う子で数が変わる)
+//   2026-10-27 総点検 E: カード投げは捨てる枚数を、ボンバ・牙きり・地雷針・大旋風は狙う子の2倍を数えていなかった(応酬・封印をすり抜けた/出せる手を止めていた)
+const cardFieldBanned = (db, st, p, mi, card, idxs, extra = 0, target = null) => {
   if (!st.field || !card) return false;
   const kinds = cardFieldEff(st, 'fieldBanKind');
   if (kinds && mi >= 0 && kinds.kinds.includes(card.kind)) return true;
@@ -50978,7 +50983,9 @@ const cardFieldBanned = (db, st, p, mi, card, idxs) => {
   let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(card.kind)) mult *= mon.mult.n;
   if (mon && mon.charge && mon.charge.kinds.includes(card.kind)) mult *= mon.charge.n;
-  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add) * mult + cardFieldDmgAdd(st, card));
+  const mv = cardEff(card, 'multVs');
+  if (mv && target && cardMonType(target, st.turn) === mv.type) mult *= mv.n;
+  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add + extra) * mult + cardFieldDmgAdd(st, card));
   return (ban.max !== undefined && dmg <= ban.max) || (ban.min !== undefined && dmg >= ban.min);
 };
 // 場の全体カードを置く・外す。外すときは出した人の捨て札へ、持ちょうを元に戻す(悪天候・空間のひずみ)
@@ -51210,10 +51217,12 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (cardHasEff(card, 'tossBonus')) {
-          tossSets(idxs).forEach((toss) => opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j }, toss }); }));
+          tossSets(idxs).forEach((toss) => { if (cardFieldBanned(db, st, p, mi, card, idxs, toss.length)) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j }, toss }); }); });
           return;
         }
-        if (cardFieldBanned(db, st, p, mi, card, idxs)) return; // 全体カード: がんじがらめ・必殺技の応酬・必殺技の封印
+        // 全体カード: がんじがらめ・必殺技の応酬・必殺技の封印(狙う子で数が変わる技は、下で1体ずつ見る)
+        const byTarget = cardHasEff(card, 'multVs') && !cardHasEff(card, 'area') && !cardHasEff(card, 'split');
+        if (!byTarget && cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           // 変形・トランスフォーム: 空中か地上かを選ぶ(手に form を持たせる)
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
@@ -51231,7 +51240,7 @@ const cardAttackOptions = (db, st) => {
           cardSplits(card.damage || 0, alive).forEach((sp) => { const ts = sp.map((x, j) => (x > 0 ? { p: cardOther(p), m: j } : null)).filter(Boolean); if (cardTauntOk(st, p, ts, false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: null, split: sp }); });
           return;
         }
-        opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j } }); });
+        opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false) && !(byTarget && cardFieldBanned(db, st, p, mi, card, idxs, 0, t))) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j } }); });
       });
     });
   });
@@ -51722,7 +51731,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'discard') return null;
     const q = st.pendingDiscard.p;
     const idxs = (act.hand || []).slice(0, st.pendingDiscard.n);
-    if (idxs.length !== st.pendingDiscard.n || idxs.some((i) => i < 0 || i >= st.players[q].hand.length)) return null;
+    if (idxs.length !== st.pendingDiscard.n || !cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].discard.push(...taken);
     cardLog(st, `${st.players[q].name}は手札を${taken.length}枚捨てた`);
@@ -51733,6 +51742,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'setupGuts') return null;
     const idxs = (act.hand || []).slice(0, CARD_BATTLE_SETUP_GUTS_MAX);
     const q = cardOther(st.first);
+    if (!cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[q].name}は始める前に${taken.length}枚をガッツにした`);
@@ -51780,6 +51790,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感: ガッツの段で n 枚まで
     if (gm && (act.hand || []).length > gm.n) return null;
+    if (!cardHandIdxsOk(st.players[p].hand, act.hand || [])) return null;
     const taken = cardTakeFromHand(st, p, act.hand || []);
     st.players[p].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
@@ -59837,7 +59848,8 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
 
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
-const CARD_REPLAY_RULES = 2; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)
+//   2 → 3: 必殺技の応酬・封印でカード投げとボンバなどの出せる手・ガッツにする手札の番号の確かめ(#3821)
+const CARD_REPLAY_RULES = 3; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
