@@ -18083,15 +18083,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
                         <span aria-hidden="true" className="mhms-mark">{look.mark}</span>
                         <span aria-hidden="true" className="mhms-ico relative shrink-0 text-3xl leading-none">{sys.emoji}</span>
-                        <span className="relative min-w-0 flex-1">
+                        <span className="relative min-w-0 flex-1" style={{containerType:'inline-size'}}>
                           <span className="flex items-center gap-1.5">
-                            <b className="block min-w-0 truncate text-[18px] font-black italic leading-tight">{sys.label}</b>
+                            {/* 名前は「…」で切らずに、カードの幅に合わせて字を縮める(320で「タクティクス…」と切れていた。札のぶんは幅から引く) */}
+                            <b data-battle-system-title className="block min-w-0 whitespace-nowrap font-black italic leading-tight" style={{fontSize:`min(18px, calc((100cqw - ${(soon||beta||(sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE))?46:0}px) / ${[...String(sys.label)].length+0.8}))`}}>{sys.label}</b>
                             {soon&&<span className="shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black">準備中</span>}
                             {beta&&<span data-battle-system-beta className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-amber-200">β版</span>}
                             {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&<span className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300">DEBUG</span>}
                           </span>
                           <small className="block text-[10px] font-black leading-tight text-slate-900/80" style={JA_LABEL_STYLE}>{jaWrap(sys.tagline)}</small>
-                          {(soon||beta)&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">{soon?'いま準備しています。遊べるようになったらお知らせします':'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'}</small>}
+                          {/* β版の札には中の言葉(「ほかのモードは準備中」)を書かない。出せるようになってから書く(2026-10-26 カゲあつくんの見回り) */}
+                          {soon&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">いま準備しています。遊べるようになったらお知らせします</small>}
                         </span>
                       </button>
                       <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
@@ -19902,7 +19904,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
-            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
+            /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
+               ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}
