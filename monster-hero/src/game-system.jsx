@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 72aea188e9ed6c18
+// generated-sha256: 5fbfe4cc8aab849a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 01:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -46568,6 +46568,8 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-art-img{width:var(--mhms-w)}
 @supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
 @container (max-height:120px){.mhms-art-img{left:30%!important}}
+/* 細い枠(縦持ちの375幅まで)では「立ち絵ON」「コメントON」を右の端に縦に並べ、体にかかる幅を狭くする(2026-10-26 カゲあつ「あつの手と胸に乗る」) */
+@container (max-width:360px){.mhms-art-toggles{flex-direction:column;align-items:flex-end;gap:4px}.mhms-art-toggles>button{min-height:28px;padding-left:8px;padding-right:8px}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
 .mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
 .mhms-card.free::after{animation-delay:1.9s}
@@ -46763,7 +46765,7 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle })
       {showArt && (
         <div data-rhythm-mode-assistant-art-box className="mhms-art-box relative min-h-0 flex-1 overflow-hidden">
           <span aria-hidden="true" className="mhms-glow" />
-          <ModeSelectAssistToggles assistant={assistant} showArt={showArt} showComment={showComment} onToggle={onToggle} cls="absolute bottom-1.5 right-1.5 z-20" withLabel={false} />
+          <ModeSelectAssistToggles assistant={assistant} showArt={showArt} showComment={showComment} onToggle={onToggle} cls="mhms-art-toggles absolute bottom-1.5 right-1.5 z-20" withLabel={false} />
           <div className="mhms-float pointer-events-none absolute inset-0">
             {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
               ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
