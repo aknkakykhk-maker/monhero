@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c9f3d7147757b810
+// generated-sha256: 515969c029061aad
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11350,10 +11350,13 @@ const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
     {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
   </span>
 );
+// 血統名は「…」で切らず、2行まで折り返す(2026-10-26。幅320pxでは28体中13種が「モッ…」「ライ…」と切れ、
+// 360pxでもウンディーネ・ユグドラシルが切れていた)。札の高さは顔アイコン(28px)で決まり、2行の字はその中に収まるので
+// 札の大きさは変わらない。5文字以上は少し小さい字にして、なるべく1行で読めるようにする
 const DexLineageChip = ({ lineage, iconUrl }) => (
-  <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
+  <span data-dex-lineage className="flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1">
     {iconUrl?<DexMonsterIcon src={iconUrl} lineage/>:<span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
-    <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
+    <span data-dex-lineage-name className={`${String(lineage.name||'').length>=5?'text-[10px]':'text-[11px]'} min-w-0 font-black text-amber-100 leading-[1.2] line-clamp-2 [overflow-wrap:anywhere]`}>{lineage.name}</span>
   </span>
 );
 // 立ち絵の <img> そのもの。待機アニメ(withMonsterIdleArt)は絵の要素を複製して重ねるので、
@@ -20676,9 +20679,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
             <div className="min-w-0 [container-type:inline-size]">
               <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
-              <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[22px] leading-tight':'text-[12px] leading-snug'}`}
-                style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
-                {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
+              {/* 「まだ遊んでいません」は、細い札(横の小さい画面)では「…」にせず「まだ／遊んでいません」の2行にし、長いほうの7字が入る大きさにする(2026-10-26) */}
+              <b data-rhythm-demo-best className={`block font-black tabular-nums text-amber-100 ${best&&best.played?'truncate text-[22px] leading-tight':'break-keep text-[12px] leading-tight'}`}
+                style={{fontSize:best&&best.played?`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`:'min(12px, calc(100cqw / 7.4))'}}>
+                {best&&best.played?best.bestScore.toLocaleString():<>まだ<wbr/>遊んでいません</>}
               </b>
               <span data-rhythm-demo-combo className="block whitespace-nowrap text-[9px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
@@ -20722,8 +20726,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {/* ボタンが細い端末でも「1,000,000」が切れないよう、幅に合わせて8px〜6pxで収める(2026-09-26) */}
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
+                // 鍵の文字は、下限の6pxでも1行に入らない細い端末(320幅の HELL「MASTERで解放」)では「…」にせず「MASTERで／解放」の2行に折る(2026-10-26)
+                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
+                  style={{fontSize:rhythmTitleFitSize(lockedFitText,8,6,2)}}>{need}<wbr/>で解放</span>;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-                  style={{fontSize:rhythmTitleFitSize(open?text:lockedFitText,8,6,2)}}>{text}</span>;})()}
+                  style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
@@ -34997,7 +35004,8 @@ function RhythmSongSelectScreen({
         {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
           {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
             <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
-            <span className="min-w-0 truncate">{beatPointCampaign.name}{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span>
+            {/* 細い端末(320幅)で「周回 5倍」のほうが「…」に消えていた。縮めるのはイベント名だけにし、倍率は必ず見せる(2026-10-26) */}
+            <span className="flex min-w-0"><span className="min-w-0 truncate">{beatPointCampaign.name}</span><span className="shrink-0">{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span></span>
             <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
           {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
@@ -35681,7 +35689,8 @@ function RhythmRankingScreen({
             return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1">{ids.map(id=>(
               <button key={id} type="button" data-rhythm-ranking-diff={id} aria-pressed={cur===id} onClick={()=>loadRhythmRanking(song,id)}
                 className={`min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
-                {id==='ALL'?'全難易度':(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
+                {/* 細い端末で「全難／易度」と折れていた。折れるなら「全／難易度」にする(2026-10-26) */}
+                {id==='ALL'?<span className="break-keep">全<wbr/>難易度</span>:(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
           {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
@@ -46263,7 +46272,7 @@ function RhythmMultiRecordSheet({ songName, onClose }) {
             ))}
           </div>
           <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto">
-            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400">まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります</li>}
+            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります')}</li>}
             {rec.recent.map((x) => (
               <li key={x.round} data-rhythm-multi-record-row className="rounded-xl bg-slate-800/70 px-2 py-1.5 text-[11px] font-bold leading-snug">
                 <div className="flex items-center gap-2">
@@ -47294,9 +47303,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
+              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26) */}
               {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
                 <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
-                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+                  className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
               ))}
             </div>
           </div>
@@ -55096,17 +55106,75 @@ const cardArtBox = (src) => new Promise((resolve) => {
   img.src = src;
 });
 // 測ってある立ち絵の輪郭(透明な余白を除いた範囲)。canvas で調べられない端末でも枠に合わせるため(2026-10-26 社長「みゅあだけ小さい」)。
-//   キーは `${imagePrefix}_${表情}`。標準の服の絵だけ(着替えの絵には当てない)。nw・nh が実際の絵の大きさと合うときだけ使う
-//   myua_wink … 1536×1024 の絵(images/assistant)を、cardArtBox と同じ決まり(列・行に透明でない点が3つ以上)で測った
+//   キーは `${imagePrefix}_${表情}`、値は [絵の幅, 絵の高さ, x, y, 幅, 高さ]。標準の服の絵だけ(着替えの絵には当てない)。
+//   絵の大きさ(はじめの2つ)が実際の絵と合うときだけ使う。表は tools/card/card-art-box-build.js が測って書く(cardArtBox と同じ決まり)
 const CARD_ART_KNOWN_BOX = Object.freeze({
-  myua_wink: Object.freeze({ nw: 1536, nh: 1024, x: 379, y: 28, w: 760, h: 996 }),
+  // <card-art-known-box> ここから下は tools/card/card-art-box-build.js が書く(手で直さない)
+  atsu_angry: [768, 1024, 0, 2, 768, 1022],
+  atsu_crying: [768, 1024, 0, 4, 768, 1020],
+  atsu_excited: [768, 1024, 0, 4, 768, 1020],
+  atsu_happy: [768, 1024, 0, 0, 768, 1024],
+  atsu_normal: [768, 1024, 0, 5, 768, 1019],
+  atsu_surprise: [768, 1024, 0, 0, 768, 1024],
+  atsu_troubled: [768, 1024, 0, 3, 768, 1021],
+  atsu_wink: [768, 1024, 0, 14, 768, 1010],
+  dra_angry: [384, 384, 44, 39, 299, 278],
+  dra_crying: [384, 384, 47, 45, 291, 269],
+  dra_excited: [384, 384, 46, 46, 292, 269],
+  dra_happy: [384, 384, 28, 40, 312, 276],
+  dra_normal: [384, 384, 45, 42, 293, 273],
+  dra_surprise: [384, 384, 25, 39, 313, 278],
+  dra_troubled: [384, 384, 45, 43, 294, 272],
+  dra_wink: [384, 384, 49, 43, 286, 270],
+  kiki_angry: [1536, 1024, 481, 10, 573, 1014],
+  kiki_crying: [1536, 1024, 480, 15, 572, 1009],
+  kiki_excited: [1536, 1024, 495, 12, 556, 1012],
+  kiki_happy: [1536, 1024, 486, 14, 573, 1010],
+  kiki_normal: [1536, 1024, 476, 17, 603, 1007],
+  kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
+  kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
+  kiki_wink: [1536, 1024, 490, 7, 569, 1017],
+  kyuko_angry: [384, 512, 0, 0, 384, 508],
+  kyuko_crying: [384, 512, 4, 0, 380, 507],
+  kyuko_excited: [384, 512, 0, 0, 384, 508],
+  kyuko_happy: [384, 512, 3, 7, 381, 505],
+  kyuko_normal: [384, 512, 0, 6, 377, 506],
+  kyuko_surprise: [384, 512, 4, 6, 375, 506],
+  kyuko_troubled: [384, 512, 0, 2, 384, 506],
+  kyuko_wink: [384, 512, 0, 6, 375, 502],
+  momosuke_angry: [512, 512, 12, 3, 497, 509],
+  momosuke_crying: [512, 512, 25, 2, 468, 510],
+  momosuke_excited: [512, 512, 10, 6, 502, 506],
+  momosuke_happy: [512, 512, 28, 14, 475, 498],
+  momosuke_normal: [512, 512, 25, 9, 478, 503],
+  momosuke_surprise: [512, 512, 18, 7, 486, 505],
+  momosuke_troubled: [512, 512, 32, 9, 459, 503],
+  momosuke_wink: [512, 512, 0, 7, 512, 505],
+  myua_angry: [1536, 1024, 306, 27, 907, 997],
+  myua_crying: [1536, 1024, 332, 19, 839, 1005],
+  myua_excited: [1536, 1024, 245, 15, 948, 1009],
+  myua_happy: [1536, 1024, 360, 26, 783, 998],
+  myua_normal: [1536, 1024, 396, 26, 715, 998],
+  myua_surprise: [1536, 1024, 325, 27, 852, 997],
+  myua_troubled: [1536, 1024, 323, 15, 866, 1009],
+  myua_wink: [1536, 1024, 379, 28, 760, 996],
+  // </card-art-known-box>
 });
+const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
 // その助手の標準の服の絵のときだけ、測ってある輪郭を返す(着替え・まだ大きい絵の無い助手は null)
 const cardArtKnownBox = (who, expression, src) => {
   if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
   const ex = assistantExpressionName(who, expression);
-  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
-  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
+  return src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? cardArtBoxOf(CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`]) : null;
+};
+// 絵の場所から、どの助手のどの表情の標準の絵かを見つけて、測ってある輪郭を返す(呼ぶ側で指定しなくてよい)
+const cardArtKnownBoxBySrc = (src) => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS)) return null;
+  for (const who of ASSISTANTS) {
+    const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
+    if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
+  }
+  return null;
 };
 // 測ってある輪郭が、読み込んだ絵の大きさと合うか(絵が差し替わっていたら使わない)
 const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
@@ -55116,7 +55184,7 @@ const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
-// knownBox … 測ってある輪郭(cardArtKnownBox)。あれば canvas で調べずに使う
+// knownBox … 測ってある輪郭(cardArtKnownBox)。渡さなくても、標準の服の絵なら絵の場所から引く(cardArtKnownBoxBySrc)。あれば canvas で調べずに使う
 // 枠の大きさが決まったとき・変わったとき(画面の向き・大きさ)も ResizeObserver で合わせ直す(最初に 0 だと合わせないままだった)
 const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = null }) => {
   const ref = useRef(null);
@@ -55125,9 +55193,9 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
   useEffect(() => {
     let alive = true;
     setBox(null);
-    void cardArtKnownBoxFor(src, knownBox).then((known) => (known ? { ...known, known: true } : cardArtBox(src))).then((b) => { if (alive) setBox(b || null); });
+    void cardArtKnownBoxFor(src, knownBox || cardArtKnownBoxBySrc(src)).then((known) => (known ? { ...known, known: true } : cardArtBox(src))).then((b) => { if (alive) setBox(b || null); });
     return () => { alive = false; };
-  }, [src, knownBox]);
+  }, [src]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
@@ -55567,7 +55635,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
               {/* 背の低い画面(SE)では絵を低くして、下の「あなたのデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
               {/* 横画面では絵を外して、強さのボタンまでスクロールなしで見せる(2026-10-25 カゲあつくん「EASY〜が下で切れている」) */}
-              <CardAssistantArt src={assistantFullImage(a, 'wink')} knownBox={cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink'))} alt={a.name} className="w-[42%] landscape:hidden" style={{ height: 'min(150px, 17vh)' }}/>
+              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%] landscape:hidden" style={{ height: 'min(150px, 17vh)' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
                 <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
