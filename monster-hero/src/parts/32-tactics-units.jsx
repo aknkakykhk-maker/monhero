@@ -2617,7 +2617,7 @@ const tacticsExConfusesOnHit = (state, units, slot, now) => {
 const ENEMY_CONFUSE_TURNS = 3;
 const ENEMY_CONFUSE_CHANCE = 0.5;
 // 予告を「意味不明」へ差し替えたもの。狙い(targetSlot)は持たせない(だれも狙われない)
-const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '意味不明', icon: '❓', value: 0, notice: '乱心',
+const confusedEnemyIntent = (intent) => ({ type: 'CONFUSED', label: '混乱中', icon: '❓', value: 0, notice: '乱心',
   confusedFrom: intent && typeof intent.label === 'string' ? intent.label : null });
 // 次の予告を決めるときの乱心。turns が残っていれば1つ使い、rnd() が確率未満なら意味不明にする
 const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
