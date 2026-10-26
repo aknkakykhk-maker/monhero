@@ -32,7 +32,7 @@ const from = screenSrc.indexOf('const RaidJackRewardChips');
 const to = screenSrc.indexOf('// 報酬一覧(モード別・難易度別)。');
 check('報酬の行・段階ごとの報酬の部品を切り出せる', from >= 0 && to > from);
 const code = babel.transformSync(
-  `const { RAID_JACK_REWARDS, RAID_JACK_A_TIERS, raidJackRewardParts, raidJackClaimId, raidJackPlaceId, raidJackNoneId } = deps;\n${screenSrc.slice(from, to)}\nmodule.exports = { RaidJackTierRewards };`,
+  `const { RAID_JACK_REWARDS, RAID_JACK_A_TIERS, raidJackRewardParts, raidJackClaimId, raidJackPlaceId, raidJackNoneId } = deps;\n// 言葉の切れ目で折る部品(41-screen-ui.jsx)は切り出していないので、字をそのまま返す代わりを置く(印の有無だけを見る検査)\nconst JA_WRAP_STYLE = {}; const jaWrap = (t) => t;\n${screenSrc.slice(from, to)}\nmodule.exports = { RaidJackTierRewards };`,
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'badge.jsx' }).code;
 const mod = { exports: {} };
 new Function('module', 'exports', 'React', 'deps', code)(mod, mod.exports, React, o);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eda5ce31801a0811
+// source-sha256: 715e71b764915d9f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -41073,9 +41073,8 @@ const RhythmTapTest = ({
     ref: abilityFlashRef,
     "data-rhythm-ability-flash": true,
     "data-on": "0",
-    className: "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100",
+    className: "pointer-events-none absolute bottom-[calc(12%+78px)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100 landscape:bottom-[3%]",
     style: {
-      bottom: 'calc(12% + 78px)',
       visibility: 'hidden',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
@@ -63315,8 +63314,9 @@ function ProPartyPicker({
     "data-pro-party-done": true,
     disabled: !hero,
     onClick: () => onDone(hero, ids.filter(id => id && id !== hero.id).map(id => byId.get(id))),
-    className: "min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
-  }, hero ? '次へ(距離をえらぶ)' : '勇者モンをえらんでください')));
+    className: "min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500",
+    style: JA_LABEL_STYLE
+  }, jaWrap(hero ? '次へ(距離をえらぶ)' : '勇者モンをえらんでください'))));
   return React.createElement("div", {
     "data-pro-party-step": "members",
     className: "w-full flex-1 min-h-0 flex flex-col"
@@ -68887,6 +68887,7 @@ const kindOfTacticsSlotFx = fx => {
   return null;
 };
 function BattleScreen({
+  battleOverlayOpen = false,
   applyTurnDamageReduction,
   attackAnim,
   autoBattle,
@@ -70236,7 +70237,7 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
   }, "⚔️"), React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
-  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
+  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && !battleOverlayOpen && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
     className: "fixed left-1/2 pointer-events-none",
     style: {
       top: '22%',
@@ -71875,9 +71876,9 @@ function BattleScreen({
     }, RANGE_LABELS[i], "距離")));
   }))), tacticsExIntroVisible && React.createElement("div", {
     "data-tactics-ex-intro": true,
-    className: "shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1"
+    className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
   }, React.createElement("div", {
-    className: "flex items-start gap-1"
+    className: "flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement(AssistantBubble, {
@@ -71890,9 +71891,9 @@ function BattleScreen({
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
   }, "×"))), quickRhythmIntroVisible && React.createElement("div", {
     "data-quick-rhythm-intro": true,
-    className: "shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1"
+    className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
   }, React.createElement("div", {
-    className: "flex items-start gap-1"
+    className: "flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement(AssistantBubble, {
@@ -81962,6 +81963,29 @@ const RaidJackHpBar = ({
     }
   }));
 };
+const RaidJackFitName = ({
+  label,
+  size = 9,
+  className = 'text-slate-100'
+}) => React.createElement("span", {
+  className: `mt-0.5 w-full overflow-hidden whitespace-nowrap font-black leading-tight [container-type:inline-size] ${className}`
+}, React.createElement("span", {
+  className: "block",
+  style: {
+    fontSize: `min(${size}px, calc(100cqw / ${[...String(label || '')].length + 0.3}))`
+  }
+}, label));
+const RaidJackFitTitle = ({
+  text
+}) => React.createElement("span", {
+  "data-raid-jack-fit-title": true,
+  className: "block min-w-0 flex-1 overflow-hidden whitespace-nowrap [container-type:inline-size]"
+}, React.createElement("span", {
+  className: "block pr-1",
+  style: {
+    fontSize: `min(1.25rem, calc(100cqw / ${[...text].length + 0.8}))`
+  }
+}, text));
 const RaidJackRewardChips = ({
   reward
 }) => React.createElement("span", {
@@ -81984,8 +82008,9 @@ const RaidJackRewardRow = ({
 }, React.createElement("div", {
   className: "w-[68px] shrink-0"
 }, React.createElement("div", {
-  className: "text-[10px] font-black leading-tight text-orange-200"
-}, label), note && React.createElement("div", {
+  className: "text-[10px] font-black leading-tight text-orange-200",
+  style: JA_WRAP_STYLE
+}, jaWrap(label)), note && React.createElement("div", {
   className: "text-[8px] leading-tight text-slate-400"
 }, note)), React.createElement("div", {
   className: "min-w-0 flex-1"
@@ -82046,7 +82071,7 @@ const RaidJackRewardList = ({
   const have = Array.isArray(claimed) ? claimed : [];
   return React.createElement("div", {
     "data-raid-jack-reward-list": true,
-    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "ジャックの報酬一覧",
@@ -82224,7 +82249,7 @@ const RaidJackRankingList = ({
   const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${src === 'rhythm' ? '1曲' : '1戦'}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${RAID_JACK_A_TIERS[tierIdx].name.replace('ジャック', '')}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
-    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "ジャックのランキング",
@@ -82257,8 +82282,10 @@ const RaidJackRankingList = ({
       setSrc('all');
     }
   }), React.createElement("div", {
+    className: "mb-1.5 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0"
+  }, React.createElement("div", {
     "data-raid-jack-ranking-kinds": true,
-    className: "mb-2 flex shrink-0 gap-1.5 text-[10px] font-black"
+    className: "flex shrink-0 gap-1.5"
   }, React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-kind": "total",
@@ -82271,16 +82298,16 @@ const RaidJackRankingList = ({
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
   }, "1戦の最大ダメージ")), tab === 'a' && React.createElement("div", {
     "data-raid-jack-ranking-sources": true,
-    className: "mb-2 flex shrink-0 gap-1.5 text-[10px] font-black"
+    className: "flex shrink-0 gap-1.5 border-l border-white/15 pl-1.5"
   }, [['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート']].map(([id, label]) => React.createElement("button", {
     type: "button",
     key: id,
     "data-raid-jack-ranking-source": id,
     onClick: () => setSrc(id),
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${src === id ? 'border-fuchsia-300 bg-fuchsia-900 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, label))), maxHit && React.createElement("div", {
+  }, label)))), maxHit && React.createElement("div", {
     "data-raid-jack-ranking-max-tiers": true,
-    className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
+    className: "mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0"
   }, [{
     id: 'all',
     name: '全難易度',
@@ -82297,7 +82324,7 @@ const RaidJackRankingList = ({
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxTier === t.n ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
   }, t.name))), tab === 'a' && !maxHit && React.createElement("div", {
     "data-raid-jack-ranking-tiers": true,
-    className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
+    className: "mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0"
   }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
     type: "button",
     key: t.id,
@@ -82461,7 +82488,9 @@ const RaidJackScreen = ({
     className: `${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`,
     "data-raid-jack-screen": true
   }, React.createElement(ScreenHead, {
-    title: "カボチャの大王ジャック",
+    title: React.createElement(RaidJackFitTitle, {
+      text: "カボチャの大王ジャック"
+    }),
     icon: "🎃",
     accent: "text-orange-200",
     onBack: onBack,
@@ -82775,9 +82804,9 @@ const RaidJackPrepScreen = ({
       "data-raid-mon-range": at >= 0 ? at : undefined,
       "aria-pressed": !!role,
       className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`
-    }, faceOf(mon, 'h-12 w-12'), React.createElement("span", {
-      className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-    }, mon.name), monsterTypeProtoOn() && (() => {
+    }, faceOf(mon, 'h-12 w-12'), React.createElement(RaidJackFitName, {
+      label: mon.name
+    }), monsterTypeProtoOn() && (() => {
       const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main];
       return t ? React.createElement("span", {
         "data-raid-mon-type": monsterTypeOf(mon.baseId || mon.id).main,
@@ -82838,9 +82867,9 @@ const RaidJackPrepScreen = ({
       className: "text-[9px] font-black text-slate-200"
     }, "距離")), mon ? faceOf(mon, 'mt-0.5 h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8') : React.createElement("span", {
       className: `mt-0.5 flex h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`
-    }, "+"), React.createElement("span", {
-      className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-    }, mon ? mon.name : active ? 'ここに入る' : '空き'), React.createElement("span", {
+    }, "+"), React.createElement(RaidJackFitName, {
+      label: mon ? mon.name : active ? 'ここに入る' : '空き'
+    }), React.createElement("span", {
       "data-raid-slot-apt": mon ? r : undefined,
       className: `text-[10px] font-black leading-tight tabular-nums ${mon ? pctTone(pct) : 'text-slate-600'}`
     }, mon ? formatAptPct(pct) : '—'), mon && step === 'party' && React.createElement("span", {
@@ -82922,9 +82951,9 @@ const RaidJackPrepScreen = ({
     "data-raid-teach": t.id,
     onClick: () => toggleTeach(t.id),
     className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
-  }, cardIconNode(t.icon, 40, t.id), React.createElement("span", {
-    className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-  }, t.baseName)), typeof onOpenTeachingDetail === 'function' && React.createElement("button", {
+  }, cardIconNode(t.icon, 40, t.id), React.createElement(RaidJackFitName, {
+    label: t.baseName
+  })), typeof onOpenTeachingDetail === 'function' && React.createElement("button", {
     type: "button",
     "data-raid-teach-detail": t.id,
     "aria-label": `${t.baseName}の効果を見る`,
@@ -93802,7 +93831,7 @@ const CardBattleScreen = ({
     }, (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''))), bgmPreview && React.createElement("button", {
+    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''))), bgmPreview && React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => bgmPreview.toggle(save.bgm[k]),
@@ -93811,7 +93840,7 @@ const CardBattleScreen = ({
       "data-card-options-se": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')));
+    }, jaWrap('音の大きさは、ゲーム全体の設定の「音量」で変えられます')));
     const quickAutoPanel = React.createElement("div", {
       "data-card-options-quick": true,
       "data-card-setting": "quickAutoStart",
@@ -128474,24 +128503,26 @@ function MonsterHeroGame() {
     }, React.createElement("div", {
       className: "flex items-center gap-2"
     }, React.createElement("div", {
-      className: "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1",
+      className: "flex min-w-0 flex-1 gap-1",
       role: "tablist",
-      "aria-label": "編成セット",
-      style: {
-        scrollbarWidth: 'none'
-      }
-    }, monsterPartySets.names.map((name, index) => React.createElement("button", {
-      key: index,
-      role: "tab",
-      "aria-selected": editingPartySetIndex === index,
-      onClick: () => switchMonsterPartySet(index),
-      className: `flex shrink-0 min-w-[76px] min-h-[44px] items-center justify-center gap-1 rounded-xl border px-2.5 active:scale-95 ${editingPartySetIndex === index ? 'border-indigo-300 bg-indigo-600/40' : 'border-slate-700 bg-slate-800'}`
-    }, React.createElement("span", {
-      className: "min-w-0 truncate text-[11px] font-black"
-    }, index + 1, ". ", name), monsterPartySets.activeIndex === index && React.createElement("span", {
-      className: "shrink-0 text-[11px] font-black text-emerald-300",
-      "aria-label": "使用中"
-    }, "✓")))), React.createElement("button", {
+      "aria-label": "編成セット"
+    }, monsterPartySets.names.map((name, index) => {
+      const editing = editingPartySetIndex === index;
+      return React.createElement("button", {
+        key: index,
+        role: "tab",
+        "aria-selected": editing,
+        "aria-label": `${index + 1}. ${name}`,
+        title: `${index + 1}. ${name}`,
+        onClick: () => switchMonsterPartySet(index),
+        className: `flex min-h-[44px] items-center justify-center gap-0.5 rounded-xl border active:scale-95 ${editing ? 'min-w-0 flex-1 px-1.5 border-indigo-300 bg-indigo-600/40' : 'w-[30px] shrink-0 border-slate-700 bg-slate-800'}`
+      }, React.createElement("span", {
+        className: "min-w-0 truncate text-[11px] font-black"
+      }, editing ? `${index + 1}. ${name}` : index + 1), monsterPartySets.activeIndex === index && React.createElement("span", {
+        className: "shrink-0 text-[11px] font-black text-emerald-300",
+        "aria-label": "使用中"
+      }, "✓"));
+    })), React.createElement("button", {
       type: "button",
       "data-party-set-edit-toggle": true,
       onClick: () => toggleScreenNote('partySetEdit'),
@@ -131256,6 +131287,7 @@ function MonsterHeroGame() {
       onClick: () => setShowBackup(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs mt-3"
     }, "閉じる"))), gameState === 'BATTLE' && React.createElement(BattleScreen, {
+      battleOverlayOpen: !!(showHeroInfo || showBattleLog || showEnemyInfo || showDeckInfo || waveScanPreview),
       applyTurnDamageReduction: applyTurnDamageReduction,
       attackAnim: attackAnim,
       autoBattle: autoBattle,
@@ -133425,13 +133457,16 @@ function MonsterHeroGame() {
       "aria-label": "バトルの記録"
     }, React.createElement("header", {
       className: "flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-slate-950/95 px-5 py-3"
-    }, React.createElement("div", null, React.createElement("h3", {
+    }, React.createElement("div", {
+      className: "min-w-0"
+    }, React.createElement("h3", {
       className: "text-lg font-black italic uppercase text-amber-300"
     }, "Battle Log"), React.createElement("small", {
-      className: "font-black text-slate-400"
-    }, "古い順・いちばん下が最新（最大", BATTLE_LOG_LIMIT, "件）")), React.createElement("button", {
+      className: "block font-black text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap(`古い順・いちばん下が最新（最大${BATTLE_LOG_LIMIT}件）`))), React.createElement("button", {
       onClick: () => setShowBattleLog(false),
-      className: "min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90"
+      className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-white/10 px-5 text-[11px] text-white active:scale-90"
     }, "閉じる")), React.createElement("div", {
       "data-battle-log-list": true,
       ref: el => {
@@ -133927,7 +133962,10 @@ function MonsterHeroGame() {
       onClick: () => setShowHeroInfo(false),
       className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
     }, "戻る")), React.createElement("div", {
-      className: "flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll"
+      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll",
+      style: {
+        justifyContent: 'safe center'
+      }
     }, mainHero.imgUrl ? React.createElement(DyedMonsterImage, {
       baseId: mainHero.id,
       src: mainHero.imgUrl,
@@ -133997,11 +134035,14 @@ function MonsterHeroGame() {
         className: "mt-0.5 text-[9px] font-black text-fuchsia-200"
       }, "EX「", exInfo.def.name, "」", exInfo.styleLabel ? `：いまは${exInfo.styleLabel}` : exInfo.active ? '：効果中' : '', exInfo.remaining.unlimited ? '' : `（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`));
     })), !isTacticsMode(runMode) && React.createElement("div", {
-      className: "grid grid-cols-2 gap-6 text-left"
+      className: "grid grid-cols-2 gap-x-3 gap-y-6 text-left"
     }, React.createElement("div", null, React.createElement("div", {
       className: "text-[9px] text-pink-400 font-black uppercase"
     }, "ライフ"), React.createElement("div", {
-      className: "text-xl font-mono font-black"
+      className: "font-mono font-black whitespace-nowrap",
+      style: {
+        fontSize: 'clamp(13px,4.2vw,1.25rem)'
+      }
     }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), React.createElement("div", null, React.createElement("div", {
       className: "text-[9px] text-red-400 font-black uppercase"
     }, "ちから"), React.createElement("div", {
@@ -134017,7 +134058,10 @@ function MonsterHeroGame() {
     }, "(被ダメ -", Math.round(getPermaBuff('dmgCutPct') * 100), "%)"))), React.createElement("div", null, React.createElement("div", {
       className: "text-[9px] text-amber-400 font-black uppercase"
     }, "ガッツ"), React.createElement("div", {
-      className: "text-xl font-mono font-black"
+      className: "font-mono font-black whitespace-nowrap",
+      style: {
+        fontSize: 'clamp(13px,4.2vw,1.25rem)'
+      }
     }, guts, " / ", effectiveMaxGuts))), React.createElement("div", {
       className: "bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"
     }, React.createElement("div", {
