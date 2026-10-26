@@ -277,8 +277,9 @@ async function faceIconLayout(dataUrl, box, name, dye, anchors = null, quiet = f
   const anchor = anchors && anchors[name] && Array.isArray(anchors[name].face) ? anchors[name].face : null;
   // 基準があるときは、その点を丸のまんなかに置く(biasX・biasY は使わない。ずらしは基準の点そのものに含める)
   const headCx = anchor ? anchor[0] * img.width : opaque.cx, headCy = anchor ? anchor[1] * img.height : opaque.cy;
-  // 頭の長辺が枠のFIT分を占めるように倍率を決める
-  const scale = (SIZE * FIT) / Math.max(headW, headH);
+  // 頭の長辺が枠のFIT分を占めるように倍率を決める。基準に寄り具合(zoom)があれば掛ける(1より大きいと寄る、小さいと引く)
+  const zoom = anchor && Number.isFinite(anchors[name].zoom) && anchors[name].zoom > 0 ? anchors[name].zoom : 1;
+  const scale = (SIZE * FIT) / Math.max(headW, headH) * zoom;
   // 頭の中心が枠の中心(biasY・biasXぶんずらす)に来るよう、元絵全体を配置する。
   // 枠からはみ出た体や翼は自動的に切り落とされ、直線的な断面は残らない
   const dx = SIZE / 2 + (anchor ? 0 : biasX * SIZE) - headCx * scale;

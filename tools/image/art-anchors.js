@@ -7,6 +7,7 @@
 // 【基準の意味】
 // ART_ANCHORS[名前].face = [x, y] … 全身絵(<名前>_IMG)の中で「顔アイコンの丸のまんなかに来る点」(0〜1)。
 // 顔(目のあいだ・鼻)のまんなかを書く。make-face-icons.js は、この点を丸のまんなかに置いて顔アイコンを作る。
+// ART_ANCHORS[名前].zoom(書かなくてよい)… 顔の範囲(FACE_BOXES)から決まる大きさに掛ける寄り具合。1より大きいと寄る、小さいと引く。
 //
 // 【はじめの値の取り方】
 // 2026-10-26 時点の顔アイコンは、全部を丸に入れて十字を引いて目で確かめ、顔がまんなかに来ていた(アークは直した)。
@@ -33,7 +34,7 @@ async function currentCenter(name, images, dye) {
 
 // 書き出す表の文字。名前の並びは FACE_BOXES と同じ
 const renderTable = (table) => {
-  const rows = Object.keys(face.FACE_BOXES).filter((n) => table[n]).map((n) => `  ${n}: Object.freeze({ face: Object.freeze([${table[n].face.join(', ')}]) }),`);
+  const rows = Object.keys(face.FACE_BOXES).filter((n) => table[n]).map((n) => `  ${n}: Object.freeze({ face: Object.freeze([${table[n].face.join(', ')}])${Number.isFinite(table[n].zoom) ? `, zoom: ${table[n].zoom}` : ''} }),`);
   return `const ART_ANCHORS = Object.freeze({\n${rows.join('\n')}\n});`;
 };
 
