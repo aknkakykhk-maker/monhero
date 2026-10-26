@@ -959,8 +959,17 @@ function botTeachingScore(st, t) {
     + (isGuts ? (starved ? 3.2 : 1.2) : 0) + (/被ダメ|軽減|守り/.test(text) ? (hurt ? 2.5 : 1) : 0) + (/行動を無効|スタン/.test(text) ? 2.5 : 0);
 }
 // 選ぶ。st.assist: 'bot'(いまのボット)・カードの id(そのカードがあれば必ず。無ければボットの点数)・'none'(選ばない)
+// アシカの Tier(asika-tier.md 14 版目の総合)の並び。'rank' の選び方で使う
+const ASSIST_RANK = ['mua', 'momosuke', 'atsu', 'oryo', 'poltz', 'kiki', 'meloso', 'dra', 'cadmium', 'myaru'];
 function chooseTeaching(st, pool) {
   if (!pool.length || st.assist === 'none') return null;
+  // 'rank' = アシカの Tier の上から順に取る(15 版目の候補。asika-tier.md の総合の並び)。強化できるものも含め、上のカードを先に
+  if (st.assist === 'rank') {
+    const order = (st.assistRank || ASSIST_RANK);
+    const pick = pool.filter((t) => { const o = ownedTeaching(st, t.id); return !o || o.evoLevel < 2; })
+      .sort((a, z) => (order.indexOf(a.id) < 0 ? 99 : order.indexOf(a.id)) - (order.indexOf(z.id) < 0 ? 99 : order.indexOf(z.id)))[0];
+    if (pick) return pick;
+  }
   if (TEACH_BY_ID[st.assist]) {
     const want = pool.find((t) => t.id === st.assist);
     const o = ownedTeaching(st, st.assist);
@@ -1505,7 +1514,7 @@ function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', se
     // 緊急回復(7 版目): 'auto'(① AUTO と同じ条件)・'brink'(② 全滅の手前だけ)・'bot'(①+②。2026-10-10 からのブラウザのボット arena-1 と同じ)・'none'(使わない。それまでのボット)
     emergency, emergencyUses: 0, emergencyCfg, discardBlocked, revive,
   };
-  if (assist !== 'bot' && assist !== 'none' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
+  if (assist !== 'bot' && assist !== 'none' && assist !== 'rank' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (!TRAINING_PLANS.includes(training)) throw new Error(`トレーニングの選び方が分からない: ${training}`);
   if (!REVIVE_PLANS.includes(revive)) throw new Error(`起こすかの決め方が分からない: ${revive}`);
   if (!UNIQUE_PLANS.includes(uniquePlan)) throw new Error(`固有技の強化の入れ方が分からない: ${uniquePlan}`);
