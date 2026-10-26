@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f2171a315ea18c6
+// source-sha256: 948d91b456c6a383
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56189,6 +56189,12 @@ function RhythmInfoScreen({
   }, "HOMEへ戻る")));
 }
 const RHYTHM_SELECT_PLAY_MODES = [['assistMode', '🛟', 'アシスト', 'border-emerald-300 bg-emerald-600/80 text-white'], ['mirrorChart', '↔', 'ミラー譜面', 'border-sky-300 bg-sky-600/80 text-white']];
+const rhythmDebugSelectSongs = filter => {
+  const proto = typeof RHYTHM_PROTO_SONGS !== 'undefined' && Array.isArray(RHYTHM_PROTO_SONGS) ? RHYTHM_PROTO_SONGS : [];
+  const playable = song => !!song && RHYTHM_PLAY_DIFFICULTIES.some(d => rhythmChartPlayable(song, d.id));
+  return (filter === 'proto' ? [...proto] : [...RHYTHM_SONGS, ...proto]).filter(playable);
+};
+const rhythmDebugSelectRowCount = filter => new Set(rhythmDebugSelectSongs(filter).map(song => rhythmSongVersionHead(song.songId))).size;
 function RhythmSongSelectScreen({
   catchingUp,
   difficulty,
@@ -56245,12 +56251,23 @@ function RhythmSongSelectScreen({
   startQuickRunFromRhythm,
   wave,
   monsterSlots = [],
-  raidChallenge = null
+  raidChallenge = null,
+  debugAll = false
 }) {
-  const songs = rhythmDemoSongs(RHYTHM_SONGS);
-  const difficulties = rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
+  if (debugAll) {
+    quickRunProgress = null;
+    raidChallenge = null;
+    rhythmEventNotice = null;
+    quickRhythmBackgroundVisible = false;
+    rhythmSixLaneIntroVisible = false;
+    rhythmLookIntroVisible = false;
+    exitingQuickRun = false;
+  }
+  const [debugSongFilter, setDebugSongFilter] = useState('all');
+  const songs = debugAll ? rhythmDebugSelectSongs(debugSongFilter) : rhythmDemoSongs(RHYTHM_SONGS);
+  const difficulties = debugAll ? RHYTHM_PLAY_DIFFICULTIES : rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
-  const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
+  const beatPointReleased = !debugAll && RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
@@ -56301,7 +56318,7 @@ function RhythmSongSelectScreen({
   }, quickRunBandLabel), React.createElement("span", {
     className: "shrink-0 text-[9px] font-black text-slate-400"
   }, quickRunDetailOpen ? '▲' : '▼')) : null;
-  const quickRunStartNode = !quickRunProgress && !runStage ? repeatTemplateForNewRun() ? React.createElement("button", {
+  const quickRunStartNode = !debugAll && !quickRunProgress && !runStage ? repeatTemplateForNewRun() ? React.createElement("button", {
     type: "button",
     "data-quick-run-start-button": true,
     onClick: () => {
@@ -56325,10 +56342,11 @@ function RhythmSongSelectScreen({
   }, "クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。")) : null;
   const selectNoticeShort = useRhythmShortPortrait();
   const selectNoticesOpen = rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView), rhythmPlayedSongCount(rhythmBestRecords), selectNoticeShort);
-  const quickRunStartRowVisible = !quickRunProgress && !runStage;
+  const quickRunStartRowVisible = !debugAll && !quickRunProgress && !runStage;
   const foldedNoticeCount = selectNoticesOpen ? 0 : [!!rhythmEventNotice, !!rhythmSixLaneIntroVisible, !!rhythmLookIntroVisible, !!quickRhythmBackgroundVisible].filter(Boolean).length;
   return React.createElement("main", {
-    "data-rhythm-demo-home": true,
+    "data-rhythm-demo-home": debugAll ? undefined : true,
+    "data-rhythm-debug-select": debugAll ? true : undefined,
     className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
   }, exitingQuickRun && React.createElement("div", {
     "data-rhythm-exiting-run": true,
@@ -56345,8 +56363,8 @@ function RhythmSongSelectScreen({
   }, React.createElement("button", {
     "data-rhythm-song-select-back": true,
     type: "button",
-    "aria-label": "モードえらびへ戻る",
-    title: "モードえらびへ戻る",
+    "aria-label": debugAll ? 'モンヒロビートのデバッグへ戻る' : 'モードえらびへ戻る',
+    title: debugAll ? 'デバッグへ戻る' : 'モードえらびへ戻る',
     onClick: onExit,
     className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
   }, React.createElement(ArrowLeft, {
@@ -56359,8 +56377,9 @@ function RhythmSongSelectScreen({
     className: "max-[359px]:hidden"
   }, "MONBEAT"), React.createElement("span", {
     "data-rhythm-demo-badge": true,
+    "data-rhythm-debug-select-badge": debugAll ? true : undefined,
     className: "rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200"
-  }, "体験版")), React.createElement("h2", {
+  }, debugAll ? '記録しない' : '体験版')), React.createElement("h2", {
     className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"
   }, React.createElement("span", {
     className: "max-[359px]:hidden"
@@ -56411,7 +56430,27 @@ function RhythmSongSelectScreen({
     className: "text-base leading-none"
   }, "⚙️"), React.createElement("span", {
     className: "text-[9px] font-black leading-none"
-  }, "設定"))), raidChallenge && React.createElement("div", {
+  }, "設定"))), debugAll && (() => {
+    const protoCount = rhythmDebugSelectRowCount('proto'),
+      allCount = rhythmDebugSelectRowCount('all');
+    return React.createElement("div", {
+      "data-rhythm-debug-song-filter": true,
+      role: "radiogroup",
+      "aria-label": "並べる曲",
+      className: "grid shrink-0 grid-cols-2 gap-1.5 border-b border-amber-400/30 bg-amber-950/30 px-2 py-1.5"
+    }, [['all', `すべての曲(${allCount})`], ['proto', `🧪 試作だけ(${protoCount})`]].map(([id, label]) => {
+      const on = debugSongFilter === id;
+      return React.createElement("button", {
+        key: id,
+        type: "button",
+        role: "radio",
+        "aria-checked": on,
+        "data-rhythm-debug-song-filter-option": id,
+        onClick: () => setDebugSongFilter(id),
+        className: `min-h-[40px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on ? 'border-amber-300 bg-amber-500/80 text-slate-950' : 'border-white/15 bg-slate-900/80 text-amber-100'}`
+      }, label);
+    }));
+  })(), raidChallenge && React.createElement("div", {
     "data-raid-challenge-banner": true,
     role: "status",
     className: "shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100"
@@ -56654,19 +56693,21 @@ function RhythmSongSelectScreen({
     onDifficultyId: setRhythmSelectedDifficultyId,
     spotClass: spotClass,
     onPlay: onPlaySong,
-    notice: React.createElement(AssistantBubble, {
+    notice: debugAll ? null : React.createElement(AssistantBubble, {
       scene: "rhythmHome",
       compact: true
     }),
+    unlockAll: debugAll,
+    playLabel: debugAll ? '決定(記録しない)' : undefined,
     noticeHidden: foldedNoticeCount,
     toolbarExtra: beatPointSideCard,
     view: rhythmSelectView,
     onView: saveRhythmSelectView,
-    listScrollTop: rhythmSongListScrollRef.current,
+    listScrollTop: rhythmSongListScrollRef ? rhythmSongListScrollRef.current : null,
     onListScrollTop: top => {
-      rhythmSongListScrollRef.current = top;
+      if (rhythmSongListScrollRef) rhythmSongListScrollRef.current = top;
     },
-    actionExtra: song => React.createElement("button", {
+    actionExtra: debugAll ? null : song => React.createElement("button", {
       type: "button",
       "data-rhythm-demo-ranking": true,
       "data-rhythm-ranking-place": "action",
@@ -56682,7 +56723,7 @@ function RhythmSongSelectScreen({
     }, "順位")),
     footer: song => React.createElement(React.Fragment, null, React.createElement("div", {
       "data-rhythm-play-modes": true,
-      className: "hidden grid-cols-3 gap-1.5 landscape:grid"
+      className: `hidden ${debugAll ? 'grid-cols-2' : 'grid-cols-3'} gap-1.5 landscape:grid`
     }, RHYTHM_SELECT_PLAY_MODES.map(([key, icon, name, on]) => {
       const active = !!(rhythmSettings && rhythmSettings[key]);
       return React.createElement("button", {
@@ -56701,7 +56742,7 @@ function RhythmSongSelectScreen({
       }, name), React.createElement("span", {
         className: "text-[10px]"
       }, active ? 'ON' : 'OFF'));
-    }), React.createElement("button", {
+    }), !debugAll && React.createElement("button", {
       "data-rhythm-demo-ranking": true,
       onClick: () => onOpenRanking(song),
       "aria-label": "この曲の全国ランキング",
@@ -126343,70 +126384,41 @@ function MonsterHeroGame() {
       setRhythmEventDivision: setRhythmEventDivision,
       setRhythmRankingDetail: setRhythmRankingDetail,
       setRhythmRankingTab: setRhythmRankingTab
-    }), gameState === 'RHYTHM_DEBUG_SELECT' && (() => {
-      const songs = [...RHYTHM_SONGS, ...RHYTHM_PROTO_SONGS];
-      return React.createElement("main", {
-        "data-rhythm-debug-select": true,
-        className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
-      }, React.createElement("header", {
-        className: "z-10 flex shrink-0 items-center gap-1 border-b border-amber-400/30 bg-slate-950/95 px-2 py-1",
-        style: {
-          paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
-        }
-      }, React.createElement("button", {
-        type: "button",
-        "aria-label": "モンヒロビートのデバッグへ戻る",
-        title: "デバッグへ戻る",
-        onClick: () => setGameState('RHYTHM_DEBUG'),
-        className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, React.createElement("small", {
-        className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
-      }, "MONBEAT", React.createElement("span", {
-        "data-rhythm-debug-select-badge": true,
-        className: "rounded-full border border-amber-300/70 bg-amber-500/20 px-1.5 py-px text-[8px] tracking-normal text-amber-100"
-      }, "デバッグ(記録しない)")), React.createElement("h2", {
-        className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-      }, "🎵 曲えらび(全解放)")), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
-        type: "button",
-        "data-rhythm-debug-select-options": true,
-        onClick: () => {
-          setRhythmOptionsBack('RHYTHM_DEBUG_SELECT');
-          setGameState('RHYTHM_OPTIONS');
-        },
-        "aria-label": "オプション",
-        title: "オプション",
-        className: "flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/50 bg-cyan-950/60 px-1 text-[9px] font-black text-cyan-100"
-      }, React.createElement("span", {
-        "aria-hidden": "true",
-        className: "text-base leading-none"
-      }, "⚙️"), React.createElement("span", null, "オプション"))), React.createElement(RhythmSongSelect, {
-        songs: songs,
-        difficulties: RHYTHM_PLAY_DIFFICULTIES,
-        bestRecords: rhythmBestRecords,
-        unlockAll: true,
-        songId: rhythmDebugSelectSongId,
-        difficultyId: rhythmDebugSelectDifficultyId,
-        onSongId: setRhythmDebugSelectSongId,
-        onDifficultyId: setRhythmDebugSelectDifficultyId,
-        view: rhythmDebugSelectView,
-        onView: setRhythmDebugSelectView,
-        playLabel: "決定(記録しない)",
-        onPlay: (song, difficulty) => {
-          if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
-          setRhythmPlay({
-            song,
-            difficulty,
-            from: 'proto',
-            backTo: 'RHYTHM_DEBUG_SELECT'
-          });
-          setGameState('RHYTHM_PLAY');
-        }
-      }));
-    })(), gameState === 'RHYTHM_DEBUG' && React.createElement("main", {
+    }), gameState === 'RHYTHM_DEBUG_SELECT' && React.createElement(RhythmSongSelectScreen, {
+      debugAll: true,
+      monsterSlots: rhythmMonsterSlots,
+      rhythmSettings: rhythmSettings,
+      onToggleRhythmSetting: async key => {
+        const saved = await saveRhythmSettings({
+          ...rhythmSettings,
+          [key]: !rhythmSettings[key]
+        });
+        setRhythmSettings(saved);
+      },
+      onExit: () => setGameState('RHYTHM_DEBUG'),
+      onOpenOptions: () => {
+        setRhythmOptionsBack('RHYTHM_DEBUG_SELECT');
+        setGameState('RHYTHM_OPTIONS');
+      },
+      onPlaySong: (song, difficulty) => {
+        if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+        setRhythmPlay({
+          song,
+          difficulty,
+          from: 'proto',
+          backTo: 'RHYTHM_DEBUG_SELECT'
+        });
+        setGameState('RHYTHM_PLAY');
+      },
+      rhythmBestRecords: rhythmBestRecords,
+      rhythmSelectView: rhythmDebugSelectView,
+      saveRhythmSelectView: setRhythmDebugSelectView,
+      rhythmSelectedSongId: rhythmDebugSelectSongId,
+      rhythmSelectedDifficultyId: rhythmDebugSelectDifficultyId,
+      setRhythmSelectedSongId: setRhythmDebugSelectSongId,
+      setRhythmSelectedDifficultyId: setRhythmDebugSelectDifficultyId,
+      spotClass: spotClass
+    }), gameState === 'RHYTHM_DEBUG' && React.createElement("main", {
       "data-rhythm-debug-screen": true,
       className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {
