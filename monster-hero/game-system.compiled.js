@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 715e71b764915d9f
+// source-sha256: d264ef83679ef3cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84802,6 +84802,7 @@ const cardResolveTarget = (db, st) => {
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
   if (pd.endure && dmg >= target.life && target.life > 0) dmg = target.life - 1;
   if (target.safeUntil >= st.turn) dmg = 0;
+  const lifeBefore = target.life;
   target.life = Math.max(0, target.life - dmg);
   if (dmg > 0) target.charge = null;
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
@@ -84838,7 +84839,7 @@ const cardResolveTarget = (db, st) => {
       cardLog(st, `${target.name}は次のターン攻撃できない`);
     }
     if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) {
-      const h = Math.min(dmg, atkMon.max - atkMon.life);
+      const h = Math.min(lifeBefore - target.life, atkMon.max - atkMon.life);
       atkMon.life += h;
       if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`);
     }
@@ -99753,7 +99754,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 3;
+const CARD_REPLAY_RULES = 4;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
