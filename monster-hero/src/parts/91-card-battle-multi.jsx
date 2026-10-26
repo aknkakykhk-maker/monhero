@@ -15,6 +15,8 @@
 // 公開の印: MFバトルカードの公開(RELEASE_FLAGS.cardBattle)と同じ日に開ける(2026-10-25 社長 案A)。見るたびに引く(読み込み時に後ろの部品の const を触らない)。
 // 印が偽のあいだは、デバッグ設定から入ったときだけ入れる
 const cardPvpOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
+// 送るアイコンの値の長さ(前は8文字で切っていて、id が読めなくなった。2026-10-26)
+const CARD_PVP_ICON_MAX = 64;
 const CARD_PVP_HIDDEN = -1;               // 相手の見えない札
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
@@ -287,8 +289,7 @@ const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => (
 // ---- 部屋と通信(ここから下は画面と通信。区切り1)
 // ---- 相手のアイコン(2026-10-26 社長といちかさんの対戦で「sneguroc」と字が出た) ----
 // アイコンの値は、プロフィールのアイコンの id(モンスターの顔・マーケットのアイコン)・絵の道・絵文字のどれか。
-// 前は送るときに8文字で切っていた(「snegurochka」→「sneguroc」)ので id として読めず、字のまま出ていた。いまは CARD_PVP_ICON_MAX まで送る
-const CARD_PVP_ICON_MAX = 64;
+// 前は送るときに8文字で切っていた(「snegurochka」→「sneguroc」)ので id として読めず、字のまま出ていた。いまは CARD_PVP_ICON_MAX(ファイルの頭)まで送る
 const cardPvpIconIds = () => {
   const out = [];
   try { Object.keys(ALL_PLAYER_MONSTERS).forEach((k) => { if (ALL_PLAYER_MONSTERS[k] && ALL_PLAYER_MONSTERS[k].iconUrl) out.push(k); }); } catch (_) { /* 無い環境 */ }
