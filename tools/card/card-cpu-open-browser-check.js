@@ -43,6 +43,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     browser = await playwright.chromium.launch(fs.existsSync('/opt/pw-browsers/chromium') ? { executablePath: '/opt/pw-browsers/chromium' } : {});
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     // 本物の Supabase へは書かない(読むだけは通す)。外の AI も呼ばない
+    // 自分で Supabase を差し替える検査は印を入れる(印が無いと、差し替え先へ届く前にゲーム側が空の返事で止める。2026-10-27)
+    await ctx.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await ctx.route(/supabase\.co\//, (r) => (r.request().method() === 'GET' ? r.continue() : r.fulfill({ status: 201, contentType: 'application/json', body: '[]' })));
     await ctx.addInitScript(() => {
       if (sessionStorage.getItem('__seeded')) return;

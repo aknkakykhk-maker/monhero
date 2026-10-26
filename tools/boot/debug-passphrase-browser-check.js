@@ -30,6 +30,8 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     // ★本物の Supabase へは何も届けない(2026-10-27)。この検査は人の端末に見せるため navigator.webdriver を false に偽り、
     //   ゲームの「自動操作のブラウザは本物へ書かない」止め(26-supabase.jsx)が効かなくなる。差し替えなしだと、
     //   名前「テスト」・アイコン🐣の端末が本番の breeder_profiles / breeder_levels へ行を足し続ける(実際に起きた)。読み込みも空で返す
+    // 自分で Supabase を差し替える検査は印を入れる(印が無いと、差し替え先へ届く前にゲーム側が空の返事で止める。2026-10-27)
+    await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.route(/\.supabase\.co\//, route => route.fulfill({ status: route.request().method() === 'GET' ? 200 : 201, contentType: 'application/json', body: '[]' }));
     await page.addInitScript(({ human, unlocked }) => {
       if (human) Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false, configurable: true });

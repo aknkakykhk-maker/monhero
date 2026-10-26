@@ -76,7 +76,7 @@ const PVP = [
       }
       return r.continue();
     });
-    // 自動操作のブラウザの書き込み止め(26 の sbAutomationWriteBlocked)を外し、この偽物へ届くようにする
+    // 自動操作のブラウザの書き込み止め(26 の sbAutomationBlocked)を外し、この偽物へ届くようにする
     await ctx.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await ctx.addInitScript((self) => {
       if (sessionStorage.getItem('__seeded')) return;

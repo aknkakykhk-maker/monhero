@@ -32,6 +32,8 @@ const serve = () => new Promise((resolve) => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const page = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
+  // 自分で Supabase を差し替える検査は印を入れる(印が無いと、差し替え先へ届く前にゲーム側が空の返事で止める。2026-10-27)
+  await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
   await page.route(/supabase\.co/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.addInitScript(() => {
     if (sessionStorage.getItem('__s')) return; sessionStorage.setItem('__s', '1');

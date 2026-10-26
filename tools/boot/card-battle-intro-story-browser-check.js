@@ -46,6 +46,8 @@ const JOIN = { atsu: 'atsu_join_2026_10_22', kyuko: 'kyuko_join_2026_10_22' };
       const page = await ctx.newPage();
       const errors = [];
       page.on('pageerror', (e) => errors.push(String(e)));
+      // 自分で Supabase を差し替える検査は印を入れる(印が無いと、差し替え先へ届く前にゲーム側が空の返事で止める。2026-10-27)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
       await page.route(/supabase\.co/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
       await page.addInitScript(() => {
         const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));

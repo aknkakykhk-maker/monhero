@@ -146,6 +146,8 @@ if (require.main === module) (async () => {
     for (const [W, H] of SIZES) {
       const page = await browser.newPage({ viewport: { width: W, height: H } });
       // ランキングは本番へ読みに行かない(読み込めないときの文を見る)
+      // 自分で Supabase を差し替える検査は印を入れる(印が無いと、差し替え先へ届く前にゲーム側が空の返事で止める。2026-10-27)
+      await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
       await page.route(/supabase\.co/, (r) => r.abort());
       await page.addInitScript(() => {
         const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));

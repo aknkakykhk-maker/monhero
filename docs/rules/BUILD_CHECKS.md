@@ -90,10 +90,12 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 本物の総合力ランキング(`bond_levels`)とブリーダーの表(`breeder_profiles`)へ行が増えた(2日で約300行。ユーザー報告
 「ランキングひどいことになってる」)。検査は毎回まっさらなブラウザで開くので、**そのたびに新しいブリーダーIDができる**。
 
-- ゲーム側(`26-supabase.jsx` の `sbAutomationWriteBlocked`)が、`navigator.webdriver` が true のときは
-  Supabase への書き込み(GET/HEAD 以外。読み取りの rpc は除く)を送らずに「保存できた」と返す
+- ゲーム側(`26-supabase.jsx` の `sbAutomationBlocked`)が、`navigator.webdriver` が true のときは、
+  Supabase への**書き込みも読み込みも助手の中継(functions)も本物へ出さず**、空の返事を返す(書き込み=201・読み込みと rpc=200の空の配列・中継=503)。
+  2026-10-27 に「書き込みだけ」から広げた(検査 167本が読み込みだけ本番へ届き、画面が本番のデータで変わって落ちる・通信量がかさむ、を防ぐ)。
+  ふつうに遊ぶ人のブラウザ(`webdriver` が false)は何も変わらない
 - **送信そのものを確かめる検査**は、`page.route` で差し替えたうえで印を入れる。差し替えた先へは今までどおり届く
   - 全部の表を差し替えたとき: `window.__mhSupabaseStubbed = true`
   - 一部の表だけのとき: `window.__mhSupabaseStubbed = ['rankings', 'bond_levels']`(並べた表だけを通す)
   - 入れ方は `await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });`(開いたあとなら `page.evaluate` も)
-- **差し替えずに印だけ入れない**(本物へ届いてしまう)。モンヒロくんは `lib/session.js` がにせの Supabase で受け止めたうえで入れている
+- **自分で `page.route` して差し替える検査は、必ず印も入れる**(印が無いと、差し替え先へ届く前にゲーム側が空の返事で止める)。**差し替えずに印だけ入れない**(本物へ届いてしまう)。モンヒロくんは `lib/session.js` がにせの Supabase で受け止めたうえで入れている
