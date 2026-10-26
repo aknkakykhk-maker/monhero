@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ced0d6cce6b35c19
+// generated-sha256: 03b5e2d8bbd35767
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 22:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11483,7 +11483,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex w-full min-w-0 flex-col items-center gap-1 [container-type:inline-size]"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span>{/* 札はカードの幅で折り返す(2026-10-20 窓口「条件を達成すると買えます」がカードの外へはみ出していた・幅の狭い3列のカード) */}<div data-market-coming-soon-label className="max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl" style={{wordBreak:'keep-all',overflowWrap:'anywhere',fontSize:marketLabelFitSize(comingSoonLabel)}}>{marketLabelNodes(comingSoonLabel)}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint||usesCardPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesCardPoint?'bg-orange-500 text-white active:scale-95':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesCardPoint?<><span aria-hidden="true">🃏</span><span>{item.cost.toLocaleString()}</span></>:usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex w-full min-w-0 flex-col items-center gap-1 [container-type:inline-size]"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{item.giftOnly?'プレゼント':marketPriceText(item)}</span>{/* 札はカードの幅で折り返す(2026-10-20 窓口「条件を達成すると買えます」がカードの外へはみ出していた・幅の狭い3列のカード) */}<div data-market-coming-soon-label className="max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl" style={{wordBreak:'keep-all',overflowWrap:'anywhere',fontSize:marketLabelFitSize(comingSoonLabel)}}>{marketLabelNodes(comingSoonLabel)}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint||usesCardPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesCardPoint?'bg-orange-500 text-white active:scale-95':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesCardPoint?<><span aria-hidden="true">🃏</span><span>{item.cost.toLocaleString()}</span></>:usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -33329,7 +33329,10 @@ function BreederMarketScreen({
   })();
   const hasDiscIconCards = breederPointItems.some(item=>/_disc_icon$/.test(item.id));
   // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
-  const breederFrameItems = marketItems.filter(item=>item.type==='frame');
+  // プレゼントで届く枠(ハロウィン・妖)も、条件だけ並べる。買えない・値段は出さない(2026-10-25 社長「ハロウィン・妖もマーケットに条件だけ出して」)
+  const giftFrameItems = (typeof releasedProfileFrames==='function'?releasedProfileFrames():[]).filter(frame=>profileFrameGift(frame))
+    .map(frame=>({ id:frame.id, name:frame.name, emoji:'🖼️', type:'frame', currency:'breederPoint', cost:0, desc:frame.desc||'', giftOnly:true }));
+  const breederFrameItems = [...marketItems.filter(item=>item.type==='frame'), ...giftFrameItems];
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
   const SECTION_TABS = {
@@ -33395,8 +33398,9 @@ function BreederMarketScreen({
     // 札には条件を短く書く(2026-10-20・profileFrameConditionShort。「ジャックを倒すか / イベント終了で」「ザン・エイキ / ビートLv50」)
     const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id,'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
+    const giftLocked = !!item.giftOnly && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
-    const canBuy = !comingSoon && !frameLocked && !owned && balance>=item.cost && !busy;
+    const canBuy = !comingSoon && !frameLocked && !owned && !item.giftOnly && balance>=item.cost && !busy;
     // 近日公開予定の子(まだ ALL_PLAYER_MONSTERS にいない)も、案の段階の中身で詳細を開けるようにする
     const detailMon = item.type==='disc' ? (ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS!=='undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null) : null;
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
@@ -33405,7 +33409,7 @@ function BreederMarketScreen({
     return (
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard previewIcon={previewIcon}
-          item={item} owned={owned} comingSoon={comingSoon||frameLocked} comingSoonLabel={frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
+          item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?PROFILE_FRAME_GIFT_LABELS[profileFrameGift(profileFrameById(item.id))]||'プレゼントで届きます':frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
