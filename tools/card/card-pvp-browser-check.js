@@ -206,7 +206,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await A.locator('[data-card-pvp-chat]').click();
     await A.locator('[data-card-pvp-stamp="0"]').click();
     const chatSeen = await B.locator('[data-card-bubble]').filter({ hasText: 'よろしく！' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
-    check('⑥ 定型のチャットが、相手の画面の吹き出しに出る', chatSeen);
+    // 吹き出しの顔は、相手(A)のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた)。A のアイコンは id なので絵になる
+    const chatIcon = await B.locator('[data-card-bubble] [data-card-bubble-pvp-icon]').evaluate((el) => el.querySelectorAll('img').length).catch(() => 0);
+    check('⑥ 定型のチャットが、相手の画面の吹き出しに出る・顔は相手のアイコン', chatSeen && chatIcon >= 1, `アイコンの絵 ${chatIcon}`);
     await shot(B, 'pvp-04-chat');
     const beatP = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
     const pointBefore = [await beatP(A), await beatP(B)];
