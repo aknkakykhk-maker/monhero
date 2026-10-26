@@ -10,7 +10,7 @@
 // ここでは描いた行の変わり目ごとに、前後の字から「言葉の途中か」を決まり(BAD_RULES)で判定する。漢字どうし・ひらがなどうしの区切りは
 // 文節の切れ目のこと(「数人／来て」「よろしく／お願い」)も多いので数えず、言葉の途中と言い切れる形だけを数える
 //   台詞: 助手・ジャック・お話(data/assistants.js・38-raid-jack-home-lines.jsx)と MFバトルカード(83-card-battle-lines・83-card-battle-vs・86-card-tutorial)
-//   幅: 320・375・390 の縦で、お話の窓(字13px・本文 幅-64px)・助手の吹き出し(字12px・幅-130px)・カードの台詞(字12px・幅-150px)
+//   幅: 320・375・390 の縦で、お話の窓(字13px・本文 幅-64px)・助手の吹き出し(字12px・幅-130px)・カードの台詞(字12px・幅-150px)・カードの対戦の吹き出し(幅-66px・頭に名前)
 'use strict';
 const fs = require('fs'), path = require('path'), { execSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -58,16 +58,22 @@ check('台詞を集められた', bubble.length >= 500 && story.length >= 300 &&
       ['記号が行の頭', (l, r) => /^[！？!?、。，．」』）)】〕〉》…‥〜～ー・]/.test(r)],
       ['「お・ご」と漢字', (l, r) => /(?:^|[^ぁ-ゖ])[おご]$/.test(l) && new RegExp(`^${K}`).test(r)],
       ['くっついた言葉(読み|合い)', (l, r) => new RegExp(`${K}[きしちひみりっ]$`).test(l) && !/少し$/.test(l) && new RegExp(`^${K}`).test(r)],
+      // 「終わっちゃっ／たら」「なっ／た」。小さい「っ」のあとにひらがなが続く所は、言葉の途中(2026-10-26 カゲあつくんの点検)
+      //   (「じゃ／ない」「めちゃくちゃ／やってた」は文節の切れ目なので数えない)
+      ['「っ」とひらがな', (l, r) => /[ぁ-ゖ一-龯]っ$/.test(l) && /^[ぁ-ゖ]/.test(r)],
       ['カタカナと英字', (l, r) => new RegExp(`${KA}$`).test(l) && /^[A-Za-zＡ-Ｚ]/.test(r)],
       // 数と助数詞・単位(「1／曲ずつ」「5／倍」「Lv.／12」。2026-10-26 クラフト)
       ['数と助数詞', (l, r) => (/[0-9０-９]$/.test(l) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連%％]|時間|ms|P|Lv)/.test(r)) || (/(?:Lv\.?|×|約|第)$/.test(l) && /^[0-9０-９]/.test(r))],
     ];
-    const sets = [['お話', story, [[320, 256, 13], [375, 311, 13], [390, 326, 13]]], ['吹き出し', bubble, [[320, 190, 12], [375, 245, 12], [390, 260, 12]]], ['カード', card, [[320, 170, 12], [375, 225, 12], [390, 240, 12]]]];
+    const sets = [['お話', story, [[320, 256, 13], [375, 311, 13], [390, 326, 13]]], ['吹き出し', bubble, [[320, 190, 12], [375, 245, 12], [390, 260, 12]]], ['カード', card, [[320, 170, 12], [375, 225, 12], [390, 240, 12]]],
+      // 対戦の画面の吹き出し(84 の data-card-bubble)。幅いっぱいの1行で、頭に助手の名前が付く(1行目は名前のぶん短い)。
+      //   幅は 画面-16(左右の余白)-6(枠)-12(内側)-顔-6(すき間)。小さい画面は顔26px・字12px。2026-10-26 カゲあつくんの点検「すぐ終わっちゃっ／たら」
+      ['カードの対戦', card, [[320, 254, 12, 52], [375, 303, 12, 52], [390, 312, 13, 56]]]];
     const out = { lines: 0, breaks: 0, bad: [], byRule: {} };
     const range = document.createRange();
-    for (const [kind, texts, sizes] of sets) for (const t of texts) for (const [vw, w, fz] of sizes) {
+    for (const [kind, texts, sizes] of sets) for (const t of texts) for (const [vw, w, fz, indent = 0] of sizes) {
       const d = document.createElement('div');
-      d.style.cssText = `width:${w}px;font-size:${fz}px;font-weight:700;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere;text-wrap:wrap;font-family:sans-serif`;
+      d.style.cssText = `width:${w}px;text-indent:${indent}px;font-size:${fz}px;font-weight:700;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere;text-wrap:wrap;font-family:sans-serif`;
       // jaWrap と同じ: 印を <wbr> に(折らない枠 data-ja-keep は jaWrapPieces が決める)
       jaWrapPoints(t).split('​').forEach((seg, i) => {
         if (i > 0 && !/^\s/.test(seg)) d.appendChild(document.createElement('wbr'));
