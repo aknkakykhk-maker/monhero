@@ -60,7 +60,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `fxRestTimerRef.current = setTimeout(` | screen | 止める(71-screen-battle.jsx) | タクティクスで操作が無いあいだ演出を休ませる。止めても休まないだけ |
 | `timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms)` | screen | 止める | MFバトルカード(84)のカードの長押し。指を離すと止める・画面を離れたら止める |
 | `motionTimers.current.push(setTimeout(() => setMotions(` | screen | 止める | MFバトルカードの技の動きを、見せ終わったら外す。対戦の画面を離れたら止めてよい(motionTimers はまとめて止める) |
-| `bubbleTimer.current = setTimeout(() => setBubble(null), 4500)` | screen | 止める | MFバトルカードの対戦中の助手の吹き出し(マルチのひとことも)を消す。hideBubbleLater の1か所 |
+| `const t = setTimeout(nextBubble, ms);` | screen | 止める | MFバトルカードの対戦中の助手の吹き出し(マルチのひとことも)を、字の数で決めた時間のあと次の台詞へ(無ければ消す)。effect の後始末で止める |
 | `setTimeout(() => { setBubble(null); setTutQ((q) => q.slice(1)); }, 2100)` | screen | 止める | MFバトルカードの練習試合の台詞を順に出す。画面の中だけの進み |
 | `bigTimer.current = setTimeout(` | screen | 止める | MFバトルカードの相手の出したカードを大きく見せて、消えたら当てる。画面を離れたら止め、当てる1手も打たない |
 | `motionTimers.current.push(setTimeout(() => setGutsFly(` | screen | 止める | MFバトルカードのガッツへ飛ぶカードの絵を消す |
