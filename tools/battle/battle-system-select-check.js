@@ -267,10 +267,11 @@ check('本公開が立てばβ版の印は消え、3つとも遊べる',
       .every(id => afterRelease.battleModePlayable(id) === true
         && afterRelease.battleModeComingSoon(id) === false));
 // 画面側の結線。押せないだけでなく、目印と文言もそろっていること
-check('β版の印を画面へ出している',
+check('β版の印を画面へ出している・札に中の言葉を書かない',
   has('const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});')
     && has('<span data-battle-system-beta')
-    && has('いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'));
+    // β版の札に中の言葉(「ほかのモードは準備中です」)を書かない(2026-10-26 カゲあつくんの見回り)
+    && !has('ほかのモードは準備中です'));
 check('準備中のモードは押せない',
   has('modeSoon=battleModeComingSoon(m.id,{debugBattle}),')
     && has("data-battle-mode-soon={modeSoon?'1':undefined}")
