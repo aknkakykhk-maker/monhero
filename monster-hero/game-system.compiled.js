@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1533b0b92633ae6c
+// source-sha256: 9c10a5619ebd4e8a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89525,12 +89525,12 @@ const CardResultBanner = ({
   "data-card-result-banner": tone,
   className: "mhms-in py-1 text-center"
 }, React.createElement("div", {
-  className: `text-[44px] font-black italic leading-none tracking-wider ${tone === 'win' ? 'text-amber-200' : tone === 'lose' ? 'text-slate-300' : 'text-sky-200'}`,
+  className: `text-[44px] font-black italic leading-none tracking-wider [@media(orientation:portrait)_and_(max-height:600px)]:text-[34px] ${tone === 'win' ? 'text-amber-200' : tone === 'lose' ? 'text-slate-300' : 'text-sky-200'}`,
   style: {
     textShadow: tone === 'win' ? '0 0 18px rgba(251,191,36,.65), 0 3px 0 #7c2d12' : '0 3px 0 #0f172a'
   }
 }, title), sub && React.createElement("div", {
-  className: "mt-1 text-[10px] font-black tracking-[0.3em] text-white/70"
+  className: "mt-1 text-[10px] font-black tracking-[0.3em] text-white/70 [@media(orientation:portrait)_and_(max-height:600px)]:hidden"
 }, sub));
 const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'カララギマンゴー': 4,
@@ -89886,7 +89886,7 @@ const CardResultTalk = ({
     alt: a.name,
     className: "w-[46%]",
     style: {
-      height: 'min(220px, 28vh)'
+      height: 'min(220px, 28vh, max(110px, calc(var(--mh-vh) - 460px)))'
     }
   }), React.createElement("div", {
     className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
