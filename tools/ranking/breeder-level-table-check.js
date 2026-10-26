@@ -48,10 +48,12 @@ const run = async () => {
   // 読む: ページ送り(1ページ目の件数をそのサーバーの1ページ分とみなす)
   calls.length = 0;
   pages.push([{ breeder_id: 'a', user_name: 'A', level: 9, icon: null }, { breeder_id: 'b', user_name: 'B', level: 8, icon: null }],
-             [{ breeder_id: 'c', user_name: 'C', level: 7, icon: null }, { breeder_id: 'd', user_name: 'D', level: 0, icon: null }], []);
+             [{ breeder_id: 'c', user_name: 'C', level: 7, icon: null }, { breeder_id: 'd', user_name: 'D', level: 0, icon: null }],
+             [{ breeder_id: 'e', user_name: 'テスト', level: 1, icon: '🐣' }], []);
   const rows = await ctx.fetchRows('t');
-  assert.strictEqual(JSON.stringify(rows.map(r => r.breeder_id)), '["a","b","c"]', 'Lv0の行は捨て、全ページを集める');
+  assert.strictEqual(JSON.stringify(rows.map(r => r.breeder_id)), '["a","b","c"]', 'Lv.1以下の行(表に残るテスト行など)は外し、全ページを集める');
   assert(calls.every(c => /select=breeder_id,user_name,level,icon/.test(c.url)), '読む列は4つだけ');
+  assert(calls.every(c => /level=gte\.2(&|$)/.test(c.url)), 'サーバー側でも Lv.2 以上だけを頼む(通信量も減らす)');
   console.log('OK: 読む関数は全ページを集める(列は4つだけ)');
 
   // 表が無い: 空で、以後は通信しない
