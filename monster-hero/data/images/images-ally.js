@@ -408,6 +408,8 @@ const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=b3722ab1b74e
 const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=9fcfee53438b";
 const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=4ee1ce8f7085";
 const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
+const KYUBI_FACE_ICON = "images/monster-icons/face/kyubi.png?v=6648b970a72f";
+const ORIHIME_FACE_ICON = "images/monster-icons/face/orihime.png?v=887beb2d000f";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,

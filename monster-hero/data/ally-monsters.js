@@ -270,7 +270,7 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C037_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'monol', sub:'worm' }) }),
   // キュービ・オリヒメ(2026-10-27 社長「新モンスター2体実装」)。能力値・技・特性・タイプ・顔アイコンは社長が決めてから入れる
   Kyubi: Object.freeze({ id:'Kyubi', name:"キュービ", emoji:"🦊", imgUrl:KYUBI_IMG, iconUrl:KYUBI_IMG,
-    draft:true, draftLineage:Object.freeze({ main:'kyubi', sub:'kyubi' }) }),
+    faceIconUrl:KYUBI_FACE_ICON, distAptitude:['B','D','B','B'], draft:true, draftLineage:Object.freeze({ main:'kyubi', sub:'kyubi' }) }),
   Orihime: Object.freeze({ id:'Orihime', name:"オリヒメ", emoji:"🎐", imgUrl:ORIHIME_IMG, iconUrl:ORIHIME_IMG,
-    draft:true, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
+    faceIconUrl:ORIHIME_FACE_ICON, distAptitude:['B','A','D','A'], draft:true, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
 });

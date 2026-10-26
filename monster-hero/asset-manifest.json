@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "08d958a8dee6",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":122295733,"count":668},"card":{"bytes":31268880,"count":906},"all":{"bytes":260952059,"count":1667}},
+  "id": "ef0ff98806b5",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":122466090,"count":670},"card":{"bytes":31268880,"count":906},"all":{"bytes":261122416,"count":1669}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1341,6 +1341,7 @@
     "images/monster-icons/face/joker.png": {"v":"44f6f8edaccc","size":63289,"pack":"battle"},
     "images/monster-icons/face/kenshi-mocchi.png": {"v":"fed887e4c278","size":31270,"pack":"battle"},
     "images/monster-icons/face/kuromy.png": {"v":"29d41f754746","size":86318,"pack":"battle"},
+    "images/monster-icons/face/kyubi.png": {"v":"6648b970a72f","size":79505,"pack":"battle"},
     "images/monster-icons/face/mel-whip.png": {"v":"5016f704506c","size":36344,"pack":"battle"},
     "images/monster-icons/face/melody.png": {"v":"95bbe06158e4","size":71109,"pack":"battle"},
     "images/monster-icons/face/metalner.png": {"v":"ac30798baf9a","size":60001,"pack":"battle"},
@@ -1348,6 +1349,7 @@
     "images/monster-icons/face/mitarashi.png": {"v":"36f1cf509e8e","size":71737,"pack":"battle"},
     "images/monster-icons/face/mocchi.png": {"v":"96be4cbc1468","size":24345,"pack":"battle"},
     "images/monster-icons/face/naga.png": {"v":"3e34d760941f","size":74442,"pack":"battle"},
+    "images/monster-icons/face/orihime.png": {"v":"887beb2d000f","size":90852,"pack":"battle"},
     "images/monster-icons/face/phoenix.png": {"v":"7e70faa2de7a","size":58305,"pack":"battle"},
     "images/monster-icons/face/pixie.png": {"v":"d33b92e39fa0","size":20945,"pack":"battle"},
     "images/monster-icons/face/snegurochka.png": {"v":"b30d920ec35a","size":22403,"pack":"battle"},
