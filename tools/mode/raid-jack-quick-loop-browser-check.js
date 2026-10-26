@@ -82,6 +82,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
+    // 助手のおしゃべりの中継(Edge Function)も本物へ届けない。差し替えが無いと本物の中継が AI を呼ぶ(2026-10-27)
+    await page.route('**/functions/v1/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
     await page.route('**/rest/v1/**', async (route) => {
       const req = route.request();
       const url = req.url();

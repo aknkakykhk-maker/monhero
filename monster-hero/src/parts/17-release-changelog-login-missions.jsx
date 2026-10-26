@@ -119,8 +119,10 @@ const releasedForPlayers = (item) => !item
 const CHANGELOG_TYPES = ['update', 'issue'];
 // 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
 // ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。
+// ★idTitle は、題を書き直した項目の元の題(2026-10-27 社長「題の頭に遊びの名前を付けない」で頭を外した239件)。
+//   id は元の題から作り続ける。題から作り直すと、読んだ人の既読(mh_changelog_seen_ids_*)が外れて全部 NEW に戻る。
 const changelogEntryId = entry => {
-  const source = entry.id || [entry.type, entry.title, ...(entry.items || [])].join('\u001f');
+  const source = entry.id || [entry.type, entry.idTitle || entry.title, ...(entry.items || [])].join('\u001f');
   let hash = 2166136261;
   for (let i=0;i<source.length;i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }
   return `${entry.type || 'notice'}-${(hash >>> 0).toString(36)}`;
