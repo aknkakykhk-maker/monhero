@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3dcad988431f544
+// source-sha256: 052bbeb5cbea19c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9394,6 +9394,48 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Kyubi: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
+  Orihime: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -9844,7 +9886,9 @@ const EXACT_DYE_MASKS = Object.freeze({
   Dreamy: DREAMY_DYE_MASK,
   Undine: UNDINE_DYE_MASK,
   Tiger: TIGER_DYE_MASK,
-  Suezo: SUEZO_DYE_MASK
+  Suezo: SUEZO_DYE_MASK,
+  Kyubi: KYUBI_DYE_MASK,
+  Orihime: ORIHIME_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -10231,6 +10275,26 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.71
   }, {
     gloss: 0.55
+  }],
+  Kyubi: [{
+    gloss: 0.39
+  }, {
+    gloss: 0.53
+  }, {}, {
+    gloss: 0.79
+  }, {
+    gloss: 0.53
+  }],
+  Orihime: [{
+    gloss: 0.51
+  }, {
+    gloss: 0.25
+  }, {
+    gloss: 0.44
+  }, {
+    gloss: 0.55
+  }, {
+    gloss: 0.49
   }]
 };
 const _NO_REGION_DYE = {
@@ -10448,7 +10512,7 @@ const MASU_COLOR_FALLBACK_REGION = {
   }
 };
 const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
 const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(baseId) ? {
   ...style,
   objectFit: 'contain'
@@ -25642,6 +25706,16 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     parts: []
   },
   Soborobent: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
+  },
+  Kyubi: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Orihime: {
     body: 'drift',
     bodyMask: null,
     parts: []

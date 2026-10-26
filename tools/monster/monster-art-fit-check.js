@@ -27,7 +27,7 @@ const has = (needle) => source.includes(needle);
 
 // --- 対象の定義と挙動 ---
 check('縦長の立ち絵を持つ対象がcontainに定義されている',
-  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy']);"));
+  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);"));
 // 味方の立ち絵が正方形でないのに contain に入っていない子がいないか(イルミネ・ドリーミィの足し忘れ。2026-10-26)
 {
   // PNG の幅と高さは先頭の IHDR(16〜24バイト目)にある
