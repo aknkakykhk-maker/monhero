@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c821e16d3f0cbf6f
+// generated-sha256: 2f73eec0bbe7497e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2889,6 +2889,62 @@ const dexMainLineages = () => {
     if (!lineage || seen.has(lineage.id)) return false;
     seen.add(lineage.id); return true;
   });
+};
+// 図鑑の画面に並べる全員(2026-10-26 社長「モンスターのデータめちゃくちゃ入れたから全部図鑑に入れて。
+// ただ、入手済みと未入手と未実装と分ける。未入手と未実装は、グラフィックと図鑑説明とメイン・サブしか見えない」)。
+//   入手済み(owned) … 解放済み(mh_unlocked_monsters)。今までどおり全部見える
+//   未入手(locked)  … 遊べるがまだ解放していない子
+//   未実装(draft)   … 案の段階の子(UPCOMING_MONSTER_DRAFTS)。まだ遊べない
+// 案の子は dexMonsterList へは混ぜない。あちらは種族チャレンジ・絆ランキング・ヘルプの血統一覧なども見ていて、
+// 遊べない子がそこへ出てしまうため。図鑑の一覧と詳細だけがこちらを使う。保存は読むだけ
+const DEX_ENTRY_STATUSES = Object.freeze([
+  Object.freeze({ id:'owned', label:'入手済み' }),
+  Object.freeze({ id:'locked', label:'未入手' }),
+  Object.freeze({ id:'draft', label:'未実装' }),
+]);
+const dexDraftMonsterList = () => {
+  if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+};
+// 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
+const dexEntryLineageOf = (mon) => {
+  if (!mon) return monsterLineageOf(null);
+  const draft = mon.draft && mon.draftLineage && !lineageEntryMap()[mon.id] ? mon.draftLineage : null;
+  if (!draft) return monsterLineageOf(mon.id);
+  return { main: lineageById(draft.main), sub: lineageById(draft.sub != null ? draft.sub : draft.main), known: true };
+};
+const dexEntryCategoryOf = (mon) => {
+  const { main, sub } = dexEntryLineageOf(mon);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const dexEntryStatusOf = (mon, unlockedIds) => {
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  if (!mon || !playable[mon.id]) return 'draft';
+  return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+// 図鑑の説明。案の子でまだ文が無い子は、文を作らず「？？？」で空けておく(2026-10-26 社長が文を決めるまで)
+const dexEntryDescription = (mon) => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
+};
+// 並びは 入手済み → 未入手 → 未実装。それぞれの中は今までの図鑑の並び(種族順)のまま
+const dexScreenEntries = (unlockedIds) => {
+  const base = dexMonsterList();
+  const all = [...base, ...dexDraftMonsterList()];
+  return DEX_ENTRY_STATUSES.flatMap(s => all.filter(mon => dexEntryStatusOf(mon, unlockedIds) === s.id));
+};
+// 図鑑の画面の絞り込みチップ。今までの主血統の並びはそのままにして、案の子にしかいない種族を後ろへ足す
+const dexScreenMainLineages = () => {
+  const list = dexMainLineages().slice();
+  const seen = new Set(list.map(l => l.id));
+  for (const mon of dexDraftMonsterList()) {
+    const main = dexEntryLineageOf(mon).main;
+    if (main && main.id !== 'unknown' && !seen.has(main.id)) { seen.add(main.id); list.push(main); }
+  }
+  return list;
 };
 
 // ==================== 総合力 ====================
@@ -15381,6 +15437,26 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Gentle: { body:'breathe', bodyMask:null, parts:[] },
   Vesuvios: { body:'breathe', bodyMask:null, parts:[] },
   MooHybrid: { body:'breathe', bodyMask:null, parts:[] },
+  Baron: { body:'breathe', bodyMask:null, parts:[] },
+  Aquarius: { body:'sway', bodyMask:null, parts:[] },
+  Plumler: { body:'hop', bodyMask:null, parts:[] },
+  StrikeReaper: { body:'sway', bodyMask:null, parts:[] },
+  DarkHam: { body:'hop', bodyMask:null, parts:[] },
+  HellFat: { body:'jelly', bodyMask:null, parts:[] },
+  UrokoGel: { body:'jelly', bodyMask:null, parts:[] },
+  WakakusaKenzai: { body:'sway', bodyMask:null, parts:[] },
+  Garant: { body:'heavy', bodyMask:null, parts:[] },
+  MimiNyaa: { body:'breathe', bodyMask:null, parts:[] },
+  BenihimeSou: { body:'sway', bodyMask:null, parts:[] },
+  MurasakiChu: { body:'jelly', bodyMask:null, parts:[] },
+  ArmorDragon: { body:'heavy', bodyMask:null, parts:[] },
+  Kermadix: { body:'heavy', bodyMask:null, parts:[] },
+  Gigalon: { body:'breathe', bodyMask:null, parts:[] },
+  BlueMountainHybrid: { body:'heavy', bodyMask:null, parts:[] },
+  MagnaBeetle: { body:'heavy', bodyMask:null, parts:[] },
+  GinGiLiger: { body:'breathe', bodyMask:null, parts:[] },
+  Ankylox: { body:'heavy', bodyMask:null, parts:[] },
+  Soborobent: { body:'drift', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -20679,9 +20755,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
             <div className="min-w-0 [container-type:inline-size]">
               <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
-              <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[22px] leading-tight':'text-[12px] leading-snug'}`}
-                style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
-                {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
+              {/* 「まだ遊んでいません」は、細い札(横の小さい画面)では「…」にせず「まだ／遊んでいません」の2行にし、長いほうの7字が入る大きさにする(2026-10-26) */}
+              <b data-rhythm-demo-best className={`block font-black tabular-nums text-amber-100 ${best&&best.played?'truncate text-[22px] leading-tight':'break-keep text-[12px] leading-tight'}`}
+                style={{fontSize:best&&best.played?`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`:'min(12px, calc(100cqw / 7.4))'}}>
+                {best&&best.played?best.bestScore.toLocaleString():<>まだ<wbr/>遊んでいません</>}
               </b>
               <span data-rhythm-demo-combo className="block whitespace-nowrap text-[9px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
@@ -20725,8 +20802,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {/* ボタンが細い端末でも「1,000,000」が切れないよう、幅に合わせて8px〜6pxで収める(2026-09-26) */}
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
+                // 鍵の文字は、下限の6pxでも1行に入らない細い端末(320幅の HELL「MASTERで解放」)では「…」にせず「MASTERで／解放」の2行に折る(2026-10-26)
+                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
+                  style={{fontSize:rhythmTitleFitSize(lockedFitText,8,6,2)}}>{need}<wbr/>で解放</span>;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-                  style={{fontSize:rhythmTitleFitSize(open?text:lockedFitText,8,6,2)}}>{text}</span>;})()}
+                  style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
@@ -34426,11 +34506,25 @@ function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
   return <span data-monster-type-badge={monId} className={`inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`}>{chip(t.main, false)}{t.sub && chip(t.sub, true)}</span>;
 }
 
+// 図鑑の札(入手済み・未入手・未実装)。一覧の区切りの見出しと、詳細の名前の下で同じ色を使う
+const DEX_STATUS_STYLE = {
+  owned: 'border-amber-300/60 bg-amber-500/15 text-amber-100',
+  locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
+  draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100',
+};
+const DexStatusTag = ({ status, size = 'sm' }) => {
+  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
+};
+
 function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineage, onOpenDetail, onBackToManagement }) {
       const monsters=dexMonsterList();
       const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
-      const filters=dexMainLineages();
-      const shown=dexLineageFilter==='all'?monsters:monsters.filter(mon=>monsterLineageOf(mon.id).main.id===dexLineageFilter);
+      // 入手済み → 未入手 → 未実装 の順に、区切りの見出しを付けて並べる(2026-10-26 社長)
+      const entries=dexScreenEntries(unlockedMonsterIds);
+      const filters=dexScreenMainLineages();
+      const shown=dexLineageFilter==='all'?entries:entries.filter(mon=>dexEntryLineageOf(mon).main.id===dexLineageFilter);
+      const sections=DEX_ENTRY_STATUSES.map(s=>({...s,list:shown.filter(mon=>dexEntryStatusOf(mon,unlockedMonsterIds)===s.id)})).filter(s=>s.list.length>0);
       const chipClass=(on)=>`shrink-0 min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-white/10 text-amber-200/80'}`;
       return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
@@ -34447,39 +34541,53 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
           ))}
         </div>
         <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}>
-          <div className="grid grid-cols-3 gap-2.5 pb-4">
-            {shown.map(mon=>{
-              const unlocked=unlockedMonsterIds.includes(mon.id);
-              const iconSrc=mon.iconUrl||mon.imgUrl||'';
-              const category=monsterCategoryOf(mon.id);
-              return (
-                <button key={mon.id} type="button" data-dex-entry aria-label={unlocked?`${mon.name}の図鑑を見る`:'まだ出会っていないモンスター'}
-                  onClick={()=>onOpenDetail(mon.id)}
-                  className="w-full min-h-[124px] rounded-2xl border border-white/10 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none">
-                  {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
-                      少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
-                  <DexMonsterIcon src={iconSrc} hidden={!unlocked}/>
-                  <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{unlocked?mon.name:'？？？'}</div>
-                  <div className="text-[10px] font-black text-amber-400/80 leading-tight">{unlocked?monsterCategoryName(category):'未発見'}</div>
-                  {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
-                </button>
-              );
-            })}
-          </div>
+          {sections.map(section=>(
+            <section key={section.id} data-dex-section={section.id} className="pb-3">
+              {/* 区切りの見出し。数は「この区切りの数 / いま並んでいる全員」 */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <DexStatusTag status={section.id} size="md"/>
+                <span data-dex-section-count className="text-[11px] font-mono font-black text-amber-100 tabular-nums">{section.list.length}<span className="text-slate-400 text-[10px]"> / {shown.length}</span></span>
+                <span className="flex-1 h-px bg-amber-500/25" aria-hidden="true"/>
+              </div>
+              <div className="grid grid-cols-3 gap-2.5">
+                {section.list.map(mon=>{
+                  const unlocked=section.id==='owned';
+                  const iconSrc=mon.iconUrl||mon.imgUrl||'';
+                  const category=unlocked?monsterCategoryOf(mon.id):null;
+                  return (
+                    <button key={mon.id} type="button" data-dex-entry data-dex-entry-status={section.id} aria-label={`${mon.name}の図鑑を見る`}
+                      onClick={()=>onOpenDetail(mon.id)}
+                      className={`w-full min-h-[124px] rounded-2xl border ${section.id==='draft'?'border-dashed border-fuchsia-300/30':'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`}>
+                      {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
+                          少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
+                      <DexMonsterIcon src={iconSrc}/>
+                      <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{mon.name}</div>
+                      {unlocked
+                        ? <div className="text-[10px] font-black text-amber-400/80 leading-tight">{monsterCategoryName(category)}</div>
+                        : <DexStatusTag status={section.id}/>}
+                      {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
           {shown.length===0&&<ScreenEmpty emoji="📖" lines={['この血統のモンスターはまだいません。']}/>}
         </div>
       </div>);}
 
 function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masuMons, dexColorKey, onSelectColor, tryDyeDraft, onOpenTryDye, onTryDyeChange, onTryDyeCustom, onTryDyeReset, onCloseTryDye, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
+      // 前後へ移る順も一覧と同じ(入手済み → 未入手 → 未実装)。未入手と未実装は、立ち絵・説明・血統だけを見せる
       const [idleMotion,toggleIdleMotion]=useDexIdleMotion();
-      const monsters=dexMonsterList();
+      const monsters=dexScreenEntries(unlockedMonsterIds);
       const [colorSheetOpen,setColorSheetOpen]=useState(false); // 色の見本にするマスモンの一覧(開いているあいだだけ)
       const index=monsters.findIndex(m=>m.id===dexMonsterId);
       const mon=index>=0?monsters[index]:null;
       if(!mon){ onMissing(); return null; }
-      const unlocked=unlockedMonsterIds.includes(mon.id);
-      const {main,sub}=monsterLineageOf(mon.id);
-      const category=monsterCategoryOf(mon.id);
+      const status=dexEntryStatusOf(mon,unlockedMonsterIds);
+      const unlocked=status==='owned';
+      const {main,sub}=dexEntryLineageOf(mon);
+      const category=dexEntryCategoryOf(mon);
       const categoryClass=category==='rare'?'bg-amber-600 text-white':category==='pure'?'bg-emerald-700 text-white':'bg-indigo-700 text-white';
       // 攻撃演出そのものは MONSTER_ATTACK_PREVIEW で再生する。ここでは立ち絵を静止で見せ、
       // 途中で移動・離脱したときに向こうの再生が残らないよう止める口だけ持つ
@@ -34545,7 +34653,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
           <div data-dex-side="left" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
-            {unlocked&&monsterIdleRigOf(mon.id)
+            {mon.imgUrl&&monsterIdleRigOf(mon.id)
               ? <button type="button" data-dex-idle-toggle aria-pressed={idleMotion} onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}
                   className={`w-full max-w-[124px] min-h-[44px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black shadow-lg active:scale-95 ${idleMotion?'border-amber-300/60 bg-slate-950/85 text-amber-100':'border-white/20 bg-slate-800 text-slate-300'}`}>
                   <DexSideLabel text={idleMotion?'⏸ 動きを止める':'▶ 動かす'}/>
@@ -34564,7 +34672,11 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div data-dex-art className="relative shrink-0 aspect-square flex items-center justify-center" style={{height:'clamp(152px, 22dvh, 190px)'}}>
             {unlocked
               ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>
-              : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
+              // 未入手・未実装も同じく待機アニメで動かす(2026-10-26 社長)。色は元の色だけ。
+              // 立ち絵がまだ無い子(アンキロックスなど)は影で出す
+              : mon.imgUrl
+                ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>
+                : <DexMonsterArt mon={mon} alt="立ち絵のないモンスター" hidden/>}
           </div>
           {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外(右の列)に置く。
               演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
@@ -34592,23 +34704,24 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
         {/* 下半分: 情報カード */}
         <div className="flex-1 min-h-0 pt-3">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
-            <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
+            <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{mon.name}</div>
             {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
+            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md"/></div>}
+            {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
+                左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
+            <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
+              <span className="text-[10px] font-black text-amber-300 shrink-0">血統</span>
+              {lineageChip(main)}
+              <span className="text-[12px] font-black text-amber-300 shrink-0 text-center">×</span>
+              {lineageChip(sub)}
+              <span data-dex-category className={`shrink-0 min-w-[42px] text-center text-[10px] font-black px-1.5 py-1 rounded-full ${categoryClass}`}>{monsterCategoryName(category)}</span>
+            </div>
+            {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
+                3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
+            <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
+              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(dexEntryDescription(mon))}</p>
+            </div>
             {unlocked?(<>
-              {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
-                  左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
-              <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
-                <span className="text-[10px] font-black text-amber-300 shrink-0">血統</span>
-                {lineageChip(main)}
-                <span className="text-[12px] font-black text-amber-300 shrink-0 text-center">×</span>
-                {lineageChip(sub)}
-                <span data-dex-category className={`shrink-0 min-w-[42px] text-center text-[10px] font-black px-1.5 py-1 rounded-full ${categoryClass}`}>{monsterCategoryName(category)}</span>
-              </div>
-              {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
-                  3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
-              <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
-                <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(monsterDexDescription(mon.id))}</p>
-              </div>
               <ScreenTabs className="mt-2" value={tab} onChange={onSelectTab}
                 items={tabs.map(([id,label])=>({id,label,color:'#d97706'}))}/>
               <div className="flex-1 min-h-0 overflow-y-auto mh-scroll pr-0.5">
@@ -34662,7 +34775,9 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
               </div>
             </>):(
               <div className="flex-1 min-h-0 flex items-center justify-center">
-                <ScreenEmpty emoji="❓" lines={['まだ出会っていないモンスターです','マーケットで円盤石を手に入れて解放すると、血統・能力・技が図鑑に記録されます。']}/>
+                <ScreenEmpty emoji={status==='draft'?'🛠️':'🔒'} lines={status==='draft'
+                  ?['まだ仲間にできないモンスターです','能力・技・特性は、まだ記録されていません。']
+                  :['まだ入手していないモンスターです','マーケットで円盤石を手に入れて解放すると、能力・技・特性が図鑑に記録されます。']}/>
               </div>
             )}
           </div>
@@ -35000,7 +35115,8 @@ function RhythmSongSelectScreen({
         {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
           {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
             <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
-            <span className="min-w-0 truncate">{beatPointCampaign.name}{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span>
+            {/* 細い端末(320幅)で「周回 5倍」のほうが「…」に消えていた。縮めるのはイベント名だけにし、倍率は必ず見せる(2026-10-26) */}
+            <span className="flex min-w-0"><span className="min-w-0 truncate">{beatPointCampaign.name}</span><span className="shrink-0">{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span></span>
             <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
           {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
@@ -35684,7 +35800,8 @@ function RhythmRankingScreen({
             return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1">{ids.map(id=>(
               <button key={id} type="button" data-rhythm-ranking-diff={id} aria-pressed={cur===id} onClick={()=>loadRhythmRanking(song,id)}
                 className={`min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
-                {id==='ALL'?'全難易度':(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
+                {/* 細い端末で「全難／易度」と折れていた。折れるなら「全／難易度」にする(2026-10-26) */}
+                {id==='ALL'?<span className="break-keep">全<wbr/>難易度</span>:(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
           {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
@@ -46266,7 +46383,7 @@ function RhythmMultiRecordSheet({ songName, onClose }) {
             ))}
           </div>
           <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto">
-            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400">まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります</li>}
+            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります')}</li>}
             {rec.recent.map((x) => (
               <li key={x.round} data-rhythm-multi-record-row className="rounded-xl bg-slate-800/70 px-2 py-1.5 text-[11px] font-bold leading-snug">
                 <div className="flex items-center gap-2">
@@ -47297,9 +47414,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
+              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26) */}
               {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
                 <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
-                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+                  className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
               ))}
             </div>
           </div>
@@ -55097,17 +55215,75 @@ const cardArtBox = (src) => new Promise((resolve) => {
   img.src = src;
 });
 // 測ってある立ち絵の輪郭(透明な余白を除いた範囲)。canvas で調べられない端末でも枠に合わせるため(2026-10-26 社長「みゅあだけ小さい」)。
-//   キーは `${imagePrefix}_${表情}`。標準の服の絵だけ(着替えの絵には当てない)。nw・nh が実際の絵の大きさと合うときだけ使う
-//   myua_wink … 1536×1024 の絵(images/assistant)を、cardArtBox と同じ決まり(列・行に透明でない点が3つ以上)で測った
+//   キーは `${imagePrefix}_${表情}`、値は [絵の幅, 絵の高さ, x, y, 幅, 高さ]。標準の服の絵だけ(着替えの絵には当てない)。
+//   絵の大きさ(はじめの2つ)が実際の絵と合うときだけ使う。表は tools/card/card-art-box-build.js が測って書く(cardArtBox と同じ決まり)
 const CARD_ART_KNOWN_BOX = Object.freeze({
-  myua_wink: Object.freeze({ nw: 1536, nh: 1024, x: 379, y: 28, w: 760, h: 996 }),
+  // <card-art-known-box> ここから下は tools/card/card-art-box-build.js が書く(手で直さない)
+  atsu_angry: [768, 1024, 0, 2, 768, 1022],
+  atsu_crying: [768, 1024, 0, 4, 768, 1020],
+  atsu_excited: [768, 1024, 0, 4, 768, 1020],
+  atsu_happy: [768, 1024, 0, 0, 768, 1024],
+  atsu_normal: [768, 1024, 0, 5, 768, 1019],
+  atsu_surprise: [768, 1024, 0, 0, 768, 1024],
+  atsu_troubled: [768, 1024, 0, 3, 768, 1021],
+  atsu_wink: [768, 1024, 0, 14, 768, 1010],
+  dra_angry: [384, 384, 44, 39, 299, 278],
+  dra_crying: [384, 384, 47, 45, 291, 269],
+  dra_excited: [384, 384, 46, 46, 292, 269],
+  dra_happy: [384, 384, 28, 40, 312, 276],
+  dra_normal: [384, 384, 45, 42, 293, 273],
+  dra_surprise: [384, 384, 25, 39, 313, 278],
+  dra_troubled: [384, 384, 45, 43, 294, 272],
+  dra_wink: [384, 384, 49, 43, 286, 270],
+  kiki_angry: [1536, 1024, 481, 10, 573, 1014],
+  kiki_crying: [1536, 1024, 480, 15, 572, 1009],
+  kiki_excited: [1536, 1024, 495, 12, 556, 1012],
+  kiki_happy: [1536, 1024, 486, 14, 573, 1010],
+  kiki_normal: [1536, 1024, 476, 17, 603, 1007],
+  kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
+  kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
+  kiki_wink: [1536, 1024, 490, 7, 569, 1017],
+  kyuko_angry: [384, 512, 0, 0, 384, 508],
+  kyuko_crying: [384, 512, 4, 0, 380, 507],
+  kyuko_excited: [384, 512, 0, 0, 384, 508],
+  kyuko_happy: [384, 512, 3, 7, 381, 505],
+  kyuko_normal: [384, 512, 0, 6, 377, 506],
+  kyuko_surprise: [384, 512, 4, 6, 375, 506],
+  kyuko_troubled: [384, 512, 0, 2, 384, 506],
+  kyuko_wink: [384, 512, 0, 6, 375, 502],
+  momosuke_angry: [512, 512, 12, 3, 497, 509],
+  momosuke_crying: [512, 512, 25, 2, 468, 510],
+  momosuke_excited: [512, 512, 10, 6, 502, 506],
+  momosuke_happy: [512, 512, 28, 14, 475, 498],
+  momosuke_normal: [512, 512, 25, 9, 478, 503],
+  momosuke_surprise: [512, 512, 18, 7, 486, 505],
+  momosuke_troubled: [512, 512, 32, 9, 459, 503],
+  momosuke_wink: [512, 512, 0, 7, 512, 505],
+  myua_angry: [1536, 1024, 306, 27, 907, 997],
+  myua_crying: [1536, 1024, 332, 19, 839, 1005],
+  myua_excited: [1536, 1024, 245, 15, 948, 1009],
+  myua_happy: [1536, 1024, 360, 26, 783, 998],
+  myua_normal: [1536, 1024, 396, 26, 715, 998],
+  myua_surprise: [1536, 1024, 325, 27, 852, 997],
+  myua_troubled: [1536, 1024, 323, 15, 866, 1009],
+  myua_wink: [1536, 1024, 379, 28, 760, 996],
+  // </card-art-known-box>
 });
+const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
 // その助手の標準の服の絵のときだけ、測ってある輪郭を返す(着替え・まだ大きい絵の無い助手は null)
 const cardArtKnownBox = (who, expression, src) => {
   if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
   const ex = assistantExpressionName(who, expression);
-  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
-  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
+  return src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? cardArtBoxOf(CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`]) : null;
+};
+// 絵の場所から、どの助手のどの表情の標準の絵かを見つけて、測ってある輪郭を返す(呼ぶ側で指定しなくてよい)
+const cardArtKnownBoxBySrc = (src) => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS)) return null;
+  for (const who of ASSISTANTS) {
+    const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
+    if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
+  }
+  return null;
 };
 // 測ってある輪郭が、読み込んだ絵の大きさと合うか(絵が差し替わっていたら使わない)
 const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
@@ -55117,7 +55293,7 @@ const cardArtKnownBoxFor = (src, known) => new Promise((resolve) => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
-// knownBox … 測ってある輪郭(cardArtKnownBox)。あれば canvas で調べずに使う
+// knownBox … 測ってある輪郭(cardArtKnownBox)。渡さなくても、標準の服の絵なら絵の場所から引く(cardArtKnownBoxBySrc)。あれば canvas で調べずに使う
 // 枠の大きさが決まったとき・変わったとき(画面の向き・大きさ)も ResizeObserver で合わせ直す(最初に 0 だと合わせないままだった)
 const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = null }) => {
   const ref = useRef(null);
@@ -55126,9 +55302,9 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
   useEffect(() => {
     let alive = true;
     setBox(null);
-    void cardArtKnownBoxFor(src, knownBox).then((known) => (known ? { ...known, known: true } : cardArtBox(src))).then((b) => { if (alive) setBox(b || null); });
+    void cardArtKnownBoxFor(src, knownBox || cardArtKnownBoxBySrc(src)).then((known) => (known ? { ...known, known: true } : cardArtBox(src))).then((b) => { if (alive) setBox(b || null); });
     return () => { alive = false; };
-  }, [src, knownBox]);
+  }, [src]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
@@ -55565,10 +55741,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {/* 横の画面は、紹介と型の欄を左右に並べる(縦に積むと強さのボタンが下へ出た。landscape-screens-check) */}
           <div className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0">
           {a && (
-            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
+            <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center">
               {/* 背の低い画面(SE)では絵を低くして、下の「あなたのデッキ」の欄まで1画面に入れる(2026-10-24 改善部の点検 V2) */}
-              {/* 横画面では絵を外して、強さのボタンまでスクロールなしで見せる(2026-10-25 カゲあつくん「EASY〜が下で切れている」) */}
-              <CardAssistantArt src={assistantFullImage(a, 'wink')} knownBox={cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink'))} alt={a.name} className="w-[42%] landscape:hidden" style={{ height: 'min(150px, 17vh)' }}/>
+              {/* 横画面: 前は絵を外していた(2026-10-25 カゲあつくん「EASY〜が下で切れている」)が、この欄は右の欄と同じ高さに伸びるので、
+                  上が空白になっていた(2026-10-26 巡回)。強さのボタンはこの欄より上にあるので、欄の高さに収まる大きさで出す。
+                  高さは縦の画面では今までどおり 17vh(縦長では 17vh が 28vmin より大きい)。横の画面だけ 28vmin まで大きくなる */}
+              <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%]" style={{ height: 'min(150px, max(17vh, 28vmin))' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
                 <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
