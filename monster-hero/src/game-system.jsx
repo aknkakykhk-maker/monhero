@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e74a5c0b2e7f482b
+// generated-sha256: 419956a11573fe13
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50891,7 +50891,8 @@ const cardTauntsOn = (st, p) => (st.taunts || []).filter((t) => t.turn === st.tu
 const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every((t) => {
   const hits = targets.filter((x) => x.p === t.by);
   if (t.mode === 'not') return !hits.some((x) => x.m === t.m);
-  if (area) return !t.noArea || !hits.some((x) => x.m !== t.m);
+  // 全員に当たる技も、縛った子に当たらないもの(空中だけ・地上だけで外れる)は出せない(2026-10-27 総点検D。文「このモンスターにダメージを与える技しか」)
+  if (area) return hits.some((x) => x.m === t.m) && (!t.noArea || !hits.some((x) => x.m !== t.m));
   return hits.every((x) => x.m === t.m);
 });
 // 合体: 生きている味方2体(a のメイン・b のサブ)で出せる混血の組。混血の子は、もとの種族が無いので材料にならない
@@ -51352,7 +51353,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach((e) => {
-    if (e.t === 'draw') { for (let i = 0; i < e.n; i++) { if (!me.deck.length) break; me.hand.push(me.deck.pop()); } cardLog(st, `${me.name}は${e.n}枚引いた`); }
+    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); } // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
     if (e.t === 'peekHand') { cardEvent(st, { t: 'peek', p, hand: opp.hand.slice() }); cardLog(st, `${me.name}は相手の手札を見た`); }
     if (e.t === 'discardOpp') { st.pendingDiscard = { p: cardOther(p), n: Math.min(e.n, opp.hand.length) }; if (!st.pendingDiscard.n) st.pendingDiscard = null; }
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
@@ -51557,6 +51558,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.ko) return;
           const d = m.safeUntil >= st.turn ? 0 : burn.n; // ぬいぐるみの子は0
           m.life = Math.max(0, m.life - d);
+          if (d > 0) m.charge = null; // 力をためる・根を張る・静の構えは、ダメージを受けると終わる(2026-10-27 総点検D)
           cardEvent(st, { t: 'hit', p, m: mi, dmg: d, self: true });
           cardLog(st, `灼熱の地: ${m.name}に${d}ダメージ`, { kind: 'hit' });
           if (m.life <= 0) cardKo(st, p, mi);
@@ -51626,7 +51628,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
   mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.075, master: 0.12 },
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.14 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.3 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.12 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。360戦で測り直すと 35% と弱かった(90戦の検査はたまたま 39%)ので 0.3 → 0.12(2026-10-27 総点検D。360戦 44%)
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
   atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0, master: 0 },   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });

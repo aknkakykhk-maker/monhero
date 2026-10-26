@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 149fd55c9ab9b580
+// source-sha256: 19a0e6d143d3203e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:49";
+const BUILD_DATE = "2026-10-27 03:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83803,7 +83803,7 @@ const cardTauntsOn = (st, p) => (st.taunts || []).filter(t => t.turn === st.turn
 const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every(t => {
   const hits = targets.filter(x => x.p === t.by);
   if (t.mode === 'not') return !hits.some(x => x.m === t.m);
-  if (area) return !t.noArea || !hits.some(x => x.m !== t.m);
+  if (area) return hits.some(x => x.m === t.m) && (!t.noArea || !hits.some(x => x.m !== t.m));
   return hits.every(x => x.m === t.m);
 });
 const cardFuseOptions = (db, st, p) => {
@@ -84592,11 +84592,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach(e => {
     if (e.t === 'draw') {
-      for (let i = 0; i < e.n; i++) {
-        if (!me.deck.length) break;
-        me.hand.push(me.deck.pop());
-      }
-      cardLog(st, `${me.name}は${e.n}枚引いた`);
+      const k = cardDrawN(st, p, e.n);
+      cardLog(st, `${me.name}は${k}枚引いた`);
     }
     if (e.t === 'peekHand') {
       cardEvent(st, {
@@ -85077,6 +85074,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.ko) return;
           const d = m.safeUntil >= st.turn ? 0 : burn.n;
           m.life = Math.max(0, m.life - d);
+          if (d > 0) m.charge = null;
           cardEvent(st, {
             t: 'hit',
             p,
@@ -85257,7 +85255,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: 0.06,
     hard: 0.15,
     expert: 0,
-    master: 0.3
+    master: 0.12
   },
   dra: {
     easy: -0.075,
