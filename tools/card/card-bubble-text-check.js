@@ -145,6 +145,8 @@ for (const f of fs.readdirSync(PARTS).filter((x) => x.endsWith('.jsx'))) {
   // 言葉の切れ目で折る(結果の吹き出しと同じ cardJaWrap)。素のままだと 320幅で言葉の途中で折れる(2026-10-26 フキダシくん)
   ok(/data-card-deck-ask-text[^\n]*cardJaWrap\(ask\.busy \? [^\n]*: ask\.text\)/.test(p87), 'デッキ相談の吹き出しが cardJaWrap を通していない');
   ok(/line \? cardJaWrap\(line\.text\) : ''/.test(p84), '相手えらびの吹き出しが cardJaWrap を通していない');
+  // 相手えらびの「あなたのデッキ」は「対戦する」の帯の中、ボタンの手前(一覧の終わりだと 375×667 で帯の下に隠れた。2026-10-26 ソランドくん)
+  ok(/SCREEN_FOOTER_CLASS\}>\s*\{\/\*[\s\S]{0,400}?\*\/\}\s*<div data-card-foe-mydeck[\s\S]{0,1500}?data-card-start/.test(p84), '相手えらびの「あなたのデッキ」が「対戦する」のすぐ上(帯の中)に無い');
 }
 
 if (fails) { console.log(`\n${fails} 件 NG`); process.exit(1); }
