@@ -48,12 +48,15 @@ const SCAN = () => {
     let p = n.parentElement; while (p && getComputedStyle(p).display.startsWith('inline')) p = p.parentElement;
     if (p) blocks.add(p);
   }
+  const blockOf = (n) => { let p = n.parentElement; while (p && getComputedStyle(p).display.startsWith('inline')) p = p.parentElement; return p; };
   for (const b of blocks) {
     const st = getComputedStyle(b); if (st.visibility === 'hidden' || Number(st.opacity) === 0) continue;
     const r0 = b.getBoundingClientRect(); if (!r0.width || r0.bottom < 0 || r0.top > innerHeight) continue;
     // 字を1つずつ、その字の上端と「手前が <wbr> か」で並べる
     const chars = []; const tw = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
     for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      // 中の別の箱(閉じた「▸ 詳しく」の中の文など)の字は、その箱のほうで数える
+      if (blockOf(n) !== b) continue;
       let prev = n.previousSibling; if (!prev && n.parentElement !== b) prev = n.parentElement.previousSibling;
       const afterWbr = !!prev && prev.nodeName === 'WBR';
       for (let i = 0; i < n.length; i++) { range.setStart(n, i); range.setEnd(n, i + 1); const r = range.getClientRects()[0]; chars.push([n.data[i], r ? r.top : null, i === 0 && afterWbr]); }
