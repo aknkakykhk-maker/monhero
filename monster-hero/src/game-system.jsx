@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 72aea188e9ed6c18
+// generated-sha256: 77273dd48a8d7a49
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9772,12 +9772,12 @@ const missionMonthlyDefinitions = () => [
   {id:'monthly_wins',name:'月間勝利',condition:'バトルで200回勝つ',key:'wins',target:200,rewards:[{type:'trainingTicketLarge',amount:5}]},
   {id:'monthly_daily_completes',name:'デイリーマスター',condition:'デイリーコンプリートを20回達成する',key:'dailyCompletes',target:20,rewards:[{type:'diamond',amount:5000}]},
   {id:'monthly_weekly_completes',name:'ウィークリーマスター',condition:'ウィークリーコンプリートを3回達成する',key:'weeklyCompletes',target:3,rewards:[{type:'rainbowPsyche',amount:100}]},
-  {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回プレイする',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
+  {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回遊ぶ',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
   {id:'monthly_challenge_runs',name:'チャレンジ月間',condition:`チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,key:'challengeRuns',target:10,rewards:[{type:'rainbowPsyche',amount:50}]},
   {id:'monthly_pro_clears',name:'プロ月間',condition:`プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:10,rewards:[missionItemReward('hero_proof_shard',10)]},
   {id:'monthly_enhances',name:'育成月間',condition:'モンスターを30回強化する',key:'enhances',target:30,rewards:[{type:'uniqueSkillResetTicket',amount:2}]},
   {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回買い物する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
-  {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'各種モードを合計30回プレイする',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
+  {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'どのモードでも合わせて30回遊ぶ',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
   {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1),{type:'gameItem',itemId:'session_ticket',amount:10}],complete:true},
 ];
 // 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。
