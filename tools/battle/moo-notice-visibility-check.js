@@ -49,8 +49,8 @@ const check = (name, ok, detail = '') => {
 // ★2026-09-24 覚醒ムーにも技ごとの動き(data-enemy-motion / data-em-* など)を足した。data-* が前に何個あっても読めるようにする
 const art = src.match(/<div (?:data-[a-zA-Z-]+(?:=\{[^{}]*\})? )*className="fixed left-1\/2 pointer-events-none flex items-center justify-center" style=\{\{(?:\.\.\.[A-Za-z]+,)*top:'([^']+)',transform:'translate\(-50%,-50%\)',zIndex:focusedCard\?5:(\d+),width:'([^']+)',height:'([^']+)'\}\}>/);
 check('立ち絵の置き方を読み取れる', !!art, art ? `top ${art[1]} / z ${art[2]} / ${art[3]}` : '見つからない');
-// ★2026-10-27 横向きの並べ方(71-screen-battle.jsx の BATTLE_LANDSCAPE_CSS)で data-battle-float-right を足した。data-* が間に入っても読めるようにする
-const notice = src.match(/data-enemy-notice-moo (?:data-[a-zA-Z-]+(?:="[^"]*")? )*className="fixed left-1\/2 pointer-events-none"\s*\n\s*style=\{\{top:'([^']+)',transform:'([^']+)',zIndex:focusedCard\?5:(\d+)\}\}/);
+// ★2026-10-27 横向きで背の低い画面の寄せ(data-battle-float-right)が足された。目印が後ろに何個あっても読めるようにする
+const notice = src.match(/data-enemy-notice-moo(?: data-[a-zA-Z-]+(?:="[^"]*")?)* className="fixed left-1\/2 pointer-events-none"\s*\n\s*style=\{\{top:'([^']+)',transform:'([^']+)',zIndex:focusedCard\?5:(\d+)\}\}/);
 check('札の置き方を読み取れる', !!notice, notice ? `top ${notice[1]} / z ${notice[3]}` : '見つからない');
 
 // ①札は丸枠より前に書く。丸枠の中に入れると、下でどれだけ z-index を上げても効かない

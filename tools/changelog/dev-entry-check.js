@@ -127,8 +127,9 @@ for (const title of [
 check('更新情報タブが空になっていない', changelogEntriesOfTab('update').length > 0, `${changelogEntriesOfTab('update').length}件`);
 check('不具合情報タブが空になっていない', changelogEntriesOfTab('issue').length > 0, `${changelogEntriesOfTab('issue').length}件`);
 // 公開後に直したぶんはプレイヤーが体験しているので、作業メモにしない
+// 題の頭の「モンヒロビート: 」は外した(2026-10-27 社長「題の頭に遊びの名前を付けない」)
 check('プレオープン後に直したぶんは出ている',
-  shownTitles.has('モンヒロビート: レーンの下に数字が残っていたのを直しました'));
+  shownTitles.has('レーンの下に数字が残っていたのを直しました'));
 
 // ---- ⑤ 書き方の説明が残っている ----
 check('changelog.js に dev:true の使い分けが書いてある',
