@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 181c094489002673
+// source-sha256: ecf4c710e61ffb52
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89624,16 +89624,30 @@ const CARD_CPU = 1;
 const CARD_DRAG_THRESHOLD = 10;
 const CARD_ME = 0;
 const cardDeciderOf = st => st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st);
+if (typeof document !== 'undefined' && document.head && !document.getElementById('mh-card-press-css')) {
+  const el = document.createElement('style');
+  el.id = 'mh-card-press-css';
+  el.textContent = '[data-card-press]{touch-action:manipulation}';
+  document.head.appendChild(el);
+}
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return (no, onTap) => ({
+  const last = useRef(null);
+  const pending = useRef(null);
+  useEffect(() => () => {
+    clearTimeout(timer.current);
+    clearTimeout(pending.current);
+  }, []);
+  return (no, onTap, opt = {}) => ({
+    'data-card-press': true,
     onPointerDown: () => {
       fired.current = false;
       clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         fired.current = true;
+        last.current = null;
+        clearTimeout(pending.current);
         onLong(no);
       }, ms);
     },
@@ -89646,7 +89660,30 @@ const useCardLongPress = (onLong, ms = 450) => {
         fired.current = false;
         return;
       }
-      if (onTap) onTap(e);
+      const now = Date.now();
+      if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
+        last.current = null;
+        if (pending.current) {
+          clearTimeout(pending.current);
+          pending.current = null;
+        } else if (opt.undo) opt.undo();
+        onLong(no);
+        return;
+      }
+      last.current = {
+        no,
+        at: now
+      };
+      if (!onTap) return;
+      if (opt.hold && opt.double !== false) {
+        clearTimeout(pending.current);
+        pending.current = setTimeout(() => {
+          pending.current = null;
+          onTap();
+        }, CARD_DOUBLE_TAP_MS);
+        return;
+      }
+      onTap(e);
     }
   });
 };
@@ -90223,7 +90260,9 @@ const CardMonSlot = ({
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return React.createElement("div", _extends({
     "data-card-mon": `${p}-${m}`
-  }, press ? press(mon.no, onTap) : {
+  }, press ? press(mon.no, onTap, {
+    hold: mark === 'target' || mark === 'user'
+  }) : {
     onClick: onTap
   }, {
     className: `relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`,
@@ -91112,6 +91151,54 @@ const CardBattleBoard = ({
     const mon = el.closest('[data-card-mon]');
     return mon ? mon.getAttribute('data-card-mon') : null;
   };
+  const handTap = useRef({
+    last: null,
+    pending: null
+  });
+  useEffect(() => () => clearTimeout(handTap.current.pending), []);
+  const tapHandOrDouble = (i, no) => {
+    const h = handTap.current;
+    const now = Date.now();
+    if (h.last && h.last.i === i && h.last.no === no && now - h.last.at < CARD_DOUBLE_TAP_MS) {
+      const before = h.last.before;
+      h.last = null;
+      if (h.pending) {
+        clearTimeout(h.pending);
+        h.pending = null;
+      } else if (before) {
+        setSel(before.sel);
+        setPicks(before.picks);
+        setHint(before.hint);
+      }
+      setDetail(no);
+      return;
+    }
+    if (mode === 'guard') {
+      h.last = {
+        i,
+        no,
+        at: now,
+        before: null
+      };
+      clearTimeout(h.pending);
+      h.pending = setTimeout(() => {
+        h.pending = null;
+        tapHand(i);
+      }, CARD_DOUBLE_TAP_MS);
+      return;
+    }
+    h.last = {
+      i,
+      no,
+      at: now,
+      before: {
+        sel,
+        picks,
+        hint
+      }
+    };
+    tapHand(i);
+  };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
     const d = {
@@ -91178,7 +91265,7 @@ const CardBattleBoard = ({
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHand(i);
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);
     };
     window.addEventListener('pointermove', onMove, {
       passive: false
@@ -91776,6 +91863,7 @@ const CardBattleBoard = ({
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
+      "data-card-press": true,
       onPointerDown: e => handDown(e, i, no),
       onContextMenu: e => e.preventDefault(),
       onDragStart: e => e.preventDefault(),
@@ -94571,7 +94659,9 @@ const CardDeckTile = ({
   return React.createElement("button", _extends({
     type: "button",
     "data-card-deck-tile": no
-  }, press(no, onTap), {
+  }, press(no, onTap, {
+    double: false
+  }), {
     className: `relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`,
     style: {
       WebkitUserSelect: 'none',
@@ -94641,7 +94731,9 @@ const CardDeckPickTile = ({
   }, "このデッキの子は使えない"), React.createElement("button", _extends({
     type: "button",
     "data-card-deck-tile": no
-  }, press(no, onAdd), {
+  }, press(no, onAdd, {
+    double: false
+  }), {
     className: `block w-full active:scale-95 ${!canAdd && inDeck === 0 || unusable ? 'opacity-45' : ''}`,
     style: {
       WebkitUserSelect: 'none',
@@ -94891,7 +94983,9 @@ const CardDeckEditor = ({
       key: i,
       type: "button",
       "data-card-deck-mon": i
-    }, press(no, () => removeOne(no)), {
+    }, press(no, () => removeOne(no), {
+      double: false
+    }), {
       "aria-label": `${m.name}を外す`,
       className: "relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]",
       style: size
