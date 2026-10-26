@@ -100,7 +100,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     // ⑰ 公開前: ふつうのプレイヤー(デバッグの合言葉の印が無い)には、HOME に MFバトルカードの入口が出ない(社長 #3495・必ず守る)
     await page.waitForTimeout(800);
-    check('⑰ ふつうのプレイヤーの HOME には MFバトルカードの入口が出ない', (await page.locator('[data-home-card-battle]').count()) === 0);
+    // 公開後は、公開のお話を見た人(この検査は quiet-boot-seed で見たことにしている)に入口が出る
+    if (RELEASED) check('⑰ 公開後: ふつうのプレイヤーの HOME に MFバトルカードの入口が出る', (await page.locator('[data-home-card-battle]').count()) === 1);
+    else check('⑰ ふつうのプレイヤーの HOME には MFバトルカードの入口が出ない', (await page.locator('[data-home-card-battle]').count()) === 0);
     // ここまでの保存(既存のキー)を控える。カードバトルが書くのは mh_card_* だけのはず
     await page.waitForTimeout(1500);
     const before = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
@@ -806,7 +808,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-ranking-tab="multi"]').click();
       const multiSoon = /準備中/.test(await page.locator('[data-card-ranking-multi]').innerText().catch(() => ''));
       if (SHOT) await shot(page, '37-ranking-multi');
-      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。デバッグの端末では見本の案内が出て、表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && rankWins.preview && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
+      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。公開前は見本の案内が出て、公開後は合言葉の端末でも HOME から入れば送るので出ない。表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && (RELEASED ? !rankWins.preview : rankWins.preview) && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
       await page.locator('[data-card-ranking] header button').first().click();
       await page.locator('[data-card-options-open]').click();
       await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
