@@ -130,7 +130,7 @@ async function auditBuild(playwright, root, label, port) {
       }
       const title = await s.page.evaluate((id) => { try { return (() => { const x = RHYTHM_SONGS.find((y) => y.songId === id); return x ? (typeof rhythmSongFullName === 'function' ? rhythmSongFullName(x) : x.displayName) : ''; })(); } catch { return ''; } }, songId);
       if (!title) { row.why = `曲 ${songId} がこの版に無い`; throw new Error(row.why); }
-      const picked = await openSoloLive(s, { songName: title, difficulty: DIFFICULTY, strict: true });
+      const picked = await openSoloLive(s, { songName: title, songId, difficulty: DIFFICULTY, strict: true });
       if (!picked) { row.why = '曲えらびまで行けない'; throw new Error(row.why); }
       await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|はじめる)$/i, 2500);
       await s.dismissOverlays(4);

@@ -261,7 +261,20 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await shot(page, '03-foe');
     await page.locator('[data-card-start]').click();
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
-    await page.waitForTimeout(1500);
+    // ㉒ 始まりの台詞は、相手が先に動いても、字の数で決めた時間(最低 3 秒)は出ている(2026-10-27 社長「すぐ流れる。とくに開始のとき」)
+    const startTalk = await page.evaluate(async () => {
+      const t0 = performance.now();
+      // 始まりの台詞は対戦の画面が開いた瞬間に出る。見えない間(番の札)も字は残るので textContent で見る
+      let first = null;
+      while (performance.now() - t0 < 9000) {
+        const el = document.querySelector('[data-card-bubble]');
+        if (!first && el) first = { text: el.textContent, ms: Number(el.getAttribute('data-card-bubble-ms')), at: performance.now() };
+        if (first && (!el || el.textContent !== first.text)) return { ...first, shown: Math.round(performance.now() - first.at) };
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return first ? { ...first, shown: Math.round(performance.now() - first.at), still: true } : null;
+    });
+    check('㉒ 始まりの台詞が、読む前に消えない(字の数で決めた時間は出ている)', !!startTalk && (startTalk.ms >= 3000 && (startTalk.still || startTalk.shown >= startTalk.ms - 300)), JSON.stringify(startTalk));
     const hand = await page.locator('[data-card-hand-card]').count();
     const mons = await page.locator('[data-card-mon]').count();
     check('④ 対戦が始まり、手札5枚・場の6体が出る', hand === 5 && mons === 6, `手札${hand}・場${mons}`);
@@ -280,6 +293,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ 詳しい画面はタップで閉じる', await page.locator('[data-card-detail]').count() === 0);
 
     // ⑤ 自分の番を進める(使えるカードを出す → 狙える相手 → 攻撃おわり → ガッツ)
+    let guardAtk = null;   // 守りの番の相手の攻撃カード
     let myActions = 0, guards = 0, gutsTurns = 0, shotGuard = false, shotTarget = false, motionSeen = false, poseSeen = new Set();
     // ⑫ 運ぶ操作: 指(マウス)で手札を持って、置ける所まで運んで離す
     let dragAttack = null, dragGuts = null, dragNoGlow = null, dragTries = 0, dragShotNo = false;
@@ -344,7 +358,24 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (mode === 'setup') { await page.getByRole('button', { name: /始める$/ }).click(); continue; }
       if (mode === 'discard') { const n = await page.locator('[data-card-hand-card]').count(); for (let i = 0; i < n; i++) await page.locator(`[data-card-hand-card="${i}"]`).click(); await page.getByRole('button', { name: /捨てる$/ }).click().catch(() => {}); continue; }
       if (mode === 'guard') {
-        if (!shotGuard) { await shot(page, '07-guard'); layoutSeen.push(...(await layoutIssues(page)).map((x) => `守りの番: ${x}`)); shotGuard = true; }
+        if (!shotGuard) {
+          await shot(page, '07-guard'); layoutSeen.push(...(await layoutIssues(page)).map((x) => `守りの番: ${x}`)); shotGuard = true;
+          // 守りを選ぶあいだ、受けている相手の攻撃カード(絵・名前・ダメージ・効果)が出て、手札・ボタンに重ならず、押すと詳しい画面が開く(2026-10-26 ソラシドさん)
+          guardAtk = await page.evaluate(() => {
+            const el = document.querySelector('[data-card-guard-attack]');
+            if (!el) return { shown: false };
+            const r = el.getBoundingClientRect();
+            const over = ['[data-card-hand]', '[data-card-footer]'].filter((s) => { const q = document.querySelector(s); if (!q) return false; const b = q.getBoundingClientRect(); return r.bottom > b.top + 1 && r.top < b.bottom - 1 && r.right > b.left + 1 && r.left < b.right - 1; });
+            const img = el.querySelector('img'); const fit = Number(document.querySelector('[data-card-stage]').getAttribute('data-card-stage-fit'));
+            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
+          });
+          if (guardAtk.shown) {
+            await page.locator('[data-card-guard-attack]').click();
+            guardAtk.detail = await page.locator('[data-card-detail]').waitFor({ timeout: 2000 }).then(() => true).catch(() => false);
+            if (SHOT) await shot(page, '07b-guard-attack-detail');
+            if (guardAtk.detail) { await page.locator('[data-card-detail]').click({ position: { x: 4, y: 4 } }).catch(() => {}); await page.waitForTimeout(200); guardAtk.closed = !(await page.locator('[data-card-detail]').count()); }
+          }
+        }
         guards += 1;
         await page.getByRole('button', { name: '守らない' }).click();
         continue;
@@ -435,6 +466,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ 技を相手のモンスターまで運んで離すと使える(置ける所の上で光る)', dragAttack === true, `${dragAttack}(試した回数 ${dragTries + (dragAttack === true ? 1 : 0)})`);
     check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
     check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
+    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
       `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
@@ -448,7 +480,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-discard]').waitFor({ timeout: 5000 });
     await shot(page, '08-discard');
     check('⑥ 捨て札の一覧が開く(自分/相手のタブ)', await page.getByRole('button', { name: /相手の捨て札/ }).count() === 1);
-    await page.getByRole('button', { name: '閉じる' }).click();
+    // 「閉じる」はちょうどその名前のボタンだけ(相手の番のまとめの「タップで閉じる」にも当たっていた)
+    await page.getByRole('button', { name: '閉じる', exact: true }).click();
     // ⑦ 投了
     const result = await page.locator('[data-card-top="result"]').count();
     if (!result) {
@@ -469,7 +502,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     if (outcome === 'surrender') check('⑦ 投了のビートPは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
     else check(`⑦ 決着(${outcome})で結果が出て戦績が付く`, after.record && after.record.cpu[outcome] === 1);
     // ⑧ 既存のキーを書き換えていない(時刻・起動のたびに変わる記録は除く)
-    const volatile = /^mh_(debug_entry|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
+    const volatile = /^mh_(debug_entry|debug_menu|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
     // ★ポイントはビートP(2026-10-26 社長「カードポイントを廃止してビートポイントにして」)。ビートPの残高 mh_rhythm_event_points_v1 だけは書いてよい
     const BEAT_KEY = 'mh_rhythm_event_points_v1';
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k) && before[k] !== after.all[k]);
@@ -483,7 +516,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     for (const k of ['in', 'out']) {
       await page.locator(`[data-card-result-demo="${k}"]`).click();
       await page.waitForTimeout(300);
-      demoTxt[k] = await page.locator('[data-card-quick-loops]').innerText().catch(() => '');
+      demoTxt[k] = (await page.locator('[data-card-quick-loops]').count()) ? await page.locator('[data-card-quick-loops]').innerText() : '';
       await shot(page, `16-result-loops-${k}`);
       await page.locator('[data-card-top="result"] button').first().click();
       await page.waitForTimeout(300);
@@ -508,7 +541,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.waitForTimeout(250);
     }
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
-    check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && /^クイック周回をしていないときは入りません$/.test(demoTxt.out.trim()), JSON.stringify(demoTxt).slice(0, 200));
+    check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(周回中だけ。していないときは何も出さない。2026-10-26 カゲあつくんの点検)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && demoTxt.out === '', JSON.stringify(demoTxt).slice(0, 200));
     // ⑬ パックを開ける見本(デバッグ・保存しない。1パック目の最後は別絵キラ・2パック目の最後はキラ)
     //   キラ以上は真ん中に大きく出る(data-card-pack-spot)。鳴らした効果音(data-card-pack-se)に、破る音・めくる音・キラの音(crit＋levelUp)・別絵キラの音(crit＋fusion)がそろう
     await page.locator('[data-card-pack-open-demo]').dispatchEvent('click');
@@ -583,6 +616,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 絞り込みは、縦の画面では1列(横に流す)、横の画面では折り返して並べる作り(87 の data-card-deck-chips)。1列は縦のときだけ見る
     const portrait = VH > VW;
     check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは縦で1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && (!portrait || chipsRows === 1), JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows, portrait }));
+    // ⑭ カードの名前の右の「i」で詳しい画面が開く(長押しに気づかない人のため・2026-10-26)。押してもデッキの枚数は変わらない
+    const infoBefore = await page.locator('[data-card-deck-count]').innerText();
+    await page.locator(`[data-card-deck-info="${firstIn}"]`).click();
+    const infoOpen = await page.locator('[data-card-detail]').count();
+    const infoAfter = await page.locator('[data-card-deck-count]').innerText();
+    await page.locator('[data-card-detail]').getByRole('button', { name: /閉じる/ }).first().click().catch(() => {});
+    await page.waitForTimeout(200);
+    check('⑭ カードの名前の右の「i」を押すと詳しい画面が開き、デッキには入らない', infoOpen === 1 && infoAfter === infoBefore && (await page.locator('[data-card-detail]').count()) === 0, `${infoOpen} ${infoBefore}→${infoAfter}`);
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));
