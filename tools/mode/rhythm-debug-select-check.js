@@ -6,7 +6,7 @@
 //   node tools/mode/rhythm-debug-select-check.js --shots <フォルダ>   # 横 844×390・縦 390×844 の静止画も書き出す
 //
 // 見ること
-//   ・デバッグ設定 → モンヒロビート → 「全解放の曲えらびを開く」で、通常の曲えらびと同じ部品が開く
+//   ・デバッグ設定 → モンヒロビート → 「全解放の曲えらびを開く」で、本物の曲えらびと同じ画面が開く(アシスト・ミラー・オプション・「試作だけ」の切り替え)
 //   ・公開前・試作の曲(試作の枠の Sheriruth HELL)が並び、HELL を含む全部の難易度に鍵が無い
 //   ・「デバッグ(記録しない)」の印が出ている
 //   ・横持ち(844×390)で演奏して、終わったら全解放の曲えらびへ戻る
@@ -91,6 +91,21 @@ const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.le
       return [...document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-difficulty]')].filter(b=>b.getAttribute('data-rhythm-difficulty-locked')==='1').length;
     });
     check('公開曲でも EXPERT・MASTER に鍵が無い',publicLocks===0,`鍵 ${publicLocks}`);
+    // 2026-10-26 社長室「デバッグの曲えらびを本物と同じ画面に」: 本物の曲えらび(RhythmSongSelectScreen)を debugAll で使う。
+    //   アシスト・ミラー・オプションがその場で触れる/試作だけに絞れる/デバッグで意味の無いもの(周回・ランキング・ビートP)は出さない
+    const same=await page.evaluate(()=>({modes:document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-play-mode-toggle]').length,
+      options:!!document.querySelector('[data-rhythm-debug-select] [data-rhythm-demo-options]'),realHome:!!document.querySelector('[data-rhythm-demo-home]'),
+      extras:document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-demo-ranking],[data-rhythm-debug-select] [data-quick-run-start],[data-rhythm-debug-select] [data-quick-run-start-header],[data-rhythm-debug-select] [data-rhythm-beat-point-balance]').length}));
+    check('本物の曲えらびと同じ部品(アシスト・ミラーの切り替えとオプション)がある',same.modes>=2&&same.options,JSON.stringify(same));
+    check('本物の曲えらび(体験版)の印とは分けてある',!same.realHome);
+    check('デバッグで意味の無いもの(周回の入口・ランキング・ビートP)は出さない',same.extras===0,`${same.extras}件`);
+    const filtered=await page.evaluate(async()=>{const b=document.querySelector('[data-rhythm-debug-song-filter-option="proto"]');if(!b)return null;b.click();await new Promise(r=>setTimeout(r,500));
+      const proto=document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-song-row]').length;
+      document.querySelector('[data-rhythm-debug-song-filter-option="all"]')?.click();await new Promise(r=>setTimeout(r,500));
+      const label=id=>(document.querySelector(`[data-rhythm-debug-song-filter-option="${id}"]`)?.textContent||'').match(/\((\d+)\)/)?.[1];
+      return {proto,protoSongs:RHYTHM_PROTO_SONGS.length,all:document.querySelectorAll('[data-rhythm-debug-select] [data-rhythm-song-row]').length,protoLabel:+label('proto'),allLabel:+label('all')};});
+    check('「試作だけ」に絞ると試作の枠の曲だけになり、「すべての曲」で戻る',!!filtered&&filtered.proto===filtered.protoSongs&&filtered.all>filtered.proto,JSON.stringify(filtered));
+    check('切り替えに出す曲の数が、並んでいる行の数と同じ',!!filtered&&filtered.protoLabel===filtered.proto&&filtered.allLabel===filtered.all,JSON.stringify(filtered));
     await selectSong(page,SONG_ID);await page.waitForTimeout(400);
     await page.evaluate(()=>document.querySelector('[data-rhythm-debug-select] [data-rhythm-difficulty="HELL"]')?.click());await page.waitForTimeout(400);
 

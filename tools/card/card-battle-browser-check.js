@@ -389,7 +389,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
             const r = el.getBoundingClientRect();
             const over = ['[data-card-hand]', '[data-card-footer]'].filter((s) => { const q = document.querySelector(s); if (!q) return false; const b = q.getBoundingClientRect(); return r.bottom > b.top + 1 && r.top < b.bottom - 1 && r.right > b.left + 1 && r.left < b.right - 1; });
             const img = el.querySelector('img'); const fit = Number(document.querySelector('[data-card-stage]').getAttribute('data-card-stage-fit'));
-            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, bubbleShown: !!document.querySelector('[data-card-bubble]:not(.invisible)'), actionBand: !!document.querySelector('[data-card-action]'), logZ: Number(getComputedStyle(document.querySelector('[data-card-log]')).zIndex) || 0, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
+            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, bubbleShown: !!document.querySelector('[data-card-bubble]:not(.invisible)'), actionBand: !!document.querySelector('[data-card-action]'), logZ: Number(getComputedStyle(document.querySelector('[data-card-log]')).zIndex) || 0, logBgA: (() => { const m = getComputedStyle(document.querySelector('[data-card-log]')).backgroundColor.match(/rgba?\(([^)]+)\)/); const v = m ? m[1].split(',').map(Number) : []; return v.length === 4 ? v[3] : 1; })(), inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
           });
           if (guardAtk.shown) {
             await page.locator('[data-card-guard-attack]').click();
@@ -488,7 +488,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ 技を相手のモンスターまで運んで離すと使える(置ける所の上で光る)', dragAttack === true, `${dragAttack}(試した回数 ${dragTries + (dragAttack === true ? 1 : 0)})`);
     check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
     check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
-    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面。吹き出しと上の技の札は出さず、攻撃の動きより前)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.bubbleShown && !guardAtk.actionBand && guardAtk.logZ > 40 && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
+    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面。吹き出しと上の技の札は出さず、攻撃の動きより前)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.bubbleShown && !guardAtk.actionBand && guardAtk.logZ > 40 && guardAtk.logBgA > 0.9 && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
       `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
@@ -536,6 +536,22 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         const st0 = await page.locator('[data-card-replay-step]').innerText();
         const faces = await page.locator('[data-card-replay-foe-card] img').count();
         check('㉑ はじめから始まり、相手の手札が表で並ぶ', /^0\//.test(st0) && faces >= 5, `${st0} 表${faces}`);
+        // 1手ずつ進めて、下の帯の「その手を打った人」と説明の文の主語が、記録と同じか(2026-10-27 カゲあつくんの見直し: 動いたあとの番で書いていた)
+        const recd = await page.evaluate(() => { const v = JSON.parse(localStorage.getItem('mh_card_replays_v1')); return { by: v.list[0].acts.map((a) => a[0]), level: v.list[0].level, foe: v.list[0].foe.name }; });
+        const wrong = [];
+        for (let k = 1; k <= Math.min(16, recd.by.length); k++) {
+          await page.locator('[data-card-replay-next]').click();
+          const by = Number(await page.locator('[data-card-replay-turn]').getAttribute('data-card-replay-by'));
+          const cap = await page.locator('[data-card-replay-caption]').innerText();
+          const other = recd.by[k - 1] === 0 ? recd.foe : 'あなた';
+          if (by !== recd.by[k - 1] || cap.startsWith(`${other}は`)) wrong.push(`${k}手目 帯${by}/記録${recd.by[k - 1]} 「${cap}」`);
+        }
+        check('㉑ 見返しの1手ごとに、その手を打った人と説明の文が記録と同じ', wrong.length === 0, wrong.slice(0, 3).join(' / '));
+        const levelText = await page.locator('[data-card-battle] small').filter({ hasText: /EASY|NORMAL|HARD|EXPERT|MASTER|助手と対戦/ }).first().innerText().catch(() => '');
+        check('㉑ 見返しの相手の名前の下が、遊んだ難易度', !!recd.level && levelText.trim() === ({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' })[recd.level], `${recd.level} / ${levelText}`);
+        await page.locator('[data-card-replay-first]').click();
+        const startHead = await page.locator('[data-card-head-turn]').innerText();
+        check('㉑ 見返しのはじまりは、上の帯も「はじまり」', /はじまり/.test(startHead), startHead);
         for (let i = 0; i < 300; i++) { if (await page.locator('[data-card-replay-next-turn]').isDisabled()) break; await page.locator('[data-card-replay-next-turn]').click(); }
         const end = (await page.locator('[data-card-replay-step]').innerText()).replace('手', '').split('/').map(Number);
         check('㉑ 最後の手まで見られる・助手は勝手に動かない', end[0] === end[1] && end[1] >= 1, end.join('/'));
