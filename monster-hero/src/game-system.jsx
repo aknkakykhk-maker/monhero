@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d0f2457058d7f7a2
+// generated-sha256: 83d836b15cd03ac8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 02:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33322,10 +33322,11 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
       <div className="mh-title-dialog" data-art-picker={pickerId} style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
         <div className="mh-dialog-head"><h3>{heading}</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
-        <p className="text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
-        {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック) */}
-        <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
-        <div className="grid grid-cols-2 gap-3">{options.map(option=>{
+        <p className="shrink-0 text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
+        {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック)。
+            shrink-0 … 窓は縦に並べる作りなので、中身が窓より高いと札が縮められ、2行目「いまは〜を出しています」が下の枠にかかっていた(320。2026-10-26 ダメダシの見回り s04) */}
+        <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
+        <div className="shrink-0 grid grid-cols-2 gap-3">{options.map(option=>{
           const selected=value===option.id;
           return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>onChange(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}>
             <img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>
@@ -33335,7 +33336,7 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
             <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small>
           </button>;
         })}</div>
-        <button type="button" className="mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" onClick={onClose}>決定</button>
+        <button type="button" className="shrink-0 mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" onClick={onClose}>決定</button>
       </div>
     </div>
   );
