@@ -564,6 +564,13 @@ const CARD_PVP = (() => {
     const winner = s.result.reward === 'win' && !s.result.forced ? 0 : s.result.reward === 'lose' && !s.result.forced ? 1 : null;
     const v = cardPvpVerify(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeDeck: o.deck, foeSeed: o.seed, first: s.first, names: ['あなた', 'あいて'], history: s.history, winner });
     set({ result: { ...s.result, verify: v.ok ? 'ok' : 'ng', why: v.why } });
+    // 過去の対戦を見る(93-card-replay.jsx): 確かめが通った試合だけ、端末に取っておく(mh_card_replays_v1)。保存できたら結果の画面に「この対戦を見る」
+    if (v.ok && typeof cardReplayFromPvp === 'function') {
+      const match = s.match;
+      const rec = cardReplayFromPvp(CARD_BATTLE_DATA, { match, at: Date.now(), myDeck: s.deck, mySeed: s.seed, foeDeck: o.deck, foeSeed: o.seed, first: s.first, history: s.history,
+        foe: { name: s.foe && s.foe.name, icon: s.foe && s.foe.icon, frame: s.foe && s.foe.fr, deckName: s.foe && s.foe.dn }, outcome: s.result.outcome, reason: s.result.reason });
+      if (rec && await cardReplaySave(rec) && s.result && s.match === match) set({ result: { ...s.result, replay: match } });
+    }
   };
   const onMessage = (raw) => {
     const msg = cardPvpCleanMessage(raw);
@@ -951,6 +958,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           </div>
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
+          {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${btn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
           <button type="button" data-card-pvp-leave className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
         </div>
       </div>
@@ -971,7 +979,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           {inviteOpen && roster && (
             <div data-card-pvp-invite-pick className="rounded-2xl border border-emerald-300/40 bg-emerald-500/5 p-2">
               {roster.length === 0
-                ? <p className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだフレンドがいません。HOMEの「フレンド」から申請できます')}</p>
+                ? <p className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだフレンドがいません。HOME左上のプロフィールの「フレンド」から、フレンドコードで申請できます')}</p>
                 : <ul data-card-pvp-roster className="max-h-[40vh] space-y-1 overflow-y-auto">
                   {roster.slice(0, 30).map((f) => (
                     <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
@@ -1001,7 +1009,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
             <p className="mb-2 text-[13px] font-bold text-slate-300">フレンドの合言葉で入る</p>
             <div className="flex gap-2">
-              <input data-card-pvp-code value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))} maxLength={4} inputMode="text" autoCapitalize="characters" placeholder="ABCD"
+              <input data-card-pvp-code value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))} maxLength={4} inputMode="text" autoCapitalize="characters" placeholder="K7Q3"
                 className="min-h-[48px] w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-3 text-center text-[22px] font-black tracking-[.3em] text-white"/>
               <button type="button" data-card-pvp-join disabled={!ready || !rhythmMultiNormalizeCode(code)} className="mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40"
                 onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(code, profile, deck); }}>入る</button>

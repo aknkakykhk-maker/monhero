@@ -21,7 +21,8 @@
 //   ⑨ 招待された側は、マルチの入口の外でも画面の上に知らせが出る。「断る」で消え、送った側に「断られました」が出る
 //   ⑩ もう一度送ると知らせがまた出て、「参加する」でマルチの入口へ移って同じ部屋に入り、対戦が始まる
 //   ⑪ 招待のようすの見分け(届いている・時間切れ・断られた)
-//   ⑫ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
+//   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
+//   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -270,6 +271,42 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 結果の画面の「もらったビートP」も、+50 を足した合計
     const shown = [rewardA, rewardB].map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
     check('⑥ 結果の画面の「もらったビートP」が、増えた数と同じ', shown[0] === gain[0] && shown[1] === gain[1], `${rewardA} / ${rewardB}`);
+    // ⑫ 過去の対戦を見る(93-card-replay.jsx・2026-10-27): 確かめが通った試合は2台とも端末に残り、結果の画面の「この対戦を見る」から、はじめから見られる
+    {
+      const saved = await Promise.all([A, B].map((page) => page.evaluate(() => { try { const v = JSON.parse(localStorage.getItem('mh_card_replays_v1') || 'null'); return v && Array.isArray(v.list) ? v.list.length : 0; } catch (_) { return -1; } })));
+      check('⑫ 確かめが通った試合は、2台とも端末に記録が残る', saved[0] === 1 && saved[1] === 1, saved.join(' / '));
+      const btn = A.locator('[data-card-pvp-replay]');
+      const hasBtn = await btn.waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+      check('⑫ 結果の画面に「この対戦を見る」が出る', hasBtn);
+      if (hasBtn) {
+        await btn.click();
+        const bar = await A.locator('[data-card-replay-bar]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+        check('⑫ 押すと、対戦の画面で再生の帯が出る', bar);
+        const stepText = async () => A.locator('[data-card-replay-step]').innerText().catch(() => '');
+        const first = await stepText();
+        const foeFaces = await A.locator('[data-card-replay-foe-card] img').count();
+        const foeBacks = await A.locator('[data-card-hand-of="1"] img').count();
+        check('⑫ はじめから始まり、相手の手札が表で並ぶ(裏の札は出さない)', /^0\//.test(first) && foeFaces >= 5 && foeBacks === 0, `${first} 表${foeFaces} 裏${foeBacks}`);
+        await shot(A, 'pvp-12-replay-start');
+        await A.locator('[data-card-replay-next]').click();
+        await A.locator('[data-card-replay-next]').click();
+        const two = await stepText();
+        await A.locator('[data-card-replay-prev]').click();
+        const one = await stepText();
+        check('⑫ 1手すすむ・もどるができる', /^2\//.test(two) && /^1\//.test(one), `${two} → ${one}`);
+        for (let i = 0; i < 400; i++) { if (await A.locator('[data-card-replay-next-turn]').isDisabled()) break; await A.locator('[data-card-replay-next-turn]').click(); }
+        const last = await stepText();
+        const [at, total] = last.replace('手', '').split('/').map(Number);
+        check('⑫ 番ごとに進めて、最後の手まで見られる(ルールが同じなので止まらない)', at === total && total > 10 && !(await A.locator('[data-card-replay-stop]').count()), last);
+        await shot(A, 'pvp-12-replay-end');
+        const noResult = await A.locator('[data-card-top="result"]').count();
+        await A.locator('[data-card-replay-first]').click();
+        check('⑫ 最後まで見ても、結果の画面へは行かない・⏮ ではじめに戻る', noResult === 0 && /^0\//.test(await stepText()));
+        await A.locator('[data-card-replay-exit]').click();
+        const back = await A.locator('[data-card-pvp="over"]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+        check('⑫ 「とじる」で、マルチの結果の画面へ戻る', back);
+      }
+    }
     const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
     check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
     // ⑥ 54本の台詞を、いまの吹き出しと同じ幅・同じ文字に入れて、言葉の途中で折れていないか測る(かたまり1つが2行にまたがっていない)
@@ -345,30 +382,30 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const mine = reports.slice(reportsBefore);
     check('⑦ 終わったら2台とも、同じ試合・同じ勝った人で強さの点数へ届ける', mine.length === 2 && mine[0].p_match_id && mine[0].p_match_id === mine[1].p_match_id && mine[0].p_winner === mine[1].p_winner,
       JSON.stringify(mine.map((x) => [x.p_match_id, x.p_winner])));
-    // ⑫ マルチの履歴(92・2026-10-27 社長「過去のマルチの戦績とかで相手のデッキが見れるように」): 2試合とも端末に残り、相手のデッキが全部見える・点数の増減が書かれる
+    // ⑬ マルチの履歴(92・2026-10-27 社長「過去のマルチの戦績とかで相手のデッキが見れるように」): 2試合とも端末に残り、相手のデッキが全部見える・点数の増減が書かれる
     const histOf = (page) => page.evaluate(async () => (typeof cardPvpHistoryLoad === 'function' ? cardPvpHistoryLoad() : null));
     let histA = null;
     for (let i = 0; i < 70; i++) { histA = await histOf(A); if (histA && histA.length >= 2 && histA[0].rating) break; await A.waitForTimeout(500); }
     const histB = await histOf(B);
-    check('⑫ マルチの履歴: 2台とも2試合が残り、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
+    check('⑬ マルチの履歴: 2台とも2試合が残り、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
       !!histA && histA.length === 2 && !!histB && histB.length === 2 && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
       JSON.stringify((histA || []).map((x) => [x.match, x.outcome, x.verify, x.foeDeck && x.foeDeck.cards.length, x.rating])));
     const deltaA = histA && histA[0].rating ? histA[0].rating.after - histA[0].rating.before : null;
-    check('⑫ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +16・負け -16。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 16 : -16), JSON.stringify(histA && histA[0].rating));
+    check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +16・負け -16。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 16 : -16), JSON.stringify(histA && histA[0].rating));
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
     await A.locator('[data-card-pvp-history-open]').click();
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     const rowsText = await A.locator('[data-card-pvp-history-row]').allInnerTexts();
     await shot(A, 'pvp-09-history');
-    check('⑫ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === 2 && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
+    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === 2 && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
     await A.locator('[data-card-pvp-history-row]').first().click();
     await A.locator('[data-card-pvp-history="detail"]').waitFor({ timeout: 10000 });
     const foeTiles = await A.evaluate(() => ({ mons: document.querySelectorAll('[data-card-pvp-history-mon]').length, total: [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }));
     await shot(A, 'pvp-09-history-deck');
-    check('⑫ 行を押すと、相手のデッキ(3体と、同じ札をまとめた50枚)', foeTiles.mons === 3 && foeTiles.total === 50, JSON.stringify(foeTiles));
+    check('⑬ 行を押すと、相手のデッキ(3体と、同じ札をまとめた50枚)', foeTiles.mons === 3 && foeTiles.total === 50, JSON.stringify(foeTiles));
     await A.locator('[data-card-pvp-history-tab="me"]').click();
     const myTiles = await A.evaluate(() => [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0));
-    check('⑫ 「自分のデッキ」で、その試合で使った自分のデッキ(50枚)', myTiles === 50, String(myTiles));
+    check('⑬ 「自分のデッキ」で、その試合で使った自分のデッキ(50枚)', myTiles === 50, String(myTiles));
     await A.locator('[data-card-pvp-history="detail"] button').first().click();
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     await A.locator('[data-card-pvp-history="list"] button').first().click();
