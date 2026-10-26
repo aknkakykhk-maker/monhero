@@ -36,7 +36,7 @@
 const CHANGELOG = [
   {
     // MFバトルカードの公開(社長「この文で」2026-10-26)。印 RELEASE_FLAGS.cardBattle が立つまで出ない。日時は公開の時刻(実時刻)
-    date: "2026-10-26 15:38", type:'content', group:'cardBattle', title:'新しい遊び「MFバトルカード」が始まりました', status:'new', releaseFlag:'cardBattle',
+    date: "2026-10-26 17:36", type:'content', group:'cardBattle', title:'新しい遊び「MFバトルカード」が始まりました', status:'new', releaseFlag:'cardBattle',
     image: 'images/events/card-battle-teaser.jpg?v=dc64e1718761',
     items:[
       'HOME に「MFバトルカード」が加わりました。モンスター3体と技カード50枚でデッキを組み、相手のモンスター3体を先に全員倒したほうの勝ちです。',
