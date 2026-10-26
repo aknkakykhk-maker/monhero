@@ -126,7 +126,7 @@ const cardMonArt = (mon) => {
   return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`);
+const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '');   // 全体カードはダメージが無い(「ダメージnull」と出ていた)
 const cardUserLabel = (db, c) => {
   if (!c) return '';
   if (c.user === 'any') return '全モンスター';
