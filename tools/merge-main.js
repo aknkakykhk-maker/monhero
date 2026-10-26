@@ -56,7 +56,7 @@ const MARK_RE = /^(<{7}( |$)|={7}$|>{7}( |$))/m;
 // 以前は生成物として main 側を丸ごと取っていたので、ぶつかっていない所まで、こちらの CSS が消えた(2026-10-24。#3222 でも起きた)。
 // ぶつかりが数値の行だけならこちら側を取り(build.js が付け直す)、それ以外の行がぶつかったら手で直してもらう
 const STAMPED_HTML = 'monster-hero/index.html';
-const HTML_STAMP_LINE = /\/\* BOOT_SIZES \*\/|^\s*var GAME_BUILD = '|\?v=[0-9a-z]+/;
+const HTML_STAMP_LINE = /\/\* BOOT_SIZES \*\/|^\s*var GAME_BUILD = '|^\s*window\.__mhBuildDate = '|\?v=[0-9a-z]+/;
 function resolveStampedHtml() {
   const file = path.join(ROOT, STAMPED_HTML);
   const src = fs.readFileSync(file, 'utf8');
@@ -78,8 +78,15 @@ function resolveCore() {
   const src = fs.readFileSync(file, 'utf8');
   const hunk = /<{7}[^\n]*\n([\s\S]*?)={7}\n([\s\S]*?)>{7}[^\n]*\n/g;
   let onlyBuildDate = true;
+  // 2026-10-27 から BUILD_DATE は本体の外(index.html の window.__mhBuildDate)から読む形になった(速さ部)。
+  // 古い形(時刻を書いた1行)と新しい形(説明のコメント+window から読む1行)がぶつかったら、必ず新しい形を取る。
+  // こちら側を取るだけだと、古い main から作ったブランチで古い形へ巻き戻ってしまう
+  const lines = (t) => t.split('\n').filter(l => l.trim());
+  const isOld = (t) => lines(t).length > 0 && lines(t).every(l => /^const BUILD_DATE = "/.test(l));
+  const isNew = (t) => t.includes('window.__mhBuildDate') && lines(t).every(l => /^\/\//.test(l.trim()) || /^const BUILD_DATE = /.test(l));
   const out = src.replace(hunk, (all, ours, theirs) => {
-    const lines = (t) => t.split('\n').filter(l => l.trim());
+    if (isOld(ours) && isNew(theirs)) return theirs;
+    if (isNew(ours) && (isOld(theirs) || isNew(theirs))) return ours;
     if (![...lines(ours), ...lines(theirs)].every(l => /^const BUILD_DATE = /.test(l))) onlyBuildDate = false;
     return ours;
   });
