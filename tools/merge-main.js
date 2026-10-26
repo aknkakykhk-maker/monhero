@@ -56,7 +56,7 @@ const MARK_RE = /^(<{7}( |$)|={7}$|>{7}( |$))/m;
 // 以前は生成物として main 側を丸ごと取っていたので、ぶつかっていない所まで、こちらの CSS が消えた(2026-10-24。#3222 でも起きた)。
 // ぶつかりが数値の行だけならこちら側を取り(build.js が付け直す)、それ以外の行がぶつかったら手で直してもらう
 const STAMPED_HTML = 'monster-hero/index.html';
-const HTML_STAMP_LINE = /\/\* BOOT_SIZES \*\/|^\s*var GAME_BUILD = '|\?v=[0-9a-z]+/;
+const HTML_STAMP_LINE = /\/\* BOOT_SIZES \*\/|^\s*var GAME_BUILD = '|^\s*window\.__mhBuildDate = '|\?v=[0-9a-z]+/;
 function resolveStampedHtml() {
   const file = path.join(ROOT, STAMPED_HTML);
   const src = fs.readFileSync(file, 'utf8');
