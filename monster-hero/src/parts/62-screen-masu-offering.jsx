@@ -115,7 +115,8 @@ function MasuOfferingScreen({
         {mode==='diamonds'&&<>
           <div className="text-[11px] font-black text-slate-300">使うダイヤ（自由に入力できます）</div>
           <input type="text" inputMode="numeric" aria-label="お布施に使うダイヤ" value={diamondText===''?'':diamondAmount.toLocaleString()} placeholder="0" onChange={e=>setDiamondText(e.target.value)} className="w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-right font-mono text-lg font-black text-white outline-none focus:border-violet-300"/>
-          <div className="grid grid-cols-4 gap-1.5">{OFFERING_DIAMOND_STEPS.map(step=><button key={step} className={stepBtn} onClick={()=>setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount+step)))}>+{fmt(step)}</button>)}</div>
+          {/* 320 幅で「+100,000」が枠の端まで届いていた(2026-10-27 ダメダシの見回り)。狭い幅だけ、字を少し小さく・横の余白を詰める */}
+          <div className="grid grid-cols-4 gap-1.5">{OFFERING_DIAMOND_STEPS.map(step=><button key={step} className={`${stepBtn} whitespace-nowrap px-1 max-[359px]:text-[11px] max-[359px]:tracking-tight`} onClick={()=>setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount+step)))}>+{fmt(step)}</button>)}</div>
           <div className="grid grid-cols-2 gap-1.5"><button className={stepBtn} onClick={()=>setDiamondText('')}>クリア</button><button className={stepBtn} disabled={limits.maxDiamonds<=0} onClick={()=>setDiamondText(String(limits.maxDiamonds))}>MAX（{fmt(limits.maxDiamonds)}）</button></div>
         </>}
         {mode==='levels'&&<>
