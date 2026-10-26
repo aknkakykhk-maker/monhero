@@ -355,7 +355,7 @@ const cardPvpRatingFromRow = (row) => {
     rating: Number.isFinite(row.rating) ? row.rating : CARD_PVP_RATING_START, wins: n(row.wins), loses: n(row.loses) };
 };
 // 自分の行だけ読む(上位50に入っていないときの「あなたの強さ」)。無ければ null
-const sbFetchCardPvpRatingOf = async (breederId) => {
+const sbFetchCardPvpOwnRating = async (breederId) => {
   if (_cardPvpRatingsUnavailable || typeof SUPABASE_URL === 'undefined' || typeof breederId !== 'string' || !breederId) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -1241,7 +1241,7 @@ const CardPvpRankingList = ({ renderBreederIcon = null, selfId = '', reloadKey =
     if (inListAt >= 0) { setMine({ entry: state.entries[inListAt], place: places[inListAt], capped: false }); return undefined; }
     let alive = true;
     (async () => {
-      const e = await sbFetchCardPvpRatingOf(selfId).catch(() => null);
+      const e = await sbFetchCardPvpOwnRating(selfId).catch(() => null);
       if (!alive) return;
       if (!e) { setMine(null); return; }
       const r = await sbCountCardPvpAbove(e.rating).catch(() => null);
