@@ -64,3 +64,6 @@
 
 ## 2026-10-27 モンヒロビートのプライベートの部屋
 → [damedashi-2026-10-26/private/README.md](damedashi-2026-10-26/private/README.md)(1件)
+
+## 2026-10-27 プロフィールの記録・フレンド・ビートLv
+→ [damedashi-2026-10-26/records/README.md](damedashi-2026-10-26/records/README.md)(2件)
