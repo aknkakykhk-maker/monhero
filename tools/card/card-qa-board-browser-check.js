@@ -16,6 +16,7 @@
 //   ⑨ 320×568: カララギマンゴーを選んで狙うとき・「攻撃できない」の子がいるときも、下のボタンが画面の中(最後の見回り)
 //   ⑩ 助手全員の結果の台詞で、記号だけが行頭に来ない(最後の見回り)
 //   ⑫ 対戦開始の画面(VS)の自分側にも、自分のアイコンが出る
+//   ⑭ ランキングの「マルチ」に、その人のアイコンが出る(切れた古い値も絵に)
 //   ⑬ 助手と対戦の結果の画面に「自分 vs 助手・勝ち負け」の1行(マルチの結果は card-pvp-browser-check)
 //   ⑪ 320・375・390・横844: 自分の帯に自分のアイコン(フレーム付き)と名前が出る・名前が切れない・手札にかからない
 const http = require('http');
@@ -340,6 +341,24 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
         cut: [...el.querySelectorAll('span')].some((x) => getComputedStyle(x).whiteSpace === 'nowrap' && x.scrollWidth > x.clientWidth + 1), right: el.getBoundingClientRect().right <= innerWidth })) : null;
       await shot(page, `result-vs-${w}`);
       check(`⑬ ${w}×${h}: 助手と対戦の結果に「自分 vs 助手・勝ち負け」の1行(名前は切れない)`, r && r.icon && /検査ブリーダー/.test(r.text) && /ももすけ/.test(r.text) && /投了/.test(r.text) && !r.cut && r.right, JSON.stringify(r));
+      await page.close();
+    }
+    // ⑭ ランキングの「マルチ」の欄に、その人のアイコンが出る。表に残っている古い版の8文字で切れた値(本番の「sneguroc」「atsu_hap」)も絵にする
+    {
+      const page = await openBattle(browser, { ...base, stopAtTop: true, viewport: { width: 390, height: 844 } }, errors);
+      await page.route(/card_battle_pvp_ratings/, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { breeder_id: 'b-ichika', user_name: 'いちか', icon: 'sneguroc', profile_frame: null, rating: 1516, wins: 1, loses: 0 },
+        { breeder_id: 'b-atsu', user_name: 'あつ', icon: 'atsu_hap', profile_frame: null, rating: 1484, wins: 0, loses: 1 },
+        { breeder_id: 'b-x', user_name: 'みしらぬ', icon: 'zzzzzzzz', profile_frame: null, rating: 1500, wins: 1, loses: 1 }]) }));
+      await page.locator('[data-card-ranking-open]').click();
+      await page.locator('[data-card-ranking-tab="multi"]').click();
+      await page.locator('[data-card-pvp-rank="ready"]').waitFor({ timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(800);
+      const rows = await page.locator('[data-card-pvp-rank="ready"] li').evaluateAll((els) => els.map((li) => ({ name: li.innerText.split('\n').filter(Boolean)[1] || '', img: li.querySelectorAll('img').length, text: li.innerText })));
+      await shot(page, 'ranking-multi-390');
+      const by = (n) => rows.find((r) => r.name === n) || {};
+      check('⑭ ランキングの「マルチ」に、その人のアイコンが出る(切れた値も絵に・分からない値は字を出さない)',
+        rows.length === 3 && by('いちか').img >= 1 && by('あつ').img >= 1 && !rows.some((r) => /sneguroc|atsu_hap|zzzz/.test(r.text)), JSON.stringify(rows.map((r) => [r.name, r.img])));
       await page.close();
     }
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
