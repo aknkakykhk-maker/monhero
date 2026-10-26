@@ -333,15 +333,16 @@ const useCardWatchLive = (enabled) => {
 };
 
 // ---- 画面: 観戦する試合を選ぶ(マルチ対戦の入口から) ----
-// roster … 承認済みのフレンド [{ otherId, userName }](91 の入口が読んだもの)。いまはフレンドの対戦だけを出す(先に出す区切り)
+// roster … 承認済みのフレンド [{ otherId, userName }](91 の入口が読んだもの)。だれの対戦でも出す(2026-10-27 社長「だれの対戦でも見られる」)。
+// フレンドの対戦を先に並べて「フレンド」の札を付ける。出すのは名前・アイコン・番の数・見ている人数だけ(ほかの情報は出さない・社長)
 const CardPvpWatchList = ({ roster = [] }) => {
   const { seen, now } = useCardWatchLive(true);
   const friends = useMemo(() => new Set((roster || []).map((f) => f.otherId)), [roster]);
-  const list = cardWatchLiveList(seen, now, friends).filter((x) => x.friend >= 0);
+  const list = cardWatchLiveList(seen, now, friends);
   return (
     <div data-card-watch-list className="rounded-2xl border border-violet-300/40 bg-violet-500/5 p-2">
       {list.length === 0
-        ? <p data-card-watch-none className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(roster && roster.length ? 'いま対戦しているフレンドはいません。少し待つと出てきます' : 'まだフレンドがいません。HOMEの「フレンド」から申請できます')}</p>
+        ? <p data-card-watch-none className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('いまマルチ対戦をしている人はいません。少し待つと出てきます')}</p>
         : <ul className="max-h-[44vh] space-y-1 overflow-y-auto">
           {list.slice(0, 20).map((x) => (
             <li key={x.match} data-card-watch-row={x.match} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
@@ -351,7 +352,10 @@ const CardPvpWatchList = ({ roster = [] }) => {
                 <CardPvpAvatar icon={x.p[1].icon} frame={x.p[1].fr} className="h-7 w-7"/>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-bold text-white">{x.p[0].name} vs {x.p[1].name}</div>
+                <div className="flex min-w-0 items-center gap-1">
+                  {x.friend >= 0 && <span data-card-watch-friend className="shrink-0 rounded bg-emerald-500/25 px-1 text-[10px] font-black text-emerald-100">フレンド</span>}
+                  <span className="truncate text-[13px] font-bold text-white">{x.p[0].name} vs {x.p[1].name}</span>
+                </div>
                 <div className="text-[11px] font-bold text-slate-400 tabular-nums">{x.turn > 0 ? `ターン${x.turn}` : 'はじまったところ'}{x.eyes > 0 ? `・👀 ${x.eyes}` : ''}</div>
               </div>
               <button type="button" data-card-watch-go={x.match} disabled={x.eyes >= CARD_WATCH_MAX} className="mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"

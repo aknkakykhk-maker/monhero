@@ -1019,10 +1019,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               ))}
             </div>
           )}
-          {/* 観戦(2026-10-27 社長「マルチの観戦機能」)。いまはフレンドの対戦だけを出す。デッキが無くても見られる */}
-          <button type="button" data-card-watch-open disabled={!roster} className={`${btn} border border-violet-300/40 bg-slate-900 text-violet-100`}
-            onClick={() => { Audio_.fgSe.tap(); setWatchOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{watchOpen ? '観戦を閉じる' : 'フレンドの対戦を観戦する'}</button>
-          {watchOpen && roster && <CardPvpWatchList roster={roster}/>}
+          {/* 観戦(2026-10-27 社長「マルチの観戦機能」→「だれの対戦でも見られる」)。フレンドの対戦を先に並べる。デッキが無くても見られる */}
+          <button type="button" data-card-watch-open className={`${btn} border border-violet-300/40 bg-slate-900 text-violet-100`}
+            onClick={() => { Audio_.fgSe.tap(); setWatchOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{watchOpen ? '観戦を閉じる' : 'マルチ対戦を観戦する'}</button>
+          {watchOpen && <CardPvpWatchList roster={roster || []}/>}
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
             <p className="mb-2 text-[13px] font-bold text-slate-300">フレンドの合言葉で入る</p>
             <div className="flex gap-2">

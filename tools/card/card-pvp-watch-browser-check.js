@@ -6,7 +6,7 @@
 //   SHOT_DIR=<フォルダ> を付けると、観戦の画面と、見られている2人の画面の写真を残す
 //
 // ★外へはつながない。足場(偽の WebSocket と Node の中継・偽の Supabase)は card-pvp-browser-check.js と同じ。3つのページは別々の保存先
-//   A(ホスト)と B が合言葉の部屋で戦い、C(A のフレンド)がマルチ対戦の入口の「フレンドの対戦を観戦する」から途中で見始める
+//   A(ホスト)と B が合言葉の部屋で戦い、C(B のフレンド)がマルチ対戦の入口の「マルチ対戦を観戦する」から途中で見始める
 //   ① C の一覧に、対戦中のフレンド(A)の試合が出る(realtime:mhc-live)
 //   ② 「見る」で観戦の画面になり、途中からでも、はじめからの手をもらって、いまの場面まで追いつく
 //   ③ 見ている人の数が、A と B の対戦の画面に「👀 1」と出る
@@ -163,7 +163,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await A.waitForTimeout(6000);
     await C.locator('[data-card-watch-open]').click();
     const row = await C.locator('[data-card-watch-go]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-    check('① C の一覧に、対戦中のフレンドの試合が出る', hostIsA && row, `ホストはA: ${hostIsA}`);
+    const friendBadge = await C.locator('[data-card-watch-row] [data-card-watch-friend]').count();
+    check('① C の一覧に、対戦中の試合が出る・フレンドの試合には「フレンド」の札', hostIsA && row && friendBadge === 1, `ホストはA: ${hostIsA}・札 ${friendBadge}`);
     await shot(C, 'watch-01-list');
     await C.locator('[data-card-watch-go]').first().click();
     const caught = await C.waitForFunction(() => { const w = CARD_WATCH.get(); return w.phase === 'watching' && w.n > 0 && w.n >= w.hostN - 1; }, null, { timeout: 15000 }).then(() => true).catch(() => false);
@@ -174,6 +175,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const eyesB = await B.locator('[data-card-pvp-eyes]').waitFor({ timeout: 8000 }).then(() => B.locator('[data-card-pvp-eyes]').getAttribute('data-card-pvp-eyes')).catch(() => null);
     check('③ 見ている人の数が、2人の対戦の画面に「👀 1」と出る', eyesA === '1' && eyesB === '1', `${eyesA} / ${eyesB}`);
     await shot(C, 'watch-02-screen'); await shot(A, 'watch-03-host'); await shot(B, 'watch-04-guest');
+    // 場が進むと画面の描き直しが少し遅れるので、裏の札の数と手札の数がそろう瞬間を待ってから読む
+    await C.waitForFunction(() => { const st = CARD_WATCH.get().st; return st && [0, 1].every((p) => document.querySelectorAll(`[data-card-watch-hand="${p}"] img`).length === Math.min(7, st.players[p].hand.length)); }, null, { timeout: 10000 }).catch(() => {});
     const hid = await C.evaluate(() => { const st = CARD_WATCH.get().st; return { deck: st.players.every((p) => p.deck.every((no) => no === CARD_PVP_HIDDEN)), backs: [0, 1].map((p) => document.querySelectorAll(`[data-card-watch-hand="${p}"] img`).length), hands: st.players.map((p) => p.hand.length) }; });
     check('④ 観戦の画面に、両方の手札が裏の札で出る・山札は全部仮の札', hid.deck && hid.backs.every((n, i) => n === Math.min(7, hid.hands[i])), JSON.stringify(hid));
     // 終わるまで追う(途中で、観戦の場が当てられなくなっていないか)

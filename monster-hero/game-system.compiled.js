@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fd1a001177f8cc3
+// source-sha256: cdced0b7b1a01d83
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:29";
+const BUILD_DATE = "2026-10-27 03:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -97760,15 +97760,14 @@ const CardPvpLobby = ({
   }, "参加する")))), React.createElement("button", {
     type: "button",
     "data-card-watch-open": true,
-    disabled: !roster,
     className: `${btn} border border-violet-300/40 bg-slate-900 text-violet-100`,
     onClick: () => {
       Audio_.fgSe.tap();
       setWatchOpen(v => !v);
       if (selfBid) void cardPvpRoster(selfBid).then(list => setRoster(Array.isArray(list) ? list : []));
     }
-  }, watchOpen ? '観戦を閉じる' : 'フレンドの対戦を観戦する'), watchOpen && roster && React.createElement(CardPvpWatchList, {
-    roster: roster
+  }, watchOpen ? '観戦を閉じる' : 'マルチ対戦を観戦する'), watchOpen && React.createElement(CardPvpWatchList, {
+    roster: roster || []
   }), React.createElement("div", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
   }, React.createElement("p", {
@@ -98746,7 +98745,7 @@ const CardPvpWatchList = ({
     now
   } = useCardWatchLive(true);
   const friends = useMemo(() => new Set((roster || []).map(f => f.otherId)), [roster]);
-  const list = cardWatchLiveList(seen, now, friends).filter(x => x.friend >= 0);
+  const list = cardWatchLiveList(seen, now, friends);
   return React.createElement("div", {
     "data-card-watch-list": true,
     className: "rounded-2xl border border-violet-300/40 bg-violet-500/5 p-2"
@@ -98754,7 +98753,7 @@ const CardPvpWatchList = ({
     "data-card-watch-none": true,
     className: "p-2 text-[13px] font-bold text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(roster && roster.length ? 'いま対戦しているフレンドはいません。少し待つと出てきます' : 'まだフレンドがいません。HOMEの「フレンド」から申請できます')) : React.createElement("ul", {
+  }, jaWrap('いまマルチ対戦をしている人はいません。少し待つと出てきます')) : React.createElement("ul", {
     className: "max-h-[44vh] space-y-1 overflow-y-auto"
   }, list.slice(0, 20).map(x => React.createElement("li", {
     key: x.match,
@@ -98775,8 +98774,13 @@ const CardPvpWatchList = ({
   })), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("div", {
+    className: "flex min-w-0 items-center gap-1"
+  }, x.friend >= 0 && React.createElement("span", {
+    "data-card-watch-friend": true,
+    className: "shrink-0 rounded bg-emerald-500/25 px-1 text-[10px] font-black text-emerald-100"
+  }, "フレンド"), React.createElement("span", {
     className: "truncate text-[13px] font-bold text-white"
-  }, x.p[0].name, " vs ", x.p[1].name), React.createElement("div", {
+  }, x.p[0].name, " vs ", x.p[1].name)), React.createElement("div", {
     className: "text-[11px] font-bold text-slate-400 tabular-nums"
   }, x.turn > 0 ? `ターン${x.turn}` : 'はじまったところ', x.eyes > 0 ? `・👀 ${x.eyes}` : '')), React.createElement("button", {
     type: "button",
