@@ -14363,11 +14363,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!isCardRunScreen(gameState)) return undefined;
     if (resultProcessing) return undefined;
     if (!cardQuickAutoStart || !autoQuickRunConfigured(autoSettings)) return undefined;
-    const timer = setTimeout(() => {
+    const retry = () => {
       const current = quickRunProgressRef.current;
       if (!current || !current.finished || current.reason !== 'defeat') return;
       startQuickRunFromRhythm();
-    }, QUICK_RUN_AUTO_RETRY_MS);
+    };
+    const timer = setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS);   // 目印をモンヒロビートの始め直しと分ける(SCREEN_EFFECTS_MAP)
     return () => clearTimeout(timer);
   }, [quickRunProgress, gameState, resultProcessing, autoSettings, cardQuickAutoStart]);
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
