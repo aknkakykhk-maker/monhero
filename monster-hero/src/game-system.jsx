@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a51d3b464923b555
+// generated-sha256: 2fa7ab59f5550ac9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -2908,8 +2908,13 @@ const DEX_ENTRY_STATUSES = Object.freeze([
 const dexDraftMonsterList = () => {
   if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
   const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
-  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  const list = Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  // 実装予告を出した子(draftAnnounced)は「未実装」の先頭に並べる(2026-10-27 社長室カゲあつ。
+  // 予告で「図鑑の未実装に並べました」と書いたのに、58体の最後にいて見つけにくかった)。ほかの子の順は変えない
+  return [...list.filter(dexDraftAnnounced), ...list.filter(mon => !dexDraftAnnounced(mon))];
 };
+// 実装予告を出した案の子か。図鑑の札を「未実装」ではなく「近日実装」にする
+const dexDraftAnnounced = (mon) => !!(mon && mon.draft && mon.draftAnnounced);
 // 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
 const dexEntryLineageOf = (mon) => {
   if (!mon) return monsterLineageOf(null);
@@ -34997,8 +35002,10 @@ const DEX_STATUS_STYLE = {
   locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
   draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100',
 };
-const DexStatusTag = ({ status, size = 'sm' }) => {
-  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+// announced: 実装予告を出した案の子。「未実装」の代わりに「近日実装」と出す(色は未実装と同じ)
+const DexStatusTag = ({ status, size = 'sm', announced = false }) => {
+  const found = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  const def = announced && found.id === 'draft' ? { ...found, label:'近日実装' } : found;
   return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
 };
 
@@ -35056,7 +35063,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                       <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{mon.name}</div>
                       {unlocked
                         ? <div className="text-[10px] font-black text-amber-400/80 leading-tight">{monsterCategoryName(category)}</div>
-                        : <DexStatusTag status={section.id}/>}
+                        : <DexStatusTag status={section.id} announced={dexDraftAnnounced(mon)}/>}
                       {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
                     </button>
                   );
@@ -35201,7 +35208,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{mon.name}</div>
             {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
-            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md"/></div>}
+            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md" announced={dexDraftAnnounced(mon)}/></div>}
             {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
                 左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
             <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>

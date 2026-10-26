@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5146713f42501517
+// source-sha256: 92e5003e5fec8303
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -2902,8 +2902,10 @@ const DEX_ENTRY_STATUSES = Object.freeze([Object.freeze({
 const dexDraftMonsterList = () => {
   if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
   const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
-  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  const list = Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  return [...list.filter(dexDraftAnnounced), ...list.filter(mon => !dexDraftAnnounced(mon))];
 };
+const dexDraftAnnounced = mon => !!(mon && mon.draft && mon.draftAnnounced);
 const dexEntryLineageOf = mon => {
   if (!mon) return monsterLineageOf(null);
   const draft = mon.draft && mon.draftLineage && !lineageEntryMap()[mon.id] ? mon.draftLineage : null;
@@ -55784,9 +55786,14 @@ const DEX_STATUS_STYLE = {
 };
 const DexStatusTag = ({
   status,
-  size = 'sm'
+  size = 'sm',
+  announced = false
 }) => {
-  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  const found = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  const def = announced && found.id === 'draft' ? {
+    ...found,
+    label: '近日実装'
+  } : found;
   return React.createElement("span", {
     "data-dex-status-tag": def.id,
     className: `inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`
@@ -55893,7 +55900,8 @@ function MonsterDexScreen({
     }, mon.name), unlocked ? React.createElement("div", {
       className: "text-[10px] font-black text-amber-400/80 leading-tight"
     }, monsterCategoryName(category)) : React.createElement(DexStatusTag, {
-      status: section.id
+      status: section.id,
+      announced: dexDraftAnnounced(mon)
     }), unlocked && React.createElement(MonsterTypeBadge, {
       monId: mon.id,
       compact: true
@@ -56153,7 +56161,8 @@ function MonsterDexDetailScreen({
     className: "shrink-0 mt-1 flex justify-center"
   }, React.createElement(DexStatusTag, {
     status: status,
-    size: "md"
+    size: "md",
+    announced: dexDraftAnnounced(mon)
   })), React.createElement("div", {
     "data-dex-lineage-row": true,
     className: "shrink-0 mt-2 grid items-center gap-1.5",
