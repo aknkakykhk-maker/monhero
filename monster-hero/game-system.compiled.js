@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a7f51601a4617650
+// source-sha256: 4474170cb4ef34d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:51";
+const BUILD_DATE = "2026-10-27 02:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28235,6 +28235,98 @@ const sbUpsertBreederProfile = async ({
   } finally {
     clearTimeout(timer);
   }
+};
+const BREEDER_LEVELS_TABLE = 'breeder_levels';
+const BREEDER_LEVELS_SELECT = 'breeder_id,user_name,level,icon';
+const BREEDER_LEVELS_PAGE_SIZE = 1000;
+const BREEDER_LEVELS_MAX_PAGES = 30;
+let _breederLevelsUnavailable = false;
+const sbUpsertBreederLevel = async ({
+  breederId,
+  userName,
+  icon,
+  level
+}) => {
+  if (_breederLevelsUnavailable) return false;
+  const id = typeof breederId === 'string' ? breederId.trim() : '';
+  const lv = Math.floor(Number(level));
+  if (!id || !Number.isFinite(lv) || lv < 1) return false;
+  const row = {
+    breeder_id: id,
+    user_name: userName || '名無しのブリーダー',
+    icon: icon ?? null,
+    level: lv
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?on_conflict=breeder_id`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify([row]),
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) {
+        _breederLevelsUnavailable = true;
+        return false;
+      }
+      throw new Error(`breeder_levels upsert ${res.status}: ${body || res.statusText}`);
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const sbFetchBreederLevelRows = async (requestId = 'untracked') => {
+  if (_breederLevelsUnavailable) return [];
+  const all = [];
+  let pageSize = BREEDER_LEVELS_PAGE_SIZE;
+  let offset = 0;
+  for (let page = 0; page < BREEDER_LEVELS_MAX_PAGES; page++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?select=${BREEDER_LEVELS_SELECT}` + `&order=level.desc.nullslast,breeder_id.asc&limit=${pageSize}&offset=${offset}`;
+      const res = await fetch(url, {
+        headers: SB_HEADERS,
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        if (_isMissingTableError(res.status, body)) {
+          _breederLevelsUnavailable = true;
+          return [];
+        }
+        throw new Error(`breeder_levels ${res.status}: ${body || res.statusText}`);
+      }
+      const rows = JSON.parse(body || '[]');
+      const got = Array.isArray(rows) ? rows : [];
+      all.push(...got);
+      rankingLog(requestId, 'breeder-levels-page', {
+        page,
+        offset,
+        pageSize,
+        received: got.length,
+        total: all.length
+      });
+      if (got.length === 0) break;
+      if (page === 0 && got.length < pageSize) pageSize = got.length;
+      if (got.length < pageSize) break;
+      offset += got.length;
+    } catch (error) {
+      console.error('[ranking] breeder_levels fetch failed:', error && error.message ? error.message : error);
+      break;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return all.filter(r => r && typeof r === 'object' && Number(r.level) > 0);
 };
 let _recordLookById = new Map();
 let _recordLookByName = new Map();
@@ -100202,6 +100294,29 @@ function MonsterHeroGame() {
     lastPublishedProfileRef.current = signature;
     publishBreederProfile();
   }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
+  const lastPublishedBreederLevelRef = useRef(0);
+  useEffect(() => {
+    if (!dataLoaded || !onboarded || onboardingPreview) return;
+    const level = Math.floor(Number(levelInfo(breederXp).level));
+    if (!Number.isFinite(level) || level < 1 || lastPublishedBreederLevelRef.current >= level) return;
+    lastPublishedBreederLevelRef.current = level;
+    (async () => {
+      try {
+        const breederId = await ensureBreederId();
+        if (!breederId) return;
+        const ok = await sbUpsertBreederLevel({
+          breederId,
+          userName: breederName,
+          icon: breederIcon,
+          level
+        });
+        if (!ok) lastPublishedBreederLevelRef.current = 0;
+      } catch (error) {
+        lastPublishedBreederLevelRef.current = 0;
+        console.error('[breeder-level] publish failed:', error && error.message ? error.message : error);
+      }
+    })();
+  }, [dataLoaded, onboarded, onboardingPreview, breederXp, breederName, breederIcon]);
   const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
@@ -102144,7 +102259,8 @@ function MonsterHeroGame() {
       rankingLatestRequestRef.current.set(cacheKey, requestId);
       const request = (async () => {
         let error = null,
-          rows = [];
+          rows = [],
+          breederLevelTableRows = [];
         try {
           if (levelKind === 'bond') {
             try {
@@ -102167,6 +102283,7 @@ function MonsterHeroGame() {
             if (orderError) throw orderError;
           } else {
             rows = await sbFetchAllBreederRows(requestId);
+            breederLevelTableRows = await sbFetchBreederLevelRows(requestId);
           }
         } catch (e) {
           const message = e?.message || String(e);
@@ -102175,7 +102292,8 @@ function MonsterHeroGame() {
         }
         if (rankingLatestRequestRef.current.get(cacheKey) !== requestId) return;
         const fetched = mergeRows([], Array.isArray(rows) ? rows : []).map(toEntry);
-        const entries = levelKind === 'bond' ? fetched : aggregateBreederLevels(fetched);
+        const levelTableEntries = levelKind === 'bond' ? [] : (Array.isArray(breederLevelTableRows) ? breederLevelTableRows : []).map(toEntry);
+        const entries = levelKind === 'bond' ? fetched : aggregateBreederLevels([...levelTableEntries, ...fetched]);
         if (entries.length) {
           if (levelKind === 'bond') setBondRankingData({
             all: entries
@@ -118731,7 +118849,19 @@ function MonsterHeroGame() {
   }, "バックアップ"), React.createElement("button", {
     className: backupTab === 'import' ? 'active' : '',
     onClick: () => setBackupTab('import')
-  }, "復元")), backupTab === 'export' ? React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "復元")), backupTab === 'export' ? React.createElement(React.Fragment, null, React.createElement("button", {
+    "data-mhsave-action": "export",
+    className: "mh-dialog-choice mh-button mh-button-primary justify-center text-center",
+    style: {
+      justifyContent: 'center'
+    },
+    onClick: saveBackupFile
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルを保存（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118749,7 +118879,7 @@ function MonsterHeroGame() {
       color: '#fff',
       marginBottom: 4
     }
-  }, "使い方"), React.createElement("div", null, "1. 下の「バックアップファイルを保存」を押す"), React.createElement("div", null, "2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ"), React.createElement("div", null, "3. Android / PCはダウンロードフォルダへ直接保存されます"), React.createElement("div", null, "4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く"), React.createElement("div", {
+  }, "使い方"), React.createElement("div", null, "1. 上の「バックアップファイルを保存」を押す"), React.createElement("div", null, "2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ"), React.createElement("div", null, "3. Android / PCはダウンロードフォルダへ直接保存されます"), React.createElement("div", null, "4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く"), React.createElement("div", {
     style: {
       marginTop: 8,
       fontWeight: 900,
@@ -118767,14 +118897,7 @@ function MonsterHeroGame() {
       marginTop: 6,
       color: '#94a3b8'
     }
-  }, "※ YYYYMMDD_HHMM は保存した日時に置き換わります。")), React.createElement("button", {
-    "data-mhsave-action": "export",
-    className: "mh-dialog-choice mh-button mh-button-primary justify-center text-center",
-    style: {
-      justifyContent: 'center'
-    },
-    onClick: saveBackupFile
-  }, "バックアップファイルを保存（.mhsave）"), backupCode && React.createElement("textarea", {
+  }, "※ YYYYMMDD_HHMM は保存した日時に置き換わります。")), backupCode && React.createElement("textarea", {
     readOnly: true,
     value: backupCode
   }), React.createElement("button", {
@@ -118783,7 +118906,24 @@ function MonsterHeroGame() {
       justifyContent: 'center'
     },
     onClick: generateBackupCode
-  }, "バックアップコードを作成")) : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップコードを作成')))) : React.createElement(React.Fragment, null, React.createElement("button", {
+    "data-mhsave-action": "import",
+    className: "mh-dialog-choice justify-center text-center",
+    style: {
+      justifyContent: 'center'
+    },
+    onClick: restoreFromBackupFile
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルから復元（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118801,7 +118941,7 @@ function MonsterHeroGame() {
       color: '#fff',
       marginBottom: 4
     }
-  }, "使い方"), React.createElement("div", null, "1. 下の「バックアップファイルから復元」を押す"), React.createElement("div", null, "2. 保存した ", React.createElement("code", {
+  }, "使い方"), React.createElement("div", null, "1. 上の「バックアップファイルから復元」を押す"), React.createElement("div", null, "2. 保存した ", React.createElement("code", {
     style: {
       color: '#c4b5fd'
     }
@@ -118810,14 +118950,7 @@ function MonsterHeroGame() {
       marginTop: 7,
       color: '#fbbf24'
     }
-  }, "※ 選んだバックアップ内のデータで現在のセーブが上書きされます。")), React.createElement("button", {
-    "data-mhsave-action": "import",
-    className: "mh-dialog-choice justify-center text-center",
-    style: {
-      justifyContent: 'center'
-    },
-    onClick: restoreFromBackupFile
-  }, "バックアップファイルから復元（.mhsave）"), React.createElement("textarea", {
+  }, "※ 選んだバックアップ内のデータで現在のセーブが上書きされます。")), React.createElement("textarea", {
     value: restoreInput,
     onChange: e => setRestoreInput(e.target.value),
     placeholder: "バックアップコードを貼り付け"
@@ -118827,7 +118960,12 @@ function MonsterHeroGame() {
       justifyContent: 'center'
     },
     onClick: restoreFromBackupCode
-  }, "このコードで復元する")), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('このコードで復元する')))), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return React.createElement(React.Fragment, null, React.createElement("main", {
     className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
   }, React.createElement("div", {
