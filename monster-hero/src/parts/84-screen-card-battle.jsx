@@ -387,7 +387,7 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose }) => {
 };
 // カードの画面の文の折り方。jaWrap(41)に任せたうえで、短いかぎかっこの言葉(「守らない」)と、道具が割ってしまう言葉(ひととおり)は折らない
 // (320で「「守ら/ない」」「ひと/とおり」と折れた。QA 10・12)
-const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり)/;
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*)/;
 const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => (i % 2 === 1
   ? <span key={i} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>
   : <React.Fragment key={i}>{jaWrap(t)}</React.Fragment>));

@@ -198,7 +198,7 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
           Object.assign(host.style, { wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
           document.body.appendChild(host);
           ReactDOM.createRoot(host).render(cardJaWrap('よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう')); // eslint-disable-line no-undef
-          return new Promise((res) => setTimeout(() => { const k = [...host.querySelectorAll('[data-ja-keep]')].find((e) => e.innerText === 'ひととおり'); res({ width, rects: k ? k.getClientRects().length : 0 }); host.remove(); }, 300));
+          return new Promise((res) => setTimeout(() => { const k = [...host.querySelectorAll('[data-ja-keep]')].find((e) => e.innerText.startsWith('ひととおり')); res({ width, rects: k ? k.getClientRects().length : 0 }); host.remove(); }, 300));
         }, vw);
         check(`⑥ ${vw}幅: ドラの台詞の「ひととおり」が言葉の途中で折れない`, r.rects === 1, JSON.stringify(r));
       }

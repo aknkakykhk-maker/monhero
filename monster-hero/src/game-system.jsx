@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fb9feabc7ba4a587
+// generated-sha256: 388fb27812cd8659
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 12:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -53490,7 +53490,7 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose }) => {
 };
 // カードの画面の文の折り方。jaWrap(41)に任せたうえで、短いかぎかっこの言葉(「守らない」)と、道具が割ってしまう言葉(ひととおり)は折らない
 // (320で「「守ら/ない」」「ひと/とおり」と折れた。QA 10・12)
-const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり)/;
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*)/;
 const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => (i % 2 === 1
   ? <span key={i} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>
   : <React.Fragment key={i}>{jaWrap(t)}</React.Fragment>));
