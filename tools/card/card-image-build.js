@@ -36,6 +36,49 @@ const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // �
 const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9, x1: 678, y1: 725, frame: { below: 728, right: 679, x1: 692, y1: 734 } };
 const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT, blur: 9, x1: 674 };
 
+// キラ・別絵キラのモンスターカード(番号が S・V・RS で終わる元のカード)は地が粒の模様で、上下の色をつなぐと縦じまの四角が浮く
+// (2026-10-27 カード追加部パックくんの見回り。40枚ほどで © の所に縦じまが出ていた)。
+// すぐ上(dy<0)・すぐ下(dy>0)の、文字の無い同じ模様の行を写して埋める(©は板の中なので上から・URL は板の外なので下から)
+const isKiraMonster = (file) => /^C-\d+R?(S|V)\.jpg$/.test(path.basename(file));
+const KIRA_COPY = [{ ...BAND.monster[0], dy: -24 }, { ...BAND.monster[1], dy: 22 }];
+// 上の行に絵(爪・炎・線)がかかっていて写すと二重になる子と、別絵キラ(地が模様でなく絵)は、写さずに周りから滑らかに埋める(dy:null)
+const KIRA_SMOOTH = ['C-005S.jpg', 'C-005V.jpg', 'C-021S.jpg', 'C-026S.jpg', 'C-030S.jpg'];
+const kiraRects = (file) => {
+  const b = path.basename(file);
+  return KIRA_SMOOTH.includes(b) || /V\.jpg$/.test(b) ? KIRA_COPY.map((r) => ({ ...r, dy: null })) : KIRA_COPY;
+};
+// dy:null は写す元なし(縁の色を内側へなだらかに広げるだけ)。
+// 写したままだと明るさの差で四角の縁が見えるので、縁(四角のすぐ外の1列・1行)での「元 − 写す元」の差を、
+// 内側へなだらかに広げて足す(差の面を Jacobi で解く。四角は 200×20 ほどなので軽い)
+const copyRect = (px, ch, r) => {
+  const w = r.x1 - r.x0 + 3, h = r.y1 - r.y0 + 3; // 外の1列・1行を含む
+  for (let c = 0; c < ch; c += 1) {
+    const d = new Float32Array(w * h);
+    for (let j = 0; j < h; j += 1) for (let i = 0; i < w; i += 1) {
+      if (i && j && i < w - 1 && j < h - 1) continue;
+      const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
+      d[j * w + i] = px[(y * W + x) * ch + c] - (r.dy === null ? 0 : px[((y + r.dy) * W + x) * ch + c]);
+    }
+    for (let it = 0; it < 1500; it += 1) for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
+      d[j * w + i] = (d[j * w + i - 1] + d[j * w + i + 1] + d[(j - 1) * w + i] + d[(j + 1) * w + i]) / 4;
+    }
+    for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
+      const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
+      px[(y * W + x) * ch + c] = Math.max(0, Math.min(255, Math.round((r.dy === null ? 0 : px[((y + r.dy) * W + x) * ch + c]) + d[j * w + i])));
+    }
+  }
+};
+
+// © と URL の字が無い絵(2026-10-26 社長が送った剣士モッチー C-066・パンドラ C-067 の3枚ずつ)。
+// 前は帯を塗っていて、パンドラは赤い帯・別絵キラは縞の四角が出ていた(2026-10-27 カード追加部パックくんの見回り)
+const NO_COPYRIGHT = ['C066.jpg', 'C066S.jpg', 'C066V.jpg', 'C067.jpg', 'C067S.jpg', 'C067V.jpg'];
+
+// 日本語にした絵に残った英語の字の欠片。ヨロイモッチー(C-035)のサブの札で「デュラハン」の左に白い欠片が残っていた
+// (英語の DURAHAN が札の左端近くまであり、札の丸い角を守る所に重なっていた。2026-10-27 カード追加部パックくんの見回り)
+const PATCH = {
+  'C035.jpg': [{ x0: 562, y0: 810, x1: 573, y1: 836, from: 560 }],
+};
+
 // ★混血の絵は「C051.jpg」と「-」が無い名前なので、C のあとに数字が続くものもモンスターカードにする
 //   (前は技カードとして扱っていて、© が残り、右下の「No. C-051」を塗りつぶしていた・2026-10-24 に気づいた)
 const isMonster = (file) => /^C-?\d/.test(path.basename(file));
@@ -94,6 +137,9 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   // 文字を描き直した版(card-battle-ja/F*.jpg・カード部)は、もう枠にそろえてあるので切り出さない
   const { data, info } = await sharp(isField(file) && !file.startsWith(JA) ? await normalizeField(file) : file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
+  // © と URL の字がもともと無い絵(社長が作った剣士モッチー・パンドラ)は、塗るとまだらの四角だけが残るので消さない
+  if (NO_COPYRIGHT.includes(path.basename(file))) return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
+  if (isKiraMonster(file)) { kiraRects(file).forEach((r) => copyRect(data, info.channels, r)); return sharp(data, { raw: { width: W, height: H, channels: info.channels } }); }
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
   // 全体カードの © は場所がほかの技カードと違う(絵の右下 y≈708〜722)ので、文字を描き直す段(card-image-ja.js の field)で消してある。ここでは消さない
   if (artCopyright && !isMonster(file) && !(isField(file) && file.startsWith(JA))) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
@@ -105,6 +151,10 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
     const cp = (x, y, sx, sy) => { for (let c = 0; c < ch; c += 1) data[(y * W + x) * ch + c] = data[(sy * W + sx) * ch + c]; };
     for (let y = f.below; y <= f.y1; y += 1) for (let x = r.x0; x <= f.x1; x += 1) cp(x, y, r.x0 - 8, y);   // 窓の下: 左の枠の同じ行
     for (let y = r.y0; y < f.below; y += 1) for (let x = f.right; x <= f.x1; x += 1) cp(x, y, f.x1 + 4, y); // 窓の右: 右の枠の同じ行
+  }
+  // 日本語にした絵に残った、英語の字の欠片(1枚ずつ)。四角の中を、行ごとに左の from 列の色で塗る
+  for (const p of PATCH[path.basename(file)] || []) {
+    for (let y = p.y0; y <= p.y1; y += 1) for (let x = p.x0; x <= p.x1; x += 1) for (let c = 0; c < info.channels; c += 1) data[(y * W + x) * info.channels + c] = data[(y * W + p.from) * info.channels + c];
   }
   return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
 };
