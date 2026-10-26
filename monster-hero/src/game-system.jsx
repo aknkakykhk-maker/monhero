@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f2356fde64e58893
+// generated-sha256: a6407ce7bc266392
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 09:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 10:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6393,8 +6393,9 @@ const MASU_COLOR_REGION_HUES = {
   // 本体も淡い水色(彩度0.2前後)で白の判定から外れたので、花は位置(待機アニメの花の切り抜きと同じ範囲)で、本体は淡さで分ける。
   // 部位の数は3のまま(花／茎・葉・足／本体)
   Oboro: [
-    [{ hue: [232, 200], sMin: 0.12, bbox: OBORO_FLOWER_BOXES }, { hue: 50, sMin: 0.1, vMin: 0.6, bbox: OBORO_FLOWER_BOXES }],
-    { hue: 200, sMin: 0.02, notBbox: OBORO_FLOWER_BOXES }, // 葉・足の白い光の点も同じ部位に入れる(新しい絵は光がはっきりしている)
+    // 花びら(濃い青)と中(クリーム色)、茎(水色)と本体のあいだは色相が大きく違うので、既定の「境目は塗らない」を切る(内側に元の色の筋が残った)
+    [{ hue: [232, 200], sMin: 0.02, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { hue: [50, 100, 150], sMin: 0.02, vMin: 0.5, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { white: true, sMax: 0.4, vMin: 0.75, bbox: OBORO_FLOWER_BOXES }],
+    { hue: 200, sMin: 0.02, notBbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, // 葉・足の白い光の点も同じ部位に入れる(新しい絵は光がはっきりしている)
     { white: true, sMax: 0.55, vMin: 0.9, bbox: OBORO_BODY_BOX },
   ],
   // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。
@@ -6822,8 +6823,8 @@ const MASK_EXACT_ANALYSIS_MAX_SIZE = 768;
 // (96px表示)で口まわりに階段が残っていた。
 // 判定と平滑化は解析サイズのまま(多数決の半径が画像幅に比例するため、解像度を上げると
 // 実測で7秒級まで重くなる)、書き出しだけを高解像度で行うことで見た目だけを直す。
-// モノリス・オボロゲソウは 2026-10-26 に元絵を160pxから1024pxへ差し替えたので足した(白で染めると帯の境目に線が出ていた)
-const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true, Monol: true, Oboro: true };
+// モノリスは 2026-10-26 に元絵を160pxから1024pxへ差し替えたので足した(白で染めると帯の境目に線が出ていた)
+const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true, Monol: true };
 // 高解像度で書き出すときのマスクの最大サイズ(px)。表示は最大でも250px程度なので、
 // 元絵の原寸まで上げる必要はなく、階段が見えなくなる範囲で抑える
 const MASK_HIRES_MAX_SIZE = 768;

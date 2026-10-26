@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 18c8f6db89ebdd59
+// source-sha256: ab3a491b84a5f6a6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 09:52";
+const BUILD_DATE = "2026-10-26 10:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -9043,17 +9043,25 @@ const MASU_COLOR_REGION_HUES = {
   }],
   Oboro: [[{
     hue: [232, 200],
-    sMin: 0.12,
-    bbox: OBORO_FLOWER_BOXES
+    sMin: 0.02,
+    bbox: OBORO_FLOWER_BOXES,
+    noEdgeGuard: true
   }, {
-    hue: 50,
-    sMin: 0.1,
-    vMin: 0.6,
+    hue: [50, 100, 150],
+    sMin: 0.02,
+    vMin: 0.5,
+    bbox: OBORO_FLOWER_BOXES,
+    noEdgeGuard: true
+  }, {
+    white: true,
+    sMax: 0.4,
+    vMin: 0.75,
     bbox: OBORO_FLOWER_BOXES
   }], {
     hue: 200,
     sMin: 0.02,
-    notBbox: OBORO_FLOWER_BOXES
+    notBbox: OBORO_FLOWER_BOXES,
+    noEdgeGuard: true
   }, {
     white: true,
     sMax: 0.55,
@@ -9584,8 +9592,7 @@ const MASK_HIRES_BASE_IDS = {
   Zan: true,
   Undine: true,
   Yaobikuni: true,
-  Monol: true,
-  Oboro: true
+  Monol: true
 };
 const MASK_HIRES_MAX_SIZE = 768;
 const _buildHiResMaskUrls = (smoothed, regionDefs, src, w, h, natW, natH) => {

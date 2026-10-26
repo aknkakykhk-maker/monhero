@@ -52,7 +52,7 @@ const GLOSS_EXPECTED = ['Mocchi'];
 const REGION_SAT_RATIO_MIN = 0.45;
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
-const EXPECTED = ['Mocchi', 'Ark', 'Ham', 'Zan', 'Undine', 'Yaobikuni'];
+const EXPECTED = ['Mocchi', 'Ark', 'Ham', 'Zan', 'Undine', 'Yaobikuni', 'Monol'];
 
 const page = `<!doctype html><meta charset="utf-8">
 <!-- 画像はPNGファイルになったので、monster-hero/ を基準にパスを解決させる -->
