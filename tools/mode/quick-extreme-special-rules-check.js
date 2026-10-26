@@ -45,11 +45,11 @@ for (const use of [
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);
 assert(source.includes('quick&&hasExtremeSpecialRules(key)') && source.includes('特殊ルールあり'));
 assert(source.includes('const groups=extremeRuleDetailGroups(specialDifficulty,isQuickMode(runMode));'), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
-assert(source.includes("? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`])"), 'Quick ULTIMATE rule detail must call the WAVE effect automatic growth');
+assert(source.includes("? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE内1ターンごと-${turnPointText(rules.awakeningPenaltyRate)}`])"), 'Quick ULTIMATE rule detail must call the WAVE effect automatic growth');
 // クイックの自動成長は成長率そのものから引く(pt)、トレーニングは増える量へ掛ける(%)。
 // 掛かり方が違うので、ルール詳細の言い方も分ける
-assert(source.includes(": (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE Tごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}Tで0%）`])"), 'training reduction must be described as a multiplier on the gain');
-assert(source.includes("['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`]")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE rule detail must explain the damage floor as a stopping point');
+assert(source.includes(": (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE内1ターンごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}ターンで0%）`])"), 'training reduction must be described as a multiplier on the gain');
+assert(source.includes("['与ダメ倍率',`経過1ターンごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`]")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE rule detail must explain the damage floor as a stopping point');
 assert(source.includes('extremeRuleSummaryText(setting.id)')&&source.includes('data-extreme-rule-detail-open={setting.id}'), 'official card must point at the shared rule-detail sheet instead of listing rules');
 assert(source.includes('const enemyTurnMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount,specialRuleDifficulty);'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
 assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&!!extremeDistanceBreakRule(specialRuleDifficulty);'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');

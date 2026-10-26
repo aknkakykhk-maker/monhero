@@ -166,7 +166,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
           await page.mouse.up();
           await page.waitForTimeout(300);
           if (await has('[data-card-detail]')) await page.locator('[data-card-detail]').click({ position: { x: 10, y: 10 } });
-          if (await has('[data-confirm-sheet]')) { await page.getByRole('button', { name: 'キャンセル' }).click().catch(() => {}); }
+          if (await has('[data-confirm-sheet]')) { await page.getByRole('button', { name: 'やめる' }).click().catch(() => {}); }
           continue;
         }
         // ② 技を使う前の確認: 使える技 → 狙える相手
@@ -183,7 +183,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
           const sheet = await has('[data-confirm-sheet]');
           if (sheet && cancelOk === null) {
             if (SHOT) await shot('confirm-use');
-            await page.getByRole('button', { name: 'キャンセル' }).click();
+            await page.getByRole('button', { name: 'やめる' }).click();
             await page.waitForTimeout(250);
             cancelOk = (await page.locator('[data-card-log]').textContent()) === logBefore && !(await has('[data-confirm-sheet]'));
             await tgt.click(); await page.waitForTimeout(250);
@@ -217,7 +217,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
       }
       await page.waitForTimeout(150);
     }
-    check('② 技を使う前の確認: 窓が出て、「キャンセル」なら何も起きない', cancelOk === true, String(cancelOk));
+    check('② 技を使う前の確認: 窓が出て、「やめる」なら何も起きない', cancelOk === true, String(cancelOk));
     check('② 技を使う前の確認: 「使う」で技が出る', useOk === true, String(useOk));
     check('③ ターン終了の確認: 窓が出て、「終わる」で相手の番へ移る', endOk === true, String(endOk));
     check('④ ガッツにするカードのおすすめ: 何枚か選んだ状態で始まる', gutsPicked === true, String(gutsPicked));
