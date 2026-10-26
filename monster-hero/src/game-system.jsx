@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f0d47bd087b29673
+// generated-sha256: 35398f38b4fc8a1f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 01:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1111,7 +1111,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([
   // 補助
   Object.freeze({ id:'gutsCostReduction', category:'support', name:'省気', desc:'本人のカード消費ガッツ -1%', costPerLevel:10, effectPerLevel:1, unit:'%', maxLevel:100 }),
   Object.freeze({ id:'autoGutsRecovery', category:'support', name:'活気', desc:'パーティの実際の自動ガッツ回復量 +1%', costPerLevel:10, effectPerLevel:1, unit:'%' }),
-  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使用可能カード枚数 +1', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
+  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使えるカード +1枚', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
 ]);
 const SOUL_TRAIT_BY_ID = Object.freeze(Object.fromEntries(SOUL_TRAIT_DEFINITIONS.map(trait => [trait.id, trait])));
 const SOUL_TRAIT_CATEGORIES = Object.freeze([
@@ -4235,10 +4235,10 @@ const TRAINING_DIFFICULTIES = Object.freeze({
   NORMAL:{id:'NORMAL',label:'NORMAL',available:false,turns:10,dice:[1,3],spaces:32,summary:'道具の判断が重要になる予定です。説明のみ確認できます。'},
 });
 const TRAINING_TOOLS = Object.freeze({
- feather:{name:'加速の羽',emoji:'🪽',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目に＋2'}, gale:{name:'疾風の札',emoji:'🌪️',timing:'サイコロを振る前',mode:'消費型',desc:'2回振り、高い出目を採用'}, reroll:{name:'振り直しの石',emoji:'🪨',timing:'出目の確定後・移動前',mode:'消費型',desc:'確定した出目を1回だけ振り直す'}, noReturn:{name:'戻らずのお守り',emoji:'🧿',timing:'取得後は自動待機',mode:'自動発動型',desc:'次に受ける後退効果を1回無効化して消滅'}, sand:{name:'時の砂',emoji:'⏳',timing:'移動していない時',mode:'消費型',desc:'残りターン＋1'}, fixed:{name:'確定サイコロ',emoji:'🎲',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目を1・2・3から選択'}, returnCharm:{name:'帰還のお守り',emoji:'🏮',timing:'取得後は自動待機',mode:'自動発動型',desc:'ゴール失敗時、仮獲得した通常アイテムから1個選んで保護'},
+ feather:{name:'加速の羽',emoji:'🪽',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目に＋2'}, gale:{name:'疾風の札',emoji:'🌪️',timing:'サイコロを振る前',mode:'消費型',desc:'2回振り、高い出目を採用'}, reroll:{name:'振り直しの石',emoji:'🪨',timing:'出目の確定後・移動前',mode:'消費型',desc:'確定した出目を1回だけ振り直す'}, noReturn:{name:'戻らずのお守り',emoji:'🧿',timing:'持っているだけで効く',mode:'自動発動型',desc:'次に戻されるのを1回だけ防いで、なくなる'}, sand:{name:'時の砂',emoji:'⏳',timing:'移動していない時',mode:'消費型',desc:'残りターン＋1'}, fixed:{name:'確定サイコロ',emoji:'🎲',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目を1・2・3から選択'}, returnCharm:{name:'帰還のお守り',emoji:'🏮',timing:'持っているだけで効く',mode:'自動発動型',desc:'ゴール失敗時、仮獲得した通常アイテムから1個選んで保護'},
 });
 const TRAINING_SPACE_TYPES = Object.freeze({
- start:{kind:'start',label:'スタート',emoji:'🚩',color:'#475569',desc:'修行の開始地点'}, xp30:{kind:'xp',value:30,label:'絆EXP',emoji:'💗',color:'#16a34a',desc:'仮獲得絆経験値＋30'}, xp60:{kind:'xp',value:60,label:'大EXP',emoji:'💖',color:'#15803d',desc:'仮獲得絆経験値＋60'}, gem50:{kind:'diamond',value:50,label:'ダイヤ',emoji:'💎',color:'#0891b2',desc:'仮獲得ダイヤ＋50'}, gem100:{kind:'diamond',value:100,label:'大ダイヤ',emoji:'💠',color:'#2563eb',desc:'仮獲得ダイヤ＋100'}, item:{kind:'item',value:'training_ticket',label:'アイテム',emoji:'🎁',color:'#ec4899',desc:'仮獲得通常アイテムを1個追加'}, tool:{kind:'tool',label:'修行道具',emoji:'🎒',color:'#d946ef',desc:'修行専用アイテムをランダム取得'}, forward:{kind:'move',value:1,label:'前進',emoji:'⏩',color:'#16a34a',desc:'1～3マス追加移動（停止マスだけ発動）'}, back:{kind:'move',value:-1,label:'後退',emoji:'⏪',color:'#dc2626',desc:'1～3マス戻る（停止マスだけ発動）'}, turnPlus:{kind:'turn',value:1,label:'ターン＋',emoji:'⏱️',color:'#059669',desc:'残りターン＋1'}, turnMinus:{kind:'turn',value:-1,label:'ターン－',emoji:'⚡',color:'#b91c1c',desc:'残りターン－1'}, boost:{kind:'effect',value:'boost',label:'強化',emoji:'✨',color:'#ca8a04',desc:'次回のサイコロ出目＋1'}, again:{kind:'effect',value:'again',label:'もう一度',emoji:'🔁',color:'#0d9488',desc:'ターンを消費せず再度サイコロ'}, happening:{kind:'happening',label:'ハプニング',emoji:'⁉️',color:'#9333ea',desc:'良い効果または悪い効果が発動'}, goal:{kind:'goal',label:'ゴール',emoji:'🏁',color:'#eab308',desc:'到達または通過で修行成功'},
+ start:{kind:'start',label:'スタート',emoji:'🚩',color:'#475569',desc:'修行の開始地点'}, xp30:{kind:'xp',value:30,label:'絆EXP',emoji:'💗',color:'#16a34a',desc:'仮獲得絆経験値＋30'}, xp60:{kind:'xp',value:60,label:'大EXP',emoji:'💖',color:'#15803d',desc:'仮獲得絆経験値＋60'}, gem50:{kind:'diamond',value:50,label:'ダイヤ',emoji:'💎',color:'#0891b2',desc:'仮獲得ダイヤ＋50'}, gem100:{kind:'diamond',value:100,label:'大ダイヤ',emoji:'💠',color:'#2563eb',desc:'仮獲得ダイヤ＋100'}, item:{kind:'item',value:'training_ticket',label:'アイテム',emoji:'🎁',color:'#ec4899',desc:'仮獲得通常アイテムを1個追加'}, tool:{kind:'tool',label:'修行道具',emoji:'🎒',color:'#d946ef',desc:'修行で使う道具を1つもらう'}, forward:{kind:'move',value:1,label:'前進',emoji:'⏩',color:'#16a34a',desc:'1～3マス追加移動（停止マスだけ発動）'}, back:{kind:'move',value:-1,label:'後退',emoji:'⏪',color:'#dc2626',desc:'1～3マス戻る（停止マスだけ発動）'}, turnPlus:{kind:'turn',value:1,label:'ターン＋',emoji:'⏱️',color:'#059669',desc:'残りターン＋1'}, turnMinus:{kind:'turn',value:-1,label:'ターン－',emoji:'⚡',color:'#b91c1c',desc:'残りターン－1'}, boost:{kind:'effect',value:'boost',label:'強化',emoji:'✨',color:'#ca8a04',desc:'次回のサイコロ出目＋1'}, again:{kind:'effect',value:'again',label:'もう一度',emoji:'🔁',color:'#0d9488',desc:'ターンを消費せず再度サイコロ'}, happening:{kind:'happening',label:'ハプニング',emoji:'⁉️',color:'#9333ea',desc:'良い効果または悪い効果が発動'}, goal:{kind:'goal',label:'ゴール',emoji:'🏁',color:'#eab308',desc:'到達または通過で修行成功'},
 });
 // 接続先を持つ24ノード。3回分岐し、安全な短路と報酬の遠回りが再合流する。
 const TRAINING_BEGINNER_NODES = Object.freeze([
@@ -9730,10 +9730,10 @@ const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらで
 const missionItemReward = (itemId, amount) => ({ type:'gameItem', itemId, amount });
 const DAILY_ROTATION_MISSIONS = Object.freeze({
   1:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'diamond',amount:300}]},
-  2:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'trainingTicket',amount:3}]},
+  2:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使う',key:'itemUses',target:1,rewards:[{type:'trainingTicket',amount:3}]},
   3:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
   4:{id:'daily_rotation',name:'本日のミッション',condition:`種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
-  5:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'dyeMock',amount:1}]},
+  5:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使う',key:'itemUses',target:1,rewards:[{type:'dyeMock',amount:1}]},
   6:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[missionItemReward('hero_proof_shard',1)]},
   0:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
 });
@@ -9741,11 +9741,11 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([
   {id:'weekly_rotation',name:'今週のミッション',condition:`プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:3,rewards:[missionItemReward('hero_proof_shard',3)]},
   {id:'weekly_rotation',name:'今週のミッション',condition:'極限チャレンジを1回クリアする（未解放ならクイックモードを10回クリア）',key:'extremeOrQuick',target:1,rewards:[{type:'rainbowPsyche',amount:30}]},
   {id:'weekly_rotation',name:'今週のミッション',condition:`種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:3,rewards:[{type:'trainingTicketLarge',amount:2}]},
-  {id:'weekly_rotation',name:'今週のミッション',condition:'アイテムを10個使用する',key:'itemUses',target:10,rewards:[{type:'bondPointReset',amount:1}]},
+  {id:'weekly_rotation',name:'今週のミッション',condition:'アイテムを10個使う',key:'itemUses',target:10,rewards:[{type:'bondPointReset',amount:1}]},
 ]);
 const missionDailyDefinitions = (now=Date.now()) => [
   {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:200}]},
-  {id:'daily_battles',name:'バトルに挑戦',condition:'バトルを3回行う',key:'battles',target:3,rewards:[{type:'trainingTicket',amount:3}]},
+  {id:'daily_battles',name:'バトルに挑戦',condition:'バトルを3回遊ぶ',key:'battles',target:3,rewards:[{type:'trainingTicket',amount:3}]},
   // 旧 daily_wins のIDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
   {id:'daily_wins',name:'デイリーチャレンジ',condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
   {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:300}]},
@@ -9753,31 +9753,31 @@ const missionDailyDefinitions = (now=Date.now()) => [
   {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1},{type:'gameItem',itemId:'session_ticket',amount:1}],complete:true},
 ];
 const missionWeeklyDefinitions = (now=Date.now()) => [
-  {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
-  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回行う',key:'battles',target:20,rewards:[{type:'diamond',amount:1000}]},
+  {id:'weekly_logins',name:'継続は力なり',condition:'5日ログインする(同じ日は1回)',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
+  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回遊ぶ',key:'battles',target:20,rewards:[{type:'diamond',amount:1000}]},
   {id:'weekly_enhance',name:'育成週間',condition:'モンスターを10回強化する',key:'enhances',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
   // 旧 weekly_wins のIDをクイック枠へ再利用し、同期間の二重受取を防ぐ。
   {id:'weekly_wins',name:'クイック育成',condition:'クイックモードを5回クリアする',key:'quickClears',target:5,rewards:[{type:'rainbowPsyche',amount:20}]},
   // 旧IDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
   {id:'weekly_donations',name:'チャレンジャー',condition:`チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:3,rewards:[{type:'breederXp',amount:300}]},
-  {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回購入する',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:2}]},
+  {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回買う',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:2}]},
   // 旧 weekly_daily_claims のIDをアイテム使用枠へ再利用する。
-  {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使用する',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
+  {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使う',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
   {...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]},
   {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5),{type:'gameItem',itemId:'session_ticket',amount:3}],complete:true},
 ];
 const missionMonthlyDefinitions = () => [
-  {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
-  {id:'monthly_battles',name:'月間バトル',condition:'バトルを100回行う',key:'battles',target:100,rewards:[{type:'rainbowPsyche',amount:50}]},
-  {id:'monthly_wins',name:'月間勝利',condition:'バトルで200回勝利する',key:'wins',target:200,rewards:[{type:'trainingTicketLarge',amount:5}]},
+  {id:'monthly_logins',name:'月間ログイン',condition:'20日ログインする(同じ日は1回)',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
+  {id:'monthly_battles',name:'月間バトル',condition:'バトルを100回遊ぶ',key:'battles',target:100,rewards:[{type:'rainbowPsyche',amount:50}]},
+  {id:'monthly_wins',name:'月間勝利',condition:'バトルで200回勝つ',key:'wins',target:200,rewards:[{type:'trainingTicketLarge',amount:5}]},
   {id:'monthly_daily_completes',name:'デイリーマスター',condition:'デイリーコンプリートを20回達成する',key:'dailyCompletes',target:20,rewards:[{type:'diamond',amount:5000}]},
   {id:'monthly_weekly_completes',name:'ウィークリーマスター',condition:'ウィークリーコンプリートを3回達成する',key:'weeklyCompletes',target:3,rewards:[{type:'rainbowPsyche',amount:100}]},
-  {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回プレイする',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
+  {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回遊ぶ',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
   {id:'monthly_challenge_runs',name:'チャレンジ月間',condition:`チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,key:'challengeRuns',target:10,rewards:[{type:'rainbowPsyche',amount:50}]},
   {id:'monthly_pro_clears',name:'プロ月間',condition:`プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:10,rewards:[missionItemReward('hero_proof_shard',10)]},
   {id:'monthly_enhances',name:'育成月間',condition:'モンスターを30回強化する',key:'enhances',target:30,rewards:[{type:'uniqueSkillResetTicket',amount:2}]},
-  {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回取引する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
-  {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'各種モードを合計30回プレイする',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
+  {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回買い物する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
+  {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'どのモードでも合わせて30回遊ぶ',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
   {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1),{type:'gameItem',itemId:'session_ticket',amount:10}],complete:true},
 ];
 // 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。
@@ -10225,7 +10225,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ assistCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。間合い適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
+  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35ターンごとに距離の弱体（DISTANCE BREAK）が進む最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   // INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。ただし役割が重なるルールは
   // 重ねない(CHAOSの与ダメ50%・加入B50%はULTIMATE系のターン低下と重複するため入れない。
   // NIGHTMAREのwaveEnhancementも、トレーニングまで50%になってターン低下と重なるため入れず、
@@ -10596,11 +10596,11 @@ const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
 const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
 const INFINITY_SETTING = EXTREME_DIFFICULTIES[4];
 // GODは極限チャレンジの正式な最上位難易度。バトルデバッグも同じ定義を参照する。
-const GOD_SETTING = Object.freeze({ id:'GOD', label:'GOD', japanese:'ゴッド', available:true, debugAvailable:true, power:100, score:20, xp:60, gold:40, psyche:100, waveCount:10, unlockRequirement:'INFINITY', rankingId:'ExtremeGOD', recordId:'GOD', description:'神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。', cardDescription:'2WAVEごとに神威が上昇。累計ターン圧と20TごとのDISTANCE BREAKを受ける。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.0125, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:20, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) });
+const GOD_SETTING = Object.freeze({ id:'GOD', label:'GOD', japanese:'ゴッド', available:true, debugAvailable:true, power:100, score:20, xp:60, gold:40, psyche:100, waveCount:10, unlockRequirement:'INFINITY', rankingId:'ExtremeGOD', recordId:'GOD', description:'神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。', cardDescription:'2WAVEごとに神威が上昇。累計ターン圧と20ターンごとの距離の弱体（DISTANCE BREAK）を受ける。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.0125, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:20, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) });
 // RAGNAROKはGODの次の極限難易度。黄昏が2WAVEごとに深まり、W5とW10のボスは倒しても起き上がる。
 // 「不死(revival)」は数値ではなく形のあるルールなので、他の倍率と同じく specialRules へ持たせ、
 // バトル側は難易度名ではなく「そのルールを持っているか」だけを見る(難易度を足しても分岐が増えない)。
-const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japanese:'ラグナロク', available:true, debugAvailable:true, power:200, score:20, xp:80, gold:60, psyche:130, waveCount:10, unlockRequirement:'GOD', rankingId:'ExtremeRAGNAROK', recordId:'RAGNAROK', description:'黄昏が2WAVEごとに深まり、WAVE5とWAVE10のボスは倒しても起き上がる、極限チャレンジの最終難易度。', cardDescription:'2WAVEごとに黄昏が深まる。ボスは死者の再起で蘇り、15TごとのDISTANCE BREAKに安全距離はない。', specialRules:Object.freeze({ assistCardEffect:0.35, positiveModifier:0.35, negativeModifier:2.5, distanceEnhancement:0.35, gutsCost:1.75, enemyTurnRate:0.01, allyJoinPenaltyRate:0.01, minimumAllyJoinBonus:0.05, damageTurnRate:0.015, minimumDamageDealt:0.20, awakeningPenaltyRate:0.0075, awakeningZeroTurns:15, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:15, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 5:1, 10:2 }), hpRate:0.5, atkBoostPerRevival:0.5 }) }) });
+const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japanese:'ラグナロク', available:true, debugAvailable:true, power:200, score:20, xp:80, gold:60, psyche:130, waveCount:10, unlockRequirement:'GOD', rankingId:'ExtremeRAGNAROK', recordId:'RAGNAROK', description:'黄昏が2WAVEごとに深まり、WAVE5とWAVE10のボスは倒しても起き上がる、極限チャレンジの最終難易度。', cardDescription:'2WAVEごとに黄昏が深まる。ボスは死者の再起で蘇り、15ターンごとの距離の弱体（DISTANCE BREAK）に安全距離はない。', specialRules:Object.freeze({ assistCardEffect:0.35, positiveModifier:0.35, negativeModifier:2.5, distanceEnhancement:0.35, gutsCost:1.75, enemyTurnRate:0.01, allyJoinPenaltyRate:0.01, minimumAllyJoinBonus:0.05, damageTurnRate:0.015, minimumDamageDealt:0.20, awakeningPenaltyRate:0.0075, awakeningZeroTurns:15, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:15, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 5:1, 10:2 }), hpRate:0.5, atkBoostPerRevival:0.5 }) }) });
 // HELHEIMはRAGNAROKの次の極限難易度。ボス復活がW3/W5/W7/W9/W10へ広がり、冥府が味方の最大ライフを削る。
 // 距離強化はWAVEごとに薄れ(W1=10%→W10=1%)、敵のライフは全員10倍。W9のデュラハンは専用の上乗せを受ける。
 // 敵ごとの上乗せは「ライフ倍率(lifeRate)」と「敵ごとの補正(byEnemy)」を specialRules に持たせ、
@@ -10866,12 +10866,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   const groups=[];
   const push=(title,lines)=>{const kept=lines.filter(Boolean);if(kept.length)groups.push({title,lines:kept});};
   if(difficultyId===GOD_SETTING.id)push('神威',[
-    ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
+    ['進行','2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'],
     ['敵ライフ/攻撃力','神威Lvごと +15% / +30% / +45% / +60% / +75%'],
     ['Lv5','与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし'],
   ]);
   if(difficultyId===RAGNAROK_SETTING.id)push('黄昏',[
-    ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
+    ['進行','2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'],
     ['敵ライフ/攻撃力','黄昏Lvごと +20% / +40% / +60% / +80% / +100%'],
     ['Lv2','距離強化 35%→25%'],
     ['Lv3','消費ガッツ 175%→200%'],
@@ -10882,7 +10882,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
     push('冥府',[
-      ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
+      ['進行','2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'],
       ['敵ライフ/攻撃力','冥府Lvごと +30% / +60% / +90% / +120% / +150%'],
       ['味方の最大ライフ','冥府Lvごと -5%（Lv5で-25%）'],
       ['Lv3','消費ガッツ 200%→225%'],
@@ -10912,21 +10912,21 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     rules.gutsCost!=null&&['消費ガッツ',specialRulePercent(rules.gutsCost)],
   ]);
   push('累計ターン',[
-    rules.enemyTurnRate!=null&&['敵ライフ/攻撃力',`累計Tごと+${precisePercent(rules.enemyTurnRate)}`],
-    rules.allyJoinPenaltyRate!=null&&['加入B倍率',`累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus!=null?`（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）`:''}`],
-    rules.damageTurnRate!=null&&['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`],
+    rules.enemyTurnRate!=null&&['敵ライフ/攻撃力',`累計1ターンごと+${precisePercent(rules.enemyTurnRate)}`],
+    rules.allyJoinPenaltyRate!=null&&['加入B倍率',`累計1ターンごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus!=null?`（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）`:''}`],
+    rules.damageTurnRate!=null&&['与ダメ倍率',`経過1ターンごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`],
   ]);
   push('WAVEターン',[
     // クイックの自動成長は成長率そのものから引く(10%→…)ので「pt」、
     // トレーニングは増える量へ掛かるので「%」。掛かり方が違うので言い方も分ける
     quick
-      ? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`])
-      : (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE Tごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}Tで0%）`]),
+      ? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE内1ターンごと-${turnPointText(rules.awakeningPenaltyRate)}`])
+      : (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE内1ターンごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}ターンで0%）`]),
     (quick?rules.awakeningPenaltyRate!=null:rules.awakeningZeroTurns>0)&&Array.isArray(rules.awakeningPenaltyExcludes)&&rules.awakeningPenaltyExcludes.includes('distance')&&['対象外','距離強化は下がらない'],
   ]);
   const breakRule=extremeDistanceBreakRule(difficultyId);
   if(breakRule)push('DISTANCE BREAK',[
-    ['進行',`累計${breakRule.interval}Tごと1距離の弱体Lv上昇`],
+    ['進行',`累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`],
     ['弱体倍率',`Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel**2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel**3)}（以降も半減）`],
     ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離すべて弱体化する）'],
   ]);
@@ -11696,7 +11696,7 @@ const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', 
     {error&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{error}</p>}
     <div className="mt-3 grid grid-cols-1 gap-2">
       <button type="button" disabled={!canConfirm} onClick={()=>onConfirm&&onConfirm(count)} className={`mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`}>{meta.verb}する</button>
-      <MarketModalClose onClick={onCancel} label="キャンセル" disabled={pending}/>
+      <MarketModalClose onClick={onCancel} label="やめる" disabled={pending}/>
     </div>
   </MarketModal>;
 };
@@ -12176,11 +12176,11 @@ const HELP_DATA_TITLES = {
   cardBeatPointRewards: 'MFバトルカードの1戦でもらえるビートP',
   cardPacks: 'パックの弾と入っている種族',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
-  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
-  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
+  raidJackTiersA: 'レイドバトルのジャック(段階別の共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階別のライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   tacticsHateGains: '🔥(ヘイト)の増え方',
-  tacticsHateTypes: 'タイプごとの🔥',
+  tacticsHateTypes: 'タイプ別の🔥',
   tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
@@ -12201,11 +12201,11 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
-  assistantBondRewards: '仲良し度のLvごとのごほうび(助手ごとに1回)',
+  assistantBondRewards: '仲良し度Lvのごほうび(助手ひとりにつき1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
-  psycheRewards: '難易度ごとにもらえる虹のプシュケー',
-  rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  psycheRewards: '難易度別にもらえる虹のプシュケー',
+  rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
   rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
@@ -19951,7 +19951,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 </div>
 </section>
 <section data-rhythm-options-group="音ごとの大きさ" className={card}>
-{!wide&&<h3 className={head}>◆ 音ごとの大きさ</h3>}
+{!wide&&<h3 className={head}>◆ 音の種類別の大きさ</h3>}
 <div className={wide?`mt-1 ${grid}`:`mt-3 ${grid}`}>
 {field('フリック音の大きさ',stepper('noteSeFlickVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
               'タップ音量に対する大きさです。フリックは触れた瞬間ではなく、払えたときに「シュッ」と鳴ります。0%で鳴らしません。',{full:true})}
@@ -19967,14 +19967,14 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               <button type="button" data-rhythm-se-preview="flick" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'flick')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">フリック音</button>
               <button type="button" data-rhythm-se-preview="end" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'end')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">ロングの終わり</button>
               <button type="button" data-rhythm-se-preview="hold" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'hold')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">押さえている間</button>
-              <button type="button" data-rhythm-se-preview="judge" onClick={()=>{['MARVELOUS','GREAT','GOOD'].forEach((id,i)=>setTimeout(()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'tap',id),i*260));}} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100">判定ごと<span className="block text-[10px] text-fuchsia-300">良い順に3回</span></button>
+              <button type="button" data-rhythm-se-preview="judge" onClick={()=>{['MARVELOUS','GREAT','GOOD'].forEach((id,i)=>setTimeout(()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'tap',id),i*260));}} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100">判定の音<span className="block text-[10px] text-fuchsia-300">良い順に3回</span></button>
             </div>
 </div>
 </section>
 <section className={card}>
           <details data-rhythm-option-help className="mt-3">
             <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量について詳しく</summary>
-            <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+            <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
             {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
             <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
             {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ */}
@@ -20988,8 +20988,8 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
       </video>}
       <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:'6px',marginTop:'14px'}}>{pages.map((_,i)=><i key={i} style={{display:'block',width:i===index?'18px':'6px',height:'6px',borderRadius:'999px',background:i===index?'#f472b6':'rgba(148,163,184,.5)'}}/>)}</div>
       <div style={{display:'grid',gridTemplateColumns:index>0?'1fr 2fr':'1fr',gap:'8px',marginTop:'14px'}}>
-        {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>もどる</button>}
-        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'とじる':'つぎへ'}</button>
+        {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>戻る</button>}
+        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'閉じる':'つぎへ'}</button>
       </div>
     </section>
   </div>;
@@ -29542,7 +29542,7 @@ const friendsGroup = (selfId, rows) => {
 };
 // 最後に開いた時刻から「いま」「◯分前」「◯時間前」「◯日前」の文を作る(表示用の純粋な計算)
 const friendsLastSeenText = (updatedAtMs, nowMs) => {
-  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間は不明';
+  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間はわかりません';
   const diff = Math.max(0, nowMs - updatedAtMs);
   if (diff < FRIENDS_ONLINE_MS) return 'いま遊んでいるかも';
   const minutes = Math.floor(diff / 60000);
@@ -32225,7 +32225,7 @@ const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, bo
       className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
     <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
       <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
     </div>
   </ModalFrame>
@@ -32238,7 +32238,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
     {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
     <div className="mt-4 grid grid-cols-1 gap-2">
       <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
     </div>
   </ModalFrame>
 );
@@ -33050,10 +33050,10 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {onOpenDebug && <SettingsMenuLink icon="🧪" label="デバッグ設定" desc="確認待ちの試作・検証用(この端末だけ)" onClick={onOpenDebug}/>}
         <SettingsMenuLink icon="⚔️" label="バトル設定" desc="タクティクスの画面・画面の軽さ・待機中の動き" onClick={() => setBattleSettingsOpen(true)} data-open-battle-settings/>
         <SettingsMenuLink icon="🎚️" label="音量設定" desc="効果音とBGMの大きさ・音が出ないとき" onClick={onOpenAudioSettings}/>
-        <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面ごとに流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
+        <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面に合わせて流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
         <SettingsMenuLink icon="🖼️" label="タイトル画像アレンジ" desc="タイトル画面の絵を選ぶ" onClick={onOpenTitleArt} data-open-title-art/>
         <SettingsMenuLink icon="🏡" label="ホーム画面アレンジ" desc="ホーム画面の背景を選ぶ" onClick={onOpenHomeArt} data-open-home-art/>
-        <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面ごとにハロウィン／クラシックを選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
+        <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面の見た目(ハロウィン／クラシック)を選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
         {/* 入/切に関係なく出す(切のままだと、プレイヤーに戻す手段が無い)。対応していない端末はページの中で知らせる */}
         <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
@@ -34721,7 +34721,9 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
             {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
                 3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
             <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
-              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(dexEntryDescription(mon))}</p>
+              {/* 社長が改行して決めた文(プラント・ミーア・パンドラ・ギンギライガー・アンキロックス)は、改行のまま出す。
+                  以前は改行が空白になり、2行目が1行目の続きにつながっていた */}
+              <p className="font-bold leading-relaxed text-slate-200 break-words whitespace-pre-line">{helpWrap(dexEntryDescription(mon))}</p>
             </div>
             {unlocked?(<>
               <ScreenTabs className="mt-2" value={tab} onChange={onSelectTab}
@@ -35923,7 +35925,7 @@ function RhythmRankingScreen({
             </p>}
             {/* 部門ごとの報酬。どの部門で何位を狙うと何がもらえるかを、切り替えずに見渡せるようにする */}
             {eventRewardsByDivision.length>0&&<div data-rhythm-event-rewards className="space-y-2">
-              <p className="text-[10px] font-black text-amber-200">部門ごとの報酬（終了後に受け取れます）</p>
+              <p className="text-[10px] font-black text-amber-200">部門別の報酬（終わったあとに受け取れます）</p>
               {eventRewardsByDivision.map(({division,ranks})=>(
                 <div key={division.id} data-rhythm-event-reward-division={division.id}
                   className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">
@@ -36226,7 +36228,7 @@ function MasuReincarnateScreen({
             {reincarnateError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{reincarnateError}</p>}
             <div className="mt-3 grid grid-cols-1 gap-2">
               <button type="button" disabled={busy||!preview?.ok} onClick={confirmBulk} className="mh-button mh-button-primary min-h-[52px] rounded-2xl bg-violet-600 font-black active:scale-[.98] disabled:opacity-30">{preview?.ok?`${preview.count}体を転生する`:'転生できません'}</button>
-              <ModalCloseButton onClick={()=>setBulkConfirmOpen(false)} label="キャンセル" disabled={busy}/>
+              <ModalCloseButton onClick={()=>setBulkConfirmOpen(false)} label="やめる" disabled={busy}/>
             </div>
             </div>
           </ModalFrame>}
@@ -36699,7 +36701,7 @@ function MasuOfferingScreen({
         {done.reincarnations>0&&row('転生', `${done.reincarnations}回`, 'text-violet-200')}
         {row('使ったダイヤ', fmt(done.spent), 'text-amber-300')}
       </div>
-      <div className="mt-4"><ModalCloseButton onClick={()=>setDone(null)} label="とじる"/></div>
+      <div className="mt-4"><ModalCloseButton onClick={()=>setDone(null)} label="閉じる"/></div>
     </ModalFrame>}
   </div>;
 }
@@ -37112,7 +37114,7 @@ function MasuTranscendEnhanceScreen({
             {!normalized.transcended&&<div data-transcend-not-yet className="rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] font-bold text-slate-400 leading-relaxed">この個体はまだ神殿で超越していませんが、超越強化はいつでも使えます。あとで正式に超越しても、ここで上げた基礎値と残っている超越ポイントはそのまま引き継がれます。<br/>神殿の「超越」（Lv上限400→500・超越マーク）は、これまでどおりLv.{MAX_MASU_LEVEL_CAP}・限界突破{FINAL_BREAKTHROUGH_COUNT}回が必要です。</div>}
           </div>
           <div className={`${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto grid grid-cols-2 gap-2`}>
-            <button type="button" onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95">キャンセル</button>
+            <button type="button" onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95">やめる</button>
             <button type="button" data-transcend-commit disabled={planUsed<=0} onClick={()=>commitTranscendPlan(masu, plan)} className="mh-button mh-button-primary min-h-[52px] rounded-xl bg-sky-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95">この配分で確定（{planUsed}P）</button>
           </div>
           {/* 超越ポイントのリセット。何が何点戻るのかを出してから確定させる */}
@@ -37186,7 +37188,7 @@ function MasuTranscendEnhanceScreen({
                 <div className="grid grid-cols-2 gap-2">
                   {fruitChoices.map(({itemId,name,have})=><button key={itemId} data-transcend-fruit-select={itemId} disabled={have<=0} aria-pressed={transcendFruitItemId===itemId} onClick={()=>{setTranscendFruitItemId(itemId);setTranscendFruitConfirmAmount(0);setTranscendFruitError('');}} className={`mh-button mh-button-secondary min-h-[64px] rounded-xl border p-2 text-[11px] font-black active:scale-95 disabled:opacity-30 ${transcendFruitItemId===itemId?'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200':'border-white/10 bg-slate-800 text-slate-200'}`}><span className="block leading-tight">{name}</span><span className="mt-1 block font-mono text-[12px]">所持 ×{have}</span></button>)}
                 </div>
-                {!transcendFruitItemId?<div className="rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200">使用する実を明示選択してください</div>:<>
+                {!transcendFruitItemId?<div className="rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200">使う実を選んでください</div>:<>
                   <div className="grid grid-cols-3 gap-2">{[[1,'1'],[10,'10'],[selectedFruitHave,'MAX']].map(([amount,label])=><button key={label} data-transcend-fruit-amount={label} disabled={selectedFruitHave<amount||amount<=0} onClick={()=>requestFruitUse(amount)} className="min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30">{label}</button>)}</div>
                   <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/25 p-3 text-[10px] font-black"><div className="flex justify-between"><span className="text-slate-300">現在の超越ポイント</span><span className="font-mono">{points}P</span></div><div className="flex justify-between"><span className="text-slate-300">使用後（選択中）</span><span className="font-mono text-emerald-200">{points} → {points+(transcendFruitConfirmAmount||1)}P</span></div></div>
                 </>}
@@ -37564,7 +37566,7 @@ function MasuFusionScreen({
               </div>
               {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[11px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
               {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[11px] leading-relaxed font-bold text-violet-200">複数副を選択順にまとめて合体します。固有技継承は確認画面で副ごとに選べ、Lv上限を超える場合は「限界突破して合体」も選べます。</div>}
-              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'副を選択してください'}</button>
+              <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'合体に使う子を選んでください'}</button>
             </div>
             {fusionSortBar}
             <div className={SCREEN_LIST_CLASS}>
@@ -38430,7 +38432,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
               </>);})()}
-              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
+              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>くわしく見る <ChevronRight size={11}/></div>
             </>),
           })}
         </button>);})}
@@ -39239,7 +39241,7 @@ function MasuRegisterModal({
         </div>
         <input type="text" value={masuNameInput} onChange={e=>setMasuNameInput(e.target.value.slice(0,12))} placeholder={mainHero?.name||'名前'} maxLength={12} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-center font-black focus:outline-none focus:border-pink-400"/>
         <div className="flex gap-2">
-          <button onClick={()=>setShowMasuRegisterModal(false)} className="w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">キャンセル</button>
+          <button onClick={()=>setShowMasuRegisterModal(false)} className="w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">やめる</button>
           <button onClick={()=>{ registerMasuMon(masuNameInput); setShowMasuRegisterModal(false); }} className="w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95">登録する</button>
         </div>
       </div>
@@ -39965,7 +39967,7 @@ const BATTLE_CARD_ART_DEBUG = (() => {
 // 行動カードの見た目の選択(2026-10-16 社長「前のカードも選べる」)。設定 → バトル設定で「新しいカードの絵」(既定)と「前のカード」を選ぶ。
 //   保存は新しいキー mh_battle_card_look_v1('art' / 'classic')だけ。無い・壊れているときは既定の 'art'。前のカードを選んだ人には、公開の印やデバッグの切り替えより優先して前のカードを出す
 const BATTLE_CARD_LOOKS = Object.freeze([
-  { id: 'art', label: '新しいカードの絵', note: '種類ごとの色の枠' },
+  { id: 'art', label: '新しいカードの絵', note: '種類で色分けした枠' },
   { id: 'classic', label: '前のカード', note: '字が大きいシンプルな形' },
 ]);
 const normalizeBattleCardLook = (v) => (v === 'classic' ? 'classic' : 'art');
@@ -43153,7 +43155,7 @@ function SoulBattleEffects({
           <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">回避 / 反射 / 吸収</span><b className="text-slate-100">{(Math.round(unifiedSpecialDefense.evasion*10)/10)} / {(Math.round(unifiedSpecialDefense.reflect*10)/10)} / {(Math.round(unifiedSpecialDefense.absorb*10)/10)}%</b></div>
           <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">威圧</span><b className="text-violet-300">{(Math.round(battleIntimidate*10)/10)}%</b></div>
           <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">自動ガッツ回復</span><b className="text-amber-300">×{soulBattleParty.autoGutsMultiplier.toFixed(2)}</b></div>
-          <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">使用可能カード</span><b className="text-sky-300">{soulCoordinationCardBonus>0?'+1':'変化なし'}</b></div>
+          <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">使えるカード</span><b className="text-sky-300">{soulCoordinationCardBonus>0?'+1':'変化なし'}</b></div>
         </div>
         {unifiedSpecialDefense.rate>0&&<div className="mt-2 text-[10px] leading-relaxed text-slate-400">特殊防御が発動した場合、回避・反射・吸収の比率から1つだけ発動します。</div>}
       </section>
@@ -44686,7 +44688,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                         <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{labels[e.id].label}</b>
                         <strong className="shrink-0 text-[13px] font-black text-amber-200">{e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`}</strong>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">モードごとの、いちばん良い記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、いちばん良い記録です。</p>
                   </div>);
               })()}
               {profileTab === 'songs' && sum && sum.records && (() => {
@@ -47497,7 +47499,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 )}
               {friendsOn && view && view.mode === 'private' && (
                 <section data-rhythm-multi-friend-invite className={card}>
-                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'}</button>
+                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'}</button>
                   {invitePanel && (
                     <div className="mt-2 space-y-1">
                       {roster === null && <p className="text-[11px] font-bold text-slate-400">フレンドを読み込んでいます…</p>}
@@ -48212,7 +48214,7 @@ function RhythmBuddyScoreChart({ recent, songName }) {
         {songName(picked.songId)} {picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : ''} <b className="text-lime-200">{picked.score.toLocaleString()}点</b>
         <span className="text-slate-400">(満点の{pct(picked)}%)</span>
       </p>
-      <button type="button" onClick={() => setTable((v) => !v)} className="mt-1 min-h-[36px] rounded-lg bg-slate-800 px-2 text-[10px] font-black text-slate-200">{table ? '数字の一覧をとじる' : '数字の一覧で見る'}</button>
+      <button type="button" onClick={() => setTable((v) => !v)} className="mt-1 min-h-[36px] rounded-lg bg-slate-800 px-2 text-[10px] font-black text-slate-200">{table ? '数字の一覧を閉じる' : '数字の一覧で見る'}</button>
       {table && (
         <ol data-rhythm-buddy-chart-table className="mt-1 space-y-0.5">
           {list.slice().reverse().map((x, i) => (
@@ -48305,7 +48307,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
         </small>
       </section>
       <button data-rhythm-buddy-traits-toggle type="button" onClick={() => setTraitsOpen((v) => !v)} className="min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
-        {traitsOpen ? '性格の一覧をとじる' : '性格の一覧を見る(9つ)'}
+        {traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'}
       </button>
       {traitsOpen && (
         <ul data-rhythm-buddy-traits className="space-y-1 rounded-xl bg-slate-950/60 p-2">
@@ -48351,7 +48353,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
           </button>
         )}
       </section>
-      {onBack && <button type="button" onClick={onBack} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">一覧へもどる</button>}
+      {onBack && <button type="button" onClick={onBack} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">一覧へ戻る</button>}
     </div>
   );
 }
@@ -48770,7 +48772,7 @@ function RhythmBuddyRankDetail({ entry, onClose, renderBreederIcon = null, songN
         </div>
       </div>
       <section data-rhythm-buddy-rank-detail-scores className="rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2">
-        <b className="mb-1 block text-[12px] font-black text-lime-100">難易度ごとの最高スコア</b>
+        <b className="mb-1 block text-[12px] font-black text-lime-100">難易度別の最高スコア</b>
         <ul className="space-y-1">
           {rhythmBuddyShownDiffIds().map((id) => (
             <li key={id} className="flex items-center gap-2 text-[11px] font-bold">
@@ -58264,7 +58266,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
           {/* フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 相手を選ぶと部屋を作り、合言葉が出たところで招待を送る。相手が来たら始まる */}
           <button type="button" data-card-pvp-invite-open disabled={!ready || !roster} className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`}
-            onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{inviteOpen ? 'フレンドの招待をとじる' : 'フレンドを招待'}</button>
+            onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{inviteOpen ? 'フレンドの招待を閉じる' : 'フレンドを招待'}</button>
           {inviteOpen && roster && (
             <div data-card-pvp-invite-pick className="rounded-2xl border border-emerald-300/40 bg-emerald-500/5 p-2">
               {roster.length === 0
@@ -61040,7 +61042,7 @@ function MonsterHeroGame() {
     ? <div className="w-full flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 leading-none" style={{minHeight:'16px'}}>{node||null}{sub||null}</div>
     : null;
   // 総合力の行。一覧では「どれが強いか」がいちばん知りたい情報なので、いちばん目立つ位置に置く
-  const monsterCardPower = (power) => power==null ? null : <div className="w-full flex items-baseline justify-center gap-1 leading-none" style={{height:'20px'}}><span className="text-[9px] text-amber-400/70 font-black">総合力</span><span className="text-[14px] font-mono font-black text-amber-200 tabular-nums">{formatMonsterPower(power)}</span></div>;
+  const monsterCardPower = (power) => power==null ? null : <div className="w-full flex items-baseline justify-center gap-1 leading-none" style={{height:'20px'}}><span className="shrink-0 whitespace-nowrap text-[9px] text-amber-400/70 font-black">総合力</span><span className="text-[14px] font-mono font-black text-amber-200 tabular-nums">{formatMonsterPower(power)}</span></div>;
   const monsterCardSub = (node) => node||null;
   const monsterCardStatus = (node) => node ? <div className="w-full flex items-center justify-center" style={{height:'20px'}}>{node}</div> : null;
   // マスモンの絆Lvと上限。細かいXPの進み具合は詳細画面で見るので、一覧ではゲージを出さない
@@ -61155,7 +61157,7 @@ function MonsterHeroGame() {
       </button>
       <div className="w-[74px] shrink-0 border-l border-white/10 flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-center bg-black/25 px-1"><span className="text-[8px] text-slate-500 font-black">総合力</span><b className="text-[14px] text-amber-300 font-mono leading-tight">{formatMonsterPower(monsterPowerOf(mon))}</b></div>
-        <button onClick={onDetail} aria-label={`${mon.name}の詳細を見る`} className="min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60">詳細を見る<ChevronRight size={12}/></button>
+        <button onClick={onDetail} aria-label={`${mon.name}の詳細を見る`} className="min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60">くわしく見る<ChevronRight size={12}/></button>
       </div>
     </article>
   );
@@ -65668,7 +65670,7 @@ function MonsterHeroGame() {
             return;
           }
         } catch (e) {
-          if (e && e.name === 'AbortError') { setRestoreMsg('保存をキャンセルしました'); return; }
+          if (e && e.name === 'AbortError') { setRestoreMsg('保存をやめました'); return; }
         }
       }
       const url = URL.createObjectURL(blob);
@@ -65815,7 +65817,7 @@ function MonsterHeroGame() {
       <div className="truncate text-xs font-black text-white">{displayName}</div>
       <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] font-black"><span className={isMasu?'text-pink-300':'text-cyan-300'}>{isMasu?'マスモン':'ベースモン'}</span>{isMasu&&<span className="text-pink-300">絆Lv.{masuBondLevelInfo(masu).level}</span>}<span className="text-slate-200">総合力 {formatMonsterPower(power)}</span></div>
       <div className="mt-1.5 grid min-w-0 grid-cols-4 gap-1">{RANGE_LABELS.map((label,index)=><div key={label} className={`min-w-0 rounded-md px-1 py-1 text-center text-[9px] font-black leading-none ${RANGE_STYLES[index].labelBg}`}><span>{label}</span><span className="ml-1">{aptitude[index]||'C'}</span></div>)}</div>
-      <div className="mt-2 text-right text-[10px] font-black text-indigo-200">詳細を見る ›</div>
+      <div className="mt-2 text-right text-[10px] font-black text-indigo-200">くわしく見る ›</div>
     </button>;
   };
   // 編成の1枠が対象とする「モンスター種id」を返す(プレーン種でもマスモンでも、種としては同じ扱い)
@@ -65927,7 +65929,8 @@ function MonsterHeroGame() {
     return (
       <div className="mb-2 shrink-0 flex gap-2">
         <button onClick={() => openModal('sort')} className="flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95">
-          <span className="text-[11px] font-black text-white truncate">並べ替え: {currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</span>
+          {/* 「並べ替え」は小さい見出しにして2段で出す。1行だと 320 幅で「並べ替え: …」と切れ、いまの並べ方が読めなかった(2026-10-26) */}
+          <span data-monster-sort-label className="min-w-0 text-left leading-tight"><small className="block text-[9px] font-black text-slate-400">並べ替え</small><b className="block truncate text-[11px] font-black text-white">{currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</b></span>
           <ChevronRight size={14} className="text-slate-400 shrink-0"/>
         </button>
         {/* 種族のしぼりこみ。並べかえと掛け合わせて使えるので、別のボタンとして常に出す。
@@ -67225,7 +67228,7 @@ function MonsterHeroGame() {
   const rollTrainingDice=async(fixedValue=null,isReroll=false,sessionOverride=null)=>{const base=sessionOverride||trainingSession;if(!base||base.status!=='playing'||trainingMovingRef.current||trainingRollTimerRef.current||base.branchOptions.length||(!isReroll&&base.rollPending))return;Audio_.se.trainingDice();setTrainingDiceStage('rolling');setTrainingDiceFace(1+Math.floor(Math.random()*3));trainingRollTimerRef.current=setInterval(()=>setTrainingDiceFace(1+Math.floor(Math.random()*3)),75);await new Promise(r=>setTimeout(r,720));clearInterval(trainingRollTimerRef.current);trainingRollTimerRef.current=null;const roll=()=>1+Math.floor(Math.random()*3);let value=fixedValue||trainingDebugRoll||roll();if(!isReroll&&base.effects.gale)value=Math.max(value,roll());if(!isReroll&&base.effects.boost)value++;if(!isReroll&&base.effects.feather)value+=2;const effects={...base.effects};delete effects.gale;delete effects.boost;delete effects.feather;delete effects.fixed;const canReroll=!isReroll&&base.tools.includes('reroll');const next={...base,previousRoll:base.lastRoll,lastRoll:value,rollPending:canReroll,effects,remainingTurns:base.remainingTurns-(isReroll?0:1),forcedMoves:0,message:canReroll?`${value}が出た！ 振り直すか、この出目で進んでください`:`${value}が出た！ 自動で進みます`,eventLog:logTraining(base,`${isReroll?'振り直し':'サイコロ'} ${value}`)};setTrainingDiceFace(value);setTrainingDiceStage('result');setTrainingSession(next);await new Promise(r=>setTimeout(r,850));setTrainingDiceStage('idle');if(!canReroll)advanceTraining({...next,rollPending:false},value);};
   const acceptTrainingRoll=()=>{if(!trainingSession?.rollPending)return;const preview=previewTrainingRoute(trainingSession.position,trainingSession.lastRoll);const next={...trainingSession,rollPending:false,routePreview:preview.path,stopPreview:preview.stop,message:`${trainingSession.lastRoll}で自動前進します`};setTrainingSession(next);advanceTraining(next,next.lastRoll);};
   const chooseTrainingBranch=id=>{if(!trainingSession.branchOptions.includes(id))return;Audio_.se.trainingDecide();advanceTraining(trainingSession,trainingSession.movementRemaining,id);};
-  const trainingToolAvailability=id=>{if(['noReturn','returnCharm'].includes(id))return {ok:false,reason:'取得後に自動で待機し、条件を満たすと発動します'};if(id==='reroll')return trainingSession?.rollPending?{ok:true}:{ok:false,reason:'サイコロの出目確定後、移動前のみ使用可能'};if(trainingMovingRef.current||trainingSession?.movementRemaining||trainingSession?.branchOptions.length||trainingSession?.rollPending)return {ok:false,reason:'移動していない時のみ使用可能'};return {ok:true};};
+  const trainingToolAvailability=id=>{if(['noReturn','returnCharm'].includes(id))return {ok:false,reason:'取得後に自動で待機し、条件を満たすと発動します'};if(id==='reroll')return trainingSession?.rollPending?{ok:true}:{ok:false,reason:'サイコロを振ったあと、進む前にだけ使えます'};if(trainingMovingRef.current||trainingSession?.movementRemaining||trainingSession?.branchOptions.length||trainingSession?.rollPending)return {ok:false,reason:'まだ進んでいないときだけ使えます'};return {ok:true};};
   const useTrainingTool=id=>{const t=TRAINING_TOOLS[id],availability=trainingToolAvailability(id);if(!t||!availability.ok)return;const tools=[...trainingSession.tools];tools.splice(tools.indexOf(id),1);let effects={...trainingSession.effects},remainingTurns=trainingSession.remainingTurns;if(id==='sand')remainingTurns++;else if(id==='reroll'){const next={...trainingSession,tools,rollPending:false};Audio_.se.trainingTool();setTrainingSession(next);setTimeout(()=>rollTrainingDice(null,true,next),0);return;}else effects[id]=true;Audio_.se.trainingTool();patchTraining({tools,effects,remainingTurns,eventLog:logTraining(trainingSession,`${t.name}使用`)});};
   const restartTraining=()=>{if(trainingSelectedId){setTrainingMapScale(1);setTrainingMapOverview(false);setTrainingSession(createTrainingSession(trainingSelectedId));setGameState('TRAINING_BOARD');}};
   const leaveTrainingResult=()=>{setTrainingSession(null);setTrainingSelectedId(null);setGameState('DEBUG_SETTINGS');};
@@ -67763,7 +67766,7 @@ function MonsterHeroGame() {
   // 見積もりと同じ buildMasuOffering を、実行の瞬間の最新の所持数で計算し直して確定する
   // (画面の見積もりが古くても、足りない状態で成立させない)。保存に失敗したら何も減らさない。
   const executeMasuOffering = async ({ masuId, mode, amount, autoBreakthrough }) => {
-    if (offeringProcessingRef.current) return { ok:false, error:'処理中です。少し待ってからお試しください。' };
+    if (offeringProcessingRef.current) return { ok:false, error:'いま手続き中です。少し待ってからもう一度押してください。' };
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(masuId));
     const plan = buildMasuOffering({ masu, gold, ownedItems:ownedItemsRef.current, lockedIds:rebirthLockedMasuIds, mode, amount, autoBreakthrough });
     if (!plan.ok) return { ok:false, error:plan.reason || 'お布施の条件を満たしていません。' };
@@ -75148,7 +75151,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div className="space-y-1.5">{choices.map(choice=>{const amount=Math.max(0,Math.floor(Number(draft[choice.key])||0)),after=choice.level+amount,current=uniqueSkillAtLevel(choice.unique,after),maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL;return (
           <div key={choice.key} className="rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] font-black text-white">{current?.name||choice.name}</span><span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → Lv.${after}`}</span></div>{!maxed&&<div className="mt-1 flex items-center justify-end gap-2"><button aria-label={`${current?.name||choice.name}の仮配分を減らす`} disabled={amount<=0} onClick={()=>changeDraft(choice.key,-1)} className="w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30">−</button><span className="w-8 text-center text-[11px] font-mono font-black text-amber-200">＋{amount}</span><button aria-label={`${current?.name||choice.name}の仮配分を増やす`} disabled={remaining<=0||after>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>changeDraft(choice.key,1)} className="w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30">＋</button></div>}</div>
         );})}</div>
-        <div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">キャンセル</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}
+        <div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">やめる</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}
         <div className="mt-2 border-t border-white/10 pt-2">
           <button type="button" data-unique-setting-open aria-label={`${masu.name}の固有技設定を開く`} onClick={()=>setUniqueSettingMasuId(masu.id)} className="w-full min-h-[44px] px-2 rounded-xl bg-gradient-to-b from-violet-600 to-indigo-800 text-white text-[10px] font-black leading-tight active:scale-95 flex items-center justify-center gap-1.5"><List size={13}/><span>固有技設定（並び順・初期技）</span></button>
           <div className="text-[8px] text-slate-400 font-bold text-center mt-1 leading-tight">バトルでの並び順と、開始時に構える固有技を決められます</div>
@@ -75644,8 +75647,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const finiteNumber = value => value==null || value==='' ? null : (Number.isFinite(Number(value)) ? Number(value) : null);
     const scoreValue = finiteNumber(entry?.score);
     const breederLevelValue = finiteNumber(entry?.level);
-    const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
-    const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue>0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
+    const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコアの記録なし';
+    const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue>0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLvの記録なし';
     const speciesLabel = showSpecies ? speciesRankingLabel(entry?.difficulty) : null;
     // クリアした記録は「何ターンで終えたか」、途中で終わった記録は「どのWAVEまで行ったか」。
     // ターン数はクリアしたときだけ入るので、この2つが同じ意味で混ざることはない。
@@ -75675,7 +75678,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ブリーダーLv専用カード。編成・スコア・絆情報をDOMへ一切出さず、1行でコンパクトに表示する。
   const renderBreederRankingEntry = (entry, index) => {
     const level = Number(entry?.level);
-    return <article key={`breeder-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="breeder" className={`${rankingCardClass(index)} px-2 py-2 flex items-center gap-2 min-w-0`}>{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="flex-1 min-w-0 truncate text-[11px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="shrink-0 text-xs text-indigo-300">{Number.isFinite(level)&&level>0?`ブリーダーLv.${level}`:'Lv情報なし'}</strong></article>;
+    return <article key={`breeder-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="breeder" className={`${rankingCardClass(index)} px-2 py-2 flex items-center gap-2 min-w-0`}>{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="flex-1 min-w-0 truncate text-[11px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="shrink-0 text-xs text-indigo-300">{Number.isFinite(level)&&level>0?`ブリーダーLv.${level}`:'Lvの記録なし'}</strong></article>;
   };
   // 絆Lv専用カード。スコアや編成・役割は表示せず、ブリーダーと個体だけを表示する。
   const renderBondRankingEntry = (entry, index) => {
@@ -75687,7 +75690,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           masuId: entry.masuId, bondLevel: level, detail: entry.detail,
           colors: Array.isArray(entry.colors) ? entry.colors : [] }
       : null;
-    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'記録なし'}</button></div></article>;
   };
   // 総合力専用カード。絆Lvのカードと同じ並び(順位・アイコン・名前・数字／下に個体)で、
   // いちばん大きく出す数字だけが絆Lvから総合力へ替わる。絆Lvは個体の行へ小さく添える。
@@ -75700,7 +75703,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           masuId: entry.masuId, bondLevel: level, detail: entry.detail,
           colors: Array.isArray(entry.colors) ? entry.colors : [] }
       : null;
-    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[9px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+    return <article key={`power-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="power" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="flex items-baseline gap-1 whitespace-nowrap"><span className="text-[9px] font-black uppercase tracking-widest text-amber-400/80">総合力</span><span className="font-mono text-xs tabular-nums text-amber-200">{formatMonsterPower(entry?.power)}</span></strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{Number.isFinite(level)&&level>0&&<span className="shrink-0 text-[9px] font-black text-pink-300 whitespace-nowrap">絆Lv.{level}</span>}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-power-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'記録なし'}</button></div></article>;
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
@@ -76548,7 +76551,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 : { label:'自己ベストスコア', value:`${(highScores[key]||0).toLocaleString()} pt`, valueColor:'text-indigo-200', sub:`最高到達 WAVE ${waveOf(key)}` };
               // 倍率の下の補足行も、クイックだけに出すとカードの高さが変わるため両モードで出す
               const noteText=quick?'経験値・ダイヤのみ1.5倍':'スコアがランキングに登録される';
-              return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>{Object.keys(SKIP_TICKETS).length>0&&(
+              return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度をえらぶ</div>{Object.keys(SKIP_TICKETS).length>0&&(
                 /* スキップチケットの所持数。使えるのはクイックだけだが、チャレンジでも同じ高さの行を出す。
                    ここを片方だけ消すと、下に続く難易度カードの位置がモードでずれてしまうため */
                 <div className="shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2 min-h-[24px]">
@@ -76729,7 +76732,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 {/* 幅が360未満(320など)は、のぞきの余白を細くしてカードを広げる(2026-10-20 改善部 M4。題名・特長が右で切れていた)。
                     難易度・極限のカードの並びも同じ。難易度のカードの「全WAVE詳細」「ランキング」は縦に並べる */}
-                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプしてモードを選択</div>
+                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプしてモードをえらぶ</div>
                 <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20"><ChevronLeft size={18}/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
@@ -76806,7 +76809,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     }} className={`mhbs-tab text-[12px] active:scale-95 ${on?'on x':''}`}>{tabLabel}<span className="ml-1 text-[9px] opacity-75">{on?difficulties.length:Object.keys(DIFFICULTY_SETTINGS).length}</span></button>;
                   })}
                 </div>
-                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度を選択</div>
+                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度をえらぶ</div>
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="mhbs-arrow absolute left-0 top-[42%] z-20 disabled:opacity-20"><ChevronLeft size={18}/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
@@ -76831,7 +76834,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div data-extreme-card-actions className="grid grid-cols-[minmax(0,1fr)] gap-1.5 mt-auto pt-2 pb-1">
                           <div className="flex min-w-0 gap-1.5">
                             <button data-extreme-rule-detail-open={setting.id} disabled={!previewable} onClick={()=>setExtremeRuleDetail(setting.id)} className="mhbt-pb disabled:opacity-50">{previewable?'ルール詳細':'ルール ？？？'}</button>
-                            <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="mhbt-pb disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
+                            <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="mhbt-pb disabled:opacity-50">{previewable?'全WAVE詳細':'まだ見られません'}</button>
                           </div>
                           {/* 極限は難易度そのものが別表なので、通常の難易度は Normal のまま触らない。
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
@@ -76906,7 +76909,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <BattleScreenHead eyebrow="MONHERO BATTLE ・ SELECT LEVEL" title={mode.label} accentStyle={{color:mode.color}} disabled={!!battleTutorial} onBack={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':(battleSystemOf(battleMode).direct?'BATTLE_SYSTEM_SELECT':'BATTLE_MODE_SELECT'))}/>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
-                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度を選択</div>
+                <div className="mhbs-hint mt-auto mb-1 shrink-0">左右にスワイプして難易度をえらぶ</div>
                 {quick&&<fieldset className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1">
                   <legend className="px-1 text-[9px] font-black text-teal-200">報酬方針</legend>
                   <div className="grid grid-cols-3 gap-1">
@@ -77083,7 +77086,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const swatch=(id,label,point)=>{const glyph={stripe:'▥',dot:'⠿',leopard:'◉',camouflage:'⬟',check:'▦',scale:'◡',honeycomb:'⬡',lightning_repeat:'ϟ',flame_repeat:'♨',wave:'≋',crack:'⌁',star_repeat:'★',heart_repeat:'♥',paw_repeat:'🐾',rune_repeat:'ᚱ',digital:'▦',star:'★',heart:'♥',scar:'╱',paw:'🐾',crown:'♛',flame:'♨',lightning:'ϟ',moon:'☾',sun:'☀',magic_circle:'✡',skull:'☠',wing:'𓆩',number:'7',alphabet:'M'}[id]||'◆';return <button key={id} onClick={()=>patchActive({pattern:id})} className={`min-w-[76px] h-[68px] rounded-xl border p-1 ${active?.pattern===id?'bg-fuchsia-800 border-fuchsia-300 ring-1 ring-fuchsia-300':'bg-slate-900 border-white/10'}`}><span className="block text-2xl leading-7" style={{color:active?.color}}>{glyph}</span><b className="block text-[8px]">{label}</b></button>};
               const layerRows=[{key:'full',label:'全身模様',value:patternSettings.fullPattern,mode:'all'},...Array.from({length:regions},(_,i)=>({key:`region:${i}`,label:`染色${'①②③④⑤'[i]}`,value:patternSettings.regionPatterns[i],mode:'region'})),...patternSettings.decals.map((d,i)=>({key:`decal:${d.id}`,label:`ワンポイント${i+1}`,value:d,mode:'point',decal:d}))];
               return <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <nav aria-label="付け方" className="grid grid-cols-3 gap-1 px-3 py-1 shrink-0">{[['all','全身模様'],['region','部位ごと'],['point','ワンポイント']].map(([id,label])=><button key={id} onClick={()=>selectMode(id)} className={`min-h-[38px] rounded-xl text-[9px] font-black ${mode===id?'bg-fuchsia-700 ring-2 ring-fuchsia-300':'bg-slate-800 text-slate-400'}`}>{label}</button>)}</nav>
+                <nav aria-label="付け方" className="grid grid-cols-3 gap-1 px-3 py-1 shrink-0">{[['all','全身模様'],['region','部位別'],['point','ワンポイント']].map(([id,label])=><button key={id} onClick={()=>selectMode(id)} className={`min-h-[38px] rounded-xl text-[9px] font-black ${mode===id?'bg-fuchsia-700 ring-2 ring-fuchsia-300':'bg-slate-800 text-slate-400'}`}>{label}</button>)}</nav>
                 <section id="masu-pattern-large-preview" className="relative shrink-0 w-[calc(100%_-_1.5rem)] max-w-[430px] mx-auto rounded-3xl border border-fuchsia-500/40 bg-[radial-gradient(circle,#1e293b,#020617)] shadow-xl overflow-hidden" style={{height:'clamp(220px,28vh,260px)'}}>
                   <PatternPlacementPreview masu={selected} base={base} colors={colors} settings={patternSettings} selectedDecal={selectedDecal} onSelectDecal={id=>setPatternSettings(p=>({...p,selectedLayer:`decal:${id}`}))} onChangeDecal={patchDecal} onAddDecal={addDecal} className="w-full h-full"/>
                   <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[8px] font-black">{mode==='all'?'全身模様':mode==='region'?`染色${'①②③④⑤'[regionIndex]}`:selectedDecal?'選択中':'タップで追加'}</span>
@@ -77091,9 +77094,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </section>
                 <section className="flex-1 min-h-0 mt-2 rounded-t-3xl border-t border-fuchsia-500/30 bg-slate-900/95 flex flex-col overflow-hidden">
                   <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-3 pb-2">
-                    {patternStep==='attach'&&<div className="space-y-3"><h3 className="text-xs font-black text-fuchsia-300">STEP1：付け方選択</h3><p className="text-[9px] text-slate-400">上の3方式はいつでも切り替えられ、設定は方式ごとに保持されます。</p>{mode==='region'&&<div className="grid grid-cols-3 gap-2">{Array.from({length:regions},(_,i)=><button key={i} onClick={()=>setPatternSettings(p=>({...p,selectedLayer:`region:${i}`}))} className={`min-h-[44px] rounded-xl font-black ${regionIndex===i?'bg-cyan-700 ring-2 ring-cyan-300':'bg-slate-800'}`}>染色{'①②③④⑤'[i]}</button>)}</div>}{mode==='point'&&<button onClick={()=>addDecal()} className="w-full min-h-[48px] rounded-xl bg-cyan-700 font-black">＋ ワンポイントを追加</button>}<div className="grid grid-cols-2 gap-2"><button onClick={()=>setPatternSizePreview(true)} className="min-h-[44px] rounded-xl bg-slate-800 font-black">サイズ確認</button><button onClick={resetPattern} className="min-h-[44px] rounded-xl bg-red-950 font-black">すべて初期化</button></div></div>}
+                    {patternStep==='attach'&&<div className="space-y-3"><h3 className="text-xs font-black text-fuchsia-300">STEP1：付け方選択</h3><p className="text-[9px] text-slate-400">上の3方式はいつでも切り替えられ、設定は方式ごとに保持されます。</p>{mode==='region'&&<div className="grid grid-cols-3 gap-2">{Array.from({length:regions},(_,i)=><button key={i} onClick={()=>setPatternSettings(p=>({...p,selectedLayer:`region:${i}`}))} className={`min-h-[44px] rounded-xl font-black ${regionIndex===i?'bg-cyan-700 ring-2 ring-cyan-300':'bg-slate-800'}`}>染色{'①②③④⑤'[i]}</button>)}</div>}{mode==='point'&&<button onClick={()=>addDecal()} className="w-full min-h-[48px] rounded-xl bg-cyan-700 font-black">＋ ワンポイントを追加</button>}<div className="grid grid-cols-2 gap-2"><button onClick={()=>setPatternSizePreview(true)} className="min-h-[44px] rounded-xl bg-slate-800 font-black">サイズ確認</button><button onClick={resetPattern} className="min-h-[44px] rounded-xl bg-red-950 font-black">ぜんぶ元に戻す</button></div></div>}
                     {patternStep==='pattern'&&<div className="space-y-2">{!active&&mode==='point'?<button onClick={()=>addDecal()} className="w-full min-h-[48px] rounded-xl bg-cyan-700 font-black">＋ 最初のワンポイントを追加</button>:<><div className="flex gap-2 overflow-x-auto mh-scroll pb-2">{(mode==='point'?MASU_PATTERN_POINT_OPTIONS:MASU_PATTERN_REPEAT_OPTIONS).map(([id,label])=>swatch(id,label,mode==='point'))}</div>{slider('size','大きさ',.02,.25,.005,v=>`${Math.round(v*100)}%`)}{slider('rotation','回転',-180,180,1,v=>`${Math.round(v)}°`)}{slider('x','横位置',0,1,.01,v=>`${Math.round(v*100)}%`)}{slider('y','縦位置',0,1,.01,v=>`${Math.round(v*100)}%`)}{slider('opacity','透明度',0,100,1,v=>`${v}%`)}{mode==='region'&&<button onClick={()=>patchActive({...makePatternLayer({pattern:'none',target:String(regionIndex+1)})})} className="w-full min-h-[42px] rounded-xl bg-slate-800 font-black">この部位を初期値へ戻す</button>}{mode==='point'&&selectedDecal&&<div className="grid grid-cols-3 gap-2"><button onClick={()=>duplicateDecal(selectedDecal)} className="min-h-[42px] rounded-xl bg-cyan-900 font-black">複製</button><button onClick={()=>moveDecal(selectedDecal.id,1)} className="min-h-[42px] rounded-xl bg-slate-800 font-black">前面へ</button><button onClick={()=>deleteDecal(selectedDecal.id)} className="min-h-[42px] rounded-xl bg-red-900 font-black">削除</button></div>}</>}</div>}
-                    {patternStep==='color'&&<div className="space-y-3">{!active?<p className="text-center text-sm text-slate-400">レイヤーを選択してください</p>:<><div className="flex gap-2 items-center"><span className="w-10 h-10 rounded-full border-2 border-white/30" style={{backgroundColor:active.color}}/><b className="text-xs">プリセット色・カスタム色</b></div><div className="grid grid-cols-9 gap-1">{MASU_PATTERN_PRESET_COLORS.map(color=><button key={color} aria-label={`模様色 ${color}`} onClick={()=>patchActive({color})} className="aspect-square rounded-full border border-white/30" style={{backgroundColor:color}}/>)}<button aria-label="カスタム色" onClick={()=>setPatternCustomColor(prev=>({...prev,open:!prev.open}))} className="aspect-square rounded-full" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}/></div>{patternCustomColor.open&&<><CustomColorPicker h={patternCustomColor.h} s={patternCustomColor.s} v={patternCustomColor.v} onChange={(h,s,v)=>{const [r,g,b]=_hsvToRgb(h,s,v);setPatternCustomColor({open:true,h,s,v});patchActive({color:`#${[r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('')}`});}}/><div className="grid grid-cols-3 text-center text-[8px] text-slate-400"><span>色相 {Math.round(patternCustomColor.h)}°</span><span>彩度 {Math.round(patternCustomColor.s*100)}%</span><span>明度 {Math.round(patternCustomColor.v*100)}%</span></div></>}</>}</div>}
+                    {patternStep==='color'&&<div className="space-y-3">{!active?<p className="text-center text-sm text-slate-400">重ねる模様を選んでください</p>:<><div className="flex gap-2 items-center"><span className="w-10 h-10 rounded-full border-2 border-white/30" style={{backgroundColor:active.color}}/><b className="text-xs">プリセット色・カスタム色</b></div><div className="grid grid-cols-9 gap-1">{MASU_PATTERN_PRESET_COLORS.map(color=><button key={color} aria-label={`模様色 ${color}`} onClick={()=>patchActive({color})} className="aspect-square rounded-full border border-white/30" style={{backgroundColor:color}}/>)}<button aria-label="カスタム色" onClick={()=>setPatternCustomColor(prev=>({...prev,open:!prev.open}))} className="aspect-square rounded-full" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}/></div>{patternCustomColor.open&&<><CustomColorPicker h={patternCustomColor.h} s={patternCustomColor.s} v={patternCustomColor.v} onChange={(h,s,v)=>{const [r,g,b]=_hsvToRgb(h,s,v);setPatternCustomColor({open:true,h,s,v});patchActive({color:`#${[r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('')}`});}}/><div className="grid grid-cols-3 text-center text-[8px] text-slate-400"><span>色相 {Math.round(patternCustomColor.h)}°</span><span>彩度 {Math.round(patternCustomColor.s*100)}%</span><span>明度 {Math.round(patternCustomColor.v*100)}%</span></div></>}</>}</div>}
                     {patternStep==='layers'&&<div className="space-y-2">{layerRows.map(row=><div key={row.key} className={`flex items-center gap-2 min-h-[48px] rounded-xl border p-2 ${selectedKey===row.key?'border-cyan-300 bg-cyan-950':'border-white/10 bg-slate-950'}`}><button onClick={()=>setPatternSettings(p=>({...p,mode:row.mode,selectedLayer:row.key}))} className="flex-1 text-left text-[10px] font-black">{row.label}<small className="block text-[8px] text-slate-400">{row.value?.pattern==='none'?'未設定':row.value?.pattern||'未設定'}</small></button>{row.value&&<button aria-label={`${row.label} 表示切替`} onClick={()=>toggleLayer(row)} className="w-10 h-10 rounded-lg bg-slate-800">{row.value.visible===false?'○':'●'}</button>}{row.decal&&<><button onClick={()=>moveDecal(row.decal.id,-1)} className="w-9 h-10 rounded-lg bg-slate-800">↓</button><button onClick={()=>moveDecal(row.decal.id,1)} className="w-9 h-10 rounded-lg bg-slate-800">↑</button><button onClick={()=>deleteDecal(row.decal.id)} className="w-9 h-10 rounded-lg bg-red-900">×</button></>}</div>)}</div>}
                   </div>
                   <nav className="grid grid-cols-4 gap-1 px-2 pt-1 border-t border-white/10 shrink-0" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}>{[['attach','付け方'],['pattern','模様'],['color','色'],['layers','レイヤー']].map(([id,label])=><button key={id} onClick={()=>setPatternStep(id)} className={`min-h-[48px] rounded-xl text-[9px] font-black ${patternStep===id?'bg-fuchsia-700 text-white':'bg-slate-800 text-slate-400'}`}>{label}</button>)}</nav>
@@ -77510,7 +77513,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <p className="mh-rpg-actor">技をえらぶ（ねらい: {targetUnit?targetUnit.name:'—'}）</p>
-                <button type="button" className="mh-rpg-cancel" onClick={()=>setRpgSkillMenu(false)}>もどる</button>
+                <button type="button" className="mh-rpg-cancel" onClick={()=>setRpgSkillMenu(false)}>戻る</button>
               </>}
             </footer>
           </main>;
@@ -78272,7 +78275,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <p className="text-[9px] text-slate-400">通常のデバッグ設定 →「⚔️ バトル」→「⚔️ バトルモード」から入った場合は、これまでどおり何も保存しません。</p>
                 <button data-species-real-run-start onClick={()=>{if(!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？'))return;openSpeciesChallengeSelection({saveProgress:true,fromDebug:true});}} className="min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white">実進行を保存する実戦を始める</button>
               </article>
-              <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使用する実を明示選択してください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
+              <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使う実を選んでください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
               {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
             </section>
           </main>;
@@ -78730,7 +78733,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <button onClick={()=>setRosterDetailMon(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-slate-800 bg-slate-900`}>
                         {renderMonsterCardBody({
                           base: m,
-                          info: <div className="text-[10px] text-pink-400 font-bold text-center leading-none">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>,
+                          info: <div className="text-[10px] text-pink-400 font-bold text-center leading-none" style={JA_LABEL_STYLE}>{jaWrap(masuCount>0?`マスモン${masuCount}体`:'マスモン未登録')}</div>,
                           status: monsterDisplayFlags.active&&e.active?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white leading-none">編成中</span>:null,
                         })}
                       </button>
@@ -78751,7 +78754,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="放牧設定" accent="text-emerald-300" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"
               right={<span className="rounded-full border border-emerald-400/60 px-2 py-1 text-[12px] font-black text-emerald-200">{draftHomePastureIds.length} / 5</span>}/>
             <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pasture" compact/></div>
-            <ScreenLead>HOMEに表示するマスモンをタップで選択してください。0体でも保存できます。</ScreenLead>
+            <ScreenLead>HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。</ScreenLead>
             <div className="grid grid-cols-5 gap-2 mb-2 shrink-0" aria-label="選択中の放牧マスモン">
               {Array.from({length:5},(_,index)=>{const id=draftHomePastureIds[index],masu=id?masuMons.find(m=>String(m.id)===id):null,base=masu&&ALL_PLAYER_MONSTERS[masu.baseId];return masu&&base?(
                 <button key={id} onClick={()=>toggleDraftPasture(id)} aria-label={`${masu.name}を放牧から外す`} className="relative min-w-0 aspect-square rounded-full border-2 border-emerald-300 bg-emerald-950 active:scale-90 overflow-hidden">
@@ -78949,7 +78952,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-1 gap-2`}>
                 {!usedResult&&<button onClick={()=>{ const result=useBondXpTickets(item.id, masu.id, count); if(result){void saveMissionProgress('itemUse',count);setXpTicketUse({itemId:item.id,masuId:masu.id,count,usedCount:count,result});} }} disabled={have<=0} className="mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-30">{count}枚 使う</button>}
-                <ModalCloseButton onClick={()=>setXpTicketUse(null)} label={usedResult?'閉じる':'キャンセル'}/>
+                <ModalCloseButton onClick={()=>setXpTicketUse(null)} label={usedResult?'閉じる':'やめる'}/>
               </div>
             </div>
           );
@@ -79344,7 +79347,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <DyeRegionColorControls baseId={masu.baseId} colors={dyePreviewColors} onChange={(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/>
                 </div>
                 <div className="flex gap-2 mt-1 shrink-0">
-                  <button onClick={closeDyePicker} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
+                  <button onClick={closeDyePicker} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
                   <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColors); closeDyePicker(); }} disabled={noChange} className={`flex-1 py-3 rounded-xl font-black text-xs uppercase ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white active:scale-95'}`}>この色に染める</button>
                 </div>
               </div>
@@ -79388,7 +79391,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 )}
                 <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
                 <div className="flex gap-2 mt-1 shrink-0">
-                  <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
+                  <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
                   <button onClick={applyCustom} className="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95">この色に決定</button>
                 </div>
               </div>
@@ -79654,7 +79657,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="mt-3 grid grid-cols-1 gap-2">
                 <button type="button" data-message-save onClick={()=>saveProfileMessage(tempMessage)} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存する</button>
                 {profileMessage&&<button type="button" data-message-clear onClick={()=>saveProfileMessage('')} className="min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-[.98]">ひとことを消す</button>}
-                <ModalCloseButton onClick={()=>setShowMessageEditor(false)} label="キャンセル"/>
+                <ModalCloseButton onClick={()=>setShowMessageEditor(false)} label="やめる"/>
               </div>
             </div>
           </div>
@@ -80626,7 +80629,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {dailyMasuAdvice.debugCount!=null&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・登録数{dailyMasuAdvice.debugCount}体を想定</div>}
             <h2 className="mb-3 text-center text-base font-black text-pink-200">みゅあのワンポイントアドバイス</h2>
             {eligible?<div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression={lines[0]?.e||'wink'}/><div className="flex-1 space-y-2" style={{minHeight:'44px',color:'#ffffff',visibility:'visible'}}>{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line" style={{minHeight:'36px',color:'#ffffff',backgroundColor:'#0f172a',display:'block'}}>{assistantSpeakText(line.t,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div>)}</div></div>
-            :<div className="rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100" style={{minHeight:'64px',color:'#f1f5f9',backgroundColor:'#0f172a'}}>表示条件の対象外です。<br/><small>登録数8体以上では、通常プレイ中にこの案内は表示されません。</small></div>}
+            :<div className="rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100" style={{minHeight:'64px',color:'#f1f5f9',backgroundColor:'#0f172a'}}>いまは出ない案内です。<br/><small>登録数8体以上では、通常プレイ中にこの案内は表示されません。</small></div>}
             <div className={`mt-4 grid ${eligible?'grid-cols-2':'grid-cols-1'} gap-2`}>{eligible&&<button onClick={tryDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">やってみる</button>}<button onClick={closeDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">閉じる</button></div>
           </div>
         </div>);})()}
@@ -81095,8 +81098,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
       {titleModal}
 
-      {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">キャンセル</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
-      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3">最新のゲームデータを読み込み直します。<br/>セーブデータは消えません。</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">キャンセル</button></div></div></div>)}
+      {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">やめる</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
+      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3">最新のゲームデータを読み込み直します。<br/>セーブデータは消えません。</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
 
       {/* ランキングの編成をくわしく見る。一覧は軽さ優先で素の絵のままにしてあるので、
           染色(実際にその人が染めた色)を見せるのはこの画面だけ。ここなら1件ぶん
@@ -81123,22 +81126,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {rankingBreederIcon(entry)}
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</div>
-                <div className="text-[9px] text-indigo-300">{lv!=null&&lv>0?`ブリーダーLv.${lv}`:'ブリーダーLv情報なし'}</div>
+                <div className="text-[9px] text-indigo-300">{lv!=null&&lv>0?`ブリーダーLv.${lv}`:'ブリーダーLvの記録なし'}</div>
               </div>
               <div className="text-right shrink-0">
                 <div className="text-[7px] text-slate-400 uppercase tracking-widest">Score</div>
-                <div className="text-[13px] font-black text-indigo-200">{score!=null?`${score.toLocaleString()} pt`:'スコア情報なし'}</div>
+                <div className="text-[13px] font-black text-indigo-200">{score!=null?`${score.toLocaleString()} pt`:'スコアの記録なし'}</div>
               </div>
             </div>
             <div className="border-t border-white/10 shrink-0"></div>
             {(members===null||members.length===0)?(
               /* 編成が残っていない古い記録でも、勇者モンの名前だけは残っていることがある */
               <div className="text-center py-6">
-                <div className="text-[11px] text-slate-500">編成情報なし（過去の記録）</div>
+                <div className="text-[11px] text-slate-500">編成の記録なし（過去の記録）</div>
                 <div className="mt-2 flex items-center justify-center gap-1">
                   <Crown size={11} className="text-amber-400 shrink-0"/>
                   <span className="text-[8px] text-amber-300">勇者モン:</span>
-                  <span className="text-[11px] font-black text-white">{entry?.hero||'勇者モン情報なし'}</span>
+                  <span className="text-[11px] font-black text-white">{entry?.hero||'勇者モンの記録なし'}</span>
                 </div>
               </div>
             ):(
@@ -81160,7 +81163,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {hero&&<Crown size={11} className="text-amber-300 shrink-0"/>}
                           <span className="text-[12px] font-black text-white truncate">{m?.name||'不明'}</span>
                         </div>
-                        <div className="text-[9px] font-black text-pink-300 mt-0.5">{bond!=null?`絆Lv.${bond}`:'絆Lv情報なし'}</div>
+                        <div className="text-[9px] font-black text-pink-300 mt-0.5">{bond!=null?`絆Lv.${bond}`:'絆Lvの記録なし'}</div>
                         <div className="flex items-center gap-1 mt-1">
                           {m?.slotIndex!=null&&<span className={`text-[8px] font-black px-2 py-0.5 rounded-full border ${RANGE_STYLES[m.slotIndex].bg} ${RANGE_STYLES[m.slotIndex].border}`}>{RANGE_LABELS[m.slotIndex]}距離</span>}
                           {colors.length>0
@@ -81587,7 +81590,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           )}
           <div className="mh-rjresult-in mb-4 text-[10px] text-slate-300" style={{'--d':'1500ms'}}>{sendLabel}{r.eventId!==RAID_JACK_EVENT.id?'(デバッグ用の記録)':''}</div>
           <div className="mh-rjresult-in w-full max-w-xs space-y-3" style={{'--d':'1600ms'}}>
-            <button onClick={()=>r.way==='rhythm'?exitRaidJackRhythmResult(r.eventId!==RAID_JACK_EVENT.id):exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">もどる</button>
+            <button onClick={()=>r.way==='rhythm'?exitRaidJackRhythmResult(r.eventId!==RAID_JACK_EVENT.id):exitRaidJack(r.eventId!==RAID_JACK_EVENT.id)} className="w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black">戻る</button>
           </div>
         </div>);
       })()}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf4ff16df72666c2
+// source-sha256: 52ac0952a0fa528b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:55";
+const BUILD_DATE = "2026-10-27 01:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -1055,7 +1055,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([Object.freeze({
   id: 'coordination',
   category: 'support',
   name: '連携',
-  desc: '使用可能カード枚数 +1',
+  desc: '使えるカード +1枚',
   costPerLevel: 200,
   effectPerLevel: 1,
   unit: '枚',
@@ -4867,9 +4867,9 @@ const TRAINING_TOOLS = Object.freeze({
   noReturn: {
     name: '戻らずのお守り',
     emoji: '🧿',
-    timing: '取得後は自動待機',
+    timing: '持っているだけで効く',
     mode: '自動発動型',
-    desc: '次に受ける後退効果を1回無効化して消滅'
+    desc: '次に戻されるのを1回だけ防いで、なくなる'
   },
   sand: {
     name: '時の砂',
@@ -4888,7 +4888,7 @@ const TRAINING_TOOLS = Object.freeze({
   returnCharm: {
     name: '帰還のお守り',
     emoji: '🏮',
-    timing: '取得後は自動待機',
+    timing: '持っているだけで効く',
     mode: '自動発動型',
     desc: 'ゴール失敗時、仮獲得した通常アイテムから1個選んで保護'
   }
@@ -4946,7 +4946,7 @@ const TRAINING_SPACE_TYPES = Object.freeze({
     label: '修行道具',
     emoji: '🎒',
     color: '#d946ef',
-    desc: '修行専用アイテムをランダム取得'
+    desc: '修行で使う道具を1つもらう'
   },
   forward: {
     kind: 'move',
@@ -13451,7 +13451,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   2: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'アイテムを1個使用する',
+    condition: 'アイテムを1個使う',
     key: 'itemUses',
     target: 1,
     rewards: [{
@@ -13484,7 +13484,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   5: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'アイテムを1個使用する',
+    condition: 'アイテムを1個使う',
     key: 'itemUses',
     target: 1,
     rewards: [{
@@ -13542,7 +13542,7 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
-  condition: 'アイテムを10個使用する',
+  condition: 'アイテムを10個使う',
   key: 'itemUses',
   target: 10,
   rewards: [{
@@ -13563,7 +13563,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'daily_battles',
   name: 'バトルに挑戦',
-  condition: 'バトルを3回行う',
+  condition: 'バトルを3回遊ぶ',
   key: 'battles',
   target: 3,
   rewards: [{
@@ -13614,7 +13614,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
 const missionWeeklyDefinitions = (now = Date.now()) => [{
   id: 'weekly_logins',
   name: '継続は力なり',
-  condition: '異なる5日分のログインを行う',
+  condition: '5日ログインする(同じ日は1回)',
   key: 'loginDays',
   target: 5,
   rewards: [{
@@ -13624,7 +13624,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'weekly_battles',
   name: 'バトル週間',
-  condition: 'バトルを20回行う',
+  condition: 'バトルを20回遊ぶ',
   key: 'battles',
   target: 20,
   rewards: [{
@@ -13664,7 +13664,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'weekly_market',
   name: 'マーケット常連',
-  condition: 'マーケットで3回購入する',
+  condition: 'マーケットで3回買う',
   key: 'marketTrades',
   target: 3,
   rewards: [{
@@ -13674,7 +13674,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'weekly_daily_claims',
   name: 'アイテム活用',
-  condition: 'アイテムを5個使用する',
+  condition: 'アイテムを5個使う',
   key: 'itemUses',
   target: 5,
   rewards: [{
@@ -13708,7 +13708,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
 const missionMonthlyDefinitions = () => [{
   id: 'monthly_logins',
   name: '月間ログイン',
-  condition: '異なる20日分のログインを行う',
+  condition: '20日ログインする(同じ日は1回)',
   key: 'loginDays',
   target: 20,
   rewards: [{
@@ -13718,7 +13718,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_battles',
   name: '月間バトル',
-  condition: 'バトルを100回行う',
+  condition: 'バトルを100回遊ぶ',
   key: 'battles',
   target: 100,
   rewards: [{
@@ -13728,7 +13728,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_wins',
   name: '月間勝利',
-  condition: 'バトルで200回勝利する',
+  condition: 'バトルで200回勝つ',
   key: 'wins',
   target: 200,
   rewards: [{
@@ -13758,7 +13758,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_quick_runs',
   name: 'クイック月間',
-  condition: 'クイックモードを20回プレイする',
+  condition: 'クイックモードを20回遊ぶ',
   key: 'quickRuns',
   target: 20,
   rewards: [{
@@ -13795,7 +13795,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_market',
   name: 'マーケット月間',
-  condition: 'マーケットで10回取引する',
+  condition: 'マーケットで10回買い物する',
   key: 'marketTrades',
   target: 10,
   rewards: [{
@@ -13805,7 +13805,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_mode_runs',
   name: 'モードプレイヤー',
-  condition: '各種モードを合計30回プレイする',
+  condition: 'どのモードでも合わせて30回遊ぶ',
   key: 'modeRuns',
   target: 30,
   rewards: [{
@@ -14450,7 +14450,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   psyche: 60,
   unlockRequirement: 'CHAOS',
   description: '累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。',
-  cardDescription: '累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。',
+  cardDescription: '累計ターンで敵が強化され、味方側の各効果が低下。35ターンごとに距離の弱体（DISTANCE BREAK）が進む最高難易度。',
   specialRules: Object.freeze({
     enemyTurnRate: 0.0075,
     allyJoinPenaltyRate: 0.0075,
@@ -14961,7 +14961,7 @@ const GOD_SETTING = Object.freeze({
   rankingId: 'ExtremeGOD',
   recordId: 'GOD',
   description: '神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。',
-  cardDescription: '2WAVEごとに神威が上昇。累計ターン圧と20TごとのDISTANCE BREAKを受ける。',
+  cardDescription: '2WAVEごとに神威が上昇。累計ターン圧と20ターンごとの距離の弱体（DISTANCE BREAK）を受ける。',
   specialRules: Object.freeze({
     assistCardEffect: 0.5,
     positiveModifier: 0.5,
@@ -15000,7 +15000,7 @@ const RAGNAROK_SETTING = Object.freeze({
   rankingId: 'ExtremeRAGNAROK',
   recordId: 'RAGNAROK',
   description: '黄昏が2WAVEごとに深まり、WAVE5とWAVE10のボスは倒しても起き上がる、極限チャレンジの最終難易度。',
-  cardDescription: '2WAVEごとに黄昏が深まる。ボスは死者の再起で蘇り、15TごとのDISTANCE BREAKに安全距離はない。',
+  cardDescription: '2WAVEごとに黄昏が深まる。ボスは死者の再起で蘇り、15ターンごとの距離の弱体（DISTANCE BREAK）に安全距離はない。',
   specialRules: Object.freeze({
     assistCardEffect: 0.35,
     positiveModifier: 0.35,
@@ -15437,22 +15437,22 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
       lines: kept
     });
   };
-  if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
-  if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
+  if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
+  if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
   if (difficultyId === HELHEIM_SETTING.id) {
     const adjust = rules.enemyAdjust || {};
     const durahan = adjust.byEnemy?.Durahan;
-    push('冥府', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
+    push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
   push('ダメージ・ガッツ', [rules.damageDealt != null && ['与ダメージ', specialRulePercent(rules.damageDealt)], rules.allyJoinBonus != null && ['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)], rules.gutsCost != null && ['消費ガッツ', specialRulePercent(rules.gutsCost)]]);
-  push('累計ターン', [rules.enemyTurnRate != null && ['敵ライフ/攻撃力', `累計Tごと+${precisePercent(rules.enemyTurnRate)}`], rules.allyJoinPenaltyRate != null && ['加入B倍率', `累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus != null ? `（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）` : ''}`], rules.damageTurnRate != null && ['与ダメ倍率', `経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt ?? 0)}で停止）`]]);
-  push('WAVEターン', [quick ? rules.awakeningPenaltyRate != null && ['自動成長', `WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`] : rules.awakeningZeroTurns > 0 && ['トレーニング', `強化量が WAVE Tごと-${precisePercent(1 / rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}Tで0%）`], (quick ? rules.awakeningPenaltyRate != null : rules.awakeningZeroTurns > 0) && Array.isArray(rules.awakeningPenaltyExcludes) && rules.awakeningPenaltyExcludes.includes('distance') && ['対象外', '距離強化は下がらない']]);
+  push('累計ターン', [rules.enemyTurnRate != null && ['敵ライフ/攻撃力', `累計1ターンごと+${precisePercent(rules.enemyTurnRate)}`], rules.allyJoinPenaltyRate != null && ['加入B倍率', `累計1ターンごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus != null ? `（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）` : ''}`], rules.damageTurnRate != null && ['与ダメ倍率', `経過1ターンごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt ?? 0)}で停止）`]]);
+  push('WAVEターン', [quick ? rules.awakeningPenaltyRate != null && ['自動成長', `WAVE内1ターンごと-${turnPointText(rules.awakeningPenaltyRate)}`] : rules.awakeningZeroTurns > 0 && ['トレーニング', `強化量が WAVE内1ターンごと-${precisePercent(1 / rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}ターンで0%）`], (quick ? rules.awakeningPenaltyRate != null : rules.awakeningZeroTurns > 0) && Array.isArray(rules.awakeningPenaltyExcludes) && rules.awakeningPenaltyExcludes.includes('distance') && ['対象外', '距離強化は下がらない']]);
   const breakRule = extremeDistanceBreakRule(difficultyId);
-  if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}Tごと1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', breakRule.safeDistanceCount > 0 ? `${breakRule.safeDistanceCount}距離は最後まで弱体化しない` : 'なし（4距離すべて弱体化する）']]);
+  if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', breakRule.safeDistanceCount > 0 ? `${breakRule.safeDistanceCount}距離は最後まで弱体化しない` : 'なし（4距離すべて弱体化する）']]);
   const revivalRule = extremeRevivalRule(difficultyId);
   if (revivalRule) push('不死（死者の再起）', [['対象', Object.entries(revivalRule.waves).map(([waveNumber, count]) => `WAVE${waveNumber}（${count}回）`).join(' / ')], ['復活時', `ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`], ['起き上がるたび', `敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`]]);
   return groups;
@@ -16696,7 +16696,7 @@ const MarketPurchaseSheet = ({
     className: `mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`
   }, meta.verb, "する"), React.createElement(MarketModalClose, {
     onClick: onCancel,
-    label: "キャンセル",
+    label: "やめる",
     disabled: pending
   })));
 };
@@ -17045,11 +17045,11 @@ const HELP_DATA_TITLES = {
   cardBeatPointRewards: 'MFバトルカードの1戦でもらえるビートP',
   cardPacks: 'パックの弾と入っている種族',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
-  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
-  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
+  raidJackTiersA: 'レイドバトルのジャック(段階別の共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階別のライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   tacticsHateGains: '🔥(ヘイト)の増え方',
-  tacticsHateTypes: 'タイプごとの🔥',
+  tacticsHateTypes: 'タイプ別の🔥',
   tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
@@ -17070,11 +17070,11 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
-  assistantBondRewards: '仲良し度のLvごとのごほうび(助手ごとに1回)',
+  assistantBondRewards: '仲良し度Lvのごほうび(助手ひとりにつき1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
-  psycheRewards: '難易度ごとにもらえる虹のプシュケー',
-  rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  psycheRewards: '難易度別にもらえる虹のプシュケー',
+  rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
   rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
@@ -31745,7 +31745,7 @@ const RhythmOptions = ({
     className: card
   }, !wide && React.createElement("h3", {
     className: head
-  }, "◆ 音ごとの大きさ"), React.createElement("div", {
+  }, "◆ 音の種類別の大きさ"), React.createElement("div", {
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
   }, field('フリック音の大きさ', stepper('noteSeFlickVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
     fine: 5,
@@ -31808,7 +31808,7 @@ const RhythmOptions = ({
       }, 'tap', id), i * 260));
     },
     className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100"
-  }, "判定ごと", React.createElement("span", {
+  }, "判定の音", React.createElement("span", {
     className: "block text-[10px] text-fuchsia-300"
   }, "良い順に3回"))))), React.createElement("section", {
     className: card
@@ -31819,7 +31819,7 @@ const RhythmOptions = ({
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
   }, "▸ 音量について詳しく"), React.createElement("p", {
     className: `mt-1 ${note}`
-  }, "この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。"), React.createElement("p", {
+  }, "この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。"), React.createElement("p", {
     className: `mt-2 ${note}`
   }, "2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。"), React.createElement("p", {
     className: `mt-2 ${note}`
@@ -33291,7 +33291,7 @@ const RhythmHellGuide = ({
       fontSize: '14px',
       fontWeight: 900
     }
-  }, "もどる"), React.createElement("button", {
+  }, "戻る"), React.createElement("button", {
     type: "button",
     "data-rhythm-hell-guide-next": true,
     onClick: () => last ? onClose() : onPage(index + 1),
@@ -33304,7 +33304,7 @@ const RhythmHellGuide = ({
       fontSize: '14px',
       fontWeight: 900
     }
-  }, last ? 'とじる' : 'つぎへ'))));
+  }, last ? '閉じる' : 'つぎへ'))));
 };
 const RHYTHM_HAPTICS = (() => {
   let holder = null,
@@ -47902,7 +47902,7 @@ const friendsGroup = (selfId, rows) => {
   return groups;
 };
 const friendsLastSeenText = (updatedAtMs, nowMs) => {
-  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間は不明';
+  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間はわかりません';
   const diff = Math.max(0, nowMs - updatedAtMs);
   if (diff < FRIENDS_ONLINE_MS) return 'いま遊んでいるかも';
   const minutes = Math.floor(diff / 60000);
@@ -51150,7 +51150,7 @@ const NameEditModal = ({
   className: "mt-3 grid grid-cols-2 gap-2"
 }, React.createElement(ModalCloseButton, {
   onClick: onCancel,
-  label: "キャンセル"
+  label: "やめる"
 }), React.createElement("button", {
   type: "button",
   onClick: onSave,
@@ -51181,7 +51181,7 @@ const ConfirmSheet = ({
   className: `mh-button ${danger ? 'mh-button-danger' : 'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`
 }, confirmLabel), React.createElement(ModalCloseButton, {
   onClick: onCancel,
-  label: "キャンセル"
+  label: "やめる"
 })));
 const PHASE_STEP_LABELS = Object.freeze({
   training: 'トレーニング',
@@ -52494,7 +52494,7 @@ function SettingsScreen({
   }), React.createElement(SettingsMenuLink, {
     icon: "🎵",
     label: "BGMアレンジ",
-    desc: "場面ごとに流す曲を選ぶ",
+    desc: "場面に合わせて流す曲を選ぶ",
     onClick: onOpenBgmArrangement
   }), React.createElement(SettingsMenuLink, {
     icon: "🖼️",
@@ -52511,7 +52511,7 @@ function SettingsScreen({
   }), React.createElement(SettingsMenuLink, {
     icon: "🎨",
     label: "画面テーマ",
-    desc: "画面ごとにハロウィン／クラシックを選ぶ",
+    desc: "画面の見た目(ハロウィン／クラシック)を選ぶ",
     onClick: onOpenScreenTheme,
     "data-open-screen-theme": true
   }), React.createElement(SettingsMenuLink, {
@@ -55514,7 +55514,7 @@ function MonsterDexDetailScreen({
       height: 'calc(1.625em * 3)'
     }
   }, React.createElement("p", {
-    className: "font-bold leading-relaxed text-slate-200 break-words"
+    className: "font-bold leading-relaxed text-slate-200 break-words whitespace-pre-line"
   }, helpWrap(dexEntryDescription(mon)))), unlocked ? React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     className: "mt-2",
     value: tab,
@@ -57037,7 +57037,7 @@ function RhythmRankingScreen({
     className: "space-y-2"
   }, React.createElement("p", {
     className: "text-[10px] font-black text-amber-200"
-  }, "部門ごとの報酬（終了後に受け取れます）"), eventRewardsByDivision.map(({
+  }, "部門別の報酬（終わったあとに受け取れます）"), eventRewardsByDivision.map(({
     division,
     ranks
   }) => React.createElement("div", {
@@ -58022,7 +58022,7 @@ function MasuReincarnateScreen({
       className: "mh-button mh-button-primary min-h-[52px] rounded-2xl bg-violet-600 font-black active:scale-[.98] disabled:opacity-30"
     }, preview?.ok ? `${preview.count}体を転生する` : '転生できません'), React.createElement(ModalCloseButton, {
       onClick: () => setBulkConfirmOpen(false),
-      label: "キャンセル",
+      label: "やめる",
       disabled: busy
     })))));
   }
@@ -59326,7 +59326,7 @@ function MasuOfferingScreen({
     className: "mt-4"
   }, React.createElement(ModalCloseButton, {
     onClick: () => setDone(null),
-    label: "とじる"
+    label: "閉じる"
   }))));
 }
 function MasuOfferingAnimation({
@@ -60408,7 +60408,7 @@ function MasuTranscendEnhanceScreen({
     onClick: () => setTranscendPlan(null),
     disabled: planUsed <= 0,
     className: "mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95"
-  }, "キャンセル"), React.createElement("button", {
+  }, "やめる"), React.createElement("button", {
     type: "button",
     "data-transcend-commit": true,
     disabled: planUsed <= 0,
@@ -60652,7 +60652,7 @@ function MasuTranscendEnhanceScreen({
     className: "mt-1 block font-mono text-[12px]"
   }, "所持 ×", have)))), !transcendFruitItemId ? React.createElement("div", {
     className: "rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200"
-  }, "使用する実を明示選択してください") : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "使う実を選んでください") : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "grid grid-cols-3 gap-2"
   }, [[1, '1'], [10, '10'], [selectedFruitHave, 'MAX']].map(([amount, label]) => React.createElement("button", {
     key: label,
@@ -61416,7 +61416,7 @@ function MasuFusionScreen({
       onClick: continueWithFusionSubs,
       disabled: selectedSubs.length === 0,
       className: "mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-xl bg-violet-600 text-white text-[13px] font-black disabled:bg-slate-800 disabled:text-slate-400 active:scale-95"
-    }, selectedSubs.length > 0 ? `副${selectedSubs.length}体で確認へ` : '副を選択してください')), fusionSortBar, React.createElement("div", {
+    }, selectedSubs.length > 0 ? `副${selectedSubs.length}体で確認へ` : '合体に使う子を選んでください')), fusionSortBar, React.createElement("div", {
       className: SCREEN_LIST_CLASS
     }, candidates.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "💫",
@@ -63176,7 +63176,7 @@ function PickHeroAllyScreen({
             style: {
               fontSize: '10px'
             }
-          }, "詳細を見る ", React.createElement(ChevronRight, {
+          }, "くわしく見る ", React.createElement(ChevronRight, {
             size: 11
           })))
         }));
@@ -64824,7 +64824,7 @@ function MasuRegisterModal({
   }, React.createElement("button", {
     onClick: () => setShowMasuRegisterModal(false),
     className: "w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95"
-  }, "キャンセル"), React.createElement("button", {
+  }, "やめる"), React.createElement("button", {
     onClick: () => {
       registerMasuMon(masuNameInput);
       setShowMasuRegisterModal(false);
@@ -66186,7 +66186,7 @@ const BATTLE_CARD_ART_DEBUG = (() => {
 const BATTLE_CARD_LOOKS = Object.freeze([{
   id: 'art',
   label: '新しいカードの絵',
-  note: '種類ごとの色の枠'
+  note: '種類で色分けした枠'
 }, {
   id: 'classic',
   label: '前のカード',
@@ -72134,7 +72134,7 @@ function SoulBattleEffects({
     className: "rounded-xl bg-black/30 p-2"
   }, React.createElement("span", {
     className: "block text-slate-400"
-  }, "使用可能カード"), React.createElement("b", {
+  }, "使えるカード"), React.createElement("b", {
     className: "text-sky-300"
   }, soulCoordinationCardBonus > 0 ? '+1' : '変化なし'))), unifiedSpecialDefense.rate > 0 && React.createElement("div", {
     className: "mt-2 text-[10px] leading-relaxed text-slate-400"
@@ -74237,7 +74237,7 @@ function FriendsScreen({
           className: "shrink-0 text-[13px] font-black text-amber-200"
         }, e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`))), React.createElement("p", {
           className: "px-1 text-[10px] font-bold text-slate-500"
-        }, "モードごとの、いちばん良い記録です。"));
+        }, "モード別の、いちばん良い記録です。"));
       })(), profileTab === 'songs' && sum && sum.records && (() => {
         const flagText = ['', 'フルコンボ', 'オールエクセレント', 'オールマーベラス'];
         const cmp = friendsCompareScores(sum.records.rhythm.songs, myBest);
@@ -78557,7 +78557,7 @@ function RhythmMultiScreen({
       type: "button",
       className: `${btn} w-full bg-pink-700`,
       onClick: openInvitePanel
-    }, invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'), invitePanel && React.createElement("div", {
+    }, invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'), invitePanel && React.createElement("div", {
       className: "mt-2 space-y-1"
     }, roster === null && React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
@@ -79771,7 +79771,7 @@ function RhythmBuddyScoreChart({
     type: "button",
     onClick: () => setTable(v => !v),
     className: "mt-1 min-h-[36px] rounded-lg bg-slate-800 px-2 text-[10px] font-black text-slate-200"
-  }, table ? '数字の一覧をとじる' : '数字の一覧で見る'), table && React.createElement("ol", {
+  }, table ? '数字の一覧を閉じる' : '数字の一覧で見る'), table && React.createElement("ol", {
     "data-rhythm-buddy-chart-table": true,
     className: "mt-1 space-y-0.5"
   }, list.slice().reverse().map((x, i) => React.createElement("li", {
@@ -79892,7 +79892,7 @@ function RhythmBuddyDetail({
     type: "button",
     onClick: () => setTraitsOpen(v => !v),
     className: "min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
-  }, traitsOpen ? '性格の一覧をとじる' : '性格の一覧を見る(9つ)'), traitsOpen && React.createElement("ul", {
+  }, traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'), traitsOpen && React.createElement("ul", {
     "data-rhythm-buddy-traits": true,
     className: "space-y-1 rounded-xl bg-slate-950/60 p-2"
   }, RHYTHM_BUDDY_TRAITS.map(t => React.createElement("li", {
@@ -79957,7 +79957,7 @@ function RhythmBuddyDetail({
     type: "button",
     onClick: onBack,
     className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black"
-  }, "一覧へもどる"));
+  }, "一覧へ戻る"));
 }
 const RHYTHM_BUDDY_LIST_KEY = 'mh_masu_beat_list_v1';
 const RHYTHM_BUDDY_SORTS = Object.freeze([Object.freeze({
@@ -80729,7 +80729,7 @@ function RhythmBuddyRankDetail({
     className: "rounded-2xl border border-lime-300/25 bg-slate-900/80 p-2"
   }, React.createElement("b", {
     className: "mb-1 block text-[12px] font-black text-lime-100"
-  }, "難易度ごとの最高スコア"), React.createElement("ul", {
+  }, "難易度別の最高スコア"), React.createElement("ul", {
     className: "space-y-1"
   }, rhythmBuddyShownDiffIds().map(id => React.createElement("li", {
     key: id,
@@ -97214,7 +97214,7 @@ const CardPvpLobby = ({
       setInviteOpen(v => !v);
       if (selfBid) void cardPvpRoster(selfBid).then(list => setRoster(Array.isArray(list) ? list : []));
     }
-  }, inviteOpen ? 'フレンドの招待をとじる' : 'フレンドを招待'), inviteOpen && roster && React.createElement("div", {
+  }, inviteOpen ? 'フレンドの招待を閉じる' : 'フレンドを招待'), inviteOpen && roster && React.createElement("div", {
     "data-card-pvp-invite-pick": true,
     className: "rounded-2xl border border-emerald-300/40 bg-emerald-500/5 p-2"
   }, roster.length === 0 ? React.createElement("p", {
@@ -100013,7 +100013,7 @@ function MonsterHeroGame() {
       height: '20px'
     }
   }, React.createElement("span", {
-    className: "text-[9px] text-amber-400/70 font-black"
+    className: "shrink-0 whitespace-nowrap text-[9px] text-amber-400/70 font-black"
   }, "総合力"), React.createElement("span", {
     className: "text-[14px] font-mono font-black text-amber-200 tabular-nums"
   }, formatMonsterPower(power)));
@@ -100200,7 +100200,7 @@ function MonsterHeroGame() {
     onClick: onDetail,
     "aria-label": `${mon.name}の詳細を見る`,
     className: "min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60"
-  }, "詳細を見る", React.createElement(ChevronRight, {
+  }, "くわしく見る", React.createElement(ChevronRight, {
     size: 12
   }))));
   const {
@@ -104671,7 +104671,7 @@ function MonsterHeroGame() {
           }
         } catch (e) {
           if (e && e.name === 'AbortError') {
-            setRestoreMsg('保存をキャンセルしました');
+            setRestoreMsg('保存をやめました');
             return;
           }
         }
@@ -104858,7 +104858,7 @@ function MonsterHeroGame() {
       className: "ml-1"
     }, aptitude[index] || 'C')))), React.createElement("div", {
       className: "mt-2 text-right text-[10px] font-black text-indigo-200"
-    }, "詳細を見る ›"));
+    }, "くわしく見る ›"));
   };
   const baseIdOfRosterEntry = entry => {
     if (typeof entry === 'string' && entry.startsWith('masu:')) return getMasuMon(entry.slice(5))?.baseId || null;
@@ -104990,8 +104990,13 @@ function MonsterHeroGame() {
       onClick: () => openModal('sort'),
       className: "flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95"
     }, React.createElement("span", {
-      className: "text-[11px] font-black text-white truncate"
-    }, "並べ替え: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), React.createElement(ChevronRight, {
+      "data-monster-sort-label": true,
+      className: "min-w-0 text-left leading-tight"
+    }, React.createElement("small", {
+      className: "block text-[9px] font-black text-slate-400"
+    }, "並べ替え"), React.createElement("b", {
+      className: "block truncate text-[11px] font-black text-white"
+    }, currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼'))), React.createElement(ChevronRight, {
       size: 14,
       className: "text-slate-400 shrink-0"
     })), React.createElement("button", {
@@ -106948,11 +106953,11 @@ function MonsterHeroGame() {
       ok: true
     } : {
       ok: false,
-      reason: 'サイコロの出目確定後、移動前のみ使用可能'
+      reason: 'サイコロを振ったあと、進む前にだけ使えます'
     };
     if (trainingMovingRef.current || trainingSession?.movementRemaining || trainingSession?.branchOptions.length || trainingSession?.rollPending) return {
       ok: false,
-      reason: '移動していない時のみ使用可能'
+      reason: 'まだ進んでいないときだけ使えます'
     };
     return {
       ok: true
@@ -107785,7 +107790,7 @@ function MonsterHeroGame() {
   }) => {
     if (offeringProcessingRef.current) return {
       ok: false,
-      error: '処理中です。少し待ってからお試しください。'
+      error: 'いま手続き中です。少し待ってからもう一度押してください。'
     };
     const masu = masuMonsRef.current.find(m => String(m.id) === String(masuId));
     const plan = buildMasuOffering({
@@ -117078,7 +117083,7 @@ function MonsterHeroGame() {
       disabled: allocated <= 0,
       onClick: clearDraft,
       className: "min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30"
-    }, "キャンセル"), React.createElement("button", {
+    }, "やめる"), React.createElement("button", {
       disabled: allocated <= 0,
       onClick: () => {
         const updated = spendUniqueSkillPoint(masu.id, draft);
@@ -118290,8 +118295,8 @@ function MonsterHeroGame() {
     const finiteNumber = value => value == null || value === '' ? null : Number.isFinite(Number(value)) ? Number(value) : null;
     const scoreValue = finiteNumber(entry?.score);
     const breederLevelValue = finiteNumber(entry?.level);
-    const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
-    const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue > 0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
+    const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコアの記録なし';
+    const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue > 0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLvの記録なし';
     const speciesLabel = showSpecies ? speciesRankingLabel(entry?.difficulty) : null;
     const turnsValue = finiteNumber(entry?.turns);
     const reachedWaveValue = finiteNumber(entry?.reachedWave);
@@ -118345,7 +118350,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-w-0 truncate text-[11px]"
     }, entry?.userName || '名無しのブリーダー'), React.createElement("strong", {
       className: "shrink-0 text-xs text-indigo-300"
-    }, Number.isFinite(level) && level > 0 ? `ブリーダーLv.${level}` : 'Lv情報なし'));
+    }, Number.isFinite(level) && level > 0 ? `ブリーダーLv.${level}` : 'Lvの記録なし'));
   };
   const renderBondRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
@@ -118392,7 +118397,7 @@ function MonsterHeroGame() {
       disabled: !detailMember,
       "data-bond-detail": detailMember ? 'open' : 'none',
       className: `shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
-    }, detailMember ? '詳細 ›' : '情報なし')));
+    }, detailMember ? '詳細 ›' : '記録なし')));
   };
   const renderPowerRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
@@ -118445,7 +118450,7 @@ function MonsterHeroGame() {
       disabled: !detailMember,
       "data-power-detail": detailMember ? 'open' : 'none',
       className: `shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
-    }, detailMember ? '詳細 ›' : '情報なし')));
+    }, detailMember ? '詳細 ›' : '記録なし')));
   };
   const modeRecordFor = (mode, diff) => isTacticsMode(mode) ? {
     score: tacticsRecordsOf(mode).hs[diff] || 0,
@@ -120311,7 +120316,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
-      }, "左右にスワイプして難易度を選択"), Object.keys(SKIP_TICKETS).length > 0 && React.createElement("div", {
+      }, "左右にスワイプして難易度をえらぶ"), Object.keys(SKIP_TICKETS).length > 0 && React.createElement("div", {
         className: "shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2 min-h-[24px]"
       }, React.createElement("span", {
         className: "text-[8px] font-black text-slate-500 tracking-[.12em]"
@@ -120781,7 +120786,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
-      }, "左右にスワイプしてモードを選択"), React.createElement("div", {
+      }, "左右にスワイプしてモードをえらぶ"), React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('modeCards')}`
       }, React.createElement("button", {
         "aria-label": "前のモード",
@@ -120988,7 +120993,7 @@ function MonsterHeroGame() {
         }, on ? difficulties.length : Object.keys(DIFFICULTY_SETTINGS).length));
       })), React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
-      }, "左右にスワイプして難易度を選択"), React.createElement("div", {
+      }, "左右にスワイプして難易度をえらぶ"), React.createElement("div", {
         className: "relative shrink-0"
       }, React.createElement("button", {
         "aria-label": "前の難易度",
@@ -121097,7 +121102,7 @@ function MonsterHeroGame() {
           disabled: !previewable,
           onClick: () => setShowWaveDetails(true),
           className: "mhbt-pb disabled:opacity-50"
-        }, previewable ? '全WAVE詳細' : '詳細 ？？？')), React.createElement("button", {
+        }, previewable ? '全WAVE詳細' : 'まだ見られません')), React.createElement("button", {
           disabled: !previewable,
           onClick: () => {
             battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';
@@ -121207,7 +121212,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
-      }, "左右にスワイプして難易度を選択"), quick && React.createElement("fieldset", {
+      }, "左右にスワイプして難易度をえらぶ"), quick && React.createElement("fieldset", {
         className: "shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1"
       }, React.createElement("legend", {
         className: "px-1 text-[9px] font-black text-teal-200"
@@ -121862,7 +121867,7 @@ function MonsterHeroGame() {
         }, React.createElement("nav", {
           "aria-label": "付け方",
           className: "grid grid-cols-3 gap-1 px-3 py-1 shrink-0"
-        }, [['all', '全身模様'], ['region', '部位ごと'], ['point', 'ワンポイント']].map(([id, label]) => React.createElement("button", {
+        }, [['all', '全身模様'], ['region', '部位別'], ['point', 'ワンポイント']].map(([id, label]) => React.createElement("button", {
           key: id,
           onClick: () => selectMode(id),
           className: `min-h-[38px] rounded-xl text-[9px] font-black ${mode === id ? 'bg-fuchsia-700 ring-2 ring-fuchsia-300' : 'bg-slate-800 text-slate-400'}`
@@ -121921,7 +121926,7 @@ function MonsterHeroGame() {
         }, "サイズ確認"), React.createElement("button", {
           onClick: resetPattern,
           className: "min-h-[44px] rounded-xl bg-red-950 font-black"
-        }, "すべて初期化"))), patternStep === 'pattern' && React.createElement("div", {
+        }, "ぜんぶ元に戻す"))), patternStep === 'pattern' && React.createElement("div", {
           className: "space-y-2"
         }, !active && mode === 'point' ? React.createElement("button", {
           onClick: () => addDecal(),
@@ -121951,7 +121956,7 @@ function MonsterHeroGame() {
           className: "space-y-3"
         }, !active ? React.createElement("p", {
           className: "text-center text-sm text-slate-400"
-        }, "レイヤーを選択してください") : React.createElement(React.Fragment, null, React.createElement("div", {
+        }, "重ねる模様を選んでください") : React.createElement(React.Fragment, null, React.createElement("div", {
           className: "flex gap-2 items-center"
         }, React.createElement("span", {
           className: "w-10 h-10 rounded-full border-2 border-white/30",
@@ -122930,7 +122935,7 @@ function MonsterHeroGame() {
         type: "button",
         className: "mh-rpg-cancel",
         onClick: () => setRpgSkillMenu(false)
-      }, "もどる"))));
+      }, "戻る"))));
     })(), gameState === 'RPG_DEBUG_RESULT' && rpgBattle && (() => {
       const battle = rpgBattle;
       const renderRows = units => React.createElement("div", {
@@ -124945,7 +124950,7 @@ function MonsterHeroGame() {
         className: `min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID ? 'bg-fuchsia-700 ring-2 ring-white' : 'bg-slate-800'}`
       }, "虹の実を選択")), React.createElement("div", null, !selectedFruitId && React.createElement("p", {
         className: "text-center text-[8px] font-black text-amber-300"
-      }, "使用する実を明示選択してください。")), React.createElement("div", {
+      }, "使う実を選んでください。")), React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, React.createElement("button", {
         disabled: !selectedFruitId,
@@ -125871,8 +125876,9 @@ function MonsterHeroGame() {
       }, renderMonsterCardBody({
         base: m,
         info: React.createElement("div", {
-          className: "text-[10px] text-pink-400 font-bold text-center leading-none"
-        }, masuCount > 0 ? `マスモン${masuCount}体` : 'マスモン未登録'),
+          className: "text-[10px] text-pink-400 font-bold text-center leading-none",
+          style: JA_LABEL_STYLE
+        }, jaWrap(masuCount > 0 ? `マスモン${masuCount}体` : 'マスモン未登録')),
         status: monsterDisplayFlags.active && e.active ? React.createElement("span", {
           className: "text-[10px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white leading-none"
         }, "編成中") : null
@@ -125905,7 +125911,7 @@ function MonsterHeroGame() {
       }, React.createElement(AssistantBubble, {
         scene: "pasture",
         compact: true
-      })), React.createElement(ScreenLead, null, "HOMEに表示するマスモンをタップで選択してください。0体でも保存できます。"), React.createElement("div", {
+      })), React.createElement(ScreenLead, null, "HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。"), React.createElement("div", {
         className: "grid grid-cols-5 gap-2 mb-2 shrink-0",
         "aria-label": "選択中の放牧マスモン"
       }, Array.from({
@@ -126255,7 +126261,7 @@ function MonsterHeroGame() {
         className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-30"
       }, count, "枚 使う"), React.createElement(ModalCloseButton, {
         onClick: () => setXpTicketUse(null),
-        label: usedResult ? '閉じる' : 'キャンセル'
+        label: usedResult ? '閉じる' : 'やめる'
       })));
     })(), detailTrainingMasuId && (() => {
       const masu = getMasuMon(detailTrainingMasuId);
@@ -126952,7 +126958,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         onClick: closeDyePicker,
         className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase"
-      }, "キャンセル"), React.createElement("button", {
+      }, "やめる"), React.createElement("button", {
         onClick: () => {
           useDyeItem(masu.id, dyePreviewColors);
           closeDyePicker();
@@ -127034,7 +127040,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         onClick: () => setCustomColorPicker(null),
         className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase"
-      }, "キャンセル"), React.createElement("button", {
+      }, "やめる"), React.createElement("button", {
         onClick: applyCustom,
         className: "flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95"
       }, "この色に決定"))));
@@ -127540,7 +127546,7 @@ function MonsterHeroGame() {
       className: "min-h-[44px] rounded-2xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-[.98]"
     }, "ひとことを消す"), React.createElement(ModalCloseButton, {
       onClick: () => setShowMessageEditor(false),
-      label: "キャンセル"
+      label: "やめる"
     })))), showFavoritePicker && (() => {
       const closeFav = () => {
         setShowFavoritePicker(false);
@@ -129350,7 +129356,7 @@ function MonsterHeroGame() {
           color: '#f1f5f9',
           backgroundColor: '#0f172a'
         }
-      }, "表示条件の対象外です。", React.createElement("br", null), React.createElement("small", null, "登録数8体以上では、通常プレイ中にこの案内は表示されません。")), React.createElement("div", {
+      }, "いまは出ない案内です。", React.createElement("br", null), React.createElement("small", null, "登録数8体以上では、通常プレイ中にこの案内は表示されません。")), React.createElement("div", {
         className: `mt-4 grid ${eligible ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
       }, eligible && React.createElement("button", {
         onClick: tryDailyMasuAdvice,
@@ -130194,7 +130200,7 @@ function MonsterHeroGame() {
     }, React.createElement("button", {
       onClick: () => setShowOfficialTitleConfirm(false),
       className: "w-full bg-slate-800 py-3 rounded-xl font-black"
-    }, "キャンセル"), React.createElement("button", {
+    }, "やめる"), React.createElement("button", {
       onClick: returnToOfficialTitle,
       className: "w-full bg-red-600 py-3 rounded-xl font-black"
     }, "タイトルへ戻る")))), showGameUpdateConfirm && React.createElement("div", {
@@ -130223,7 +130229,7 @@ function MonsterHeroGame() {
       onClick: () => setShowGameUpdateConfirm(false),
       disabled: gameUpdatePending,
       className: "w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50"
-    }, "キャンセル")))), rankingPartyDetail && (() => {
+    }, "やめる")))), rankingPartyDetail && (() => {
       const entry = rankingPartyDetail;
       const finite = v => v == null || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null;
       const score = finite(entry?.score),
@@ -130270,19 +130276,19 @@ function MonsterHeroGame() {
         className: "text-[13px] font-black text-white truncate"
       }, entry?.userName || '名無しのブリーダー'), React.createElement("div", {
         className: "text-[9px] text-indigo-300"
-      }, lv != null && lv > 0 ? `ブリーダーLv.${lv}` : 'ブリーダーLv情報なし')), React.createElement("div", {
+      }, lv != null && lv > 0 ? `ブリーダーLv.${lv}` : 'ブリーダーLvの記録なし')), React.createElement("div", {
         className: "text-right shrink-0"
       }, React.createElement("div", {
         className: "text-[7px] text-slate-400 uppercase tracking-widest"
       }, "Score"), React.createElement("div", {
         className: "text-[13px] font-black text-indigo-200"
-      }, score != null ? `${score.toLocaleString()} pt` : 'スコア情報なし'))), React.createElement("div", {
+      }, score != null ? `${score.toLocaleString()} pt` : 'スコアの記録なし'))), React.createElement("div", {
         className: "border-t border-white/10 shrink-0"
       }), members === null || members.length === 0 ? React.createElement("div", {
         className: "text-center py-6"
       }, React.createElement("div", {
         className: "text-[11px] text-slate-500"
-      }, "編成情報なし（過去の記録）"), React.createElement("div", {
+      }, "編成の記録なし（過去の記録）"), React.createElement("div", {
         className: "mt-2 flex items-center justify-center gap-1"
       }, React.createElement(Crown, {
         size: 11,
@@ -130291,7 +130297,7 @@ function MonsterHeroGame() {
         className: "text-[8px] text-amber-300"
       }, "勇者モン:"), React.createElement("span", {
         className: "text-[11px] font-black text-white"
-      }, entry?.hero || '勇者モン情報なし'))) : React.createElement("div", {
+      }, entry?.hero || '勇者モンの記録なし'))) : React.createElement("div", {
         className: "space-y-2"
       }, members.map((m, i) => {
         const art = monArt(m);
@@ -130328,7 +130334,7 @@ function MonsterHeroGame() {
           className: "text-[12px] font-black text-white truncate"
         }, m?.name || '不明')), React.createElement("div", {
           className: "text-[9px] font-black text-pink-300 mt-0.5"
-        }, bond != null ? `絆Lv.${bond}` : '絆Lv情報なし'), React.createElement("div", {
+        }, bond != null ? `絆Lv.${bond}` : '絆Lvの記録なし'), React.createElement("div", {
           className: "flex items-center gap-1 mt-1"
         }, m?.slotIndex != null && React.createElement("span", {
           className: `text-[8px] font-black px-2 py-0.5 rounded-full border ${RANGE_STYLES[m.slotIndex].bg} ${RANGE_STYLES[m.slotIndex].border}`
@@ -131287,7 +131293,7 @@ function MonsterHeroGame() {
       }, React.createElement("button", {
         onClick: () => r.way === 'rhythm' ? exitRaidJackRhythmResult(r.eventId !== RAID_JACK_EVENT.id) : exitRaidJack(r.eventId !== RAID_JACK_EVENT.id),
         className: "w-full bg-orange-700 text-white py-3.5 rounded-2xl font-black"
-      }, "もどる")));
+      }, "戻る")));
     })(), debugBattle && debugOutcome && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6 text-center",
       style: {
