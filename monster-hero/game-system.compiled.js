@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 03e2a25e8e9c0f9a
+// source-sha256: 9d460bf8dbf50715
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:30";
+const BUILD_DATE = "2026-10-27 03:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -89612,7 +89612,12 @@ const CardMonSlot = ({
     key: `${mv.key}-j`,
     "data-card-air-mark": true,
     className: "mh-card-air-mark"
-  }, "空中"), mv && mv.type === 'guard' && React.createElement("span", {
+  }, "空中"), mv && mv.type === 'hit' && React.createElement("span", {
+    key: `${mv.key}-f`,
+    "data-card-hit-flash": true,
+    className: "mh-card-hit-flash",
+    "aria-hidden": "true"
+  }), mv && mv.type === 'guard' && React.createElement("span", {
     key: `${mv.key}-s`,
     className: "mh-card-shield",
     "aria-hidden": "true"
@@ -89624,10 +89629,11 @@ const CardMonSlot = ({
     className: "absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300"
   }, "KO"), fx.map(f => React.createElement("span", {
     key: f.key,
-    className: `pointer-events-none absolute top-1 z-[50] text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`,
+    "data-card-dmg-num": f.dmg > 0 ? f.dmg : undefined,
+    className: `pointer-events-none absolute top-0 z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[34px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`,
     style: {
-      WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1',
-      textShadow: '0 0 10px rgba(248,113,113,.8)'
+      WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1',
+      textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)'
     }
   }, f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス')));
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
@@ -89729,6 +89735,7 @@ const CardBattleBoard = ({
   const [bigCard, setBigCard] = useState(null);
   const [turnSummary, setTurnSummary] = useState(null);
   const [logSheet, setLogSheet] = useState(false);
+  const [downBand, setDownBand] = useState(null);
   const [breederFx, setBreederFx] = useState(null);
   const [beams, setBeams] = useState([]);
   const lastGuard = useRef({});
@@ -90022,6 +90029,18 @@ const CardBattleBoard = ({
       motionTimers.current.push(setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000));
       if (hits.some(h => h.dmg >= 3)) Audio_.fgSe.crit();else if (hits.some(h => h.dmg > 0)) Audio_.fgSe.attack();else if (hits.some(h => h.heal)) Audio_.fgSe.heal();else Audio_.fgSe.guard();
     } else if (evs.some(e => e.t === 'use')) Audio_.fgSe.card();
+    const kos = evs.filter(e => e.t === 'ko');
+    if (kos.length && next.winner === null && !tutorial) {
+      const p0 = kos[0].p;
+      const key = `down-${next.log.length}-${Date.now()}`;
+      setDownBand({
+        key,
+        p: p0,
+        names: kos.filter(e => e.p === p0).map(e => next.players[p0].mons[e.m].name),
+        left: next.players[p0].mons.filter(x => !x.ko).length
+      });
+      motionTimers.current.push(setTimeout(() => setDownBand(cur => cur && cur.key === key ? null : cur), Math.max(700, Math.round(1100 * pace))));
+    }
     const centerOf = id => {
       const el = document.querySelector(`[data-card-art="${id}"]`);
       if (!el) return null;
@@ -91086,7 +91105,8 @@ const CardBattleBoard = ({
     className: "text-rose-200"
   }, pendingText)), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
-    className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
+    "data-card-log-kind": l.kind || undefined,
+    className: `${i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'} ${l.kind === 'ko' ? '!text-rose-300 font-black' : l.kind === 'hit' && /ダメージ/.test(l.text) ? '!text-rose-200' : ''}`
   }, l.text)))), !wide && tutorBox, React.createElement("div", {
     "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
     "data-card-floor": "me",
@@ -91306,7 +91326,28 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
-  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnBanner && !bigCard && !(tutorial && tutSay) && React.createElement("div", {
+  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), downBand && !bigCard && !turnBanner && React.createElement("div", {
+    key: downBand.key,
+    "data-card-down-band": downBand.p === CARD_ME ? 'me' : 'foe',
+    className: "pointer-events-none absolute inset-0 z-[52] flex items-center justify-center",
+    style: wide ? {
+      right: 'calc(min(42%, 420px) + 8px)'
+    } : undefined
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-fit": true,
+    onClick: () => setDownBand(null),
+    className: "mh-card-down-band pointer-events-auto flex w-full flex-col items-center bg-[linear-gradient(90deg,transparent,rgba(185,28,28,.95)_15%,rgba(185,28,28,.95)_85%,transparent)] py-1.5 text-white"
+  }, React.createElement("span", {
+    "data-card-down-name": true,
+    className: "max-w-full px-4 font-black leading-tight tracking-wide",
+    style: {
+      fontSize: 'clamp(20px, 6.5vw, 28px)',
+      ...JA_LABEL_STYLE
+    }
+  }, downBand.names.join('・'), " ダウン！"), React.createElement("span", {
+    className: "text-[12px] font-bold tracking-wider text-rose-100"
+  }, downBand.p === CARD_ME ? 'あなた' : '相手', "のモンスター 残り", downBand.left, "体"))), turnBanner && !bigCard && !(tutorial && tutSay) && React.createElement("div", {
     key: turnBanner.key,
     "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
     "aria-live": "polite",
@@ -137449,6 +137490,14 @@ const createAnimationStyle = () => {
     .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
+    /* 当たった子の白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
+    .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
+    @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
+    @keyframes mhCardDmgPop { 0% { opacity: 0; transform: scale(.4) translateY(6px); } 18% { opacity: 1; transform: scale(1.25) translateY(-4px); } 32% { transform: scale(1) translateY(-6px); } 80% { opacity: 1; transform: translateY(-14px); } 100% { opacity: 0; transform: translateY(-20px); } }
+    .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
+    @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band { animation: none; } }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }

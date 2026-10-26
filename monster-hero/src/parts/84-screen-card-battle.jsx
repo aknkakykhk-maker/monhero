@@ -485,11 +485,13 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       {/* よけた: 元の場所に残像が残って消える / ジャンプでよけた: 上で止まって「空中」の印 */}
       {mv && mv.type === 'dodge' && <div key={`${mv.key}-a`} className="mh-card-afterimage" aria-hidden="true">{imgEl}</div>}
       {mv && mv.type === 'jump' && <span key={`${mv.key}-j`} data-card-air-mark className="mh-card-air-mark">空中</span>}
+      {/* 当たった子は白く一瞬光る(2026-10-26 改良の案 B・カゲあつくん 7) */}
+      {mv && mv.type === 'hit' && <span key={`${mv.key}-f`} data-card-hit-flash className="mh-card-hit-flash" aria-hidden="true"/>}
       {mv && mv.type === 'guard' && <span key={`${mv.key}-s`} className="mh-card-shield" aria-hidden="true"/>}
       {mv && mv.type === 'guard' && mv.label && <span key={`${mv.key}-n`} data-card-guard-num className="mh-card-guard-num">{mv.label}</span>}
       {mon.ko && <span className="absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300">KO</span>}
       {fx.map((f) => (
-        <span key={f.key} className={`pointer-events-none absolute top-1 z-[50] text-[30px] font-black ${f.dmg > 0 ? 'animate-bounce text-white' : 'text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #dc2626' : '1px #0369a1', textShadow: '0 0 10px rgba(248,113,113,.8)' }}>
+        <span key={f.key} data-card-dmg-num={f.dmg > 0 ? f.dmg : undefined} className={`pointer-events-none absolute top-0 z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[34px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`} style={{ WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1', textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)' }}>
           {f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス'}
         </span>
       ))}
@@ -570,6 +572,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [bigCard, setBigCard] = useState(null);
   const [turnSummary, setTurnSummary] = useState(null);
   const [logSheet, setLogSheet] = useState(false);
+  const [downBand, setDownBand] = useState(null); // 倒れたときの「◯◯ ダウン！ / 残り◯体」の帯 { key, p, names, left }(改良の案 B)
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
   const lastGuard = useRef({}); // 'p-m' → 守りのカードを出したときの控え { jump, label, at }           // はね返したときの光線 [{ key, x, y, len, deg }](画面の位置)
@@ -771,6 +774,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       motionTimers.current.push(setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some((h) => h.key === f.key))), 1000));
       if (hits.some((h) => h.dmg >= 3)) Audio_.fgSe.crit(); else if (hits.some((h) => h.dmg > 0)) Audio_.fgSe.attack(); else if (hits.some((h) => h.heal)) Audio_.fgSe.heal(); else Audio_.fgSe.guard();
     } else if (evs.some((e) => e.t === 'use')) Audio_.fgSe.card();
+    // 倒れた子がいたら、まんなかに赤い帯「◯◯ ダウン！ / 残り◯体」(1秒ほど・タップで消える)。決着した時は勝ち負けの演出に任せる。練習試合はドラの窓と重ねない
+    const kos = evs.filter((e) => e.t === 'ko');
+    if (kos.length && next.winner === null && !tutorial) {
+      const p0 = kos[0].p;
+      const key = `down-${next.log.length}-${Date.now()}`;
+      setDownBand({ key, p: p0, names: kos.filter((e) => e.p === p0).map((e) => next.players[p0].mons[e.m].name), left: next.players[p0].mons.filter((x) => !x.ko).length });
+      motionTimers.current.push(setTimeout(() => setDownBand((cur) => (cur && cur.key === key ? null : cur)), Math.max(700, Math.round(1100 * pace))));
+    }
     // 技の動き: 攻撃した子が狙った子へ向かって動く(位置は画面で測る。全員に当たる技は相手の真ん中へ)
     const centerOf = (id) => { const el = document.querySelector(`[data-card-art="${id}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
     // 技の動き(オプション): ふつう … 全部 / 短め … 攻める側の動きを省く / 出さない … 動きを出さない。
@@ -1407,7 +1418,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               </span>
             </button>
             : <div className="text-rose-200">{pendingText}</div>)}
-          {(pendingText ? [] : (compact || tutorial || stageFit >= 1) ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
+          {(pendingText ? [] : (compact || tutorial || stageFit >= 1) ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} data-card-log-kind={l.kind || undefined} className={`${i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'} ${l.kind === 'ko' ? '!text-rose-300 font-black' : l.kind === 'hit' && /ダメージ/.test(l.text) ? '!text-rose-200' : ''}`}>{l.text}</div>)}
         </div>
       </div>
       {/* 自分の番のあいだは、自分の場のふちを金色に光らせる */}
@@ -1514,6 +1525,17 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 案C: 自分の番の始めに、相手のターンにしたこと(タップで閉じる・カードを選ぶと閉じる) */}
       {/* 番が替わったとき、盤全体の真ん中に大きく「あなたの番」「◯◯の番」(0.8秒ほど・字の札をタップでも消える。大写しが出ているあいだは出さない)。
           2026-10-26 ソラシドさん「どっちのターンか分かりにくい」。指の操作は札の外では下へ通す(すぐ手札を選べる) */}
+      {/* 倒れたときの帯(改良の案 B・カゲあつくん 4・9)。番の帯より下・指の操作は帯の外では下へ通す */}
+      {downBand && !bigCard && !turnBanner && (
+        <div key={downBand.key} data-card-down-band={downBand.p === CARD_ME ? 'me' : 'foe'} className="pointer-events-none absolute inset-0 z-[52] flex items-center justify-center"
+          style={wide ? { right: 'calc(min(42%, 420px) + 8px)' } : undefined}>
+          <button type="button" data-card-fit onClick={() => setDownBand(null)}
+            className="mh-card-down-band pointer-events-auto flex w-full flex-col items-center bg-[linear-gradient(90deg,transparent,rgba(185,28,28,.95)_15%,rgba(185,28,28,.95)_85%,transparent)] py-1.5 text-white">
+            <span data-card-down-name className="max-w-full px-4 font-black leading-tight tracking-wide" style={{ fontSize: 'clamp(20px, 6.5vw, 28px)', ...JA_LABEL_STYLE }}>{downBand.names.join('・')} ダウン！</span>
+            <span className="text-[12px] font-bold tracking-wider text-rose-100">{downBand.p === CARD_ME ? 'あなた' : '相手'}のモンスター 残り{downBand.left}体</span>
+          </button>
+        </div>
+      )}
       {/* 練習試合でドラの窓が出ているあいだは、番の札を出さない(縦の画面は窓が真ん中寄りにあり、札が窓と「次へ」に重なった) */}
       {turnBanner && !bigCard && !(tutorial && tutSay) && (
         <div key={turnBanner.key} data-card-turn-banner={turnBanner.me ? 'me' : 'foe'} aria-live="polite" className="pointer-events-none absolute inset-0 z-[53] flex items-center justify-center"

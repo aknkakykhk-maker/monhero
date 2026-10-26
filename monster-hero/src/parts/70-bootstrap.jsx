@@ -4273,6 +4273,14 @@ const createAnimationStyle = () => {
     .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
+    /* 当たった子の白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
+    .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
+    @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
+    @keyframes mhCardDmgPop { 0% { opacity: 0; transform: scale(.4) translateY(6px); } 18% { opacity: 1; transform: scale(1.25) translateY(-4px); } 32% { transform: scale(1) translateY(-6px); } 80% { opacity: 1; transform: translateY(-14px); } 100% { opacity: 0; transform: translateY(-20px); } }
+    .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
+    @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band { animation: none; } }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }
