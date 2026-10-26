@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7b3f9a0d3e55e9b1
+// source-sha256: 8ab6a68536b1a120
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 12:20";
+const BUILD_DATE = "2026-10-26 12:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84564,8 +84564,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({
 });
 const CARD_AI_PLAY_TUNE = Object.freeze({
   mua: {
-    easy: -0.035,
-    normal: -0.105,
+    easy: 0.1,
+    normal: -0.04,
     hard: -0.11,
     expert: 0.075,
     master: 0.12
@@ -85030,6 +85030,36 @@ const CARD_AI_FAVORITE = Object.freeze({
   dra: 'zilla',
   atsu: 'dragon'
 });
+const CARD_AI_SAME_BLOOD = Object.freeze({
+  easy: 0.3,
+  normal: 0.28
+});
+const CARD_AI_TEAM = Object.freeze({
+  atk: 0.04,
+  guard: 0.06,
+  type: 0.8,
+  blood: 0.5
+});
+const cardAiSameBloodScale = familySize => Math.max(0, Math.min(1, (familySize - 1) / 4));
+const cardAiBloodOf = m => String(m.wave) === 'hybrid' ? m.main : m.species;
+const cardAiTeamValue = (db, who, team, m, maxWave) => {
+  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const lim = Math.max(maxWave, cardAiMonWave(db, m));
+  const mine = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, {
+    ...m,
+    ko: false
+  }));
+  const sharedBy = c => team.some(t => cardUsableBy(c, {
+    ...t,
+    ko: false
+  }));
+  const fresh = mine.filter(c => !sharedBy(c)).map(c => cardAiCardValue(c, habit)).sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0);
+  const atk = mine.filter(c => !cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const guard = mine.filter(c => cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const sameType = team.length >= 2 && team.every(t => t.type === m.type) ? 1 : 0;
+  const sameBlood = team.filter(t => cardAiBloodOf(t) === cardAiBloodOf(m)).length;
+  return fresh + (m.life || 0) * 0.3 + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
+};
 const CARD_AI_BUILD = Object.freeze({
   easy: {
     maxWave: 1,
@@ -85237,14 +85267,33 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       ko: false
     })).length * 1.2;
   }
-  const scored = cands.map(m => ({
+  const family = favs.filter(m => m.species !== fav.species);
+  const familySize = new Set(favs.map(m => m.species)).size;
+  const byScore = !CARD_AI_SAME_BLOOD[levelId];
+  const sameRate = byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
+  const isFamily = new Set(family.map(m => m.no));
+  const pool = byScore ? [...cands, ...family.filter(m => !m.variant)] : cands;
+  const scored = pool.map(m => ({
     m,
     v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m)
   }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  const usedNos = new Set([fav.species]);
   for (let k = 0; k < 2; k++) {
-    const left = scored.filter(x => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    const famLeft = family.filter(m => !usedNos.has(m.species));
+    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+      const w = famLeft.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
+      const m = famLeft[cardAiPickIndex(w, rand)];
+      out.push(m.no);
+      usedNos.add(m.species);
+      continue;
+    }
+    const team = out.map(no => cardMonsterOf(db, no));
+    const left = scored.filter(x => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))).map(x => isFamily.has(x.m.no) ? {
+      ...x,
+      v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave) + counter(x.m)
+    } : x);
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 1 && cfg.lastTop > 1) {
@@ -85256,6 +85305,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     }
     out.push(pick.m.no);
     usedSpecies.add(pick.m.species);
+    usedNos.add(pick.m.species);
   }
   return out;
 };
@@ -90502,9 +90552,14 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black"
     }, x.name), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
-    }, "勝")))), React.createElement(ScreenSectionLabel, {
-      note: "勝つと次の強さが開きます"
-    }, "強さ"), React.createElement("div", {
+    }, "勝")))), React.createElement("div", {
+      className: "flex items-baseline gap-2 px-0.5 pt-1"
+    }, React.createElement("span", {
+      className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
+    }, "強さ"), React.createElement("span", {
+      className: "text-[11px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, "勝つと次の強さが開きます")), React.createElement("div", {
       className: "grid grid-cols-5 gap-1"
     }, CARD_LEVEL_ORDER.map(lv => {
       const open = cardLevelOpen(save.unlocked, lv) || debug;
@@ -91925,8 +91980,9 @@ const CardDeckList = ({
     })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("div", {
-      className: "truncate text-[14px] font-black text-white"
-    }, on ? '★ ' : '', d.name), React.createElement("div", {
+      className: "text-[14px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, on ? '★ ' : '', jaWrap(d.name)), React.createElement("div", {
       className: `text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`
     }, d.cards.length, "/", CARD_BATTLE_DECK_SIZE, "枚・", ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
       className: "mt-2 grid grid-cols-4 gap-1"
@@ -93397,13 +93453,13 @@ const CardRankingBoard = ({
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
   }, period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数')), React.createElement("div", {
-    className: "flex gap-1.5 overflow-x-auto"
+    className: "grid grid-cols-5 gap-1"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
     type: "button",
     "data-card-ranking-level": lv,
     onClick: () => setLevel(lv),
-    className: chip(level === lv)
+    className: `${chip(level === lv)} min-w-0 !px-0.5 max-[359px]:text-[10px]`
   }, levelLabel(lv))))), kind !== 'multi' && React.createElement("div", {
     "data-card-ranking-mine": true,
     className: `${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex shrink-0 items-center gap-2 text-[12px] font-bold`
@@ -93432,7 +93488,7 @@ const CardRankingBoard = ({
   }, "準備中"), !cardPvpOpen() && React.createElement("p", {
     className: "mt-2 text-[12px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), React.createElement(CardPvpRankingList, {
+  }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), cardPvpOpen() && React.createElement(CardPvpRankingList, {
     renderBreederIcon: renderBreederIcon,
     selfId: selfId
   })), kind !== 'multi' && state.status === 'loading' && React.createElement("p", {

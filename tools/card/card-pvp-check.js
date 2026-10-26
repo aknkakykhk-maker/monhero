@@ -199,8 +199,15 @@ for (let n = 0; n < N; n++) runOne(n);
 const hybrids = Object.values(db.monsters).filter((m) => m.main && m.ready !== false && !m.variant && !m.dexOnly).map((m) => m.no).sort();
 {
   let k = 0;
-  for (let i = 0; i < hybrids.length; i += 3) {
-    const trio = hybrids.slice(i, i + 3);
+  // 3体ずつの組に、同じ子(キラ・別絵キラ。剣士モッチー C-066・C-066S・C-066V は species が同じ)を入れない。
+  //   番号順に3つずつ切ると C-065・C-066・C-066S が同じ組になり、「同じモンスターが2体」でデッキの決まりに合わなかった(2026-10-26)
+  const trios = [];
+  hybrids.forEach((no) => {
+    const sp = db.monsters[no].species;
+    const t = trios.find((x) => x.length < 3 && !x.some((y) => db.monsters[y].species === sp));
+    if (t) t.push(no); else trios.push([no]);
+  });
+  for (const trio of trios) {
     ['C-003', 'C-001', 'C-005'].forEach((x) => { if (trio.length < 3) trio.push(x); });
     runOne(N + k, [trio, ['C-005', 'C-001', 'C-003']]); k++;
     runOne(N + k, [['C-005', 'C-001', 'C-003'], trio]); k++; // 後攻・相手側でも

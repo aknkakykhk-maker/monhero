@@ -221,7 +221,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
               <div className="flex items-center gap-2">
                 <div className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = cardMonsterOf(db, d.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <div key={i} className="h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/25"/>; })}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-black text-white">{on ? '★ ' : ''}{d.name}</div>
+                  <div className="text-[14px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{on ? '★ ' : ''}{jaWrap(d.name)}</div>
                   <div className={`text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{d.cards.length}/{CARD_BATTLE_DECK_SIZE}枚・{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
                 </div>
               </div>

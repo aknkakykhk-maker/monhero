@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bab23c4ceae7c633
+// generated-sha256: d3947ce1039fa6ae
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 12:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51157,7 +51157,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 // デッキの組み方を毎試合変えた(2026-10-25)ので、card-ai-balance.js で勝率がそろうように決め直した。
 // ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
 const CARD_AI_PLAY_TUNE = Object.freeze({
-  mua: { easy: -0.035, normal: -0.105, hard: -0.11, expert: 0.075, master: 0.12 },
+  // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
+  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.075, master: 0.12 },
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.14 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14
   kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.3 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
@@ -51480,6 +51481,32 @@ const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', ki
 // 強さごとの組み方(社長の決め)。maxWave … 技などのカードの弾(好きな子の技は、その子の弾まで使える) / noise … カードの選び方の雑さ /
 // temp … 残り2体の選び方のゆらぎ(大きいほど型に合わない子も入る) / stray … 気まぐれな子(型と関係なく)が1体混ざる割合 /
 // best … いちばん強い組み合わせ(相手のデッキも見る)
+// 同じ血統の2体・3体(2026-10-26 社長「3体編成も実際あるから組まれるようにして」)。
+//   2体目・3体目をえらぶたびに、この割合で好きな子の血統の仲間(派生・混血を含む)からえらぶ。
+//   割合は強さごとの値 × 仲間の多さ(仲間が5体以上で1、4体で0.75、3体で0.5、2体で0.25、1体だけなら0)。MASTER は入れない(下の cardAiPickTrio)
+const CARD_AI_SAME_BLOOD = Object.freeze({ easy: 0.3, normal: 0.28 });
+// HARD から上は割合でなく点数でえらぶ(2026-10-26 社長「同じメインのメリットは同じ攻撃カードを入れられること、同じサブのメリットは同じ防御カードを使えること。
+//   だからといってその組み方が強いわけではないと思う」)。仲間(同じ血統の子)の点数は、チームとして数え直す(cardAiTeamValue)
+//   ・ふつうの点数(cardAiMonScore)は子ごとに「使える良い技の上位10枚」を数えるので、同じ血統の子どうしでは同じ技を2回・3回数えてしまう。
+//     デッキに入る同じ技は3枚までなので、同じ技を使える子が増えても技の種類は増えない(これが損)。仲間の点数は「チームにまだ無い技」だけで数える
+//   ・得: すでにえらんだ子と同じ攻撃の技を使える枚数 × atk、同じ回避・防御を使える枚数 × guard(手札で使えずに残るカードが減る)
+//   ・損: 3体の特徴(地上・空中・水中)がそろう … type、同じ血統の子がいる(同じ種族に効く技にまとめてやられやすい)… blood
+const CARD_AI_TEAM = Object.freeze({ atk: 0.04, guard: 0.06, type: 0.8, blood: 0.5 });
+const cardAiSameBloodScale = (familySize) => Math.max(0, Math.min(1, (familySize - 1) / 4));
+const cardAiBloodOf = (m) => (String(m.wave) === 'hybrid' ? m.main : m.species);
+// すでにえらんだ子(team)に仲間 m を足したときの、チームとして数え直した点数(cardAiMonScore と同じ目盛り)
+const cardAiTeamValue = (db, who, team, m, maxWave) => {
+  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const lim = Math.max(maxWave, cardAiMonWave(db, m));
+  const mine = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, { ...m, ko: false }));
+  const sharedBy = (c) => team.some((t) => cardUsableBy(c, { ...t, ko: false }));
+  const fresh = mine.filter((c) => !sharedBy(c)).map((c) => cardAiCardValue(c, habit)).sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0);
+  const atk = mine.filter((c) => !cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const guard = mine.filter((c) => cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const sameType = team.length >= 2 && team.every((t) => t.type === m.type) ? 1 : 0;
+  const sameBlood = team.filter((t) => cardAiBloodOf(t) === cardAiBloodOf(m)).length;
+  return fresh + (m.life || 0) * 0.3 + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
+};
 const CARD_AI_BUILD = Object.freeze({
   easy:   { maxWave: 1, noise: 1.6, temp: 3.0, stray: 0.3 },              // 好きな子優先の気分屋・組み方は雑
   normal: { maxWave: 1, noise: 0.8, temp: 1.5, stray: 0 },                // 型に合う子が中心・カードは適当に
@@ -51638,11 +51665,33 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     const evadeRate = pc.filter((c) => cardHasEff(c, 'evade')).length / pc.length;
     counter = (m) => areaRate * (m.life || 0) * 1.5 + evadeRate * Object.values(db.cards).filter((c) => c.ready && cardHasEff(c, 'noEvade') && cardUsableBy(c, { ...m, ko: false })).length * 1.2;
   }
-  const scored = cands.map((m) => ({ m, v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m) }));
+  // 好きな子の血統の仲間(好きな子とは別の子。キラ・別絵キラは同じ子として1つに数える)
+  const family = favs.filter((m) => m.species !== fav.species);
+  const familySize = new Set(favs.map((m) => m.species)).size;
+  // EASY・NORMAL は割合(くせとしてときどき)。HARD から上は、仲間も候補に入れて、チームとして数え直した点数(cardAiTeamValue)でくらべる
+  //   ★数え直すのは仲間だけ(ほかの子の点数は今のまま。強さのそろえを動かさないため)。
+  //    数え直さずに仲間をくらべると、あつがドラゴンの仲間ばかりえらび、MASTER の勝率が 44%→19%・EXPERT の同じ血統の組みは 21% に下がった(2026-10-26 測定)
+  const byScore = !CARD_AI_SAME_BLOOD[levelId];
+  const sameRate = byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
+  const isFamily = new Set(family.map((m) => m.no));
+  const pool = byScore ? [...cands, ...family.filter((m) => !m.variant)] : cands;
+  const scored = pool.map((m) => ({ m, v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m) }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  const usedNos = new Set([fav.species]);   // 同じ子(キラ・別絵キラ)を2体入れない
   for (let k = 0; k < 2; k++) {
-    const left = scored.filter((x) => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    // 同じ血統の仲間からえらぶ(割合は sameRate)
+    const famLeft = family.filter((m) => !usedNos.has(m.species));
+    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+      const w = famLeft.map((m) => (String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2));
+      const m = famLeft[cardAiPickIndex(w, rand)];
+      out.push(m.no);
+      usedNos.add(m.species);
+      continue;
+    }
+    const team = out.map((no) => cardMonsterOf(db, no));
+    const left = scored.filter((x) => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
+      .map((x) => (isFamily.has(x.m.no) ? { ...x, v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave) + counter(x.m) } : x));
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];   // 気まぐれ
@@ -51651,6 +51700,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     else { const top = Math.max(...left.map((x) => x.v)); pick = left[cardAiPickIndex(left.map((x) => Math.exp((x.v - top) / cfg.temp)), rand)]; }
     out.push(pick.m.no);
     usedSpecies.add(pick.m.species);
+    usedNos.add(pick.m.species);
   }
   return out;
 };
@@ -54791,7 +54841,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             ))}
           </div>
           {/* 強さのボタンは助手の顔のすぐ下(紹介の欄が長いと、下の「対戦する」の帯に潜っていた。2026-10-25 社長の実機) */}
-          <ScreenSectionLabel note="勝つと次の強さが開きます">強さ</ScreenSectionLabel>
+          {/* 見出しの部品(ScreenSectionLabel)の注記は9pxで小さすぎた(見回り #16)。ほかの画面は変えず、ここだけ11pxで書く */}
+          <div className="flex items-baseline gap-2 px-0.5 pt-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">強さ</span>
+            <span className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>勝つと次の強さが開きます</span>
+          </div>
           <div className="grid grid-cols-5 gap-1">
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
@@ -55404,7 +55458,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
               <div className="flex items-center gap-2">
                 <div className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = cardMonsterOf(db, d.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <div key={i} className="h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/25"/>; })}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-black text-white">{on ? '★ ' : ''}{d.name}</div>
+                  <div className="text-[14px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{on ? '★ ' : ''}{jaWrap(d.name)}</div>
                   <div className={`text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{d.cards.length}/{CARD_BATTLE_DECK_SIZE}枚・{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
                 </div>
               </div>
@@ -56122,8 +56176,9 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
             {[['week', '今週'], ['total', '通算']].map(([id, label]) => <button key={id} type="button" data-card-ranking-period={id} onClick={() => setPeriod(id)} className={chip(period === id)}>{label}</button>)}
             <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数'}</small>
           </div>
-          <div className="flex gap-1.5 overflow-x-auto">
-            {CARD_LEVEL_ORDER.map((lv) => <button key={lv} type="button" data-card-ranking-level={lv} onClick={() => setLevel(lv)} className={chip(level === lv)}>{levelLabel(lv)}</button>)}
+          {/* 5つを等分に並べる(横にすべらせる形だと、320幅で MASTER が画面の外・375幅で「MASTEF」と切れていた。2026-10-26 見回り #5) */}
+          <div className="grid grid-cols-5 gap-1">
+            {CARD_LEVEL_ORDER.map((lv) => <button key={lv} type="button" data-card-ranking-level={lv} onClick={() => setLevel(lv)} className={`${chip(level === lv)} min-w-0 !px-0.5 max-[359px]:text-[10px]`}>{levelLabel(lv)}</button>)}
           </div>
         </div>
       )}
@@ -56143,7 +56198,8 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
             {!cardPvpOpen() && <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>}
             {!cardPvpOpen() && <p className="mt-2 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')}</p>}
             {/* 勝つと上がる強さの点数の順(91-card-battle-multi.jsx・表 card_battle_pvp_ratings)。表が無いあいだは「準備中」 */}
-            <CardPvpRankingList renderBreederIcon={renderBreederIcon} selfId={selfId}/>
+            {/* 開くまでは「準備中」だけ(読み込み中…が同時に出ていた。見回り #13) */}
+            {cardPvpOpen() && <CardPvpRankingList renderBreederIcon={renderBreederIcon} selfId={selfId}/>}
           </div>
         )}
         {kind !== 'multi' && state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
