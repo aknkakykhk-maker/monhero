@@ -52,8 +52,8 @@ const DYE_CANDIDATES = {
     J: { style: '朝顔', colors: ['purple', 'pink_light', 'pink', 'blue', 'magenta'], bg: ['#120a3a', '#5a3aa8', '#ffc4e6'], accent: '#ffd6f0', dots: ['rgba(255,190,230,.6)', 'rgba(180,160,255,.5)'] },
   },
 };
-// 予告に載せる配色(2026-10-27 社長: キュービ C 月夜ぎつね。オリヒメはマスクが固まってから選ぶ。いまは仮の A)
-const CHOSEN = { Kyubi: 'C', Orihime: 'A' };
+// 予告に載せる配色(2026-10-27 社長: キュービ C 月夜ぎつね・オリヒメ G 桜)
+const CHOSEN = { Kyubi: 'C', Orihime: 'G' };
 const NAMES = { Kyubi: 'キュービ', Orihime: 'オリヒメ' };
 // 部位の名前(社長が決めた区分け)。染色イメージの下の表に、この順で ①〜⑤ を並べる
 const REGION_NAMES = {
