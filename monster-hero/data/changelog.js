@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-26 20:11", type:'update', title:'MFバトルカードのトップで、クイック周回が何周目か見やすくなりました', status:'new', releaseFlag:'cardBattle',
+    items:[
+      'トップのいちばん上の帯に、「WAVE ◯/10・◯周目」が切れずに出るようにしました。',
+      'ダイヤと経験値の数は、帯の「詳細」を押すと見られます。いまの難易度や、今日バトルカードで足した周回も出ます。',
+    ],
+  },
+  {
     // MFバトルカードの公開(社長「この文で」2026-10-26)。印 RELEASE_FLAGS.cardBattle が立つまで出ない。日時は公開の時刻(実時刻)
     date: "2026-10-26 17:36", type:'content', group:'cardBattle', title:'新しい遊び「MFバトルカード」が始まりました', status:'new', releaseFlag:'cardBattle',
     image: 'images/events/card-battle-teaser.jpg?v=dc64e1718761',
