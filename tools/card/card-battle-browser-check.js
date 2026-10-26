@@ -368,7 +368,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         if (dragAttack === null && usable.length) {
           // 技を相手のモンスターまで運ぶ。途中で自分の場(置けない所)の上を通るときは光らない
           // ★相手の上で光るかを見てから離す。光らない札(自分の子に使う札など)は元の場所へ戻して離し(使わない)、次の札で試す
-          const logBefore = await page.locator('[data-card-log]').innerText();
+          const logBefore = await page.locator('[data-card-log]').textContent();
           const mine = await center(page.locator('[data-card-mon="0-0"]'));
           let tried = false;
           for (const hi of usable.slice(0, 5)) {
@@ -390,7 +390,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
               await page.waitForTimeout(300);
               // 自分の手は、先にカードを大きく出してから効く(2026-10-26)。大写しが出たら「使えた」、消えるまで待つ
               const bigMine = (await page.locator('[data-card-big="me"]').count()) > 0;
-              const changed = bigMine || (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              const changed = bigMine || (await page.locator('[data-card-log]').textContent()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
               if (bigMine) await page.waitForTimeout(1000);
               if (changed) { myActions += 1; dragAttack = true; dragNoGlow = midGlow === 0; }
               break;
@@ -560,6 +560,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
     if (SHOT) await shot(page, '19-deck-edit');
+    // 先頭の3つ(モンスター・デッキ・技など全部)を選んだときは、絞り込みの列が左はしから始まる(2026-10-26 2回目の見回り「ター 3/3」と切れて見えた)
+    const chipsLeft = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); return el ? el.scrollLeft : -1; });
+    check('⑭ 「技など全部」を選んでも、絞り込みの列は左はしから(先頭の「モンスター」が切れない)', chipsLeft === 0, String(chipsLeft));
     const deckReady = await page.locator('[data-card-deck-ready]').getAttribute('data-card-deck-ready');
     // デッキに入れたものだけを出し、「−」で1枚外して「＋」で戻せる(外し方が見える。2026-10-25 社長「外し方がわからない」)
     await page.locator('[data-card-deck-filter="deck"]').click();

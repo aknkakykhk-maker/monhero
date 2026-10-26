@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cf5814308ce7d73b
+// source-sha256: d780eb560b69b7bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 13:13";
+const BUILD_DATE = "2026-10-26 14:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84595,17 +84595,30 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     easy: -0.075,
     normal: -0.15,
     hard: -0.105,
-    expert: 0.03,
+    expert: 0,
     master: 0
   }
 });
-const cardAiPolicy = (habitId, levelId) => {
+const CARD_AI_SAME_BLOOD_PLAY = Object.freeze({
+  mua: {
+    hard: 0.25,
+    expert: 0.1
+  },
+  atsu: {
+    hard: -0.1,
+    expert: -0.1
+  },
+  dra: {
+    expert: -0.06
+  }
+});
+const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
-  const add = (CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0;
+  const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0) + (opts && opts.sameBlood ? (CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId] || 0 : 0);
   return {
     habit,
     level: {
@@ -85034,6 +85047,11 @@ const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
   normal: 0.28
 });
+const CARD_AI_SAME_BLOOD_HI = Object.freeze({
+  hard: 0.2,
+  expert: 0.12,
+  master: 0.1
+});
 const CARD_AI_TEAM = Object.freeze({
   atk: 0.04,
   guard: 0.06,
@@ -85280,7 +85298,23 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
   const usedNos = new Set([fav.species]);
+  const hiRate = byScore ? (CARD_AI_SAME_BLOOD_HI[levelId] || 0) * cardAiSameBloodScale(familySize) : 0;
+  const sameGame = hiRate > 0 && family.length > 0 && rand() < hiRate;
+  const sameThree = sameGame && rand() < 0.5;
   for (let k = 0; k < 2; k++) {
+    if (sameGame && (k === 0 || sameThree)) {
+      const team = out.map(no => cardMonsterOf(db, no));
+      const famLeft = family.filter(m => !m.variant && !usedNos.has(m.species));
+      if (famLeft.length) {
+        const m = famLeft.map(x => ({
+          x,
+          v: cardAiTeamValue(db, who, team, x, cfg.maxWave) + counter(x)
+        })).reduce((a2, b2) => b2.v > a2.v ? b2 : a2).x;
+        out.push(m.no);
+        usedNos.add(m.species);
+        continue;
+      }
+    }
     const famLeft = family.filter(m => !usedNos.has(m.species));
     if (sameRate > 0 && famLeft.length && rand() < sameRate) {
       const w = famLeft.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
@@ -85394,9 +85428,11 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     const have = cards.filter(n => cardOf(db, n).name === x.c.name).length;
     add(x.c, CARD_DECK_COPY_MAX - have);
   }
+  const sameBlood = mons.filter(m => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
   return {
     monsters: monsters.slice(),
-    cards
+    cards,
+    sameBlood
   };
 };
 const cardDeckProblems = (db, deck) => {
@@ -86602,7 +86638,7 @@ const CARD_VS_LINES = Object.freeze({
   momosuke: {
     easy: {
       e: 'happy',
-      t: 'ももと遊んでくれるの？ やさしくしてあげよっかな〜w'
+      t: 'ももと遊んでくれるの？ 《やさしく》して《あげよっかな〜w》'
     },
     normal: {
       e: 'wink',
@@ -86640,7 +86676,7 @@ const CARD_VS_LINES = Object.freeze({
     },
     master: {
       e: 'wink',
-      t: 'いちばん強いききで、お相手しまつね。'
+      t: 'いちばん強いききで、《お相手》しまつね。'
     }
   },
   kyuko: {
@@ -86662,7 +86698,7 @@ const CARD_VS_LINES = Object.freeze({
     },
     master: {
       e: 'wink',
-      t: 'きみのデッキも見て組み直したよ。読み合い、しよっか'
+      t: 'きみのデッキも見て《組み直したよ。》読み合い、しよっか'
     }
   },
   dra: {
@@ -86676,7 +86712,7 @@ const CARD_VS_LINES = Object.freeze({
     },
     hard: {
       e: 'excited',
-      t: '打ってこい。全部はね返してやるよ'
+      t: '打ってこい。全部《はね返して》やるよ'
     },
     expert: {
       e: 'excited',
@@ -86690,15 +86726,15 @@ const CARD_VS_LINES = Object.freeze({
   atsu: {
     easy: {
       e: 'happy',
-      t: 'ゆるくいこうぜ笑 全体攻撃はちょっとだけな'
+      t: 'ゆるくいこうぜ笑 《全体攻撃》はちょっとだけな'
     },
     normal: {
       e: 'excited',
-      t: 'まとめて吹っ飛ばすぞ！ 楽しもうぜ笑'
+      t: 'まとめて吹っ飛ばすぞ！ 《楽しもうぜ笑》'
     },
     hard: {
       e: 'excited',
-      t: '全員まとめていくからな。覚悟しとけよ笑'
+      t: '全員まとめていくからな。《覚悟しとけよ笑》'
     },
     expert: {
       e: 'excited',
@@ -86955,7 +86991,7 @@ const CardVsIntro = ({
     "data-card-vs-line": true,
     className: "mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900",
     style: JA_WRAP_STYLE
-  }, helpWrap(foe.line.t)))), React.createElement(CardVsDeckName, {
+  }, cardRuleLine(foe.line.t)))), React.createElement(CardVsDeckName, {
     text: foe.deckName,
     tone: "foe"
   }), React.createElement(CardVsMonsters, {
@@ -88770,7 +88806,9 @@ const CardBattleBoard = ({
     name: pvp.name,
     accent: '#38bdf8'
   } : ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
-  const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
+  const policy = useMemo(() => cardAiPolicy(game.who, game.level, {
+    sameBlood: !!game.cpuSameBlood
+  }), [game.who, game.level, game.cpuSameBlood]);
   const [st, setSt] = useState(game.st);
   const [sel, setSel] = useState(null);
   const [picks, setPicks] = useState([]);
@@ -89885,7 +89923,7 @@ const CardBattleBoard = ({
     key: bubble.key,
     "data-card-bubble": true,
     "data-card-bubble-face": bubble.face || face,
-    className: `pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
+    className: `${bigCard ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -89954,7 +89992,7 @@ const CardBattleBoard = ({
     className: "ml-1 text-[10px] font-bold text-emerald-200"
   }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), React.createElement("div", {
     "data-card-log": true,
-    className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug transition-opacity ${turnBanner ? 'opacity-0' : ''}`,
+    className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && React.createElement("div", {
     className: "text-rose-200"
@@ -90856,7 +90894,8 @@ const CardBattleScreen = ({
       who: pick.who,
       level: pick.level,
       settings: save.settings,
-      intro
+      intro,
+      cpuSameBlood: !!cpuDeck.sameBlood
     });
     onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
@@ -92161,6 +92200,21 @@ const CardDeckEditor = ({
     cards: deck0.cards.slice()
   }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  const chipsRow = useRef(null);
+  useEffect(() => {
+    try {
+      const row = chipsRow.current;
+      if (!row) return;
+      const idx = CARD_DECK_VIEWS.findIndex(f => f.id === view);
+      if (idx <= 2) {
+        row.scrollLeft = 0;
+        return;
+      }
+      const el = row.querySelector(`[data-card-deck-filter="${view}"]`);
+      if (!el) return;
+      if (el.offsetLeft < row.scrollLeft) row.scrollLeft = el.offsetLeft - 8;else if (el.offsetLeft + el.offsetWidth > row.scrollLeft + row.clientWidth - 24) row.scrollLeft = el.offsetLeft + el.offsetWidth - row.clientWidth + 32;
+    } catch (_) {}
+  }, [view]);
   const [sort, setSort] = useState('kind');
   const [usableOnly, setUsableOnly] = useState(true);
   const [notice, setNotice] = useState('');
@@ -92362,8 +92416,9 @@ const CardDeckEditor = ({
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE
   }, jaWrap(notice))), React.createElement("div", {
+    ref: chipsRow,
     "data-card-deck-chips": true,
-    className: "mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0",
+    className: "mh-scroll relative mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0",
     style: land ? undefined : {
       WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)',
       maskImage: 'linear-gradient(to right, #000 82%, transparent)'
@@ -92377,7 +92432,7 @@ const CardDeckEditor = ({
       setNotice('');
     },
     className: chip(view === f.id)
-  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length}枚+${deck.monsters.length}体` : f.label)), canAsk && React.createElement("button", {
+  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label)), canAsk && React.createElement("button", {
     type: "button",
     "data-card-deck-ask": true,
     onClick: () => {
