@@ -207,26 +207,33 @@ const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, 
   kind: 'cpu', match: id, at, decks: [myDeck, cpuDeck], seeds: [seed, 0], first, history, foe, outcome, reason });
 
 // ---- 保存(端末の中だけ) ----
-const cardReplayLoad = async () => cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null));
+// 取ってある試合の番号の控え(履歴の画面の行ごとに、すぐ答えるため)。読み込み・書き込みのたびに作り直す
+let _cardReplayIds = new Set();
+const cardReplayNoteIds = (box) => { _cardReplayIds = new Set(box.list.map((r) => r.id)); return box; };
+const cardReplayLoad = async () => cardReplayNoteIds(cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null)));
 // 書く直前に読み直して足す(同じ端末でゲームを2つ開いていても、片方の記録を消さない)
 const cardReplaySave = async (rec) => {
   if (!rec) return false;
   try {
     const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
     if (!box.list.some((r) => r.id === rec.id)) return false;
-    return await storeSet(CARD_REPLAY_KEY, box);
+    const ok = await storeSet(CARD_REPLAY_KEY, box);
+    if (ok) cardReplayNoteIds(box);
+    return ok;
   } catch (_) { return false; }
 };
 const cardReplayFav = async (id, on) => {
   try {
     const { box, ok } = cardReplaySetFav(await storeGet(CARD_REPLAY_KEY, null), id, on);
-    if (ok) await storeSet(CARD_REPLAY_KEY, box);
+    if (ok) { await storeSet(CARD_REPLAY_KEY, box); cardReplayNoteIds(box); }
     return ok;
   } catch (_) { return false; }
 };
-// 履歴の画面から「この試合のリプレイがあるか」を引く(マルチの試合の番号)
-const cardReplayHas = async (id) => { try { return (await cardReplayLoad()).list.some((r) => r.id === id); } catch (_) { return false; } };
+// 履歴の画面から「この試合を見られるか」をすぐ引く(試合の番号。控えは読み込みのときに作る)
+const cardReplayHas = (id) => typeof id === 'string' && _cardReplayIds.has(id);
 const cardReplayGet = async (id) => { try { return (await cardReplayLoad()).list.find((r) => r.id === id) || null; } catch (_) { return null; } };
+// 起動したときに1回、控えを作る(読めなくても遊びは止めない)
+if (typeof window !== 'undefined') { try { void cardReplayLoad().catch(() => {}); } catch (_) { /* 読めなければ空のまま */ } }
 
 // 対戦の盤面(84 の CardBattleBoard)へ渡す形。replay … { states, stop, rec }
 const cardReplayGameOf = (db, rec) => {

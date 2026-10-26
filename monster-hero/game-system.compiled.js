@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 022c14c5b201106f
+// source-sha256: a158fa0004d012ad
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:03";
+const BUILD_DATE = "2026-10-27 02:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -92290,9 +92290,10 @@ const CardBattleScreen = ({
       };
     };
     return React.createElement(CardPvpLobby, {
-      onReplay: id => {
+      onOpenReplay: id => {
         void openReplay(id, 'pvp');
       },
+      replayHas: cardReplayHas,
       meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       meFrame: rank && rank.profile && rank.profile.frame || null,
       deck: activeDeck,
@@ -97305,7 +97306,7 @@ const CardPvpLobby = ({
   point = null,
   onAssistant = null,
   rankSend = false,
-  onReplay = null
+  onOpenReplay = null
 }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
@@ -97557,13 +97558,13 @@ const CardPvpLobby = ({
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
-    }, r.replay && onReplay && React.createElement("button", {
+    }, r.replay && onOpenReplay && React.createElement("button", {
       type: "button",
       "data-card-pvp-replay": true,
       className: `${btn} mh-button-secondary`,
       onClick: () => {
         Audio_.fgSe.tap();
-        onReplay(r.replay);
+        onOpenReplay(r.replay);
       }
     }, "この対戦を見る"), React.createElement("button", {
       type: "button",
@@ -98282,13 +98283,20 @@ const cardReplayFromCpu = (db, {
   outcome,
   reason
 });
-const cardReplayLoad = async () => cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null));
+let _cardReplayIds = new Set();
+const cardReplayNoteIds = box => {
+  _cardReplayIds = new Set(box.list.map(r => r.id));
+  return box;
+};
+const cardReplayLoad = async () => cardReplayNoteIds(cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null)));
 const cardReplaySave = async rec => {
   if (!rec) return false;
   try {
     const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
     if (!box.list.some(r => r.id === rec.id)) return false;
-    return await storeSet(CARD_REPLAY_KEY, box);
+    const ok = await storeSet(CARD_REPLAY_KEY, box);
+    if (ok) cardReplayNoteIds(box);
+    return ok;
   } catch (_) {
     return false;
   }
@@ -98299,19 +98307,16 @@ const cardReplayFav = async (id, on) => {
       box,
       ok
     } = cardReplaySetFav(await storeGet(CARD_REPLAY_KEY, null), id, on);
-    if (ok) await storeSet(CARD_REPLAY_KEY, box);
+    if (ok) {
+      await storeSet(CARD_REPLAY_KEY, box);
+      cardReplayNoteIds(box);
+    }
     return ok;
   } catch (_) {
     return false;
   }
 };
-const cardReplayHas = async id => {
-  try {
-    return (await cardReplayLoad()).list.some(r => r.id === id);
-  } catch (_) {
-    return false;
-  }
-};
+const cardReplayHas = id => typeof id === 'string' && _cardReplayIds.has(id);
 const cardReplayGet = async id => {
   try {
     return (await cardReplayLoad()).list.find(r => r.id === id) || null;
@@ -98319,6 +98324,11 @@ const cardReplayGet = async id => {
     return null;
   }
 };
+if (typeof window !== 'undefined') {
+  try {
+    void cardReplayLoad().catch(() => {});
+  } catch (_) {}
+}
 const cardReplayGameOf = (db, rec) => {
   if (!rec) return null;
   const built = cardReplayBuild(db, rec);

@@ -255,7 +255,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 結果の画面の「もらったビートP」も、+50 を足した合計
     const shown = [rewardA, rewardB].map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
     check('⑥ 結果の画面の「もらったビートP」が、増えた数と同じ', shown[0] === gain[0] && shown[1] === gain[1], `${rewardA} / ${rewardB}`);
-    // ⑫ 過去の対戦を見る(92-card-replay.jsx・2026-10-27): 確かめが通った試合は2台とも端末に残り、結果の画面の「この対戦を見る」から、はじめから見られる
+    // ⑫ 過去の対戦を見る(93-card-replay.jsx・2026-10-27): 確かめが通った試合は2台とも端末に残り、結果の画面の「この対戦を見る」から、はじめから見られる
     {
       const saved = await Promise.all([A, B].map((page) => page.evaluate(() => { try { const v = JSON.parse(localStorage.getItem('mh_card_replays_v1') || 'null'); return v && Array.isArray(v.list) ? v.list.length : 0; } catch (_) { return -1; } })));
       check('⑫ 確かめが通った試合は、2台とも端末に記録が残る', saved[0] === 1 && saved[1] === 1, saved.join(' / '));

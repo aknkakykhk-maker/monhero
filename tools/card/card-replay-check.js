@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// MFバトルカードの「過去の対戦を見る」(92-card-replay.jsx)の純粋な計算を確かめる(2026-10-27・カード部ミカエシくん)。
+// MFバトルカードの「過去の対戦を見る」(93-card-replay.jsx)の純粋な計算を確かめる(2026-10-27・カード部ミカエシくん)。
 //
 //   node tools/card/card-replay-check.js
 //
@@ -14,7 +14,7 @@ const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(GAME, p), 'utf8');
 const multi = read('src/parts/91-card-battle-multi.jsx').split('// ---- 部屋と通信')[0];
 // 92 の画面の部品(再生の帯)は React を使うので、純粋な計算の所だけを読む
-const replay = read('src/parts/92-card-replay.jsx').split('// ---- 保存(端末の中だけ)')[0];
+const replay = read('src/parts/93-card-replay.jsx').split('// ---- 保存(端末の中だけ)')[0];
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'

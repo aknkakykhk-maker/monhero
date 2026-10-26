@@ -488,7 +488,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 投了は倒した相手のモンスター × 10(25まで。案A・台帳 #3484)。結果に出た数だけ増えている
     if (outcome === 'surrender') check('⑦ 投了のビートPは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
     else check(`⑦ 決着(${outcome})で結果が出て戦績が付く`, after.record && after.record.cpu[outcome] === 1);
-    // ㉑ 過去の対戦を見る(92-card-replay.jsx・2026-10-27): 助手と対戦も、結果の画面の「この対戦を見る」から、はじめから見られる(投了で終わっても)
+    // ㉑ 過去の対戦を見る(93-card-replay.jsx・2026-10-27): 助手と対戦も、結果の画面の「この対戦を見る」から、はじめから見られる(投了で終わっても)
     {
       const kept = await page.evaluate(() => { try { const v = JSON.parse(localStorage.getItem('mh_card_replays_v1') || 'null'); return v && v.list ? v.list.map((r) => `${r.kind}:${r.acts.length}`) : []; } catch (_) { return ['壊れている']; } });
       check('㉑ 助手と対戦の手の一覧が、端末に1試合ぶん残る', kept.length === 1 && /^cpu:\d+$/.test(kept[0]) && Number(kept[0].split(':')[1]) >= 1, kept.join(','));
