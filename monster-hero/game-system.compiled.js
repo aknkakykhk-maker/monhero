@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad79edcfa5358573
+// source-sha256: cb68978cad776d79
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 23:47";
+const BUILD_DATE = "2026-10-27 00:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50586,6 +50586,7 @@ const ModalCloseButton = ({
 let _jaSegmenter;
 const JA_WRAP_LINE = 10;
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/;
+const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
 const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -50601,6 +50602,9 @@ const jaWrapPoints = text => {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = pos => kao.some(([a, b]) => pos > a && pos < b);
+    const keepWords = [];
+    for (const w of JA_WORDS_KEEP) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) keepWords.push([i, i + w.length]);
+    const inKeepWord = pos => keepWords.some(([a, b]) => pos > a && pos < b);
     const kaoStart = pos => kao.some(([a]) => pos === a || a > pos && /^\s+$/.test(s.slice(pos, a)));
     const segs = [];
     for (const {
@@ -50623,8 +50627,8 @@ const jaWrapPoints = text => {
       const prev = segs[i - 1],
         g = groups[groups.length - 1],
         cur = g.parts.join('');
-      const hard = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
-      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      const hard = inKao(pos) || inKeepWord(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg) || /^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)) || /[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
         g.hard.push(hard);
@@ -50710,13 +50714,13 @@ const jaWrapPoints = text => {
     return s;
   }
 };
-const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
-const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
 const jaWrapPieces = seg => {
   const out = [];
   for (const part of String(seg).split(/(\s+)(?![^(（]*[)）])/)) {
     if (!part) continue;
-    if (/^\s+$/.test(part)) out.push([part, false]);else if (jaKeepWhole(part)) out.push([part, true]);else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+    if (/^\s+$/.test(part)) out.push([part, false]);else if (jaKeepWhole(part)) out.push([part, true]);else if (/[」』？！?!][ぁ-ゖ笑ｗwW]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
       if (!t) return;
       if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) {
         out.push([t, k % 2 === 1]);
@@ -76778,6 +76782,10 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-title{background:linear-gradient(90deg,#67e8f9,#f0abfc 55%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(240,171,252,.45))}
 .mhms-glow{position:absolute;left:50%;top:46%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(244,114,182,.45),rgba(168,85,247,.18) 55%,transparent 75%);animation:mhmsPulse 3.6s ease-in-out infinite}
 .mhms-float{animation:mhmsFloat 4.5s ease-in-out infinite}
+.mhms-art-box{container-type:size}
+.mhms-art-img{width:var(--mhms-w)}
+@supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
+@container (max-height:120px){.mhms-art-img{left:30%!important}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
 .mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
 .mhms-card.free::after{animation-delay:1.9s}
@@ -76881,6 +76889,7 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     cx: 0.5,
     cy: 0.48,
     top: 0.42,
+    show: 0.55,
     cxBy: {
       angry: 0.545,
       happy: 0.545,
@@ -76896,19 +76905,22 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     zoom: 0.85,
     cx: 0.5,
     cy: 0.5,
-    top: 0.4
+    top: 0.4,
+    show: 0.75
   },
   atsu: {
     zoom: 1.1,
     cx: 0.48,
     cy: 0,
-    top: 0.02
+    top: 0.02,
+    show: 0.6
   },
   kyuko: {
     zoom: 0.75,
     cx: 0.5,
     cy: 0,
-    top: 0.06
+    top: 0.06,
+    show: 0.8
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -77063,19 +77075,30 @@ function ModeSelectAssistToggles({
     className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
   }, label, " ", on ? 'ON' : 'OFF'))) : null;
 }
+const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 function ModeSelectAssistantPanel({
   assistant,
   showArt,
   showComment,
   onToggle
 }) {
+  const [artRatio, setArtRatio] = React.useState(null);
+  const artSrc = assistant && assistant.image;
+  React.useEffect(() => {
+    setArtRatio(null);
+  }, [artSrc]);
   if (!assistant || !(showArt || showComment)) return null;
+  const onArtLoad = e => {
+    const im = e.currentTarget;
+    if (im.naturalWidth > 0) setArtRatio(im.naturalHeight / im.naturalWidth);
+  };
+  const capOf = show => artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px';
   return React.createElement("div", {
     "data-rhythm-mode-assistant": true,
     className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
   }, showArt && React.createElement("div", {
     "data-rhythm-mode-assistant-art-box": true,
-    className: "relative min-h-0 flex-1 overflow-hidden"
+    className: "mhms-art-box relative min-h-0 flex-1 overflow-hidden"
   }, React.createElement("span", {
     "aria-hidden": "true",
     className: "mhms-glow"
@@ -77104,9 +77127,12 @@ function ModeSelectAssistantPanel({
       src: assistant.image,
       alt: "",
       draggable: false,
-      className: "absolute max-w-none",
+      onLoad: onArtLoad,
+      className: "mhms-art-img absolute max-w-none",
       style: {
-        width: `${fr.zoom * 100}%`,
+        '--mhms-w': `${fr.zoom * 100}%`,
+        '--mhms-cover': '0px',
+        '--mhms-cap': capOf(fr.show || 1),
         height: 'auto',
         left: '50%',
         top: `${fr.top * 100}%`,
@@ -77119,7 +77145,17 @@ function ModeSelectAssistantPanel({
     src: assistant.image,
     alt: "",
     draggable: false,
-    className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
+    onLoad: onArtLoad,
+    className: "mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]",
+    style: {
+      '--mhms-w': '100%',
+      '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px',
+      '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW),
+      height: 'auto',
+      left: '50%',
+      top: 'calc(var(--mhms-y) * 100%)',
+      transform: 'translate(-50%, calc(var(--mhms-y) * -100%))'
+    }
   }))), !showArt && React.createElement(ModeSelectAssistToggles, {
     assistant: assistant,
     showArt: showArt,
@@ -90765,75 +90801,20 @@ const cardArtBox = src => new Promise(resolve => {
   img.src = src;
 });
 const CARD_ART_KNOWN_BOX = Object.freeze({
-  atsu_angry: [768, 1024, 0, 2, 768, 1022],
-  atsu_crying: [768, 1024, 0, 4, 768, 1020],
-  atsu_excited: [768, 1024, 0, 4, 768, 1020],
-  atsu_happy: [768, 1024, 0, 0, 768, 1024],
-  atsu_normal: [768, 1024, 0, 5, 768, 1019],
-  atsu_surprise: [768, 1024, 0, 0, 768, 1024],
-  atsu_troubled: [768, 1024, 0, 3, 768, 1021],
-  atsu_wink: [768, 1024, 0, 14, 768, 1010],
-  dra_angry: [384, 384, 44, 39, 299, 278],
-  dra_crying: [384, 384, 47, 45, 291, 269],
-  dra_excited: [384, 384, 46, 46, 292, 269],
-  dra_happy: [384, 384, 28, 40, 312, 276],
-  dra_normal: [384, 384, 45, 42, 293, 273],
-  dra_surprise: [384, 384, 25, 39, 313, 278],
-  dra_troubled: [384, 384, 45, 43, 294, 272],
-  dra_wink: [384, 384, 49, 43, 286, 270],
-  kiki_angry: [1536, 1024, 481, 10, 573, 1014],
-  kiki_crying: [1536, 1024, 480, 15, 572, 1009],
-  kiki_excited: [1536, 1024, 495, 12, 556, 1012],
-  kiki_happy: [1536, 1024, 486, 14, 573, 1010],
-  kiki_normal: [1536, 1024, 476, 17, 603, 1007],
-  kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
-  kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
-  kiki_wink: [1536, 1024, 490, 7, 569, 1017],
-  kyuko_angry: [384, 512, 0, 0, 384, 508],
-  kyuko_crying: [384, 512, 4, 0, 380, 507],
-  kyuko_excited: [384, 512, 0, 0, 384, 508],
-  kyuko_happy: [384, 512, 3, 7, 381, 505],
-  kyuko_normal: [384, 512, 0, 6, 377, 506],
-  kyuko_surprise: [384, 512, 4, 6, 375, 506],
-  kyuko_troubled: [384, 512, 0, 2, 384, 506],
-  kyuko_wink: [384, 512, 0, 6, 375, 502],
-  momosuke_angry: [512, 512, 12, 3, 497, 509],
-  momosuke_crying: [512, 512, 25, 2, 468, 510],
-  momosuke_excited: [512, 512, 10, 6, 502, 506],
-  momosuke_happy: [512, 512, 28, 14, 475, 498],
-  momosuke_normal: [512, 512, 25, 9, 478, 503],
-  momosuke_surprise: [512, 512, 18, 7, 486, 505],
-  momosuke_troubled: [512, 512, 32, 9, 459, 503],
-  momosuke_wink: [512, 512, 0, 7, 512, 505],
-  myua_angry: [1536, 1024, 306, 27, 907, 997],
-  myua_crying: [1536, 1024, 332, 19, 839, 1005],
-  myua_excited: [1536, 1024, 245, 15, 948, 1009],
-  myua_happy: [1536, 1024, 360, 26, 783, 998],
-  myua_normal: [1536, 1024, 396, 26, 715, 998],
-  myua_surprise: [1536, 1024, 325, 27, 852, 997],
-  myua_troubled: [1536, 1024, 323, 15, 866, 1009],
-  myua_wink: [1536, 1024, 379, 28, 760, 996]
+  myua_wink: Object.freeze({
+    nw: 1536,
+    nh: 1024,
+    x: 379,
+    y: 28,
+    w: 760,
+    h: 996
+  })
 });
-const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
-  nw: v[0],
-  nh: v[1],
-  x: v[2],
-  y: v[3],
-  w: v[4],
-  h: v[5]
-} : null;
 const cardArtKnownBox = (who, expression, src) => {
   if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
   const ex = assistantExpressionName(who, expression);
-  return src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? cardArtBoxOf(CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`]) : null;
-};
-const cardArtKnownBoxBySrc = src => {
-  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS)) return null;
-  for (const who of ASSISTANTS) {
-    const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
-    if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
-  }
-  return null;
+  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
+  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
 };
 const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
   if (!known) {
@@ -90861,7 +90842,7 @@ const CardAssistantArt = ({
   useEffect(() => {
     let alive = true;
     setBox(null);
-    void cardArtKnownBoxFor(src, knownBox || cardArtKnownBoxBySrc(src)).then(known => known ? {
+    void cardArtKnownBoxFor(src, knownBox).then(known => known ? {
       ...known,
       known: true
     } : cardArtBox(src)).then(b => {
@@ -90870,7 +90851,7 @@ const CardAssistantArt = ({
     return () => {
       alive = false;
     };
-  }, [src]);
+  }, [src, knownBox]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
@@ -91274,6 +91255,12 @@ const CardBattleScreen = ({
           onBgm && onBgm(save.bgm.top);
           onNavigate('CARD_TOP');
           setView('pvp');
+          return;
+        }
+        if (game.demo) {
+          onBgm && onBgm(save.bgm.top);
+          onNavigate('CARD_TOP');
+          setView('top');
           return;
         }
         if (game.tutorial) {
@@ -91742,6 +91729,7 @@ const CardBattleScreen = ({
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
+      knownBox: cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink')),
       alt: a.name,
       className: "w-[42%] landscape:hidden",
       style: {

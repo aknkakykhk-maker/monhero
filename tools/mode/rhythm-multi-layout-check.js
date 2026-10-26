@@ -203,12 +203,12 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
     await A.locator('[data-rhythm-mode-toggle-art]').click();
     await A.locator('[data-rhythm-mode-toggle-comment]').click();
     check('もう一度オンにすると、絵もコメントも戻る', (await has('[data-rhythm-mode-assistant-art-box]')) && (await has('[data-rhythm-mode-assistant-line]')));
-    // ももすけの絵は、表情ごとに体の真ん中へ合わせて広げる(かけらを枠の外へ出す)
+    // ももすけの絵は、表情ごとに体の真ん中へ合わせて広げる(かけらを枠の外へ出す)(幅は --mhms-w に入る。小さい画面では cqh で広げる・2026-10-26)
     const art = await A.evaluate(() => {
       const img = document.querySelector('[data-rhythm-mode-assistant-art]');
       return img ? { src: img.getAttribute('src') || '', style: img.getAttribute('style') || '' } : null;
     });
-    check('モードえらび: ももすけの立ち絵は、表情ごとの切り出し位置で広げて出す', !!art && /momosuke_/.test(art.src) && /translate\(-\d/.test(art.style) && /width: 150%/.test(art.style),
+    check('モードえらび: ももすけの立ち絵は、表情ごとの切り出し位置で広げて出す', !!art && /momosuke_/.test(art.src) && /translate\(-\d/.test(art.style) && /(?:^|[ ;])(?:width|--mhms-w): 150%/.test(art.style),
       art ? `${art.src.split('/').pop()} ${art.style.slice(0, 60)}` : '絵が無い');
 
     // ===== ①-2 選曲の画面の「マスモンを呼ぶ」(マスモンを持っている部屋主で) =====
