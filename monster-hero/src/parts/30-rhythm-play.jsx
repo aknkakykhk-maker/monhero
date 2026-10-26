@@ -967,7 +967,14 @@ const RhythmResultMoreHint=({label})=>{
   React.useEffect(()=>{
     const box=document.querySelector('[data-rhythm-result-scroll]');
     if(!box) return undefined;
-    const update=()=>setMore(box.scrollHeight-box.scrollTop-box.clientHeight>24);
+    // 知らせる続き(ビートP・ライブログ)のいちばん下の見出しが、もう箱の中に見えていれば出さない
+    // (2026-10-26 ダメダシ z01。見出しが見えているのに印が出たままで、ライブログの説明「棒=… / 数字=BAD・MISS」に重なって読めなかった)
+    const update=()=>{
+      const targets=[...box.querySelectorAll('[data-rhythm-result-beat-points],[data-rhythm-live-log]')];
+      const last=targets[targets.length-1];
+      const seen=!!last&&last.getBoundingClientRect().top<box.getBoundingClientRect().bottom-28;
+      setMore(!seen&&box.scrollHeight-box.scrollTop-box.clientHeight>24);
+    };
     update();
     box.addEventListener('scroll',update,{passive:true});
     window.addEventListener('resize',update);
