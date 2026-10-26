@@ -40,3 +40,6 @@
 
 ## 2026-10-26 言葉の直し(#3705)・入口の立ち絵(#3703)の確かめ
 → [damedashi-2026-10-26/words-recheck/README.md](damedashi-2026-10-26/words-recheck/README.md)(8件)
+
+## 2026-10-26 M/B管理の各一覧
+→ [damedashi-2026-10-26/mb/README.md](damedashi-2026-10-26/mb/README.md)(3件)
