@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4ba96e69eb4d961
+// source-sha256: fbc00e4fb92e4d67
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105296,7 +105296,7 @@ function MonsterHeroGame() {
   };
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
@@ -105307,7 +105307,7 @@ function MonsterHeroGame() {
       step: 0,
       live: true
     });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
   useEffect(() => {
     if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt();
   }, [bootPhase, battleCardArtDebug]);
@@ -105360,14 +105360,14 @@ function MonsterHeroGame() {
   }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!tacticsIntroPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay && !loginBonusPopup)) return;
     setTacticsIntroPending(false);
     setEventReplay({
       id: 'tactics_intro',
       step: 0,
       live: true
     });
-  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay, loginBonusPopup]);
   const rhythmEventLiveCatchUpRef = useRef(false);
   useEffect(() => {
     if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
@@ -106811,6 +106811,14 @@ function MonsterHeroGame() {
           setMomosukeIntroSeenFlag(true);
         } catch {}
       }
+      if (!wasOnboarded) {
+        for (const [on, key] of [[EVENT_REPLAY_RELEASE_FLAGS.assistantChat, ASSISTANT_CHAT_STORY_SEEN_KEY], [EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes, TACTICS_TYPES_STORY_SEEN_KEY], [EVENT_REPLAY_RELEASE_FLAGS.cardBattle, CARD_BATTLE_INTRO_STORY_SEEN_KEY]]) {
+          if (!on) continue;
+          try {
+            if ((await storeGet(key, false, false)) !== true) await storeSet(key, true, false);
+          } catch {}
+        }
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try {
           setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
@@ -106862,7 +106870,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -131992,6 +132000,7 @@ function MonsterHeroGame() {
         setEventReplay(null);
       };
       return React.createElement("div", {
+        "data-event-story": eventReplay.id,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
