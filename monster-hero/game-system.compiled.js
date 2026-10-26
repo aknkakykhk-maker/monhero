@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8752d324dcaab3c0
+// source-sha256: b656a2d8eff74be7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -29934,22 +29934,23 @@ const RewardSummaryCard = ({
     levelAfter: summary.breederLevelAfter,
     onComplete: () => markPresented('breeder')
   })), React.createElement("div", {
-    className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
+    "data-reward-gold": true,
+    className: "pt-2 border-t border-white/10 text-[11px]"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-amber-300 font-black flex items-center gap-1"
   }, React.createElement(Gem, {
     size: 12
   }), "ダイヤ"), React.createElement("span", {
-    className: "text-white font-mono font-bold flex items-baseline gap-1"
-  }, React.createElement("span", {
-    className: "text-slate-500 text-[10px]"
-  }, summary.goldBefore.toLocaleString(), " →"), React.createElement(CountUpNumber, {
-    from: summary.goldBefore,
-    to: summary.goldAfter,
+    className: "text-white font-mono font-bold"
+  }, "+", React.createElement(CountUpNumber, {
+    from: 0,
+    to: Math.max(0, summary.goldAfter - summary.goldBefore),
     onComplete: () => markPresented('gold')
-  }), summary.goldAfter > summary.goldBefore && React.createElement("span", {
-    className: "text-amber-300 text-[10px]"
-  }, "(+", (summary.goldAfter - summary.goldBefore).toLocaleString(), ")"))), summary.psycheGain > 0 && React.createElement("div", {
+  }))), React.createElement("div", {
+    className: "mt-0.5 text-right text-[9px] font-mono font-bold text-slate-300"
+  }, "所持 ", summary.goldBefore.toLocaleString(), " → ", summary.goldAfter.toLocaleString())), summary.psycheGain > 0 && React.createElement("div", {
     className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
   }, React.createElement("span", {
     className: "text-fuchsia-300 font-black flex items-center gap-1"
@@ -65309,7 +65310,8 @@ function ChampionScreen({
   speciesChallengeBattleRunRef
 }) {
   return React.createElement("div", {
-    className: "fixed inset-0 flex flex-col items-center p-6 text-center",
+    "data-champion-screen": true,
+    className: "fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch",
     style: {
       position: 'fixed',
       inset: 0,
@@ -65319,12 +65321,12 @@ function ChampionScreen({
       background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
     }
   }, React.createElement(EndConfetti, null), React.createElement("div", {
-    className: "relative z-10 shrink-0 flex flex-col items-center"
+    className: "relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
   }, React.createElement(Crown, {
     size: 64,
-    className: "mh-end-crown text-white animate-bounce mb-3"
+    className: "mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"
   }), React.createElement("h1", {
-    className: "mh-end-title text-3xl font-black italic text-white uppercase"
+    className: "mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl"
   }, "CHAMPION"), !isQuickMode(runMode) && React.createElement("div", {
     className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"
   }, React.createElement("div", {
@@ -65336,21 +65338,23 @@ function ChampionScreen({
     duration: 1400,
     format: v => v.toLocaleString()
   })))), React.createElement("div", {
-    className: "relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
+    "data-champion-rewards": true,
+    className: "relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
   }, masuRegisterButtonNode(), speciesChallengeClearCardNode(), finalRewardSummary && React.createElement(RewardSummaryCard, {
     key: resultProcessing ? 'locked' : 'ready',
     summary: finalRewardSummary,
     onPresentationComplete: resultProcessing ? undefined : () => setChampionPresentationComplete(true)
-  }), runHighlights.rankingFailed && React.createElement(RankingFailedNote, null), React.createElement("div", {
-    className: "w-full max-w-xs mx-auto mt-3 text-left"
+  }), runHighlights.rankingFailed && React.createElement(RankingFailedNote, null))), React.createElement("div", {
+    "data-champion-bubble": true,
+    className: "relative z-10 w-full max-w-xs mx-auto mt-2 shrink-0 text-left [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, React.createElement(AssistantBubble, {
     scene: "resultWin",
     condition: runHighlights.firstWin ? 'firstWin' : runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
     compact: true
-  })))), isQuickMode(runMode) && autoRepeat && React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2"
+  })), isQuickMode(runMode) && autoRepeat && React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, React.createElement("button", {
     onClick: () => setAutoRepeatEnabled(false),
     className: "min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black"
@@ -65373,12 +65377,12 @@ function ChampionScreen({
       });
     },
     disabled: resultActionPending,
-    className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50"
+    className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50 [@media(max-height:700px)]:py-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, "種族チャレンジ選択へ戻る"), React.createElement("button", {
     onClick: () => runResultActionOnce(returnToHome),
     disabled: resultActionPending,
     "aria-busy": resultActionPending,
-    className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:700px)]:py-2.5 [@media(max-height:700px)]:text-base [@media(max-height:700px)]:rounded-2xl [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, resultActionPending ? '処理中…' : 'HOMEへ'));
 }
 function GameOverScreen({
@@ -112204,13 +112208,13 @@ function MonsterHeroGame() {
     }, "登録できます"), React.createElement("span", {
       className: "text-[10px] font-black text-pink-200"
     }, mainHero?.name || 'このモンスター', "をマスモンに！")), React.createElement("div", {
-      className: "text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center"
+      className: "text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center [@media(max-height:700px)]:hidden"
     }, "今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます"), React.createElement("button", {
       onClick: () => {
         setMasuNameInput(mainHero?.name || '');
         setShowMasuRegisterModal(true);
       },
-      className: "w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95",
+      className: "w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95 [@media(max-height:700px)]:py-2",
       style: {
         backgroundColor: '#db2777'
       }
