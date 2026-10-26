@@ -1,4 +1,6 @@
-// BUILD_DATE、version.json、index.htmlの本体JSキャッシュキーを「今の日本時間」に揃える。
+// BUILD_DATE と version.json を「今の日本時間」に揃え、data/*.js・tailwind.css・画像のキャッシュキーを中身のハッシュに合わせる。
+// 本体JSのキャッシュキー(index.html の GAME_BUILD)は、本体を書き出したあとに stamp-game-build.js が中身のハッシュで打つ
+// (2026-10-27 まではここで時刻を打っていた)。
 // CHANGELOGはユーザー向け更新だけの正本とし、デバッグ・内部修正では自動更新しない。
 //
 //   node stamp-version.js            … 現在時刻(JST)で更新する
@@ -37,12 +39,7 @@ if (!/const BUILD_DATE = "[^"]*";/.test(src)) {
 }
 const indexPath = path.join(REPO_ROOT, 'monster-hero', 'index.html');
 const index = fs.readFileSync(indexPath, 'utf8');
-const gameBuild = stamp.replace(/[- :]/g, '');
-let replacedIndex = index.replace(/var GAME_BUILD = '[^']*';/, `var GAME_BUILD = '${gameBuild}';`);
-if (!/var GAME_BUILD = '[^']*';/.test(index)) {
-  console.error('NG: index.html の GAME_BUILD 宣言が見つかりませんでした');
-  process.exit(1);
-}
+let replacedIndex = index;
 fs.writeFileSync(GAME_SYSTEM, replaced);
 // 編集元は parts 側なので、BUILD_DATE を持つ部品にも同じ値を書く(game-system.jsx と parts を同時に進め、
 // build.js の「どちらが変わったか」の判定で食い違いにならないようにする)
@@ -59,7 +56,7 @@ require('./harness').syncPartsAndGameSystem();
 fs.writeFileSync(path.join(REPO_ROOT, 'monster-hero', 'version.json'), `{"build": "${stamp}"}\n`);
 
 // data/*.js のキャッシュキー(?v=)を中身のハッシュに合わせる。
-// 本体(game-system.compiled.js)はGAME_BUILDで毎回更新されるが、データ側は手書きの固定値だったため、
+// 本体(game-system.compiled.js)はGAME_BUILDで更新されるが、データ側は手書きの固定値だったため、
 // data/breeder.js だけ古いままブラウザに残り「本体は新しいのにデータが古い」状態で
 // 参照エラー → 画面が真っ暗、という不具合が起きた。
 // 中身が変わったファイルだけキーが変わるので、変えていないファイルは再ダウンロードされない。
@@ -148,7 +145,7 @@ if (imageChanged) {
   fs.writeFileSync(indexPath, redone);
 }
 
-console.log(`BUILD_DATE、version.json、GAME_BUILD を ${stamp} に更新しました（CHANGELOGは変更しません）`);
+console.log(`BUILD_DATE、version.json を ${stamp} に更新しました（CHANGELOGは変更しません）`);
 console.log(`data/*.js のキャッシュキー: ${dataKeys.join(' / ')}`);
 console.log(`tailwind.css のキャッシュキー: ${tailwindKey}`);
 console.log(`画像のキャッシュキー: ${imageCount}枚`);
