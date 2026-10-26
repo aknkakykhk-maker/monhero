@@ -52,3 +52,6 @@
 
 ## 2026-10-26 マスモンのいるデータで(3周目)
 → [damedashi-2026-10-26/masu-filled/README.md](damedashi-2026-10-26/masu-filled/README.md)(4件)
+
+## 2026-10-26 クイックモードを最後まで・リザルト
+→ [damedashi-2026-10-26/quick-result/README.md](damedashi-2026-10-26/quick-result/README.md)(3件)
