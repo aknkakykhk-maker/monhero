@@ -9409,10 +9409,11 @@ function MonsterHeroGame() {
           <span className="text-[8px] font-black text-white px-1.5 py-0.5 rounded-full" style={{ backgroundColor:'#ec4899', animation:'masuBadge 1.6s ease-in-out infinite' }}>登録できます</span>
           <span className="text-[10px] font-black text-pink-200">{mainHero?.name||'このモンスター'}をマスモンに！</span>
         </div>
-        <div className="text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center">今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます</div>
+        {/* 背の低い画面では説明の1行を省いて、もらった物の一覧を広く取る(2026-10-27 ダメダシくん) */}
+        <div className="text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center [@media(max-height:700px)]:hidden">今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます</div>
         <button
           onClick={()=>{setMasuNameInput(mainHero?.name||''); setShowMasuRegisterModal(true);}}
-          className="w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95"
+          className="w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95 [@media(max-height:700px)]:py-2"
           style={{ backgroundColor:'#db2777' }}
         ><Heart size={14}/>マスモンとして登録する</button>
       </div>
