@@ -389,19 +389,20 @@ async function collectFingerSuspects(s, state, final = false) {
 // 書くのは自己ベスト(mh_rhythm_best_v1)へ clear / played だけ。手元のブラウザの中だけの話で、ランキングへは何も送らない
 async function unlockHarderCharts(s) {
   const done = await s.page.evaluate(() => {
-    if (localStorage.getItem('__playbot_hard_unlocked')) return true;
+    if (localStorage.getItem('__playbot_hard_unlocked_v2')) return true;
     const best = {};
-    RHYTHM_SONGS.forEach((song) => { best[song.songId] = { HARD: { bestScore: 1, maxCombo: 1, played: true, clear: true }, EXPERT: { bestScore: 1, maxCombo: 1, played: true, clear: true } }; });
+    // MASTER もクリア済みにして、HELL も選べるようにする(2026-10-26 HELL の Lv. をボットで比べる)
+    RHYTHM_SONGS.forEach((song) => { best[song.songId] = { HARD: { bestScore: 1, maxCombo: 1, played: true, clear: true }, EXPERT: { bestScore: 1, maxCombo: 1, played: true, clear: true }, MASTER: { bestScore: 1, maxCombo: 1, played: true, clear: true } }; });
     localStorage.setItem('mh_rhythm_best_v1', JSON.stringify(best));
-    localStorage.setItem('__playbot_hard_unlocked', '1');
+    localStorage.setItem('__playbot_hard_unlocked_v2', '1');
     return false;
   });
   if (!done) await s.boot();
 }
 
-async function openSoloLive(s, { songName = '', difficulty = '', harder = false, strict = false } = {}) {
+async function openSoloLive(s, { songName = '', songId = '', difficulty = '', harder = false, strict = false } = {}) {
   const { page, rand } = s;
-  if (harder || /^(EXPERT|MASTER)$/.test(difficulty)) await unlockHarderCharts(s);
+  if (harder || /^(EXPERT|MASTER|HELL)$/.test(difficulty)) await unlockHarderCharts(s);
   await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.innerText || '').trim() === 'モンヒロビート')?.click());
   await s.wait(2500);
   await s.dismissOverlays(10);
@@ -433,17 +434,22 @@ async function openSoloLive(s, { songName = '', difficulty = '', harder = false,
     if (songName && !songs.find((b) => b.label.startsWith(songName))) {
       const scrolled = await s.page.evaluate((name) => {
         const norm = (t) => (t || '').replace(/\s+/g, ' ').trim();
-        const b = [...document.querySelectorAll('button')].find((x) => /Lv\.\s*\d+/.test(x.innerText || '') && !/大きく見る|お気に入り/.test(x.getAttribute('aria-label') || '') && norm(x.innerText).startsWith(name));
+        const cards = [...document.querySelectorAll('button')].filter((x) => /Lv\.\s*\d+/.test(x.innerText || '') && !/大きく見る|お気に入り/.test(x.getAttribute('aria-label') || ''));
+        // 版のある曲は、名前が曲名の頭と同じ代表の札
+        const b = cards.find((x) => norm(x.innerText).startsWith(name)) || cards.find((x) => /つの版/.test(x.innerText || '') && (() => { const n = norm(x.innerText).replace(/\s*Lv\..*$/s, '').trim(); return n.length >= 4 && name.startsWith(n); })());
         if (!b) return false;
         b.scrollIntoView({ block: 'center' });
         return true;
       }, songName);
       if (scrolled) { await s.wait(400); songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label)); }
     }
-    const named = songName && songs.find((b) => b.label.startsWith(songName));
+    // 版のある曲(「2つの版」)は、一覧には代表の札だけが出る。札の名前が曲名の頭と同じものを選び、あとで版のボタンを押す(2026-10-26)
+    const named = songName && (songs.find((b) => b.label.startsWith(songName))
+      || songs.filter((b) => /つの版/.test(b.label)).find((b) => { const n = b.label.replace(/\s*Lv\..*$/s, '').trim(); return n.length >= 4 && songName.startsWith(n); }));
     if (songName && !named && strict) { await s.addIssue('進めない', `曲えらびに「${songName}」が見つからない`); return null; }
     const song = named || songs[Math.floor(rand() * songs.length)];
     await s.tap(song, '曲を選ぶ');
+    if (songId) { await s.wait(300); await s.page.evaluate((id) => document.querySelector(`[data-rhythm-song-version="${id}"]`)?.click(), songId); await s.wait(300); }
     picked = { song: song.label.replace(/\s*Lv\..*$/, ''), difficulty: '' };
   }
   // 小さい画面では難易度と「決定」が下に隠れていることがある。見えるところまで送る
@@ -451,11 +457,11 @@ async function openSoloLive(s, { songName = '', difficulty = '', harder = false,
   await s.wait(300);
   // 難易度は EASY〜HARD から(人は最初から最難関を選ばない)
   // harder = true のときは、EXPERT・MASTER から選ぶ(HOLDの途中でほかのノーツを押す譜面も、タップの取りこぼしも、高難易度に多い。指のくせの見張り用)
-  const allDiffs = (await s.listButtons()).filter((b) => /(EASY|NORMAL|HARD|EXPERT|MASTER)/.test(b.label) && b.h < 90);
+  const allDiffs = (await s.listButtons()).filter((b) => /(EASY|NORMAL|HARD|EXPERT|MASTER|HELL)/.test(b.label) && b.h < 90);
   const pool = harder ? (allDiffs.some((x) => /(EXPERT|MASTER)/.test(x.label)) ? /(EXPERT|MASTER)/ : /(HARD)/) : /(EASY|NORMAL|HARD)/;
   const diffs = allDiffs.filter((b) => pool.test(b.label));
-  const d = (difficulty && allDiffs.find((b) => b.label.includes(difficulty))) || diffs[Math.floor(rand() * diffs.length)] || allDiffs.find((b) => /(EASY|NORMAL|HARD)/.test(b.label));
-  if (d) { await s.tap(d, '難易度を選ぶ'); picked.difficulty = (d.label.match(/EASY|NORMAL|HARD|EXPERT|MASTER/) || [''])[0]; }
+  const d = (difficulty && allDiffs.find((b) => new RegExp(`(^|[^A-Z])${difficulty}([^A-Z]|$)`).test(b.label))) || diffs[Math.floor(rand() * diffs.length)] || allDiffs.find((b) => /(EASY|NORMAL|HARD)/.test(b.label));
+  if (d) { await s.tap(d, '難易度を選ぶ'); picked.difficulty = (d.label.match(/EASY|NORMAL|HARD|EXPERT|MASTER|HELL/) || [''])[0]; }
   await s.inspect();
   return picked;
 }
