@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8cf8f75fbb1ea83
+// source-sha256: 5ea291714f709ddb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:15";
+const BUILD_DATE = "2026-10-27 00:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16051,14 +16051,15 @@ const DexLineageChip = ({
   iconUrl
 }) => React.createElement("span", {
   "data-dex-lineage": true,
-  className: "flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
+  className: "flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1"
 }, iconUrl ? React.createElement(DexMonsterIcon, {
   src: iconUrl,
   lineage: true
 }) : React.createElement("span", {
   className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
 }, "血"), React.createElement("span", {
-  className: "text-[11px] font-black text-amber-100 truncate"
+  "data-dex-lineage-name": true,
+  className: `${String(lineage.name || '').length >= 5 ? 'text-[10px]' : 'text-[11px]'} min-w-0 font-black text-amber-100 leading-[1.2] line-clamp-2 [overflow-wrap:anywhere]`
 }, lineage.name));
 const dexMonsterArtImage = (mon, alt, hidden = false, colors = null) => React.createElement(DyedMonsterImage, {
   baseId: mon.id,
@@ -32595,11 +32596,11 @@ const RhythmSongSelect = ({
     className: "ml-1 tracking-normal text-rose-300"
   }, "未クリア")), React.createElement("b", {
     "data-rhythm-demo-best": true,
-    className: `block truncate font-black tabular-nums text-amber-100 ${best && best.played ? 'text-[22px] leading-tight' : 'text-[12px] leading-snug'}`,
-    style: best && best.played ? {
-      fontSize: `min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length * .72).toFixed(2)}))`
-    } : undefined
-  }, best && best.played ? best.bestScore.toLocaleString() : 'まだ遊んでいません'), React.createElement("span", {
+    className: `block font-black tabular-nums text-amber-100 ${best && best.played ? 'truncate text-[22px] leading-tight' : 'break-keep text-[12px] leading-tight'}`,
+    style: {
+      fontSize: best && best.played ? `min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length * .72).toFixed(2)}))` : 'min(12px, calc(100cqw / 7.4))'
+    }
+  }, best && best.played ? best.bestScore.toLocaleString() : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "遊んでいません")), React.createElement("span", {
     "data-rhythm-demo-combo": true,
     className: "block whitespace-nowrap text-[9px] font-black text-slate-400"
   }, React.createElement("span", {
@@ -32668,11 +32669,18 @@ const RhythmSongSelect = ({
     }, open ? item.id : `🔒${item.id}`), (() => {
       const record = open ? rhythmBestRecord(bestRecords, song.songId, item.id) : null;
       const text = open ? record && record.played ? record.bestScore.toLocaleString() : '—' : `${need}で解放`;
+      if (!open) return React.createElement("span", {
+        "data-rhythm-difficulty-best": item.id,
+        className: "block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
+        style: {
+          fontSize: rhythmTitleFitSize(lockedFitText, 8, 6, 2)
+        }
+      }, need, React.createElement("wbr", null), "で解放");
       return React.createElement("span", {
         "data-rhythm-difficulty-best": item.id,
         className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80",
         style: {
-          fontSize: rhythmTitleFitSize(open ? text : lockedFitText, 8, 6, 2)
+          fontSize: rhythmTitleFitSize(text, 8, 6, 2)
         }
       }, text);
     })());
@@ -53283,8 +53291,9 @@ function BreederMarketScreen({
   }, line)) : section.label)), React.createElement("div", {
     className: "mt-2.5 font-mono text-xl font-black text-white"
   }, section.value !== null ? section.value : ' '), React.createElement("div", {
-    className: "mt-0.5 text-[10px] font-bold text-slate-400 [text-wrap:balance]"
-  }, section.hint), React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(section.hint)), React.createElement("span", {
     "aria-hidden": "true",
     className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
   }, "›"))))), marketSection && React.createElement(React.Fragment, null, React.createElement(MarketBalanceBar, {
@@ -55790,8 +55799,12 @@ function RhythmSongSelectScreen({
   }, React.createElement("span", {
     className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
+    className: "flex min-w-0"
+  }, React.createElement("span", {
     className: "min-w-0 truncate"
-  }, beatPointCampaign.name, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中'), React.createElement("span", {
+  }, beatPointCampaign.name), React.createElement("span", {
+    className: "shrink-0"
+  }, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中')), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
@@ -56638,7 +56651,9 @@ function RhythmRankingScreen({
       "aria-pressed": cur === id,
       onClick: () => loadRhythmRanking(song, id),
       className: `min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur === id ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
-    }, id === 'ALL' ? '全難易度' : RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id)));
+    }, id === 'ALL' ? React.createElement("span", {
+      className: "break-keep"
+    }, "全", React.createElement("wbr", null), "難易度") : RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id)));
   })(), songTab && rhythmRanking.status === 'loading' && React.createElement("p", {
     "data-rhythm-ranking-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
@@ -76497,8 +76512,9 @@ function RhythmMultiRecordSheet({
   }, v)))), React.createElement("ul", {
     className: "mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto"
   }, rec.recent.length === 0 && React.createElement("li", {
-    className: "text-[12px] font-bold text-slate-400"
-  }, "まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります"), rec.recent.map(x => React.createElement("li", {
+    className: "text-[12px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります')), rec.recent.map(x => React.createElement("li", {
     key: x.round,
     "data-rhythm-multi-record-row": true,
     className: "rounded-xl bg-slate-800/70 px-2 py-1.5 text-[11px] font-bold leading-snug"
@@ -78203,7 +78219,7 @@ function RhythmMultiScreen({
       type: "button",
       "data-rhythm-mode-ranking-tab": id,
       onClick: () => setRankHubTab(id),
-      className: `min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
+      className: `min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
     }, label)))));
   }
   if (!view && !searching) return React.createElement("main", {
@@ -89504,16 +89520,22 @@ const CardBattleBoard = ({
       name: meNow ? 'あなた' : who.name
     });
     setAction(null);
-    const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), Math.max(500, Math.round(1000 * pace)));
+    const bannerMs = Math.max(500, Math.round(800 * pace));
+    const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), bannerMs);
+    let t2 = null;
     if (meNow && !tutorial && !game.demo) {
       const lines = st.log.filter(l => l.turn === st.turn - 1 && l.kind !== 'turn').map(l => l.text).slice(-8);
-      if (lines.length) setTurnSummary({
+      setTurnSummary(null);
+      if (lines.length) t2 = setTimeout(() => setTurnSummary({
         key: `sum-${id}`,
         turn: st.turn - 1,
         lines
-      });
+      }), bannerMs);
     } else setTurnSummary(null);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      if (t2) clearTimeout(t2);
+    };
   }, [st.turn, st.active, st.phase]);
   useEffect(() => {
     if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null);
@@ -89587,6 +89609,8 @@ const CardBattleBoard = ({
   const opp = st.players[CARD_CPU];
   const decider = cardDeciderOf(st);
   const myTurn = st.winner === null && decider === CARD_ME;
+  const turnMe = st.active === CARD_ME;
+  const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait' : st.pendingPray ? 'pray' : st.pendingReveal ? 'reveal' : st.pendingChoice ? 'choose' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
   const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find(o => o.hand) || null : null;
@@ -90122,13 +90146,14 @@ const CardBattleBoard = ({
     className: `shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`
   }, "⚔ ", quickRun.loops, "周目"), React.createElement("span", {
     "data-card-head-turn": true,
+    "data-card-head-turn-me": turnMe ? '1' : undefined,
     className: `min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`,
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: "whitespace-nowrap"
   }, "ターン ", Math.max(1, st.turn)), " ・ ", React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`)))), React.createElement("div", {
+    className: `whitespace-nowrap ${turnMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`
+  }, turnMe ? 'あなたの番' : `${who.name}の番`)))), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
@@ -90159,7 +90184,8 @@ const CardBattleBoard = ({
   }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
     className: "ml-auto"
   }, strip(CARD_CPU))), React.createElement("div", {
-    className: "flex shrink-0 items-start justify-around px-1"
+    "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
+    className: `flex shrink-0 items-start justify-around rounded-2xl px-1 transition-shadow ${turnLive && !turnMe ? 'shadow-[inset_0_0_0_2px_rgba(251,113,133,.75),0_0_16px_rgba(251,113,133,.35)]' : ''}`
   }, opp.mons.map((_, m) => React.createElement(CardMonSlot, {
     key: m,
     db: db,
@@ -90183,17 +90209,7 @@ const CardBattleBoard = ({
     style: {
       justifyContent: 'safe center'
     }
-  }, turnBanner && React.createElement("div", {
-    key: turnBanner.key,
-    "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
-    "data-card-fit": true,
-    "aria-live": "polite",
-    className: `mh-card-turn-banner pointer-events-none absolute inset-x-0 top-1/2 z-[6] -translate-y-1/2 py-1.5 text-center font-black tracking-wider text-white shadow-lg ${turnBanner.me ? 'bg-gradient-to-r from-amber-500/0 via-amber-500/90 to-amber-500/0' : 'bg-gradient-to-r from-rose-600/0 via-rose-600/90 to-rose-600/0'}`,
-    style: {
-      fontSize: 'clamp(16px, 5.5vw, 24px)',
-      textShadow: '0 2px 0 rgba(0,0,0,.45)'
-    }
-  }, turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`), bubble && React.createElement("div", {
+  }, bubble && React.createElement("div", {
     key: bubble.key,
     "data-card-bubble": true,
     "data-card-bubble-face": bubble.face || face,
@@ -90202,7 +90218,14 @@ const CardBattleBoard = ({
       borderColor: who.accent,
       ...JA_WRAP_STYLE
     }
-  }, React.createElement("img", {
+  }, pvp ? React.createElement("span", {
+    "data-card-bubble-pvp-icon": true,
+    className: `block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`
+  }, React.createElement(CardPvpAvatar, {
+    icon: pvp.icon,
+    frame: pvp.frame,
+    className: "h-full w-full"
+  })) : React.createElement("img", {
     src: assistantFaceImage(who, bubble.face || face),
     alt: "",
     className: `${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
@@ -90278,7 +90301,8 @@ const CardBattleBoard = ({
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), React.createElement("div", {
-    className: "flex shrink-0 items-end justify-around px-1"
+    "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
+    className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`
   }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
     key: m,
     db: db,
@@ -90394,7 +90418,8 @@ const CardBattleBoard = ({
     className: `rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`
   }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), React.createElement("div", {
     "data-card-hand": true,
-    className: "flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2"
+    "data-card-hand-dim": mode === 'wait' ? '1' : undefined,
+    className: `flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2 transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`
   }, handOrder.map(i => {
     const no = me.hand[i];
     const c = cardOf(db, no);
@@ -90529,7 +90554,24 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
-  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnSummary && !bigCard && React.createElement("button", {
+  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnBanner && !bigCard && React.createElement("div", {
+    key: turnBanner.key,
+    "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
+    "aria-live": "polite",
+    className: "pointer-events-none absolute inset-0 z-[53] flex items-center justify-center px-4",
+    style: wide ? {
+      right: 'calc(min(42%, 420px) + 8px)'
+    } : undefined
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-fit": true,
+    onClick: () => setTurnBanner(null),
+    className: `mh-card-turn-call pointer-events-auto max-w-full rounded-3xl border-4 px-6 py-2 text-center font-black tracking-wider shadow-2xl ${turnBanner.me ? 'border-amber-200 bg-amber-400 text-slate-950' : 'border-rose-200 bg-rose-600 text-white'}`,
+    style: {
+      fontSize: 'clamp(26px, 9vw, 44px)',
+      ...JA_LABEL_STYLE
+    }
+  }, turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`)), turnSummary && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary": true,
@@ -135529,8 +135571,11 @@ const createAnimationStyle = () => {
     .mh-card-turn-banner { animation: mhCardTurnBanner .9s ease-out both; }
     @keyframes mhCardTurnBanner { 0% { opacity: 0; transform: translateY(-50%) scaleX(.6); } 18% { opacity: 1; transform: translateY(-50%) scaleX(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-big { animation: mhCardBig .22s ease-out both; }
+    /* 番が替わったときの真ん中の大きな知らせ(2026-10-26 ソラシドさん「どっちのターンか分かりにくい」) */
+    .mh-card-turn-call { animation: mhCardTurnCall .8s ease-out both; }
+    @keyframes mhCardTurnCall { 0% { opacity: 0; transform: scale(.7); } 20% { opacity: 1; transform: scale(1.06); } 32% { transform: scale(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes mhCardBig { 0% { opacity: 0; scale: .85; } 100% { opacity: 1; scale: 1; } }
-    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-big { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-turn-call, .mh-card-big { animation: none; } }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }
