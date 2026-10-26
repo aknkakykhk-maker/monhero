@@ -183,7 +183,7 @@ const extremeTabInfo = () => {
     check('全WAVE詳細のWAVE1に敵の能力が出る', waveOneDetailHp > 0, waves[0]);
     check('デュラハン・ムーとボス表示がある', waves.some(w => w.includes('デュラハン')) && waves.at(-1)?.includes('ムー') && waves.at(-1)?.includes('BOSS'), waves.slice(-2).join(' / '));
     await page.getByRole('button', { name:'閉じる' }).click();
-    check('NIGHTMARE以降の詳細ボタンは無効', await page.evaluate(() => [...document.querySelectorAll('[data-extreme-difficulties] article')].slice(1).every(card => [...card.querySelectorAll('button')].find(b => b.textContent.includes('詳細 ？？？'))?.disabled)));
+    check('NIGHTMARE以降の詳細ボタンは無効', await page.evaluate(() => [...document.querySelectorAll('[data-extreme-difficulties] article')].slice(1).every(card => [...card.querySelectorAll('button')].find(b => b.textContent.includes('まだ見られません'))?.disabled)));
 
     // 難易度カードからもランキングを開ける
     await page.evaluate(() => {
@@ -210,7 +210,7 @@ const extremeTabInfo = () => {
     });
     await page.waitForTimeout(1500);
     const heroText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('EXTREMEを押すと勇者モン選択へ進む', started && heroText.includes('勇者モンを選択'), heroText.slice(0, 70));
+    check('EXTREMEを押すと勇者モン選択へ進む', started && heroText.includes('勇者モンをえらぶ'), heroText.slice(0, 70));
 
     // 勇者モンを1体選んでバトルへ
     await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => b.textContent.includes('モッチー'))?.click(); });

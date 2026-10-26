@@ -16,7 +16,7 @@
 //   1. 候補をしぼる: 勇者ごとに、組み合わせ(asika-sim.json の combo。その組の届いた WAVE、Expert 5・Master 3 の重み)の上位 --top-allies 体
 //   2. その中の3体の組をすべて(6 体なら 20 組)、難易度ごとに回す。Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11)で並べる
 //   3. 難易度ごとに上位 --verify-top 組を、別の乱数の種で各 --verify-runs 回測り直し、その数字で並べる。くじのぶれ(標準誤差の2倍)の中の差には順位を付けない
-//   シミュレーターの設定: EX・アシカの使い方は上手(best)、アシカの選び方はボット、トレーニングはドミノ倒し+走り込み(10 版目から)、緊急回復は直したボットと同じ(bot)
+//   シミュレーターの設定: EX・アシカの使い方は上手(best)、アシカの選び方はボット、トレーニングはドミノ倒し+走り込み(10 版目から)、緊急回復は上手な使い方(best。ガッツの平均 40% 未満で押す)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -29,10 +29,11 @@ const ASIKA_CACHE = path.join(OUT_DIR, 'asika-sim.json');
 const args = process.argv.slice(2);
 const argOf = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const DIFFS = ['Hard', 'Expert', 'Master'];
-const SIM_VER = 13; // 13 = WAVE の始めのヘイトをタイプで決める(2026-10-22) / sim/battle.js の版(asika-tier.js の SIM_VER と同じ意味)。11 = 10 版目+ヘイト(2026-10-22) / 12 = ヘイトを強めた(2026-10-22)
+const SIM_VER = 14; // 14 = 上手な遊び方の緊急回復・剣士モッチーの初期スタイル(2026-10-27) / 13 = WAVE の始めのヘイトをタイプで決める(2026-10-22) / sim/battle.js の版(asika-tier.js の SIM_VER と同じ意味)。11 = 10 版目+ヘイト(2026-10-22) / 12 = ヘイトを強めた(2026-10-22)
 const ev = require('./evidence');
 // 10 版目(2026-10-16 ハカセくんの決定): 上手な遊び方のトレーニングはドミノ倒し+走り込み(lab/training.md)
-const SIM_OPT = { exMode: 'best', assist: 'bot', assistPlay: 'best', training: 'atkhp', emergency: 'bot' };
+// 11 版目(同日): 緊急回復も上手な使い方(ガッツの平均 40% 未満で押す。lab/emergency.md)・剣士モッチーは強い難易度でずっと片手盾(simulateRun が best のとき自動)
+const SIM_OPT = { exMode: 'best', assist: 'bot', assistPlay: 'best', training: 'atkhp', emergency: 'best' };
 
 // ---------- 子プロセス: 1マス(勇者モン×供モン3体×難易度)を N 回まわして足し合わせる ----------
 if (args[0] === '--worker') {
@@ -217,7 +218,22 @@ function writeAll(cache) {
     const aimed = (r) => { const f = fixedOf(r); return f && f.length === wantSet.size && f.every((n) => wantSet.has(n)) && alliesOf(r).every((n) => wantSet.has(n)); };
     const rs = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && ['clear', 'wipe', 'timeout'].includes(r.result)
       && (fixedOf(r) ? aimed(r) : alliesOf(r).slice().sort().join(',') === want));
-    return rs.length ? { 回数: rs.length, クリア: rs.filter((r) => r.result === 'clear').length } : null;
+    if (!rs.length) return null;
+    const out = { 回数: rs.length, クリア: rs.filter((r) => r.result === 'clear').length };
+    // 比べ(2026-10-27 ジン部長「アリーナくんのパーティの比べを実戦で確認へ」): 固定した回と同じボットの版で、同じ勇者・同じ難易度を
+    //   ふだんの選び方(固定なし・順番に試す回 rotate は除く)で遊んだ回。届いた WAVE はクリアを 11 と数える
+    const vers = new Set(rs.filter(fixedOf).map((r) => r.bot.ver));
+    if (vers.size) {
+      const wave = (r) => (r.result === 'clear' ? 11 : Number(r.wave) || 0);
+      const avg = (xs) => xs.reduce((a, r) => a + wave(r), 0) / xs.length;
+      const base = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && ['clear', 'wipe', 'timeout'].includes(r.result)
+        && r.bot && vers.has(r.bot.ver) && !r.bot.fixedAllies && !r.bot.rotate);
+      const fx = rs.filter(fixedOf);
+      out.比べ = base.length
+        ? `パーティを固定した ${fx.length} 回は届いた WAVE 平均 ${avg(fx).toFixed(1)}(クリア ${fx.filter((r) => r.result === 'clear').length})。同じ勇者・同じボットで供モンをふだんどおり選んだ ${base.length} 回は ${avg(base).toFixed(1)}(クリア ${base.filter((r) => r.result === 'clear').length})。クリアは 11 と数えた。回数が少なく、ぶれは大きい`
+        : `パーティを固定した ${fx.length} 回は届いた WAVE 平均 ${avg(fx).toFixed(1)}。同じボットでふだんどおり選んだ回はまだ無い`;
+    }
+    return out;
   };
   // なぜ噛み合うか(機械が書く1〜2行): 得意な枠の分かれ方と EX の役
   const EX_ROLE = { coverAll: '守り', partyGuard: '守り', damageBack: '守り', lifeSpring: '支え', cookieBox: '支え', partyBoost: '支え', multiBuff: '支え', present: '支え', timeStop: '支え' };
@@ -314,7 +330,7 @@ function writeAll(cache) {
   o();
   o('**組み方**: 始める前に供モンの候補を5体選び、WAVE 2・4・6 のあとに、まだ入っていない候補からくじで3体が出て1体を選ぶ。候補の5体に下の3体を入れ、出た3体のうち下の並びの前の子から選ぶ。5体中3体が出るので、指定の3体が1体も出ないことは無く、いつでもこの4体がそろう。**候補の残り2体は誰でもよい**(強さに効かない)。入る順はくじしだいで、シミュレーターも同じくじで測った。');
   o();
-  o('**並べ方**: Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11 と数える)。測り直した数字で並べた。「ぶれの中で並ぶ順位」は、くじのぶれ(標準誤差の2倍)の中の差を同じ順位にしたもの(同じ数字の組は、どれを選んでも同じくらい)。「確か」= 測り直しても、候補の全パーティの平均(基準)よりぶれ以上に上(そうでなければ「ぶれの中」)。EX とアシカの使い方は上手な使い方、アシカの選び方はボットと同じ、トレーニングはドミノ倒し+走り込み(全員。シミュレーター 10 版目)、緊急回復は直したボットと同じ条件。暫定・回数不足の子(Tier 表で回数が足りない子)が入るパーティには、そう書いた。');
+  o('**並べ方**: Hard はクリア率、Expert・Master は届いた WAVE(クリアは 11 と数える)。測り直した数字で並べた。「ぶれの中で並ぶ順位」は、くじのぶれ(標準誤差の2倍)の中の差を同じ順位にしたもの(同じ数字の組は、どれを選んでも同じくらい)。「確か」= 測り直しても、候補の全パーティの平均(基準)よりぶれ以上に上(そうでなければ「ぶれの中」)。EX とアシカの使い方は上手な使い方、アシカの選び方はボットと同じ、トレーニングはドミノ倒し+走り込み(全員。シミュレーター 10 版目)、緊急回復は上手な使い方(ガッツの平均 40% 未満で押す。11 版目)。暫定・回数不足の子(Tier 表で回数が足りない子)が入るパーティには、そう書いた。');
   const out = [];
   for (const d of DIFFS) {
     const rows = topParties(cache, d);
@@ -363,7 +379,7 @@ function writeAll(cache) {
       o(`- トレーニング: ${det.train.text}(${det.train.all.map((y) => `${TRAINING_JA[y.kk.split(':')[1]]} ${d === 'Hard' ? sgn(y.v * 100, 0) : sgn(y.v)}`).join('・')})`);
       o(`- 固有技の強化ポイント: ${det.unique.text}(${det.unique.all.map((y) => `${UNIQUE_JA[y.kk.split(':')[1]]} ${d === 'Hard' ? sgn(y.v * 100, 0) : sgn(y.v)}`).join('・')})`);
       const rr = realOf(h, allies, d);
-      o(`- 実戦: ${rr ? `${rr.回数} 回・クリア ${rr.クリア} 回` : 'まだ無い'}`);
+      o(`- 実戦: ${rr ? `${rr.回数} 回・クリア ${rr.クリア} 回${rr.比べ ? `(${rr.比べ})` : ''}` : 'まだ無い'}`);
       ev.evidenceMd(partyEvidence(x, d, base, scanAll.length, det), '').forEach((t) => o(t));
     }
   }

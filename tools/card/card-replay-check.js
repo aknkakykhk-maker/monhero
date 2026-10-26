@@ -6,7 +6,7 @@
 //   ① コンピューターどうしで何十戦も最後まで戦わせ、記録からなぞり直すと、1手ごとの場と勝ち負けが、実際の試合と同じになる
 //   ② 記録を保存の形(JSON)にして読み直しても、同じようになぞれる
 //   ③ ルールが変わったときの止まり方: 手を1つ書き換える・指紋を書き換えると、その手で止まる(勝手に別の試合にしない)
-//   ④ 保存の掃除: 壊れた値・知らない形・型の違う項目は捨てる/同じ試合は1つ/10試合まで/お気に入り3つまでで消さない/大きさの上限
+//   ④ 保存の掃除: 壊れた値・知らない形・型の違う項目は捨てる/同じ試合は1つ/50試合まで/お気に入り10までで消さない/大きさの上限/最後の番
 //   ⑤ 番の区切りと、いまの手の一言
 //   ⑥ 助手と対戦(種は1つ・cardCreateGame の始まり)の記録も、同じようになぞれる
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -124,27 +124,31 @@ check(`1試合の記録の大きさ(最大 ${(maxBytes / 1024).toFixed(1)}KB・�
   const odd = E.cardReplayNormalizeOne({ ...r0, prints: 'xyz', foe: { name: 5 }, outcome: 'nope', fav: 'yes' });
   check('知らない値は既定で補う(指紋なし・相手の名前・結果・お気に入り)', odd && odd.prints === '' && odd.foe.name === 'あいて' && odd.outcome === null && odd.fav === false);
 
-  // 10試合まで・お気に入りは消さない・3つまで
+  // 50試合まで・お気に入りは消さない・10まで(30戦の記録を番号を替えて増やし、上限を超えるまで足す)
+  const many = [];
+  for (let k = 0; many.length < E.CARD_REPLAY_MAX + 15; k++) recs.forEach(({ rec }) => { if (many.length < E.CARD_REPLAY_MAX + 15) many.push({ ...rec, id: `${rec.id}-${k}`, at: 1 + many.length }); });
   let saved = null;
-  recs.slice(0, 4).forEach(({ rec }) => { saved = E.cardReplayAdd(saved, rec); });
-  saved = E.cardReplaySetFav(saved, recs[0].rec.id, true).box;
-  saved = E.cardReplaySetFav(saved, recs[1].rec.id, true).box;
-  saved = E.cardReplaySetFav(saved, recs[2].rec.id, true).box;
-  const fourth = E.cardReplaySetFav(saved, recs[3].rec.id, true);
-  check('お気に入りは3つまで', !fourth.ok && fourth.box.list.filter((r) => r.fav).length === 3);
-  recs.slice(4).forEach(({ rec }) => { saved = E.cardReplayAdd(saved, rec); });
+  const FAV = E.CARD_REPLAY_FAV_MAX;
+  many.slice(0, FAV + 1).forEach((rec) => { saved = E.cardReplayAdd(saved, rec); });
+  for (let i = 0; i < FAV; i++) saved = E.cardReplaySetFav(saved, many[i].id, true).box;
+  const over = E.cardReplaySetFav(saved, many[FAV].id, true);
+  check(`お気に入りは${FAV}まで`, !over.ok && over.box.list.filter((r) => r.fav).length === FAV);
+  many.slice(FAV + 1).forEach((rec) => { saved = E.cardReplayAdd(saved, rec); });
   const ids = saved.list.map((r) => r.id);
-  check(`取っておくのは${E.CARD_REPLAY_MAX}試合まで(${saved.list.length})`, saved.list.length <= E.CARD_REPLAY_MAX);
-  check('いちばん古い3試合でも、お気に入りは消えない', [0, 1, 2].every((i) => ids.includes(recs[i].rec.id)));
-  check('新しい試合が先頭', saved.list[0].id === recs[recs.length - 1].rec.id);
+  check(`取っておくのは${E.CARD_REPLAY_MAX}試合まで(${saved.list.length})`, saved.list.length === E.CARD_REPLAY_MAX);
+  check('いちばん古い試合でも、お気に入りは消えない', many.slice(0, FAV).every((r) => ids.includes(r.id)));
+  check('新しい試合が先頭', saved.list[0].id === many[many.length - 1].id);
   check(`合わせた大きさが上限以下(${(JSON.stringify(saved).length / 1024).toFixed(1)}KB)`, JSON.stringify(saved).length <= E.CARD_REPLAY_BYTES_MAX);
-  const again = E.cardReplayAdd(saved, recs[recs.length - 1].rec);
+  check('最後の番が記録に入る(一覧の「◯番まで」)', saved.list.every((r) => Number.isInteger(r.turn) && r.turn >= 1));
+  const old = E.cardReplayNormalizeOne({ ...many[0], turn: undefined });
+  check('最後の番の無い前の記録も読める', old && old.turn === null);
+  const again = E.cardReplayAdd(saved, many[many.length - 1]);
   check('同じ試合は2度足さない', again.list.length === saved.list.length);
-  const off = E.cardReplaySetFav(saved, recs[0].rec.id, false);
-  check('お気に入りを外せる', off.ok && !off.box.list.find((r) => r.id === recs[0].rec.id).fav);
+  const off = E.cardReplaySetFav(saved, many[0].id, false);
+  check('お気に入りを外せる', off.ok && !off.box.list.find((r) => r.id === many[0].id).fav);
   // 保存の4つ目のお気に入り(手で書き換えた保存)は、読むときに3つへ減らす
   const four = { v: 1, list: saved.list.map((r) => ({ ...r, fav: true })) };
-  check('読むときもお気に入りは3つまで', E.cardReplayNormalize(four).list.filter((r) => r.fav).length === E.CARD_REPLAY_FAV_MAX);
+  check(`読むときもお気に入りは${E.CARD_REPLAY_FAV_MAX}まで`, E.cardReplayNormalize(four).list.filter((r) => r.fav).length === E.CARD_REPLAY_FAV_MAX);
 }
 
 // ⑤ 番の区切りと一言
@@ -179,11 +183,12 @@ check(`1試合の記録の大きさ(最大 ${(maxBytes / 1024).toFixed(1)}KB・�
     // 途中で投了した試合も(半分の手まで)
     const cut = n % 3 === 0 ? Math.floor(history.length / 2) : history.length;
     n0++;
-    const rec = E.cardReplayFromCpu(db, { id: `c${seed}`, at: 1, myDeck, cpuDeck, seed, first, history: history.slice(0, cut), foe: { name: 'ドラ', who: 'dra' }, outcome: cut < history.length ? 'surrender' : st.winner === 0 ? 'win' : 'lose' });
+    const rec = E.cardReplayFromCpu(db, { id: `c${seed}`, at: 1, myDeck, cpuDeck, seed, first, history: history.slice(0, cut), foe: { name: 'ドラ', who: 'dra' }, level: 'hard', outcome: cut < history.length ? 'surrender' : st.winner === 0 ? 'win' : 'lose' });
     const built = rec && E.cardReplayBuild(db, E.cardReplayNormalizeOne(JSON.parse(JSON.stringify(rec))));
-    if (built && built.stop === null && built.states.length === cut + 1 && built.states.every((s, i) => E.cardReplayPrint(s) === E.cardReplayPrint(states[i])) && rec.foe.who === 'dra' && rec.kind === 'cpu') ok++;
+    if (built && built.stop === null && built.states.length === cut + 1 && built.states.every((s, i) => E.cardReplayPrint(s) === E.cardReplayPrint(states[i])) && rec.foe.who === 'dra' && rec.kind === 'cpu' && rec.level === 'hard'
+      && E.cardReplayNormalizeOne({ ...JSON.parse(JSON.stringify(rec)), level: undefined }).level === null) ok++;
   }
-  check(`助手と対戦の記録も、1手ごとに同じになぞれる(投了で終わった試合も・${ok}/${n0}戦)`, ok === n0 && n0 === 10);
+  check(`助手と対戦の記録も、1手ごとに同じになぞれる・難易度が残る(前の記録は null)(投了で終わった試合も・${ok}/${n0}戦)`, ok === n0 && n0 === 10);
 }
 
 console.log(failed ? `\nNG ${failed} 件` : '\nすべて OK');

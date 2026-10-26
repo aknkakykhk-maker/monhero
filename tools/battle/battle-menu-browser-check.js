@@ -185,7 +185,7 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   await page.getByText('BATTLE MODE').first().waitFor();
   await openDifficultyFromModeSelect();
   await page.getByRole('button', { name:'この難易度で挑戦' }).first().click();
-  await page.getByRole('heading', { name:'勇者モンを選択' }).waitFor();
+  await page.getByRole('heading', { name:'勇者モンをえらぶ' }).waitFor();
   if (exceptions.length) throw new Error(`JavaScript例外: ${exceptions.join(' / ')}`);
 
   console.log('OK: 390x844で難易度画面、例外ゼロ、矢印・スワイプ、全WAVE、戻る、再入場、勇者選択を確認');

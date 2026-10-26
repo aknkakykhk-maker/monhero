@@ -113,6 +113,7 @@ const FORCE_CHECKS = [
   // 保存キー(mh_*)は docs/spec/SAVE_DATA.md の一覧に載せる決まり。本体・データを触ったら必ず確かめる
   // (2026-10-12・新しいキーを一覧に書き忘れて main で落ちた。ファイル名の語では拾えない)
   { re: /^monster-hero\/(src\/parts\/.+\.jsx|data\/.+\.js|index\.html)$|^docs\/spec\/SAVE_DATA\.md$/, checks: ['boot/save-keys-check.js'], why: '保存キーが SAVE_DATA.md の一覧に載っているか' },
+  { re: /^monster-hero\/(sw\.js|src\/parts\/25-asset-cache\.jsx)$|^tools\/(build|stamp-version|stamp-game-build|build-asset-manifest)\.js$|^tools\/boot\/code-prefetch-check\.js$/, checks: ['boot/code-prefetch-check.js'], why: '新しい版を出したら必ず新しい本体が動くか(事前ダウンロードの JS・CSS)' },
   { re: /^(CLAUDE|AGENTS|README)\.md$|^docs\/|^\.claude\/skills\//, checks: ['rules-index-check.js'], why: 'ルールと資料' },
   // 新モード(tactics)の分岐が入っているファイル。ファイル名の語(app・parts)では拾えないので名指しする。
   // 「isTacticsMode で締めたつもり」が既存5モードへ漏れると、遊んでいる人の記録に直に効く
