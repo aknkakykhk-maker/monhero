@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3d3e78afc30090cd
+// generated-sha256: d486730268e05dfa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7046,7 +7046,10 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK,
+  // 2026-10-26 から、色相ルール・埋め込み部位マップで分けていた子も、境目を絵の線へ寄せ直した配信マスクで染める
+  // (tools/image/refine-dye-mask.js。分け方は前と同じ)。配信マスクは下の色相ルール・埋め込み部位マップより優先される
+  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -20908,7 +20911,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 {favoriteIds.has(song.songId)?'♥':'♡'}
               </button>
             </div>
-            <small className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
+            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -22653,6 +22656,11 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const cutInOn=settings.monsterCutIn!==false&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
   // モンスターノーツの層の先作り(試作・2026-10-16)。演奏を始めるときに1回読む
   const monLayersOn=useState(()=>rhythmMonLayersOn())[0];
+  // モンスターノーツのかくつきの犯人さがし(試作・2026-10-27・デバッグ「確認待ちの試作」だけで入る)。iPhone の記録では、叩いた直後に JS の外で1コマ落ちが2つ続く。
+  // 入れた日だけ、1曲の中のモンスターノーツごとに叩いた瞬間の演出を1つずつ止め、止めた物を記録(stats.mon の i.ab)に控える。落ちが消えた回の物が犯人。
+  // 値 '1' … 1回目 跳ね / 2回目 能力名の札 / 3回目 光の輪 / 4回目 何も止めない。値 '2' … 粒の光(と画面全体の光) / 音 / カットイン / 全部。5回目からは何も止めない。
+  // 止めるのは見た目と音だけ。判定・スコア・ライフ・能力の効き目・保存には触らない
+  const monAbSet=useState(()=>{try{const v=typeof localStorage!=='undefined'?localStorage.getItem('mh_rhythm_mon_ab_v1'):null;return v==='1'?['hop','flash','ring','']:v==='2'?['spark','se','cutin','all']:null;}catch{return null;}})[0];
   const cutInElements=useMemo(()=>{
     if(!cutInOn)return null;
     return <div data-rhythm-cutin aria-hidden="true">
@@ -23177,8 +23185,11 @@ if(clearedGesture){
 // ★モンスターノーツかどうかは、演出量のブロックの外で1回だけ出す。
 //   振動はここへまとめる(演出量で強さが変わっていた。振動は専用の設定の管轄)。
 const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);
+// 犯人さがし(monAbSet)で、このモンスターノーツで止める物。monAbOff('hop') が真ならその演出を出さない
+const monAb=monsterHit&&monAbSet?monAbSet[(run.monAbCount=(run.monAbCount||0)+1)-1]||'':'';
+const monAbOff=name=>monAb===name||monAb==='all';
 if(judgment!=='MISS'){
-  if(monsterHit){RHYTHM_NOTE_SE_RUNTIME.playMonster();RHYTHM_FRAME_DIAG.cue('se');}
+  if(monsterHit&&!monAbOff('se')){RHYTHM_NOTE_SE_RUNTIME.playMonster();RHYTHM_FRAME_DIAG.cue('se');}
   // 空中のノーツ(試作)は、ふだんの音に「きらっ」を重ねる(空中のノーツがある譜面だけ)
   if(rhythmNoteSkyHeight(note)>0)RHYTHM_NOTE_SE_RUNTIME.playSky(judgment);
   if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'){
@@ -23204,7 +23215,7 @@ if(judgment!=='MISS'){
     //   いちばん軽い段「最小」(NONE)が素通りし、**「少なめ」より重い光**が出ていた
     //   (踏んだ瞬間に 900ms・幅1.5倍・粒2.1倍の金色の光。ふつうのノーツは340ms)。
     //   ユーザー報告「設定を最小にしても固まるときがある / 踏んだときに起こる何かが原因」。
-    const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF');
+    const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF')&&!monAbOff('spark');
     // フリックを取ったときは、払った向きへ炎の羽を吹き上げる(2026-09-27 に炎の筋、2026-09-28 に炎の羽へ・参考動画)。
     // 終点フリック(ホールド・スライドの最後で払う)も上向きの炎を出す(2026-09-28・ユーザー指示)
     const flickHit=rhythmNoteVisualType(note)==='FLICK'?(rhythmFlickDir(note)||'up'):(note.endFlick?'up':'');
@@ -23212,13 +23223,13 @@ if(judgment!=='MISS'){
     // 空中のノーツ(試作)は、空中の判定ラインの上で空中専用の弾け方にする
     const hitEffect=rhythmSpawnHitEffect(area,{centerRatio:span.center,widthRatio:span.width,judgment,monster:bigMonsterEffect,precise:preciseHit,defer:true,flick:flickHit,finish:rhythmNoteHasBody(note),sky:rhythmNoteSkyHeight(note)>0});
     if(hitEffect)restarts.push(hitEffect);
-    if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
+    if(monsterHit&&monsterEffect==='NORMAL'&&!monAbOff('spark')&&screenFlashRef.current)restarts.push({el:screenFlashRef.current,attr:'rhythmFlash'});
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
     // ★いちばん軽い段(NONE)では、このかたまりを丸ごと飛ばす
     //   (2026-09-13・ユーザー指摘「マスモンの表示より踏んだときの挙動だと思うんだけど」)。
     //   跳ねないのに phase を書き換えてアニメを切り替え、700msのタイマーまで張っていた。
     //   踏んだその瞬間にスタイルの計算が走るので、跳ねを出さない段では何もしないのが正しい。
-    if(monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'NONE')){
+    if(monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'NONE')&&!monAbOff('hop')){
       const slot=rhythmNoteMonsterSlot(note),el=slot?sideMonsterRefs.current[slot-1]:null;
       if(el){
         // 「少なめ」では跳ねない(跳ねはそのマスモンの周りを描き直すため)
@@ -23295,7 +23306,7 @@ if(stockRevive.revived){run.life=stockRevive.life;run.abilities=stockRevive.stat
 // モンスターノーツはGREAT以上で能力が出る(§3.4)。判定窓は専用に甘くしない
 const monster=monsterForNote(note);
 // モンスターノーツの前後のコマを実機の記録に残す(2026-10-16)。カットインの絵がもう用意できていたか(dec)も控える
-if(monster){const ci=cutInOn?cutInRefs.current[rhythmNoteMonsterSlot(note)-1]:null,img=ci&&ci.querySelector('img');RHYTHM_FRAME_DIAG.mark(songTimeMs,judgment,{ly:monLayersOn?1:0,ci:cutInOn?1:0,dec:img?(img.complete&&img.naturalWidth>0?1:0):-1,lw:settings.lightweightMode?1:0,fx:String(settings.effectAmount||'').slice(0,3)});}
+if(monster){const ci=cutInOn?cutInRefs.current[rhythmNoteMonsterSlot(note)-1]:null,img=ci&&ci.querySelector('img');RHYTHM_FRAME_DIAG.mark(songTimeMs,judgment,{ly:monLayersOn?1:0,ci:cutInOn?1:0,dec:img?(img.complete&&img.naturalWidth>0?1:0):-1,lw:settings.lightweightMode?1:0,fx:String(settings.effectAmount||'').slice(0,3),...(monAbSet?{ab:monAb||'-'}:{})});}
 if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
   const activated=rhythmActivateMonsterAbility({ability:monster.ability,state:run.abilities,life:run.life,songTimeMs});
   run.abilities=activated.state;run.life=activated.life;
@@ -23307,16 +23318,16 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 判定・スコア・ライフには一切関係しない、見た目だけの控え。
     const slot=rhythmNoteMonsterSlot(note);
     run.abilityOwners=run.abilityOwners||{};
-    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI'||monster.ability.id==='ITAZURA')run.abilityOwners[monster.ability.id]=slot;
-    if(monster.ability.id==='KONJO'&&Number(activated.state?.konjoStock)>0)run.abilityOwners.KONJO=slot;
+    if(!monAbOff('ring')){if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI'||monster.ability.id==='ITAZURA')run.abilityOwners[monster.ability.id]=slot;
+    if(monster.ability.id==='KONJO'&&Number(activated.state?.konjoStock)>0)run.abilityOwners.KONJO=slot;}
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
-    run.abilityFlashSlot=slot;
-    run.abilityFlashUntilMs=songTimeMs+RHYTHM_SIDE_MONSTER_FLASH_MS;
+    if(!monAbOff('ring')){run.abilityFlashSlot=slot;
+    run.abilityFlashUntilMs=songTimeMs+RHYTHM_SIDE_MONSTER_FLASH_MS;}
     // 能力が出た回数をマスモンごとに数える(リザルトに出す子を、ノーツを取れた子から選ぶため。見た目だけ・保存しない)
     run.abilityCounts=run.abilityCounts||[];
     if(slot>=1)run.abilityCounts[slot-1]=(Number(run.abilityCounts[slot-1])||0)+1;
     // カットインを1回だけ走らせる(見た目だけ。判定・スコア・ライフには触らない)
-    if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn){RHYTHM_FRAME_DIAG.cue('cutin');rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}}
+    if(cutInOn&&!monAbOff('cutin')){const cutIn=cutInRefs.current[slot-1];if(cutIn){RHYTHM_FRAME_DIAG.cue('cutin');rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}}
   }
 }
 const calculatedScore=run.tickRules?tickScoreOf(run):Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));if(!run.lifeDepleted)run.score=calculatedScore-run.scoreOffset;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}
@@ -23343,7 +23354,7 @@ if(lifeDelta<0){
 if(run.life===0&&lifeBefore>0)setLifeDownCount(count=>count+1);
 // ★能力名の大きな表示は、いちばん軽い段(NONE)では出さない(2026-09-13)。
 //   効いていることは左上のバッジと音・振動で分かる。能力そのものは当然かかる
-const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monsterNoteEffect,'NONE');
+const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monsterNoteEffect,'NONE')&&!monAbOff('flash');
 const score=run.lifeDepleted?run.lockedScore:run.score,lastDeltaMs=judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // 判定ごとの表示(スコアの札・コンボ数・判定の文字・ライフの数字)は hud を書き換えるだけ(その4つの部品だけが作り直される)。
 // 演奏画面全体(setView)は、コンボの段・100のくぎり・ライフの状態が変わったときと、能力が出たときだけ作り直す
@@ -53432,6 +53443,8 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   M3: 'これでどーだ！',
   D9: 'みゅあが攻めてきたぞ。相手の番でも、回避か防御のカードで守れるんだ',
   D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われた子のぶん(か、誰でも使えるもの)だけ使えるからな',
+  // D10b … ステップを選んだあと、「これで守る」で決める前(2026-10-26 巡回 → 社長が文をOK。84 が D10 のかわりに出す)
+  D10b: 'よし、それでいい。最後に光ってる「これで守る」を押して決めな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
   D12: '今度はこっちの番。ガッツが2つあるから「パンチ」が出せる',
@@ -53777,7 +53790,8 @@ const cardPickWeighted = (items, weightOf, rand) => {
   return items[items.length - 1];
 };
 
-// 1パック開ける。返す: { cards:[{ no, slot:'tech'|'mon', rarity, dup, point }], collection, pity, point(だぶりのビートP), hit(キラ以上が出たか) }
+// 1パック開ける。返す: { cards:[{ no, slot:'tech'|'mon', rarity, dup, point, fresh }], collection, pity, point(だぶりのビートP), hit(キラ以上が出たか) }
+// fresh … その種類をはじめて手に入れた1枚(開ける前に持っていない・同じパックの前の札でもない)。まとめの「NEW」に使う(保存しない。2026-10-26 巡回)
 const cardOpenPack = (db, packId, { collection, pity }, rand) => {
   const pack = cardPackOf(packId);
   if (!pack) return null;
@@ -53789,8 +53803,9 @@ const cardOpenPack = (db, packId, { collection, pity }, rand) => {
   for (let i = 0; i < pack.tech && techPool.length; i++) {
     const no = techPool[Math.floor(rand() * techPool.length) % techPool.length];
     const dup = (col[no] || 0) >= CARD_TECH_KEEP_MAX;
+    const fresh = !((col[no] || 0) > 0);
     if (dup) point += CARD_DUP_POINT.tech; else col[no] = (col[no] || 0) + 1;
-    cards.push({ no, slot: 'tech', rarity: 'normal', dup, point: dup ? CARD_DUP_POINT.tech : 0 });
+    cards.push({ no, slot: 'tech', rarity: 'normal', dup, point: dup ? CARD_DUP_POINT.tech : 0, fresh });
   }
   let hit = false;
   for (let i = 0; i < pack.mon; i++) {
@@ -53801,9 +53816,10 @@ const cardOpenPack = (db, packId, { collection, pity }, rand) => {
     const no = pool[Math.floor(rand() * pool.length) % pool.length];
     const dup = (col[no] || 0) >= 1;
     const dupPoint = CARD_DUP_POINT[rarity];
+    const fresh = !dup;
     if (dup) point += dupPoint; else col[no] = 1;
     if (rarity !== 'normal') hit = true;
-    cards.push({ no, slot: 'mon', rarity, dup, point: dup ? dupPoint : 0 });
+    cards.push({ no, slot: 'mon', rarity, dup, point: dup ? dupPoint : 0, fresh });
   }
   if (pack.pity) nextPity[pack.id] = hit ? 0 : (nextPity[pack.id] || 0) + 1;
   return { cards, collection: col, pity: nextPity, point, hit };
@@ -55322,7 +55338,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             <div className={wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'}>
             <div data-card-tutor={tutStage.id} className={`${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`}>
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
-              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
+              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay === 'D10' && st.pending && st.pending.evaded ? 'D10b' : tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
               {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
             </div>
             </div>
@@ -55461,7 +55477,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
       {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
       {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
-      {mode === 'guard' && !guardOpts.length && (
+      {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
+      {mode === 'guard' && tutorial && st.pending && st.pending.evaded && <div data-card-tutor-guard-done className="mx-auto mb-1 shrink-0 rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap('「これで守る」を押してください')}</div>}
+      {mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && (
         <div data-card-guard-why className={`mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`} style={tiny ? undefined : JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
@@ -56436,7 +56454,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           ) : null; })()}
           <div className={SCREEN_PANEL_CLASS}>
             {result.done && result.reward > 0 && <div className="text-[15px] font-black text-amber-200">ビートP {result.reward}</div>}
-            <div className="mt-1 text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(result.done ? '引く・ガッツ・守り・攻撃・山札切れの5つを覚えました。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300">保存できませんでした</div>}
           </div>
@@ -57348,7 +57366,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
                     </div>
                     {on && rare && <div aria-hidden="true" className={`mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`}/>}
                     {on && c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
-                    {on && !c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                    {/* NEW は、その種類をはじめて手に入れた1枚だけ(前から持っている・同じパックの2枚目には付けない。89 の fresh。2026-10-26 巡回)。fresh が無い札(見本)は前のまま */}
+                    {on && !c.dup && (c.fresh === undefined || c.fresh) && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
                     {on && rare && <span className={`absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
                   </button>
                   <CardNameFit name={on ? name : '\u00a0'} className="mt-0.5 font-bold leading-tight text-slate-100"/>
@@ -57359,7 +57378,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
         )}
         {phase === 'open' && allOpen && (
           <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
-            {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
+            {/* 「だぶった」だと、同じカードが2枚出たのに「ありません」と読めた(2026-10-26 巡回 → 社長が文をOK) */}
+            {packPoint > 0 ? <>持てる数をこえたカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'ビートPに変わったカードはありません'}
             {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
           </div>
         )}
@@ -57591,13 +57611,18 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
 // 送ってよいのは、本当に対戦して勝った記録だけ(cardRecordAfter の rankable。公開前・デバッグの入口からの対戦は数えない・送らない)。
 // デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)
 const CARD_RANK_TABLE = 'card_battle_ranks';
+// 2026-10-26 社長「ブリーダーIDで数える形に直す」: これからは一人ひとりの ID(breeder_id)で上書きする新しい表へ書く。
+// 古い表(名前で1行)は消さず書き換えず、まだ新しい表に来ていない人の行として読むだけ。SQL: docs/sql/card-battle-ranks/CARD_BATTLE_RANKS_V2_APPLY.sql
+// 新しい表がまだ無い環境では、今までどおり古い表へ書く
+const CARD_RANK_TABLE_V2 = 'card_battle_ranks_v2';
 const CARD_RANK_SELECT = 'user_name,breeder_id,icon,profile_frame,week_key,'
   + CARD_LEVEL_ORDER.map((lv) => `wins_${lv},week_wins_${lv}`).join(',') + ',best_streak,current_streak,dex_count,dex_total,updated_at';
 const CARD_RANK_FETCH_LIMIT = 150;
 const CARD_RANK_SHOW_LIMIT = 50;
 const CARD_RANK_CACHE_MS = 60 * 1000;
-let _cardRanksUnavailable = false;
-const cardRanksUnavailable = () => _cardRanksUnavailable;
+let _cardRanksUnavailable = false;   // 古い表(card_battle_ranks)が無い
+let _cardRanksV2Unavailable = false; // 新しい表(card_battle_ranks_v2)が無い
+const cardRanksUnavailable = () => _cardRanksUnavailable && _cardRanksV2Unavailable;
 const cardRankCache = new Map();
 
 // カード図鑑の集めた種類(図鑑の「集めた種類」と同じ数え方: 全モンスター＋技・ブリーダー)
@@ -57625,16 +57650,18 @@ const cardRankEntryFromRow = (row) => {
     updatedAt: String(row.updated_at || ''),
   };
 };
-// 改名で同じ人が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)
+// 改名で同じ人が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)。
+// 新しい表の行(e.v2)は、古い表の同じ人の行より先に選ぶ。ID の無い古い行は、同じ名前の人が新しい表にいれば出さない(IDができる前の同じ人)
 const cardRankMerge = (entries) => {
   const byKey = new Map();
-  (Array.isArray(entries) ? entries : []).forEach((e) => {
-    if (!e) return;
+  const list = (Array.isArray(entries) ? entries : []).filter(Boolean);
+  list.forEach((e) => {
     const key = e.breederId || `name:${e.userName}`;
     const cur = byKey.get(key);
-    if (!cur || e.updatedAt > cur.updatedAt) byKey.set(key, e);
+    if (!cur || (e.v2 && !cur.v2) || (!!e.v2 === !!cur.v2 && e.updatedAt > cur.updatedAt)) byKey.set(key, e);
   });
-  return [...byKey.values()];
+  const v2Names = new Set(list.filter((e) => e.v2).map((e) => e.userName));
+  return [...byKey.values()].filter((e) => e.v2 || e.breederId || !v2Names.has(e.userName));
 };
 // 何で並べるか。kind: 'wins'(period: 'week' | 'total', level)/ 'streak' / 'dex'
 const cardRankColumn = ({ kind, period, level }) => (kind === 'streak' ? 'best_streak' : kind === 'dex' ? 'dex_count'
@@ -57642,12 +57669,11 @@ const cardRankColumn = ({ kind, period, level }) => (kind === 'streak' ? 'best_s
 const cardRankValue = (e, { kind, period, level }) => (kind === 'streak' ? e.bestStreak : kind === 'dex' ? e.dexCount
   : (period === 'week' ? e.weekWins : e.wins)[level] || 0);
 
-// 表から上位を取る。表が無ければ null
-const sbFetchCardRanks = async (q, now = Date.now()) => {
-  if (_cardRanksUnavailable) return null;
+// 1つの表から上位を取る。表が無ければ null(以後その表へはアクセスしない)
+const sbFetchCardRankRows = async (table, q, now) => {
   const column = cardRankColumn(q);
   const week = q.kind === 'wins' && q.period === 'week' ? `&week_key=eq.${cardWeekKeyJst(now)}` : '';
-  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}`
+  const url = `${SUPABASE_URL}/rest/v1/${table}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}`
     + `&order=${column}.desc.nullslast,updated_at.asc&limit=${CARD_RANK_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -57655,21 +57681,48 @@ const sbFetchCardRanks = async (q, now = Date.now()) => {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
-      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return null; }
-      throw new Error(`${CARD_RANK_TABLE} ${res.status}: ${body || res.statusText}`);
+      if (_isMissingTableError(res.status, body)) return null;
+      throw new Error(`${table} ${res.status}: ${body || res.statusText}`);
     }
     const rows = JSON.parse(body || '[]');
-    const entries = cardRankMerge((Array.isArray(rows) ? rows : []).map(cardRankEntryFromRow));
-    entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
-    return entries;
+    return Array.isArray(rows) ? rows : [];
   } finally {
     clearTimeout(timer);
   }
 };
-// 上書き保存。同じ人(同じ名前)は何度書いても1行のまま、最新の値になる
+// 表から上位を取る(新しい表と古い表を合わせて、同じ人は1行に)。どちらの表も無ければ null
+const sbFetchCardRanks = async (q, now = Date.now()) => {
+  if (cardRanksUnavailable()) return null;
+  const [v2Rows, oldRows] = await Promise.all([
+    _cardRanksV2Unavailable ? Promise.resolve(null) : sbFetchCardRankRows(CARD_RANK_TABLE_V2, q, now),
+    _cardRanksUnavailable ? Promise.resolve(null) : sbFetchCardRankRows(CARD_RANK_TABLE, q, now),
+  ]);
+  if (v2Rows === null) _cardRanksV2Unavailable = true;
+  if (oldRows === null) _cardRanksUnavailable = true;
+  if (v2Rows === null && oldRows === null) return null;
+  const entries = cardRankMerge([
+    ...(v2Rows || []).map((r) => { const e = cardRankEntryFromRow(r); return e ? { ...e, v2: true } : null; }),
+    ...(oldRows || []).map(cardRankEntryFromRow),
+  ]);
+  entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
+  return entries;
+};
+// 上書き保存。ID があれば新しい表へ ID で(同じ人は何度書いても1行)。ID が無い・新しい表が無いときは、今までどおり古い表へ名前で
 const sbUpsertCardRank = async (row) => {
-  if (_cardRanksUnavailable || !row) return false;
-  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?on_conflict=user_name`;
+  if (!row) return false;
+  if (typeof row.breeder_id === 'string' && row.breeder_id && !_cardRanksV2Unavailable) {
+    const r = await sbUpsertCardRankTo(CARD_RANK_TABLE_V2, 'breeder_id', row);
+    if (r !== null) return r;
+    _cardRanksV2Unavailable = true; // 新しい表がまだ無い(SQL を流す前)。古い表へ書く
+  }
+  if (_cardRanksUnavailable) return false;
+  const r = await sbUpsertCardRankTo(CARD_RANK_TABLE, 'user_name', row);
+  if (r === null) { _cardRanksUnavailable = true; return false; }
+  return r;
+};
+// 1つの表へ上書き。表が無ければ null
+const sbUpsertCardRankTo = async (table, conflict, row) => {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflict}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -57680,8 +57733,8 @@ const sbUpsertCardRank = async (row) => {
     });
     if (!res.ok) {
       const body = await res.text();
-      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return false; }
-      throw new Error(`${CARD_RANK_TABLE} upsert ${res.status}: ${body || res.statusText}`);
+      if (_isMissingTableError(res.status, body)) return null;
+      throw new Error(`${table} upsert ${res.status}: ${body || res.statusText}`);
     }
     return true;
   } finally {
@@ -57691,7 +57744,7 @@ const sbUpsertCardRank = async (row) => {
 // 記録から1行を作って送る(前に送った中身と同じなら送らない)。呼ぶのは「ランキングに数えてよい対戦」のあとだけ
 const cardRankSync = async (db, { record, collection, profile }) => {
   try {
-    if (_cardRanksUnavailable || !profile) return false;
+    if (cardRanksUnavailable() || !profile) return false;
     const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
     const dex = cardDexCounts(db, collection);
     const row = cardRankRow(record, { dexCount: dex.count, dexTotal: dex.total, userName: profile.name, icon: profile.icon, profileFrame: profile.frame, breederId, now: Date.now() });
@@ -57709,7 +57762,7 @@ const cardRankSync = async (db, { record, collection, profile }) => {
 // ---- プロフィール・フレンドの MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」) ----
 // 中身: 助手と対戦の強さごとの勝ち数・いちばん長い連勝・マルチ対戦の勝ち負けと強さの点数・カード図鑑で集めた数。
 // 自分: 端末の保存(mh_card_record_v1・mh_card_collection_v1)を読むだけ(書かない)。強さの点数は表から読む
-// フレンド: ランキングの表 card_battle_ranks・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
+// フレンド: ランキングの表 card_battle_ranks_v2(無ければ card_battle_ranks)・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
 const cardStatsGet = async (path) => {
   if (typeof SUPABASE_URL === 'undefined') return null;
   const controller = new AbortController();
@@ -57751,7 +57804,9 @@ const cardStatsOfSelf = async () => {
 // フレンドの戦績(表から)。表に行が無ければ null
 const cardStatsOfFriend = async (breederId) => {
   if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
-  const rows = await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
+  // 新しい表(ID で1行)を先に見て、まだ移っていない人は古い表の行を読む(2026-10-26 ブリーダーIDで数える形)
+  const v2 = _cardRanksV2Unavailable ? null : await cardStatsGet(`${CARD_RANK_TABLE_V2}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&limit=1`);
+  const rows = v2 && v2.length ? v2 : await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
   const e = rows && rows[0] ? cardRankEntryFromRow(rows[0]) : null;
   const pvp = await sbFetchCardPvpRatingOf(breederId);
   if (!e && !pvp) return null;
@@ -59514,6 +59569,16 @@ const CardReplayList = ({ onOpen, onBack }) => {
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
+  // 2026-10-27 モンスターノーツのかくつきの犯人さがし。1曲の中のモンスターノーツごとに演出を1つずつ止め、止めた物を記録(stats.mon の i.ab)に控える。
+  // 同じキーの値 '1' と '2'。どちらも見た目と音だけで、判定・スコア・ライフ・能力の効き目は変わらない
+  { id: 'rhythm_mon_ab1', added: '2026-10-27', area: 'モンヒロビート', key: 'mh_rhythm_mon_ab_v1', on: '1',
+    title: '🎵 モンスターノーツのかくつき調べ(1)',
+    note: 'モンスターノーツを取ったときの演出を、1回目は跳ね・2回目は能力名・3回目は光の輪だけ出さず、4回目はいつもどおりにします。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+    when: '次の演奏から' },
+  { id: 'rhythm_mon_ab2', added: '2026-10-27', area: 'モンヒロビート', key: 'mh_rhythm_mon_ab_v1', on: '2',
+    title: '🎵 モンスターノーツのかくつき調べ(2)',
+    note: 'モンスターノーツを取ったときの演出を、1回目は金色の光・2回目は音・3回目はカットインだけ出さず、4回目は全部出しません。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+    when: '次の演奏から' },
   // 2026-10-16 社長「モンスターノーツでかくつくの直ってない」。見た目は変わらない。入と切で同じ曲を1回ずつ遊ぶと、記録(stats.mon)で比べられる
   { id: 'rhythm_mon_layers', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_mon_layers_v1', on: 'on',
     title: '🎵 モンスターノーツのかくつきの手当て',
