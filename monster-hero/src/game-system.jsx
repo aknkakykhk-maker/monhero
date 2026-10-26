@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c5eab57f67b1a540
+// generated-sha256: 9d71898a56fa3af9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -385,8 +385,8 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
-    ['🔓','種族ごとに難易度を解放していく'],
-    ['🏅','記録は種族ごとに別々に残る'],
+    ['🔓','種族別に難易度を解放していく'],
+    ['🏅','記録は種族別に残る'],
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'],
@@ -446,8 +446,8 @@ const TACTICS_SPECIES_MODE = Object.freeze({
   tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
-    ['🔓','種族ごとに難易度を解放していく'],
-    ['🏅','記録は種族ごとに別々に残る'],
+    ['🔓','種族別に難易度を解放していく'],
+    ['🏅','記録は種族別に残る'],
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。クラシックバトルの種族チャレンジと同じしばりで、戦い方だけがタクティクスバトルになります。'],
@@ -838,7 +838,7 @@ const BATTLE_SYSTEMS = Object.freeze([
     highlights: Object.freeze([
       Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']),
       Object.freeze(['🃏', 'カードと間合いを選んで戦う']),
-      Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる']),
+      Object.freeze(['📈', 'WAVEのたびに強化を選んで積み上げる']),
     ]),
     note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
     points: Object.freeze([
@@ -24743,7 +24743,7 @@ const DebugScreenHead = ({ title, note = '', saves = false, onBack, backLabel = 
     <button aria-label={backLabel} onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
     <div className="min-w-0">
       <h2 className="truncate text-sm font-black text-white">{title}</h2>
-      {note && <small className="block truncate text-[9px] font-bold text-slate-400">{note}</small>}
+      {note && <small className="block text-[9px] font-bold leading-snug text-slate-400 [overflow-wrap:anywhere]">{note}</small>}
     </div>
     <span data-debug-saves={saves ? 'yes' : 'no'}
       className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black ${saves ? 'bg-rose-700 text-white' : 'border border-white/15 bg-slate-900 text-slate-300'}`}>
@@ -39081,7 +39081,8 @@ function PickSlotScreen({
           <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
             <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
-            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?'この距離で':'合流後'} {formatAptPct(after)}</span>
+            {/* 従来のモードは「合流すると +◯%」(この子が足すぶん)。合流後の合計は勇者モンの詳細の「くわしく」に出す(2026-10-27 社長OK) */}
+            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?`この距離で ${formatAptPct(after)}`:`合流すると ${aptGradeToPct(grade)===0?'+':''}${formatAptPct(aptGradeToPct(grade))}`}</span>
           </>):(<>
             {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="relative w-10 h-10 object-contain drop-shadow-md"/>:<span className="relative text-2xl drop-shadow-md">{s.emoji}</span>}
             <span className="relative max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>
@@ -44344,7 +44345,7 @@ function MonsterCheckDebugScreen({
   if (!mon) {
     return (
       <main data-monster-check-debug data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-        <header className="flex items-center gap-2"><button aria-label="デバッグ設定へ戻る" onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-lg font-black italic text-emerald-300 uppercase tracking-widest">新モンスター確認</h2></header>
+        <DebugScreenHead title="新モンスター確認" note="全種を所持・解放に関係なく表示" onBack={onBack}/>
         <div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><p className="p-6 text-center text-[11px] font-bold text-slate-400">ALL_PLAYER_MONSTERS が読み込めていません。</p></div>
       </main>
     );
@@ -44395,10 +44396,7 @@ function MonsterCheckDebugScreen({
     const needsFix = monsters.filter(entry => monsterCheckNgCount(entry) > 0).length;
     return (
       <div data-monster-check-debug data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
-        <div className="flex items-center gap-2 mb-2 shrink-0">
-          <button onClick={onBack} className="p-3 text-slate-400 active:scale-90" aria-label="デバッグ設定へ戻る"><ArrowLeft size={20}/></button>
-          <h2 className="text-lg font-black italic text-emerald-300 uppercase tracking-widest">新モンスター確認</h2>
-        </div>
+        <DebugScreenHead title="新モンスター確認" note="全種を所持・解放に関係なく表示" onBack={onBack}/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/70 to-slate-950 px-3 py-2 flex items-center justify-between gap-2">
           <span className="text-[9px] font-black text-emerald-300 uppercase tracking-widest shrink-0">確認できる種</span>
           <span className="text-[15px] font-mono font-black text-emerald-100 tabular-nums">{monsters.length}<span className="text-slate-400 text-[10px]"> 種（所持・解放に関係なく全部）</span></span>
@@ -49879,7 +49877,9 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
     : !isOpenTier ? '前の段階を倒すと開きます' : closedTier ? 'この段階は倒されました(次の段階へ)' : remaining <= 0 ? '今日の挑戦回数がありません' : 'この段階に挑戦する';
 
   return (
-    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-screen>
+    <div className={`${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-raid-jack-screen>
+      {/* 横向きの背の低い画面(844×390 など)では、上の札だけで高さを使い切り、一覧が0になって挑戦のボタンが画面の下の外に出ていた
+          (送ることもできず挑戦できない。ダメダシ見回り 10/26 raid #1)。その画面だけ、画面ごと下へ送れる形にする */}
       <ScreenHead title="カボチャの大王ジャック" icon="🎃" accent="text-orange-200" onBack={onBack}
         note={forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'} />
       {guideVisible && (
@@ -49909,7 +49909,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
       {message && <div className="mb-2 shrink-0 text-center text-[11px] font-black text-amber-200" role="status">{message}</div>}
       {totals === null && <div className="mb-2 shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/30 p-2 text-center text-[10px] text-amber-100">サーバーを準備中です。みんなの記録は少し待ってから見られます(戦った記録はあとで自動で送られます)</div>}
 
-      <div className={`${SCREEN_LIST_CLASS} space-y-2`}>
+      <div className={`${SCREEN_LIST_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:flex-none [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible space-y-2`}>
         {/* 初めて読み込むあいだは、段階もライフも分からないので一覧を出さない(出すと男爵・満タンから本当の姿へ切り替わって見える) */}
         {tab === 'a' && totals === undefined && <div data-raid-jack-loading className="py-6 text-center text-[11px] text-slate-300">読み込み中…</div>}
         {!(tab === 'a' && totals === undefined) && tiers.map((t, i) => {
@@ -51578,7 +51578,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach((e) => {
-    if (e.t === 'draw') { for (let i = 0; i < e.n; i++) { if (!me.deck.length) break; me.hand.push(me.deck.pop()); } cardLog(st, `${me.name}は${e.n}枚引いた`); }
+    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); } // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
     if (e.t === 'peekHand') { cardEvent(st, { t: 'peek', p, hand: opp.hand.slice() }); cardLog(st, `${me.name}は相手の手札を見た`); }
     if (e.t === 'discardOpp') { st.pendingDiscard = { p: cardOther(p), n: Math.min(e.n, opp.hand.length) }; if (!st.pendingDiscard.n) st.pendingDiscard = null; }
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
@@ -54763,6 +54763,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [turnBanner, setTurnBanner] = useState(null);
   const [bigCard, setBigCard] = useState(null);
   const [turnSummary, setTurnSummary] = useState(null);
+  // まとめは、まず小さな1行(まんなかの下)で知らせ、押したら開く(毎回まんなかに大きく開くと、相手のライフに重なってテンポも落ちた。2026-10-26 カゲあつくんの通しの点検)
+  const [sumOpen, setSumOpen] = useState(false);
+  useEffect(() => { setSumOpen(false); }, [turnSummary && turnSummary.key]);
   const [logSheet, setLogSheet] = useState(false);
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
@@ -55081,10 +55084,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   手札を運び始めたとき(運んだ先にまとめが重なる)と、しばらくたったときも閉じる
   useEffect(() => { if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null); }, [sel, picks.length, drag]);
   useEffect(() => {
-    if (!turnSummary) return undefined;
+    if (!turnSummary || sumOpen) return undefined;
     const t = setTimeout(() => setTurnSummary((cur) => (cur && cur.key === turnSummary.key ? null : cur)), Math.max(3500, turnSummary.lines.length * 1200));
     return () => clearTimeout(t);
-  }, [turnSummary && turnSummary.key]);
+  }, [turnSummary && turnSummary.key, sumOpen]);
 
   // マルチ対戦: 届いた相手の手を当てる・相手の捨て札の並びを本物にする・相手の投了や抜けたで終える(91 の CARD_PVP)
   const stRef = useRef(st);
@@ -55568,7 +55571,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               : pvp ? <CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/> : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
-        {action && stageFit < 3 && !turnSummary && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
+        {action && stageFit < 3 && !(turnSummary && sumOpen) && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
           <div key={action.key} data-card-action data-card-action-side={action.side} className={`relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
             {/* 案A: どちらが使った技か(相手=赤・自分=金) */}
             <span data-card-fit className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? '相手' : '自分'}</span>
@@ -55583,6 +55586,13 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             className="relative z-[1] flex max-w-full items-center gap-1.5 rounded-xl border-2 border-emerald-300/80 bg-emerald-950/80 px-2 py-0.5 text-left active:scale-[.98]">
             <span className="shrink-0 whitespace-nowrap rounded-md bg-emerald-400 px-1 py-0.5 text-[10px] font-black text-emerald-950">全体</span>
             <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
+          </button>
+        )}
+        {/* 案C: 相手の番のまとめの1行。押すと開く(開いた窓は下の data-card-turn-summary) */}
+        {turnSummary && !sumOpen && !bigCard && (
+          <button type="button" key={turnSummary.key} data-card-turn-summary-chip onClick={() => { Audio_.fgSe.tap(); setSumOpen(true); }}
+            className="absolute bottom-1 left-1/2 z-[7] flex max-w-[92%] -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-rose-300/70 bg-slate-950/90 px-2.5 py-0.5 text-[11px] font-black text-rose-100 shadow active:scale-95">
+            <span className="min-w-0 truncate">{`${who.name}のターンにしたこと(${turnSummary.lines.length})`}</span><span className="shrink-0 text-rose-300">▸ 見る</span>
           </button>
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
@@ -55717,7 +55727,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             style={{ fontSize: 'clamp(26px, 9vw, 44px)', ...JA_LABEL_STYLE }}>{turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`}</button>
         </div>
       )}
-      {turnSummary && !bigCard && (
+      {turnSummary && sumOpen && !bigCard && (
         <button type="button" key={turnSummary.key} data-card-turn-summary onClick={() => setTurnSummary(null)}
           // 横の画面は、左の盤のまんなかへ小さく出す(右の手札にかからない。もとは盤の上の段と案内に大きく重なった。QA 2)
           className={`mh-card-big absolute z-[54] overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 text-left shadow-2xl ${wide ? 'left-2 top-[34%] max-h-[42%] p-2' : 'inset-x-3 top-[18%] mx-auto max-h-[56%] max-w-md p-3'}`}
@@ -56542,7 +56552,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <CardAssistantArt src={assistantFullImage(a, 'wink')} alt={a.name} className="w-[42%]" style={{ height: 'min(150px, max(17vh, 28vmin))' }}/>
               <div className="min-w-0 flex-1 pb-2">
                 <div className="text-[11px] font-bold text-slate-400">{a.tagline}</div>
-                <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? line.text : ''}</div>
+                <div className="mt-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{line ? cardJaWrap(line.text) : ''}</div>
               </div>
             </div>
           )}
@@ -56848,7 +56858,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   // ---- ランキング ----
   if (view === 'ranking') {
-    return <CardRankingBoard onBack={() => setView('top')} renderBreederIcon={rank && rank.renderBreederIcon} selfName={(rank && rank.profile && rank.profile.name) || ''} record={save.record} dex={cardDexCounts(db, save.collection)} sendOn={!!(rank && rank.send) && !debug}/>;
+    return <CardRankingBoard onBack={() => setView('top')} renderBreederIcon={rank && rank.renderBreederIcon} selfName={(rank && rank.profile && rank.profile.name) || ''} record={save.record} dex={cardDexCounts(db, save.collection)} sendOn={!!(rank && rank.send) && !debug}
+      syncArgs={rank && rank.profile ? { db, record: save.record, collection: save.collection, profile: rank.profile } : null}/>;
   }
 
   // ---- トップ(モンヒロビートのモードえらび・モンヒロバトルの入口と同じ作り。社長 台帳 #3513) ----
@@ -57172,7 +57183,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           <div className="w-full max-w-[420px] rounded-2xl border border-white/15 bg-slate-900 p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-2">
               {advisor.face && <img src={advisor.face} alt="" className="h-12 w-12 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: advisor.accent }}/>}
-              <div data-card-deck-ask-text className="min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1.5 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: advisor.accent, ...JA_WRAP_STYLE }}>{ask.busy ? 'うーん、どうしようかな…' : ask.text}</div>
+              <div data-card-deck-ask-text className="min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1.5 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: advisor.accent, ...JA_WRAP_STYLE }}>{cardJaWrap(ask.busy ? 'うーん、どうしようかな…' : ask.text)}</div>
             </div>
             {!ask.busy && ask.picks.length > 0 && (
               <div className="mt-2 space-y-1">
@@ -57920,6 +57931,46 @@ const cardRankSync = async (db, { record, collection, profile }) => {
   }
 };
 
+// 同じ数は同じ順位(5・5・3 → 1位・1位・3位)。entries は多い順に並んでいる(2026-10-26 社長「全部入れる」の改善)
+const cardRankPlaces = (entries, valueOf) => {
+  let place = 0;
+  let prev = null;
+  return entries.map((e, i) => { const v = valueOf(e); if (prev === null || v !== prev) { place = i + 1; prev = v; } return place; });
+};
+// 自分より多い人(自分を除く)を、表から名前とIDだけ読んで数える。上位に入っていないときの順位に使う。
+// 新しい表と古い表を合わせ、同じ人(同じID・IDが無ければ同じ名前)は1人と数える。読めた数が上限なら capped
+const CARD_RANK_COUNT_LIMIT = 1000;
+const sbCardRankAbove = async (q, value, selfId, now = Date.now()) => {
+  const column = cardRankColumn(q);
+  const week = q.kind === 'wins' && q.period === 'week' ? `&week_key=eq.${cardWeekKeyJst(now)}` : '';
+  const keys = new Set();
+  let capped = false;
+  let any = false;
+  for (const [table, off] of [[CARD_RANK_TABLE_V2, _cardRanksV2Unavailable], [CARD_RANK_TABLE, _cardRanksUnavailable]]) {
+    if (off) continue;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=breeder_id,user_name&${column}=gt.${Math.max(0, Math.floor(value))}${week}&limit=${CARD_RANK_COUNT_LIMIT}`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+      const body = await res.text();
+      if (!res.ok) { if (_isMissingTableError(res.status, body)) continue; throw new Error(`${table} ${res.status}`); }
+      const rows = JSON.parse(body || '[]');
+      if (!Array.isArray(rows)) continue;
+      any = true;
+      if (rows.length >= CARD_RANK_COUNT_LIMIT) capped = true;
+      rows.forEach((r) => { const id = r && typeof r.breeder_id === 'string' && r.breeder_id ? r.breeder_id : ''; if (id && id === selfId) return; keys.add(id || `name:${r && r.user_name}`); });
+    } finally { clearTimeout(timer); }
+  }
+  return any ? { above: keys.size, capped } : null;
+};
+// いまの記録から作る行が、前に送った中身と違えば「まだ送れていない」(週が変わった・パックで図鑑が増えた・送るのに失敗した など)
+const cardRankPending = async (db, { record, collection, profile }) => {
+  if (cardRanksUnavailable() || !profile) return false;
+  const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+  const dex = cardDexCounts(db, collection);
+  const row = cardRankRow(record, { dexCount: dex.count, dexTotal: dex.total, userName: profile.name, icon: profile.icon, profileFrame: profile.frame, breederId, now: Date.now() });
+  return (await storeGet(CARD_SAVE_KEYS.rankSync, null)) !== JSON.stringify(row);
+};
 // ---- プロフィール・フレンドの MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」) ----
 // 中身: 助手と対戦の強さごとの勝ち数・いちばん長い連勝・マルチ対戦の勝ち負けと強さの点数・カード図鑑で集めた数。
 // 自分: 端末の保存(mh_card_record_v1・mh_card_collection_v1)を読むだけ(書かない)。強さの点数は表から読む
@@ -58032,14 +58083,30 @@ const CARD_RANK_KINDS = Object.freeze([
   { id: 'wins', label: '勝ち数', emoji: '🏆' }, { id: 'streak', label: '連勝', emoji: '🔥' },
   { id: 'dex', label: '図鑑', emoji: '📖' }, { id: 'multi', label: 'マルチ', emoji: '🎮' },
 ]);
-const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', record = null, dex = null, sendOn = false }) => {
+// syncArgs … 送れていない記録を送るための材料({ db, collection, profile })。開いたときに、送れていなければ自動で送る(モンヒロビートのランキングと同じ考え)
+const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', record = null, dex = null, sendOn = false, syncArgs = null }) => {
   const [kind, setKind] = useState('wins');
   const [period, setPeriod] = useState('week');
   const [level, setLevel] = useState('normal');
   const [state, setState] = useState({ status: 'loading', entries: [] });
   const [selfId, setSelfId] = useState('');
   const [retry, setRetry] = useState(0);
+  const [sendState, setSendState] = useState('idle'); // 送れていない記録: idle / sending / failed
+  const [above, setAbove] = useState(null);           // 上位に入っていないときの、自分より多い人の数 { key, above, capped }
   const q = { kind, period, level };
+  // 送れていない記録があれば送る(開いたとき・「送る」を押したとき)。送れたら読み直す
+  const resend = async (force = false) => {
+    if (!sendOn || !syncArgs || !syncArgs.db) return;
+    try {
+      if (!force && !(await cardRankPending(syncArgs.db, syncArgs))) return;
+      setSendState('sending');
+      const ok = await cardRankSync(syncArgs.db, syncArgs);
+      setSendState(ok ? 'idle' : 'failed');
+      if (ok) { cardRankCache.clear(); setRetry((n) => n + 1); }
+    } catch (_) { setSendState('failed'); }
+  };
+  useEffect(() => { void resend(); }, []);
+  const refresh = () => { Audio_.fgSe.tap(); cardRankCache.clear(); setAbove(null); setRetry((n) => n + 1); };
   const cacheKey = kind === 'wins' ? `wins:${period}:${level}` : kind;
   useEffect(() => { let alive = true; if (typeof ensureBreederId === 'function') ensureBreederId().then((id) => { if (alive && typeof id === 'string') setSelfId(id); }).catch(() => {}); return () => { alive = false; }; }, []);
   useEffect(() => {
@@ -58062,12 +58129,35 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
     : (period === 'week' ? (rec.rank.week.key === weekNow ? rec.rank.week.wins : {}) : rec.rank.total)[level] || 0;
   const unit = kind === 'dex' ? '種類' : kind === 'streak' ? '連勝' : '勝';
   const shown = state.entries.slice(0, CARD_RANK_SHOW_LIMIT);
+  const places = cardRankPlaces(state.entries, (e) => cardRankValue(e, q));
+  // 自分の順位: 自分より多い人の数 + 1(同じ数は同じ順位)。読んだ一覧の外(一覧が上限まで全部自分より多い)なら、表から数を読む
+  const isMine = (e) => (selfId && e.breederId === selfId) || (!e.breederId && !!selfName && e.userName === selfName);
+  const othersAbove = state.entries.filter((e) => !isMine(e) && cardRankValue(e, q) > mineValue).length;
+  const listFull = state.entries.length >= CARD_RANK_FETCH_LIMIT && state.entries.filter((e) => !isMine(e)).every((e) => cardRankValue(e, q) > mineValue);
+  const aboveKey = `${cacheKey}:${mineValue}:${retry}`;
+  useEffect(() => {
+    if (kind === 'multi' || state.status !== 'ready' || !listFull || mineValue <= 0) return undefined;
+    let alive = true;
+    sbCardRankAbove(q, mineValue, selfId).then((r) => { if (alive && r) setAbove({ key: aboveKey, ...r }); }).catch(() => {});
+    return () => { alive = false; };
+  }, [aboveKey, state.status, listFull]);
+  const myPlace = mineValue <= 0 || state.status !== 'ready' ? null
+    : !listFull ? { place: othersAbove + 1, capped: false }
+    : above && above.key === aboveKey ? { place: above.above + 1, capped: above.capped } : null;
   const chip = (on) => `min-h-[36px] shrink-0 rounded-full border px-3 text-[11px] font-black ${on ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/10 bg-slate-900 text-slate-400'}`;
-  const medal = (i) => (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1));
+  const medal = (place) => (place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : String(place));
   const levelLabel = (lv) => CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
   return (
     <div data-mh-screen data-card-ranking={kind} className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="ランキング" accent="text-amber-200" onBack={onBack} note="MFバトルカード"/>
+      <ScreenHead title="ランキング" accent="text-amber-200" onBack={onBack} note="MFバトルカード"
+        right={<button type="button" data-card-ranking-refresh aria-label="更新" onClick={refresh} className="min-h-[44px] shrink-0 rounded-xl border border-amber-300/40 px-3 text-[12px] font-black text-amber-200 active:scale-95">更新</button>}/>
+      {/* 送れていない記録(電波が弱かった など)。開いたときに自動で送り、送れなかったときだけ出す(モンヒロビートのランキングと同じ) */}
+      {sendState === 'failed' && (
+        <div data-card-ranking-pending className="mb-1.5 flex shrink-0 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-500/10 px-2 py-1.5">
+          <span className="min-w-0 flex-1 text-[11px] font-bold text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('あなたの記録を、まだランキングへ送れていません')}</span>
+          <button type="button" data-card-ranking-pending-send onClick={() => { Audio_.fgSe.tap(); void resend(true); }} className="min-h-[36px] shrink-0 rounded-lg bg-amber-400 px-3 text-[12px] font-black text-slate-950 active:scale-95">送る</button>
+        </div>
+      )}
       <div className="mb-2 grid shrink-0 grid-cols-4 gap-1">
         {CARD_RANK_KINDS.map((k) => (
           <button key={k.id} type="button" data-card-ranking-tab={k.id} aria-pressed={kind === k.id} onClick={() => { Audio_.fgSe.tap(); setKind(k.id); }}
@@ -58091,21 +58181,26 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
       {kind !== 'multi' && (
         <div data-card-ranking-mine className={`${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex shrink-0 items-center gap-2 text-[12px] font-bold`}>
           <span className="text-slate-300">あなたの記録</span>
+          {/* 自分の順位(同じ数は同じ順位)。記録が無いときは出さない */}
+          {myPlace && <b data-card-ranking-mine-place className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[12px] font-black text-amber-100">{myPlace.place.toLocaleString()}位{myPlace.capped ? '以下' : ''}</b>}
           <b className="ml-auto text-base font-black text-amber-200">{mineValue.toLocaleString()}<small className="ml-0.5 text-[10px] text-slate-400">{unit}</small></b>
         </div>
       )}
       {kind !== 'multi' && !sendOn && <p data-card-ranking-preview className="mb-1.5 shrink-0 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('いまは見本です。ランキングへ送るのは、公開してからのふつうの対戦の記録だけです')}</p>}
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-3`}>
-        {kind === 'multi' && (
+        {/* 「準備中」はマルチ対戦を開ける(MFバトルカードの公開の印・91 の cardPvpOpen)まで */}
+        {kind === 'multi' && !cardPvpOpen() && (
           <div data-card-ranking-multi className="mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-5 text-center">
             <div aria-hidden="true" className="text-3xl">🎮</div>
             <b className="mt-1 block text-[15px] font-black text-white">マルチ対戦の強さ</b>
-            {/* 「準備中」はマルチ対戦を開ける(MFバトルカードの公開の印・91 の cardPvpOpen)まで */}
             {!cardPvpOpen() && <span className="mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300">準備中</span>}
             {!cardPvpOpen() && <p className="mt-2 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')}</p>}
-            {/* 勝つと上がる強さの点数の順(91-card-battle-multi.jsx・表 card_battle_pvp_ratings)。表が無いあいだは「準備中」 */}
-            {/* 開くまでは「準備中」だけ(読み込み中…が同時に出ていた。見回り #13) */}
-            {cardPvpOpen() && <CardPvpRankingList renderBreederIcon={renderBreederIcon} selfId={selfId}/>}
+          </div>
+        )}
+        {/* 勝つと上がる強さの点数の順(91-card-battle-multi.jsx・表 card_battle_pvp_ratings)。ほかのタブと同じ見た目(あなたの欄・メダル・同じ点数は同じ順位) */}
+        {kind === 'multi' && cardPvpOpen() && (
+          <div data-card-ranking-multi>
+            <CardPvpRankingList renderBreederIcon={renderBreederIcon} selfId={selfId} reloadKey={retry}/>
           </div>
         )}
         {kind !== 'multi' && state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
@@ -58118,12 +58213,12 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         )}
         {kind !== 'multi' && state.status === 'ready' && shown.length === 0 && <p data-card-ranking-empty className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません</p>}
         {kind !== 'multi' && state.status === 'ready' && shown.map((e, i) => {
-          const mine = (selfId && e.breederId === selfId) || (!e.breederId && !!selfName && e.userName === selfName);
+          const mine = isMine(e);
           const v = cardRankValue(e, q);
           return (
-            <article key={e.breederId || e.userName} data-card-ranking-row={i + 1} data-mine={mine ? '1' : undefined}
-              className={`grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-amber-300/70 bg-amber-500/10' : i === 0 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`}>
-              <b className="text-center text-sm font-black text-slate-200">{medal(i)}</b>
+            <article key={e.breederId || e.userName} data-card-ranking-row={i + 1} data-card-ranking-place={places[i]} data-mine={mine ? '1' : undefined}
+              className={`grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${mine ? 'border-amber-300/70 bg-amber-500/10' : places[i] === 1 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`}>
+              <b className="text-center text-sm font-black text-slate-200">{medal(places[i])}</b>
               {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: e.icon, profileFrame: e.profileFrame, breederId: e.breederId }) : <span aria-hidden="true" className="text-lg">👤</span>}
               <span className="min-w-0 leading-tight">
                 <b className="block truncate text-[13px] font-black text-white">{e.userName}{mine ? '(あなた)' : ''}</b>
@@ -58242,6 +58337,15 @@ const cardPvpApplyRemote = (db, st, msg) => {
       if (!cardOf(db, msg.discard[i]) || (have !== CARD_PVP_HIDDEN && have !== msg.discard[i])) return null;
     }
     next.players[1].discard = msg.discard.slice();
+    // 捨て札から選ぶ段(回避プログラム・悪夢など)の候補は、本物の捨て札で作り直す。払ったガッツはこちらでは仮の札のまま捨て札に入るので、
+    //   絞り込みのある札だと候補が相手の端末より少なくなり、相手が選んだ手をはねて試合が止まった(2026-10-27 総点検D)。いま使った札は選べない
+    const ch = next.pendingChoice;
+    if (ch && ch.p === 1 && ch.src === 'discard' && !(st.pendingChoice)) {
+      const fa = cardPvpFlip(msg.act);
+      const e = cardEff(cardOf(db, ch.card), 'choose');
+      const used = Array.isArray(fa.hand) ? fa.hand.length : 0;
+      if (e) ch.cands = cardChoiceCands(db, next, 1, fa.mon !== undefined ? fa.mon : -1, e, next.players[1].discard.length - used);
+    }
   }
   next.players[1].deck = next.players[1].deck.map(() => CARD_PVP_HIDDEN); // 山札へ戻した札(伝説のちから・時間稼ぎなど)も仮の札に
   return next;
@@ -58357,7 +58461,9 @@ const cardPvpCleanMessage = (raw) => {
       seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null,
       bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
       // デッキ名(対戦開始の画面に出すだけ。2026-10-26 で足した項目。古い版は送らないので null)
-      dn: typeof raw.dn === 'string' ? (rhythmMultiText(raw.dn, 30) || null) : null };
+      dn: typeof raw.dn === 'string' ? (rhythmMultiText(raw.dn, 30) || null) : null,
+      // 何回目の試合か(「もう1戦」。2026-10-26 で足した項目。古い版は送らないので 0)
+      rd: cardPvpInt(raw.rd, 1000) || 0 };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -58377,10 +58483,13 @@ const cardPvpCleanMessage = (raw) => {
     const cards = cardPvpCleanCards(raw.cards, 60);
     const mons = cardPvpCleanCards(raw.mons, 3);
     if (!cards || cards.includes(null) || !mons || mons.includes(null)) return null;
-    return { t: 'open', from, seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0, salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '', deck: { monsters: mons, cards } };
+    return { t: 'open', from, seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0, salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '', deck: { monsters: mons, cards },
+      match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '' };
   }
   if (raw.t === 'seek') { const code = rhythmMultiNormalizeCode(raw.code); return code && Number.isFinite(raw.at) ? { t: 'seek', from, code, at: raw.at } : null; }
   if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
+  // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
+  if (raw.t === 'again') { const rd = cardPvpInt(raw.rd, 1000); const seal = typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null; return rd && seal ? { t: 'again', from, rd, seal } : null; }
   if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return { t: raw.t, from };
   return null;
 };
@@ -58489,6 +58598,31 @@ const cardPvpRatingFromRow = (row) => {
   const n = (v) => (Number.isFinite(v) ? v : 0);
   return { breederId: row.breeder_id, userName: typeof row.user_name === 'string' ? row.user_name : '', icon: typeof row.icon === 'string' ? row.icon : '', profileFrame: typeof row.profile_frame === 'string' ? row.profile_frame : '',
     rating: Number.isFinite(row.rating) ? row.rating : CARD_PVP_RATING_START, wins: n(row.wins), loses: n(row.loses) };
+};
+// 自分の行だけ読む(上位50に入っていないときの「あなたの強さ」)。無ければ null
+const sbFetchCardPvpOwnRating = async (breederId) => {
+  if (_cardPvpRatingsUnavailable || typeof SUPABASE_URL === 'undefined' || typeof breederId !== 'string' || !breederId) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_PVP_RATING_TABLE}?select=breeder_id,user_name,icon,profile_frame,rating,wins,loses&breeder_id=eq.${encodeURIComponent(breederId)}&limit=1`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    if (!res.ok) return null;
+    const rows = JSON.parse((await res.text()) || '[]');
+    const e = Array.isArray(rows) ? cardPvpRatingFromRow(rows[0]) : null;
+    return e && e.wins + e.loses > 0 ? e : null;
+  } finally { clearTimeout(timer); }
+};
+// 自分より点数の高い人の数(上位50の外のときの順位)。数だけ読む
+const sbCountCardPvpAbove = async (rating) => {
+  if (_cardPvpRatingsUnavailable || typeof SUPABASE_URL === 'undefined' || !Number.isFinite(rating)) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_PVP_RATING_TABLE}?select=breeder_id&rating=gt.${Math.floor(rating)}&wins=gte.0&limit=1000`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    if (!res.ok) return null;
+    const rows = JSON.parse((await res.text()) || '[]');
+    return Array.isArray(rows) ? { above: rows.length, capped: rows.length >= 1000 } : null;
+  } finally { clearTimeout(timer); }
 };
 const sbFetchCardPvpRatings = async () => {
   if (_cardPvpRatingsUnavailable || typeof SUPABASE_URL === 'undefined') return null;
@@ -58655,14 +58789,34 @@ const CARD_PVP = (() => {
   let board = null;                 // 対戦の画面の受け口 { onAct(msg) → 次の場|null, onDiscard(list), onForceEnd(outcome), onChat(text) }
   const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0,
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
-    offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '' });
+    offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '',
+    round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
   const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0 });
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
-  const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
+  const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards, match: s.match || '' });
+  // ホストが、2人そろったら先攻・後攻のくじを引く(hb が届いたとき・もう1戦で回を進めたとき)
+  // ★くじの知らせは、相手がまだこちらを知らない間に届くと捨てられる。相手の hb にその試合の印が載るまで、毎回送り直す(tick)
+  const maybeStart = () => {
+    if (s.phase === 'waiting' && !s.match && !s.startMsg && s.foe && isHost() && s.foe.mons && s.foe.seal) {
+      s = { ...s, startMsg: { t: 'start', match: rhythmMultiMakeId('m'), hostFirst: Math.random() < 0.5, guest: s.foe.id } };
+      send(s.startMsg);
+    }
+  };
+  // もう1戦: 2人とも同じ回を押したら、同じ部屋で次の試合を待つ形へ戻す(山札の封は押したときに作り直したもの)
+  const tryAgain = () => {
+    if (!s || s.phase !== 'over' || !s.again || !s.foeAgain || s.foeAgain.rd !== s.again.rd || s.foeGone) return;
+    const a = s.again;
+    s = { ...s, phase: 'waiting', round: a.rd, seed: a.seed, salt: a.salt, seal: a.seal, again: null, foeAgain: null,
+      match: '', startMsg: null, game: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null,
+      timeouts: 0, broken: '', first: 0, hostFirst: false, foe: { ...s.foe, seal: s.foeAgain.seal } };
+    hb();
+    maybeStart();
+    emit();
+  };
   const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
   const stop = () => {
     if (tick) clearInterval(tick); tick = null;
@@ -58721,15 +58875,13 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
-      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, bid: msg.bid, dn: msg.dn || null, seen: now };
-      if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
+      // もう1戦: 相手がもう次の回へ進んでいる(こちらの「もう1戦」が届いて、相手が先に切りかえた)なら、その hb を相手の同意として追いつく
+      if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); return; }
+      const sameRound = (msg.rd || 0) === (s.round || 0); // 前の回の hb(届くのが遅れた分)の封は使わない
+      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: sameRound ? msg.seal : (s.foe && s.foe.seal) || null, bid: msg.bid, dn: msg.dn || null, seen: now };
+      if (sameRound && s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
       s = { ...s, foe: { ...(s.foe || {}), ...foe } };
-      // ホストが、2人そろったら先攻・後攻のくじを引く
-      // ★くじの知らせは、相手がまだこちらを知らない間に届くと捨てられる。相手の hb にその試合の印が載るまで、毎回送り直す(tick)
-      if (s.phase === 'waiting' && !s.match && !s.startMsg && isHost() && s.foe.mons && s.foe.seal) {
-        s = { ...s, startMsg: { t: 'start', match: rhythmMultiMakeId('m'), hostFirst: Math.random() < 0.5, guest: s.foe.id } };
-        send(s.startMsg);
-      }
+      maybeStart();
       if (s.match && msg.match === s.match) s = { ...s, foeInMatch: true };
       emit();
       return;
@@ -58749,11 +58901,13 @@ const CARD_PVP = (() => {
       emit();
       return;
     }
-    if (msg.t === 'open') { if (!s.foeOpen) { set({ foeOpen: msg }); void tryVerify(); } return; }
+    if (msg.t === 'open') { if (msg.match && msg.match !== s.match) return; if (!s.foeOpen) { set({ foeOpen: msg }); void tryVerify(); } return; } // 前の試合の封は使わない
+    if (msg.t === 'again') { if (s.phase === 'over' && !s.foeGone) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); emit(); } return; }
     if (msg.t === 'chat') { if (s.phase === 'playing' && board && board.onChat) board.onChat(CARD_PVP_STAMPS[msg.i]); return; }
     if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
       if (s.phase === 'playing') forceEnd(msg.t === 'surrender' ? 'foeSurrender' : msg.t === 'timeout' ? 'foeTimeout' : 'foeLeft');
       else if (s.phase === 'waiting') set({ foe: null });
+      else if (s.phase === 'over' && msg.t === 'bye') set({ foeGone: true, foeAgain: null }); // 結果のあとに相手が部屋を出た(もう1戦はできない)
     }
   };
   // つなぐ(電波が切れたら、同じ部屋へつなぎ直す。届いていない手は送り直しで追いつく)
@@ -58829,6 +58983,7 @@ const CARD_PVP = (() => {
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach((m) => send(m)); // 「受け取った」が来ていない手は送り直す
       if (s.phase === 'over') sendOpen();
+      if (s.phase === 'over' && s.again) send({ t: 'again', rd: s.again.rd, seal: s.again.seal });
       // 相手から何も届かないまま CARD_PVP_ALIVE_MS が過ぎたら、抜けた扱い(こちらの電波が切れているあいだは数えない)
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
     }, CARD_PVP_HEARTBEAT_MS);
@@ -58881,6 +59036,20 @@ const CARD_PVP = (() => {
       sendOpen();
       void tryVerify();
       setTimeout(() => { if (s && s.result && s.result.verify === 'wait') set({ result: { ...s.result, verify: 'skip' } }); }, CARD_PVP_VERIFY_WAIT_MS);
+    },
+    // もう1戦(結果の画面から)。次の回の山札の封を作って知らせる。相手も押したら、同じ部屋で次の試合へ
+    again: async () => {
+      if (!s || s.phase !== 'over' || s.again || s.foeGone) return false;
+      const rd = (s.round || 0) + 1;
+      const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
+      const salt = rhythmMultiMakeId('k');
+      const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck: s.deck }));
+      if (!seal || !s || s.phase !== 'over' || s.again) return false;
+      s = { ...s, again: { rd, seed, salt, seal } };
+      send({ t: 'again', rd, seal });
+      tryAgain();
+      emit();
+      return true;
     },
     markRewarded: (got) => { if (s && s.result) set({ result: { ...s.result, rewarded: true, got } }); },
     // 強さの点数へ届ける(確かめが済んだ試合だけ・1試合1回)。2人の届けが合ったときだけ、データベースの関数が点数を動かす
@@ -59098,9 +59267,20 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             </>)}
           </div>
         </div>
-        <div className={SCREEN_FOOTER_CLASS}>
+        {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けたときは出さない */}
+        {/* 上の段に「もう1戦」、下の段に「この対戦を見る」「部屋を出る」を並べる(320px でも3つが詰まらないように) */}
+        <div className={`${SCREEN_FOOTER_CLASS} flex flex-col gap-2`}>
+          {!room.foeGone && r.reason !== '相手が抜けた' && (
+            <button type="button" data-card-pvp-again={room.again ? 'waiting' : room.foeAgain ? 'foe' : 'ready'} disabled={!!room.again} className={`${btn} mh-button-primary`}
+              onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.again(); }}>
+              {room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'}
+            </button>
+          )}
+          <div className="flex gap-2">
           {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${btn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
-          <button type="button" data-card-pvp-leave className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          {room.foeGone && <p data-card-pvp-foe-gone className="flex-1 self-center text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
+          <button type="button" data-card-pvp-leave className={`${btn} ${room.foeGone || r.reason === '相手が抜けた' ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          </div>
         </div>
       </div>
     );
@@ -59304,31 +59484,70 @@ const CardPvpChat = () => {
 
 // ---- ランキングの「マルチ」の札(90-card-rank.jsx の CardRankingBoard から出す) ----
 // 勝つと上がる強さの点数(はじめ1500)の順。表がまだ無いときは「準備中」のまま
-const CardPvpRankingList = ({ renderBreederIcon = null, selfId = '' }) => {
+// reloadKey … ランキングの「更新」で読み直す。ほかのタブ(勝ち数など)と同じ見た目にそろえる(メダル・同じ点数は同じ順位・あなたの強さの欄。2026-10-26 社長「全部入れる」)
+const CardPvpRankingList = ({ renderBreederIcon = null, selfId = '', reloadKey = 0 }) => {
   const [state, setState] = useState({ status: 'loading', entries: [] });
+  const [mine, setMine] = useState(null); // { entry, place, capped } か null(まだマルチで対戦していない)
   useEffect(() => {
     let alive = true;
+    setState((cur) => (cur.status === 'ready' ? cur : { status: 'loading', entries: [] }));
     sbFetchCardPvpRatings().then((entries) => { if (alive) setState(entries == null ? { status: 'missing', entries: [] } : { status: 'ready', entries }); })
       .catch(() => { if (alive) setState({ status: 'error', entries: [] }); });
     return () => { alive = false; };
-  }, []);
-  if (state.status === 'loading') return <p className="py-4 text-center text-[13px] font-bold text-slate-400">読み込み中…</p>;
-  if (state.status === 'missing') return <p data-card-pvp-rank="missing" className="py-3 text-center text-[12px] font-bold text-slate-400">強さの点数の表は、まだ準備中です</p>;
-  if (state.status === 'error') return <p className="py-3 text-center text-[12px] font-bold text-rose-200">読み込めませんでした</p>;
-  if (!state.entries.length) return <p data-card-pvp-rank="empty" className="py-3 text-center text-[12px] font-bold text-slate-400">まだ記録がありません</p>;
+  }, [reloadKey]);
+  // 同じ点数は同じ順位(1516・1516・1484 → 1位・1位・3位)
+  const places = [];
+  state.entries.forEach((e, i) => { places.push(i > 0 && state.entries[i - 1].rating === e.rating ? places[i - 1] : i + 1); });
+  const inListAt = state.entries.findIndex((e) => selfId && e.breederId === selfId);
+  useEffect(() => {
+    if (state.status !== 'ready' || !selfId) { setMine(null); return undefined; }
+    if (inListAt >= 0) { setMine({ entry: state.entries[inListAt], place: places[inListAt], capped: false }); return undefined; }
+    let alive = true;
+    (async () => {
+      const e = await sbFetchCardPvpOwnRating(selfId).catch(() => null);
+      if (!alive) return;
+      if (!e) { setMine(null); return; }
+      const r = await sbCountCardPvpAbove(e.rating).catch(() => null);
+      if (alive) setMine({ entry: e, place: r ? r.above + 1 : null, capped: !!(r && r.capped) });
+    })();
+    return () => { alive = false; };
+  }, [state, selfId]);
+  const medal = (place) => (place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : String(place));
+  const mineBox = state.status === 'ready' && (
+    <div data-card-pvp-rank-mine className={`${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex items-center gap-2 text-[12px] font-bold`}>
+      <span className="text-slate-300">あなたの強さ</span>
+      {mine && mine.place && <b className="rounded-full bg-sky-400/20 px-2 py-0.5 text-[12px] font-black text-sky-100">{mine.place.toLocaleString()}位{mine.capped ? '以下' : ''}</b>}
+      {mine ? <>
+        <span className="ml-auto text-[11px] font-bold text-slate-300">{mine.entry.wins}勝{mine.entry.loses}敗</span>
+        <b className="text-base font-black text-sky-200">{mine.entry.rating}</b>
+      </> : <span className="ml-auto text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('マルチで対戦すると、ここに出ます')}</span>}
+    </div>
+  );
+  if (state.status === 'loading') return <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>;
+  if (state.status === 'missing') return <p data-card-pvp-rank="missing" className="py-8 text-center text-sm font-bold text-slate-400">強さの点数の表は、まだ準備中です</p>;
+  if (state.status === 'error') return <p className="py-8 text-center text-sm font-bold text-rose-200">読み込めませんでした</p>;
+  if (!state.entries.length) return <>{mineBox}<p data-card-pvp-rank="empty" className="py-8 text-center text-sm font-bold text-slate-400">まだ記録がありません</p></>;
   return (
-    <ol data-card-pvp-rank="ready" className="mt-2 space-y-1 text-left">
-      {state.entries.map((e, i) => (
-        <li key={e.breederId} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 ${e.breederId === selfId ? 'bg-amber-500/15' : 'bg-black/25'}`}>
-          <b className="w-7 text-right text-[13px] font-black text-amber-200">{i + 1}</b>
-          {/* アイコンは id にそろえてから渡す(古い版は8文字で切って送っていた。絵文字・分からない値は人型) */}
-          {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: cardPvpIconId(e.icon), profileFrame: e.profileFrame, breederId: e.breederId }) : <CardPvpAvatar icon={e.icon} frame={e.profileFrame}/>}
-          <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{e.userName || 'ブリーダー'}</span>
-          <span className="text-[11px] font-bold text-slate-300">{e.wins}勝{e.loses}敗</span>
-          <b className="w-12 text-right text-[15px] font-black text-sky-200">{e.rating}</b>
-        </li>
-      ))}
-    </ol>
+    <>
+      {mineBox}
+      <ol data-card-pvp-rank="ready" className="space-y-1.5 text-left">
+        {state.entries.map((e, i) => {
+          const me = !!selfId && e.breederId === selfId;
+          return (
+            <li key={e.breederId} data-card-pvp-rank-place={places[i]} className={`grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${me ? 'border-sky-300/70 bg-sky-500/10' : places[i] === 1 ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/10 bg-slate-900/80'}`}>
+              <b className="text-center text-sm font-black text-slate-200">{medal(places[i])}</b>
+              {/* アイコンは id にそろえてから渡す(古い版は8文字で切って送っていた。cardPvpIconId・#3691) */}
+              {renderBreederIcon ? renderBreederIcon({ userName: e.userName, icon: cardPvpIconId(e.icon), profileFrame: e.profileFrame, breederId: e.breederId }) : <CardPvpAvatar icon={e.icon} frame={e.profileFrame}/>}
+              <span className="min-w-0 leading-tight">
+                <b className="block truncate text-[13px] font-black text-white">{e.userName || 'ブリーダー'}{me ? '(あなた)' : ''}</b>
+                <small className="block text-[10px] font-bold text-slate-400">{e.wins}勝{e.loses}敗</small>
+              </span>
+              <b className="text-right text-base font-black leading-tight text-sky-200">{e.rating}</b>
+            </li>
+          );
+        })}
+      </ol>
+    </>
   );
 };
 
@@ -76494,7 +76713,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(t.id==='momosuke') return level===0?"ガッツ 50%回復・ライフ/ガッツ上限 3%アップ・丈夫さ 3%アップ（次のターンから）":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 3%アップ・ガッツ上限 5%アップ・丈夫さ 3%アップ（次のターンから）":"ライフ・ガッツ 90%回復・ライフ上限 5%アップ・ガッツ上限 8%アップ・丈夫さ 5%アップ（次のターンから）");
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
-    if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
+    if(t.id==='kiki') return `次の${level+2}ターン 使えるカード +1枚・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
     if(t.id==='kyuko'){
       const tier=KYUKO_TIERS[Math.min(level,KYUKO_TIERS.length-1)];
       return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
@@ -76639,11 +76858,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         : <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1">{rows.map(([label,value,color])=><div key={label} className="flex justify-between text-[10px] font-mono"><span>{label}:</span><span className={`${color} font-bold`}>{value}</span></div>)}</div>}</div>
       {/* 間合い適性は「距離ごとの与ダメージ補正(%)」。グレードは目安で、実際に効くのは%のほう。
           aptCurrentPctを渡すと、いまの距離補正値からこのモンスターを加えた後の値まで出す。 */}
-      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30 min-w-0"><div className="flex items-center justify-between gap-2 mb-0.5 flex-wrap"><div className="text-[10px] text-cyan-400 uppercase font-bold">間合い適性（距離補正）{growth&&<span className="ml-1 text-slate-500 normal-case">タップで詳細</span>}</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; const gain=growth?growth.apt[idx]:null; const openKey=`${monGrowthKey}:${idx}`; const aptOpen=!!gain&&growthAptOpen===openKey;
-        const cell=(<><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span data-dist-apt-grade className={`flex h-[22px] w-full items-center justify-center rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[10px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[10px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{gain&&(gain.baseUp>0||gain.enhance>0)&&<span className="flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5">{growthGainBadge('base',gain.baseUp)}{growthGainBadge('enhance',gain.enhance)}</span>}</>);
+      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30 min-w-0"><div className="flex items-center justify-between gap-2 mb-0.5 flex-wrap"><div className="text-[10px] text-cyan-400 uppercase font-bold">{/* 勇者モンの詳細・配置(今の補正を渡すとき)は遊ぶ人の言葉で(2026-10-27 社長OK「この子の得意な距離」) */}{aptCurrentPct?'この子の得意な距離':'間合い適性（距離補正）'}{growth&&<span className="ml-1 text-slate-500 normal-case">タップで詳細</span>}</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; const gain=growth?growth.apt[idx]:null; const openKey=`${monGrowthKey}:${idx}`; const aptOpen=!!gain&&growthAptOpen===openKey;
+        const cell=(<><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span data-dist-apt-grade className={`flex h-[22px] w-full items-center justify-center rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{cur!=null&&<span className="text-[8px] font-bold leading-none text-slate-400">合流すると</span>}<span className={`text-[10px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{cur!=null&&pct===0?'+':''}{formatAptPct(pct)}</span>{gain&&(gain.baseUp>0||gain.enhance>0)&&<span className="flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5">{growthGainBadge('base',gain.baseUp)}{growthGainBadge('enhance',gain.enhance)}</span>}</>);
         return(<div key={idx} className="flex flex-col items-center gap-0.5 min-w-0">{gain
           ? <button type="button" data-growth-apt-cell={idx} aria-expanded={aptOpen} aria-label={`${label}距離の間合い適性の内訳を${aptOpen?'閉じる':'開く'}`} onClick={()=>setGrowthAptOpen(aptOpen?null:openKey)} className={`w-full min-w-0 flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1 active:scale-95 ${aptOpen?'border-fuchsia-400/70 bg-fuchsia-950/40':'border-white/10 bg-black/20'}`}>{cell}</button>
-          : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}<div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
+          : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}
+        {/* いまの補正 → 合流後の数字は消さずに「くわしく」の中へ(2026-10-27 社長OK) */}
+        {aptCurrentPct&&<details data-apt-detail className="mt-1 rounded-lg bg-black/30 px-2 py-1"><summary className="cursor-pointer text-[10px] font-black text-cyan-300">くわしく(現在の補正 → 合流したあと)</summary><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx);const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);const cur=aptCurrentPct[idx]||0;return <span key={idx} className="text-center leading-tight"><span className="block text-[9px] font-black text-slate-300">{label}</span><span className="block text-[10px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>;})}</div></details>}
+        <div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight" style={JA_WRAP_STYLE}>{jaWrap('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます')}</div></div>
       {renderSkillSection(mon)}
       {(()=>{
         const exDef=typeof tacticsExDefOf==='function'?raidExDefOf(mon.id):null;
@@ -78629,7 +78851,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const resetPattern=()=>{setPatternStep('attach');setPatternSettings(makePatternSettings());setPatternCustomColor({open:false,h:198,s:.77,v:.97});setPatternSizePreview(false);};
           return <main className="flex-1 min-h-0 flex flex-col bg-slate-950" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}}>
             <div className="mh-debug-banner">DEBUG・模様は保存されません</div>
-            <header className="flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"><button aria-label="戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="block text-[8px] font-black text-fuchsia-400">PATTERN CUSTOM TEST</small><h2 className="truncate text-xs font-black">{selected?selected.name:'マスモン模様カスタム'}</h2></div>{selected&&<button onClick={()=>setPatternMasuId(null)} className="ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}</header>
+            <div className="px-2 pt-1 border-b border-white/10"><DebugScreenHead title={selected?selected.name:'マスモン模様カスタムテスト'} note="模様は保存されません" onBack={()=>setGameState('DEBUG_SETTINGS')}
+              right={selected&&<button onClick={()=>setPatternMasuId(null)} className="min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}/></div>
             {eligible.length===0?<section className="flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300">カスタマイズできる所持マスモンがいません</section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">模様を試すモンスターを1体選んでください（所持していない種もそのまま試せます）。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);resetPattern();}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b></button>})}</div></section>:(()=>{
               const base=ALL_PLAYER_MONSTERS[selected.baseId],regions=dyeRegionCount(selected.baseId),colors=getMasuColors(selected);
               const mode=patternSettings.mode,selectedKey=patternSettings.selectedLayer;
@@ -78682,7 +78905,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const slider=(key,label,min,max,step)=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-2 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{values[key]}</output></span><input className="w-full accent-fuchsia-500" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>patchValue(key,e.target.value)}/></label>;
           const copyText=`${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">プロフィールの見た目</h2></div></header>
+            <DebugScreenHead title="プロフィールの見た目" note="顔アイコンの拡大・位置を決めてコピー／フレームとの相性" onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
               <input type="search" value={iconAdjustQuery} onChange={e=>setIconAdjustQuery(e.target.value)} placeholder="名前・内部IDで検索" className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"/>
               <select value={filteredItems.some(entry=>entry.id===item.id)?item.id:''} onChange={e=>e.target.value&&setIconAdjustId(e.target.value)} size={Math.min(6,Math.max(2,filteredItems.length))} className="w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black">{!filteredItems.length&&<option value="">一致するアイコンはありません</option>}{filteredItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
@@ -78745,7 +78968,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const look=looks.some(([id])=>id===masuLookTab)?masuLookTab:'reincarnate';
           if(!previewBase)return null;
           return <main data-mh-screen data-masu-look-debug className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-300">DEBUG・本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します</small><h2 className="text-sm font-black">育成マークの見た目</h2></div></header>
+            <DebugScreenHead title="育成マークの見た目" note="本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します" saves onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div role="tablist" aria-label="見る段階" className="shrink-0 mb-2 grid grid-cols-4 gap-1">
               {looks.map(([id,label])=><button key={id} type="button" role="tab" aria-selected={look===id} data-masu-look-tab={id} onClick={()=>setMasuLookTab(id)} className={`min-h-[42px] rounded-xl border px-0.5 text-[10px] font-black active:scale-95 ${look===id?(id==='prepare'?'border-rose-300 bg-rose-700 text-white':'border-amber-300 bg-amber-600 text-white'):'border-amber-500/30 bg-slate-900 text-amber-200/80'}`}>{label}</button>)}
             </div>
@@ -79808,7 +80031,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const useFruit=async(amount)=>{if(!selectedMasu)return;const before=Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0));const result=useTranscendFruitOnMasu(selectedMasu,ownedItems,selectedFruitId,amount);setTranscendFruitDebugResult({ok:result.ok,before,after:Math.max(0,Math.floor(Number(result.nextMasu?.transcendPoints)||0))});if(!result.ok)return;const nextMasuMons=masuMons.map(m=>String(m.id)===String(selectedMasu.id)?result.nextMasu:m);setMasuMons(nextMasuMons);setOwnedItems(result.nextOwnedItems);await Promise.all([storeSet('mh_masu_mons',nextMasuMons,false),storeSet('mh_owned_items',result.nextOwnedItems,false)]);};
           const grantFruit=async(itemId)=>{const result=changeTranscendFruitOwnedCount(ownedItems,itemId,10);if(!result.ok)return;setOwnedItems(result.ownedItems);await storeSet('mh_owned_items',result.ownedItems,false);};
           return <main data-species-challenge-debug className="flex-1 flex flex-col min-h-0 bg-slate-950 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-3 shrink-0"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-emerald-300">DEBUG・保存先 {SPECIES_CHALLENGE_PROGRESS_KEY}</small><h2 className="text-sm font-black">種族チャレンジ進行確認</h2></div></header>
+            <DebugScreenHead title="種族チャレンジ進行確認" note={`保存先 ${SPECIES_CHALLENGE_PROGRESS_KEY}`} saves onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <section className="shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3">
               <button data-species-challenge-production-flow onClick={()=>openSpeciesChallengeSelection({fromDebug:true})} className="min-h-[52px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-950 text-[11px] font-black text-cyan-100">⚔️ 実戦フロー確認<small className="block text-[8px] text-cyan-300">本番用の選択フロー（バトル開始なし）</small></button>
               <label className="block text-[9px] font-black text-emerald-200">種族（主血統）<select aria-label="種族" value={speciesId} onChange={e=>{setSpeciesChallengeDebugSpeciesId(e.target.value);setSpeciesChallengeDebugHeroId('');setSpeciesChallengeDebugAllyIds([]);setSpeciesChallengeDebugRun(null);setSpeciesChallengeDebugWaveLog([]);}} className="mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white">{speciesEntries.map(lineage=><option key={lineage.id} value={lineage.id}>{lineage.name}種／{dexMonsterList().filter(mon=>monsterLineageOf(mon.id).main.id===lineage.id).map(mon=>mon.name).join('・')}</option>)}</select></label>
@@ -80162,7 +80385,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     操作の説明は助手の吹き出し(scene="roster")が受け持つ。 */}
                 {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={['表示するモンスターがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
+                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するモンスターがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {unifiedMonsterEntriesDraft.map(e=>{
                       if (e.type==='base') {
@@ -80281,7 +80504,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
             <div className={SCREEN_LIST_CLASS}>
-              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={['表示するベースモンがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
+              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={[jaWrap('表示するベースモンがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('上の「表示」「種族」で絞り込みを見直してください。')}</span>]}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').map(e=>{
                   const m = e.base;
@@ -80312,7 +80535,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="放牧設定" accent="text-emerald-300" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"
               right={<span className="rounded-full border border-emerald-400/60 px-2 py-1 text-[12px] font-black text-emerald-200">{draftHomePastureIds.length} / 5</span>}/>
             <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pasture" compact/></div>
-            <ScreenLead>HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。</ScreenLead>
+            {/* 言葉の切れ目で折る(320 で「0体で/も保存」、375・390 で「見直/して」と折れていた。2026-10-27 育成の見回り) */}<ScreenLead><span style={JA_WRAP_STYLE}>{jaWrap('HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。')}</span></ScreenLead>
             <div className="grid grid-cols-5 gap-2 mb-2 shrink-0" aria-label="選択中の放牧マスモン">
               {Array.from({length:5},(_,index)=>{const id=draftHomePastureIds[index],masu=id?masuMons.find(m=>String(m.id)===id):null,base=masu&&ALL_PLAYER_MONSTERS[masu.baseId];return masu&&base?(
                 <button key={id} onClick={()=>toggleDraftPasture(id)} aria-label={`${masu.name}を放牧から外す`} className="relative min-w-0 aspect-square rounded-full border-2 border-emerald-300 bg-emerald-950 active:scale-90 overflow-hidden">
@@ -80323,7 +80546,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             {renderMonsterSortFilterBar({singleType:true})}
             <div className={SCREEN_LIST_CLASS}>
-              {pastureEntries.length===0&&<ScreenEmpty emoji="🌱" lines={['放牧できるマスモンがいません。','バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。']}/>}
+              {pastureEntries.length===0&&<ScreenEmpty emoji="🌱" lines={[jaWrap('放牧できるマスモンがいません。'),<span style={JA_LABEL_STYLE}>{jaWrap('バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。')}</span>]}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {pastureEntries.map(({masu,base})=>{
                   const id=String(masu.id), selected=draftHomePastureIds.includes(id), disabled=!selected&&draftHomePastureIds.length>=5;
@@ -80415,7 +80638,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
              data-mh-screen は横画面で左右2カラムへ組み替えるための目印 */
           return (
             <div data-mh-screen className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
-              <ScreenHead title={`${item?.name||''}を使う対象を選択`} accent="text-teal-400" onBack={()=>setPendingItemUse(null)} backLabel="アイテムへ戻る"/>
+              <ScreenHead title={`${item?.name||''}を使う相手を選ぶ`} accent="text-teal-400" onBack={()=>setPendingItemUse(null)} backLabel="アイテムへ戻る"/>
               <ScreenLead>対象のマスモンをタップしてください</ScreenLead>
               <div className={SCREEN_LIST_CLASS}>
                 {masuMons.length===0?(
@@ -80695,7 +80918,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="mb-1.5 px-1 text-[10px] font-black tracking-wider text-slate-400">育成・カスタム</div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button type="button" aria-label={`${masu.name}を強化`} onClick={()=>{setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE');}} className={`${MASU_DETAIL_ACTION_CLASS} border-amber-400/45 bg-amber-950/60 text-amber-100`}><Sparkles size={15}/><span>強化</span>{(masu.distAptPoints||0)>0&&<small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-amber-400/20 text-amber-200`}>{masu.distAptPoints}P</small>}</button>
-                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span><span>トレーニング</span></button>
+                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span>{/* 320 で「トレーニ/ング」と折れていた(2026-10-27 育成の見回り)。折らずに、狭い幅だけ字を小さくする */}<span className="whitespace-nowrap max-[359px]:text-[10px]">トレーニング</span></button>
                   <button type="button" aria-label={`${masu.name}を染色`} onClick={()=>{const n=dyeRegionCount(masu.baseId),cur=getMasuColors(masu);setDyeTargetMasuId(masu.id);setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null));}} className={`${MASU_DETAIL_ACTION_CLASS} border-fuchsia-400/45 bg-fuchsia-950/60 text-fuchsia-100`}><span className="text-[15px] leading-none">🎨</span><span>染色</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-fuchsia-400/20 text-fuchsia-200`}>所持 {ownedItems.dye_mock||0}</small></button>
                 </div>
                 <button type="button" data-soul-trait-entry aria-label={`${masu.name}の魂格特性を開く`} onClick={()=>{setSoulTraitReturnState(gameState);setSoulTraitTab('attack');setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState('MASU_SOUL_TRAITS');}} className="mt-1.5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-sky-400/45 bg-sky-950/60 text-[12px] font-black text-sky-100 active:scale-[.98]"><Sparkles size={15}/><span>魂格特性</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} ${masuNorm.soulRankStage>=1?'bg-sky-400/20 text-sky-200':'bg-black/40 text-slate-300'}`}>{masuNorm.soulRankStage>=1?`未使用 ${soulTraitAvailablePoints(masuNorm)}P`:'未解放'}</small></button>
@@ -82918,7 +83141,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             });
           }
         }
-        const title = card.type==='atk'?'通常技を選択':(card.type==='range_atk'?'距離技を選択':'固有技を選択');
+        const title = card.type==='atk'?'通常技をえらぶ':(card.type==='range_atk'?'距離技をえらぶ':'固有技をえらぶ');
         return (
           <div className="fixed inset-0 z-[60000] flex items-end justify-center" style={{backgroundColor:'rgba(0,0,0,0.85)'}} onClick={()=>setSkillPicker(null)}>
             <div className="bg-slate-900 border-t-2 border-x-2 border-indigo-500 rounded-t-3xl p-4 w-full max-w-md max-h-[75vh] flex flex-col gap-2" onClick={e=>e.stopPropagation()} style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>

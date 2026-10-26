@@ -12,7 +12,7 @@
 //   ③ トップの台詞は {name} を置き換えたあとも文字で、「{」「}」が残らない
 //   ④ 助手の吹き出しへ渡す物(text: …)に部品(JSX)を入れていない。吹き出しの側(ModeSelectAssistantPanel など)が jaWrap に通すので、
 //      部品を渡すと「[object Object]」になる。言葉の折り方は吹き出しの側に任せ、渡すのは文字だけにする
-//   ⑤ 吹き出しの字を出す所(対戦中・結果・相手えらび・デッキ相談)が、文字に直す前の値をそのまま出していない
+//   ⑤ 吹き出しの字を出す所(対戦中・結果・相手えらび・デッキ相談)が、文字の台詞を言葉の切れ目で折って出している
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -142,6 +142,9 @@ for (const f of fs.readdirSync(PARTS).filter((x) => x.endsWith('.jsx'))) {
   ok(/const text = ai \? ai\.text : line \? line\.text : '';/.test(p84), '結果の台詞が「AIの文 → 決まった台詞 → 空」の順で文字を選んでいない');
   ok(/typeof res\.text !== 'string'/.test(read('83-card-battle-talk-ai.jsx')), '外のAIの返事が文字かどうかを確かめていない(文字でない返事が吹き出しに出る)');
   ok(/data-card-deck-ask-text[^\n]*ask\.text/.test(p87), 'デッキ相談の吹き出しが ask.text を出していない(形が変わったらこの検査も直す)');
+  // 言葉の切れ目で折る(結果の吹き出しと同じ cardJaWrap)。素のままだと 320幅で言葉の途中で折れる(2026-10-26 フキダシくん)
+  ok(/data-card-deck-ask-text[^\n]*cardJaWrap\(ask\.busy \? [^\n]*: ask\.text\)/.test(p87), 'デッキ相談の吹き出しが cardJaWrap を通していない');
+  ok(/line \? cardJaWrap\(line\.text\) : ''/.test(p84), '相手えらびの吹き出しが cardJaWrap を通していない');
 }
 
 if (fails) { console.log(`\n${fails} 件 NG`); process.exit(1); }
