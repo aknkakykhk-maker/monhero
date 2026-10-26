@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1bdfa7a5b7c36fda
+// source-sha256: 3f019e2040fe8101
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:19";
+const BUILD_DATE = "2026-10-27 01:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -130359,7 +130359,7 @@ function MonsterHeroGame() {
           backgroundColor: cat.color
         }
       }, "次: ", nextTopic.title)))), React.createElement("footer", {
-        className: "shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center",
+        className: "mh-help-foot shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center",
         style: {
           backgroundColor: '#0f172a',
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -135973,6 +135973,13 @@ const createAnimationStyle = () => {
        背の低い器では .mh-phase-tall(助手の吹き出し・説明・合計の欄など、無くても選べるもの)を畳む。
        自前で画面を回しているとき(data-mh-view-rotation)も、器の高さで判定するので同じく効く。 */
     .mh-phase { container-type: size; }
+    /* ヘルプの下の帯: 横の背の低い画面では余白とボタンを詰め、ボタンの幅も抑える(60-app.jsx の .mh-help-foot) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .mh-help-foot { position: relative; padding: 6px 12px calc(6px + env(safe-area-inset-bottom)) !important; }
+      .mh-help-foot > button:first-child { min-height: 38px !important; padding-top: 6px !important; padding-bottom: 6px !important; max-width: 420px; margin-left: auto; margin-right: auto; display: block; }
+      /* うすい入口(デバッグの合言葉の画面へ)は消さずに、帯の右はしへ重ねる(縦に場所を取らない) */
+      .mh-help-foot > button:last-child:not(:first-child) { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); margin: 0 !important; }
+    }
     /* .mh-phase-card は min-h-[112px] と一緒に付ける。背の低い器ではその下限だけを外す */
     .mh-phase-gain { font-size: clamp(20px, 7vw, 30px); }
     /* .mh-phase-mid … SE(667px)くらいから畳むもの(補足の説明文)。絵も一回り小さくする */

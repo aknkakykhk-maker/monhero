@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f93f52f7202692dd
+// generated-sha256: bcae01e5c1b17c1f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 01:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 01:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -81195,7 +81195,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             )}
           </div>
-          <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+          {/* 横の背の低い画面では、下の帯とボタンを詰める(見出しの一覧が1行ぶんしか見えなかった。2026-10-26 ダメダシくんの見回り。.mh-help-foot は 70-bootstrap.jsx) */}
+          <footer className="mh-help-foot shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="mh-button mh-button-primary w-full min-h-[52px] py-3 rounded-2xl font-black text-sm active:scale-95">わかった！冒険に戻る</button>
             <button aria-label="" onClick={requestDebugSettings} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
@@ -85966,6 +85967,13 @@ const createAnimationStyle = () => {
        背の低い器では .mh-phase-tall(助手の吹き出し・説明・合計の欄など、無くても選べるもの)を畳む。
        自前で画面を回しているとき(data-mh-view-rotation)も、器の高さで判定するので同じく効く。 */
     .mh-phase { container-type: size; }
+    /* ヘルプの下の帯: 横の背の低い画面では余白とボタンを詰め、ボタンの幅も抑える(60-app.jsx の .mh-help-foot) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .mh-help-foot { position: relative; padding: 6px 12px calc(6px + env(safe-area-inset-bottom)) !important; }
+      .mh-help-foot > button:first-child { min-height: 38px !important; padding-top: 6px !important; padding-bottom: 6px !important; max-width: 420px; margin-left: auto; margin-right: auto; display: block; }
+      /* うすい入口(デバッグの合言葉の画面へ)は消さずに、帯の右はしへ重ねる(縦に場所を取らない) */
+      .mh-help-foot > button:last-child:not(:first-child) { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); margin: 0 !important; }
+    }
     /* .mh-phase-card は min-h-[112px] と一緒に付ける。背の低い器ではその下限だけを外す */
     .mh-phase-gain { font-size: clamp(20px, 7vw, 30px); }
     /* .mh-phase-mid … SE(667px)くらいから畳むもの(補足の説明文)。絵も一回り小さくする */
