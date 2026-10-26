@@ -1071,7 +1071,12 @@ const cardApplyAction = (db, st0, act) => {
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
     st.active = cardOther(p);
     // 歌う: 相手の番を飛ばす(引く・攻撃・ガッツ置きが無い。その番の数だけ進めて、こちらの番へ)
-    if (st.skip === st.active) { st.skip = null; st.turn += 1; cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p; }
+    //   飛ばした番では「攻撃できない」(吠え・吹き飛ばしなど)を使い切らず、次の本当の番(2つ先)まで残す(2026-10-27 社長)
+    if (st.skip === st.active) {
+      st.skip = null; st.turn += 1;
+      st.players[st.active].mons.forEach((m) => { if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2; });
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p;
+    }
     cardBeginTurn(st);
     return st;
   }

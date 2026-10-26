@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e3f7490bc3a251e1
+// generated-sha256: 5d156e4aafc8bf13
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51394,7 +51394,8 @@ const cardResolveTarget = (db, st) => {
   if (dmg > 0) dmg = Math.max(0, dmg + cardFieldDmgAdd(st, main));
   let reflected = 0;
   if (pd.reflect) {
-    if (pd.reflect.keep) reflected = Math.floor(dmg * pd.reflect.frac);
+    // カウンター(keep): 半分(切り捨て)を返し、残りだけ受ける(5ダメージなら2を返して3を受ける。2026-10-27 社長)
+    if (pd.reflect.keep) { reflected = Math.floor(dmg * pd.reflect.frac); dmg -= reflected; }
     else { reflected = dmg; dmg = 0; }
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
@@ -51714,7 +51715,12 @@ const cardApplyAction = (db, st0, act) => {
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
     st.active = cardOther(p);
     // 歌う: 相手の番を飛ばす(引く・攻撃・ガッツ置きが無い。その番の数だけ進めて、こちらの番へ)
-    if (st.skip === st.active) { st.skip = null; st.turn += 1; cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p; }
+    //   飛ばした番では「攻撃できない」(吠え・吹き飛ばしなど)を使い切らず、次の本当の番(2つ先)まで残す(2026-10-27 社長)
+    if (st.skip === st.active) {
+      st.skip = null; st.turn += 1;
+      st.players[st.active].mons.forEach((m) => { if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2; });
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p;
+    }
     cardBeginTurn(st);
     return st;
   }
@@ -51966,7 +51972,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const re = cardEff(c, 'reduce'); if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
     if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
     if (cardHasEff(c, 'reduceAll') && !cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
-    const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg : 0;
+    const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg - Math.floor(dmg * rf.frac) : 0; // カウンターは返した残りだけ受ける
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
       after = target.life <= dmg && cm.life > dmg ? 0 : dmg; // 倒れそうな味方を、硬い子がかばう
