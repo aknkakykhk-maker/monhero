@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b0f0dfcc9aad8f3
+// source-sha256: a231cc306cf9ba68
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:10";
+const BUILD_DATE = "2026-10-27 00:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -54543,7 +54543,7 @@ function ProfileScreen({
   })(), onboarded && !onboardingPreview && rhythmAchRows.some(r => r.clear > 0) && React.createElement(RhythmAchievementPanel, {
     rows: rhythmAchRows,
     who: "self"
-  }), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  }), onboarded && !onboardingPreview && React.createElement(CardBattleStatsSelf, null), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -73997,7 +73997,9 @@ function FriendsScreen({
         return React.createElement("div", {
           "data-friend-battle": true,
           className: "mt-2 flex flex-col gap-2"
-        }, rows.length === 0 && React.createElement("p", {
+        }, React.createElement(CardBattleStatsFriend, {
+          breederId: selected.otherId
+        }), rows.length === 0 && React.createElement("p", {
           className: "px-1 py-4 text-center text-[11px] font-bold text-slate-500"
         }, "まだバトルの記録がありません"), rows.map(e => React.createElement("div", {
           key: e.id,
@@ -94636,6 +94638,174 @@ const cardRankSync = async (db, {
     console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
     return false;
   }
+};
+const cardStatsGet = async path => {
+  if (typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers: SB_HEADERS,
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (!res.ok) return null;
+    const rows = JSON.parse((await res.text()) || '[]');
+    return Array.isArray(rows) ? rows : null;
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const CARD_STATS_ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+const sbFetchCardPvpRatingOf = async breederId => {
+  if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
+  const rows = await cardStatsGet(`card_battle_pvp_ratings?select=rating,wins,loses&breeder_id=eq.${breederId}&limit=1`);
+  const r = rows && rows[0];
+  if (!r) return null;
+  const n = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0;
+  return {
+    rating: Number.isFinite(Number(r.rating)) ? Math.floor(Number(r.rating)) : null,
+    win: n(r.wins),
+    lose: n(r.loses)
+  };
+};
+const cardStatsOfSelf = async () => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  if (!db) return null;
+  const record = cardNormalizeRecord(await storeGet(CARD_SAVE_KEYS.record, null));
+  const rawCol = await storeGet(CARD_SAVE_KEYS.collection, null);
+  const dex = cardDexCounts(db, cardIsPlainObject(rawCol) ? rawCol : {});
+  const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+  const rating = await sbFetchCardPvpRatingOf(id).catch(() => null);
+  return {
+    wins: record.rank.total,
+    bestStreak: record.rank.streak.best,
+    dex,
+    pvp: {
+      win: record.pvp.win,
+      lose: record.pvp.lose,
+      rating: rating ? rating.rating : null
+    },
+    played: record.cpu.win + record.cpu.lose + record.cpu.surrender + record.pvp.win + record.pvp.lose
+  };
+};
+const cardStatsOfFriend = async breederId => {
+  if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
+  const rows = await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
+  const e = rows && rows[0] ? cardRankEntryFromRow(rows[0]) : null;
+  const pvp = await sbFetchCardPvpRatingOf(breederId);
+  if (!e && !pvp) return null;
+  const wins = e ? e.wins : Object.fromEntries(CARD_LEVEL_ORDER.map(lv => [lv, 0]));
+  return {
+    wins,
+    bestStreak: e ? e.bestStreak : 0,
+    dex: e ? {
+      count: e.dexCount,
+      total: e.dexTotal
+    } : null,
+    pvp: pvp ? {
+      win: pvp.win,
+      lose: pvp.lose,
+      rating: pvp.rating
+    } : {
+      win: 0,
+      lose: 0,
+      rating: null
+    },
+    played: CARD_LEVEL_ORDER.reduce((a, lv) => a + wins[lv], 0) + (pvp ? pvp.win + pvp.lose : 0) + (e && e.dexCount > 0 ? 1 : 0)
+  };
+};
+const CardBattleStatsPanel = ({
+  stats,
+  who = 'self'
+}) => {
+  if (!stats || !stats.played) return null;
+  const cell = 'rounded-lg bg-black/30 px-1 py-1';
+  const val = n => `text-[13px] font-black tabular-nums ${n > 0 ? 'text-white' : 'text-slate-500'}`;
+  return React.createElement("section", {
+    "data-card-stats": who,
+    className: `${SCREEN_PANEL_FLAT_CLASS} mb-3`
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-amber-100"
+  }, "MFバトルカードの戦績"), React.createElement("small", {
+    className: "mb-2 block text-[9px] font-bold text-slate-400"
+  }, "助手と対戦の、強さごとの勝ち数"), React.createElement("div", {
+    className: "grid grid-cols-5 gap-1 text-center"
+  }, CARD_LEVEL_ORDER.map(lv => React.createElement("div", {
+    key: lv,
+    "data-card-stats-level": lv,
+    className: cell
+  }, React.createElement("span", {
+    className: "block whitespace-nowrap text-[9px] font-black text-slate-300"
+  }, CARD_LEVEL_LABEL[lv]), React.createElement("b", {
+    className: `block ${val(stats.wins[lv] || 0)}`
+  }, stats.wins[lv] || 0)))), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1 text-center"
+  }, React.createElement("div", {
+    "data-card-stats-streak": true,
+    className: cell
+  }, React.createElement("span", {
+    className: "block whitespace-nowrap text-[9px] font-black text-orange-200"
+  }, "いちばん長い連勝"), React.createElement("b", {
+    className: `block ${val(stats.bestStreak)}`
+  }, stats.bestStreak)), React.createElement("div", {
+    "data-card-stats-pvp": true,
+    className: cell
+  }, React.createElement("span", {
+    className: "block whitespace-nowrap text-[9px] font-black text-sky-200"
+  }, "マルチ対戦"), React.createElement("b", {
+    className: `block ${val(stats.pvp.win + stats.pvp.lose)}`
+  }, stats.pvp.win, "勝", stats.pvp.lose, "敗"), Number.isFinite(stats.pvp.rating) && React.createElement("span", {
+    className: "block text-[9px] font-bold text-sky-100"
+  }, "強さ ", stats.pvp.rating)), React.createElement("div", {
+    "data-card-stats-dex": true,
+    className: cell
+  }, React.createElement("span", {
+    className: "block whitespace-nowrap text-[9px] font-black text-emerald-200"
+  }, "カード図鑑"), stats.dex ? React.createElement("b", {
+    className: `block ${val(stats.dex.count)}`
+  }, stats.dex.count, React.createElement("span", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "/", stats.dex.total)) : React.createElement("b", {
+    className: "block text-[13px] font-black text-slate-500"
+  }, "-"))));
+};
+const CardBattleStatsSelf = () => {
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    cardStatsOfSelf().then(x => {
+      if (alive) setStats(x);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return React.createElement(CardBattleStatsPanel, {
+    stats: stats,
+    who: "self"
+  });
+};
+const CardBattleStatsFriend = ({
+  breederId
+}) => {
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    setStats(null);
+    cardStatsOfFriend(breederId).then(x => {
+      if (alive) setStats(x);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [breederId]);
+  return React.createElement(CardBattleStatsPanel, {
+    stats: stats,
+    who: "friend"
+  });
 };
 const CARD_RANK_KINDS = Object.freeze([{
   id: 'wins',
