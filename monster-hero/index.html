@@ -102,7 +102,7 @@ var GAME_BUILD = '30d81c45e21f';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-10-27 04:07';
+window.__mhBuildDate = '2026-10-27 04:08';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -2245,7 +2245,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <body>
 <div id="loading"><div class="static-mocchi"><img id="static-mocchi-image" alt="モッチー"><span></span></div><section class="static-copy"><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div class="static-progress"><span></span></div><strong>0%</strong><p>ゲームシステムを起動中</p></section></div>
 <div id="root"></div>
-<script src="data/images/images-ally.js?v=5ad4f7999ca5" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
+<script src="data/images/images-ally.js?v=99369832c5fe" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
 <script>try{document.getElementById('static-mocchi-image').src=MOCCHI_IMG}catch(e){}</script>
 <script src="data/images/images-enemy.js?v=f10f6ad82110" onload="__mhBoot.done('data/images/images-enemy.js','敵モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-enemy.js')"></script>
 <script src="data/ally-monsters.js?v=51d6430d98dd" onload="__mhBoot.done('data/ally-monsters.js','モンスターデータを読み込み中')" onerror="__mhBoot.fail('data/ally-monsters.js')"></script>
