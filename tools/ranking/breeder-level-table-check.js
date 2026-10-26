@@ -119,6 +119,14 @@ const run = async () => {
     assert(/route\([^)]*supabase/i.test(t), `${f}: webdriver を偽るのに Supabase を差し替えていない(本番へ書いてしまう)`);
   }
   console.log(`OK: webdriver を偽る検査(${spoofers.length}本)は Supabase を差し替えている`);
+  // __mhSupabaseStubbed = true を立てる検査も同じ(止めが外れる。差し替えが無いと本番へ書く)。
+  // 差し替えの印: page/context の route(...)・fake-supabase・sb.handle のどれか
+  const stubbers = walk('tools').filter((f) => /__mhSupabaseStubbed\s*=\s*true/.test(fs.readFileSync(f, 'utf8')));
+  for (const f of stubbers) {
+    const t = fs.readFileSync(f, 'utf8');
+    assert(/route\(|createFakeSupabase|sb\.handle/.test(t), `${f}: __mhSupabaseStubbed = true を立てるのに Supabase を差し替えていない(本番へ書いてしまう)`);
+  }
+  console.log(`OK: __mhSupabaseStubbed = true を立てる検査(${stubbers.length}本)は Supabase を差し替えている`);
 
   // SQL
   const dir = 'docs/sql/rankings/';
