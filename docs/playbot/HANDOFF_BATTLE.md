@@ -37,6 +37,7 @@
   演出はタクティクスの枠だけ・軽量表示と超省エネでは出さない・「待機中の動き：止める」(`battleFx.idleMotion==='OFF'`)と端末の動きを減らす設定で止める
 - **静止画用の差し込み口** … 自動操作のブラウザ(`navigator.webdriver`)のときだけ `window.__mhStackMarksDebug.set({ ally:{枠:{kind:数}}, enemy:{kind:数}, fx:{枠:{...}} })` が使える。見た目だけで効き目は変えない
 - CSS は `monster-hero/index.html` の `.mh-stack-mark*` と `.mh-mfx-*`
+- **ヘイト(確認待ちの試作・10/17)** … 数字は `32-tactics-units.jsx` の `TACTICS_HATE` の1か所(役割・子ごとの上書きもここ)。60-app は `tacticsHateOnFor`(タクティクスバトルだけ・試作が入のときだけ)・カードと EX でためて敵の次の狙いの直前に `stepTacticsHate`・WAVE の始めに `resetTacticsHate`。炎は `71-screen-battle.jsx` の `hateFlame`。検査 `battle/tactics-hate-check.js`、説明と動画 `docs/playbot/reports/2026-10-17/tactics-hate-proto/`
 
 ## 残っていること・宿題
 

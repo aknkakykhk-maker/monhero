@@ -6,8 +6,8 @@
 // build.js が毎回呼ぶ。手で書かない(ファイルを足すと書き忘れて、その絵だけ落とせなくなる)。
 //
 // 【中身】
-//   files: { "audio/bgm-xxx.mp3": { v: "<中身の sha256 先頭12桁>", size: <バイト>, pack: "beat" | "battle" } }
-//   packs: { beat: { bytes, count }, battle: {...}, all: {...} }
+//   files: { "audio/bgm-xxx.mp3": { v: "<中身の sha256 先頭12桁>", size: <バイト>, pack: "beat" | "battle" | "card" } }
+//   packs: { beat: { bytes, count }, battle: {...}, card: {...}, all: {...} }
 //   id:    一覧全体の指紋(どれか1つでも変われば変わる)
 //
 // v は stamp-version.js(画像)・stamp-audio-keys.js(音源)が URL に付ける ?v= と同じ計算にしてある。
@@ -18,9 +18,13 @@
 //   beat   … モンヒロビートの曲(rhythm-mode.js の bgmTrackId → BGM 一覧の src)とジャケット(images/song-art/)、
 //             演奏画面の見た目(images/rhythm-look/)
 //   battle … それ以外の音源と画像(バトル・HOME の BGM、モンスター、敵、演出、助手、アイコン、背景)
-//   all    … 両方
+//   card   … MFバトルカードのカードの絵(images/card-battle/ の小さい版 s と大きい版 l。2026-10-25 社長「両方入れる」)
+//             公開の印(RELEASE_FLAGS.cardBattle)が false のあいだは、ページ側(25-asset-cache.jsx)が遊ぶ人に見せず、
+//             「全部」にも入れず、自動ダウンロードもしない(デバッグ端末だけ)。公開した日から自動で入る
+//   all    … 全部
 // movies/ は入れない。<video> は範囲指定(Range)で取るので、Service Worker から丸ごと返すと
 // iPhone で再生できないことがあるため。
+// images/card-battle/ は、バトルのまとまりに混ぜず、別のまとまり card にする(以前は一覧に入れていなかった)。
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -77,9 +81,10 @@ function buildManifest() {
   for (const full of [...audio, ...images].sort()) {
     const r = rel(full);
     const isBeat = beat.set.has(r) || r.startsWith('images/song-art/') || r.startsWith('images/rhythm-look/');
-    files[r] = { v: hashOf(full), size: fs.statSync(full).size, pack: isBeat ? 'beat' : 'battle' };
+    const isCard = r.startsWith('images/card-battle/');
+    files[r] = { v: hashOf(full), size: fs.statSync(full).size, pack: isCard ? 'card' : isBeat ? 'beat' : 'battle' };
   }
-  const packs = { beat: { bytes: 0, count: 0 }, battle: { bytes: 0, count: 0 }, all: { bytes: 0, count: 0 } };
+  const packs = { beat: { bytes: 0, count: 0 }, battle: { bytes: 0, count: 0 }, card: { bytes: 0, count: 0 }, all: { bytes: 0, count: 0 } };
   for (const f of Object.values(files)) {
     packs[f.pack].bytes += f.size; packs[f.pack].count++;
     packs.all.bytes += f.size; packs.all.count++;
@@ -121,5 +126,5 @@ if (require.main === module) {
   if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
   const mb = (n) => (n / 1024 / 1024).toFixed(1);
   const p = r.manifest.packs;
-  console.log(`${check ? 'OK' : (r.changed ? '書き出しました' : '最新でした')}: asset-manifest.json (${r.manifest.id}) モンヒロビート ${p.beat.count}件 ${mb(p.beat.bytes)}MB / バトル ${p.battle.count}件 ${mb(p.battle.bytes)}MB / 全部 ${mb(p.all.bytes)}MB`);
+  console.log(`${check ? 'OK' : (r.changed ? '書き出しました' : '最新でした')}: asset-manifest.json (${r.manifest.id}) モンヒロビート ${p.beat.count}件 ${mb(p.beat.bytes)}MB / バトル ${p.battle.count}件 ${mb(p.battle.bytes)}MB / バトルカード ${p.card.count}件 ${mb(p.card.bytes)}MB / 全部 ${mb(p.all.bytes)}MB`);
 }

@@ -40,12 +40,16 @@ const NICKNAME_ALLOWED = [
   'モンビー……モンヒロビートのことでつね',
   'モンビー始めたばっかりの子でも',
 ];
-const allowed = (line) => NICKNAME_ALLOWED.some(phrase => line.includes(phrase));
+// 助手ごとの呼び方を説明する行(2026-10-18 社長「ドラちゃんはモンビー呼び、ももはモンビート呼びでいいよ」)。
+// 正式名称と並べて「〜と呼ぶ」と書く説明(ヘルプ・更新履歴・助手の人物設定)と、人物設定の rhythmCall だけ
+const callExplanation = (line) => (line.includes('モンヒロビート') && /と呼|呼び方/.test(line)) || /rhythmCall\s*:\s*'モンビート?'/.test(line);
+const allowed = (line) => NICKNAME_ALLOWED.some(phrase => line.includes(phrase)) || callExplanation(line);
 // 助手のセリフ({ e:'…', t:'…' })は、キャラクターが話す会話。愛称はここで使ってよい(CLAUDE.md ⑤)。
-// 誰が愛称で呼ぶかは会話の側で決めてある(例: 異世界交響祭の告知は「みゅあ・ももすけはモンビー、きき・ドラはモンヒロビート」)。
+// 誰が愛称で呼ぶかは会話の側で決めてある(2026-10-18 から: みゅあ・ドラはモンビー、ももすけはモンビート、ききはモンヒロビート。例: 異世界交響祭の告知を書いた時は「みゅあ・ももすけはモンビー、きき・ドラはモンヒロビート」)。
 // 以前は許可リストの言い回しだけを通していたので、新しい会話を足すたびに落ちていた(2026-09-27)
 // 物語の会話は { who:'mua', e:'…', t:'…' } の形(話し手が先に付く)
-const assistantSpeech = (file, line) => file.endsWith('assistants.js') && /\{\s*(?:who\s*:\s*'[^']*'\s*,\s*)?e\s*:\s*'[^']*'\s*,\s*t\s*:\s*'/.test(line);
+// おしゃべりの見本({ q:'…', a:'…' })の答えも助手のセリフ
+const assistantSpeech = (file, line) => file.endsWith('assistants.js') && (/\{\s*(?:who\s*:\s*'[^']*'\s*,\s*)?e\s*:\s*'[^']*'\s*,\s*t\s*:\s*'/.test(line) || /\{\s*q\s*:\s*'[^']*'\s*,\s*a\s*:\s*'/.test(line));
 // 行末のコメント(コードのあとの「  // …」)も開発者向けなので外す
 const withoutTrailingComment = (line) => line.replace(/\s{2,}\/\/.*$/, '');
 

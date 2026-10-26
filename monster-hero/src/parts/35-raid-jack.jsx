@@ -50,7 +50,7 @@ const raidJackStoryUnlockKey = (id) => `${String(id).replace(/^raid_jack_/, 'rai
 // イベント中のBGM(2026-10-04・ユーザー指示)。レイド画面・段階えらび・編成は、この曲に固定する(ジャック戦は 2026-10-05 から下の RAID_JACK_BATTLE_BGM_TRACK)。
 // HOMEの曲は、ユーザーが自分で選んでいない(既定のまま)あいだだけ、期間中にこの曲へ替わる。終わると元に戻る
 const RAID_JACK_BGM_TRACK = 'melo_crazy_party_night_full';   // Crazy Party Night ～ぱんぷきんの逆襲～ の全編版(2026-10-04・ユーザー指示「ハロウィンイベント関連はこの曲をデフォルトに」。1分34秒の版から替えた)
-const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP', 'RAID_JACK_PLACE']);
+const RAID_JACK_BGM_STATES = Object.freeze(['RAID_JACK', 'RAID_JACK_PREP']);
 // ジャックとの戦い(レイドバトルもグランドスラムも)だけは、ハロウィンの曲「Monster」の全編の版にする(2026-10-05・ユーザー指示
 // 「フルはハロウィンイベント期間でのレイド戦用のデフォルト曲にして」。範囲は戦闘中だけ・ユーザー判断)。レイド画面・段階えらび・編成は上の曲のまま
 const RAID_JACK_BATTLE_BGM_TRACK = 'melo_monster';
@@ -153,7 +153,9 @@ const RAID_JACK_PUMPKIN = raidJackTier('a6', 'ぱんぷきん', 13.0, 5, 1.0, 45
 //     数字を見てから決め直す。決めたら RAID_JACK_RHYTHM_DAMAGE_LIMIT に数字を入れる(null = 上限なし。1回の送信の上限 1億 は別に効く)
 const RAID_JACK_RHYTHM_JUDGMENT_RATES = Object.freeze({ JUST: 1.0, MARVELOUS: 0.95, EXCELLENT: 0.70, GREAT: 0.50, GOOD: 0.25, BAD: -0.15, MISS: -0.30 });
 const RAID_JACK_RHYTHM_BASE = 1000;   // MASTER のジャスト1個
-const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0 });
+// HELL は 2026-10-17 に足した(それまでは表に無く、HELL で遊ぶとダメージが0だった)。はじめは MASTER と同じ 1.0。
+// 2026-10-21 社長の決定で、レイドの曲えらびに HELL を出し、重みを 1.5 に上げた
+const RAID_JACK_RHYTHM_DIFFICULTY_FACTORS = Object.freeze({ EASY: 0.25, NORMAL: 0.40, HARD: 0.55, EXPERT: 0.75, MASTER: 1.0, HELL: 1.5 });
 const RAID_JACK_RHYTHM_COMBO_PER_COMBO = 0.0005;   // 1コンボあたりの上乗せ(100コンボで +5%)
 // 達成の補正: ふつうの演奏は基準の0.35倍(半分からさらに30%下げた)。オールマーベラス=1.0(従来どおり)・オールエクセレント=0.9・フルコンボ=0.7(いずれも従来比)
 const RAID_JACK_RHYTHM_ACHIEVE_FACTORS = Object.freeze({ NONE: 0.35, FULL_COMBO: 0.7, ALL_EXCELLENT: 0.9, ALL_MARVELOUS: 1.0 });
@@ -187,7 +189,14 @@ const raidJackRhythmDamage = (input) => {
 // 演奏の結果(result・difficulty)から、ダメージを出す
 const raidJackRhythmDamageOf = (result, difficulty) => {
   const r = result && typeof result === 'object' ? result : {};
-  return raidJackRhythmDamage({ judgments: r.judgments, precise: r.precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true, fullCombo: r.fullCombo === true, allExcellent: r.allExcellent === true, allMarvelous: r.allMarvelous === true });
+  // 刻みの数え方(2026-10-17・社長の決定「レイドは係数そのままで、刻みも数える」): 取った刻みは JUST MARVELOUS、落とした刻みは MISS として判定の数へ足す。
+  // 最大コンボはもともと刻み込み。刻みの無い記録(今までの数え方)はそのまま
+  const tickJust = Math.max(0, Math.floor(Number(r.tickJust) || 0)), tickMiss = Math.max(0, Math.floor(Number(r.tickMiss) || 0));
+  const judgments = (tickJust || tickMiss) && r.judgments && typeof r.judgments === 'object'
+    ? { ...r.judgments, MARVELOUS: (Math.floor(Number(r.judgments.MARVELOUS) || 0)) + tickJust, MISS: (Math.floor(Number(r.judgments.MISS) || 0)) + tickMiss }
+    : r.judgments;
+  const precise = (Math.floor(Number(r.precise) || 0)) + tickJust;
+  return raidJackRhythmDamage({ judgments, precise, maxCombo: r.maxCombo, difficultyId: difficulty && difficulty.id, assist: r.assist === true, fullCombo: r.fullCombo === true, allExcellent: r.allExcellent === true, allMarvelous: r.allMarvelous === true });
 };
 
 // 共有の合計から「大王が倒されたか」を見る(totals は sbFetchRaidJackTierTotals の返り値)。見るたびに数え直す
@@ -236,6 +245,26 @@ const raidJackStoryCandidates = (totals, nowMs) => {
     out.push(defeatedAt(RAID_JACK_A_TIERS.length - 1) ? RAID_JACK_ENDING_CLEARED_ID : RAID_JACK_ENDING_NOTCLEARED_ID);
   }
   return out.filter(Boolean);
+};
+
+// 大王が倒されたのを見た印(2026-10-20)。フレーム「ハロウィン・恐」をマーケットで買えるようにする条件に使う。
+// 倒されたことは取り消されないので、一度見たら持っておき、サーバーへ届かないときもそのまま使う。値は { at }
+const RAID_JACK_BOSS_DOWN_KEY = 'mh_raid_jack_boss_down_v1';
+// 大王まで倒せたときの終章を見た参加者へ、プロフィールフレーム「ハロウィン・妖」をギフトで1回だけ届ける(2026-10-20 社長の決定)。
+// ★届けたかは新しいキー mh_raid_jack_frame_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない)。
+// ★倒せなかったとき(終章が raid_jack_ending_notcleared)は届けない。期間が終わってから起動した参加者にも、終章を見たところで届く
+const RAID_JACK_FRAME_GIFT_KEY = 'mh_raid_jack_frame_gift_v1';
+const RAID_JACK_FRAME_GIFT_FRAME_ID = 'frame_halloween_pumpkin';
+const raidJackFrameGift = () => ({
+  id: `${RAID_JACK_EVENT.id}_frame_gift`,
+  title: 'ハロウィン・ナイトのお礼',
+  source: 'raidJack',
+  rewards: [{ type: 'profileFrame', frameId: RAID_JACK_FRAME_GIFT_FRAME_ID, amount: 1 }],
+});
+// レイドに参加したか(この端末の記録で見る)。1回でも挑んだ日・グランドスラムの累計・倒した段階・受け取った報酬・送り待ちのどれかがあれば参加
+const raidJackParticipated = (raw) => {
+  const st = raidJackNormalizeState(raw);
+  return !!(st.a.day || st.b.day || st.b.total > 0 || st.a.defeated.length || st.b.defeated.length || st.claimed.length || st.pending.length);
 };
 
 // 毎日5:00(JST)で回数が戻る。日付キー = 5時間引いたJSTの日付。

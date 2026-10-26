@@ -8528,3 +8528,73 @@ songId `anima` / bgmTrackId `melo_anima` / 譜面は MHB CHART ENGINE Rev.28。
   着いた瞬間にふだんの速さへ段差なしでつなぐ。判定の時刻は音楽どおり。見張りは `tools/mode/grievous-lady-scroll-check.js`
 - **公開:** 地上の5難易度を `RHYTHM_DEMO_SONG_IDS` に入れ、公開中の譜面の控え（`rhythm-released-chart-lock.json`）に登録した。
   HELL（空中あり・`grievous_lady_hell`）は `RHYTHM_PROTO_SONGS` のままデバッグ専用（`RELEASE_FLAGS.rhythmHell` は偽のまま）
+
+## 「ROSE」の全編と short ver. をモンヒロビートへ足した（2026-10-18）
+
+社長の依頼（窓口経由・mp4 1本とジャケット1枚。曲名「ROSE」・アーティスト表記「HANA」）。「ショートとフルで両方作って。ヘルもありで。今後の新曲は基本ヘルありで」。
+songId `rose`（全編）/ `rose_short`（副題 `short ver.`）、bgmTrackId `melo_rose` / `melo_rose_short`（`creator:'HANA'`）。譜面は MHB CHART ENGINE Rev.31。
+曲えらびは `RHYTHM_SONG_VERSION_GROUPS` で1行にまとめ、先頭（行を押したとき）は全編。
+
+- **ジャケット**: 2つの版で同じ絵（512×512・quality 80・80KB）
+- **音源**: 頭から鳴っているので、最初のノーツを2秒より後にするため頭に2秒の無音を足した。全編 ×1.0507 で **-13.99 LUFS / -3.04 dBTP**（2分45秒）
+- **short の作り**: 決まり「頭からサビの終わりまで」。全編の解析の区切りで、いちばん盛り上がるサビ（86.6〜113.5秒・強さ0.85）の終わりで切り、
+  次の区切りの頭1小節（1.92秒）でフェードアウト（`--from 0 --to 115.396 --fade-out 1.92`）。×1.0715 で **-14.01 LUFS / -2.74 dBTP**（1分55秒）。
+  全編と同じ録音の頭から切ったので、拍の格子も同じ（`splices` は書かない）
+- **テンポ**: 自動判定 125 BPM / 4拍子 / 拍の頭 116ms（無音を足して 2116ms）。半分 62.5（±15ms 30%）・3/4倍 93.75（18%）・4/3倍 166.67（33%）と比べ、
+  ±15ms の格子への乗りがいちばん良い 125（55%）にした（4/3倍は ±43ms では 98% だが、格子が細かく偶然でも乗る）
+- **歯ごたえは社長が激しさの中間（`chartIntensity:'strong'`）と決めた**（`challengeFactor` は書かない）。
+  全編 EASY 5 / NORMAL 7 / HARD 10 / EXPERT 17 / MASTER 30 / HELL 45、ノーツ 159 / 197 / 266 / 424 / 533。
+  short 5 / 6 / 10 / 17 / 33 / 44、ノーツ 113 / 131 / 183 / 286 / 356。
+  候補: 自動 全編 5 / 6 / 8 / 13 / 19 / 27・short 5 / 6 / 8 / 12 / 20 / 29 ／ 1.3 で 7 / 9 / 15 / 18 / 30 / 40・6 / 8 / 14 / 22 / 32 / 41 ／
+  1.6 で 8 / 9 / 16 / 26 / 31 / 41・8 / 10 / 17 / 26 / 35 / 42 ／ `extreme` で 7 / 9 / 13 / 28 / 41 / 51・6 / 9 / 12 / 28 / 37 / 53
+- **HELL**（新曲は基本 HELL あり・2026-10-18 から）: 曲の解析から HELL 用に一から作った（`rhythm-hell-mix.js` の `source:'audio'`）。
+  `variant` を 0〜3 で比べ、モンスター4個・水平クロス0・帯の中0のうち、横持ちの交差・届きにくいが少ないものにした（全編 1・short 3）。
+  引き出しは道具が曲を見て決めた（全編は R3・R5 を使う／short は使わない。理由は道具の出力）
+
+## 「Toward the Stars, Paradise or Truth」short ver. をモンヒロビートへ足した（2026-10-19）
+
+社長の依頼（窓口経由・mp3 1本。ジャケットは mp3 に埋め込まれていた絵）。曲名・作者はタグから（`Toward the Stars, Paradise or Truth`・`hitoyakyuko`）。
+短い版だけで全編は無いので、1曲として足した。songId `toward_the_stars_short`、`displayName:'Toward the Stars, Paradise or Truth'`・`subtitle:'short ver.'`、bgmTrackId `melo_toward_the_stars_short`（`creator:'hitoyakyuko'`）。
+
+- **ジャケット**: mp3 の中の絵（1254×1254）を 512×512 に（65KB）
+- **音源**: 頭から鳴っているので2秒の無音を足した。×1.3725 で **-14.00 LUFS / -2.91 dBTP**（2分17秒）
+- **テンポ**: 自動判定 143.27 BPM / 4拍子 / 拍の頭 1390.5ms（無音込み）。半分 71.64（±15ms 28%）・3/4倍 107.45（24%）・4/3倍 191.03（39%）と比べ、±15ms がいちばん良い 143.27（51%）のまま
+- **歯ごたえは社長が「マスター以上をもっとむずく」と決めた**: EASY〜EXPERT は自動のまま、`chartIntensityByDifficulty:{MASTER:'extreme',HELL:'extreme'}`（`challengeFactor`・`chartIntensity` は書かない）。
+  EASY 7 / NORMAL 8 / HARD 13 / EXPERT 17 / MASTER 37 / HELL 46、ノーツ 174 / 205 / 278 / 332 / 481 / 563。
+  候補: 自動 7 / 8 / 13 / 17 / 27 / 37 ／ 1.3 で 8 / 10 / 16 / 22 / 28 / 36 ／ `strong` で 8 / 10 / 18 / 28 / 31 / 38 ／ 1.6・`extreme`（曲まるごと）は出荷できない ／
+  MASTER・HELL を `strong` で MASTER 31・HELL 37
+- **HELL**: 社長「HELL をもっと上げる」で、HELL を作る道具に2つの手を足した（書いた曲だけ・`docs/rules/CHART_ENGINE.md`「HELL を重くする」）。
+  曲の一覧の `hellDensity:1.3`（拾う音 566 → 881・HELL 467 → 563 ノーツ）と、`rhythm-hell-mix.js` の `phrases:['L','both','R','both']`（両手とも地上の小節を無くす）。variant 2。
+  Lv.37 → 46、空中のタップ 78 → 150。モンスター4個・水平クロス0・帯の中0
+- 公開前に、EXPERT（3か所）・MASTER（2か所）の押さえている帯の中のタップを帯の外へ、MASTER のモンスターノーツ（激しさを上げて3個になった）を4個に直した（時刻・ノーツ数はそのまま）
+
+## 「BLACK SHOUT」をモンヒロビートへ足した（2026-10-21）
+
+社長の依頼（窓口経由・mp4 とジャケット）「譜面の新しい作り方で新曲作って」。Roselia の `BLACK SHOUT`。songId `black_shout`、bgmTrackId `melo_black_shout`、マーカー `black-shout-v3`。
+手の流れを狙う配置（`flowPlacement:true`・#3250）で作った最初の曲。
+**最初に届いた mp4 は別の曲だった**（#3252 で公開 → 社長「曲間違えてる・スタートや速度がばくってる」で #3253 で取り下げ）。正しい mp4 で、解析から作り直した。
+
+- **ジャケット**: 1254×1254 を 512×512 に（81KB）
+- **音源**: 頭から鳴っているので2秒の無音を足した。×1.0556 で **-14.00 LUFS / -1.80 dBTP**（1分49秒）
+- **テンポ**: 自動判定 185.07 BPM / 4拍子 / 拍の頭 989ms（無音込み）。半分 92.53（±43ms 68%）・3/4倍 138.80（76%）・185.00（±15ms 31%）と比べ、
+  ±43ms 100%・±15ms 57% の 185.07 にした。拍の頭は足した無音のあとの最初の拍 2285.8ms
+- **歯ごたえは社長が自動のままと決めた**（`challengeFactor` は書かない）。
+  EASY 8 / NORMAL 12 / HARD 18 / EXPERT 24 / MASTER 33 / HELL 61、ノーツ 204 / 238 / 325 / 399 / 445 / 512
+- **HELL**: `variant` 0〜3 を比べた（交差+届きにくい 102 / 97 / 90 / 84）。3 がいちばん少ないが空中のタップが7個しかないので、差の小さい 2（空中のタップ38個）にした。
+  モンスター4個・水平クロス0・帯の中0・見分けにくい所0
+- 公開前に、MASTER の押さえている帯の中のタップ2か所（27.74秒・65.50秒のモンスター）を帯の外へ横にずらした（時刻・ノーツ数は変えない）
+
+## 「light player」「月が満ちる前に」の全編と short ver. をモンヒロビートへ足した（2026-10-23）
+
+社長の依頼（窓口経由・m4a とジャケット）「フル、ショート両方」。school food punishment「light player」と Fuki Commune「月が満ちる前に」。
+songId `light_player`・`light_player_short`・`tsuki_ga_michiru_mae_ni`・`tsuki_ga_michiru_mae_ni_short`（`flowPlacement:true`）。
+
+- **音源**: 頭に2秒の無音を足し(月が満ちる前にの全編だけ 1.95秒。2秒だと最初の音に乗る格子が 3.004秒で、最初のノーツが3秒を超えた。1.9秒では作った譜面の EXPERT に押せない所が1件残った)、4曲とも -14 LUFS にそろえた（全編 light ×0.8946・月 ×0.7413、short は short だけで測って light ×0.8810・月 ×0.7595）。元はモノラル
+- **テンポ**: light player は自動の 188.00 BPM（強い打点の60%が16分に乗る）。月が満ちる前には自動判定 153.16 BPM が格子に乗らず（偶然と同じ割合）、
+  60〜240 BPM を広く探して 188.00 BPM に決めた(拍の頭 全編 799.9ms・short 849.9ms)（8分の乗り 56%・偶然 25%）。2曲とも 188 BPM
+- **short ver.**: 頭から2つ目のサビの終わりまで・最後の1小節でフェードアウト（light 0〜150.5秒・月 0〜111.9秒）。一番盛り上がるのは2曲とも最後のサビで、そこで切ると全編とほぼ同じ長さになるため
+- **歯ごたえは社長が「自動のまま」と決めた**（`challengeFactor`・`chartIntensity` は書かない）。候補: 0.9 で light 7/8/11/19/26・月 7/9/13/19/24、1.15 で light 8/9/14/24/33・月 9/12/15/24/29（月は 1.15 で MASTER が下がる）
+- Lv.: light 8/9/14/23/30・HELL 54 / light short 8/9/14/20/27・HELL 52 / 月 9/11/16/24/34・HELL 65 / 月 short 9/12/16/23/33・HELL 65
+- **HELL**: variant を比べて light 0・light short 2・月 0・月 short 0。空中の「指が同じ位置にくる」形は許す数の内（月の全編は 9→6 に直した）
+- 作ったあとに直したもの（時刻・ノーツ数はそのまま）: 帯の中に戻っていたノーツ12件を帯の外へ（`fixHeldBand`）、月 MASTER のモンスター枠1（欠けていた）を 57.02秒の拍の頭の単打へ、
+  月 short MASTER の 6.0秒で通り道が交わっていた地上スライド2本の片方を同じ位置のタップへ

@@ -260,7 +260,11 @@ check('タクティクスプロはプロ扱い・タクティクス種族は種�
 check('既存のランキング行を書き換える処理を足していない',
   !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source)
     // フレンド機能(friendsPatchLink)の PATCH は、フレンドの申請の表を書き換えるもの。ランキングの表ではない(2026-10)
-    && !/method:\s*'PATCH'/.test(source.replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, ''))
+    // MFバトルカードのマルチ対戦の招待を断る(sbDeclineCardInvite)の PATCH は、招待の表(card_battle_invites)の時刻を書き換えるもの。
+    //   ランキングの表ではない(2026-10-26 #3678)。例外にするのは、この関数の中の card_battle_invites への PATCH だけ
+    && !/method:\s*'PATCH'/.test(source
+      .replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, '')
+      .replace(/const sbDeclineCardInvite = async[\s\S]*?cardPvpInviteRequest\(`card_battle_invites\?[^`]*`, \{ method: 'PATCH', [^}]*\}, prefer: 'return=minimal' \}\);/, ''))
     && !has('DELETE FROM') && !has('migrateRanking'));
 
 // --- ③ WAVEごとの自動成長 ---
@@ -422,7 +426,7 @@ check('ランキングボタンはチャレンジのときだけ出す',
 // クイックでも同じ高さの案内を出し、下に続く表示の位置がモードでずれないようにする
 check('ランキングボタンはモードのタブと同じ幅', has('className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40'));
 check('ランキングボタンはモードのタブのすぐ下にある',
-  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度を選択'));
+  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度をえらぶ'));
 check('クイックでも同じ高さの案内を出す', has('クイックモードはランキング対象外です') && count('w-full h-10 rounded-xl') === 2, `${count('w-full h-10 rounded-xl')}か所`);
 // 最低の高さ(min-h)ではなく決め打ちの高さ(h-10)にする。ボタンの中身によっては
 // min-hを超えて伸びてしまい、クイック側の空き場所とずれるため
@@ -534,7 +538,8 @@ check('モード選択は極限チャレンジもクイックも出さず、残�
   has(MODE_LIST_LINE) && count(MODE_LIST_LINE) === 2
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     // モードカードは色のタイル(mhbt-tile・2026-10-10 の作り直し)。横スライドの1枚の幅と高さはそのまま
-    && has('mhbt-tile snap-center shrink-0 w-[82%] h-[366px]'),
+    // (幅360未満だけ 90% に広げる・#3210 改善部 M2。それ以外の幅と高さは変わらない)
+    && has('mhbt-tile snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[366px]'),
   'モード一覧はモード選択と難易度選択の2か所とも同じ並べ方');
 // 極限の一覧は「公開ぶんだけ」の共通定義(PUBLIC_EXTREME_DIFFICULTIES)へまとまった
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
@@ -649,7 +654,7 @@ check('プロの勇者モン選択はベースモンだけ',
     && has("const savedRawList=pickMode==='hero'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
     && has('{!isProMode(runMode)&&<div className="flex gap-1.5">'));
 check('プロの勇者モン選択に編成タブを出さない',
-  has("isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません'"));
+  has("isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)'"));
 // 供モンの候補は「始める前に選んだ5体」からしか出さない
 check('ラン中の加入候補はモードで切り替える',
   has('if (!isProMode(runMode)) return getActiveMonsterList();')

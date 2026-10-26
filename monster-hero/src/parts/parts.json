@@ -289,6 +289,59 @@
       "role": "助手とおしゃべりの窓(AssistantChatWindow)。中継役へ送るだけで、会話は端末の新しいキーにだけ置く。公開の印 assistantChat の後ろ"
     },
     {
+      "file": "82-card-battle-core.jsx",
+      "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
+      "pure": true
+    },
+    {
+      "file": "83-card-battle-lines.jsx",
+      "role": "MFバトルカードの相手の助手のひとこと(6人×14場面の台詞・表情・場面の選び方)",
+      "pure": true
+    },
+    {
+      "file": "83-card-battle-talk-ai.jsx",
+      "role": "MFバトルカードの助手のおしゃべり(AI)。中継役 card-assistant-talk を呼ぶ口・入/切(mh_card_ai_talk_v1)・山場/対戦後/デッキ相談の材料。失敗したら決まった台詞のまま"
+    },
+    {
+      "file": "83-card-battle-vs.jsx",
+      "role": "MFバトルカードの対戦開始の画面(VS。相手の助手の立ち絵・ひとこと・3体／こちらの3体)と、組んだ中身と助手の性格からのデッキ名の自動づけ。見せるだけで場にはさわらない"
+    },
+    {
+      "file": "86-card-tutorial.jsx",
+      "role": "MFバトルカードのチュートリアル(練習試合)の台本・決まった場面・段ごとに出せる操作・みゅあの決まった手・保存の形(mh_card_tutorial_v1)",
+      "pure": true
+    },
+    {
+      "file": "88-card-rules.jsx",
+      "role": "MFバトルカードのルールの画面の文(CARD_RULE_PAGES)。正本は docs/spec/card-battle/RULES_SOURCE.md",
+      "pure": true
+    },
+    {
+      "file": "89-card-pack.jsx",
+      "role": "MFバトルカードのパック(弾ごとの中身・確率・天井・だぶりのカードポイント)とスターターキットを買う決まり。乱数は外から渡す",
+      "pure": true
+    },
+    {
+      "file": "85-card-battle-motion.jsx",
+      "role": "MFバトルカードの技の動き。カードの技を、モンヒロの技の動き(24-battle-fx.jsx の SkillFxMotion)に当てる表。守り・受ける・倒れるの動きは 70-bootstrap.jsx の CSS"
+    },
+    {
+      "file": "84-screen-card-battle.jsx",
+      "role": "画面: MFバトルカード(CARD_TOP=トップ・スターター選び・相手えらび / CARD_BATTLE=対戦 / 結果)。保存は mh_card_* の新しいキーだけ。いまはデバッグ設定からだけ入れる"
+    },
+    {
+      "file": "87-card-deck-edit.jsx",
+      "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)・カード図鑑・ルールの画面。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
+    },
+    {
+      "file": "90-card-rank.jsx",
+      "role": "MFバトルカードのランキング(台帳 #3513)。新しい表 card_battle_ranks の読み書きと、ランキングの画面。送るのは公開後のふつうの対戦の勝ちだけ(SQL: docs/sql/card-battle-ranks/)"
+    },
+    {
+      "file": "91-card-battle-multi.jsx",
+      "role": "MFバトルカードのマルチ対戦(人どうし)。部屋と通信(CARD_PVP・Broadcast だけ)・相手の見えない札・届いた手の当て方・終わってからのなぞり直し・合言葉の部屋の画面。いまはデバッグ設定からだけ"
+    },
+    {
       "file": "81-debug-trials.jsx",
       "role": "デバッグ設定のいちばん上の「確認待ちの試作」(DEBUG_TRIALS に1行足すと出る)。デバッグ専用"
     },

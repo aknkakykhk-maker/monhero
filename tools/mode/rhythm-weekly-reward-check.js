@@ -215,7 +215,7 @@ check('アプリは累計の関数を呼ぶ',
   supa.includes('rpc/rhythm_week_score_totals')
   &&/const weeklyTotals = \(kind === 'weekly' \|\| \(kind === 'history' && historyEntry\.kind === 'weekly'\)\) && !targetSongId;/.test(app));
 check('関数が無い環境を「準備中」として扱う',
-  /rhythm_week_score_totals\|rhythm_event_song_bests/.test(supa));
+  /rhythm2\?_week_score_totals\|rhythm2\?_event_song_bests/.test(supa));
 check('端末側で累計を足していない',
   !/entries\.reduce\([^)]*totalScore/.test(app));
 

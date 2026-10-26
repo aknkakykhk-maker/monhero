@@ -125,7 +125,9 @@ assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaB
 // 2026-10-08 からメロディーのクッキー(7個から味方全体の被ダメ軽減)の *cookieEffectNow().takenMult が最後に付く。クッキーが無いときは 1 なので、この検査の場面は変わらない
 assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`)
   || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`)
-  || /\? Math\.max\(1,Math\.floor\(damage\*getTurnBuff\('takenDamageMult',1\.0\)\s*\*tacticsSlotRate\(isTacticsMode\(runMode\)\?turnBuffs\.bySlot:null,slotIdx,'takenDamageMult',1\.0\)\s*\*\(isTacticsMode\(runMode\)\?[^:]+:1\)(?:\s*\*cookieEffectNow\(\)\.takenMult)?\)\)/.test(game),
+  || /\? Math\.max\(1,Math\.floor\(damage\*getTurnBuff\('takenDamageMult',1\.0\)\s*\*tacticsSlotRate\(isTacticsMode\(runMode\)\?turnBuffs\.bySlot:null,slotIdx,'takenDamageMult',1\.0\)\s*\*\(isTacticsMode\(runMode\)\?[^:]+:1\)(?:\s*\*cookieEffectNow\(\)\.takenMult)?\)\)/.test(game)
+  // 2026-10-22 からきゅうこの譜面(置いた子の被ダメ軽減)の *kyukoTakenMultAt(slotIdx) がさらに外側に付く。カードが無いときは 1 なので、この検査の場面は変わらない
+  || /\? Math\.max\(1,Math\.floor\(damage\*getTurnBuff\('takenDamageMult',1\.0\)\s*\*tacticsSlotRate\(isTacticsMode\(runMode\)\?turnBuffs\.bySlot:null,slotIdx,'takenDamageMult',1\.0\)\s*\*\(isTacticsMode\(runMode\)\?[^:]+:1\)\s*\*cookieEffectNow\(\)\.takenMult\)[^\n]*\n\s*\*kyukoTakenMultAt\(slotIdx\)\)/.test(game),
   '次ターン被ダメージ軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // 予測表示は1発ずつ数えるため、ガードを引いた値(hit.taken)を resolveTacticsGuardedHit で出してから軽減を掛ける形になった(順番は同じ)
 assert(game.includes(`applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)))`)

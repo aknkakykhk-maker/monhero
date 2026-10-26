@@ -17,7 +17,14 @@ pg_cron 'rhythm-anomaly-report'(毎日 18:10 UTC = 3:10 JST)
 
 ## 異変の条件(rhythm_anomaly_facts)
 - 曲×難易度×端末の種類(ios / android)ごとの MISS 率(`rhythm_touch_diagnostics` の stats.misses ÷ note_count)
-- 前日2回以上・300ノーツ以上、前の7日にも2回以上、前日が前の7日の1.5倍以上かつ +2ポイント以上 → 多い順に10件まで
+- 前日2回以上・300ノーツ以上、前の7日にも2回以上**かつ2台以上の端末**、前日が前の7日の1.5倍以上かつ +2ポイント以上 → 多い順に10件まで
+  - 端末の数(2026-10-16 社長の決定): 前の7日を1人だけが遊んだ曲では、新しい人が数回遊んだだけで MISS 率が大きく動き、異変に挙がっていた(風がそよぐ場所 HELL android)。
+    端末は `device_key` で数える(数 `devices_base` だけを報告に入れ、値そのものは出さない)。SQL: `docs/sql/rankings/RHYTHM_ANOMALY_FACTS_DEVICES2_APPLY.sql`(窓口ではなくテンポくんが流した)
+- 集計から外すプレイ(外すのは見張りの集計だけ。表・既存の行・ランキング・記録は変えない)
+  - 連打の多いプレイ(1ノーツあたりのタッチが5回を超える・2026-10-19 社長の決定)。外した数は `mashed_excluded_day`。SQL: `docs/sql/rankings/RHYTHM_ANOMALY_FACTS_MASH_APPLY.sql`
+  - 曲の途中から放置したプレイ(入力5回以下・未クリア・2026-10-21 社長の決定)。外した数は `abandoned_excluded_day`。
+    10/20 に1台が toriko MASTER を最初の1回だけ押して放置し(MISS 158/159)、android の MISS 率が 4.11%(外すと 2.39%)になって旗の元になった。
+    区間ごとの MISS(`rhythm_play_logs`)では入力の数が無いので、未クリアで MISS でないノーツが5個以下の1回を外す。SQL: `docs/sql/rankings/RHYTHM_ANOMALY_FACTS_ABANDON_APPLY.sql`
 - 挙がった曲は `rhythm_play_logs` の deltas(`zz` が MISS)から、曲のはじめからノーツの順で5%ずつ20区間の MISS の数を出す(秒が要るときは `tools/mode/rhythm-play-log.js` で直す)
 - 端末の種類ごとの全体(MISS 率・何も押していない MISS 率・遅れて届いたタッチの率・34ms超のコマ)と、前日に動いていた版(app_build)も入れる
 - 個人を特定できるもの(device_key・名前・ブリーダーID)は SQL の時点で外す。関数も渡す前に欄が無いことを確かめる

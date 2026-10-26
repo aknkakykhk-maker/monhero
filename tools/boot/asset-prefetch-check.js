@@ -116,7 +116,31 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
     check('HTML・JS・CSS・JSON を SW が返していない', codeFromSw.length === 0, codeFromSw.slice(0, 3).join(' '));
     // 設定の「ダウンロード」が出る
     const opened = await page.evaluate(() => typeof ASSET_PACKS !== 'undefined' && ASSET_PACKS.map(p => p.id).join(','));
-    check('まとまりは モンヒロビート・バトル・全部', opened === 'beat,battle,all', opened);
+    check('まとまりは モンヒロビート・バトル・バトルカード・全部', opened === 'beat,battle,card,all', opened);
+    // バトルカード(2026-10-25)は、公開の印が false のあいだ、遊ぶ人(デバッグの印が無い端末)には出さず、「全部」にも入れない
+    const cardGate = await page.evaluate(async () => {
+      const released = !!(typeof EVENT_REPLAY_RELEASE_FLAGS !== 'undefined' && EVENT_REPLAY_RELEASE_FLAGS.cardBattle);
+      const debug = localStorage.getItem(DEBUG_UNLOCK_KEY) === '1';
+      const shown = assetPacksShown().map(p => p.id).join(',');
+      const st = await ASSET_CACHE.refreshStatus();
+      const m = await (await fetch('asset-manifest.json', { cache: 'no-store' })).json();
+      const cardCount = Object.values(m.files).filter(f => f.pack === 'card').length;
+      const allCount = st.packs.all ? st.packs.all.count : -1;
+      return { released, debug, shown, cardCount, allCount, nonCard: Object.values(m.files).filter(f => f.pack !== 'card').length };
+    });
+    check('公開前の遊ぶ人には「バトルカード」を出さず、「全部」にもカードの絵を入れない(一覧にはカードの絵が入っている)',
+      cardGate.released || cardGate.debug || (cardGate.shown === 'beat,battle,all' && cardGate.cardCount > 400 && cardGate.allCount === cardGate.nonCard), JSON.stringify(cardGate));
+    // デバッグの合言葉が合った端末には出し、「全部」にもカードの絵が入る(印は読むだけ。確かめたら元に戻す)
+    const cardDebug = await page.evaluate(async () => {
+      const before = localStorage.getItem(DEBUG_UNLOCK_KEY);
+      localStorage.setItem(DEBUG_UNLOCK_KEY, '1');
+      const shown = assetPacksShown().map(p => p.id).join(',');
+      const st = await ASSET_CACHE.refreshStatus();
+      if (before === null) localStorage.removeItem(DEBUG_UNLOCK_KEY); else localStorage.setItem(DEBUG_UNLOCK_KEY, before);
+      await ASSET_CACHE.refreshStatus();
+      return { shown, all: st.packs.all && st.packs.all.count, card: st.packs.card && st.packs.card.count };
+    });
+    check('デバッグ端末には「バトルカード」が出て、「全部」にもカードの絵が入る', cardDebug.shown === 'beat,battle,card,all' && cardDebug.card > 400 && cardDebug.all === cardGate.nonCard + cardDebug.card, JSON.stringify(cardDebug));
 
     console.log('③ ダウンロード・取り消し・消す');
     const battleBefore = (await status()).packs.battle.haveCount; // 遊んでいる画面が使った絵は SW が入れる(作りどおり)

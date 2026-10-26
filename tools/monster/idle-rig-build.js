@@ -99,9 +99,10 @@ const RIGS = [
   // 花は花びらの形に沿って切り抜く(四角で切ると、花びらの先が体の側に残り、傾けたとき線が出た)。
   // 軸は茎の付け根。脇の花の下の花びらは葉に重なっているので、葉を少し含むのは許す
   { id:'Oboro', img:'images/monsters/oboro.png', body:'sway', parts:[
+    // 2026-10-26 高画質の絵へ差し替え。花びらの先が前の範囲(左右9〜91%・上32%)から外へ出ていて、体の側にかけらが残ったので広げた
     { name:'flowerT', poly:[[31,8],[71,8],[71,36],[64,38.5],[62,45],[52.5,47],[51.8,54],[47.5,54],[47,47],[38,45],[36,38.5],[29,36]], share:[[46.5,52.5],[53,52.5],[53,56],[46.5,56]], pivot:[49.5,54.5], anim:'swing', amp:5, dur:2600, layer:'front' },
-    { name:'flowerL', poly:[[9,32],[35,32],[35,47],[37,51],[40.5,54.5],[41.5,55.5],[41.5,58.3],[37,57.8],[32,57.6],[30.5,58.5],[28,59.6],[23,59.2],[20,58.2],[17,59],[12,58.8],[9,57.5]], share:[[39.5,54],[43,54],[43,59],[39.5,59]], pivot:[41,57], anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' },
-    { name:'flowerR', poly:[[91,32],[65,32],[65,47],[63,51],[59.5,54.5],[58.5,55.5],[58.5,58.3],[63,57.8],[68,57.6],[69.5,58.5],[72,59.6],[77,59.2],[80,58.2],[83,59],[88,58.8],[91,57.5]], share:[[60.5,54],[57,54],[57,59],[60.5,59]], pivot:[59,57], anim:'swing', amp:6, dur:2500, delay:900, layer:'front' },
+    { name:'flowerL', poly:[[4,30],[35,30],[35,47],[37,51],[40.5,54.5],[41.5,55.5],[41.5,58.3],[37,57.8],[32,57.6],[30.5,58.5],[28,59.6],[23,59.2],[20,58.2],[17,59],[12,58.8],[4,57.5]], share:[[39.5,54],[43,54],[43,59],[39.5,59]], pivot:[41,57], anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' },
+    { name:'flowerR', poly:[[96,30],[65,30],[65,47],[63,51],[59.5,54.5],[58.5,55.5],[58.5,58.3],[63,57.8],[68,57.6],[69.5,58.5],[72,59.6],[77,59.2],[80,58.2],[83,59],[88,58.8],[96,57.5]], share:[[60.5,54],[57,54],[57,59],[60.5,59]], pivot:[59,57], anim:'swing', amp:6, dur:2500, delay:900, layer:'front' },
   ]},
   { id:'Plant', img:'images/monsters/plant.PNG', body:'sway', parts:[
     { name:'flowerT', poly:[[32,12],[68,12],[68,36],[57,43],[52.2,47.5],[51.5,55],[47.5,55],[47,47.5],[43,43],[32,36]], share:[[46.5,53.5],[52.5,53.5],[52.5,57],[46.5,57]], pivot:[49.5,55.5], anim:'swing', amp:5, dur:2600, layer:'front' },
@@ -109,8 +110,9 @@ const RIGS = [
     { name:'flowerR', poly:[[93,34],[65,34],[65,48],[64,52.5],[59,54.5],[55.5,55.5],[55.5,59.8],[60,58.6],[64.5,57.2],[67,56.2],[70,56.5],[72.5,58.5],[75,62.4],[78,62.6],[80.5,60],[83,57],[88,55.5],[93,53]], share:[[57.5,54.5],[53.5,54.5],[53.5,60.5],[57.5,60.5]], pivot:[56,57.5], anim:'swing', amp:6, dur:2500, delay:900, layer:'front' },
   ]},
   { id:'Zan', img:'images/monsters/zan.png', body:'hover', parts:[
-    { name:'bladeL', poly:[[2,27],[20,29],[24.5,27.8],[27,28.2],[30.5,28.3],[29.5,31],[28.5,35],[28.5,60],[27.5,92],[2,92]], share:[[28.5,27.5],[32,27.5],[32,31],[28.5,31]], pivot:[30,29.5], anim:'swing', amp:-5, dur:1800, layer:'back' },
-    { name:'bladeR', poly:[[98,27],[80,29],[75.5,27.8],[73,28.2],[69.5,28.3],[70.5,31],[71.5,35],[71.5,60],[72.5,92],[98,92]], share:[[71.5,27.5],[68,27.5],[68,31],[71.5,31]], pivot:[70,29.5], anim:'swing', amp:5, dur:1800, layer:'back' },
+    // 2026-10-26 高画質の絵へ差し替え。内へ曲がった刃の先が前の範囲(内側のふち28.5%)を越えていたので、ひざから下の内側のふちを30.5%へ
+    { name:'bladeL', poly:[[2,27],[20,29],[24.5,27.8],[27,28.2],[30.5,28.3],[29.5,31],[28.5,35],[28.5,60],[30.5,64],[30.5,92],[2,92]], share:[[28.5,27.5],[32,27.5],[32,31],[28.5,31]], pivot:[30,29.5], anim:'swing', amp:-5, dur:1800, layer:'back' },
+    { name:'bladeR', poly:[[98,27],[80,29],[75.5,27.8],[73,28.2],[69.5,28.3],[70.5,31],[71.5,35],[71.5,60],[69.5,64],[69.5,92],[98,92]], share:[[71.5,27.5],[68,27.5],[68,31],[71.5,31]], pivot:[70,29.5], anim:'swing', amp:5, dur:1800, layer:'back' },
   ]},
   { id:'Mitarashi', img:'images/monsters/mitarashi.png', body:'breathe', parts:[
     // 翼は体と同じ赤の骨とふちの線を持つので、色で絞ると骨と線が体の側に残り、羽ばたくたびに
@@ -188,6 +190,77 @@ const RIGS = [
   { id:'Kuromy', img:'images/monsters/kuromy.png', body:'breathe', parts:[
     { name:'tail', poly:[[74,45],[86,45],[86,52.5],[78.5,52.5],[76.5,54.2],[74.6,53.4],[77,50.6],[74.6,49]], share:[[74.6,52.4],[77,52.4],[77,54.3],[74.6,54.3]], pivot:[75.6,53.4], anim:'wag', amp:7, dur:1700, layer:'back' },
   ]},
+  // イルミネ(2026-10-22・案の段階): 足の先がとがった、宙に浮く子なので体ごとふわふわ(hover)。
+  // 左右へ長く垂れた光る髪の先(黄〜橙)だけを、スカートの下のあたりを軸にゆらゆら揺らす。スカートの紫・青は色で外す
+  { id:'Illumine', img:'images/monsters/illumine.png', body:'hover', parts:[
+    { name:'hairL', poly:[[0,74],[17,74],[14,100],[0,100]], keep:{ hue:[15,75], minSat:0.15, orDark:70 }, pivot:[12,75], anim:'swing', amp:5, dur:2800, layer:'back' },
+    { name:'hairR', poly:[[83,74],[100,74],[100,96],[80,96]], keep:{ hue:[15,75], minSat:0.15, orDark:70 }, pivot:[88,75], anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' },
+  ]},
+  // ドリーミィ(2026-10-22・案の段階): 雲に乗って立つ子なので体ごとゆったり息をする(breathe)。
+  // 左右に垂れた玉の飾りを、雲の髪から出ている上の端を軸に振る。となりのクリーム色の体は彩度で外す
+  { id:'Dreamy', img:'images/monsters/dreamy.png', body:'breathe', parts:[
+    { name:'beadsL', poly:[[0,34],[9,34],[9,82],[0,82]], keep:{ hue:[0,360], minSat:0.3, orDark:70 }, pivot:[7,35], anim:'swing', amp:2.5, dur:2400, layer:'back' },
+    { name:'beadsR', poly:[[89,33],[100,33],[100,82],[89,82]], keep:{ hue:[0,360], minSat:0.3, orDark:70 }, pivot:[92,34], anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' },
+  ]},
+  // 新しい16種(2026-10-24・案の段階)。まずは体の動きだけ(部位の揺れは正式実装のときに足す)
+  { id:'Dino', img:'images/monsters/dino.png', body:'breathe', parts:[] },
+  { id:'Gali', img:'images/monsters/gali.png', body:'sway', parts:[] },
+  { id:'Naga', img:'images/monsters/naga.png', body:'sway', parts:[] },
+  { id:'Dragon', img:'images/monsters/dragon.png', body:'breathe', parts:[] },
+  { id:'Henger', img:'images/monsters/henger.png', body:'heavy', parts:[] },
+  { id:'Durahan', img:'images/monsters/durahan.png', body:'heavy', parts:[] },
+  { id:'Arrowhead', img:'images/monsters/arrowhead.png', body:'breathe', parts:[] },
+  { id:'Zilla', img:'images/monsters/zilla.png', body:'breathe', parts:[] },
+  { id:'Phoenix', img:'images/monsters/phoenix.png', body:'glide', parts:[] },
+  { id:'Joker', img:'images/monsters/joker.png', body:'sway', parts:[] },
+  { id:'Jell', img:'images/monsters/jell.png', body:'jelly', parts:[] },
+  { id:'Mew', img:'images/monsters/mew.png', body:'breathe', parts:[] },
+  { id:'Metalner', img:'images/monsters/metalner.png', body:'drift', parts:[] },
+  { id:'Worm', img:'images/monsters/worm.png', body:'jelly', parts:[] },
+  { id:'Centaur', img:'images/monsters/centaur.png', body:'breathe', parts:[] },
+  { id:'Colorpandora', img:'images/monsters/colorpandora.png', body:'hop', parts:[] },
+  // 派生モンスター20体(2026-10-25・案の子)。動かす部分はまだ無く、体の動きだけ
+  { id:'HamLiger', img:'images/monsters/c010.png', body:'breathe', parts:[] },
+  { id:'Melonbo', img:'images/monsters/c012.png', body:'hop', parts:[] },
+  { id:'LavenderKeel', img:'images/monsters/c013.png', body:'drift', parts:[] },
+  { id:'VirgiaHapi', img:'images/monsters/c015.png', body:'breathe', parts:[] },
+  { id:'Angel', img:'images/monsters/c016.png', body:'drift', parts:[] },
+  { id:'HitotsumeOuji', img:'images/monsters/c017.png', body:'sway', parts:[] },
+  { id:'Tsunomaru', img:'images/monsters/c018.png', body:'hop', parts:[] },
+  { id:'Bazula', img:'images/monsters/c019.png', body:'sway', parts:[] },
+  { id:'NachtFalter', img:'images/monsters/c033.png', body:'drift', parts:[] },
+  { id:'Katchusaur', img:'images/monsters/c034.png', body:'breathe', parts:[] },
+  { id:'YoroiMocchi', img:'images/monsters/c035.png', body:'breathe', parts:[] },
+  { id:'ParPurin', img:'images/monsters/c036.png', body:'jelly', parts:[] },
+  { id:'DarkHenger', img:'images/monsters/c038.png', body:'drift', parts:[] },
+  { id:'MamaNyaa', img:'images/monsters/c039.png', body:'breathe', parts:[] },
+  { id:'Hinekuresou', img:'images/monsters/c040.png', body:'sway', parts:[] },
+  { id:'Corone', img:'images/monsters/c041.png', body:'breathe', parts:[] },
+  { id:'Jihad', img:'images/monsters/c042.png', body:'breathe', parts:[] },
+  { id:'Gentle', img:'images/monsters/c020.png', body:'breathe', parts:[] },
+  { id:'Vesuvios', img:'images/monsters/c043.png', body:'breathe', parts:[] },
+  { id:'MooHybrid', img:'images/monsters/c045.png', body:'breathe', parts:[] },
+  // MFバトルカードの混血15体と、2026-10-26 に立ち絵が届いた5体(案の子)。体の動きだけ
+  { id:'Baron', img:'images/monsters/c051.png', body:'breathe', parts:[] },
+  { id:'Aquarius', img:'images/monsters/c052.png', body:'sway', parts:[] },
+  { id:'Plumler', img:'images/monsters/c053.png', body:'hop', parts:[] },
+  { id:'StrikeReaper', img:'images/monsters/c054.png', body:'sway', parts:[] },
+  { id:'DarkHam', img:'images/monsters/c055.png', body:'hop', parts:[] },
+  { id:'HellFat', img:'images/monsters/c056.png', body:'jelly', parts:[] },
+  { id:'UrokoGel', img:'images/monsters/c057.png', body:'jelly', parts:[] },
+  { id:'WakakusaKenzai', img:'images/monsters/c058.png', body:'sway', parts:[] },
+  { id:'Garant', img:'images/monsters/c059.png', body:'heavy', parts:[] },
+  { id:'MimiNyaa', img:'images/monsters/c060.png', body:'breathe', parts:[] },
+  { id:'BenihimeSou', img:'images/monsters/c061.png', body:'sway', parts:[] },
+  { id:'MurasakiChu', img:'images/monsters/c062.png', body:'jelly', parts:[] },
+  { id:'ArmorDragon', img:'images/monsters/c063.png', body:'heavy', parts:[] },
+  { id:'Kermadix', img:'images/monsters/c064.png', body:'heavy', parts:[] },
+  { id:'Gigalon', img:'images/monsters/c065.png', body:'breathe', parts:[] },
+  { id:'BlueMountainHybrid', img:'images/monsters/c011.png', body:'heavy', parts:[] },
+  { id:'MagnaBeetle', img:'images/monsters/c032.png', body:'heavy', parts:[] },
+  { id:'GinGiLiger', img:'images/monsters/c044.png', body:'breathe', parts:[] },
+  { id:'Ankylox', img:'images/monsters/c014.png', body:'heavy', parts:[] },
+  { id:'Soborobent', img:'images/monsters/c037.png', body:'drift', parts:[] },
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

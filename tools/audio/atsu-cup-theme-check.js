@@ -19,8 +19,13 @@ for (const file of files) {
     b.includes("id:'atsu_cup_theme'") && !b.includes("name:'あつ杯テーマ'"));
   check(`${file}: BGMアレンジ共通選択肢を再利用`,
     compact.includes('BGM_TRACKS.map(track=>') && compact.includes('Audio_.previewBGM(trackId)') && compact.includes('BGM_TRACK_BY_ID[saved]'));
-  check(`${file}: あつ杯テーマを既定BGMへ勝手に設定していない`,
-    !/DEFAULT_BGM_ARRANGEMENT[^;]+atsu_cup_theme/.test(compact));
+  // 既定にしてよいのは、社長が指定した枠だけ。
+  // cardBattleIntroEvent … MFバトルカードのはじまりのお話(2026-10-26 社長「イベントBGM、MFいちかにして」)
+  const allowed = ['cardBattleIntroEvent'];
+  const defaults = compact.match(/DEFAULT_BGM_ARRANGEMENT=Object\.freeze\(\{([^}]*)\}/)?.[1] || '';
+  const atsuScenes = [...defaults.matchAll(/(\w+):'atsu_cup_theme'/g)].map((m) => m[1]);
+  check(`${file}: あつ杯テーマを既定BGMへ勝手に設定していない(指定のあった枠だけ: ${atsuScenes.join('・') || 'なし'})`,
+    !!defaults && atsuScenes.every((scene) => allowed.includes(scene)));
 }
 const audioPath = path.join(ROOT, 'monster-hero/audio/bgm-atsu-cup-theme.mp3');
 const audio = fs.existsSync(audioPath) ? fs.readFileSync(audioPath) : null;

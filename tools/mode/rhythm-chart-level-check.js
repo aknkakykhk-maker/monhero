@@ -132,11 +132,11 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     // 1ノーツの重さに足した生の値そのもの(一律の倍率ではない)で、空中を地上と見なした Lv. より下にならない
     {const {levelFromRaw}=require('./rhythm-chart-level.js');const groundLv=chartLevel(grounded(hell)).level,lv=chartLevel(hell);
       check('Sheriruth HELL の式の Lv. は、空中込みの生の値から測った値(空中を地上と見なした Lv. 以上)',lv.level===levelFromRaw(lv.strain.raw)&&lv.level>=groundLv,`式 Lv.${lv.level} / 地上と見なして Lv.${groundLv}`);}
-    // 公開中の HELL 4曲(と古い試作の Sheriruth)の表示は、公開したときの値のまま(LEVEL_OVERRIDES で固定。Against My Own Shadow は新しい式の 42 で公開)
+    // 公開中の HELL 4曲の表示(2026-10-20 夕方からは新しい測り方 v2 の値。下の 5-2 で9譜面まとめて見る)
     {const {shownLevel,loadRuntimeSongs:loadSongs}=require('./rhythm-chart-level.js');const all=[...(loadSongs().RHYTHM_PROTO_SONGS||[])];
-      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',54],['grievous_lady_hell','MASTER',60],['kaze_ga_soyogu_hell_debug','HELL',23],['against_my_own_shadow_hell_debug','HELL',42]]){
+      for(const [id,d,want] of [['sheriruth_hell_debug','HELL',50],['grievous_lady_hell','MASTER',64],['kaze_ga_soyogu_hell_debug','HELL',21],['against_my_own_shadow_hell_debug','HELL',49]]){
         const s=all.find(x=>x.songId===id),c=s&&s.difficulties[d];
-        check(`公開中の HELL ${id} の表示は前の値 Lv.${want} のまま(新しい式に変えても動かない)`,!!c&&shownLevel(id,d,c)===want&&c.level===want,`譜面 Lv.${c&&c.level} / 表示 ${c&&shownLevel(id,d,c)} / 新しい式 ${c&&chartLevel(c).level}`);}}
+        check(`公開中の HELL ${id} の表示は Lv.${want}(新しい測り方の値)`,!!c&&shownLevel(id,d,c)===want&&c.level===want,`譜面 Lv.${c&&c.level} / 表示 ${c&&shownLevel(id,d,c)} / 新しい式 ${c&&chartLevel(c).level}`);}}
     check('Sheriruth HELL は空中のぶん MASTER より重い',hellStrain.raw>masterStrain.raw&&hell.level>master.level,
       `HELL 生${hellStrain.raw} Lv.${hell.level} / MASTER 生${masterStrain.raw} Lv.${master.level}`);
   }
@@ -154,6 +154,69 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     }
   }
   check(`レベルが ${LEVEL_MIN}〜${LEVEL_MAX} に収まっている`,out.length===0,out.join(' / '));
+}
+
+// --- 5-2. 新しい測り方(v2・2026-10-20)。これから足す曲だけに使い、いまある曲の表示は1つも動かさない ---
+{
+  const L=require('./rhythm-chart-level.js');
+  const {RHYTHM_PROTO_SONGS}=loadRuntimeSongs();
+  const all=[...RHYTHM_SONGS,...(RHYTHM_PROTO_SONGS||[])];
+  // 2026-10-21 社長の指示で HELL を作り直した5譜面だけは v3 で測る(見分けにくい形なしで作り直したので、新しい測り方の値を出す)
+  const REWORKED_V3=['toward_the_stars_short_hell_debug','rose_hell_debug','rose_short_hell_debug','sad_song_hell_debug','sad_song_short_hell_debug',
+    'sheriruth_hell_debug','grievous_lady_hell','kaze_ga_soyogu_hell_debug','against_my_own_shadow_hell_debug',
+    // 2026-10-21 社長「全曲ヘルを実装して」: 34曲の HELL(新しく作ったので v3)
+    'mf_ichika_mix_hell_debug','monster_hero_hell_debug','monster_hero_another_hell_debug','six_eternel_beat_hell_debug','six_eternel_remix_hell_debug','stay_with_me_hell_debug','kiki_issen_hell_debug','close_to_your_heart_hell_debug','eiki_boss_remix_hell_debug','pandora_boss_remix_hell_debug','dullahan_hell_debug','dullahan_clockwork_hell_debug','toriko_hell_debug','4u_hitasura_hell_debug','kindan_no_resistance_hell_debug','crossing_field_hell_debug','nothing_without_you_hell_debug','mou_hitotsu_no_sekai_e_hell_debug','senjou_no_shippuu_hell_debug','makutsu_no_senritsu_hell_debug','the_city_beneath_the_comets_hell_debug','freedom_dive_hell_debug','only_my_railgun_hell_debug','big_bridge_no_shitou_hell_debug','rising_hope_hell_debug','haruka_hell_debug','stay_with_me_short_hell_debug','kiki_issen_short_hell_debug','crazy_party_night_hell_debug','crazy_party_night_full_hell_debug','emerald_rush_hell_debug','wrath_of_the_thorn_king_hell_debug','monster_hell_debug','monster_short_hell_debug'];
+  // 2026-10-21 に足した ANiMA・Journey の HELL(新しく足した譜面なので v1 の一覧には入れない・v3 で測る)
+  REWORKED_V3.push('anima_hell_debug','journey_hell_debug');
+  // 2026-10-21 の新曲 BLACK SHOUT(新曲は v3 で測る)
+  REWORKED_V3.push('black_shout','black_shout_hell_debug');
+  // 2026-10-23 に足した新曲 light player・月が満ちる前に(全編と short ver.・5難易度と HELL・v3 で測る)
+  REWORKED_V3.push('light_player','light_player_hell_debug','light_player_short','light_player_short_hell_debug','tsuki_ga_michiru_mae_ni','tsuki_ga_michiru_mae_ni_hell_debug','tsuki_ga_michiru_mae_ni_short','tsuki_ga_michiru_mae_ni_short_hell_debug');
+  check('いまある曲は全部、前の測り方(v1)で測る一覧に入っている(作り直した HELL 5譜面と、10/21 に足した HELL 2譜面は v3)',all.length>0&&all.every(song=>L.levelFormulaFor(song.songId)===(REWORKED_V3.includes(song.songId)?'v3':'v1')),
+    all.filter(song=>L.levelFormulaFor(song.songId)!==(REWORKED_V3.includes(song.songId)?'v3':'v1')).map(song=>song.songId).join(','));
+  check('一覧に無い曲(これから足す曲)はいちばん新しい測り方(v3・2026-10-21)',L.levelFormulaFor('a_new_song_not_listed')==='v3');
+  check('v3 の重み: 見分けにくさ 10(× 近さ・短さ・形の score)・指を離した位置への持ち上げ・下ろしは 0.6 軽く(ほかは v2 と同じ)',L.SKY_CONFUSE_WORK===10&&L.SKY_NATURAL_RELIEF===.6
+    &&L.WORK_V3.skyConfuse===10&&L.WORK_V3.skyNatural===.6&&L.WORK_V3.sameSideHeld===L.WORK_V2.sameSideHeld&&L.WORK_V3.skySwitch===L.WORK_V2.skySwitch&&!L.WORK_V2.skyConfuse);
+  check('v2 の重み: 空中の入り乱れは 1.7倍、押さえている手の側は 3',L.SKY_MIX_FACTOR===1.7&&L.SAME_SIDE_HELD===3
+    &&Math.abs(L.WORK_V2.sameHandFast-L.WORK.sameHandFast*1.7)<1e-9&&Math.abs(L.WORK_V2.skySwitch-L.WORK.skySwitch*1.7)<1e-9&&L.WORK_V2.sameSideHeld===3&&!L.WORK.sameSideHeld);
+  // 社長が決めた5曲の HELL(2026-10-20)は、新しい測り方の値を表示にした。値は v2 で測った値と同じ・譜面の数字とも同じ
+  // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)。表示は v2 の値のまま(v3 は新曲から)
+  // 2026-10-21 作り直した5譜面は v3 の値(Toward 50・ROSE 51・ROSE short 49・SAD SONG 39・SAD SONG short 42。同じ日に残りの見分けにくい所も直した)
+  // 2026-10-22 指が同じ位置に来る形を直した(社長の決定)ので、SAD SONG 38・SAD SONG short 43・Sheriruth 50 に変わった(測った値どおり)
+  const SET={toward_the_stars_short_hell_debug:50,rose_hell_debug:51,rose_short_hell_debug:49,sad_song_hell_debug:38,sad_song_short_hell_debug:43,
+    sheriruth_hell_debug:50,grievous_lady_hell:64,against_my_own_shadow_hell_debug:49,kaze_ga_soyogu_hell_debug:21};
+  for(const [id,want] of Object.entries(SET)){
+    const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d],f=REWORKED_V3.includes(id)?'v3':'v2';
+    check(`${id} の HELL は Lv.${want}(新しい測り方(${f})の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c,{formula:f}).level===want,
+      c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,d,c)} / ${f} ${L.chartLevel(c,{formula:f}).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
+  }
+  // ② 押さえている手の側に来るノーツ: 右で押さえている間に右へ来るタップは数え、左へ来るタップは数えない
+  const hold={type:'HOLD',lane:4,subLane:8,subLaneWidth:2,timeMs:1000,endTimeMs:3000};
+  const taps=(lane)=>Array.from({length:10},(_,i)=>({type:'TAP',lane,subLane:lane*2,subLaneWidth:2,timeMs:1200+i*150}));
+  const same=chartStrain({notes:[hold,...taps(5)]},{formula:'v2'}),other=chartStrain({notes:[hold,...taps(0)]},{formula:'v2'});
+  check('② 押さえている側へ来るノーツを数え、反対側は数えない',same.parts.sameSideHeld===10&&other.parts.sameSideHeld===0,`同じ側 ${same.parts.sameSideHeld} / 反対側 ${other.parts.sameSideHeld}`);
+  const sameV1=chartStrain({notes:[hold,...taps(5)]},{formula:'v1'}),otherV1=chartStrain({notes:[hold,...taps(0)]},{formula:'v1'});
+  check('② は新しい測り方だけで重くなる(前の測り方では足さない)',same.raw>sameV1.raw&&Math.abs(other.raw-otherV1.raw)<1e-9,
+    `同じ側 v2 ${same.raw} / v1 ${sameV1.raw}・反対側 v2 ${other.raw} / v1 ${otherV1.raw}`);
+}
+
+// --- 5-3. 地上と空中の見分けにくさ(v3・2026-10-21 社長「見分けづらいってのが相当難易度高い」)。見分けにくい所は重く、指を離した位置への持ち上げ・下ろしは軽く ---
+{
+  const HR=require('./rhythm-chart-hand-rules.js');
+  const base=Array.from({length:12},(_,i)=>({type:'TAP',lane:i%2?4:1,subLane:i%2?8:2,subLaneWidth:2,timeMs:500+i*400}));
+  // 右手が地上のタップ(レーン4)を離した直後に、同じ位置で空中のタップ(自然)/2レーン離れた所で空中のタップ(重ならない)
+  const pair=(lane)=>[{type:'TAP',lane:4,subLane:8,subLaneWidth:2,timeMs:6000},{type:'TAP',lane,subLane:lane*2,subLaneWidth:2,skyHeight:1,timeMs:6200}];
+  // 隣り合うレーンへ、地上(左手)と空中(右手)を同時に(重なって見える・形が同じ)
+  const chord=[{type:'TAP',lane:2,subLane:4,subLaneWidth:2,timeMs:6000},{type:'TAP',lane:3,subLane:6,subLaneWidth:2,skyHeight:1,timeMs:6000}];
+  const near=chartStrain({notes:[...base,...pair(4)]}),far=chartStrain({notes:[...base,...pair(6)]}),mix=chartStrain({notes:[...base,...chord]});
+  check('v3 は、指を離した位置への持ち上げを自然として数え、見分けにくさには数えない',near.parts.skyNatural===1&&near.parts.skyConfuse===0,
+    `自然 ${near.parts.skyNatural}・見分けにくい ${near.parts.skyConfuse}`);
+  check('重ならないほど離れた高さの入れ替わりは、見分けにくさに数えない',far.parts.skyConfuse===0,`見分けにくい ${far.parts.skyConfuse}`);
+  check('隣のレーンへ同時に地上と空中は、見分けにくい所に数え、v2 より重い',mix.parts.skyConfuse===1&&mix.raw>chartStrain({notes:[...base,...chord]},{formula:'v2'}).raw,
+    `見分けにくい ${mix.parts.skyConfuse} / v3 ${mix.raw} / v2 ${chartStrain({notes:[...base,...chord]},{formula:'v2'}).raw}`);
+  const one=HR.skyConfusable(chord)[0],slide=HR.skyConfusable([chord[0],{type:'HOLD',lane:3,subLane:6,subLaneWidth:2,skyHeight:1,timeMs:6000,endTimeMs:6400}])[0];
+  check('形が同じで高さだけ違う組は、形の違う組より重い',!!one&&!!slide&&one.sameShape&&!slide.sameShape&&one.score>slide.score,
+    one&&slide?`同じ形 ${one.score} / 違う形 ${slide.score}`:'拾えていない');
 }
 
 // --- 6. 画面へ出ている ---

@@ -16,6 +16,8 @@ const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=26508bc26c81";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
+// きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
+const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
 // マーケットのアイコン商品だけで使う立ち絵。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
@@ -24,7 +26,7 @@ const SNEGUROCHKA_AWAKENED_MARKET_ICON = "images/monsters/SNEGUROCHKA_AWAKENED.P
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
 const DISC_STONE_BASE = "images/disc-icons/disc-stone-base.PNG?v=2cf55b47492a";
-const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=dd757e49f636";
+const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=0f5cf76eb420";
 const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=39933ff87253";
 const ARK_DISC_ICON = "images/disc-icons/ark.png?v=55e7c1c5d1e9";
 const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=4d6d7f7f7234";
@@ -46,6 +48,9 @@ const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
 // メロディー・クロミー(2026-10-07・実装予告)。作り方はほかの円盤石と同じ(make-disc-icon.js)。?v= は build.js が打ち直す
 const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=634ff5eb63a4";
 const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=8b1aa76636ad";
+// イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコン。商品はこのファイルの下の BREEDER_MARKET_ITEMS(近日追加)
+const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=5e82d79e0bfb";
+const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=66626d663904";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
@@ -57,7 +62,8 @@ const BREEDER_EVO_NAMES = {
   kiki: ["ききの応援", "ききの本気", "ききの全力全開"],
   meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"],
   poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
-  momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"]
+  momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"],
+  kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -84,6 +90,16 @@ const POLTZ_TIERS = [
   { charges:1, healGuts:0.2, gutsRecover:0.01,  atk:0 },
   { charges:2, healGuts:0.2, gutsRecover:0.025, atk:0 },
   { charges:3, healGuts:0.2, gutsRecover:0.035, atk:0.10 },
+];
+
+// きゅうこの譜面(cover_kyuko・2026-10-22 社長の決定)。効果の適用も説明文もこの表だけを見る。
+//   使ったターンだけ、敵の単体攻撃が「使った子」に向く(タクティクス。全体攻撃は変えない・🔥は上げない)。
+//   cut   : 使った子の受けるダメージを減らす割合(タクティクス以外はパーティのライフ全体)
+//   turns : 減らすのが続くターン数(使ったターンを含む)。続くのはダメージダウンだけ
+const KYUKO_TIERS = [
+  { cut:0.30, turns:2 },
+  { cut:0.45, turns:3 },
+  { cut:0.60, turns:4 },
 ];
 
 // 行動カードの絵(2026-10-15 社長「バトルカードの変更も進めて」。原本は tools/art-sources/card-frames・skill-icons)。
@@ -136,7 +152,9 @@ const TEACHING_CARDS = [
   { id:'poltz',   baseName:"ポルツの弁当",      icon:POLTZ_FACE_ICON,   type:'buff',   subType:'buff_poltz', baseValue:0.2, step:0,  desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ", evoLevel:0, guts:20 },
   // ももすけは「みゅあのガッツ回復版」。回復と上限アップの量は60-app.jsxのmomosuke分岐と
   // getDynamicDescの2か所に同じ表がある。攻撃アップの代わりに丈夫さ(defPct)を上げる
-  { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 }
+  { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 },
+  // きゅうこ(2026-10-22)。加入のお話を見たあとマーケットで買える(BREEDER_MARKET_ITEMS の shop)。効果量は KYUKO_TIERS
+  { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -248,20 +266,33 @@ const DRA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// 助手きゅうこの顔アイコンも同じ仕様(8表情・各1pt)。画像は吹き出しの face/kyuko_*.PNG をそのまま使う(2026-10-22)。
+// 公開の印 assistantKyuko が立つまでは交換所に並べない(見るたびに読む)
+const KYUKO_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `kyuko_${key}`,
+  name: `きゅうこ（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/kyuko_${key}.PNG`,
+  cost: 1,
+  get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true ? undefined : false; } catch { return false; } },
+}));
+
 // あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
-// あつは助手ではないので、顔アイコン(256px)を images/breeder-icons/atsu_<表情>.png に直接置いている。
+// 顔アイコン(256px)は images/breeder-icons/atsu_<表情>.png に直接置いている。
+// 2026-10-22 あつが助手になり、絵を助手あつの大きい絵から作った顔(images/assistant/face/atsu_*.PNG と同じ絵)へ差し替えた
+// (社長「アイコンも今回の絵に差し替える」。id・パスはそのままなので、買った人のアイコンも新しい絵になる)。
 // 既存の「あつのアイコン」(id:'atsu', images/breeder-icons/atsu.png)は別の絵で、購入済みの人がいるのでそのまま残す。
 // こちらは id を atsu_* に分けているので、既存の保存データには影響しない。
 // (使われていない画像の検査が見つけられるよう、パスは1枚ずつ文字で書いておく)
 const ATSU_EXPRESSION_ICONS = {
-  normal:   "images/breeder-icons/atsu_normal.png?v=f4d1376ca306",
-  happy:    "images/breeder-icons/atsu_happy.png?v=311560d5a472",
-  wink:     "images/breeder-icons/atsu_wink.png?v=702e6985867a",
-  excited:  "images/breeder-icons/atsu_excited.png?v=98eb2efc88fa",
-  surprise: "images/breeder-icons/atsu_surprise.png?v=5ea1fdd3873c",
-  troubled: "images/breeder-icons/atsu_troubled.png?v=e9ffa3a87f89",
-  angry:    "images/breeder-icons/atsu_angry.png?v=24449b0075a1",
-  crying:   "images/breeder-icons/atsu_crying.png?v=c8e7bc88c9c3",
+  normal:   "images/breeder-icons/atsu_normal.png?v=c7743bb24276",
+  happy:    "images/breeder-icons/atsu_happy.png?v=c99760be79b6",
+  wink:     "images/breeder-icons/atsu_wink.png?v=b5c98359f32b",
+  excited:  "images/breeder-icons/atsu_excited.png?v=363fb647aac0",
+  surprise: "images/breeder-icons/atsu_surprise.png?v=307aaa394f61",
+  troubled: "images/breeder-icons/atsu_troubled.png?v=b5bc115df52f",
+  angry:    "images/breeder-icons/atsu_angry.png?v=781bf0aca262",
+  crying:   "images/breeder-icons/atsu_crying.png?v=23e2be3f83f9",
 };
 const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   id: `atsu_${key}`,
@@ -322,6 +353,14 @@ const HALLOWEEN_MARKET_ICONS = HALLOWEEN_ICON_SETS.flatMap(set => set.items.map(
   get shop() { return halloweenIconSale() === 'breederPoint' ? undefined : false; },
 })));
 
+// きゅうこのカードが交換所に並ぶか。公開の印と「加入のお話を見たか」を見るたびに読む。
+// 見たかどうかは、ゲーム側が「見終えたお話の id」(mh_rhythm_event_story_v1。新しいキーは作らない)を読んだときに
+// setKyukoJoinSeenForShop で知らせる(保存の読み書きは Claude アプリの保存場所も通るので、ここでは直接読まない)
+let kyukoJoinSeenForShop = false;
+const setKyukoJoinSeenForShop = (seen) => { kyukoJoinSeenForShop = seen === true; };
+const kyukoCardOnSale = () => {
+  try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true && kyukoJoinSeenForShop; } catch { return false; }
+};
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -329,6 +368,10 @@ const BREEDER_MARKET_ITEMS = [
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:150000, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
   { id:'momosuke', name:"アシストカード「ももすけ」", type:'assist', icon:MOMOSUKE_FACE_ICON, cost:150000, desc:"ガッツ回復・ライフ/ガッツ上限と丈夫さが永続アップ" },
   { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:150000, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
+  // きゅうこ(2026-10-22 社長の決定)。公開の印 assistantKyuko が立ち、加入のお話(kyuko_join_2026_10_22)を見たら並ぶ(kyukoCardOnSale)。150000(ももすけ・ポルツと同じ)
+  { id:'kyuko', name:"アシストカード「きゅうこ」", type:'assist', icon:KYUKO_FACE_ICON, cost:150000, desc:"このターン敵の単体攻撃を引き受け、数ターン受けるダメージダウン",
+    get shop() { return kyukoCardOnSale() ? undefined : false; } },
+
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },
@@ -406,12 +449,13 @@ const BREEDER_MARKET_ITEMS = [
   // 値段はユグドラシル種と同じ(円盤石150,000ダイヤ・アイコンは各1)。
   // 2026-10-05 の正式実装で、ユグドラシル種と同じく円盤石はビートP交換所で先行公開(data/rhythm-event.js・各1,500P)し、
   // アイコン2種(本人・円盤石)の available:false を外した。ダイヤショップの円盤石は「近日追加」のまま
+  // 2026-10-23 イルミネ・ドリーミィの公開と同時に、ダイヤショップの円盤石も買えるようにした(社長)
   { id:'ghost_icon', name:"ゴーストのアイコン", type:'icon', icon:GHOST_FACE_ICON, cost:1 },
   { id:'ghost_disc_icon', name:"ゴーストの円盤石アイコン", type:'icon', icon:GHOST_DISC_ICON, cost:1 },
-  { id:'Ghost', name:"ゴーストの円盤石", type:'disc', icon:GHOST_DISC_ICON, cost:150000, available:false },
+  { id:'Ghost', name:"ゴーストの円盤石", type:'disc', icon:GHOST_DISC_ICON, cost:150000 },
   { id:'spooky_icon', name:"スプーキーのアイコン", type:'icon', icon:SPOOKY_FACE_ICON, cost:1 },
   { id:'spooky_disc_icon', name:"スプーキーの円盤石アイコン", type:'icon', icon:SPOOKY_DISC_ICON, cost:1 },
-  { id:'Spooky', name:"スプーキーの円盤石", type:'disc', icon:SPOOKY_DISC_ICON, cost:150000, available:false },
+  { id:'Spooky', name:"スプーキーの円盤石", type:'disc', icon:SPOOKY_DISC_ICON, cost:150000 },
   // メロディーとクロミー(ユグドラシル×？？？のレア2体)。
   // 2026-10-07 ユーザー指示「ゴーストのときと同じを一式」で、6件とも available:false(「近日追加」)で並べた。
   // 本体はまだ案の段階(UPCOMING_MONSTER_DRAFTS)。値段はゴースト・スプーキーと同じ(円盤石150,000ダイヤ・アイコンは各1)。
@@ -425,9 +469,20 @@ const BREEDER_MARKET_ITEMS = [
   { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1 },
   { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1 },
   { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
+  // イルミネ(イルミネ×イルミネ)とドリーミィ(イルミネ×ニャー)。
+  // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」で、メロディー・クロミーと同じく6件とも available:false(「近日追加」)で並べた。
+  // 値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。
+  // 2026-10-23 正式実装(新しい助手きゅうこのお話と同時)。ゴースト・スプーキーと同じく、円盤石はビートP交換所で先行公開(data/rhythm-event.js・各1,500P)し、
+  // アイコン2種(本人・円盤石)の available:false を外した。ダイヤショップの円盤石は「近日追加」のまま(社長「ダイヤでは近日で、まずはビートポイントでしか買えない」)
+  { id:'illumine_icon', name:"イルミネのアイコン", type:'icon', icon:ILLUMINE_FACE_ICON, cost:1 },
+  { id:'illumine_disc_icon', name:"イルミネの円盤石アイコン", type:'icon', icon:ILLUMINE_DISC_ICON, cost:1 },
+  { id:'Illumine', name:"イルミネの円盤石", type:'disc', icon:ILLUMINE_DISC_ICON, cost:150000, available:false },
+  { id:'dreamy_icon', name:"ドリーミィのアイコン", type:'icon', icon:DREAMY_FACE_ICON, cost:1 },
+  { id:'dreamy_disc_icon', name:"ドリーミィの円盤石アイコン", type:'icon', icon:DREAMY_DISC_ICON, cost:1 },
+  { id:'Dreamy', name:"ドリーミィの円盤石", type:'disc', icon:DREAMY_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
-  { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
+  { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格の結晶で増やしたぶんは、結晶として持ち物に戻る。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
   { id:'unique_skill_reset_ticket', name:"スキルポイントリセット券", type:'item', emoji:"🎟️", cost:1000, usage:'uniqueSkillReset', desc:"マスモン詳細の「固有技強化」で使うと、その個体の固有技に配分したポイントをすべて未使用の固有技Pへ戻せる。固有技以外の育成状態は変わらない。" },
   // 説明は実際の機能に合わせて更新すること。導入時は6色から全身を1色に変えるだけだったが、
   // その後アイコンごとの部位分け・プリセット27色・カスタムカラーに対応している
@@ -465,6 +520,7 @@ const BREEDER_MARKET_ITEMS = [
   // 助手ドラの表情アイコン(8種)
   ...DRA_MARKET_ICONS,
   ...ATSU_MARKET_ICONS,
+  ...KYUKO_MARKET_ICONS,
   ...HALLOWEEN_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
@@ -488,9 +544,10 @@ const breederIconGroupKeyOf = (id) => {
   if (key === 'kiki_icon' || /^kiki_/.test(key)) return 'kiki';
   if (/^momosuke_/.test(key)) return 'momosuke';
   if (key === 'atsu' || /^atsu_/.test(key)) return 'atsu';
+  if (/^kyuko_/.test(key)) return 'kyuko';
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
-const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ',
+const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ',
   mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）' });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
@@ -598,6 +655,9 @@ const PROFILE_FRAMES = [
   //   tools/ranking/profile-frame-check.js が実際のPNGを測って突き合わせる。
   // ★元絵は 1254px / 0.9〜2.2MB だったものを 384px へ落として入れてある。
   //   表示は最大80pxなので、これで足りる(CLAUDE.md ⑥-2)。
+  // ★srcSmall は小さく出す所(マルチの部屋の上の並び28px・チャット32px)用に、前もって縮めた絵(2026-10-19 社長「小さい所用にフレームを出す」)。
+  //   大きい絵をその場で縮めると、細かい飾りが点の散ったように潰れた。細かい点を均してから、28〜32px×画素密度3に合う大きさへ縮めてある。
+  //   穴の比(hole)は大きい絵と同じなので、位置合わせは profileFrameImageStyle をそのまま使う。絵を差し替えたら small も作り直す
   //
   // 【released と unlock の役割はまったく別】(2026-09-16)
   //   released … **描いてよいか**。false のものは選択画面にも出ないし、
@@ -612,15 +672,15 @@ const PROFILE_FRAMES = [
   // ★条件は「買えるか」だけを決める。買ったあとに条件を割っても枠は残る(mh_profile_frame_owned_v1)。
   { id:'frame_mocchi', name:'モッチー', kind:'image', released:true, hole:0.656,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'speciesRebirth', lineage:'mocchi', count:1, text:'モッチー種(モッチー・ミタラシ・剣士モッチー)を1回以上限界突破する' } },
-    src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf',
+    src:'images/profile-frames/mocchi.png?v=7c842f6ed7bf', srcSmall:'images/profile-frames/small/mocchi.png?v=2d23bd4ec6b9',
     desc:'桜の花びらと桜もちをあしらった、モッチーの和風フレーム。' },
   { id:'frame_moo', name:'ムー', kind:'image', released:true, hole:0.682,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'Master', text:'バトルの難易度マスター以上をクリアする' } },
-    src:'images/profile-frames/moo.png?v=fc64f9da9806',
+    src:'images/profile-frames/moo.png?v=fc64f9da9806', srcSmall:'images/profile-frames/small/moo.png?v=2c1f217a83e6',
     desc:'紫の宝玉と金の角をいただく、ラスボス「ムー」のフレーム。' },
   { id:'frame_suezo_beat', name:'スエゾービート', kind:'image', released:true, hole:0.724,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'rhythmClears', count:10, text:'モンヒロビートを10回以上クリアする' } },
-    src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89',
+    src:'images/profile-frames/suezo-beat.png?v=0b43f621dd89', srcSmall:'images/profile-frames/small/suezo-beat.png?v=ed7ff5b7d2b4',
     desc:'スエゾーと音符が跳ねる、モンヒロビートのフレーム。' },
   // ==================== モンスターの枠7枚(2026-10-03) ====================
   // ユーザーから受け取った透過PNG(1254px → 384pxへ軽くした。ASSETS.md)。
@@ -629,49 +689,54 @@ const PROFILE_FRAMES = [
   // ★条件に shops:['breederPoint'] と書いたぶん、ビートP交換所では条件なしで買える。
   { id:'frame_suezo', name:'スエゾー', kind:'image', released:true, hole:0.573,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Suezo', count:1, shops:['breederPoint'], text:'スエゾーを1回転生する' } },
-    src:'images/profile-frames/suezo.png?v=6f617e7aa00a',
+    src:'images/profile-frames/suezo.png?v=6f617e7aa00a', srcSmall:'images/profile-frames/small/suezo.png?v=af78e8da3297',
     desc:'黄金の輪に、スエゾーがぺろりと顔を出す、きらめくフレーム。' },
   { id:'frame_golem', name:'ゴーレム', kind:'image', released:true, hole:0.755,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Golem', count:1, shops:['breederPoint'], text:'ゴーレムを1回転生する' } },
-    src:'images/profile-frames/golem.png?v=84bc05c75f8d',
+    src:'images/profile-frames/golem.png?v=84bc05c75f8d', srcSmall:'images/profile-frames/small/golem.png?v=b7677178c19c',
     desc:'ごつごつした白い岩が、ぐるりと連なる、ゴーレムの輪。' },
   { id:'frame_tiger', name:'ライガー', kind:'image', released:true, hole:0.703,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Tiger', count:1, shops:['breederPoint'], text:'ライガーを1回転生する' } },
-    src:'images/profile-frames/tiger.png?v=3ced385df138',
+    src:'images/profile-frames/tiger.png?v=3ced385df138', srcSmall:'images/profile-frames/small/tiger.png?v=2a743d53deb4',
     desc:'蒼い結晶と金の飾りをまとった、ライガーの輪。' },
   { id:'frame_ham', name:'ハム', kind:'image', released:true, hole:0.792,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Ham', count:1, shops:['breederPoint'], text:'ハムを1回転生する' } },
-    src:'images/profile-frames/ham.png?v=0d4103bbbab8',
+    src:'images/profile-frames/ham.png?v=0d4103bbbab8', srcSmall:'images/profile-frames/small/ham.png?v=88da9ab250ff',
     desc:'ふわふわの毛並みと肉球、桃色の耳をあしらった、ハムの輪。' },
   { id:'frame_pixie', name:'ピクシー', kind:'image', released:true, hole:0.750,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Pixie', count:1, shops:['breederPoint'], text:'ピクシーを1回転生する' } },
-    src:'images/profile-frames/pixie.png?v=a9a36e085925',
+    src:'images/profile-frames/pixie.png?v=a9a36e085925', srcSmall:'images/profile-frames/small/pixie.png?v=fb6479bd1636',
     desc:'ハートの宝石とこうもりの羽が並ぶ、ピクシーの輪。' },
   { id:'frame_mia', name:'ミーア', kind:'image', released:true, hole:0.734,
     unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'monsterReincarnate', monsterId:'Mia', count:1, shops:['breederPoint'], text:'ミーアを1回転生する' } },
-    src:'images/profile-frames/mia.png?v=fc46dfb38806',
+    src:'images/profile-frames/mia.png?v=fc46dfb38806', srcSmall:'images/profile-frames/small/mia.png?v=25df0abdb3a3',
     desc:'白い羽と色とりどりのリボンで飾った、ミーアの輪。' },
   { id:'frame_ragnarok', name:'ラグナロク', kind:'image', released:true, hole:0.672,
     unlock:{ shops:PROFILE_FRAME_RAGNAROK_SHOPS, condition:{ kind:'difficultyCleared', difficulty:'RAGNAROK', shops:['breederPoint'], text:'バトルの難易度ラグナロクをクリアする' } },
-    src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece',
+    src:'images/profile-frames/ragnarok.png?v=b6e9fe525ece', srcSmall:'images/profile-frames/small/ragnarok.png?v=145848170f50',
     desc:'燃えさかる炎をまとう黒い竜が、ぐるりと取り巻く輪。' },
-  // ==================== ハロウィンとモンヒロビート用の4枚(2026-10-05・未公開) ====================
+  // ==================== ハロウィンとモンヒロビート用の4枚(2026-10-05 取り込み・2026-10-20 公開) ====================
   // ユーザーから受け取ったJPEG(透過なし・黒背景)を、枠の外と穴の中の黒を透明にして取り込んだ(384px)。
-  // 売り方が決まっていないので released:false(選択画面にも売り場にも出ず、他人の記録に入っていても描かれない)。
-  // 決まったら released:true にして unlock に売り値(shops)や条件を書く(上のモンスターの枠と同じ)。
-  //   ハロウィンの2種は期間限定にするか未定。「モンビー用」はモンヒロビート用の意味。
-  { id:'frame_halloween_night', name:'ハロウィン・夜', kind:'image', released:false, hole:0.521,
-    src:'images/profile-frames/halloween-night.png?v=647f32308d31',
-    desc:'青い炎と骨、音符の輪に、ハロウィンの夜のモンスターたちが集まる、暗い夜のフレーム。' },
-  { id:'frame_halloween_pumpkin', name:'ハロウィン・パンプキン', kind:'image', released:false, hole:0.583,
-    src:'images/profile-frames/halloween-pumpkin.png?v=f68b833002c2',
-    desc:'大きなパンプキンと、包帯のうさぎ、ゴーストが並ぶ、にぎやかなハロウィンのフレーム。' },
-  { id:'frame_eiki_zan', name:'エイキ&ザン', kind:'image', released:false, hole:0.656,
-    src:'images/profile-frames/eiki-zan.png?v=535efca30954',
-    desc:'桜と夜空のステージで、エイキとザンがギターを奏でる、モンヒロビート用のフレーム。' },
-  { id:'frame_undine_beat', name:'ウンディーネ種', kind:'image', released:false, hole:0.604,
-    src:'images/profile-frames/undine-beat.png?v=71fc5b699b36',
-    desc:'水と泡のステージで、ウンディーネの仲間たちが歌う、モンヒロビート用のフレーム。' },
+  // 2026-10-20 社長の決定で公開。名前も社長が決めた(id は取り込んだときのまま。変えると選んだ人・ランキングの記録が外れる)。
+  //   ハロウィン・恐 … マーケットで売る(値段はモンスターの枠と同じ)。レイドの大王ジャックがみんなで倒されるか、イベントが終わると、全員が買えるようになる(condition.kind:'raidJackBossDown')
+  //   ハロウィン・妖 … レイド「カボチャの大王ジャック」の大王まで倒せたときの終章を見た参加者へ、ギフトで1回だけ届ける(unlock.gift)
+  //   ウンディーネ3姉妹・ザン・エイキ … 対象のマスモンのビートLvを、それぞれ50以上にするとマーケットで買える(condition.kind:'buddyBeatLevel')
+  { id:'frame_halloween_night', name:'ハロウィン・恐', kind:'image', released:true, hole:0.521,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'raidJackBossDown', text:'カボチャの大王ジャックが倒されるか、ハロウィン・ナイトが終わると買えるようになります' } },
+    src:'images/profile-frames/halloween-night.png?v=647f32308d31', srcSmall:'images/profile-frames/small/halloween-night.png?v=5c47af1a0742',
+    desc:'青い炎と骨、音符の輪に、ハロウィンの夜のモンスターたちが集まる、ちょっとこわいフレーム。' },
+  { id:'frame_halloween_pumpkin', name:'ハロウィン・妖', kind:'image', released:true, hole:0.583,
+    unlock:{ gift:'raidJackEnding' },
+    src:'images/profile-frames/halloween-pumpkin.png?v=f68b833002c2', srcSmall:'images/profile-frames/small/halloween-pumpkin.png?v=f4aac89375ec',
+    desc:'大きなパンプキンと魔女の女の子、包帯のうさぎ、ゴーストが並ぶ、にぎやかなハロウィンのフレーム。' },
+  { id:'frame_eiki_zan', name:'ザン・エイキ', kind:'image', released:true, hole:0.656,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'buddyBeatLevel', monsterIds:['Zan', 'Eiki'], level:50, text:'ザンとエイキのマスモンを、それぞれビートLv50以上にする' } },
+    src:'images/profile-frames/eiki-zan.png?v=535efca30954', srcSmall:'images/profile-frames/small/eiki-zan.png?v=3ca4fedaece2',
+    desc:'桜と夜空のステージで、エイキとザンがギターを奏でる、モンヒロビートのフレーム。' },
+  { id:'frame_undine_beat', name:'ウンディーネ3姉妹', kind:'image', released:true, hole:0.604,
+    unlock:{ shops:PROFILE_FRAME_MONSTER_SHOPS, condition:{ kind:'buddyBeatLevel', monsterIds:['Undine', 'Yaobikuni', 'Snegurochka'], level:50, text:'ウンディーネ・ヤオビクニ・スネグーラチカのマスモンを、それぞれビートLv50以上にする' } },
+    src:'images/profile-frames/undine-beat.png?v=71fc5b699b36', srcSmall:'images/profile-frames/small/undine-beat.png?v=9d34ec0bd2fd',
+    desc:'水と泡のステージで、ウンディーネの3姉妹が歌う、モンヒロビートのフレーム。' },
   // ==================== 助手の仲良し度でもらえる枠(2026-09-16) ====================
   // 助手1人につき3枚。その助手との仲良し度が Lv2 / Lv5 / Lv7 になると自動でもらえる。
   // ★unlock を書いた枠は「もらうまで選べない」だけで、描くのは自由(released:true)。
@@ -681,29 +746,29 @@ const PROFILE_FRAMES = [
   // (BREEDER_EVO_NAMES.mua の 愛 → 深愛 → 慈愛)にそろえてある。
   { id:'frame_mua_1', name:'みゅあ・愛', kind:'image', released:true, hole:0.669,
     unlock:{ assistantId:'mua', bondLevel:2 },
-    src:'images/profile-frames/mua-1.png?v=cf21c351ff0a',
+    src:'images/profile-frames/mua-1.png?v=cf21c351ff0a', srcSmall:'images/profile-frames/small/mua-1.png?v=cff43ee9669e',
     desc:'桜色のリボンと星をあしらった、みゅあの細いリース。' },
   { id:'frame_mua_2', name:'みゅあ・深愛', kind:'image', released:true, hole:0.745,
     unlock:{ assistantId:'mua', bondLevel:5 },
-    src:'images/profile-frames/mua-2.png?v=ec2adae9b6f6',
+    src:'images/profile-frames/mua-2.png?v=ec2adae9b6f6', srcSmall:'images/profile-frames/small/mua-2.png?v=0d8f01b1ce71',
     desc:'金の飾りと真珠、虹のリボンで華やかにした、みゅあのリース。' },
   { id:'frame_mua_3', name:'みゅあ・慈愛', kind:'image', released:true, hole:0.719,
     unlock:{ assistantId:'mua', bondLevel:7 },
-    src:'images/profile-frames/mua-3.png?v=d18cf1740410',
+    src:'images/profile-frames/mua-3.png?v=d18cf1740410', srcSmall:'images/profile-frames/small/mua-3.png?v=3c302cc16d8e',
     desc:'みゅあ本人が寄り添って眠る、いちばん特別なリース。' },
   // ききの3枚。同じ意匠を段階的に豪華にしたもので、呼び分けは教えカードの3段階
   // (BREEDER_EVO_NAMES.kiki の 応援 → 本気 → 全力全開)にそろえてある。
   { id:'frame_kiki_ouen', name:'きき・応援', kind:'image', released:true, hole:0.755,
     unlock:{ assistantId:'kiki', bondLevel:2 },
-    src:'images/profile-frames/kiki-ouen.png?v=09b871ec464c',
+    src:'images/profile-frames/kiki-ouen.png?v=09b871ec464c', srcSmall:'images/profile-frames/small/kiki-ouen.png?v=765c2b84055f',
     desc:'紅いリボンと白いくつ下をあしらった、ききのフレーム。' },
   { id:'frame_kiki_honki', name:'きき・本気', kind:'image', released:true, hole:0.698,
     unlock:{ assistantId:'kiki', bondLevel:5 },
-    src:'images/profile-frames/kiki-honki.png?v=fb89e34bd92b',
+    src:'images/profile-frames/kiki-honki.png?v=fb89e34bd92b', srcSmall:'images/profile-frames/small/kiki-honki.png?v=9383373c0f24',
     desc:'金の縁飾りと桜、幾重ものリボンで華やかにした、ききのフレーム。' },
   { id:'frame_kiki_zenryoku', name:'きき・全力全開', kind:'image', released:true, hole:0.677,
     unlock:{ assistantId:'kiki', bondLevel:7 },
-    src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306',
+    src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306', srcSmall:'images/profile-frames/small/kiki-zenryoku.png?v=393ad230d39d',
     desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
   // ももすけの3枚。ももすけにはまだアシストカードが無いので、呼び分けを先に決めてある
   // (2026-09-16・ユーザーが選択)。おねだり → だだこね → 独り占め。
@@ -711,15 +776,15 @@ const PROFILE_FRAMES = [
   // (BREEDER_EVO_NAMES へ momosuke:['ももすけのおねだり','ももすけのだだこね','ももすけの独り占め'])。
   { id:'frame_momosuke_1', name:'ももすけ・おねだり', kind:'image', released:true, hole:0.737,
     unlock:{ assistantId:'momosuke', bondLevel:2 },
-    src:'images/profile-frames/momosuke-1.png?v=85af4bc2f2e2',
+    src:'images/profile-frames/momosuke-1.png?v=85af4bc2f2e2', srcSmall:'images/profile-frames/small/momosuke-1.png?v=618769cbac66',
     desc:'黒とピンクのリボンに、うさぎと三日月をあしらった細い輪。' },
   { id:'frame_momosuke_2', name:'ももすけ・だだこね', kind:'image', released:true, hole:0.714,
     unlock:{ assistantId:'momosuke', bondLevel:5 },
-    src:'images/profile-frames/momosuke-2.png?v=9c1adfb2e8b6',
+    src:'images/profile-frames/momosuke-2.png?v=9c1adfb2e8b6', srcSmall:'images/profile-frames/small/momosuke-2.png?v=4503f619c3a6',
     desc:'大きな三日月と魔法陣、こうもりの羽で飾った、ももすけの輪。' },
   { id:'frame_momosuke_3', name:'ももすけ・独り占め', kind:'image', released:true, hole:0.714,
     unlock:{ assistantId:'momosuke', bondLevel:7 },
-    src:'images/profile-frames/momosuke-3.png?v=15ed59e8cf51',
+    src:'images/profile-frames/momosuke-3.png?v=15ed59e8cf51', srcSmall:'images/profile-frames/small/momosuke-3.png?v=5ca7a59b24ff',
     desc:'ももすけ本人がうさぎのぬいぐるみを抱えて陣取る、いちばん特別な輪。' },
 ];
 const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
@@ -784,12 +849,22 @@ const profileFrameUnlock = (frame) => {
   return (unlock && typeof unlock.assistantId === 'string' && Number.isFinite(level))
     ? { assistantId: unlock.assistantId, bondLevel: level } : null;
 };
+// 贈り物で届く枠(2026-10-20)。売らない・仲良し度でもない。決まった出来事で、ギフトボックスへ1回だけ届く。
+//   gift:'raidJackEnding' … レイド「カボチャの大王ジャック」で大王まで倒せたときの終章(raid_jack_ending_cleared)を見た参加者へ
+// ★届くまでは選択画面にも出さない(手に入れ方を先に見せない)。届いたら mh_profile_frame_owned_v1 に入る(ほかの枠と同じ入れ物)
+const PROFILE_FRAME_GIFT_KINDS = Object.freeze(['raidJackEnding']);
+// プレゼントで届く枠の、マーケットの札に出す手に入れ方(買えない枠を条件だけ並べる)
+const PROFILE_FRAME_GIFT_LABELS = Object.freeze({ raidJackEnding: 'ジャック大王を倒すと届く' });
+const profileFrameGift = (frame) => {
+  const gift = frame && frame.unlock && frame.unlock.gift;
+  return (typeof gift === 'string' && PROFILE_FRAME_GIFT_KINDS.includes(gift)) ? gift : null;
+};
 // いま選べるか。条件の無い枠は常に true、条件つきは「もらった記録」にあるときだけ true
 const profileFrameOwned = (id, owned) => {
   const frame = profileFrameById(id);
   if (!frame || frame.released !== true) return false;
   // もらう条件(仲良し度)か売り値が付いている枠は、手に入れた記録がなければ選べない。どちらも無い枠は最初から選べる
-  if (!profileFrameUnlock(frame) && !profileFrameSale(frame)) return true;
+  if (!profileFrameUnlock(frame) && !profileFrameSale(frame) && !profileFrameGift(frame)) return true;
   return normalizeOwnedProfileFrames(owned).includes(frame.id);
 };
 // ==== 売るフレーム(2026-10-03 ユーザー指示「フレームも販売実装を予定してるから、ブリーダーポイントとビートポイントのとこに実装できる準備をしといて」) ====
@@ -829,7 +904,12 @@ const profileFramesForSale = (shop) => releasedProfileFrames().filter(frame => !
 //   kind:'monsterReincarnate' … monsterId のモンスター(マスモン)を count 回以上「転生」(reincarnateCount。限界突破とは別の仕組み)
 //   kind:'difficultyCleared' … difficulty 以上の難易度をクリア
 //   kind:'rhythmClears'    … モンヒロビートを count 回以上クリア(通算。RHYTHM_CLEAR_TOTAL_KEY)
-const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears']);
+//   kind:'buddyBeatLevel'  … monsterIds の種ごとに、自分のマスモンのビートLv(RHYTHM_BUDDY_KEY の経験値)が level 以上(2026-10-20)。
+//                            同じ種のマスモンが何体かいるときは、いちばん高い子で見る。全部の種がそろって達成
+//   kind:'raidJackBossDown' … レイド「カボチャの大王ジャック」の大王が、みんなで倒されたあと(共有の合計・raidJackBossDown。2026-10-20)か、
+//                            倒されなくてもレイドの期間が終わったあと(raidJackWindowAt が 'after'・社長「終わったら解放」)。
+//                            自分が参加したかは問わない。text はそのまま鍵の文になる(ネタバレにならない書き方で)
+const PROFILE_FRAME_CONDITION_KINDS = Object.freeze(['speciesRebirth', 'monsterReincarnate', 'difficultyCleared', 'rhythmClears', 'buddyBeatLevel', 'raidJackBossDown']);
 const profileFrameCondition = (frame) => {
   const condition = frame && frame.unlock && frame.unlock.condition;
   return (condition && PROFILE_FRAME_CONDITION_KINDS.includes(condition.kind)) ? condition : null;
@@ -840,6 +920,34 @@ const profileFrameConditionFor = (frame, shop) => {
   const condition = profileFrameCondition(frame);
   if (!condition) return null;
   return (Array.isArray(condition.shops) && !condition.shops.includes(shop)) ? null : condition;
+};
+// 鍵つきの札に出す、条件の短い文(2026-10-20 社長の決定・改善部の指摘 L3)。2行に収めるので、折ってよい区切りごとの配列で返す。
+// ★文は unlock.condition の中身(種類・モンスター・難易度・回数・Lv.)から作る。condition.text を書き写さない。
+//   読めない条件は null(呼ぶ側が「条件を達成すると買えます」に戻す)。shop を渡すと、その交換所にかかる条件だけを見る
+const profileFrameConditionShort = (frame, shop = null) => {
+  const c = shop ? profileFrameConditionFor(frame, shop) : profileFrameCondition(frame);
+  if (!c) return null;
+  const monName = (id) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[id] && ALL_PLAYER_MONSTERS[id].name) || id;
+  const count = Math.max(1, Math.floor(Number(c.count) || 1));
+  if (c.kind === 'monsterReincarnate') return [`${monName(c.monsterId)}を`, count > 1 ? `${count}回転生` : '転生'];
+  if (c.kind === 'speciesRebirth') {
+    const lineage = typeof MONSTER_LINEAGES !== 'undefined' ? MONSTER_LINEAGES[c.lineage] : null;
+    return [`${(lineage && lineage.name) || c.lineage}種を`, count > 1 ? `${count}回限界突破` : '限界突破'];
+  }
+  if (c.kind === 'difficultyCleared') {
+    const d = c.difficulty === 'RAGNAROK' && typeof RAGNAROK_SETTING !== 'undefined' ? RAGNAROK_SETTING
+      : (typeof DIFFICULTY_SETTINGS !== 'undefined' ? DIFFICULTY_SETTINGS[c.difficulty] : null);
+    return [`${(d && (d.japanese || d.label)) || c.difficulty}を`, 'クリア'];
+  }
+  if (c.kind === 'rhythmClears') return ['モンヒロビートを', `${count}回クリア`];
+  if (c.kind === 'buddyBeatLevel') {
+    const ids = Array.isArray(c.monsterIds) ? c.monsterIds : [];
+    const level = Math.max(1, Math.floor(Number(c.level) || 1));
+    // 2体までは名前を並べる(ザン・エイキ)。3体以上は枠の名前(ウンディーネ3姉妹)
+    return [ids.length <= 2 ? ids.map(monName).join('・') : (frame && frame.name) || '', `ビートLv${level}`];
+  }
+  if (c.kind === 'raidJackBossDown') return ['ジャックを倒すか', 'イベント終了で'];
+  return null;
 };
 // 売る枠として書かれているのに、売り値が正しくない(shop だけ・cost が0など)枠のid。検査用
 const profileFramesWithBrokenSale = () => PROFILE_FRAMES

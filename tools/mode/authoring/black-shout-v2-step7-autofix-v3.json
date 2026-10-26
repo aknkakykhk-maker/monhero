@@ -1,0 +1,430 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step7-autofix",
+ "trackId": "black_shout",
+ "source": "v3",
+ "sourceLabel": "V3 生成",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 150,
+  "restrikeLimitMs": 105,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30,
+  "endFlickReleaseMs": 80
+ },
+ "weights": {
+  "impossible": 10000,
+  "reach": 10000,
+  "strained": 100,
+  "hardJump": 120,
+  "laneSpread": 1,
+  "move": 3,
+  "maxPasses": 8
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 204,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 62,
+    "cost": 62
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 62,
+    "cost": 62
+   },
+   "fixes": []
+  },
+  "NORMAL": {
+   "noteCount": 238,
+   "fixCount": 1,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 1,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 54,
+    "cost": 154
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 54,
+    "cost": 54
+   },
+   "fixes": [
+    {
+     "grid": 944,
+     "bar": 59,
+     "timeMs": 78797,
+     "type": "TAP",
+     "move": "サブレーン0→3",
+     "pass": 1,
+     "costBefore": 154,
+     "costAfter": 54,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    }
+   ]
+  },
+  "HARD": {
+   "noteCount": 325,
+   "fixCount": 1,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 1,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 84,
+    "cost": 184
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 0,
+    "overSteps": 0,
+    "spread": 84,
+    "cost": 84
+   },
+   "fixes": [
+    {
+     "grid": 1086,
+     "bar": 67,
+     "timeMs": 90307,
+     "type": "TAP",
+     "move": "サブレーン7→6",
+     "pass": 1,
+     "costBefore": 184,
+     "costAfter": 84,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    }
+   ]
+  },
+  "EXPERT": {
+   "noteCount": 399,
+   "fixCount": 3,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 2,
+    "reach": 1,
+    "hardJumps": 2,
+    "overSteps": 0,
+    "spread": 87,
+    "cost": 10527
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 2,
+    "overSteps": 0,
+    "spread": 87,
+    "cost": 327
+   },
+   "fixes": [
+    {
+     "grid": 644,
+     "bar": 40,
+     "timeMs": 54482,
+     "type": "SLIDE",
+     "move": "レーン1.5→2.0",
+     "pass": 1,
+     "costBefore": 10527,
+     "costAfter": 527,
+     "impossibleAfter": 0,
+     "strainedAfter": 2
+    },
+    {
+     "grid": 772,
+     "bar": 48,
+     "timeMs": 64857,
+     "type": "TAP",
+     "move": "サブレーン7→5",
+     "pass": 1,
+     "costBefore": 527,
+     "costAfter": 426,
+     "impossibleAfter": 0,
+     "strainedAfter": 1
+    },
+    {
+     "grid": 870,
+     "bar": 54,
+     "timeMs": 72800,
+     "type": "TAP",
+     "move": "サブレーン8→7",
+     "pass": 1,
+     "costBefore": 426,
+     "costAfter": 327,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    }
+   ]
+  },
+  "MASTER": {
+   "noteCount": 445,
+   "fixCount": 18,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 18,
+    "reach": 0,
+    "hardJumps": 3,
+    "overSteps": 0,
+    "spread": 57,
+    "cost": 2217
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "reach": 0,
+    "hardJumps": 3,
+    "overSteps": 0,
+    "spread": 63,
+    "cost": 423
+   },
+   "fixes": [
+    {
+     "grid": 178,
+     "bar": 11,
+     "timeMs": 16713,
+     "type": "TAP",
+     "move": "サブレーン4→3",
+     "pass": 1,
+     "costBefore": 2217,
+     "costAfter": 2117,
+     "impossibleAfter": 0,
+     "strainedAfter": 17
+    },
+    {
+     "grid": 314,
+     "bar": 19,
+     "timeMs": 27736,
+     "type": "TAP",
+     "move": "サブレーン1→3",
+     "pass": 1,
+     "costBefore": 2117,
+     "costAfter": 2017,
+     "impossibleAfter": 0,
+     "strainedAfter": 16
+    },
+    {
+     "grid": 741,
+     "bar": 46,
+     "timeMs": 62344,
+     "type": "TAP",
+     "move": "サブレーン5→4",
+     "pass": 1,
+     "costBefore": 2017,
+     "costAfter": 1917,
+     "impossibleAfter": 0,
+     "strainedAfter": 15
+    },
+    {
+     "grid": 746,
+     "bar": 46,
+     "timeMs": 62749,
+     "type": "TAP",
+     "move": "サブレーン4→3",
+     "pass": 1,
+     "costBefore": 1917,
+     "costAfter": 1817,
+     "impossibleAfter": 0,
+     "strainedAfter": 14
+    },
+    {
+     "grid": 776,
+     "bar": 48,
+     "timeMs": 65181,
+     "type": "HOLD",
+     "move": "サブレーン7→4",
+     "pass": 1,
+     "costBefore": 1817,
+     "costAfter": 1718,
+     "impossibleAfter": 0,
+     "strainedAfter": 13
+    },
+    {
+     "grid": 800,
+     "bar": 50,
+     "timeMs": 67126,
+     "type": "TAP",
+     "move": "サブレーン5→2",
+     "pass": 1,
+     "costBefore": 1718,
+     "costAfter": 1619,
+     "impossibleAfter": 0,
+     "strainedAfter": 12
+    },
+    {
+     "grid": 856,
+     "bar": 53,
+     "timeMs": 71665,
+     "type": "TAP",
+     "move": "サブレーン0→2",
+     "pass": 1,
+     "costBefore": 1619,
+     "costAfter": 1520,
+     "impossibleAfter": 0,
+     "strainedAfter": 11
+    },
+    {
+     "grid": 950,
+     "bar": 59,
+     "timeMs": 79284,
+     "type": "TAP",
+     "move": "サブレーン10→7",
+     "pass": 1,
+     "costBefore": 1520,
+     "costAfter": 1420,
+     "impossibleAfter": 0,
+     "strainedAfter": 10
+    },
+    {
+     "grid": 968,
+     "bar": 60,
+     "timeMs": 80743,
+     "type": "TAP",
+     "move": "サブレーン1→2",
+     "pass": 1,
+     "costBefore": 1420,
+     "costAfter": 1320,
+     "impossibleAfter": 0,
+     "strainedAfter": 9
+    },
+    {
+     "grid": 998,
+     "bar": 62,
+     "timeMs": 83174,
+     "type": "TAP",
+     "move": "サブレーン0→3",
+     "pass": 1,
+     "costBefore": 1320,
+     "costAfter": 1222,
+     "impossibleAfter": 0,
+     "strainedAfter": 8
+    },
+    {
+     "grid": 1021,
+     "bar": 63,
+     "timeMs": 85038,
+     "type": "TAP",
+     "move": "サブレーン7→6",
+     "pass": 1,
+     "costBefore": 1222,
+     "costAfter": 1122,
+     "impossibleAfter": 0,
+     "strainedAfter": 7
+    },
+    {
+     "grid": 1085,
+     "bar": 67,
+     "timeMs": 90226,
+     "type": "TAP",
+     "move": "サブレーン3→2",
+     "pass": 1,
+     "costBefore": 1122,
+     "costAfter": 1021,
+     "impossibleAfter": 0,
+     "strainedAfter": 6
+    },
+    {
+     "grid": 1088,
+     "bar": 68,
+     "timeMs": 90469,
+     "type": "HOLD",
+     "move": "サブレーン5→2",
+     "pass": 1,
+     "costBefore": 1021,
+     "costAfter": 921,
+     "impossibleAfter": 0,
+     "strainedAfter": 5
+    },
+    {
+     "grid": 1120,
+     "bar": 70,
+     "timeMs": 93062,
+     "type": "TAP",
+     "move": "サブレーン4→2",
+     "pass": 1,
+     "costBefore": 921,
+     "costAfter": 822,
+     "impossibleAfter": 0,
+     "strainedAfter": 4
+    },
+    {
+     "grid": 1198,
+     "bar": 74,
+     "timeMs": 99384,
+     "type": "TAP",
+     "move": "サブレーン5→6",
+     "pass": 1,
+     "costBefore": 822,
+     "costAfter": 722,
+     "impossibleAfter": 0,
+     "strainedAfter": 3
+    },
+    {
+     "grid": 1199,
+     "bar": 74,
+     "timeMs": 99465,
+     "type": "TAP",
+     "move": "サブレーン8→5",
+     "pass": 1,
+     "costBefore": 722,
+     "costAfter": 622,
+     "impossibleAfter": 0,
+     "strainedAfter": 2
+    },
+    {
+     "grid": 1200,
+     "bar": 75,
+     "timeMs": 99546,
+     "type": "TAP",
+     "move": "サブレーン9→8",
+     "pass": 1,
+     "costBefore": 622,
+     "costAfter": 522,
+     "impossibleAfter": 0,
+     "strainedAfter": 1
+    },
+    {
+     "grid": 1201,
+     "bar": 75,
+     "timeMs": 99627,
+     "type": "TAP",
+     "move": "サブレーン7→4",
+     "pass": 1,
+     "costBefore": 522,
+     "costAfter": 423,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    }
+   ]
+  }
+ }
+}

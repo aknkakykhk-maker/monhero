@@ -407,7 +407,7 @@ check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));
 
 // --- ④ 共通コンポーネント ---
-check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0 })'));
+check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0 })'));
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',
@@ -426,6 +426,15 @@ check('連打のあとは笑って元に戻す',
     const last = c.__s.ASSISTANT_SPAM_LINES[c.__s.ASSISTANT_SPAM_LINES.length - 1];
     return c.__s.ASSISTANT_SPAM_LINES.length >= 5 && last.last === true && /うそだよ/.test(c.__s.ASSISTANT_SPAM_RECOVER.t);
   })());
+check('連打のセリフは助手ごと(みゅあ以外の全員に専用の6行と戻りがある)',
+  has('assistantSpamLinesOf(who.id)') && has('assistantSpamRecoverOf(who.id)')
+    && (() => { const c = {}; require('vm').createContext(c);
+      require('vm').runInContext(assistantsSrc + ';globalThis.__s={ASSISTANTS,ASSISTANT_SPAM_SETS};', c);
+      return c.__s.ASSISTANTS.filter(a => a.id !== 'mua').every(a => {
+        const set = c.__s.ASSISTANT_SPAM_SETS[a.id];
+        return set && Array.isArray(set.lines) && set.lines.length >= 5 && set.lines[set.lines.length - 1].last === true
+          && set.recover && typeof set.recover.t === 'string' && set.recover.t.length > 0;
+      }); })());
 check('場面が変わったら送ったセリフも連打もリセットする',
   has('useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);'));
 check('場面キーだけでも、直接指定でも呼べる',
@@ -449,9 +458,10 @@ check('セリフをJSXへ直接書いていない', (() => {
 check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//.test(source));
 // HOMEは絶対配置なので、置き場所をCSSで決める。施設のボタンやマスモンに
 // かぶらないよう、プレイヤー情報と更新履歴の下の空きへ置く
+// 2026-10-23 からセリフは2行まで(maxLines={2})だったが、幅320で「…」で切れた(2026-10-24 窓口)。いまは全文を出し、伸びたぶん「M/B管理」の札を下げる(home-layout-check)
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
   has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}')
-    && has('@media(max-width:350px){.mh-home-assistant{width:62%}}')
+    && has('@media(max-width:350px){.mh-home-assistant{width:68%}}')
     // 助手とおしゃべり(2026-10-14)の「おしゃべり」ボタンは、同じ置き場所の中で吹き出しの下の行(左の空き)へ重ねる。
     // 吹き出しの下へ1段足すと高くなり、横持ちの「M/B管理」・小さい画面のジャックの吹き出しにかぶった(2026-10-16。raid-jack-home-say-tap-check)
     && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact footerSpace={typeof onOpenAssistantChat===\'function\'?70:0}/>')

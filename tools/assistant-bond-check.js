@@ -184,9 +184,12 @@ check('カード分・おしゃべり分を足した理論上限が全体の上�
   `${A.ASSISTANT_BOND_DAILY_MAX} / 318+20+24+20=${legacySum + 64}`);
 // Lvアップに必要な累積量は変えていない(増やしたのは1回の獲得量だけ)。
 // 獲得量をいじるときにここまで一緒に動かすと、既存プレイヤーのLvが勝手に変わってしまう
+// 2026-10-21 社長「助手レベルの上限もそろそろ上げて」で Lv30 まで。Lv20 までの数は変えていない(前と同じ)。
+// Lv21〜30 は Lv20 までの伸び方(1段ごとに +50 ずつ広がる)を続けたもの
 const WANT_NEEDS = [0, 60, 180, 400, 800, 1250, 1750, 2300, 2900, 3550,
-  4250, 5000, 5800, 6650, 7550, 8500, 9500, 10550, 11650, 12800];
-check('Lvアップに必要な累積仲良し度は変えていない',
+  4250, 5000, 5800, 6650, 7550, 8500, 9500, 10550, 11650, 12800,
+  14000, 15250, 16550, 17900, 19300, 20750, 22250, 23800, 25400, 27050];
+check('Lvアップに必要な累積仲良し度は変えていない(Lv20まで)・Lv30まである',
   A.ASSISTANT_BOND_LEVELS.length === WANT_NEEDS.length
     && WANT_NEEDS.every((n, i) => A.ASSISTANT_BOND_LEVELS[i].need === n),
   A.ASSISTANT_BOND_LEVELS.map(s => s.need).join('/'));
@@ -455,8 +458,10 @@ const cardCtx = {};
 vm.createContext(cardCtx);
 vm.runInContext([
   `const ASSISTANTS = ${JSON.stringify(A.ASSISTANTS.map(a => ({ id: a.id, name: a.name })))};`,
+  // 公開の印(data/assistants.js の assistantReleased)の代わり。あつだけ印で切り替える
+  'let __atsuOn = false; const assistantReleased = (id) => id !== "atsu" || __atsuOn === true;',
   grab(source, 'const assistantIdOfAssistCard = (cardId) => {', '// 呼び方の上書きも助手ごとに分ける'),
-  'globalThis.__c = { assistantIdOfAssistCard };',
+  'globalThis.__c = { assistantIdOfAssistCard, setAtsu: (v) => { __atsuOn = v; } };',
 ].join('\n'), cardCtx);
 const C = cardCtx.__c;
 
@@ -466,7 +471,13 @@ check('ききカード(id:kiki)はきき本人へ結び付く', C.assistantIdOfA
 //   カードidと助手idが同じ綴りなら、そのまま本人へ結び付く(17-release… の作りどおり)
 check('ドラカード(id:dra)はドラ本人へ結び付く', C.assistantIdOfAssistCard('dra') === 'dra', String(C.assistantIdOfAssistCard('dra')));
 check('助手以外のアシストカードは結び付かない',
-  ['oryo', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfAssistCard(id) === null));
+  ['oryo', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfAssistCard(id) === null));
+// ★あつは 2026-10-22 に助手へ加わった。カード「あつの挑発」は前からあるので、公開の印が立つまでは結び付けない
+//   (結び付けると、公開前に「あつ」の仲良し度が貯まり、ごほうびのギフトまで届く)
+check('あつカード(id:atsu)は、公開の印が立つまで結び付かない', C.assistantIdOfAssistCard('atsu') === null);
+C.setAtsu(true);
+check('あつカード(id:atsu)は、公開したらあつ本人へ結び付く', C.assistantIdOfAssistCard('atsu') === 'atsu');
+C.setAtsu(false);
 check('壊れた値でも落ちずにnullを返す',
   [null, undefined, '', 0, {}, []].every(v => C.assistantIdOfAssistCard(v) === null));
 // カード名は進化で変わる(みゅあの愛→深愛→慈愛)。名前で判定していたら、ここで外れる

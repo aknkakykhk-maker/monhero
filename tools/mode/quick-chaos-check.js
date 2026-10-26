@@ -25,7 +25,8 @@ const order = source.indexOf("Legend:") < source.indexOf("EXTREME: { label:'EXTR
   && source.indexOf("NIGHTMARE: { label:'NIGHTMARE'") < source.indexOf("CHAOS: { label:'CHAOS'");
 assert(order, 'Legend → EXTREME → NIGHTMARE → CHAOSの順序');
 // 2026-10-08(c3409b62a)に難易度の札を共通のカラータイルへ作り直し、クイックだけの高さ固定(h-[384px])をやめた
-assert(source.includes('snap-center shrink-0 w-[82%] px-4 pt-3.5 pb-4 transition-all flex flex-col') && !source.includes("quick?'h-[384px]"), 'クイックカードも共通のタイル(高さ固定なし)');
+// 2026-10-20(#3210)に狭い画面の幅(max-[359px]:w-[90%])が足された
+assert(source.includes('snap-center shrink-0 w-[82%] max-[359px]:w-[90%] px-4 pt-3.5 pb-4 transition-all flex flex-col') && !source.includes("quick?'h-[384px]"), 'クイックカードも共通のタイル(高さ固定なし)');
 assert(source.includes('data-difficulty-assistant') && source.includes('compact={quick}'), '助手コメントをカード外のコンパクト枠へ配置');
 assert(changelog.includes("id:'update_notice_quick_chaos_v1'") && changelog.includes("id:'update_notice_chaos_v1'"), '極限CHAOSとは別IDの通知');
 assert(help.includes("title:'クイック CHAOS'") && help.includes('経験値×45・ダイヤ×13.5'), 'ヘルプに正式仕様を掲載');

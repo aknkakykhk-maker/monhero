@@ -45,11 +45,11 @@ for (const use of [
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);
 assert(source.includes('quick&&hasExtremeSpecialRules(key)') && source.includes('特殊ルールあり'));
 assert(source.includes('const groups=extremeRuleDetailGroups(specialDifficulty,isQuickMode(runMode));'), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
-assert(source.includes("? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`])"), 'Quick ULTIMATE rule detail must call the WAVE effect automatic growth');
+assert(source.includes("? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE内1ターンごと-${turnPointText(rules.awakeningPenaltyRate)}`])"), 'Quick ULTIMATE rule detail must call the WAVE effect automatic growth');
 // クイックの自動成長は成長率そのものから引く(pt)、トレーニングは増える量へ掛ける(%)。
 // 掛かり方が違うので、ルール詳細の言い方も分ける
-assert(source.includes(": (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE Tごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}Tで0%）`])"), 'training reduction must be described as a multiplier on the gain');
-assert(source.includes("['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`]")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE rule detail must explain the damage floor as a stopping point');
+assert(source.includes(": (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE内1ターンごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}ターンで0%）`])"), 'training reduction must be described as a multiplier on the gain');
+assert(source.includes("['与ダメ倍率',`経過1ターンごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`]")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE rule detail must explain the damage floor as a stopping point');
 assert(source.includes('extremeRuleSummaryText(setting.id)')&&source.includes('data-extreme-rule-detail-open={setting.id}'), 'official card must point at the shared rule-detail sheet instead of listing rules');
 assert(source.includes('const enemyTurnMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount,specialRuleDifficulty);'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
 assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&!!extremeDistanceBreakRule(specialRuleDifficulty);'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');
@@ -82,7 +82,8 @@ assert(source.includes('if(penaltyRate==null) return QUICK_GROWTH_MULT-1;'), 'ot
 assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');
 // 2026-10-08(c3409b62a)に難易度の札を入口と同じカラータイルへ作り直し、クイックだけの高さ固定(h-[384px])をやめた。
 // いまは全部の札が同じタイル(縦に並べる形)。クイック専用の高さ固定が戻っていないことと、共通のタイルであることを見る
-assert(source.includes('snap-center shrink-0 w-[82%] px-4 pt-3.5 pb-4 transition-all flex flex-col') && !source.includes("quick?'h-[384px]"), 'difficulty cards must stay the shared color tile without a quick-only fixed height');
+// 2026-10-21 から、横幅360未満だけカードを90%に広げる(max-[359px]:w-[90%]・改善部 M4)。共通のタイルであることは同じ
+assert(source.includes('snap-center shrink-0 w-[82%] max-[359px]:w-[90%] px-4 pt-3.5 pb-4 transition-all flex flex-col') && !source.includes("quick?'h-[384px]"), 'difficulty cards must stay the shared color tile without a quick-only fixed height');
 assert(source.includes('if (isQuickMode(runMode)) {') && source.includes('return;'), 'quick ranking exclusion path must remain present');
 const changelog=fs.readFileSync('monster-hero/data/changelog.js','utf8');
 const assistants=fs.readFileSync('monster-hero/data/assistants.js','utf8');

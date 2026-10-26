@@ -29,7 +29,7 @@ const ASIKA_CACHE = path.join(OUT_DIR, 'asika-sim.json');
 const args = process.argv.slice(2);
 const argOf = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const DIFFS = ['Hard', 'Expert', 'Master'];
-const SIM_VER = 10; // sim/battle.js の版(asika-tier.js の SIM_VER と同じ意味)
+const SIM_VER = 13; // 13 = WAVE の始めのヘイトをタイプで決める(2026-10-22) / sim/battle.js の版(asika-tier.js の SIM_VER と同じ意味)。11 = 10 版目+ヘイト(2026-10-22) / 12 = ヘイトを強めた(2026-10-22)
 const ev = require('./evidence');
 // 10 版目(2026-10-16 ハカセくんの決定): 上手な遊び方のトレーニングはドミノ倒し+走り込み(lab/training.md)
 const SIM_OPT = { exMode: 'best', assist: 'bot', assistPlay: 'best', training: 'atkhp', emergency: 'bot' };

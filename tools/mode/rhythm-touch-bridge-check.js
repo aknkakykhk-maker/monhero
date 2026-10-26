@@ -37,7 +37,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const fixCtx = (ua) => { const c = { navigator: { userAgent: ua, maxTouchPoints: 5 }, console }; vm.runInNewContext(`${src.slice(start, end)}\nthis.F=RHYTHM_TOUCH_FIXES;this.on=rhythmTouchFixOn;this.active=rhythmTouchFixesActive;`, c); return c; };
     const pc = fixCtx('Mozilla/5.0 (X11; Linux x86_64)'), ip = fixCtx('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
     // inputAgeCap は 2026-10-07 21時のユーザー報告(タップ抜けがひどくなった)で標準では切った。releaseAgeWide(2026-10-11)はデバッグ画面で試すだけで標準は切ってある
-    check('部品: 入れてあるのは lateInputEffectDown(iPhoneのみ)と autoPauseOnHidden(全端末)で、inputAgeCap・releaseAgeWide・wideEdge・smoothSongClock は切ってある', ip.on('lateInputEffectDown') && !ip.on('inputAgeCap') && !ip.on('releaseAgeWide') && !ip.on('wideEdge') && !ip.on('smoothSongClock') && !pc.on('lateInputEffectDown') && !pc.on('inputAgeCap') && !pc.on('releaseAgeWide') && pc.on('autoPauseOnHidden') && ip.active().join() === 'lateInputEffectDown,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
+    check('部品: 入れてあるのは lateInputEffectDown・wideEdge(iPhoneのみ)と autoPauseOnHidden(全端末)で、inputAgeCap・releaseAgeWide・smoothSongClock は切ってある', ip.on('lateInputEffectDown') && !ip.on('inputAgeCap') && !ip.on('releaseAgeWide') && ip.on('wideEdge') && !pc.on('wideEdge') && !ip.on('smoothSongClock') && !pc.on('lateInputEffectDown') && !pc.on('inputAgeCap') && !pc.on('releaseAgeWide') && pc.on('autoPauseOnHidden') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.wideEdge = true; ip.F.wideEdge = true;
     check('部品: iPhone専用の直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.allPlatforms = true;
@@ -105,6 +105,8 @@ const seed = () => {
     await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
     await page.addInitScript(seed);
+    // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
+    await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
     const clickText = (p) => page.evaluate((s) => { const rx = new RegExp(s); const x = [...document.querySelectorAll('button')].find((b) => rx.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!x) return false; x.click(); return true; }, p);
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true, timeout: 60000 });
@@ -216,7 +218,7 @@ const seed = () => {
     check('⑥ 1曲ぶんのまとめに、系統・突き合わせ・入力の数が入る', saved.d && ['ios', 'android', 'other'].includes(saved.d.platform) && typeof saved.d.stats.pointerOnly === 'number' && saved.d.stats.inputs === 2, JSON.stringify(saved.d || saved));
     check('⑥ まとめが端末に残る(新しいキー mh_rhythm_touch_diag_v1)', Array.isArray(saved.list) && saved.list.length >= 1 && saved.list[saved.list.length - 1].song_id === 'mf_ichika_mix');
 
-    // ⑨ 直し方「wideEdge」: 道の外の受け付けを広げる(既定は切ってある)
+    // ⑨ 直し方「wideEdge」: 道の外の受け付けを広げる(iPhone では入れてある。ここはパソコンで開くので、allPlatforms を入れるまでは効かない)
     const edge = await page.evaluate(() => {
       const rect = { left: 0, top: 0, width: 1000, height: 1000 };
       const left = rhythmProjectBoundary(0, 1), right = rhythmProjectBoundary(RHYTHM_LANE_COUNT, 1), lw = (right - left) / RHYTHM_LANE_COUNT;
@@ -225,10 +227,10 @@ const seed = () => {
       RHYTHM_TOUCH_FIXES.wideEdge = true; RHYTHM_TOUCH_FIXES.allPlatforms = true;
       const on = rhythmLaneCoordinateAtPoint(x, 1000, rect);
       const far = rhythmLaneCoordinateAtPoint((left - lw / 2 * 2.5) * 1000, 1000, rect);
-      RHYTHM_TOUCH_FIXES.wideEdge = false; RHYTHM_TOUCH_FIXES.allPlatforms = false;
+      RHYTHM_TOUCH_FIXES.allPlatforms = false;
       return { off, on, far, back: rhythmLaneCoordinateAtPoint(x, 1000, rect) };
     });
-    check('⑨ 切ってあるときは、サブレーン1.5本ぶん外の指を受け付けない(いまのまま)', edge.off === null && edge.back === null, JSON.stringify(edge));
+    check('⑨ 効かないとき(パソコン)は、サブレーン1.5本ぶん外の指を受け付けない(いまのまま)', edge.off === null && edge.back === null, JSON.stringify(edge));
     check('⑨ 入れると、サブレーン2本ぶんまで受け付ける(それより外は受け付けない)', typeof edge.on === 'number' && edge.far === null, JSON.stringify(edge));
 
     // ⑩ リザルトの「押したのに反応しないことがあった」: 端末の記録に印を付け、報告の行を作る
@@ -315,12 +317,14 @@ const seed = () => {
   }
   // 本体の配線(文字列)
   const play = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
-  check('演奏の始まりで突き合わせを空にする', play.includes('RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={'));
+  // 2026-10 からあいだに刻みの決めごと(const tickRules=…)が入った。空にしてから演奏を作る順はそのまま
+  check('演奏の始まりで突き合わせを空にする', /RHYTHM_TOUCH_BRIDGE\.reset\(\);(?:const tickRules=rhythmTickRulesActive\(\);)?rhythmFloatingNotesClear\(\);runRef\.current=\{/.test(play));
   check('取り戻し済みの指のタッチは、演奏エリアの入力にしない', play.includes('if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;'));
-  check('デバッグ・練習・タイミング合わせでは診断を送らない', /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?rhythmTouchDiagOf\(/.test(play) && play.includes('if(touchDiag)void rhythmTouchDiagRecord(touchDiag);'));
+  check('デバッグ・練習・タイミング合わせでは診断を送らない', /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?(rhythmTouchDiagWithMon\()?rhythmTouchDiagOf\(/.test(play) && play.includes('if(touchDiag)void rhythmTouchDiagRecord(touchDiag);'));
   const supa = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/26-supabase.jsx'), 'utf8');
   check('手元のサーバーで開いたゲームからは、診断・遊んだ記録を送らない(検査の行を本番へ混ぜない)',
-    (supa.match(/typeof fetch !== 'function' \|\| sbTelemetryLocal\(\)\) return false;/g) || []).length === 2);
+    // 診断・遊んだ記録の2つに、バトルの記録(タクティクスプロ・レイド。#3265)も同じ止め方で足された
+    (supa.match(/typeof fetch !== 'function' \|\| sbTelemetryLocal\(\)\) return false;/g) || []).length >= 2);
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

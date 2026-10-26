@@ -98,7 +98,8 @@ check('配列が入っていても落ちない', Object.keys(JSON.parse(JSON.str
 
 // ⑤ 保存の入口
 const save = pick(storage, 'saveRhythmBestRecord');
-check('⑤ saveRhythmBestRecord が normalizeRhythmBestRecords を通して保存する', !!save && /normalizeRhythmBestRecords\(records\)/.test(save) && /storeSet\(RHYTHM_BEST_RECORDS_KEY,normalized/.test(save));
+// 2026-10-17 刻みの数え方: 版ごとのキー(v1/v2)の保存値を読み直し、normalizeRhythmBestRecords を通してから保存する
+check('⑤ saveRhythmBestRecord が normalizeRhythmBestRecords を通して保存する', !!save && /normalizeRhythmBestRecords\(await storeGet\(key,\{\},false\)\)/.test(save) && /storeSet\(key,normalized,false\)/.test(save) && /const key=version===2\?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;/.test(save));
 
 console.log(failed ? `\n${failed}件のNG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

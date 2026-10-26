@@ -169,10 +169,13 @@ const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
 //   みゅあ補正で上限を作り直しても消えないよう、ここで一緒に掛ける(既存の子は0なので値は今までどおり)
 //   ★ガッツの上限は exMaxGutsRate を別に持てる(ミタラシのように上げ幅がライフと違うEX)。
 //     無ければ exMaxRate と同じ(ガッツ全開っちーはライフ・ガッツとも同じ率)
-const tacticsExMaxRateOf = (unit, kind = 'hp') => {
+//   ★exShieldRate … ミルフィーシールド(ドリーミィのEX)で上がっている上限の割合(ライフ・ガッツ共通)。
+//     ほかのEXの上限とは別に持ち、足し算で効かせる(片方が切れても、もう片方を消さない)。withShield=false でそれを除く
+const tacticsExMaxRateOf = (unit, kind = 'hp', withShield = true) => {
   const own = kind === 'guts' ? Number(unit && unit.exMaxGutsRate) : NaN;
   const rate = Number.isFinite(own) ? own : Number(unit && unit.exMaxRate);
-  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  const shield = withShield ? Number(unit && unit.exShieldRate) : 0;
+  return (Number.isFinite(rate) && rate > 0 ? rate : 0) + (Number.isFinite(shield) && shield > 0 ? shield : 0);
 };
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const target = normalizeTacticsUnit(unit);
@@ -516,17 +519,34 @@ const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_EN
 //   重みは「残りライフの割合が低いほど大きい」。倒れている子は狙わない。
 //   weightBias を0にすると一様ランダムになる(検査で確かめる)。
 const TACTICS_TARGET_LOW_HP_BIAS = 2;
-const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+// hate … ヘイト(試作)の配列。渡したときだけ重みに ×(1 + ヘイト ÷ k) を掛ける(渡さなければ今までどおり)
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
   return tacticsAliveSlots(units).map(index => {
     const unit = normalizeTacticsUnit(units[index]);
     const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
-    return { index, weight: 1 + safeBias * (1 - remain) };
+    return { index, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index) };
   });
 };
+// 枠ごとの「狙われる確率(%)」(2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいいかもね。ひとりなら常に100%で
+// 2人とか3人とかでも今の計算で狙われる率がそのまま出るようにして」)。
+// ★敵が狙いを決めるのと同じ重み(tacticsTargetWeights: ライフの減り具合 × ヘイトの倍率)を、生きている子だけで割る。
+//   表示と実際の抽選が食い違わないよう、ここで重みを作り直さない。
+// ★合計がちょうど100になるように、切り捨てたあと端数の大きい順に1ずつ足す。倒れた子・空き枠は null
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+  const out = [null, null, null, null];
+  const weights = tacticsTargetWeights(units, bias, hate);
+  const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
+  if (!weights.length || !(total > 0)) return out;
+  const parts = weights.map(entry => { const v = entry.weight / total * 100; return { index: entry.index, pct: Math.floor(v), rest: v - Math.floor(v) }; });
+  let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
+  [...parts].sort((a, b) => (b.rest - a.rest) || (a.index - b.index)).forEach(p => { if (left > 0) { p.pct += 1; left -= 1; } });
+  parts.forEach(p => { out[p.index] = p.pct; });
+  return out;
+};
 // 狙うスロットを1つ選ぶ。生きている子がいなければ null
-const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
-  const weights = tacticsTargetWeights(units, bias);
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+  const weights = tacticsTargetWeights(units, bias, hate);
   if (!weights.length) return null;
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!(total > 0)) return weights[0].index;
@@ -552,7 +572,7 @@ const tacticsTargetName = (units, slotIndex) => {
 //   実行時に「その間合いにいる子」を見る(予告には間合いが出ている)。
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
-const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
   // ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
@@ -562,9 +582,224 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   //   誰も立っていない間合いだと攻撃そのものが起きなかった
   const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist)
     && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
-  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias);
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate);
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
+
+// ===== ヘイト(確認待ちの試作・2026-10-17 社長「試作する」) =====
+// 敵の狙いを「目立った子ほど狙われやすく」する裏の値。タクティクスバトルだけ・バトル中だけ(保存しない)。
+// デバッグ設定の「🧪 確認待ちの試作」で入れたときだけ効く(切のときは今までとまったく同じ)。
+// ★数字はこの TACTICS_HATE の1か所だけに置く(試算: docs/playbot/reports/2026-10-17/tactics-hate-numbers.md の★おすすめ)。
+//   action … 行動ごとの基準値 / monsters … 子ごとの上書き(mult・add・always)。タイプごとの倍率は下の MONSTER_TYPES(1か所)
+//   1ターンの動き: ヘイト = 前のヘイト × decay + 倍率 ×(そのターンに増えたぶん)。上限 cap・倒れたら0・WAVE で0。
+//   WAVE の始めのヘイトは、メインとサブのタイプで決める(start。勇者モンかどうかは関係ない・2026-10-22 社長)。狙いの重みは weightCurve
+// 入/切を読むのは 81-debug-trials.jsx の tacticsHateProtoOn(この部品は保存に触らない)
+const TACTICS_HATE = {
+  decay: 0.7, cap: 100,
+  // 狙いの重みに掛ける倍率を、ヘイトの点 [ヘイト, 倍率] で決める(あいだは直線でつなぐ・上限より上は最後の点)。
+  // 2026-10-22 社長「もうちょい狙われる確率を上げて。最大40%じゃヘイト調整してもなかなかこない」で選んだ強さ:
+  //   4体ともライフ満タンで、1体がヘイト40・1体が20・2体が0 → ヘイト40の子が約65%(前は約40%)
+  //   ヘイト上限100 → 約90%(前は約57%)
+  //   ヘイト20 は前と同じ ×1.8。べき乗の式だと低いヘイトでも偏りすぎるので、点で決めた
+  //   (2026-10-22 社長「ガードは狙われたら使うからそこまでむしろ上げないほうがよさそう。ヘイトはアシカとかexでためる」で、
+  //    約65%・約90% は「ガードで」ではなく「ヘイト約40で」「上限100で」の目安として守る)
+  // 前は ×(1 + ヘイト ÷ 25)。全員ヘイト0なら ×1 で、ライフの減り具合だけで決まるのは今までどおり
+  weightCurve: [[0, 1], [20, 1.8], [40, 7.1], [100, 34]],
+  // 行動カード・EX に出す「使うと🔥がどれだけ上がるか」の段(2026-10-19 社長「各カードにヘイト割合も書いたほうがわかりやすいかもね」)。
+  //   1回で上がる量(使う子の倍率を掛けたあと)が cardFlames[0] 未満なら🔥(小)・cardFlames[1] 未満なら🔥🔥(中)・それ以上は🔥🔥🔥(大)
+  //   攻撃は与ダメージのぶんも入るので、そのターンの味方の与ダメージのうち cardDmgShareGuess を出したとして見積もる
+  cardFlames: [15, 40],
+  cardDmgShareGuess: 0.5,
+  // WAVE の始めのヘイト(2026-10-22 社長「初期ヘイトは勇者モンとか決めないでメインサブのタイプで決めたらどう？」・数字は社長が決めた)。
+  //   メインの値 + サブの値。0 未満にはしない(サブがシャドウの子は下がる)。前は勇者モンだけ20(下地)で、20より下がらなかった
+  start: {
+    main: { tank: 20, healer: 10, attacker: 10, supporter: 5, shadow: 0 },
+    sub: { tank: 10, healer: 5, attacker: 5, supporter: 3, shadow: -5 },
+  },
+  // guard は 25 → 5(2026-10-22 社長「ガードは狙われたら使うからそこまでむしろ上げないほうがよさそう」)。ヘイトはアシカ・EX でためる
+  // cover はきゅうこの譜面(2026-10-22 社長「やっぱりヘイトアップはなし」)。狙いを引き受けても🔥は上がらない
+  action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 5, taunt: 40, cover: 0, ex: 10 },
+  exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
+  // 助手のカード(id)がどの行動か
+  assist: { atsu: 'taunt', kyuko: 'cover', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
+  // 回復の量(ライフの回復率 + ガッツの回復率 × 0.5)。段 0〜2
+  healAmount: { mua: [0.5, 1.05, 1.35], momosuke: [0.25, 1.05, 1.35], meloso: [0.45, 0.45, 0.45] },
+  // 子ごとの上書き(タイプの既定値より強く/弱くしたい子だけ)。mult … 増え方の倍率 / add … 行動ごとの上乗せ / always … 行動のたびの上乗せ
+  monsters: {
+    Monol: { mult: 1.5, always: 3 }, // モノリスの特性(常にヘイトが上がりやすい)
+  },
+};
+
+// ===== モンスターのタイプ(確認待ちの試作・2026-10-17 社長「とりあえず表記とヘイト変動率とかでいいんじゃないかな？」) =====
+// ★効くのはタクティクスのヘイトの増え方(hateMult・hateAdd)だけ。ほかのモード・能力・ステータスには効かせない。
+// ★タイプの表はここ1か所(ヘイトの役割もこの表を読む。二重に持たない)。メイン1つ + サブ(任意・表記だけ)。
+// ★モンスターを足したら MONSTER_TYPE_OF に1行足す(tactics-hate-check.js が全モンスターを見て、無ければ止める)
+// 表記の入/切を読むのは 81-debug-trials.jsx の monsterTypeProtoOn
+const MONSTER_TYPES = {
+  attacker: { label: 'アタッカー', icon: '⚔️', note: '攻めの主役', hateMult: 1.0, hateAdd: {} },
+  tank: { label: 'タンク', icon: '🛡️', note: '前に立って攻撃を引き受ける', hateMult: 1.3, hateAdd: { guard: 2 } },
+  supporter: { label: 'サポーター', icon: '✨', note: '味方を強くする', hateMult: 1.1, hateAdd: {} },
+  healer: { label: 'ヒーラー', icon: '💚', note: '味方を癒やす', hateMult: 1.2, hateAdd: {} },
+  shadow: { label: 'シャドウ', icon: '🌙', note: 'かわして、目立たずに攻める', hateMult: 0.8, hateAdd: {} },
+};
+const MONSTER_TYPE_OF = {
+  // 2026-10-22 社長がサブを1体ずつ決めた(サブの無い子はいない・メインと同じタイプのサブもある)
+  Mocchi: { main: 'attacker', sub: 'tank' }, Mitarashi: { main: 'attacker', sub: 'tank' },
+  Golem: { main: 'attacker', sub: 'attacker' }, Suezo: { main: 'attacker', sub: 'supporter' }, Ham: { main: 'attacker', sub: 'tank' },
+  Pandora: { main: 'attacker', sub: 'shadow' }, KenshiMocchi: { main: 'attacker', sub: 'shadow' }, Eiki: { main: 'attacker', sub: 'shadow' },
+  Kuromy: { main: 'attacker', sub: 'tank' }, Spooky: { main: 'attacker', sub: 'shadow' },
+  Monol: { main: 'tank', sub: 'tank' }, Yggdrasil: { main: 'tank', sub: 'healer' }, MelWhip: { main: 'tank', sub: 'attacker' },
+  Oboro: { main: 'tank', sub: 'healer' }, Plant: { main: 'tank', sub: 'healer' },
+  Melody: { main: 'healer', sub: 'tank' }, Undine: { main: 'healer', sub: 'supporter' },
+  Pixie: { main: 'supporter', sub: 'attacker' }, Mia: { main: 'supporter', sub: 'attacker' },
+  Ark: { main: 'supporter', sub: 'attacker' }, Iblis: { main: 'supporter', sub: 'attacker' },
+  Snegurochka: { main: 'supporter', sub: 'healer' }, Yaobikuni: { main: 'supporter', sub: 'tank' },
+  Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
+  // イルミネ・ドリーミィ(2026-10-22・案の段階。社長の決定)
+  Illumine: { main: 'shadow', sub: 'attacker' }, Dreamy: { main: 'supporter', sub: 'shadow' },
+};
+// その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
+const monsterTypeOf = (monId) => {
+  const t = MONSTER_TYPE_OF[monId];
+  const main = t && MONSTER_TYPES[t.main] ? t.main : 'attacker';
+  // メインと同じタイプのサブも持てる(2026-10-22 社長。ゴーレム アタッカー/アタッカー・モノリス タンク/タンク)
+  const sub = t && MONSTER_TYPES[t.sub] ? t.sub : null;
+  return { main, sub };
+};
+const TACTICS_HATE_EMPTY = [0, 0, 0, 0];
+const tacticsHateNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+// タイプ(メイン)の既定値に、子の上書きを重ねる(表に無い子はアタッカー)
+const tacticsHateProfile = (monId) => {
+  const type = monsterTypeOf(monId).main;
+  const r = MONSTER_TYPES[type];
+  const m = TACTICS_HATE.monsters[monId] || {};
+  return { type, mult: Number.isFinite(m.mult) ? m.mult : r.hateMult, add: { ...r.hateAdd, ...(m.add || {}) }, always: tacticsHateNum(m.always) };
+};
+// カードが何の行動か(数えないものは null)
+const tacticsHateCardKind = (card) => {
+  if (!card) return null;
+  if (TACTICS_HATE.assist[card.id]) return TACTICS_HATE.assist[card.id];
+  if (card.type === 'guard' || card.type === 'weak_guard') return 'guard';
+  if (card.type === 'unique') return 'unique';
+  if (card.type === 'atk' || card.type === 'range_atk') return 'atk';
+  if (card.type === 'buff') return 'buff';
+  if (card.type === 'debuff') return 'debuff';
+  return null;
+};
+// カード1枚で増えるヘイト(倍率を掛ける前)。effMul … 同じ子の2枚目なら 0.5
+const tacticsHateCardGain = (card, monId, effMul = 1) => {
+  const kind = tacticsHateCardKind(card);
+  if (!kind) return 0;
+  const p = tacticsHateProfile(monId);
+  const eff = Number.isFinite(Number(effMul)) ? Math.max(0, Number(effMul)) : 1;
+  let base = tacticsHateNum(TACTICS_HATE.action[kind]);
+  if (kind === 'heal') {
+    const lv = Math.max(0, Math.min(2, Math.floor(tacticsHateNum(card.evoLevel))));
+    base = TACTICS_HATE.action.heal * tacticsHateNum((TACTICS_HATE.healAmount[card.id] || [])[lv]) * eff;
+  } else if (kind === 'taunt' || kind === 'buff' || kind === 'debuff') base *= eff;
+  return base + tacticsHateNum(p.add[kind]) + p.always;
+};
+// EX を使ったときに増えるヘイト(倍率を掛ける前)
+const tacticsHateExGain = (effect, monId) => {
+  const p = tacticsHateProfile(monId);
+  const base = Object.prototype.hasOwnProperty.call(TACTICS_HATE.exByEffect, effect) ? TACTICS_HATE.exByEffect[effect] : TACTICS_HATE.action.ex;
+  return base + tacticsHateNum(p.add.ex) + p.always;
+};
+// 1回で上がる量 → 段(0 = 上がらない・1〜3 = 小・中・大)
+const tacticsHateGainLevel = (gain) => (tacticsHateNum(gain) > 0 ? 1 + TACTICS_HATE.cardFlames.filter(x => gain >= x).length : 0);
+const TACTICS_HATE_LEVEL_LABELS = ['', '小', '中', '大'];
+// 行動カードを1回使うと上がる量(使う子の倍率まで掛けたもの)。monId が無ければタイプの倍率なし(アタッカーと同じ)
+const tacticsHateCardEstimate = (card, monId = null) => {
+  const kind = tacticsHateCardKind(card);
+  if (!kind) return 0;
+  const share = kind === 'atk' || kind === 'unique' || kind === 'taunt' ? TACTICS_HATE.action.dmgShare * TACTICS_HATE.cardDmgShareGuess : 0;
+  return tacticsHateProfile(monId).mult * (tacticsHateCardGain(card, monId) + share);
+};
+const tacticsHateCardLevel = (card, monId = null) => tacticsHateGainLevel(tacticsHateCardEstimate(card, monId));
+// EX を使うと上がる量の段(使う子の倍率まで掛けたもの)
+const tacticsHateExLevel = (effect, monId) => tacticsHateGainLevel(tacticsHateProfile(monId).mult * tacticsHateExGain(effect, monId));
+const normalizeTacticsHate = (hate) => [0, 1, 2, 3].map(i => tacticsClamp(tacticsHateNum(Array.isArray(hate) ? hate[i] : 0), 0, TACTICS_HATE.cap));
+// WAVE の始め(勇者だけ下地から)
+// その子の WAVE の始めのヘイト(メイン + サブ。0 未満にはしない)
+const tacticsHateStartOf = (monId) => {
+  if (!monId) return 0;
+  const t = monsterTypeOf(monId), st = TACTICS_HATE.start;
+  return Math.min(TACTICS_HATE.cap, Math.max(0, tacticsHateNum(st.main[t.main]) + (t.sub ? tacticsHateNum(st.sub[t.sub]) : 0)));
+};
+// WAVE の始め: 4つの枠それぞれ、その子のタイプで決まる値(空き枠は0)。monIds … 枠ごとの子の id
+const tacticsHateWaveStart = (monIds = []) => [0, 1, 2, 3].map(i => tacticsHateStartOf(Array.isArray(monIds) ? monIds[i] : null));
+// 1ターンぶん進める。gains … 枠ごとの行動のぶん(倍率の前)/ dealt … 枠ごとのそのターンの与ダメージ / monIds … 枠ごとの子の id
+// 2026-10-22 勇者モンの下限(20より下がらない)は外した。勇者モンかどうかは見ない
+const tacticsHateStep = (hate, { gains = TACTICS_HATE_EMPTY, dealt = TACTICS_HATE_EMPTY } = {}, units, monIds = []) => {
+  const prev = normalizeTacticsHate(hate);
+  const filled = tacticsFilledSlots(units);
+  const team = filled.reduce((sum, i) => sum + Math.max(0, tacticsHateNum(dealt[i])), 0);
+  return [0, 1, 2, 3].map(i => {
+    if (!filled.includes(i)) return 0;
+    if (normalizeTacticsUnit(units[i]).downed) return 0;
+    const p = tacticsHateProfile(monIds[i]);
+    const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt[i])) / team : 0;
+    let v = prev[i] * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gains[i])) + share);
+    return Math.min(TACTICS_HATE.cap, v);
+  });
+};
+// 狙いの重みに掛ける倍率(hate が無ければ 1)。ヘイトの点(weightCurve)のあいだを直線でつなぐ
+const tacticsHateWeightMult = (hate, index) => {
+  if (!Array.isArray(hate)) return 1;
+  const h = tacticsClamp(tacticsHateNum(hate[index]), 0, TACTICS_HATE.cap);
+  const pts = TACTICS_HATE.weightCurve;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    if (h <= x1) return y0 + (y1 - y0) * (h - x0) / (x1 - x0);
+  }
+  return pts[pts.length - 1][1];
+};
+// ヘルプ「タクティクスバトルの狙われやすさ(🔥)」の表(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」→「ヘルプに目安の表を足す」)。
+// ★数字は TACTICS_HATE・MONSTER_TYPES・TACTICS_TARGET_LOW_HP_BIAS から作り、目安の確率はゲームの狙いの重み(tacticsHateWeightMult)で計算する。
+//   書き写さないので、ヘイトを調整してもヘルプが古いままにならない。敵の数字は出さない。2列目は短く(help-render-check)。
+//   ヘルプ(helpDataRows)と、おしゃべりの材料(tools/build-assistant-chat-digest.js)の両方がこれを読む
+const tacticsHateHelpRows = (id) => {
+  if (id === 'tacticsHateGains') {
+    const a = TACTICS_HATE.action, ex = TACTICS_HATE.exByEffect || {};
+    const exVals = Object.values(ex).concat([a.ex]).filter(v => Number.isFinite(v));
+    const tankGuard = (MONSTER_TYPES.tank && MONSTER_TYPES.tank.hateAdd && MONSTER_TYPES.tank.hateAdd.guard) || 0;
+    return [
+      ['通常攻撃', `+${a.atk}`],
+      ['固有技', `+${a.unique}`],
+      ['与えたダメージ', `味方の中の割合 × ${a.dmgShare}`],
+      ['強化のカード', `+${a.buff}`],
+      ['弱体のカード', `+${a.debuff}`],
+      ['ガード', `+${a.guard}${tankGuard ? `（タンクは +${tankGuard}）` : ''}`],
+      ['回復', `回復した割合 × ${a.heal}`],
+      ['あつの挑発', `+${a.taunt}`],
+      ['EXスキル', `+${Math.min(...exVals)}〜${Math.max(...exVals)}`],
+      ['毎ターン', `×${TACTICS_HATE.decay}（${Math.round((1 - TACTICS_HATE.decay) * 10)}割へる）`],
+      ['上限', `${TACTICS_HATE.cap}`],
+    ];
+  }
+  if (id === 'tacticsHateTypes') {
+    const st = TACTICS_HATE.start;
+    const sign = (v) => (v > 0 ? `+${v}` : `${v}`);
+    return Object.entries(MONSTER_TYPES).map(([key, t]) => [`${t.icon} ${t.label}`,
+      `増え方 ×${t.hateMult} ／ 始め ${st.main[key] || 0}（サブ ${sign(st.sub[key] || 0)}）`]);
+  }
+  if (id === 'tacticsHateOdds') {
+    const rows = TACTICS_HATE.weightCurve.map(([h, m]) => [`🔥ヘイト ${h}`, `狙われやすさ ×${m}`]);
+    const bias = typeof TACTICS_TARGET_LOW_HP_BIAS !== 'undefined' ? TACTICS_TARGET_LOW_HP_BIAS : 0;
+    rows.push(['ライフ満タン', '×1'], ['ライフ半分', `×${1 + bias * 0.5}`], ['ライフわずか', `×${1 + bias}近く`]);
+    // 目安: 4体ともライフ満タン(ライフの倍率は1)・ほかの3体はヘイト0のとき、1体のヘイトがいくつなら何%狙われるか。
+    //   狙いの重みはゲームと同じ tacticsHateWeightMult で計算する(ライフ満タンなら tacticsTargetWeights と同じ値になる。tactics-hate-check で確かめる)
+    [0, 20, 40, 60, 90, 100].forEach(h => {
+      const hate = [h, 0, 0, 0];
+      const w = [0, 1, 2, 3].map(i => tacticsHateWeightMult(hate, i));
+      const sum = w.reduce((x, y) => x + y, 0) || 1;
+      rows.push([`1体が🔥${h}・ほか0`, `その子 ${Math.round(w[0] / sum * 100)}% ／ ほか ${Math.round(w[1] / sum * 100)}%ずつ`]);
+    });
+    return rows;
+  }
+  return [];
+};
+// ===== ヘイトの数字ここまで(枠には炎の段ではなく狙われる確率を出す・tacticsTargetChances。2026-10-22 社長) =====
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 // 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
 // ★見るのは2つだけ。**敵がどの距離にいるか**と、**狙われた子がどの距離にいるか**
@@ -1038,6 +1273,17 @@ const TACTICS_EX_DIST_MATCH_MULT = 1.7;
 // (枠の番号がそのまま距離なので、枠の番号と敵の距離が同じかどうかで見る)
 const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) =>
   (effect === 'distMatch' || effect === 'dodgeCombo') && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
+// カウンターの上限(ハムボクシングは3)。使ったときに写した設定(counterCfg)に max が無い古い状態でも3にする
+const TACTICS_EX_COUNTER_MAX = 3;
+const tacticsExCounterMax = (cfg) => { const m = tacticsSafeInt(cfg && cfg.max, 0); return m > 0 ? m : TACTICS_EX_COUNTER_MAX; };
+// カウンターの数ごとの技名(2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンター」)。
+// tier は演出の強さ: cross … 大きな文字と揺れ / full … カットイン / revenge … もっと派手で長いカットイン
+const TACTICS_EX_COUNTER_NAMES = Object.freeze([
+  Object.freeze({ name: 'クロスカウンター', tier: 'cross' }),
+  Object.freeze({ name: 'フルカウンター', tier: 'full' }),
+  Object.freeze({ name: 'リベンジカウンター', tier: 'revenge' }),
+]);
+const tacticsExCounterNameOf = (counter) => TACTICS_EX_COUNTER_NAMES[Math.max(1, Math.min(TACTICS_EX_COUNTER_NAMES.length, tacticsSafeInt(counter, 1))) - 1];
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -1090,22 +1336,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    useNote: '3ターン 距離補正×1.7・同じ距離は完全回避',
-    desc: '3ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
-    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 3,
+    useNote: '5ターン 距離補正×1.7・同じ距離は完全回避',
+    desc: '5ターンのあいだ、エイキの攻撃が強くなり、敵の攻撃をよける。\n・攻撃の距離補正が、どの距離でも×1.7に固定される（ふだんは、敵と同じ距離で×1.5、離れるほど下がって×0.9）\n・敵と同じ距離の枠にいるとき、エイキが狙われた攻撃を完全に回避する\n・使ったターン、エイキはカードを使えない（ほかの子は使える）',
+    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 5,
     effect: 'distMatch',
   }),
   // ★2026-10-02 ユーザー指示(ザンのEX)。「敵と同じ距離の場合は完全回避、回避するごとに10%連撃付与
   //   (与ダメ10%連撃が増えてく) 5ターン、ラン5回 併用あり」。名前はユーザー指定「血踊」(最初は仮に「見切り連斬」)。
-  //   のちに社長が3ターンに修正(2026-10-10 確認。ゲームの3ターンが正しい)。
+  //   のちに社長が3ターンに修正(2026-10-10 確認)。2026-10-23 社長「ザンとエイキ戻して」で5ターンに戻した。
   //   回避の判定はエイキの緋桜瞬歩と同じ(tacticsExDistMatchDodges)。回避した数(effects[slot].dodges)だけ、
   //   その子の攻撃へ与ダメージ10%の連撃が1回ずつ増える(tacticsExExtraCombosAt)。効果が切れたら数も消える
   Zan: Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
-    useNote: '3ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '3ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
-    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    useNote: '5ターン 同じ距離は完全回避・回避で連撃が増える',
+    desc: '5ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
   }),
@@ -1271,10 +1517,12 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ham: Object.freeze({
     id: 'ham_boxing',
     name: 'ハムボクシング',
-    useNote: '3ターン カウンター1・狙われた日に攻撃するとクロスカウンター(与ダメ×2×カウンター)',
-    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングで「クロスカウンター」が発動する\n・クロスカウンター：敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる（カウンター1なら2倍、2なら4倍）\n・クロスカウンターが発動するたび、カウンターが1つ増える\n・効果が切れると、カウンターもなくなる',
+    // 2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンターって名前変えられる？ 最大3だよね？」。
+    //   技名はカウンターの数で変わる(TACTICS_EX_COUNTER_NAMES)。カウンターは最大3(counter.max)。効く3ターンで出るのは3回までなので、遊び方は変わらない
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとカウンター発動(与ダメ×2×カウンター・最大3)',
+    desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングでカウンターの技が発動する\n・敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる\n　カウンター1：クロスカウンター(2倍)\n　カウンター2：フルカウンター(4倍)\n　カウンター3：リベンジカウンター(6倍)\n・発動するたび、カウンターが1つ増える(最大3)\n・効果が切れると、カウンターもなくなる',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
-    counter: Object.freeze({ start: 1, mult: 2 }),
+    counter: Object.freeze({ start: 1, mult: 2, max: 3 }),
     effect: 'counter',
     // 効いている途中でもう一度使うと、カウンターが1に戻ってしまうので使えない
     conditions: Object.freeze(['notActive']),
@@ -1382,6 +1630,26 @@ const TACTICS_EX_SKILLS = Object.freeze({
     conditions: Object.freeze(['hasStack']),
     effect: 'nightmareKey',
   }),
+  // ★2026-10-22 社長が決めた値(イルミネ・ドリーミィ。いまは案の段階・公開はほかの2つと同時)。勇者特性「影潜」の楔とつながるEX。
+  //   イルミネは「楔を貯める」側、ドリーミィは「貯まった楔で味方を守り強くする」側
+  Illumine: Object.freeze({
+    id: 'illumine_the_end',
+    name: 'ジエンド',
+    useNote: '3ターン 楔が1回で2つ・上限12・使うとヘイト−30',
+    desc: '影に潜み、敵へ楔を打ち込み続ける。\n・3ターンのあいだ、イルミネの攻撃が当たると楔が2つ付く（ふだんは1つ）\n・3ターンのあいだ、楔の上限が12になる（ふだんは6）。楔の連撃と回避率アップも、12個まで数が増える\n・使った瞬間に、イルミネのヘイトが30下がる（0より下がらない）\n・効果が切れると、楔は6個までに戻る',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    hateDown: 30,
+    effect: 'kusabiDouble',
+  }),
+  Dreamy: Object.freeze({
+    id: 'dreamy_millefeuille_shield',
+    name: 'ミルフィーシールド',
+    useNote: '全員に最大ライフぶんのシールド・3ターン シールドのある子は全ステータス+5%(楔1つごとに+5%)',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っている子は、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になった子は、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかの子はそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
+    effect: 'millefeuille',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
@@ -1394,7 +1662,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1459,7 +1727,7 @@ const normalizeTacticsExDef = (raw) => {
     usesPerWave: raw.usesPerWave === true,
     target: raw.target === 'ally' ? 'ally' : null,
     counter: raw.counter && typeof raw.counter === 'object'
-      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), mult: Math.max(0, Number(raw.counter.mult) || 0) } : null,
+      ? { start: Math.max(0, tacticsSafeInt(raw.counter.start, 0)), mult: Math.max(0, Number(raw.counter.mult) || 0), max: Math.max(1, tacticsSafeInt(raw.counter.max, TACTICS_EX_COUNTER_MAX)) } : null,
     psychoLock: raw.psychoLock && typeof raw.psychoLock === 'object'
       ? { enemyDmgDown: Math.min(0.9, Math.max(0, Number(raw.psychoLock.enemyDmgDown) || 0)), enemyTakenUp: Math.max(0, Number(raw.psychoLock.enemyTakenUp) || 0) } : null,
     damageBack: raw.damageBack && typeof raw.damageBack === 'object'
@@ -1509,6 +1777,11 @@ const normalizeTacticsExDef = (raw) => {
       ? { count: tacticsSafeInt(raw.extraCombos.count, 0), rate: Number(raw.extraCombos.rate) } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
+    // ジエンド(イルミネ): 使った瞬間に下げるその子のヘイト
+    hateDown: Math.min(100, Math.max(0, tacticsSafeInt(raw.hateDown, 0))),
+    // ミルフィーシールド(ドリーミィ): シールドのある子のちから・丈夫さ・ライフ上限・ガッツ上限の上げ幅 = statBase + statPer × 使った瞬間の楔の数
+    millefeuille: raw.millefeuille && typeof raw.millefeuille === 'object'
+      ? { statBase: Math.min(1, Math.max(0, Number(raw.millefeuille.statBase) || 0)), statPer: Math.min(0.5, Math.max(0, Number(raw.millefeuille.statPer) || 0)) } : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
   };
 };
@@ -1656,7 +1929,16 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
-      avoidLeft: def.avoidCharges || 0, partyStatRate: def.partyStatRate || 0,
+      avoidLeft: def.avoidCharges || 0,
+      // ミルフィーシールド: 上げ幅は使った瞬間の楔の数で決めて固定する(snapshot.kusabi)。シールドは枠ごとの残り(snapshot.shields)
+      partyStatRate: def.millefeuille ? def.millefeuille.statBase + def.millefeuille.statPer * Math.max(0, tacticsSafeInt(snapshot && snapshot.kusabi, 0)) : (def.partyStatRate || 0),
+      // 効いているあいだにもう一度使ったら、残りのシールドへ足す(2026-10-22 社長の決定。残りターンは3に戻り、上げ幅は決め直し)
+      shields: def.millefeuille && snapshot && snapshot.shields && typeof snapshot.shields === 'object' ? (() => {
+        const prev = safe.effects[slot];
+        const keep = prev && prev.effect === 'millefeuille' && prev.monId === monId && prev.shields && isTacticsExEffectActive(safe, slot, monId, now) ? prev.shields : {};
+        const keys = new Set([...Object.keys(keep), ...Object.keys(snapshot.shields)]);
+        return Object.fromEntries([...keys].map((k) => [k, Math.max(0, tacticsSafeInt(keep[k], 0)) + Math.max(0, tacticsSafeInt(snapshot.shields[k], 0))]).filter(([, v]) => v > 0));
+      })() : null,
       dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, uniqueCrit: def.uniqueCrit === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
@@ -2180,14 +2462,50 @@ const tacticsExCritFixedAt = (state, units, slot, now) => tacticsExAvoidLeftOf(s
 // 味方全員のちから・丈夫さへ上乗せする倍率。効いている子が複数いれば足し算(使った子が倒れても残る)。効いていなければ 0
 //   緑のめぐみ(partyBoost・プラント) … partyBoostCfg.statRate
 //   トリックコンフューズ(trickConfuse・スプーキー。2026-10-05) … partyStatRate
-const tacticsExPartyStatRate = (state, now) => {
+//   ミルフィーシールド(millefeuille・ドリーミィ。2026-10-22) … partyStatRate。ただし、その子のシールドが残っているあいだだけ
+//   (社長「シールドが壊れたらステアップもなくなる」。slot を渡さないときは、シールドを見ずに数える)
+const tacticsExPartyStatRate = (state, now, slot = null) => {
   const effects = normalizeTacticsExState(state).effects;
   return Object.keys(effects).reduce((sum, key) => {
     const e = effects[key];
-    if (!e || (e.effect !== 'partyBoost' && e.effect !== 'trickConfuse') || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (!e || (e.effect !== 'partyBoost' && e.effect !== 'trickConfuse' && e.effect !== 'millefeuille') || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    if (e.effect === 'millefeuille' && slot != null && !(e.shields && tacticsSafeInt(e.shields[String(slot)], 0) > 0)) return sum;
     const rate = Number(e.effect === 'partyBoost' ? (e.partyBoostCfg && e.partyBoostCfg.statRate) : e.partyStatRate);
     return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
   }, 0);
+};
+// ---- ドリーミィ(millefeuille): ミルフィーシールド ----
+// その枠に残っているシールド(効いているミルフィーシールドぶんの合計)
+const tacticsExShieldAt = (state, slot, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    return sum + Math.max(0, tacticsSafeInt(e.shields[String(slot)], 0));
+  }, 0);
+};
+// 受けるダメージをシールドで減らす。{ state, absorbed, rest }。シールドが複数あれば、使った枠の若い順に削る
+const spendTacticsExShield = (state, slot, damage, now) => {
+  const safe = normalizeTacticsExState(state);
+  let rest = Math.max(0, tacticsSafeInt(damage, 0)), absorbed = 0;
+  const effects = { ...safe.effects };
+  for (const key of Object.keys(effects).sort()) {
+    const e = effects[key];
+    if (rest <= 0) break;
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !isTacticsExEffectActive(safe, key, e.monId, now)) continue;
+    const have = Math.max(0, tacticsSafeInt(e.shields[String(slot)], 0));
+    if (have <= 0) continue;
+    const use = Math.min(have, rest);
+    effects[key] = { ...e, shields: { ...e.shields, [String(slot)]: have - use } };
+    rest -= use; absorbed += use;
+  }
+  return { state: absorbed > 0 ? { ...safe, effects } : safe, absorbed, rest };
+};
+// ---- イルミネ(kusabiDouble): ジエンド ----
+// その子のジエンドが効いているか(楔が1回で2つ・上限12)
+const tacticsExKusabiDoubleAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  return !!unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'kusabiDouble';
 };
 // ---- ハム(counter): ハムボクシング ----
 // いまのカウンターの数(効いていなければ null)。mult は「カウンター1つあたりの与ダメ倍率」(2 なら 1つで×2・2つで×4)
@@ -2197,7 +2515,7 @@ const tacticsExCounterOf = (state, units, slot, now) => {
   const mine = normalizeTacticsExState(state).effects[slot], cfg = mine.counterCfg;
   if (!cfg) return null;
   const mult = Number(cfg.mult);
-  return { slot, counter: Math.min(99, Math.max(0, tacticsSafeInt(mine.counter, 0))), mult: Number.isFinite(mult) && mult > 0 ? mult : 0 };
+  return { slot, counter: Math.min(tacticsExCounterMax(cfg), Math.max(0, tacticsSafeInt(mine.counter, 0))), mult: Number.isFinite(mult) && mult > 0 ? mult : 0 };
 };
 // クロスカウンターが発動した子のカウンターを n 増やす(効いていなければ状態をそのまま返す)
 const addTacticsExCounter = (state, units, now, slot, n) => {
@@ -2205,7 +2523,7 @@ const addTacticsExCounter = (state, units, now, slot, n) => {
   const c = tacticsExCounterOf(safe, units, slot, now);
   const add = Math.max(0, tacticsSafeInt(n, 0));
   if (!c || add <= 0) return safe;
-  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(99, c.counter + add) } } };
+  return { ...safe, effects: { ...safe.effects, [slot]: { ...safe.effects[slot], counter: Math.min(tacticsExCounterMax(safe.effects[slot].counterCfg), c.counter + add) } } };
 };
 // クロスカウンターが発動したときの、ハムの与ダメ倍率(2 × カウンターの数。カウンター1なら×2・2なら×4・3なら×6)。効いていなければ 1
 const tacticsExCounterMult = (state, units, slot, now) => {
@@ -2310,7 +2628,7 @@ const rollEnemyConfusion = (intent, turns, rnd = Math.random) => {
 // 味方全員のちから・丈夫さ(緑のめぐみ・トリックコンフューズ)は、その子自身のEXで変わったあとの値へ掛ける
 const applyTacticsExStats = (unit, state, slot, now) => {
   const own = applyTacticsExOwnStats(unit, state, slot, now);
-  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now) : 0;
+  const party = unit && typeof unit === 'object' ? tacticsExPartyStatRate(state, now, slot) : 0;
   return party > 0 ? { ...own, atk: Math.floor(Math.max(0, tacticsSafeInt(own.atk, 0)) * (1 + party)), def: Math.floor(Math.max(0, tacticsSafeInt(own.def, 0)) * (1 + party)) } : own;
 };
 const applyTacticsExOwnStats = (unit, state, slot, now) => {
@@ -2361,7 +2679,7 @@ const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArr
 const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
   .map((unit, i) => (unit && i === slot
     // ★ガッツの上限の率は、いまの値のまま明示する(書かないと、ライフの率がガッツの上限にまで効いてしまう)
-    ? { ...unit, exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'), exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0)) } : unit));
+    ? { ...unit, exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts', false), exMaxRate: Math.max(tacticsExMaxRateOf(unit, 'hp', false), Math.max(0, Number(rate) || 0)) } : unit));
 // 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
@@ -2372,11 +2690,35 @@ const expireTacticsExMaxRates = (units, state, now) => {
     return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
   }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
-    if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
+    if (!unit || !(tacticsExMaxRateOf(unit, 'hp', false) > 0 || tacticsExMaxRateOf(unit, 'guts', false) > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
     if (springTargets.has(slot)) return unit; // 生命の泉の対象(効いているあいだ)
     changed = true;
     return { ...unit, exMaxRate: 0, exMaxGutsRate: 0 };
+  });
+  return { units: next, changed };
+};
+// ミルフィーシールドの上限アップ(ライフ・ガッツ)を、いまのシールドに合わせる(2026-10-22 社長「全ステータス」)。
+//   シールドが残っている子だけ partyStatRate ぶん上げ、壊れた子・3ターン終わった子は0へ戻す
+//   (ライフ・ガッツが新しい上限を超えていたら、normalizeTacticsUnit が上限まで切り詰める)。変えた枠があれば changed:true
+const tacticsExShieldMaxRateAt = (state, slot, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const e = effects[key];
+    if (!e || e.effect !== 'millefeuille' || !e.shields || !(tacticsSafeInt(e.shields[String(slot)], 0) > 0) || !isTacticsExEffectActive(state, key, e.monId, now)) return sum;
+    const rate = Number(e.partyStatRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const syncTacticsExShieldMaxRates = (units, state, now) => {
+  let changed = false;
+  const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
+    if (!unit) return unit;
+    const want = unit.downed ? 0 : tacticsExShieldMaxRateAt(state, slot, now);
+    const have = Number(unit.exShieldRate) > 0 ? Number(unit.exShieldRate) : 0;
+    if (Math.abs(want - have) < 1e-9) return unit;
+    changed = true;
+    return { ...unit, exShieldRate: want };
   });
   return { units: next, changed };
 };
@@ -2420,6 +2762,13 @@ const tacticsExCoverSlot = (state, units, now) => {
 // 敵の攻撃の当たり先を、かばう子へ集める。★当たる回数はそのまま
 // (全体攻撃で3体に当たるはずなら、かばう子が3回受ける。連撃は連撃のまま)。
 // 攻撃の性質(貫通ならガードが効かない、など)は変えない
+// きゅうこの譜面(2026-10-22 社長の決定): 使ったターンだけ、敵の単体攻撃を使った子(slot)へ向ける。
+// 全体攻撃(targetsAll)・当たり先が無い攻撃はそのまま。倒れている子には向けない。「みんなをかばう」はこのあとに掛かる(かばうが勝つ)
+const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
+  const list = Array.isArray(targets) ? targets : [];
+  if (!Number.isInteger(slot) || !intent || intent.targetsAll || list.length !== 1) return list;
+  return tacticsAliveSlots(units).includes(slot) ? [slot] : list;
+};
 const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length
   ? targets.map(() => coverSlot) : (Array.isArray(targets) ? targets : []));
 // ==== タクティクス専用 EXスキルここまで ====

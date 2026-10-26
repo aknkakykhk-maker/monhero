@@ -51,8 +51,12 @@ check('ファイルを指すアイコンがある', fileIcons.length > 0, `${fil
 // 表情を足したら商品も足す。片方だけ増えて「買えない表情」が出るのを防ぐ。
 // 助手を増やしたときも同じ仕様(8表情・各1pt)で追随しているかをここでまとめて見る
 const soldFaces = new Set(fileIcons.map(i => stripCacheKey(i.icon)));
+// ★あつ(2026-10-22 に助手へ加わった)は、助手になる前から images/breeder-icons/atsu_<表情>.png で8種売っていて、買った人がいる。
+//   id・パスを変えないため、売り物はそのファイルのまま(中身は助手の顔 face/atsu_*.PNG と同じ絵に差し替えた・社長の決定)
+const MARKET_FACE_OF = { atsu: (e) => `images/breeder-icons/atsu_${e}.png` };
+const marketFace = (who, e) => (MARKET_FACE_OF[who.id] ? MARKET_FACE_OF[who.id](e) : assistantFaceImage(who, e));
 for (const who of ASSISTANTS) {
-  const wantedFaces = ASSISTANT_EXPRESSIONS.map(e => assistantFaceImage(who, e));
+  const wantedFaces = ASSISTANT_EXPRESSIONS.map(e => marketFace(who, e));
   const notSold = wantedFaces.filter(p => !soldFaces.has(stripCacheKey(p)));
   check(`${who.name}の表情はすべてマーケットに並んでいる`, notSold.length === 0, notSold.join(', '));
 }
@@ -63,7 +67,7 @@ check('アイコンはすべてptで買える安さにそろえる', icons.every
 // 価格・商品名の付け方も助手ごとにそろっていること(みゅあだけ安い・名前の形が違う、を防ぐ)
 for (const who of ASSISTANTS) {
   const own = icons.filter(i => typeof i.icon === 'string'
-    && ASSISTANT_EXPRESSIONS.some(e => stripCacheKey(i.icon) === stripCacheKey(assistantFaceImage(who, e))));
+    && ASSISTANT_EXPRESSIONS.some(e => stripCacheKey(i.icon) === stripCacheKey(marketFace(who, e))));
   check(`${who.name}の表情アイコンは8種・各1ptで並ぶ`,
     own.length === ASSISTANT_EXPRESSIONS.length && own.every(i => i.cost === 1 && i.name.includes(who.name)),
     `${own.length}件`);

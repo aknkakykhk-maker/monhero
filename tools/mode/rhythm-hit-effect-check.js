@@ -68,7 +68,8 @@ check('叩いた光の位置と幅は、判定ラインの高さ(RHYTHM_JUDGMENT
   /const lineY=RHYTHM_JUDGMENT_LINE_Y\.ratio;[\s\S]{0,200}rhythmProjectSlideSpan\(rhythmReleaseLane\(note\),note,lineY,[\s\S]{0,120}rhythmNoteVisualSpan\(note,note\.lane,lineY,/.test(game));
 check('モンスターノーツ専用の音がある',typeof RHYTHM_NOTE_SE_RUNTIME.playMonster==='function');
 check('音が出せない環境でも落ちない',RHYTHM_NOTE_SE_RUNTIME.playMonster()===false);
-const monsterSe=/const playMonster=\(\)=>\{[\s\S]*?\n  \};/.exec(source)?.[0]||'';
+// 2026-10-13 から曲の前に聞こえない音量で1回通す引数(silent)を持つ(最初のモンスターノーツのかくつき対策)
+const monsterSe=/const playMonster=\((?:\{silent=false\}=\{\})?\)=>\{[\s\S]*?\n  \};/.exec(source)?.[0]||'';
 check('モンスターノーツの音を取り出せる',monsterSe.length>300);
 check('ふつうのノーツとは違う音になっている(駆け上がる3音＋低音)',
   /1046\.50,1318\.51,1567\.98/.test(monsterSe)&&/261\.63/.test(monsterSe));
@@ -76,12 +77,13 @@ check('音量・ON/OFF・全体ミュートは既存のタップ音の設定を�
   monsterSe.includes('readSettings()')&&monsterSe.includes('rhythmAudioGloballyEnabled()')
   &&!/mh_/.test(monsterSe));
 check('モンスターノーツを取ったときにその音を鳴らす',
-  game.includes('if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();'));
+  // 鳴らした印をフレームの記録へ残す(RHYTHM_FRAME_DIAG.cue)。鳴らすのは同じ1か所
+  /if\(monsterHit\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
 // ★monsterHit は 2026-09-13 に「演出量のブロックの外」へ出した(振動をそこへまとめたため)。
 //   MISSでは false になるので、鳴らす・光らせるところへは入らない。
 check('MISSでは鳴らさない・光らせない',
   game.includes("const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);")
-  &&/if\(judgment!=='MISS'\)\{\s*if\(monsterHit\)RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
+  &&/if\(judgment!=='MISS'\)\{\s*if\(monsterHit\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
 
 // --- 重くならない作り ---
 check('使い回す枚数が決まっている',Number.isInteger(RHYTHM_HIT_EFFECT_POOL)&&RHYTHM_HIT_EFFECT_POOL>=6&&RHYTHM_HIT_EFFECT_POOL<=24,
@@ -195,7 +197,8 @@ check('ぴったりは表示だけへ渡す(viewと演出)',
 // 印は次の判定へ持ち越さない(消すときも一緒に落とす)
 check('判定表示を消すときに、ぴったりの印も落とす',
   game.includes("hudRef.current.set({last:'',lastPrecise:false,fastSlow:''})")
-  &&game.includes("const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,")
+  // 始まりの状態は、判定ラインの合わせ込みのときだけ idle(status の値は問わない)
+  &&/const initialView=\(\)=>\(\{status:[^,]*?'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,/.test(game)
   &&game.includes("const rhythmHudInitial=()=>({score:0,combo:0,last:'',lastPrecise:false,"));
 check('ぴったりのときだけ見た目が強くなる(文字と光)',
   html.includes('[data-rhythm-judgment-text][data-judgment="MARVELOUS"][data-judgment-precise="1"]{')
@@ -269,7 +272,7 @@ check('演出量MINIMAL・軽量モードでは出さない(音は鳴る)',
   &&hitCss.includes('display:none!important')
   // 音は演出量の外で鳴らす
   // 間に空中のノーツの「きらっ」の音(playSky・演出量の外)が入ってよい
-  &&/if\(monsterHit\)RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);\s*\n(?:\s*\/\/[^\n]*\n\s*if\(rhythmNoteSkyHeight\(note\)>0\)RHYTHM_NOTE_SE_RUNTIME\.playSky\(judgment\);\s*\n)?\s*if\(!settings\.lightweightMode/.test(game));
+  &&/if\(monsterHit\)(?:RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);|\{RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);RHYTHM_FRAME_DIAG\.cue\('se'\);\})\s*\n(?:\s*\/\/[^\n]*\n\s*if\(rhythmNoteSkyHeight\(note\)>0\)RHYTHM_NOTE_SE_RUNTIME\.playSky\(judgment\);\s*\n)?\s*if\(!settings\.lightweightMode/.test(game));
 // 設定「押したときの光」(2026-10-15)。既定は「おまかせ」(これまでどおり)で、新しい項目は正規化で補う。
 // 「いつも出す」の枝は判定ラインの光だけを出す(判定文字・コンボ数・フラッシュ・マスモンの跳ねには触らない)
 {const i=game.indexOf('}else if(rhythmTapLightOnly(settings)){'),branch=i>=0?game.slice(i,game.indexOf('\n}\n',i)):'';

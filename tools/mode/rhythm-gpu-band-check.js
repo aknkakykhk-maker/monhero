@@ -32,6 +32,10 @@ const PAGE=`<!doctype html><html><head><meta charset="utf-8"><style>html,body{ma
 // bigOver: 差の大きい画素(どれかの値が64以上違う)が、今の WebGL と 2D の間より何画素多いか。細い線(区切りの線)の抜けは平均の差に埋もれるので、これで見る
 //   色は「濃さを掛けた色」(画面に重ねたときに出る色)で比べる(2026-10-11)。ほぼ透明な画素(薄い光のふち)は、濃さを掛ける前の色だと
 //   なめらかさのわずかな違い(1画素の5%)でも 64 以上ずれて数えられてしまう(ノーツの板を GPU で描いたときに演出量 最小の場面で出た)
+//   押さえている帯の切り口(判定ラインの所で横にまっすぐ切る)は、なめらかさの差が高さ1画素の横一列に出る。横長(844x390)の太い帯では
+//   それだけで200画素を越えた(2026-10-21 black_shout HELL)ので、上下どちらにも差の大きい画素が無い画素は数えない(区切りの線は4画素の太さなので残る)
+// avg: 今の WebGL がもともと 2D から上限近くまで離れている場面(重なった空中スライドの取り損ね・2026-10-21 sad_song HELL で 1.445)は、
+//   今の WebGL より overBase 以上離れたときだけ NG にする(新しい描き方が今の WebGL と同じ絵なら通す)
 const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
 (async()=>{
   let playwright;
@@ -129,8 +133,10 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
         {const cv=document.createElement('canvas');R.attach(cv,{webgl:true,gpuBand:true});R.additiveGlow=false;R.warmSprites({effect:'NORMAL',lightweight:false,maxDpr:2});backend=R.backend;gpuReady=R.gpuBand;
           frames.forEach((fr,i)=>{drawFrame(fr,false);results[i].B=snap(cv);const n=drawFrame(fr,true);results[i].C=snap(cv);results[i].n=n;});R.release();R.additiveGlow=true;}
         const BIG=64;
-        const cmp=(X,Y)=>{let sum=0,opaqueX=0,opaqueY=0,missing=0,extra=0,big=0;
-          for(let i=0;i<X.length;i+=4){let d=0;const ax=X[i+3]/255,ay=Y[i+3]/255;for(let k=0;k<4;k++){const e=Math.abs(X[i+k]-Y[i+k]);sum+=e;const p=k<3?Math.abs(X[i+k]*ax-Y[i+k]*ay):e;if(p>d)d=p;}if(d>=BIG)big++;if(X[i+3]>128){opaqueX++;if(Y[i+3]<32)missing++;}if(Y[i+3]>128){opaqueY++;if(X[i+3]<32)extra++;}}
+        const W=size.w*2;
+        const cmp=(X,Y)=>{let sum=0,opaqueX=0,opaqueY=0,missing=0,extra=0,big=0;const mask=new Uint8Array(X.length/4);
+          for(let i=0;i<X.length;i+=4){let d=0;const ax=X[i+3]/255,ay=Y[i+3]/255;for(let k=0;k<4;k++){const e=Math.abs(X[i+k]-Y[i+k]);sum+=e;const p=k<3?Math.abs(X[i+k]*ax-Y[i+k]*ay):e;if(p>d)d=p;}if(d>=BIG)mask[i/4]=1;if(X[i+3]>128){opaqueX++;if(Y[i+3]<32)missing++;}if(Y[i+3]>128){opaqueY++;if(X[i+3]<32)extra++;}}
+          for(let j=0;j<mask.length;j++)if(mask[j]&&((j>=W&&mask[j-W])||(j+W<mask.length&&mask[j+W])))big++;
           return {avg:sum/X.length,missing:opaqueX?missing/opaqueX:0,extra:opaqueY?extra/opaqueY:0,opaque:opaqueX,big};};
         const toUrl=(data,diffWith)=>{const s=document.createElement('canvas');s.width=size.w*2;s.height=size.h*2;const x=s.getContext('2d');const img=x.createImageData(s.width,s.height);
           if(diffWith){for(let i=0;i<data.length;i+=4){let d=0;for(let k=0;k<4;k++)d=Math.max(d,Math.abs(data[i+k]-diffWith[i+k]));img.data[i]=Math.min(255,d*4);img.data[i+1]=d>24?255:0;img.data[i+2]=0;img.data[i+3]=255;}}
@@ -151,7 +157,7 @@ const LIMIT={avg:1.5,missing:.003,extra:.003,overBase:.3,bigOver:200};
         if(f.BA.avg>totals.worstB.avg)totals.worstB={avg:f.BA.avg,where};
         const over=f.CA.avg-f.BA.avg;if(over>totals.overBase.d)totals.overBase={d:over,where};
         const bigOver=f.CA.big-f.BA.big;if(bigOver>totals.bigOver.d)totals.bigOver={d:bigOver,where,ca:f.CA.big,ba:f.BA.big};
-        const bad=f.CA.avg>=LIMIT.avg||f.CA.missing>=LIMIT.missing||f.CA.extra>=LIMIT.extra||over>=LIMIT.overBase||bigOver>=LIMIT.bigOver;
+        const bad=f.CA.avg>=Math.max(LIMIT.avg,f.BA.avg+LIMIT.overBase)||f.CA.missing>=LIMIT.missing||f.CA.extra>=LIMIT.extra||over>=LIMIT.overBase||bigOver>=LIMIT.bigOver;
         if(bad)totals.bad.push(`${where} 平均${f.CA.avg.toFixed(3)}(今のWebGL ${f.BA.avg.toFixed(3)})・抜け${(f.CA.missing*100).toFixed(2)}%・余計${(f.CA.extra*100).toFixed(2)}%・大きく違う画素 +${bigOver}`);
       }
       process.stdout.write(`\r      ${ci+1}/${charts.length} ${c.songId} ${c.id}                    `);

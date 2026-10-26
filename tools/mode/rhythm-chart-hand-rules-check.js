@@ -106,5 +106,31 @@ for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(
     if(list.length>limit)bad.push(`${key} ${list.length}件`+(limit?`(上限${limit})`:'')+` ${list.slice(0,6).map(x=>`${(x.at/1000).toFixed(2)}秒(${R.HELD_BAND_KINDS[x.kind]})`).join(' ')}`);}
   ok('押さえている帯の中にノーツを置かない(前からある譜面は控えの件数より増えない・新しい譜面は0)',bad.length===0,bad.slice(0,6).join(' / '));
   console.log(`参考: 両方幅1.5以上の半レーンの重なり(許す) ${wide}件 / 控えに残っている置かない形 ${Object.values(caps).reduce((a,b)=>a+b,0)}件(${Object.keys(caps).length}譜面)`);}
+// 7. 見分けにくい所(2026-10-21 社長「見分けづらいってのが相当難易度高い」)。見分けにくい形を入れない決まりで作った HELL は、ゲームに読み込んだ形で0。
+//   数え方は同時のノーツの並び順で変わらない(Journey の HELL で、道具の形では0・ゲームの形では2と食い違った)
+{const NO_CONFUSE=['rose_hell_debug','rose_short_hell_debug','sad_song_hell_debug','sad_song_short_hell_debug','toward_the_stars_short_hell_debug','anima_hell_debug','journey_hell_debug'];
+  const bad=[];
+  for(const id of NO_CONFUSE){const s=(runtime.RHYTHM_PROTO_SONGS||[]).find(x=>x.songId===id),c=s&&s.difficulties&&s.difficulties.HELL;
+    if(!c||!Array.isArray(c.notes)||!c.notes.length){bad.push(`${id} 譜面が無い`);continue;}
+    const cf=R.skyConfusable(c.notes);if(cf.length)bad.push(`${id} ${cf.length}件 ${cf.slice(0,4).map(x=>`${(x.at/1000).toFixed(2)}秒`).join(' ')}`);}
+  ok('見分けにくい形を入れない決まりで作った HELL は、ゲームの形で見分けにくい所0',bad.length===0,bad.join(' / '));
+  // 同時の点の並びを入れ替えても数が同じ(同じ時刻のノーツを逆順にして数え直す)
+  const flip=notes=>{const out=notes.slice().sort((a,b)=>a.timeMs-b.timeMs);for(let i=0;i<out.length;){let j=i;while(j+1<out.length&&out[j+1].timeMs-out[i].timeMs<=2)j++;
+    out.splice(i,j-i+1,...out.slice(i,j+1).reverse());i=j+1;}return out;};
+  const diff=[];
+  for(const s of runtime.RHYTHM_PROTO_SONGS||[])for(const [d,c] of Object.entries(s.difficulties||{})){if(!c||!Array.isArray(c.notes)||!R.hasSky(c.notes))continue;
+    const a=R.skyConfusable(c.notes).length,b=R.skyConfusable(flip(c.notes)).length;if(a!==b)diff.push(`${s.songId}/${d} ${a}→${b}`);}
+  ok('見分けにくい所の数は、同時のノーツの並び順で変わらない',diff.length===0,diff.slice(0,6).join(' / '));}
+// 7. 空中が絡む「指が同じ位置に来る形」(空中スライドの通り道・押さえている所の真上真下)は、HELL の Lv. ごとの許す数まで
+//    (2026-10-22 社長「空中入り交じるとまじで厳しいからなんでもかんでもそういうのいれないで。高難易度ならまだしも」。
+//    許す数は Lv.45未満0・45〜54は2・55〜64は4・65以上は6。rhythm-hell-sameplace-fix.js の SAME_PLACE_ALLOW)。
+//    直したあとも許す数を超えて残った曲は、そのときの件数を上限にする(これ以上ふやさない)。新しい HELL は rhythm-hell-mix.js が直して書く
+{const SP=require('./rhythm-hell-sameplace-fix.js');
+  const OVER_CAP={monster_hero_another:1,six_eternel_beat:5,stay_with_me:2,kiki_issen:3,sad_song_short:1};
+  const bad=[];
+  for(const s of runtime.RHYTHM_PROTO_SONGS||[]){const c=(s.difficulties||{}).HELL;if(!c||!Array.isArray(c.notes)||!R.hasSky(c.notes))continue;
+    const id=s.songId.replace(/_hell_debug$/,''),n=SP.skyHits(c.notes).length,cap=Math.max(SP.SAME_PLACE_ALLOW(c.level),OVER_CAP[id]||0);
+    if(n>cap)bad.push(`${id} Lv.${c.level} ${n}件(上限${cap})`);}
+  ok('HELL の「指が同じ位置に来る形」は Lv. ごとの許す数まで',bad.length===0,bad.slice(0,8).join(' / '));}
 console.log(ng?`\n✗ ${ng}件NG`:'\nすべてOK');
 process.exit(ng?1:0);

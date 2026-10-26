@@ -93,6 +93,25 @@ const fakeDb = ({ facts = FLAGGED_FACTS, tokenOk = true, tokenThrows = false } =
       && row.model === 'claude-haiku-5-5' && row.input_tokens === 1500 && row.output_tokens === 700 && row.facts === FLAGGED_FACTS && db.state.rows.length === 1,
       JSON.stringify({ ...row, facts: undefined }));
   }
+  // ③-2 連打の多いプレイを外した数(2026-10-19・mashed_excluded_day)。外した日だけ本文に1行足す。無い日・0 の日は今までと同じ本文
+  {
+    const db = fakeDb({ facts: { ...QUIET_FACTS, mashed_excluded_day: 35 } }), client = fakeClient(() => okText('x'));
+    await run(db, client);
+    const row = db.state.rows[0] || {};
+    check('quiet の日も、連打で外した数を本文に1行足す', row.status === 'quiet' && row.summary === `${core.QUIET_SUMMARY}\n連打の多いプレイ35件を除いた。` && client.calls.length === 0, row.summary);
+  }
+  {
+    const db = fakeDb({ facts: { ...FLAGGED_FACTS, mashed_excluded_day: 2 } }), client = fakeClient(() => okText('・toriko MASTER(iPhone)の MISS が増えました。'));
+    await run(db, client);
+    const row = db.state.rows[0] || {};
+    check('報告の本文の最後に、連打で外した数を1行足す', row.status === 'ok' && row.summary === '・toriko MASTER(iPhone)の MISS が増えました。\n連打の多いプレイ2件を除いた。', row.summary);
+  }
+  {
+    const db = fakeDb({ facts: { ...QUIET_FACTS, mashed_excluded_day: 0 } }), client = fakeClient(() => okText('x'));
+    await run(db, client);
+    check('外した数が0の日は本文を変えない', (db.state.rows[0] || {}).summary === core.QUIET_SUMMARY);
+  }
+  check('Claude への説明に、外した数の項目の意味を書いている', core.SYSTEM.includes('mashed_excluded_day'));
   {
     const long = 'あ'.repeat(core.MAX_SUMMARY_CHARS + 50);
     const db = fakeDb(), client = fakeClient(() => okText(long));
@@ -173,6 +192,19 @@ const fakeDb = ({ facts = FLAGGED_FACTS, tokenOk = true, tokenThrows = false } =
       /rpc\("rhythm_anomaly_facts", \{ p_day: day \}\)/.test(src) && /from\("rhythm_anomaly_reports"\)\.upsert\(row, \{ onConflict: "report_date" \}\)/.test(src));
     check('入口: API キー・合言葉の値をコードに書いていない', !/sk-ant-|ANTHROPIC_API_KEY\s*=|apiKey\s*:/.test(src) && !/RHYTHM_ANOMALY_CRON_TOKEN/.test(src));
     check('入口: POST だけを受ける', /req\.method !== "POST"/.test(src));
+  }
+  // 曲の途中から放置したプレイ(入力5回以下・未クリア)を集計から外す(2026-10-21 社長の決定)。
+  // 外すのは見張りの集計だけ(関数を作り直すだけで、表・行には触れない)。連打を外す決まりも残っていること
+  {
+    const sql = fs.readFileSync(path.join(root, 'docs/sql/rankings/RHYTHM_ANOMALY_FACTS_ABANDON_APPLY.sql'), 'utf8');
+    const code = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    check('集計: 放置したプレイ(入力5回以下・未クリア)と連打の多いプレイを外し、外した数を返す',
+      /\(t\.stats->>'inputs'\)::int,0\) <= 5 and coalesce\(\(t\.stats->>'cleared'\)::boolean,true\) = false\) as abandoned/.test(code)
+        && /d as \(select \* from d0 where touches <= notes \* 5 and not abandoned\)/.test(code)
+        && /'abandoned_excluded_day'/.test(code) && /'mashed_excluded_day'/.test(code)
+        && /l\.cleared = false and \(select count\(\*\)[\s\S]*?<> 'zz'\) <= 5/.test(code));
+    check('集計: 関数を作り直すだけで、表・行を変えない', /create or replace function public\.rhythm_anomaly_facts\(p_day date\)/.test(code)
+      && !/\b(insert|update|delete|truncate|drop|alter)\b/i.test(code));
   }
 
   console.log('');

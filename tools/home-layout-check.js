@@ -54,6 +54,8 @@ ${css}
   <button class="mh-home-mission">ミッション</button>
   <button class="mh-home-gift">ギフト</button>
   <button class="mh-home-update">更新履歴</button>
+  <button class="mh-home-event-banner"><b>🎃 ハロウィン・ナイト</b><small>開催中 〜11/1 13:59</small></button>
+  <button class="mh-home-card-battle"><span>🃏 MFバトルカード</span></button>
   <div class="mh-home-assistant" style="height:70px">みゅあ</div>
 </main></div></body></html>`;
 
@@ -139,6 +141,26 @@ const SIZES = [
     const cut = res.facilities.filter(f => f.bottom > res.height + 0.5 || f.top < -0.5);
     check('  施設のラベルが上下に切れない', cut.length === 0,
       cut.map(f => `${f.name}(上${Math.round(f.top)} 下${Math.round(f.bottom)} / 画面高${res.height})`).join(', '));
+    // ⑦ 左の列の札(モンヒロビート・イベントの札・MFバトルカード)が重ならない(2026-10-26 320×568〜375×667 で 3〜6px 重なっていた)。
+    //    イベントの札が無いときは、MFバトルカードの札が1段上がる(.raised)ので、そちらも見る
+    const leftCol = async (event) => page.evaluate((event) => {
+      const ev = document.querySelector('.mh-home-event-banner'); const cardBtn = document.querySelector('.mh-home-card-battle');
+      ev.style.display = event ? '' : 'none'; cardBtn.classList.toggle('raised', !event);
+      const r = (el) => { const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left, right: b.right, h: b.height }; };
+      const items = [['モンヒロビート', document.querySelector('.mh-home-facility.rhythm>span')], ['イベントの札', ev], ['MFバトルカード', cardBtn.querySelector('span')], ['バトル', document.querySelector('.mh-home-facility.battle>span')]]
+        .map(([n, el]) => [n, r(el)]).filter(([, b]) => b.h > 0);
+      const hits = [];
+      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+        const [na, a] = items[i], [nb, b] = items[j];
+        if (a.top < b.bottom && a.bottom > b.top && a.left < b.right && a.right > b.left) hits.push(`${na}と${nb}(${Math.round(Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))}px)`);
+      }
+      ev.style.display = ''; cardBtn.classList.remove('raised');
+      return hits;
+    }, event);
+    for (const [label, event] of [['イベントの札があるとき', true], ['イベントの札が無いとき', false]]) {
+      const hits = await leftCol(event);
+      check(`  左の列の札が重ならない(${label})`, hits.length === 0, hits.join(', '));
+    }
     // ⑥ 右上の枠(ダイヤ・ブリーダーP)は桁が増えても高さが変わらない(2026-10-13 社長「8桁で『ダイヤ』が縦に折れた」)。
     //    0・8桁・10桁で、数とラベルが1行のまま・枠とプロフィールの高さが同じかを見る
     const walletAt = async (gold, bp) => page.evaluate(([g, p, grow]) => {
@@ -161,7 +183,124 @@ const SIZES = [
     }
     await page.close();
   }
+  // ---- 本物の画面でも測る(2026-10-20 改善部 M7) ----
+  // 上の見本は .mh-home- の CSS だけで組むので、index.html の CSS や吹き出しの本当の文の長さが入らない。
+  // 320×568 で「みゅあの吹き出しが M/B管理 の札の左上を隠す」のを見逃していた。本物を開いて、
+  // 吹き出しの文の行数(幅360未満は2行まで)と、吹き出しの下端が「M/B管理」の札の上端を越えないかを見る
+  {
+    const http = require('http');
+    const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
+    const PORT = 8963;
+    const server = await new Promise(r => { const sv = http.createServer((req, res) => {
+      const u = decodeURIComponent(req.url.split('?')[0]); const f = path.join(root, u);
+      if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); sv.listen(PORT, () => r(sv)); });
+    for (const size of [{ name: '本物 320x568', width: 320, height: 568 }, { name: '本物 375x667(SE)', width: 375, height: 667 }, { name: '本物 390x844', width: 390, height: 844 }]) {
+      console.log(`--- ${size.name}`);
+      const page = await browser.newPage({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+      await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+        put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
+        put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true);
+        put('mh_update_notice_seen_v1', true); put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
+        // 10桁のダイヤ・9桁のブリーダーP(2026-10-21 改善部 N5「数の字が約6px まで縮む」)。財布の字の大きさを下で測る
+        put('mh_gold', 6736760000); put('mh_breeder_points', 123456790); put('mh_breeder_points_granted', true); });
+      await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
+      await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
+      await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+      await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+      await page.waitForFunction(() => document.querySelector('.mh-home-assistant [data-bubble-text]'), { timeout: 40000 });
+      for (let i = 0; i < 14; i++) {
+        const did = await page.evaluate(() => { const inO = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const st = getComputedStyle(e); if (st.position === 'fixed' || (st.position === 'absolute' && Number(st.zIndex) >= 40)) return true; } return false; };
+          const l = [...document.querySelectorAll('button')].filter(b => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
+          if (!l.length) return false; l[0].click(); return true; });
+        if (!did) break; await page.waitForTimeout(300);
+      }
+      // いちばん長くなりやすい文(3行ぶん)に差し替えて測る。ふだんのひとことは毎回ちがうので、長い文で確かめる
+      await page.evaluate(() => { const t = document.querySelector('.mh-home-assistant [data-bubble-text]'); if (t) t.textContent = '今日はどんな勇者モンが育つかなぁ〜٩(*´ᵕ`*)۶ワクワク まずはミッションとギフトを見てから、バトルへいこ！'; });
+      // 吹き出しが伸びたぶん札が下がる(ResizeObserver)のを待ってから測る
+      await page.waitForTimeout(300);
+      const res = await page.evaluate(() => {
+        const t = document.querySelector('.mh-home-assistant [data-bubble-text]');
+        const st = t ? getComputedStyle(t) : null;
+        const lh = st ? parseFloat(st.lineHeight) || parseFloat(st.fontSize) * 1.6 : 0;
+        const lines = t ? Math.round(t.getBoundingClientRect().height / lh) : 0;
+        const a = document.querySelector('.mh-home-assistant');
+        const mb = [...document.querySelectorAll('.mh-home-facility')].find(x => /M\/B管理/.test(x.innerText));
+        const label = mb && (mb.querySelector('span') || mb);
+        // 吹き出しの本体(顔の絵を除く、文の枠)の下端
+        const bubble = t && t.closest('button,div[style*="border"]');
+        const bb = (bubble || a).getBoundingClientRect(), lb = label ? label.getBoundingClientRect() : null;
+        const overlapX = lb ? Math.min(bb.right, lb.right) - Math.max(bb.left, lb.left) : 0;
+        return { lines, cut: t ? t.scrollHeight > t.clientHeight + 1 || st.webkitLineClamp !== 'none' : false, bubbleBottom: Math.round(bb.bottom), labelTop: lb ? Math.round(lb.top) : null, overlapX: Math.round(overlapX) };
+      });
+      // 2026-10-24 窓口「幅320で『ついてるから大丈夫！…』と切れている」。文は切らずに全部出し、伸びたぶん札を下げる
+      check('  みゅあの文が「…」で切れずに全部見える', !res.cut, `${res.lines}行`);
+      check('  みゅあの吹き出しが「M/B管理」の札を隠さない', res.labelTop === null || res.overlapX <= 0 || res.bubbleBottom <= res.labelTop + 1,
+        `吹き出しの下端 ${res.bubbleBottom}px / 札の上端 ${res.labelTop}px`);
+      // N5: 9桁(1億)からは「67.3億」のように縮めて出し、財布の字が8px 以上に保たれる。押すと細かい数が出る
+      const wallet = await page.evaluate(() => [...document.querySelectorAll('.mh-home-wallet > div b')].map(b => ({ t: b.innerText.trim(), px: parseFloat(getComputedStyle(b).fontSize) })));
+      check('  財布の数は9桁から縮めて出し、字は8px 以上(10桁のダイヤ・9桁のブリーダーP)', wallet.length === 2 && wallet[0].t === '67.3億' && wallet[1].t === '1.23億' && wallet.every(x => x.px >= 8),
+        wallet.map(x => `${x.t}@${x.px}px`).join(' / '));
+      const exact = await page.evaluate(() => { const b = document.querySelector('.mh-home-wallet [data-compact-count]'); if (!b) return ''; b.click(); return new Promise(r => setTimeout(() => r((document.querySelector('[data-compact-count-exact]') || {}).textContent || ''), 200)); });
+      check('  縮めた数を押すと、細かい数(6,736,760,000)が出る', exact === '6,736,760,000', exact);
+      // ジャックの吹き出し(2026-10-21 窓口「幅320で ジャックのセリフの吹き出しが M/B管理 の札にかかる」)。
+      // 置き場所はときどき測り直すので、落ち着くのを待ってから、施設の札(見える札)とジャックの絵に重ならず、画面の中にあるかを見る
+      await page.evaluate(() => { const t = document.querySelector('.mh-home-assistant [data-bubble-text]'); if (t) t.textContent = 'あたしがついてるから大丈夫！ いってらっしゃい〜(｡･ω･)ﾉﾞ'; });
+      await page.waitForTimeout(2000);
+      const readJack = () => page.evaluate(() => {
+        const say = document.querySelector('[data-home-raid-say]');
+        if (!say) return null;
+        const r = say.getBoundingClientRect();
+        // 絵は跳ねているので、アプリ(homeRaidSayPlace)と同じく、跳ねる前の置き位置(offset)で測る
+        const art = document.querySelector('[data-home-raid-jack] [data-jack-aura], [data-home-raid-jack] [data-home-raid-pumpkin]');
+        const img = art && art.querySelector('img.mh-home-raid-jack-img');
+        const ar = art ? art.getBoundingClientRect() : null;
+        const jr = img ? { left: ar.left + img.offsetLeft, top: ar.top + img.offsetTop, right: ar.left + img.offsetLeft + img.offsetWidth, bottom: ar.top + img.offsetTop + img.offsetHeight, width: img.offsetWidth, height: img.offsetHeight } : null;
+        const hit = (o) => Math.min(r.right, o.right) - Math.max(r.left, o.left) > 0 && Math.min(r.bottom, o.bottom) - Math.max(r.top, o.top) > 0;
+        const labels = [...document.querySelectorAll('.mh-home-facility')].map(x => ({ t: x.innerText.replace(/\s+/g, '').slice(0, 8), r: (x.querySelector(':scope > span') || x).getBoundingClientRect() }))
+          .filter(x => x.r.width > 2 && hit(x.r)).map(x => x.t);
+        const jackHit = jr ? Math.max(0, Math.min(r.right, jr.right) - Math.max(r.left, jr.left)) * Math.max(0, Math.min(r.bottom, jr.bottom) - Math.max(r.top, jr.top)) / Math.max(1, jr.width * jr.height) : 0;
+        const title = document.querySelector('[data-home-raid-jack] [data-home-raid-jack-title]');
+        const band = title ? title.parentElement.getBoundingClientRect() : null;
+        const titleLines = title ? Math.round(title.getBoundingClientRect().height / (parseFloat(getComputedStyle(title).fontSize) * 1.3)) : 0;
+        return { labels, jackHit: Math.round(jackHit * 100), faceTop: jr ? Math.round(jr.top + jr.height * 0.45 - 8) : 0, inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, box: [r.left, r.top, r.right, r.bottom].map(Math.round),
+          side: say.getAttribute('data-say-side'), hidden: say.getAttribute('data-say-hidden') === 'true', bandTop: band ? Math.round(band.top) : null, titleLines };
+      });
+      // ① みゅあがふつうの長さ(2行)の台詞のとき: ジャックの吹き出しは必ず出て、札・帯・絵を隠さない
+      const sayJack = (jack, label) => {
+        if (!jack) return;
+        check(`  ${label}ジャックの吹き出しが施設の札(M/B管理・神殿など)にかからない`, jack.labels.length === 0, `${jack.labels.join('・')} / 吹き出し ${jack.box.join(',')}`);
+        // 2026-10-24 窓口「320 で大王の吹き出しがかぼちゃの顔を隠している」。しっぽの先まで、目の高さ(絵の箱の上から45%)より8px上に置く
+        check(`  ${label}ジャックの吹き出しがかぼちゃの顔を隠さない・画面の中にある`, jack.box[3] + 9 <= jack.faceTop + 1 && jack.inside, `吹き出しの下端+しっぽ ${jack.box[3] + 9}px / 顔の線 ${jack.faceTop}px / 吹き出し ${jack.box.join(',')}`);
+        // 2026-10-24 窓口「SE・320 で、帯の右に出て帯を隠している」。どの幅でもかぼちゃの上(帯より上。しっぽ9pxも含めて)に置く
+        check(`  ${label}ジャックの吹き出しはかぼちゃの上に出て、帯(〜があらわれた！・共有HP)に乗らない`, jack.side === 'top' && jack.bandTop !== null && jack.box[3] + 9 <= jack.bandTop, `${jack.side} / 吹き出しの下端 ${jack.box[3]}px / 帯の上端 ${jack.bandTop}px`);
+      };
+      const short = await readJack();
+      if (short) {
+        check('  帯の「〜があらわれた！」が1行に収まる', short.titleLines === 1, `${short.titleLines}行`);
+        // 幅360未満は、ジャックの台詞が長いと置ける所が無く、出さないことがある(2026-10-24 窓口「置ける場所がなければ出さない扱いで構わない」)
+        check('  (みゅあが2行のとき)ジャックの吹き出しが出ている(出さないのは幅360未満だけ)', !short.hidden || size.width < 360, `幅${size.width}`);
+        if (!short.hidden) sayJack(short, '(みゅあが2行のとき)');
+      }
+      // ② みゅあが長い台詞(上で差し替えた3〜4行)のとき。札にも顔にもかからない置き場所が無いなら出さない。出さないのは幅360未満だけ
+      await page.evaluate(() => { const t = document.querySelector('.mh-home-assistant [data-bubble-text]'); if (t) t.textContent = '今日はどんな勇者モンが育つかなぁ〜٩(*´ᵕ`*)۶ワクワク まずはミッションとギフトを見てから、バトルへいこ！'; });
+      await page.waitForTimeout(2000);
+      const jack = await readJack();
+      if (jack && jack.hidden) check('  (みゅあが長いとき)ジャックの吹き出しを出さないのは幅360未満だけ', size.width < 360, `幅${size.width}`);
+      else sayJack(jack, '(みゅあが長いとき)');
+      await page.close();
+    }
+    server.close();
+  }
   await browser.close();
+  // 助手の吹き出しは下へ伸びるので、そのままだとセリフが長いときに施設の札「M/B管理」へかぶって押せなくなる
+  // (2026-10-23 社長「MB管理に助手のコメントが被ってくる」。きゅうこの3行のセリフで起きた)。2行で切っていたが、幅320で「…」で切れた
+  // (2026-10-24 窓口)。いまは全文を出し、吹き出しの下端(--mh-home-assistant-bottom)より下へ M/B管理・神殿の札を下げる
+  check('HOMEの助手の吹き出しは切らずに全部出し、伸びたぶん施設の札を下げる',
+    !/<AssistantBubble scene="home"[^>]*\bmaxLines=/.test(source)
+    && source.includes("scene.style.setProperty('--mh-home-assistant-bottom'")
+    && source.includes('.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}')
+    && source.includes('.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}'));
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

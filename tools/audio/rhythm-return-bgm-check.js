@@ -39,13 +39,14 @@ for (const file of files) {
 
   check(`${rel}: モンビーで止めたことを覚えている`,
     src.includes('const bgmSuspendedByRhythmRef = useRef(false);')
-    && compact.includes('bgmSuspendedByRhythmRef.current=rhythmScreenOpen;'));
+    && compact.includes('bgmSuspendedByRhythmRef.current=rhythmScreenOpen||cardScreenOpen;'));
   check(`${rel}: 戻った最初の1回は維持せず鳴らし直す`,
     /key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef\.current/.test(src)
     // 生成物は `(waveHistory || [])` のように空白が入るので、空白を潰してから見る
     && compact.includes('bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp,false)'));
   check(`${rel}: モンビーの開け閉めでBGMを見直す`,
-    /autoBgmOverride, rhythmScreenOpen\]\);/.test(src));
+    // 2026-10-18: 依存の並びの後ろに eventLineBgm などが足されても、rhythmScreenOpen が入っていれば同じ
+    /autoBgmOverride, rhythmScreenOpen(?:, [A-Za-z_$][\w$]*)*\]\);/.test(src));
 
   // 前提: モンビーの画面はBGMのキーを持たない(だから止まる)
   if (file.includes('/src/')) {
@@ -79,7 +80,7 @@ for (const file of files) {
     // 生成物は書き方が変わるので、編集元だけで見る
     if (file.includes('/src/')) {
       check(`${rel}: モンビー中のSE消音に巻き込まれない（負けの音はBGM側）`,
-        src.includes('Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume)')
+        src.includes('Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume)')
         && !/setSeVolume[\s\S]{0,200}isGameOver/.test(src));
     }
   }

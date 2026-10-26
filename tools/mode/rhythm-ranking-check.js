@@ -81,11 +81,13 @@ check('キー解析: 接頭辞違い・部品数違い・知らない難易度�
 // 2026-09-05、先行公開が5曲・5難易度になったのでEXPERT/MASTERも合算へ入る。
 // 見張りたいのは「体験版で遊べる難易度と合算対象がずれていないこと」なので、
 // 数を決め打ちにせず RHYTHM_DEMO_DIFFICULTY_IDS から作った期待値と突き合わせる。
+// 2026-10-17: 曲ごとの順位は、4つ区切り(…-2)で届いた記録も一緒に読む(1つにつなげる)。今までの鍵の並びは同じ
+const membersV1=rhythmRankingCombinedMembers('song').filter(k=>k.split('-').length===3);
 check('合算対象は体験版で遊べる難易度と一致する(ずれたら気づく)',
-  JSON.stringify(rhythmRankingCombinedMembers('song'))
+  JSON.stringify(membersV1)
   ===JSON.stringify(RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>`Rhythm-song-${id}`)));
-check('いまの合算対象はEASY〜MASTERの5難易度',
-  JSON.stringify(rhythmRankingCombinedMembers('song'))
+check('いまの合算対象はEASY〜MASTERの5難易度(…-2 の記録も一緒に読む)',
+  rhythmRankingCombinedMembers('song').length===membersV1.length*2&&JSON.stringify(membersV1)
   ===JSON.stringify(['Rhythm-song-EASY','Rhythm-song-NORMAL','Rhythm-song-HARD','Rhythm-song-EXPERT','Rhythm-song-MASTER']));
 check('取得件数(200)は表示件数(50)より多い(重複ユーザーぶんを見込む)',
   Number(RHYTHM_RANKING_FETCH_LIMIT)>Number(RHYTHM_RANKING_DISPLAY_LIMIT));
@@ -178,7 +180,7 @@ check('1人1件に絞るときも同じ並べ方を使い、サーバーから�
 const tieDone=(async()=>{
   const at=game.indexOf('const RHYTHM_TIE_PAD = 20;'),end=game.indexOf('const rhythmTieWanted =',at);
   const pick=(name)=>(data.match(new RegExp(`^const ${name}=.*$`,'m'))||[''])[0];
-  const make=(reply)=>new Function('fetch',`const SUPABASE_URL='x',SB_HEADERS={},rankingLog=()=>{};\n${pick('rhythmRankingRowPrecise')}\n${at>=0&&end>at?game.slice(at,end):''}\nreturn {rhythmTieFix,asked:()=>_rhythmPreciseUnavailable};`)(reply);
+  const make=(reply)=>new Function('fetch',`const SUPABASE_URL='x',SB_HEADERS={},rankingLog=()=>{},rhythmRankingUrl=(u)=>u;\n${pick('rhythmRankingRowPrecise')}\n${at>=0&&end>at?game.slice(at,end):''}\nreturn {rhythmTieFix,asked:()=>_rhythmPreciseUnavailable};`)(reply);
   const rows=[{identity_key:'a',total_score:900,last_scored_at:'2026-10-14T01:00:00Z'},{identity_key:'b',total_score:900,last_scored_at:'2026-10-14T02:00:00Z'},
     {identity_key:'c',total_score:800,last_scored_at:'2026-10-14T00:00:00Z'},{identity_key:'d',total_score:900,last_scored_at:'2026-10-14T03:00:00Z'}];
   const ok=async(body)=>({ok:true,status:200,text:async()=>JSON.stringify(body)});

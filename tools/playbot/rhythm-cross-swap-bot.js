@@ -14,6 +14,8 @@
 //   --persona thumb|lean|normal --seed 3 --sigma 28 で人の指のくせを入れる(既定は くせ無し)
 //   --no-nudge 押さえている指がつられて動くくせだけ止める / --watch 33740 帯の暗さを見張るスライドの始まり(ms)
 //   --freeze 3 [--swap-skip 66800-68300] 時間が重なって横に交わるスライドの組を自動で見つけて持ち替える(区間を外すと指を交差させる)
+//   --abandon 106771:107339:108420[:110000] 自分の帯(106771始まり)を押さえる指が、108420ms から相手の帯(107339始まり)へ移って自分の帯を捨てる(--freeze 2 と同じ動き。
+//     4つ目を書くと、その時刻に自分の帯へ戻る。空中のスライドで外れて戻る場面を作る・2026-10-16 空中のスライドもチェックポイントで判定するようにしたときに足した)
 //   --touch-log <ファイル> 指の合図を曲の時刻つきで書き出す([時刻ms, s|m|e, 指の番号, x, y])
 //   --sky-adapt / --no-sky-adapt 空中の受け付けを構えに合わせる案A(mh_sky_reach_adapt_proto)を入/切にして遊ぶ(書かなければゲームの既定=入・2026-10-12 から)
 //   --travel 0.5 [--travel-ms 250] 親指の上下が届ききらない人(空中⇔地上を続けて押すとき、高さの半分の所で押す)
@@ -65,6 +67,8 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
   });
   await context.addInitScript(() => { window.__mhSupabaseStubbed = true; });
   await context.addInitScript(seed(SONG));
+  // TICK_PREVIEW=1 … 刻みの数え方(2026-10-17)を切り替えの時刻より前に試す(確認待ちの試作 mh_rhythm_tick_preview_proto)
+  if (process.env.TICK_PREVIEW) await context.addInitScript(() => { try { localStorage.setItem('mh_rhythm_tick_preview_proto', '1'); } catch (e) {} });
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
   const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
@@ -120,17 +124,18 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
   // --watch 33740,35000 で、帯の暗さ(slideOffForIndex)を見張るスライドの始まり(ms)を変える(既定は Sheriruth の交差の4本)
   if (arg('watch')) await page.evaluate((w) => { window.__watchMs = w; }, String(arg('watch')).split(',').map(Number));
   if (arg('swap-skip')) await page.evaluate((w) => { window.__swapSkip = w; }, String(arg('swap-skip')).split(',').map((r) => r.split('-').map(Number)));
-  await page.evaluate((mode) => {
-    const pairs = [[[106771, 107339], 108420], [[127367, 127772], 130700]];
+  const ABANDON = arg('abandon') ? String(arg('abandon')).split(':').map(Number) : null;
+  await page.evaluate(([mode, ab]) => {
+    const pairs = ab ? [[[ab[1], ab[0]], ab[2], ab[3] || Infinity]] : [[[106771, 107339], 108420], [[127367, 127772], 130700]];
     // mode 2: 2本目の帯(107339・127772)を押さえる指が、交わったあと相手の帯(106771・127367)に乗ったまま進む(自分の帯は捨てる=失敗するはず)
-    const seen = {}; const partner = { 107339: 106771, 127772: 127367 };
-    window.__laneNote = (n, now) => { const t = Math.round(Number(n.timeMs)); seen[t] = n; if (mode !== 2 || !partner[t]) return n; const p = pairs.find(([ids]) => ids.includes(t)); return now >= p[1] && seen[partner[t]] ? seen[partner[t]] : n; };
+    const seen = {}; const partner = ab ? { [ab[0]]: ab[1] } : { 107339: 106771, 127772: 127367 };
+    window.__laneNote = (n, now) => { const t = Math.round(Number(n.timeMs)); seen[t] = n; if (mode !== 2 || !partner[t]) return n; const p = pairs.find(([ids]) => ids.includes(t)); return now >= p[1] && now < (p[2] || Infinity) && seen[partner[t]] ? seen[partner[t]] : n; };
     // mode 1(社長の持ち替え): 指は親指を交差させず、それぞれの側に残る。右側で押し始めた指は、2本のうち右にある帯を、左の指は左にある帯を追う
     // mode 2: 2本目の帯を押さえる指が、交わったあと相手の帯に乗ったまま進む(自分の帯は捨てる)
     const other = { 106771: 107339, 107339: 106771, 127367: 127772, 127772: 127367 }; const startSide = {};
     window.__laneFor = (n, now, f) => { const t = Math.round(Number(n.timeMs)); seen[t] = n; const o = seen[other[t]];
       if (mode === 1 && o) { const mine = f(n, now), theirs = f(o, now); if (!startSide[t]) startSide[t] = mine >= theirs ? 'R' : 'L'; return startSide[t] === 'R' ? Math.max(mine, theirs) : Math.min(mine, theirs); }
-      if (mode === 2 && partner[t] && seen[partner[t]]) { const p = pairs.find(([ids]) => ids.includes(t)); if (now >= p[1]) return f(seen[partner[t]], now); }
+      if (mode === 2 && partner[t] && seen[partner[t]]) { const p = pairs.find(([ids]) => ids.includes(t)); if (now >= p[1] && now < (p[2] || Infinity)) return f(seen[partner[t]], now); }
       return f(n, now); };
     // mode 3(自動の持ち替え・2026-10-13): 時間が重なって横に交わるスライドの組を譜面から見つけ、指はそれぞれの側に残って、その側に来た帯を追う。
     // 高さもその側の帯に合わせる(__bandAt)。--swap-skip 66800-68300 の区間は持ち替えない(指を交差させる)
@@ -167,7 +172,7 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
         if (off && (!lastSp || lastSp[1] != null)) sp.push([song, null]); else if (!off && lastSp && lastSp[1] == null) lastSp[1] = song; }
       requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
-  }, Number(arg('freeze', 0)));
+  }, [ABANDON ? 2 : Number(arg('freeze', 0)), ABANDON]);
   // 演奏中のノーツはスライドの点から高さ(sky)が抜けているので、元の譜面(曲の表)から高さを引く
   await page.evaluate(([song, diff]) => {
     const all = [...(typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : []), ...(typeof RHYTHM_PROTO_SONGS !== 'undefined' ? RHYTHM_PROTO_SONGS : [])];
@@ -220,7 +225,7 @@ const player2 = player.replace(posLine, 'const pos = (() => { const q = fingerAt
   const { profile } = await cdp.send('Profiler.stop');
   console.log('判定', JSON.stringify(await page.evaluate(() => { const r = window.__mhTestHooks.rhythmNoteResults?.() || [], n = window.__mhTestHooks.rhythmNotes?.() || []; const h = {}; r.forEach(x => { if (x && x.judgment) h[x.judgment] = (h[x.judgment] || 0) + 1; });
     const sl = n.map((x, i) => [x, r[i]]).filter(([x]) => x.type === 'SLIDE' && [106771, 107339, 127367, 127772].includes(Math.round(x.timeMs))).map(([x, y]) => [Math.round(x.timeMs), y && y.judgment, y && y.done]);
-    return { 合計: h, 済み: r.filter(x => x && x.done).length, 見張ったスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
+    return { 合計: h, 刻み: window.__mhTestHooks.rhythmTickCounts?.(), 済み: r.filter(x => x && x.done).length, 見張ったスライド: Object.keys(window.__offMs).map(i => ({ 始まり: Math.round(n[i].timeMs), 判定: r[i] && r[i].judgment, 光った線: n[i].ticks,  暗かった秒: +(window.__offMs[i] / 1000).toFixed(2), 暗かった区間: window.__offSpans[i].slice(0, 8) })) }; })));
   // 外れたノーツの一覧(BAD_LIST=1): 時刻・種類・空中の高さ(タップの高さ/スライドの押し始めの高さ)
   if (TRAVEL > 0) console.log('届ききらずに押した回数', JSON.stringify(await page.evaluate(() => window.__travelLog)));
   if (arg('touch-log')) { const area = await page.evaluate(() => { const r = document.querySelector('[data-rhythm-play-area]').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, line: RHYTHM_JUDGMENT_LINE_Y.ratio, sky: typeof rhythmSkyLineRatio === 'function' ? rhythmSkyLineRatio() : null }; });

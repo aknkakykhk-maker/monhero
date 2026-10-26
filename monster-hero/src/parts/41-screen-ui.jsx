@@ -75,8 +75,10 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
       </button>
     )}
     <div className="min-w-0 flex-1">
-      <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
-      {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{note}</p>}
+      {/* 折り返す見出しは言葉の切れ目で折る(「マスモン一覧(モンヒロ／ビート)」と名前の途中で折れていた・2026-10-26) */}
+      <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{wrapTitle && typeof title === 'string' ? <span className="min-w-0" style={JA_WRAP_STYLE}>{jaWrap(title)}</span> : title}</h2>
+      {/* 注記は文字のときだけ言葉の切れ目で折る(2026-10-24。M/B管理「アシストカードは／ここ」と2字だけ落ちていた) */}
+      {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={typeof note === 'string' ? JA_LABEL_STYLE : undefined}>{typeof note === 'string' ? jaWrap(note) : note}</p>}
     </div>
     {right && <div className="shrink-0">{right}</div>}
   </header>
@@ -193,7 +195,7 @@ const ScreenSectionLabel = ({ children, note = '' }) => (
 // マーケットで作った形(2026-09-28)をここへ移し、どの画面からも同じ部品で出す。
 //   ModalFrame       … 窓の枠。safe-area を取り、外側を押すと閉じる(保存中など閉じてよくないときは onClose を渡さない)
 //   ModalCloseButton … 閉じる/キャンセルのボタン。文言は「閉じる」「キャンセル」の2つだけにそろえる
-//   QuantityStepper  … 数を選ぶ -10/-1/数/+1/+10 と MAX
+//   QuantityStepper  … 数を選ぶ -10/-1/数(直接打ち込める)/+1/+10 と MAX
 //   ConfirmSheet     … 「本当に〜しますか」の確認。本体の askConfirm から出す
 // ★窓の重なり順(z-index)は MODAL_Z の段から選ぶ。値をその場で書かない
 const MODAL_Z = Object.freeze({ dialog:42000, confirm:43000 });
@@ -205,6 +207,281 @@ const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, na
 const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
   <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
 );
+// 言葉の切れ目で折る(2026-10-20 改善部の見直し M3「継/承」「攻/撃」「ガッツ上/限」「スライ/ド」)。
+// 日本語は既定だとどの文字の間でも折れるので、幅ぴったりのときに言葉の途中で行が変わる。
+// Intl.Segmenter で言葉の切れ目に印(U+200B)を入れ、JA_WRAP_STYLE(keep-all)で印の所だけで折る。
+// 1行に入らない長い言葉だけは overflow-wrap:anywhere で折る(はみ出さない)。Segmenter の無い古い端末では今までどおり
+let _jaSegmenter;
+// jaWrapPoints: 折ってよい所に印(U+200B)を入れた文字。jaWrap はその印を <wbr> に変えて描く
+// 吹き出しのいちばん狭い1行に入る字数。ジャックの吹き出しは字11pxで本文120px(吹き出し144px)、狭い画面は字10pxで112px(136px)。
+// どちらも太字で10字入る(2026-10-24。69-screen-home.jsx の HOME_RAID_SAY_WIDTHS と、検査 tools/boot/ja-wrap-lines-check.js)
+const JA_WRAP_LINE = 10;
+// 文節の終わりになる言葉(このあとでは折ってよい)。助詞・句読点・閉じかっこ
+// (「な」「か」「って」は「強くな|ければ」「いって|らっしゃい」のように言葉の途中にも来るので入れない)
+const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/; // 記号は、ブラウザがそのあとを印が無くても折るので入れる
+// 道具(Intl.Segmenter)が読み違えて途中で切る、よく使う言葉(この中では折らない。2026-10-26 社長「ストーリーやバトルカードとかでも変なとこで切れる」
+//   「や/さしく」「ひと/とおり」「はね/返す」「しと/け」。検査 tools/boot/ja-wrap-word-check.js)
+const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
+const jaWrapPoints = (text) => {
+  const s = String(text ?? '');
+  if (!s) return s;
+  try {
+    if (_jaSegmenter === undefined) _jaSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter('ja', { granularity: 'word' }) : null;
+    if (!_jaSegmenter) return s;
+    // 印(U+200B)は「ここで折ってよい」の意味。道具(Intl.Segmenter)の言葉の切れ目に入れ、次の所には入れない。
+    // ・行の頭に来てはいけない字(「！」「、」「…」小さい字など)の前と、行の終わりに来てはいけない字(「「」「（」)の後ろ、空白の前後
+    //   (印は禁則より強いので、入れると「きたわい／！」と折れる。2026-10-21)
+    // ・「ご」「お」で始まる言葉の頭の1字のあと(「〜のご／ほうび」2026-10-21)
+    // ・文節の途中(ひらがなで始まる区切りの手前が助詞・句読点でない所。「いけ|ませ|ん」)。1字の助詞は前の言葉につなぐ(「仲間|に」「これ|は」)
+    //   ただし8字を超える文節は、中のよい所(「て・で」のあと、漢字・カタカナの前)で分ける
+    // ・閉じかっこ・「？」「！」のすぐあとのひらがな(「』|って言った」「？|ってとき」。ブラウザはそこを印が無くても折るので、jaKeepWhole で包む)
+    // ・顔文字(かっこの中に、かな・漢字・英数字・句読点以外の記号があるもの。(｡･ω･)ﾉﾞ・(っ`･ω･´)っﾌ など)の中。顔文字の手前では折ってよい
+    // そのうえで、最後のかたまり(終わりの顔文字の手前)が1〜2字(✨・♡も)なら手前とつなぐ(「いってらっしゃ／い〜」「であるぞ／！」)。
+    // 2026-10-24: 1字のひらがなを広くつなげた形(#3487)は、かたまりが長くなり狭い吹き出しでかえって崩れたのでやめた。
+    //   助手とジャックの台詞を全部、幅90〜300pxで描いて数える検査は tools/boot/ja-wrap-lines-check.js(最後の行が1〜2字・言葉の途中で折れた: 0件)
+    // 長さは句読点・記号も含めた見た目の字数で数える(「伝えてほしいでつ。」は字が8でも、句点を入れると9字ぶんの幅)
+    const visible = (t) => [...t.replace(/\s/g, '')].length;
+    const letters = (t) => (t.match(/[ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９Ａ-Ｚａ-ｖｘ-ｚ]/g) || []).length; // 笑いの「ｗ」は字に数えない
+    const kao = [];
+    for (const m of s.matchAll(/(?:ε-|[٩«ヾ＼ｦ-ﾟ])*[(（][^()（）\n]{1,14}[)）][っو۶»ﾉﾞ✧･‼❗!！\uFE0F]*/g)) {
+      if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
+    }
+    const inKao = (pos) => kao.some(([a, b]) => pos > a && pos < b);
+    const keepWords = [];
+    for (const w of JA_WORDS_KEEP) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) keepWords.push([i, i + w.length]);
+    const inKeepWord = (pos) => keepWords.some(([a, b]) => pos > a && pos < b);
+    // 道具が空白と「(」を1つの区切りにすることがあるので、空白のすぐあとから顔文字が始まる所も「始まり」とみなす
+    const kaoStart = (pos) => kao.some(([a]) => pos === a || (a > pos && /^\s+$/.test(s.slice(pos, a))));
+    const segs = [];
+    for (const { segment } of _jaSegmenter.segment(s)) {
+      // 道具は「これは|いけません」を「これ|はい|けませ」と、返事の「はい」に読むことがある。指す言葉のあとの「は〜」は「は」で分け直す
+      if (/^は[ぁ-ゖ]/.test(segment) && /^(?:これ|それ|あれ|どれ|ここ|そこ|あそこ|わたし|あたし|ワシ|吾輩|余)$/.test(segs[segs.length - 1] || '')) segs.push('は', segment.slice(1));
+      else segs.push(segment);
+    }
+    // ① 文節ごとにまとめる。かたまりは区切りの並び(parts)と、区切りごとの「固い(hard)・柔らかい(soft)」を持つ。
+    //   固い: 禁則・顔文字の中・空白の前後(ここでは切らない)。柔らかい: 文節や助詞の規則でつないだ所(長すぎるときだけ切る)
+    const groups = [];
+    let pos = 0;
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      if (i === 0) { groups.push({ parts: [seg], hard: [] }); pos += seg.length; continue; }
+      const prev = segs[i - 1], g = groups[groups.length - 1], cur = g.parts.join('');
+      const hard = inKao(pos) || inKeepWord(pos) || (!kaoStart(pos) && (
+        /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev)
+        // 「お」「ご」のあとは、ひらがなでも漢字でも離さない(「〜のご／ほうび」「お／相手」2026-10-26)
+        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg))
+        // 笑いの「笑」「w」だけを次の行の頭に落とさない(「楽しもうぜ／笑」「〜だって！／w」)
+        //   (「笑っちゃう」の「笑」は言葉なので、あとが文の終わり・空白・記号・w のときだけ)
+        || (/^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)))
+        // くっついた言葉(「読み|合い」「組み|直した」「起き|上がる」「吹っ|飛ばす」)。漢字+送り仮名のすぐあとの漢字は離さない(「少し」は1語なので除く)。
+        //   長い文節を分ける②でもここでは分けない(柔らかくつなぐと「噛み／合わない」と分けられた)
+        //   道具は「噛|み|合わ」と細かく分けるので、すぐ前の区切りではなく、それまでにまとめた文節(cur)の終わりで見る
+        || (/[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg))
+        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg))
+        // 数とそのあとの助数詞・単位は離さない(「1／曲ずつ」「5／倍」「30／%」「3回／目」。2026-10-26 クラフト)。
+        //   手前の「Lv.」「×」「約」「第」と数も離さない(「Lv.／12」「約／20秒」)
+        || (/[0-9０-９]$/.test(prev) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連万千百年月時%％]|時間|ms|px|P|Lv|コンボ|ノーツ|ビートP)/.test(seg))
+        || (/[0-9０-９][回人体個枚曲周倍つ番件位本段連]$/.test(cur) && /^目/.test(seg))
+        || (/(?:Lv\.?|LV\.?|×|x|約|第|全|各|計|最大|最高)$/.test(cur) && /^[0-9０-９]/.test(seg))
+        // カタカナどうしの間は離さない。道具は造語を「マス|モン」「モン|ヒロ|ビート」と分ける(2026-10-26 ダメダシ「(モンヒロ／ビート)」)。
+        //   合わせて7字まで(「ファームバトルカード」のように長いものまでつなぐと1行に入らず、字の途中で折れる)。
+        //   かぎかっこの中は名前ごと包む決まり(jaWrapPieces)に任せる(つなぐと「「フリーマッチ」／と……」と最後の行に字が残った)
+        || (/[ァ-ヶー]$/.test(prev) && /^[ァ-ヶ]/.test(seg) && !/[「『][^」』]*$/.test(cur) && (cur.match(/[ァ-ヶー]+$/) || [''])[0].length + (seg.match(/^[ァ-ヶー]+/) || [''])[0].length <= 7)));
+      const soft = !hard && !kaoStart(pos) && (
+        (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
+        || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
+        // ひらがなで始まる区切りは、手前が助詞・句読点のときだけ折る(文節で折る)。活用の途中(「いけ|ませ|ん」「強|く|な|け|れ|ば」「聞い|てい」)では折らない
+        || (/^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev))
+        // カタカナどうしで片方が1字の区切りは、道具が1語を割ったもの(「レ|ア」)。「モンスター|ファーム|バトル」のような長い言葉の区切りは残す
+        || (/^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1))
+        // お金の名前「カードポイント」「ビートポイント」「ブリーダーポイント」は1語(2026-10-24 改善部の点検 V4「カード/ポイント」と折れた)
+        || (/(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg))
+        // 「ビートP」「ブリーダーP」も1語(2026-10-26 見回り「ビート/P」と折れた。カードの売り場の吹き出し)
+        || (/(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg))
+        // カタカナのすぐあとの英字も1語(「ビート|Lv」2026-10-26)
+        || (/[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg))
+        // 1字の漢字のすぐあとの1字のひらがなは、助詞ではなく送り仮名(「強|が|らなくても」「強|く|なければ」)
+        || (/^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || ''))
+        // 「です・でつ・でしょ」の「で」は助詞ではない(「なんで|すか」「しないで|つよ」と折れた)
+        || (/で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg)));
+      if (hard || soft) { g.parts.push(seg); g.hard.push(hard); } else groups.push({ parts: [seg], hard: [] });
+      pos += seg.length;
+    }
+    // ①-2 終わりの顔文字(とそのうしろの「ﾌﾚｰｯ!」「ﾌﾞﾌｫｗ」のような、かな・漢字の無い飾り)は飛ばして、その手前の本文の最後の文節が
+    //   1〜2字(✨・♡も)なら手前とつなぐ(「いってらっしゃ／い〜」「であるぞ／！」)。長くなりすぎたら②で、語尾が短く残らない所で分け直す
+    {
+      const gText = (g) => g.parts.join('');
+      // 終わりから、顔文字と、かな・漢字の無い飾りを全部飛ばす(顔文字が2つ続く「(｡ ˘-˘)(｡ ˘_˘)ｳﾝｳﾝ」もある)
+      let at = s.length, k = groups.length - 1, sawKao = false;
+      while (k > 0) {
+        const t = gText(groups[k]), from = at - t.length;
+        if (kaoStart(from)) sawKao = true; else if (/[ぁ-ゖァ-ヶ一-龯]/.test(t)) break;
+        at = from; k--;
+      }
+      let end = sawKao ? k : groups.length - 1;
+      // 漢字で始まる最後の文節(「押す。」)は語尾ではなく言葉なので、つなぐと1行(10字)を超えるならつながない(1行に入らなくなる)
+      while (end > 0 && letters(gText(groups[end])) <= 2
+        && !(/^[一-龯]/.test(gText(groups[end])) && visible(gText(groups[end - 1]) + gText(groups[end])) > JA_WRAP_LINE)) {
+        const t = groups[end], h = groups[end - 1];
+        h.hard.push(false, ...t.hard); h.parts.push(...t.parts); groups.splice(end, 1); end--;
+      }
+    }
+    // ② 長すぎる文節を中で分ける。吹き出しの本文はいちばん狭くて約104〜112px(10字ほど)なので、10字を超えると1行からはみ出して
+    //   ブラウザに好きな所で折られる(「冷めてしまいます／ぞ」)。柔らかい区切りのうち、「て・で」のあと(冷めて|しまいますぞ)、
+    //   漢字・カタカナの前、の順に選ぶ。どちらの側も3字以上残し、なるべく真ん中で。空白は元から折れるので、空白で分けた部分ごとに数える
+    const runLetters = (parts) => Math.max(...parts.join('').split(/\s+/).map(visible));
+    const chunks = [];
+    const split = (g) => {
+      if (runLetters(g.parts) <= JA_WRAP_LINE || g.parts.length < 2) { chunks.push(g.parts.join('')); return; }
+      const total = visible(g.parts.join(''));
+      let best = -1, bestScore = -1;
+      for (let k = 1; k < g.parts.length; k++) {
+        if (g.hard[k - 1]) continue;
+        const left = visible(g.parts.slice(0, k).join('')), right = total - left;
+        // どちらの側にも字(かな・漢字)を3字以上残す。決まった言い方(「いって|らっしゃい」)の中では分けない
+        if (letters(g.parts.slice(0, k).join('')) < 3 || letters(g.parts.slice(k).join('')) < 3 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
+        const score = (/[てで]$/.test(g.parts[k - 1]) ? 300 : /^[一-龯ァ-ヶ]/.test(g.parts[k]) ? 200 : 100) - Math.abs(left - right);
+        if (score > bestScore) { bestScore = score; best = k; }
+      }
+      // 3字ずつ残せる所が無ければ、前だけ2字まで許す(「二度|おいしいってやつ。」)。後ろ(語尾)は3字を守る
+      if (best < 0) for (let k = 1; k < g.parts.length; k++) {
+        if (g.hard[k - 1]) continue;
+        const left = visible(g.parts.slice(0, k).join('')), right = total - left;
+        // 後ろは字が3字以上か、句読点も入れて4字以上(「せいいっぱい|でつ……。」)
+        if (letters(g.parts.slice(0, k).join('')) < 2 || (letters(g.parts.slice(k).join('')) < 3 && right < 4) || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
+        if (100 - Math.abs(left - right) > bestScore) { bestScore = 100 - Math.abs(left - right); best = k; }
+      }
+      if (best < 0) { chunks.push(g.parts.join('')); return; }
+      split({ parts: g.parts.slice(0, best), hard: g.hard.slice(0, best - 1) });
+      split({ parts: g.parts.slice(best), hard: g.hard.slice(best) });
+    };
+    groups.forEach(split);
+    // 道具が1語にした長いもの(「スパルタっていう」「チュートリアルって」)は、カタカナからひらがなへ変わる所で分ける
+    for (let k = 0; k < chunks.length; k++) {
+      const m = chunks[k].match(/^(.*[ァ-ヶー])([ぁ-ゖ].*)$/s);
+      // 境目を含む部分(空白で区切った中)が7字を超えるときだけ分ける
+      if (m && visible(m[1].split(/\s/).pop() + m[2].split(/\s/)[0]) > 7 && letters(m[1]) >= 2 && letters(m[2]) >= 2) chunks.splice(k, 1, m[1], m[2]);
+    }
+    return chunks.join('​');
+  } catch { return s; }
+};
+// 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
+const jaKeepWhole = (seg) => ([...seg].length <= JA_WRAP_LINE || (!/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14))
+  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
+  || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+// かたまり1つを、折らない枠で包む所([字, true])とそのままの所([字, false])に分ける(jaWrap と検査 ja-wrap-lines-check.js が使う)。
+// 空白で分けてから部分ごとに決める(空白をまたいで包むと、「大丈夫！ いってらっしゃい〜」が1行のまま吹き出しからはみ出した。2026-10-24)。
+// 長い部分(「『MONSTERS』で」)は、かぎかっこの名前や、閉じかっこ・？・！とその前後の字だけを包む。「。って」「、っぽい」も(ブラウザは句点のあとを折る)。
+// 「でつ……。」の三点リーダー、「……？💦」の終わりの絵文字も、手前の数字といっしょに包む(ブラウザはその手前を折る)
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const jaWrapPieces = (seg) => {
+  const out = [];
+  // 顔文字のかっこの中の空白((｡ ˘ω˘))では分けない
+  for (const part of String(seg).split(/(\s+)(?![^(（]*[)）])/)) {
+    if (!part) continue;
+    if (/^\s+$/.test(part)) out.push([part, false]);
+    else if (jaKeepWhole(part)) out.push([part, true]);
+    // かぎかっこの名前は「「」からまとめて包む(「「ドラシ／ル」だって」と名前の中で折れた)。1行(10字)に入らないものは包まず、閉じかっこのあとで折れるのに任せる
+    else if (/[」』？！?!][ぁ-ゖ笑ｗwW]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+      if (!t) return;
+      if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) { out.push([t, k % 2 === 1]); return; }
+      // 10字を超える「かぎかっこの名前+あとの字」は、名前だけを包む(「「チュートリア／ル」から」と名前の中で折れた)
+      const m = t.match(/^([「『][^「」『』]+[」』])(.*)$/s);
+      if (m && [...m[1]].length <= JA_WRAP_LINE) out.push([m[1], true], [m[2], false]); else out.push([t, false]);
+    });
+    else out.push([part, false]);
+  }
+  return out;
+};
+const jaWrap = (text) => {
+  const s = jaWrapPoints(text);
+  if (typeof s !== 'string' || !s.includes('\u200B')) return s;
+  // ブラウザは「…」「～」「♡」・絵文字・顔文字の手前や中を、印が無くても折り目として扱う。「入れんのじゃ／……」「(っ`･／ω･´)」と
+  // 崩れないよう、それを含む14字までのかたまりは折らずに置く(2026-10-24。見えない字は足さない)
+  const keep = (t, k) => <span key={k} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>;
+  // 空白で始まるかたまりの手前には印(<wbr>)を置かない。空白はもともと折れるうえ、「折らない枠」+<wbr>+「空白で始まる字」の並びで
+  // Chromium が落ちた(行の長さをそろえる text-wrap: balance・pretty のとき。2026-10-24 台詞「本当に極限…！ (>人<;)」で見つけた)
+  return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : t))}</React.Fragment>);
+};
+// 太字(<b>)などが混ざった文用。文字の部分だけを jaWrap に通す(2026-10-26 マスモン設定「金色のノー／ツに」)。JA_WRAP_STYLE と一緒に使う
+const jaWrapParts = (...parts) => parts.map((p, i) => <React.Fragment key={i}>{typeof p === 'string' ? jaWrap(p) : p}</React.Fragment>);
+// textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
+const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
+// 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
+// (「音が出ないと／き」「得意な曲を／見る」のように、最後の行に1〜2字だけ残らない)。jaWrap と一緒に使う
+const JA_LABEL_STYLE = Object.freeze({ ...JA_WRAP_STYLE, textWrap: 'balance' });
+// 大きな所持数を縮めて出す(2026-10-21 改善部の見直し N5「ダイヤが10桁になると HOME(320)の数が約6px まで縮む」)。
+// 8桁まではそのまま(1,234,567 のように)。9桁(1億)からは「1.23億」「67.3億」「6,736億」、13桁からは「兆」で、上から3桁ぶん。
+// 切り上げると持っていない数に見えるので、端は切り捨てる。保存値は変えない(出し方だけ)
+const compactCount = (value) => {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return '0';
+  const a = Math.abs(n);
+  if (a < 1e8) return n.toLocaleString();
+  const [unit, div] = a >= 1e12 ? ['兆', 1e12] : ['億', 1e8];
+  const v = a / div, digits = v >= 100 ? 0 : v >= 10 ? 1 : 2, f = Math.pow(10, digits);
+  return `${n < 0 ? '-' : ''}${(Math.floor(v * f) / f).toLocaleString(undefined, { maximumFractionDigits: digits })}${unit}`;
+};
+// 縮めた数。押すと細かい数が小さな札で出る(2.5秒で消える)。縮めていないときはふつうの字のまま
+const CompactCount = ({ value, className = '', style }) => {
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => { if (!open) return undefined; const t = setTimeout(() => setOpen(false), 2500); return () => clearTimeout(t); }, [open]);
+  const exact = (Math.floor(Number(value)) || 0).toLocaleString();
+  const text = compactCount(value);
+  if (text === exact) return <b className={className} style={style}>{text}</b>;
+  return <b role="button" tabIndex={0} data-compact-count={exact} aria-label={exact} title={exact} className={`${className} relative cursor-pointer`} style={style}
+    onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(o => !o); } }}>
+    {text}{open && <span data-compact-count-exact className="absolute right-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg border border-amber-300/60 bg-slate-950 px-2 py-1 text-[12px] font-black text-amber-200 shadow-lg">{exact}</span>}
+  </b>;
+};
+// ノーツの見本の絵(2026-10-21 社長「見た目とかちゃんとわかるようにしてほしい」)。ヘルプの表と助手のおしゃべりで使う。
+// 絵は演奏画面と同じ描き方(data/rhythm-mode.js の rhythmDrawNoteSwatch)で描く。手描きの絵や写真は使わない。kind は RHYTHM_NOTE_SWATCH_KINDS の id
+const RhythmNoteSwatch = ({ kind, width = 54, height = 42, className = '' }) => {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const c = ref.current;
+    if (!c || typeof rhythmDrawNoteSwatch !== 'function') return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    c.width = Math.round(width * dpr); c.height = Math.round(height * dpr);
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, width, height);
+    rhythmDrawNoteSwatch(g, kind, width, height);
+  }, [kind, width, height]);
+  const label = ((typeof RHYTHM_NOTE_SWATCH_KINDS !== 'undefined' ? RHYTHM_NOTE_SWATCH_KINDS : []).find(k => k.id === kind) || {}).label || kind;
+  return <canvas ref={ref} data-rhythm-note-swatch={kind} role="img" aria-label={`${label}の見た目`} className={className} style={{ display: 'block', width, height }} />;
+};
+// 数を直接打ち込む欄(2026-10-19 社長「マーケットのアイテムは直接数値入力で買えるようにしよう！」、
+// 2026-10-20「個数系のやつは基本的に直接入力があったほうがいいね」)。★個数・回数・枚数を選ぶ所は、この欄を使う
+//   (−/＋/MAX のボタンは呼ぶ側に並べたまま。tools/boot/count-input-check.js が見張る)
+// ・数字のキーボード(inputMode=numeric)。字は20px(16px未満だと iPhone で欄を押したときに画面が拡大される)
+// ・打っている途中でも、数として読めたら min〜max にそろえてすぐ onChange へ渡す(合計などの表示が追いつく)
+// ・空・min未満のあいだは min として数え、max を超えたら max にそろえる。小数は点より前だけ。全角数字も読む
+// ・欄に出すのは、打った字がいまの数と合うときだけ打った字、合わなければいまの数(−/＋ を押したら数が出し直される)
+const countInputClamp = (n, min, max) => Math.min(Math.max(min, n), Math.max(min, max));
+const CountInput = ({ value, max, min=1, onChange, unit='', label='数', className='', disabled=false, dataAttrs={} }) => {
+  const safeMin=Math.max(0, Math.floor(Number(min)||0));
+  const safeMax=Math.max(0, Math.floor(Number(max)||0));
+  const current=countInputClamp(Math.floor(Number(value)||safeMin), safeMin, safeMax);
+  const [draft,setDraft]=React.useState(null);
+  const readDraft=(raw)=>{
+    const digits=String(raw||'').split(/[.,．。]/)[0].replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[^0-9]/g,'');
+    const n=parseInt(digits,10);
+    return { digits, n:Number.isFinite(n)?n:null };
+  };
+  const type=(raw)=>{
+    const { digits, n }=readDraft(raw);
+    if(n!==null&&n>Math.max(safeMin,safeMax)) { const top=Math.max(safeMin,safeMax); setDraft(String(top)); onChange&&onChange(top); return; }
+    setDraft(digits);
+    onChange&&onChange(countInputClamp(n===null?safeMin:n, safeMin, safeMax));
+  };
+  const draftMatches=draft!==null&&countInputClamp(readDraft(draft).n??safeMin, safeMin, safeMax)===current;
+  return <input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" data-quantity-input {...dataAttrs}
+    aria-label={`${label}（${safeMin.toLocaleString()}〜${Math.max(safeMin,safeMax).toLocaleString()}${unit}）`}
+    disabled={disabled||safeMax<safeMin||safeMax<=0} value={draftMatches?draft:String(current)} onChange={(e)=>type(e.target.value)}
+    onFocus={(e)=>e.target.select()} onBlur={()=>setDraft(null)} onKeyDown={(e)=>{ if(e.key==='Enter') e.currentTarget.blur(); }}
+    style={{fontSize:20}} className={`min-h-[44px] min-w-0 rounded-xl border border-white/20 bg-black/40 px-1 text-center font-black font-mono text-white outline-none focus:border-amber-300 disabled:opacity-40 ${className}`}/>;
+};
 // value は 1〜max に収めてから onChange へ渡す。max が 0 のときは何も増やせない(MAX も押せない)
 const QuantityStepper = ({ value, max, onChange, unit='個', maxClass='' }) => {
   const safeMax=Math.max(0, Math.floor(Number(max)||0));
@@ -215,7 +492,7 @@ const QuantityStepper = ({ value, max, onChange, unit='個', maxClass='' }) => {
     <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
       <button type="button" disabled={count<=1} onClick={()=>setCount(count-10)} className={stepClass}>-10</button>
       <button type="button" disabled={count<=1} onClick={()=>setCount(count-1)} className={stepClass}>-1</button>
-      <strong className="text-center text-xl font-black font-mono">{count}</strong>
+      <CountInput value={count} max={safeMax} onChange={setCount} unit={unit} className="w-full"/>
       <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+1)} className={stepClass}>+1</button>
       <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+10)} className={stepClass}>+10</button>
     </div>
@@ -233,7 +510,7 @@ const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, bo
       className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
     <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
       <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
     </div>
   </ModalFrame>
@@ -246,7 +523,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
     {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
     <div className="mt-4 grid grid-cols-1 gap-2">
       <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
     </div>
   </ModalFrame>
 );
@@ -371,7 +648,7 @@ const TrainingResultFx = ({ effect }) => {
       </div>
       {effect.guard && <div className="mh-train-guard shrink-0 w-full max-w-sm rounded-2xl border border-sky-300/50 bg-sky-950/70 px-3 py-1.5 text-center" style={{'--d': `${350 + entries.length * 260 + 300}ms`}}>
         <div className="text-[13px] font-black text-sky-200">🛡️ {effect.guard.title}</div>
-        <div className="text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line">{effect.guard.text}</div>
+        <div className="text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line">{helpWrap(effect.guard.text)}</div>
       </div>}
     </div>
   );
@@ -428,7 +705,7 @@ const TeachingResultFx = ({ effect }) => {
         ))}
       </div>
       <div className="mh-train-gain text-[12px] font-black text-purple-200" style={{'--d': '450ms'}}>{isUpgrade ? `Lv.${effect.fromLevel} → Lv.${effect.toLevel} に強化！` : '新しく習得しました！'}</div>
-      {effect.desc && <div className="mh-train-card mh-ph-panel w-full max-w-sm rounded-2xl px-3 py-2 text-[11px] font-bold leading-snug text-slate-100" style={{'--d': '300ms'}}>{effect.desc}</div>}
+      {effect.desc && <div className="mh-train-card mh-ph-panel w-full max-w-sm rounded-2xl px-3 py-2 text-[11px] font-bold leading-snug text-slate-100" style={{'--d': '300ms'}}>{helpWrap(effect.desc)}</div>}
     </div>
   );
 };

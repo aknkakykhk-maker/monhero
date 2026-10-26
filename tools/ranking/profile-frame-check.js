@@ -110,7 +110,7 @@ if (!frameBlock) { console.log(`\n${failed}件のNGがあります`); process.ex
 
 const ctx = { BREEDER_MARKET_ITEMS: [] };
 vm.createContext(ctx);
-vm.runInContext(`${frameBlock}\n this.out={PROFILE_FRAME_NONE_ID,PROFILE_FRAME_KEY,PROFILE_FRAMES,PROFILE_FRAME_HOLE_FIT,profileFrameById,profileFrameImageStyle,normalizeProfileFrameId,releasedProfileFrames,rankingProfileFrameValue,profileFrameSale,profileFrameOwned};`, ctx);
+vm.runInContext(`${frameBlock}\n this.out={PROFILE_FRAME_NONE_ID,PROFILE_FRAME_KEY,PROFILE_FRAMES,PROFILE_FRAME_HOLE_FIT,profileFrameById,profileFrameImageStyle,normalizeProfileFrameId,releasedProfileFrames,rankingProfileFrameValue,profileFrameSale,profileFrameOwned,profileFrameGift};`, ctx);
 const F = ctx.out;
 
 check('保存キーは新設の mh_profile_frame_v1', F.PROFILE_FRAME_KEY === 'mh_profile_frame_v1', F.PROFILE_FRAME_KEY);
@@ -179,7 +179,8 @@ check('画像フレームは base64 で埋め込んでいない',
 // ★released(描いてよいか) と unlock(自分が選べるか) は別物。一緒にすると
 //   「解放した人の枠が他人のランキングで消える」(2026-09-16)
 check('画像フレームは、公開するなら必ずもらう条件が付いている',
-  imageFrames.every(frame => frame.released !== true || (frame.unlock && frame.unlock.assistantId) || F.profileFrameSale(frame)),
+  // 2026-10-20 からはプレゼントで届く枠(unlock.gift・ハロウィン・妖)もある
+  imageFrames.every(frame => frame.released !== true || (frame.unlock && frame.unlock.assistantId) || F.profileFrameSale(frame) || (typeof F.profileFrameGift === 'function' && F.profileFrameGift(frame))),
   imageFrames.filter(frame => frame.released === true && !frame.unlock).map(f => f.id).join(', ') || `${imageFrames.length}枚`);
 check('もらう条件つきの枠は、他人の記録なら描いてよい(選べるかとは別)',
   imageFrames.filter(frame => frame.unlock).every(frame => F.normalizeProfileFrameId(frame.id) === frame.id));
@@ -211,6 +212,19 @@ for (const frame of imageFrames) {
     style.width === style.height && parseFloat(style.width) > 100 && style.maxWidth === 'none'
     && Math.abs(parseFloat(style.left) + (box - 1) / 2 * 100) < 0.01 && style.left === style.top,
     `${style.width} / left ${style.left}`);
+}
+// ===== ①-3 小さく出す所(28〜32px)用に前もって縮めた絵(srcSmall・2026-10-19) =====
+// 大きい絵をその場で縮めると細かい飾りが点のように潰れた(マルチの部屋の上の並び・チャット)。
+// 小さい版は同じ穴の比で重ねるので、穴が大きい絵とそろっていること・軽いことを見る
+for (const frame of imageFrames) {
+  const small = String(frame.srcSmall || '');
+  check(`${frame.id}: 小さく出す所用の絵がある`, /^images\/profile-frames\/small\/[a-z0-9-]+\.png(\?v=[0-9a-f]+)?$/.test(small) && small.split('?')[0].split('/').pop() === String(frame.src || '').split('?')[0].split('/').pop(), small);
+  const file = path.join(ROOT, 'monster-hero', small.split('?')[0]);
+  if (!small || !fs.existsSync(file)) { check(`${frame.id}: 小さい絵が置いてある`, false, small); continue; }
+  const m = measureFramePng(file);
+  check(`${frame.id}: 小さい絵は正方形で、32px×画素密度3に足りて、軽い`,
+    m.width === m.height && m.width >= 96 && m.width <= 256 && m.bytes <= 24 * 1024, `${m.width}px / ${(m.bytes / 1024).toFixed(1)}KB`);
+  check(`${frame.id}: 小さい絵の穴が大きい絵とそろう`, Math.abs(m.hole - Number(frame.hole)) <= 0.03, `書いてある ${frame.hole} / 小さい絵 ${m.hole.toFixed(3)}`);
 }
 check('穴の大きさが取れない絵は保険の大きさへ倒れる',
   [{}, { hole: 0 }, { hole: 3 }, { hole: 'x' }].every(f => F.profileFrameImageStyle(f).width === '132.00%'));
@@ -264,7 +278,8 @@ check('図鑑のモンスターアイコンに枠を付けていない', !/const
 //   frameId を書いてよいのは、type==='frame' の枝(MarketProductIcon の先頭)の1か所だけ
 check('マーケットの商品画像に枠を付けていない(フレームそのものを売る商品だけが例外)',
   (widgets.match(/const MarketProductIcon[\s\S]*?\n};\n/)?.[0].match(/frameId/g) || []).length === 1
-  && /if\(item\.type==='frame'\)\{[\s\S]{0,700}frameId=\{item\.id\}/.test(widgets));
+  // 2026-10-20 に枠の大きさの計算(商品名に重ならないよう縮める)を枝の頭へ足したので、範囲を広げた
+  && /if\(item\.type==='frame'\)\{[\s\S]{0,1600}frameId=\{item\.id\}/.test(widgets));
 check('円盤石・通常のモンスター画像に枠を付けていない',
   !/DyedMonsterImage[^\n]{0,200}frameId/.test(app) && !/DyedMonsterImage[^\n]{0,200}frameId/.test(widgets));
 

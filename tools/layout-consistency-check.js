@@ -116,9 +116,11 @@ check('モードのタブはランキングでは出さない',
 // 2026-09-18: 枠の高さに加えて「上寄せ(items-start)」もここで見る。中央寄せに戻すと、
 // 1行で収まる品だけが枠の真ん中へ降りて、2行の品の1行目と高さがそろわなくなる。
 check('商品名は行数が変わっても同じ高さの枠に入れる',
-  has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>")
+  (has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>")
+    // 2026-10-21: 画面全体の text-wrap:pretty を外すため textWrap:'wrap' を足した
+    || has("style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>"))
     // 名前に全角のかっこ（ ）を含む長い商品は文字を10pxに小さくする条件が足され、class が文字列から式(テンプレート)になった(2026-10)
-    && /w-full flex items-start justify-center text-center \$\{[^}]*\}[\s\S]{0,40}font-black leading-tight/.test(source));
+    && /w-full flex items-start justify-center text-center \$\{[\s\S]{0,300}?\}[\s\S]{0,40}font-black leading-tight/.test(source));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
 // 2026-09-10(STEP 6-6)にマーケットを切り出したので、画面は onOpenItemDetail を呼び、
 // 本体がそれに setMarketItemDetail を渡す形になった
@@ -160,8 +162,31 @@ check('購入ボタンの通貨表示がカード内に収まる',
     && has('usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>')
     // 勇者の証は名前が長いので、字を小さくして1行(whitespace-nowrap)に収めている
     && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
-// 予告の札は既定で「近日追加」。ビートP交換所の円盤石だけ「先行公開予定」と書く(札の形は同じ)
-check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">{comingSoonLabel}</div>') && has("comingSoonLabel='近日追加'") && has('rounded-full whitespace-nowrap">所持済み</div>'));
+// 予告の札は既定で「近日追加」。ビートP交換所の円盤石だけ「先行公開予定」と書く(札の形は同じ)。
+// 2026-10-20 から、鍵つきフレームの札(条件の短い文)は言葉の切れ目で2行まで折ってよい(#3199・#3200・#3205)。
+// 見るのは「2行まで・言葉の途中で折らない・いちばん長い語が1行に入る大きさ」。所持済みの札は1行のまま
+{
+  const vm = require('vm');
+  const widgets = fs.readFileSync(path.join(root, 'monster-hero/src/parts/20-market-notices-help.jsx'), 'utf8');
+  const take = (name) => { const at = widgets.indexOf(`const ${name} = `); return at >= 0 ? widgets.slice(at, widgets.indexOf(';\n', at) + 2) : ''; };
+  const lc = {}; vm.createContext(lc);
+  vm.runInContext(`${take('MARKET_LABEL_WRAP_AFTER')}\n${take('marketLabelSegments')}\nthis.out={marketLabelSegments};`, lc);
+  // 鍵つきフレームの札の文を、本物のフレームの定義から作る(名前を引く表は仮の名前でよい・数えるのは区切りの数)
+  const breeder = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
+  const fStart = breeder.indexOf('const PROFILE_FRAME_NONE_ID'), fEnd = breeder.indexOf('\n};', breeder.indexOf('const nextProfileFrameForAssistant')) + 3;
+  const fc = { BREEDER_MARKET_ITEMS: [], ALL_PLAYER_MONSTERS: new Proxy({}, { get: () => ({ name: 'モッチー' }) }), MONSTER_LINEAGES: new Proxy({}, { get: () => ({ name: 'モッチー' }) }),
+    DIFFICULTY_SETTINGS: new Proxy({}, { get: () => ({ label: 'Master' }) }), RAGNAROK_SETTING: { japanese: 'ラグナロク' } };
+  vm.createContext(fc);
+  vm.runInContext(`${breeder.slice(fStart, fEnd)}\nthis.out={PROFILE_FRAMES,profileFrameConditionShort};`, fc);
+  const frameLabels = fc.out.PROFILE_FRAMES.flatMap(f => ['breederPoint', 'beatPoint'].map(shop => fc.out.profileFrameConditionShort(f, shop))).filter(Boolean);
+  const labels = ['近日追加', '先行公開予定', '条件を達成すると買えます', ...frameLabels];
+  const over = labels.filter(l => lc.out.marketLabelSegments(l).length > 2);
+  check('予告の札は言葉の切れ目で2行まで(言葉の途中では折らない)',
+    has('data-market-coming-soon-label') && has("wordBreak:'keep-all'") && has('fontSize:marketLabelFitSize(comingSoonLabel)')
+      && has('{marketLabelNodes(comingSoonLabel)}') && has("comingSoonLabel='近日追加'") && frameLabels.length > 0 && over.length === 0,
+    `札 ${labels.length}種(フレームの条件 ${frameLabels.length})${over.length ? ` / 3行以上: ${over.map(l => [].concat(l).join('')).join('、')}` : ''}`);
+  check('所持済みの札は折り返さない', has('rounded-full whitespace-nowrap">所持済み</div>'));
+}
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
 check('ききの拡大量を1か所の表で持ち、縦横比と円形クリップを保つ',
@@ -206,10 +231,9 @@ const COMPONENT_OWNED_SCREENS = {
   // 元からスクロール領域を持たない。2026-09-10 に画面を切り出して初めてそれが見えた
   // (それまでは 9000 文字の窓が隣の画面へはみ出し、隣の overflow-y-auto を拾って通っていた)
   MONSTER_ATTACK_PREVIEW: 'MonsterAttackPreviewScreen（演出を見せる専用画面。元からスクロールしない）',
-  // レイドの編成画面は RaidJackPrepScreen、配置画面は PickSlotScreen が持ち主(どちらも中で縦スクロールする)。
+  // レイドの編成画面は RaidJackPrepScreen が持ち主(中で縦スクロールする。距離もここで決める)。
   // 呼び出しが <> で包まれていたり IIFE の中だったりして、分岐の周りには overflow-y-auto が出てこない
   RAID_JACK_PREP: 'RaidJackPrepScreen（79-screen-raid-jack.jsx。一覧の中で縦スクロールする）',
-  RAID_JACK_PLACE: 'PickSlotScreen（配置画面。中身の領域がスクロールする）',
 };
 // 共有層(10〜30番台の部品)に置いてある画面部品の中身を取り出す。
 // 定義の先頭から、次のトップレベル定義の手前までを1つの部品とみなす。
@@ -279,7 +303,7 @@ check('神殿の一覧はスクロールできる(横画面で「限界突破」
 check('HOMEに横画面用の配置がある', has('@media(orientation:landscape) and (max-height:600px){.mh-home-assistant'));
 check('HOMEは小さい端末向けの調整がある', has('@media(max-width:350px)') && has('@media(max-height:620px)'));
 check('難易度タブは背の低い端末で縦スクロールできる',
-  has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>'));
+  has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度をえらぶ</div>'));
 
 // --- ⑤ バトルの強化の札は、いくつ付いても高さが変わらない(2026-09-20 ユーザー指摘) ---
 // ★もとは flex-wrap で何行にも伸び、強化が増えると敵の絵・「緊急」のボタン・与ダメの数字を

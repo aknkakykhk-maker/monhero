@@ -75,6 +75,7 @@ node tools/monster/monster-stats-table.js --hp 420 --guts 140 --atk 200 --def 40
 | 固有技の名前・倍率・消費ガッツ・効果 | バン / 2.1倍 / 42 / 次ターン、カード消費ガッツ0 | 倍率と消費は連動する(下記) |
 | 血統(`main`/`sub`)と区分 | `pixie` / `unknown` | 既存の血統一覧を見せて |
 | 円盤石の値段 | 150000 | だいたい150000で固定(2026-09-28に100倍へ) |
+| タイプ(メイン1つ + サブ任意) | `supporter` / サブ `attacker` | `MONSTER_TYPES` の5つ(アタッカー・タンク・サポーター・ヒーラー・シャドウ)から案を出して確認 |
 
 **答えが分かれそうなもの・好みで決まるもの(特性の方向性、固有技の効果、名前)は
 選択肢を並べて質問の形で聞く。** 数値は②の表を添えて聞く。
@@ -115,6 +116,7 @@ node tools/monster/monster-stats-table.js --hp 420 --guts 140 --atk 200 --def 40
 | 9 | `parts/60-app.jsx` ほか | 勇者特性・固有技の**実効果のID分岐**(§5)。表示だけでは何も起きない |
 | 10 | `tools/monster/idle-rig-build.js` | **待機アニメ**の `RIGS`(§6)。全20種が持っている。2026-09-24に入った |
 | 10 | `tools/monster/idle-rig-build.js` | `RIGS` へ1体(待機アニメ。動かす部分が無い子も `body` だけ書く)→ `node tools/monster/idle-rig-build.js`。バトルと図鑑の両方で動く(図鑑の側は触らない) |
+| 11 | `parts/32-tactics-units.jsx` | `MONSTER_TYPE_OF[id]={main,sub}`(タイプ。タクティクスのヘイトの増え方にだけ効く)。無いと `battle/tactics-hate-check.js` が止める。特別に狙われやすく/にくくしたい子だけ `TACTICS_HATE.monsters[id]` に上書き |
 
 ### `ALL_PLAYER_MONSTERS` のフィールド
 

@@ -8,6 +8,11 @@
 // NEW の印は「まだ一度も入/切を押していない試作」に付く(押した試作は mh_debug_trials_seen_v1 に覚える)。
 // デバッグ専用(更新履歴・ヘルプに載せない)。判定・セーブデータの中身には触らない
 const DEBUG_TRIALS = [
+  // 2026-10-16 社長「モンスターノーツでかくつくの直ってない」。見た目は変わらない。入と切で同じ曲を1回ずつ遊ぶと、記録(stats.mon)で比べられる
+  { id: 'rhythm_mon_layers', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_mon_layers_v1', on: 'on',
+    title: '🎵 モンスターノーツのかくつきの手当て',
+    note: 'モンスターノーツを取ったときに大きくなる両サイドのマスモンと光の輪を、曲の前から用意しておきます(見た目は変わりません)。入と切で同じ曲を1回ずつ遊ぶと、どちらがかくつかないかを記録で比べられます',
+    when: '次の演奏から' },
   { id: 'bgm_light', added: '2026-10-16', area: '音', key: 'mh_bgm_light_v1', on: 'on',
     title: '🔊 場面のBGMを軽く持つ',
     note: 'タイトル・ホーム・バトルなどの BGM を軽くして(少しこもることがあります)、持つ曲を2本までにします。長く遊んだときのメモリ不足の手当てです。モンヒロビートの曲・効果音は変わりません',
@@ -21,8 +26,28 @@ const DEBUG_TRIALS = [
     title: '🎵 床と空中の見た目(試作2)',
     note: '色を抜いても高さで見分けられるように、空中のノーツの真下の床に濃い影と白い導線を出し、箱を宙に立てます。空中スライドは床の影と帯の下の薄い幕で浮いたリボンにします。判定は変わりません',
     when: '次の演奏から' },
+  // 試作3(2026-10-16 社長「全然だめだね。もっと立体感出せないの？」)。同じキーの値 on3
+  { id: 'rhythm_floor3d3', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'on3',
+    title: '🎵 床と空中の見た目(試作3・立体)',
+    note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
+    when: '次の演奏から' },
+  // 案3の2段目(2026-10-16)。同じキーの値 c3b。道の遠近と押す場所の計算を一緒に替える
+  { id: 'rhythm_floor3d_c3b', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'c3b',
+    title: '🎵 空中の見た目(案3+カメラを寝かせる)',
+    note: '案3の見た目に加えて、カメラを寝かせて道を奥へ深くします(遠くのノーツは小さく、手前で速く近づきます)。押す場所も同じ計算でそろって変わるので、見た目と押す場所はずれません。判定の時刻・色は変わりません',
+    when: '次の演奏から' },
+  // 案3の1段目(2026-10-16 社長「案3までやる」)。同じキーの値 c3。2段目(カメラを寝かせる)はこのあと
+  { id: 'rhythm_floor3d_c3', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'c3',
+    title: '🎵 空中の見た目(案3・明るい板と光の帯)',
+    note: '空中のタップを明るく薄い板と光る縁に、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。地上と道は今のまま。色・判定は変わりません',
+    when: '次の演奏から' },
+  // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
+// タクティクスのヘイト・モンスターのタイプ表記(表と式は 32-tactics-units.jsx)。2026-10-18 に公開し、試作の一覧から外した。
+// いまは公開の印 RELEASE_FLAGS.tacticsHate だけで決まる(試作のときのキー mh_tactics_hate_proto_v1 / mh_monster_type_proto_v1 は読まない・消さない)
+const tacticsHateProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
+const monsterTypeProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
 const debugTrialRead = (trial) => { try { return typeof localStorage !== 'undefined' && localStorage.getItem(trial.key) === trial.on; } catch (e) { return false; } };
 const debugTrialWrite = (trial, on) => { try { if (on) localStorage.setItem(trial.key, trial.on); else localStorage.removeItem(trial.key); } catch (e) {} return debugTrialRead(trial); };
 const debugTrialsSeen = () => { try { const v = JSON.parse(localStorage.getItem(DEBUG_TRIALS_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } };

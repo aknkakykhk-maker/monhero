@@ -101,7 +101,7 @@ for (const file of files) {
     /kikiIntroPlaying[\s\S]{0,200}EVENT_BGM_SCENES\.kiki_intro/.test(source) &&
     /eventReplay\s*\?\s*\(?EVENT_BGM_SCENES\[eventReplay\.id\]\s*\|\|\s*null\)?\s*:\s*null/.test(source));
   check(`${file}: イベントが終われば元の画面のBGMへ戻る（依存に入れて鳴らし直す）`,
-    /bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?(?:, autoBgmOverride)?(?:, rhythmScreenOpen)?\]/.test(source));
+    /bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?(?:, autoBgmOverride)?(?:, rhythmScreenOpen)?(?:, cardScreenOpen)?(?:, eventLineBgm)?(?:, cardBgm)?\]/.test(source)); // eventLineBgm … 会話イベントの途中で曲を替える(2026-10-17) / cardBgm … カードバトルの画面で曲を替える(2026-10-24) / cardScreenOpen … カードから戻った最初の1回は鳴らし直す(2026-10-24)
   check(`${file}: 旧保存のデュラハン・boss選択を新規キーへ継承`,
     /quickMoo:'boss'/.test(compact) && /proDullahan:'dullahan'/.test(compact) && /proMoo:'boss'/.test(compact) &&
     /extremeDullahan:'dullahan'/.test(compact) && /extremeMoo:'boss'/.test(compact) && /BGM_TRACK_BY_ID\[legacySaved\]/.test(source));

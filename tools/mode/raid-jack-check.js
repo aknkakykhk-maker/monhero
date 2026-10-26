@@ -43,8 +43,9 @@ check('A のライフは 175万 / 320万 / 800万 / 3,500万 / 8,000万(ユー�
   const mk = (id, n, extra = {}) => dj({ difficultyId: id, judgments: { MARVELOUS: n }, precise: n, maxCombo: n, ...extra });
   check('モンヒロビート挑戦: 判定の割合(ジャスト1.0 / マーベラス0.95 / エクセレント0.70 / グレート0.50 / グッド0.25 / バッド-0.15 / ミス-0.30)',
     JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_JUDGMENT_RATES)) === JSON.stringify([1.0, 0.95, 0.70, 0.50, 0.25, -0.15, -0.30]));
-  check('モンヒロビート挑戦: 難易度の補正(EASY 0.25 / NORMAL 0.40 / HARD 0.55 / EXPERT 0.75 / MASTER 1.0)・MASTER が基準',
-    JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DIFFICULTY_FACTORS)) === JSON.stringify([0.25, 0.40, 0.55, 0.75, 1.0]));
+  // HELL は 2026-10-17 に足した(それまで表に無く、HELL で遊ぶとダメージが0だった)。2026-10-21 社長の決定で 1.5 へ
+  check('モンヒロビート挑戦: 難易度の補正(EASY 0.25 / NORMAL 0.40 / HARD 0.55 / EXPERT 0.75 / MASTER 1.0 / HELL 1.5)・MASTER が基準',
+    JSON.stringify(Object.values(o.RAID_JACK_RHYTHM_DIFFICULTY_FACTORS)) === JSON.stringify([0.25, 0.40, 0.55, 0.75, 1.0, 1.5]));
   check('モンヒロビート挑戦: 判定1個あたり(MASTER は 1000 / 950 / 700 / 500 / 250 / -150 / -300、EASY は 250 / 238 / 175 / 125 / 63 / -37 / -75)',
     JSON.stringify(Object.values(T.MASTER)) === JSON.stringify([1000, 950, 700, 500, 250, -150, -300]) && JSON.stringify(Object.values(T.EASY)) === JSON.stringify([250, 238, 175, 125, 63, -37, -75])
     && JSON.stringify(Object.values(T.NORMAL)) === JSON.stringify([400, 380, 280, 200, 100, -60, -120]) && JSON.stringify(Object.values(T.HARD)) === JSON.stringify([550, 523, 385, 275, 138, -82, -165])
@@ -192,7 +193,10 @@ check('強化の表示(回数)は 4回・次の強化のターンが出る', o.r
   const app = read('monster-hero/src/parts/60-app.jsx');
   const start = app.slice(app.indexOf('const startRaidJackBattle = (req) => {'), app.indexOf('// 開始の依頼が来て、runMode が依頼のモードへ反映された次の描画で始める'));
   check('ジャック戦の開始で、編成全員の距離適性を合算して渡さない(立っている子の適性だけが効く)', start.length > 0 && !/raidApt/.test(start) && /initBattle\(1,raidSlots,uniques,teachings,raidDef,'Jack',hero,null\)/.test(start));
-  check('配置画面の「いまの適性」は、その距離に立っている子のぶんだけ(合計ではない)', /const standing=raidJackPlace\.slots\[dist\]/.test(app) && /perSlotApt=\{true\}/.test(app));
+  // 2026-10-19 から距離は編成画面で決める。枠と一覧の%は、その距離に立つ子の適性だけ(足し算しない)
+  const prep = read('monster-hero/src/parts/79-screen-raid-jack.jsx');
+  check('編成画面の距離の%は、その距離に立っている子のぶんだけ(合計ではない)', /const raidJackAptPct = \(mon, range\) => aptGradeToPct\(\(mon && mon\.distAptitude && mon\.distAptitude\[range\]\) \|\| 'C'\);/.test(prep) && /const pct = mon \? raidJackAptPct\(mon, r\) : null;/.test(prep));
+  check('編成画面から、選んだ距離(slots・heroSlot)のまま戦闘を始める', /slots: slotMons, heroSlot: heroIdx/.test(prep) && /void startRaidJackFromPrep\(args\)/.test(app));
 }
 
 // ⑤ 公開フラグ

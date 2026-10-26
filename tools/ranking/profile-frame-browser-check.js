@@ -24,8 +24,10 @@ const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/in
 // どちらも data/breeder.js から作る(検査へ名前を書き写すと、増やしたときにここだけ古くなる)
 const BREEDER_DATA = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/breeder.js'), 'utf8');
 const frameNames = (released) => [...BREEDER_DATA
-  .matchAll(/\{\s*id:'[a-z0-9_]+',\s*name:'([^']+)',\s*kind:'(?:none|css|image)',\s*released:(true|false)/g)]
-  .filter(m => (m[2] === 'true') === released).map(m => m[1]);
+  .matchAll(/\{\s*id:'[a-z0-9_]+',\s*name:'([^']+)',\s*kind:'(?:none|css|image)',\s*released:(true|false)[^\n]*\n(?:\s*unlock:\{ gift:'([A-Za-z]+)')?/g)]
+  .filter(m => (m[2] === 'true') === released && !m[3]).map(m => m[1]);
+// プレゼントで届く枠(unlock.gift・2026-10-20 ハロウィン・妖)は、届くまで選択画面に並ばない
+const GIFT_FRAMES = [...BREEDER_DATA.matchAll(/\{\s*id:'[a-z0-9_]+',\s*name:'([^']+)',\s*kind:'image',\s*released:true[^\n]*\n\s*unlock:\{ gift:'[A-Za-z]+'/g)].map(m => m[1]);
 const EXPECTED_FRAMES = frameNames(true);
 const HIDDEN_FRAMES = frameNames(false);
 const results = [];
@@ -170,6 +172,7 @@ async function run() {
   check('公開フレームが全部並ぶ', options.length === EXPECTED_FRAMES.length,
     `画面 ${options.length}件 / データ ${EXPECTED_FRAMES.length}件`);
   // もらっていない枠には名前の下に条件(「みゅあ Lv2」)も付くので、丸ごと一致ではなく含むかで見る
+  check('プレゼントで届く枠は、届くまで並ばない', GIFT_FRAMES.length > 0 && GIFT_FRAMES.every(n => !options.some(o => o.includes(n))), GIFT_FRAMES.join(','));
   check('名前がデータどおり', EXPECTED_FRAMES.every(n => options.some(o => o.includes(n))),
     EXPECTED_FRAMES.filter(n => !options.some(o => o.includes(n))).join(' / ') || `${options.length}件`);
   check('④ 未公開の豪華フレームは出ない',
@@ -240,12 +243,15 @@ async function run() {
   check('未公開・知らないidは描かない', byName('未公開さん').frame.length === 0, byName('未公開さん').frame.join(','));
   const rankFrames = await page.evaluate(() => [...document.querySelectorAll('[data-ranking-kind="breeder"] .mh-profile-frame')]
     .map(el => { const r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect();
-      return { out: +((r.width - p.width) / 2).toFixed(2), parent: Math.round(p.width) }; }));
+      const box = el.closest('[data-profile-avatar-box]'), b = box ? box.getBoundingClientRect() : p;
+      return { out: +((r.width - p.width) / 2).toFixed(2), parent: Math.round(p.width), box: Math.round(b.width), fits: r.width <= b.width + 0.5 }; }));
   // 2026-09-15にユーザー指摘「太すぎてかっこ悪い」を受けて細くした。細くしすぎて
-  // 32pxで消えてしまわないこと(はみ出し1.5px以上)を、実寸で見張る
-  check('小さいランキングアイコンでも枠が見える(32px前後で1.5px以上はみ出す)',
-    rankFrames.length > 0 && rankFrames.every(f => f.parent <= 40 && f.out >= 1.5),
-    rankFrames.map(f => `${f.parent}px/+${f.out}`).join(' '));
+  // 32pxで消えてしまわないこと(アイコンの外へ出る幅)を、実寸で見張る。
+  // 2026-10-21 社長「フレームのサイズ感微妙？」から、一覧の枠は枠ごと外側の四角(32px)に収める(ProfileAvatar の fit)。
+  //   中のアイコンが約27pxになるので、輪の出る幅は 1.4px 以上を見る(前は 32px のアイコンで 1.5px 以上)。輪の外形が四角に収まることも見る
+  check('小さいランキングアイコンでも枠が見え(1.4px以上出る)、枠ごと外側の四角に収まる',
+    rankFrames.length > 0 && rankFrames.every(f => f.box <= 40 && f.out >= 1.4 && f.fits),
+    rankFrames.map(f => `四角${f.box}px・アイコン${f.parent}px/+${f.out}${f.fits ? '' : '・はみ出す'}`).join(' '));
   check('iPhone縦画面で横にはみ出さない',
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
     await page.evaluate(() => `${document.documentElement.scrollWidth} / ${window.innerWidth}`));

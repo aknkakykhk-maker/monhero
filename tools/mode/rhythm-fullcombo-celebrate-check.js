@@ -27,8 +27,9 @@ check('finish()を取り出せる',finishBlock.length>0);
 
 // --- 達成の判定は既存のrhythmResultAchievementsをそのまま使う(判定を増やさない) ---
 check('達成の判定はリザルト画面と同じrhythmResultAchievementsを再利用する(二重定義していない)',
-  finishBlock.includes('const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);')
-  &&(finishBlock.match(/rhythmResultAchievements\(/g)||[]).length===1);
+  // 2026-10-17 刻みの数え方: 落とした刻みも渡す。旧の物差しの記録(result.legacy)にも同じ関数を使う(二重定義ではない)
+  finishBlock.includes('const achievements=rhythmResultAchievements(run.counts,chart.totalNotes,run.tickRules?run.tickMiss:0);')
+  &&(finishBlock.match(/rhythmResultAchievements\(/g)||[]).length<=2&&!/const rhythmResultAchievements/.test(finishBlock));
 check('称号の優先順はリザルト画面の表示と同じ(ALL MARVELOUS > ALL EXCELLENT > FULL COMBO)',
   finishBlock.includes("const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;"));
 check('celebrateTitleが無い(何も達成していない)ときは今までどおりresultへ直行する',

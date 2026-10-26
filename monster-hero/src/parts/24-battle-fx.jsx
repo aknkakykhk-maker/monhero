@@ -662,8 +662,55 @@ const SKM_KUROMY = Object.freeze({
     skm('float', { c:'dark', line:'ray', over:'aurora', burst:'bnote', form:'psy' }),                      // ダークオーロラ
     skm('gather', { c:'dark', fx:skmFx('orbit', 'skull', 10), over:'nightmare', burst:'bnote' })],        // 悪夢フィナーレ
 });
+// イルミネ(2026-10-22・案の段階): 影に潜む刃の使い手。影・刃・月・連撃寄り(社長の依頼)
+const SKM_ILLUMINE = Object.freeze({
+  normal:[
+    skm('cast', { c:'psy', line:'bolt', burst:'spark' }),                                                   // プラズマ
+    skm('slash', { c:'gas', fx:skmFx('shot', 'blade', 2), over:'slash', burst:'dust' }),                    // ヴェノムエッジ
+    skm('bash', { c:'cosmic', over:'fist', burst:'star' }),                                                 // シールドバッシュ
+    skm('jab', { c:'dark', over:'fist', burst:'spark' }),                                                   // ストレート
+    skm('toss', { c:'gold', fx:skmFx('lob', 'star', 3, { s:1.3 }), over:'boom', burst:'star' }),            // モーニングスター
+    skm('warp', { c:'dark', over:'claw', burst:'dust' }),                                                   // アサシンクロウ
+    skm('cast', { c:'sky', fx:skmFx('shot', 'needle', 5, { step:40 }), burst:'spark' }),                   // アサルトアロー
+    skm('spin', { c:'psy', fx:skmFx('orbit', 'blade', 6), over:'xslash', burst:'spark' }),                 // ブレードダンス
+    skm('slash', { c:'dark', fx:skmFx('fall', 'sword', 1, { s:1.6 }), over:'sword', burst:'dust' })],     // バスターソード
+  unique:[
+    skm('cast', { c:'ice', fx:skmFx('fall', 'ice', 8), over:'ice', burst:'snow' }),                        // エーテルアイス
+    skm('cast', { c:'psy', fx:skmFx('orbit', 'fire', 6), over:'boom', burst:'star', form:'fire' }),         // アルカナフレア
+    skm('gather', { c:'gold', line:'ray', over:'pillar', burst:'star' }),                                   // アルスマグナ
+    skm('float', { c:'dark', fx:skmFx('orbit', 'note', 8), over:'shadow', burst:'bnote' }),                // ノクターン
+    skm('warp', { c:'cosmic', fx:skmFx('shot', 'blade', 4, { step:35 }), over:'claw', burst:'spark' }),    // ミラージュクロウ
+    skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 8), over:'eclipse', burst:'star', form:'fire' }), // クリムゾンノヴァ
+    skm('float', { c:'cosmic', line:'arc', over:'aurora', burst:'star' }),                                  // ムーンライトヴェール
+    skm('float', { c:'psy', line:'ray', over:'aurora', burst:'spark', form:'light' }),                      // ルミナスオーロラ
+    skm('gather', { c:'dark', fx:skmFx('orbit', 'blade', 10), over:'nightmare', burst:'dust', form:'void' })], // レクイエムエンド
+});
+// ドリーミィ(2026-10-22・案の段階): おもちゃの爆弾・人形・夢寄り。イルミネと同じ名前の技は、同じ動きで色だけ変える
+const SKM_DREAMY = Object.freeze({
+  normal:[
+    { ...SKM_ILLUMINE.normal[0], c:'pink' },                                                                 // プラズマ
+    { ...SKM_ILLUMINE.normal[1], c:'pink' },                                                                 // ヴェノムエッジ
+    skm('bash', { c:'pink', over:'fist', burst:'heart' }),                                                   // ドールバッシュ
+    { ...SKM_ILLUMINE.normal[3], c:'sakura' },                                                               // ストレート
+    { ...SKM_ILLUMINE.normal[4], c:'sky' },                                                                  // モーニングスター
+    skm('jab', { c:'pink', over:'claw', burst:'heart' }),                                                    // キャットクロウ
+    skm('cast', { c:'pink', fx:skmFx('shot', 'heart', 5, { step:40 }), burst:'heart' }),                    // ハートアロー
+    skm('spin', { c:'sky', fx:skmFx('orbit', 'star', 6), over:'bloom', burst:'star' }),                     // ドリームダンス
+    skm('slash', { c:'sakura', fx:skmFx('fall', 'sword', 1, { s:1.6 }), over:'sword', burst:'sakura' })],  // パステルソード
+  unique:[
+    skm('toss', { c:'pink', fx:skmFx('lob', 'candy', 3, { s:1.4 }), over:'boom', burst:'candy', form:'bloom' }), // おもちゃの爆弾
+    { ...SKM_ILLUMINE.unique[0], c:'sky' },                                                                  // エーテルアイス
+    { ...SKM_ILLUMINE.unique[1], c:'pink' },                                                                 // アルカナフレア
+    { ...SKM_ILLUMINE.unique[2], c:'sakura' },                                                               // アルスマグナ
+    skm('float', { c:'cosmic', fx:skmFx('orbit', 'note', 8), over:'aurora', burst:'note' }),                // ララバイノクターン
+    { ...SKM_ILLUMINE.unique[4], c:'pink' },                                                                 // ミラージュクロウ
+    { ...SKM_ILLUMINE.unique[5], c:'red' },                                                                  // クリムゾンノヴァ
+    skm('float', { c:'sakura', fx:skmFx('fall', 'candy', 14), over:'rainbow', burst:'candy', form:'bloom' }), // スウィートドリーム
+    skm('gather', { c:'pink', fx:skmFx('orbit', 'heart', 10), over:'rainbow', burst:'heart', form:'bloom' })], // ドリーミィパレード
+});
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
-const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY });
+const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY,
+  Illumine:SKM_ILLUMINE, Dreamy:SKM_DREAMY });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
@@ -962,6 +1009,46 @@ const TacticsExCutin = ({ cutin }) => {
     document.body
   );
 };
+// ==== ハムのカウンターの演出(2026-10-22 社長「名前変えられる？」「演出も派手にしてほしい」「フルからはカットイン付きでも良さそう」
+//      「滅多にないし演出が少し長くなっても良さそう」「タップで早送り」) ====
+// 段はカウンターの数で決まる(TACTICS_EX_COUNTER_NAMES の tier)。長さはこの表の1か所(バトルの速さで縮む)。
+//   cross   … 大きな拳の光(技名は大きくしたポップアップ)。押せる場所は塞がない(待たない)
+//   full    … カットイン(暗転・斜めの帯にハム・名前・倍率)+光の輪。画面を覆い、タップで飛ばせる
+//   revenge … full より長く、画面全体の白い光・炎の色・大きな文字・輪を増やす
+const HAM_COUNTER_FX_MS = Object.freeze({ cross: 900, full: 1900, revenge: 2500 });
+const HamCounterFx = ({ fx, onSkip }) => {
+  if (!fx) return null;
+  const big = fx.tier !== 'cross';
+  const rings = fx.tier === 'revenge' ? 6 : fx.tier === 'full' ? 3 : 0;
+  return ReactDOM.createPortal(
+    <div key={fx.key} data-ham-counter-fx={fx.tier} className={`ham-cfx ham-cfx--${fx.tier}`} style={{ '--cfx-ms':`${fx.ms}ms` }}
+      aria-hidden={big ? undefined : 'true'} role={big ? 'button' : undefined} aria-label={big ? `${fx.name}の演出をとばす` : undefined}
+      onPointerDown={big ? (e) => { e.preventDefault(); e.stopPropagation(); if (onSkip) onSkip(); } : undefined}>
+      {big && <div className="ham-cfx__shade"/>}
+      {big && <div className="ham-cfx__rays"/>}
+      {[...Array(rings)].map((_, i) => <i key={i} className="ham-cfx__ring" style={{ '--i':i }}/>)}
+      <div className="ham-cfx__fist">🥊</div>
+      {big && (
+        <div className="ham-cfx__band">
+          <div className="ham-cfx__art">
+            {fx.imgUrl ? <DyedMonsterImage baseId={fx.monId} src={fx.imgUrl} alt="" masuColors={fx.colors} draggable={false} className="w-full h-full object-contain"/> : <span className="ham-cfx__emoji">🐹</span>}
+          </div>
+          <div className="ham-cfx__text">
+            <div className="ham-cfx__tag">{fx.tier === 'revenge' ? 'REVENGE COUNTER' : 'FULL COUNTER'}</div>
+            <div className="ham-cfx__sub">{fx.monName} ／ 攻撃を回避</div>
+          </div>
+        </div>
+      )}
+      {/* 技名は帯の外に、画面幅いっぱいの大きな文字で出す(帯の中だと「リベンジカウンター」が狭い画面で入り切らない)。
+          クロスの技名は今までどおりのポップアップ(大きくした「🥊 クロスカウンター ×2!」)が出すので、ここは拳の光だけ */}
+      {big && <div data-ham-counter-name className="ham-cfx__title">{fx.name}</div>}
+      {big && <div className="ham-cfx__mult">×{fx.mult}</div>}
+      {fx.tier === 'revenge' && <div className="ham-cfx__flash"/>}
+      {big && <div className="ham-cfx__skip">タップでとばす</div>}
+    </div>,
+    document.body
+  );
+};
 // ==== EXの説明文(2026-10-06 ユーザー指示「説明欄の見やすさ」) ====
 // def.desc の書き方: 1行目＝要約 / 「・」で始まる行＝効果の項目 / 全角空白で始まる行＝その項目の細かい内訳 / 「◯◯：…」の行＝名前つきの項目。
 // 図鑑と、距離枠から開く詳細の両方で同じ見た目にする(文字そのものは変えず、段と印だけを付ける)
@@ -1221,6 +1308,64 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Spooky: { body:'hover', bodyMask:IDLE_SPOOKY_BODY_MASK, parts:[{ mask:IDLE_SPOOKY_TAIL_MASK, origin:'58% 86%', anim:'wag', amp:5, dur:1900, delay:0, layer:'back' }, { mask:IDLE_SPOOKY_HAT_TIP_MASK, origin:'66% 12%', anim:'swing', amp:-6, dur:2600, delay:500, layer:'front' }] },
   Melody: { body:'breathe', bodyMask:IDLE_MELODY_BODY_MASK, parts:[{ mask:IDLE_MELODY_TAIL_MASK, origin:'81.8% 79.5%', anim:'wag', amp:8, dur:1800, delay:0, layer:'back' }] },
   Kuromy: { body:'breathe', bodyMask:IDLE_KUROMY_BODY_MASK, parts:[{ mask:IDLE_KUROMY_TAIL_MASK, origin:'65.9% 53.4%', anim:'wag', amp:7, dur:1700, delay:0, layer:'back' }] },
+  Illumine: { body:'hover', bodyMask:IDLE_ILLUMINE_BODY_MASK, parts:[{ mask:IDLE_ILLUMINE_HAIR_L_MASK, origin:'17.1% 75%', anim:'swing', amp:5, dur:2800, delay:0, layer:'back' }, { mask:IDLE_ILLUMINE_HAIR_R_MASK, origin:'82.9% 75%', anim:'swing', amp:-5, dur:2800, delay:600, layer:'back' }] },
+  Dreamy: { body:'breathe', bodyMask:IDLE_DREAMY_BODY_MASK, parts:[{ mask:IDLE_DREAMY_BEADS_L_MASK, origin:'20% 35%', anim:'swing', amp:2.5, dur:2400, delay:0, layer:'back' }, { mask:IDLE_DREAMY_BEADS_R_MASK, origin:'79.3% 34%', anim:'swing', amp:-2.5, dur:2400, delay:500, layer:'back' }] },
+  Dino: { body:'breathe', bodyMask:null, parts:[] },
+  Gali: { body:'sway', bodyMask:null, parts:[] },
+  Naga: { body:'sway', bodyMask:null, parts:[] },
+  Dragon: { body:'breathe', bodyMask:null, parts:[] },
+  Henger: { body:'heavy', bodyMask:null, parts:[] },
+  Durahan: { body:'heavy', bodyMask:null, parts:[] },
+  Arrowhead: { body:'breathe', bodyMask:null, parts:[] },
+  Zilla: { body:'breathe', bodyMask:null, parts:[] },
+  Phoenix: { body:'glide', bodyMask:null, parts:[] },
+  Joker: { body:'sway', bodyMask:null, parts:[] },
+  Jell: { body:'jelly', bodyMask:null, parts:[] },
+  Mew: { body:'breathe', bodyMask:null, parts:[] },
+  Metalner: { body:'drift', bodyMask:null, parts:[] },
+  Worm: { body:'jelly', bodyMask:null, parts:[] },
+  Centaur: { body:'breathe', bodyMask:null, parts:[] },
+  Colorpandora: { body:'hop', bodyMask:null, parts:[] },
+  HamLiger: { body:'breathe', bodyMask:null, parts:[] },
+  Melonbo: { body:'hop', bodyMask:null, parts:[] },
+  LavenderKeel: { body:'drift', bodyMask:null, parts:[] },
+  VirgiaHapi: { body:'breathe', bodyMask:null, parts:[] },
+  Angel: { body:'drift', bodyMask:null, parts:[] },
+  HitotsumeOuji: { body:'sway', bodyMask:null, parts:[] },
+  Tsunomaru: { body:'hop', bodyMask:null, parts:[] },
+  Bazula: { body:'sway', bodyMask:null, parts:[] },
+  NachtFalter: { body:'drift', bodyMask:null, parts:[] },
+  Katchusaur: { body:'breathe', bodyMask:null, parts:[] },
+  YoroiMocchi: { body:'breathe', bodyMask:null, parts:[] },
+  ParPurin: { body:'jelly', bodyMask:null, parts:[] },
+  DarkHenger: { body:'drift', bodyMask:null, parts:[] },
+  MamaNyaa: { body:'breathe', bodyMask:null, parts:[] },
+  Hinekuresou: { body:'sway', bodyMask:null, parts:[] },
+  Corone: { body:'breathe', bodyMask:null, parts:[] },
+  Jihad: { body:'breathe', bodyMask:null, parts:[] },
+  Gentle: { body:'breathe', bodyMask:null, parts:[] },
+  Vesuvios: { body:'breathe', bodyMask:null, parts:[] },
+  MooHybrid: { body:'breathe', bodyMask:null, parts:[] },
+  Baron: { body:'breathe', bodyMask:null, parts:[] },
+  Aquarius: { body:'sway', bodyMask:null, parts:[] },
+  Plumler: { body:'hop', bodyMask:null, parts:[] },
+  StrikeReaper: { body:'sway', bodyMask:null, parts:[] },
+  DarkHam: { body:'hop', bodyMask:null, parts:[] },
+  HellFat: { body:'jelly', bodyMask:null, parts:[] },
+  UrokoGel: { body:'jelly', bodyMask:null, parts:[] },
+  WakakusaKenzai: { body:'sway', bodyMask:null, parts:[] },
+  Garant: { body:'heavy', bodyMask:null, parts:[] },
+  MimiNyaa: { body:'breathe', bodyMask:null, parts:[] },
+  BenihimeSou: { body:'sway', bodyMask:null, parts:[] },
+  MurasakiChu: { body:'jelly', bodyMask:null, parts:[] },
+  ArmorDragon: { body:'heavy', bodyMask:null, parts:[] },
+  Kermadix: { body:'heavy', bodyMask:null, parts:[] },
+  Gigalon: { body:'breathe', bodyMask:null, parts:[] },
+  BlueMountainHybrid: { body:'heavy', bodyMask:null, parts:[] },
+  MagnaBeetle: { body:'heavy', bodyMask:null, parts:[] },
+  GinGiLiger: { body:'breathe', bodyMask:null, parts:[] },
+  Ankylox: { body:'heavy', bodyMask:null, parts:[] },
+  Soborobent: { body:'drift', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({

@@ -70,7 +70,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         { id: 'rj-m1', baseId: 'Mocchi', name: '検査モッチー', bondXp: 300, createdAt: 1, soulRankStage: 1, soulPointMaxReachedLevel: 520, levelCap: 600, statPoints: { hp: 0, atk: 400000, def: 0, guts: 0 } },
         { id: 'rj-m2', baseId: 'Suezo', name: '検査スエゾー', bondXp: 300, createdAt: 2, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 } },
       ]));
-      localStorage.setItem('mh_owned_items', JSON.stringify({ soul_crystal: 12 }));
+      localStorage.setItem('mh_owned_items', JSON.stringify({ soul_crystal: 12, soul_rank_respec_scroll: 2 }));
       localStorage.setItem('mh_monster_roster', JSON.stringify(['masu:rj-m1', 'masu:rj-m2']));
     });
     await page.addInitScript(eventStorySeed());
@@ -126,6 +126,29 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const saved = await page.evaluate(() => ({ items: JSON.parse(localStorage.getItem('mh_owned_items') || '{}'), mons: JSON.parse(localStorage.getItem('mh_masu_mons') || '[]') }));
     check('保存: 結晶の所持が2・個体のボーナスが10', saved.items.soul_crystal === 2 && saved.mons.find((m) => m.id === 'rj-m1').soulBonusPoints === 10, JSON.stringify(saved.items) + ' ' + saved.mons.map((m) => m.soulBonusPoints));
     check('使っていない個体にはボーナス項目を書かない', !('soulBonusPoints' in saved.mons.find((m) => m.id === 'rj-m2')));
+    // 魂格再編の書を使うと、結晶で足したぶん(10)が結晶として持ち物へ戻る(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)
+    await page.locator('[data-soul-trait-respec-open]').dispatchEvent('click');
+    await page.locator('[data-soul-trait-respec-sheet]').waitFor({ timeout: 10000 });
+    const sheet = (await page.locator('[data-soul-trait-respec-sheet]').innerText()).replace(/\s+/g, ' ');
+    check('再編の確認に「魂格の結晶 10個 が持ち物に戻ります」と、結晶2→12個・獲得済み30→20Pが出る', /魂格の結晶 10個 が持ち物に戻ります/.test(sheet) && /2 → 12個/.test(sheet) && /30 → 20P/.test(sheet), sheet.slice(0, 220));
+    const SHOT = process.env.SOUL_SHOT_DIR || '';
+    if (SHOT) {
+      await page.screenshot({ path: `${SHOT}/respec-confirm-390.png` });
+      await page.setViewportSize({ width: 320, height: 568 });
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: `${SHOT}/respec-confirm-320.png` });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(300);
+    }
+    await page.locator('[data-soul-trait-respec-confirm]').dispatchEvent('click');
+    await page.waitForTimeout(800);
+    const saved2 = await page.evaluate(() => ({ items: JSON.parse(localStorage.getItem('mh_owned_items') || '{}'), mons: JSON.parse(localStorage.getItem('mh_masu_mons') || '[]') }));
+    const m1 = saved2.mons.find((m) => m.id === 'rj-m1');
+    check('保存: 結晶が2→12・書が2→1・この子のボーナス項目は消える', saved2.items.soul_crystal === 12 && saved2.items.soul_rank_respec_scroll === 1 && !('soulBonusPoints' in m1), JSON.stringify(saved2.items) + ' ' + m1.soulBonusPoints);
+    const after2 = (await page.locator('[data-soul-trait-screen]').innerText()).replace(/\s+/g, ' ');
+    check('画面: 総獲得が20に戻り、結晶の所持が12個', /総獲得\s*20/.test(after2) && /所持 12個/.test(after2), after2.slice(0, 220));
+    check('二重に戻らない: 戻すものが無いので「全リセット」は押せない', await page.locator('[data-soul-trait-respec-open]').isDisabled());
+    check('ほかの個体には触れない', !('soulBonusPoints' in saved2.mons.find((m) => m.id === 'rj-m2')) && JSON.stringify(saved2.mons.find((m) => m.id === 'rj-m2')) === JSON.stringify(saved.mons.find((m) => m.id === 'rj-m2')));
     check('実行時エラーが出ない', errors.length === 0, errors.join(' / '));
   } finally {
     if (browser) await browser.close();

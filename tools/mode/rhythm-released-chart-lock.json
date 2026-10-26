@@ -200,7 +200,107 @@
   "grievous_lady/normal": "bb395c39cce17651",
   "grievous_lady/hard": "406cee60ab2fb116",
   "grievous_lady/expert": "e0ab70ed9b827bc2",
-  "grievous_lady/master": "9348316cb81ed3ef"
+  "grievous_lady/master": "9348316cb81ed3ef",
+  "rose/easy": "1b4cd7e8aa80c37f",
+  "rose/normal": "17fcc3a6649dd9d2",
+  "rose/hard": "3b2ad830d281bcf3",
+  "rose/expert": "94431c5fb8c19603",
+  "rose/master": "0e265a14b22550d7",
+  "rose_short/easy": "1874957e01d1a478",
+  "rose_short/normal": "850a795c9b56bd90",
+  "rose_short/hard": "66727662efa44f4b",
+  "rose_short/expert": "7eb2aa2e6bef045a",
+  "rose_short/master": "ca1af8a08b902eb8",
+  "sad_song/easy": "a832f396bf920ab1",
+  "sad_song/normal": "03573f9e5e0ea7e9",
+  "sad_song/hard": "621f169f6404a922",
+  "sad_song/expert": "44b89642ca70590a",
+  "sad_song/master": "37b1f1dc314da7bc",
+  "sad_song_short/easy": "746e28642e31a074",
+  "sad_song_short/normal": "a465ae3a46b772bf",
+  "sad_song_short/hard": "dc0f97dcee78b3a9",
+  "sad_song_short/expert": "c559a9e8c5dd5286",
+  "sad_song_short/master": "9cc9d8b15d303b66",
+  "toward_the_stars_short/easy": "d6c779dff3230048",
+  "toward_the_stars_short/normal": "55b025e4205a0e6a",
+  "toward_the_stars_short/hard": "afe02bc39240db70",
+  "toward_the_stars_short/expert": "178a932c31f42eb8",
+  "toward_the_stars_short/master": "95c9471b49f7b83f",
+  "black_shout/easy": "f8bd087550031ca1",
+  "black_shout/normal": "67fa46b040b849a4",
+  "black_shout/hard": "f6f8ff6e8fc7aa19",
+  "black_shout/expert": "75af6ec0c6a8fe85",
+  "black_shout/master": "dd82a6d2dfd4f0f6",
+  "light_player/easy": "b1a19514fafeed64",
+  "light_player/normal": "2c04fd664ed95e5e",
+  "light_player/hard": "e47e857817bb2a00",
+  "light_player/expert": "2b344a930c763dfd",
+  "light_player/master": "0e34b8a2f281b980",
+  "light_player_short/easy": "55a3fe32ebbfa229",
+  "light_player_short/normal": "5df3d64753c2c3ee",
+  "light_player_short/hard": "284eaad60764024f",
+  "light_player_short/expert": "15f66c218d16f3ce",
+  "light_player_short/master": "9803b1e4a33cd001",
+  "tsuki_ga_michiru_mae_ni/easy": "0021d39a99b3afea",
+  "tsuki_ga_michiru_mae_ni/normal": "2026692ea256ee71",
+  "tsuki_ga_michiru_mae_ni/hard": "3dceeb3e7f6cd136",
+  "tsuki_ga_michiru_mae_ni/expert": "336cb0eb53b8321f",
+  "tsuki_ga_michiru_mae_ni/master": "a4287b8076559b5a",
+  "tsuki_ga_michiru_mae_ni_short/easy": "688f52657c94643d",
+  "tsuki_ga_michiru_mae_ni_short/normal": "fe91cc494e08841f",
+  "tsuki_ga_michiru_mae_ni_short/hard": "d64cdab32aa2dfd6",
+  "tsuki_ga_michiru_mae_ni_short/expert": "a6a8ec87e0d415e9",
+  "tsuki_ga_michiru_mae_ni_short/master": "7a715b499715400e",
+  "mf_ichika_mix/hell": "fb44abd7b8b62f15",
+  "monster_hero/hell": "5e9db00bf41b8e59",
+  "monster_hero_another/hell": "5dc329f75601a73e",
+  "six_eternel_remix/hell": "f341b91c6ba9c3fb",
+  "six_eternel_beat/hell": "444deb7fb8118e1b",
+  "stay_with_me/hell": "427919276ef0491e",
+  "kiki_issen/hell": "8cecb09b1ff21bab",
+  "kaze_ga_soyogu/hell": "812426b02dcd7cdf",
+  "close_to_your_heart/hell": "aa6c4f9cedb87fed",
+  "eiki_boss_remix/hell": "647a5b5388087c89",
+  "pandora_boss_remix/hell": "c73ddc35bd65dab8",
+  "dullahan/hell": "8ec741c58204cbdd",
+  "dullahan_clockwork/hell": "0a1c961e061a0464",
+  "toriko/hell": "cb21f63998764395",
+  "4u_hitasura/hell": "43e8e0308b2d7374",
+  "kindan_no_resistance/hell": "68fab1648d4a8508",
+  "crossing_field/hell": "2960adf56f3b9a81",
+  "nothing_without_you/hell": "57582435d886ee3f",
+  "freedom_dive/hell": "68bfe54148e352ca",
+  "the_city_beneath_the_comets/hell": "5c5b0655c38bb409",
+  "mou_hitotsu_no_sekai_e/hell": "9349c763cd23a48a",
+  "senjou_no_shippuu/hell": "a62a604a9cc1c50e",
+  "makutsu_no_senritsu/hell": "d3acc8f2b273cfbc",
+  "only_my_railgun/hell": "0904c3cdae4c6748",
+  "big_bridge_no_shitou/hell": "978f8265c3a7b170",
+  "rising_hope/hell": "4e4c56b80fbebbbf",
+  "haruka/hell": "121a83bf0e07895d",
+  "stay_with_me_short/hell": "100243718b843b8b",
+  "kiki_issen_short/hell": "d2ed7316dce954e5",
+  "crazy_party_night/hell": "44150877a3e4be57",
+  "crazy_party_night_full/hell": "d39d6260f7b97513",
+  "emerald_rush/hell": "56bbc28ba2401490",
+  "wrath_of_the_thorn_king/hell": "31628aff793aa2e5",
+  "monster/hell": "a0c1de1859b66301",
+  "monster_short/hell": "5f035c10b1f01259",
+  "anima/hell": "de9b68873609c6b9",
+  "journey/hell": "de8f71683d62e469",
+  "sheriruth/hell": "c8c72361a054b9ae",
+  "against_my_own_shadow/hell": "7a561059c0486639",
+  "grievous_lady/hell": "08ae75620ee6e121",
+  "rose/hell": "a1049ba8a493dab3",
+  "rose_short/hell": "cca8355995c4a37a",
+  "sad_song/hell": "d75fe56ad4f6469a",
+  "sad_song_short/hell": "ac8e88e716252e1e",
+  "toward_the_stars_short/hell": "36d49102d9dd2b78",
+  "black_shout/hell": "b682ef78769746d0",
+  "light_player/hell": "1373eda9e3d07706",
+  "light_player_short/hell": "87684abfa3a11ca0",
+  "tsuki_ga_michiru_mae_ni/hell": "7c53909ece20ab67",
+  "tsuki_ga_michiru_mae_ni_short/hell": "270a9bd2954e5578"
  },
  "history": [
   {
@@ -257,6 +357,172 @@
    "changed": [
     "against_my_own_shadow/expert",
     "against_my_own_shadow/master"
+   ]
+  },
+  {
+   "at": "2026-10-18 13:16",
+   "reason": "新曲 ROSE(全編・short ver.)を公開",
+   "changed": [
+    "rose/easy",
+    "rose/normal",
+    "rose/hard",
+    "rose/expert",
+    "rose/master",
+    "rose_short/easy",
+    "rose_short/normal",
+    "rose_short/hard",
+    "rose_short/expert",
+    "rose_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-18 14:29",
+   "reason": "新曲 ROSE: 押さえている帯の中のノーツを外へ・モンスターノーツを4個に",
+   "changed": [
+    "rose/expert",
+    "rose/master",
+    "rose_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-19 01:10",
+   "reason": "新曲 Toward the Stars, Paradise or Truth short ver. を公開",
+   "changed": [
+    "toward_the_stars_short/easy",
+    "toward_the_stars_short/normal",
+    "toward_the_stars_short/hard",
+    "toward_the_stars_short/expert",
+    "toward_the_stars_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-19 01:49",
+   "reason": "新曲 SAD SONG(全編・short ver.)を公開",
+   "changed": [
+    "sad_song/easy",
+    "sad_song/normal",
+    "sad_song/hard",
+    "sad_song/expert",
+    "sad_song/master",
+    "sad_song_short/easy",
+    "sad_song_short/normal",
+    "sad_song_short/hard",
+    "sad_song_short/expert",
+    "sad_song_short/master"
+   ]
+  },
+  {
+   "at": "2026-10-21 09:57",
+   "reason": "2026-10-21 社長の指示: 公開中の HELL 9譜面も見張りに足す(Toward(short)・ROSE・ROSE(short)・SAD SONG・SAD SONG(short) は同じ日に見分けにくい形なしで作り直した後の形)",
+   "changed": [
+    "kaze_ga_soyogu/hell",
+    "sheriruth/hell",
+    "against_my_own_shadow/hell",
+    "grievous_lady/hell",
+    "rose/hell",
+    "rose_short/hell",
+    "sad_song/hell",
+    "sad_song_short/hell",
+    "toward_the_stars_short/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 10:51",
+   "reason": "2026-10-21 社長「ジャーニーとアニマもヘル作って」: ANiMA・Journey に HELL を足した(既存の5難易度は変えていない)",
+   "changed": [
+    "anima/hell",
+    "journey/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 11:45",
+   "reason": "2026-10-21 窓口・社長: Journey の HELL に残っていた見分けにくい所2か所(2.15秒・30.27秒)の空中のタップを地上へ下ろした(Lv.51・716ノーツは同じ)",
+   "changed": [
+    "journey/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 12:00",
+   "reason": "2026-10-21 社長の指示(4曲とも直す): Sheriruth・Grievous Lady・Against My Own Shadow・風がそよぐ場所の HELL の見分けにくい所を0件に直した",
+   "changed": [
+    "kaze_ga_soyogu/hell",
+    "sheriruth/hell",
+    "against_my_own_shadow/hell",
+    "grievous_lady/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 12:38",
+   "reason": "2026-10-21 社長の指示「全曲ヘルを実装して」: HELL が無かった34曲に HELL を足した",
+   "changedCount": 34
+  },
+  {
+   "at": "2026-10-21 13:25",
+   "reason": "2026-10-21 社長の決定: the_city_beneath_the_comets の HELL を60ぐらいへ(量0.78倍→Lv.61)、stay_with_me の HELL を35ぐらいへ(Lv.37)作り直した",
+   "changed": [
+    "stay_with_me/hell",
+    "the_city_beneath_the_comets/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 21:15",
+   "reason": "新曲 BLACK SHOUT を公開",
+   "changed": [
+    "black_shout/easy",
+    "black_shout/normal",
+    "black_shout/hard",
+    "black_shout/expert",
+    "black_shout/master",
+    "black_shout/hell"
+   ]
+  },
+  {
+   "at": "2026-10-21 22:17",
+   "reason": "BLACK SHOUT を正しい音源で作り直す",
+   "changed": [
+    "black_shout/easy",
+    "black_shout/normal",
+    "black_shout/hard",
+    "black_shout/expert",
+    "black_shout/master",
+    "black_shout/hell"
+   ]
+  },
+  {
+   "at": "2026-10-22 09:24",
+   "reason": "HELL の指が同じ位置に来る形を Lv. ごとの許す数まで直す(2026-10-22 社長)",
+   "changedCount": 43
+  },
+  {
+   "at": "2026-10-22 09:38",
+   "reason": "Journey HELL 154.72秒の重なったノーツを抜く(指が同じ位置に来る形の直しの続き)",
+   "changed": [
+    "journey/hell"
+   ]
+  },
+  {
+   "at": "2026-10-23 21:06",
+   "reason": "新曲 light player・月が満ちる前に(全編と short ver.)を公開",
+   "changedCount": 24
+  },
+  {
+   "at": "2026-10-23 21:38",
+   "reason": "新曲 light player・月が満ちる前に(全編と short ver.)を公開",
+   "changed": [
+    "tsuki_ga_michiru_mae_ni/easy",
+    "tsuki_ga_michiru_mae_ni/normal",
+    "tsuki_ga_michiru_mae_ni/hard",
+    "tsuki_ga_michiru_mae_ni/expert",
+    "tsuki_ga_michiru_mae_ni/master",
+    "tsuki_ga_michiru_mae_ni/hell"
+   ]
+  },
+  {
+   "at": "2026-10-23 22:02",
+   "reason": "新曲 light player short ver. の終点フリック2本を外す(公開前)",
+   "changed": [
+    "light_player_short/expert",
+    "light_player_short/master"
    ]
   }
  ]

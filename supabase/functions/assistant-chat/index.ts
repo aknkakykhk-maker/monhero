@@ -12,6 +12,7 @@ import {
   TOTAL_DAILY_LIMIT,
   USER_DAILY_LIMIT,
 } from "./core.js";
+import { RANKING_FUNCTIONS, RANKING_TABLES } from "./ranking.js";
 
 // キーは環境変数から SDK が読む(ANTHROPIC_API_KEY)
 const anthropic = new Anthropic({ maxRetries: 1, timeout: 20_000 });
@@ -20,6 +21,38 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   { auth: { persistSession: false } },
 );
+
+// ランキングを読む入れ物(2026-10-21)。ゲームと同じ公開の鍵(anon)で読むので、ランキング画面で見えるものしか読めない。
+// 読むだけ(select と、読むための既存の関数)。表・関数の名前は ranking.js の一覧にあるものだけ
+const rankingClient = createClient(
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+  { auth: { persistSession: false } },
+);
+type RankingOpts = { select: string; filters?: [string, string, unknown][]; order?: [string, boolean][]; limit?: number; count?: boolean };
+// deno-lint-ignore no-explicit-any
+const applyRankingQuery = (q: any, opts: RankingOpts) => {
+  for (const [col, op, val] of opts.filters || []) {
+    q = op === "eq" ? q.eq(col, val) : op === "in" ? q.in(col, val as unknown[]) : op === "gt" ? q.gt(col, val) : q;
+  }
+  for (const [col, asc] of opts.order || []) q = q.order(col, { ascending: asc, nullsFirst: false });
+  return opts.limit ? q.limit(opts.limit) : q;
+};
+// 公開の鍵が無い環境では読まない(ランキングの話題でも、ランキング無しでふつうに答える)
+const rankingDb = !Deno.env.get("SUPABASE_ANON_KEY") ? null : {
+  async select(table: string, opts: RankingOpts) {
+    if (!RANKING_TABLES.includes(table)) throw new Error("table");
+    const { data, error, count } = await applyRankingQuery(rankingClient.from(table).select(opts.select, opts.count ? { count: "exact" } : undefined), opts);
+    if (error) throw new Error("select");
+    return { rows: data || [], count };
+  },
+  async rpc(fn: string, args: Record<string, unknown>, opts: RankingOpts) {
+    if (!RANKING_FUNCTIONS.includes(fn)) throw new Error("function");
+    const { data, error, count } = await applyRankingQuery(rankingClient.rpc(fn, args, opts.count ? { count: "exact" } : undefined).select(opts.select), opts);
+    if (error) throw new Error("rpc");
+    return { rows: data || [], count };
+  },
+};
 
 const envInt = (name: string, fallback: number) => {
   const n = Number(Deno.env.get(name));
@@ -70,6 +103,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, kind: "sorry", reply: "ごめん、今うまく話せないや", expression: "troubled" }), { status: 200, headers });
   }
   // kind:'daily_lines' はふだんの吹き出しを1日1回まとめて作る頼み。それ以外はおしゃべり(core.js の handleRequest が分ける)
-  const result = await handleRequest({ body, digest, client: anthropic, take, refund, log, limits });
+  const result = await handleRequest({ body, digest, client: anthropic, take, refund, log, limits, rankingDb });
   return new Response(JSON.stringify(result.json), { status: result.status, headers });
 });

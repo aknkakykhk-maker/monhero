@@ -151,11 +151,15 @@ const check = (name, ok, detail = '') => {
     // ★ボタンの字は「🏆 このモードのランキング」に変わった(2026-09-21)。
     //   モード名を繰り返すと、名前の長いモードで文字が横にあふれて切れるため。
     //   どのモードのものかは、カード(data-battle-mode)の中を見て判断する
+    // 画面の題名(ランキング・難易度選択)は、共通の見出し部品 BattleScreenHead の <header> の中の <b>。
+    // 見出しの要素(h1〜h3)ではないので、getByRole('heading') では見つからない(2026-10-22 ここで落ち続けていた)
+    const screenTitle = (name) => page.locator('header b').filter({ hasText: new RegExp(`^${name}$`) });
     const rankLinksIn = async (modeId) => {
       const cards = page.locator(`[data-battle-mode="${modeId}"]`);
       let found = 0;
       for (let i = 0; i < await cards.count(); i += 1) {
-        found += await cards.nth(i).getByRole('button', { name: /このモードのランキング/ }).count();
+        // ★字は「🏆 ランキング」になった(2026-10-10 のタイルの作り直し)。字ではなく印(data-mode-ranking-link)で探す
+        found += await cards.nth(i).locator('button[data-mode-ranking-link]').count();
       }
       return found;
     };
@@ -169,10 +173,10 @@ const check = (name, ok, detail = '') => {
 
     // --- ④ プロ専用ランキングへ入れる ---
     await page.locator('[data-battle-mode="pro"]').first()
-      .getByRole('button', { name: /このモードのランキング/ }).dispatchEvent('click');
+      .locator('button[data-mode-ranking-link]').dispatchEvent('click');
     // ★見出しは「プロモード」と、その下に小さく「ランキング」の2段になった
     //   (名前の長いモードでは1行に入らず、モード名のほうが切れていたため)
-    await page.getByRole('heading', { name: 'プロモード' }).waitFor({ timeout: 15000 });
+    await screenTitle('プロモード').first().waitFor({ timeout: 15000 });
     check('プロモードのランキング画面へ入れる', true);
     await page.getByRole('button', { name: '戻る' }).dispatchEvent('click');
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
@@ -185,7 +189,7 @@ const check = (name, ok, detail = '') => {
     check('ドットでプロモードへ移動できる', (await centeredMode()).includes('プロモード'), await centeredMode());
     await page.locator('article').filter({ hasText: 'プロモード' }).first().getByRole('button', { name: '難易度を選ぶ' }).dispatchEvent('click');
     await page.getByText('BATTLE DIFFICULTY').first().waitFor({ timeout: 15000 });
-    check('難易度選択画面へ進める', await page.getByRole('heading', { name: 'プロモード' }).count() === 1);
+    check('難易度選択画面へ進める', await screenTitle('プロモード').count() === 1);
     check('難易度のカードが9枚ある', await page.locator('.snap-mandatory > article').count() === 9,
       `${await page.locator('.snap-mandatory > article').count()}枚`);
     // 表示は「クリア報酬」の枠の中に 経験値 / 虹のプシュケー：n個 / 💎 ダイヤ：×n を並べる。
@@ -226,7 +230,7 @@ const check = (name, ok, detail = '') => {
     const hardCard = page.locator('.snap-mandatory > article').filter({ hasText: 'Hard' }).first();
     await hardCard.scrollIntoViewIfNeeded();
     await hardCard.getByRole('button', { name: /Hardのランキング/ }).dispatchEvent('click');
-    await page.getByRole('heading', { name: 'プロモード' }).waitFor({ timeout: 15000 });
+    await screenTitle('プロモード').first().waitFor({ timeout: 15000 });
     const selected = await page.evaluate(() => {
       const btn = [...document.querySelectorAll('button')].find(b => b.className.includes('ring-2 ring-white'));
       return btn ? btn.textContent.trim() : null;

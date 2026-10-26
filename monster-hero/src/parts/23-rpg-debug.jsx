@@ -467,7 +467,10 @@ const skillMotionSlotOf = (monId, skillName, isUnique) => {
   if (!skillName || typeof SKILL_MOTION_SETS === 'undefined') return null;
   const lookup = (id) => {
     const set = SKILL_MOTION_SETS[id];
-    const mon = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
+    // 案の段階の子(UPCOMING_MONSTER_DRAFTS)も引く。引けないと、デバッグの「新モンスター確認」で技を選んでも
+    // どの技も同じ型の動きになっていた(2026-10-22 イルミネ・ドリーミィ。本体にはまだいないため)
+    const mon = (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[id])
+      || (typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS[id]) || null;
     if (!set || !mon) return null;
     const lists = isUnique === true ? [['unique', mon.unique?.names]] : isUnique === false ? [['normal', HERO_ATK_NAMES[id]]]
       : [['normal', HERO_ATK_NAMES[id]], ['unique', mon.unique?.names]];

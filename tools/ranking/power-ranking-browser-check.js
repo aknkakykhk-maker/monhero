@@ -52,7 +52,8 @@ const cardsOf = (page, kind) => page.evaluate((k) => [...document.querySelectorA
 
 async function openTab(page, label) {
   await page.evaluate((text) => {
-    const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === text);
+    // タブの名前の前に「🏆」が付くようになった(画面の作り直し)。印を除いた名前で探す
+    const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim().replace(/^🏆\s*/, '') === text);
     if (b) b.click();
   }, label);
   await page.waitForTimeout(3500);
@@ -64,6 +65,8 @@ async function run() {
   const fatal = [];
   page.on('pageerror', e => fatal.push(e.message));
   await page.addInitScript(seed);
+  // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
+  await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
   // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
   await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
   await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
@@ -111,7 +114,7 @@ async function run() {
 
   // 上のタブが4つ並んでいること(モード選択・ブリーダーLv・絆Lv・総合力)
   const tabs = await page.evaluate(() => [...document.querySelectorAll('button[aria-label$="ランキング"], button[aria-label="モード選択"]')]
-    .map(b => b.textContent.trim()));
+    .map(b => b.textContent.trim().replace(/^🏆\s*/, '')));
   check('上のタブが4つ並ぶ', ['モード選択', 'ブリーダーLv', '絆Lv', '総合力'].every(t => tabs.includes(t)), tabs.join(' / '));
 
   // まず絆Lvタブ。こちらは古い記録も含めて並ぶ(見え方が変わっていないことの確認)

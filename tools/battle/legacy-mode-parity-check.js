@@ -189,7 +189,8 @@ check('新モードの枚数は盤面の人数で決まる', (() => {
 // ★新モード用の値を、isTacticsMode の外で使っていないか
 const has = (needle) => source.includes(needle);
 check('特殊防御の抽選は既存モードだと従来の表を通る',
-  has('const defenseTable = !isTacticsMode(runMode) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
+  // 2026-10-22 イルミネ・ドリーミィの楔の回避率が乗っているときだけ、既存モードでも表を作り直す(楔0なら従来の表のまま)
+  has('const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({')
     && has('const aimedSlots = isTacticsMode(runMode)'));
 check('自動回復の率は既存モードだと従来のまま',
   has('tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate)'));

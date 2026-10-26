@@ -174,7 +174,9 @@ const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); c
       return [...document.querySelectorAll('span[data-volume-value]')]
         .map((e) => e.textContent.trim()).slice(0, 2);
     });
-    check('初期音量がSE/BGMとも1', JSON.stringify(await vols()) === '["1","1"]', JSON.stringify(await vols()));
+    // 既定の音量は 2026-10-18 に 1 → 30(社長の判断「控えめの値に上げる」)。数は書き写さず、決まりの1か所(DEFAULT_VOLUME)から読む
+    const defaultVolume = String((require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8').match(/^const DEFAULT_VOLUME = (\d+);/m) || [])[1]);
+    check(`初期音量がSE/BGMとも決まりの値(${defaultVolume})`, JSON.stringify(await vols()) === JSON.stringify([defaultVolume, defaultVolume]), JSON.stringify(await vols()));
     // ★ミュートの作りが変わった。以前は「オフ→オンで音量を1へ戻す」だったが、
     //   いまは mh_audio_muted の真偽だけを切り替え、**音量の設定はそのまま残す**
     //   (60-app.jsx の toggleQuickMute)。戻したときに自分で決めた音量が

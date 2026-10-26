@@ -120,6 +120,52 @@ const heldHandSwitch=notes=>{const out=[],ev=handEventsOf(notes);
         out.push({at:e.at,side:hand,gapMs:Math.round(d),from:e.level?'地上':'空中',to:e.level?'空中':'地上'});}}
   return out.sort((a,b)=>a.at-b.at);};
 
+// 地上と空中の入り乱れ(2026-10-21 社長「地上と空中が近辺で入り混じってるのがあるけどこれかなり難易度高い」「空中地上は基本は指を離した位置に置くのが基本」)。
+//   押し始めの点を時刻の順に見て、直前(同時押しはまとめる)と高さが違い、MIXED_GAP_MS 以内に来るものを分ける。手は handEventsOf の割り振り
+//   near  … 同じ手が、直前に叩いた・離した位置から MIXED_NEAR_LANES 以内で高さを変える(指を離した位置へ持ち上げる・下ろす。自然な形)
+//   far   … 同じ手が、それより遠い所で高さを変える(入り乱れ)
+//   cross … 違う手が、直前の点から MIXED_CROSS_LANES 以内の近い所で高さを変える(近くで地上と空中が交互に来る。入り乱れ)
+//   違う手が離れた所で高さを変えるもの(左手は地上・右手は空中で、それぞれの場所で叩く)は数えない
+const MIXED_GAP_MS=250,MIXED_NEAR_LANES=1,MIXED_CROSS_LANES=1.5;
+const skyMixedSwitch=(notes,{gapMs=MIXED_GAP_MS,nearLanes=MIXED_NEAR_LANES,crossLanes=MIXED_CROSS_LANES}={})=>{
+  const ev=handEventsOf((notes||[]).filter(n=>n&&Number.isFinite(n.timeMs))).filter(e=>!e.end),out=[];
+  for(let i=0;i<ev.length;i++){const e=ev[i];let j=i-1;while(j>=0&&e.at-ev[j].at<=SAME_TIME_MS)j--;if(j<0)continue;
+    const p=ev[j];if(e.at-p.at>gapMs||p.level===e.level)continue;
+    const pos=centerAt(e.n,e.at),dPrev=Math.abs(pos-centerAt(p.n,p.at));
+    const kind=p.hand===e.hand?(dPrev<=nearLanes?'near':'far'):(dPrev<=crossLanes?'cross':null);
+    if(kind)out.push({at:e.at,kind,hand:e.hand,note:e.n,prev:p.n,lanes:Math.round(dPrev*100)/100,gapMs:Math.round(e.at-p.at),level:e.level?'空中':'地上'});}
+  return out;};
+const SKY_MIXED_LABEL='地上と空中の入り乱れ(250ms以内に、離した位置から遠い所・近くの別の手で高さが変わる)';
+// 見分けにくさ(2026-10-21 社長「見分けづらいってのが相当難易度高いんだよ」)。
+//   同じ左右の位置(画面の上で重なって見える範囲)へ、短い間に高さの違うノーツが続く・同時に見えていると、どちらの高さか一瞬で読み分けられない。
+//   押し始めの点どうしで、CONFUSE_GAP_MS 以内・横の重なり(真ん中の差が2つの幅の半分の和以下)・高さが違う組を拾う。
+//   近いほど・短いほど重い(score 0〜1)。形が同じ(タップどうし・長押しどうし)で高さだけが違う組は重く、形が違えば CONFUSE_SHAPE_RELIEF 倍に軽くする。
+//   同じ手が1つ前に離した位置から1レーン以内で高さを変える(指を離した位置へ・自然な形)は数えない。1つのノーツにはいちばん重い組だけを付ける
+const CONFUSE_GAP_MS=500,CONFUSE_SHAPE_RELIEF=.6;
+const widthOf=n=>num(n.subLaneWidth,2)/2;
+const shapeOf=n=>n.type==='TAP'||n.type==='FLICK'?'tap':'long';
+const skyConfusable=(notes,{gapMs=CONFUSE_GAP_MS}={})=>{
+  const ev=handEventsOf((notes||[]).filter(n=>n&&Number.isFinite(n.timeMs))),starts=ev.filter(e=>!e.end),out=[];
+  // その手が最後に触った点(同じ時刻に2つ以上あれば、全部)。並び順で答えが変わらないように、同時の点はまとめて返す
+  //   (2026-10-21 Journey の HELL: 1913ms に地上 sub4 と空中 sub0 が同時にあり、ゲームの形と道具の形で並びが逆だったので数がずれた。
+  //   以前は並びで最後の1つだけと比べていたので、並びによって数えたり数えなかったりした)
+  const lastOfHand=(hand,at,self)=>{let best=[];for(const x of ev){if(x.at>=at-SAME_TIME_MS)break;if(x.hand!==hand||x.n===self)continue;
+    if(best.length&&x.at-best[0].at>SAME_TIME_MS)best=[];best.push(x);}return best;};
+  for(let i=0;i<starts.length;i++){const e=starts[i],pos=centerAt(e.n,e.at);let top=null;
+    // 相手は、前の点(500ms 以内)と同時の点。同時の組は並び順によらず、空中の側に1つ数える(地上の側では数えない)
+    let lo=i;while(lo>0&&e.at-starts[lo-1].at<=gapMs)lo--;let hi=i;while(hi+1<starts.length&&starts[hi+1].at-e.at<=SAME_TIME_MS)hi++;
+    for(let j=lo;j<=hi;j++){if(j===i)continue;const p=starts[j],dt=Math.max(0,e.at-p.at);if(p.level===e.level||p.n===e.n)continue;
+      if(Math.abs(e.at-p.at)<=SAME_TIME_MS&&!(e.level>p.level))continue;
+      const reach=(widthOf(e.n)+widthOf(p.n))/2,d=Math.abs(pos-centerAt(p.n,p.at));if(d>reach)continue;
+      if(p.hand===e.hand&&dt>SAME_TIME_MS){const last=lastOfHand(e.hand,e.at,e.n);
+        // 自然な形(指を離した位置へ)とみなすのは、その手が最後に触った点が p ひとつだけのとき。同時に2つ以上触っていたら、
+        //   どちらの指を上げたのか決まらないので数える側にそろえる(2026-10-21 窓口「数えない側にそろえると見張りが緩くなる」)
+        if(last.length===1&&last[0].n===p.n&&Math.abs(pos-centerAt(p.n,last[0].at))<=MIXED_NEAR_LANES)continue;}
+      const same=shapeOf(e.n)===shapeOf(p.n),score=(1-.5*d/reach)*(1-.6*dt/gapMs)*(same?1:CONFUSE_SHAPE_RELIEF);
+      if(!top||score>top.score)top={at:e.at,note:e.n,prev:p.n,score:Math.round(score*100)/100,gapMs:Math.round(dt),lanes:Math.round(d*100)/100,sameShape:same,level:e.level?'空中':'地上'};}
+    if(top)out.push(top);}
+  return out;};
+const SKY_CONFUSE_LABEL='見分けにくい所(500ms以内に、重なって見える近いレーンへ高さの違うノーツ)';
 // 水平クロス(2026-10-13 社長「ヘル譜面で水平クロスは意味ないから、クロスのときは上下を活用してほしい」)。
 //   2本の長押し(HOLD・SLIDE)が同じ時間に押さえられていて、左右が入れ替わる瞬間に、2本が同じ高さ(地上どうし・空中どうし)のもの。
 //   HELL の交差は上下に分ける(交わる瞬間は片方が空中・片方が地上)。上下に分かれていれば親指の先どうしは当たらない。
@@ -184,6 +230,42 @@ const fixHeldBand=(notes,{canRemove=()=>true,canMirror=()=>false,lanes=12,keepWi
     else if(canMirror(n)&&fits(mirror,w0)){n.subLane=mirror;n.lane=Math.floor(mirror/2);done.mirrored++;stuck.add(n);}
     else{stuck.add(n);done.left++;}}
   return done;};
+// 指が同じ位置に来る形(2026-10-22 社長「指が同じ位置くるやつが多い。ききいっせんの原曲とか」「空中スライドにほぼ同じ位置に空中タップとか」)。
+//   どれも、片方の親指が押さえている・叩く所の、真横・真上・真下を、もう片方の親指で叩くことになる形。帯の中(onHeldBand の blocked)より外側の、近さの話。
+//   kind:
+//     skyPath   … 空中スライドの通り道に空中のノーツ: 空中のノーツ(長押しでない)の時刻の前後 SAME_PLACE_PATH_MS に、空中にいるスライドが
+//                 すき間 SAME_PLACE_NEAR レーン未満を通る(重なりも含む)。スライドが通り過ぎる所・これから通る所を、もう片方の指で叩く
+//     stacked   … 押さえている所の真上・真下: 押さえている長押しの最中に、高さの違うノーツがその時刻の帯と横に重なる
+//                 (押さえている親指の真上・真下をもう片方の親指で叩く。帯の決まりでは「地上と空中なら同じ位置でもよい」としていた形)
+//     beside    … 地上の帯のすぐ横: 地上の長押しの最中に、地上のノーツがすき間 SAME_PLACE_NEAR レーン未満(半レーンの重なりを許した形も含む)
+//     chord     … 同時押しが隣り合う: 同じ高さの同時押しが、すき間 SAME_PLACE_NEAR レーン未満(重なりも含む)
+//     centerSwap … 真ん中で左右が同じ所: 続く2つの押し始め(SAME_PLACE_SWAP_MS 以内・同じ高さ)が SAME_PLACE_SWAP_OVERLAP レーン以上重なり、真ん中(レーン3)の左右に分かれる
+//                 (半レーンだけの重なりは流れの階段なので数えない)
+//                 (左の親指が叩いた所とほぼ同じ所を、すぐに右の親指が叩く。ききいっせん原曲がいちばん多い)
+const SAME_PLACE_PATH_MS=250,SAME_PLACE_NEAR=.5,SAME_PLACE_STEP_MS=20,SAME_PLACE_SWAP_MS=250,SAME_PLACE_SWAP_OVERLAP=1;
+const SAME_PLACE_KINDS=Object.freeze({skyPath:'空中スライドの通り道に空中のノーツ',stacked:'押さえている所の真上・真下',beside:'地上の帯のすぐ横',chord:'同時押しが隣り合う',centerSwap:'真ん中で左右が同じ所'});
+const samePlace=notes=>{const out=[],list=(notes||[]).filter(n=>n&&Number.isFinite(n.timeMs)),longs=list.filter(isLong);
+  const gapOf=(a,b)=>Math.max(a[0],b[0])-Math.min(a[1],b[1]);
+  const put=(kind,n,h,gap)=>out.push({kind,at:n.timeMs,note:n,heldNote:h,type:n.type,side:sideAt(n,n.timeMs),gap:Math.round(gap*100)/100,
+    lanes:spanAt(n,n.timeMs).map(v=>v.toFixed(2)).join('〜'),held:h?`${h.type} ${h.timeMs}〜${endOf(h)}`:''});
+  for(const h of longs)for(const n of list){if(n===h)continue;const t=n.timeMs,ln=levelAt(n,t),sn=spanAt(n,t);
+    if(h.type==='SLIDE'&&!isLong(n)&&ln===1&&t>=h.timeMs-SAME_PLACE_PATH_MS&&t<=endOf(h)+SAME_PLACE_PATH_MS){let best=Infinity;
+      for(let u=Math.max(h.timeMs,t-SAME_PLACE_PATH_MS);u<=Math.min(endOf(h),t+SAME_PLACE_PATH_MS)+EPS;u+=SAME_PLACE_STEP_MS)
+        if(levelAt(h,u)===1)best=Math.min(best,gapOf(spanAt(h,u),sn));
+      if(best<SAME_PLACE_NEAR-EPS){put('skyPath',n,h,best);continue;}}
+    if(t<=h.timeMs+SAME_TIME_MS||t>=endOf(h)-SAME_TIME_MS)continue;
+    const lh=levelAt(h,t),gap=gapOf(spanAt(h,t),sn);
+    if(lh!==ln&&gap<-EPS)put('stacked',n,h,gap);
+    else if(lh===0&&ln===0&&gap<SAME_PLACE_NEAR-EPS&&gap>=-HELD_BAND_HALF-EPS)put('beside',n,h,gap);}
+  const st=list.slice().sort((a,b)=>a.timeMs-b.timeMs);
+  for(let i=0;i<st.length;i++)for(let j=i+1;j<st.length&&st[j].timeMs-st[i].timeMs<=SAME_TIME_MS;j++){const a=st[i],b=st[j],t=a.timeMs;
+    if(levelAt(a,t)!==levelAt(b,t))continue;const gap=gapOf(spanAt(a,t),spanAt(b,t));if(gap<SAME_PLACE_NEAR-EPS)put('chord',b,a,gap);}
+  for(let i=1;i<st.length;i++){const b=st[i];let j=i-1;while(j>=0&&b.timeMs-st[j].timeMs<=SAME_TIME_MS)j--;if(j<0)continue;
+    const a=st[j],dt=b.timeMs-a.timeMs;if(dt>SAME_PLACE_SWAP_MS||levelAt(a,a.timeMs)!==levelAt(b,b.timeMs))continue;
+    const sa=spanAt(a,a.timeMs),sb=spanAt(b,b.timeMs),gap=gapOf(sa,sb);
+    if(gap<=-SAME_PLACE_SWAP_OVERLAP+EPS&&(sa[0]+sa[1]<6)!==(sb[0]+sb[1]<6))put('centerSwap',b,a,gap);}
+  // 同じノーツが2つの長押しに数えられても1件にする(型ごと)
+  const seen=new Set();return out.filter(x=>{const k=`${x.kind}|${list.indexOf(x.note)}`;if(seen.has(k))return false;seen.add(k);return true;}).sort((x,y)=>x.at-y.at);};
 const FLAT_CROSS_LABEL='同じ高さのまま左右が入れ替わる(水平クロス・HELL は0にする)';
 const RULES={sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,heldHandSwitch};
 const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さが変わる`,skyAfterGround:`同じ側の地上から${SKY_RAISE_MS}ms以内に空中`,
@@ -191,7 +273,7 @@ const RULE_LABELS={sideHeightSwitch:`同じ側で${SIDE_GAP_MS}ms以内に高さ
 const analyze=notes=>Object.fromEntries(Object.entries(RULES).map(([k,f])=>[k,f(notes||[])]));
 const countsOf=notes=>Object.fromEntries(Object.entries(analyze(notes)).map(([k,v])=>[k,v.length]));
 
-module.exports={flatCross,hasSky,FLAT_CROSS_LABEL,onHeldBand,heldBandBlocked,fixHeldBand,spanAt,ON_HELD_BAND_LABEL,HELD_BAND_KINDS,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
+module.exports={skyConfusable,CONFUSE_GAP_MS,CONFUSE_SHAPE_RELIEF,SKY_CONFUSE_LABEL,skyMixedSwitch,MIXED_GAP_MS,MIXED_NEAR_LANES,MIXED_CROSS_LANES,SKY_MIXED_LABEL,flatCross,hasSky,FLAT_CROSS_LABEL,onHeldBand,heldBandBlocked,fixHeldBand,spanAt,ON_HELD_BAND_LABEL,HELD_BAND_KINDS,SIDE_GAP_MS,SKY_RAISE_MS,FAST_SAME_SIDE_MS,centerAt,sideAt,levelAt,eventsOf,handEventsOf,heldHandSwitch,sideHeightSwitch,skyAfterGround,besideHeldBand,fastSameSide,RULES,RULE_LABELS,analyze,countsOf};
 
 if(require.main===module){
   const args=process.argv.slice(2),argOf=k=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
@@ -211,3 +293,4 @@ if(require.main===module){
       +(bl.length?' — '+bl.slice(0,12).map(x=>`${(x.at/1000).toFixed(3)} ${x.type} ${x.level} ${x.lanes}(押さえ ${x.held} ${x.heldLanes}・${HELD_BAND_KINDS[x.kind]})`).join(' / '):''));}
     for(const [k,list] of Object.entries(res))console.log(`  ${RULE_LABELS[k]}: ${list.length}件`+(list.length?' — '+list.slice(0,12).map(x=>`${(x.at/1000).toFixed(2)}${x.side}`+(x.gapMs!=null?`(${x.gapMs})`:'')).join(' ')+(list.length>12?' …':''):''));}
 }
+module.exports.samePlace=samePlace;module.exports.SAME_PLACE_KINDS=SAME_PLACE_KINDS;module.exports.SAME_PLACE_PATH_MS=SAME_PLACE_PATH_MS;module.exports.SAME_PLACE_NEAR=SAME_PLACE_NEAR;

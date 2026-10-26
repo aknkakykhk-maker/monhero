@@ -85,6 +85,22 @@ description: Update the in-game changelog (更新履歴), the help pages (ヘル
 `node tools/changelog/player-words-check.js`（必須検査に入っている）が、上の3種類を機械で拾う。
 「同じ日に2件へ割れていないか」は中身を読まないと判断できないので検査していない。**そこは自分で見る。**
 
+## 0-3. 書く前に3つ自分に聞く(2026-10-23 社長「更新情報の書き方頭悪すぎだからちゃんと勉強したほうがいいよ」)
+
+同じ日に3回、お知らせの中身で社長に止められた。**1行ずつ、次の3つに全部「はい」と言えるものだけ残す。**
+
+1. **遊ぶ人が、いま画面で確かめられることか。**
+   まだ誰も見ていないお話の中身・まだ来ていない段階(「大王を倒したあとのお話に〜」「終章で〜」)は書かない。
+   起きたあとに、起きたこととして書く。予告するなら「近日」「お楽しみに」までで中身は言わない
+2. **遊ぶ人に関係がある変化か。**
+   助手の話し方・言い回しを変えただけ(「くだけた言い回しもするように」)は載せない。
+   お話の案内の小さな表示を消した、のような作り手しか気にしない直しも載せない
+3. **仕組みの説明になっていないか。**
+   「解放している人だけに出る」「まだのときはほかの子が話す」「〜に並ぶようになりました。見たお話はこれまでどおり」は、
+   作り手が考えた出し分けの説明。遊ぶ人は自分の画面に出たものしか見ない。**出し分けたこと自体を書かない**
+
+迷ったら書かない。1件まるごと消せるなら消す(項目を減らして残すより、無いほうがよいことが多い)。
+
 ## 1. 時刻は必ず実時刻を取る
 
 ```bash
@@ -123,7 +139,7 @@ const CHANGELOG = [
 | `title` | ○ | 一覧に出る1行。**正式名称で書く**（音ゲーは「モンヒロビート」。略称「モンビー」はキャラの会話だけ） |
 | `status` | ○ | `'new'`（NEWマーク） |
 | `items` | ○ | 本文の配列。**空にしない**（空だと告知が作られない） |
-| `group` | 任意 | `monster`（新モンスター・新血統） / `rhythm` / `masu` / `battle` / `items` / `ranking` / `assistant` / `ui` / `other`。**書かなければタイトルと本文から自動で見当が付く**ので、見当が外れるときだけ書く |
+| `group` | 任意 | `monster`（新モンスター・新血統） / `cardBattle`（MFバトルカード） / `rhythm` / `masu` / `battle` / `items` / `ranking` / `assistant` / `ui` / `other`。**書かなければタイトルと本文から自動で見当が付く**ので、見当が外れるときだけ書く |
 | `assistantNotice` | 大きい追加のみ | ③を見る |
 | `image` | 新曲のとき必須 | `'images/song-art/◯◯.jpg'`。`?v=` は手で書かない |
 | `gallery` | 任意 | `[{ caption, image }]`。本文の下に「■見出し」と絵を順に並べる（染色イメージなど）。一覧の詳細にだけ出て、助手の告知には出ない。`?v=` は手で書かない |
@@ -153,7 +169,7 @@ const CHANGELOG = [
 - 助手ごとの口調で話させたいときだけ、`data/assistants.js` の
   `ASSISTANT_UPDATE_NOTICE_SCRIPTS[告知id][助手id] = [{e:表情, t:セリフ}, …]` を足す。
   書かなければ `items` をそのまま読む（既存の告知は何も変わらない）。
-  呼び方の決めごと：**みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」**
+  呼び方の決めごと：**みゅあ・ドラは「モンビー」、ももすけは「モンビート」、ききは「モンヒロビート」**(2026-10-18 社長指示。公開済みのお話はそのときの呼び方のまま)
 
 > ⚠️ 時刻で出し入れするものに、**読み込み時に1回だけ決まる値を使わない**。
 > 開始前に起動して開きっぱなしの端末では、その答えが永久に残る。
@@ -182,7 +198,7 @@ const CHANGELOG = [
    assistantBond assistantBondActions assistants difficulties extremeDifficulties
    items levelUpPointMultipliers loginBonus masuCosts missionsDaily missionsMonthly
    missionsWeekly monsterLineages monsterPower profileFrames psycheRewards
-   rhythmDemoSongLevels rhythmDemoSongList rhythmDifficultyRanks rhythmDifficultySpread
+   rhythmDemoSongLevels rhythmDemoSongList rhythmDifficultyRanks rhythmDifficultySpread rhythmHellEntry rhythmHellSongs
    rhythmEventPlayBonus rhythmMonsterAbilities rhythmSongArtwork rhythmWeeklyRewards
    skipTickets speciesChallengeLineages speciesChallengeRewards teachings
    ```
@@ -244,13 +260,16 @@ node tools/changelog/external-link-check.js           # link を書いたとき
 
 ## 8. 公開まで
 
+**マージの前に、お知らせ(更新履歴・助手の告知)の文を窓口(モンヒロくん)へ送って見てもらう**(2026-10-23 社長が選択)。
+窓口は §0-3 の3つで確かめて返す。返事が来るまでマージしない(窓口の会話自身が書いたときは、自分で §0-3 を読み直してから)。
+
 CLAUDE.md ②③のとおり、**確認を取らずに最後まで進める**。
 
 ```bash
 node tools/build.js                      # 忘れると変更が反映されない
 node tools/run-checks.js --area required 2>&1 | tail -20
 git add -A && git commit
-git fetch origin main                    # ★PRを作る直前に取り込む（コンフリクトはほぼこれで防げる）
+node tools/merge-main.js                 # ★PRを作る直前に main を取り込む(生成物・更新履歴のぶつかりは道具が解く)
 git push -u origin <branch>
 # PR作成 → squash merge → git fetch origin main && git reset --hard origin/main
 ```

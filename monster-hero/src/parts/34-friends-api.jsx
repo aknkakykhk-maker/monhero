@@ -201,7 +201,7 @@ const friendsGroup = (selfId, rows) => {
 };
 // 最後に開いた時刻から「いま」「◯分前」「◯時間前」「◯日前」の文を作る(表示用の純粋な計算)
 const friendsLastSeenText = (updatedAtMs, nowMs) => {
-  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間は不明';
+  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間はわかりません';
   const diff = Math.max(0, nowMs - updatedAtMs);
   if (diff < FRIENDS_ONLINE_MS) return 'いま遊んでいるかも';
   const minutes = Math.floor(diff / 60000);
@@ -486,7 +486,8 @@ const sbSendRoomInvite = (selfIdRaw, targetIdRaw, roomCode) => friendsGuard(asyn
   const code = typeof roomCode === 'string' ? roomCode.toUpperCase() : '';
   if (!selfId || !targetId || selfId === targetId || !FRIEND_INVITE_CODE_RE.test(code)) return 'error';
   await friendsRequest(`friend_invites?on_conflict=sender_id,target_id`, {
-    method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: code }],
+    // 時刻も書く(表には書き換えで時刻を新しくする仕掛けが無いので、同じ相手への2回目の招待が古いまま届かなかった。2026-10-26)
+    method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: code, created_at: new Date().toISOString() }],
     prefer: 'resolution=merge-duplicates,return=minimal' });
   return 'invited';
 });
