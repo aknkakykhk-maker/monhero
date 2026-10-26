@@ -240,6 +240,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑪ もう一度やっても(飛ばしても)100 は二度ともらえない', tut2 === 400, String(tut2));
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
+    // トップの助手の吹き出しは文字で出る(2026-10-27 「[object Object]」と出ていた。部品を文字にしていた)
+    { await page.waitForTimeout(400); const line = await page.locator('[data-rhythm-mode-assistant-line]').innerText().catch(() => ''); check('㉓ トップの助手の吹き出しに、文字でない物(「[object Object]」)が出ない', !/\[object Object\]/.test(line), line.replace(/\s+/g, ' ').slice(0, 80)); }
     const saved = await page.evaluate(() => ({
       col: JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}'),
       decks: JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'),
