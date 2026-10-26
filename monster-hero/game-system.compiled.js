@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a638d9c2c8f81de1
+// source-sha256: d7cf1e9641030fd4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -78707,7 +78707,7 @@ function RhythmMultiScreen({
     className: "absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200"
   }, view.myCpus.length)) : null;
   const header = (step, onBackClick, opts = {}) => React.createElement("header", {
-    className: "z-10 flex shrink-0 items-center gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
+    className: "z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
       paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
@@ -78718,12 +78718,14 @@ function RhythmMultiScreen({
     className: "min-h-[44px] min-w-[44px] max-[380px]:min-w-[36px] shrink-0 rounded-xl text-lg font-black text-slate-300",
     onClick: onBackClick
   }, "←"), React.createElement("div", {
-    className: "min-w-0 flex-1 leading-none"
+    className: "min-w-[7.5rem] flex-1 leading-none"
   }, React.createElement("b", {
-    className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
+    className: "block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
-    className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    className: "mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"
+  }, "▶ ", step, view ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
     info: quickRunInfo,
     onRestart: onRestartQuickRun,
     onResume: onResumeQuickRun,
