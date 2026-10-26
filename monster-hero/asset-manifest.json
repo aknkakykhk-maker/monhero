@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "6ee9e3363cde",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120961319,"count":653},"card":{"bytes":31268880,"count":906},"all":{"bytes":259617645,"count":1652}},
+  "id": "c9650e903e1b",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120995059,"count":654},"card":{"bytes":31268880,"count":906},"all":{"bytes":259651385,"count":1653}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1327,7 +1327,7 @@
     "images/monster-icons/face/golem.png": {"v":"8ef71840d1d5","size":22691,"pack":"battle"},
     "images/monster-icons/face/ham.png": {"v":"fbe8e4f70214","size":25368,"pack":"battle"},
     "images/monster-icons/face/henger.png": {"v":"0485ba6e277c","size":47924,"pack":"battle"},
-    "images/monster-icons/face/iblis.png": {"v":"9663afec97f9","size":17096,"pack":"battle"},
+    "images/monster-icons/face/iblis.png": {"v":"bdd570ce943a","size":20145,"pack":"battle"},
     "images/monster-icons/face/illumine.png": {"v":"68f84dc1972f","size":81714,"pack":"battle"},
     "images/monster-icons/face/jell.png": {"v":"f775b1f7a7c9","size":39311,"pack":"battle"},
     "images/monster-icons/face/joker.png": {"v":"44f6f8edaccc","size":63289,"pack":"battle"},
@@ -1340,6 +1340,7 @@
     "images/monster-icons/face/mitarashi.png": {"v":"36f1cf509e8e","size":71737,"pack":"battle"},
     "images/monster-icons/face/mocchi.png": {"v":"96be4cbc1468","size":24345,"pack":"battle"},
     "images/monster-icons/face/naga.png": {"v":"3e34d760941f","size":74442,"pack":"battle"},
+    "images/monster-icons/face/pandora.png": {"v":"2f1277f1d3bb","size":30691,"pack":"battle"},
     "images/monster-icons/face/phoenix.png": {"v":"7e70faa2de7a","size":58305,"pack":"battle"},
     "images/monster-icons/face/pixie.png": {"v":"d33b92e39fa0","size":20945,"pack":"battle"},
     "images/monster-icons/face/plant.png": {"v":"b79e75dedc41","size":17289,"pack":"battle"},
