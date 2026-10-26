@@ -2463,7 +2463,7 @@ function MonsterHeroGame() {
     ? <div className="w-full flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 leading-none" style={{minHeight:'16px'}}>{node||null}{sub||null}</div>
     : null;
   // 総合力の行。一覧では「どれが強いか」がいちばん知りたい情報なので、いちばん目立つ位置に置く
-  const monsterCardPower = (power) => power==null ? null : <div className="w-full flex items-baseline justify-center gap-1 leading-none" style={{height:'20px'}}><span className="text-[9px] text-amber-400/70 font-black">総合力</span><span className="text-[14px] font-mono font-black text-amber-200 tabular-nums">{formatMonsterPower(power)}</span></div>;
+  const monsterCardPower = (power) => power==null ? null : <div className="w-full flex items-baseline justify-center gap-1 leading-none" style={{height:'20px'}}><span className="shrink-0 whitespace-nowrap text-[9px] text-amber-400/70 font-black">総合力</span><span className="text-[14px] font-mono font-black text-amber-200 tabular-nums">{formatMonsterPower(power)}</span></div>;
   const monsterCardSub = (node) => node||null;
   const monsterCardStatus = (node) => node ? <div className="w-full flex items-center justify-center" style={{height:'20px'}}>{node}</div> : null;
   // マスモンの絆Lvと上限。細かいXPの進み具合は詳細画面で見るので、一覧ではゲージを出さない
@@ -7350,7 +7350,8 @@ function MonsterHeroGame() {
     return (
       <div className="mb-2 shrink-0 flex gap-2">
         <button onClick={() => openModal('sort')} className="flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95">
-          <span className="text-[11px] font-black text-white truncate">並べ替え: {currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</span>
+          {/* 「並べ替え」は小さい見出しにして2段で出す。1行だと 320 幅で「並べ替え: …」と切れ、いまの並べ方が読めなかった(2026-10-26) */}
+          <span data-monster-sort-label className="min-w-0 text-left leading-tight"><small className="block text-[9px] font-black text-slate-400">並べ替え</small><b className="block truncate text-[11px] font-black text-white">{currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</b></span>
           <ChevronRight size={14} className="text-slate-400 shrink-0"/>
         </button>
         {/* 種族のしぼりこみ。並べかえと掛け合わせて使えるので、別のボタンとして常に出す。
@@ -18082,15 +18083,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
                         <span aria-hidden="true" className="mhms-mark">{look.mark}</span>
                         <span aria-hidden="true" className="mhms-ico relative shrink-0 text-3xl leading-none">{sys.emoji}</span>
-                        <span className="relative min-w-0 flex-1">
+                        <span className="relative min-w-0 flex-1" style={{containerType:'inline-size'}}>
                           <span className="flex items-center gap-1.5">
-                            <b className="block min-w-0 truncate text-[18px] font-black italic leading-tight">{sys.label}</b>
+                            {/* 名前は「…」で切らずに、カードの幅に合わせて字を縮める(320で「タクティクス…」と切れていた。札のぶんは幅から引く) */}
+                            <b data-battle-system-title className="block min-w-0 whitespace-nowrap font-black italic leading-tight" style={{fontSize:`min(18px, calc((100cqw - ${(soon||beta||(sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE))?46:0}px) / ${[...String(sys.label)].length+0.8}))`}}>{sys.label}</b>
                             {soon&&<span className="shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black">準備中</span>}
                             {beta&&<span data-battle-system-beta className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-amber-200">β版</span>}
                             {!soon&&!beta&&sys.id===BATTLE_SYSTEM_TACTICS&&!TACTICS_MODE_PUBLIC_RELEASE&&<span className="shrink-0 rounded border border-slate-900/50 bg-slate-950/80 px-1 py-0.5 text-[8px] font-black text-amber-300">DEBUG</span>}
                           </span>
                           <small className="block text-[10px] font-black leading-tight text-slate-900/80" style={JA_LABEL_STYLE}>{jaWrap(sys.tagline)}</small>
-                          {(soon||beta)&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">{soon?'いま準備しています。遊べるようになったらお知らせします':'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'}</small>}
+                          {/* β版の札には中の言葉(「ほかのモードは準備中」)を書かない。出せるようになってから書く(2026-10-26 カゲあつくんの見回り) */}
+                          {soon&&<small className="mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70">いま準備しています。遊べるようになったらお知らせします</small>}
                         </span>
                       </button>
                       <button data-battle-system-info={sys.id} disabled={!!battleTutorial} onClick={()=>setModeInfoId(sys.id)}
@@ -19901,7 +19904,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
-            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
+            /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
+               ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}
@@ -20153,7 +20158,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <button onClick={()=>setRosterDetailMon(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-slate-800 bg-slate-900`}>
                         {renderMonsterCardBody({
                           base: m,
-                          info: <div className="text-[10px] text-pink-400 font-bold text-center leading-none">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>,
+                          info: <div className="text-[10px] text-pink-400 font-bold text-center leading-none" style={JA_LABEL_STYLE}>{jaWrap(masuCount>0?`マスモン${masuCount}体`:'マスモン未登録')}</div>,
                           status: monsterDisplayFlags.active&&e.active?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white leading-none">編成中</span>:null,
                         })}
                       </button>
