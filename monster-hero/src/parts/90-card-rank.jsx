@@ -157,7 +157,7 @@ const cardRankSync = async (db, { record, collection, profile }) => {
 // ---- プロフィール・フレンドの MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」) ----
 // 中身: 助手と対戦の強さごとの勝ち数・いちばん長い連勝・マルチ対戦の勝ち負けと強さの点数・カード図鑑で集めた数。
 // 自分: 端末の保存(mh_card_record_v1・mh_card_collection_v1)を読むだけ(書かない)。強さの点数は表から読む
-// フレンド: ランキングの表 card_battle_ranks・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
+// フレンド: ランキングの表 card_battle_ranks_v2(無ければ card_battle_ranks)・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
 const cardStatsGet = async (path) => {
   if (typeof SUPABASE_URL === 'undefined') return null;
   const controller = new AbortController();
@@ -199,7 +199,9 @@ const cardStatsOfSelf = async () => {
 // フレンドの戦績(表から)。表に行が無ければ null
 const cardStatsOfFriend = async (breederId) => {
   if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
-  const rows = await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
+  // 新しい表(ID で1行)を先に見て、まだ移っていない人は古い表の行を読む(2026-10-26 ブリーダーIDで数える形)
+  const v2 = _cardRanksV2Unavailable ? null : await cardStatsGet(`${CARD_RANK_TABLE_V2}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&limit=1`);
+  const rows = v2 && v2.length ? v2 : await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
   const e = rows && rows[0] ? cardRankEntryFromRow(rows[0]) : null;
   const pvp = await sbFetchCardPvpRatingOf(breederId);
   if (!e && !pvp) return null;
