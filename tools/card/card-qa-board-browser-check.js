@@ -15,6 +15,7 @@
 //   ⑧ 320・390: カードの大写しのあいだ、後ろの記録の字と助手の吹き出しが消えている(見回り2回目の新4)
 //   ⑨ 320×568: カララギマンゴーを選んで狙うとき・「攻撃できない」の子がいるときも、下のボタンが画面の中(最後の見回り)
 //   ⑩ 助手全員の結果の台詞で、記号だけが行頭に来ない(最後の見回り)
+//   ⑪ 320・375・390・横844: 自分の帯に自分のアイコン(フレーム付き)と名前が出る・名前が切れない・手札にかからない
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -297,6 +298,23 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
         return { count: lines.length, out };
       });
       check(`⑩ 助手全員の結果の台詞(${bad.count}本)で、記号だけが行頭に来ない(幅112〜170px)`, bad.count > 20 && bad.out.length === 0, bad.out.slice(0, 4).join(' / '));
+      await page.close();
+    }
+    // ⑪ 自分の帯に、自分のアイコン(プロフィールのアイコン+フレーム)と名前が出る。名前は切れない・手札にかからない(2026-10-26 社長「バトル中とかに自分のアイコンとかも出るようにしたいね」)
+    for (const [w, h] of [[320, 568], [375, 667], [390, 844], [844, 390]]) {
+      const page = await openBattle(browser, { ...base, active: 0, mode: 'attack', viewport: { width: w, height: h } }, errors);
+      await page.waitForTimeout(600);
+      if (await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
+      await page.waitForTimeout(300);
+      const r = await page.evaluate(() => {
+        const ic = document.querySelector('[data-card-me-icon]'), nm = document.querySelector('[data-card-me-name]'), head = document.querySelector('[data-card-me-head]'), hand = document.querySelector('[data-card-hand]');
+        if (!ic || !nm || !head || !hand) return null;
+        const a = head.getBoundingClientRect(), b = hand.getBoundingClientRect(), q = ic.getBoundingClientRect();
+        const side = a.right <= b.left + 1 || b.right <= a.left + 1;
+        return { name: nm.innerText, cut: nm.scrollWidth > nm.clientWidth + 1, icon: !!ic.querySelector('img, span'), iconPx: Math.round(q.width), headH: Math.round(a.height), over: !side && a.bottom > b.top + 1 };
+      });
+      await shot(page, `me-icon-${w}x${h}`);
+      check(`⑪ ${w}×${h}: 自分の帯にアイコンと名前が出る・名前が切れない・手札にかからない`, r && r.icon && r.name === '検査ブリーダー' && !r.cut && !r.over && r.headH <= 32, JSON.stringify(r));
       await page.close();
     }
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));

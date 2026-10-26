@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a96ad5f2f192d1b
+// source-sha256: 1ed50629d916222a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 19:35";
+const BUILD_DATE = "2026-10-26 19:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -88816,7 +88816,8 @@ const CardBattleBoard = ({
   game,
   onFinish,
   quickRun = null,
-  meProfile = null
+  meProfile = null,
+  meIcon = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
   const pace = CARD_THINK_PACE[settings.think] || 1;
@@ -90039,8 +90040,31 @@ const CardBattleBoard = ({
     calm: settings.shake === 'OFF',
     motion: motions[`0-${m}`] || null
   }))), React.createElement("div", {
-    className: "flex shrink-0 justify-end px-2 py-1"
-  }, strip(CARD_ME))), React.createElement("div", {
+    "data-card-me-head": true,
+    className: "flex shrink-0 items-center gap-1.5 px-2 py-1"
+  }, React.createElement("span", {
+    "data-card-me-icon": true,
+    "aria-hidden": "true",
+    className: "relative block h-[22px] w-[22px] shrink-0"
+  }, React.createElement("span", {
+    className: "absolute left-0 top-0 block h-8 w-8 origin-top-left",
+    style: {
+      transform: `scale(${22 / 32})`
+    }
+  }, meIcon || React.createElement("span", {
+    className: "grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-[18px]"
+  }, meProfile && meProfile.icon ? cardIconNode(meProfile.icon, 22) : '🧑'))), React.createElement("span", {
+    className: "block min-w-0 flex-1",
+    style: {
+      containerType: 'inline-size'
+    }
+  }, React.createElement("span", {
+    "data-card-me-name": true,
+    className: "block overflow-hidden whitespace-nowrap font-black leading-tight text-white",
+    style: {
+      fontSize: `clamp(8px, ${(96 / Math.max(1, [...String(meProfile && meProfile.name || 'あなた')].length)).toFixed(1)}cqw, 12px)`
+    }
+  }, meProfile && meProfile.name || 'あなた')), strip(CARD_ME))), React.createElement("div", {
     "data-card-side": true,
     className: wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'
   }, tutorial && tutSay && (() => {
@@ -90752,6 +90776,7 @@ const CardBattleScreen = ({
       db: db,
       game: game,
       meProfile: rank && rank.profile,
+      meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       quickRun: quickRun ? {
         loops: quickRun.loops,
         stopped: quickRun.stopped
@@ -123271,7 +123296,18 @@ function MonsterHeroGame() {
           icon: breederIcon,
           frame: rankingProfileFrameValue(profileFrameId)
         },
-        renderBreederIcon: rankingBreederIcon
+        renderBreederIcon: rankingBreederIcon,
+        renderMeIcon: () => React.createElement(ProfileAvatar, {
+          src: resolveIconUrl(breederIcon) || undefined,
+          id: breederIcon,
+          frameId: rankingProfileFrameValue(profileFrameId),
+          fit: true,
+          small: true,
+          className: "w-8 h-8 shrink-0",
+          fallback: React.createElement("span", {
+            className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-[18px]"
+          }, typeof breederIcon === 'string' && breederIcon && !resolveIconUrl(breederIcon) && [...breederIcon].length <= 4 ? breederIcon : '👤')
+        })
       }
     }), gameState === 'RAID_JACK_DEBUG' && React.createElement(RaidJackDebugScreen, {
       onBack: () => setGameState('DEBUG_SETTINGS'),
