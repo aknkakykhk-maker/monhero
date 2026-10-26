@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c9a5f5e9f645ade3
+// source-sha256: 65528a9dac3137e1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 19:43";
+const BUILD_DATE = "2026-10-26 20:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16750,8 +16750,8 @@ const helpDataRows = id => {
       {
         if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
         const label = lv => typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
-        const lose = typeof CARD_CPU_LOSE_POINT !== 'undefined' ? CARD_CPU_LOSE_POINT : 0;
-        const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose}`]);
+        const lose = lv => typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0;
+        const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
         if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
         return rows;
       }
@@ -48034,7 +48034,8 @@ const sbSendRoomInvite = (selfIdRaw, targetIdRaw, roomCode) => friendsGuard(asyn
     body: [{
       sender_id: selfId,
       target_id: targetId,
-      room_code: code
+      room_code: code,
+      created_at: new Date().toISOString()
     }],
     prefer: 'resolution=merge-duplicates,return=minimal'
   });
@@ -86148,26 +86149,27 @@ const cardGrantStarter = (db, {
     }
   };
 };
-const CARD_CPU_LOSE_POINT = 25;
+const CARD_LOSE_SHARE = 3 / 4;
+const cardLosePoint = level => Math.floor(level.point * CARD_LOSE_SHARE);
+const cardLoseLoops = level => Math.floor(level.loops * CARD_LOSE_SHARE);
+const cardLoseScaled = (n, ownTurns) => Math.floor(n * Math.min(1, Math.max(0, Number(ownTurns) || 0) / CARD_LOSE_FULL_TURNS));
 const CARD_SURRENDER_POINT_PER_KO = 10;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
 const CARD_PVP_REWARD = Object.freeze({
   win: {
-    point: 200,
-    loops: 24
+    point: CARD_AI_LEVELS.master.point * 2,
+    loops: CARD_AI_LEVELS.master.loops * 2
   },
   lose: {
-    point: 50,
-    loops: 12
+    point: cardLosePoint(CARD_AI_LEVELS.master),
+    loops: cardLoseLoops(CARD_AI_LEVELS.master)
   },
   left: {
     point: 0,
     loops: 0
-  },
-  dailyMax: 2200,
-  sameFoePerDay: 3
+  }
 });
 const cardOwnTurns = (st, p) => {
   const t = Math.max(0, Number(st && st.turn) || 0);
@@ -86185,14 +86187,14 @@ const cardCpuBasePoint = (levelId, outcome, facts) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
   if (outcome === 'win') return level.point;
-  if (outcome === 'lose') return CARD_CPU_LOSE_POINT;
-  if (outcome === 'surrender') return Math.min(CARD_CPU_LOSE_POINT, facts.kos * CARD_SURRENDER_POINT_PER_KO);
+  if (outcome === 'lose') return cardLoseScaled(cardLosePoint(level), facts.ownTurns);
+  if (outcome === 'surrender') return Math.min(cardLoseScaled(cardLosePoint(level), facts.ownTurns), facts.kos * CARD_SURRENDER_POINT_PER_KO);
   return 0;
 };
 const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
-  const loseFull = Math.floor(level.loops / 2);
+  const loseFull = cardLoseLoops(level);
   if (outcome === 'win') return level.loops;
   if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
   if (outcome === 'surrender') return Math.min(loseFull, Math.round(facts.kos * loseFull / 3));
@@ -90594,6 +90596,13 @@ const CardBattleScreen = ({
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  useEffect(() => {
+    const go = c => {
+      if (c) setView('pvp');
+    };
+    go(CARD_PVP_JOIN.peek());
+    return CARD_PVP_JOIN.on(go);
+  }, []);
   const [kitPick, setKitPick] = useState(null);
   const [foe, setFoe] = useState({
     who: 'mua',
@@ -91051,15 +91060,22 @@ const CardBattleScreen = ({
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
-      const got = cardPvpReward(r.reward, r.facts);
+      const base = cardPvpReward(r.reward, r.facts);
       const daily = cardNormalizeDaily(save.daily, cardTodayJst());
       const record = cardNormalizeRecord(save.record);
       const win = r.outcome === 'win';
+      const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+      const got = {
+        ...base,
+        point: base.point + bonus,
+        bonus
+      };
       const ok = await persist({
         point: save.point + got.point,
         daily: {
           ...daily,
-          pvpPoint: daily.pvpPoint + got.point
+          pvpPoint: daily.pvpPoint + got.point,
+          firstWin: daily.firstWin || bonus > 0
         },
         record: {
           ...record,
@@ -94307,12 +94323,12 @@ const cardPvpReward = (outcome, facts) => {
     short: false
   };
   if (outcome === 'surrender') return {
-    point: Math.min(L.point, f.kos * CARD_SURRENDER_POINT_PER_KO),
+    point: Math.min(cardLoseScaled(L.point, f.ownTurns), f.kos * CARD_SURRENDER_POINT_PER_KO),
     loops: Math.min(L.loops, Math.round(f.kos * L.loops / 3)),
     short: false
   };
   return {
-    point: L.point,
+    point: cardLoseScaled(L.point, f.ownTurns),
     loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)),
     short: false
   };
@@ -94749,7 +94765,8 @@ const sbSendCardInvite = async (selfId, targetId, code) => {
     body: [{
       sender_id: selfId,
       target_id: targetId,
-      room_code: room
+      room_code: room,
+      created_at: new Date().toISOString()
     }],
     prefer: 'resolution=merge-duplicates,return=minimal'
   });
@@ -94765,6 +94782,63 @@ const sbFetchCardInvites = async (selfId, nowMs) => {
     createdAt: Date.parse(row.created_at) || 0
   })).filter(x => CARD_PVP_INVITE_ID_RE.test(x.senderId) && x.roomCode && nowMs - x.createdAt <= CARD_PVP_INVITE_TTL_MS);
 };
+const cardPvpInviteLeftSec = (at, nowMs) => Math.max(0, Math.min(CARD_PVP_INVITE_TTL_MS / 1000, Math.ceil((CARD_PVP_INVITE_TTL_MS - (nowMs - at)) / 1000)));
+const CARD_PVP_INVITE_DECLINED_AT = '1970-01-01T00:00:00.000Z';
+const sbDeclineCardInvite = async (selfId, senderId) => {
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(senderId))) return false;
+  const r = await cardPvpInviteRequest(`card_battle_invites?sender_id=eq.${senderId}&target_id=eq.${selfId}`, {
+    method: 'PATCH',
+    body: {
+      created_at: CARD_PVP_INVITE_DECLINED_AT
+    },
+    prefer: 'return=minimal'
+  });
+  return r !== null;
+};
+const sbFetchCardInvitesSent = async (selfId, targetIds) => {
+  const ids = (targetIds || []).filter(x => CARD_PVP_INVITE_ID_RE.test(String(x)));
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !ids.length) return {};
+  const rows = await cardPvpInviteRequest(`card_battle_invites?select=target_id,room_code,created_at&sender_id=eq.${selfId}&target_id=in.(${ids.join(',')})`);
+  if (!Array.isArray(rows)) return null;
+  const out = {};
+  rows.forEach(row => {
+    const at = Date.parse(row.created_at);
+    if (typeof row.target_id === 'string') out[row.target_id] = {
+      code: rhythmMultiNormalizeCode(row.room_code),
+      at: Number.isFinite(at) ? at : null
+    };
+  });
+  return out;
+};
+const cardPvpInviteState = (sent, row, nowMs) => {
+  if (row && row.code === sent.code && Number.isFinite(row.at) && row.at < sent.at - 60 * 1000) return 'declined';
+  if (nowMs - sent.at > CARD_PVP_INVITE_TTL_MS) return 'expired';
+  return 'live';
+};
+const CARD_PVP_JOIN = (() => {
+  let code = '';
+  const listeners = new Set();
+  return {
+    request(c) {
+      code = rhythmMultiNormalizeCode(c) || '';
+      listeners.forEach(f => f(code));
+    },
+    peek() {
+      return code;
+    },
+    take() {
+      const c = code;
+      code = '';
+      return c;
+    },
+    on(f) {
+      listeners.add(f);
+      return () => listeners.delete(f);
+    }
+  };
+})();
+const cardPvpInviteDismissed = new Set();
+const cardPvpInviteKey = x => `${x.senderId}:${x.roomCode}:${x.createdAt}`;
 const cardPvpRoster = async selfId => {
   if (typeof window !== 'undefined' && Array.isArray(window.__mhCardPvpRosterTest)) return window.__mhCardPvpRosterTest;
   if (typeof sbFetchFriendRoster !== 'function') return [];
@@ -94773,6 +94847,106 @@ const cardPvpRoster = async selfId => {
   } catch (_) {
     return [];
   }
+};
+let cardPvpLobbyOpen = 0;
+const CARD_PVP_NOTICE_BUSY = Object.freeze(['CARD_BATTLE', 'CARD_PACK_OPEN', 'BATTLE', 'BATTLE_TUTORIAL', 'RHYTHM_PLAY', 'RHYTHM_MASU_BEAT', 'RHYTHM_MULTI', 'RAID_JACK', 'RAID_JACK_DEBUG', 'RPG_DEBUG_BATTLE', 'DEBUG_BATTLE_SETUP']);
+const CARD_PVP_NOTICE_POLL_MS = 10000;
+const CardPvpInviteNotice = ({
+  enabled = false,
+  busy = false,
+  onAccept
+}) => {
+  const [selfId, setSelfId] = useState('');
+  const [roster, setRoster] = useState(null);
+  const [list, setList] = useState([]);
+  const [now, setNow] = useState(Date.now());
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let alive = true;
+    const loadRoster = async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (!alive || typeof id !== 'string') return;
+      setSelfId(id);
+      const r = await cardPvpRoster(id);
+      if (alive) setRoster(Array.isArray(r) ? r : []);
+    };
+    void loadRoster();
+    const t = setInterval(loadRoster, 5 * 60 * 1000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [enabled]);
+  useEffect(() => {
+    if (!enabled || !selfId || !roster || !roster.length) {
+      setList([]);
+      return undefined;
+    }
+    let alive = true;
+    const names = new Map(roster.map(f => [f.otherId, f.userName]));
+    const load = async () => {
+      if (cardPvpLobbyOpen > 0 || CARD_PVP.get().phase !== 'idle') return;
+      const got = await sbFetchCardInvites(selfId, Date.now());
+      if (alive) setList(got.filter(x => names.has(x.senderId) && !cardPvpInviteDismissed.has(cardPvpInviteKey(x))).map(x => ({
+        ...x,
+        name: names.get(x.senderId)
+      })));
+    };
+    void load();
+    const t = setInterval(load, CARD_PVP_NOTICE_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [enabled, selfId, roster]);
+  useEffect(() => {
+    if (!list.length) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [list.length]);
+  const x = list.find(y => now - y.createdAt <= CARD_PVP_INVITE_TTL_MS && !cardPvpInviteDismissed.has(cardPvpInviteKey(y)));
+  if (!enabled || busy || !x || cardPvpLobbyOpen > 0 || CARD_PVP.get().phase !== 'idle') return null;
+  const close = () => {
+    cardPvpInviteDismissed.add(cardPvpInviteKey(x));
+    force(n => n + 1);
+  };
+  return React.createElement("div", {
+    "data-card-pvp-notice": x.roomCode,
+    role: "alert",
+    className: "pointer-events-none fixed inset-x-0 top-0 z-[41000] flex justify-center px-3",
+    style: {
+      paddingTop: 'max(10px, env(safe-area-inset-top))'
+    }
+  }, React.createElement("div", {
+    className: "pointer-events-auto w-full max-w-md rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 p-3 text-white shadow-2xl"
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-emerald-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${x.name || 'フレンド'}さんから、MFバトルカードのマルチ対戦の招待が届いています`)), React.createElement("p", {
+    className: "mt-0.5 text-[11px] font-bold text-slate-300 tabular-nums"
+  }, "あと", cardPvpInviteLeftSec(x.createdAt, now), "秒"), React.createElement("div", {
+    className: "mt-2 flex gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-pvp-notice-decline": true,
+    className: "mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[13px] font-black text-slate-200",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      close();
+      void sbDeclineCardInvite(selfId, x.senderId);
+    }
+  }, "断る"), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-notice-accept": true,
+    className: "mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[13px] font-black",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      close();
+      CARD_PVP_JOIN.request(x.roomCode);
+      if (onAccept) onAccept(x.roomCode);
+    }
+  }, "参加する"))));
 };
 const CARD_PVP = (() => {
   const listeners = new Set();
@@ -95530,7 +95704,14 @@ const CardPvpLobby = ({
     name: 'ブリーダー',
     icon: '🙂'
   });
+  const [profileReady, setProfileReady] = useState(false);
   useEffect(() => CARD_PVP.subscribe(setRoom), []);
+  useEffect(() => {
+    cardPvpLobbyOpen += 1;
+    return () => {
+      cardPvpLobbyOpen -= 1;
+    };
+  }, []);
   const [penaltyUntil, setPenaltyUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -95546,6 +95727,8 @@ const CardPvpLobby = ({
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invited, setInvited] = useState({});
+  const [inviteNext, setInviteNext] = useState('');
+  const [sentRows, setSentRows] = useState({});
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -95568,7 +95751,7 @@ const CardPvpLobby = ({
     const ids = new Map(roster.map(f => [f.otherId, f.userName]));
     const load = async () => {
       const list = await sbFetchCardInvites(selfBid, Date.now());
-      if (alive) setInvites(list.filter(x => ids.has(x.senderId)).map(x => ({
+      if (alive) setInvites(list.filter(x => ids.has(x.senderId) && !cardPvpInviteDismissed.has(cardPvpInviteKey(x))).map(x => ({
         ...x,
         name: ids.get(x.senderId)
       })));
@@ -95580,6 +95763,60 @@ const CardPvpLobby = ({
       clearInterval(t);
     };
   }, [room.phase, selfBid, roster]);
+  const sendInvite = async (to, roomCode) => {
+    const at = Date.now();
+    const ok = await sbSendCardInvite(selfBid, to, roomCode);
+    setInvited(cur => ({
+      ...cur,
+      [to]: {
+        code: rhythmMultiNormalizeCode(roomCode),
+        at,
+        ok
+      }
+    }));
+  };
+  useEffect(() => {
+    if (!inviteNext || room.phase !== 'waiting' || !room.code) return;
+    const to = inviteNext;
+    setInviteNext('');
+    setInviteOpen(true);
+    void sendInvite(to, room.code);
+  }, [inviteNext, room.phase, room.code]);
+  useEffect(() => {
+    if (room.phase === 'idle') {
+      setInvited({});
+      setSentRows({});
+    }
+  }, [room.phase]);
+  const sentIds = Object.keys(invited).filter(k => invited[k] && invited[k].ok).join(',');
+  useEffect(() => {
+    if (room.phase !== 'waiting' || room.foe || !selfBid || !sentIds) return undefined;
+    let alive = true;
+    const load = async () => {
+      const rows = await sbFetchCardInvitesSent(selfBid, sentIds.split(','));
+      if (alive && rows) setSentRows(rows);
+    };
+    void load();
+    const t = setInterval(load, 5000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [room.phase, !!room.foe, selfBid, sentIds]);
+  const [joinAsk, setJoinAsk] = useState(() => CARD_PVP_JOIN.peek());
+  useEffect(() => CARD_PVP_JOIN.on(setJoinAsk), []);
+  useEffect(() => {
+    if (!joinAsk || !profileReady || room.phase !== 'idle') return;
+    if (!deck || deckIssues.length || penaltyMin > 0) return;
+    const c = CARD_PVP_JOIN.take();
+    setJoinAsk('');
+    if (c) CARD_PVP.join(c, profile, deck);
+  }, [joinAsk, profileReady, room.phase, !!deck, deckIssues.length, penaltyMin]);
+  const declineInvite = x => {
+    cardPvpInviteDismissed.add(cardPvpInviteKey(x));
+    setInvites(cur => cur.filter(y => y !== x));
+    void sbDeclineCardInvite(selfBid, x.senderId);
+  };
   const rewardRef = useRef(onReward);
   rewardRef.current = onReward;
   useEffect(() => {
@@ -95599,11 +95836,16 @@ const CardPvpLobby = ({
   useEffect(() => {
     let alive = true;
     Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).then(([name, icon]) => {
-      if (alive) setProfile({
-        name: typeof name === 'string' && name ? name : 'ブリーダー',
-        icon: typeof icon === 'string' && icon ? icon : '🙂'
-      });
-    }).catch(() => {});
+      if (alive) {
+        setProfile({
+          name: typeof name === 'string' && name ? name : 'ブリーダー',
+          icon: typeof icon === 'string' && icon ? icon : '🙂'
+        });
+        setProfileReady(true);
+      }
+    }).catch(() => {
+      if (alive) setProfileReady(true);
+    });
     return () => {
       alive = false;
     };
@@ -95740,7 +95982,44 @@ const CardPvpLobby = ({
       Audio_.fgSe.tap();
       void CARD_PVP.create(profile, deck);
     }
-  }, "合言葉で部屋を作る"), invites.length > 0 && React.createElement("div", {
+  }, "合言葉で部屋を作る"), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-invite-open": true,
+    disabled: !ready || !roster,
+    className: `${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setInviteOpen(v => !v);
+      if (selfBid) void cardPvpRoster(selfBid).then(list => setRoster(Array.isArray(list) ? list : []));
+    }
+  }, inviteOpen ? 'フレンドの招待をとじる' : 'フレンドを招待'), inviteOpen && roster && React.createElement("div", {
+    "data-card-pvp-invite-pick": true,
+    className: "rounded-2xl border border-emerald-300/40 bg-emerald-500/5 p-2"
+  }, roster.length === 0 ? React.createElement("p", {
+    className: "p-2 text-[13px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだフレンドがいません。HOMEの「フレンド」から申請できます')) : React.createElement("ul", {
+    "data-card-pvp-roster": true,
+    className: "max-h-[40vh] space-y-1 overflow-y-auto"
+  }, roster.slice(0, 30).map(f => React.createElement("li", {
+    key: f.otherId,
+    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
+  }, f.userName), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-invite-to": f.otherId,
+    disabled: !ready,
+    className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setInviteNext(f.otherId);
+      void CARD_PVP.create(profile, deck);
+    }
+  }, "招待する")))), React.createElement("p", {
+    className: "mt-1 px-1 text-[11px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('選ぶと部屋を作って招待を送ります。招待は3分のあいだ届きます'))), invites.length > 0 && React.createElement("div", {
     "data-card-pvp-invites": true,
     className: "space-y-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"
   }, invites.slice(0, 3).map(x => React.createElement("div", {
@@ -95749,7 +96028,17 @@ const CardPvpLobby = ({
   }, React.createElement("p", {
     className: "min-w-0 flex-1 text-[13px] font-bold text-emerald-50",
     style: JA_WRAP_STYLE
-  }, jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)), React.createElement("button", {
+  }, jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`), React.createElement("small", {
+    className: "block text-[11px] text-emerald-200/80 tabular-nums"
+  }, "あと", cardPvpInviteLeftSec(x.createdAt, now), "秒")), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-decline": x.roomCode,
+    className: "mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      declineInvite(x);
+    }
+  }, "断る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-accept": x.roomCode,
     disabled: !ready,
@@ -95841,20 +96130,23 @@ const CardPvpLobby = ({
     className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
   }, React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
-  }, f.userName), React.createElement("button", {
-    type: "button",
-    "data-card-pvp-invite-to": f.otherId,
-    disabled: invited[f.otherId] === 'sent',
-    className: "mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
-    onClick: async () => {
-      Audio_.fgSe.tap();
-      const ok = await sbSendCardInvite(selfBid, f.otherId, room.code);
-      setInvited(cur => ({
-        ...cur,
-        [f.otherId]: ok ? 'sent' : 'ng'
-      }));
-    }
-  }, invited[f.otherId] === 'sent' ? '招待しました' : invited[f.otherId] === 'ng' ? '送れませんでした' : '招待する')))))), room.phase === 'error' && React.createElement("p", {
+  }, f.userName), (() => {
+    const sent = invited[f.otherId];
+    const state = sent && sent.ok ? cardPvpInviteState(sent, sentRows[f.otherId], now) : sent ? 'ng' : '';
+    const label = state === 'live' ? `招待しました(あと${cardPvpInviteLeftSec(sent.at, now)}秒)` : state === 'declined' ? '断られました' : state === 'expired' ? '時間切れ' : state === 'ng' ? '送れませんでした' : '';
+    return React.createElement(React.Fragment, null, label && React.createElement("span", {
+      "data-card-pvp-invite-state": state,
+      className: `shrink-0 text-[11px] font-bold tabular-nums ${state === 'live' ? 'text-emerald-200' : 'text-amber-200'}`
+    }, label), state !== 'live' && React.createElement("button", {
+      type: "button",
+      "data-card-pvp-invite-to": f.otherId,
+      className: "mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void sendInvite(f.otherId, room.code);
+      }
+    }, state ? 'もう一度' : '招待する'));
+  })()))))), room.phase === 'error' && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
   }, room.error), room.broken && React.createElement("p", {
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-3 text-[13px] font-bold text-rose-100"
@@ -122948,7 +123240,14 @@ function MonsterHeroGame() {
       accent: 'indigo',
       readOnly: true,
       label: `${raidJackDetailMon.name}の詳細`
-    })), renderCardQuickRunStrip(), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE' || gameState === 'CARD_PACK_OPEN' && !cardPackOpen) && React.createElement(CardBattleScreen, {
+    })), renderCardQuickRunStrip(), React.createElement(CardPvpInviteNotice, {
+      enabled: !!cardBattleEntryVisible && (cardPvpOpen() || !!cardBattleDebugHome),
+      busy: CARD_PVP_NOTICE_BUSY.includes(gameState),
+      onAccept: () => {
+        if (!String(gameState).startsWith('CARD_')) setCardOrigin('home');
+        setGameState('CARD_TOP');
+      }
+    }), (gameState === 'CARD_TOP' || gameState === 'CARD_BATTLE' || gameState === 'CARD_PACK_OPEN' && !cardPackOpen) && React.createElement(CardBattleScreen, {
       screen: gameState,
       onNavigate: setGameState,
       onExit: () => {

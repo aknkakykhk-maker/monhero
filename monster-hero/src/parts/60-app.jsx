@@ -19594,6 +19594,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
         {renderCardQuickRunStrip()}
+        {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
+        <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}

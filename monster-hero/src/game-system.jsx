@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f602fbfb4e265a53
+// generated-sha256: d3f47c7ec2711d3a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 19:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 20:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11815,8 +11815,9 @@ const helpDataRows = (id) => {
     case 'cardBeatPointRewards': {
       if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
       const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
-      const lose = typeof CARD_CPU_LOSE_POINT !== 'undefined' ? CARD_CPU_LOSE_POINT : 0;
-      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose}`]);
+      // 負けは勝ちの 3/4(82 の cardLosePoint。2026-10-26)
+      const lose = (lv) => (typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0);
+      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
       if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
       return rows;
     }
@@ -29721,7 +29722,8 @@ const sbSendRoomInvite = (selfIdRaw, targetIdRaw, roomCode) => friendsGuard(asyn
   const code = typeof roomCode === 'string' ? roomCode.toUpperCase() : '';
   if (!selfId || !targetId || selfId === targetId || !FRIEND_INVITE_CODE_RE.test(code)) return 'error';
   await friendsRequest(`friend_invites?on_conflict=sender_id,target_id`, {
-    method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: code }],
+    // 時刻も書く(表には書き換えで時刻を新しくする仕掛けが無いので、同じ相手への2回目の招待が古いまま届かなかった。2026-10-26)
+    method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: code, created_at: new Date().toISOString() }],
     prefer: 'resolution=merge-duplicates,return=minimal' });
   return 'invited';
 });
@@ -52175,18 +52177,26 @@ const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now)
 };
 
 // コンピューター戦の結果(4-1・社長が案Aに決めた 台帳 #3484)
-//   ビートP: 勝ち … 難易度の点 / 負け(最後まで)… どの難易度も 25 / 降参 … 倒した相手のモンスター × 10(25まで。0体なら0)
-//   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの半分 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
+//   ビートP: 勝ち … 難易度の点 / 負け(最後まで)… 勝ちの 3/4(切り捨て)× (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した相手のモンスター × 10(減ったあとの負けの数まで。0体なら0)
+//   ★負けのビートPも自分の番の数で減らす(2026-10-26 社長。すぐ負けて回しても得にならないように)
+//   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの 3/4 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
+//   ★負けを勝ちの 3/4 にしたのは 2026-10-26 社長「助手とのバトルも負けても報酬もっとあげよう」(前はビートP 25・周回は勝ちの半分)
 //   ★かかった時間は見ない(止めて放っておいても増えない)。自分の番を3回やる前に終わった試合は、どちらも0(すぐ降参・すぐ負けで回せないように)
-//   ★負けのポイントを難易度で増やさないのは、MASTER でわざと早く負けるのがいちばん得にならないようにするため
 //   1日の上限は設けない(社長 2026-10-24。#3531 で取り消し)。その日はじめての勝ちの +50 だけは1日1回
-const CARD_CPU_LOSE_POINT = 25;
+// 負けでもらえる割合(勝ちの 3/4)。ビートPもクイック周回も、勝ちの数にこれを掛けて切り捨てる
+const CARD_LOSE_SHARE = 3 / 4;
+const cardLosePoint = (level) => Math.floor(level.point * CARD_LOSE_SHARE);
+const cardLoseLoops = (level) => Math.floor(level.loops * CARD_LOSE_SHARE);
+// 負けの数を、自分の番の数で減らす(10回で満額。切り捨て)。助手と対戦・マルチ対戦の負けと投了で使う
+const cardLoseScaled = (n, ownTurns) => Math.floor(n * Math.min(1, Math.max(0, Number(ownTurns) || 0) / CARD_LOSE_FULL_TURNS));
 const CARD_SURRENDER_POINT_PER_KO = 10;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
-// 対人戦(区切り4で使う。数は案A): 勝ち・負け(最後まで)・途中で抜けた で分かれる。同じ相手からは1日3戦まで
-const CARD_PVP_REWARD = Object.freeze({ win: { point: 200, loops: 24 }, lose: { point: 50, loops: 12 }, left: { point: 0, loops: 0 }, dailyMax: 2200, sameFoePerDay: 3 });
+// マルチ対戦: 勝ち・負け(最後まで)・途中で抜けた で分かれる。
+//   2026-10-26 社長: 勝ちは MASTER の2倍(ビートP 400・44周)、負けは MASTER と同じ(150・自分の番10回で16周。投了も MASTER と同じ)、抜けたら0。
+//   1日の上限(dailyMax)も、同じ相手と1日3戦まで(sameFoePerDay)もなくした(社長「同じ相手の縛りもいらないよ」)
+const CARD_PVP_REWARD = Object.freeze({ win: { point: CARD_AI_LEVELS.master.point * 2, loops: CARD_AI_LEVELS.master.loops * 2 }, lose: { point: cardLosePoint(CARD_AI_LEVELS.master), loops: cardLoseLoops(CARD_AI_LEVELS.master) }, left: { point: 0, loops: 0 } });
 // その人が自分の番を何回やったか(1ターン目は先攻の番)
 const cardOwnTurns = (st, p) => {
   const t = Math.max(0, Number(st && st.turn) || 0);
@@ -52200,15 +52210,15 @@ const cardCpuBasePoint = (levelId, outcome, facts) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
   if (outcome === 'win') return level.point;
-  if (outcome === 'lose') return CARD_CPU_LOSE_POINT;
-  if (outcome === 'surrender') return Math.min(CARD_CPU_LOSE_POINT, facts.kos * CARD_SURRENDER_POINT_PER_KO);
+  if (outcome === 'lose') return cardLoseScaled(cardLosePoint(level), facts.ownTurns);
+  if (outcome === 'surrender') return Math.min(cardLoseScaled(cardLosePoint(level), facts.ownTurns), facts.kos * CARD_SURRENDER_POINT_PER_KO);
   return 0;
 };
 // コンピューター戦のクイック周回(◯周ぶん)。周回クリア扱いにするかどうか(クイックで通したことがあるか)は、配る側(60-app)が決める
 const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
-  const loseFull = Math.floor(level.loops / 2);
+  const loseFull = cardLoseLoops(level);
   if (outcome === 'win') return level.loops;
   if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
   if (outcome === 'surrender') return Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));
@@ -54914,6 +54924,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
+  useEffect(() => { const go = (c) => { if (c) setView('pvp'); }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
   const [kitPick, setKitPick] = useState(null);
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
   const [game, setGame] = useState(null);
@@ -55135,12 +55147,16 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   if (view === 'pvp') {
     // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): ビートP・その日の数・記録(pvp の勝ち負け)・クイック周回
+    // その日はじめての勝ちの +50 は、助手と対戦と同じ印(daily.firstWin)を使う。どちらで勝っても合わせて1日1回(2026-10-26 社長)
+    // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
     const pvpReward = async (r) => {
-      const got = cardPvpReward(r.reward, r.facts);
+      const base = cardPvpReward(r.reward, r.facts);
       const daily = cardNormalizeDaily(save.daily, cardTodayJst());
       const record = cardNormalizeRecord(save.record);
       const win = r.outcome === 'win';
-      const ok = await persist({ point: save.point + got.point, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point },
+      const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+      const got = { ...base, point: base.point + bonus, bonus };
+      const ok = await persist({ point: save.point + got.point, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 },
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } });
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
@@ -56715,8 +56731,9 @@ const cardPvpReward = (outcome, facts) => {
   if (f.ownTurns < CARD_MIN_OWN_TURNS || outcome === 'left') return { point: 0, loops: 0, short: f.ownTurns < CARD_MIN_OWN_TURNS };
   const W = CARD_PVP_REWARD.win, L = CARD_PVP_REWARD.lose;
   if (outcome === 'win') return { point: W.point, loops: W.loops, short: false };
-  if (outcome === 'surrender') return { point: Math.min(L.point, f.kos * CARD_SURRENDER_POINT_PER_KO), loops: Math.min(L.loops, Math.round((f.kos * L.loops) / 3)), short: false };
-  return { point: L.point, loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)), short: false };
+  // 負けのビートPも自分の番の数で減らす(82 の cardLoseScaled。2026-10-26 社長)。投了の最大は減ったあとの負けの数
+  if (outcome === 'surrender') return { point: Math.min(cardLoseScaled(L.point, f.ownTurns), f.kos * CARD_SURRENDER_POINT_PER_KO), loops: Math.min(L.loops, Math.round((f.kos * L.loops) / 3)), short: false };
+  return { point: cardLoseScaled(L.point, f.ownTurns), loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)), short: false };
 };
 
 // 封(山札の切り方とデッキ)。終わるまで中身は見せず、指紋だけを先に渡す
@@ -56926,7 +56943,8 @@ const cardPvpInviteRequest = async (path, { method = 'GET', body = null, prefer 
 const sbSendCardInvite = async (selfId, targetId, code) => {
   const room = rhythmMultiNormalizeCode(code);
   if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(targetId)) || selfId === targetId || !room) return false;
-  const r = await cardPvpInviteRequest('card_battle_invites?on_conflict=sender_id,target_id', { method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: room }], prefer: 'resolution=merge-duplicates,return=minimal' });
+  // 時刻も書く(表には書き換えで時刻を新しくする仕掛けが無いので、同じ相手への2回目の招待が古いまま届かなかった)
+  const r = await cardPvpInviteRequest('card_battle_invites?on_conflict=sender_id,target_id', { method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: room, created_at: new Date().toISOString() }], prefer: 'resolution=merge-duplicates,return=minimal' });
   return r !== null;
 };
 // 自分に届いている3分以内の招待 [{ senderId, roomCode, createdAt }](新しい順)
@@ -56937,11 +56955,111 @@ const sbFetchCardInvites = async (selfId, nowMs) => {
   return (Array.isArray(rows) ? rows : []).map((row) => ({ senderId: typeof row.sender_id === 'string' ? row.sender_id : '', roomCode: rhythmMultiNormalizeCode(row.room_code), createdAt: Date.parse(row.created_at) || 0 }))
     .filter((x) => CARD_PVP_INVITE_ID_RE.test(x.senderId) && x.roomCode && nowMs - x.createdAt <= CARD_PVP_INVITE_TTL_MS);
 };
+// 招待の残りの秒数(0〜180)。端末の時計がずれていても、3分より長くは出さない
+const cardPvpInviteLeftSec = (at, nowMs) => Math.max(0, Math.min(CARD_PVP_INVITE_TTL_MS / 1000, Math.ceil((CARD_PVP_INVITE_TTL_MS - (nowMs - at)) / 1000)));
+// 断る: 受け手が、その招待の時刻をいちばん古い値へ書き換える(表は消せない。古い招待はどの版でも出ない)。送り手はこれを読んで「断られました」と出す
+const CARD_PVP_INVITE_DECLINED_AT = '1970-01-01T00:00:00.000Z';
+const sbDeclineCardInvite = async (selfId, senderId) => {
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(senderId))) return false;
+  const r = await cardPvpInviteRequest(`card_battle_invites?sender_id=eq.${senderId}&target_id=eq.${selfId}`, { method: 'PATCH', body: { created_at: CARD_PVP_INVITE_DECLINED_AT }, prefer: 'return=minimal' });
+  return r !== null;
+};
+// 送った招待のようす(送り手が部屋で待つあいだに読む)。{ [相手のid]: { code, at } }。読めなければ null
+const sbFetchCardInvitesSent = async (selfId, targetIds) => {
+  const ids = (targetIds || []).filter((x) => CARD_PVP_INVITE_ID_RE.test(String(x)));
+  if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !ids.length) return {};
+  const rows = await cardPvpInviteRequest(`card_battle_invites?select=target_id,room_code,created_at&sender_id=eq.${selfId}&target_id=in.(${ids.join(',')})`);
+  if (!Array.isArray(rows)) return null;
+  const out = {};
+  rows.forEach((row) => { const at = Date.parse(row.created_at); if (typeof row.target_id === 'string') out[row.target_id] = { code: rhythmMultiNormalizeCode(row.room_code), at: Number.isFinite(at) ? at : null }; });
+  return out;
+};
+// 送った招待の、いまのようす: 'live'(届いている)・'declined'(断られた)・'expired'(3分たった)
+const cardPvpInviteState = (sent, row, nowMs) => {
+  // 時刻が読めない行(at が null)は、断られたと見なさない
+  if (row && row.code === sent.code && Number.isFinite(row.at) && row.at < sent.at - 60 * 1000) return 'declined';
+  if (nowMs - sent.at > CARD_PVP_INVITE_TTL_MS) return 'expired';
+  return 'live';
+};
+// どの画面からでも「参加する」を押したら、マルチの入口が開いたときにその部屋へ入る(60-app の知らせ → 84 の入口 → 91 の CardPvpLobby)
+const CARD_PVP_JOIN = (() => {
+  let code = '';
+  const listeners = new Set();
+  return {
+    request(c) { code = rhythmMultiNormalizeCode(c) || ''; listeners.forEach((f) => f(code)); },
+    peek() { return code; },
+    take() { const c = code; code = ''; return c; },
+    on(f) { listeners.add(f); return () => listeners.delete(f); },
+  };
+})();
+// この端末で、断った・閉じた招待(同じ招待を何度も出さない。保存はしない)
+const cardPvpInviteDismissed = new Set();
+const cardPvpInviteKey = (x) => `${x.senderId}:${x.roomCode}:${x.createdAt}`;
 // 招待の相手(承認済みのフレンドだけ)。フレンドの表が無い環境では空。検査のときは window.__mhCardPvpRosterTest を使う
 const cardPvpRoster = async (selfId) => {
   if (typeof window !== 'undefined' && Array.isArray(window.__mhCardPvpRosterTest)) return window.__mhCardPvpRosterTest;
   if (typeof sbFetchFriendRoster !== 'function') return [];
   try { return await sbFetchFriendRoster(selfId); } catch (_) { return []; }
+};
+
+// ---- どの画面にいても、フレンドからの招待に気づける知らせ(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」) ----
+// 60-app が画面のいちばん上に置く。マルチの入口(CardPvpLobby)を開いているあいだ・部屋に入っているあいだ・busy(対戦中・演奏中など)は出さない。
+// 「参加する」で CARD_PVP_JOIN に合言葉を預けて onAccept(60-app がMFバトルカードのマルチへ移す)。「断る」で表の時刻を古くする。3分たったら消える
+let cardPvpLobbyOpen = 0;
+// 知らせを出さない画面(対戦・演奏・レイド・パック開封・モンヒロビートのマルチの部屋。押しまちがいと、遊びの途中で抜けるのを防ぐ)
+const CARD_PVP_NOTICE_BUSY = Object.freeze(['CARD_BATTLE', 'CARD_PACK_OPEN', 'BATTLE', 'BATTLE_TUTORIAL', 'RHYTHM_PLAY', 'RHYTHM_MASU_BEAT', 'RHYTHM_MULTI', 'RAID_JACK', 'RAID_JACK_DEBUG', 'RPG_DEBUG_BATTLE', 'DEBUG_BATTLE_SETUP']);
+const CARD_PVP_NOTICE_POLL_MS = 10000;
+const CardPvpInviteNotice = ({ enabled = false, busy = false, onAccept }) => {
+  const [selfId, setSelfId] = useState('');
+  const [roster, setRoster] = useState(null);
+  const [list, setList] = useState([]);
+  const [now, setNow] = useState(Date.now());
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let alive = true;
+    const loadRoster = async () => {
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (!alive || typeof id !== 'string') return;
+      setSelfId(id);
+      const r = await cardPvpRoster(id);
+      if (alive) setRoster(Array.isArray(r) ? r : []);
+    };
+    void loadRoster();
+    const t = setInterval(loadRoster, 5 * 60 * 1000); // 新しく承認したフレンドも、少しあとで拾う
+    return () => { alive = false; clearInterval(t); };
+  }, [enabled]);
+  useEffect(() => {
+    if (!enabled || !selfId || !roster || !roster.length) { setList([]); return undefined; }
+    let alive = true;
+    const names = new Map(roster.map((f) => [f.otherId, f.userName]));
+    const load = async () => {
+      if (cardPvpLobbyOpen > 0 || CARD_PVP.get().phase !== 'idle') return; // 入口の画面・部屋の中では、入口の一覧が受け持つ
+      const got = await sbFetchCardInvites(selfId, Date.now());
+      if (alive) setList(got.filter((x) => names.has(x.senderId) && !cardPvpInviteDismissed.has(cardPvpInviteKey(x))).map((x) => ({ ...x, name: names.get(x.senderId) })));
+    };
+    void load();
+    const t = setInterval(load, CARD_PVP_NOTICE_POLL_MS);
+    return () => { alive = false; clearInterval(t); };
+  }, [enabled, selfId, roster]);
+  useEffect(() => { if (!list.length) return undefined; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [list.length]);
+  const x = list.find((y) => now - y.createdAt <= CARD_PVP_INVITE_TTL_MS && !cardPvpInviteDismissed.has(cardPvpInviteKey(y)));
+  if (!enabled || busy || !x || cardPvpLobbyOpen > 0 || CARD_PVP.get().phase !== 'idle') return null;
+  const close = () => { cardPvpInviteDismissed.add(cardPvpInviteKey(x)); force((n) => n + 1); };
+  return (
+    <div data-card-pvp-notice={x.roomCode} role="alert" className="pointer-events-none fixed inset-x-0 top-0 z-[41000] flex justify-center px-3" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
+      <div className="pointer-events-auto w-full max-w-md rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 p-3 text-white shadow-2xl">
+        <p className="text-[13px] font-black text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、MFバトルカードのマルチ対戦の招待が届いています`)}</p>
+        <p className="mt-0.5 text-[11px] font-bold text-slate-300 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</p>
+        <div className="mt-2 flex gap-2">
+          <button type="button" data-card-pvp-notice-decline className="mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[13px] font-black text-slate-200"
+            onClick={() => { Audio_.fgSe.tap(); close(); void sbDeclineCardInvite(selfId, x.senderId); }}>断る</button>
+          <button type="button" data-card-pvp-notice-accept className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[13px] font-black"
+            onClick={() => { Audio_.fgSe.tap(); close(); CARD_PVP_JOIN.request(x.roomCode); if (onAccept) onAccept(x.roomCode); }}>参加する</button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // 部屋の状態は React の外に置く(対戦の画面へ行って戻っても、部屋は切れない。モンヒロビートの RHYTHM_MULTI と同じ)
@@ -57235,7 +57353,9 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
+  const [profileReady, setProfileReady] = useState(false);
   useEffect(() => CARD_PVP.subscribe(setRoom), []);
+  useEffect(() => { cardPvpLobbyOpen += 1; return () => { cardPvpLobbyOpen -= 1; }; }, []);
   // 試合の途中で抜けた人は、少しのあいだ入れない(mh_card_pvp_penalty_v1。無い・壊れた値は 0 = 入れる)
   const [penaltyUntil, setPenaltyUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -57248,6 +57368,8 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invited, setInvited] = useState({});
+  const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
+  const [sentRows, setSentRows] = useState({});       // 送った招待の、表の今のようす(断られたかを見る)
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -57264,11 +57386,47 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
     if (room.phase !== 'idle' || !selfBid || !roster || !roster.length) { setInvites([]); return undefined; }
     let alive = true;
     const ids = new Map(roster.map((f) => [f.otherId, f.userName]));
-    const load = async () => { const list = await sbFetchCardInvites(selfBid, Date.now()); if (alive) setInvites(list.filter((x) => ids.has(x.senderId)).map((x) => ({ ...x, name: ids.get(x.senderId) }))); };
+    const load = async () => { const list = await sbFetchCardInvites(selfBid, Date.now()); if (alive) setInvites(list.filter((x) => ids.has(x.senderId) && !cardPvpInviteDismissed.has(cardPvpInviteKey(x))).map((x) => ({ ...x, name: ids.get(x.senderId) }))); };
     void load();
     const t = setInterval(load, CARD_PVP_INVITE_POLL_MS);
     return () => { alive = false; clearInterval(t); };
   }, [room.phase, selfBid, roster]);
+  // 入口で選んだ相手へ、部屋ができたら招待を送る
+  const sendInvite = async (to, roomCode) => {
+    const at = Date.now();
+    const ok = await sbSendCardInvite(selfBid, to, roomCode);
+    setInvited((cur) => ({ ...cur, [to]: { code: rhythmMultiNormalizeCode(roomCode), at, ok } }));
+  };
+  useEffect(() => {
+    if (!inviteNext || room.phase !== 'waiting' || !room.code) return;
+    const to = inviteNext;
+    setInviteNext('');
+    setInviteOpen(true);
+    void sendInvite(to, room.code);
+  }, [inviteNext, room.phase, room.code]);
+  // 部屋を出たら、送った招待の覚えを消す(次の部屋で、また送れるように)
+  useEffect(() => { if (room.phase === 'idle') { setInvited({}); setSentRows({}); } }, [room.phase]);
+  // 部屋で待つあいだ、送った招待が断られていないかを5秒おきに読む
+  const sentIds = Object.keys(invited).filter((k) => invited[k] && invited[k].ok).join(',');
+  useEffect(() => {
+    if (room.phase !== 'waiting' || room.foe || !selfBid || !sentIds) return undefined;
+    let alive = true;
+    const load = async () => { const rows = await sbFetchCardInvitesSent(selfBid, sentIds.split(',')); if (alive && rows) setSentRows(rows); };
+    void load();
+    const t = setInterval(load, 5000);
+    return () => { alive = false; clearInterval(t); };
+  }, [room.phase, !!room.foe, selfBid, sentIds]);
+  // ほかの画面の知らせで「参加する」を押してきたら、名前を読み終えたところで、その部屋へ入る
+  const [joinAsk, setJoinAsk] = useState(() => CARD_PVP_JOIN.peek());
+  useEffect(() => CARD_PVP_JOIN.on(setJoinAsk), []);
+  useEffect(() => {
+    if (!joinAsk || !profileReady || room.phase !== 'idle') return;
+    if (!deck || deckIssues.length || penaltyMin > 0) return; // デッキが使えない・入れない間は、入口の招待の一覧から入ってもらう(招待は3分のあいだ出ている)
+    const c = CARD_PVP_JOIN.take();
+    setJoinAsk('');
+    if (c) CARD_PVP.join(c, profile, deck);
+  }, [joinAsk, profileReady, room.phase, !!deck, deckIssues.length, penaltyMin]);
+  const declineInvite = (x) => { cardPvpInviteDismissed.add(cardPvpInviteKey(x)); setInvites((cur) => cur.filter((y) => y !== x)); void sbDeclineCardInvite(selfBid, x.senderId); };
   // 報酬: 確かめが「合っている」か「確かめられない(相手が抜けた・封が届かない)」になったら、1回だけ渡す
   const rewardRef = useRef(onReward);
   rewardRef.current = onReward;
@@ -57285,7 +57443,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
   useEffect(() => {
     let alive = true;
     Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)])
-      .then(([name, icon]) => { if (alive) setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' }); }).catch(() => {});
+      .then(([name, icon]) => { if (alive) { setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' }); setProfileReady(true); } }).catch(() => { if (alive) setProfileReady(true); });
     return () => { alive = false; };
   }, []);
   // 始まったら対戦の画面へ(1回だけ)
@@ -57360,11 +57518,33 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
           {penaltyMin === 0 && !ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
           <button type="button" data-card-pvp-free disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.free(profile, deck); }}>だれとでも</button>
           <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
+          {/* フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 相手を選ぶと部屋を作り、合言葉が出たところで招待を送る。相手が来たら始まる */}
+          <button type="button" data-card-pvp-invite-open disabled={!ready || !roster} className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`}
+            onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{inviteOpen ? 'フレンドの招待をとじる' : 'フレンドを招待'}</button>
+          {inviteOpen && roster && (
+            <div data-card-pvp-invite-pick className="rounded-2xl border border-emerald-300/40 bg-emerald-500/5 p-2">
+              {roster.length === 0
+                ? <p className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだフレンドがいません。HOMEの「フレンド」から申請できます')}</p>
+                : <ul data-card-pvp-roster className="max-h-[40vh] space-y-1 overflow-y-auto">
+                  {roster.slice(0, 30).map((f) => (
+                    <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
+                      <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                        onClick={() => { Audio_.fgSe.tap(); setInviteNext(f.otherId); void CARD_PVP.create(profile, deck); }}>招待する</button>
+                    </li>
+                  ))}
+                </ul>}
+              <p className="mt-1 px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('選ぶと部屋を作って招待を送ります。招待は3分のあいだ届きます')}</p>
+            </div>
+          )}
           {invites.length > 0 && (
             <div data-card-pvp-invites className="space-y-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3">
               {invites.slice(0, 3).map((x) => (
                 <div key={`${x.senderId}-${x.roomCode}`} className="flex items-center gap-2">
-                  <p className="min-w-0 flex-1 text-[13px] font-bold text-emerald-50" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)}</p>
+                  <p className="min-w-0 flex-1 text-[13px] font-bold text-emerald-50" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)}
+                    <small className="block text-[11px] text-emerald-200/80 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</small></p>
+                  <button type="button" data-card-pvp-decline={x.roomCode} className="mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200"
+                    onClick={() => { Audio_.fgSe.tap(); declineInvite(x); }}>断る</button>
                   <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
                     onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(x.roomCode, profile, deck); }}>参加する</button>
                 </div>
@@ -57410,10 +57590,19 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
                     {roster.slice(0, 30).map((f) => (
                       <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
                         <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
-                        <button type="button" data-card-pvp-invite-to={f.otherId} disabled={invited[f.otherId] === 'sent'} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-                          onClick={async () => { Audio_.fgSe.tap(); const ok = await sbSendCardInvite(selfBid, f.otherId, room.code); setInvited((cur) => ({ ...cur, [f.otherId]: ok ? 'sent' : 'ng' })); }}>
-                          {invited[f.otherId] === 'sent' ? '招待しました' : invited[f.otherId] === 'ng' ? '送れませんでした' : '招待する'}
-                        </button>
+                        {(() => {
+                          // 招待のようす: 届いている(あと何秒)・断られた・時間切れ・送れなかった。断られた・時間切れ・送れなかったら、もう一度送れる
+                          const sent = invited[f.otherId];
+                          const state = sent && sent.ok ? cardPvpInviteState(sent, sentRows[f.otherId], now) : sent ? 'ng' : '';
+                          const label = state === 'live' ? `招待しました(あと${cardPvpInviteLeftSec(sent.at, now)}秒)` : state === 'declined' ? '断られました' : state === 'expired' ? '時間切れ' : state === 'ng' ? '送れませんでした' : '';
+                          return (<>
+                            {label && <span data-card-pvp-invite-state={state} className={`shrink-0 text-[11px] font-bold tabular-nums ${state === 'live' ? 'text-emerald-200' : 'text-amber-200'}`}>{label}</span>}
+                            {state !== 'live' && (
+                              <button type="button" data-card-pvp-invite-to={f.otherId} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                                onClick={() => { Audio_.fgSe.tap(); void sendInvite(f.otherId, room.code); }}>{state ? 'もう一度' : '招待する'}</button>
+                            )}
+                          </>);
+                        })()}
                       </li>
                     ))}
                   </ul>
@@ -77237,6 +77426,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
         {renderCardQuickRunStrip()}
+        {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
+        <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}

@@ -100,8 +100,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     // ⑰ 公開前: ふつうのプレイヤー(デバッグの合言葉の印が無い)には、HOME に MFバトルカードの入口が出ない(社長 #3495・必ず守る)
     await page.waitForTimeout(800);
-    // 公開後は、公開のお話を見た人(この検査は quiet-boot-seed で見たことにしている)に入口が出る
-    if (RELEASED) check('⑰ 公開後: ふつうのプレイヤーの HOME に MFバトルカードの入口が出る', (await page.locator('[data-home-card-battle]').count()) === 1);
+    // 公開後(#3672 で cardBattle を立てた)は、ふつうのプレイヤーの HOME にも入口が出る
+    if (RELEASED) check('⑰ 公開後: ふつうのプレイヤーの HOME にも MFバトルカードの入口が出る', (await page.locator('[data-home-card-battle]').count()) === 1, String(await page.locator('[data-home-card-battle]').count()));
     else check('⑰ ふつうのプレイヤーの HOME には MFバトルカードの入口が出ない', (await page.locator('[data-home-card-battle]').count()) === 0);
     // ここまでの保存(既存のキー)を控える。カードバトルが書くのは mh_card_* だけのはず
     await page.waitForTimeout(1500);

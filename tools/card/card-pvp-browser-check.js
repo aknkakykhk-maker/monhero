@@ -17,8 +17,10 @@
 //      終わったら報酬(カードポイント・クイック周回)が出て、カードポイントが増える
 //   ⑦ 区切り3: 「だれとでも」で2台が受付から出会い、最後まで戦える(待っている人数が出る)・終わったら2台とも強さの点数へ、同じ試合の結果を届ける
 //      (本物の表には送らない。検査は Supabase を偽物にして、届いた中身だけを見る。window.__mhCardPvpRankTest)
-//   ⑧ 区切り4: 部屋を作った人が、名簿のフレンドへ招待を送れる(表 card_battle_invites へ書く)・届いた人の画面に「招待が届いています」が出て、
-//      「参加する」で同じ部屋に入って対戦が始まる(名簿は window.__mhCardPvpRosterTest・表は偽物)
+//   ⑧ 入口の「フレンドを招待」でフレンドを選ぶと、部屋を作って招待を送る(表 card_battle_invites へ書く。名簿は window.__mhCardPvpRosterTest・表は偽物)
+//   ⑨ 招待された側は、マルチの入口の外でも画面の上に知らせが出る。「断る」で消え、送った側に「断られました」が出る
+//   ⑩ もう一度送ると知らせがまた出て、「参加する」でマルチの入口へ移って同じ部屋に入り、対戦が始まる
+//   ⑪ 招待のようすの見分け(届いている・時間切れ・断られた)
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -87,6 +89,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 2台は別々の保存先(context)。偽の Supabase・はじめの保存・偽の WebSocket は、どちらにも同じものを入れる
     const reports = [];
     const invites = [];
+    const posts = [];
+    const patches = [];
     const livePages = [];
     let relayQueue = Promise.resolve(); // 届いた順に配る(2台の手の順番を入れ替えない)
     const makeCtx = async () => {
@@ -99,7 +103,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       const req = route.request();
       if (process.env.DEBUG_PVP && /invite/.test(req.url())) console.log('REQ', req.method(), req.url().slice(0, 140), (req.postData() || '').slice(0, 120));
       if (/\/card_battle_invites/.test(req.url())) {
-        if (req.method() === 'POST') { try { const row = JSON.parse(req.postData() || '[]')[0]; invites.push({ ...row, created_at: new Date().toISOString() }); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 201, body: '' }); }
+        // 送る(同じ相手へは上書き。送った時刻があればそれを使う)
+        if (req.method() === 'POST') { try { const row = JSON.parse(req.postData() || '[]')[0]; const i = invites.findIndex((x) => x.sender_id === row.sender_id && x.target_id === row.target_id); const next = { ...row, created_at: row.created_at || new Date().toISOString() }; if (i >= 0) invites[i] = next; else invites.push(next); posts.push(next); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 201, body: '' }); }
+        // 断る(受け手が時刻を古くする)。2台の id は別々でも、偽の表では1行だけなので全部に当てる
+        if (req.method() === 'PATCH') { try { const body = JSON.parse(req.postData() || '{}'); invites.forEach((x) => { if (body.created_at) x.created_at = body.created_at; }); patches.push(body); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 204, body: '' }); }
+        // 送り手が「送った招待のようす」を読むとき(sender_id=eq.)は target_id 付きで返す
+        if (/sender_id=eq\./.test(req.url())) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(invites.map((x) => ({ target_id: x.target_id, room_code: x.room_code, created_at: x.created_at }))) });
         // 届いた側からは「名簿のフレンド(friend-x)から」の招待に見せる(2台とも同じ偽の表を見る)
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(invites.map((x) => ({ sender_id: 'friend-x', room_code: x.room_code, created_at: x.created_at }))) });
       }
@@ -233,10 +242,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const rewardB = await B.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => B.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
     const pointAfter = [await beatP(A), await beatP(B)];
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
-    // 2台は保存先が別なので、それぞれに入る(勝った台 +200・負けた台 +50。台帳 #119 の対人戦)
+    // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4)。
+    // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回)。この検査の端末はその日まだ勝っていないので +450
     const gain = pointAfter.map((v, i) => v - pointBefore[i]);
-    const want = [rA, rB].map((r) => (r === 'win' ? 200 : r === 'lose' ? 50 : null));
-    check('⑥ ビートPが、2台それぞれに増えている(勝ち+200・負け+50)', gain[0] === want[0] && gain[1] === want[1], `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
+    // 負けは自分の番の数で減る(3回で45・10回で満額150)。その試合の番の数で決まるので、幅で見る
+    const okGain = (r, g) => (r === 'win' ? g === 450 : r === 'lose' ? g >= 45 && g <= 150 : false);
+    check('⑥ ビートPが、2台それぞれに増えている(勝ち+400とその日はじめての+50・負けは自分の番の数で45〜150)', okGain(rA, gain[0]) && okGain(rB, gain[1]), `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
+    // 結果の画面の「もらったビートP」も、+50 を足した合計
+    const shown = [rewardA, rewardB].map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
+    check('⑥ 結果の画面の「もらったビートP」が、増えた数と同じ', shown[0] === gain[0] && shown[1] === gain[1], `${rewardA} / ${rewardB}`);
     const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
     check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
     // ⑥ 54本の台詞を、いまの吹き出しと同じ幅・同じ文字に入れて、言葉の途中で折れていないか測る(かたまり1つが2行にまたがっていない)
@@ -301,22 +315,41 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const mine = reports.slice(reportsBefore);
     check('⑦ 終わったら2台とも、同じ試合・同じ勝った人で強さの点数へ届ける', mine.length === 2 && mine[0].p_match_id && mine[0].p_match_id === mine[1].p_match_id && mine[0].p_winner === mine[1].p_winner,
       JSON.stringify(mine.map((x) => [x.p_match_id, x.p_winner])));
-    // ⑧ フレンドから招待
+    // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
-    await A.locator('[data-card-pvp-create]').click();
+    await A.locator('[data-card-pvp-invite-open]').click();
+    await shot(A, 'pvp-07-invite-pick');
+    await A.locator('[data-card-pvp-invite-pick] [data-card-pvp-invite-to="friend-x"]').click();
     await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
     const code3 = (await A.locator('[data-card-pvp-room]').innerText()).trim();
-    await A.locator('[data-card-pvp-invite]').click();
-    await A.locator('[data-card-pvp-invite-to="friend-x"]').click();
-    const sentOk = await A.locator('[data-card-pvp-invite-to="friend-x"]').filter({ hasText: '招待しました' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+    const sentOk = await A.locator('[data-card-pvp-invite-state="live"]').waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
     await shot(A, 'pvp-07-invite-send');
-    check('⑧ 部屋を作った人が、名簿のフレンドへ招待を送れる(表へ合言葉を書く)', sentOk && invites.length === 1 && invites[0].room_code === code3 && invites[0].target_id === 'friend-x', JSON.stringify(invites));
-    const acceptSeen = await B.locator(`[data-card-pvp-accept="${code3}"]`).waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
-    await shot(B, 'pvp-07-invite-got');
-    check('⑧ 届いた人の画面に「招待が届いています」が出る', acceptSeen);
-    if (acceptSeen) await B.locator(`[data-card-pvp-accept="${code3}"]`).click();
+    check('⑧ 入口の「フレンドを招待」でフレンドを選ぶと、部屋を作って招待を送る(表へ合言葉と時刻を書く)・「招待しました(あと何秒)」が出る',
+      sentOk && invites.length === 1 && invites[0].room_code === code3 && invites[0].target_id === 'friend-x' && !!posts[0].created_at, JSON.stringify(invites));
+    // ⑨ 招待された側は、マルチの入口の外(カードのトップ)にいても、上に知らせが出る。「断る」で消え、送った側に「断られました」が出る
+    await B.locator('[data-mh-screen] button').first().click().catch(() => {}); // 入口から戻る(マルチの入口を閉じる)
+    await B.locator('[data-card-pvp="idle"]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+    const noticeSeen = await B.locator(`[data-card-pvp-notice="${code3}"]`).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    await shot(B, 'pvp-08-invite-notice');
+    check('⑨ 招待された側は、マルチの入口の外でも画面の上に知らせが出る(参加する・断る・あと何秒)', noticeSeen && /あと\d+秒/.test(await B.locator('[data-card-pvp-notice]').innerText().catch(() => '')));
+    if (noticeSeen) await B.locator('[data-card-pvp-notice-decline]').click();
+    const goneAfterDecline = await B.locator('[data-card-pvp-notice]').waitFor({ state: 'detached', timeout: 5000 }).then(() => true).catch(() => false);
+    const declinedSeen = await A.locator('[data-card-pvp-invite-state="declined"]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    await shot(A, 'pvp-08-invite-declined');
+    check('⑨ 「断る」で知らせが消え、表の時刻を古くする・送った側に「断られました」が出る', goneAfterDecline && patches.length >= 1 && declinedSeen, JSON.stringify(patches));
+    // ⑩ 送った側が「もう一度」→ 知らせの「参加する」で、カードのマルチの入口へ移って同じ部屋に入り、対戦が始まる
+    await A.locator('[data-card-pvp-invite-to="friend-x"]').click();
+    const again = await B.locator(`[data-card-pvp-notice="${code3}"]`).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    if (again) await B.locator('[data-card-pvp-notice-accept]').click();
     const metInvite = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
-    check('⑧ 「参加する」で同じ部屋に入って、対戦が始まる', metInvite);
+    check('⑩ もう一度送ると知らせがまた出て、「参加する」で同じ部屋に入り、対戦が始まる', again && metInvite);
+    // ⑪ 時間切れ: 送って3分たつと「時間切れ」(表の時刻はそのまま)・断られた形は「断られました」。古い版の相手(時刻を書かない招待)も、届く側は同じに読む
+    const st = await A.evaluate(() => { /* eslint-disable no-undef */
+      const sent = { code: 'ABCD', at: 1000000 };
+      return [cardPvpInviteState(sent, { code: 'ABCD', at: 1000000 }, 1000000 + 60000), cardPvpInviteState(sent, { code: 'ABCD', at: 1000000 }, 1000000 + 3 * 60000 + 1000),
+        cardPvpInviteState(sent, { code: 'ABCD', at: null }, 1000000 + 60000), cardPvpInviteState(sent, { code: 'ABCD', at: Date.parse(CARD_PVP_INVITE_DECLINED_AT) }, 1000000 + 60000), cardPvpInviteState(sent, null, 1000000 + 1000)].join(',');
+    });
+    check('⑪ 招待のようすの見分け(届いている・時間切れ・時刻が読めない行・断られた・表が読めない)', st === 'live,expired,live,declined,live', st);
     const after = await A.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
     // 起動のあとに本体が書き足すもの(お話の既読など)は数えない。マルチ対戦は何も保存しない
     const volatile = /^mh_(last_|session|boot|app_open|login|bgm|se_|ui_|debug|daily_login|visit|rhythm_event_story_v1)/;
