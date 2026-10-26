@@ -19900,7 +19900,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
-            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
+            /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
+               ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}
