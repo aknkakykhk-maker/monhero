@@ -289,7 +289,8 @@ const cardReplayGameOf = (db, rec) => {
 // ---- 再生の帯(84 の盤面のいちばん下に出す) ----
 // at … いまの手の番号(0 = はじめ)。onSeek(n) で場を差し替える
 const CARD_REPLAY_SPEEDS = Object.freeze([{ id: 1, label: '×1', ms: 1400 }, { id: 2, label: '×2', ms: 650 }]);
-const CardReplayBar = ({ replay, at, onSeek, onExit }) => {
+// とじるのは上の帯の「とじる」だけ(2つ並んでいた。2026-10-27 言葉の見直し7)
+const CardReplayBar = ({ replay, at, onSeek }) => {
   const [auto, setAuto] = useState(false);
   const [speed, setSpeed] = useState(1);
   const last = replay.states.length - 1;
@@ -324,7 +325,6 @@ const CardReplayBar = ({ replay, at, onSeek, onExit }) => {
         <button type="button" data-card-replay-next className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(at + 1); }}>▶</button>
         <button type="button" data-card-replay-next-turn className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(turnIdx + 1 < turns.length ? turns[turnIdx + 1] : last); }}>▶番</button>
         <button type="button" data-card-replay-speed className={btn} onClick={() => { Audio_.fgSe.tap(); setSpeed((v) => (v === 1 ? 2 : 1)); }}>{(CARD_REPLAY_SPEEDS.find((x) => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label}</button>
-        <button type="button" data-card-replay-exit className={btn} onClick={() => { Audio_.fgSe.tap(); onExit(); }}>とじる</button>
       </div>
     </div>
   );
