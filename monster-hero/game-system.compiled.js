@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c9c4d68ca1a3cef
+// source-sha256: 8a88ae72a7563d0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93206,7 +93206,7 @@ const CardBattleScreen = ({
         borderColor: a.accent,
         ...JA_WRAP_STYLE
       }
-    }, line ? line.text : ''))), a && React.createElement(CardFoeStyle, {
+    }, line ? cardJaWrap(line.text) : ''))), a && React.createElement(CardFoeStyle, {
       db: db,
       who: a.id,
       level: foe.level
@@ -94681,7 +94681,7 @@ const CardDeckEditor = ({
       borderColor: advisor.accent,
       ...JA_WRAP_STYLE
     }
-  }, ask.busy ? 'うーん、どうしようかな…' : ask.text)), !ask.busy && ask.picks.length > 0 && React.createElement("div", {
+  }, cardJaWrap(ask.busy ? 'うーん、どうしようかな…' : ask.text))), !ask.busy && ask.picks.length > 0 && React.createElement("div", {
     className: "mt-2 space-y-1"
   }, ask.picks.map(p => {
     const why = cardDeckAddReason(db, deck, p.no, col);
