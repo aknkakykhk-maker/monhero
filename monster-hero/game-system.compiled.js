@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df4dde64f1519817
+// source-sha256: 6ce8b389efd3a552
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -26895,6 +26895,7 @@ const debugPassphraseMatches = async text => {
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
 const ASSET_CACHE_META = 'mh-assets-meta-v1';
+const ASSET_CODE_CACHE_NAME = 'mh-code-v1';
 const ASSET_CACHE_DEFAULT_ENABLED = true;
 const ASSET_PACKS = [{
   id: 'beat',
@@ -26999,7 +27000,7 @@ const ASSET_CACHE = (() => {
     }
     return manifestPromise;
   };
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId);
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
   const refreshStatus = async () => {
     status = {
       ...status,
@@ -27113,6 +27114,7 @@ const ASSET_CACHE = (() => {
     try {
       await window.caches.delete(ASSET_CACHE_NAME);
       await window.caches.delete(ASSET_CACHE_META);
+      await window.caches.delete(ASSET_CODE_CACHE_NAME);
     } catch (e) {}
   };
   const download = async packId => {
@@ -27296,7 +27298,7 @@ const ASSET_CACHE = (() => {
     if (!settings.enabled || !settings.auto) return;
     const m = await ensureManifest();
     if (!m) return;
-    enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
+    enqueue(Object.keys(m.files).filter(p => m.files[p].pack !== 'core' && ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
     if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
   };

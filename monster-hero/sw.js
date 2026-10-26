@@ -2,9 +2,11 @@
 // 説明の正本: docs/spec/ASSET_PREFETCH.md / 一覧: asset-manifest.json(tools/build-asset-manifest.js が作る)
 //
 // 【いちばん大事な決めごと】
-// ・扱うのは asset-manifest.json に載っている音源と画像だけ。HTML・JS・CSS・JSON・version.json・
-//   Supabase などには respondWith しない(ブラウザがふつうに取りに行く)。
-//   だからゲーム本体の更新は、この SW があっても無くても今まで通り必ず新しい版が動く
+// ・扱うのは asset-manifest.json に載っている音源・画像と、ゲーム本体・データの JS・CSS(pack:'core')だけ。
+//   HTML(index.html)・JSON・version.json・Supabase などには respondWith しない(ブラウザがふつうに取りに行く)
+// ・本体・データの JS・CSS は、URL の ?v= が一覧の版とぴったり同じときだけ返す(置き場 mh-code-v1)。
+//   どの版を読むかを決めるのは毎回ネットから来る index.html なので、新しい版を出せば URL が変わり、必ず新しい版が動く。
+//   &retry= の付いた取得(index.html の読み込み直し)は素通し。止め札は CODE_CACHE_OFF(true にして出せば素通しになり置き場も消す)
 // ・ためる鍵は「パス?v=<中身のハッシュ>」。中身が変われば鍵が変わるので、古い絵や音を返すことはない
 // ・一覧が変わったら、一覧に無い・版の違う古いものを消す
 // ・Range(範囲指定)つきの取得には手を出さない(<video> など。丸ごと返すと iPhone で再生できない)
@@ -12,6 +14,11 @@
 'use strict';
 
 const CACHE_NAME = 'mh-assets-v1';
+// 本体・データの JS・CSS の置き場(2026-10-27 社長「本体とデータもダウンロードに入れる」)。画像・音源とは分けて、止め札で置き場ごと消せるようにする
+const CODE_CACHE = 'mh-code-v1';
+// 止め札。本体・データをためる仕組みで困ったら、この1行を true にして公開する(次に開いたときから素通しになり、mh-code-v1 を消す)
+const CODE_CACHE_OFF = false;
+const CODE_PATH_RE = /^(game-system\.compiled\.js|tailwind\.css|data\/[a-z0-9_\/.-]+\.js|vendor\/[a-z0-9_.-]+\.js)$/i;
 const META_CACHE = 'mh-assets-meta-v1';
 const META_KEY = 'manifest.json';
 const SCOPE = self.registration.scope; // 例: https://…/monhero/monster-hero/
@@ -48,6 +55,7 @@ async function refreshManifest() {
       await meta.put(META_KEY, new Response(JSON.stringify(next), { headers: { 'Content-Type': 'application/json' } }));
     } catch (e) { /* 保存できなくても、この起動のあいだは使える */ }
     await pruneCache();
+    await pruneCode();
   }
   return manifest;
 }
@@ -68,6 +76,23 @@ async function pruneCache() {
   return removed;
 }
 
+// 本体・データの置き場から、一覧に無い・版の違うものを消す
+async function pruneCode() {
+  if (!manifest) return 0;
+  let removed = 0;
+  try {
+    if (!(await caches.has(CODE_CACHE))) return 0;
+    const cache = await caches.open(CODE_CACHE);
+    for (const req of await cache.keys()) {
+      const url = new URL(req.url);
+      const path = relPath(url);
+      const entry = path && manifest.files[path];
+      if (CODE_CACHE_OFF || !entry || entry.pack !== 'core' || url.searchParams.get('v') !== entry.v) { await cache.delete(req); removed++; }
+    }
+  } catch (e) { /* 次の機会に消す */ }
+  return removed;
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -77,6 +102,7 @@ self.addEventListener('activate', (event) => {
     // 名前の違う古い置き場(将来 v2 にしたときの v1 など)を消す
     for (const name of await caches.keys()) {
       if (name.startsWith('mh-assets-') && name !== CACHE_NAME && name !== META_CACHE) await caches.delete(name);
+      if (name.startsWith('mh-code-') && (name !== CODE_CACHE || CODE_CACHE_OFF)) await caches.delete(name);
     }
     manifestReady = refreshManifest();
     await manifestReady;
@@ -92,7 +118,7 @@ self.addEventListener('message', (event) => {
   } else if (data.type === 'mh-asset-disable') {
     disabled = true;
     event.waitUntil((async () => {
-      for (const name of await caches.keys()) if (name.startsWith('mh-assets-')) await caches.delete(name);
+      for (const name of await caches.keys()) if (name.startsWith('mh-assets-') || name.startsWith('mh-code-')) await caches.delete(name);
       if (event.source) event.source.postMessage({ type: 'mh-asset-disabled' });
     })());
   } else if (data.type === 'mh-asset-prune') {
@@ -113,6 +139,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   const path = relPath(url);
+  // 本体・データの JS・CSS: ?v= 付き・retry なしのときだけ(版の無い取得・読み込み直しは素通し)
+  if (path && CODE_PATH_RE.test(path)) {
+    if (disabled || CODE_CACHE_OFF || !url.searchParams.get('v') || url.searchParams.has('retry')) return;
+    event.respondWith(serveCode(event, req, url, path));
+    return;
+  }
   if (disabled || !path || !/^(audio|images|data\/images)\/.+\.(mp3|png|jpe?g|webp)$/i.test(path)) return;
   event.respondWith(serveAsset(event, req, url, path));
 });
@@ -139,5 +171,39 @@ async function serveAsset(event, req, url, path) {
     // ためるのは返したあと(待ってから返すと、絵や音が出るのが遅れる)
     event.waitUntil((disabled ? Promise.resolve() : cache.put(key, res.clone())).catch(() => { /* 容量いっぱいなどは、ためずに返すだけ */ }));
   }
+  return res;
+}
+
+
+// 本体・データの JS・CSS を返す。URL の版が一覧とぴったり同じときだけ、ためた物を返す・ためる
+async function serveCode(event, req, url, path) {
+  if (!manifest) { try { await (manifestReady || (manifestReady = loadStoredManifest().then(m => m || refreshManifest()))); } catch (e) {} }
+  const v = url.searchParams.get('v');
+  const key = cacheKey(path, v);
+  const sameAs = (m) => { const e = m && m.files[path]; return !!(e && e.pack === 'core' && e.v === v); };
+  let cache = null;
+  if (sameAs(manifest)) {
+    try {
+      cache = await caches.open(CODE_CACHE);
+      const hit = await cache.match(key);
+      if (hit) return hit;
+    } catch (e) { cache = null; }
+  }
+  const res = await fetch(req);
+  if (!res.ok || res.status !== 200 || res.type !== 'basic') return res;
+  // ためるのは返したあと。新しい版を出した直後は手元の一覧が古いことがあるので、ページを開いたときの一覧の取り直しを待ってから決める。
+  // 一覧の版とぴったり同じで、中身の大きさも一覧と同じときだけためる(途中で切れた物をためない)
+  const copy = res.clone();
+  event.waitUntil((async () => {
+    try {
+      if (!sameAs(manifest) && manifestReady) await manifestReady;
+      if (disabled || CODE_CACHE_OFF || !sameAs(manifest)) return;
+      const body = await copy.blob();
+      if (body.size !== manifest.files[path].size) return;
+      const c = cache || await caches.open(CODE_CACHE);
+      // 見出しは種類だけ写す(content-encoding などを写すと、もう元に戻した中身を読み違える端末がある)
+      await c.put(key, new Response(body, { status: 200, headers: { 'Content-Type': copy.headers.get('Content-Type') || (path.endsWith('.css') ? 'text/css' : 'text/javascript') } }));
+    } catch (e) { /* 容量いっぱいなどは、ためずに返すだけ */ }
+  })());
   return res;
 }
