@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2d1f7d04640d5a23
+// source-sha256: 03e2a25e8e9c0f9a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:11";
+const BUILD_DATE = "2026-10-27 03:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90175,6 +90175,7 @@ const CardBattleBoard = ({
       me: meNow,
       name: meNow ? 'あなた' : who.name
     });
+    if (meNow && !replay && !game.demo && Audio_.fgSe.card) Audio_.fgSe.card();
     setAction(null);
     const bannerMs = Math.max(500, Math.round(800 * pace));
     const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), bannerMs);
@@ -90945,7 +90946,11 @@ const CardBattleBoard = ({
     }));
   })), React.createElement("div", {
     "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
-    className: `flex shrink-0 items-start justify-around rounded-2xl px-1 transition-shadow ${turnLive && !turnMe ? 'shadow-[inset_0_0_0_2px_rgba(251,113,133,.75),0_0_16px_rgba(251,113,133,.35)]' : ''}`
+    "data-card-floor": "foe",
+    className: `flex shrink-0 items-start justify-around rounded-2xl px-1 transition-shadow ${turnLive && !turnMe ? 'shadow-[inset_0_0_0_2px_rgba(251,113,133,.75),0_0_16px_rgba(251,113,133,.35)]' : ''}`,
+    style: {
+      background: 'linear-gradient(180deg, rgba(30,64,175,0) 0%, rgba(30,64,175,.28) 100%)'
+    }
   }, opp.mons.map((_, m) => React.createElement(CardMonSlot, {
     key: m,
     db: db,
@@ -91002,7 +91007,11 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, jaWrap(bubble.text)))), React.createElement("div", {
     className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
-  }), breederFx && React.createElement("div", {
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    "data-card-vs-mark": true,
+    className: "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]"
+  }, "VS"), breederFx && React.createElement("div", {
     key: breederFx.key,
     "data-card-breeder-fx": breederFx.p === CARD_ME ? 'me' : 'foe',
     "aria-hidden": "true",
@@ -91080,7 +91089,11 @@ const CardBattleBoard = ({
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), !wide && tutorBox, React.createElement("div", {
     "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
-    className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`
+    "data-card-floor": "me",
+    className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`,
+    style: {
+      background: 'linear-gradient(0deg, rgba(180,83,9,0) 0%, rgba(180,83,9,.28) 100%)'
+    }
   }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
     key: m,
     db: db,
@@ -91297,20 +91310,30 @@ const CardBattleBoard = ({
     key: turnBanner.key,
     "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
     "aria-live": "polite",
-    className: "pointer-events-none absolute inset-0 z-[53] flex items-center justify-center px-4",
+    className: "pointer-events-none absolute inset-0 z-[53] flex items-center justify-center",
     style: wide ? {
       right: 'calc(min(42%, 420px) + 8px)'
     } : undefined
-  }, React.createElement("button", {
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    "data-card-turn-edge": true,
+    className: `mh-card-turn-edge absolute inset-0 ${turnBanner.me ? 'shadow-[inset_0_0_0_3px_rgba(252,211,77,.9),inset_0_0_40px_rgba(251,191,36,.55)]' : 'bg-slate-950/30 shadow-[inset_0_0_0_3px_rgba(96,165,250,.8),inset_0_0_40px_rgba(59,130,246,.45)]'}`
+  }), React.createElement("button", {
     type: "button",
     "data-card-fit": true,
     onClick: () => setTurnBanner(null),
-    className: `mh-card-turn-call pointer-events-auto max-w-full rounded-3xl border-4 px-6 py-2 text-center font-black tracking-wider shadow-2xl ${turnBanner.me ? 'border-amber-200 bg-amber-400 text-slate-950' : 'border-rose-200 bg-rose-600 text-white'}`,
+    className: `mh-card-turn-sweep pointer-events-auto relative flex w-full flex-col items-center py-2 text-white ${turnBanner.me ? 'bg-[linear-gradient(90deg,rgba(251,191,36,0),rgba(251,191,36,.96)_12%,rgba(234,88,12,.96)_88%,rgba(234,88,12,0))] shadow-[0_0_30px_rgba(251,191,36,.6)]' : 'bg-[linear-gradient(90deg,rgba(30,64,175,0),rgba(30,64,175,.96)_12%,rgba(190,18,60,.96)_88%,rgba(190,18,60,0))] shadow-[0_0_30px_rgba(96,165,250,.5)]'}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[11px] font-black tracking-[.4em] text-white/85"
+  }, turnBanner.me ? 'YOUR TURN' : 'ENEMY TURN'), React.createElement("span", {
+    "data-card-turn-name": true,
+    className: "max-w-full px-4 font-black leading-tight tracking-wider [text-shadow:0_3px_0_rgba(0,0,0,.35)]",
     style: {
-      fontSize: 'clamp(26px, 9vw, 44px)',
+      fontSize: 'clamp(24px, 8vw, 36px)',
       ...JA_LABEL_STYLE
     }
-  }, turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`)), turnSummary && !bigCard && React.createElement("button", {
+  }, turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`))), turnSummary && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary": true,
@@ -137458,7 +137481,12 @@ const createAnimationStyle = () => {
     .mh-card-turn-call { animation: mhCardTurnCall .8s ease-out both; }
     @keyframes mhCardTurnCall { 0% { opacity: 0; transform: scale(.7); } 20% { opacity: 1; transform: scale(1.06); } 32% { transform: scale(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes mhCardBig { 0% { opacity: 0; scale: .85; } 100% { opacity: 1; scale: 1; } }
-    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-turn-call, .mh-card-big { animation: none; } }
+    /* 番の替わり目の横いっぱいの帯(左からさっと入って、右へ抜ける)と、画面のふちの光(2026-10-26 改良の案 A) */
+    .mh-card-turn-sweep { animation: mhCardTurnSweep .8s cubic-bezier(.2,.8,.3,1) both; }
+    @keyframes mhCardTurnSweep { 0% { opacity: 0; transform: translateX(-60%) skewY(-4deg); } 18% { opacity: 1; transform: translateX(0) skewY(-4deg); } 80% { opacity: 1; transform: translateX(0) skewY(-4deg); } 100% { opacity: 0; transform: translateX(40%) skewY(-4deg); } }
+    .mh-card-turn-edge { animation: mhCardTurnEdge .8s ease-out both; }
+    @keyframes mhCardTurnEdge { 0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-turn-call, .mh-card-big, .mh-card-turn-sweep, .mh-card-turn-edge { animation: none; } }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }

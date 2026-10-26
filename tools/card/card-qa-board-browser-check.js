@@ -363,14 +363,14 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       await page.close();
     }
     // ⑮ どちらの番か、ひと目で分かる(2026-10-26 ソラシドさん「どっちのターンか分かりにくい」): 相手の番から始めて、自分の番になるまでを見る
-    //   相手の番: 真ん中に「◯◯の番」・相手の場のふちが光る・手札が暗い・上の帯は落ち着いた色
-    //   自分の番: 真ん中に「あなたの番」・自分の場のふちが光る・手札は明るい・上の帯は金色。知らせは画面の中で字が切れず、少しで消える
+    //   相手の番: 横いっぱいの帯「◯◯のターン」(2026-10-26 改良の案 A)・相手の場のふちが光る・手札が暗い・上の帯は落ち着いた色
+    //   自分の番: 横いっぱいの帯「あなたのターン」・自分の場のふちが光る・手札は明るい・上の帯は金色。知らせは画面の中で字が切れず、少しで消える
     for (const [w, h] of [[320, 568], [390, 844], [844, 390]]) {
       const page = await openBattle(browser, { ...base, active: 1, mode: 'wait', viewport: { width: w, height: h } }, errors);
       const look = () => page.evaluate(() => {
-        const b = document.querySelector('[data-card-turn-banner]'), btn = b && b.querySelector('button');
+        const b = document.querySelector('[data-card-turn-banner]'), btn = b && b.querySelector('button'), nameEl = b && b.querySelector('[data-card-turn-name]');
         const r = btn && btn.getBoundingClientRect();
-        return { banner: b ? b.getAttribute('data-card-turn-banner') : '', text: btn ? btn.innerText : '', inside: !!r && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, cut: !!btn && btn.scrollWidth > btn.clientWidth + 1,
+        return { banner: b ? b.getAttribute('data-card-turn-banner') : '', text: nameEl ? nameEl.innerText : '', edge: !!(b && b.querySelector('[data-card-turn-edge]')), inside: !!r && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, cut: !!nameEl && nameEl.scrollWidth > nameEl.clientWidth + 1,
           side: (document.querySelector('[data-card-side-active]') || { getAttribute: () => '' }).getAttribute('data-card-side-active'), dim: !!document.querySelector('[data-card-hand-dim]'), headMe: !!document.querySelector('[data-card-head-turn-me]'),
           bubble: (() => { const q = document.querySelector('[data-card-bubble]'); return q ? getComputedStyle(q).visibility : 'none'; })() };
       });
@@ -385,8 +385,8 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       await page.locator('[data-card-turn-banner]').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
       const after = await look();
       await shot(page, `turn-me-after-${w}x${h}`);
-      check(`⑮ ${w}×${h}: 相手の番は「◯◯の番」・相手の場が光る・手札が暗い・上の帯は落ち着いた色`, foe && /の番$/.test(foe.text) && foe.inside && !foe.cut && foe.side === 'foe' && foe.dim && !foe.headMe && foe.bubble !== 'visible', JSON.stringify(foe));
-      check(`⑮ ${w}×${h}: 自分の番は「あなたの番」・自分の場が光る・手札は明るい・上の帯は金色。知らせは少しで消える`, mine && mine.text === 'あなたの番' && mine.inside && !mine.cut && mine.bubble !== 'visible' && after.banner === '' && after.side === 'me' && !after.dim && after.headMe, JSON.stringify({ mine, after }));
+      check(`⑮ ${w}×${h}: 相手の番は横いっぱいの帯「◯◯のターン」・画面のふちが光る・相手の場が光る・手札が暗い・上の帯は落ち着いた色`, foe && /のターン$/.test(foe.text) && foe.edge && foe.inside && !foe.cut && foe.side === 'foe' && foe.dim && !foe.headMe && foe.bubble !== 'visible', JSON.stringify(foe));
+      check(`⑮ ${w}×${h}: 自分の番は横いっぱいの帯「あなたのターン」・画面のふちが光る・自分の場が光る・手札は明るい・上の帯は金色。知らせは少しで消える`, mine && mine.text === 'あなたのターン' && mine.edge && mine.inside && !mine.cut && mine.bubble !== 'visible' && after.banner === '' && after.side === 'me' && !after.dim && after.headMe, JSON.stringify({ mine, after }));
       await page.close();
     }
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
