@@ -43,8 +43,20 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     {user_name:'レン',  level:15,score:70, icon:null,hero:'ライガー',party:[]},
   ];
   // 通信を差し替えたので、差し替えた表だけ、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
-  await page.addInitScript(() => { window.__mhSupabaseStubbed = ['rankings']; });
-  await page.evaluate(() => { window.__mhSupabaseStubbed = ['rankings']; }).catch(() => {});
+  await page.addInitScript(() => { window.__mhSupabaseStubbed = ['rankings', 'breeder_levels']; });
+  await page.evaluate(() => { window.__mhSupabaseStubbed = ['rankings', 'breeder_levels']; }).catch(() => {});
+  // 1人1行の表(breeder_levels)も差し替える。差し替えないと本物の表を読んでしまい、
+  // 本番に入っている行の数で並びが変わって落ちる(2026-10-27・「テストブリーダー Lv.1」が2行足されて3件が5件になった)
+  //   ・アキラ: rankings の行(Lv.18)と同じ人。表のほうが高い(Lv.20)ので、1行になって Lv.20 で出る
+  //   ・ウラ: rankings に1行も無い人(裏周回だけ)。表の行だけで載る
+  const LEVEL_TABLE_ROWS=[
+    {breeder_id:'id-akira',user_name:'アキラ',level:20,icon:null},
+    {breeder_id:'id-ura',user_name:'ウラ',level:30,icon:null},
+  ];
+  await page.route('**/rest/v1/breeder_levels**',async route=>{
+    if(route.request().method()!=='GET'){await route.fulfill({status:201,body:''});return;}
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(LEVEL_TABLE_ROWS)});
+  });
   await page.route('**/rest/v1/rankings**',async route=>{
     if(route.request().method()!=='GET'){await route.fulfill({status:201,body:''});return;}
     // このファイルは先頭で URL という名前を使っているので、グローバルの URL が隠れている
@@ -95,9 +107,11 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   await page.evaluate(()=>{const b=document.querySelector('button[aria-label="ブリーダーLvランキング"]');if(b)b.click();});
   const cards=page.locator('[data-ranking-kind="breeder"]');
   await cards.first().waitFor({timeout:30000});
-  if(await cards.count()!==3)throw new Error(`ブリーダーLv DOM件数が3件ではありません: ${await cards.count()}`);
+  if(await cards.count()!==4)throw new Error(`ブリーダーLv DOM件数が4件ではありません: ${await cards.count()}`);
   const text=await cards.allTextContents();
-  for(const expected of ['アキラブリーダーLv.18','レンブリーダーLv.15','ミナブリーダーLv.8'])if(!text.some(value=>value.replace(/\s/g,'').includes(expected)))throw new Error(`表示不足: ${expected}`);
+  for(const expected of ['ウラブリーダーLv.30','アキラブリーダーLv.20','レンブリーダーLv.15','ミナブリーダーLv.8'])if(!text.some(value=>value.replace(/\s/g,'').includes(expected)))throw new Error(`表示不足: ${expected}`);
+  // 表の行と rankings の行が同じ人なら1行(高いほうの Lv.20)。古い Lv.18 の行が残って2行にならない
+  if(text.some(value=>value.replace(/\s/g,'').includes('アキラブリーダーLv.18')))throw new Error('アキラが表の行と rankings の行で2行になっています');
   if(text.join(' ').match(/pt|勇者モン|供モン|絆Lv/))throw new Error('ブリーダーLv専用DOMに不要情報があります');
   // ★この画面のタブは「ブリーダーLv / 絆Lv」の2つ。スコアは別の画面
   //   (🏆 …のランキング → BATTLE_SCORE_RANKING)へ分かれたので、
@@ -108,7 +122,7 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   if(await page.locator('[data-ranking-kind="breeder"]').count())throw new Error('絆Lvタブへブリーダー結果が混入しました');
   await page.getByRole('button',{name:'ブリーダーLv'}).click();
   await cards.first().waitFor({timeout:30000});
-  if(await cards.count()!==3)throw new Error('タブ往復でブリーダー結果が失われました');
-  console.log('OK: 全難易度集約・最高Lv重複排除・複数ブリーダーのDOM表示・タブ間独立と保持を確認');
+  if(await cards.count()!==4)throw new Error('タブ往復でブリーダー結果が失われました');
+  console.log('OK: 全難易度集約・最高Lv重複排除・表(breeder_levels)と rankings の合流(同じ人は1行・裏周回だけの人も載る)・複数ブリーダーのDOM表示・タブ間独立と保持を確認');
   await browser.close();
 })().catch(error=>{console.error(error);process.exit(1);});
