@@ -1681,6 +1681,27 @@ const ASSISTANT_SCENES = {
       { e:'troubled', t:'いま振ってる強化は白紙に戻るから、そこだけ覚えといてね。' },
     ],
   },
+  // お布施と魂格進化は、神殿全体の場面(temple)を借りていて、合体・寄付の話をしていた(2026-10-27 ダメダシの指摘)
+  offering: {
+    help: 'masu/offering',
+    lines: [
+      { e:'happy',    t:'ダイヤで絆経験値を直接あげられるよ♪ 100ダイヤで15だよ〜' },
+      { e:'normal',   t:'ダイヤ指定・レベル指定・転生、やり方は3つから選べるよ！' },
+      { e:'wink',     t:'「上限に届いたら限界突破も続ける」をオンにすると一気にいけちゃう✨' },
+      { e:'normal',   t:'使わなかったダイヤは減らないから、多めに入れても大丈夫ぢゃん！' },
+      { e:'troubled', t:'プシュケーやダイヤが足りなくなったら、そこで止まるからね〜💦' },
+    ],
+  },
+  soulRank: {
+    help: 'masu/soul-rank',
+    lines: [
+      { e:'excited',  t:'魂格進化！ ここまで来たの、まぢ神すぎ‼️' },
+      { e:'normal',   t:'進化してもLvはそのまま。上限だけが100ずつ増えるよ〜' },
+      { e:'wink',     t:'勇者の証が要るから、高難度のクリアで集めといてね♪' },
+      { e:'happy',    t:'魂格はⅠからⅤまで。Ⅴまで行くとLv1000だよ(っ`･ω･´)っﾌﾚｰｯ!' },
+      { e:'troubled', t:'ダイヤもすっごく要るんだよね…まぢで計画的にね💦' },
+    ],
+  },
   donation: {
     help: 'masu/donation',
     lines: [
@@ -4064,10 +4085,10 @@ addAssistantLinePack({
       { e:'normal',   t:'ねらってる子がいるなら、先に条件を確かめて。' },
     ],
     rebirth: [
-      { e:'normal',   t:'転生。育てた子を作り直して、さらに上を目指すやつ。' },
+      { e:'normal',   t:'限界突破。虹のプシュケーでレベル上限を伸ばすとこだよ。' },
       { e:'happy',    t:'手間はかかるけど、そのぶん強くなるよ！' },
       { e:'wink',     t:'ここまで来る人、なかなかいないんだからね？ えらいw' },
-      { e:'excited',  t:'生まれ変わったあとが本番だよ。楽しみでしょ？' },
+      { e:'excited',  t:'上限が伸びたら、また育てられるよ。楽しみでしょ？' },
       { e:'normal',   t:'条件を満たしてるか、先に確かめてからにしてね。' },
     ],
     transcendence: [
@@ -7701,6 +7722,88 @@ addAssistantLinePack({ id: 'marketShopsKyuko', assistantId: 'kyuko', label: 'マ
     { e:'happy',   t:'ここはイベントがないときも交換できますよ' },
   ],
 } } });
+
+// お布施・魂格進化の画面の台詞(2026-10-27)。前は神殿全体の場面(temple)を借りて、合体・寄付の話をしていた
+addAssistantLinePack({ id: 'templeScreensKiki', assistantId: 'kiki', label: 'きき・お布施と魂格進化', lines: {
+  offering: [
+    { e:'normal',   t:'ダイヤを納めて、マスモンへ絆経験値を直接あげられまつ。' },
+    { e:'normal',   t:'100ダイヤで絆経験値15。トレーニングチケットと同じ割合でつ。' },
+    { e:'happy',    t:'上限に届いたら、限界突破も続けられる設定がありまつよ♪' },
+    { e:'wink',     t:'使わなかったダイヤは減らないので、安心でつ。' },
+    { e:'troubled', t:'プシュケーやダイヤが足りなくなると、そこで止まりまつ。' },
+  ],
+  soulRank: [
+    { e:'normal',   t:'魂格進化。Lv上限まで育った超越済みの子が進めまつ。' },
+    { e:'happy',    t:'進化しても今のLvはそのまま。上限が100上がりまつ。' },
+    { e:'normal',   t:'勇者の証が要りまつ。高難度をクリアして集めるんでつ。' },
+    { e:'surprise', t:'魂格Ⅴまで行けば、Lv1000でつ……！' },
+    { e:'troubled', t:'ダイヤもたくさん要りまつ。計画的にいきまつよ。' },
+  ],
+} });
+addAssistantLinePack({ id: 'templeScreensMomosuke', assistantId: 'momosuke', label: 'ももすけ・お布施と魂格進化', lines: {
+  offering: [
+    { e:'normal',   t:'ダイヤで絆経験値を直接あげるとこだよ。手っ取り早いねw' },
+    { e:'normal',   t:'100ダイヤで絆経験値15ね。チケットと同じ割合だよ。' },
+    { e:'wink',     t:'上限に届いたら限界突破まで続けられるよ。便利でしょ♡' },
+    { e:'happy',    t:'使わなかったダイヤは減らないから、安心して入れてね。' },
+    { e:'troubled', t:'プシュケーやダイヤが足りなくなったら、そこで止まるよ。' },
+  ],
+  soulRank: [
+    { e:'surprise', t:'魂格進化！ ここまで来たんだ……ほんとにすごいw' },
+    { e:'normal',   t:'Lvはそのままで、上限だけ100上がるよ。' },
+    { e:'wink',     t:'勇者の証が要るからね。高難度で集めてきて♡' },
+    { e:'happy',    t:'Ⅴまで行ったらLv1000。見てみたいなぁ' },
+    { e:'troubled', t:'ダイヤもすごい量要るから、計画的にね。' },
+  ],
+} });
+addAssistantLinePack({ id: 'templeScreensDra', assistantId: 'dra', label: 'ドラ・お布施と魂格進化', lines: {
+  offering: [
+    { e:'normal',   t:'ダイヤで、絆経験値を直接あげられる場所だよ' },
+    { e:'normal',   t:'100ダイヤで絆経験値15。チケットと同じ割合だ' },
+    { e:'happy',    t:'上限に届いたら、限界突破も続けられるぞ' },
+    { e:'wink',     t:'使わなかったダイヤは減らない。多めに入れても平気だよ' },
+    { e:'troubled', t:'プシュケーかダイヤが足りなくなったら、そこで止まるよ' },
+  ],
+  soulRank: [
+    { e:'normal',   t:'魂格進化だ。超越した子が上限まで育ったら進める' },
+    { e:'happy',    t:'Lvはそのまま、上限が100上がる。それだけで十分すごい' },
+    { e:'normal',   t:'勇者の証が要る。高難度のクリアで集めるんだ' },
+    { e:'excited',  t:'{name}、Ⅴまで行ったらLv1000だぞ' },
+    { e:'troubled', t:'ダイヤもかなり要る。計画を立ててからだな' },
+  ],
+} });
+addAssistantLinePack({ id: 'templeScreensAtsu', assistantId: 'atsu', label: 'あつ・お布施と魂格進化', lines: {
+  offering: [
+    { e:'normal',   t:'とりあえずダイヤで絆経験値を直接あげられるよ！' },
+    { e:'normal',   t:'100ダイヤで絆経験値15。チケットと同じ割合な！' },
+    { e:'excited',  t:'てか上限に届いたら限界突破まで続けられるの、まじで楽だよ笑' },
+    { e:'happy',    t:'使わなかったダイヤは減らないから、多めでも大丈夫！' },
+    { e:'troubled', t:'プシュケーかダイヤが切れたら、そこで止まるからな！' },
+  ],
+  soulRank: [
+    { e:'excited',  t:'魂格進化！ ここまで育てたの、まじで尊敬するわ笑' },
+    { e:'normal',   t:'Lvはそのままで、上限だけ100上がるよ！' },
+    { e:'wink',     t:'勇者の証が要るからな。高難度で集めてこよう！' },
+    { e:'happy',    t:'Ⅴまで行ったらLv1000！ 俺も見てみたい笑' },
+    { e:'troubled', t:'てかダイヤもまじで要るから、計画的にな！' },
+  ],
+} });
+addAssistantLinePack({ id: 'templeScreensKyuko', assistantId: 'kyuko', label: 'きゅうこ・お布施と魂格進化', lines: {
+  offering: [
+    { e:'normal',   t:'ダイヤで絆経験値を直接あげられるとこだよぉ' },
+    { e:'normal',   t:'100ダイヤで絆経験値15ね。チケットと同じだよ笑' },
+    { e:'wink',     t:'上限に届いたら限界突破も続けられるの、便利でしょw' },
+    { e:'happy',    t:'使わなかったダイヤは減らないから、安心してねぇ' },
+    { e:'troubled', t:'プシュケーかダイヤが足りなくなったら、そこで止まるよぉ笑' },
+  ],
+  soulRank: [
+    { e:'surprise', t:'魂格進化かぁ。ここまで来たの、ほんとすごいって笑' },
+    { e:'normal',   t:'Lvはそのまま、上限が100ずつ上がるよぉ' },
+    { e:'troubled', t:'ダイヤもすごい量だから、計画的にねぇw' },
+    { e:'happy',    t:'Ⅴまで行ったらLv1000。俺も見届けたいなぁ' },
+    { e:'wink',     t:'証は高難度をクリアすると集まるよぉ笑' },
+  ],
+} });
 
 const ASSISTANT_PACKS_APPLIED = {};
 const applyAssistantLinePacks = () => {
