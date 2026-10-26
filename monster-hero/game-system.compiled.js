@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cb01743e71e7e3a7
+// source-sha256: fd59fe63cd83b593
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 08:45";
+const BUILD_DATE = "2026-10-26 09:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -91809,11 +91809,10 @@ const CardDex = ({
   const tabRow = useRef(null);
   useEffect(() => {
     try {
-      const el = tabRow.current && tabRow.current.querySelector('[aria-pressed="true"]');
-      if (el) el.scrollIntoView({
-        block: 'nearest',
-        inline: 'nearest'
-      });
+      const row = tabRow.current;
+      const el = row && row.querySelector('[aria-pressed="true"]');
+      if (!el) return;
+      if (el.offsetLeft < row.scrollLeft) row.scrollLeft = el.offsetLeft - 8;else if (el.offsetLeft + el.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollLeft = el.offsetLeft + el.offsetWidth - row.clientWidth + 8;
     } catch (_) {}
   }, [mode, tab]);
   return React.createElement("div", {
@@ -91845,7 +91844,7 @@ const CardDex = ({
     key: mode,
     ref: tabRow,
     "data-card-dex-tabs": mode,
-    className: "mh-scroll mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible"
+    className: "mh-scroll relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible"
   }, tabList.map(t => React.createElement("button", {
     key: t.id,
     type: "button",
