@@ -225,7 +225,7 @@ check('血統チップは枠いっぱいに広がる（中身の長さで幅が�
   detail.includes('<DexLineageChip') && sharedDex.includes('data-dex-lineage className="flex w-full items-center justify-center'));
 // 血統名は「…」で切らず2行まで折り返す(2026-10-26。320pxで13種が「モッ…」と切れていた)。実際の幅での測り方は lineage-chip-fit の写真で確かめた
 check('血統名は切らずに2行まで折り返す',
-  /data-dex-lineage-name className=\{[^}]*line-clamp-2[^}]*\}/.test(sharedDex) && !/data-dex-lineage-name[^>]*truncate/.test(sharedDex));
+  /data-dex-lineage-name className=\{`[^`]*line-clamp-2[^`]*`\}/.test(sharedDex) && !/data-dex-lineage-name[^>]*truncate/.test(sharedDex));
 // 丸アイコンは円の内側へ収める。枠いっぱいに絵を入れると、円の外側へかかる部分が
 // どのモンスターでも切れる(アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)
 check('血統チップのアイコンが円の内側へ収まる',

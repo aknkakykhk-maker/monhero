@@ -32,7 +32,7 @@ const fxSrc = read('monster-hero/src/parts/24-battle-fx.jsx');
 // --- 本体の登録 ---
 const sandboxData = {};
 vm.createContext(sandboxData);
-vm.runInContext(`${allies.replace(/\b[A-Z_]+_(IMG|ICON|FACE_ICON)\b/g, "'img'")}\nglobalThis.M=ALL_PLAYER_MONSTERS;globalThis.N=HERO_ATK_NAMES;`, sandboxData);
+vm.runInContext(`${allies.replace(/\b[A-Z][A-Z0-9_]*_(IMG|ICON|FACE_ICON)\b/g, "'img'")}\nglobalThis.M=ALL_PLAYER_MONSTERS;globalThis.N=HERO_ATK_NAMES;`, sandboxData);
 const M = sandboxData.M, N = sandboxData.N;
 check('ゴーストとスプーキーが本体の一覧にいる', !!M.Ghost && !!M.Spooky);
 check('能力値がユーザーの決めた値(ゴースト 450/150/130/50・スプーキー 510/160/150/55)',
