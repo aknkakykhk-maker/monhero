@@ -1368,7 +1368,7 @@ function RhythmMultiRecordSheet({ songName, onClose }) {
             ))}
           </div>
           <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto">
-            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400">まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります</li>}
+            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります')}</li>}
             {rec.recent.map((x) => (
               <li key={x.round} data-rhythm-multi-record-row className="rounded-xl bg-slate-800/70 px-2 py-1.5 text-[11px] font-bold leading-snug">
                 <div className="flex items-center gap-2">
@@ -2399,9 +2399,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
+              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26) */}
               {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
                 <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
-                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+                  className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
               ))}
             </div>
           </div>
