@@ -75,7 +75,7 @@ check('存在しないidではnullを返す', h.helpFindCategory('nope') === nul
 // --- ③ 画面 ---
 check('ヘルプはカテゴリ→項目→本文の3階層', has('const [helpCatId, setHelpCatId] = useState(null);') && has('const [helpTopicId, setHelpTopicId] = useState(null);'));
 check('ヘルプを開くと必ずカテゴリ一覧から始まる',
-  has('const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setHelpAssistantOpen(true); setShowHelp(true); };')
+  has('const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setShowHelp(true); };')
     && !/onClick=\{\(\)=>setShowHelp\(true\)\}/.test(source));
 check('戻るは1階層ずつ戻る', has('const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };'));
 check('カテゴリの色をそのまま使う(Tailwindの動的クラスに頼らない)', has('style={{borderColor:c.color,backgroundColor:\'rgba(15,23,42,0.85)\'}}'));

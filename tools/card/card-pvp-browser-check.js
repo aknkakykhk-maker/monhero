@@ -22,6 +22,8 @@
 //   ⑩ もう一度送ると知らせがまた出て、「参加する」でマルチの入口へ移って同じ部屋に入り、対戦が始まる
 //   ⑪ 招待のようすの見分け(届いている・時間切れ・断られた)
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
+//   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
+//   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -115,6 +117,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(invites.map((x) => ({ sender_id: 'friend-x', room_code: x.room_code, created_at: x.created_at }))) });
       }
       if (/\/rpc\/card_battle_pvp_report/.test(req.url())) { try { reports.push(JSON.parse(req.postData() || '{}')); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 200, contentType: 'application/json', body: '"wait"' }); }
+      // 強さの点数の表の自分の行(マルチの履歴の増減・92)。2人が届けた試合だけを数えた偽の点数(勝ち +16・負け -16)
+      const ratingOf = /card_battle_pvp_ratings\?.*breeder_id=eq\.([^&]+)/.exec(req.url());
+      if (ratingOf) {
+        const bid = decodeURIComponent(ratingOf[1]);
+        const done = [...new Set(reports.map((x) => x.p_match_id))].filter((m) => reports.filter((x) => x.p_match_id === m).length >= 2).map((m) => reports.find((x) => x.p_match_id === m));
+        const mineDone = done.filter((x) => x.p_me === bid || x.p_foe === bid);
+        const wins = mineDone.filter((x) => x.p_winner === bid).length, loses = mineDone.length - wins;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mineDone.length ? [{ rating: 1500 + 16 * (wins - loses), wins, loses }] : []) });
+      }
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
     await ctx.addInitScript((ic) => {
@@ -206,9 +217,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ 上の帯に持ち時間が出る', (await A.locator('[data-card-pvp-clock]').count()) === 1 && /秒/.test(await A.locator('[data-card-pvp-clock]').innerText()));
     await A.locator('[data-card-pvp-chat]').click();
     await A.locator('[data-card-pvp-stamp="0"]').click();
-    const chatSeen = await B.locator('[data-card-bubble]').filter({ hasText: 'よろしく！' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
-    // 吹き出しの顔は、相手(A)のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた)。A のアイコンは id なので絵になる
-    const chatIcon = await B.locator('[data-card-bubble] [data-card-bubble-pvp-icon]').evaluate((el) => el.querySelectorAll('img').length).catch(() => 0);
+    // 吹き出しの文と、顔(相手 A のアイコン。助手の顔の絵を引いて、空の白い枠が出ていた)が、同じときに出ているか。A のアイコンは id なので絵になる
+    // ★吹き出しは、だれかがカードを使うと消える(84)。この検査は自動で打つのですぐ消えるので、出ている瞬間をページの中で見張る(2026-10-27 あとから数えて 0 になっていた)
+    const chatState = await B.waitForFunction(() => {
+      const b = [...document.querySelectorAll('[data-card-bubble]')].find((el) => el.textContent.includes('よろしく！'));
+      if (b) window.__chatBubbleSeen = true;
+      const icon = b ? b.querySelectorAll('[data-card-bubble-pvp-icon] img').length : 0;
+      return icon > 0 ? { seen: true, icon } : false;
+    }, null, { timeout: 5000, polling: 'raf' }).then((h) => h.jsonValue()).catch(async () => ({ seen: await B.evaluate(() => window.__chatBubbleSeen === true).catch(() => false), icon: 0 }));
+    const chatSeen = chatState.seen, chatIcon = chatState.icon;
     check('⑥ 定型のチャットが、相手の画面の吹き出しに出る・顔は相手のアイコン', chatSeen && chatIcon >= 1, `アイコンの絵 ${chatIcon}`);
     await shot(B, 'pvp-04-chat');
     const beatP = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
@@ -337,6 +354,27 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await A.evaluate(() => document.getElementById('pvp-line-sheet')?.remove());
     }
     await shot(A, 'pvp-03-A-result'); await shot(B, 'pvp-03-B-result');
+    // ⑫ もう1戦(2026-10-26 社長「全部入れる」): 片方が押すと待ちになり、相手には「相手が待っています」。2人とも押すと同じ部屋で次の試合。
+    //    前の試合の封・手が混ざらず、最後まで戦えて、確かめも「正しく終わった」になる
+    const matchOf = (page) => page.evaluate(() => CARD_PVP.get().match);
+    const m1 = await matchOf(A);
+    await A.locator('[data-card-pvp-again]').click();
+    const waitMine = await A.locator('[data-card-pvp-again="waiting"]').waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    const waitFoe = await B.locator('[data-card-pvp-again="foe"]').waitFor({ timeout: 8000 }).then(() => true).catch(() => false);
+    await shot(B, 'pvp-03c-again-foe');
+    check('⑫ 「もう1戦」を押すと待ちになり、相手の画面に「相手が待っています」が出る', waitMine && waitFoe);
+    await B.locator('[data-card-pvp-again]').click();
+    const rematched = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
+    const m2 = await matchOf(A);
+    check('⑫ 2人とも押すと、同じ部屋で次の試合が始まる(試合の印が新しくなる・2台で同じ)', rematched && !!m2 && m2 !== m1 && (await matchOf(B)) === m2, `${m1} → ${m2}`);
+    const end12 = Date.now() + 300000;
+    while (Date.now() < end12 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
+    const r12 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+    check('⑫ もう1戦も最後まで戦えて、片方が勝ち・片方が負け', !!r12[0] && !!r12[1] && r12[0] !== r12[1], r12.join(' / '));
+    const v12 = [await waitVerify(A), await waitVerify(B)];
+    check('⑫ もう1戦も、山札を見せ合って両方で「正しく終わった」(前の試合の封が混ざらない)', v12[0] === 'ok' && v12[1] === 'ok', v12.join(' / '));
+    const reward12 = await A.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    check('⑫ もう1戦の報酬も出る', reward12);
     // ⑦ だれとでも: 2台とも部屋を出て、受付から出会う
     const reportsBefore = reports.length;
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
@@ -366,8 +404,36 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const mine = reports.slice(reportsBefore);
     check('⑦ 終わったら2台とも、同じ試合・同じ勝った人で強さの点数へ届ける', mine.length === 2 && mine[0].p_match_id && mine[0].p_match_id === mine[1].p_match_id && mine[0].p_winner === mine[1].p_winner,
       JSON.stringify(mine.map((x) => [x.p_match_id, x.p_winner])));
-    // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
+    // ⑬ マルチの履歴(92・2026-10-27 社長「過去のマルチの戦績とかで相手のデッキが見れるように」): 2試合とも端末に残り、相手のデッキが全部見える・点数の増減が書かれる
+    const histOf = (page) => page.evaluate(async () => (typeof cardPvpHistoryLoad === 'function' ? cardPvpHistoryLoad() : null));
+    let histA = null;
+    for (let i = 0; i < 70; i++) { histA = await histOf(A); if (histA && histA.length >= 2 && histA[0].rating) break; await A.waitForTimeout(500); }
+    // 試合の数は、ここまでに遊んだ数(合言葉・もう1戦・だれとでも)。前の区切りで試合が増えても落ちないよう、2台で同じ数か・2試合以上かで見る
+    const histB = await histOf(B);
+    check('⑬ マルチの履歴: 2台とも遊んだ試合が残り(同じ数)、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
+      !!histA && histA.length >= 2 && !!histB && histB.length === histA.length && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
+      JSON.stringify((histA || []).map((x) => [x.match, x.outcome, x.verify, x.foeDeck && x.foeDeck.cards.length, x.rating])));
+    const deltaA = histA && histA[0].rating ? histA[0].rating.after - histA[0].rating.before : null;
+    check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +16・負け -16。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 16 : -16), JSON.stringify(histA && histA[0].rating));
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    await A.locator('[data-card-pvp-history-open]').click();
+    await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
+    const rowsText = await A.locator('[data-card-pvp-history-row]').allInnerTexts();
+    await shot(A, 'pvp-09-history');
+    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === histA.length && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
+    await A.locator('[data-card-pvp-history-row]').first().click();
+    await A.locator('[data-card-pvp-history="detail"]').waitFor({ timeout: 10000 });
+    const foeTiles = await A.evaluate(() => ({ mons: document.querySelectorAll('[data-card-pvp-history-mon]').length, total: [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }));
+    await shot(A, 'pvp-09-history-deck');
+    check('⑬ 行を押すと、相手のデッキ(3体と、同じ札をまとめた50枚)', foeTiles.mons === 3 && foeTiles.total === 50, JSON.stringify(foeTiles));
+    await A.locator('[data-card-pvp-history-tab="me"]').click();
+    const myTiles = await A.evaluate(() => [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0));
+    check('⑬ 「自分のデッキ」で、その試合で使った自分のデッキ(50枚)', myTiles === 50, String(myTiles));
+    await A.locator('[data-card-pvp-history="detail"] button').first().click();
+    await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
+    await A.locator('[data-card-pvp-history="list"] button').first().click();
+    await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
     await A.locator('[data-card-pvp-invite-open]').click();
     await shot(A, 'pvp-07-invite-pick');
     await A.locator('[data-card-pvp-invite-pick] [data-card-pvp-invite-to="friend-x"]').click();
@@ -407,6 +473,16 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));
+    // ⑭ 相手が試合の途中で画面を閉じた(「抜けます」が届かないことがある): 相手の時間切れや電波切れで終わっても「相手が抜けた」と出し、「もう1戦」は出さない(2026-10-27 部長)
+    //   ⑩ で始まった試合のまま、A の画面を閉じる。閉じる前に、閉じたときの知らせ(bye)が出ないようにしておく
+    await A.evaluate(() => { window.__mhCardPvpAuto = false; window.addEventListener('pagehide', (e) => e.stopImmediatePropagation(), true); window.addEventListener('beforeunload', (e) => e.stopImmediatePropagation(), true); }).catch(() => {});
+    await A.close({ runBeforeUnload: false });
+    for (let i = 0; i < 240 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
+    await B.waitForTimeout(1500);
+    const leftText = (await B.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
+    await shot(B, 'pvp-14-foe-left');
+    check('⑭ 相手が画面を閉じて抜けたら、「相手が抜けた」と出る(時間切れと出さない)', /相手が抜けた/.test(leftText) && !/相手の時間切れ/.test(leftText), leftText.replace(/\n/g, ' ').slice(0, 120));
+    check('⑭ そのとき「もう1戦」は出ない(待ち続けない)・「部屋を出る」が押せる', (await B.locator('[data-card-pvp-again]').count()) === 0 && (await B.locator('[data-card-pvp-leave]').count()) === 1);
     await ctxA.close(); await ctxB.close();
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');

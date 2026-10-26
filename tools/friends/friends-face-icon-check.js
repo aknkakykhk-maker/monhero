@@ -45,7 +45,8 @@ for (const id of Object.keys(M)) {
 }
 check(`全${count}体の顔アイコンが、プロフィールのアイコンと同じ id・絵になる`, bad.length === 0, bad.join(' / '));
 const sn = face('Snegurochka');
-check('スネグーラチカは、顔アイコンの絵ではなくマーケットの商品(snegurochka_icon)の絵と調整を使う', sn && sn.id === 'snegurochka_icon' && /SNEGUROCHKA\.PNG/.test(sn.src) && hasStyle('snegurochka_icon'), JSON.stringify(sn));
+// 2026-10-27 社長: スネグーラチカはマーケットの寄り方(A)で顔アイコンを作り直し、手書きの寄せを外した。ほかの子と同じく顔アイコンの絵を、寄せなしで使う
+check('スネグーラチカも、顔アイコンの絵を寄せなしで使う(マーケットの商品 snegurochka_icon と同じ絵)', sn && sn.id === 'snegurochka_icon' && /monster-icons\/face\/snegurochka\.png/.test(sn.src) && !hasStyle('snegurochka_icon'), JSON.stringify(sn));
 check('知らないモンスターは null', face('NoSuchMonster') === null);
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

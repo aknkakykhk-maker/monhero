@@ -63,11 +63,12 @@ check('出す行が無いときは行ごと作らない',
   has('const monsterCardStatus = (node) => node ?') && has('const monsterCardPower = (power) => power==null ? null :')
     && has('{monsterCardStatus(status)}'));
 check('マスモンの個体名は転生オーラより前面に固定する',
-  has('mh-monster-card-name text-[11px]')
+  // 2026-10-27 長い名前(9字以上)だけ 10px にして2行に収める形に変えた
+  has("`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'}")
     && has('.mh-reincarnate-aura{position:absolute;z-index:-1;')
     && has('.mh-monster-card-name{position:relative;z-index:2}'));
 check('マスモン一覧の個体名は画像とオーラの下に独立した名前帯で表示する',
-  has("band?'min-h-[28px] px-1 py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words")
+  has("band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words")
     && has("style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}")
     // 2026-09-10に画面を MasuMonsScreen へ切り出した。切り出し先は 60-app.jsx より前に連結されるので、
     // ファイル内の並び順ではなく、その画面の本体そのものを見る
