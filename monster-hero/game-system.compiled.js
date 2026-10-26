@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad8f1af6aefab823
+// source-sha256: 0a154b50c69bfbca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 13:24";
+const BUILD_DATE = "2026-10-26 13:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -88504,15 +88504,18 @@ const CardDiscardModal = ({
     return React.createElement("div", _extends({
       key: `${no}-${i}`
     }, press(no), {
-      className: "flex flex-col items-center"
+      className: "flex flex-col items-center",
+      style: {
+        containerType: 'inline-size'
+      }
     }), React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
       alt: c ? c.name : no,
       loading: "lazy",
       className: "w-full rounded-md"
-    }), React.createElement("span", {
-      className: "mt-0.5 w-full truncate text-center text-[11px] font-bold text-slate-200"
-    }, c ? c.name : no));
+    }), React.createElement(CardDiscardName, {
+      name: c ? c.name : no
+    }));
   })), React.createElement("p", {
     className: "mt-2 text-center text-[11px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
@@ -88571,6 +88574,51 @@ const CardTurnLogSheet = ({
     className: "mh-button mh-button-secondary mt-2 min-h-[44px] rounded-xl font-black"
   }, "閉じる")));
 };
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*)/;
+const cardJaWrap = text => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => i % 2 === 1 ? React.createElement("span", {
+  key: i,
+  "data-ja-keep": true,
+  style: {
+    whiteSpace: 'nowrap'
+  }
+}, t) : React.createElement(React.Fragment, {
+  key: i
+}, jaWrap(t)));
+const CardMonName = ({
+  name,
+  w
+}) => {
+  const len = Math.max(1, String(name || '').length);
+  const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
+  const k = Math.min(1, w / (len * fs));
+  return React.createElement("div", {
+    "data-card-mon-name": true,
+    className: "whitespace-nowrap font-black leading-tight",
+    style: {
+      fontSize: fs,
+      transform: k < 1 ? `scaleX(${k})` : undefined,
+      transformOrigin: 'left',
+      width: k < 1 ? `${w / k}px` : undefined
+    }
+  }, name);
+};
+const CardDiscardName = ({
+  name
+}) => {
+  const one = !String(jaWrapPoints(name)).includes('\u200B');
+  const len = Math.max(1, String(name).length);
+  return React.createElement("span", {
+    "data-card-discard-name": true,
+    className: "mt-0.5 w-full text-center font-bold leading-tight text-slate-200",
+    style: one ? {
+      fontSize: `min(10px, calc(100cqw / ${len + 0.5}))`,
+      whiteSpace: 'nowrap'
+    } : {
+      fontSize: 10,
+      ...JA_WRAP_STYLE
+    }
+  }, one ? name : jaWrap(name));
+};
 const CardMonSlot = ({
   db,
   st,
@@ -88611,9 +88659,10 @@ const CardMonSlot = ({
     }
   })), React.createElement("div", {
     className: `${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`
-  }, React.createElement("div", {
-    className: "truncate text-[12px] font-black leading-tight"
-  }, mon.name), React.createElement("div", {
+  }, React.createElement(CardMonName, {
+    name: mon.name,
+    w: tiny ? 56 : 62
+  }), React.createElement("div", {
     className: "flex items-center gap-1 whitespace-nowrap text-[13px] font-black leading-tight"
   }, mon.life, React.createElement("span", {
     className: "text-[10px] text-slate-400"
@@ -89943,7 +89992,7 @@ const CardBattleBoard = ({
     className: "ml-1 text-[10px] font-bold text-emerald-200"
   }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), React.createElement("div", {
     "data-card-log": true,
-    className: "relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug",
+    className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug transition-opacity ${turnBanner ? 'opacity-0' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && React.createElement("div", {
     className: "text-rose-200"
@@ -90184,7 +90233,10 @@ const CardBattleBoard = ({
     key: turnSummary.key,
     "data-card-turn-summary": true,
     onClick: () => setTurnSummary(null),
-    className: "mh-card-big absolute inset-x-3 top-[18%] z-[54] mx-auto max-h-[56%] max-w-md overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 p-3 text-left shadow-2xl"
+    className: `mh-card-big absolute z-[54] overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 text-left shadow-2xl ${wide ? 'left-2 top-[34%] max-h-[42%] p-2' : 'inset-x-3 top-[18%] mx-auto max-h-[56%] max-w-md p-3'}`,
+    style: wide ? {
+      right: 'calc(min(42%, 420px) + 8px)'
+    } : undefined
   }, React.createElement("div", {
     "data-card-fit": true,
     className: "text-[14px] font-black text-rose-200",
@@ -91302,7 +91354,7 @@ const CardBattleScreen = ({
           borderColor: dra.accent,
           ...JA_WRAP_STYLE
         }
-      }, jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ'))) : null;
+      }, cardJaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ'))) : null;
     })(), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, result.done && result.reward > 0 && React.createElement("div", {
@@ -91606,7 +91658,7 @@ const CardBattleScreen = ({
       }, "(助手と対戦)")), React.createElement("p", {
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
         style: JA_WRAP_STYLE
-      }, jaWrap(item.desc)), React.createElement("div", {
+      }, cardJaWrap(item.desc)), React.createElement("div", {
         className: `mt-2 grid gap-1.5 ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : item.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`
       }, item.options.map(o => React.createElement("button", {
         key: o.id,
