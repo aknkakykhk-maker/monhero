@@ -444,13 +444,34 @@ async function openSoloLive(s, { songName = '', songId = '', difficulty = '', ha
       if (scrolled) { await s.wait(400); songs = (await s.listButtons()).filter((b) => /Lv\.\s*\d+/.test(b.label)); }
     }
     // 版のある曲(「2つの版」)は、一覧には代表の札だけが出る。札の名前が曲名の頭と同じものを選び、あとで版のボタンを押す(2026-10-26)
-    const named = songName && (songs.find((b) => b.label.startsWith(songName))
+    // 曲の ID が分かっているときは、版の組(rhythmSongVersionHead)で一覧の行(data-rhythm-song-row は組の代表の ID)を探して押し、
+    // そのあと版のボタン(data-rhythm-song-version)を押す。名前の頭で探すと「Monster」が「Monster Hero」や short ver. に当たり、
+    // 版の代表の名前が曲名の頭と違う組(ドパガキリミックス・Crazy Party Night など)は見つからなかった(2026-10-27)
+    let viaGroup = false;
+    if (songId) {
+      viaGroup = await s.page.evaluate((id) => {
+        if (typeof rhythmSongVersionHead !== 'function') return false;
+        const head = rhythmSongVersionHead(id);
+        const row = [...document.querySelectorAll('[data-rhythm-song-row]')].find((x) => rhythmSongVersionHead(x.getAttribute('data-rhythm-song-row')) === head);
+        if (!row) return false;
+        row.scrollIntoView({ block: 'center' }); row.click(); return true;
+      }, songId);
+      if (viaGroup) {
+        await s.wait(400);
+        await s.page.evaluate((id) => document.querySelector(`[data-rhythm-song-version="${id}"]`)?.click(), songId);
+        await s.wait(300);
+      }
+    }
+    const named = !viaGroup && songName && (songs.find((b) => b.label.startsWith(songName))
       || songs.filter((b) => /つの版/.test(b.label)).find((b) => { const n = b.label.replace(/\s*Lv\..*$/s, '').trim(); return n.length >= 4 && songName.startsWith(n); }));
+    if (viaGroup) picked = { song: songName, difficulty: '' };
+    else {
     if (songName && !named && strict) { await s.addIssue('進めない', `曲えらびに「${songName}」が見つからない`); return null; }
     const song = named || songs[Math.floor(rand() * songs.length)];
     await s.tap(song, '曲を選ぶ');
     if (songId) { await s.wait(300); await s.page.evaluate((id) => document.querySelector(`[data-rhythm-song-version="${id}"]`)?.click(), songId); await s.wait(300); }
     picked = { song: song.label.replace(/\s*Lv\..*$/, ''), difficulty: '' };
+    }
   }
   // 小さい画面では難易度と「決定」が下に隠れていることがある。見えるところまで送る
   await s.page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(▶\s*)?決定$/.test((x.innerText || '').trim())); if (b) b.scrollIntoView({ block: 'end' }); });

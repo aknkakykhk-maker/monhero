@@ -64,7 +64,11 @@ function resolveStampedHtml() {
   let onlyStamps = true;
   const out = src.replace(hunk, (all, ours, theirs) => {
     const lines = (t) => t.split('\n').filter(l => l.trim());
-    if (![...lines(ours), ...lines(theirs)].every(l => HTML_STAMP_LINE.test(l))) onlyStamps = false;
+    // 両側に同じ行があるもの(ぶつかりのかたまりに巻き込まれた説明のコメントなど)は、こちら側を取っても失われないので数値の行と同じ扱い
+    // (2026-10-27 window.__mhBuildDate の上のコメントが同じかたまりに入り、毎回手で直す必要があった)
+    const a = lines(ours), b = lines(theirs);
+    const same = (l) => a.includes(l) && b.includes(l);
+    if (![...a, ...b].every(l => HTML_STAMP_LINE.test(l) || same(l))) onlyStamps = false;
     return ours;
   });
   if (!onlyStamps) return false;

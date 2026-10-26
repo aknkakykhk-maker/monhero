@@ -407,9 +407,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const histOf = (page) => page.evaluate(async () => (typeof cardPvpHistoryLoad === 'function' ? cardPvpHistoryLoad() : null));
     let histA = null;
     for (let i = 0; i < 70; i++) { histA = await histOf(A); if (histA && histA.length >= 2 && histA[0].rating) break; await A.waitForTimeout(500); }
+    // 試合の数は、ここまでに遊んだ数(合言葉・もう1戦・だれとでも)。前の区切りで試合が増えても落ちないよう、2台で同じ数か・2試合以上かで見る
     const histB = await histOf(B);
-    check('⑬ マルチの履歴: 2台とも2試合が残り、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
-      !!histA && histA.length === 2 && !!histB && histB.length === 2 && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
+    check('⑬ マルチの履歴: 2台とも遊んだ試合が残り(同じ数)、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
+      !!histA && histA.length >= 2 && !!histB && histB.length === histA.length && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
       JSON.stringify((histA || []).map((x) => [x.match, x.outcome, x.verify, x.foeDeck && x.foeDeck.cards.length, x.rating])));
     const deltaA = histA && histA[0].rating ? histA[0].rating.after - histA[0].rating.before : null;
     check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +16・負け -16。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 16 : -16), JSON.stringify(histA && histA[0].rating));
@@ -418,7 +419,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     const rowsText = await A.locator('[data-card-pvp-history-row]').allInnerTexts();
     await shot(A, 'pvp-09-history');
-    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === 2 && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
+    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === histA.length && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
     await A.locator('[data-card-pvp-history-row]').first().click();
     await A.locator('[data-card-pvp-history="detail"]').waitFor({ timeout: 10000 });
     const foeTiles = await A.evaluate(() => ({ mons: document.querySelectorAll('[data-card-pvp-history-mon]').length, total: [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }));
