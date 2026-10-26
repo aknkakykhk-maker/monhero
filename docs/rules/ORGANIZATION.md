@@ -5,7 +5,7 @@
 
 | 部署 | 部長 | 社員 |
 | --- | --- | --- |
-| カード部(MFバトルカード) | デッキくん session_01Tst6Rt9k8EXY37zQwwbdzd | リプレイくん session_01Jw9U7KFaeYk5R5oQRLpu1c(ランキング・戦績)/ブレイブくん session_01JVCTL76hMSV1TP5Z9RMnui(対戦画面の見た目)/ツナグくん session_01SG4ZP7u89w7hsJ8zpmSyhY(マルチの新機能)/パックくん session_013UUeQXE9ZnXG7KQNCuXiUJ(新しいカード) |
+| カード部(MFバトルカード) | デッキくん session_01Tst6Rt9k8EXY37zQwwbdzd | リプレイくん session_01Jw9U7KFaeYk5R5oQRLpu1c(ランキング・戦績)/ブレイブくん session_01JVCTL76hMSV1TP5Z9RMnui(対戦画面の見た目)/ツナグくん session_01SG4ZP7u89w7hsJ8zpmSyhY(マルチの新機能)/パックくん session_013UUeQXE9ZnXG7KQNCuXiUJ(新しいカード)/ミカエシくん session_01KGELHQvX5nDVyGHALsmxmQ(過去の対戦を見る)/ナガメくん session_01DkCfFVPA26NohVsXjxrigt(観戦) |
 | バトル部(モンヒロバトル) | ジンくん session_01VKmd8sYDuhtmYMJMz95MDp | (必要になったら足す) |
 | ビート部(モンヒロビート・助手の台詞) | テンポくん session_01SG7SEGSmUcyxyymHyDVipd | (必要になったら足す) |
 | モンスター部(図鑑・モンスターの絵・新モンスター) | ズカンくん session_01UuhN9L3PoQXeR6w3rggzQq | (必要になったら足す) |
