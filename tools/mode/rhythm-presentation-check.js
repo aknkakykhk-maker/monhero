@@ -138,15 +138,15 @@ ok('モンスターノーツの演出の強さを選べる',
   &&game.includes("monsterNoteEffect:'LIGHT'")
   &&game.includes('monsterNoteEffect:RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect)?source.monsterNoteEffect:DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect')
   &&game.includes("segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS)")
-  // 「軽め」「最小」で画面全体の光を出さない
-  &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&screenFlashRef.current)")
+  // 「軽め」「最小」で画面全体の光を出さない(monAbOff はデバッグの犯人さがし・2026-10-27。既定では何も止めない)
+  &&game.includes("if(monsterHit&&monsterEffect==='NORMAL'&&!monAbOff('spark')&&screenFlashRef.current)")
   // いちばん軽い段では、踏んだ瞬間のマスモンへの反応も丸ごと飛ばす(2026-09-13)。
   // ★段は必ず順位(rhythmMonsterEffectAtMost)でくらべる。名前を並べてくらべていたため、
   //   あとから足した「最小」が大きな光の条件を素通りしていた(同日・ユーザー報告
   //   「設定を最小にしても固まるときがある」)
-  &&game.includes("if(monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'NONE')){")
+  &&game.includes("if(monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'NONE')&&!monAbOff('hop')){")
   // 「少なめ」から下では粒もふつうのノーツと同じにし、跳ねもやめる
-  &&game.includes("const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF');")
+  &&game.includes("const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF')&&!monAbOff('spark');")
   &&game.includes("if(!rhythmMonsterEffectAtMost(monsterEffect,'OFF'))restarts.push({el,attr:'rhythmSideHit'});")
   // 音と振動はどの段でも残す。★振動は演出量のブロックの外で1回だけ(2026-09-13)。
   //   それまでは中で26ms・外で12msの**2回**走り、演出量を下げると強さも変わっていた
