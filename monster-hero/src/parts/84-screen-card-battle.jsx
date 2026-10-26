@@ -570,6 +570,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [turnBanner, setTurnBanner] = useState(null);
   const [bigCard, setBigCard] = useState(null);
   const [turnSummary, setTurnSummary] = useState(null);
+  // まとめは、まず小さな1行(まんなかの下)で知らせ、押したら開く(毎回まんなかに大きく開くと、相手のライフに重なってテンポも落ちた。2026-10-26 カゲあつくんの通しの点検)
+  const [sumOpen, setSumOpen] = useState(false);
+  useEffect(() => { setSumOpen(false); }, [turnSummary && turnSummary.key]);
   const [logSheet, setLogSheet] = useState(false);
   const [breederFx, setBreederFx] = useState(null); // ブリーダーのカードを使ったとき、まんなかの端に出す顔 { p, key }
   const [beams, setBeams] = useState([]);
@@ -888,10 +891,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   手札を運び始めたとき(運んだ先にまとめが重なる)と、しばらくたったときも閉じる
   useEffect(() => { if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null); }, [sel, picks.length, drag]);
   useEffect(() => {
-    if (!turnSummary) return undefined;
+    if (!turnSummary || sumOpen) return undefined;
     const t = setTimeout(() => setTurnSummary((cur) => (cur && cur.key === turnSummary.key ? null : cur)), Math.max(3500, turnSummary.lines.length * 1200));
     return () => clearTimeout(t);
-  }, [turnSummary && turnSummary.key]);
+  }, [turnSummary && turnSummary.key, sumOpen]);
 
   // マルチ対戦: 届いた相手の手を当てる・相手の捨て札の並びを本物にする・相手の投了や抜けたで終える(91 の CARD_PVP)
   const stRef = useRef(st);
@@ -1375,7 +1378,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               : pvp ? <CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/> : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
-        {action && stageFit < 3 && !turnSummary && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
+        {action && stageFit < 3 && !(turnSummary && sumOpen) && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
           <div key={action.key} data-card-action data-card-action-side={action.side} className={`relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
             {/* 案A: どちらが使った技か(相手=赤・自分=金) */}
             <span data-card-fit className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? '相手' : '自分'}</span>
@@ -1392,8 +1395,15 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
           </button>
         )}
+        {/* 案C: 相手の番のまとめの1行。押すと開く(開いた窓は下の data-card-turn-summary) */}
+        {turnSummary && !sumOpen && !bigCard && (
+          <button type="button" key={turnSummary.key} data-card-turn-summary-chip onClick={() => { Audio_.fgSe.tap(); setSumOpen(true); }}
+            className="absolute bottom-1 left-1/2 z-[7] flex max-w-[92%] -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-rose-300/70 bg-slate-950/90 px-2.5 py-0.5 text-[11px] font-black text-rose-100 shadow active:scale-95">
+            <span className="min-w-0 truncate">{`${who.name}のターンにしたこと(${turnSummary.lines.length})`}</span><span className="shrink-0 text-rose-300">▸ 見る</span>
+          </button>
+        )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
-        <div data-card-log className={`relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
+        <div data-card-log className={`relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
             ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
@@ -1434,7 +1444,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {wide && tutorBox}
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
       {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
-      {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
+      {/* 守れるカードが無いときは、下の理由の1行だけにする(「使える回避・防御はありません」と2回言っていた。2026-10-27 カゲあつくん) */}
+      {guide && !tutorial && !(mode === 'guard' && !guardOpts.length && !hint) && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
       {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
       {mode === 'guard' && tutorial && st.pending && st.pending.evaded && <div data-card-tutor-guard-done className="mx-auto mb-1 shrink-0 rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap('「これで守る」を押してください')}</div>}
       {mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && (
@@ -1524,7 +1535,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             style={{ fontSize: 'clamp(26px, 9vw, 44px)', ...JA_LABEL_STYLE }}>{turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`}</button>
         </div>
       )}
-      {turnSummary && !bigCard && (
+      {turnSummary && sumOpen && !bigCard && (
         <button type="button" key={turnSummary.key} data-card-turn-summary onClick={() => setTurnSummary(null)}
           // 横の画面は、左の盤のまんなかへ小さく出す(右の手札にかからない。もとは盤の上の段と案内に大きく重なった。QA 2)
           className={`mh-card-big absolute z-[54] overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 text-left shadow-2xl ${wide ? 'left-2 top-[34%] max-h-[42%] p-2' : 'inset-x-3 top-[18%] mx-auto max-h-[56%] max-w-md p-3'}`}
@@ -2577,14 +2588,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''}</option>)}
                   </select>
                   {bgmPreview && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
                 </div>
               </label>
             ))}
             {cpuPlaylistPanel}
-            <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')}</p>
+            <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('音の大きさは、ゲーム全体の設定の「音量」で変えられます')}</p>
           </div>
     );
     // 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形(上の bgmPanel)

@@ -99,7 +99,7 @@ const check = (name, ok, detail = '') => {
     const beginner = page.locator('.snap-mandatory > article').filter({ hasText: 'Beginner' }).first();
     await beginner.scrollIntoViewIfNeeded();
     await beginner.getByRole('button', { name: 'この難易度で挑戦' }).dispatchEvent('click');
-    await page.getByRole('heading', { name: '勇者モンを選択' }).waitFor({ timeout: 15000 });
+    await page.getByRole('heading', { name:'勇者モンをえらぶ' }).waitFor({ timeout: 15000 });
 
     // --- ① ベースモンだけ ---
     check('プロの勇者モン選択に編成タブを出さない',

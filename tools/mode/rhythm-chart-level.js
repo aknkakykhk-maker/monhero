@@ -411,6 +411,17 @@ const LEVEL_OVERRIDES=Object.freeze({
   // 2026-10-21 社長「4曲とも直す」: Sheriruth・Grievous Lady・風がそよぐ場所・Against My Own Shadow の HELL も見分けにくい所を0件に直し、固定(61・69・22・51)を外して v3 で測る(51・64・21・49)
   // 2026-10-21 社長「今の難易度にあわせて最近のヘルは全譜面見直したほうがいい」: Toward(short)・ROSE・ROSE(short)・SAD SONG・SAD SONG(short) の
   //   HELL を見分けにくい形なしで作り直し、上の固定(57・52・50・39・43)を外して v3 で測った値を出す(v1 の一覧からも外した)
+  // 2026-10-27 社長「ヘルの難易度が難易度詐欺してる。ステイウィズミーのフルとかむずすぎた」→ A「表示の Lv. だけ上げる」(譜面は1音も変えない)。
+  //   式は押さえながら叩く・手が重なる形の重さをほとんど数えない(多さと Lv. の相関 -0.09)。人の指のボット(tools/playbot/feel.js・タッチ・同じ種)で
+  //   HELL 24譜面の「正しく押したのに取れない数(千回あたり)」を比べ、近い譜面に合わせた: Stay With Me 162→48(綺季一閃・battle remix 48 より多い)・
+  //   Stay With Me short 149→44・SAD SONG 109→43・ドパガキリミックス 97→44・綺季一閃 short 119→44・MF × ICHIKA MIX 150→35(Thorn King 35 と並ぶ)・トリコ 118→32
+  stay_with_me:Object.freeze({HELL:48}),stay_with_me_hell_debug:Object.freeze({HELL:48}),
+  stay_with_me_short:Object.freeze({HELL:44}),stay_with_me_short_hell_debug:Object.freeze({HELL:44}),
+  sad_song:Object.freeze({HELL:43}),sad_song_hell_debug:Object.freeze({HELL:43}),
+  six_eternel_remix:Object.freeze({HELL:44}),six_eternel_remix_hell_debug:Object.freeze({HELL:44}),
+  kiki_issen_short:Object.freeze({HELL:44}),kiki_issen_short_hell_debug:Object.freeze({HELL:44}),
+  mf_ichika_mix:Object.freeze({HELL:35}),mf_ichika_mix_hell_debug:Object.freeze({HELL:35}),
+  toriko:Object.freeze({HELL:32}),toriko_hell_debug:Object.freeze({HELL:32}),
 });
 // 表示に出す Lv.: 上書き(社長の値)があればそれ、無ければ式の値
 const shownLevel=(songId,difficultyId,chart)=>{const o=LEVEL_OVERRIDES[songId];return o&&Number.isFinite(o[difficultyId])?o[difficultyId]:chartLevel(chart,{formula:levelFormulaFor(songId)}).level;};
