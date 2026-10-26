@@ -216,7 +216,9 @@ const cardPvpCleanMessage = (raw) => {
       seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null,
       bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
       // デッキ名(対戦開始の画面に出すだけ。2026-10-26 で足した項目。古い版は送らないので null)
-      dn: typeof raw.dn === 'string' ? (rhythmMultiText(raw.dn, 30) || null) : null };
+      dn: typeof raw.dn === 'string' ? (rhythmMultiText(raw.dn, 30) || null) : null,
+      // 何回目の試合か(「もう1戦」。2026-10-26 で足した項目。古い版は送らないので 0)
+      rd: cardPvpInt(raw.rd, 1000) || 0 };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -236,10 +238,13 @@ const cardPvpCleanMessage = (raw) => {
     const cards = cardPvpCleanCards(raw.cards, 60);
     const mons = cardPvpCleanCards(raw.mons, 3);
     if (!cards || cards.includes(null) || !mons || mons.includes(null)) return null;
-    return { t: 'open', from, seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0, salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '', deck: { monsters: mons, cards } };
+    return { t: 'open', from, seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0, salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '', deck: { monsters: mons, cards },
+      match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '' };
   }
   if (raw.t === 'seek') { const code = rhythmMultiNormalizeCode(raw.code); return code && Number.isFinite(raw.at) ? { t: 'seek', from, code, at: raw.at } : null; }
   if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
+  // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
+  if (raw.t === 'again') { const rd = cardPvpInt(raw.rd, 1000); const seal = typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null; return rd && seal ? { t: 'again', from, rd, seal } : null; }
   if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return { t: raw.t, from };
   return null;
 };
@@ -539,14 +544,34 @@ const CARD_PVP = (() => {
   let board = null;                 // 対戦の画面の受け口 { onAct(msg) → 次の場|null, onDiscard(list), onForceEnd(outcome), onChat(text) }
   const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0,
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
-    offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '' });
+    offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '',
+    round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
   const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0 });
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
-  const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards });
+  const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards, match: s.match || '' });
+  // ホストが、2人そろったら先攻・後攻のくじを引く(hb が届いたとき・もう1戦で回を進めたとき)
+  // ★くじの知らせは、相手がまだこちらを知らない間に届くと捨てられる。相手の hb にその試合の印が載るまで、毎回送り直す(tick)
+  const maybeStart = () => {
+    if (s.phase === 'waiting' && !s.match && !s.startMsg && s.foe && isHost() && s.foe.mons && s.foe.seal) {
+      s = { ...s, startMsg: { t: 'start', match: rhythmMultiMakeId('m'), hostFirst: Math.random() < 0.5, guest: s.foe.id } };
+      send(s.startMsg);
+    }
+  };
+  // もう1戦: 2人とも同じ回を押したら、同じ部屋で次の試合を待つ形へ戻す(山札の封は押したときに作り直したもの)
+  const tryAgain = () => {
+    if (!s || s.phase !== 'over' || !s.again || !s.foeAgain || s.foeAgain.rd !== s.again.rd || s.foeGone) return;
+    const a = s.again;
+    s = { ...s, phase: 'waiting', round: a.rd, seed: a.seed, salt: a.salt, seal: a.seal, again: null, foeAgain: null,
+      match: '', startMsg: null, game: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null,
+      timeouts: 0, broken: '', first: 0, hostFirst: false, foe: { ...s.foe, seal: s.foeAgain.seal } };
+    hb();
+    maybeStart();
+    emit();
+  };
   const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
   const stop = () => {
     if (tick) clearInterval(tick); tick = null;
@@ -598,15 +623,13 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
-      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: msg.seal, bid: msg.bid, dn: msg.dn || null, seen: now };
-      if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
+      // もう1戦: 相手がもう次の回へ進んでいる(こちらの「もう1戦」が届いて、相手が先に切りかえた)なら、その hb を相手の同意として追いつく
+      if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); return; }
+      const sameRound = (msg.rd || 0) === (s.round || 0); // 前の回の hb(届くのが遅れた分)の封は使わない
+      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: sameRound ? msg.seal : (s.foe && s.foe.seal) || null, bid: msg.bid, dn: msg.dn || null, seen: now };
+      if (sameRound && s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
       s = { ...s, foe: { ...(s.foe || {}), ...foe } };
-      // ホストが、2人そろったら先攻・後攻のくじを引く
-      // ★くじの知らせは、相手がまだこちらを知らない間に届くと捨てられる。相手の hb にその試合の印が載るまで、毎回送り直す(tick)
-      if (s.phase === 'waiting' && !s.match && !s.startMsg && isHost() && s.foe.mons && s.foe.seal) {
-        s = { ...s, startMsg: { t: 'start', match: rhythmMultiMakeId('m'), hostFirst: Math.random() < 0.5, guest: s.foe.id } };
-        send(s.startMsg);
-      }
+      maybeStart();
       if (s.match && msg.match === s.match) s = { ...s, foeInMatch: true };
       emit();
       return;
@@ -626,11 +649,13 @@ const CARD_PVP = (() => {
       emit();
       return;
     }
-    if (msg.t === 'open') { if (!s.foeOpen) { set({ foeOpen: msg }); void tryVerify(); } return; }
+    if (msg.t === 'open') { if (msg.match && msg.match !== s.match) return; if (!s.foeOpen) { set({ foeOpen: msg }); void tryVerify(); } return; } // 前の試合の封は使わない
+    if (msg.t === 'again') { if (s.phase === 'over' && !s.foeGone) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); emit(); } return; }
     if (msg.t === 'chat') { if (s.phase === 'playing' && board && board.onChat) board.onChat(CARD_PVP_STAMPS[msg.i]); return; }
     if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
       if (s.phase === 'playing') forceEnd(msg.t === 'surrender' ? 'foeSurrender' : msg.t === 'timeout' ? 'foeTimeout' : 'foeLeft');
       else if (s.phase === 'waiting') set({ foe: null });
+      else if (s.phase === 'over' && msg.t === 'bye') set({ foeGone: true, foeAgain: null }); // 結果のあとに相手が部屋を出た(もう1戦はできない)
     }
   };
   // つなぐ(電波が切れたら、同じ部屋へつなぎ直す。届いていない手は送り直しで追いつく)
@@ -706,6 +731,7 @@ const CARD_PVP = (() => {
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach((m) => send(m)); // 「受け取った」が来ていない手は送り直す
       if (s.phase === 'over') sendOpen();
+      if (s.phase === 'over' && s.again) send({ t: 'again', rd: s.again.rd, seal: s.again.seal });
       // 相手から何も届かないまま CARD_PVP_ALIVE_MS が過ぎたら、抜けた扱い(こちらの電波が切れているあいだは数えない)
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
     }, CARD_PVP_HEARTBEAT_MS);
@@ -758,6 +784,20 @@ const CARD_PVP = (() => {
       sendOpen();
       void tryVerify();
       setTimeout(() => { if (s && s.result && s.result.verify === 'wait') set({ result: { ...s.result, verify: 'skip' } }); }, CARD_PVP_VERIFY_WAIT_MS);
+    },
+    // もう1戦(結果の画面から)。次の回の山札の封を作って知らせる。相手も押したら、同じ部屋で次の試合へ
+    again: async () => {
+      if (!s || s.phase !== 'over' || s.again || s.foeGone) return false;
+      const rd = (s.round || 0) + 1;
+      const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
+      const salt = rhythmMultiMakeId('k');
+      const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck: s.deck }));
+      if (!seal || !s || s.phase !== 'over' || s.again) return false;
+      s = { ...s, again: { rd, seed, salt, seal } };
+      send({ t: 'again', rd, seal });
+      tryAgain();
+      emit();
+      return true;
     },
     markRewarded: (got) => { if (s && s.result) set({ result: { ...s.result, rewarded: true, got } }); },
     // 強さの点数へ届ける(確かめが済んだ試合だけ・1試合1回)。2人の届けが合ったときだけ、データベースの関数が点数を動かす
@@ -971,8 +1011,16 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             </>)}
           </div>
         </div>
-        <div className={SCREEN_FOOTER_CLASS}>
-          <button type="button" data-card-pvp-leave className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+        {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けたときは出さない */}
+        <div className={`${SCREEN_FOOTER_CLASS} flex gap-2`}>
+          {!room.foeGone && r.reason !== '相手が抜けた' && (
+            <button type="button" data-card-pvp-again={room.again ? 'waiting' : room.foeAgain ? 'foe' : 'ready'} disabled={!!room.again} className={`${btn} mh-button-primary`}
+              onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.again(); }}>
+              {room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'}
+            </button>
+          )}
+          {room.foeGone && <p data-card-pvp-foe-gone className="flex-1 self-center text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
+          <button type="button" data-card-pvp-leave className={`${btn} ${room.foeGone || r.reason === '相手が抜けた' ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
         </div>
       </div>
     );

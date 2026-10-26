@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1e100b777afb18d
+// source-sha256: a42ce96a977a71d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:35";
+const BUILD_DATE = "2026-10-27 00:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -94910,9 +94910,9 @@ const CardRankingBoard = ({
     className: "text-3xl"
   }, "🎮"), React.createElement("b", {
     className: "mt-1 block text-[15px] font-black text-white"
-  }, "マルチ対戦の強さ"), React.createElement("span", {
+  }, "マルチ対戦の強さ"), !cardPvpOpen() && React.createElement("span", {
     className: "mt-1 inline-block rounded border border-slate-500 px-2 py-0.5 text-[11px] font-black text-slate-300"
-  }, "準備中"), React.createElement("p", {
+  }, "準備中"), !cardPvpOpen() && React.createElement("p", {
     className: "mt-2 text-[12px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
   }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます'))), kind === 'multi' && cardPvpOpen() && React.createElement("div", {
@@ -95309,7 +95309,8 @@ const cardPvpCleanMessage = raw => {
       seal: typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null,
       match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : null,
       bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
-      dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null
+      dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null,
+      rd: cardPvpInt(raw.rd, 1000) || 0
     };
   }
   if (raw.t === 'start') return {
@@ -95360,7 +95361,8 @@ const cardPvpCleanMessage = raw => {
       deck: {
         monsters: mons,
         cards
-      }
+      },
+      match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : ''
     };
   }
   if (raw.t === 'seek') {
@@ -95379,6 +95381,16 @@ const cardPvpCleanMessage = raw => {
       from,
       i
     };
+  }
+  if (raw.t === 'again') {
+    const rd = cardPvpInt(raw.rd, 1000);
+    const seal = typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null;
+    return rd && seal ? {
+      t: 'again',
+      from,
+      rd,
+      seal
+    } : null;
   }
   if (raw.t === 'surrender' || raw.t === 'bye' || raw.t === 'timeout') return {
     t: raw.t,
@@ -95882,7 +95894,11 @@ const CARD_PVP = (() => {
     joining: '',
     joinAt: 0,
     ownCode: '',
-    reported: ''
+    reported: '',
+    round: 0,
+    again: null,
+    foeAgain: null,
+    foeGone: false
   });
   const emit = () => listeners.forEach(fn => {
     try {
@@ -95914,7 +95930,8 @@ const CARD_PVP = (() => {
     seal: s.seal,
     match: s.match || null,
     bid: s.me.bid || null,
-    dn: s.me.dn || null
+    dn: s.me.dn || null,
+    rd: s.round || 0
   });
   const closeLobby = () => {
     lobbyAlive = false;
@@ -95930,8 +95947,59 @@ const CARD_PVP = (() => {
     seed: s.seed,
     salt: s.salt,
     mons: s.deck.monsters,
-    cards: s.deck.cards
+    cards: s.deck.cards,
+    match: s.match || ''
   });
+  const maybeStart = () => {
+    if (s.phase === 'waiting' && !s.match && !s.startMsg && s.foe && isHost() && s.foe.mons && s.foe.seal) {
+      s = {
+        ...s,
+        startMsg: {
+          t: 'start',
+          match: rhythmMultiMakeId('m'),
+          hostFirst: Math.random() < 0.5,
+          guest: s.foe.id
+        }
+      };
+      send(s.startMsg);
+    }
+  };
+  const tryAgain = () => {
+    if (!s || s.phase !== 'over' || !s.again || !s.foeAgain || s.foeAgain.rd !== s.again.rd || s.foeGone) return;
+    const a = s.again;
+    s = {
+      ...s,
+      phase: 'waiting',
+      round: a.rd,
+      seed: a.seed,
+      salt: a.salt,
+      seal: a.seal,
+      again: null,
+      foeAgain: null,
+      match: '',
+      startMsg: null,
+      game: null,
+      foeInMatch: false,
+      mySeq: 0,
+      outbox: [],
+      theirSeq: 0,
+      inbox: {},
+      history: [],
+      result: null,
+      foeOpen: null,
+      timeouts: 0,
+      broken: '',
+      first: 0,
+      hostFirst: false,
+      foe: {
+        ...s.foe,
+        seal: s.foeAgain.seal
+      }
+    };
+    hb();
+    maybeStart();
+    emit();
+  };
   const inGame = () => !!s && (s.phase === 'playing' || s.phase === 'over');
   const stop = () => {
     if (tick) clearInterval(tick);
@@ -96069,6 +96137,18 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
+      if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) {
+        s = {
+          ...s,
+          foeAgain: {
+            rd: msg.rd,
+            seal: msg.seal
+          }
+        };
+        tryAgain();
+        return;
+      }
+      const sameRound = (msg.rd || 0) === (s.round || 0);
       const foe = {
         id: msg.from,
         name: msg.name || 'あいて',
@@ -96077,12 +96157,12 @@ const CARD_PVP = (() => {
         at: msg.at,
         mons: msg.mons,
         count: msg.count,
-        seal: msg.seal,
+        seal: sameRound ? msg.seal : s.foe && s.foe.seal || null,
         bid: msg.bid,
         dn: msg.dn || null,
         seen: now
       };
-      if (s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return;
+      if (sameRound && s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return;
       s = {
         ...s,
         foe: {
@@ -96090,18 +96170,7 @@ const CARD_PVP = (() => {
           ...foe
         }
       };
-      if (s.phase === 'waiting' && !s.match && !s.startMsg && isHost() && s.foe.mons && s.foe.seal) {
-        s = {
-          ...s,
-          startMsg: {
-            t: 'start',
-            match: rhythmMultiMakeId('m'),
-            hostFirst: Math.random() < 0.5,
-            guest: s.foe.id
-          }
-        };
-        send(s.startMsg);
-      }
+      maybeStart();
       if (s.match && msg.match === s.match) s = {
         ...s,
         foeInMatch: true
@@ -96149,11 +96218,26 @@ const CARD_PVP = (() => {
       return;
     }
     if (msg.t === 'open') {
+      if (msg.match && msg.match !== s.match) return;
       if (!s.foeOpen) {
         set({
           foeOpen: msg
         });
         void tryVerify();
+      }
+      return;
+    }
+    if (msg.t === 'again') {
+      if (s.phase === 'over' && !s.foeGone) {
+        s = {
+          ...s,
+          foeAgain: {
+            rd: msg.rd,
+            seal: msg.seal
+          }
+        };
+        tryAgain();
+        emit();
       }
       return;
     }
@@ -96164,6 +96248,9 @@ const CARD_PVP = (() => {
     if (msg.t === 'surrender' || msg.t === 'bye' || msg.t === 'timeout') {
       if (s.phase === 'playing') forceEnd(msg.t === 'surrender' ? 'foeSurrender' : msg.t === 'timeout' ? 'foeTimeout' : 'foeLeft');else if (s.phase === 'waiting') set({
         foe: null
+      });else if (s.phase === 'over' && msg.t === 'bye') set({
+        foeGone: true,
+        foeAgain: null
       });
     }
   };
@@ -96345,6 +96432,11 @@ const CARD_PVP = (() => {
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach(m => send(m));
       if (s.phase === 'over') sendOpen();
+      if (s.phase === 'over' && s.again) send({
+        t: 'again',
+        rd: s.again.rd,
+        seal: s.again.seal
+      });
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
     }, CARD_PVP_HEARTBEAT_MS);
   };
@@ -96508,6 +96600,35 @@ const CARD_PVP = (() => {
           }
         });
       }, CARD_PVP_VERIFY_WAIT_MS);
+    },
+    again: async () => {
+      if (!s || s.phase !== 'over' || s.again || s.foeGone) return false;
+      const rd = (s.round || 0) + 1;
+      const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
+      const salt = rhythmMultiMakeId('k');
+      const seal = await cardPvpSha256(cardPvpSealText({
+        seed,
+        salt,
+        deck: s.deck
+      }));
+      if (!seal || !s || s.phase !== 'over' || s.again) return false;
+      s = {
+        ...s,
+        again: {
+          rd,
+          seed,
+          salt,
+          seal
+        }
+      };
+      send({
+        t: 'again',
+        rd,
+        seal
+      });
+      tryAgain();
+      emit();
+      return true;
     },
     markRewarded: got => {
       if (s && s.result) set({
@@ -96843,11 +96964,24 @@ const CardPvpLobby = ({
       className: "mt-1 text-[12px] font-bold text-rose-300",
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
-      className: SCREEN_FOOTER_CLASS
-    }, React.createElement("button", {
+      className: `${SCREEN_FOOTER_CLASS} flex gap-2`
+    }, !room.foeGone && r.reason !== '相手が抜けた' && React.createElement("button", {
+      type: "button",
+      "data-card-pvp-again": room.again ? 'waiting' : room.foeAgain ? 'foe' : 'ready',
+      disabled: !!room.again,
+      className: `${btn} mh-button-primary`,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void CARD_PVP.again();
+      }
+    }, room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'), room.foeGone && React.createElement("p", {
+      "data-card-pvp-foe-gone": true,
+      className: "flex-1 self-center text-center text-[12px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap('相手は部屋を出ました')), React.createElement("button", {
       type: "button",
       "data-card-pvp-leave": true,
-      className: `${btn} mh-button-primary`,
+      className: `${btn} ${room.foeGone || r.reason === '相手が抜けた' ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
       onClick: () => {
         Audio_.fgSe.tap();
         CARD_PVP.leave();
