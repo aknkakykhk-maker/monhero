@@ -37,3 +37,6 @@
 
 ## 2026-10-26 横向きで指が届かないボタン
 → [damedashi-2026-10-26/landscape-reach/README.md](damedashi-2026-10-26/landscape-reach/README.md)(4件。1〜3は横で押せない)
+
+## 2026-10-26 言葉の直し(#3705)・入口の立ち絵(#3703)の確かめ
+→ [damedashi-2026-10-26/words-recheck/README.md](damedashi-2026-10-26/words-recheck/README.md)(8件)
