@@ -38,11 +38,29 @@
 
 ## ゲーム本体の更新を止めない約束
 
-- SW が `respondWith` するのは「`audio/` `images/` `data/images/` の下の mp3・png・jpg・webp」だけ。
-  HTML・JS・CSS・JSON・version.json・Supabase には手を出さない(ブラウザがふつうに取りに行く)。
-  なので、新しい版を出したら今まで通り必ず新しい版が動く。
+- SW が `respondWith` するのは「`audio/` `images/` `data/images/` の下の mp3・png・jpg・webp」と、
+  下の「本体とデータ」の JS・CSS だけ。HTML(index.html)・JSON・version.json・Supabase には手を出さない
+  (ブラウザがふつうに取りに行く)。なので、新しい版を出したら今まで通り必ず新しい版が動く。
 - ページ本体(navigate)にも `respondWith` しない。オフラインで遊べるようにするものではない。
 - Range つきの取得には手を出さない。
+
+## 本体とデータ(2026-10-27〜)
+
+社長「本体とデータもダウンロードに入れる」。案は [`docs/progress/speed/download-plan.md`](../progress/speed/download-plan.md)。
+
+- **版を決めるのは index.html。** index.html は毎回ネットから取る(SW は触らない)。index.html が読む同じサイトの JS・CSS
+  (`game-system.compiled.js`・`tailwind.css`・`data/*.js`・`data/images/*.js`・`vendor/*.js`)は、どれも `?v=<版>` 付き。
+  本体の版 `GAME_BUILD` は中身のハッシュ(`tools/stamp-game-build.js`)
+- **一覧**: `build-asset-manifest.js` が index.html から拾い、`asset-manifest.json` の files に `pack:'core'` で載せる(版は index.html の `?v=` のまま)。
+  本体の版は本体を書き出したあとに決まるので、`build.js` のいちばん最後に作る。「全部」のまとまりには数えない
+- **SW**: 置き場は `mh-code-v1`(画像・音源の `mh-assets-v1` とは分ける)。URL の `?v=` が一覧の版と**ぴったり同じ**ときだけ返し・ためる。
+  `?v=` の無い取得・`&retry=` 付き(index.html の読み込み直し)は素通し。新しい版を出した直後は、ページを開いたときの一覧の取り直しを
+  待ってからためる。ためるのは中身の大きさが一覧と同じときだけで、見出しは種類(Content-Type)だけ写す
+- **古い版**: 一覧が変わったら、一覧に無い・版の違うものを `mh-code-v1` から消す
+- **止め札**: sw.js の `const CODE_CACHE_OFF = false;` を true にして公開すると、次に開いたときから JS・CSS は素通しになり、`mh-code-v1` を消す
+- **切にしたとき**: 設定(DEBUG MENU)で事前ダウンロードを切にすると、SW を外し `mh-code-v1` も消す
+- **検査**: `tools/boot/asset-prefetch-check.js`(2回目に開くと本体が置き場から返る・返した JS・CSS はどれも一覧の版と同じ・切で消える)。
+  版の入れ替えで新しい本体が動くことは `tools/boot/code-prefetch-check.js`(開発部ドライバーくん)
 
 ## 保存データ・ランキング
 

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fdcf1c6b52006907
+// generated-sha256: ab23cbf78448cb93
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16322,6 +16322,8 @@ const debugPassphraseMatches = async (text) => {
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
 const ASSET_CACHE_META = 'mh-assets-meta-v1';
+// 本体・データの JS・CSS の置き場(sw.js の CODE_CACHE と同じ名前)。切にしたときに一緒に消す
+const ASSET_CODE_CACHE_NAME = 'mh-code-v1';
 // 2026-10-11 社長の了承で既定を入にした(「既定『する』で公開」)。保存値が無い人(既存・新規とも)は入・自動ダウンロードも「する」。
 // 一度「しない」を選んだ人(auto:false)や、デバッグで切にした人(enabled:false)の保存値はそのまま使う(normalizeAssetCacheSettings)
 const ASSET_CACHE_DEFAULT_ENABLED = true;
@@ -16394,7 +16396,8 @@ const ASSET_CACHE = (() => {
     return manifestPromise;
   };
   // 「全部」には、出してよいまとまりのものだけを入れる(公開前のバトルカードは入れない)
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
+  // 本体・データ(pack:'core')は設定のまとまりに入れない。遊んだときに SW が置き場 mh-code-v1 へためる(2026-10-27)
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
 
   // 端末にあるもの(版も一覧と同じもの)を数え直す
   const refreshStatus = async () => {
@@ -16461,7 +16464,7 @@ const ASSET_CACHE = (() => {
         if (sw && /\/sw\.js(\?|$)/.test(sw.scriptURL)) await reg.unregister();
       }
     } catch (e) {}
-    try { await window.caches.delete(ASSET_CACHE_NAME); await window.caches.delete(ASSET_CACHE_META); } catch (e) {}
+    try { await window.caches.delete(ASSET_CACHE_NAME); await window.caches.delete(ASSET_CACHE_META); await window.caches.delete(ASSET_CODE_CACHE_NAME); } catch (e) {}
   };
 
   // ---- まとまりのダウンロード ----
@@ -16595,7 +16598,7 @@ const ASSET_CACHE = (() => {
     if (!settings.enabled || !settings.auto) return;
     const m = await ensureManifest();
     if (!m) return;
-    enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
+    enqueue(Object.keys(m.files).filter(p => m.files[p].pack !== 'core' && ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
     // カードの絵(小さい版→大きい版)は、バトルカードのまとまりを出してよいときだけ(公開前の遊ぶ人の端末では落とさない)
     if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
