@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c7bc362d549f6490
+// generated-sha256: 5645a0cfcb82e4c6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 13:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 13:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -53683,9 +53683,9 @@ const CardDiscardModal = ({ db, st, initial = CARD_ME, onDetail, onClose }) => {
       <div className="grid max-h-[60vh] grid-cols-4 gap-1.5 overflow-y-auto">
         {list.length === 0 && <p className="col-span-4 py-6 text-center text-[13px] font-bold text-slate-400">まだありません</p>}
         {list.map((no, i) => { const c = cardOf(db, no); return (
-          <div key={`${no}-${i}`} {...press(no)} className="flex flex-col items-center">
+          <div key={`${no}-${i}`} {...press(no)} className="flex flex-col items-center" style={{ containerType: 'inline-size' }}>
             <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} loading="lazy" className="w-full rounded-md"/>
-            <span className="mt-0.5 w-full truncate text-center text-[11px] font-bold text-slate-200">{c ? c.name : no}</span>
+            <CardDiscardName name={c ? c.name : no}/>
           </div>
         ); })}
       </div>
@@ -53723,6 +53723,30 @@ const CardTurnLogSheet = ({ st, meName, foeName, onClose }) => {
     </div>
   );
 };
+// カードの画面の文の折り方。jaWrap(41)に任せたうえで、短いかぎかっこの言葉(「守らない」)と、道具が割ってしまう言葉(ひととおり)は折らない
+// (320で「「守ら/ない」」「ひと/とおり」と折れた。QA 10・12)
+const CARD_KEEP_WORDS = /(「[^「」\s]{1,8}」|ひととおり[だ。]*)/;
+const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) => (i % 2 === 1
+  ? <span key={i} data-ja-keep style={{ whiteSpace: 'nowrap' }}>{t}</span>
+  : <React.Fragment key={i}>{jaWrap(t)}</React.Fragment>));
+// 場のモンスターの名前。「…」で切らずに収める(320で「メタル…」と切れていた。QA 8)。
+// 字を少し小さく(10pxまで) → それでも入らなければ横をつめて1行に収める(2行にすると「ストライ/クリパー」と言葉の途中で割れる)
+const CardMonName = ({ name, w }) => {
+  const len = Math.max(1, String(name || '').length);
+  const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
+  const k = Math.min(1, w / (len * fs));
+  return <div data-card-mon-name className="whitespace-nowrap font-black leading-tight" style={{ fontSize: fs, transform: k < 1 ? `scaleX(${k})` : undefined, transformOrigin: 'left', width: k < 1 ? `${w / k}px` : undefined }}>{name}</div>;
+};
+// 捨て札の一覧の名前。「…」で切らない(「ライトニ…」と切れていた。QA 9)。言葉の切れ目がある名前(最後の/きらめき)はそこで折り、
+// 切れ目の無いカタカナ1語(フレイムビーム)は、折ると「フレイムビ/ーム」になるので、カードの幅に合わせて字を小さくして1行に収める
+const CardDiscardName = ({ name }) => {
+  const one = !String(jaWrapPoints(name)).includes('\u200B');
+  const len = Math.max(1, String(name).length);
+  return (
+    <span data-card-discard-name className="mt-0.5 w-full text-center font-bold leading-tight text-slate-200"
+      style={one ? { fontSize: `min(10px, calc(100cqw / ${len + 0.5}))`, whiteSpace: 'nowrap' } : { fontSize: 10, ...JA_WRAP_STYLE }}>{one ? name : jaWrap(name)}</span>
+  );
+};
 const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact = false, tiny = false, wide = false, motion = null, calm = false }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
@@ -53738,7 +53762,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
         {mon.ko && <span className="mh-card-flip-back" aria-hidden="true" style={{ backgroundImage: `url(${CARD_BACK_IMG()})`, backgroundSize: '100% 100%', border: 0 }}/>}
       </span>
       <div className={`${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`}>
-        <div className="truncate text-[12px] font-black leading-tight">{mon.name}</div>
+        <CardMonName name={mon.name} w={tiny ? 56 : 62}/>
         {/* 小さい画面(tiny)は、地上・空中の札をライフと同じ行へ(1行ぶん低くする) */}
         <div className="flex items-center gap-1 whitespace-nowrap text-[13px] font-black leading-tight">{mon.life}<span className="text-[10px] text-slate-400"> / {mon.max}</span>
           {tiny && <span className={`ml-auto rounded px-0.5 text-[9px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`}>{CARD_TYPE_LABEL[ty]}</span>}</div>
@@ -54568,7 +54592,8 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             <span className="min-w-0 text-[12px] font-black leading-tight text-emerald-50" style={JA_WRAP_STYLE}>{cardOf(db, st.field.no).name}<small className="ml-1 text-[10px] font-bold text-emerald-200">({st.field.p === CARD_ME ? '自分' : '相手'}が出した)</small></span>
           </button>
         )}
-        <div data-card-log className="relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug" style={JA_WRAP_STYLE}>
+        {/* 番の帯が出ているあいだは、記録の字を消す(帯の後ろに透けて読みにくかった。QA 7) */}
+        <div data-card-log className={`relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug transition-opacity ${turnBanner ? 'opacity-0' : ''}`} style={JA_WRAP_STYLE}>
           {pendingText && <div className="text-rose-200">{pendingText}</div>}
           {(pendingText ? [] : (compact || tutorial || stageFit >= 1) ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
         </div>
@@ -54679,7 +54704,10 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       )}
       {/* 案C: 自分の番の始めに、相手のターンにしたこと(タップで閉じる・カードを選ぶと閉じる) */}
       {turnSummary && !bigCard && (
-        <button type="button" key={turnSummary.key} data-card-turn-summary onClick={() => setTurnSummary(null)} className="mh-card-big absolute inset-x-3 top-[18%] z-[54] mx-auto max-h-[56%] max-w-md overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 p-3 text-left shadow-2xl">
+        <button type="button" key={turnSummary.key} data-card-turn-summary onClick={() => setTurnSummary(null)}
+          // 横の画面は、左の盤のまんなかへ小さく出す(右の手札にかからない。もとは盤の上の段と案内に大きく重なった。QA 2)
+          className={`mh-card-big absolute z-[54] overflow-y-auto rounded-2xl border-2 border-rose-300/80 bg-slate-950/95 text-left shadow-2xl ${wide ? 'left-2 top-[34%] max-h-[42%] p-2' : 'inset-x-3 top-[18%] mx-auto max-h-[56%] max-w-md p-3'}`}
+          style={wide ? { right: 'calc(min(42%, 420px) + 8px)' } : undefined}>
           <div data-card-fit className="text-[14px] font-black text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`${who.name}のターンにしたこと`)}</div>
           <ol className="mt-1 space-y-0.5">{turnSummary.lines.map((t, i) => <li key={i} data-card-fit className="text-[13px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{i + 1}. {jaWrap(t)}</li>)}</ol>
           <div className="mt-2 flex items-center justify-between gap-2">
@@ -55184,7 +55212,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {(() => { const dra = allAssistants.find((x) => x.id === 'dra'); return dra ? (
             <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
               <CardAssistantArt src={assistantFullImage(dra, result.done ? 'happy' : 'normal')} alt={dra.name} className="w-[42%]" style={{ height: 'min(180px, 24vh)' }}/>
-              <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: dra.accent, ...JA_WRAP_STYLE }}>{jaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ')}</div>
+              <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: dra.accent, ...JA_WRAP_STYLE }}>{cardJaWrap(result.done ? 'よくやったな。これで決まりはひととおりだ。あとは対戦で慣れていこう' : 'またいつでも練習しような。トップの「ルール」から、また練習試合できるぞ')}</div>
             </div>
           ) : null; })()}
           <div className={SCREEN_PANEL_CLASS}>
@@ -55340,7 +55368,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 return (
                   <div key={item.key} data-card-setting={item.key} className="mt-2.5 border-t border-white/10 pt-2.5">
                     <b className="block text-[12px] font-black text-slate-200">{item.title}{item.only === 'cpu' && <small className="ml-1 text-[10px] font-bold text-slate-400">(助手と対戦)</small>}</b>
-                    <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(item.desc)}</p>
+                    <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap(item.desc)}</p>
                     <div className={`mt-2 grid gap-1.5 ${item.options.length >= 5 ? 'grid-cols-5' : item.options.length === 4 ? 'grid-cols-4' : item.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                       {item.options.map((o) => (
                         <button key={o.id} type="button" data-card-setting-option={o.id} aria-pressed={cur === o.id}
