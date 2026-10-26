@@ -201,16 +201,18 @@ check('主血統プラントの対象はPlantとOboro',
   // 立ち絵が無いのは「影で並べる」と決まった2体だけ。図鑑の文が無いのは、社長がまだ文を決めていない子だけ(文は作らず ？？？)。
   // ここに名前が無い子で欠けたら、入れ忘れとして止める
   const NO_ART = [];
-  const NO_TEXT = ['Baron', 'Aquarius', 'Plumler', 'StrikeReaper', 'DarkHam', 'HellFat', 'UrokoGel', 'WakakusaKenzai', 'Garant',
-    'MimiNyaa', 'BenihimeSou', 'MurasakiChu', 'ArmorDragon', 'Kermadix', 'Gigalon'];
+  // 2026-10-26 混血15体の文も社長から届いていたので入れた。いまは文の無い子はいない
+  const NO_TEXT = [];
   check('案の子の立ち絵が無いのは、影で並べる子だけ',
     drafts.filter(d => !d.imgUrl).map(d => d.id).sort().join() === NO_ART.slice().sort().join(),
     drafts.filter(d => !d.imgUrl).map(d => d.id).join(' '));
   check('案の子の図鑑の文が無いのは、文が決まっていない子だけ',
     drafts.filter(d => !A.MONSTER_DEX_DESCRIPTIONS[d.id]).map(d => d.id).sort().join() === NO_TEXT.slice().sort().join(),
     drafts.filter(d => !A.MONSTER_DEX_DESCRIPTIONS[d.id]).map(d => d.id).join(' '));
+  check('図鑑の文が ？？？ になる子はいない', A.dexScreenEntries([]).every(m => A.dexEntryDescription(m) !== '？？？'),
+    A.dexScreenEntries([]).filter(m => A.dexEntryDescription(m) === '？？？').map(m => m.id).join(' '));
   check('文の無い案の子は、文を作らず ？？？ で出す',
-    NO_TEXT.every(id => A.dexEntryDescription(A.UPCOMING_MONSTER_DRAFTS[id]) === '？？？')
+    A.dexEntryDescription({ id: '文の無い案の子', draft: true }) === '？？？'
     && monsters.every(m => A.dexEntryDescription(m) === A.monsterDexDescription(m.id)));
   check('アンキロックスの図鑑の文は社長の文のまま',
     A.dexEntryDescription(A.UPCOMING_MONSTER_DRAFTS.Ankylox) === '体の表面に岩が張りついた、重い体を持つ\n動きはのんびりしているが、その怪力はあなどれない\n見た目につられて岩だと思うと、痛い目にあう');
