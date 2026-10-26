@@ -1304,7 +1304,9 @@ function RhythmMultiLobbyCount() {
   const [count, setCount] = React.useState(null);
   React.useEffect(() => RHYTHM_MULTI.watchLobby('free', (people) => setCount(people)), []);
   return (
-    <small data-rhythm-multi-lobby-count className="block truncate text-[10px] font-black leading-tight text-slate-950/80">
+    // 320幅では札の右の斜めの角に字がかかっていた(2026-10-26 ダメダシ)。札は3行目が入らない高さなので、細い端末では字を少し小さくして
+    // 角の手前で1行に収める(折ると札の下で切れた)
+    <small data-rhythm-multi-lobby-count className="block truncate pr-2.5 text-[10px] font-black leading-tight text-slate-950/80 max-[359px]:text-[8.5px]">
       {count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません'}
     </small>
   );
@@ -1754,8 +1756,9 @@ function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle })
       )}
       {!showArt && <ModeSelectAssistToggles assistant={assistant} showArt={showArt} showComment={showComment} onToggle={onToggle} cls="mx-2 mt-2 justify-end" withLabel />}
       {showComment && (
-        <p data-rhythm-mode-assistant-line className={`mhms-bubble ${showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`} style={{ borderColor: assistant.accent }}>
-          <b className="mb-0.5 block text-[10px]" style={{ color: assistant.accent }}>{assistant.name}</b>{assistant.text}
+        <p data-rhythm-mode-assistant-line className={`mhms-bubble ${showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`} style={{ ...JA_WRAP_STYLE, borderColor: assistant.accent }}>
+          {/* 台詞は言葉の切れ目で折る(320幅で「協力ラ／イブ」と折れていた・2026-10-26) */}
+          <b className="mb-0.5 block text-[10px]" style={{ color: assistant.accent }}>{assistant.name}</b>{jaWrap(assistant.text)}
         </p>
       )}
     </div>
@@ -2478,7 +2481,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 )}
               {friendsOn && view && view.mode === 'private' && (
                 <section data-rhythm-multi-friend-invite className={card}>
-                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'}</button>
+                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'}</button>
                   {invitePanel && (
                     <div className="mt-2 space-y-1">
                       {roster === null && <p className="text-[11px] font-bold text-slate-400">フレンドを読み込んでいます…</p>}

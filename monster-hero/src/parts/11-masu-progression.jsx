@@ -93,7 +93,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([
   // 補助
   Object.freeze({ id:'gutsCostReduction', category:'support', name:'省気', desc:'本人のカード消費ガッツ -1%', costPerLevel:10, effectPerLevel:1, unit:'%', maxLevel:100 }),
   Object.freeze({ id:'autoGutsRecovery', category:'support', name:'活気', desc:'パーティの実際の自動ガッツ回復量 +1%', costPerLevel:10, effectPerLevel:1, unit:'%' }),
-  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使用可能カード枚数 +1', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
+  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使えるカード +1枚', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
 ]);
 const SOUL_TRAIT_BY_ID = Object.freeze(Object.fromEntries(SOUL_TRAIT_DEFINITIONS.map(trait => [trait.id, trait])));
 const SOUL_TRAIT_CATEGORIES = Object.freeze([
@@ -1871,6 +1871,62 @@ const dexMainLineages = () => {
     if (!lineage || seen.has(lineage.id)) return false;
     seen.add(lineage.id); return true;
   });
+};
+// 図鑑の画面に並べる全員(2026-10-26 社長「モンスターのデータめちゃくちゃ入れたから全部図鑑に入れて。
+// ただ、入手済みと未入手と未実装と分ける。未入手と未実装は、グラフィックと図鑑説明とメイン・サブしか見えない」)。
+//   入手済み(owned) … 解放済み(mh_unlocked_monsters)。今までどおり全部見える
+//   未入手(locked)  … 遊べるがまだ解放していない子
+//   未実装(draft)   … 案の段階の子(UPCOMING_MONSTER_DRAFTS)。まだ遊べない
+// 案の子は dexMonsterList へは混ぜない。あちらは種族チャレンジ・絆ランキング・ヘルプの血統一覧なども見ていて、
+// 遊べない子がそこへ出てしまうため。図鑑の一覧と詳細だけがこちらを使う。保存は読むだけ
+const DEX_ENTRY_STATUSES = Object.freeze([
+  Object.freeze({ id:'owned', label:'入手済み' }),
+  Object.freeze({ id:'locked', label:'未入手' }),
+  Object.freeze({ id:'draft', label:'未実装' }),
+]);
+const dexDraftMonsterList = () => {
+  if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+};
+// 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
+const dexEntryLineageOf = (mon) => {
+  if (!mon) return monsterLineageOf(null);
+  const draft = mon.draft && mon.draftLineage && !lineageEntryMap()[mon.id] ? mon.draftLineage : null;
+  if (!draft) return monsterLineageOf(mon.id);
+  return { main: lineageById(draft.main), sub: lineageById(draft.sub != null ? draft.sub : draft.main), known: true };
+};
+const dexEntryCategoryOf = (mon) => {
+  const { main, sub } = dexEntryLineageOf(mon);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const dexEntryStatusOf = (mon, unlockedIds) => {
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  if (!mon || !playable[mon.id]) return 'draft';
+  return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+// 図鑑の説明。案の子でまだ文が無い子は、文を作らず「？？？」で空けておく(2026-10-26 社長が文を決めるまで)
+const dexEntryDescription = (mon) => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
+};
+// 並びは 入手済み → 未入手 → 未実装。それぞれの中は今までの図鑑の並び(種族順)のまま
+const dexScreenEntries = (unlockedIds) => {
+  const base = dexMonsterList();
+  const all = [...base, ...dexDraftMonsterList()];
+  return DEX_ENTRY_STATUSES.flatMap(s => all.filter(mon => dexEntryStatusOf(mon, unlockedIds) === s.id));
+};
+// 図鑑の画面の絞り込みチップ。今までの主血統の並びはそのままにして、案の子にしかいない種族を後ろへ足す
+const dexScreenMainLineages = () => {
+  const list = dexMainLineages().slice();
+  const seen = new Set(list.map(l => l.id));
+  for (const mon of dexDraftMonsterList()) {
+    const main = dexEntryLineageOf(mon).main;
+    if (main && main.id !== 'unknown' && !seen.has(main.id)) { seen.add(main.id); list.push(main); }
+  }
+  return list;
 };
 
 // ==================== 総合力 ====================
