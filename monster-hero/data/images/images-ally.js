@@ -173,7 +173,7 @@ const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // キュービ・オリヒメ(2026-10-27・案の段階)。元絵は tools/art-sources/kyubi-orihime-2026-10-27/。高さ916px・256色(sharp)
 const KYUBI_IMG = "images/monsters/kyubi.png?v=f3711a72a817";
 const KYUBI_DYE_MASK = "images/monsters/kyubi-dye-mask.PNG?v=0d55e5438f0a";
-const ORIHIME_DYE_MASK = "images/monsters/orihime-dye-mask.PNG?v=0abaae71d9d6";
+const ORIHIME_DYE_MASK = "images/monsters/orihime-dye-mask.PNG?v=855049a4486b";
 const ORIHIME_IMG = "images/monsters/orihime.png?v=86ff26c44dcb";
 const MF_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
 const MF_GALI_IMG = "images/monsters/gali.png?v=802cb6ce6f64";
