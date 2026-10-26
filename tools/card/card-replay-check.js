@@ -183,11 +183,12 @@ check(`1試合の記録の大きさ(最大 ${(maxBytes / 1024).toFixed(1)}KB・�
     // 途中で投了した試合も(半分の手まで)
     const cut = n % 3 === 0 ? Math.floor(history.length / 2) : history.length;
     n0++;
-    const rec = E.cardReplayFromCpu(db, { id: `c${seed}`, at: 1, myDeck, cpuDeck, seed, first, history: history.slice(0, cut), foe: { name: 'ドラ', who: 'dra' }, outcome: cut < history.length ? 'surrender' : st.winner === 0 ? 'win' : 'lose' });
+    const rec = E.cardReplayFromCpu(db, { id: `c${seed}`, at: 1, myDeck, cpuDeck, seed, first, history: history.slice(0, cut), foe: { name: 'ドラ', who: 'dra' }, level: 'hard', outcome: cut < history.length ? 'surrender' : st.winner === 0 ? 'win' : 'lose' });
     const built = rec && E.cardReplayBuild(db, E.cardReplayNormalizeOne(JSON.parse(JSON.stringify(rec))));
-    if (built && built.stop === null && built.states.length === cut + 1 && built.states.every((s, i) => E.cardReplayPrint(s) === E.cardReplayPrint(states[i])) && rec.foe.who === 'dra' && rec.kind === 'cpu') ok++;
+    if (built && built.stop === null && built.states.length === cut + 1 && built.states.every((s, i) => E.cardReplayPrint(s) === E.cardReplayPrint(states[i])) && rec.foe.who === 'dra' && rec.kind === 'cpu' && rec.level === 'hard'
+      && E.cardReplayNormalizeOne({ ...JSON.parse(JSON.stringify(rec)), level: undefined }).level === null) ok++;
   }
-  check(`助手と対戦の記録も、1手ごとに同じになぞれる(投了で終わった試合も・${ok}/${n0}戦)`, ok === n0 && n0 === 10);
+  check(`助手と対戦の記録も、1手ごとに同じになぞれる・難易度が残る(前の記録は null)(投了で終わった試合も・${ok}/${n0}戦)`, ok === n0 && n0 === 10);
 }
 
 console.log(failed ? `\nNG ${failed} 件` : '\nすべて OK');

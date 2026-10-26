@@ -214,3 +214,29 @@ node tools/ranking/profile-frame-sql-check.js         # PostgreSQL があると�
   IDは端末ごとなので、機種変すると別の人として1行増える(`rankings` も同じ)
 
 検査: `node tools/ranking/breeder-level-table-check.js`(送る・読む・結線・並べ方・SQL の形)。
+
+### 6.1 表に積まれたテスト行の扱い(2026-10-27・社長の決定「消さない・書き換えない」)
+
+検査の端末が本番へ行を足した跡が、2つの表に残っている(名前「テスト」・アイコン🐣や Mocchi・Lv.1)。
+
+- `breeder_levels`: Lv.1 の行。**読む側で外した**(§6。Lv.2 以上だけを使う)
+- `breeder_profiles`: 名前「テスト」・🐣 の行が262件(2026-10-26 時点で全348件)。**ゲームの画面には出ない**
+  - ランキングの見た目は「ブリーダーID」か「名前が1人だけのとき」にだけ引く。テスト行のIDは本物と重ならず、名前「テスト」は大勢いるので引き当てに使われない
+  - フレンド・レイドは、相手のIDを指定して読むだけ。表を一覧にして見せる画面は無い
+- 残る心配(今は起きない): 表を読むとき `order=updated_at.desc&limit=5000`(`BREEDER_PROFILES_FETCH_LIMIT`)。
+  テスト行が新しいまま増え続け、全体が5,000行を超えると、古い本物の行が読まれなくなる。**増える元を止める**のが先(§6 の見張りと検査の差し替え)
+- 案(急がない・必要になったら): 読む側で「名前『テスト』かつアイコン🐣または Mocchi」の行を、読み込んだ直後に捨てる。
+  サーバーに頼むなら `&user_name=neq.テスト`(名前だけで外れる。本物の「テスト」さんも外れるので、アイコンも見るなら読んだあとで外す)。
+  `breeder_levels` のように「本物だけを数える線」(Lv.2 以上)は、`breeder_profiles` には使えない(Lv の列が無い)
+
+**出どころの記録(2026-10-26〜27・消さないので、どこから来た行かだけ残す)**
+
+| 行 | 元 | 止めた PR |
+| --- | --- | --- |
+| 名前「テスト」・🐣・Lv.1(`breeder_levels`)・🐣 の「テスト」(`breeder_profiles`・10/11〜) | `tools/boot/debug-passphrase-browser-check.js`(webdriver を偽り、本物へ書く止めが外れていた) | #3887 |
+| 名前「テスト」・アイコン Mocchi・Lv.1(`breeder_levels`・18:58Z〜19:11Z) | `tools/debug-trials-check.js`(`__mhSupabaseStubbed = true` を立てて差し替えなし) | #3942 |
+| 10/26 18:22〜18:42Z の「テスト」・🐣 の行の一部 | ストックくんの回(#3868 のときの run-checks)が、#3887 より前の版の上の検査を回した分(クラフトくん調べ) | #3887 |
+| 10/26 18:30Z ごろ以降の2行ずつ(`breeder_levels`・`breeder_profiles`) | ガードくんが元を探すため、直す前の上の検査を1回回した分 | — |
+
+- 3本目以降が出ないよう、`breeder-level-table-check` が「`webdriver` を偽る検査」「`__mhSupabaseStubbed = true` を立てる検査」は Supabase を差し替えていることを見張る
+- 古い版の検査を回すと、また書く。検査は `node tools/merge-main.js` で main を取り込んでから回す

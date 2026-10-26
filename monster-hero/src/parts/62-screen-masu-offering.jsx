@@ -69,7 +69,7 @@ function MasuOfferingScreen({
     const entries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
     return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="お布施" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact/></div>
       {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3">
         <div className="text-[11px] font-black text-violet-200">お布施の使い方</div>
         <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"><li>お布施をするマスモンを選びます。</li><li>「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。</li><li>見積もりを見て「お布施する」を押します。</li></ol>
@@ -77,7 +77,7 @@ function MasuOfferingScreen({
       </div>}
       {renderScreenNote('offering','ダイヤを払って、マスモンへ直接絆経験値を与えられます。',['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。','上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。'])}
       {renderMonsterSortFilterBar({singleType:true})}
-      <div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🙏" lines={['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:
+      <div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🙏" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:
         <div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;
           return <button key={masu.id} onClick={()=>pick(masu.id)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900`}>{renderMonsterCardBody({masu,base,status:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>;})}</div>}</div>
     </div>;
