@@ -8,7 +8,7 @@
 //   ② 手札を1回タップすると、今までどおり技が選ばれるだけ(詳しい画面は出ない)
 //   ③ 相手のモンスターを2回続けてタップすると詳しい画面が出る。技を選んで狙える相手を2回タップしても、技は出ない(攻撃しない)
 //   ④ 技を選んで、狙える相手を1回タップすると、今までどおり技が出る
-//   ⑤ デッキ編成のカードを続けて2回タップすると2枚入る(詳しい画面は出ない)。「i」で詳しい画面が出る
+//   ⑤ デッキ編成のカードを続けて2回タップすると2枚入る(詳しい画面は出ない。「i」ボタンはデッキくんの card-deck 検査が見る)
 //   ⑥ 押せるカードは touch-action: manipulation(iPhone の Safari がダブルタップで拡大しない)。実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -108,10 +108,6 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await doubleTap(page.locator(`[data-card-deck-pick="${no5}"] [data-card-deck-tile]`));
     const in1 = await inOf();
     check('⑤ デッキ編成のカードを続けて2回タップすると2枚入り、詳しい画面は出ない', in1 === Math.min(in0 + 2, Number((await page.locator(`[data-card-deck-in="${no5}"]`).innerText()).split('/')[1])) && !(await detailOpen()), `${in0} → ${in1}・詳しい画面 ${await detailOpen()}`);
-    await page.locator(`[data-card-deck-info="${no5}"]`).click();
-    await sleep(300);
-    check('⑤ デッキ編成のカードの「i」で詳しい画面が出る', await detailOpen());
-    await closeDetail();
     const ta = await page.evaluate(() => getComputedStyle(document.querySelector('[data-card-deck-tile]')).touchAction);
     check('⑥ 押せるカードは touch-action: manipulation', ta === 'manipulation', ta);
     await page.getByRole('button', { name: /^やめる$/ }).click().catch(() => {});

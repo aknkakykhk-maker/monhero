@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fdbb66fa17bc0e8
+// source-sha256: 45be4a4400d56f84
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:28";
+const BUILD_DATE = "2026-10-27 01:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -92871,8 +92871,7 @@ const CardDeckPickTile = ({
   canAdd,
   press,
   onAdd,
-  onRemove,
-  onInfo = null
+  onRemove
 }) => {
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
@@ -92898,16 +92897,7 @@ const CardDeckPickTile = ({
     draggable: false,
     onDragStart: e => e.preventDefault(),
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
-  })), onInfo && React.createElement("button", {
-    type: "button",
-    "data-card-deck-info": no,
-    onClick: onInfo,
-    "aria-label": `${name}をくわしく見る`,
-    className: "absolute right-0 top-0 flex h-[30px] w-[30px] items-start justify-end p-1"
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    className: "grid h-[20px] w-[20px] place-items-center rounded-full bg-slate-950/85 font-serif text-[13px] font-black italic leading-none text-sky-100 ring-1 ring-sky-300/80"
-  }, "i")), React.createElement(CardNameFit, {
+  })), React.createElement(CardNameFit, {
     name: name,
     className: "mt-0.5 font-bold leading-tight text-slate-100"
   }), React.createElement("div", {
@@ -93046,8 +93036,7 @@ const CardDeckEditor = ({
       canAdd: !cardDeckAddReason(db, deck, no, col),
       press: press,
       onAdd: () => add(no),
-      onRemove: () => removeOne(no),
-      onInfo: () => setDetail(no)
+      onRemove: () => removeOne(no)
     });
   };
   const chip = on => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
