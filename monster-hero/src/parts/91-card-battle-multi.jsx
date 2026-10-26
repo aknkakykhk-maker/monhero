@@ -805,7 +805,7 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
 // onAssistant … 「助手と対戦へ」(だれとでもで、だれも来なかったとき)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
-const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null }) => {
+const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
   const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
@@ -820,6 +820,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
   // フレンドから招待: 自分のブリーダーid・名簿(承認済みのフレンド)・届いている招待
   const [selfBid, setSelfBid] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false); // マルチの履歴(92-card-pvp-history.jsx)
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -889,6 +890,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   useEffect(() => {
     const r = room.result;
     if (room.phase !== 'over' || !r || r.rewarded) return;
+    // マルチの履歴へ1行(92。確かめが決まったら1回だけ・無効の試合も残す)
+    if (r.verify !== 'wait' && typeof cardPvpHistoryRecord === 'function') void cardPvpHistoryRecord(CARD_PVP.get(), { rankable: r.verify !== 'ng' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true)) });
     if (r.verify === 'ng') { CARD_PVP.markRewarded(null); return; }
     if (r.verify !== 'ok' && r.verify !== 'skip') return;
     CARD_PVP.markRewarded({ pending: true });
@@ -904,13 +907,14 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   }, []);
   // 始まったら対戦の画面へ(1回だけ)
   const started = useRef('');
-  useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); } }, [room.phase, room.match]);
+  useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); if (typeof cardPvpHistoryBegin === 'function' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true))) cardPvpHistoryBegin(room.match, room.me && room.me.bid); } }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
   const back = () => { CARD_PVP.leave(); onBack(); };
   const r = room.result;
   // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったビートP・クイック周回・いまのビートP) ----
   // ★立ち絵の横は、助手の台詞ではなく結果の文(マルチ対戦の結果の台詞は、まだ作っていない。台詞は社長が先に読む決まり)
+  if (historyOpen && room.phase === 'idle' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setHistoryOpen(false)} onOpenReplay={onOpenReplay} replayHas={replayHas} meIcon={meIcon} meName={profile.name}/>;
   if (room.phase === 'over' && r) {
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id) || null : null;
@@ -1020,6 +1024,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                 onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(code, profile, deck); }}>入る</button>
             </div>
           </div>
+          {/* マルチの履歴と相手のデッキ(92-card-pvp-history.jsx・2026-10-27 社長) */}
+          {typeof CardPvpHistory === 'function' && <button type="button" data-card-pvp-history-open className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); setHistoryOpen(true); }}>📜 マルチの履歴</button>}
         </>)}
         {(room.phase === 'connecting' || room.phase === 'waiting') && room.mode === 'free' && (
           <div data-card-pvp-seek className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
