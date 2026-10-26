@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 570eb755f65486a6
+// source-sha256: 1a3e2fe2d2b5cb8a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84328,7 +84328,7 @@ const cardTauntsOn = (st, p) => (st.taunts || []).filter(t => t.turn === st.turn
 const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every(t => {
   const hits = targets.filter(x => x.p === t.by);
   if (t.mode === 'not') return !hits.some(x => x.m === t.m);
-  if (area) return !t.noArea || !hits.some(x => x.m !== t.m);
+  if (area) return hits.some(x => x.m === t.m) && (!t.noArea || !hits.some(x => x.m !== t.m));
   return hits.every(x => x.m === t.m);
 });
 const cardFuseOptions = (db, st, p) => {
@@ -85349,6 +85349,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     }
     if (e.t === 'selfHurt' && tm && tm.safeUntil >= st.turn) cardLog(st, `${tm.name}はダメージを受けない(ぬいぐるみ)`);else if (e.t === 'selfHurt' && tm) {
       tm.life = Math.max(0, tm.life - e.n);
+      tm.charge = null;
       cardEvent(st, {
         t: 'hit',
         p: target.p,
@@ -85608,6 +85609,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.ko) return;
           const d = m.safeUntil >= st.turn ? 0 : burn.n;
           m.life = Math.max(0, m.life - d);
+          if (d > 0) m.charge = null;
           cardEvent(st, {
             t: 'hit',
             p,
@@ -100194,7 +100196,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 6;
+const CARD_REPLAY_RULES = 7;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
