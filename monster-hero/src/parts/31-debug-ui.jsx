@@ -24,7 +24,7 @@ const DebugScreenHead = ({ title, note = '', saves = false, onBack, backLabel = 
     <button aria-label={backLabel} onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
     <div className="min-w-0">
       <h2 className="truncate text-sm font-black text-white">{title}</h2>
-      {note && <small className="block truncate text-[9px] font-bold text-slate-400">{note}</small>}
+      {note && <small className="block text-[9px] font-bold leading-snug text-slate-400 [overflow-wrap:anywhere]">{note}</small>}
     </div>
     <span data-debug-saves={saves ? 'yes' : 'no'}
       className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black ${saves ? 'bg-rose-700 text-white' : 'border border-white/15 bg-slate-900 text-slate-300'}`}>
