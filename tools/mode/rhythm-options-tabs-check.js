@@ -171,7 +171,7 @@ const tabClass = 'min-h-[44px] rounded-xl border text-[13px] font-black';
       <details class="mt-3"><summary class="min-h-[24px] list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量について詳しく</summary></details></section>
       <p class="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>
       </div></div>
-      <footer class="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2" style="padding-bottom:.5rem"><div class="grid grid-cols-[.9fr_1.1fr] gap-3"><button class="min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black">デフォルトに戻す</button><button class="min-h-[52px] rounded-xl bg-amber-600 px-3 font-black">保存</button></div></footer>
+      <footer class="z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2" style="padding-bottom:.5rem"><div class="grid grid-cols-[.9fr_1.1fr] gap-3"><button class="min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black">最初の設定に戻す</button><button class="min-h-[52px] rounded-xl bg-amber-600 px-3 font-black">保存</button></div></footer>
       </main></body></html>`, { waitUntil: 'load' });
     const box = await page.evaluate(() => {
       const scroll = document.getElementById('scroll'), stack = document.getElementById('stack');
