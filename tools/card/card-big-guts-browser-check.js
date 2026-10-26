@@ -160,11 +160,12 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
     // ③ 相手の番: 技の大写し(相手)・相手のガッツも飛ぶ
     let bigFoe = '', foeFly = 0;
     for (let i = 0; i < 80 && (!bigFoe || !foeFly); i++) {
-      if (!bigFoe) bigFoe = await page.locator('[data-card-big="foe"]').innerText().catch(() => '');
+      // 有るか無いかだけをその場で見る(locator.innerText は、無いと30秒待つ)
+      if (!bigFoe) bigFoe = await page.evaluate(() => { const el = document.querySelector('[data-card-big="foe"]'); return el ? el.innerText : ''; });
       if (bigFoe && !fs.existsSync(path.join(SHOT || '/nonexistent', 'big-3-foe.png'))) await snap(page, 'big-3-foe');
       if (!foeFly) foeFly = await page.locator('[data-card-guts-fly="1"], [data-card-guts-plus="1"]').count();
       await page.waitForTimeout(150);
-      const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => '');
+      const mode = await page.evaluate(() => (document.querySelector('[data-card-battle]') || { getAttribute: () => '' }).getAttribute('data-card-mode'));
       if (mode === 'guard') { const pass = page.getByRole('button', { name: /守らない/ }); if (await pass.count()) await pass.click().catch(() => {}); }
     }
     check('③ 相手(助手)が技を出すときも、先に大きく出る(「相手」の札)', /相手/.test(bigFoe), bigFoe.replace(/\s+/g, ' ').slice(0, 60));
