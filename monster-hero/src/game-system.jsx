@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: af19524e443af1cf
+// generated-sha256: dd66239a489bb63f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 21:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 23:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31840,6 +31840,9 @@ const JA_WRAP_LINE = 10;
 // 文節の終わりになる言葉(このあとでは折ってよい)。助詞・句読点・閉じかっこ
 // (「な」「か」「って」は「強くな|ければ」「いって|らっしゃい」のように言葉の途中にも来るので入れない)
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/; // 記号は、ブラウザがそのあとを印が無くても折るので入れる
+// 道具(Intl.Segmenter)が読み違えて途中で切る、よく使う言葉(この中では折らない。2026-10-26 社長「ストーリーやバトルカードとかでも変なとこで切れる」
+//   「や/さしく」「ひと/とおり」「はね/返す」「しと/け」。検査 tools/boot/ja-wrap-word-check.js)
+const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
 const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -31865,6 +31868,9 @@ const jaWrapPoints = (text) => {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = (pos) => kao.some(([a, b]) => pos > a && pos < b);
+    const keepWords = [];
+    for (const w of JA_WORDS_KEEP) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) keepWords.push([i, i + w.length]);
+    const inKeepWord = (pos) => keepWords.some(([a, b]) => pos > a && pos < b);
     // 道具が空白と「(」を1つの区切りにすることがあるので、空白のすぐあとから顔文字が始まる所も「始まり」とみなす
     const kaoStart = (pos) => kao.some(([a]) => pos === a || (a > pos && /^\s+$/.test(s.slice(pos, a))));
     const segs = [];
@@ -31881,10 +31887,18 @@ const jaWrapPoints = (text) => {
       const seg = segs[i];
       if (i === 0) { groups.push({ parts: [seg], hard: [] }); pos += seg.length; continue; }
       const prev = segs[i - 1], g = groups[groups.length - 1], cur = g.parts.join('');
-      const hard = inKao(pos) || (!kaoStart(pos) && (
+      const hard = inKao(pos) || inKeepWord(pos) || (!kaoStart(pos) && (
         /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev)
-        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))
-        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))));
+        // 「お」「ご」のあとは、ひらがなでも漢字でも離さない(「〜のご／ほうび」「お／相手」2026-10-26)
+        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg))
+        // 笑いの「笑」「w」だけを次の行の頭に落とさない(「楽しもうぜ／笑」「〜だって！／w」)
+        //   (「笑っちゃう」の「笑」は言葉なので、あとが文の終わり・空白・記号・w のときだけ)
+        || (/^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)))
+        // くっついた言葉(「読み|合い」「組み|直した」「起き|上がる」「吹っ|飛ばす」)。漢字+送り仮名のすぐあとの漢字は離さない(「少し」は1語なので除く)。
+        //   長い文節を分ける②でもここでは分けない(柔らかくつなぐと「噛み／合わない」と分けられた)
+        //   道具は「噛|み|合わ」と細かく分けるので、すぐ前の区切りではなく、それまでにまとめた文節(cur)の終わりで見る
+        || (/[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg))
+        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg))));
       const soft = !hard && !kaoStart(pos) && (
         (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
         || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
@@ -31896,6 +31910,8 @@ const jaWrapPoints = (text) => {
         || (/(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg))
         // 「ビートP」「ブリーダーP」も1語(2026-10-26 見回り「ビート/P」と折れた。カードの売り場の吹き出し)
         || (/(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg))
+        // カタカナのすぐあとの英字も1語(「ビート|Lv」2026-10-26)
+        || (/[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg))
         // 1字の漢字のすぐあとの1字のひらがなは、助詞ではなく送り仮名(「強|が|らなくても」「強|く|なければ」)
         || (/^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || ''))
         // 「です・でつ・でしょ」の「で」は助詞ではない(「なんで|すか」「しないで|つよ」と折れた)
@@ -31963,13 +31979,13 @@ const jaWrapPoints = (text) => {
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
 const jaKeepWhole = (seg) => ([...seg].length <= JA_WRAP_LINE || (!/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14))
-  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
+  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
   || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 // かたまり1つを、折らない枠で包む所([字, true])とそのままの所([字, false])に分ける(jaWrap と検査 ja-wrap-lines-check.js が使う)。
 // 空白で分けてから部分ごとに決める(空白をまたいで包むと、「大丈夫！ いってらっしゃい〜」が1行のまま吹き出しからはみ出した。2026-10-24)。
 // 長い部分(「『MONSTERS』で」)は、かぎかっこの名前や、閉じかっこ・？・！とその前後の字だけを包む。「。って」「、っぽい」も(ブラウザは句点のあとを折る)。
 // 「でつ……。」の三点リーダー、「……？💦」の終わりの絵文字も、手前の数字といっしょに包む(ブラウザはその手前を折る)
-const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
 const jaWrapPieces = (seg) => {
   const out = [];
   // 顔文字のかっこの中の空白((｡ ˘ω˘))では分けない
@@ -31978,7 +31994,7 @@ const jaWrapPieces = (seg) => {
     if (/^\s+$/.test(part)) out.push([part, false]);
     else if (jaKeepWhole(part)) out.push([part, true]);
     // かぎかっこの名前は「「」からまとめて包む(「「ドラシ／ル」だって」と名前の中で折れた)。1行(10字)に入らないものは包まず、閉じかっこのあとで折れるのに任せる
-    else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+    else if (/[」』？！?!][ぁ-ゖ笑ｗwW]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
       if (!t) return;
       if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) { out.push([t, k % 2 === 1]); return; }
       // 10字を超える「かぎかっこの名前+あとの字」は、名前だけを包む(「「チュートリア／ル」から」と名前の中で折れた)
