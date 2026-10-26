@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 459643737b7a1457
+// generated-sha256: e03882338a040c7e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7959,6 +7959,16 @@ const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
           aria-label={`染色${regionLabels[idx]||idx+1}の濃さ`} className="flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"/>
         <span className="text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0">{colorAlphaOf(colors[idx])}%</span>
       </div>}
+      {/* 濃さも1ずつ動かせる(2026-10-27 社長。表の「濃さ100%」などにぴったり合わせるため)。押しっぱなしで続けて動く */}
+      {colors[idx]&&<div data-dye-alpha-steppers className="mt-1 flex items-center justify-end gap-1.5">
+        <RepeatStepButton data-dye-alpha-step="down" aria-label={`染色${regionLabels[idx]||idx+1}の濃さを1下げる`} disabled={colorAlphaOf(colors[idx])<=MASU_COLOR_ALPHA_MIN}
+          onStep={()=>onChange(idx,withColorAlpha(colors[idx],colorAlphaOf(colors[idx])-1))}
+          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">−</RepeatStepButton>
+        <span className="w-14 text-center text-[11px] font-black text-white tabular-nums">濃さ{colorAlphaOf(colors[idx])}%</span>
+        <RepeatStepButton data-dye-alpha-step="up" aria-label={`染色${regionLabels[idx]||idx+1}の濃さを1上げる`} disabled={colorAlphaOf(colors[idx])>=MASU_COLOR_ALPHA_MAX}
+          onStep={()=>onChange(idx,withColorAlpha(colors[idx],colorAlphaOf(colors[idx])+1))}
+          className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">+</RepeatStepButton>
+      </div>}
     </div>
   ))}</div>;
 };
@@ -8453,6 +8463,24 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
 // 自前のスペクトラムピッカー。端末のOS標準カラーピッカー(<input type="color">)はiOS/Android/PCで
 // 見た目も操作感もバラバラで、アプリのテーマにも合わせられず自動テストもできないため使わず、
 // 既存のVolumeSliderと同じくpointerdown/move/upでドラッグを自前実装している
+// 1ずつ動かす「−」「+」ボタン(2026-10-27 染色の数字を表のとおりに合わせるため)。押しっぱなしにすると、少し待ってから続けて動く。
+// 押した瞬間に1回動かし、そのあとの click は無視する(二重に動かさない)。キーボードの決定(click だけ)でも1回動く
+const RepeatStepButton = ({ onStep, disabled = false, className = '', children, ...rest }) => {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  const timers = useRef({ wait: null, loop: null, pressed: false });
+  const stop = () => { clearTimeout(timers.current.wait); clearInterval(timers.current.loop); timers.current.wait = null; timers.current.loop = null; };
+  useEffect(() => stop, []);
+  useEffect(() => { if (disabled) stop(); }, [disabled]);
+  return (
+    <button type="button" disabled={disabled} className={className} {...rest}
+      onPointerDown={(e) => { if (disabled) return; e.preventDefault(); timers.current.pressed = true; stepRef.current(); stop();
+        timers.current.wait = setTimeout(() => { timers.current.loop = setInterval(() => stepRef.current(), 70); }, 400); }}
+      onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}
+      onClick={() => { if (timers.current.pressed) { timers.current.pressed = false; return; } if (!disabled) stepRef.current(); }}
+      onContextMenu={(e) => e.preventDefault()}>{children}</button>
+  );
+};
 const CustomColorPicker = ({ h, s, v, onChange }) => {
   const squareRef = useRef(null);
   const hueRef = useRef(null);
@@ -8497,8 +8525,9 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
       <div
         ref={squareRef}
         onPointerDown={(e) => { setDragTarget('square'); updateFromSquare(e.clientX, e.clientY); }}
-        className="relative w-full aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10"
-        style={{ backgroundColor: pureHueColor, backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))' }}
+        className="relative mx-auto aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10"
+        // 背の低い画面(320×568・横向き)では、四角を画面の高さに合わせて小さくする(数字と「−」「+」が下に収まるように)
+        style={{ width: 'min(100%, calc(var(--mh-vh) * 0.34))', backgroundColor: pureHueColor, backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))' }}
       >
         <div
           className="absolute rounded-full border-2 border-white shadow-[0_0_6px_rgba(0,0,0,0.8)]"
@@ -8515,6 +8544,35 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
           className="absolute top-1/2 rounded-full bg-white border-2 border-slate-900 shadow-[0_0_6px_rgba(0,0,0,0.8)]"
           style={{ left: `${(h / 360) * 100}%`, width: '18px', height: '18px', transform: 'translate(-50%,-50%)' }}
         ></div>
+      </div>
+      {/* いま選んでいる色の数字(2026-10-27 社長「染色のやつはどの色と透明度とかわかるようにして」。前の「数字は出さない」を変えた)。
+          見せるだけで、保存する色の形(custom:… の色id)は変えない */}
+      <div data-custom-color-numbers className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5">
+        <span className="h-6 w-6 shrink-0 rounded-full border border-white/30" style={{ backgroundColor: previewColor }} aria-hidden="true"></span>
+        <span className="min-w-0 flex-1">
+          {/* 呼び方と幅は、モンスター部の予告の色の表と同じ(色相 0〜360・彩度 0〜100・明るさ 0〜100)。数字は色id custom:色相:彩度:明度 と同じ丸め方 */}
+          <b className="block text-[12px] font-black leading-tight text-white [word-break:keep-all]">カスタム(色相{Math.round(h)}・<wbr/>彩度{Math.round(s * 100)}・<wbr/>明るさ{Math.round(v * 100)})</b>
+          <small className="block text-[9px] font-bold leading-tight text-slate-400 [word-break:keep-all]">色相 0〜360・<wbr/>彩度 0〜100・<wbr/>明るさ 0〜100</small>
+        </span>
+      </div>
+      {/* 表の数字にぴったり合わせるための「−」「+」(1ずつ動く)。指でなぞるだけでは、帯の1pxで色相が1以上動き、止めにくい(2026-10-27 モンスター部ズカンくん) */}
+      <div data-custom-color-steppers className="space-y-1">
+        {[['h', '色相', Math.round(h), 360], ['s', '彩度', Math.round(s * 100), 100], ['v', '明るさ', Math.round(v * 100), 100]].map(([key, label, value, max]) => {
+          const step = (d) => {
+            const next = Math.max(0, Math.min(max, value + d));
+            onChange(key === 'h' ? next : Math.round(h), (key === 's' ? next : Math.round(s * 100)) / 100, (key === 'v' ? next : Math.round(v * 100)) / 100);
+          };
+          return (
+            <div key={key} className="flex items-center gap-1.5">
+              <span className="w-12 shrink-0 text-[10px] font-black text-slate-300">{label}</span>
+              <RepeatStepButton data-custom-color-step={`${key}-down`} aria-label={`${label}を1下げる`} disabled={value <= 0} onStep={() => step(-1)}
+                className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">−</RepeatStepButton>
+              <span className="min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white">{value}</span>
+              <RepeatStepButton data-custom-color-step={`${key}-up`} aria-label={`${label}を1上げる`} disabled={value >= max} onStep={() => step(1)}
+                className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">+</RepeatStepButton>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -80862,7 +80920,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
-              <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl">
+              <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs max-h-full overflow-y-auto mh-scroll flex flex-col gap-3 shadow-2xl">
                 <div className="flex items-center justify-between shrink-0">
                   <h3 className="text-sm font-black text-white">🎨 カスタムカラー</h3>
                   <button onClick={()=>setCustomColorPicker(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
@@ -80871,6 +80929,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={previewColors} className="w-full h-full object-cover"/></div>
                 )}
                 <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
+                {/* この部位の濃さ(透け具合)も数字で出す。濃さは染色の画面のつまみで変える(色を決めても引き継ぐ) */}
+                <p data-custom-color-alpha className="-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">濃さ{colorAlphaOf(sourceColors[idx])}%<span className="text-slate-500">(濃さは染色の画面のつまみで変えられます)</span></p>
                 <div className="flex gap-2 mt-1 shrink-0">
                   <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
                   <button onClick={applyCustom} className="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95">この色に決定</button>

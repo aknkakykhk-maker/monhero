@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 74dfdcbc6f9698af
+// source-sha256: ba5b320a990f2e2d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10957,7 +10957,24 @@ const DyeRegionColorControls = ({
     className: "flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"
   }), React.createElement("span", {
     className: "text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0"
-  }, colorAlphaOf(colors[idx]), "%")))));
+  }, colorAlphaOf(colors[idx]), "%")), colors[idx] && React.createElement("div", {
+    "data-dye-alpha-steppers": true,
+    className: "mt-1 flex items-center justify-end gap-1.5"
+  }, React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "down",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1下げる`,
+    disabled: colorAlphaOf(colors[idx]) <= MASU_COLOR_ALPHA_MIN,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) - 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "−"), React.createElement("span", {
+    className: "w-14 text-center text-[11px] font-black text-white tabular-nums"
+  }, "濃さ", colorAlphaOf(colors[idx]), "%"), React.createElement(RepeatStepButton, {
+    "data-dye-alpha-step": "up",
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さを1上げる`,
+    disabled: colorAlphaOf(colors[idx]) >= MASU_COLOR_ALPHA_MAX,
+    onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) + 1)),
+    className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+  }, "+")))));
 };
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
 const makePatternLayer = (patch = {}) => ({
@@ -11991,6 +12008,58 @@ const HomeWalkingMasumon = ({
     className: "mh-home-masumon-stars"
   })));
 };
+const RepeatStepButton = ({
+  onStep,
+  disabled = false,
+  className = '',
+  children,
+  ...rest
+}) => {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  const timers = useRef({
+    wait: null,
+    loop: null,
+    pressed: false
+  });
+  const stop = () => {
+    clearTimeout(timers.current.wait);
+    clearInterval(timers.current.loop);
+    timers.current.wait = null;
+    timers.current.loop = null;
+  };
+  useEffect(() => stop, []);
+  useEffect(() => {
+    if (disabled) stop();
+  }, [disabled]);
+  return React.createElement("button", _extends({
+    type: "button",
+    disabled: disabled,
+    className: className
+  }, rest, {
+    onPointerDown: e => {
+      if (disabled) return;
+      e.preventDefault();
+      timers.current.pressed = true;
+      stepRef.current();
+      stop();
+      timers.current.wait = setTimeout(() => {
+        timers.current.loop = setInterval(() => stepRef.current(), 70);
+      }, 400);
+    },
+    onPointerUp: stop,
+    onPointerLeave: stop,
+    onPointerCancel: stop,
+    onClick: () => {
+      if (timers.current.pressed) {
+        timers.current.pressed = false;
+        return;
+      }
+      if (!disabled) stepRef.current();
+    },
+    onContextMenu: e => e.preventDefault()
+  }), children);
+};
 const CustomColorPicker = ({
   h,
   s,
@@ -12044,8 +12113,9 @@ const CustomColorPicker = ({
       setDragTarget('square');
       updateFromSquare(e.clientX, e.clientY);
     },
-    className: "relative w-full aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10",
+    className: "relative mx-auto aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10",
     style: {
+      width: 'min(100%, calc(var(--mh-vh) * 0.34))',
       backgroundColor: pureHueColor,
       backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))'
     }
@@ -12077,6 +12147,49 @@ const CustomColorPicker = ({
       height: '18px',
       transform: 'translate(-50%,-50%)'
     }
+  })), React.createElement("div", {
+    "data-custom-color-numbers": true,
+    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "h-6 w-6 shrink-0 rounded-full border border-white/30",
+    style: {
+      backgroundColor: previewColor
+    },
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black leading-tight text-white [word-break:keep-all]"
+  }, "カスタム(色相", Math.round(h), "・", React.createElement("wbr", null), "彩度", Math.round(s * 100), "・", React.createElement("wbr", null), "明るさ", Math.round(v * 100), ")"), React.createElement("small", {
+    className: "block text-[9px] font-bold leading-tight text-slate-400 [word-break:keep-all]"
+  }, "色相 0〜360・", React.createElement("wbr", null), "彩度 0〜100・", React.createElement("wbr", null), "明るさ 0〜100"))), React.createElement("div", {
+    "data-custom-color-steppers": true,
+    className: "space-y-1"
+  }, [['h', '色相', Math.round(h), 360], ['s', '彩度', Math.round(s * 100), 100], ['v', '明るさ', Math.round(v * 100), 100]].map(([key, label, value, max]) => {
+    const step = d => {
+      const next = Math.max(0, Math.min(max, value + d));
+      onChange(key === 'h' ? next : Math.round(h), (key === 's' ? next : Math.round(s * 100)) / 100, (key === 'v' ? next : Math.round(v * 100)) / 100);
+    };
+    return React.createElement("div", {
+      key: key,
+      className: "flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: "w-12 shrink-0 text-[10px] font-black text-slate-300"
+    }, label), React.createElement(RepeatStepButton, {
+      "data-custom-color-step": `${key}-down`,
+      "aria-label": `${label}を1下げる`,
+      disabled: value <= 0,
+      onStep: () => step(-1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    }, "−"), React.createElement("span", {
+      className: "min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white"
+    }, value), React.createElement(RepeatStepButton, {
+      "data-custom-color-step": `${key}-up`,
+      "aria-label": `${label}を1上げる`,
+      disabled: value >= max,
+      onStep: () => step(1),
+      className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
+    }, "+"));
   })));
 };
 const VolumeSlider = ({
@@ -129367,7 +129480,7 @@ function MonsterHeroGame() {
           zIndex: 32000
         }
       }, React.createElement("div", {
-        className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl"
+        className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs max-h-full overflow-y-auto mh-scroll flex flex-col gap-3 shadow-2xl"
       }, React.createElement("div", {
         className: "flex items-center justify-between shrink-0"
       }, React.createElement("h3", {
@@ -129395,7 +129508,12 @@ function MonsterHeroGame() {
           s: ns,
           v: nv
         } : prev)
-      }), React.createElement("div", {
+      }), React.createElement("p", {
+        "data-custom-color-alpha": true,
+        className: "-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
+      }, "濃さ", colorAlphaOf(sourceColors[idx]), "%", React.createElement("span", {
+        className: "text-slate-500"
+      }, "(濃さは染色の画面のつまみで変えられます)")), React.createElement("div", {
         className: "flex gap-2 mt-1 shrink-0"
       }, React.createElement("button", {
         onClick: () => setCustomColorPicker(null),
