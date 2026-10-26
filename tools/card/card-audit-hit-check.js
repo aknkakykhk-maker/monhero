@@ -13,7 +13,7 @@
 //      ・「ダメージを与えた場合」「ダメージを受けた」の効果(ガッツを減らす・攻撃できない)は、回避や防御でダメージ0のときは効かない
 //      ・「攻撃できない」は、受けた子の持ち主の次のターンに、その子で攻撃できない(その次のターンは攻撃できる)
 //   C. 守りを選ぶ画面(cardGuardOptions)と CPU の手(cardAiChooseAction)で、効き目が外れていない
-//      ・回避されない技には、回避の札が出せない(画面に出ない)
+//      ・回避されない技には回避の札が、防御でマイナスされない技には −N・半分・0 の防御の札が出せない(画面に出ない)
 //      ・回避されても半分の技・防御でマイナスされない技でも、CPU が考えたまま止まらない(手が返る)
 const fs = require('fs');
 const path = require('path');
@@ -124,7 +124,8 @@ targets.forEach((c) => {
   // 回避されても半分(切り上げ)
   if (eff(c, 'halfOnEvade') && ev.offered) check(`${name}: 回避されても半分(切り上げ)`, evd.dmg === Math.ceil(hit.dmg / 2), `回避で ${evd.dmg} / ふつう ${hit.dmg}`);
   // 防御でマイナスされない
-  if (eff(c, 'noBlockReduce') && ra.offered) check(`${name}: 防御でダメージ0にされない`, rad.dmg === hit.dmg, `防御で ${rad.dmg} / ふつう ${hit.dmg}`);
+  // 効かない防御の札は守りの画面に出さない(社長の答え 案A・2026-10-27)
+  if (eff(c, 'noBlockReduce')) check(`${name}: 防御でマイナスされない技に、防御の札が出せない`, !ra.offered && rad.dmg === hit.dmg, JSON.stringify({ offered: ra.offered, rad, hit }));
   // ダメージを与えたらガッツを減らす
   const gl = eff(c, 'gutsLossOnHit');
   if (gl) {
@@ -206,7 +207,7 @@ attachCards.forEach((ac) => {
   }
   if (eff(ac, 'attachNoBlockReduce')) {
     const ra = run(true, 'reduceAll');
-    if (ra && ra.offered) check(`${name}: 防御でダメージ0にされない`, ra.dmg === att.dmg, JSON.stringify({ ra, att }));
+    check(`${name}: 防御の札が出せない`, ra && !ra.offered && ra.dmg === att.dmg, JSON.stringify({ ra, att }));
   }
 });
 
@@ -226,19 +227,35 @@ attachCards.forEach((ac) => {
   check(`C ${k}(${c.no} ${c.name})を受けた CPU が守りの手を返す`, ok, detail);
 });
 
-// 防御でマイナスされない攻撃(渾身を付けたちから技)を受けた CPU は、効かない防御(−N・半分・0)を出さずに見送る(2026-10-26 直した)
-attachCards.filter((ac) => eff(ac, 'attachNoBlockReduce')).forEach((ac) => {
-  const base = cards.find((x) => x.ready && x.user === ac.user && x.kind === 'pow' && (x.effects || []).length === 0 && x.damage > 0);
+// 防御でマイナスされない攻撃(技そのもの・渾身を付けたちから技)には、効かない防御(−N・半分・0)を守りの画面に出さず、
+// CPU も出さずに見送る(2026-10-26 CPU を直した / 2026-10-27 社長の答え 案A で画面にも出さない)
+const noReduceAttacks = [
+  ...attachCards.filter((ac) => eff(ac, 'attachNoBlockReduce')).map((ac) => {
+    const base = cards.find((x) => x.ready && x.user === ac.user && x.kind === 'pow' && (x.effects || []).length === 0 && x.damage > 0);
+    return base && { label: `${ac.no} ${ac.name}つきの攻撃`, user: ac.user, kind: 'pow', hand: [base.no, ac.no], plain: [base.no] };
+  }),
+  ...targets.filter((c) => eff(c, 'noBlockReduce')).map((c) => ({ label: `${c.no} ${c.name}`, user: c.user, kind: c.kind, hand: [c.no] })),
+].filter(Boolean);
+noReduceAttacks.forEach((na) => {
   ['reduce', 'reduceHalf', 'reduceAll'].forEach((t) => {
     // その防御の札を使える種族を、受ける側にする(どの子でも使える札ならゴーレム)
-    const g = cards.find((c) => c.ready && (c.user === 'any' || monOf[c.user]) && (c.effects || []).length === 1 && (c.effects || []).some((e) => e.t === t && Array.isArray(e.kinds) && e.kinds.includes('pow')));
-    if (!base || !g) return;
-    let st = scene({ atkMon: monOf[ac.user], hands: [[base.no, ac.no], [g.no]], defMon: g.user === 'any' ? DEF_MON : monOf[g.user] });
-    const o = E.cardAttackOptions(db, st).find((x) => x.mon === 0 && [].concat(x.hand).length === 2 && x.target && x.target.p === 1 && x.target.m === 0);
-    st = act(st, o);
-    if (!E.cardGuardOptions(db, st).length) return;
+    const g = cards.find((c) => c.ready && (c.user === 'any' || monOf[c.user]) && (c.effects || []).length === 1 && (c.effects || []).some((e) => e.t === t && Array.isArray(e.kinds) && e.kinds.includes(na.kind)));
+    if (!g) return;
+    const start = (hand) => {
+      const st0 = scene({ atkMon: monOf[na.user], hands: [hand, [g.no]], defMon: g.user === 'any' ? DEF_MON : monOf[g.user] });
+      const o = E.cardAttackOptions(db, st0).find((x) => x.mon === 0 && [].concat(x.hand).length === hand.length && x.target && x.target.p === 1 && x.target.m === 0);
+      return o ? act(st0, o) : null;
+    };
+    // 渾身を付けないふつうのちから技には、いままでどおり防御の札が出せる(比べるための確かめ)
+    if (na.plain) {
+      const sp = start(na.plain);
+      check(`C ${na.label}: 付けないときは防御(${g.name}・${t})が出せる`, sp && sp.pending && E.cardGuardOptions(db, sp).some((x) => x.type === 'guard'));
+    }
+    let st = start(na.hand);
+    if (!st || !st.pending) { check(`C ${na.label}: 防御(${g.name})の相手に攻撃できる`, false); return; }
+    check(`C ${na.label}に、守りの画面で効かない防御(${g.name}・${t})が出ない`, !E.cardGuardOptions(db, st).some((x) => x.type === 'guard'));
     const picks = ['normal', 'master'].map((lv) => (E.cardAiChooseAction(db, st, E.cardAiPolicy('kiki', lv)) || {}).type);
-    check(`C ${ac.no} ${ac.name}つきの攻撃に、CPU が効かない防御(${g.name}・${t})を出さない`, picks.every((x) => x === 'pass'), picks.join(','));
+    check(`C ${na.label}に、CPU が効かない防御(${g.name}・${t})を出さない`, picks.every((x) => x === 'pass'), picks.join(','));
   });
 });
 

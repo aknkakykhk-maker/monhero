@@ -618,7 +618,8 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll');
-    if (re) { if (re.kinds.includes(atkCard.kind)) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
+    // 防御でマイナスされない技(技そのもの・渾身を付けたちから技)には、−N・半分・0 の防御の札は出せない(効かないので。社長の答え 2026-10-27・案A。回避されない技の回避の札と同じ扱い)
+    if (re) { if (re.kinds.includes(atkCard.kind) && !cardHasEff(atkCard, 'noBlockReduce') && !fl.attachNoBlockReduce) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
     const rf = cardEff(c, 'reflect');
     if (rf) { if (rf.kinds.includes(atkCard.kind) && !pd.reflect) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
   });

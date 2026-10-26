@@ -685,8 +685,11 @@ const pendingCards = () => {
     ok(dino && dp && red, '362: 見本が無い');
     if (dino && dp && red) { const st = big(scene({ mons: [[dino, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[dp.no, '362'], [red.no]], guts: [9, 9] }));
       const a = optWith(st, [dp.no, '362'], 0); ok(a, '362: 付けられない');
-      if (a) { let s1 = act(st, a); const g = find(E.cardGuardOptions(db, s1), (x) => s1.players[1].hand[x.hand] === red.no); ok(g, '362: 防御は出せるはず');
-        if (g) { const l = s1.players[1].mons[0].life; s1 = act(act(s1, g), { type: 'pass' }); ok(l - s1.players[1].mons[0].life === dp.damage, '362: 防御でダメージが減った'); } } } }
+      // 効かない防御は守りの画面に出さない(社長の答え 案A・2026-10-27)。見送れば、そのままのダメージ
+      if (a) { let s1 = act(st, a); const g = find(E.cardGuardOptions(db, s1), (x) => s1.players[1].hand[x.hand] === red.no); ok(!g, '362: 効かない防御が出せてしまう');
+        const l = s1.players[1].mons[0].life; s1 = act(s1, { type: 'pass' }); ok(l - s1.players[1].mons[0].life === dp.damage, '362: ダメージがそのまま入らない');
+        const sp = big(scene({ mons: [[dino, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[dp.no], [red.no]], guts: [9, 9] })); const ap = optWith(sp, [dp.no], 0);
+        if (ap) { const s2 = act(sp, ap); ok(find(E.cardGuardOptions(db, s2), (x) => s2.players[1].hand[x.hand] === red.no), '362: 付けないときに防御が出せない'); } } } }
   { ready('363'); const naga = monOf('naga'); const np = plainOf('naga', 'pow'); ok(naga && np, '363: 見本が無い');
     if (naga && np) { const st = scene({ mons: [[naga, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [[np.no, '363'], ['109']], guts: [9, 9] });
       const a = optWith(st, [np.no, '363'], 0); ok(a, '363: 付けられない'); if (a) ok(!guardsAfter(st, a).g.length, '363: 守りが出せてしまう'); } }
