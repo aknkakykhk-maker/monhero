@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fb3898e434d764a6
+// source-sha256: 28fd65373b3abc47
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 13:54";
+const BUILD_DATE = "2026-10-26 14:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86638,7 +86638,7 @@ const CARD_VS_LINES = Object.freeze({
   momosuke: {
     easy: {
       e: 'happy',
-      t: 'ももと遊んでくれるの？ やさしくしてあげよっかな〜w'
+      t: 'ももと遊んでくれるの？ 《やさしく》して《あげよっかな〜w》'
     },
     normal: {
       e: 'wink',
@@ -86676,7 +86676,7 @@ const CARD_VS_LINES = Object.freeze({
     },
     master: {
       e: 'wink',
-      t: 'いちばん強いききで、お相手しまつね。'
+      t: 'いちばん強いききで、《お相手》しまつね。'
     }
   },
   kyuko: {
@@ -86698,7 +86698,7 @@ const CARD_VS_LINES = Object.freeze({
     },
     master: {
       e: 'wink',
-      t: 'きみのデッキも見て組み直したよ。読み合い、しよっか'
+      t: 'きみのデッキも見て《組み直したよ。》読み合い、しよっか'
     }
   },
   dra: {
@@ -86712,7 +86712,7 @@ const CARD_VS_LINES = Object.freeze({
     },
     hard: {
       e: 'excited',
-      t: '打ってこい。全部はね返してやるよ'
+      t: '打ってこい。全部《はね返して》やるよ'
     },
     expert: {
       e: 'excited',
@@ -86726,15 +86726,15 @@ const CARD_VS_LINES = Object.freeze({
   atsu: {
     easy: {
       e: 'happy',
-      t: 'ゆるくいこうぜ笑 全体攻撃はちょっとだけな'
+      t: 'ゆるくいこうぜ笑 《全体攻撃》はちょっとだけな'
     },
     normal: {
       e: 'excited',
-      t: 'まとめて吹っ飛ばすぞ！ 楽しもうぜ笑'
+      t: 'まとめて吹っ飛ばすぞ！ 《楽しもうぜ笑》'
     },
     hard: {
       e: 'excited',
-      t: '全員まとめていくからな。覚悟しとけよ笑'
+      t: '全員まとめていくからな。《覚悟しとけよ笑》'
     },
     expert: {
       e: 'excited',
@@ -86991,7 +86991,7 @@ const CardVsIntro = ({
     "data-card-vs-line": true,
     className: "mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900",
     style: JA_WRAP_STYLE
-  }, helpWrap(foe.line.t)))), React.createElement(CardVsDeckName, {
+  }, cardRuleLine(foe.line.t)))), React.createElement(CardVsDeckName, {
     text: foe.deckName,
     tone: "foe"
   }), React.createElement(CardVsMonsters, {
