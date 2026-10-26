@@ -812,19 +812,20 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-ranking] header button').first().click();
       await page.locator('[data-card-options-open]').click();
       await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
-      // ⑱ オプション: 対戦の BGM(おまかせ・曲えらび)・対戦の進む速さ・自動パスが、新しいキーだけに保存される
-      const cpuSel = page.locator('[data-card-bgm-select="cpu"]');
+      // ⑱ オプション: BGM(トップ画面の曲えらび)・対戦の進む速さ・自動パスが、新しいキーだけに保存される
+      //   助手と対戦の曲は、助手ごとの曲の並び(mh_card_cpu_playlist_v1)にした(2026-10-26)。そちらは card-cpu-playlist-browser-check.js で見る
+      const cpuSel = page.locator('[data-card-bgm-select="top"]');
       const bgmDefault = await cpuSel.inputValue();
       await cpuSel.selectOption('melo_toriko');
       await page.locator('[data-card-setting="think"] [data-card-setting-option="FAST"]').click();
       await page.locator('[data-card-setting="autoPass"] [data-card-setting-option="OFF"]').click();
       await page.waitForTimeout(300);
       const optSaved = await page.evaluate(() => ({ bgm: JSON.parse(localStorage.getItem('mh_card_bgm_v1') || 'null'), settings: JSON.parse(localStorage.getItem('mh_card_settings_v1') || 'null') }));
-      check('⑱ オプション: 対戦のBGMは最初「おまかせ」で(トップ画面だけ MF × ICHIKA MIX)、曲・速さ・自動パスを変えると mh_card_bgm_v1・mh_card_settings_v1 に残る',
-        bgmDefault === 'auto' && optSaved.bgm && optSaved.bgm.cpu === 'melo_toriko' && optSaved.settings && optSaved.settings.think === 'FAST' && optSaved.settings.speed === 'fast' && optSaved.settings.autoPass === false, JSON.stringify({ bgmDefault, ...optSaved }));
+      check('⑱ オプション: トップ画面のBGMは最初 MF × ICHIKA MIX で、曲・速さ・自動パスを変えると mh_card_bgm_v1・mh_card_settings_v1 に残る',
+        bgmDefault === 'atsu_cup_theme' && optSaved.bgm && optSaved.bgm.top === 'melo_toriko' && optSaved.bgm.cpu === 'auto' && optSaved.settings && optSaved.settings.think === 'FAST' && optSaved.settings.speed === 'fast' && optSaved.settings.autoPass === false, JSON.stringify({ bgmDefault, ...optSaved }));
       if (SHOT) await shot(page, '38-options');
       // 元に戻す(このあとの対戦の検査を、いつもの設定のまま進めるため)
-      await cpuSel.selectOption('auto');
+      await cpuSel.selectOption('atsu_cup_theme');
       await page.locator('[data-card-setting="think"] [data-card-setting-option="NORMAL"]').click();
       await page.locator('[data-card-setting="autoPass"] [data-card-setting-option="ON"]').click();
       await page.locator('[data-card-options] header button').first().click();
