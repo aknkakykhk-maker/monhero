@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd746a837357d661
+// source-sha256: ca813231a1ce5c60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -48819,13 +48819,22 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   multi: 'みんなで対戦中',
   masu: 'マスモンのお世話中',
   market: 'マーケットを見ています',
-  other: 'ログイン中'
+  other: 'ログイン中',
+  card: 'MFバトルカードで遊び中',
+  cardBattle: 'MFバトルカードで対戦中'
 });
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+const friendsPlaceFromRow = (place, records) => {
+  if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
+  return Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : null;
+};
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
+  if (name === 'CARD_BATTLE') return 'cardBattle';
+  if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
@@ -49020,6 +49029,7 @@ const friendsNormalizeRecords = raw => {
   } : null).filter(Boolean).slice(0, FRIEND_RECORD_SONG_MAX);
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
+    pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
@@ -49096,9 +49106,10 @@ const friendsBuildSummary = ({
 const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   const id = friendsSafeId(breederIdRaw);
   if (!id || !summary) return false;
+  const sub = FRIEND_SUB_PLACES.includes(summary.place) ? summary.place : null;
   const base = {
     breeder_id: id,
-    place: summary.place,
+    place: sub ? 'other' : summary.place,
     started_on: summary.startedOn,
     play_seconds: summary.playSeconds,
     best_bond: summary.bestBond,
@@ -49115,11 +49126,15 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   });
   try {
     if (_friendProfileExtraUnavailable) await send(base);else {
+      const records = sub ? {
+        ...(summary.records || {}),
+        pl: sub
+      } : summary.records;
       try {
         await send({
           ...base,
           message: summary.message,
-          records: summary.records
+          records
         });
       } catch (error) {
         if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
@@ -49209,7 +49224,7 @@ const sbFetchFriendSummaries = async ids => {
       const num = value => Number.isFinite(Number(value)) && value !== null ? Number(value) : null;
       const fav = row.favorite && typeof row.favorite === 'object' && !Array.isArray(row.favorite) && typeof row.favorite.monsterId === 'string' ? row.favorite : null;
       byId[row.breeder_id] = {
-        place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, row.place) ? row.place : null,
+        place: friendsPlaceFromRow(row.place, row.records),
         startedOn: typeof row.started_on === 'string' && FRIEND_DAY_RE.test(row.started_on) ? row.started_on : null,
         playSeconds: num(row.play_seconds),
         bestBond: num(row.best_bond),
