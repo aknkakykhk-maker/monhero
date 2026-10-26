@@ -553,7 +553,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         check('㉑ 見返しの相手の名前の下が、遊んだ難易度', !!recd.level && levelText.trim() === ({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' })[recd.level], `${recd.level} / ${levelText}`);
         await page.locator('[data-card-replay-first]').click();
         const startHead = await page.locator('[data-card-head-turn]').innerText();
-        check('㉑ 見返しのはじまりは、上の帯も「はじまり」', /はじまり/.test(startHead), startHead);
+        await page.locator('[data-card-replay-next]').click();
+        const firstHead = await page.locator('[data-card-head-turn]').innerText();
+        const firstBar = await page.locator('[data-card-replay-turn]').innerText();
+        check('㉑ 見返しのはじまりと1手目(始める前のガッツ)は、上の帯も「はじまり」', /はじまり/.test(startHead) && /はじまり/.test(firstHead) && /はじまり/.test(firstBar), `${startHead} / ${firstHead} / ${firstBar}`);
+        await page.waitForTimeout(1500);
+        check('㉑ 見返しでは助手の吹き出しを出さない(記録の箱に重ならない)', (await page.locator('[data-card-bubble]').count()) === 0);
         for (let i = 0; i < 300; i++) { if (await page.locator('[data-card-replay-next-turn]').isDisabled()) break; await page.locator('[data-card-replay-next-turn]').click(); }
         const end = (await page.locator('[data-card-replay-step]').innerText()).replace('手', '').split('/').map(Number);
         check('㉑ 最後の手まで見られる・助手は勝手に動かない', end[0] === end[1] && end[1] >= 1, end.join('/'));
