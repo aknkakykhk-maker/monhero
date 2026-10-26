@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b509d073ef4897d2
+// source-sha256: dd9967fca9e4dfec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122443,7 +122443,7 @@ function MonsterHeroGame() {
       onSelectTab: setDexTab,
       onStopPreview: stopDexAttackPreview
     }), gameState === 'AUTO_SETTINGS' && (() => {
-      const strategies = [['random', 'ランダム', 'AUTOが候補からランダムに選択'], ['offense', '火力重視', '攻撃・ちから系を優先'], ['defense', '耐久重視', 'ライフ・丈夫さ系を優先'], ['guts', 'ガッツ重視', 'ガッツ系を優先']];
+      const strategies = [['random', 'ランダム', 'AUTOが候補からランダムに選ぶ'], ['offense', '火力重視', '攻撃・ちから系を優先'], ['defense', '耐久重視', 'ライフ・丈夫さ系を優先'], ['guts', 'ガッツ重視', 'ガッツ系を優先']];
       const ranges = [[null, '自動'], [0, '零'], [1, '近'], [2, '中'], [3, '遠']];
       const selectedEntries = draftAutoSettings.allies.map(ally => ally.rosterEntry).filter(Boolean);
       const autoBreakthroughBulkLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
@@ -122500,7 +122500,7 @@ function MonsterHeroGame() {
         className: "w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"
       }, React.createElement("option", {
         value: ""
-      }, "未指定（ランダム）"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => React.createElement("option", {
+      }, "おまかせ（AUTOがランダムに選ぶ）"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => React.createElement("option", {
         key: entry,
         value: entry,
         disabled: selectedEntries.includes(entry) && ally.rosterEntry !== entry
@@ -122535,7 +122535,7 @@ function MonsterHeroGame() {
         className: "w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"
       }, React.createElement("option", {
         value: ""
-      }, "未設定（この機能を使わない）"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => React.createElement("option", {
+      }, "使わない（まだ決めていない）"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => React.createElement("option", {
         key: entry,
         value: entry
       }, autoRosterLabel(entry)))), renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry), React.createElement("div", null, React.createElement("div", {
