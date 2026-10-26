@@ -256,7 +256,13 @@ check('未入手・未実装は立ち絵と名前を出し、札で分ける',
   // 立ち絵がまだ無い子だけは影
   && /mon\.imgUrl\s*\?\s*<DexMonsterIdleArt mon=\{mon\} alt=\{mon\.name\} motion=\{idleMotion\}\/>\s*:\s*<DexMonsterArt mon=\{mon\} alt="立ち絵のないモンスター" hidden\/>/.test(detail)
   && list.includes('data-dex-section={section.id}') && list.includes('data-dex-section-count')
-  && list.includes('<DexStatusTag status={section.id}/>') && detail.includes('<DexStatusTag status={status} size="md"/>'));
+  && list.includes('<DexStatusTag status={section.id} announced={dexDraftAnnounced(mon)}/>') && detail.includes('<DexStatusTag status={status} size="md" announced={dexDraftAnnounced(mon)}/>'));
+// 実装予告を出した案の子(draftAnnounced)は「未実装」の先頭に並び、札が「近日実装」になる(2026-10-27 社長室カゲあつ。
+// 予告で「図鑑の未実装に並べました」と書いたのに、58体の最後にいて見つけにくかった)
+check('実装予告を出した子は「未実装」の先頭に並び、札が「近日実装」になる',
+  /const dexDraftAnnounced = \(mon\) => !!\(mon && mon\.draft && mon\.draftAnnounced\)/.test(source)
+  && /return \[\.\.\.list\.filter\(dexDraftAnnounced\), \.\.\.list\.filter\(mon => !dexDraftAnnounced\(mon\)\)\]/.test(source)
+  && /announced && found\.id === 'draft' \? \{ \.\.\.found, label:'近日実装' \}/.test(source));
 {
   // 情報カードのうち、入手済みのときだけ出す部分(タブ以下)と、いつも出す部分(血統・説明)を分けて見る
   const card = detail.slice(detail.indexOf('下半分: 情報カード'));
