@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 106ef6c05ad2deed
+// source-sha256: 6bb9630c7081e48f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -27008,6 +27008,7 @@ const debugPassphraseMatches = async text => {
 const ASSET_CACHE_KEY = 'mh_asset_prefetch_v1';
 const ASSET_CACHE_NAME = 'mh-assets-v1';
 const ASSET_CACHE_META = 'mh-assets-meta-v1';
+const ASSET_CODE_CACHE_NAME = 'mh-code-v1';
 const ASSET_CACHE_DEFAULT_ENABLED = true;
 const ASSET_PACKS = [{
   id: 'beat',
@@ -27112,7 +27113,7 @@ const ASSET_CACHE = (() => {
     }
     return manifestPromise;
   };
-  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId);
+  const filesOfPack = (m, packId) => Object.entries(m.files).filter(([, f]) => f.pack !== 'core' && (packId === 'all' ? assetPackOpen(assetPackOfId(f.pack)) : f.pack === packId));
   const refreshStatus = async () => {
     status = {
       ...status,
@@ -27226,6 +27227,7 @@ const ASSET_CACHE = (() => {
     try {
       await window.caches.delete(ASSET_CACHE_NAME);
       await window.caches.delete(ASSET_CACHE_META);
+      await window.caches.delete(ASSET_CODE_CACHE_NAME);
     } catch (e) {}
   };
   const download = async packId => {
@@ -27409,7 +27411,7 @@ const ASSET_CACHE = (() => {
     if (!settings.enabled || !settings.auto) return;
     const m = await ensureManifest();
     if (!m) return;
-    enqueue(Object.keys(m.files).filter(p => ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
+    enqueue(Object.keys(m.files).filter(p => m.files[p].pack !== 'core' && ASSET_CORE_PREFIXES.some(pre => p.startsWith(pre))));
     for (const songId of settings.songs) enqueue(songPaths(songId));
     if (assetPackOpen(assetPackOfId('card'))) for (const pre of ASSET_CARD_AUTO_PREFIXES) enqueue(Object.keys(m.files).filter(p => p.startsWith(pre)));
   };
@@ -77610,6 +77612,8 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-art-img{width:var(--mhms-w)}
 @supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
 @container (max-height:120px){.mhms-art-img{left:30%!important}}
+/* 細い枠(縦持ちの375幅まで)では「立ち絵ON」「コメントON」を右の端に縦に並べ、体にかかる幅を狭くする(2026-10-26 カゲあつ「あつの手と胸に乗る」) */
+@container (max-width:360px){.mhms-art-toggles{flex-direction:column;align-items:flex-end;gap:4px}.mhms-art-toggles>button{min-height:28px;padding-left:8px;padding-right:8px}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
 .mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
 .mhms-card.free::after{animation-delay:1.9s}
@@ -77931,7 +77935,7 @@ function ModeSelectAssistantPanel({
     showArt: showArt,
     showComment: showComment,
     onToggle: onToggle,
-    cls: "absolute bottom-1.5 right-1.5 z-20",
+    cls: "mhms-art-toggles absolute bottom-1.5 right-1.5 z-20",
     withLabel: false
   }), React.createElement("div", {
     className: "mhms-float pointer-events-none absolute inset-0"
@@ -83722,14 +83726,26 @@ const cardGuardCost = (st, c) => cardFieldCostOf(st, c && c.guts || 0);
 const cardFieldDmgAdd = (st, main) => (st && st.field && Array.isArray(st.field.effects) ? st.field.effects : []).filter(e => e.t === 'fieldDmg' && main && e.kinds.includes(main.kind)).reduce((a, e) => a + e.n, 0);
 const cardClone = st => JSON.parse(JSON.stringify(st));
 const cardOther = p => 1 - p;
+const cardIsHybridMon = mon => !!(mon && mon.main && mon.sub && mon.sub !== 'unknown');
 const cardUsableBy = (card, mon) => {
   if (!card || !mon || mon.ko) return false;
   if (card.user === 'any') return true;
   if (card.user === 'breeder') return false;
   if (card.user === mon.species) return true;
-  if (mon.main && card.user === mon.main) return true;
-  if (mon.sub && card.user === mon.sub && cardIsGuardKind(card.kind)) return true;
-  return false;
+  if (!mon.main) return false;
+  if (!cardIsHybridMon(mon)) return card.user === mon.main;
+  return card.user === (cardIsGuardKind(card.kind) ? mon.sub : mon.main);
+};
+const cardDeckDeadCount = (db, deck) => {
+  const mons = (deck && deck.monsters || []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  if (!mons.length) return 0;
+  return (deck && deck.cards || []).filter(no => {
+    const c = cardOf(db, no);
+    return c && c.user !== 'breeder' && c.user !== 'any' && c.kind !== 'fld' && !mons.some(m => cardUsableBy(c, {
+      ...m,
+      ko: false
+    }));
+  }).length;
 };
 const cardMonType = (mon, turn) => mon.fieldType ? mon.fieldType : mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type;
 const cardLog = (st, text, extra) => {
@@ -84035,8 +84051,8 @@ const cardAttachOk = (db, st, p, mon, main, c) => {
   if (w.area && !cardHasEff(main, 'area')) return false;
   if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
   if (w.deckEmpty && me.deck.length) return false;
-  if (w.pure && (mon.main || mon.sub)) return false;
-  if (w.subSpe && !(mon.sub && main.user === mon.sub)) return false;
+  if (w.pure && cardIsHybridMon(mon)) return false;
+  if (w.subSpe && !(cardIsHybridMon(mon) && main.user === mon.sub)) return false;
   return c.user === 'breeder' ? !me.breederUsed || cardBreederFree(st, p) : cardUsableBy(c, mon);
 };
 const cardAttachSets = (db, st, p, mon, main, exclude) => {
@@ -84246,7 +84262,7 @@ const cardAttackOptions = (db, st) => {
       return;
     }
     me.mons.forEach((mon, mi) => {
-      const enabler = card.kind === 'pow' ? 'mimic' : card.kind === 'spe' && mon.sub && card.user === mon.sub ? 'ancient' : null;
+      const enabler = card.kind === 'pow' ? 'mimic' : card.kind === 'spe' && cardIsHybridMon(mon) && card.user === mon.sub ? 'ancient' : null;
       const mimicIdx = enabler ? me.hand.map((n2, j) => ({
         j,
         c: cardOf(db, n2)
@@ -84403,7 +84419,7 @@ const cardGuardOptions = (db, st) => {
   if (pd.redirected) return [];
   const isArea = cardHasEff(atkCard, 'area');
   const atkMon0 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !atkMon0.main && !!target.main;
+  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !cardIsHybridMon(atkMon0) && cardIsHybridMon(target);
   const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
@@ -84450,7 +84466,7 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     if (cardHasEff(c, 'evadeAll')) {
-      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && (target.main || target.sub)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
+      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && cardIsHybridMon(target)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
         type: 'guard',
         hand: hi,
         mon: tgt.m
@@ -84490,7 +84506,7 @@ const cardGuardOptions = (db, st) => {
     if (ev) {
       if (pd.evaded) return;
       if (cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade) return;
-      if (fl.attachNoEvadeHybrid && (target.main || target.sub)) return;
+      if (fl.attachNoEvadeHybrid && cardIsHybridMon(target)) return;
       if (!ev.kinds.includes(atkCard.kind)) return;
       if (ev.minGuts && pd.cost < ev.minGuts) return;
       out.push({
@@ -85540,7 +85556,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     easy: 0.1,
     normal: -0.04,
     hard: -0.11,
-    expert: 0.075,
+    expert: 0.03,
     master: 0.12
   },
   momosuke: {
@@ -85548,7 +85564,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: 0.06,
     hard: 0,
     expert: 0.1,
-    master: 0.14
+    master: 0.05
   },
   kiki: {
     easy: -0.045,
@@ -85561,14 +85577,14 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     easy: -0.075,
     normal: -0.075,
     hard: 0.03,
-    expert: 0,
-    master: 0.12
+    expert: -0.06,
+    master: 0
   },
   atsu: {
     easy: -0.075,
     normal: -0.15,
     hard: -0.105,
-    expert: 0,
+    expert: -0.06,
     master: 0
   }
 });
@@ -85606,7 +85622,7 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
-  if (flags.attachNoEvadeHybrid && (tmon.main || tmon.sub)) return 0;
+  if (flags.attachNoEvadeHybrid && cardIsHybridMon(tmon)) return 0;
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
@@ -85637,7 +85653,7 @@ const cardAiScoreField = (db, st, p, card, cost) => {
       v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
     }
     if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
-    if (e.t === 'fieldPurePride') v += (alive(op).filter(m => m.main).length - alive(me).filter(m => m.main).length) * 0.6;
+    if (e.t === 'fieldPurePride') v += (alive(op).filter(cardIsHybridMon).length - alive(me).filter(cardIsHybridMon).length) * 0.6;
     if (e.t === 'fieldBanKind') v += (share(theirs, c => e.kinds.includes(c.kind), 0.2) - share(mine, c => e.kinds.includes(c.kind), 0.2)) * 4;
     if (e.t === 'fieldType') v += (alive(me).filter(m => m.type === e.type).length - alive(op).filter(m => m.type === e.type).length) * 0.2;
     if (e.t === 'fieldBurn') v += (alive(me).length - alive(op).length) * 0.5 - 0.4;
@@ -86115,11 +86131,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
     normal: -1.5,
     hard: -1.5,
     expert: 0,
-    master: 1
+    master: -0.05
   },
   dra: {
     easy: -1.5,
-    normal: -1.5
+    normal: -1.5,
+    master: 0.5
   },
   atsu: {
     easy: -1.5,
@@ -86130,7 +86147,9 @@ const CARD_AI_DECK_TUNE = Object.freeze({
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
-  dra: 0.3
+  dra: 0.3,
+  kyuko: 2.0,
+  atsu: 1.5
 });
 const CARD_DECK_COPY_MAX = 3;
 const CARD_AI_ATTACH_MAX = 6;
@@ -86261,7 +86280,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const favs = cardAiFavoriteCandidates(db, who).map(no => cardMonsterOf(db, no));
   if (!favs.length) return [];
-  const favScore = favs.map(m => cardAiMonScore(db, who, m, cfg.maxWave));
+  const favScore = favs.map(m => cardAiMonScore(db, who, m, cfg.maxWave) * (cardIsHybridMon(m) ? 0.9 : 1));
   const favW = favs.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
   const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
   const cands = Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who] && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
@@ -86376,9 +86395,20 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     }
   };
   const guards = ranked.filter(x => cardIsGuardKind(x.c.kind));
+  const guardLanes = mons.map(m => guards.filter(x => x.c.user === 'any' || cardUsableBy(x.c, {
+    ...m,
+    ko: false
+  })));
+  const guardUsed = new Set();
   let g = 0;
-  for (const x of guards) {
-    if (g >= guardTarget) break;
+  for (let gi = 0, miss = 0; g < guardTarget && miss < guardLanes.length; gi = (gi + 1) % guardLanes.length) {
+    const x = guardLanes[gi].find(y => !guardUsed.has(y.c.name));
+    if (!x) {
+      miss += 1;
+      continue;
+    }
+    miss = 0;
+    guardUsed.add(x.c.name);
     const n = Math.min(CARD_DECK_COPY_MAX, guardTarget - g);
     add(x.c, n);
     g += n;
@@ -94553,7 +94583,11 @@ const CardDeckEditor = ({
     "data-card-deck-problems": true,
     className: "text-[11px] font-bold leading-snug text-rose-300",
     style: JA_WRAP_STYLE
-  }, [...rules, ...own].slice(0, 2).join(' / ')), notice && React.createElement("div", {
+  }, [...rules, ...own].slice(0, 2).join(' / ')), cardDeckDeadCount(db, deck) > 0 && React.createElement("div", {
+    "data-card-deck-dead": true,
+    className: "text-[11px] font-bold leading-snug text-amber-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`3体のどの子も使えないカードが${cardDeckDeadCount(db, deck)}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます)`)), notice && React.createElement("div", {
     "data-card-deck-notice": true,
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE
@@ -94731,7 +94765,10 @@ const CardDeckList = ({
       style: JA_LABEL_STYLE
     }, on ? '★ ' : '', jaWrap(d.name)), React.createElement("div", {
       className: `text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`
-    }, d.cards.length, "/", CARD_BATTLE_DECK_SIZE, "枚・", ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
+    }, d.cards.length, "/", CARD_BATTLE_DECK_SIZE, "枚・", ready ? '対戦に使えます' : 'まだ対戦に使えません'), cardDeckDeadCount(db, d) > 0 && React.createElement("div", {
+      "data-card-deck-dead": d.id,
+      className: "text-[11px] font-bold text-amber-200"
+    }, `使えないカード ${cardDeckDeadCount(db, d)}枚`))), React.createElement("div", {
       className: "mt-2 grid grid-cols-4 gap-1"
     }, React.createElement("button", {
       type: "button",
