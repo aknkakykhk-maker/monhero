@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b106493eb910d43
+// generated-sha256: 8dbad69f71e37405
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 19:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 20:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52714,7 +52714,7 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
 const CardVsDeckName = ({ text, tone }) => text ? (
   <div data-card-vs-deck-name className={`mh-vs-fade max-w-full rounded-2xl px-3 py-0.5 text-center font-black leading-tight ${String(text).length > 16 ? 'text-[11px]' : 'text-[13px]'} ${tone === 'foe' ? 'bg-rose-950/80 text-rose-100' : 'bg-sky-950/80 text-sky-100'}`} style={{ ...JA_LABEL_STYLE, animationDelay: tone === 'foe' ? '450ms' : '1250ms' }}>{jaWrap(text)}</div>
 ) : null;
-const CardVsIntro = ({ db, intro, onDone }) => {
+const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
   const done = useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone && onDone(); };
   const ms = CARD_VS_MS[intro.mode] || CARD_VS_MS.assistant;
@@ -52753,7 +52753,11 @@ const CardVsIntro = ({ db, intro, onDone }) => {
         <div data-card-vs-side="me" className="flex min-h-0 flex-col items-center justify-start gap-1.5 px-3 pb-3 pt-2 landscape:flex-1 landscape:justify-center">
           <CardVsMonsters db={db} monsters={me.monsters} side="me" start={short ? 500 : 1100} step={step}/>
           <CardVsDeckName text={me.deckName} tone="me"/>
-          <b className="mh-vs-fade text-[14px] font-black" style={{ ...JA_LABEL_STYLE, animationDelay: short ? '600ms' : '1200ms' }}>{me.name || 'あなた'}</b>
+          {/* 自分のアイコン(プロフィールのアイコン+フレーム。盤の自分の帯と同じ部品・84 が 60-app から受け取って渡す)と名前(2026-10-26 社長) */}
+          <div className="mh-vs-fade flex max-w-full items-center gap-2" style={{ animationDelay: short ? '600ms' : '1200ms' }}>
+            {meIcon && <span data-card-vs-me-icon aria-hidden="true" className="block h-8 w-8 shrink-0">{meIcon}</span>}
+            <b className="min-w-0 text-[14px] font-black" style={JA_LABEL_STYLE}>{me.name || 'あなた'}</b>
+          </div>
         </div>
       </div>
       <p className="relative z-[1] shrink-0 pb-2 text-center text-[10px] font-bold text-white/60">タップで始める</p>
@@ -55009,7 +55013,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   if (screen === 'CARD_BATTLE' && game) {
     // 対戦開始の画面(83-card-battle-vs.jsx)。出し終わるかタップしたら、対戦の画面へ(場はもう作ってあり、見せるだけ)
-    if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
+    if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
     return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {

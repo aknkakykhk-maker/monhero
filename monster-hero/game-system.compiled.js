@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1ed50629d916222a
+// source-sha256: 0b420109dbfc404b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 19:57";
+const BUILD_DATE = "2026-10-26 20:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86937,7 +86937,8 @@ const CardVsDeckName = ({
 const CardVsIntro = ({
   db,
   intro,
-  onDone
+  onDone,
+  meIcon = null
 }) => {
   const done = useRef(false);
   const finish = () => {
@@ -87042,13 +87043,19 @@ const CardVsIntro = ({
   }), React.createElement(CardVsDeckName, {
     text: me.deckName,
     tone: "me"
-  }), React.createElement("b", {
-    className: "mh-vs-fade text-[14px] font-black",
+  }), React.createElement("div", {
+    className: "mh-vs-fade flex max-w-full items-center gap-2",
     style: {
-      ...JA_LABEL_STYLE,
       animationDelay: short ? '600ms' : '1200ms'
     }
-  }, me.name || 'あなた'))), React.createElement("p", {
+  }, meIcon && React.createElement("span", {
+    "data-card-vs-me-icon": true,
+    "aria-hidden": "true",
+    className: "block h-8 w-8 shrink-0"
+  }, meIcon), React.createElement("b", {
+    className: "min-w-0 text-[14px] font-black",
+    style: JA_LABEL_STYLE
+  }, me.name || 'あなた')))), React.createElement("p", {
     className: "relative z-[1] shrink-0 pb-2 text-center text-[10px] font-bold text-white/60"
   }, "タップで始める"));
 };
@@ -90766,6 +90773,7 @@ const CardBattleScreen = ({
       key: `vs-${game.key}`,
       db: db,
       intro: game.intro,
+      meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       onDone: () => setGame(g => g && g.key === game.key ? {
         ...g,
         intro: null
