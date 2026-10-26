@@ -354,7 +354,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       <div className="shrink-0 flex gap-2 pt-2">
         <button type="button" data-pro-party-back onClick={()=>setStep('members')} className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">← 選び直す</button>
         <button type="button" data-pro-party-done disabled={!hero} onClick={()=>onDone(hero,ids.filter(id=>id&&id!==hero.id).map(id=>byId.get(id)))}
-          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください'}</button>
+          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500" style={JA_LABEL_STYLE}>{jaWrap(hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください')}</button>
       </div>
     </div>
   );
