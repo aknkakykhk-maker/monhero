@@ -44,7 +44,8 @@ levels.forEach((lv) => {
         for (let g = 0; g < games; g++) {
           // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体・カードも少しずつ変わる。2026-10-25)。MASTER はプレイヤー役のデッキを見る
           const mine = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) });
-          const st = E.cardSimulate(db, { decks: [mine, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!mine.sameBlood }), E.cardAiPolicy('kyuko', lv)], seed: 7000 + seed++, first: g % 2 });
+          // プレイヤー役は山札の上限を見ない(playerRole。2026-10-27 ソランド判断・ドラ EXPERT の測り方をそろえるため。人が相手のときと同じ測り方)
+          const st = E.cardSimulate(db, { decks: [mine, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!mine.sameBlood }), E.cardAiPolicy('kyuko', lv, { playerRole: true })], seed: 7000 + seed++, first: g % 2 });
           if (st.winner === 0) win[w] += 1;
           play[w] += 1;
         }

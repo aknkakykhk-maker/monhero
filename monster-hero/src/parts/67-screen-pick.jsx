@@ -354,7 +354,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       <div className="shrink-0 flex gap-2 pt-2">
         <button type="button" data-pro-party-back onClick={()=>setStep('members')} className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">← 選び直す</button>
         <button type="button" data-pro-party-done disabled={!hero} onClick={()=>onDone(hero,ids.filter(id=>id&&id!==hero.id).map(id=>byId.get(id)))}
-          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください'}</button>
+          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500" style={JA_LABEL_STYLE}>{jaWrap(hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください')}</button>
       </div>
     </div>
   );
@@ -393,7 +393,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2>
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
         <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
@@ -521,7 +521,7 @@ function PickHeroAllyScreen({
               onDetail={m=>setCurrentPickingMon(m)}/>
           );
           return (<>
-        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンを選択</div>}
+        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンをえらぶ</div>}
         {allyCarousel&&<div className="relative h-0">
           <button aria-label="前の供モン" disabled={allyCardIndex===0} onClick={()=>stepAlly(-1)} className="absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
           <button aria-label="次の供モン" disabled={allyCardIndex>=list.length-1} onClick={()=>stepAlly(1)} className="absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
@@ -807,7 +807,8 @@ function PickSlotScreen({
           <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
             <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
-            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?'この距離で':'合流後'} {formatAptPct(after)}</span>
+            {/* 従来のモードは「合流すると +◯%」(この子が足すぶん)。合流後の合計は勇者モンの詳細の「くわしく」に出す(2026-10-27 社長OK) */}
+            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {perSlotApt?`この距離で ${formatAptPct(after)}`:`合流すると ${aptGradeToPct(grade)===0?'+':''}${formatAptPct(aptGradeToPct(grade))}`}</span>
           </>):(<>
             {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="relative w-10 h-10 object-contain drop-shadow-md"/>:<span className="relative text-2xl drop-shadow-md">{s.emoji}</span>}
             <span className="relative max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>
