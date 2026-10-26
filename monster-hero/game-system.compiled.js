@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3af7b8970d14a8e0
+// source-sha256: 35cdd2e35f7c0706
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:11";
+const BUILD_DATE = "2026-10-27 03:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36507,6 +36507,14 @@ const RhythmTapTest = ({
   const cutInRefs = useRef([]);
   const cutInOn = settings.monsterCutIn !== false && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
   const monLayersOn = useState(() => rhythmMonLayersOn())[0];
+  const monAbSet = useState(() => {
+    try {
+      const v = typeof localStorage !== 'undefined' ? localStorage.getItem('mh_rhythm_mon_ab_v1') : null;
+      return v === '1' ? ['hop', 'flash', 'ring', ''] : v === '2' ? ['spark', 'se', 'cutin', 'all'] : null;
+    } catch {
+      return null;
+    }
+  })[0];
   const cutInElements = useMemo(() => {
     if (!cutInOn) return null;
     return React.createElement("div", {
@@ -37294,8 +37302,10 @@ const RhythmTapTest = ({
       if (!settings.lightweightMode && !rhythmEffectAtMost(settings.effectAmount, 'LIGHT')) note._rhythmClearAt = run.audio?.songTimeMs?.() ?? 0;
     }
     const monsterHit = judgment !== 'MISS' && !!monsterForNote(note);
+    const monAb = monsterHit && monAbSet ? monAbSet[(run.monAbCount = (run.monAbCount || 0) + 1) - 1] || '' : '';
+    const monAbOff = name => monAb === name || monAb === 'all';
     if (judgment !== 'MISS') {
-      if (monsterHit) {
+      if (monsterHit && !monAbOff('se')) {
         RHYTHM_NOTE_SE_RUNTIME.playMonster();
         RHYTHM_FRAME_DIAG.cue('se');
       }
@@ -37306,7 +37316,7 @@ const RhythmTapTest = ({
         const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, lineY, run.audio?.songTimeMs?.() ?? note.timeMs);
         const restarts = [];
         const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
-        const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF');
+        const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF') && !monAbOff('spark');
         const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
         const hitEffect = rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
@@ -37320,11 +37330,11 @@ const RhythmTapTest = ({
           sky: rhythmNoteSkyHeight(note) > 0
         });
         if (hitEffect) restarts.push(hitEffect);
-        if (monsterHit && monsterEffect === 'NORMAL' && screenFlashRef.current) restarts.push({
+        if (monsterHit && monsterEffect === 'NORMAL' && !monAbOff('spark') && screenFlashRef.current) restarts.push({
           el: screenFlashRef.current,
           attr: 'rhythmFlash'
         });
-        if (monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'NONE')) {
+        if (monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'NONE') && !monAbOff('hop')) {
           const slot = rhythmNoteMonsterSlot(note),
             el = slot ? sideMonsterRefs.current[slot - 1] : null;
           if (el) {
@@ -37470,7 +37480,10 @@ const RhythmTapTest = ({
         ci: cutInOn ? 1 : 0,
         dec: img ? img.complete && img.naturalWidth > 0 ? 1 : 0 : -1,
         lw: settings.lightweightMode ? 1 : 0,
-        fx: String(settings.effectAmount || '').slice(0, 3)
+        fx: String(settings.effectAmount || '').slice(0, 3),
+        ...(monAbSet ? {
+          ab: monAb || '-'
+        } : {})
       });
     }
     if (monster && monster.ability && rhythmMonsterAbilityTriggers(judgment)) {
@@ -37491,13 +37504,17 @@ const RhythmTapTest = ({
         };
         const slot = rhythmNoteMonsterSlot(note);
         run.abilityOwners = run.abilityOwners || {};
-        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI' || monster.ability.id === 'ITAZURA') run.abilityOwners[monster.ability.id] = slot;
-        if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
-        run.abilityFlashSlot = slot;
-        run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        if (!monAbOff('ring')) {
+          if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI' || monster.ability.id === 'ITAZURA') run.abilityOwners[monster.ability.id] = slot;
+          if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
+        }
+        if (!monAbOff('ring')) {
+          run.abilityFlashSlot = slot;
+          run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        }
         run.abilityCounts = run.abilityCounts || [];
         if (slot >= 1) run.abilityCounts[slot - 1] = (Number(run.abilityCounts[slot - 1]) || 0) + 1;
-        if (cutInOn) {
+        if (cutInOn && !monAbOff('cutin')) {
           const cutIn = cutInRefs.current[slot - 1];
           if (cutIn) {
             RHYTHM_FRAME_DIAG.cue('cutin');
@@ -37544,7 +37561,7 @@ const RhythmTapTest = ({
       rhythmRestartAnimations(lifeRestarts);
     }
     if (run.life === 0 && lifeBefore > 0) setLifeDownCount(count => count + 1);
-    const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE');
+    const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE') && !monAbOff('flash');
     const score = run.lifeDepleted ? run.lockedScore : run.score,
       lastDeltaMs = judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
     hudRef.current.set(rhythmNoteIsSky(note) ? {
@@ -99045,6 +99062,24 @@ const CardReplayBar = ({
   }, "とじる")));
 };
 const DEBUG_TRIALS = [{
+  id: 'rhythm_mon_ab1',
+  added: '2026-10-27',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_mon_ab_v1',
+  on: '1',
+  title: '🎵 モンスターノーツのかくつき調べ(1)',
+  note: 'モンスターノーツを取ったときの演出を、1回目は跳ね・2回目は能力名・3回目は光の輪だけ出さず、4回目はいつもどおりにします。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+  when: '次の演奏から'
+}, {
+  id: 'rhythm_mon_ab2',
+  added: '2026-10-27',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_mon_ab_v1',
+  on: '2',
+  title: '🎵 モンスターノーツのかくつき調べ(2)',
+  note: 'モンスターノーツを取ったときの演出を、1回目は金色の光・2回目は音・3回目はカットインだけ出さず、4回目は全部出しません。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+  when: '次の演奏から'
+}, {
   id: 'rhythm_mon_layers',
   added: '2026-10-16',
   area: 'モンヒロビート',
