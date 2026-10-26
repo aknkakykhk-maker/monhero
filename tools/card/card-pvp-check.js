@@ -21,7 +21,7 @@ const multi = read('src/parts/91-card-battle-multi.jsx').split('// ---- 部屋�
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, crypto: crypto.webcrypto, TextEncoder });
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
-  + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardLegalActions, cardAiFillBind, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
+  + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardCreateGame, cardLegalActions, cardAiFillBind, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
     cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine, cardCpuReward, cardCpuLoops, CARD_AI_LEVELS };`, ctx);
 const E = ctx.E;
@@ -357,25 +357,25 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
     /rank=\{\{send:EVENT_REPLAY_RELEASE_FLAGS\.cardBattle===true,/.test(p60) && /debug=\{cardOrigin==='debug'\}/.test(p60) && /const rankable = !!\(rank && rank\.send\) && !debug;/.test(p84));
   // ⑩ 捨て札から選ぶ段(2026-10-27 総点検D): 相手が「回避プログラム」(186・ガッツ1)を使い、払ったガッツの札が回避カードのとき、
   //   受ける側では払った札が仮の札のまま候補が作られ、候補が1枚少なくなって、相手が選んだ手をはねて試合が止まっていた
-  [['186', (c, m) => c.kind === 'dge' && E.cardUsableBy(c, m)], ['303', (c, m) => ['pow', 'int'].includes(c.kind) && E.cardUsableBy(c, m)]].forEach(([no, fit]) => {
+  [['186', (c, m) => c.kind === 'dge' && E.cardUsableBy(c, m)], ['303', (c, m) => ['pow', 'int'].includes(c.kind) && E.cardUsableBy(c, m)], ['303', (c, m) => ['pow', 'int'].includes(c.kind) && E.cardUsableBy(c, m), 'F256']].forEach(([no, fit, field]) => {
     const H = E.CARD_PVP_HIDDEN;
     const mon = Object.values(db.monsters).find((m) => m.species === db.cards[no].user && !m.main).no;
     const dA = { monsters: [mon, 'C-003', 'C-005'], cards: Array(50).fill('100') }, dB = { monsters: ['C-001', 'C-003', 'C-009'], cards: Array(50).fill('100') };
     const A = E.cardPvpNewGame(db, { myDeck: dA, mySeed: 1, foeMonsters: dB.monsters, first: 0, names: ['A', 'B'] });
     const B = E.cardPvpNewGame(db, { myDeck: dB, mySeed: 2, foeMonsters: dA.monsters, first: 1, names: ['B', 'A'] });
     const good = Object.values(db.cards).find((c) => c.ready && fit(c, A.players[0].mons[0]));
-    [A, B].forEach((s0, i) => { s0.phase = 'main'; s0.turn = 1; s0.active = i; });
-    A.players[0].hand = [no]; A.players[0].guts = Array(Math.max(1, db.cards[no].guts)).fill(good.no); A.players[0].discard = ['100', good.no];
-    B.players[1].hand = [H]; B.players[1].guts = Array(Math.max(1, db.cards[no].guts)).fill(H); B.players[1].discard = ['100', good.no];
+    [A, B].forEach((s0, i) => { s0.phase = 'main'; s0.turn = 1; s0.active = i; if (field) s0.field = { no: field, p: 1 - i, effects: db.cards[field].effects.map((e) => ({ ...e })) }; }); // 師匠のまなざし(ガッツ+1)で、悪夢(ガッツ0)も1枚払う(ナガメくんが見つけた形)
+    A.players[0].hand = [no]; A.players[0].guts = Array(Math.max(1, db.cards[no].guts) + (field ? 1 : 0)).fill(good.no); A.players[0].discard = ['100', good.no];
+    B.players[1].hand = [H]; B.players[1].guts = Array(Math.max(1, db.cards[no].guts) + (field ? 1 : 0)).fill(H); B.players[1].discard = ['100', good.no];
     const send = (from, to, act, seq) => { const n = E.cardApplyAction(db, from, act); return [n, n && E.cardPvpApplyRemote(db, to, E.cardPvpCleanMessage(JSON.parse(JSON.stringify({ t: 'act', from: 'x', seq, act, reveal: E.cardPvpRevealOf(from, act), discard: n.players[0].discard }))))]; };
     const o = E.cardLegalActions(db, A).find((a) => a.type === 'attack' && a.hand.length === 1);
     if (!o) return check(`⑩ ${no}: 場面が作れる`, false);
     const [A2, B2] = send(A, B, o, 1);
-    check(`⑩ ${no}「${db.cards[no].name}」: 選ぶ段の候補が2台で同じ(払ったガッツの札も入る)`, !!B2 && JSON.stringify(A2.pendingChoice.cands) === JSON.stringify(B2.pendingChoice && B2.pendingChoice.cands),
+    check(`⑩ ${no}「${db.cards[no].name}」${field ? '+師匠のまなざし' : ''}: 選ぶ段の候補が2台で同じ(払ったガッツの札も入る)`, !!B2 && JSON.stringify(A2.pendingChoice.cands) === JSON.stringify(B2.pendingChoice && B2.pendingChoice.cands),
       `${JSON.stringify(A2.pendingChoice.cands)} / ${JSON.stringify(B2 && B2.pendingChoice && B2.pendingChoice.cands)}`);
     const pick = A2.pendingChoice.cands[A2.pendingChoice.cands.length - 1];
     const [A3, B3] = send(A2, B2, { type: 'choose', pick }, 2);
-    check(`⑩ ${no}「${db.cards[no].name}」: 払ったガッツの札を選んでも、相手の端末で当てられる`, !!B3 && same(A3, B3));
+    check(`⑩ ${no}「${db.cards[no].name}」${field ? '+師匠のまなざし' : ''}: 払ったガッツの札を選んでも、相手の端末で当てられる`, !!B3 && same(A3, B3));
   });
   // ⑪ カード投げ(169・2026-10-27 総点検D): 手の「捨てる手札(toss)」が知らせの掃除で落ちて、受ける側で必ずはねて試合が止まっていた。0枚・2枚とも
   [[], [1, 2]].forEach((toss) => {
@@ -396,6 +396,33 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
     const B3 = E.cardApplyAction(db, B2, { type: 'pass' });
     check(`⑪ カード投げ(${toss.length}枚捨てる): 守らなかったあと、2台の場(ライフ・捨て札の数)が同じ`, !!A3 && !!B3 && same(A3, B3) && A3.players[1].mons[0].life === A3.players[1].mons[0].max - toss.length - (db.cards['169'].damage || 0));
   });
+  // ⑫ 手の項目の突き合わせ(2026-10-27 総点検D・ソランドくん): 82 が出す手(攻撃・ブリーダー・守り)の項目を、知らせの掃除(cardPvpCleanAct)が1つも落とさない。
+  //   使えるカードを1枚ずつ、使える子の場面で手札に入れ、出せる手・守りの手を全部並べて、掃除の前とあとで同じかを見る(カード投げの toss を落としていた形を止める)
+  {
+    const monOf2 = {}; Object.values(db.monsters).filter((m) => m.ready !== false && !m.main).sort((a, b) => (a.no < b.no ? -1 : 1)).forEach((m) => { if (!monOf2[m.species]) monOf2[m.species] = m.no; });
+    const hyb = Object.values(db.monsters).find((m) => m.main && m.sub && m.ready !== false && monOf2[m.main] && monOf2[m.sub]);
+    const keys = new Set(); const lost = []; let n = 0;
+    const look = (a, where) => { n++; Object.keys(a).forEach((k) => keys.add(k)); const c = E.cardPvpCleanAct(JSON.parse(JSON.stringify(a))); const sk = (v) => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((kk) => [kk, x[kk]])) : x)); if (sk(c) !== sk(a) && lost.length < 5) lost.push(`${where}: ${JSON.stringify(a)} → ${JSON.stringify(c)}`); };
+    Object.values(db.cards).filter((c) => c.ready).forEach((c) => {
+      const u = monOf2[c.user] || 'C-003';
+      const mons = c.no === '352' && hyb ? [monOf2[hyb.main], monOf2[hyb.sub], 'C-003'] : [u, u === 'C-003' ? 'C-009' : 'C-003', 'C-005'];
+      let st = E.cardCreateGame(db, { decks: [{ monsters: mons, cards: Array(50).fill('100') }, { monsters: ['C-001', 'C-003', 'C-005'], cards: Array(50).fill('100') }], seed: 5, first: 0 });
+      st = E.cardApplyAction(db, st, { type: 'setupGuts', hand: [] });
+      st.players[0].hand = [c.no, c.no, '100', '026']; st.players[0].guts = Array(9).fill('100'); st.players[0].discard = ['100', '108', '026', c.no];
+      st.players[1].hand = ['100']; st.players[1].mons[0].life = 3;
+      st.players[0].mons[1].attacks = 0;
+      E.cardLegalActions(db, st).forEach((a) => look(a.hand && a.hand.some((i) => (db.cards[st.players[0].hand[i]].effects || []).some((e) => e.t === 'attachBind')) ? E.cardAiFillBind(db, st, a, E.cardAiPolicy('kyuko', 'easy')) : a, `${c.no} 攻撃`));
+      // 守り: 相手のふつうの技を受けて、守りの手を全部
+      if (['dge', 'blk'].includes(c.kind)) {
+        let g = E.cardCreateGame(db, { decks: [{ monsters: ['C-001', 'C-003', 'C-005'], cards: Array(50).fill('100') }, { monsters: mons, cards: Array(50).fill('100') }], seed: 5, first: 0 });
+        g = E.cardApplyAction(db, g, { type: 'setupGuts', hand: [] });
+        g.players[0].hand = ['026']; g.players[0].guts = Array(9).fill('100'); g.players[1].hand = [c.no]; g.players[1].guts = Array(9).fill('100');
+        E.cardLegalActions(db, g).filter((a) => a.type === 'attack').forEach((a) => { const p2 = E.cardApplyAction(db, g, a); if (p2 && p2.pending) E.cardLegalActions(db, p2).forEach((x) => look(x, `${c.no} 守り`)); });
+      }
+    });
+    check(`⑫ 82 が出す手 ${n}通り(項目 ${[...keys].sort().join('・')})を、知らせの掃除が1つも落とさない`, !lost.length, lost.join(' / '));
+    ['toss', 'split', 'fuse', 'form', 'bind', 'to', 'target', 'mon', 'hand'].forEach((k) => check(`⑫ 突き合わせの場面に「${k}」の手が入っている`, keys.has(k)));
+  }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();
