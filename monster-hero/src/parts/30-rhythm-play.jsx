@@ -967,7 +967,14 @@ const RhythmResultMoreHint=({label})=>{
   React.useEffect(()=>{
     const box=document.querySelector('[data-rhythm-result-scroll]');
     if(!box) return undefined;
-    const update=()=>setMore(box.scrollHeight-box.scrollTop-box.clientHeight>24);
+    // 知らせる続き(ビートP・ライブログ)のいちばん下の見出しが、もう箱の中に見えていれば出さない
+    // (2026-10-26 ダメダシ z01。見出しが見えているのに印が出たままで、ライブログの説明「棒=… / 数字=BAD・MISS」に重なって読めなかった)
+    const update=()=>{
+      const targets=[...box.querySelectorAll('[data-rhythm-result-beat-points],[data-rhythm-live-log]')];
+      const last=targets[targets.length-1];
+      const seen=!!last&&last.getBoundingClientRect().top<box.getBoundingClientRect().bottom-28;
+      setMore(!seen&&box.scrollHeight-box.scrollTop-box.clientHeight>24);
+    };
     update();
     box.addEventListener('scroll',update,{passive:true});
     window.addEventListener('resize',update);
@@ -1247,7 +1254,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 判定ラインの高さは描くたびに測る(下の measure)。測った高さが変わったら、空中の面を描き直す(skyLineTick)
   RHYTHM_ROAD_WIDTH.set(orientationIsLandscape()?(RHYTHM_ROAD_WIDTHS[settings.roadWidth]||1):1);
   // 案3の2段目(試作・2026-10-16): カメラを寝かせる。道の幅と同じく、描き始めより前に入れる(判定・入力・見た目がそろって変わる)
-  const cameraDeep=useState(()=>rhythmCameraDeepActive())[0];
+  // 道の奥行き(オプション「深い」・2026-10-27)か、デバッグの試作 c3b のとき、カメラを寝かせる。演奏を始めるときに1回だけ決める(途中で変えると押す場所が変わるため)
+  const cameraDeep=useState(()=>settings.roadDepth==='DEEP'||rhythmCameraDeepActive())[0];
   RHYTHM_PROJECTION_CAMERA.set(cameraDeep);
   const [skyLineTick,setSkyLineTick]=useState(0);
   if(skyChart)RHYTHM_SKY_LIFT.set(orientationIsLandscape());
