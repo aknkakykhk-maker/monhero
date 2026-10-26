@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c1094ed60ff56ff
+// generated-sha256: 1439c2b73fcf508f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 10:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6336,6 +6336,9 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 // 頭から顎までをまとめてピンクの判定から外す。ピンクの毛はここより下にしか無い。
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
+// オボロゲソウの花の範囲(上・左・右。縦横とも絵の幅を1とした割合)と、白い本体の範囲(2026-10-26 高画質の絵に合わせて実測)
+const OBORO_FLOWER_BOXES = [[0.31, 0.06, 0.71, 0.455], [0.04, 0.24, 0.40, 0.575], [0.60, 0.24, 0.96, 0.575]];
+const OBORO_BODY_BOX = [0.28, 0.6, 0.72, 0.9];
 const MASU_COLOR_REGION_HUES = {
   // ミーアは正解見本から埋め込んだ部位マップで境界を固定する。以下は3レイヤーを既存経路へ知らせる控え。
   Mia: [
@@ -6386,7 +6389,15 @@ const MASU_COLOR_REGION_HUES = {
   // 花の中心(淡い黄色、hue50前後)は彩度が0.18前後あり白バケツ(sMax0.18)に入りきらず、
   // どの部位にも属さないまま常に無染色で残っていた(花びらだけ染まって中心だけ元の黄色が浮く)ため、
   // 花びらと同じ染色①にまとめて含めた
-  Oboro: [[{ hue: 239 }, { hue: 50, sMax: 0.3, vMin: 0.8 }], { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
+  // 2026-10-26 高画質の絵へ差し替え。新しい絵は色が濃く、花びらのふち(水色)と茎・葉が同じ色相になり、
+  // 本体も淡い水色(彩度0.2前後)で白の判定から外れたので、花は位置(待機アニメの花の切り抜きと同じ範囲)で、本体は淡さで分ける。
+  // 部位の数は3のまま(花／茎・葉・足／本体)
+  Oboro: [
+    // 花びら(濃い青)と中(クリーム色)、茎(水色)と本体のあいだは色相が大きく違うので、既定の「境目は塗らない」を切る(内側に元の色の筋が残った)
+    [{ hue: [232, 200], sMin: 0.02, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { hue: [50, 100, 150], sMin: 0.02, vMin: 0.5, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { white: true, sMax: 0.4, vMin: 0.75, bbox: OBORO_FLOWER_BOXES }],
+    { hue: 200, sMin: 0.02, notBbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, // 葉・足の白い光の点も同じ部位に入れる(新しい絵は光がはっきりしている)
+    { white: true, sMax: 0.55, vMin: 0.9, bbox: OBORO_BODY_BOX },
+  ],
   // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。
   // 花の内側(淡いピンク)と体(ほぼ白)はどちらも低彩度で、色相・彩度の閾値だけでは
   // どうしても互いに混ざってごま塩状に汚れる。そのため2026年8月に正式マスク
@@ -6812,7 +6823,8 @@ const MASK_EXACT_ANALYSIS_MAX_SIZE = 768;
 // (96px表示)で口まわりに階段が残っていた。
 // 判定と平滑化は解析サイズのまま(多数決の半径が画像幅に比例するため、解像度を上げると
 // 実測で7秒級まで重くなる)、書き出しだけを高解像度で行うことで見た目だけを直す。
-const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true };
+// モノリスは 2026-10-26 に元絵を160pxから1024pxへ差し替えたので足した(白で染めると帯の境目に線が出ていた)
+const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true, Monol: true };
 // 高解像度で書き出すときのマスクの最大サイズ(px)。表示は最大でも250px程度なので、
 // 元絵の原寸まで上げる必要はなく、階段が見えなくなる範囲で抑える
 const MASK_HIRES_MAX_SIZE = 768;
@@ -6886,6 +6898,14 @@ const _buildHiResMaskUrls = (smoothed, regionDefs, src, w, h, natW, natH) => {
         if (hit < 0) continue;
         const o = (y*outW + x)*4 + 3;
         for (let idx = 0; idx < outDatas.length; idx++) outDatas[idx].data[o] = (idx === hit) ? 255 : 0;
+        // 帯(band)どうしの境目は、となりの帯のマスクも2画素ぶん重ねる。境目でぴったり切ると、表示の大きさへ
+        // 引き伸ばしたときに境目の1行が両方とも半分の濃さになり、元の色が細い線として透けた
+        // (2026-10-26 モノリスを1024pxの絵にしたら、白で染めたときに帯の境目へ線が出た)
+        for (const [idx, def] of posRegions) {
+          if (idx === hit || !def.band) continue;
+          const [y0, y1] = def.band; const e = 2 / outH;
+          if (ny >= y0 - e && ny < y1 + e) outDatas[idx].data[o] = 255;
+        }
       }
     }
   }
@@ -53044,6 +53064,11 @@ const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}
 const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御', fld: '全体' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
+// 難易度の札の色(対戦の上の帯。2026-10-26)
+const CARD_LEVEL_TONE = Object.freeze({
+  easy: 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100', normal: 'border-sky-300/70 bg-sky-500/20 text-sky-100', hard: 'border-amber-300/70 bg-amber-500/20 text-amber-100',
+  expert: 'border-rose-300/70 bg-rose-500/20 text-rose-100', master: 'border-fuchsia-300/80 bg-fuchsia-500/25 text-fuchsia-100', tutorial: 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100',
+});
 // 結果の画面の大きい見出し(2026-10-24 改善部の点検 V6「勝ち負けが左上の小さな見出しだけ」)。tone … win / lose / plain
 const CardResultBanner = ({ title, sub, tone = 'win' }) => (
   <div data-card-result-banner={tone} className="mhms-in py-1 text-center">
@@ -54095,17 +54120,19 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
 
   return (
     <div ref={boardRef} data-mh-screen data-card-battle data-card-mode={mode} data-card-wide={wide ? 'true' : undefined} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
-      <div className={`flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`}>
+      <div data-card-head className={`flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2 py-0.5`}>
         <div className="flex shrink-0 items-center gap-1.5">
           <button type="button" data-card-quit onClick={() => setQuit(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{tutorial ? '飛ばす' : '投了'}</button>
           {pvp && <CardPvpChat/>}
           {!tutorial && <button type="button" data-card-log-open onClick={() => setLogSheet(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200" aria-label="ターンごとの記録を見る">記録</button>}
         </div>
-        {pvp ? <CardPvpStatus clock={pvpClock}/> : tiny && !wide ? <span className="flex-1"/> : <span className="min-w-0 truncate text-[15px] font-black">MFバトルカード</span>}
-        <span className="flex shrink-0 items-center gap-1.5">
+        {/* 上の帯(2026-10-26 社長「上のタブが色々切れてる。難易度の表示もほしい」): 対戦中は題を出さず、難易度の札にする(練習試合は「練習」・マルチは持ち時間)。
+            右のターンの表示は2行まで折り返し、どの幅でも切らない */}
+        {pvp ? <CardPvpStatus clock={pvpClock}/> : <span data-card-level-badge={tutorial ? 'tutorial' : game.level} className={`shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE[tutorial ? 'tutorial' : game.level] || CARD_LEVEL_TONE.easy}`}>{tutorial ? '練習' : (CARD_LEVEL_LABEL[game.level] || '')}</span>}
+        <span data-card-head-right className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
           {/* 裏のクイック∞周回(設計書 5-3)。対戦中は帯もポップアップも出さず、ここに小さく「⚔ ◯周目」だけ。止まったら赤くする */}
-          {quickRun && <span data-card-battle-quick-run={quickRun.stopped ? 'stopped' : 'live'} aria-label={quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`} className={`rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`}>⚔ {quickRun.loops}周目</span>}
-          <span className="text-[12px] font-bold text-violet-200">ターン {Math.max(1, st.turn)} ・ {st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span>
+          {quickRun && <span data-card-battle-quick-run={quickRun.stopped ? 'stopped' : 'live'} aria-label={quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`} className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`}>⚔ {quickRun.loops}周目</span>}
+          <span data-card-head-turn className={`min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`} style={JA_WRAP_STYLE}><span className="whitespace-nowrap">ターン {Math.max(1, st.turn)}</span> ・ <span className="whitespace-nowrap">{st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`}</span></span>
         </span>
       </div>
       {/* 横画面(④): 左に「相手の帯〜自分の帯」、右に「案内〜手札〜下のボタン」。縦のときは2つの箱を display:contents にして、今までと同じ縦の並び */}

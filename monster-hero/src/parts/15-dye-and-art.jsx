@@ -150,6 +150,9 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 // 頭から顎までをまとめてピンクの判定から外す。ピンクの毛はここより下にしか無い。
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
+// オボロゲソウの花の範囲(上・左・右。縦横とも絵の幅を1とした割合)と、白い本体の範囲(2026-10-26 高画質の絵に合わせて実測)
+const OBORO_FLOWER_BOXES = [[0.31, 0.06, 0.71, 0.455], [0.04, 0.24, 0.40, 0.575], [0.60, 0.24, 0.96, 0.575]];
+const OBORO_BODY_BOX = [0.28, 0.6, 0.72, 0.9];
 const MASU_COLOR_REGION_HUES = {
   // ミーアは正解見本から埋め込んだ部位マップで境界を固定する。以下は3レイヤーを既存経路へ知らせる控え。
   Mia: [
@@ -200,7 +203,15 @@ const MASU_COLOR_REGION_HUES = {
   // 花の中心(淡い黄色、hue50前後)は彩度が0.18前後あり白バケツ(sMax0.18)に入りきらず、
   // どの部位にも属さないまま常に無染色で残っていた(花びらだけ染まって中心だけ元の黄色が浮く)ため、
   // 花びらと同じ染色①にまとめて含めた
-  Oboro: [[{ hue: 239 }, { hue: 50, sMax: 0.3, vMin: 0.8 }], { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
+  // 2026-10-26 高画質の絵へ差し替え。新しい絵は色が濃く、花びらのふち(水色)と茎・葉が同じ色相になり、
+  // 本体も淡い水色(彩度0.2前後)で白の判定から外れたので、花は位置(待機アニメの花の切り抜きと同じ範囲)で、本体は淡さで分ける。
+  // 部位の数は3のまま(花／茎・葉・足／本体)
+  Oboro: [
+    // 花びら(濃い青)と中(クリーム色)、茎(水色)と本体のあいだは色相が大きく違うので、既定の「境目は塗らない」を切る(内側に元の色の筋が残った)
+    [{ hue: [232, 200], sMin: 0.02, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { hue: [50, 100, 150], sMin: 0.02, vMin: 0.5, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { white: true, sMax: 0.4, vMin: 0.75, bbox: OBORO_FLOWER_BOXES }],
+    { hue: 200, sMin: 0.02, notBbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, // 葉・足の白い光の点も同じ部位に入れる(新しい絵は光がはっきりしている)
+    { white: true, sMax: 0.55, vMin: 0.9, bbox: OBORO_BODY_BOX },
+  ],
   // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。
   // 花の内側(淡いピンク)と体(ほぼ白)はどちらも低彩度で、色相・彩度の閾値だけでは
   // どうしても互いに混ざってごま塩状に汚れる。そのため2026年8月に正式マスク
@@ -626,7 +637,8 @@ const MASK_EXACT_ANALYSIS_MAX_SIZE = 768;
 // (96px表示)で口まわりに階段が残っていた。
 // 判定と平滑化は解析サイズのまま(多数決の半径が画像幅に比例するため、解像度を上げると
 // 実測で7秒級まで重くなる)、書き出しだけを高解像度で行うことで見た目だけを直す。
-const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true };
+// モノリスは 2026-10-26 に元絵を160pxから1024pxへ差し替えたので足した(白で染めると帯の境目に線が出ていた)
+const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true, Monol: true };
 // 高解像度で書き出すときのマスクの最大サイズ(px)。表示は最大でも250px程度なので、
 // 元絵の原寸まで上げる必要はなく、階段が見えなくなる範囲で抑える
 const MASK_HIRES_MAX_SIZE = 768;
@@ -700,6 +712,14 @@ const _buildHiResMaskUrls = (smoothed, regionDefs, src, w, h, natW, natH) => {
         if (hit < 0) continue;
         const o = (y*outW + x)*4 + 3;
         for (let idx = 0; idx < outDatas.length; idx++) outDatas[idx].data[o] = (idx === hit) ? 255 : 0;
+        // 帯(band)どうしの境目は、となりの帯のマスクも2画素ぶん重ねる。境目でぴったり切ると、表示の大きさへ
+        // 引き伸ばしたときに境目の1行が両方とも半分の濃さになり、元の色が細い線として透けた
+        // (2026-10-26 モノリスを1024pxの絵にしたら、白で染めたときに帯の境目へ線が出た)
+        for (const [idx, def] of posRegions) {
+          if (idx === hit || !def.band) continue;
+          const [y0, y1] = def.band; const e = 2 / outH;
+          if (ny >= y0 - e && ny < y1 + e) outDatas[idx].data[o] = 255;
+        }
       }
     }
   }
