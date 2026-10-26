@@ -2061,6 +2061,20 @@ const cardNormalizeCpuUnlocked = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return { hard: r.hard === true, expert: r.expert === true, master: r.master === true };
 };
+// 記録から、開いているはずの強さを足す(2026-10-26 社長「ハード解放したのにできてない」)。
+//   1つ下の強さで勝ったことがあれば開いている扱い(NORMAL→HARD・HARD→EXPERT・EXPERT→MASTER)。勝ち数(byLevel)と最近の対戦(recent)の両方を見る。
+//   読み込みのときに足すだけで、保存へは書き戻さない(次に勝ったとき、ふだんどおり一緒に保存される)。数を配る処理ではないので、何度通っても増えない
+const cardUnlockedWithRecord = (unlocked, record) => {
+  const u = cardNormalizeCpuUnlocked(unlocked);
+  const rec = cardNormalizeRecord(record);
+  const wonAt = (lv) => rec.byLevel.win[lv] > 0 || rec.recent.some((x) => x.level === lv && x.outcome === 'win');
+  const out = { ...u };
+  for (let i = 1; i < CARD_LEVEL_ORDER.length - 1; i++) {
+    const next = CARD_LEVEL_ORDER[i + 1];
+    if (!out[next] && wonAt(CARD_LEVEL_ORDER[i])) out[next] = true;
+  }
+  return out;
+};
 const cardLevelOpen = (unlocked, levelId) => levelId === 'easy' || levelId === 'normal' || (unlocked && unlocked[levelId] === true);
 
 // スターターを配る(一度きり。印がある人には二度と配らない)。300 ビートPもいっしょに

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05d709a87625a809
+// source-sha256: a4ebd98a1b546e3e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 20:33";
+const BUILD_DATE = "2026-10-26 21:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86114,6 +86114,19 @@ const cardNormalizeCpuUnlocked = v => {
     master: r.master === true
   };
 };
+const cardUnlockedWithRecord = (unlocked, record) => {
+  const u = cardNormalizeCpuUnlocked(unlocked);
+  const rec = cardNormalizeRecord(record);
+  const wonAt = lv => rec.byLevel.win[lv] > 0 || rec.recent.some(x => x.level === lv && x.outcome === 'win');
+  const out = {
+    ...u
+  };
+  for (let i = 1; i < CARD_LEVEL_ORDER.length - 1; i++) {
+    const next = CARD_LEVEL_ORDER[i + 1];
+    if (!out[next] && wonAt(CARD_LEVEL_ORDER[i])) out[next] = true;
+  }
+  return out;
+};
 const cardLevelOpen = (unlocked, levelId) => levelId === 'easy' || levelId === 'normal' || unlocked && unlocked[levelId] === true;
 const CARD_STARTER_POINT = 300;
 const cardGrantStarter = (db, {
@@ -90796,7 +90809,7 @@ const CardBattleScreen = ({
       starter: cardNormalizeStarter(starter),
       daily: cardNormalizeDaily(daily, cardTodayJst()),
       record: cardNormalizeRecord(record),
-      unlocked: cardNormalizeCpuUnlocked(unlocked),
+      unlocked: cardUnlockedWithRecord(unlocked, record),
       tutorial: cardNormalizeTutorial(tutorial),
       bgm: normalizeCardBgm(bgm, cardIsBgmTrack),
       settings: normalizeCardSettings(settings)
