@@ -19,7 +19,7 @@ const fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const root = path.resolve(__dirname, '..', '..');
-const PORT = 8994;
+const PORT = Number(process.env.CARD_PORT) || 8994; // 別の検査と同時に回すときは CARD_PORT で変える
 const SHOT = process.env.CARD_SHOT_DIR || '';
 // 画面の大きさ(既定は iPhone 13 の 390×844。SE は CARD_VIEWPORT=375x667)
 const [VW, VH] = (process.env.CARD_VIEWPORT || '390x844').split('x').map(Number);
@@ -567,7 +567,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const afterPlus = await page.locator('[data-card-deck-count]').innerText();
     const monMinus = await page.locator('[data-card-deck-mon="0"] span').innerText().catch(() => '');
     const chipsRows = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); const ys = new Set([...el.children].map((b) => Math.round(b.getBoundingClientRect().top))); return ys.size; });
-    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && chipsRows === 1, JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows }));
+    // 絞り込みは、縦の画面では1列(横に流す)、横の画面では折り返して並べる作り(87 の data-card-deck-chips)。1列は縦のときだけ見る
+    const portrait = VH > VW;
+    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは縦で1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && (!portrait || chipsRows === 1), JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows, portrait }));
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));
