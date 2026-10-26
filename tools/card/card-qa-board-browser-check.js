@@ -16,6 +16,7 @@
 //   ⑨ 320×568: カララギマンゴーを選んで狙うとき・「攻撃できない」の子がいるときも、下のボタンが画面の中(最後の見回り)
 //   ⑩ 助手全員の結果の台詞で、記号だけが行頭に来ない(最後の見回り)
 //   ⑫ 対戦開始の画面(VS)の自分側にも、自分のアイコンが出る
+//   ⑮ 320・390・横844: どちらの番か、ひと目で分かる(真ん中の知らせ・場のふち・手札の暗さ・上の帯の色)。知らせのあいだ、相手の吹き出しは隠す(札に重ねない)
 //   ⑭ ランキングの「マルチ」に、その人のアイコンが出る(切れた古い値も絵に)
 //   ⑬ 助手と対戦の結果の画面に「自分 vs 助手・勝ち負け」の1行(マルチの結果は card-pvp-browser-check)
 //   ⑪ 320・375・390・横844: 自分の帯に自分のアイコン(フレーム付き)と名前が出る・名前が切れない・手札にかからない
@@ -359,6 +360,33 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       const by = (n) => rows.find((r) => r.name === n) || {};
       check('⑭ ランキングの「マルチ」に、その人のアイコンが出る(切れた値も絵に・分からない値は字を出さない)',
         rows.length === 3 && by('いちか').img >= 1 && by('あつ').img >= 1 && !rows.some((r) => /sneguroc|atsu_hap|zzzz/.test(r.text)), JSON.stringify(rows.map((r) => [r.name, r.img])));
+      await page.close();
+    }
+    // ⑮ どちらの番か、ひと目で分かる(2026-10-26 ソラシドさん「どっちのターンか分かりにくい」): 相手の番から始めて、自分の番になるまでを見る
+    //   相手の番: 真ん中に「◯◯の番」・相手の場のふちが光る・手札が暗い・上の帯は落ち着いた色
+    //   自分の番: 真ん中に「あなたの番」・自分の場のふちが光る・手札は明るい・上の帯は金色。知らせは画面の中で字が切れず、少しで消える
+    for (const [w, h] of [[320, 568], [390, 844], [844, 390]]) {
+      const page = await openBattle(browser, { ...base, active: 1, mode: 'wait', viewport: { width: w, height: h } }, errors);
+      const look = () => page.evaluate(() => {
+        const b = document.querySelector('[data-card-turn-banner]'), btn = b && b.querySelector('button');
+        const r = btn && btn.getBoundingClientRect();
+        return { banner: b ? b.getAttribute('data-card-turn-banner') : '', text: btn ? btn.innerText : '', inside: !!r && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, cut: !!btn && btn.scrollWidth > btn.clientWidth + 1,
+          side: (document.querySelector('[data-card-side-active]') || { getAttribute: () => '' }).getAttribute('data-card-side-active'), dim: !!document.querySelector('[data-card-hand-dim]'), headMe: !!document.querySelector('[data-card-head-turn-me]'),
+          bubble: (() => { const q = document.querySelector('[data-card-bubble]'); return q ? getComputedStyle(q).visibility : 'none'; })() };
+      });
+      let foe = null, mine = null, foeShot = false;
+      for (let t = 0; t < 700 && !mine; t++) {
+        const r = await look();
+        if (!foe && r.banner === 'foe') { foe = r; if (!foeShot) { foeShot = true; await shot(page, `turn-foe-${w}x${h}`); } }
+        if (r.banner === 'me') { mine = r; await shot(page, `turn-me-${w}x${h}`); }
+        if (!mine) await page.waitForTimeout(100);
+      }
+      // 自分の番の知らせが消えたあとの、ふだんの見た目
+      await page.locator('[data-card-turn-banner]').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
+      const after = await look();
+      await shot(page, `turn-me-after-${w}x${h}`);
+      check(`⑮ ${w}×${h}: 相手の番は「◯◯の番」・相手の場が光る・手札が暗い・上の帯は落ち着いた色`, foe && /の番$/.test(foe.text) && foe.inside && !foe.cut && foe.side === 'foe' && foe.dim && !foe.headMe && foe.bubble !== 'visible', JSON.stringify(foe));
+      check(`⑮ ${w}×${h}: 自分の番は「あなたの番」・自分の場が光る・手札は明るい・上の帯は金色。知らせは少しで消える`, mine && mine.text === 'あなたの番' && mine.inside && !mine.cut && mine.bubble !== 'visible' && after.banner === '' && after.side === 'me' && !after.dim && after.headMe, JSON.stringify({ mine, after }));
       await page.close();
     }
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
