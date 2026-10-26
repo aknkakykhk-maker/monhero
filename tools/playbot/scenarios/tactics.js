@@ -231,7 +231,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       }
       // ★勇者モン・供モンの画面は、はじめから誰かが選ばれていて「この子で挑む」「供モンNにする」が押せる。
       //   先に決定を押すと、選びたい子ではなく前回の子・一覧の先頭の子になる。選びたい子が画面にいれば、先にその子を押す
-      const monsEarly = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
+      const monsEarly = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && !/^(詳細を見る|くわしく見る)$/.test(x.textContent.trim()) && !/DEBUG/.test(x.textContent));
       const wantBtnEarly = (name) => live.find((x) => x.textContent.trim().replace(/^前回/, '') === name) || monsEarly.find((x) => x.textContent.includes(name));
       if (!window.__pbJustPicked && pick(/この子で挑む|供モン\d*にする/)) {
         const at = (window.__pbWant || []).findIndex((name) => !!wantBtnEarly(name));
@@ -241,7 +241,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
       const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
       const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
-      const mons = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
+      const mons = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && !/^(詳細を見る|くわしく見る)$/.test(x.textContent.trim()) && !/DEBUG/.test(x.textContent));
       // 勇者えらびは顔アイコンの並びで、タイルの文字は名前だけ(「前回」が付くことがある)。一覧のカードは名前を含む
       const wantBtnOf = (name) => live.find((x) => x.textContent.trim().replace(/^前回/, '') === name) || mons.find((x) => x.textContent.includes(name));
       const wantAt = (window.__pbWant || []).findIndex((name) => !!wantBtnOf(name));
@@ -320,7 +320,7 @@ const closeExPanel = (s) => s.page.evaluate(() => { const b = document.querySele
 
 // WAVE の合間・報酬えらびなど。人と同じく「次へ進む」を押し、選ぶ画面では1つ選ぶ
 // 取り消し・やり直しも押さない(押すと同じ画面を行ったり来たりする)
-const BACKWARD = /^(キャンセル|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる|降参|取り消す|下げる|選び直す|やり直す|変更せず戻る/;
+const BACKWARD = /^(キャンセル|やめる|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる|降参|取り消す|下げる|選び直す|やり直す|変更せず戻る/;
 // 進むボタン。上にあるものほど先に押す(選ぶ画面で1つ選んだあと、確定 → 次の画面へ)
 const FORWARD = [/^(この供モンを選ぶ|勇者モンに選ぶ|この子で挑む|供モン\d*にする)/, /^(習得する|強化する|決定する|決定|確定)$/, /^(次へ進む|次のWAVEへ|次へ|進む|バトルへ|出撃|出発|OK|受け取る)/, /^アシストカードへ$/];
 async function betweenWaves(s, ctx) {
