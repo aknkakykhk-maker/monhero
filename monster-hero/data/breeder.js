@@ -26,7 +26,7 @@ const SNEGUROCHKA_AWAKENED_MARKET_ICON = "images/monsters/SNEGUROCHKA_AWAKENED.P
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
 const DISC_STONE_BASE = "images/disc-icons/disc-stone-base.PNG?v=2cf55b47492a";
-const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=dd757e49f636";
+const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=0f5cf76eb420";
 const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=39933ff87253";
 const ARK_DISC_ICON = "images/disc-icons/ark.png?v=55e7c1c5d1e9";
 const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=4d6d7f7f7234";
