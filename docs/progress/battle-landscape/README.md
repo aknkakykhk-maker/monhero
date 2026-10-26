@@ -18,3 +18,18 @@
 - `proposal-*.css` は試しの物(撮るときに `@media` を付けず全部に効かせた)。採用したら `@media (orientation: landscape) and (max-height: 500px)` の中へ入れ、parts 側で作る
 
 撮影: 2026-10-26 バトル部セコンドくん
+
+## 決まった物(2026-10-26 社長が案Aを選んだ → 本体に入れた)
+
+**前と後の写真: [`before-after.jpg`](before-after.jpg)**
+
+- `monster-hero/src/parts/71-screen-battle.jsx` の `BATTLE_LANDSCAPE_CSS`。効くのは `@media (orientation: landscape) and (max-height: 520px)` の中だけ(難易度えらびの2列 #3790 と同じ条件)。縦画面は変わらない
+- 戦いの画面があるときだけ(`:has([data-battle-speed])`)、遊ぶ列の幅の上限を外して2列にする。WAVE の合間の画面は今までどおり
+- 目印の属性を足した: 敵の舞台 `data-battle-stage`・手札 `data-battle-hand`・真ん中に出す札 `data-battle-float`・列の右端に寄せる札 `data-battle-float-right`(右からの余白)
+- 右の列の幅は MFバトルカードの横向き(カード部ブレイブくん)にそろえて `min(42vw, 420px)`。入りきらないときは右の列だけ縦に送れる
+- 測った位置(844×390): 手札の列の左端 490px / 移動の吹き出しの右端 482px / 真ん中の札の中心 245px(左の列の真ん中)
+
+### 前からある物(今回は直していない)
+
+- 移動の吹き出しが、WAVE の合間の画面にも残って、列の右外に出る
+- 横向きの WAVE 3 のトレーニングで、選ぶものが画面に出ずボットが進めなくなった(合間の画面の作り)

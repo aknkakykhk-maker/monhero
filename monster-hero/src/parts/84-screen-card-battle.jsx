@@ -160,6 +160,8 @@ const cardGuardBlockReasons = (db, st) => {
     else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
     else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;
     else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
+    // 防御でマイナスされない技(技そのもの・渾身つき)には −N・半分・0 の防御は出せない(案A)。はね返す防御は別
+    else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
     if (why && !out.includes(why)) out.push(why);
   });
   return out.slice(0, 2);
@@ -169,18 +171,51 @@ const CARD_DRAG_THRESHOLD = 10; // 指がこれだけ動いたら「運ぶ」(�
 const CARD_ME = 0;
 const cardDeciderOf = (st) => (st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st));
 
-// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し
+// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し。
+// 2回続けてタップ(CARD_DOUBLE_TAP_MS の内。モンヒロバトルの手札と同じ間・10-core)でも詳しい画面(2026-10-26 社長「ダブルタップでも見られるように」)。
+//   press(no, onTap, opt) の opt:
+//     double … false ならダブルタップを使わない(デッキ編成。1タップで入れる・続けて入れられるを残す。社長の決め)
+//     hold   … true なら1回目のタップを CARD_DOUBLE_TAP_MS 待ってから動かす(押すと技が決まってしまう所。2回目が来たら動かさずに詳しい画面)
+//     undo   … 1回目をすぐ動かす所で、2回目が来たときに1回目を取り消す関数
+//   iPhone の Safari がダブルタップで画面を拡大しないよう、押せるカードには data-card-press を付け、その印にだけ touch-action: manipulation を当てる
+if (typeof document !== 'undefined' && document.head && !document.getElementById('mh-card-press-css')) {
+  const el = document.createElement('style');
+  el.id = 'mh-card-press-css';
+  el.textContent = '[data-card-press]{touch-action:manipulation}';
+  document.head.appendChild(el);
+}
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return (no, onTap) => ({
-    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms); },
+  const last = useRef(null);    // 前のタップ { no, at }
+  const pending = useRef(null); // hold で待っている1回目
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(pending.current); }, []);
+  return (no, onTap, opt = {}) => ({
+    'data-card-press': true,
+    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; clearTimeout(pending.current); onLong(no); }, ms); },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
     onPointerCancel: () => clearTimeout(timer.current),
     onContextMenu: (e) => e.preventDefault(),
-    onClick: (e) => { if (fired.current) { fired.current = false; return; } if (onTap) onTap(e); },
+    onClick: (e) => {
+      if (fired.current) { fired.current = false; return; }
+      const now = Date.now();
+      if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
+        last.current = null;
+        if (pending.current) { clearTimeout(pending.current); pending.current = null; }
+        else if (opt.undo) opt.undo();
+        onLong(no);
+        return;
+      }
+      last.current = { no, at: now };
+      if (!onTap) return;
+      if (opt.hold && opt.double !== false) {
+        clearTimeout(pending.current);
+        pending.current = setTimeout(() => { pending.current = null; onTap(); }, CARD_DOUBLE_TAP_MS);
+        return;
+      }
+      onTap(e);
+    },
   });
 };
 
@@ -470,16 +505,19 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   // 動き(85-card-battle-motion.jsx): attack … SkillFxMotion で技の動き / hit 揺れ / dodge よける(残像) / jump 跳んでよける / guard 防ぐ(光の盾と数字) / KO は倒れたまま
   // 横画面(wide)は高さ390で上下2段を収めるので、絵をいちばん小さくする
-  const artSize = wide ? 'max-h-[40px] max-w-[56px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  // 横画面は、まんなかが空いていたので、絵を大きくする(2026-10-27 ソランドくん「場のモンスターの絵と場のカードが小さい」)。
+  //   高さは画面の高さから決める(40〜64px。844×390 で 64px・667×375 で 56px ほど。上下の帯とまんなかの 64px を引いた残りを2段で分ける)
+  const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
+  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art
-    ? <img src={art} alt="" className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
+    ? <img src={art} alt="" style={wide ? { maxHeight: wideArtH } : undefined} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
-    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? 'h-[40px]' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
-      style={mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : undefined}>
+    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
+      style={{ ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
         : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
@@ -498,7 +536,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return (
-    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
+    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap, { hold: mark === 'target' || mark === 'user' }) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
       {opp ? <>{info}{artEl}</> : <>{artEl}{info}</>}
     </div>
   );
@@ -939,6 +977,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const myTurn = !replay && st.winner === null && decider === CARD_ME;
   // どちらの番か(守りの場面でも、番の持ち主は st.active)。場のふち・上の帯の色に使う
   const turnMe = st.active === CARD_ME;
+  // 上の帯の番。見返しでは「いま見せている手を打ったときの場」で数える(下の帯と同じ。1手目は「はじまり」のまま。2026-10-27 カゲあつくんの見直し)
+  const headSt = replay && replayAt > 0 ? replay.states[replayAt - 1] : st;
+  const headMe = headSt.active === CARD_ME;
+  // 見返しでは助手の吹き出しを出さない(まんなかの記録の箱に重なって読めなかった。2026-10-27 カゲあつくんの見直し)
+  useEffect(() => { if (replay && bubble) setBubble(null); }, [bubble && bubble.key]);
   const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait'
     : st.pendingPray ? 'pray'
@@ -1039,7 +1082,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const rank = (i) => { const c = cardOf(db, me.hand[i]); return c ? (c.user === 'breeder' ? 9 : (CARD_KIND_ORDER[c.kind] ?? 8)) : 10; };
     return idx.sort((a, b) => rank(a) - rank(b) || a - b);
   })();
-  const handLarge = settings.handText === 'LARGE' && !tiny; // 手札の字を大きく(狭い画面では、ふつうのまま)
+  const handLarge = settings.handText === 'LARGE' && !tiny;
+  // 手札の小さい段は縦の画面だけ(横画面は右の列の幅に余裕がある。2026-10-27 ソランドくん「手札のカードも小さい」)
+  const handTiny = tiny && !wide; // 手札の字を大きく(狭い画面では、ふつうのまま)
   const tapHand = (i) => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
@@ -1133,6 +1178,31 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const mon = el.closest('[data-card-mon]');
     return mon ? mon.getAttribute('data-card-mon') : null;
   };
+  // 手札を2回続けてタップ(CARD_DOUBLE_TAP_MS の内)したら、詳しい画面(社長 2026-10-26)。
+  //   1回目は、選ぶ・ガッツに選ぶ(2回目で元に戻せる)はすぐ動かし、2回目が来たら1回目の前の選び方へ戻す。
+  //   守りの番は、1回押すと守りが決まることがあるので、1回目を待ってから動かす(2回目が来たら動かさない)
+  const handTap = useRef({ last: null, pending: null });
+  useEffect(() => () => clearTimeout(handTap.current.pending), []);
+  const tapHandOrDouble = (i, no) => {
+    const h = handTap.current;
+    const now = Date.now();
+    if (h.last && h.last.i === i && h.last.no === no && now - h.last.at < CARD_DOUBLE_TAP_MS) {
+      const before = h.last.before;
+      h.last = null;
+      if (h.pending) { clearTimeout(h.pending); h.pending = null; }
+      else if (before) { setSel(before.sel); setPicks(before.picks); setHint(before.hint); }
+      setDetail(no);
+      return;
+    }
+    if (mode === 'guard') {
+      h.last = { i, no, at: now, before: null };
+      clearTimeout(h.pending);
+      h.pending = setTimeout(() => { h.pending = null; tapHand(i); }, CARD_DOUBLE_TAP_MS);
+      return;
+    }
+    h.last = { i, no, at: now, before: { sel, picks, hint } };
+    tapHand(i);
+  };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
     // 手札を運ぶ操作を使わない(オプション)ときは、置ける所を作らない(タップと長押しだけ)
@@ -1170,7 +1240,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHand(i);
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);
     };
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
@@ -1205,7 +1275,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!el || stageFit >= 3) return;
     if (el.scrollHeight > el.clientHeight + 1) setStageFit((f) => Math.min(3, f + 1));
   });
-  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey]);
+  // 横と縦が切りかわったときも測り直す(はじめは縦の並びで測って詰めたまま、横の並びで手札が小さく残っていた)
+  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey, wide]);
   React.useLayoutEffect(() => {
     const b = boardRef.current;
     const f = b && b.querySelector('[data-card-footer]');
@@ -1321,7 +1392,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           {/* 裏のクイック∞周回(設計書 5-3)。対戦中は帯もポップアップも出さず、ここに小さく「⚔ ◯周目」だけ。止まったら赤くする */}
           {quickRun && <span data-card-battle-quick-run={quickRun.stopped ? 'stopped' : 'live'} aria-label={quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`} className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`}>⚔ {quickRun.loops}周目</span>}
           {/* 自分の番は目立つ金色の札、相手の番は落ち着いた色(2026-10-26 ソラシドさん「どっちのターンか分かりにくい」) */}
-          <span data-card-head-turn data-card-head-turn-me={turnMe ? '1' : undefined} className={`min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`} style={JA_WRAP_STYLE}><span className="whitespace-nowrap">ターン {Math.max(1, st.turn)}</span> ・ <span className={`whitespace-nowrap ${turnMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`}>{turnMe ? 'あなたの番' : `${who.name}の番`}</span></span>
+          <span data-card-head-turn data-card-head-turn-me={headMe ? '1' : undefined} className={`min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`} style={JA_WRAP_STYLE}>{headSt.phase === 'setup' && replay ? <span className="whitespace-nowrap">はじまり</span> : <><span className="whitespace-nowrap">ターン {Math.max(1, headSt.turn)}</span> ・ <span className={`whitespace-nowrap ${headMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`}>{headMe ? 'あなたの番' : `${who.name}の番`}</span></>}</span>
         </span>
       </div>
       {/* 横画面(④): 左に「相手の帯〜自分の帯」、右に「案内〜手札〜下のボタン」。縦のときは2つの箱を display:contents にして、今までと同じ縦の並び */}
@@ -1332,7 +1403,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {pvp ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* リプレイでは相手の手札も表で見せる(終わったあとなので。2026-10-27 社長)。押すと詳しい画面 */}
@@ -1359,7 +1430,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
             番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
-        {bubble && (
+        {bubble && !replay && (
           <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} className={`${bigCard || turnBanner || guarding ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
             {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
@@ -1466,12 +1537,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
-              <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
+              <div className={`mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
                 <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
-                {tiny ? <>
+                {handTiny ? <>
                   <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                   <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                 </> : compact ? <>
@@ -2169,7 +2240,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (log && log.id === game.key) {
         cpuLogRef.current = null;
         const rec = cardReplayFromCpu(db, { id: `c${log.id}`, at: Date.now(), myDeck: log.decks[0], cpuDeck: log.decks[1], seed: log.seed, first: log.first, history: log.acts,
-          foe: { name: log.foeName, who: game.who, deckName: log.deckName }, outcome, reason: '' });
+          foe: { name: log.foeName, who: game.who, deckName: log.deckName }, outcome, reason: '', level: game.level });
         if (rec && await cardReplaySave(rec)) replayId = rec.id;
       }
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId });
@@ -2512,7 +2583,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
               <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{CARD_LEVEL_LABEL[lv]}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
             </table>
-            <p className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この記録ができてからのぶんです')}</p>
+            {/* 難易度別は 2026-10-24 から数えている。それより前から遊んでいて、合計と合わない人にだけ断る(はじめての人には出さない) */}
+            {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
@@ -2521,7 +2593,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div key={label} className="rounded-xl bg-black/30 py-1.5"><small className="block text-[10px] font-bold text-slate-400">{label}</small><b className="text-[16px] font-black text-amber-200">{v}</b><small className="text-[10px] font-bold text-slate-400">{u}</small></div>
               ))}
             </div>
-            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')}</p>
+            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
           </div>
         </div>
       </div>
