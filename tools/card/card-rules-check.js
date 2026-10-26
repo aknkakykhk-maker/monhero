@@ -304,6 +304,11 @@ const decksAndSaves = () => {
   ok(Object.entries(loseWant).every(([lv, [pt]]) => E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), lv, 'lose', full).total === pt), '負けは勝ちの 3/4(60・82・105・127・150)のはず');
   // 負けのビートPも自分の番の数で減る(10回で満額・切り捨て)。投了の最大も減ったあとの負けの数(2026-10-26 社長)
   const d0 = () => E.cardNormalizeDaily(null, 'd');
+  {
+    // 結果の画面で「60 → 42(自分の番が7回。10回で満額)」を出すもと(2026-10-26)
+    const rc = E.cardCpuReward(d0(), 'easy', 'lose', { ownTurns: 7, kos: 1 });
+    ok(rc.full === 60 && rc.got === 42 && rc.ownTurns === 7 && rc.kos === 1, `負けの満額・番の数・倒した数が結果に入っていない(${JSON.stringify({ full: rc.full, got: rc.got, ownTurns: rc.ownTurns, kos: rc.kos })})`);
+  }
   ok(E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 3, kos: 0 }).total === 45 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 7, kos: 0 }).total === 105 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 15, kos: 0 }).total === 150, '負けのビートPが自分の番の数で減らない(MASTER 3回で45・7回で105・10回以上で150のはず)');
   ok(E.cardCpuReward(d0(), 'easy', 'surrender', { ownTurns: 3, kos: 3 }).total === 18, '投了の最大が、減ったあとの負けの数(EASY 3回で18)になっていない');
   const sh = E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'win', { ownTurns: 2, kos: 3 });
@@ -360,10 +365,15 @@ const decksAndSaves = () => {
     const saved = { hard: false };
     W(saved, recWins({ normal: 1 }));
     ok(saved.hard === false, '保存値(引数)を書き換えてしまう');
+    // 助手の立ち絵の範囲の表(84 の CARD_ART_KNOWN_BOX)が、今の絵と合っている(絵を差し替えたら tools/card/card-art-box-build.js で書き直す)
+    {
+      const r = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'card-art-box-build.js'), '--check'], { encoding: 'utf8' });
+      ok(r.status === 0, `助手の立ち絵の範囲の表が今の絵と合っていない(${(r.stdout || r.stderr || '').trim().split('\n').pop()})`);
+    }
     // デバッグの「技の動きの見本」の対戦は、終わっても投了しても保存しない(結果の保存より前に戻る)
     {
       const p84 = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '84-screen-card-battle.jsx'), 'utf8');
-      const fin = p84.slice(p84.indexOf('if (game.pvp) {'), p84.indexOf('const fresh = await freshCardSave();'));
+      const at = p84.indexOf('if (game.pvp) {'); const fin = p84.slice(at, p84.indexOf('const fresh = await freshCardSave();', at));   // 結果の分かれ道のあとの読み直しまで(ほかの所の読み直しは見ない)
       ok(/if \(game\.demo\) \{[^}]*setView\('top'\);\s*return;\s*\}/.test(fin) && fin.indexOf('if (game.demo)') < fin.indexOf('persist('), '技の動きの見本の対戦が、終わったときに記録・ビートPを保存してしまう');
     }
     ok(/unlocked: cardUnlockedWithRecord\(unlocked, record\)/.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '84-screen-card-battle.jsx'), 'utf8')), 'カードの画面の読み込みで、記録から開いている強さを足していない');

@@ -5,7 +5,8 @@
 //
 // 見ること:
 //   ・はじめての端末(デバッグ設定を開いたことが無い)では、設定の画面にデバッグ設定の入口が出ない(ふつうのプレイヤーに見せない)
-//   ・ヘルプの奥の入口からデバッグ設定を開くと、いちばん上に「確認待ちの試作」があり、DEBUG_TRIALS の全部が NEW つきで並ぶ
+//   ・ヘルプの奥の入口からデバッグ設定を開くと、「確認待ちの試作」のまとまりに DEBUG_TRIALS の全部が NEW つきで並ぶ
+//     (2026-10-27 の整理で、いちばん上は「よく使う」、試作はたたんだまとまりへ移した)
 //   ・入/切を押すと、試作のキーが書き換わり、「いま 入/切」が変わり、その試作の NEW が外れる
 //   ・一度開いたあとは、設定の画面に「🧪 デバッグ設定」が出て、押すとデバッグ設定が開く
 //   ・例外が出ない
@@ -54,9 +55,9 @@ check('新しいキーが保存データの一覧に載っている', ['mh_debug
     // ヘルプの奥の入口(名前の無い 💊)から開く
     await clickText('^ヘルプ'); await page.waitForTimeout(900);
     await clickText('^💊$'); await page.waitForTimeout(1200);
-    const first = await page.evaluate(() => { const panel = document.querySelector('[data-debug-trials]'); const list = panel && panel.parentElement; return { has: !!panel, first: list && list.firstElementChild === panel, rows: [...document.querySelectorAll('[data-debug-trial]')].map((r) => ({ id: r.dataset.debugTrial, on: r.dataset.debugTrialOn, isNew: r.dataset.debugTrialNew === '1' })) }; });
+    const first = await page.evaluate(() => { const panel = document.querySelector('[data-debug-trials]'); const groups = [...document.querySelectorAll('[data-debug-group]')]; return { has: !!panel, first: !!(panel && panel.closest('[data-debug-group="trials"]')) && groups[0] && groups[0].dataset.debugGroup === 'pinned', rows: [...document.querySelectorAll('[data-debug-trial]')].map((r) => ({ id: r.dataset.debugTrial, on: r.dataset.debugTrialOn, isNew: r.dataset.debugTrialNew === '1' })) }; });
     await shot('debug-trials-1-open.png');
-    check('デバッグ設定のいちばん上に「確認待ちの試作」がある', first.has && first.first);
+    check('「確認待ちの試作」は試作のまとまりにあり、いちばん上は「よく使う」', first.has && first.first);
     check('試作が全部並び、どれも NEW つき', first.rows.length === trialIds.length && first.rows.every((r) => r.isNew), JSON.stringify(first.rows));
     const target = first.rows[0] && first.rows[0].id;
     await page.evaluate((id) => document.querySelector(`[data-debug-trial="${id}"] [data-debug-trial-set="on"]`)?.click(), target);

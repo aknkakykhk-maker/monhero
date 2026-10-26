@@ -225,6 +225,13 @@ const HYBRID_C042_IMG = "images/monsters/c042.png?v=e5a483c55e02";
 const HYBRID_C020_IMG = "images/monsters/c020.png?v=81b9fd3f3ec0";
 const HYBRID_C043_IMG = "images/monsters/c043.png?v=71b585e27dc5";
 const HYBRID_C045_IMG = "images/monsters/c045.png?v=86b2b98d136d";
+// 2026-10-26 社長から届いた5体(案の子・図鑑の「未実装」に並ぶ)。元絵は tools/art-sources/<名前>-2026-10-26/。
+// MFバトルカードの画面にはまだつながない(社長に聞いてから HYBRID_MONSTER_IMGS へ足す)
+const HYBRID_C011_IMG = "images/monsters/c011.png?v=44e731f843ea";
+const HYBRID_C032_IMG = "images/monsters/c032.png?v=5b63d78632ff";
+const HYBRID_C014_IMG = "images/monsters/c014.png?v=dde0b6c82d78";
+const HYBRID_C037_IMG = "images/monsters/c037.png?v=8479c3319aac";
+const HYBRID_C044_IMG = "images/monsters/c044.png?v=997468609578";
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-010': HYBRID_C010_IMG,
   'C-012': HYBRID_C012_IMG,
@@ -390,6 +397,12 @@ const HYBRID_C042_FACE_ICON = "images/monster-icons/face/c042.png?v=9331e5dd8316
 const HYBRID_C020_FACE_ICON = "images/monster-icons/face/c020.png?v=12bdba21a409";
 const HYBRID_C043_FACE_ICON = "images/monster-icons/face/c043.png?v=656a46dd72a0";
 const HYBRID_C045_FACE_ICON = "images/monster-icons/face/c045.png?v=cbe99cc190ae";
+// 2026-10-26 社長が選んだ顔アイコン(案の子・カードの画面の HYBRID_MONSTER_FACE_ICONS へはまだ入れない)
+const HYBRID_C044_FACE_ICON = "images/monster-icons/face/c044.png?v=8c4395c28bd3";
+const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=b3722ab1b74e";
+const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=9fcfee53438b";
+const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=4ee1ce8f7085";
+const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,

@@ -143,7 +143,8 @@ const seed = ({ conditions }) => {
     await clickText(page, '着替え');
     {
       const soon = await costumeCards(page);
-      check('② ダイヤショップの3着は「近日追加」で並び、買えない', soon.every(c => c.found && !c.buyEnabled && /近日/.test(c.text)), soon.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 30)}`).join(' | '));
+      // 2026-10-26 開発部: 札は「近日追加」をやめ、売り始める日(saleWindows の開始日から出す「11/1から」)と、ビートP交換所で買えることの一言にした
+      check('② ダイヤショップの3着は「◯/◯から」の札で並び、買えない(ハロウィン中はビートP交換所の案内つき)', soon.every(c => c.found && !c.buyEnabled && /\d+\/\d+から/.test(c.text) && /ビートP/.test(c.text)), soon.map(c => `${c.name}:${c.found}:${c.buyEnabled}:${c.text.slice(0, 30)}`).join(' | '));
     }
     await goShop(page, 'ビートP');
     check('② ビートP交換所に「着替え」タブが出る', (await tabs(page)).includes('着替え'));
