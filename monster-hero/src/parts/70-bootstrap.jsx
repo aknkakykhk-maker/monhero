@@ -4274,6 +4274,10 @@ const createAnimationStyle = () => {
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
     /* 当たった子の白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
+    /* 全体カードの背景に切りかわる(2026-10-26 改良の案 D) */
+    .mh-card-field-bg { animation: mhCardFieldBg .6s ease-out both; }
+    @keyframes mhCardFieldBg { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-field-bg { animation: none; } }
     /* 勝った・負けた瞬間(2026-10-26 改良の案 C)。決着の動きを少し見せてから出す */
     .mh-card-end { animation: mhCardEndIn .35s ease-out .25s both; }
     @keyframes mhCardEndIn { 0% { opacity: 0; } 100% { opacity: 1; } }
