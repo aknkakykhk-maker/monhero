@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 24cd616431a5c45e
+// source-sha256: 89086567df4ee816
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93002,7 +93002,15 @@ const CardBattleScreen = ({
     }, "強さ"), React.createElement("span", {
       className: "text-[11px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
-    }, "勝つと次の強さが開きます")), React.createElement("div", {
+    }, "勝つと次の強さが開きます")), (() => {
+      const lock = debug ? null : CARD_LEVEL_ORDER.find(lv => !cardLevelOpen(save.unlocked, lv));
+      const prev = lock ? CARD_LEVEL_ORDER[CARD_LEVEL_ORDER.indexOf(lock) - 1] : null;
+      return lock && prev ? React.createElement("p", {
+        "data-card-level-hint": lock,
+        className: "px-0.5 text-[11px] font-bold text-amber-200/90",
+        style: JA_LABEL_STYLE
+      }, jaWrap(`🔒 ${CARD_LEVEL_LABEL[lock]} は ${CARD_LEVEL_LABEL[prev]} で勝つと開きます`)) : null;
+    })(), React.createElement("div", {
       className: "grid grid-cols-5 gap-1"
     }, CARD_LEVEL_ORDER.map(lv => {
       const open = cardLevelOpen(save.unlocked, lv) || debug;
