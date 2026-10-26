@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b535e0a9c1c776bf
+// source-sha256: d9006ccf61335a1e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 23:49";
+const BUILD_DATE = "2026-10-26 23:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50586,6 +50586,7 @@ const ModalCloseButton = ({
 let _jaSegmenter;
 const JA_WRAP_LINE = 10;
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/;
+const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
 const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -50601,6 +50602,9 @@ const jaWrapPoints = text => {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = pos => kao.some(([a, b]) => pos > a && pos < b);
+    const keepWords = [];
+    for (const w of JA_WORDS_KEEP) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) keepWords.push([i, i + w.length]);
+    const inKeepWord = pos => keepWords.some(([a, b]) => pos > a && pos < b);
     const kaoStart = pos => kao.some(([a]) => pos === a || a > pos && /^\s+$/.test(s.slice(pos, a)));
     const segs = [];
     for (const {
@@ -50623,8 +50627,8 @@ const jaWrapPoints = text => {
       const prev = segs[i - 1],
         g = groups[groups.length - 1],
         cur = g.parts.join('');
-      const hard = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
-      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      const hard = inKao(pos) || inKeepWord(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg) || /^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)) || /[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
         g.hard.push(hard);
@@ -50710,13 +50714,13 @@ const jaWrapPoints = text => {
     return s;
   }
 };
-const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
-const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
 const jaWrapPieces = seg => {
   const out = [];
   for (const part of String(seg).split(/(\s+)(?![^(（]*[)）])/)) {
     if (!part) continue;
-    if (/^\s+$/.test(part)) out.push([part, false]);else if (jaKeepWhole(part)) out.push([part, true]);else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+    if (/^\s+$/.test(part)) out.push([part, false]);else if (jaKeepWhole(part)) out.push([part, true]);else if (/[」』？！?!][ぁ-ゖ笑ｗwW]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
       if (!t) return;
       if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) {
         out.push([t, k % 2 === 1]);
