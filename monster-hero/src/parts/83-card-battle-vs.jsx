@@ -206,7 +206,8 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
             <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, 30vh, 150px)' }}>
               {who
                 ? <img src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} draggable={false} className="w-full object-contain object-bottom" style={{ aspectRatio: '3 / 4' }}/>
-                : <span className="flex aspect-square w-full items-center justify-center rounded-full bg-slate-900/70 leading-none" style={{ fontSize: 'min(16vw, 15vh, 72px)' }}>{typeof cardIconNode === 'function' ? cardIconNode(foe.icon || '🙂', 72) : '🙂'}</span>}
+                                // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
+                : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>

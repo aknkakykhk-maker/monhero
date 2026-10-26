@@ -1814,6 +1814,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   topAssist: 'mh_card_top_assist_v1', // トップの助手の「立ち絵/コメント」の出し入れ(84。無ければ両方ON)
   rankSync: 'mh_card_rank_sync_v1',   // ランキングへ最後に送った行の中身(同じなら送り直さない。90-card-rank.jsx)
   bgm: 'mh_card_bgm_v1',              // 対戦の BGM { cpu: 'auto' か 曲id, pvp: 曲id }(設計書 5-3。いまの mh_bgm_arrangement は触らない)
+  cpuPlaylist: 'mh_card_cpu_playlist_v1', // 助手と対戦の曲の並び { v:1, assistants:{ 助手id: [曲id 1〜5] } }(2026-10-26。cardNormalizeCpuPlaylist)
   settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
 });
@@ -1887,6 +1888,81 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
   };
+};
+// 助手と対戦の曲の並び(2026-10-26 社長の依頼)。助手ごとに1〜5曲を選び、対戦中は全部を1回ずつシャッフルで流す
+//   既定は助手ごとの曲1つ(台帳 #3438 の助手の曲。84 の CARD_AI_BGM はここから作る)。この並びがあれば、助手と対戦では
+//   mh_card_bgm_v1 の cpu(前の1曲えらび)は使わない。前の値は消さない・書き換えない(⑦)
+//   ★知らない助手・知らない曲id・同じ曲の2つ目・6曲目からは落とす。0曲になった助手は既定の1曲に戻す。読むだけでは保存しない
+const CARD_PLAYLIST_MAX = 5;
+const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
+  mua: Object.freeze(['melo_toriko']), kiki: Object.freeze(['eiki_boss']), momosuke: Object.freeze(['melo_crossing_field']),
+  kyuko: Object.freeze(['melo_toward_the_stars_short']), dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']), atsu: Object.freeze(['melo_against_my_own_shadow']),
+});
+const cardNormalizePlaylistList = (v, isTrack = () => true) => {
+  const out = [];
+  for (const id of Array.isArray(v) ? v : []) {
+    if (out.length >= CARD_PLAYLIST_MAX) break;
+    if (typeof id === 'string' && isTrack(id) && !out.includes(id)) out.push(id);
+  }
+  return out;
+};
+const cardNormalizeCpuPlaylist = (v, isTrack = () => true) => {
+  const src = cardIsPlainObject(v) && cardIsPlainObject(v.assistants) ? v.assistants : {};
+  const assistants = {};
+  for (const who of Object.keys(CARD_CPU_PLAYLIST_DEFAULT)) {
+    const list = cardNormalizePlaylistList(src[who], isTrack);
+    assistants[who] = list.length ? list : [...CARD_CPU_PLAYLIST_DEFAULT[who]];
+  }
+  return { v: 1, assistants };
+};
+// 1周ぶんの順を作る(全部を1回ずつ)。avoid … 直前に流れた曲。2曲以上なら、その曲を1曲目にしない(周の境目で同じ曲が続かない)
+const cardShufflePlaylist = (list, avoid = null, rnd = Math.random) => {
+  const order = [...list];
+  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  if (order.length >= 2 && avoid != null && order[0] === avoid) { const j = 1 + Math.floor(rnd() * (order.length - 1)); [order[0], order[j]] = [order[j], order[0]]; }
+  return order;
+};
+// 並びを流す係(60-app が使う)。音の出し方は io で受け取る(検査が node で動かせるように)
+//   io … { setOnce(曲id か null, { onEnd, onFail }) 1回だけ流す曲を決める / play(曲id) 鳴らす / preload(曲id) 先に読む / silence() BGMを止める }
+//   start(並び, いま鳴っている曲) … 2曲以上なら、全部を1回ずつシャッフルで流す(対戦を始めるたびに呼ぶ=順を作り直す)。1曲以下はふつうに鳴らす
+//   ・流れ終わった(onEnd)ときだけ次へ。1周が終わったら、直前の曲が1曲目にならないよう並べ直す
+//   ・読み込めない曲(onFail)は飛ばす。並びの曲が続けて全部だめなら、並びをやめて止める(何度も読み直さない)
+//   ・stop() のあと、または新しい start() のあとは、前の並びの onEnd・onFail が遅れて来ても何もしない
+const cardPlaylistPlayer = (io, rnd = Math.random) => {
+  let run = null;
+  const stop = () => { if (run) { run = null; io.setOnce(null); } };
+  const start = (list, playing = null) => {
+    const ids = (Array.isArray(list) ? list : []).filter((id, i, a) => typeof id === 'string' && id && a.indexOf(id) === i);
+    stop();
+    if (ids.length < 2) { if (ids[0]) io.play(ids[0]); return; }
+    const me = { list: ids, order: cardShufflePlaylist(ids, playing, rnd), at: 0, fails: 0 };
+    run = me;
+    const next = () => {
+      const last = me.order[me.at];
+      me.at += 1;
+      if (me.at >= me.order.length) { me.order = cardShufflePlaylist(me.list, last, rnd); me.at = 0; }
+      playAt();
+    };
+    const playAt = () => {
+      if (run !== me) return;
+      const key = me.order[me.at];
+      io.setOnce(key, {
+        onEnd: () => { if (run !== me) return; me.fails = 0; next(); },
+        onFail: () => {
+          if (run !== me) return;
+          me.fails += 1;
+          if (me.fails >= me.list.length) { stop(); io.silence(); return; }
+          next();
+        },
+      });
+      io.play(key);
+      // 次の1曲だけ先に読んでおく(並びの曲を全部いっぺんには読まない)
+      const after = me.order[me.at + 1];
+      if (after && io.preload) io.preload(after);
+    };
+    playAt();
+  };
+  return { start, stop, active: () => !!run };
 };
 // 演出の設定。speed … 'normal' / 'fast'(相手の考える間と、決着から結果までを短くする)
 //   autoPass … 守れるカードが1枚も無いとき、自動で「守らない」にする(既定は ON。理由の一言は少し見せてから進む)
