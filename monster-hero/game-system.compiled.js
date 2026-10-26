@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 855fd34033cc810e
+// source-sha256: 1bdfa7a5b7c36fda
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:16";
+const BUILD_DATE = "2026-10-27 01:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -120832,11 +120832,18 @@ function MonsterHeroGame() {
           "aria-hidden": "true",
           className: "mhms-ico relative shrink-0 text-3xl leading-none"
         }, sys.emoji), React.createElement("span", {
-          className: "relative min-w-0 flex-1"
+          className: "relative min-w-0 flex-1",
+          style: {
+            containerType: 'inline-size'
+          }
         }, React.createElement("span", {
           className: "flex items-center gap-1.5"
         }, React.createElement("b", {
-          className: "block min-w-0 truncate text-[18px] font-black italic leading-tight"
+          "data-battle-system-title": true,
+          className: "block min-w-0 whitespace-nowrap font-black italic leading-tight",
+          style: {
+            fontSize: `min(18px, calc((100cqw - ${soon || beta || sys.id === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE ? 46 : 0}px) / ${[...String(sys.label)].length + 0.8}))`
+          }
         }, sys.label), soon && React.createElement("span", {
           className: "shrink-0 rounded border border-slate-700/60 bg-white/40 px-1.5 py-0.5 text-[9px] font-black"
         }, "準備中"), beta && React.createElement("span", {
@@ -120847,9 +120854,9 @@ function MonsterHeroGame() {
         }, "DEBUG")), React.createElement("small", {
           className: "block text-[10px] font-black leading-tight text-slate-900/80",
           style: JA_LABEL_STYLE
-        }, jaWrap(sys.tagline)), (soon || beta) && React.createElement("small", {
+        }, jaWrap(sys.tagline)), soon && React.createElement("small", {
           className: "mt-0.5 block text-[9px] font-black leading-tight text-slate-900/70"
-        }, soon ? 'いま準備しています。遊べるようになったらお知らせします' : 'いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'))), React.createElement("button", {
+        }, "いま準備しています。遊べるようになったらお知らせします"))), React.createElement("button", {
           "data-battle-system-info": sys.id,
           disabled: !!battleTutorial,
           onClick: () => setModeInfoId(sys.id),
