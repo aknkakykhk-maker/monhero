@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "id": "007b40590cd3",
+  "id": "a11c3ef4504a",
   "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":115558570,"count":705},"card":{"bytes":32187692,"count":934},"all":{"bytes":255133708,"count":1732},"core":{"bytes":14268681,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
@@ -1737,7 +1737,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"63acd6f3caab","size":243301,"pack":"core"},
+    "tailwind.css": {"v":"d5f4f967acba","size":243301,"pack":"core"},
     "data/images/images-ally.js": {"v":"ffdf9524ae2a","size":58173,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"8ecf20375279","size":58306,"pack":"core"},
@@ -1750,7 +1750,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"ddcb715aad87","size":76361,"pack":"core"},
-    "data/changelog.js": {"v":"b855eee8ee96","size":1451824,"pack":"core"},
+    "data/changelog.js": {"v":"83fd9193355f","size":1451824,"pack":"core"},
     "data/help.js": {"v":"29b3c38fc4c6","size":648655,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
