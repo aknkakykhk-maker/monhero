@@ -395,7 +395,8 @@ const cardTauntsOn = (st, p) => (st.taunts || []).filter((t) => t.turn === st.tu
 const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every((t) => {
   const hits = targets.filter((x) => x.p === t.by);
   if (t.mode === 'not') return !hits.some((x) => x.m === t.m);
-  if (area) return !t.noArea || !hits.some((x) => x.m !== t.m);
+  // 全員に当たる技も、縛った子に当たらないもの(空中だけ・地上だけで外れる)は出せない(2026-10-27 総点検D。文「このモンスターにダメージを与える技しか」)
+  if (area) return hits.some((x) => x.m === t.m) && (!t.noArea || !hits.some((x) => x.m !== t.m));
   return hits.every((x) => x.m === t.m);
 });
 // 合体: 生きている味方2体(a のメイン・b のサブ)で出せる混血の組。混血の子は、もとの種族が無いので材料にならない
@@ -926,7 +927,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'oppDraw') { const k = cardDrawN(st, cardOther(p), e.n); cardLog(st, `${opp.name}は${k}枚引いた`); }
     if (e.t === 'gutsToDeckShuffle') { const k = me.guts.length; me.deck.push(...me.guts.splice(0)); cardReshuffle(st, p); cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`); }
     if (e.t === 'selfHurt' && tm && tm.safeUntil >= st.turn) cardLog(st, `${tm.name}はダメージを受けない(ぬいぐるみ)`);
-    else if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
+    else if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); tm.charge = null; /* 溜めはダメージで終わる(はね返し・反動と同じ。2026-10-27 総点検D) */ cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
     if (e.t === 'oppGutsLoss') { const k = cardLoseGuts(st, cardOther(p), e.n); cardLog(st, `${opp.name}はガッツを${k}失った`); }
     if (e.t === 'refresh') { const k = me.hand.length; me.discard.push(...me.hand.splice(0)); cardDrawN(st, p, k); cardLog(st, `${me.name}は手札を${k}枚捨てて、引き直した`); }
     if (e.t === 'millOpp') { let k = 0; for (let i = 0; i < e.n && opp.deck.length; i++) { opp.discard.push(opp.deck.pop()); k += 1; } cardLog(st, `${opp.name}の山札を${k}枚捨て札にした`); }
@@ -1069,6 +1070,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.ko) return;
           const d = m.safeUntil >= st.turn ? 0 : burn.n; // ぬいぐるみの子は0
           m.life = Math.max(0, m.life - d);
+          if (d > 0) m.charge = null; // 力をためる・根を張る・静の構えは、ダメージを受けると終わる(2026-10-27 総点検D)
           cardEvent(st, { t: 'hit', p, m: mi, dmg: d, self: true });
           cardLog(st, `灼熱の地: ${m.name}に${d}ダメージ`, { kind: 'hit' });
           if (m.life <= 0) cardKo(st, p, mi);
