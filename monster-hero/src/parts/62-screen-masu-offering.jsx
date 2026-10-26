@@ -178,7 +178,7 @@ function MasuOfferingScreen({
         {done.reincarnations>0&&row('転生', `${done.reincarnations}回`, 'text-violet-200')}
         {row('使ったダイヤ', fmt(done.spent), 'text-amber-300')}
       </div>
-      <div className="mt-4"><ModalCloseButton onClick={()=>setDone(null)} label="とじる"/></div>
+      <div className="mt-4"><ModalCloseButton onClick={()=>setDone(null)} label="閉じる"/></div>
     </ModalFrame>}
   </div>;
 }

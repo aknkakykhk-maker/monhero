@@ -303,7 +303,7 @@ check('神殿の一覧はスクロールできる(横画面で「限界突破」
 check('HOMEに横画面用の配置がある', has('@media(orientation:landscape) and (max-height:600px){.mh-home-assistant'));
 check('HOMEは小さい端末向けの調整がある', has('@media(max-width:350px)') && has('@media(max-height:620px)'));
 check('難易度タブは背の低い端末で縦スクロールできる',
-  has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>'));
+  has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度をえらぶ</div>'));
 
 // --- ⑤ バトルの強化の札は、いくつ付いても高さが変わらない(2026-09-20 ユーザー指摘) ---
 // ★もとは flex-wrap で何行にも伸び、強化が増えると敵の絵・「緊急」のボタン・与ダメの数字を
