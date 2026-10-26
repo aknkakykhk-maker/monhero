@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e03fcf0353978eea
+// source-sha256: e937a5b8b9696448
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:37";
+const BUILD_DATE = "2026-10-27 00:43";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -92033,13 +92033,13 @@ const CardBattleScreen = ({
     }, "(デバッグ: まだ開いていない強さも選べます。開いた印は勝ったときだけ付きます)"), React.createElement("div", {
       className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:items-stretch landscape:gap-2 landscape:space-y-0"
     }, a && React.createElement("div", {
-      className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
+      className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2 landscape:items-center"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
       alt: a.name,
-      className: "w-[42%] landscape:hidden",
+      className: "w-[42%]",
       style: {
-        height: 'min(150px, 17vh)'
+        height: 'min(150px, max(17vh, 28vmin))'
       }
     }), React.createElement("div", {
       className: "min-w-0 flex-1 pb-2"
