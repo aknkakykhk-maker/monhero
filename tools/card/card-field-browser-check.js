@@ -140,7 +140,7 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
       check('② 相手が全体カードを出すと、おいのりの窓が出る(名前・文・2つのボタン)', box && box.text.includes('大混乱') && box.text.includes('おいのりを使う') && box.text.includes('使わない'), JSON.stringify(box));
       check('② おいのりの窓は 320×640 の画面に収まる', box && box.inside, JSON.stringify(box));
       await page.locator('[data-card-pray-use]').click();
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(1400); // おいのりのカードを大きく出してから効く(2026-10-26)
       const b = await fieldBadge(page);
       const log = await page.locator('[data-card-log]').innerText().catch(() => '');
       check('② おいのりを使うと窓が閉じて、大混乱は場に出ず、前の全体カード(飛び散る火花)が残る', (await page.locator('[data-card-pray]').count()) === 0 && b && b.no === 'F261' && b.side === 'foe', `${JSON.stringify(b)} ${log.replace(/\s+/g, ' ').slice(-80)}`);

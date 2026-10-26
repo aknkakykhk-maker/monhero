@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 43a368b8dae5fe39
+// source-sha256: 8c73eaf32844dee6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 12:07";
+const BUILD_DATE = "2026-10-26 12:21";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84564,8 +84564,8 @@ const CARD_AI_HABIT_BLEND = Object.freeze({
 });
 const CARD_AI_PLAY_TUNE = Object.freeze({
   mua: {
-    easy: -0.035,
-    normal: -0.105,
+    easy: 0.1,
+    normal: -0.04,
     hard: -0.11,
     expert: 0.075,
     master: 0.12
@@ -85030,6 +85030,36 @@ const CARD_AI_FAVORITE = Object.freeze({
   dra: 'zilla',
   atsu: 'dragon'
 });
+const CARD_AI_SAME_BLOOD = Object.freeze({
+  easy: 0.3,
+  normal: 0.28
+});
+const CARD_AI_TEAM = Object.freeze({
+  atk: 0.04,
+  guard: 0.06,
+  type: 0.8,
+  blood: 0.5
+});
+const cardAiSameBloodScale = familySize => Math.max(0, Math.min(1, (familySize - 1) / 4));
+const cardAiBloodOf = m => String(m.wave) === 'hybrid' ? m.main : m.species;
+const cardAiTeamValue = (db, who, team, m, maxWave) => {
+  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const lim = Math.max(maxWave, cardAiMonWave(db, m));
+  const mine = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, {
+    ...m,
+    ko: false
+  }));
+  const sharedBy = c => team.some(t => cardUsableBy(c, {
+    ...t,
+    ko: false
+  }));
+  const fresh = mine.filter(c => !sharedBy(c)).map(c => cardAiCardValue(c, habit)).sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0);
+  const atk = mine.filter(c => !cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const guard = mine.filter(c => cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const sameType = team.length >= 2 && team.every(t => t.type === m.type) ? 1 : 0;
+  const sameBlood = team.filter(t => cardAiBloodOf(t) === cardAiBloodOf(m)).length;
+  return fresh + (m.life || 0) * 0.3 + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
+};
 const CARD_AI_BUILD = Object.freeze({
   easy: {
     maxWave: 1,
@@ -85237,14 +85267,33 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       ko: false
     })).length * 1.2;
   }
-  const scored = cands.map(m => ({
+  const family = favs.filter(m => m.species !== fav.species);
+  const familySize = new Set(favs.map(m => m.species)).size;
+  const byScore = !CARD_AI_SAME_BLOOD[levelId];
+  const sameRate = byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
+  const isFamily = new Set(family.map(m => m.no));
+  const pool = byScore ? [...cands, ...family.filter(m => !m.variant)] : cands;
+  const scored = pool.map(m => ({
     m,
     v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m)
   }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  const usedNos = new Set([fav.species]);
   for (let k = 0; k < 2; k++) {
-    const left = scored.filter(x => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    const famLeft = family.filter(m => !usedNos.has(m.species));
+    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+      const w = famLeft.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
+      const m = famLeft[cardAiPickIndex(w, rand)];
+      out.push(m.no);
+      usedNos.add(m.species);
+      continue;
+    }
+    const team = out.map(no => cardMonsterOf(db, no));
+    const left = scored.filter(x => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))).map(x => isFamily.has(x.m.no) ? {
+      ...x,
+      v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave) + counter(x.m)
+    } : x);
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 1 && cfg.lastTop > 1) {
@@ -85256,6 +85305,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     }
     out.push(pick.m.no);
     usedSpecies.add(pick.m.species);
+    usedNos.add(pick.m.species);
   }
   return out;
 };
@@ -88570,6 +88620,50 @@ const CardMonSlot = ({
     } : undefined
   }), opp ? React.createElement(React.Fragment, null, info, artEl) : React.createElement(React.Fragment, null, artEl, info));
 };
+const CardGutsFlight = ({
+  g,
+  still = false
+}) => {
+  const [go, setGo] = useState(false);
+  useEffect(() => {
+    const r = requestAnimationFrame(() => requestAnimationFrame(() => setGo(true)));
+    return () => cancelAnimationFrame(r);
+  }, []);
+  const w = 30,
+    h = 42;
+  const tx = g.to.x + g.to.w / 2 - w / 2,
+    ty = g.to.y + g.to.h / 2 - h / 2;
+  return React.createElement(React.Fragment, null, !still && g.items.map((it, k) => {
+    const fx = it.from.x + it.from.w / 2 - w / 2,
+      fy = it.from.y + it.from.h / 2 - h / 2;
+    return React.createElement("span", {
+      key: k,
+      "data-card-guts-fly": g.p,
+      className: "absolute left-0 top-0 block overflow-hidden rounded-[4px] border border-amber-200/80 shadow-[0_4px_10px_rgba(0,0,0,.6)]",
+      style: {
+        width: w,
+        height: h,
+        transform: `translate(${go ? tx : fx}px, ${go ? ty : fy}px) scale(${go ? 0.55 : 1})`,
+        opacity: go ? 0.2 : 1,
+        transition: `transform 480ms cubic-bezier(.5,0,.75,.4) ${it.delay}ms, opacity 480ms ease-in ${it.delay}ms`,
+        background: it.img ? undefined : 'linear-gradient(135deg, #7c3aed, #312e81)'
+      }
+    }, it.img && React.createElement("img", {
+      src: it.img,
+      alt: "",
+      className: "h-full w-full object-cover"
+    }));
+  }), React.createElement("span", {
+    "data-card-guts-plus": g.p,
+    className: "absolute rounded-full bg-amber-400 px-1.5 py-0.5 text-[12px] font-black text-slate-950 shadow-lg",
+    style: {
+      left: g.to.x + g.to.w - 6,
+      top: g.to.y - 14,
+      opacity: go ? 1 : 0,
+      transition: `opacity 200ms ease-out ${still ? 0 : 420 + 90 * (g.n - 1)}ms`
+    }
+  }, "+", g.n));
+};
 const CardBattleBoard = ({
   db,
   game,
@@ -88741,23 +88835,104 @@ const CardBattleBoard = ({
     setHint(CARD_TUTORIAL_LINES[id]);
   };
   const bigTimer = useRef(null);
-  const showBigCard = (cards, by, ms = 800) => {
+  const bigThen = useRef(null);
+  const bigMs = settings.motion === 'OFF' ? 0 : Math.round((settings.motion === 'SHORT' ? 500 : 700) * Math.min(1.2, Math.max(0.6, pace)));
+  const finishBig = () => {
+    clearTimeout(bigTimer.current);
+    setBigCard(null);
+    const f = bigThen.current;
+    bigThen.current = null;
+    if (f) f();
+  };
+  const showBigCard = (cards, by, ms = bigMs, side = 'foe', then = null) => {
     const key = `big-${Date.now()}`;
+    clearTimeout(bigTimer.current);
+    bigThen.current = then;
     setBigCard({
       key,
       cards: cards.slice(0, 3),
-      who: by
+      who: by,
+      side
     });
-    setTimeout(() => setBigCard(cur => cur && cur.key === key ? null : cur), ms);
+    bigTimer.current = setTimeout(() => {
+      setBigCard(cur => cur && cur.key === key ? null : cur);
+      const f = bigThen.current;
+      bigThen.current = null;
+      if (f) f();
+    }, ms);
   };
-  const step = (act, forced = null) => {
+  const cardsOfAct = (s0, p, act) => {
+    const hand = s0.players[p].hand;
+    if (!act) return [];
+    if (act.type === 'guard') return Number.isInteger(act.hand) && hand[act.hand] ? [hand[act.hand]] : [];
+    if (['attack', 'breeder', 'pray'].includes(act.type) && Array.isArray(act.hand)) return act.hand.map(i => hand[i]).filter(no => no && no !== CARD_PVP_HIDDEN);
+    return [];
+  };
+  const [gutsFly, setGutsFly] = useState([]);
+  const flyGuts = (s0, s1, act) => {
+    const rectOf = sel => {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return r.width ? {
+        x: r.left,
+        y: r.top,
+        w: r.width,
+        h: r.height
+      } : null;
+    };
+    const out = [];
+    [CARD_ME, CARD_CPU].forEach(p => {
+      const d = s1.players[p].guts.length - s0.players[p].guts.length;
+      if (d <= 0) return;
+      const to = rectOf(`[data-card-guts-of="${p}"]`);
+      if (!to) return;
+      const fromHand = s0.players[p].hand.length - s1.players[p].hand.length >= d && act && ['guts', 'setupGuts'].includes(act.type);
+      const items = [];
+      for (let k = 0; k < d; k++) {
+        const idx = fromHand && Array.isArray(act.hand) ? act.hand[k] : -1;
+        const from = p === CARD_ME && fromHand && rectOf(`[data-card-hand-card="${idx}"]`) || rectOf(fromHand ? `[data-card-hand-of="${p}"]` : `[data-card-deck-of="${p}"]`) || to;
+        const no = p === CARD_ME && fromHand && idx >= 0 ? s0.players[p].hand[idx] : null;
+        items.push({
+          from,
+          img: no && cardOf(db, no) ? CARD_IMG(cardOf(db, no).img) : null,
+          delay: k * 90
+        });
+      }
+      out.push({
+        key: `gf-${p}-${s1.log.length}-${Date.now()}`,
+        p,
+        to,
+        n: d,
+        items
+      });
+    });
+    if (!out.length) return;
+    setGutsFly(cur => [...cur, ...out]);
+    const life = 650 + 90 * Math.max(...out.map(o => o.n)) + 500;
+    setTimeout(() => setGutsFly(cur => cur.filter(g => !out.some(o => o.key === g.key))), life);
+  };
+  const step = (act, forced = null, shown = false) => {
     if (!forced && tutorial && cardDeciderOf(st) === CARD_ME && !tutAllow(act)) {
       tutWrongSay();
       return false;
     }
+    if (!forced && !shown && !pvp && !tutorial && !game.demo && bigMs > 0 && cardDeciderOf(st) === CARD_ME) {
+      const cards = cardsOfAct(st, CARD_ME, act);
+      if (cards.length && cardApplyAction(db, st, act)) {
+        showBigCard(cards, 'あなた', bigMs, 'me', () => step(act, null, true));
+        return true;
+      }
+    }
     const next = forced || cardApplyAction(db, st, act);
     if (!next) return false;
     if (pvp && !forced) CARD_PVP.local(st, act, next);
+    flyGuts(st, next, act);
+    if (pvp && bigMs > 0) {
+      const p0 = forced ? CARD_CPU : CARD_ME;
+      const shownCards = forced ? (next.events || []).filter(e => (e.t === 'use' || e.t === 'guard') && e.p === CARD_CPU).flatMap(e => e.t === 'use' ? e.cards : [e.card]) : cardsOfAct(st, CARD_ME, act);
+      if (shownCards.length) showBigCard(shownCards, p0 === CARD_ME ? 'あなた' : who.name, bigMs, p0 === CARD_ME ? 'me' : 'foe');
+    }
     stRef.current = next;
     const evs = next.events || [];
     if (!tutorial && evs.some(e => e.t === 'use' || e.t === 'guard')) {
@@ -88868,7 +89043,6 @@ const CardBattleBoard = ({
         who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who,
         side: use.p === CARD_ME ? 'me' : 'foe'
       });
-      if (pvp && use.p === CARD_CPU) showBigCard(use.cards, ul.by ? `${ul.who}(${ul.by}で)` : ul.who);
       setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200);
     } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI(i => i + 1);
@@ -88905,18 +89079,15 @@ const CardBattleBoard = ({
           hand: []
         });
       };
-      const shown = !tutorial && ['attack', 'guard'].includes(act.type) && Array.isArray(act.hand) && act.hand.length ? act.hand.map(i => st.players[CARD_CPU].hand[i]).filter(Boolean) : [];
+      const shown = !tutorial && bigMs > 0 ? cardsOfAct(st, CARD_CPU, act) : [];
       if (!shown.length) {
         go();
         return;
       }
-      const ms = Math.max(250, Math.round(800 * pace));
-      showBigCard(shown, who.name, ms);
-      bigTimer.current = setTimeout(go, ms);
+      showBigCard(shown, who.name, bigMs, 'foe', go);
     }, wait);
     return () => {
       clearTimeout(t);
-      clearTimeout(bigTimer.current);
     };
   }, [st, paused, tutI]);
   const turnSeen = useRef(null);
@@ -89357,13 +89528,17 @@ const CardBattleBoard = ({
     return React.createElement("div", {
       className: `flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`
     }, p === CARD_CPU && React.createElement("span", {
+      "data-card-hand-of": p,
       className: "flex"
     }, pl.hand.map((_, i) => React.createElement("b", {
       key: i,
       className: "-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"
     }))), React.createElement("span", {
+      "data-card-deck-of": p,
       className: `rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`
-    }, "山札 ", pl.deck.length), React.createElement("span", _extends({}, p === CARD_ME ? {
+    }, "山札 ", pl.deck.length), React.createElement("span", _extends({
+      "data-card-guts-of": p
+    }, p === CARD_ME ? {
       'data-card-guts-drop': true
     } : {}, {
       className: `flex items-center gap-0.5 rounded-md border ${tiny ? 'px-1' : 'px-1.5'} py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`
@@ -89878,14 +90053,32 @@ const CardBattleBoard = ({
       width: b.len,
       transform: `rotate(${b.deg}deg)`
     }
+  }))), document.body), gutsFly.length > 0 && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
+    "data-card-guts-fly-layer": true,
+    className: "pointer-events-none fixed inset-0",
+    style: {
+      zIndex: MODAL_Z.dialog - 3
+    }
+  }, gutsFly.map(g => React.createElement(CardGutsFlight, {
+    key: g.key,
+    g: g,
+    still: settings.motion === 'OFF'
   }))), document.body), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
   }), bigCard && React.createElement("div", {
+    key: `${bigCard.key}-tap`,
+    "data-card-big-skip": true,
+    role: "button",
+    "aria-label": "先へ進む",
+    onClick: finishBig,
+    className: "absolute inset-0 z-[54]"
+  }), bigCard && React.createElement("div", {
     key: bigCard.key,
-    "data-card-big": true,
-    className: "mh-card-big pointer-events-none absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4"
+    "data-card-big": bigCard.side,
+    onClick: finishBig,
+    className: "mh-card-big absolute inset-x-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-1.5 px-4"
   }, React.createElement("div", {
     className: "flex items-end justify-center gap-1.5"
   }, bigCard.cards.map((no, i) => {
@@ -89894,7 +90087,7 @@ const CardBattleBoard = ({
       key: i,
       src: CARD_IMG(c.img, 'l'),
       alt: c.name,
-      className: "rounded-[8px] border-[3px] border-rose-400 object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]",
+      className: `rounded-[8px] border-[3px] ${bigCard.side === 'me' ? 'border-amber-300' : 'border-rose-400'} object-cover shadow-[0_8px_24px_rgba(0,0,0,.7)]`,
       style: {
         height: `min(${bigCard.cards.length > 1 ? 30 : 38}vh, 300px)`,
         aspectRatio: '5 / 7'
@@ -89905,8 +90098,8 @@ const CardBattleBoard = ({
     className: "max-w-full rounded-xl border border-rose-300/60 bg-black/80 px-3 py-1 text-center text-[14px] font-black leading-snug text-white",
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
-    className: "mr-1 rounded bg-rose-500 px-1 text-[11px]"
-  }, "相手"), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnSummary && !bigCard && React.createElement("button", {
+    className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
+  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnSummary && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary": true,
@@ -90016,7 +90209,7 @@ const CardBattleBoard = ({
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: () => setSplitAsk(null)
-  }, "やめる"))), mode === 'pray' && prayUse && (() => {
+  }, "やめる"))), mode === 'pray' && prayUse && !bigCard && (() => {
     const fc = cardOf(db, st.pendingPray.no);
     return React.createElement("div", {
       "data-card-pray": true,
@@ -90811,9 +91004,14 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black"
     }, x.name), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
-    }, "勝")))), React.createElement(ScreenSectionLabel, {
-      note: "勝つと次の強さが開きます"
-    }, "強さ"), React.createElement("div", {
+    }, "勝")))), React.createElement("div", {
+      className: "flex items-baseline gap-2 px-0.5 pt-1"
+    }, React.createElement("span", {
+      className: "text-[10px] font-black uppercase tracking-widest text-slate-300"
+    }, "強さ"), React.createElement("span", {
+      className: "text-[11px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, "勝つと次の強さが開きます")), React.createElement("div", {
       className: "grid grid-cols-5 gap-1"
     }, CARD_LEVEL_ORDER.map(lv => {
       const open = cardLevelOpen(save.unlocked, lv) || debug;
@@ -92234,8 +92432,9 @@ const CardDeckList = ({
     })), React.createElement("div", {
       className: "min-w-0 flex-1"
     }, React.createElement("div", {
-      className: "truncate text-[14px] font-black text-white"
-    }, on ? '★ ' : '', d.name), React.createElement("div", {
+      className: "text-[14px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, on ? '★ ' : '', jaWrap(d.name)), React.createElement("div", {
       className: `text-[11px] font-bold ${ready ? 'text-emerald-300' : 'text-amber-200'}`
     }, d.cards.length, "/", CARD_BATTLE_DECK_SIZE, "枚・", ready ? '対戦に使えます' : 'まだ対戦に使えません'))), React.createElement("div", {
       className: "mt-2 grid grid-cols-4 gap-1"
@@ -93712,13 +93911,13 @@ const CardRankingBoard = ({
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
   }, period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数')), React.createElement("div", {
-    className: "flex gap-1.5 overflow-x-auto"
+    className: "grid grid-cols-5 gap-1"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
     type: "button",
     "data-card-ranking-level": lv,
     onClick: () => setLevel(lv),
-    className: chip(level === lv)
+    className: `${chip(level === lv)} min-w-0 !px-0.5 max-[359px]:text-[10px]`
   }, levelLabel(lv))))), kind !== 'multi' && React.createElement("div", {
     "data-card-ranking-mine": true,
     className: `${SCREEN_PANEL_FLAT_CLASS} mb-1.5 flex shrink-0 items-center gap-2 text-[12px] font-bold`
@@ -93747,7 +93946,7 @@ const CardRankingBoard = ({
   }, "準備中"), !cardPvpOpen() && React.createElement("p", {
     className: "mt-2 text-[12px] font-bold text-slate-400",
     style: JA_LABEL_STYLE
-  }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), React.createElement(CardPvpRankingList, {
+  }, jaWrap('マルチ対戦ができるようになったら、ここに順位が出ます')), cardPvpOpen() && React.createElement(CardPvpRankingList, {
     renderBreederIcon: renderBreederIcon,
     selfId: selfId
   })), kind !== 'multi' && state.status === 'loading' && React.createElement("p", {
