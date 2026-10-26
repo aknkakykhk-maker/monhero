@@ -16,7 +16,7 @@ const CARD_PACKS = Object.freeze([
   { id: 'p1', no: 1, species: ['dino', 'hare', 'mocchi'], color: '#2f7fe0' },        // 先手必勝スピードチームの3体
   { id: 'p2', no: 2, species: ['golem', 'pixie', 'naga'], color: '#ef4444' },        // 一撃必殺パワフルチーム
   { id: 'p3', no: 3, species: ['suezo', 'gali', 'tiger'], color: '#e0a420' },        // 一発逆転ミラクルチーム
-  { id: 'p4', no: 4, species: ['phoenix', 'monol', 'henger'], color: '#f97316' },
+  { id: 'p4', no: 4, species: ['phoenix', 'monol', 'ghost', 'henger'], color: '#f97316' },
   { id: 'p5', no: 5, species: ['plant', 'dragon', 'jell'], color: '#22c55e' },
   { id: 'p6', no: 6, species: ['mew', 'worm', 'durahan'], color: '#a855f7' },
   { id: 'p7', no: 7, species: ['zilla', 'metalner', 'joker'], color: '#14b8a6' },

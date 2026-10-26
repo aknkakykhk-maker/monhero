@@ -27,12 +27,14 @@ const SPECIES = [
   ['dragon', 'dragon', 'ドラゴン'], ['zilla', 'zilla', 'グジラ'], ['metalner', 'metalner', 'メタルナー'], ['joker', 'joker', 'ジョーカー'],
   ['arrowhead', 'arrowhead', 'アローヘッド'], ['centaur', 'centaur', 'ケンタロウス'], ['colorpandora', 'colorpandora', 'コロペンドラ'],
   ['durahan', 'durahan', 'デュラハン'],
+  // ゴースト(2026-10-27 社長から届いた。C-024・技 165〜176。パックは第4弾にヘンガーと並べる)
+  ['ghost', 'ghost', 'ゴースト'],
 ];
 const SPECIES_BY_NAME = Object.fromEntries(SPECIES.map(([, id, name]) => [name, id]));
 // 弾(台帳 #3413)。番号の離れた技(357〜)は第4弾。全モンスター・ブリーダーは番号で分ける(推定)
 const WAVE_OF_SPECIES = {
   tiger: 1, gali: 1, golem: 1, suezo: 1, pixie: 1, dino: 1, naga: 1, hare: 1, mocchi: 1,
-  monol: 2, henger: 2, plant: 2, dragon: 2, phoenix: 2,
+  monol: 2, ghost: 2, henger: 2, plant: 2, dragon: 2, phoenix: 2,
 
   jell: 3, mew: 3, worm: 3, zilla: 3,
   // デュラハン(2026-10-24 #3421 で届いた)。legendcup の抜粋で第3弾と分かっていた(設計書 4-2)
@@ -80,6 +82,7 @@ const SENTENCE_RULES = [
   [/^ちから技か、かしこさ技で与えられるダメージを[−-](\d+)する。$/, (m) => ({ t: 'reduce', kinds: both, n: +m[1] })],
   [/^ちから技で受けるダメージの半分\(切り捨て\)をマイナスする。$/, () => ({ t: 'reduceHalf', kinds: ['pow'] })],
   [/^ちから技で与えられるダメージを0にする。$/, () => ({ t: 'reduceAll', kinds: ['pow'] })],
+  [/^ちから技か、かしこさ技で与えられるダメージを0にする。$/, () => ({ t: 'reduceAll', kinds: both })],
   [/^自分の山札からカードを(\d+)枚引く。$/, (m) => ({ t: 'draw', n: +m[1] })],
   [/^相手の手札の内容を見る。$/, () => ({ t: 'peekHand' })],
   [/^相手の手札を(\d+)枚捨てさせる。$/, (m) => ({ t: 'discardOpp', n: +m[1] })],
@@ -139,6 +142,7 @@ const BY_NO = {
   351: [{ t: 'unstunTarget' }], // 夏美草(攻撃できない印のある味方に)
   234: [{ t: 'liftTarget' }, { t: 'extraAttack', n: 1 }], // ほうり上げる
   294: [{ t: 'unlimitedAttacks' }], // タイムディレイ
+  175: [{ t: 'unlimitedAttacks' }], // ゴーストラッシュ
   83: [{ t: 'unlimitedAttacks' }], // 死亡遊戯
   197: [{ t: 'breederUnlimited' }], // うたうニャ
   46: [{ t: 'taunt', mode: 'only' }], // 挑発
@@ -194,6 +198,8 @@ const BY_NO = {
   150: [{ t: 'attach', when: { kinds: ['pow'], mimic: true } }, { t: 'mimic' }], // ものまね(どの種族のちから技でも、この子が出せる)
   // ---- 区切り7: モンスターが入れ替わる(おいのり 280 は、全体カードを入れる日まで準備中のまま。台帳: 社長 案A) ----
   128: [{ t: 'revive', species: 'phoenix', life: 4 }], // ヒノトリの復活(その子はそのターン攻撃できない)
+  174: [{ t: 'possess' }], // のりうつる(KOされた味方1体を、この子の今のライフで戻し、この子がKOになる。戻った子はそのターン攻撃できない)
+  169: [{ t: 'throwBonus' }], // カード投げ(出すときに手札を好きな枚数捨て、その枚数をダメージに足す。act.throw)
   221: [{ t: 'cocoon' }], // まゆ化(羽化のほかの札を出せない)
   222: [{ t: 'emerge', to: 'C-062' }], // 羽化(まゆ化した子を、ムラサキチュウ(C-062)と取りかえて最大まで回復。社長 2026-10-25)
   352: [{ t: 'fuse' }], // 合体(act.fuse … { a: メインを出す子, b: サブを出す子, no: 出る混血 })
@@ -220,6 +226,9 @@ const BY_NO = {
 
 // カードの詳しい画面に足す一言。文の読み方を決めた札だけ(2026-10-25 社長「推奨どおり」。一覧: docs/progress/card-battle/pending-83/README.md)
 const NOTE_BY_NO = {
+  169: '出すときに、手札から捨てるカードを選びます(0枚でもよい)。捨てた枚数がダメージに足されます',
+  174: 'KOされた味方がいるときだけ出せます。この子の今のライフで戻し、この子はKOになります',
+  175: 'その子は、そのターン攻撃の技を何枚でも出せます(ガッツはふつうに払います)',
   9: '技に付けて一緒に出します(攻撃の1回には数えません)',
   70: '技に付けて一緒に出します(攻撃の1回には数えません)',
   209: '技に付けて一緒に出します(攻撃の1回には数えません)',

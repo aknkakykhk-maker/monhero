@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a969263459e7c6a5
+// source-sha256: bcb1fd0e7fe57e44
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:14";
+const BUILD_DATE = "2026-10-27 01:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83570,6 +83570,10 @@ const cardSpeTargets = (db, st, p, mi, card) => {
     p,
     m: j
   } : null).filter(Boolean);
+  if (cardHasEff(card, 'possess')) return me.mons.map((m, j) => m.ko && j !== mi ? {
+    p,
+    m: j
+  } : null).filter(Boolean);
   const self0 = mi >= 0 ? me.mons[mi] : null;
   if (cardHasEff(card, 'emerge') && !(self0 && self0.cocoon)) return [];
   if (cardHasEff(card, 'cocoon') && self0 && self0.cocoon) return [];
@@ -83983,7 +83987,13 @@ const cardStartAttack = (db, st, act) => {
   const mainNo = me.hand[act.hand[0]];
   const main = cardOf(db, mainNo);
   const cost = cardActionCost(db, st, p, me.hand, act.hand);
+  const throwIdx = cardHasEff(main, 'throwBonus') && Array.isArray(act.throw) ? [...new Set(act.throw)].filter(i => Number.isInteger(i) && i >= 0 && i < me.hand.length && !act.hand.includes(i)) : [];
   const used = cardTakeFromHand(st, p, act.hand);
+  const thrown = cardTakeFromHand(st, p, throwIdx.map(i => i - act.hand.filter(h => h < i).length));
+  if (thrown.length) {
+    me.discard.push(...thrown);
+    cardLog(st, `${me.name}は手札を${thrown.length}枚捨てた(ダメージ+${thrown.length})`);
+  }
   const discardBefore = me.discard.slice();
   cardPayGuts(st, p, cost);
   me.playedTurn = st.turn;
@@ -84027,7 +84037,7 @@ const cardStartAttack = (db, st, act) => {
     me.discard.push(...used);
     return;
   }
-  let dmg = cardBaseDamage(db, st, p, mi, main, used.map(n => cardOf(db, n)).filter(Boolean), discardBefore);
+  let dmg = cardBaseDamage(db, st, p, mi, main, used.map(n => cardOf(db, n)).filter(Boolean), discardBefore) + thrown.length;
   const mods = cardAttachMods(used.map(n => cardOf(db, n)).filter(Boolean));
   dmg += mods.add;
   let mult = mods.mult;
@@ -84375,6 +84385,15 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
       tm.stunTurn = st.turn;
       tm.attacks = 0;
       cardLog(st, `${tm.name}がライフ${tm.life}で戻った(このターンは攻撃できない)`);
+    }
+    if (e.t === 'possess' && tm && tm.ko && self && !self.ko) {
+      const life = self.life;
+      tm.ko = false;
+      tm.life = Math.min(life, tm.max);
+      tm.stunTurn = st.turn;
+      tm.attacks = 0;
+      cardLog(st, `${self.name}が${tm.name}にのりうつった(${tm.name}はライフ${tm.life}で戻った。このターンは攻撃できない)`);
+      cardKo(st, p, mi);
     }
     if (e.t === 'cocoon' && self) {
       self.cocoon = true;
@@ -85025,6 +85044,15 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
       if (e.t === 'revive') score += 4;
+      if (e.t === 'possess' && opt.target) {
+        const self = opt.mon >= 0 ? me.mons[opt.mon] : null;
+        const tm = st.players[opt.target.p].mons[opt.target.m];
+        const useOf = m => me.hand.filter(n => {
+          const c = cardOf(db, n);
+          return c && cardUsableBy(c, m);
+        }).length;
+        score += self ? 0.5 + 0.6 * (useOf(tm) - useOf(self)) + (self.life <= 2 ? 0.8 : 0) : 0;
+      }
       if (e.t === 'cocoon') score += me.hand.some(n => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
       if (e.t === 'emerge') {
         const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null;
@@ -85085,7 +85113,8 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       }
     });
   } else {
-    let dmg = cardBaseDamage(db, st, p, opt.mon, main, opt.hand.map(i => cardOf(db, me.hand[i])).filter(Boolean));
+    if (cardHasEff(main, 'throwBonus')) opt.throw = cardAiThrowPick(db, st, p, opt);
+    let dmg = cardBaseDamage(db, st, p, opt.mon, main, opt.hand.map(i => cardOf(db, me.hand[i])).filter(Boolean)) + (opt.throw ? opt.throw.length : 0);
     const mods = cardAttachMods(opt.hand.map(i => cardOf(db, me.hand[i])).filter(Boolean));
     dmg = (dmg + mods.add) * mods.mult;
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
@@ -85261,6 +85290,28 @@ const cardAiFillBind = (db, st, o, policy) => {
     ...o,
     bind: name
   };
+};
+const cardAiThrowPick = (db, st, p, opt) => {
+  const me = st.players[p];
+  let guards = 0;
+  return me.hand.map((no, i) => ({
+    i,
+    c: cardOf(db, no)
+  })).filter(({
+    i,
+    c
+  }) => {
+    if (opt.hand.includes(i) || !c) return false;
+    if (c.user === 'breeder' || c.user === 'any') return false;
+    if (!me.mons.some(m => !m.ko && cardUsableBy(c, m))) return true;
+    if (c.kind === 'dge' || c.kind === 'blk') {
+      guards += 1;
+      return guards > 2;
+    }
+    return false;
+  }).map(({
+    i
+  }) => i);
 };
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingPray) {
@@ -85528,6 +85579,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
       if (e.t === 'safe') v += 0.8;
       if (e.t === 'revive') v += 0.3;
+      if (e.t === 'possess') v += 0.2;
       if (e.t === 'cocoon') v -= 1;
       if (e.t === 'emerge') v += 0.3;
       if (e.t === 'fuse') v -= 0.3;
@@ -85545,6 +85597,7 @@ const cardAiCardValue = (card, habit) => {
   if (pr) dmg = pr.dmg * 0.45;
   if (eff('requires')) dmg *= 0.3;
   if (eff('bonusDiscard') || eff('bonusLost')) dmg += 3;
+  if (eff('throwBonus')) dmg += 2;
   if (eff('returnOnHit')) dmg += 0.8;
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
@@ -87822,7 +87875,7 @@ const CARD_PACKS = Object.freeze([{
 }, {
   id: 'p4',
   no: 4,
-  species: ['phoenix', 'monol', 'henger'],
+  species: ['phoenix', 'monol', 'ghost', 'henger'],
   color: '#f97316'
 }, {
   id: 'p5',
@@ -89896,10 +89949,12 @@ const CardBattleBoard = ({
   const [confirm, setConfirm] = useState(null);
   const [bindAsk, setBindAsk] = useState(null);
   const [splitAsk, setSplitAsk] = useState(null);
+  const [throwAsk, setThrowAsk] = useState(null);
   useEffect(() => {
     setConfirm(null);
     setBindAsk(null);
     setSplitAsk(null);
+    setThrowAsk(null);
   }, [st]);
   const bindCancel = () => {
     setBindAsk(null);
@@ -89909,6 +89964,13 @@ const CardBattleBoard = ({
   const askUse = o => {
     if (o && Array.isArray(o.hand) && !o.bind && o.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) {
       setBindAsk(o);
+      return;
+    }
+    if (o && Array.isArray(o.hand) && !Array.isArray(o.throw) && cardHasEff(cardOf(db, me.hand[o.hand[0]]), 'throwBonus')) {
+      setThrowAsk({
+        o,
+        picks: []
+      });
       return;
     }
     if (!confirmOn('confirmUse')) {
@@ -89941,6 +90003,7 @@ const CardBattleBoard = ({
     if (cf.kind === 'use') {
       const {
         bind: _bind,
+        throw: _throw,
         ...bare
       } = cf.act;
       if (!cardAttackOptions(db, st).some(o => JSON.stringify(o) === JSON.stringify(bare))) return;
@@ -90884,6 +90947,78 @@ const CardBattleBoard = ({
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
     onClick: bindCancel
+  }, "やめる"))), throwAsk && React.createElement("div", {
+    "data-card-throw-pick": true,
+    className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",
+    onClick: () => {
+      setThrowAsk(null);
+      setSel(null);
+      setHint('');
+    }
+  }, React.createElement("div", {
+    className: "w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-[15px] font-black",
+    style: JA_LABEL_STYLE
+  }, jaWrap('カード投げ: 捨てる手札を選ぶ')), React.createElement("div", {
+    className: "mt-1 text-[11px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap('捨てた枚数だけ、ダメージが増えます(0枚でもよい)')), React.createElement("div", {
+    className: "mt-2 grid max-h-[46vh] grid-cols-4 gap-1.5 overflow-y-auto"
+  }, me.hand.map((no, i) => ({
+    no,
+    i,
+    c: cardOf(db, no)
+  })).filter(({
+    i,
+    c
+  }) => c && !throwAsk.o.hand.includes(i)).map(({
+    no,
+    i,
+    c
+  }) => {
+    const on = throwAsk.picks.includes(i);
+    return React.createElement("button", {
+      key: i,
+      type: "button",
+      "data-card-throw-card": i,
+      "aria-pressed": on,
+      onClick: () => setThrowAsk(t => t ? {
+        ...t,
+        picks: on ? t.picks.filter(x => x !== i) : [...t.picks, i]
+      } : t),
+      className: `relative flex flex-col items-center rounded-lg p-0.5 active:scale-95 ${on ? 'bg-rose-700 ring-2 ring-rose-300' : 'bg-white/5'}`
+    }, React.createElement("img", {
+      src: CARD_IMG(c.img),
+      alt: c.name,
+      className: `aspect-[5/7] w-full rounded-[4px] object-cover ${on ? 'opacity-70' : ''}`
+    }), React.createElement(CardNameFit, {
+      name: c.name,
+      className: "mt-0.5 font-bold leading-tight text-slate-100"
+    }), on && React.createElement("span", {
+      className: "absolute left-1 top-1 rounded-md bg-rose-600 px-1 text-[10px] font-black text-white"
+    }, "捨てる"));
+  })), React.createElement("button", {
+    type: "button",
+    "data-card-throw-go": true,
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-rose-600 text-[14px] font-black text-white active:scale-[.98]",
+    onClick: () => {
+      const o = {
+        ...throwAsk.o,
+        throw: throwAsk.picks.slice().sort((a, b) => a - b)
+      };
+      setThrowAsk(null);
+      askUse(o);
+    }
+  }, throwAsk.picks.length ? `${throwAsk.picks.length}枚捨てて使う(ダメージ+${throwAsk.picks.length})` : '捨てないで使う'), React.createElement("button", {
+    type: "button",
+    className: "mt-1.5 min-h-[40px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200",
+    onClick: () => {
+      setThrowAsk(null);
+      setSel(null);
+      setHint('');
+    }
   }, "やめる"))), splitAsk && React.createElement("div", {
     "data-card-split-pick": true,
     className: "fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3",

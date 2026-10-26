@@ -955,11 +955,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 影縛り(名指しの要る札)を付けた手は、名指しする守りの札を先に選ぶ。場が変わったら閉じる(確かめの窓と同じ)
   const [bindAsk, setBindAsk] = useState(null); // 名指しを待っている手
   const [splitAsk, setSplitAsk] = useState(null); // ショットガン: 割り振りの候補(手の並び)
-  useEffect(() => { setConfirm(null); setBindAsk(null); setSplitAsk(null); }, [st]);
+  const [throwAsk, setThrowAsk] = useState(null); // カード投げ(169): { o: 手, picks: 捨てる手札の何枚目か }
+  useEffect(() => { setConfirm(null); setBindAsk(null); setSplitAsk(null); setThrowAsk(null); }, [st]);
   // 名指しをやめたら、選んでいた手札も外す(残っていると、次に押したとき選び外しになって分かりにくい)
   const bindCancel = () => { setBindAsk(null); setSel(null); setHint(''); };
   const askUse = (o) => {
     if (o && Array.isArray(o.hand) && !o.bind && o.hand.some((i) => cardHasEff(cardOf(db, me.hand[i]), 'attachBind'))) { setBindAsk(o); return; }
+    // カード投げ: 捨てる手札を先に選ぶ(0枚でもよい)
+    if (o && Array.isArray(o.hand) && !Array.isArray(o.throw) && cardHasEff(cardOf(db, me.hand[o.hand[0]]), 'throwBonus')) { setThrowAsk({ o, picks: [] }); return; }
     if (!confirmOn('confirmUse')) { step(o); return; }
     const c = cardOf(db, me.hand[o.hand[0]]);
     const tm = o.target ? st.players[o.target.p].mons[o.target.m] : null;
@@ -973,7 +976,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const cf = confirm;
     setConfirm(null);
     if (!cf) return;
-    if (cf.kind === 'use') { const { bind: _bind, ...bare } = cf.act; if (!cardAttackOptions(db, st).some((o) => JSON.stringify(o) === JSON.stringify(bare))) return; }
+    if (cf.kind === 'use') { const { bind: _bind, throw: _throw, ...bare } = cf.act; if (!cardAttackOptions(db, st).some((o) => JSON.stringify(o) === JSON.stringify(bare))) return; }
     if (cf.kind === 'end' && (st.phase !== 'guts' || cardDeciderOf(st) !== CARD_ME || st.pending)) return;
     step(cf.act);
   };
@@ -1456,6 +1459,32 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               ))}
             </div>
             <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={bindCancel}>やめる</button>
+          </div>
+        </div>
+      )}
+      {throwAsk && (
+        <div data-card-throw-pick className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3" onClick={() => { setThrowAsk(null); setSel(null); setHint(''); }}>
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-3 text-slate-100" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[15px] font-black" style={JA_LABEL_STYLE}>{jaWrap('カード投げ: 捨てる手札を選ぶ')}</div>
+            <div className="mt-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('捨てた枚数だけ、ダメージが増えます(0枚でもよい)')}</div>
+            <div className="mt-2 grid max-h-[46vh] grid-cols-4 gap-1.5 overflow-y-auto">
+              {me.hand.map((no, i) => ({ no, i, c: cardOf(db, no) })).filter(({ i, c }) => c && !throwAsk.o.hand.includes(i)).map(({ no, i, c }) => {
+                const on = throwAsk.picks.includes(i);
+                return (
+                  <button key={i} type="button" data-card-throw-card={i} aria-pressed={on} onClick={() => setThrowAsk((t) => (t ? { ...t, picks: on ? t.picks.filter((x) => x !== i) : [...t.picks, i] } : t))}
+                    className={`relative flex flex-col items-center rounded-lg p-0.5 active:scale-95 ${on ? 'bg-rose-700 ring-2 ring-rose-300' : 'bg-white/5'}`}>
+                    <img src={CARD_IMG(c.img)} alt={c.name} className={`aspect-[5/7] w-full rounded-[4px] object-cover ${on ? 'opacity-70' : ''}`}/>
+                    <CardNameFit name={c.name} className="mt-0.5 font-bold leading-tight text-slate-100"/>
+                    {on && <span className="absolute left-1 top-1 rounded-md bg-rose-600 px-1 text-[10px] font-black text-white">捨てる</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" data-card-throw-go className="mt-2 min-h-[44px] w-full rounded-xl bg-rose-600 text-[14px] font-black text-white active:scale-[.98]"
+              onClick={() => { const o = { ...throwAsk.o, throw: throwAsk.picks.slice().sort((a, b) => a - b) }; setThrowAsk(null); askUse(o); }}>
+              {throwAsk.picks.length ? `${throwAsk.picks.length}枚捨てて使う(ダメージ+${throwAsk.picks.length})` : '捨てないで使う'}
+            </button>
+            <button type="button" className="mt-1.5 min-h-[40px] w-full rounded-xl bg-slate-800 text-[13px] font-black text-slate-200" onClick={() => { setThrowAsk(null); setSel(null); setHint(''); }}>やめる</button>
           </div>
         </div>
       )}
