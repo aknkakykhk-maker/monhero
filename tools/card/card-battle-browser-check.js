@@ -616,6 +616,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 絞り込みは、縦の画面では1列(横に流す)、横の画面では折り返して並べる作り(87 の data-card-deck-chips)。1列は縦のときだけ見る
     const portrait = VH > VW;
     check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは縦で1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && (!portrait || chipsRows === 1), JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows, portrait }));
+    // ⑭ カードの名前の右の「i」で詳しい画面が開く(長押しに気づかない人のため・2026-10-26)。押してもデッキの枚数は変わらない
+    const infoBefore = await page.locator('[data-card-deck-count]').innerText();
+    await page.locator(`[data-card-deck-info="${firstIn}"]`).click();
+    const infoOpen = await page.locator('[data-card-detail]').count();
+    const infoAfter = await page.locator('[data-card-deck-count]').innerText();
+    await page.locator('[data-card-detail]').getByRole('button', { name: /閉じる/ }).first().click().catch(() => {});
+    await page.waitForTimeout(200);
+    check('⑭ カードの名前の右の「i」を押すと詳しい画面が開き、デッキには入らない', infoOpen === 1 && infoAfter === infoBefore && (await page.locator('[data-card-detail]').count()) === 0, `${infoOpen} ${infoBefore}→${infoAfter}`);
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));
