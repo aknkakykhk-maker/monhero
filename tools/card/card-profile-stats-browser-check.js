@@ -9,7 +9,7 @@
 //   ① 自分のプロフィールに、保存のとおりの戦績(強さごとの勝ち数・いちばん長い連勝・マルチの勝ち負けと強さの点数・カード図鑑)が出る
 //   ② 戦績の欄の字が切れない・画面からはみ出さない
 //   ③ 一度も遊んでいない人には、戦績の欄を出さない
-//   ④ フレンドの戦績は、ランキングの表をその人のブリーダーの番号で読んで出す(表に無い人は出さない)
+//   ④ フレンドの戦績は、ランキングの表をその人のブリーダーの番号で読んで出す(表に無い人は出さない)。図鑑の分母は自分と同じ数
 //   ⑤ 保存(mh_*)を書き換えない・実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -122,7 +122,7 @@ const statsLook = (page, sel) => page.evaluate((s) => {
       }, w);
       const fr = await statsLook(page, '[data-card-stats="friend"]');
       if (SHOT) await page.locator('[data-card-stats="friend"]').screenshot({ path: path.join(SHOT, `friend-stats-${w}.png`) }).catch(() => {});
-      check(`④ ${w}×${h}: フレンドの戦績は表から(表に無い人は出さない)`, f.count === 1 && fr && /30/.test(fr.easy) && /1/.test(fr.master) && /11/.test(fr.streak) && /6勝4敗/.test(fr.pvp) && /強さ 1532/.test(fr.pvp) && /140/.test(fr.dex) && fr.cut.length === 0, JSON.stringify({ f, fr }));
+      check(`④ ${w}×${h}: フレンドの戦績は表から(表に無い人は出さない)`, f.count === 1 && fr && /30/.test(fr.easy) && /1/.test(fr.master) && /11/.test(fr.streak) && /6勝4敗/.test(fr.pvp) && /強さ 1532/.test(fr.pvp) && /140/.test(fr.dex) && fr.dex.replace(/\s/g, '').split('/')[1] === (r && r.dex.replace(/\s/g, '').split('/')[1]) && fr.cut.length === 0, JSON.stringify({ f, fr }));
       const after = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_card_')).map((k) => [k, localStorage.getItem(k)])));
       check(`⑤ ${w}×${h}: カードの保存を書き換えない`, JSON.stringify(before) === JSON.stringify(after), Object.keys(after).join(','));
       await page.close();

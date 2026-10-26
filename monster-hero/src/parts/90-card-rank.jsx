@@ -146,6 +146,8 @@ const sbFetchCardPvpRatingOf = async (breederId) => {
   const n = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
   return { rating: Number.isFinite(Number(r.rating)) ? Math.floor(Number(r.rating)) : null, win: n(r.wins), lose: n(r.loses) };
 };
+// いまのカードの種類数(図鑑の分母。cardDexCounts と同じ数え方)
+const cardStatsDexTotal = () => { try { return cardDexCounts(CARD_BATTLE_DATA, {}).total; } catch (_) { return 0; } };
 // 自分の戦績(保存から)。何も遊んでいなければ played が 0
 const cardStatsOfSelf = async () => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
@@ -170,7 +172,8 @@ const cardStatsOfFriend = async (breederId) => {
   if (!e && !pvp) return null;
   const wins = e ? e.wins : Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, 0]));
   return {
-    wins, bestStreak: e ? e.bestStreak : 0, dex: e ? { count: e.dexCount, total: e.dexTotal } : null,
+    // 図鑑の分母は、表の dex_total(その人が最後に送ったときの数で、古いことがある)ではなく、いまのカードの種類数にそろえる(自分と同じ数え方)
+    wins, bestStreak: e ? e.bestStreak : 0, dex: e ? { count: e.dexCount, total: cardStatsDexTotal() || e.dexTotal } : null,
     pvp: pvp ? { win: pvp.win, lose: pvp.lose, rating: pvp.rating } : { win: 0, lose: 0, rating: null },
     played: CARD_LEVEL_ORDER.reduce((a, lv) => a + wins[lv], 0) + (pvp ? pvp.win + pvp.lose : 0) + (e && e.dexCount > 0 ? 1 : 0),
   };
