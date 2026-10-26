@@ -35,6 +35,8 @@ const seed = ({ bonds, storyIds, noticeIds, flagOn }) => {
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_masu_migrated', true);
   put('mh_kiki_intro_seen_v1', true); put('mh_momosuke_intro_seen_v1', true); put('mh_tactics_intro_seen_v1', true);
   put('mh_rhythm_hell_story_seen_v1', true); put('mh_story_assistant_chat_seen_v1', true); put('mh_story_tactics_types_seen_v1', true);
+  // MFバトルカードの公開のお話(2026-10-26 公開)は、あつのお話と同じ HOME で順番待ちになる。ここでは見た扱いにしておく
+  put('mh_story_card_battle_seen_v1', true);
   put('mh_assistant_selected_v1', 'mua');
   put('mh_rhythm_event_story_v1', storyIds);
   put('mh_seen_update_notices_v1', noticeIds);

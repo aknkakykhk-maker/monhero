@@ -35,6 +35,9 @@ const serve = () => new Promise((resolve) => {
   server.listen(PORT, () => resolve(server));
 });
 
+// 公開の印(17-release-changelog-login-missions.jsx の RELEASE_FLAGS.cardBattle)。立つとマルチ対戦が開く(91 の cardPvpOpen)。
+// 2026-10-26 社長「公開する」で立てた。マルチの「準備中」を見る所は、印に合わせて見るものを替える
+const RELEASED = /^\s*cardBattle:\s*true\b/m.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8'));
 let failed = 0;
 let lastPage = null;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -803,7 +806,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-ranking-tab="multi"]').click();
       const multiSoon = /準備中/.test(await page.locator('[data-card-ranking-multi]').innerText().catch(() => ''));
       if (SHOT) await shot(page, '37-ranking-multi');
-      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(準備中)。公開前は見本の案内が出て、表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && rankWins.preview && rankWins.state !== 'other' && multiSoon, JSON.stringify({ ...rankWins, multiSoon }));
+      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。デバッグの端末では見本の案内が出て、表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && rankWins.preview && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
       await page.locator('[data-card-ranking] header button').first().click();
       await page.locator('[data-card-options-open]').click();
       await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
@@ -830,7 +833,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (SHOT) { await page.waitForTimeout(900); await shot(page, '33-mode'); }
       const multiOff = await page.locator('[data-card-mode-multi]').isDisabled();
       const multiText = await page.locator('[data-card-mode-multi]').innerText();
-      check('⑰ 対戦は「助手と対戦」と「マルチ対戦(準備中・押せない)」から選ぶ', multiOff && /準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
+      if (RELEASED) check('⑰ 公開後: 対戦は「助手と対戦」と「マルチ対戦(押せる・準備中の札なし)」から選ぶ', !multiOff && !/準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
+      else check('⑰ 対戦は「助手と対戦」と「マルチ対戦(準備中・押せない)」から選ぶ', multiOff && /準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
       const shown = await page.evaluate(() => document.body.innerText);
       check('⑰ 画面に「コンピューター戦」が出ていない', !/コンピューター戦/.test(shown));
       const modeText = await page.locator('[data-card-mode-assistant]').innerText();

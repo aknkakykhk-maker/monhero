@@ -122,9 +122,11 @@ check('隠す対象のヘルプ項目が実際にある', speciesTopics.length >
 check('隠す対象の更新履歴が実際にある', speciesEntries.length > 0, `${speciesEntries.length}件`);
 check('公開フラグがfalseなら隠れる',
   speciesTopics.every(t => releasedForPlayers(t) === false) && speciesEntries.every(e => releasedForPlayers(e) === false));
+// ★カテゴリにも名札が付くことがある(MFバトルカードのカテゴリは releaseFlag:'cardBattle'・2026-10-26)ので、名札の無いものだけを見る
+const unlabeled = (x) => !x.releaseFlag && !x.unreleasedFlag;
 check('名札の無い項目はいままでどおり出る',
-  HELP_CATEGORIES.every(c => releasedForPlayers(c) === true)
-    && CHANGELOG.filter(e => !e.releaseFlag).every(e => releasedForPlayers(e) === true));
+  HELP_CATEGORIES.filter(unlabeled).every(c => releasedForPlayers(c) === true)
+    && CHANGELOG.filter(unlabeled).every(e => releasedForPlayers(e) === true));
 // 公開フラグを true にしたときだけ、同じ項目がそろって出る
 const openCtx = { console };
 vm.createContext(openCtx);

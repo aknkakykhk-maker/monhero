@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 58dc3085b10f23a7
+// generated-sha256: 85a0103476b7c37a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 15:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8660,10 +8660,10 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantKyuko: true,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
-  cardBattle: false,
+  cardBattle: true, // 2026-10-26 社長「公開する」
   // MFバトルカードの助手のおしゃべり(AI)(2026-10-25 社長が3つとも選んだ)。中継役 card-assistant-talk を窓口が出して、社長が「公開」と言ったら真にする。
   //   偽のあいだは、デバッグ端末だけが呼べる(83-card-battle-talk-ai.jsx の cardTalkOpen)。オプションの入/切もデバッグ端末だけに出る
-  cardAssistantTalk: false,
+  cardAssistantTalk: true, // 2026-10-26 社長「公開する」
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
   //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
@@ -11809,6 +11809,25 @@ const helpDataRows = (id) => {
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
         `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    // MFバトルカードの1戦でもらえるビートP(2026-10-26 にカードポイントをやめてビートPにした)。強さごとの勝ち・負けとマルチ対戦を 82-card-battle-core.jsx の数から作る
+    // (数を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く・help-render-check)
+    case 'cardBeatPointRewards': {
+      if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
+      const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
+      const lose = typeof CARD_CPU_LOSE_POINT !== 'undefined' ? CARD_CPU_LOSE_POINT : 0;
+      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose}`]);
+      if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
+      return rows;
+    }
+    // MFバトルカードのパック。弾ごとの種族とキラの割合を 89-card-pack.jsx の CARD_PACKS から作る(弾を足しても自動で並ぶ)
+    case 'cardPacks':
+      if (typeof CARD_PACKS === 'undefined') return [];
+      return CARD_PACKS.map(pack => {
+        const species = typeof cardPackSpeciesLabel === 'function' && typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA
+          ? cardPackSpeciesLabel(CARD_BATTLE_DATA, pack) : pack.species.join('・');
+        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・別絵キラ${pack.rarity.alt}%` : ''}`;
+        return [pack.name, `${species} ／ ${kira}`];
+      });
     // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
     case 'monsterLineages':
       return dexMonsterList().map(mon => {
@@ -12071,6 +12090,8 @@ const helpDataRows = (id) => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  cardBeatPointRewards: 'MFバトルカードの1戦でもらえるビートP',
+  cardPacks: 'パックの弾と入っている種族',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
   raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
   raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',

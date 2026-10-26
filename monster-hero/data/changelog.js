@@ -35,6 +35,20 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // MFバトルカードの公開(社長「この文で」2026-10-26)。印 RELEASE_FLAGS.cardBattle が立つまで出ない。日時は公開の時刻(実時刻)
+    date: "2026-10-26 15:38", type:'content', group:'cardBattle', title:'新しい遊び「MFバトルカード」が始まりました', status:'new', releaseFlag:'cardBattle',
+    image: 'images/events/card-battle-teaser.jpg?v=dc64e1718761',
+    items:[
+      'HOME に「MFバトルカード」が加わりました。モンスター3体と技カード50枚でデッキを組み、相手のモンスター3体を先に全員倒したほうの勝ちです。',
+      'はじめに好きなスターターキットを1つ選び、みゅあとの練習試合で遊び方を覚えられます。ビートP300(パック1つぶん)もいっしょにもらえます。',
+      '助手たちと対戦できます。助手それぞれに戦い方のくせがあり、強さは EASY から MASTER までの5段から選べます。',
+      '「マルチ対戦」で、ほかのブリーダーとも戦えます。合言葉・だれとでも・フレンドの招待から始められます。',
+      '対戦でビートPがたまります。マーケットの「MFバトルカード」の欄で、パック(8枚・300ポイント)、最初に選ばなかったスターターキット、円盤石・アシストカードと交換できます。',
+      'パックは第1弾から第8弾まであり、弾によって入っている種族が違います。同じカードがだぶったときは、自動でビートPになります。',
+    ],
+    assistantNotice:{ id:'update_notice_card_battle_v1', type:'content' },
+  },
+  {
     date: "2026-10-26 10:13", type:'update', title:'オボロゲソウ・モノリス・ザンの絵がきれいになりました', status:'new',
     items:[
       'オボロゲソウ・モノリス・ザンの立ち絵を、細かいところまできれいに見える絵に差し替えました。',
@@ -54,7 +68,8 @@ const CHANGELOG = [
   {
     // 2026-10-25 社長「お知らせで新コンテンツのお知らせを出して、近日公開みたいな感じでホームに出して」。公開の印(RELEASE_FLAGS.cardBattle)は偽のまま。
     // 画像は tools/image/make-card-battle-teaser-notice.js で作った(スターターキット3つのモンスターのカード)。HOME の「近日公開」の札の小窓にも、この絵と本文がそのまま出る(84 の CardBattleTeaser)
-    date: "2026-10-25 18:33", type:'content', group:'cardBattle', title:'新コンテンツ「MFバトルカード」近日公開', status:'new',
+    // 公開(RELEASE_FLAGS.cardBattle が真)のあとは「近日公開」「HOMEの入口で予告を見られる」が古くなるので出さない(unreleasedFlag)。公開のお知らせは上の項目
+    date: "2026-10-25 18:33", type:'content', group:'cardBattle', title:'新コンテンツ「MFバトルカード」近日公開', status:'new', unreleasedFlag:'cardBattle',
     image: 'images/events/card-battle-teaser.jpg?v=dc64e1718761',
     items:[
       '新しい遊び「MFバトルカード」を近日公開します。モンスターと技のカードでデッキを組んで、助手たちとカードで対戦する遊びです。',

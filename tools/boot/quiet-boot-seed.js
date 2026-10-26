@@ -57,7 +57,8 @@ const eventStoryKey = () => {
 // ★キーは本体(17-release-changelog-login-missions.jsx)から読む。お話そのものを確かめる検査はこの種を使わない
 const introStoryKeys = () => {
   const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
-  return ['TACTICS_INTRO_SEEN_KEY', 'RHYTHM_HELL_STORY_SEEN_KEY']
+  // MFバトルカードの公開のお話(2026-10-26 公開)も同じ置き方で HOME に出るので、ここで見たことにする
+  return ['TACTICS_INTRO_SEEN_KEY', 'RHYTHM_HELL_STORY_SEEN_KEY', 'CARD_BATTLE_INTRO_STORY_SEEN_KEY']
     .map((name) => (src.match(new RegExp(`const ${name} = '([^']+)'`)) || [])[1]).filter(Boolean);
 };
 const eventStorySeed = () => ({
