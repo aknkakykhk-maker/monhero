@@ -655,7 +655,7 @@ HOME の「MFバトルカード」
 
 **BGM**(社長: バトルと同じように自分で決められる。決めていないときは、相手の助手に合わせて曲が変わる)
 - 決め方は、いまのバトルの BGM 設定(`13-bgm-and-rhythm-settings.jsx` の `BGM_BATTLE_MODE_TABS`・`normalizeBgmArrangement`)と同じ形: BGM の設定画面に「MFバトルカード」のタブを足し、「コンピューター戦」「対人戦」の枠を並べる。コンピューター戦の枠の既定は「おまかせ(相手の助手に合わせる)」。
-- 保存は新しいキー `mh_card_bgm_v1`(`{ top: 曲id, cpu:'auto' か 曲id, pvp: 曲id }`。top は 2026-10-26 に足した)。読むときは `normalizeCardBgm` を通し、無い項目・知らない曲idは既定にする。既定は3つとも「MF × ICHIKA MIX」(`atsu_cup_theme`・2026-10-26 社長「MFいちかみっくす」)。練習試合は「助手と対戦」の曲(おまかせなら、みゅあの曲)。オプションで選んだ人の値は書き換えない。いまの `mh_bgm_arrangement` は触らない
+- 保存は新しいキー `mh_card_bgm_v1`(`{ top: 曲id, cpu:'auto' か 曲id, pvp: 曲id }`。top は 2026-10-26 に足した)。読むときは `normalizeCardBgm` を通し、無い項目・知らない曲idは既定にする。既定はトップ画面が「MF × ICHIKA MIX」(`atsu_cup_theme`・2026-10-26 社長「入ったときのBGMをMFいちかみっくすに」)、対戦は前のとおり(助手と対戦は助手ごとの曲・練習試合はみゅあの曲・マルチは `ichika_battle`)。オプションで選んだ人の値は書き換えない。いまの `mh_bgm_arrangement` は触らない
 
 | 相手 | 「おまかせ」のときの曲(社長が1人ずつ決めた。台帳 #3438) | 曲の id |
 | --- | --- | --- |
@@ -797,7 +797,7 @@ HOME の「MFバトルカード」
 | `mh_card_shop_v1` | `{ starters:{ キットid: 時刻 } }` マーケットで買ったスターターキットの印(区切り2) | `{ starters:{} }`。印があるキットは二度と買えない |
 | `mh_card_daily_v1` | `{ day:'YYYY-MM-DD', cpuCoin, pvpCoin, firstWin, foes:{ ブリーダーid: 戦った数 } }` | 今日の0 |
 | `mh_card_record_v1` | `{ cpu:{win,lose,surrender}, pvp:{win,lose}, recent:[…30件] }` | 0 |
-| `mh_card_bgm_v1` | `{ top: 曲id, cpu:'auto' か 曲id, pvp: 曲id }` BGM(5-3) | `{ top/cpu/pvp: 'atsu_cup_theme' }`(2026-10-26。前は cpu:'auto'・pvp:'ichika_battle') |
+| `mh_card_bgm_v1` | `{ top: 曲id, cpu:'auto' か 曲id, pvp: 曲id }` BGM(5-3) | `{ top:'atsu_cup_theme', cpu:'auto', pvp:'ichika_battle' }`(top は 2026-10-26) |
 | `mh_card_cpu_unlocked_v1` | `{ hard, expert, master }` コンピューター戦の難易度を開いた印(5-5) | EASY・NORMAL だけ開いている |
 | `mh_card_settings_v1` | 対戦中の設定(演出・速さ・助手のひとこと・操作・自動・表示。項目は 82 の `CARD_SETTING_GROUPS`)・裏の周回の自動(`quickAutoStart`) | 既定値(`normalizeCardSettings` を通す。足した項目は前からの人にも既定値で補う。前の `speed:"fast"` は考える時間「はやい」・結果まで「短め」に引き継ぐ) |
 | `mh_card_ai_talk_v1` | 助手のおしゃべり(AI)の入/切 `{ on }`(仕様 `docs/spec/CARD_ASSISTANT_TALK.md`) | 入(`cardNormalizeAiTalk`) |
