@@ -153,6 +153,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         }
         el.style.pointerEvents = pe;
         if (cover) return cover;
+        // 縦の画面: 窓が自分のモンスター(名前・ライフ)と自分の帯にかぶらない(2026-10-26 カゲあつくんの通しの点検で、ライフの数字が隠れていた)
+        if (document.querySelector('[data-card-battle]').getAttribute('data-card-wide') !== 'true') {
+          const hits = [...document.querySelectorAll(`[data-card-mon^="${CARD_ME}-"], [data-card-me-head]`)].filter((x) => { const q = x.getBoundingClientRect(); return q.height > 0 && r.bottom > q.top + 1 && r.top < q.bottom - 1; });
+          if (hits.length) return `窓が自分の場にかぶる(${hits.map((x) => x.getAttribute('data-card-mon') || '自分の帯').join('・')})`;
+        }
         // 下のボタン(攻撃おわり・ターン終了など)が画面の中にあって押せる(ドラの窓が増えて、画面の下で切れていた・2026-10-26 社長の実機)
         const fb = [...document.querySelectorAll('[data-card-footer] button')].find((x) => x.getClientRects().length);
         if (fb) { const q = fb.getBoundingClientRect(); if (q.bottom > window.innerHeight + 1 || q.top < 0) return `下のボタンが画面の外(${Math.round(q.top)}〜${Math.round(q.bottom)})`; const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); if (!hit || !fb.contains(hit)) return '下のボタンが押せない'; }
