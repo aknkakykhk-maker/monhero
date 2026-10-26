@@ -8101,6 +8101,7 @@ function MonsterHeroGame() {
   // ★カードの保存は mh_card_* の新しいキーだけ。円盤石・アシストカードは、ビートP交換所と同じ入れ物(mh_unlocked_monsters・mh_unlocked_teachings)へ
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
+    try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 前のカードポイントの移しかえ(1回だけ)。次に開いたときにやり直す */ }
     const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
     // collection … パックの中身・提供割合に「未取得」と、いまの持ち物で決まる出やすさを出すため(読むだけ)
     const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection) };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38ede6a51b845bd1
+// source-sha256: 37d70891bc26f7f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 08:57";
+const BUILD_DATE = "2026-10-26 09:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85438,6 +85438,40 @@ const CARD_SAVE_KEYS = Object.freeze({
   aiTalk: 'mh_card_ai_talk_v1'
 });
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
+const CARD_POINT_MIGRATED_KEY = 'mh_card_points_to_beatp_migrated_v1';
+const cardPointMigrationAmount = (legacyRaw, migrated) => {
+  if (migrated === true) return 0;
+  if (typeof legacyRaw !== 'number' && typeof legacyRaw !== 'string') return 0;
+  const n = Number(legacyRaw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+};
+const cardMigratePointsOnce = async (getValue, setValue, saveAll) => {
+  const migrated = await getValue(CARD_POINT_MIGRATED_KEY, null, false);
+  if (migrated === true) return {
+    added: 0,
+    saved: false
+  };
+  const legacy = await getValue(CARD_SAVE_KEYS.point, null, false);
+  const add = cardPointMigrationAmount(legacy, migrated);
+  const entries = [{
+    key: CARD_POINT_MIGRATED_KEY,
+    before: migrated,
+    next: true
+  }];
+  if (add > 0) {
+    const beatBefore = await getValue(CARD_POINT_STORE_KEY, null, false);
+    entries.push({
+      key: CARD_POINT_STORE_KEY,
+      before: beatBefore,
+      next: Math.min(Number.MAX_SAFE_INTEGER, cardNormalizePoint(beatBefore) + add)
+    });
+  }
+  const saved = await saveAll(entries, getValue, setValue);
+  return {
+    added: saved ? add : 0,
+    saved
+  };
+};
 const cardIsPlainObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = v => {
   const out = {};
@@ -89802,6 +89836,9 @@ const CardBattleScreen = ({
   };
   const load = async () => {
     const K = CARD_SAVE_KEYS;
+    try {
+      await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null)]);
     const next = {
       collection: cardNormalizeCollection(collection),
@@ -103285,6 +103322,9 @@ function MonsterHeroGame() {
   };
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
+    try {
+      await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
+    } catch (_) {}
     const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
     const next = {
       point: cardNormalizePoint(point),

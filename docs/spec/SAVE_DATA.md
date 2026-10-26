@@ -75,6 +75,7 @@
 | `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
 | `mh_card_decks_v1` | object / `cardNormalizeDecks` | MFバトルカードのデッキ `{ active, decks:[{ id, name, monsters:[3], cards:[50] }] }`(5つまで)。持っていないカードが入っていても消さない |
 | `mh_card_point_v1` | number / `cardNormalizePoint` | MFバトルカードのカードポイント(**2026-10-26 から読まない**。カードポイントをやめてビートPにした・社長。キーは消さずに残す。カードの支払い・受け取りはビートPの `mh_rhythm_event_points_v1`。`CARD_POINT_STORE_KEY`) |
+| `mh_card_points_to_beatp_migrated_v1` | `true` のみ | 前のカードポイント(`mh_card_point_v1`)の残りをビートPへ1回だけ移した印(2026-10-26 社長)。印とビートPを1つの取引で書く(`cardMigratePointsOnce`)。`CARD_SAVE_KEYS` には入れない(デバッグの記録の消去で消えて二重に足されないように)。`tools/card/card-point-migration-check.js` |
 | `mh_card_starter_v1` | object / `cardNormalizeStarter` | スターターを受け取った一度きりの印 `{ kit, at }`。ある人には二度と配らない(`cardGrantStarter`) |
 | `mh_card_daily_v1` | object / `cardNormalizeDaily` | MFバトルカードの今日の記録 `{ day(JST), cpuPoint, pvpPoint, firstWin, foes }`。日が変われば 0 に戻る |
 | `mh_card_record_v1` | object / `cardNormalizeRecord` | MFバトルカードの戦績 `{ cpu:{win,lose,surrender}, pvp:{win,lose}, beaten:{助手id:true}, recent:[30件], byLevel:{win:{難易度:数},lose:{…}}, rank:{ total:{難易度:勝ち}, week:{key:月曜の日付, wins:{…}}, streak:{now,best} } }`。byLevel・rank は 2026-10-24 に足した項目(無い人は 0 で補う)。rank はランキングに数えてよい対戦(公開後・デバッグでない人)だけを数える(`cardRecordAfter`) |

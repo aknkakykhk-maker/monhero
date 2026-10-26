@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 40f38447190c02e3
+// generated-sha256: 1077520f88d56d5e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 08:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 09:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51796,6 +51796,31 @@ const CARD_SAVE_KEYS = Object.freeze({
 //   ★CARD_SAVE_KEYS には入れない。デバッグの「カードバトルの記録を消す」が CARD_SAVE_KEYS を全部消すので、入れるとビートPまで消える
 //   ★検査(node で 82 だけ読む)では 25-storage が無いので、同じ名前を書いておく
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
+// 前のカードポイントの残りを、ビートPへ1回だけ移す(2026-10-26 社長「ビートPに1回だけ移す」。未公開なので社長とデバッグ端末の分だけ)
+//   ・前のキー(mh_card_point_v1)は読むだけ。消さない・書き換えない(⑦)
+//   ・印(mh_card_points_to_beatp_migrated_v1)とビートPを1つの取引で書く。途中で失敗したら両方戻るので、二重に足されることも、印だけ立つこともない
+//   ・壊れた値・0以下は足さない(印は立てる)
+const CARD_POINT_MIGRATED_KEY = 'mh_card_points_to_beatp_migrated_v1';
+const cardPointMigrationAmount = (legacyRaw, migrated) => {
+  if (migrated === true) return 0;
+  if (typeof legacyRaw !== 'number' && typeof legacyRaw !== 'string') return 0;
+  const n = Number(legacyRaw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+};
+// getValue / setValue / saveAll は storeGet / storeSet / saveStoredValuesOrRollback(検査から差し替えて呼べるように引数で受け取る)
+const cardMigratePointsOnce = async (getValue, setValue, saveAll) => {
+  const migrated = await getValue(CARD_POINT_MIGRATED_KEY, null, false);
+  if (migrated === true) return { added: 0, saved: false };
+  const legacy = await getValue(CARD_SAVE_KEYS.point, null, false);
+  const add = cardPointMigrationAmount(legacy, migrated);
+  const entries = [{ key: CARD_POINT_MIGRATED_KEY, before: migrated, next: true }];
+  if (add > 0) {
+    const beatBefore = await getValue(CARD_POINT_STORE_KEY, null, false);
+    entries.push({ key: CARD_POINT_STORE_KEY, before: beatBefore, next: Math.min(Number.MAX_SAFE_INTEGER, cardNormalizePoint(beatBefore) + add) });
+  }
+  const saved = await saveAll(entries, getValue, setValue);
+  return { added: saved ? add : 0, saved };
+};
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
   const out = {};
@@ -54416,6 +54441,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   const load = async () => {
     const K = CARD_SAVE_KEYS;
+    // 前のカードポイントの残りを、ビートPへ1回だけ移す(印つき。82 の cardMigratePointsOnce)。失敗しても遊びは止めない
+    try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 次に開いたときにやり直す */ }
     const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([
       storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null),
       storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null),
@@ -65108,6 +65135,7 @@ function MonsterHeroGame() {
   // ★カードの保存は mh_card_* の新しいキーだけ。円盤石・アシストカードは、ビートP交換所と同じ入れ物(mh_unlocked_monsters・mh_unlocked_teachings)へ
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
+    try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 前のカードポイントの移しかえ(1回だけ)。次に開いたときにやり直す */ }
     const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
     // collection … パックの中身・提供割合に「未取得」と、いまの持ち物で決まる出やすさを出すため(読むだけ)
     const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection) };
