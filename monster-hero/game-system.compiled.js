@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4b08be7ed669069e
+// source-sha256: a5f82c68a231dde7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -12544,7 +12544,7 @@ const RELEASE_FLAGS = {
 const releasedForPlayers = item => !item || (!item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true) && (!item.unreleasedFlag || RELEASE_FLAGS[item.unreleasedFlag] !== true);
 const CHANGELOG_TYPES = ['update', 'issue'];
 const changelogEntryId = entry => {
-  const source = entry.id || [entry.type, entry.title, ...(entry.items || [])].join('\u001f');
+  const source = entry.id || [entry.type, entry.idTitle || entry.title, ...(entry.items || [])].join('\u001f');
   let hash = 2166136261;
   for (let i = 0; i < source.length; i++) {
     hash ^= source.charCodeAt(i);
@@ -94258,7 +94258,8 @@ const CardBattleScreen = ({
       onBack: () => setView('top'),
       note: "MFバトルカード"
     }), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+      "data-card-options-side": true,
+      className: "mb-2 shrink-0 space-y-2"
     }, React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
@@ -94272,7 +94273,29 @@ const CardBattleScreen = ({
       onToggle: toggleAssist,
       cls: "",
       withLabel: true
-    }))), cardTalkOpen() && React.createElement("div", {
+    }))), React.createElement("div", {
+      "data-card-options-toc": true,
+      className: `${SCREEN_PANEL_CLASS} hidden landscape:block`
+    }, React.createElement("div", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "項目"), React.createElement("div", {
+      className: "mt-1 grid grid-cols-3 gap-1"
+    }, [...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map(g => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-card-options-jump": label,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        const el = document.querySelector(`[data-card-options] ${sel}`);
+        if (el) el.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      },
+      className: "min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100"
+    }, jaWrap(label)))))), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, cardTalkOpen() && React.createElement("div", {
       "data-card-ai-talk-panel": true,
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
@@ -100857,8 +100880,34 @@ const CardReplayList = ({
     title: "過去の対戦",
     accent: "text-sky-200",
     onBack: onBack,
-    note: `新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`
+    note: "押すと、はじめから見返せます"
   }), React.createElement("div", {
+    "data-card-replay-side": true,
+    className: `${SCREEN_PANEL_CLASS} mb-2 shrink-0`
+  }, React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5 text-center"
+  }, React.createElement("div", {
+    className: "rounded-xl bg-black/30 py-1"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "残っている試合"), React.createElement("b", {
+    "data-card-replay-count": true,
+    className: "text-[14px] font-black text-sky-100"
+  }, box ? box.list.length : '-', React.createElement("small", {
+    className: "text-[10px] text-slate-400"
+  }, "/", CARD_REPLAY_MAX))), React.createElement("div", {
+    className: "rounded-xl bg-black/30 py-1"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "★"), React.createElement("b", {
+    "data-card-replay-favs": true,
+    className: "text-[14px] font-black text-amber-200"
+  }, favs, React.createElement("small", {
+    className: "text-[10px] text-slate-400"
+  }, "/", CARD_REPLAY_FAV_MAX)))), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません`))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-1.5 pb-4`
   }, note && React.createElement("p", {
     "data-card-replay-note": true,
