@@ -113,7 +113,24 @@ function installFeelPlayer(o) {
       // 中心寄りの側。押し始めがそれで通り、押さえている最中は指の高さだけで見ていた(10/7 の食い違い)のはこちらの端
       // 途中で帯が動く・細くなるホールド(holdPoints)は、人は帯を目で追って指を動かす。受付の端で動かさずに押さえると、帯のほうが先に離れて切れるのは当たり前(ボットの勘違い)なので、端の確かめには使わず、指は帯の中心を追う
       const gn = real.get(n.index), varying = !!(gn && Array.isArray(gn.holdPoints) && gn.holdPoints.some((q) => q.subLane !== gn.holdPoints[0].subLane || q.subLaneWidth !== gn.holdPoints[0].subLaneWidth));
-      const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && !varying && rand() < o.edgeProbe ? (centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1) : 0;
+      // ★端を押す向きは、隣にノーツがある側を避ける(2026-10-26 ビート部)。同じころに来るノーツ・その時刻に押さえている帯が、
+      //   その側の受付の広がり以内にあると、端の外側は隣の帯の内側そのものになり、ゲームが隣に結ぶ(正しい振る舞い)。
+      //   それを「正しく押したのに MISS」と数えていた(洗い出しの18か所)。両側とも隣があるときは、端押しをやめて真ん中を押す
+      const sideBlocked = (side) => {
+        const w = Number.isFinite(n.subLaneWidth) ? n.subLaneWidth : 2, s0 = Number.isFinite(n.subLane) ? n.subLane : n.lane * 2, e0 = s0 + w;
+        const tol = w <= 1 ? (typeof RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES !== 'undefined' ? RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES : 0.45) : (typeof RHYTHM_TAP_TOLERANCE_SUB_LANES !== 'undefined' ? RHYTHM_TAP_TOLERANCE_SUB_LANES : 0.6);
+        const win = typeof RHYTHM_INPUT_MATCH_WINDOW_MS !== 'undefined' ? RHYTHM_INPUT_MATCH_WINDOW_MS : 250;
+        return plan.some(({ n: m }) => {
+          if (!m || m === n || !Number.isFinite(m.subLane)) return false;
+          const mt = Number(m.timeMs), me = Number.isFinite(Number(m.endTimeMs)) ? Number(m.endTimeMs) : mt;
+          if (!(Math.abs(mt - n.timeMs) <= win || (mt <= n.timeMs && me >= n.timeMs))) return false;   // 同じころに来る・その時刻に押さえている帯
+          const ms = m.subLane, mw = Number.isFinite(m.subLaneWidth) ? m.subLaneWidth : 2;
+          return side > 0 ? (ms < e0 + tol && ms + mw > e0) : (ms + mw > s0 - tol && ms < s0);
+        });
+      };
+      const prefSide = centerOf(n) < (RHYTHM_LANE_COUNT - 1) / 2 ? 1 : -1;
+      const probeSide = o.edgeProbe > 0 && (n.type === 'HOLD') && !varying && rand() < o.edgeProbe
+        ? (!sideBlocked(prefSide) ? prefSide : !sideBlocked(-prefSide) ? -prefSide : 0) : 0;
       const p = (probeSide && edgeProbePoint(n, y, probeSide)) || pointAt(c, y);
       const dropPointer = o.mode === 'ios' && rand() < o.dropPointer;
       // 遅れの大きさ: 'real' は実機(iPhone)の記録の割合どおり(50ms以上遅れたもののうち 80ms超が73%・150ms超が35%・300ms超が22%。最大は 1秒まで)。ほかは lateMs の範囲で一様

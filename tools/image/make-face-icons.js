@@ -18,7 +18,7 @@ const { loadImage } = require('canvas');
 // 顔アイコン用の高解像度の元画像を置く場所(art-sources/README.md 参照)。
 // ここに <名前>.png があれば、埋め込みの立ち絵より優先して使う
 const ART_SOURCES = path.join(TOOLS_DIR, 'art-sources');
-async function loadSourceImage(name, dataUrl) {
+async function loadSourceImage(name, dataUrl, quiet = false) {
   // 現行のモンスター原本置き場を優先し、過去の顔アイコン専用原本にも対応する。
   // GitHub 経由で保存されたファイルは拡張子が大文字になる場合があるため、双方を探す。
   // 配信フォルダに大文字名の原本(マーケットのアイコン商品として使っている高解像度版)が
@@ -35,7 +35,7 @@ async function loadSourceImage(name, dataUrl) {
   const file = candidates.find(candidate => fs.existsSync(candidate));
   if (file) {
     const img = await loadImage(file);
-    console.log(`  ${path.relative(TOOLS_DIR, file)} を使用 (${img.width}x${img.height})`);
+    if (!quiet) console.log(`  ${path.relative(TOOLS_DIR, file)} を使用 (${img.width}x${img.height})`);
     return img;
   }
   return decodeDataUrl(dataUrl);
@@ -52,6 +52,17 @@ const FIT = 0.86;
 // イブリースは頭の右後ろに背景の飾り(淡い紫の円)があり、顔だけ切り出すと
 // 四角く途切れた薄い板のように写り込んでしまうため、切り出す前に消しておく
 const STRIP_BACKGROUND = { IBLIS: 'Iblis' };
+
+// 顔のまんなか(ART_ANCHORS・data/images/images-ally.js)。全身絵の中の位置(0〜1)。2026-10-26 社長「顔アイコンと全身絵のずれが出ない仕組み」
+// あれば、この点を丸のまんなかに置く(FACE_BOXES の範囲は大きさを決めるだけ)。無ければ前のとおり、範囲の中の「絵がある所」のまんなかに置く
+// (範囲を左右対称に取らないと、羽や髪のぶん顔がずれる。アークがそうだった)。表は tools/image/art-anchors.js で書き出す
+function loadArtAnchors() {
+  const src = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero', 'data', 'images', 'images-ally.js'), 'utf8');
+  const m = src.match(/\nconst ART_ANCHORS = Object\.freeze\(([\s\S]*?)\);\n/);
+  if (!m) return {};
+  // Object.freeze を外して読む(値は数の配列だけ)
+  return Function(`return (${m[1].replace(/Object\.freeze\(/g, '(')});`)();
+}
 
 // 立ち絵に対する「頭」の範囲(正規化座標 [x0, y0, x1, y1])。
 // tools/image/grid-overlay.js で目盛りを重ねた画像を出し、元絵から目視で実測した値。
@@ -114,6 +125,10 @@ const FACE_BOXES = {
   // 近日公開予定の2体(2026-09-28)。縦横は余白を切ったあとの立ち絵の座標系。
   // ユグドラシルは鹿の耳の先〜あご下。角は長いので上半分は枠の外へ流す
   YGGDRASIL: [0.27, 0.15, 0.74, 0.41, -0.02],
+  TIGER: [0.26, 0.11, 0.72, 0.44, -0.02], // ライガーは頭まるごと(2026-10-26 社長が A を選んだ)
+  MIA: [0.315, 0.085, 0.675, 0.31, -0.06, 0.027], // 目のあいだは左右 48.5%。丸のまんなかは ART_ANCHORS(社長が「A を左へ」の案2を選んだ。2026-10-27)
+  PANDORA: [0.272, 0.04, 0.692, 0.31, -0.10], // 目のあいだは左右 48.2%。社長が A(この範囲のまま)を選んだ(2026-10-27)
+  PLANT: [0.0, 0.0, 1.0, 1.0, 0], // 体ぜんぶが顔(2026-10-26 社長: マーケットの寄り方 A にそろえる。寄り方は ART_ANCHORS の zoom)
   // メルホイップは頭の苺飾り〜あご下。左の傘は範囲に入れない
   MEL_WHIP: [0.31, 0.19, 0.78, 0.40, -0.02],
   // ゴースト(2026-10-05)。シルクハットのつば〜あご下。帽子の上半分は枠の外へ流す
@@ -250,30 +265,39 @@ function opaqueBoundsIn(img, x0, y0, x1, y1) {
   return { w: maxX - minX + 1, h: maxY - minY + 1, cx: (minX + maxX + 1) / 2, cy: (minY + maxY + 1) / 2, clipped };
 }
 
-async function makeFaceIcon(dataUrl, box, name, dye) {
-  let img = await loadSourceImage(name, dataUrl);
+// 顔アイコンの置き方を決める(描かずに数だけ返す)。art-anchors.js・art-anchor-check.js もこれを使う
+// 返す値: img(背景の飾りを消した元絵)・scale(倍率)・dx/dy(元絵を置く位置)・anchor(使った基準。無ければ null)・opaque(範囲の中の絵がある所)
+async function faceIconLayout(dataUrl, box, name, dye, anchors = null, quiet = false) {
+  let img = await loadSourceImage(name, dataUrl, quiet);
   if (STRIP_BACKGROUND[name]) {
     const { canvas, removed } = stripBackground(img, STRIP_BACKGROUND[name], dye);
-    console.log(`  背景の飾りを ${removed}px 透明化しました`);
+    if (!quiet) console.log(`  背景の飾りを ${removed}px 透明化しました`);
     img = canvas;
   }
   const [x0, y0, x1, y1, biasY = 0, biasX = 0] = box;
   // FACE_BOXES は目視で測った値なので、指定した矩形の中心と、実際に絵が描かれている
   // 部分の中心はズレることがある(モッチーが横にずれて見えていた原因)。
-  // 指定範囲の中で不透明な画素が実際に占める範囲を測り直し、そちらを中心として使う。
+  // 指定範囲の中で不透明な画素が実際に占める範囲を測り直し、大きさはそちらで決める。
   const opaque = opaqueBoundsIn(img, x0, y0, x1, y1);
-  if (opaque.clipped && opaque.clipped.length) {
+  if (!quiet && opaque.clipped && opaque.clipped.length) {
     console.log(`  ⚠ ${name}: 指定範囲が絵の${opaque.clipped.join('・')}端を切っています。FACE_BOXESを広げてください`);
   }
   const headW = opaque.w, headH = opaque.h;
-  const headCx = opaque.cx, headCy = opaque.cy;
-  // 頭の長辺が枠のFIT分を占めるように倍率を決める
-  const scale = (SIZE * FIT) / Math.max(headW, headH);
+  const anchor = anchors && anchors[name] && Array.isArray(anchors[name].face) ? anchors[name].face : null;
+  // 基準があるときは、その点を丸のまんなかに置く(biasX・biasY は使わない。ずらしは基準の点そのものに含める)
+  const headCx = anchor ? anchor[0] * img.width : opaque.cx, headCy = anchor ? anchor[1] * img.height : opaque.cy;
+  // 頭の長辺が枠のFIT分を占めるように倍率を決める。基準に寄り具合(zoom)があれば掛ける(1より大きいと寄る、小さいと引く)
+  const zoom = anchor && Number.isFinite(anchors[name].zoom) && anchors[name].zoom > 0 ? anchors[name].zoom : 1;
+  const scale = (SIZE * FIT) / Math.max(headW, headH) * zoom;
   // 頭の中心が枠の中心(biasY・biasXぶんずらす)に来るよう、元絵全体を配置する。
   // 枠からはみ出た体や翼は自動的に切り落とされ、直線的な断面は残らない
-  const dx = SIZE / 2 + biasX * SIZE - headCx * scale;
-  const dy = SIZE / 2 + biasY * SIZE - headCy * scale;
+  const dx = SIZE / 2 + (anchor ? 0 : biasX * SIZE) - headCx * scale;
+  const dy = SIZE / 2 + (anchor ? 0 : biasY * SIZE) - headCy * scale;
+  return { img, scale, dx, dy, anchor, opaque };
+}
 
+async function makeFaceIcon(dataUrl, box, name, dye, anchors = null, quiet = false) {
+  const { img, scale, dx, dy } = await faceIconLayout(dataUrl, box, name, dye, anchors, quiet);
   const c = createCanvas(SIZE, SIZE);
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = true;
@@ -282,7 +306,7 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
   return c;
 }
 
-(async () => {
+if (require.main === module) (async () => {
   const preview = process.argv.includes('--preview');
   const force = process.argv.includes('--force');
   const requested = new Set(process.argv.slice(2)
@@ -297,7 +321,7 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
     if (requested.size && !requested.has(name)) continue;
     const srcKey = `${name}_IMG`;
     if (!images[srcKey]) { console.log(`${srcKey}: 見つかりません(スキップ)`); continue; }
-    const canvas = await makeFaceIcon(images[srcKey], box, name, dye);
+    const canvas = await makeFaceIcon(images[srcKey], box, name, dye, loadArtAnchors());
     const buf = canvas.toBuffer('image/png');
 
     fs.writeFileSync(path.join(TOOLS_DIR, 'out', `${name}_FACE_ICON.png`), buf);
@@ -330,3 +354,8 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
   if (preview) { console.log('\n--preview のため顔アイコンのPNGは更新していません'); return; }
   console.log(`\n${changed}件の顔アイコンPNGを作り直しました`);
 })().catch((e) => { console.error(e); process.exit(1); });
+
+// 検査用: 何も表示せずに作る
+const makeFaceIconQuiet = (dataUrl, box, name, dye, anchors = null) => makeFaceIcon(dataUrl, box, name, dye, anchors, true);
+
+module.exports = { FACE_BOXES, SIZE, FIT, opaqueBoundsIn, loadSourceImage, faceIconLayout, makeFaceIcon, makeFaceIconQuiet, loadArtAnchors };

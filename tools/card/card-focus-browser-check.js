@@ -11,7 +11,8 @@
 // 見ているもの(助手と対戦の始まりを、検査のときだけの口 window.__mhCardScene で決めた場面にする)
 //   A 自分が付ける: 文の無いちから技を押すと「技+集中」が先に選ばれる。相手(緊急回避=0ガッツだけ)は回避できず、ダメージが入る
 //   B 助手が付けた技を受ける: 手札の緊急回避(0ガッツ)は押しても守れない・光の盾(1ガッツ)は出せてダメージが1減る
-//   どちらも実行時エラーが無い
+//   C 全体カード「ホリィの声援」(ガッツ−1)の場: 光の盾も0ガッツになるので、集中を付けた技には出せない(2026-10-27 案A・そのとき払うガッツで数える)
+//   どれも実行時エラーが無い
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -57,7 +58,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.addInitScript((m) => {
       window.__mhCardScene = (st) => {
         const db = CARD_BATTLE_DATA; // eslint-disable-line no-undef
-        const atkP = m === 'attack' ? 0 : 1;
+        const atkP = m === 'attack' ? 0 : 1; // guard・holy は助手が攻める
         const a = st.players[atkP], d = st.players[1 - atkP];
         const mon = a.mons[0];
         const atk = Object.values(db.cards).filter((c) => c.ready && c.user === mon.species && c.kind === 'pow' && !(c.effects || []).length && c.guts > 0).sort((x, y) => x.guts - y.guts)[0];
@@ -69,7 +70,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         d.guts = Array(3).fill('100');
         st.phase = 'main'; st.pending = null; st.pendingDiscard = null; st.active = atkP; st.turn = 2; st.first = atkP;
         a.breederUsed = false; a.mons.forEach((x) => { x.attacks = 0; });
-        if (m === 'guard') {
+        // C: 全体カード「ホリィの声援」(ガッツ−1)が場にある。光の盾(1ガッツ)も払うガッツが0になる
+        if (m === 'holy') { const f = db.cards.F118; st.field = { no: 'F118', p: atkP, effects: (f.effects || []).map((e) => ({ ...e })) }; }
+        if (m === 'guard' || m === 'holy') {
           // 助手の手を、集中を付けた技で先に当てておく(守りを選ぶ段から始まる)
           const o = cardAttackOptions(db, st).find((x) => x.mon === 0 && x.hand.length === 2 && x.hand.includes(1) && x.target && x.target.m === 0); // eslint-disable-line no-undef
           window.__mhFocusCpuAct = o || null;
@@ -152,6 +155,16 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     for (let i = 0; i < 40; i++) { await page.waitForTimeout(250); life3 = await lifeOf(page, '0-0'); if (life3 !== life2) break; }
     const atkB = await page.evaluate(() => window.__mhFocusAtk);
     check('B 光の盾(1ガッツ)は出せて、ダメージが1減る', life2 !== null && life2 - life3 === Math.min(life2, Math.max(0, atkB.damage - 1)), `ライフ ${life2}→${life3}・技 ${atkB && atkB.damage}`);
+    await page.close();
+    // ---- C ホリィの声援が場にあるとき(集中は「そのとき払うガッツ」で数える・2026-10-27 案A) ----
+    page = await open('holy');
+    await page.waitForFunction(() => document.querySelector('[data-card-battle]') && document.querySelector('[data-card-battle]').getAttribute('data-card-mode') === 'guard', null, { timeout: 30000 }).catch(() => {});
+    check('C 場面を作れた(ホリィの声援の場で、助手が集中を付けた技で狙っている)', !!(await page.evaluate(() => window.__mhFocusCpuAct)) && (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) === 'guard');
+    if (SHOT) await page.screenshot({ path: path.join(SHOT, 'focus-holy.png') });
+    await page.locator('[data-card-hand-card="1"]').click();
+    await page.waitForTimeout(400);
+    const holyText = await page.locator('[data-card-battle]').innerText();
+    check('C 光の盾(ホリィの声援で0ガッツ)も押しても守れない', (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) === 'guard' && holyText.includes('このカードでは守れません'));
     check('実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
