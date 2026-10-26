@@ -49,10 +49,12 @@
 //         pair(dmg) 同じ名前を2枚同時に出したらdmg / requires(names) その札を全部一緒に出すときだけ(払うのはこの札のガッツだけ)/
 //         returnOnHit ダメージを与えたら手札へ戻る / split ダメージを相手に割り振る(act.split … 相手の3体ぶんの点)/
 //         bonusDiscard(user) 捨て札のその種族の攻撃の技の枚数を足す / bonusLost 減ったライフのぶんを足す / mimic(attach) どの種族のちから技でもこの子が出せる
+//         tossBonus 使うときに手札を好きな枚数捨て、その枚数をダメージに足す(act.toss … 捨てる手札の番号。0枚でもよい。カード投げ)
 //         ---- 区切り7: モンスターが入れ替わる ----
 //         revive(species,life) 倒れたその種族の子を戻す(そのターンは攻撃できない)/ cocoon その子は emerge の札のほかを出せない /
 //         emerge(to) まゆ化した子を to のモンスターと取りかえ、ライフを最大に / fuse 味方2体をKOし、メインとサブが合う混血を出す(act.fuse)/
-//         ancient(attach) 混血の子が、サブの種族の特殊技を出せる
+//         ancient(attach) 混血の子が、サブの種族の特殊技を出せる /
+//         possess KOされた味方1体を、この子の今のライフで戻し(もとの最大まで)、この子はKO。戻った子はそのターン攻撃できない(のりうつる)
 //   使える時: useWhen(lifeMax) 自分のライフがその数以下のときだけ出せる
 //   守り: evade(kinds,minGuts) / reduce(kinds,n) / reduceHalf(kinds) 半分(切り捨て)減らす / reduceAll(kinds) / reflect(kinds,frac,keep) はね返す /
 //         cover 味方への1回分を自分が受ける / nextTurnMult(kinds,n) 次の自分のターンの技n倍 / becomeAir 次のターン終わりまで空中 /
@@ -405,6 +407,7 @@ const cardSpeTargets = (db, st, p, mi, card) => {
   if (cardHasEff(card, 'stunTarget') || cardHasEff(card, 'liftTarget')) return opp.mons.map((m, j) => (!m.ko ? { p: cardOther(p), m: j } : null)).filter(Boolean);
   if (cardHasEff(card, 'selfHurt')) return me.mons.map((m, j) => (!m.ko ? { p, m: j } : null)).filter(Boolean);
   const rv = cardEff(card, 'revive'); if (rv) return me.mons.map((m, j) => (m.ko && m.species === rv.species ? { p, m: j } : null)).filter(Boolean);
+  if (cardHasEff(card, 'possess')) return me.mons.map((m, j) => (m.ko && j !== mi ? { p, m: j } : null)).filter(Boolean); // のりうつる: KOされた味方(この子のほか)
   const self0 = mi >= 0 ? me.mons[mi] : null;
   if (cardHasEff(card, 'emerge') && !(self0 && self0.cocoon)) return [];
   if (cardHasEff(card, 'cocoon') && self0 && self0.cocoon) return [];
@@ -481,9 +484,21 @@ const cardAttackOptions = (db, st) => {
       // 付ける札(底力・クリティカルなど。0〜2枚)
       const withAttach = [];
       sets.forEach((s) => { cardAttachSets(db, st, p, mon, card, s).forEach((att) => { if (mon.cocoon && att.length) return; if (!byMimic || att.some((a) => mimicIdx.includes(a))) withAttach.push([...s, ...att]); }); });
+      // カード投げ: 捨てる手札の組ごとに1つの手(toss。残りの手札の組を全部。0枚も入る)
+      const tossSets = (idxs) => {
+        if (!cardHasEff(card, 'tossBonus')) return [undefined];
+        const rest = me.hand.map((_, j) => j).filter((j) => !idxs.includes(j)).slice(0, 6);
+        const out2 = [];
+        for (let bits = 0; bits < (1 << rest.length); bits++) out2.push(rest.filter((_, k) => bits & (1 << k)));
+        return out2;
+      };
       withAttach.forEach((idxs) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
+        if (cardHasEff(card, 'tossBonus')) {
+          tossSets(idxs).forEach((toss) => opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j }, toss }); }));
+          return;
+        }
         if (cardFieldBanned(db, st, p, mi, card, idxs)) return; // 全体カード: がんじがらめ・必殺技の応酬・必殺技の封印
         if (card.kind === 'spe') {
           // 変形・トランスフォーム: 空中か地上かを選ぶ(手に form を持たせる)
@@ -651,7 +666,10 @@ const cardStartAttack = (db, st, act) => {
   const mainNo = me.hand[act.hand[0]];
   const main = cardOf(db, mainNo);
   const cost = cardActionCost(db, st, p, me.hand, act.hand);
+  // カード投げ: 捨てる手札(技の札と重ならない番号だけ)。技の札を取ったあとの番号に直して取る
+  const tossIdx = cardHasEff(main, 'tossBonus') && Array.isArray(act.toss) ? [...new Set(act.toss)].filter((i) => Number.isInteger(i) && i >= 0 && i < me.hand.length && !act.hand.includes(i)) : [];
   const used = cardTakeFromHand(st, p, act.hand);
+  const tossed = cardTakeFromHand(st, p, tossIdx.map((i) => i - act.hand.filter((h) => h < i).length));
   const discardBefore = me.discard.slice(); // 魔神ファイナルが数える(払うガッツより前)
   cardPayGuts(st, p, cost);
   me.playedTurn = st.turn; // 突進(そのターンの最初のカード)が見る
@@ -661,6 +679,7 @@ const cardStartAttack = (db, st, act) => {
   if (!isBreeder) { mon.attacks += 1; mon.lastCard = mainNo; }
   cardLog(st, cardUseText(db, st, p, mi, used), { kind: 'use', p, cards: used });
   cardEvent(st, { t: 'use', p, mon: mi, cards: used, target: act.target || null });
+  if (tossed.length) { me.discard.push(...tossed); cardLog(st, `${me.name}は手札を${tossed.length}枚捨てた`); }
   // 全体カード: 場に置く。相手は出た瞬間に「おいのり」で無くせる(窓は、隠れた手札を見ずに開く。マルチの2台で同じにするため)
   if (main.kind === 'fld') {
     const q = cardOther(p);
@@ -677,7 +696,7 @@ const cardStartAttack = (db, st, act) => {
   // ダメージの元: 書いてある数・同時に使う組・付けた札・次のターンn倍
   let dmg = cardBaseDamage(db, st, p, mi, main, used.map((n) => cardOf(db, n)).filter(Boolean), discardBefore);
   const mods = cardAttachMods(used.map((n) => cardOf(db, n)).filter(Boolean));
-  dmg += mods.add;
+  dmg += mods.add + tossed.length; // カード投げ: 捨てた枚数を足す
   let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) { mult *= mon.mult.n; mon.mult = null; }
   if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) { mult *= mon.charge.n; mon.charge = null; } // 静の構え
@@ -841,6 +860,12 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'rage' && self) { self.noGuardUntil = st.turn + 1; self.mult = { turn: st.turn + 2, kinds: ['pow', 'int'], n: 2 }; cardLog(st, `${self.name}は次の番まで守れない。次の番の技は2倍`); }
     // ---- 区切り7 ----
     if (e.t === 'revive' && tm && tm.ko) { tm.ko = false; tm.life = Math.min(e.life, tm.max); tm.stunTurn = st.turn; tm.attacks = 0; cardLog(st, `${tm.name}がライフ${tm.life}で戻った(このターンは攻撃できない)`); }
+    if (e.t === 'possess' && self && !self.ko && tm && tm.ko && tm !== self) {
+      const n = self.life;
+      tm.ko = false; tm.life = Math.max(1, Math.min(n, tm.max)); tm.stunTurn = st.turn; tm.attacks = 0;
+      cardLog(st, `${self.name}が${tm.name}にのりうつった(${tm.name}はライフ${tm.life}で戻った。このターンは攻撃できない)`);
+      cardKo(st, p, mi);
+    }
     if (e.t === 'cocoon' && self) { self.cocoon = true; cardLog(st, `${self.name}はまゆになった(羽化のほかは出せない)`); }
     if (e.t === 'emerge' && self && self.cocoon) { const from = self.name; cardSwapMon(db, self, e.to); cardLog(st, `${from}は${self.name}になった(ライフ${self.life})`); }
     if (e.t === 'fuse' && act.fuse) {
@@ -1027,7 +1052,8 @@ const cardApplyAction = (db, st0, act) => {
       st.phase = 'guts'; return st;
     }
     if (act.type !== 'attack' && act.type !== 'breeder') return null;
-    const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse));
+    const ok = cardAttackOptions(db, st0).some((o) => o.type === act.type && o.mon === act.mon && JSON.stringify(o.hand) === JSON.stringify(act.hand) && JSON.stringify(o.target) === JSON.stringify(act.target || null) && o.form === act.form && JSON.stringify(o.split) === JSON.stringify(act.split) && JSON.stringify(o.fuse) === JSON.stringify(act.fuse)
+      && JSON.stringify(o.toss) === JSON.stringify(Array.isArray(act.toss) ? act.toss.slice().sort((x, y) => x - y) : act.toss)); // カード投げ: 捨てる手札の組
     if (!ok) return null;
     // 影縛り: 名指しが要る札を付けたら、回避・防御の札の名前が1つ要る(付けていなければ名指しは持たない)
     const needBind = act.hand.some((i) => cardHasEff(cardOf(db, st0.players[p].hand[i]), 'attachBind'));
@@ -1086,7 +1112,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
   mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.075, master: 0.12 },
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.14 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.3 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.1 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)が効くようになって(2026-10-27)プレイヤー役が強くなったぶん 0.3 → 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
   atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0, master: 0 },   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
@@ -1169,6 +1195,12 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
       // 区切り7
       if (e.t === 'revive') score += 4;
+      // のりうつる: 戻す子が、この子より強い(最大ライフが大きい・手札に使える技が多い)ときだけ得。この子は KO になる
+      if (e.t === 'possess' && opt.target && opt.mon >= 0) {
+        const self0 = me.mons[opt.mon], back = me.mons[opt.target.m];
+        const usable = (m) => me.hand.filter((_, i) => !opt.hand.includes(i)).map((n) => cardOf(db, n)).filter((c) => c && cardIsAttackKind(c.kind) && cardUsableBy(c, { ...m, ko: false })).length;
+        score += (Math.min(self0.life, back.max) - self0.life) * 0.4 + (usable(back) - usable(self0)) * 0.7 + (back.max - self0.max) * 0.15 - 0.3;
+      }
       if (e.t === 'cocoon') score += me.hand.some((n) => cardHasEff(cardOf(db, n), 'emerge')) ? 1 : -3;
       if (e.t === 'emerge') { const m0 = opt.mon >= 0 ? me.mons[opt.mon] : null; const to = cardMonsterOf(db, e.to); score += 2 + (m0 && to ? (to.life - m0.life) * 0.3 : 0); }
       if (e.t === 'fuse' && opt.fuse) { const to = cardMonsterOf(db, opt.fuse.no); score += to.life - (me.mons[opt.fuse.a].life + me.mons[opt.fuse.b].life) * 0.8 - 1; }
@@ -1219,7 +1251,13 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
   } else {
     let dmg = cardBaseDamage(db, st, p, opt.mon, main, opt.hand.map((i) => cardOf(db, me.hand[i])).filter(Boolean));
     const mods = cardAttachMods(opt.hand.map((i) => cardOf(db, me.hand[i])).filter(Boolean));
-    dmg = (dmg + mods.add) * mods.mult;
+    // カード投げ: 捨てた枚数を足す。捨てる札の値打ちを引く(だれも使えない札は安い。守りの札は高い)
+    const toss = Array.isArray(opt.toss) ? opt.toss : [];
+    if (toss.length) {
+      const live = me.mons.filter((m) => !m.ko);
+      score -= toss.map((i) => cardOf(db, me.hand[i])).reduce((a, c) => a + (!c ? 0.3 : c.user === 'breeder' ? 0.6 : !live.some((m) => cardUsableBy(c, m)) ? 0.15 : cardIsGuardKind(c.kind) ? 1.3 * habit.keepGuard : 1.0), 0); // 手札はあとでガッツにもなるので、捨てる値打ちは高め(0.7 だと4枚まとめて捨てがちだった)
+    }
+    dmg = (dmg + mods.add + toss.length) * mods.mult;
     const mon = opt.mon >= 0 ? me.mons[opt.mon] : null;
     if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(main.kind)) dmg *= mon.mult.n;
     if (mon && mon.charge && mon.charge.kinds.includes(main.kind)) dmg *= mon.charge.n;
@@ -1283,6 +1321,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
     const re = cardEff(c, 'reduce'); if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
     if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
+    if (cardHasEff(c, 'reduceAll') && !cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
     const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg : 0;
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
@@ -1523,6 +1562,7 @@ const cardAiCardValue = (card, habit) => {
       if (e.t === 'choose') v += e.then === 'toHand' ? 0.8 : 0.3;
       if (e.t === 'safe') v += 0.8;
       if (e.t === 'revive') v += 0.3;
+      if (e.t === 'possess') v += 0.2;
       if (e.t === 'cocoon') v -= 1;
       if (e.t === 'emerge') v += 0.3;
       if (e.t === 'fuse') v -= 0.3;
@@ -1539,6 +1579,7 @@ const cardAiCardValue = (card, habit) => {
   const pr = cardEff(card, 'pair'); if (pr) dmg = pr.dmg * 0.45; // 2枚そろったときだけ
   if (eff('requires')) dmg *= 0.3; // 決まった札がそろわないと出せない
   if (eff('bonusDiscard') || eff('bonusLost')) dmg += 3;
+  if (eff('tossBonus')) dmg += 1.5; // カード投げ: ふつうは手札を1〜2枚捨てて使う
   if (eff('returnOnHit')) dmg += 0.8;
   if (eff('halfOnEvade') || eff('noEvade')) dmg *= 1.3;
   if (eff('area')) dmg *= 1.6 * habit.area;
@@ -2219,7 +2260,10 @@ const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) =
   // 上限なし(何戦してももらえる)。daily.cpuPoint は前のまま数えるだけで、もらえる数には使わない(保存の形は変えない・決まり⑦)
   const got = base;
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
-  return { base, got, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
+  // full・ownTurns・kos は結果の画面で「減った理由」を出すためだけ(2026-10-26 カゲあつくんの通しの点検「負けの 42 に理由が無い」)
+  const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
+  const full = outcome === 'win' ? level.point : cardLosePoint(level);
+  return { base, got, capped: false, bonus, total: got + bonus, short: facts.ownTurns < CARD_MIN_OWN_TURNS, full, ownTurns: facts.ownTurns, kos: facts.kos, daily: { ...daily, cpuPoint: daily.cpuPoint + got, firstWin: daily.firstWin || bonus > 0 } };
 };
 // 勝ったら次の難易度を開く(NORMAL→HARD→EXPERT→MASTER)
 const cardUnlockAfterWin = (unlocked, levelId) => {

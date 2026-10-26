@@ -425,8 +425,19 @@ function analyzeCombo(cache, real) {
   const allyMain = {};
   for (const a of MONS) { const xs = rows.filter((x) => x.a.id === a.id && Number.isFinite(x.raw)); allyMain[a.id] = xs.length ? xs.reduce((s0, x) => s0 + x.raw, 0) / xs.length : 0; }
   for (const x of rows) { x.allyMain = allyMain[x.a.id]; x.pts = x.raw - allyMain[x.a.id]; }
-  rows.allyMain = allyMain;
-  return rows;
+  // 組み合わせに出すのは、Tier 表(tier.json の「モンスター」)に載っている子どうしだけ(2026-10-27 ダイスくん)。
+  //   シミュレーターは新しく入った子(イルミネ・ドリーミィなど)も回すが、Tier 表にまだいない子の組を出すと tier-page.js が止まる。
+  //   供モンとしての強さ(allyMain)は全員ぶんで出したまま
+  const tierNames = tierMonsterNames();
+  const shown = tierNames ? rows.filter((x) => tierNames.has(x.h.name) && tierNames.has(x.a.name)) : rows;
+  shown.allyMain = allyMain;
+  return shown;
+}
+function tierMonsterNames() {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(OUT_DIR, 'tier.json'), 'utf8'));
+    return Array.isArray(j.モンスター) && j.モンスター.length ? new Set(j.モンスター.map((m) => m.名前)) : null;
+  } catch (e) { return null; }
 }
 // 測り直した上位(A2)。相性 = (組 − 基準。Expert 5・Master 3) − 供モンとしての強さ(1回目の 650 組から)
 function analyzeVerify(cache, rows, which = 'pairs') {
