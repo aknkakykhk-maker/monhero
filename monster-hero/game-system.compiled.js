@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cea359946b433a85
+// source-sha256: 7c4a3b29442ba0a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:09";
+const BUILD_DATE = "2026-10-27 03:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17368,6 +17368,74 @@ const useAssistantBubbleState = () => {
   }, []);
   return state;
 };
+const ASSISTANT_BUBBLE_COLLAPSED_KEY = 'mh_bubble_collapsed_v1';
+const normalizeBubbleCollapsed = raw => {
+  const out = {};
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) Object.keys(raw).slice(0, 200).forEach(k => {
+    if (raw[k] === true) out[String(k).slice(0, 80)] = true;
+  });
+  return out;
+};
+const BUBBLE_COLLAPSE_STORE = (() => {
+  let state = {
+    map: {},
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let map = {};
+        try {
+          map = normalizeBubbleCollapsed(await storeGet(ASSISTANT_BUBBLE_COLLAPSED_KEY, {}, false));
+        } catch (_) {}
+        state = {
+          map,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    set(key, collapsed) {
+      if (!key) return;
+      const map = {
+        ...state.map
+      };
+      if (collapsed) map[key] = true;else delete map[key];
+      state = {
+        ...state,
+        map
+      };
+      emit();
+      void storeSet(ASSISTANT_BUBBLE_COLLAPSED_KEY, map).catch(() => {});
+    }
+  };
+})();
+const useBubbleCollapse = collapseKey => {
+  const [state, setState] = useState(() => BUBBLE_COLLAPSE_STORE.get());
+  useEffect(() => {
+    if (!collapseKey) return undefined;
+    const off = BUBBLE_COLLAPSE_STORE.subscribe(setState);
+    setState(BUBBLE_COLLAPSE_STORE.get());
+    void BUBBLE_COLLAPSE_STORE.load();
+    return off;
+  }, [collapseKey]);
+  const collapsed = !!collapseKey && state.map[collapseKey] === true;
+  return [collapsed, next => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
+};
 const bubbleWrap = text => typeof jaWrap === 'function' ? jaWrap(text) : text;
 const bubbleWrapStyle = () => typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
 const AssistantBubble = ({
@@ -17383,9 +17451,11 @@ const AssistantBubble = ({
   compact = false,
   defaultOpen = false,
   footerSpace = 0,
-  maxLines = 0
+  maxLines = 0,
+  collapseKey = null
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
   const bubbleDecisionRef = useRef(null);
@@ -17473,8 +17543,29 @@ const AssistantBubble = ({
   const Wrapper = hasDetail ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
+  if (collapseKey && collapsed) {
+    return React.createElement("div", {
+      "data-bubble-collapsed": true,
+      className: "w-full flex items-center gap-2"
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: 32,
+      accent: color,
+      expression: face
+    }), React.createElement("button", {
+      type: "button",
+      onClick: () => setCollapsed(false),
+      "aria-label": `${who.name}のひとことをひらく`,
+      className: "mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95",
+      style: {
+        borderColor: color,
+        color,
+        backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
+      }
+    }, "💬 ", who.name, "のひとこと ▾"));
+  }
   return React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "w-full flex items-end gap-2"
+    className: `w-full flex items-end gap-2 ${collapseKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -17546,7 +17637,13 @@ const AssistantBubble = ({
     "data-bubble-more-text": true
   }, "タップで詳しく"), React.createElement(ChevronRight, {
     size: 11
-  }))))), open && React.createElement("div", {
+  })))), collapseKey && React.createElement("button", {
+    type: "button",
+    onClick: () => setCollapsed(true),
+    "aria-label": "ひとことをたたむ",
+    "data-bubble-collapse": true,
+    className: "mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90"
+  }, "▴")), open && React.createElement("div", {
     className: "fixed inset-0 flex items-end justify-center",
     style: {
       position: 'fixed',
@@ -53656,11 +53753,13 @@ function BreederMarketScreen({
     assistantId: "mua",
     line: cardShopLine.t,
     expression: cardShopLine.e,
-    compact: true
+    compact: true,
+    collapseKey: "market:card"
   }) : React.createElement(AssistantBubble, {
     key: `market-${marketSection || 'top'}`,
     scene: "market",
     compact: true,
+    collapseKey: `market:${marketSection || 'top'}`,
     condition: {
       breeder: 'shopBreeder',
       exchange: 'shopExchange',
