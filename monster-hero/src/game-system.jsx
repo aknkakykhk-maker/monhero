@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7975b544ba828bfd
+// generated-sha256: d3f47c7ec2711d3a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 19:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 20:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -56371,7 +56371,8 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
 // 作り: マスモンランキング(39-rhythm-buddy-rank-api.jsx)と同じ。新しい表 card_battle_ranks へ「1人1行」を上書き保存し、並べ替えは表の側で行う。
 //   既存の rankings / bond_levels / rhythm_buddy_ranks には一切書かない。表がまだ無い環境でも壊れない(無いと分かったら以後アクセスしない)。
 //   SQL: docs/sql/card-battle-ranks/CARD_BATTLE_RANKS_APPLY.sql
-// 送ってよいのは、本当に対戦して勝った記録だけ(cardRecordAfter の rankable。公開前・デバッグの人・デバッグの入口からの対戦は数えない・送らない)
+// 送ってよいのは、本当に対戦して勝った記録だけ(cardRecordAfter の rankable。公開前・デバッグの入口からの対戦は数えない・送らない)。
+// デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)
 const CARD_RANK_TABLE = 'card_battle_ranks';
 const CARD_RANK_SELECT = 'user_name,breeder_id,icon,profile_frame,week_key,'
   + CARD_LEVEL_ORDER.map((lv) => `wins_${lv},week_wins_${lv}`).join(',') + ',best_streak,current_streak,dex_count,dex_total,updated_at';
@@ -77432,8 +77433,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
-          /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
-          rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true&&!cardBattleDebugHome,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon}}/>)}
+          /* ランキングへ送るのは公開してから(台帳 #3513「公開前は、デバッグの人の記録も送らない」)。デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。デバッグ設定の入口からの対戦は 84 の debug(cardOrigin==='debug')で外す */
+          rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon}}/>)}
         {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewRhythmResult={(kind)=>{const pumpkin=kind==='pumpkin';const t=pumpkin?RAID_JACK_PUMPKIN:RAID_JACK_A_TIERS[2];const hp=t.hp;const before=Math.floor(hp*0.6);const damage=523456;setRaidJackResult({way:'rhythm',songName:'Monster Hero',difficultyName:'HARD',score:523456,assist:false,kind:'a',tierIndex:pumpkin?RAID_JACK_A_TIERS.length-1:2,tierName:t.name,reason:'rhythm',damage,defeated:false,turns:0,levelUps:0,growths:0,outcome:'sent',opened:false,eventId:'raid_jack_debug',quickAward:null,lifeLeft:pumpkin?hp:Math.max(0,before-damage),lifeBefore:pumpkin?null:before,lifeMax:hp,pumpkin});}} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
