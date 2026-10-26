@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a8fa94adef7265f
+// source-sha256: 508c5560afe41b7f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 23:55";
+const BUILD_DATE = "2026-10-27 00:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16111,14 +16111,15 @@ const DexLineageChip = ({
   iconUrl
 }) => React.createElement("span", {
   "data-dex-lineage": true,
-  className: "flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
+  className: "flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1"
 }, iconUrl ? React.createElement(DexMonsterIcon, {
   src: iconUrl,
   lineage: true
 }) : React.createElement("span", {
   className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
 }, "血"), React.createElement("span", {
-  className: "text-[11px] font-black text-amber-100 truncate"
+  "data-dex-lineage-name": true,
+  className: `${String(lineage.name || '').length >= 5 ? 'text-[10px]' : 'text-[11px]'} min-w-0 font-black text-amber-100 leading-[1.2] line-clamp-2 [overflow-wrap:anywhere]`
 }, lineage.name));
 const dexMonsterArtImage = (mon, alt, hidden = false, colors = null) => React.createElement(DyedMonsterImage, {
   baseId: mon.id,
@@ -50746,6 +50747,7 @@ const ModalCloseButton = ({
 let _jaSegmenter;
 const JA_WRAP_LINE = 10;
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/;
+const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
 const jaWrapPoints = text => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -50761,6 +50763,9 @@ const jaWrapPoints = text => {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = pos => kao.some(([a, b]) => pos > a && pos < b);
+    const keepWords = [];
+    for (const w of JA_WORDS_KEEP) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) keepWords.push([i, i + w.length]);
+    const inKeepWord = pos => keepWords.some(([a, b]) => pos > a && pos < b);
     const kaoStart = pos => kao.some(([a]) => pos === a || a > pos && /^\s+$/.test(s.slice(pos, a)));
     const segs = [];
     for (const {
@@ -50783,8 +50788,8 @@ const jaWrapPoints = text => {
       const prev = segs[i - 1],
         g = groups[groups.length - 1],
         cur = g.parts.join('');
-      const hard = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
-      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      const hard = inKao(pos) || inKeepWord(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg) || /^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)) || /[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
         g.hard.push(hard);
@@ -50870,13 +50875,13 @@ const jaWrapPoints = text => {
     return s;
   }
 };
-const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
-const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
 const jaWrapPieces = seg => {
   const out = [];
   for (const part of String(seg).split(/(\s+)(?![^(（]*[)）])/)) {
     if (!part) continue;
-    if (/^\s+$/.test(part)) out.push([part, false]);else if (jaKeepWhole(part)) out.push([part, true]);else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+    if (/^\s+$/.test(part)) out.push([part, false]);else if (jaKeepWhole(part)) out.push([part, true]);else if (/[」』？！?!][ぁ-ゖ笑ｗwW]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
       if (!t) return;
       if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) {
         out.push([t, k % 2 === 1]);
@@ -53439,8 +53444,9 @@ function BreederMarketScreen({
   }, line)) : section.label)), React.createElement("div", {
     className: "mt-2.5 font-mono text-xl font-black text-white"
   }, section.value !== null ? section.value : ' '), React.createElement("div", {
-    className: "mt-0.5 text-[10px] font-bold text-slate-400 [text-wrap:balance]"
-  }, section.hint), React.createElement("span", {
+    className: "mt-0.5 text-[10px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(section.hint)), React.createElement("span", {
     "aria-hidden": "true",
     className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
   }, "›"))))), marketSection && React.createElement(React.Fragment, null, React.createElement(MarketBalanceBar, {
@@ -76988,6 +76994,10 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-title{background:linear-gradient(90deg,#67e8f9,#f0abfc 55%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(240,171,252,.45))}
 .mhms-glow{position:absolute;left:50%;top:46%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(244,114,182,.45),rgba(168,85,247,.18) 55%,transparent 75%);animation:mhmsPulse 3.6s ease-in-out infinite}
 .mhms-float{animation:mhmsFloat 4.5s ease-in-out infinite}
+.mhms-art-box{container-type:size}
+.mhms-art-img{width:var(--mhms-w)}
+@supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
+@container (max-height:120px){.mhms-art-img{left:30%!important}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
 .mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
 .mhms-card.free::after{animation-delay:1.9s}
@@ -77091,6 +77101,7 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     cx: 0.5,
     cy: 0.48,
     top: 0.42,
+    show: 0.55,
     cxBy: {
       angry: 0.545,
       happy: 0.545,
@@ -77106,19 +77117,22 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     zoom: 0.85,
     cx: 0.5,
     cy: 0.5,
-    top: 0.4
+    top: 0.4,
+    show: 0.75
   },
   atsu: {
     zoom: 1.1,
     cx: 0.48,
     cy: 0,
-    top: 0.02
+    top: 0.02,
+    show: 0.6
   },
   kyuko: {
     zoom: 0.75,
     cx: 0.5,
     cy: 0,
-    top: 0.06
+    top: 0.06,
+    show: 0.8
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -77273,19 +77287,30 @@ function ModeSelectAssistToggles({
     className: `min-h-[32px] rounded-full border px-2.5 text-[10px] font-black backdrop-blur-sm ${on ? 'border-emerald-300 bg-emerald-700/85 text-white' : 'border-white/25 bg-slate-900/75 text-slate-200'}`
   }, label, " ", on ? 'ON' : 'OFF'))) : null;
 }
+const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 function ModeSelectAssistantPanel({
   assistant,
   showArt,
   showComment,
   onToggle
 }) {
+  const [artRatio, setArtRatio] = React.useState(null);
+  const artSrc = assistant && assistant.image;
+  React.useEffect(() => {
+    setArtRatio(null);
+  }, [artSrc]);
   if (!assistant || !(showArt || showComment)) return null;
+  const onArtLoad = e => {
+    const im = e.currentTarget;
+    if (im.naturalWidth > 0) setArtRatio(im.naturalHeight / im.naturalWidth);
+  };
+  const capOf = show => artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px';
   return React.createElement("div", {
     "data-rhythm-mode-assistant": true,
     className: `mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`
   }, showArt && React.createElement("div", {
     "data-rhythm-mode-assistant-art-box": true,
-    className: "relative min-h-0 flex-1 overflow-hidden"
+    className: "mhms-art-box relative min-h-0 flex-1 overflow-hidden"
   }, React.createElement("span", {
     "aria-hidden": "true",
     className: "mhms-glow"
@@ -77314,9 +77339,12 @@ function ModeSelectAssistantPanel({
       src: assistant.image,
       alt: "",
       draggable: false,
-      className: "absolute max-w-none",
+      onLoad: onArtLoad,
+      className: "mhms-art-img absolute max-w-none",
       style: {
-        width: `${fr.zoom * 100}%`,
+        '--mhms-w': `${fr.zoom * 100}%`,
+        '--mhms-cover': '0px',
+        '--mhms-cap': capOf(fr.show || 1),
         height: 'auto',
         left: '50%',
         top: `${fr.top * 100}%`,
@@ -77329,7 +77357,17 @@ function ModeSelectAssistantPanel({
     src: assistant.image,
     alt: "",
     draggable: false,
-    className: "absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]"
+    onLoad: onArtLoad,
+    className: "mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]",
+    style: {
+      '--mhms-w': '100%',
+      '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px',
+      '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW),
+      height: 'auto',
+      left: '50%',
+      top: 'calc(var(--mhms-y) * 100%)',
+      transform: 'translate(-50%, calc(var(--mhms-y) * -100%))'
+    }
   }))), !showArt && React.createElement(ModeSelectAssistToggles, {
     assistant: assistant,
     showArt: showArt,
@@ -89678,16 +89716,22 @@ const CardBattleBoard = ({
       name: meNow ? 'あなた' : who.name
     });
     setAction(null);
-    const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), Math.max(500, Math.round(1000 * pace)));
+    const bannerMs = Math.max(500, Math.round(800 * pace));
+    const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), bannerMs);
+    let t2 = null;
     if (meNow && !tutorial && !game.demo) {
       const lines = st.log.filter(l => l.turn === st.turn - 1 && l.kind !== 'turn').map(l => l.text).slice(-8);
-      if (lines.length) setTurnSummary({
+      setTurnSummary(null);
+      if (lines.length) t2 = setTimeout(() => setTurnSummary({
         key: `sum-${id}`,
         turn: st.turn - 1,
         lines
-      });
+      }), bannerMs);
     } else setTurnSummary(null);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      if (t2) clearTimeout(t2);
+    };
   }, [st.turn, st.active, st.phase]);
   useEffect(() => {
     if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null);
@@ -89761,6 +89805,8 @@ const CardBattleBoard = ({
   const opp = st.players[CARD_CPU];
   const decider = cardDeciderOf(st);
   const myTurn = st.winner === null && decider === CARD_ME;
+  const turnMe = st.active === CARD_ME;
+  const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait' : st.pendingPray ? 'pray' : st.pendingReveal ? 'reveal' : st.pendingChoice ? 'choose' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
   const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
   const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find(o => o.hand) || null : null;
@@ -90296,13 +90342,14 @@ const CardBattleBoard = ({
     className: `shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`
   }, "⚔ ", quickRun.loops, "周目"), React.createElement("span", {
     "data-card-head-turn": true,
+    "data-card-head-turn-me": turnMe ? '1' : undefined,
     className: `min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`,
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: "whitespace-nowrap"
   }, "ターン ", Math.max(1, st.turn)), " ・ ", React.createElement("span", {
-    className: "whitespace-nowrap"
-  }, st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`)))), React.createElement("div", {
+    className: `whitespace-nowrap ${turnMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`
+  }, turnMe ? 'あなたの番' : `${who.name}の番`)))), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
@@ -90333,7 +90380,8 @@ const CardBattleBoard = ({
   }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
     className: "ml-auto"
   }, strip(CARD_CPU))), React.createElement("div", {
-    className: "flex shrink-0 items-start justify-around px-1"
+    "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
+    className: `flex shrink-0 items-start justify-around rounded-2xl px-1 transition-shadow ${turnLive && !turnMe ? 'shadow-[inset_0_0_0_2px_rgba(251,113,133,.75),0_0_16px_rgba(251,113,133,.35)]' : ''}`
   }, opp.mons.map((_, m) => React.createElement(CardMonSlot, {
     key: m,
     db: db,
@@ -90357,17 +90405,7 @@ const CardBattleBoard = ({
     style: {
       justifyContent: 'safe center'
     }
-  }, turnBanner && React.createElement("div", {
-    key: turnBanner.key,
-    "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
-    "data-card-fit": true,
-    "aria-live": "polite",
-    className: `mh-card-turn-banner pointer-events-none absolute inset-x-0 top-1/2 z-[6] -translate-y-1/2 py-1.5 text-center font-black tracking-wider text-white shadow-lg ${turnBanner.me ? 'bg-gradient-to-r from-amber-500/0 via-amber-500/90 to-amber-500/0' : 'bg-gradient-to-r from-rose-600/0 via-rose-600/90 to-rose-600/0'}`,
-    style: {
-      fontSize: 'clamp(16px, 5.5vw, 24px)',
-      textShadow: '0 2px 0 rgba(0,0,0,.45)'
-    }
-  }, turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`), bubble && React.createElement("div", {
+  }, bubble && React.createElement("div", {
     key: bubble.key,
     "data-card-bubble": true,
     "data-card-bubble-face": bubble.face || face,
@@ -90376,7 +90414,14 @@ const CardBattleBoard = ({
       borderColor: who.accent,
       ...JA_WRAP_STYLE
     }
-  }, React.createElement("img", {
+  }, pvp ? React.createElement("span", {
+    "data-card-bubble-pvp-icon": true,
+    className: `block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`
+  }, React.createElement(CardPvpAvatar, {
+    icon: pvp.icon,
+    frame: pvp.frame,
+    className: "h-full w-full"
+  })) : React.createElement("img", {
     src: assistantFaceImage(who, bubble.face || face),
     alt: "",
     className: `${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
@@ -90452,7 +90497,8 @@ const CardBattleBoard = ({
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), React.createElement("div", {
-    className: "flex shrink-0 items-end justify-around px-1"
+    "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
+    className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`
   }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
     key: m,
     db: db,
@@ -90568,7 +90614,8 @@ const CardBattleBoard = ({
     className: `rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`
   }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), React.createElement("div", {
     "data-card-hand": true,
-    className: "flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2"
+    "data-card-hand-dim": mode === 'wait' ? '1' : undefined,
+    className: `flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2 transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`
   }, handOrder.map(i => {
     const no = me.hand[i];
     const c = cardOf(db, no);
@@ -90703,7 +90750,24 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
-  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnSummary && !bigCard && React.createElement("button", {
+  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnBanner && !bigCard && React.createElement("div", {
+    key: turnBanner.key,
+    "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
+    "aria-live": "polite",
+    className: "pointer-events-none absolute inset-0 z-[53] flex items-center justify-center px-4",
+    style: wide ? {
+      right: 'calc(min(42%, 420px) + 8px)'
+    } : undefined
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-fit": true,
+    onClick: () => setTurnBanner(null),
+    className: `mh-card-turn-call pointer-events-auto max-w-full rounded-3xl border-4 px-6 py-2 text-center font-black tracking-wider shadow-2xl ${turnBanner.me ? 'border-amber-200 bg-amber-400 text-slate-950' : 'border-rose-200 bg-rose-600 text-white'}`,
+    style: {
+      fontSize: 'clamp(26px, 9vw, 44px)',
+      ...JA_LABEL_STYLE
+    }
+  }, turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`)), turnSummary && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary": true,
@@ -91429,6 +91493,12 @@ const CardBattleScreen = ({
           onBgm && onBgm(save.bgm.top);
           onNavigate('CARD_TOP');
           setView('pvp');
+          return;
+        }
+        if (game.demo) {
+          onBgm && onBgm(save.bgm.top);
+          onNavigate('CARD_TOP');
+          setView('top');
           return;
         }
         if (game.tutorial) {
@@ -135643,8 +135713,11 @@ const createAnimationStyle = () => {
     .mh-card-turn-banner { animation: mhCardTurnBanner .9s ease-out both; }
     @keyframes mhCardTurnBanner { 0% { opacity: 0; transform: translateY(-50%) scaleX(.6); } 18% { opacity: 1; transform: translateY(-50%) scaleX(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-big { animation: mhCardBig .22s ease-out both; }
+    /* 番が替わったときの真ん中の大きな知らせ(2026-10-26 ソラシドさん「どっちのターンか分かりにくい」) */
+    .mh-card-turn-call { animation: mhCardTurnCall .8s ease-out both; }
+    @keyframes mhCardTurnCall { 0% { opacity: 0; transform: scale(.7); } 20% { opacity: 1; transform: scale(1.06); } 32% { transform: scale(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes mhCardBig { 0% { opacity: 0; scale: .85; } 100% { opacity: 1; scale: 1; } }
-    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-big { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-turn-call, .mh-card-big { animation: none; } }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }
