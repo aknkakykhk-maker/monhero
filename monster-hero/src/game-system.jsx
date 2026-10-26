@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e84b560eac46592
+// generated-sha256: cf9aac8de16658de
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51561,7 +51561,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const me = st.players[p];
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach((e) => {
-    if (e.t === 'draw') { for (let i = 0; i < e.n; i++) { if (!me.deck.length) break; me.hand.push(me.deck.pop()); } cardLog(st, `${me.name}は${e.n}枚引いた`); }
+    if (e.t === 'draw') { const k = cardDrawN(st, p, e.n); cardLog(st, `${me.name}は${k}枚引いた`); } // 山札が足りなければ引けた枚数を書く(2026-10-27 総点検D)
     if (e.t === 'peekHand') { cardEvent(st, { t: 'peek', p, hand: opp.hand.slice() }); cardLog(st, `${me.name}は相手の手札を見た`); }
     if (e.t === 'discardOpp') { st.pendingDiscard = { p: cardOther(p), n: Math.min(e.n, opp.hand.length) }; if (!st.pendingDiscard.n) st.pendingDiscard = null; }
     if (e.t === 'heal' && target) { const m = me.mons[target.m]; const h = Math.min(e.n, m.max - m.life); m.life += h; cardEvent(st, { t: 'heal', p, m: target.m, n: h }); cardLog(st, `${m.name}のライフが${h}回復`); }
@@ -80895,7 +80895,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="mb-1.5 px-1 text-[10px] font-black tracking-wider text-slate-400">育成・カスタム</div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button type="button" aria-label={`${masu.name}を強化`} onClick={()=>{setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE');}} className={`${MASU_DETAIL_ACTION_CLASS} border-amber-400/45 bg-amber-950/60 text-amber-100`}><Sparkles size={15}/><span>強化</span>{(masu.distAptPoints||0)>0&&<small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-amber-400/20 text-amber-200`}>{masu.distAptPoints}P</small>}</button>
-                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span><span>トレーニング</span></button>
+                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className={`${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`}><span className="text-[15px] leading-none">🎓</span>{/* 320 で「トレーニ/ング」と折れていた(2026-10-27 育成の見回り)。折らずに、狭い幅だけ字を小さくする */}<span className="whitespace-nowrap max-[359px]:text-[10px]">トレーニング</span></button>
                   <button type="button" aria-label={`${masu.name}を染色`} onClick={()=>{const n=dyeRegionCount(masu.baseId),cur=getMasuColors(masu);setDyeTargetMasuId(masu.id);setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null));}} className={`${MASU_DETAIL_ACTION_CLASS} border-fuchsia-400/45 bg-fuchsia-950/60 text-fuchsia-100`}><span className="text-[15px] leading-none">🎨</span><span>染色</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} bg-fuchsia-400/20 text-fuchsia-200`}>所持 {ownedItems.dye_mock||0}</small></button>
                 </div>
                 <button type="button" data-soul-trait-entry aria-label={`${masu.name}の魂格特性を開く`} onClick={()=>{setSoulTraitReturnState(gameState);setSoulTraitTab('attack');setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState('MASU_SOUL_TRAITS');}} className="mt-1.5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-sky-400/45 bg-sky-950/60 text-[12px] font-black text-sky-100 active:scale-[.98]"><Sparkles size={15}/><span>魂格特性</span><small className={`${MASU_DETAIL_ACTION_BADGE_CLASS} ${masuNorm.soulRankStage>=1?'bg-sky-400/20 text-sky-200':'bg-black/40 text-slate-300'}`}>{masuNorm.soulRankStage>=1?`未使用 ${soulTraitAvailablePoints(masuNorm)}P`:'未解放'}</small></button>
