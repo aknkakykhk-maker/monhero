@@ -7,6 +7,7 @@
 //
 // ja-wrap-check.js は短い札(16字まで・題名・タブ)だけを数え、長い文は数えない。ここではモンヒロビートの画面に限って、長い文も数える。
 // 画面の字を1文字ずつの位置で見て行の変わり目を出し、その変わり目が Intl.Segmenter の1語の中か、句読点・閉じかっこ・長音が行の頭に落ちたら数える。
+//   片仮名の続き(10字未満)の途中・最後の行が仮名2字以下だけ(「演奏しま／した」)も数える(2026-10-27)
 //   ・空白・<wbr> で折れたのは数えない(作り手が決めた折り目)。英数字だけの語・10字以上の語(1行に入らない)も数えない
 //   ・見る画面: モードえらび・曲えらび・マスモン設定・遊びかた・ビートLv・オプションの4つのタブ・ランキング・記録
 // 直し方: その文を jaWrap(…) で包み、style に JA_WRAP_STYLE を付ける(41-screen-ui.jsx)。字が決まっている札は <wbr> と break-keep でもよい
@@ -84,7 +85,13 @@ const SCAN = () => {
       for (const { segment } of seg.segment(full)) { if (i > p && i < p + segment.length) { word = segment; break; } p += segment.length; if (p >= i) break; }
       const mid = !!word && /[ぁ-んァ-ヶ一-龯]/.test(word) && word.length < 10;
       const head = /^[、。，．！？!?」』）)】…ー]/.test(full.slice(i));
-      if (mid || head) out.push(`${full.slice(Math.max(0, i - 8), i)}／${full.slice(i, i + 8)}`);
+      // Intl.Segmenter が2語に分ける片仮名の続き(「ライブ|ログ」)も、10字未満なら1語として数える(2026-10-27 リザルトで見つけた)
+      const kana = (full.slice(0, i).match(/[ァ-ヶー]+$/) || [''])[0], kanaTail = (full.slice(i).match(/^[ァ-ヶー]+/) || [''])[0];
+      const kataMid = !!kana && !!kanaTail && kana.length + kanaTail.length < 10;
+      // 最後の行が仮名2字以下だけ(「演奏しま／した」)。Segmenter は「しま|した」と分けるが、読むと言葉の途中で折れている
+      const tail = full.slice(i), lastLine = !chars.slice(i + 1).some((c) => c[1] > chars[i][1] + 3);
+      const orphan = lastLine && /^[ぁ-んァ-ヶー]{1,2}[。、！？!?]?$/.test(tail) && /[ぁ-んァ-ヶー]$/.test(full.slice(0, i));
+      if (mid || head || kataMid || orphan) out.push(`${full.slice(Math.max(0, i - 8), i)}／${full.slice(i, i + 8)}`);
     }
   }
   return [...new Set(out)];
@@ -126,7 +133,9 @@ const CLIP = (allow) => {
   return out;
 };
 
-(async () => {
+// リザルトの検査(ja-wrap-beat-result-check.js)が同じ数え方を使う
+module.exports = { SCAN, CLIP, CLIP_ALLOW };
+if (require.main === module) (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools/node_modules/playwright'))); } catch { console.log('SKIP: playwright が入っていないので確認できません'); process.exit(0); }
   const server = await serve();
