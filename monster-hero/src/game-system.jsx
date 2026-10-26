@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a5d1a9a49acc089
+// generated-sha256: 27f77d6d70979710
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52257,8 +52257,7 @@ const cardAiBloodOf = (m) => (String(m.wave) === 'hybrid' ? m.main : m.species);
 // すでにえらんだ子(team)に仲間 m を足したときの、チームとして数え直した点数(cardAiMonScore と同じ目盛り)
 const cardAiTeamValue = (db, who, team, m, maxWave) => {
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
-  const lim = Math.max(maxWave, cardAiMonWave(db, m));
-  const mine = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, { ...m, ko: false }));
+  const mine = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, { ...m, ko: false }));
   const sharedBy = (c) => team.some((t) => cardUsableBy(c, { ...t, ko: false }));
   const fresh = mine.filter((c) => !sharedBy(c)).map((c) => cardAiCardValue(c, habit)).sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0);
   const atk = mine.filter((c) => !cardIsGuardKind(c.kind) && sharedBy(c)).length;
@@ -52395,16 +52394,17 @@ const cardAiFavoriteCandidates = (db, who) => {
   return Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && (String(m.wave) === 'hybrid' ? m.main === fav : m.species === fav)).map((m) => m.no).sort();
 };
 // モンスターの弾(混血・派生は主の種族の弾)。好きな子の技は、この弾まで使える
-const cardAiMonWave = (db, m) => {
+//   card を渡すと、そのカードを見る弾: 混血の防御・回避はサブの種族の弾(サブが？？？の子はメインのまま)
+const cardAiMonWave = (db, m, card) => {
   if (String(m.wave) !== 'hybrid') return Number(m.wave) || 1;
-  const main = Object.values(db.monsters).find((x) => !x.variant && x.species === m.main && String(x.wave) !== 'hybrid');
-  return main ? Number(main.wave) || 1 : 4;
+  const sp = card && cardIsGuardKind(card.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main;
+  const base = Object.values(db.monsters).find((x) => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
+  return base ? Number(base.wave) || 1 : 4;
 };
 // そのモンスターが、癖に合う技をどれだけ持っているか(入れたい度の上位10の合計+ライフ)。2体を選ぶときの「型に合う」の目安
 const cardAiMonScore = (db, who, m, maxWave) => {
   const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
-  const lim = Math.max(maxWave, cardAiMonWave(db, m));
-  const vals = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, { ...m, ko: false })).map((c) => cardAiCardValue(c, habit));
+  const vals = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, { ...m, ko: false })).map((c) => cardAiCardValue(c, habit));
   return vals.sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0) + (m.life || 0) * 0.3;
 };
 // 毎試合の3体: 好きな子1体(候補から少しずつ変える)+ 型に合うバランスで2体。強さごとの決めは CARD_AI_BUILD
@@ -52494,7 +52494,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const mons = monsters.map((no) => cardMonsterOf(db, no));
   // 弾の制限は技などのカードにかける。ただし、その子が使う技は、その子の弾まで使える(後の弾の好きな子も EASY から戦えるように)
   const pool = Object.values(db.cards).filter((c) => c.ready && ((c.user === 'any' || c.user === 'breeder') ? c.wave <= maxWave
-    : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m)))));
+    : mons.some((m) => cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)))));
   // 名前ごとに1つ(同じ名前の別番号は、入れたい度の高いほう)。強さごとの雑さ(noise)で、毎回少しずつ違うカードが入る
   const byName = {};
   const noise = Math.max(0, cfg.noise + (((CARD_AI_DECK_TUNE[who] || {})[levelId]) || 0));
@@ -57067,12 +57067,14 @@ const CARD_DECK_VIEWS = Object.freeze([{ id: 'mon', label: 'モンスター' }, 
 const CARD_DECK_SORTS = Object.freeze([{ id: 'kind', label: '種類順' }, { id: 'guts', label: 'ガッツ順' }, { id: 'no', label: '番号順' }]);
 // 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」
 // onDetail … 名前の右の「i」を押したときに詳しい画面を開く(長押しに気づかない人のため。2026-10-26)
-const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove, onDetail = null }) => {
+// unusable … デッキの3体のだれも使えない技(混血のメイン・サブの直しで、前に組んだデッキに残ることがある)。保存の中身は変えず、帯で見せるだけ
+const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove, onDetail = null, unusable = false }) => {
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
   const name = c ? c.name : m ? m.name : no;
   return (
     <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
-      <button type="button" data-card-deck-tile={no} {...press(no, onAdd)} className={`block w-full active:scale-95 ${!canAdd && inDeck === 0 ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
+      {unusable && <span data-card-deck-unusable-tag={no} className="pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200">このデッキの子は使えない</span>}
+      <button type="button" data-card-deck-tile={no} {...press(no, onAdd)} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
@@ -57156,13 +57158,16 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   const ownedCards = Object.keys(col).filter((no) => { const c = cardOf(db, no); return c && c.ready && col[no] > 0; });
   const ownedMons = Object.keys(col).filter((no) => cardMonsterOf(db, no) && col[no] > 0).sort();
   const usable = (no) => { const c = cardOf(db, no); return !usableOnly || !mons.length || c.user === 'breeder' || mons.some((m) => cardUsableBy(c, m)); };
+  // デッキに入っているのに、いまの3体のだれも使えない技(ブリーダー・全員・全体のカードは除く。cardDeckDeadCount と同じ見方)。デッキの一覧では先頭に並べる
+  const unusableIn = (no) => { const c = cardOf(db, no); return !!c && mons.length > 0 && c.user !== 'any' && c.user !== 'breeder' && c.kind !== 'fld' && !mons.some((m) => cardUsableBy(c, m)); };
+  const unusableCount = cardDeckDeadCount(db, deck); // 数え方は 82 の cardDeckDeadCount(デッキ一覧の1行と同じ)
   const shown = view === 'mon' ? ownedMons
-    : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort(bySort)]
+    : view === 'deck' ? [...deck.monsters, ...[...new Set(deck.cards)].sort((a, b) => (unusableIn(b) - unusableIn(a)) || bySort(a, b))]
       : ownedCards.filter((no) => cardDeckFilterOk(cardOf(db, no), view) && usable(no)).sort(bySort);
   const tile = (no) => {
     const inDeck = countOf(no);
     const limit = cardMonsterOf(db, no) ? 1 : Math.min(3, col[no] || 0);
-    return <CardDeckPickTile key={no} db={db} no={no} inDeck={inDeck} limit={limit} canAdd={!cardDeckAddReason(db, deck, no, col)} press={press} onAdd={() => add(no)} onRemove={() => removeOne(no)} onDetail={() => setDetail(no)}/>;
+    return <CardDeckPickTile key={no} db={db} no={no} inDeck={inDeck} limit={limit} canAdd={!cardDeckAddReason(db, deck, no, col)} press={press} onAdd={() => add(no)} onRemove={() => removeOne(no)} onDetail={() => setDetail(no)} unusable={countOf(no) > 0 && unusableIn(no)}/>;
   };
   const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = (
@@ -57202,7 +57207,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
               </div>
             </div>
             {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
-            {cardDeckDeadCount(db, deck) > 0 && <div data-card-deck-dead className="text-[11px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap(`3体のどの子も使えないカードが${cardDeckDeadCount(db, deck)}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます)`)}</div>}
+            {unusableCount > 0 && <button type="button" data-card-deck-dead={unusableCount} onClick={() => { Audio_.fgSe.tap(); setView('deck'); setNotice(''); }} className="block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted" style={JA_WRAP_STYLE}>{jaWrap(`3体のどの子も使えないカードが${unusableCount}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)}</button>}
             {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
           </div>
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
