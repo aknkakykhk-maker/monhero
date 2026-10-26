@@ -150,8 +150,9 @@ const cardPvpHistoryRecord = async (room, { rankable = false } = {}) => {
 
 // ---- 画面: マルチの履歴 ----
 // onBack … マルチ対戦の入口へ / onOpenReplay(match) … リプレイ(93・ミカエシくん)。replayHas(match) が真の試合だけ「▶ この対戦を見る」(どちらも 84 から 91 を通して渡す)
+// 横画面では右の列が広いので、絵が大きくなりすぎないよう幅に上限(縦画面の幅と同じくらい。2026-10-27)
 const CardPvpHistoryDeck = ({ db, deck, press, tone }) => (
-  <div className="space-y-2">
+  <div className="mx-auto w-full max-w-[440px] space-y-2">
     <div className="grid grid-cols-3 gap-1.5">
       {deck.monsters.map((no, i) => {
         const m = cardMonsterOf(db, no);
