@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3b107700bba5ffaa
+// source-sha256: d5faff0733716cf4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 23:42";
+const BUILD_DATE = "2026-10-26 23:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16312,7 +16312,7 @@ const MarketProductCard = ({
   }, React.createElement("span", {
     "data-market-coming-soon-price": true,
     className: "text-[10px] font-black text-slate-400 whitespace-nowrap"
-  }, marketPriceText(item)), React.createElement("div", {
+  }, item.giftOnly ? 'プレゼント' : marketPriceText(item)), React.createElement("div", {
     "data-market-coming-soon-label": true,
     className: "max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl",
     style: {
@@ -53088,7 +53088,17 @@ function BreederMarketScreen({
     return out;
   })();
   const hasDiscIconCards = breederPointItems.some(item => /_disc_icon$/.test(item.id));
-  const breederFrameItems = marketItems.filter(item => item.type === 'frame');
+  const giftFrameItems = (typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []).filter(frame => profileFrameGift(frame)).map(frame => ({
+    id: frame.id,
+    name: frame.name,
+    emoji: '🖼️',
+    type: 'frame',
+    currency: 'breederPoint',
+    cost: 0,
+    desc: frame.desc || '',
+    giftOnly: true
+  }));
+  const breederFrameItems = [...marketItems.filter(item => item.type === 'frame'), ...giftFrameItems];
   const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
   const SECTION_TABS = {
     breeder: {
@@ -53244,8 +53254,9 @@ function BreederMarketScreen({
     const owned = !comingSoon && isItemOwned(item);
     const frameCondition = item.type === 'frame' && frameConditionOf ? frameConditionOf(item.id, 'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
+    const giftLocked = !!item.giftOnly && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
-    const canBuy = !comingSoon && !frameLocked && !owned && balance >= item.cost && !busy;
+    const canBuy = !comingSoon && !frameLocked && !owned && !item.giftOnly && balance >= item.cost && !busy;
     const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null : null;
     const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
     const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
@@ -53260,8 +53271,8 @@ function BreederMarketScreen({
       previewIcon: previewIcon,
       item: item,
       owned: owned,
-      comingSoon: comingSoon || frameLocked,
-      comingSoonLabel: frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
+      comingSoon: comingSoon || frameLocked || giftLocked,
+      comingSoonLabel: giftLocked ? PROFILE_FRAME_GIFT_LABELS[profileFrameGift(profileFrameById(item.id))] || 'プレゼントで届きます' : frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
       canBuy: canBuy,
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
@@ -90963,39 +90974,91 @@ const cardArtBox = src => new Promise(resolve => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
+const CARD_ART_KNOWN_BOX = Object.freeze({
+  myua_wink: Object.freeze({
+    nw: 1536,
+    nh: 1024,
+    x: 379,
+    y: 28,
+    w: 760,
+    h: 996
+  })
+});
+const cardArtKnownBox = (who, expression, src) => {
+  if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
+  const ex = assistantExpressionName(who, expression);
+  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
+  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
+};
+const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
+  if (!known) {
+    resolve(null);
+    return;
+  }
+  const img = new Image();
+  img.onload = () => resolve(img.naturalWidth === known.nw && img.naturalHeight === known.nh ? known : null);
+  img.onerror = () => resolve(null);
+  img.src = src;
+});
 const CardAssistantArt = ({
   src,
   alt,
   className = '',
-  style = null
+  style = null,
+  knownBox = null
 }) => {
   const ref = useRef(null);
-  const [fit, setFit] = useState(null);
+  const [box, setBox] = useState(null);
+  const [size, setSize] = useState({
+    w: 0,
+    h: 0
+  });
   useEffect(() => {
     let alive = true;
-    setFit(null);
-    void cardArtBox(src).then(box => {
-      const el = ref.current;
-      if (!alive || !box || !el) return;
-      const W = el.clientWidth,
-        H = el.clientHeight;
-      if (!W || !H) return;
-      const sc = Math.min(H / box.h, W / box.w);
-      setFit({
-        width: box.nw * sc,
-        left: W / 2 - (box.x + box.w / 2) * sc,
-        top: H - (box.y + box.h) * sc,
-        artH: Math.round(box.h * sc),
-        artW: Math.round(box.w * sc)
-      });
+    setBox(null);
+    void cardArtKnownBoxFor(src, knownBox).then(known => known ? {
+      ...known,
+      known: true
+    } : cardArtBox(src)).then(b => {
+      if (alive) setBox(b || null);
     });
     return () => {
       alive = false;
     };
-  }, [src]);
+  }, [src, knownBox]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setSize(cur => cur.w === el.clientWidth && cur.h === el.clientHeight ? cur : {
+      w: el.clientWidth,
+      h: el.clientHeight
+    });
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const fit = (() => {
+    const W = size.w,
+      H = size.h;
+    if (!box || !W || !H) return null;
+    const sc = Math.min(H / box.h, W / box.w);
+    return {
+      width: box.nw * sc,
+      left: W / 2 - (box.x + box.w / 2) * sc,
+      top: H - (box.y + box.h) * sc,
+      artH: Math.round(box.h * sc),
+      artW: Math.round(box.w * sc)
+    };
+  })();
   return React.createElement("div", {
     ref: ref,
     "data-card-assistant-art": true,
+    "data-card-art-known": box && box.known ? '1' : undefined,
     "data-card-art-h": fit ? fit.artH : undefined,
     "data-card-art-w": fit ? fit.artW : undefined,
     className: `relative shrink-0 overflow-hidden ${className}`,
@@ -91834,6 +91897,7 @@ const CardBattleScreen = ({
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
+      knownBox: cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink')),
       alt: a.name,
       className: "w-[42%] landscape:hidden",
       style: {

@@ -79,7 +79,10 @@ function BreederMarketScreen({
   })();
   const hasDiscIconCards = breederPointItems.some(item=>/_disc_icon$/.test(item.id));
   // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
-  const breederFrameItems = marketItems.filter(item=>item.type==='frame');
+  // プレゼントで届く枠(ハロウィン・妖)も、条件だけ並べる。買えない・値段は出さない(2026-10-25 社長「ハロウィン・妖もマーケットに条件だけ出して」)
+  const giftFrameItems = (typeof releasedProfileFrames==='function'?releasedProfileFrames():[]).filter(frame=>profileFrameGift(frame))
+    .map(frame=>({ id:frame.id, name:frame.name, emoji:'🖼️', type:'frame', currency:'breederPoint', cost:0, desc:frame.desc||'', giftOnly:true }));
+  const breederFrameItems = [...marketItems.filter(item=>item.type==='frame'), ...giftFrameItems];
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
   const SECTION_TABS = {
@@ -145,8 +148,9 @@ function BreederMarketScreen({
     // 札には条件を短く書く(2026-10-20・profileFrameConditionShort。「ジャックを倒すか / イベント終了で」「ザン・エイキ / ビートLv50」)
     const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id,'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
+    const giftLocked = !!item.giftOnly && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
-    const canBuy = !comingSoon && !frameLocked && !owned && balance>=item.cost && !busy;
+    const canBuy = !comingSoon && !frameLocked && !owned && !item.giftOnly && balance>=item.cost && !busy;
     // 近日公開予定の子(まだ ALL_PLAYER_MONSTERS にいない)も、案の段階の中身で詳細を開けるようにする
     const detailMon = item.type==='disc' ? (ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS!=='undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null) : null;
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
@@ -155,7 +159,7 @@ function BreederMarketScreen({
     return (
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard previewIcon={previewIcon}
-          item={item} owned={owned} comingSoon={comingSoon||frameLocked} comingSoonLabel={frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
+          item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?PROFILE_FRAME_GIFT_LABELS[profileFrameGift(profileFrameById(item.id))]||'プレゼントで届きます':frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
