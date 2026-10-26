@@ -368,7 +368,7 @@ const decksAndSaves = () => {
     // デバッグの「技の動きの見本」の対戦は、終わっても投了しても保存しない(結果の保存より前に戻る)
     {
       const p84 = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '84-screen-card-battle.jsx'), 'utf8');
-      const fin = p84.slice(p84.indexOf('if (game.pvp) {'), p84.indexOf('const fresh = await freshCardSave();'));
+      const at = p84.indexOf('if (game.pvp) {'); const fin = p84.slice(at, p84.indexOf('const fresh = await freshCardSave();', at));   // 結果の分かれ道のあとの読み直しまで(ほかの所の読み直しは見ない)
       ok(/if \(game\.demo\) \{[^}]*setView\('top'\);\s*return;\s*\}/.test(fin) && fin.indexOf('if (game.demo)') < fin.indexOf('persist('), '技の動きの見本の対戦が、終わったときに記録・ビートPを保存してしまう');
     }
     ok(/unlocked: cardUnlockedWithRecord\(unlocked, record\)/.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '84-screen-card-battle.jsx'), 'utf8')), 'カードの画面の読み込みで、記録から開いている強さを足していない');
