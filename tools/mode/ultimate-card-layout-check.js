@@ -32,7 +32,7 @@ check('難易度ごとの高さ分岐を作らず、説明枠を共通化する'
   && !card.includes("setting.id==='ULTIMATE'?'mt-1 h-[32px] shrink-0'")
   && card.includes('{setting.cardDescription||setting.description}'));
 check('ULTIMATE・INFINITYの説明はカード用の短い要約を持つ',
-  source.includes("cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。'")
+  source.includes("cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35ターンごとに距離の弱体（DISTANCE BREAK）が進む最高難易度。'")
   && source.includes("cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。'"));
 check('特殊ルールはカードへ並べず、あることだけを1行で出す',
   card.includes('data-extreme-special-rules={setting.id}')

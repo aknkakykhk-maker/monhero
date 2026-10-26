@@ -18,7 +18,7 @@ console.log('OK: 編成の絆Lv表示の判定');
 const has=n=>src.includes(n);
 // 絆Lvはパーティー詳細で全員ぶん出す(一覧には編成を出さない)
 assert(has('const bond=rankingMemberLevel(m);'),'詳細で絆Lvを読む');
-assert(has("{bond!=null?`絆Lv.${bond}`:'絆Lv情報なし'}"),'絆Lvが無い記録でも表示が崩れない');
+assert(has("{bond!=null?`絆Lv.${bond}`:'絆Lvの記録なし'}"),'絆Lvが無い記録でも表示が崩れない');
 // 取得する列を不用意に増やさない。重いのは画像と編成(party)なので、そこを見張る。
 // created_at は日時1つぶん(数十バイト)で、同じ人の記録から「最後に分かっている枠」を
 // 選ぶのに要る(2026-09-16・docs/spec/BREEDER_PROFILE.md §2.3)。件数の決まっている

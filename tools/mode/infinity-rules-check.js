@@ -239,8 +239,8 @@ check('ルール詳細の本文はspecialRulesから作る（数値を書き写�
   const groups = ruleLines('INFINITY');
   const flat = groups.flatMap(group => group.lines.map(([label, value]) => `${label} ${value}`)).join(' / ');
   return groups.length >= 4 && flat.includes('50%') && flat.includes('150%') && flat.includes('0.75%')
-    && flat.includes('1.0pt') && flat.includes('30%で停止') && flat.includes('最低10%') && flat.includes('25Tごと')
-    && flat.includes('強化量が WAVE Tごと-5%（20Tで0%）');
+    && flat.includes('1.0pt') && flat.includes('30%で停止') && flat.includes('最低10%') && flat.includes('25ターンごと')
+    && flat.includes('強化量が WAVE内1ターンごと-5%（20ターンで0%）');
 })());
 check('難易度ごとに違う内容が出る', (() => {
   const key = (id) => JSON.stringify(ruleLines(id));

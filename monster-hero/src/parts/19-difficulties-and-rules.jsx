@@ -54,7 +54,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ assistCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。間合い適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
+  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35ターンごとに距離の弱体（DISTANCE BREAK）が進む最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   // INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。ただし役割が重なるルールは
   // 重ねない(CHAOSの与ダメ50%・加入B50%はULTIMATE系のターン低下と重複するため入れない。
   // NIGHTMAREのwaveEnhancementも、トレーニングまで50%になってターン低下と重なるため入れず、
@@ -425,11 +425,11 @@ const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
 const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
 const INFINITY_SETTING = EXTREME_DIFFICULTIES[4];
 // GODは極限チャレンジの正式な最上位難易度。バトルデバッグも同じ定義を参照する。
-const GOD_SETTING = Object.freeze({ id:'GOD', label:'GOD', japanese:'ゴッド', available:true, debugAvailable:true, power:100, score:20, xp:60, gold:40, psyche:100, waveCount:10, unlockRequirement:'INFINITY', rankingId:'ExtremeGOD', recordId:'GOD', description:'神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。', cardDescription:'2WAVEごとに神威が上昇。累計ターン圧と20TごとのDISTANCE BREAKを受ける。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.0125, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:20, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) });
+const GOD_SETTING = Object.freeze({ id:'GOD', label:'GOD', japanese:'ゴッド', available:true, debugAvailable:true, power:100, score:20, xp:60, gold:40, psyche:100, waveCount:10, unlockRequirement:'INFINITY', rankingId:'ExtremeGOD', recordId:'GOD', description:'神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。', cardDescription:'2WAVEごとに神威が上昇。累計ターン圧と20ターンごとの距離の弱体（DISTANCE BREAK）を受ける。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.0125, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:20, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) });
 // RAGNAROKはGODの次の極限難易度。黄昏が2WAVEごとに深まり、W5とW10のボスは倒しても起き上がる。
 // 「不死(revival)」は数値ではなく形のあるルールなので、他の倍率と同じく specialRules へ持たせ、
 // バトル側は難易度名ではなく「そのルールを持っているか」だけを見る(難易度を足しても分岐が増えない)。
-const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japanese:'ラグナロク', available:true, debugAvailable:true, power:200, score:20, xp:80, gold:60, psyche:130, waveCount:10, unlockRequirement:'GOD', rankingId:'ExtremeRAGNAROK', recordId:'RAGNAROK', description:'黄昏が2WAVEごとに深まり、WAVE5とWAVE10のボスは倒しても起き上がる、極限チャレンジの最終難易度。', cardDescription:'2WAVEごとに黄昏が深まる。ボスは死者の再起で蘇り、15TごとのDISTANCE BREAKに安全距離はない。', specialRules:Object.freeze({ assistCardEffect:0.35, positiveModifier:0.35, negativeModifier:2.5, distanceEnhancement:0.35, gutsCost:1.75, enemyTurnRate:0.01, allyJoinPenaltyRate:0.01, minimumAllyJoinBonus:0.05, damageTurnRate:0.015, minimumDamageDealt:0.20, awakeningPenaltyRate:0.0075, awakeningZeroTurns:15, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:15, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 5:1, 10:2 }), hpRate:0.5, atkBoostPerRevival:0.5 }) }) });
+const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japanese:'ラグナロク', available:true, debugAvailable:true, power:200, score:20, xp:80, gold:60, psyche:130, waveCount:10, unlockRequirement:'GOD', rankingId:'ExtremeRAGNAROK', recordId:'RAGNAROK', description:'黄昏が2WAVEごとに深まり、WAVE5とWAVE10のボスは倒しても起き上がる、極限チャレンジの最終難易度。', cardDescription:'2WAVEごとに黄昏が深まる。ボスは死者の再起で蘇り、15ターンごとの距離の弱体（DISTANCE BREAK）に安全距離はない。', specialRules:Object.freeze({ assistCardEffect:0.35, positiveModifier:0.35, negativeModifier:2.5, distanceEnhancement:0.35, gutsCost:1.75, enemyTurnRate:0.01, allyJoinPenaltyRate:0.01, minimumAllyJoinBonus:0.05, damageTurnRate:0.015, minimumDamageDealt:0.20, awakeningPenaltyRate:0.0075, awakeningZeroTurns:15, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:15, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 5:1, 10:2 }), hpRate:0.5, atkBoostPerRevival:0.5 }) }) });
 // HELHEIMはRAGNAROKの次の極限難易度。ボス復活がW3/W5/W7/W9/W10へ広がり、冥府が味方の最大ライフを削る。
 // 距離強化はWAVEごとに薄れ(W1=10%→W10=1%)、敵のライフは全員10倍。W9のデュラハンは専用の上乗せを受ける。
 // 敵ごとの上乗せは「ライフ倍率(lifeRate)」と「敵ごとの補正(byEnemy)」を specialRules に持たせ、
@@ -695,12 +695,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   const groups=[];
   const push=(title,lines)=>{const kept=lines.filter(Boolean);if(kept.length)groups.push({title,lines:kept});};
   if(difficultyId===GOD_SETTING.id)push('神威',[
-    ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
+    ['進行','2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'],
     ['敵ライフ/攻撃力','神威Lvごと +15% / +30% / +45% / +60% / +75%'],
     ['Lv5','与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし'],
   ]);
   if(difficultyId===RAGNAROK_SETTING.id)push('黄昏',[
-    ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
+    ['進行','2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'],
     ['敵ライフ/攻撃力','黄昏Lvごと +20% / +40% / +60% / +80% / +100%'],
     ['Lv2','距離強化 35%→25%'],
     ['Lv3','消費ガッツ 175%→200%'],
@@ -711,7 +711,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     const adjust=rules.enemyAdjust||{};
     const durahan=adjust.byEnemy?.Durahan;
     push('冥府',[
-      ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
+      ['進行','2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'],
       ['敵ライフ/攻撃力','冥府Lvごと +30% / +60% / +90% / +120% / +150%'],
       ['味方の最大ライフ','冥府Lvごと -5%（Lv5で-25%）'],
       ['Lv3','消費ガッツ 200%→225%'],
@@ -741,21 +741,21 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     rules.gutsCost!=null&&['消費ガッツ',specialRulePercent(rules.gutsCost)],
   ]);
   push('累計ターン',[
-    rules.enemyTurnRate!=null&&['敵ライフ/攻撃力',`累計Tごと+${precisePercent(rules.enemyTurnRate)}`],
-    rules.allyJoinPenaltyRate!=null&&['加入B倍率',`累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus!=null?`（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）`:''}`],
-    rules.damageTurnRate!=null&&['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`],
+    rules.enemyTurnRate!=null&&['敵ライフ/攻撃力',`累計1ターンごと+${precisePercent(rules.enemyTurnRate)}`],
+    rules.allyJoinPenaltyRate!=null&&['加入B倍率',`累計1ターンごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus!=null?`（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）`:''}`],
+    rules.damageTurnRate!=null&&['与ダメ倍率',`経過1ターンごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`],
   ]);
   push('WAVEターン',[
     // クイックの自動成長は成長率そのものから引く(10%→…)ので「pt」、
     // トレーニングは増える量へ掛かるので「%」。掛かり方が違うので言い方も分ける
     quick
-      ? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`])
-      : (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE Tごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}Tで0%）`]),
+      ? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE内1ターンごと-${turnPointText(rules.awakeningPenaltyRate)}`])
+      : (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE内1ターンごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}ターンで0%）`]),
     (quick?rules.awakeningPenaltyRate!=null:rules.awakeningZeroTurns>0)&&Array.isArray(rules.awakeningPenaltyExcludes)&&rules.awakeningPenaltyExcludes.includes('distance')&&['対象外','距離強化は下がらない'],
   ]);
   const breakRule=extremeDistanceBreakRule(difficultyId);
   if(breakRule)push('DISTANCE BREAK',[
-    ['進行',`累計${breakRule.interval}Tごと1距離の弱体Lv上昇`],
+    ['進行',`累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`],
     ['弱体倍率',`Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel**2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel**3)}（以降も半減）`],
     ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離すべて弱体化する）'],
   ]);
