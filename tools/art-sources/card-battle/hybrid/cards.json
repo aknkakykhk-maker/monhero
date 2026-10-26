@@ -590,6 +590,52 @@
    "img": "C045.jpg",
    "name_source": "社長が決めた(2026-10-25・本編の図鑑の名前)",
    "sub_note": "副血統は ??? のまま(このゲームでは ??? がレアの印。社長 2026-10-25)。パックでの出やすさはふつうの子と同じ"
+  },
+  {
+   "no": "C-066",
+   "name": "剣士モッチー",
+   "name_en": "KENSHI MOCCHI",
+   "type": "地上",
+   "type_en": "G",
+   "life": 7,
+   "main": "モッチー",
+   "sub": "？？？",
+   "main_en": "MOCCHI",
+   "sub_en": "???",
+   "img": "C066.jpg",
+   "name_source": "社長 2026-10-26「剣士モッチー、パックに追加して」。絵は社長から(kenshi-mocchi/received-3in1.png)を tools/card/card-art-kenshi-mocchi.js で3枚にした。番号は C-066(右下の字だけ描き直し)。メイン モッチー/サブ ？？？(本編の血統 KenshiMocchi・ジェントルと同じ)"
+  },
+  {
+   "no": "C-066S",
+   "name": "剣士モッチー",
+   "name_en": "KENSHI MOCCHI",
+   "type": "地上",
+   "type_en": "G",
+   "life": 7,
+   "main": "モッチー",
+   "sub": "？？？",
+   "main_en": "MOCCHI",
+   "sub_en": "???",
+   "img": "C066S.jpg",
+   "variant": "キラ",
+   "base": "C-066",
+   "name_source": "C-066 のキラ・別絵キラ(同じ子。デッキには1体まで)"
+  },
+  {
+   "no": "C-066V",
+   "name": "剣士モッチー",
+   "name_en": "KENSHI MOCCHI",
+   "type": "地上",
+   "type_en": "G",
+   "life": 7,
+   "main": "モッチー",
+   "sub": "？？？",
+   "main_en": "MOCCHI",
+   "sub_en": "???",
+   "img": "C066V.jpg",
+   "variant": "別絵キラ",
+   "base": "C-066",
+   "name_source": "C-066 のキラ・別絵キラ(同じ子。デッキには1体まで)"
   }
  ],
  "skills": []
