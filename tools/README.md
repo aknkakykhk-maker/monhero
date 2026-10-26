@@ -116,6 +116,7 @@ node tools/build.js --check
 | `node run-checks.js --changed` | **変更したファイルから要る検査を選んで回す**(上の節を参照)。何を通すか毎回考えずに済み、選び漏れも無くなる。 |
 | `node run-checks.js --area required` | **検査を領域ごとにまとめて回す入口。**`required` は CLAUDE.md ⑤⑥ の必須検査、`ci` は `compiled-check.yml` と同じ並び、`battle` `masu` `mode` などはフォルダ単位、`all` は全部(30分以上)。`--list` で一覧、`--json <出力先>` で結果を保存。実ブラウザ検査に必要な配信(`serve.py`)は自動で起動し、playwright が無い環境ではそれを要る検査を SKIP にする。検査の中身や判定は変えず、既存スクリプトを順に呼ぶだけ。 |
 | `node run-checks.js --area all --parallel 5` | **全部の検査を5組に分けて同時に回す**(1本ずつだと2時間を超える。5組で1時間弱)。同時に回して落ちたものは最後に1本で回し直し、通ったら分けて出す。組は前回の時間 `run-checks-times.json` で平らに分け、同じポートを使う検査は同じ組へ、自分で :8899 を立てる検査と時間を測る検査は最後に1本ずつ。`--plan` で組み分けだけ出す・`--save-times` で時間の記録を書き直す |
+| `node run-checks.js …`(部屋) | **Linux では、回すたびに自分だけのネットワークの部屋(network namespace)に入ってから検査を回す**(2026-10-27 速さ部)。部屋の中の localhost は外と別物なので、作業ツリーを2つ並べて同時に回しても、8899・8977 など決め打ちの番号を取り合わない(以前は時間切れや「ページが開けない」で誤って NG になり、1本ずつ順番待ちしていた)。検査の中身は変えない。部屋の外への通信は無くなる。部屋を作れない環境は今までどおり外で回す。`--no-room` で入らない。部屋の中の印は環境変数 `MH_CHECK_ROOM`(`--parallel` の子にも引き継ぐ)。 |
 | `node merge-main.js` | **main を取り込む。** 生成物(game-system.jsx・compiled.js・index.html・version.json・tailwind.css など)のぶつかりは main 側を取って build.js で作り直し、10-core.jsx の BUILD_DATE・更新履歴の先頭のぶつかりも解く。parts・data の中身の競合は止めて知らせる(直したら `--continue`)。最後にぶつかりの印・更新履歴・`build.js --check` を確かめてコミット |
 | `node stamp-boot-sizes.js` | 起動時に読み込むファイルの実サイズ(バイト)を `index.html` の `__mhBoot` へ書き込む。`build.js` から自動で呼ばれる。 |
 | `node boot/data-cache-key-check.js` | index.htmlが読み込むdata/*.jsのキャッシュキーが中身と一致しているか確認する(古いデータが読まれて画面が真っ暗になるのを防ぐ)。 |
