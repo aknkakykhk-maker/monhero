@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a7e792e382e21172
+// generated-sha256: c1e7233f9d8e3eb5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 02:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24254,12 +24254,12 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
         ほぼ満点でも大きな「D」だけが見えないよう、その難易度の満点に対して何%取れたかを小さく添える */}{Number(difficulty.maxScore)>0&&<span data-rhythm-result-achievement className="whitespace-nowrap font-black tabular-nums text-amber-200">満点の{Math.min(100,Math.floor(view.score/Number(difficulty.maxScore)*100))}%</span>}</div>
     {/* ランクのゲージ。その難易度の満点で届く上の5ランクに目印を置き、いまのスコアまで塗る。
         区切りは RHYTHM_RANKS のまま(ランクの決め方は変えない)。満点で届かないランクは出さない */}
-    {(()=>{const max=Number(difficulty.maxScore)>0?Number(difficulty.maxScore):1000000;const asc=RHYTHM_RANKS.filter(item=>item.min>0&&item.min<=max).slice().reverse();const marks=asc.slice(-5);if(!marks.length)return null;const lowIndex=asc.indexOf(marks[0])-1;const low=lowIndex>=0?asc[lowIndex].min:0;const span=Math.max(1,max-low);const at=value=>Math.max(0,Math.min(100,(value-low)/span*100));return <div data-rhythm-result-gauge className="mt-1.5 pr-1.5">
+    {!tutorialProp&&(()=>{const max=Number(difficulty.maxScore)>0?Number(difficulty.maxScore):1000000;const asc=RHYTHM_RANKS.filter(item=>item.min>0&&item.min<=max).slice().reverse();const marks=asc.slice(-5);if(!marks.length)return null;const lowIndex=asc.indexOf(marks[0])-1;const low=lowIndex>=0?asc[lowIndex].min:0;const span=Math.max(1,max-low);const at=value=>Math.max(0,Math.min(100,(value-low)/span*100));return <div data-rhythm-result-gauge className="mt-1.5 pr-1.5">
       <div className="relative h-2 rounded-full bg-slate-800"><i data-rhythm-result-gauge-fill className="absolute inset-y-0 left-0 block rounded-full" style={{width:`${at(view.score).toFixed(1)}%`}}/>{marks.map(item=><i key={item.id} className="absolute top-1/2 block h-3 w-px -translate-y-1/2 bg-white/60" style={{left:`${at(item.min).toFixed(1)}%`}}/>)}</div>
       <div className="relative mt-0.5 h-3 text-[9px] font-black leading-none">{marks.map(item=>{const reached=view.score>=item.min;return <span key={item.id} data-rhythm-result-gauge-mark={item.id} data-reached={reached?'1':'0'} className={`absolute -translate-x-1/2 ${reached?RHYTHM_RANK_COLORS[item.id]||'text-white':'text-slate-600'}`} style={{left:`${at(item.min).toFixed(1)}%`}}>{item.id}</span>;})}</div>
     </div>;})()}
   </div>
-  <div data-rhythm-result-rank data-rank-tier={String(rankTier)} className={`relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border-4 border-current text-[38px] font-black italic ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div>
+  {!tutorialProp&&<div data-rhythm-result-rank data-rank-tier={String(rankTier)} className={`relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border-4 border-current text-[38px] font-black italic ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div>}
 </section>
 {/* アシストモード・ミラー譜面で遊んだことを、結果の上で言う。アシストは記録に残らないことも添える */}
 {(result.assist||result.mirror)&&<div data-rhythm-result-play-mode className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">{result.assist&&<span className="rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2 py-0.5 text-emerald-100">🛟 アシストモード（スコア8割・記録には残りません{Number(result.assistGuarded)>0?`・ガード${Number(result.assistGuarded)}回`:''}）</span>}{result.mirror&&<span className="rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100">↔ ミラー譜面</span>}</div>}
@@ -24279,12 +24279,15 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     曲を終えたとき(不可逆のDOWN)だけ。入る周回数(=経験値)も半分になる。
     ★古い result(cleared を持たない)はクリア扱いにする。
     ★2026-09-26 にスコアの下へ横長で置いた(数字を大きくするため、右の箱をやめた) */}
-{(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mt-1.5 flex items-center gap-2 rounded-xl border-2 px-2 py-1"><b className="shrink-0 text-lg font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="min-w-0 text-[9px] font-black leading-snug">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
+{/* 「叩いて練習する」(tutorialProp)は記録にもランクにも関わらないので、CLEAR と「次のランクまで」は出さず、ひとことだけにする
+    (2026-10-26 カゲあつ「全部MISSでも大きくCLEAR、次のランクFまであと600,000と出る」) */}
+{tutorialProp&&<p data-rhythm-result-practice className="mt-1.5 rounded-xl border-2 border-cyan-300/50 bg-cyan-950/40 px-2 py-1.5 text-[12px] font-black leading-snug text-cyan-100" style={JA_WRAP_STYLE}>{jaWrap('おつかれさま！本番の曲で遊んでみよう')}<small className="mt-0.5 block text-[9px] font-bold text-cyan-200/80" style={JA_WRAP_STYLE}>{jaWrap('練習のスコアは記録に残りません')}</small></p>}
+{!tutorialProp&&(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mt-1.5 flex items-center gap-2 rounded-xl border-2 px-2 py-1"><b className="shrink-0 text-lg font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="min-w-0 text-[9px] font-black leading-snug">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
     </div>
   </div>
-  <div className="mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"><span className="tracking-wider text-slate-400">BEST SCORE</span><b data-rhythm-result-best className="tabular-nums text-slate-100">{result.bestScore.toLocaleString()}</b></div>
+  {!tutorialProp&&<div className="mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"><span className="tracking-wider text-slate-400">BEST SCORE</span><b data-rhythm-result-best className="tabular-nums text-slate-100">{result.bestScore.toLocaleString()}</b></div>}
   {/* 次のランクまでのあと少し。その難易度の満点では届かないランクは出さない(rhythmNextRankId が止める) */}
-{(()=>{const nextId=rhythmNextRankId(view.score,difficulty.maxScore);const next=nextId?RHYTHM_RANKS.find(item=>item.id===nextId):null;if(!next)return null;const need=next.min-view.score;if(!(need>0))return null;return <p data-rhythm-next-rank={nextId} className="mt-0.5 text-[11px] font-black tabular-nums text-slate-300">次のランク <b className={RHYTHM_RANK_COLORS[nextId]||'text-white'}>{nextId}</b> まで あと {need.toLocaleString()}</p>;})()}
+{!tutorialProp&&(()=>{const nextId=rhythmNextRankId(view.score,difficulty.maxScore);const next=nextId?RHYTHM_RANKS.find(item=>item.id===nextId):null;if(!next)return null;const need=next.min-view.score;if(!(need>0))return null;return <p data-rhythm-next-rank={nextId} className="mt-0.5 text-[11px] font-black tabular-nums text-slate-300">次のランク <b className={RHYTHM_RANK_COLORS[nextId]||'text-white'}>{nextId}</b> まで あと {need.toLocaleString()}</p>;})()}
 {/* 前の自己ベストとの差。更新したら「+いくつ」、届かなかったら「あといくつ」。
     次の1回の目標が数字で分かるようにする。前の記録が無い(初めて遊んだ)ときは出さない */}
 {(()=>{const before=runRef.current?.startBest;const prev=before&&before.played?Number(before.bestScore)||0:0;if(!(prev>0))return null;const diff=view.score-prev;return <p data-rhythm-best-diff className={`text-[11px] font-black tabular-nums ${diff>0?'text-emerald-300':'text-slate-400'}`}>{diff>0?`前の自己ベストから +${diff.toLocaleString()}`:diff===0?'自己ベストと同じスコア':`自己ベストまで あと ${(-diff).toLocaleString()}`}</p>;})()}
