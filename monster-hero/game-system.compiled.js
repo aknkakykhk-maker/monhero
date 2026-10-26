@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8752d324dcaab3c0
+// source-sha256: 91eaf6b67ad2cc1a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -27562,6 +27562,7 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -27570,10 +27571,11 @@ const sbAutomationWriteBlocked = (url, method) => {
     const m = String(method || 'GET').toUpperCase();
     if (m === 'GET' || m === 'HEAD') return false;
     const u = String(url || '');
-    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (!u.startsWith(SUPABASE_URL)) return false;
+    const path = u.slice(SUPABASE_URL.length).split('?')[0];
+    if (path.startsWith('/rest/v1/rpc/') && !SB_WRITE_RPCS.includes(path.slice('/rest/v1/rpc/'.length))) return false;
     if (Array.isArray(stubbed)) {
-      const path = u.slice(SUPABASE_URL.length).split('?')[0];
-      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
+      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/rest/v1/rpc/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
     }
     return true;
   } catch {
