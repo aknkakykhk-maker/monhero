@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "69fdcfbf4f12",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121583433,"count":658},"card":{"bytes":31286500,"count":906},"all":{"bytes":260257379,"count":1657}},
+  "id": "a1fc578f2626",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121759870,"count":661},"card":{"bytes":31286500,"count":906},"all":{"bytes":260433816,"count":1660}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1281,8 +1281,10 @@
     "images/monster-icons/face/ark.png": {"v":"1ddd19baef6b","size":22180,"pack":"battle"},
     "images/monster-icons/face/arrowhead.png": {"v":"92e7ed5fa2c1","size":36277,"pack":"battle"},
     "images/monster-icons/face/c010.png": {"v":"42dbe96e69c5","size":57319,"pack":"battle"},
+    "images/monster-icons/face/c011.png": {"v":"b3722ab1b74e","size":45301,"pack":"battle"},
     "images/monster-icons/face/c012.png": {"v":"5722ee95967f","size":58119,"pack":"battle"},
     "images/monster-icons/face/c013.png": {"v":"02afe2e9ef57","size":60724,"pack":"battle"},
+    "images/monster-icons/face/c014.png": {"v":"4ee1ce8f7085","size":66203,"pack":"battle"},
     "images/monster-icons/face/c015.png": {"v":"0eddb061d2fd","size":62586,"pack":"battle"},
     "images/monster-icons/face/c016.png": {"v":"c58049c89c0a","size":65821,"pack":"battle"},
     "images/monster-icons/face/c017.png": {"v":"d1de20f8a221","size":70432,"pack":"battle"},
@@ -1294,6 +1296,7 @@
     "images/monster-icons/face/c034.png": {"v":"ec1be7dcb7a6","size":44230,"pack":"battle"},
     "images/monster-icons/face/c035.png": {"v":"895f6b37c7db","size":74799,"pack":"battle"},
     "images/monster-icons/face/c036.png": {"v":"cb3c4f4a19a6","size":40172,"pack":"battle"},
+    "images/monster-icons/face/c037.png": {"v":"9fcfee53438b","size":64933,"pack":"battle"},
     "images/monster-icons/face/c038.png": {"v":"4eaeb9ce0c27","size":52202,"pack":"battle"},
     "images/monster-icons/face/c039.png": {"v":"673f2f41e714","size":70959,"pack":"battle"},
     "images/monster-icons/face/c040.png": {"v":"c09a8d93ef8e","size":55474,"pack":"battle"},
