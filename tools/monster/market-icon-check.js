@@ -79,10 +79,9 @@ check('名前は16文字まで(カードの枠に収まる長さ)', longName.len
 const kiki = icons.find(i => i.id === 'kiki_icon');
 check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === 'ききのアイコン' && kiki?.cost === 1);
 check('ききの画像はブリーダーアイコン専用フォルダにある', stripCacheKey(kiki?.icon || '') === 'images/breeder-icons/kiki.PNG');
-// スネグーラチカ・イブリースなど顔の寄せは、顔アイコンを作り直してなくした(2026-10-27)。顔の寄せは tools/image/art-anchor-check.js が見張る
+// アーク・スネグーラチカ・イブリースなど顔の寄せは、顔アイコンを作り直してなくした(2026-10-26〜27)。顔の寄せは tools/image/art-anchor-check.js が見張る
 check('対象アイコンを共通部品で拡大・位置調整する',
   source.includes('const MARKET_PROFILE_ICON_STYLES = {')
-    && source.includes('ark_icon: { scale: 1.17, x: -8.3, y: 4 }')
     && source.includes('snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 }')
     && source.includes('const profileIconTransformStyle = iconAdjustmentTransformStyle')
     && source.includes('const iconAdjustmentTransformStyle = ({ scale=1, x=0, y=0 }={})')

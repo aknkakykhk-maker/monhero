@@ -54,6 +54,8 @@ ${css}
   <button class="mh-home-mission">ミッション</button>
   <button class="mh-home-gift">ギフト</button>
   <button class="mh-home-update">更新履歴</button>
+  <button class="mh-home-event-banner"><b>🎃 ハロウィン・ナイト</b><small>開催中 〜11/1 13:59</small></button>
+  <button class="mh-home-card-battle"><span>🃏 MFバトルカード</span></button>
   <div class="mh-home-assistant" style="height:70px">みゅあ</div>
 </main></div></body></html>`;
 
@@ -139,6 +141,26 @@ const SIZES = [
     const cut = res.facilities.filter(f => f.bottom > res.height + 0.5 || f.top < -0.5);
     check('  施設のラベルが上下に切れない', cut.length === 0,
       cut.map(f => `${f.name}(上${Math.round(f.top)} 下${Math.round(f.bottom)} / 画面高${res.height})`).join(', '));
+    // ⑦ 左の列の札(モンヒロビート・イベントの札・MFバトルカード)が重ならない(2026-10-26 320×568〜375×667 で 3〜6px 重なっていた)。
+    //    イベントの札が無いときは、MFバトルカードの札が1段上がる(.raised)ので、そちらも見る
+    const leftCol = async (event) => page.evaluate((event) => {
+      const ev = document.querySelector('.mh-home-event-banner'); const cardBtn = document.querySelector('.mh-home-card-battle');
+      ev.style.display = event ? '' : 'none'; cardBtn.classList.toggle('raised', !event);
+      const r = (el) => { const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left, right: b.right, h: b.height }; };
+      const items = [['モンヒロビート', document.querySelector('.mh-home-facility.rhythm>span')], ['イベントの札', ev], ['MFバトルカード', cardBtn.querySelector('span')], ['バトル', document.querySelector('.mh-home-facility.battle>span')]]
+        .map(([n, el]) => [n, r(el)]).filter(([, b]) => b.h > 0);
+      const hits = [];
+      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+        const [na, a] = items[i], [nb, b] = items[j];
+        if (a.top < b.bottom && a.bottom > b.top && a.left < b.right && a.right > b.left) hits.push(`${na}と${nb}(${Math.round(Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))}px)`);
+      }
+      ev.style.display = ''; cardBtn.classList.remove('raised');
+      return hits;
+    }, event);
+    for (const [label, event] of [['イベントの札があるとき', true], ['イベントの札が無いとき', false]]) {
+      const hits = await leftCol(event);
+      check(`  左の列の札が重ならない(${label})`, hits.length === 0, hits.join(', '));
+    }
     // ⑥ 右上の枠(ダイヤ・ブリーダーP)は桁が増えても高さが変わらない(2026-10-13 社長「8桁で『ダイヤ』が縦に折れた」)。
     //    0・8桁・10桁で、数とラベルが1行のまま・枠とプロフィールの高さが同じかを見る
     const walletAt = async (gold, bp) => page.evaluate(([g, p, grow]) => {
