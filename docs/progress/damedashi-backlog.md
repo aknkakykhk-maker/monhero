@@ -25,3 +25,6 @@
 
 ## 2026-10-26 ヘルプ
 → [damedashi-2026-10-26/help/README.md](damedashi-2026-10-26/help/README.md)(5件)
+
+## 2026-10-26 クラシックバトルの戦いの画面
+→ [damedashi-2026-10-26/battle-play/README.md](damedashi-2026-10-26/battle-play/README.md)(6件)
