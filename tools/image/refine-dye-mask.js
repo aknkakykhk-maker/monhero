@@ -42,6 +42,9 @@ const CONFIGS = {
   ] },
   // 黒目は②。明るい下半分と右のふちが体①に入っていた。黒目②から、色が続くかぎり体①へ広げる(黒目のまわりの黒い線で止まる)。
   // 最初は円で指示していて、円を y=405 で切った所に黒目の上のふちが体のまま残っていた(2026-10-27 部長の指摘で作り直し)
+  // 頭のてっぺんの暗い紫(明るさ0.36〜0.47)は後ろの髪②なのに、四角い③(光る髪)のかたまりになっていた。
+  // ②から、明るさ0.5以下の画素をたどって③へ広げる(光る髪は明るいので動かない)
+  Illumine: { grow: [{ from: 2, to: 1, diff: 40, val: [0, 0.5], box: [230, 60, 580, 280] }] },
   // 黒目は彩度1.0、まぶたの黄色は0.57なので、彩度0.85以上の画素だけ進む
   // 黒目のふちの暗い帯も黒目なので、暗い画素(線の扱い)も進む(lines)
   Suezo: { grow: [{ from: 0, to: 1, diff: 40, sat: [0.85, 1], lines: true, box: [400, 360, 760, 690] }] },
@@ -193,6 +196,7 @@ const refine = (srcData, Lin, W, H, cfg) => {
       for (const i of front) for (const j of nb4(i)) {
         if (!(Array.isArray(g.from) ? g.from.includes(L[j]) : L[j] === g.from) || !inB(j) || (isLine(j) && !g.lines) || !opaque(j) || d(px(i), px(j)) > g.diff) continue;
         if (g.sat) { const sa = hsvOf(srcData, j)[1]; if (sa < g.sat[0] || sa > g.sat[1]) continue; }
+        if (g.val) { const va = hsvOf(srcData, j)[2]; if (va < g.val[0] || va > g.val[1]) continue; }
         if (g.hue) { const h = hsvOf(srcData, j)[0]; if (!(g.hue[0] <= g.hue[1] ? (h >= g.hue[0] && h <= g.hue[1]) : (h >= g.hue[0] || h <= g.hue[1]))) continue; }
         L[j] = g.to; grown++; next.push(j);
       }
