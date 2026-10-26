@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// MFバトルカードのマルチ対戦の観戦(92-card-pvp-watch.jsx)の「純粋な計算」を確かめる(2026-10-27・カード部ナガメくん)。
+// MFバトルカードのマルチ対戦の観戦(94-card-spectate.jsx)の「純粋な計算」を確かめる(2026-10-27・カード部ナガメくん)。
 // 案: docs/progress/card-multi-plus/README.md の「3. 観戦」
 //
 //   node tools/card/card-pvp-watch-check.js
@@ -16,7 +16,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = r
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(GAME, p), 'utf8');
 const multi = read('src/parts/91-card-battle-multi.jsx').split('// ---- 部屋と通信')[0];
-const watch = read('src/parts/92-card-pvp-watch.jsx').split('// ---- 対戦する側')[0];
+const watch = read('src/parts/94-card-spectate.jsx').split('// ---- 対戦する側')[0];
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map, crypto: crypto.webcrypto, TextEncoder });
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
@@ -135,7 +135,7 @@ check(`④ 途中から見る人も、はじめからの手をまとめてもら
 
 // ③ 流す知らせの形: 手札・山札・封(seed・salt)・デッキの中身の項目が無い
 {
-  const src = read('src/parts/92-card-pvp-watch.jsx');
+  const src = read('src/parts/94-card-spectate.jsx');
   const host = src.split('// ---- 対戦する側')[1].split('// ---- 見る側')[0];
   const bad = ['hand:', 'deck:', 'seed', 'salt', 'cards:', '.st'].filter((k) => new RegExp(`send(Watch|Live)\\(\\{[^}]*${k.replace('.', '\\.')}`).test(host));
   check('③ ホストが流す知らせに、手札・山札・封・デッキの中身・場そのものが入っていない', bad.length === 0, bad.join(' '));

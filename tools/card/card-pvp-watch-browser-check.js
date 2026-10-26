@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// MFバトルカードのマルチ対戦の観戦(92-card-pvp-watch.jsx)を、実際のブラウザの3つのページで確かめる(2026-10-27・カード部ナガメくん)。
+// MFバトルカードのマルチ対戦の観戦(94-card-spectate.jsx)を、実際のブラウザの3つのページで確かめる(2026-10-27・カード部ナガメくん)。
 // 案: docs/progress/card-multi-plus/README.md の「3. 観戦」
 //
 //   node tools/card/card-pvp-watch-browser-check.js
