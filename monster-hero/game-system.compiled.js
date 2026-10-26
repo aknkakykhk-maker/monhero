@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4dbb5935324713dd
+// source-sha256: 1df15f16b54a07b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:02";
+const BUILD_DATE = "2026-10-27 03:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -63928,7 +63928,7 @@ function PickTeachingScreen({
     }, "ASSIST CARD"), React.createElement("div", {
       className: "mh-ph-heading"
     }, React.createElement("h2", {
-      className: "mh-ph-title text-xl font-black italic",
+      className: "mh-ph-title text-xl max-[359px]:text-lg font-black italic",
       style: JA_WRAP_STYLE
     }, jaWrap('アシストカードの継承・強化'))), React.createElement("p", {
       className: "mh-phase-tall text-[10px] font-bold text-slate-400",
@@ -64001,7 +64001,7 @@ function PickTeachingScreen({
         className: "mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200",
         style: {
           display: '-webkit-box',
-          WebkitLineClamp: 3,
+          WebkitLineClamp: 5,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           ...JA_WRAP_STYLE
@@ -69623,7 +69623,7 @@ function BattleScreen({
     size: 11,
     className: "shrink-0"
   }), React.createElement("span", {
-    className: "max-w-[34vw] truncate"
+    className: "max-w-[34vw] truncate pr-[3px]"
   }, enemy.name), React.createElement("span", {
     className: `shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
   }, RANGE_LABELS[enemyDist]), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("button", {
@@ -71624,7 +71624,7 @@ function BattleScreen({
   }, React.createElement("span", {
     className: `flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`
   }, React.createElement("span", {
-    className: "whitespace-nowrap"
+    className: "whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight"
   }, "Action Cards"), " ", React.createElement("span", {
     className: "shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
   }, Array.isArray(tacticsUnits) ? actionUsed : selectedCards.length, "/", cardLimit), heroCardBonus > 0 && React.createElement("span", {
