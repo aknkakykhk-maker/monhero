@@ -162,7 +162,7 @@ const serve = (flagOn) => new Promise(resolve => {
       result.myCode = await page.evaluate(() => document.querySelector('[data-friend-code]').innerText.replace('-', ''));
       result.registered = fake.db.friend_codes.filter(r => r.breeder_id === 'self-user').length;
       // ③ コードで申請
-      await page.fill('input[aria-label="友だちのフレンドコード"]', 'aaaa-2222');
+      await page.fill('input[aria-label="相手のフレンドコード"]', 'aaaa-2222');
       await clickText('フレンド申請を送る');
       await page.waitForFunction(() => document.body.innerText.includes('申請を送りました'), { timeout: 8000 });
       // 最近の人への申請で出た表示と取り違えないよう、行ができるまで待ってから、送った直後の状態を控える
