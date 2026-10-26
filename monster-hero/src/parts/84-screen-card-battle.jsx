@@ -1188,12 +1188,25 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   中身が変わるたびに 0 から測り直す(描く前に測るので、ちらつかない)
   const stageRef = useRef(null);
   const [stageFit, setStageFit] = useState(0);
+  // 盤全体に入り切らないときの詰め方(2026-10-26 統括部長「下のボタンが、たまに下が少し切れる」。320×568 でホームバーの余白があると、
+  //   下の帯が盤の外へ 8〜24px 出ていた)。いちばん下の帯の下のはしが盤の外なら、1段ずつ詰める。
+  //   0 … ふつう / 1 … まんなかの最小の高さを 64→40px / 2 … 手札のカードを少し小さく・上の持ち上げ分を詰める。段や画面の大きさが変わったら 0 から測り直す
+  const [boardFit, setBoardFit] = useState(0);
+  const [boardFitKey, setBoardFitKey] = useState(0);
+  useEffect(() => { const on = () => setBoardFitKey((k) => k + 1); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
   React.useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el || stageFit >= 3) return;
     if (el.scrollHeight > el.clientHeight + 1) setStageFit((f) => Math.min(3, f + 1));
+  });
+  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey]);
+  React.useLayoutEffect(() => {
+    const b = boardRef.current;
+    const f = b && b.querySelector('[data-card-footer]');
+    if (!f || boardFit >= 2) return;
+    if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit((x) => Math.min(2, x + 1));
   });
 
   const strip = (p) => {
@@ -1282,7 +1295,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             <div className={wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'}>
             <div data-card-tutor={tutStage.id} className={`${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`}>
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
-              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
+              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay === 'D10' && st.pending && st.pending.evaded ? 'D10b' : tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
               {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
             </div>
             </div>
@@ -1336,7 +1349,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
       {/* 入り切らないときも上から並べる(safe center)。吹き出しの上が切れないように */}
-      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className="relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1" style={{ justifyContent: 'safe center' }}>
+      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1`} style={{ justifyContent: 'safe center' }}>
         {/* 案A: 番が替わったときの帯は、盤全体の真ん中へ移した(下の data-card-turn-banner。2026-10-26 ソラシドさん) */}
         {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。押すと次の台詞へ進む(練習試合は指の操作を下へ通す)。
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
@@ -1421,7 +1434,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
       {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
       {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
-      {mode === 'guard' && !guardOpts.length && (
+      {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
+      {mode === 'guard' && tutorial && st.pending && st.pending.evaded && <div data-card-tutor-guard-done className="mx-auto mb-1 shrink-0 rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap('「これで守る」を押してください')}</div>}
+      {mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && (
         <div data-card-guard-why className={`mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`} style={tiny ? undefined : JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
@@ -1432,14 +1447,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {/* 選んだ手札は上へ少し持ち上がる。その分の高さ(pt-2)を手札の箱の中に取っておき、上の案内の帯に重ならないようにする(2026-10-24 改善部の点検 V3) */}
       {/* 相手の番で、自分が守る場面でないあいだは、手札を少し暗くする(2026-10-26 ソラシドさん) */}
-      <div data-card-hand data-card-hand-dim={mode === 'wait' ? '1' : undefined} className={`flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2 transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`}>
+      <div data-card-hand data-card-hand-dim={mode === 'wait' ? '1' : undefined} data-card-board-fit={boardFit || undefined} className={`flex shrink-0 items-end justify-center gap-1 px-1 pb-1 ${boardFit >= 2 ? 'pt-1' : 'pt-2'} transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`}>
         {handOrder.map((i) => {
           const no = me.hand[i];
           const c = cardOf(db, no);
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
@@ -1459,7 +1474,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           );
         })}
       </div>
-      <div data-card-footer className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
+      {/* 画面の下の安全域(ホームバーの所)は、体(body)がもう余白に取っている。ここでも取ると二重になり、
+          下の帯が高くなっていた(2026-10-26 統括部長「下のボタンが少し切れる」)。ここは 8px だけ。入り切らないときの詰め方は boardFit */}
+      <div data-card-footer className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1">
         {replay ? <CardReplayBar replay={replay} at={replayAt} onSeek={replaySeek} onExit={() => onFinish({ outcome: 'replayExit', st })}/> : footer}
       </div>
       </div>
@@ -2303,6 +2320,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">強さ</span>
             <span className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>勝つと次の強さが開きます</span>
           </div>
+          {/* 鍵が付いているときは、どの強さで勝てば開くかを1行で出す(EASY で勝っても HARD は開かない。2026-10-26 社長が迷った) */}
+          {(() => {
+            const lock = debug ? null : CARD_LEVEL_ORDER.find((lv) => !cardLevelOpen(save.unlocked, lv));
+            const prev = lock ? CARD_LEVEL_ORDER[CARD_LEVEL_ORDER.indexOf(lock) - 1] : null;
+            return lock && prev ? <p data-card-level-hint={lock} className="px-0.5 text-[11px] font-bold text-amber-200/90" style={JA_LABEL_STYLE}>{jaWrap(`🔒 ${CARD_LEVEL_LABEL[lock]} は ${CARD_LEVEL_LABEL[prev]} で勝つと開きます`)}</p> : null;
+          })()}
           <div className="grid grid-cols-5 gap-1">
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
@@ -2396,7 +2419,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           ) : null; })()}
           <div className={SCREEN_PANEL_CLASS}>
             {result.done && result.reward > 0 && <div className="text-[15px] font-black text-amber-200">ビートP {result.reward}</div>}
-            <div className="mt-1 text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(result.done ? '引く・ガッツ・守り・攻撃・山札切れの5つを覚えました。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300">保存できませんでした</div>}
           </div>
