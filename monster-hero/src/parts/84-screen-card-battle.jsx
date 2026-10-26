@@ -1248,7 +1248,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && (
           <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`${bigCard ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
-            <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>
+            {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
+            {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
+              : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>}
             <span className="min-w-0"><span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span></span>
           </div>
         )}
@@ -1408,7 +1410,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
       {/* 番が替わったとき、盤全体の真ん中に大きく「あなたの番」「◯◯の番」(0.8秒ほど・字の札をタップでも消える。大写しが出ているあいだは出さない)。
           2026-10-26 ソラシドさん「どっちのターンか分かりにくい」。指の操作は札の外では下へ通す(すぐ手札を選べる) */}
       {turnBanner && !bigCard && (
-        <div key={turnBanner.key} data-card-turn-banner={turnBanner.me ? 'me' : 'foe'} aria-live="polite" className="pointer-events-none absolute inset-0 z-[53] flex items-center justify-center px-4">
+        <div key={turnBanner.key} data-card-turn-banner={turnBanner.me ? 'me' : 'foe'} aria-live="polite" className="pointer-events-none absolute inset-0 z-[53] flex items-center justify-center px-4"
+          // 横の画面は左の盤の上だけ(右の手札・ドラの説明の窓にかけない。練習試合で「次へ」にかぶっていた)
+          style={wide ? { right: 'calc(min(42%, 420px) + 8px)' } : undefined}>
           <button type="button" data-card-fit onClick={() => setTurnBanner(null)}
             className={`mh-card-turn-call pointer-events-auto max-w-full rounded-3xl border-4 px-6 py-2 text-center font-black tracking-wider shadow-2xl ${turnBanner.me ? 'border-amber-200 bg-amber-400 text-slate-950' : 'border-rose-200 bg-rose-600 text-white'}`}
             style={{ fontSize: 'clamp(26px, 9vw, 44px)', ...JA_LABEL_STYLE }}>{turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`}</button>
