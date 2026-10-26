@@ -6016,6 +6016,16 @@ function MonsterHeroGame() {
       //   「一度も出ない」ほうがはるかに困る
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      // 6レーン・見た目の案内は「前と変わったよ」のお知らせ。モンヒロビートをまだ1曲も遊んでいない人には出さない
+      // (2026-10-26 カゲあつ「はじめての人に、みゅあが更新の話をして、曲が3つ半しか見えない」)。見たことにして閉じておく
+      {
+        const best = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+        const beatPlayed = !!best && typeof best === 'object' && Object.values(best).some((bySong) => bySong && typeof bySong === 'object'
+          && Object.values(bySong).some((rec) => rec && typeof rec === 'object' && (rec.played === true || rec.clear === true || Number(rec.bestScore) > 0)));
+        if (!beatPlayed) {
+          for (const key of [RHYTHM_SIX_LANE_INTRO_KEY, RHYTHM_LOOK_INTRO_KEY]) { try { await storeSet(key, true, false); } catch {} }
+        }
+      }
       setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
       setRhythmLookIntroSeen(await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。

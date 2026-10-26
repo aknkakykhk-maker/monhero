@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef21b763a6e707be
+// source-sha256: b1fc836809e71891
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:55";
+const BUILD_DATE = "2026-10-27 01:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -103609,6 +103609,17 @@ function MonsterHeroGame() {
       } catch (e) {}
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
+      {
+        const best = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+        const beatPlayed = !!best && typeof best === 'object' && Object.values(best).some(bySong => bySong && typeof bySong === 'object' && Object.values(bySong).some(rec => rec && typeof rec === 'object' && (rec.played === true || rec.clear === true || Number(rec.bestScore) > 0)));
+        if (!beatPlayed) {
+          for (const key of [RHYTHM_SIX_LANE_INTRO_KEY, RHYTHM_LOOK_INTRO_KEY]) {
+            try {
+              await storeSet(key, true, false);
+            } catch {}
+          }
+        }
+      }
       setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
       setRhythmLookIntroSeen((await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
