@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 547b3db46d558423
+// source-sha256: a91d82eaabe106aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:21";
+const BUILD_DATE = "2026-10-27 02:24";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16261,6 +16261,17 @@ const marketLabelFitSize = label => {
 const marketLabelNodes = label => marketLabelSegments(label).map((seg, index) => React.createElement(React.Fragment, {
   key: index
 }, index > 0 && React.createElement("wbr", null), seg));
+const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
+  const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
+  const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
+  const fromMs = diamond ? Date.parse(diamond.from) : NaN;
+  if (!Number.isFinite(fromMs)) return undefined;
+  const jst = new Date(fromMs + 9 * 3600 * 1000);
+  const lines = [`${jst.getUTCMonth() + 1}/${jst.getUTCDate()}から`];
+  if (typeof assistantCostumeSaleIn === 'function' && assistantCostumeSaleIn(costume, 'beatPoint')) lines.push('いまはビートP', '交換所で買えます');
+  return lines;
+};
 const MarketProductCard = ({
   item,
   owned = false,
@@ -53417,7 +53428,7 @@ function BreederMarketScreen({
       item: item,
       owned: owned,
       comingSoon: comingSoon || frameLocked || giftLocked,
-      comingSoonLabel: giftLocked ? String(item.giftHow || 'プレゼントで届きます').split(/(?<=を)/) : frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
+      comingSoonLabel: giftLocked ? String(item.giftHow || 'プレゼントで届きます').split(/(?<=を)/) : item.type === 'costume' && comingSoon ? marketCostumeSoonLabel(item) : frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
       canBuy: canBuy,
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
@@ -55095,7 +55106,7 @@ const DexTryDyeSheet = ({
   "aria-modal": "true",
   "aria-label": `${mon.name}を染めてみる`
 }, React.createElement("div", {
-  className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden"
+  className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:500px)]:p-3 flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden"
 }, React.createElement("div", {
   className: "flex items-center justify-between shrink-0"
 }, React.createElement("h3", {
@@ -55106,7 +55117,12 @@ const DexTryDyeSheet = ({
   onClick: onClose,
   className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90"
 }, "✕")), React.createElement("div", {
-  className: "h-36 shrink-0 flex items-center justify-center rounded-2xl bg-black/30 border border-white/5"
+  "data-dex-try-dye-body": true,
+  className: "flex-1 min-h-0 flex flex-col gap-2.5 [@media(orientation:landscape)_and_(max-height:500px)]:flex-row [@media(orientation:landscape)_and_(max-height:500px)]:gap-3"
+}, React.createElement("div", {
+  className: "shrink-0 flex flex-col gap-2.5 [@media(orientation:landscape)_and_(max-height:500px)]:w-[40%] [@media(orientation:landscape)_and_(max-height:500px)]:min-h-0"
+}, React.createElement("div", {
+  className: "h-36 shrink-0 flex items-center justify-center rounded-2xl bg-black/30 border border-white/5 [@media(orientation:landscape)_and_(max-height:500px)]:h-auto [@media(orientation:landscape)_and_(max-height:500px)]:flex-1 [@media(orientation:landscape)_and_(max-height:500px)]:min-h-0"
 }, React.createElement(DyedMonsterImage, {
   baseId: mon.id,
   src: mon.imgUrl || mon.iconUrl,
@@ -55118,7 +55134,9 @@ const DexTryDyeSheet = ({
   className: "text-[10px] text-fuchsia-200 font-bold text-center shrink-0"
 }, "見るだけの機能です。マスモンの色は変わらず、アイテムも使いません。"), dyeRegionCount(mon.id) === 1 && React.createElement("div", {
   className: "text-[9px] text-slate-400 font-bold text-center shrink-0"
-}, "このモンスターは全身をまとめて染めます"), React.createElement("div", {
+}, "このモンスターは全身をまとめて染めます")), React.createElement("div", {
+  className: "flex-1 min-h-0 min-w-0 flex flex-col gap-2.5"
+}, React.createElement("div", {
   className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
 }, React.createElement(DyeRegionColorControls, {
   baseId: mon.id,
@@ -55136,7 +55154,7 @@ const DexTryDyeSheet = ({
   "data-dex-try-apply": true,
   onClick: onApply,
   className: "flex-1 min-h-[44px] rounded-xl font-black text-xs bg-fuchsia-600 text-white active:scale-95"
-}, "この色で見る"))));
+}, "この色で見る"))))));
 function MonsterAttackPreviewScreen({
   dexMonsterId,
   dexAttackPreview,
@@ -55296,7 +55314,7 @@ function MonsterDexScreen({
     ...s,
     list: shown.filter(mon => dexEntryStatusOf(mon, unlockedMonsterIds) === s.id)
   })).filter(s => s.list.length > 0);
-  const chipClass = on => `shrink-0 min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-white/10 text-amber-200/80'}`;
+  const chipClass = on => `shrink-0 snap-start min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-white/10 text-amber-200/80'}`;
   return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -55320,7 +55338,7 @@ function MonsterDexScreen({
   }, unlockedCount, React.createElement("span", {
     className: "text-slate-400 text-[10px]"
   }, " / ", monsters.length))), React.createElement("div", {
-    className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto pb-1",
+    className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-1",
     role: "group",
     "aria-label": "主血統で絞り込む"
   }, React.createElement("button", {
@@ -55334,7 +55352,14 @@ function MonsterDexScreen({
     "aria-pressed": dexLineageFilter === lineage.id,
     onClick: () => onSelectLineage(lineage.id),
     className: chipClass(dexLineageFilter === lineage.id)
-  }, lineage.name))), React.createElement("div", {
+  }, lineage.name)), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0",
+    ref: el => {
+      if (!el || !el.parentElement || !el.previousElementSibling) return;
+      el.style.width = `${Math.max(0, el.parentElement.clientWidth - el.previousElementSibling.offsetWidth - 6)}px`;
+    }
+  })), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`
   }, sections.map(section => React.createElement("section", {
     key: section.id,
@@ -55488,11 +55513,11 @@ function MonsterDexDetailScreen({
       className: "text-[11px] font-mono font-black text-amber-200/80 tabular-nums"
     }, index + 1, " / ", monsters.length)
   }), React.createElement("div", {
+    "data-dex-body": true,
+    className: "flex-1 min-h-0 flex flex-col [@media(orientation:landscape)_and_(max-height:500px)]:flex-row [@media(orientation:landscape)_and_(max-height:500px)]:items-center [@media(orientation:landscape)_and_(max-height:500px)]:gap-2"
+  }, React.createElement("div", {
     "data-dex-stage": true,
-    className: "shrink-0 w-full max-w-md mx-auto flex items-center gap-1 px-1.5 py-1.5",
-    style: {
-      height: 'clamp(176px, 26dvh, 226px)'
-    },
+    className: "shrink-0 w-full max-w-md mx-auto flex items-center gap-1 px-1.5 py-1.5 h-[clamp(176px,26dvh,226px)] [@media(orientation:landscape)_and_(max-height:500px)]:w-[46%] [@media(orientation:landscape)_and_(max-height:500px)]:h-[clamp(176px,70dvh,240px)]",
     onTouchStart: e => {
       swipeRef.current = e.touches && e.touches[0] ? e.touches[0].clientX : null;
     },
@@ -55618,7 +55643,7 @@ function MonsterDexDetailScreen({
       onCloseTryDye();
     }
   }), React.createElement("div", {
-    className: "flex-1 min-h-0 pt-3"
+    className: "flex-1 min-h-0 pt-3 [@media(orientation:landscape)_and_(max-height:500px)]:pt-0 [@media(orientation:landscape)_and_(max-height:500px)]:self-stretch [@media(orientation:landscape)_and_(max-height:500px)]:py-1 [@media(orientation:landscape)_and_(max-height:500px)]:min-w-0"
   }, React.createElement("div", {
     className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
   }, React.createElement("div", {
@@ -55741,7 +55766,7 @@ function MonsterDexDetailScreen({
   }, React.createElement(ScreenEmpty, {
     emoji: status === 'draft' ? '🛠️' : '🔒',
     lines: status === 'draft' ? ['まだ仲間にできないモンスターです', '能力・技・特性は、まだ記録されていません。'] : ['まだ入手していないモンスターです', 'マーケットで円盤石を手に入れて解放すると、能力・技・特性が図鑑に記録されます。']
-  })))));
+  }))))));
 }
 function RhythmInfoScreen({
   returnToHome
@@ -89067,6 +89092,7 @@ const cardFoeStyle = who => {
   const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
   return v <= 1.2 ? CARD_FOE_STYLES.balance : CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance;
 };
+const cardBubbleMs = text => Math.min(7000, Math.max(3000, 1800 + 150 * [...String(text || '')].length));
 const cardResultCut = r => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
 const cardResultCutWhy = (outcome, r) => {
   const turns = `自分の番が${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
@@ -89616,10 +89642,23 @@ const CardBattleBoard = ({
     turn: -1,
     n: 0
   });
-  const bubbleTimer = useRef(null);
-  const hideBubbleLater = () => {
-    clearTimeout(bubbleTimer.current);
-    bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+  const bubbleRef = useRef(null);
+  const bubbleQ = useRef([]);
+  const bubbleLeft = useRef({});
+  const showBubble = b => {
+    if (bubbleRef.current) {
+      bubbleQ.current = [...bubbleQ.current, b].slice(-3);
+      return;
+    }
+    bubbleRef.current = b;
+    if (b.face) setFace(b.face);
+    setBubble(b);
+  };
+  const nextBubble = () => {
+    const b = bubbleQ.current.shift() || null;
+    bubbleRef.current = b;
+    if (b && b.face) setFace(b.face);
+    setBubble(b);
   };
   const finished = useRef(false);
   const talk = useRef({
@@ -89645,12 +89684,11 @@ const CardBattleBoard = ({
     };
     setFace(line.face);
     const key = `${Date.now()}-${scene}`;
-    setBubble({
+    showBubble({
       text: line.text,
       key,
       face: line.face
     });
-    hideBubbleLater();
     if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
       talk.current.n += 1;
       void cardTalkFetch('moment', {
@@ -89659,19 +89697,39 @@ const CardBattleBoard = ({
         samples: cardTalkSamples(game.who, scene)
       }).then(r => {
         if (!r) return;
-        setBubble(cur => cur && cur.key === key ? {
-          ...cur,
+        bubbleQ.current = bubbleQ.current.map(b => b.key === key ? {
+          ...b,
           text: r.text,
           face: r.face
-        } : cur);
-        setFace(r.face);
+        } : b);
+        if (bubbleRef.current && bubbleRef.current.key === key) {
+          bubbleRef.current = {
+            ...bubbleRef.current,
+            text: r.text,
+            face: r.face
+          };
+          setBubble(bubbleRef.current);
+          setFace(r.face);
+        }
       });
     }
   };
   useEffect(() => {
     if (!tutorial) say('start');
-    return () => clearTimeout(bubbleTimer.current);
   }, []);
+  useEffect(() => {
+    if (!bubble || tutorial || bigCard || turnBanner) return undefined;
+    const key = bubble.key;
+    const ms = bubbleLeft.current[key] ?? cardBubbleMs(bubble.text);
+    const at = Date.now();
+    const t = setTimeout(nextBubble, ms);
+    return () => {
+      clearTimeout(t);
+      bubbleLeft.current = {
+        [key]: Math.max(800, ms - (Date.now() - at))
+      };
+    };
+  }, [bubble && bubble.key, !!bigCard, !!turnBanner]);
   useEffect(() => {
     if (tutorial && tutStage) setTutQ(tutStage.lines.slice());
   }, [tutI]);
@@ -89806,10 +89864,6 @@ const CardBattleBoard = ({
     }
     stRef.current = next;
     const evs = next.events || [];
-    if (!tutorial && evs.some(e => e.t === 'use' || e.t === 'guard')) {
-      clearTimeout(bubbleTimer.current);
-      setBubble(null);
-    }
     const hits = evs.filter(e => e.t === 'hit' || e.t === 'heal').map((e, i) => ({
       ...e,
       key: `${next.log.length}-${i}-${Date.now()}`,
@@ -90026,12 +90080,11 @@ const CardBattleBoard = ({
         });
       },
       onChat: text => {
-        setFace('normal');
-        setBubble({
+        showBubble({
           text,
-          key: `chat-${Date.now()}`
+          key: `chat-${Date.now()}`,
+          face: 'normal'
         });
-        hideBubbleLater();
       }
     });
   }, []);
@@ -90677,7 +90730,9 @@ const CardBattleBoard = ({
     key: bubble.key,
     "data-card-bubble": true,
     "data-card-bubble-face": bubble.face || face,
-    className: `${bigCard || turnBanner ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
+    "data-card-bubble-ms": tutorial ? undefined : cardBubbleMs(bubble.text),
+    onClick: tutorial ? undefined : nextBubble,
+    className: `${bigCard || turnBanner ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -93632,7 +93687,8 @@ const CardDeckPickTile = ({
   canAdd,
   press,
   onAdd,
-  onRemove
+  onRemove,
+  onDetail = null
 }) => {
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
@@ -93656,10 +93712,22 @@ const CardDeckPickTile = ({
     draggable: false,
     onDragStart: e => e.preventDefault(),
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
-  })), React.createElement(CardNameFit, {
+  })), React.createElement("div", {
+    className: "mt-0.5 flex items-center gap-0.5"
+  }, React.createElement(CardNameFit, {
     name: name,
-    className: "mt-0.5 font-bold leading-tight text-slate-100"
-  }), React.createElement("div", {
+    className: "min-w-0 flex-1 font-bold leading-tight text-slate-100"
+  }), onDetail && React.createElement("button", {
+    type: "button",
+    "data-card-deck-info": no,
+    onClick: e => {
+      e.stopPropagation();
+      Audio_.fgSe.tap();
+      onDetail();
+    },
+    "aria-label": `${name}の詳細`,
+    className: "flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-slate-950/80 font-serif text-[11px] font-black italic leading-none text-white active:scale-90"
+  }, "i")), React.createElement("div", {
     className: "mt-0.5 flex items-center justify-between gap-0.5"
   }, React.createElement("button", {
     type: "button",
@@ -93795,7 +93863,8 @@ const CardDeckEditor = ({
       canAdd: !cardDeckAddReason(db, deck, no, col),
       press: press,
       onAdd: () => add(no),
-      onRemove: () => removeOne(no)
+      onRemove: () => removeOne(no),
+      onDetail: () => setDetail(no)
     });
   };
   const chip = on => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
