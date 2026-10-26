@@ -36,6 +36,39 @@ const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // �
 const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9, x1: 678, y1: 725, frame: { below: 728, right: 679, x1: 692, y1: 734 } };
 const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT, blur: 9, x1: 674 };
 
+// キラ・別絵キラのモンスターカード(番号が S・V・RS で終わる元のカード)は地が粒の模様で、上下の色をつなぐと縦じまの四角が浮く
+// (2026-10-27 カード追加部パックくんの見回り。40枚ほどで © の所に縦じまが出ていた)。
+// すぐ上(dy<0)・すぐ下(dy>0)の、文字の無い同じ模様の行を写して埋める(©は板の中なので上から・URL は板の外なので下から)
+const isKiraMonster = (file) => /^C-\d+R?(S|V)\.jpg$/.test(path.basename(file));
+const KIRA_COPY = [{ ...BAND.monster[0], dy: -24 }, { ...BAND.monster[1], dy: 22 }];
+// 上の行に絵(爪・炎・線)がかかっていて写すと二重になる子と、別絵キラ(地が模様でなく絵)は、写さずに周りから滑らかに埋める(dy:null)
+const KIRA_SMOOTH = ['C-005S.jpg', 'C-005V.jpg', 'C-021S.jpg', 'C-026S.jpg', 'C-030S.jpg'];
+const kiraRects = (file) => {
+  const b = path.basename(file);
+  return KIRA_SMOOTH.includes(b) || /V\.jpg$/.test(b) ? KIRA_COPY.map((r) => ({ ...r, dy: null })) : KIRA_COPY;
+};
+// dy:null は写す元なし(縁の色を内側へなだらかに広げるだけ)。
+// 写したままだと明るさの差で四角の縁が見えるので、縁(四角のすぐ外の1列・1行)での「元 − 写す元」の差を、
+// 内側へなだらかに広げて足す(差の面を Jacobi で解く。四角は 200×20 ほどなので軽い)
+const copyRect = (px, ch, r) => {
+  const w = r.x1 - r.x0 + 3, h = r.y1 - r.y0 + 3; // 外の1列・1行を含む
+  for (let c = 0; c < ch; c += 1) {
+    const d = new Float32Array(w * h);
+    for (let j = 0; j < h; j += 1) for (let i = 0; i < w; i += 1) {
+      if (i && j && i < w - 1 && j < h - 1) continue;
+      const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
+      d[j * w + i] = px[(y * W + x) * ch + c] - (r.dy === null ? 0 : px[((y + r.dy) * W + x) * ch + c]);
+    }
+    for (let it = 0; it < 1500; it += 1) for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
+      d[j * w + i] = (d[j * w + i - 1] + d[j * w + i + 1] + d[(j - 1) * w + i] + d[(j + 1) * w + i]) / 4;
+    }
+    for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
+      const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
+      px[(y * W + x) * ch + c] = Math.max(0, Math.min(255, Math.round((r.dy === null ? 0 : px[((y + r.dy) * W + x) * ch + c]) + d[j * w + i])));
+    }
+  }
+};
+
 // © と URL の字が無い絵(2026-10-26 社長が送った剣士モッチー C-066・パンドラ C-067 の3枚ずつ)。
 // 前は帯を塗っていて、パンドラは赤い帯・別絵キラは縞の四角が出ていた(2026-10-27 カード追加部パックくんの見回り)
 const NO_COPYRIGHT = ['C066.jpg', 'C066S.jpg', 'C066V.jpg', 'C067.jpg', 'C067S.jpg', 'C067V.jpg'];
@@ -106,6 +139,7 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
   // © と URL の字がもともと無い絵(社長が作った剣士モッチー・パンドラ)は、塗るとまだらの四角だけが残るので消さない
   if (NO_COPYRIGHT.includes(path.basename(file))) return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
+  if (isKiraMonster(file)) { kiraRects(file).forEach((r) => copyRect(data, info.channels, r)); return sharp(data, { raw: { width: W, height: H, channels: info.channels } }); }
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
   // 全体カードの © は場所がほかの技カードと違う(絵の右下 y≈708〜722)ので、文字を描き直す段(card-image-ja.js の field)で消してある。ここでは消さない
   if (artCopyright && !isMonster(file) && !(isField(file) && file.startsWith(JA))) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
