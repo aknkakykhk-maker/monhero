@@ -30,8 +30,11 @@ const BAND = {
 const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // 技カードの絵の右下の「© TECMO, LTD. 1999」
 // 日本語にした絵(全モンスター・ブリーダー)は、縦じまが目立たないように広くならす(blur)。
 // ブリーダーの絵は右のふちが x≈678 から灰色の枠なので、その手前で止める(ふちの明るい色が左へ伸びて白くにじんでいた・カゲあつくん 113・122・126)
-const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9 };
-const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT_JA, x1: 674 };
+// 全モンスターの絵(白い枠)は、絵の窓の右のふちが x=679・下のふちが y=728。日本語にする段(card-image-ja.js)で © を塗ったときに、
+// 窓の外(白い枠)まで絵の色が四角くはみ出していた(緊急回避・底力・根性など19枚。2026-10-27 カード追加部パックくんの見回り)。
+// 四角は窓の内側で止め、はみ出した所(窓の下の行・右の列)は、すぐ外の白い枠の色で塗り戻す(frame)
+const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9, x1: 678, y1: 725, frame: { below: 728, right: 679, x1: 692, y1: 734 } };
+const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT, blur: 9, x1: 674 };
 
 // ★混血の絵は「C051.jpg」と「-」が無い名前なので、C のあとに数字が続くものもモンスターカードにする
 //   (前は技カードとして扱っていて、© が残り、右下の「No. C-051」を塗りつぶしていた・2026-10-24 に気づいた)
@@ -94,7 +97,15 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
   // 全体カードの © は場所がほかの技カードと違う(絵の右下 y≈708〜722)ので、文字を描き直す段(card-image-ja.js の field)で消してある。ここでは消さない
   if (artCopyright && !isMonster(file) && !(isField(file) && file.startsWith(JA))) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
-  for (const r of rects) fillRect(data, info.channels, r);
+  for (const r of rects) {
+    fillRect(data, info.channels, r);
+    const f = r.frame;
+    if (!f) continue;
+    const ch = info.channels;
+    const cp = (x, y, sx, sy) => { for (let c = 0; c < ch; c += 1) data[(y * W + x) * ch + c] = data[(sy * W + sx) * ch + c]; };
+    for (let y = f.below; y <= f.y1; y += 1) for (let x = r.x0; x <= f.x1; x += 1) cp(x, y, r.x0 - 8, y);   // 窓の下: 左の枠の同じ行
+    for (let y = r.y0; y < f.below; y += 1) for (let x = f.right; x <= f.x1; x += 1) cp(x, y, f.x1 + 4, y); // 窓の右: 右の枠の同じ行
+  }
   return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
 };
 
