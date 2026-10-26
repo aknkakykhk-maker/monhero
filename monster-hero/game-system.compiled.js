@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1e668b1a29a27e5
+// source-sha256: 2cf08c7e183778e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -52363,6 +52363,20 @@ const PhaseSteps = ({
     className: "shrink-0 whitespace-nowrap text-[9px] font-black text-[#c9ae6a]"
   }, "⚔ WAVE ", nextWave)));
 };
+const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"],[role="dialog"]';
+const overlayOpenNow = () => typeof document !== 'undefined' && !!document.querySelector(OVERLAY_WAIT_SELECTOR);
+function WaitForOverlayClose({
+  children
+}) {
+  const [blocked, setBlocked] = useState(overlayOpenNow);
+  useEffect(() => {
+    const tick = () => setBlocked(overlayOpenNow());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return blocked ? null : children;
+}
 const PickerSheet = ({
   title,
   note = '',
@@ -120602,7 +120616,7 @@ function MonsterHeroGame() {
     onClick: () => setStorageTrouble(null),
     className: "shrink-0 w-11 min-h-[44px] flex items-center justify-center rounded-xl bg-red-800 text-red-50 font-black"
   }, "×"))), document.body) : null;
-  const updateNotice = updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay ? ReactDOM.createPortal(updateNoticeSmall ? React.createElement("div", {
+  const updateNotice = updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay ? ReactDOM.createPortal(React.createElement(WaitForOverlayClose, null, updateNoticeSmall ? React.createElement("div", {
     "aria-live": "assertive",
     "data-update-notice": "mini",
     "data-update-notice-place": "top",
@@ -120634,17 +120648,24 @@ function MonsterHeroGame() {
   }, React.createElement("button", {
     type: "button",
     onClick: reloadLatestVersion,
-    className: "flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
+    className: "flex-1 min-w-0 flex items-center justify-center gap-2 min-h-[48px] px-3 py-2 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[13px] leading-tight shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
   }, React.createElement(RefreshCcw, {
-    size: 18
-  }), React.createElement("span", null, "新しいバージョンがあります\u3000更新する")), React.createElement("button", {
+    size: 18,
+    className: "shrink-0"
+  }), React.createElement("span", {
+    className: "flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "新しいバージョンがあります"), React.createElement("span", {
+    className: "whitespace-nowrap rounded-lg bg-slate-950/15 px-2 py-0.5"
+  }, "更新する"))), React.createElement("button", {
     type: "button",
     "aria-label": "あとで更新する（この通知を閉じる）",
     onClick: () => setDismissedUpdateBuild(latestBuild || BUILD_DATE),
     className: "shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
   }, React.createElement(X, {
     size: 18
-  }))), document.body) : null;
+  })))), document.body) : null;
   const titleModal = showChangelog ? React.createElement("div", _extends({
     className: "mh-title-modal"
   }, settingsBackdropProps(closeChangelog)), React.createElement("div", {
