@@ -2098,7 +2098,9 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!dataLoaded || !onboarded || onboardingPreview) return;
     const level = Math.floor(Number(levelInfo(breederXp).level));   // breederLevel は下で作るので、ここでは経験値から求める
-    if (!Number.isFinite(level) || level < 1 || lastPublishedBreederLevelRef.current >= level) return;
+    // Lv.1(まだ1つも上がっていない端末)は送らない。順位の最下位で載っても意味が無く、遊ばずに閉じた端末や
+    // 検査・試しの端末が、本物の表へ「名前だけ入った Lv.1 の行」を積み上げるのを防ぐ(2026-10-27)。Lv.2 になったときに送る
+    if (!Number.isFinite(level) || level < BREEDER_LEVEL_PUBLISH_MIN || lastPublishedBreederLevelRef.current >= level) return;
     lastPublishedBreederLevelRef.current = level;
     (async () => {
       try {
