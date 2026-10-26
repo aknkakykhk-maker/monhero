@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 76249529835dcad4
+// generated-sha256: fdd465260cabe356
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -19061,9 +19061,14 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
         </div>
         <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter} onComplete={()=>markPresented('breeder')}/>
       </div>
-      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-        <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
-        <span className="text-white font-mono font-bold flex items-baseline gap-1"><span className="text-slate-500 text-[10px]">{summary.goldBefore.toLocaleString()} →</span><CountUpNumber from={summary.goldBefore} to={summary.goldAfter} onComplete={()=>markPresented('gold')}/>{summary.goldAfter>summary.goldBefore&&<span className="text-amber-300 text-[10px]">(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})</span>}</span>
+      {/* 数の出し方をブリーダー経験値の行とそろえる: 右に「+もらった数」、下の小さい行に持っている数の変化(2026-10-27 ダメダシくん。
+          前は「100,000 → 100,374 (+374)」で、経験値の「+38」と並び方が違い、前の数も薄くて読みにくかった) */}
+      <div data-reward-gold className="pt-2 border-t border-white/10 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
+          <span className="text-white font-mono font-bold">+<CountUpNumber from={0} to={Math.max(0, summary.goldAfter-summary.goldBefore)} onComplete={()=>markPresented('gold')}/></span>
+        </div>
+        <div className="mt-0.5 text-right text-[9px] font-mono font-bold text-slate-300">所持 {summary.goldBefore.toLocaleString()} → {summary.goldAfter.toLocaleString()}</div>
       </div>
       {/* クリアしたときだけ入る限界突破アイテム。1行だけ足して、リザルトの高さを崩さない */}
       {summary.psycheGain > 0 && (
@@ -36583,6 +36588,8 @@ function MasuDonationScreen({
       const sorted=sortDonationMasuMons(masuMons,donationSortKey,donationSortDir,monsterRosterIds);
       return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="寄付" accent="text-violet-300" onBack={onLeaveDonation} backLabel="神殿へ戻る" disabled={donationProcessing}/>
+        {/* 寄付の台詞(donation)は用意してあったのに、画面に吹き出しが無かった(2026-10-27) */}
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="donation" compact/></div>
         <p className="shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
         {/* 並べ替えは合体と同じ「並べ替え＋横に流れるボタン」の形にそろえる(2026-10-05。7つを4列に詰めて総合力だけ2列ぶんの幅だった)。
             右端のぼかしと末尾の余白は合体と同じ(2026-10-27・320で続きがあると気づけなかった) */}
@@ -36840,7 +36847,7 @@ function MasuSoulRankScreen({
           .filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
         return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
           <ScreenHead title="魂格進化" accent="text-sky-200" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="soulRank" compact/></div>
           <ScreenLead>超越後、現在のLv上限まで育ったマスモンを次の魂格へ進化できます。進化しても現在Lvは上がらず、Lv上限だけが100解放されます。</ScreenLead>
           <div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2"><span className="flex items-center gap-1 text-[10px] font-black text-amber-200"><span aria-hidden="true">🏅</span>勇者の証</span><span className="text-[11px] font-mono font-black text-white">所持 {heroProofHave.toLocaleString()}</span></div>
           {renderMonsterSortFilterBar({singleType:true})}
@@ -37093,7 +37100,7 @@ function MasuOfferingScreen({
     const entries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
     return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="お布施" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact/></div>
       {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3">
         <div className="text-[11px] font-black text-violet-200">お布施の使い方</div>
         <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"><li>お布施をするマスモンを選びます。</li><li>「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。</li><li>見積もりを見て「お布施する」を押します。</li></ol>
@@ -39714,8 +39721,10 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef, speciesChallengeBattleRunRef,
 }) {
   return (
-<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div><div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
-{speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
+<div data-champion-screen className="fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div>{/* もらった物の一覧。背の低い画面では見出しと「HOMEへ」を小さくして、ここを広く取る。横向きの背の低い画面では右の列にまとめる
+    (320 は2〜3行、844×390 は1行しか見えなかった。2026-10-27 ダメダシくん) */}
+<div data-champion-rewards className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}</div></div>{/* みゅあの吹き出しは一覧の外に置き、いつも見えるようにする(320 では一覧の下に隠れていた) */}<div data-champion-bubble className="relative z-10 w-full max-w-xs mx-auto mt-2 shrink-0 text-left [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
+{speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50 [@media(max-height:700px)]:py-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:700px)]:py-2.5 [@media(max-height:700px)]:text-base [@media(max-height:700px)]:rounded-2xl [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
   );
 }
 
@@ -53647,6 +53656,29 @@ const CARD_VS_CSS = `
 .mh-vs-fade { animation: mhVsFade .3s ease-out both }
 @media (prefers-reduced-motion: reduce) { .mh-vs-foe, .mh-vs-mon-foe, .mh-vs-mon-me, .mh-vs-pop, .mh-vs-fade { animation-duration: .01s } }
 `;
+// 立ち絵を「中身の範囲」(ART_CONTENT_BOXES。tools/image/make-art-content-boxes.js が測る)で枠に収め、下と左右のまんなかをそろえる。
+//   絵の余白と縦横の比が子ごとに違っても、中身の見た目の大きさがそろう(2026-10-27 見回り #3886: みゅあ・ききの横長の絵が
+//   ももすけ・きゅうこの半分ほどに写っていた)。1体ずつ手で寄せる数字は足さない(台帳 #202)。
+//   aspect … 枠の 横÷縦 / spread … 横長の中身は、枠の幅のこの倍まで左右にはみ出してよい(高さが縮みすぎないように)
+//   表に無い絵は、前と同じ object-contain
+// 表のキーは images/ の下の道(images/ を付けると版を打つ道具が ?v= を付けてしまうため)
+const cardVsBoxOf = (src) => (typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null);
+const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, ...rest }) => {
+  const box = cardVsBoxOf(src);
+  if (!box) return <img src={src} alt={alt} draggable={false} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...style }} {...rest}/>;
+  const [x0, y0, x1, y1, a] = box;
+  const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
+  const ca = (fw * a) / fh; // 中身の 横÷縦
+  // 絵の幅(枠の幅に対する%): 横長の中身は幅で、それ以外は高さで合わせる
+  const wP = ca >= aspect * spread ? (100 * spread) / fw : (100 * a) / (fh * aspect);
+  const hP = (wP * aspect) / a; // 絵の高さ(枠の高さに対する%)
+  return (
+    <div className="relative w-full" style={{ aspectRatio: `${aspect}`, ...style }} {...rest}>
+      <img src={src} alt={alt} draggable={false} className={`absolute max-w-none ${className}`}
+        style={{ width: `${wP}%`, height: `${hP}%`, left: `${50 - (x0 + fw / 2) * wP}%`, top: `${100 - y1 * hP}%` }}/>
+    </div>
+  );
+};
 const CardVsMonsters = ({ db, monsters, side, start, step }) => (
   <div className="flex w-full items-end justify-center gap-1.5">
     {(monsters || []).slice(0, 3).map((no, i) => {
@@ -53655,7 +53687,9 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
       const art = cardMonArt(m);
       return (
         <div key={`${no}-${i}`} data-card-vs-mon={no} className={`${side === 'foe' ? 'mh-vs-mon-foe' : 'mh-vs-mon-me'} flex min-w-0 flex-1 flex-col items-center`} style={{ animationDelay: `${start + i * step}ms`, maxWidth: 140 }}>
-          <img src={art || CARD_IMG(m.img)} alt={m.name} draggable={false} className={`${art ? 'object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]' : 'rounded-md object-cover'} w-full`} style={{ aspectRatio: art ? '1 / 1' : '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>
+          {art
+            ? <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>
+            : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
           <span className="mt-0.5 w-full truncate text-center text-[10px] font-black text-white" style={{ textShadow: '0 1px 2px #000' }}>{m.name}</span>
         </div>
       );
@@ -53688,7 +53722,7 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
           <div className="flex w-full max-w-[420px] items-end gap-2">
             <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, 30vh, 150px)' }}>
               {who
-                ? <img src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} draggable={false} className="w-full object-contain object-bottom" style={{ aspectRatio: '3 / 4' }}/>
+                ? <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
                 : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
@@ -58614,6 +58648,8 @@ const cardPvpCleanAct = (raw) => {
   if (raw.split !== undefined) { if (!Array.isArray(raw.split) || raw.split.length !== 3) return null; act.split = raw.split.map((x) => cardPvpInt(x, 30)); if (act.split.some((x) => x === null)) return null; }
   // 合体の組(メインを出す子・サブを出す子・出る混血)
   if (raw.fuse !== undefined) { const f = raw.fuse || {}; const a = cardPvpInt(f.a, 2), b = cardPvpInt(f.b, 2); if (a === null || b === null || typeof f.no !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(f.no)) return null; act.fuse = { a, b, no: f.no }; }
+  // カード投げ(169): 捨てる手札の番号。落とすと、受ける側で手が合わずにはねて試合が止まった(2026-10-27 総点検D)。0枚([])も手の一部
+  if (raw.toss !== undefined) { if (!Array.isArray(raw.toss)) return null; act.toss = raw.toss.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.toss.some((i) => i === null)) return null; }
   if (raw.form !== undefined) { if (raw.form !== 'air' && raw.form !== 'ground') return null; act.form = raw.form; } // 変形・トランスフォーム
   if (raw.bind !== undefined && raw.bind !== null) { if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null; act.bind = raw.bind; }
   return act;
@@ -70393,10 +70429,11 @@ function MonsterHeroGame() {
           <span className="text-[8px] font-black text-white px-1.5 py-0.5 rounded-full" style={{ backgroundColor:'#ec4899', animation:'masuBadge 1.6s ease-in-out infinite' }}>登録できます</span>
           <span className="text-[10px] font-black text-pink-200">{mainHero?.name||'このモンスター'}をマスモンに！</span>
         </div>
-        <div className="text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center">今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます</div>
+        {/* 背の低い画面では説明の1行を省いて、もらった物の一覧を広く取る(2026-10-27 ダメダシくん) */}
+        <div className="text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center [@media(max-height:700px)]:hidden">今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます</div>
         <button
           onClick={()=>{setMasuNameInput(mainHero?.name||''); setShowMasuRegisterModal(true);}}
-          className="w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95"
+          className="w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95 [@media(max-height:700px)]:py-2"
           style={{ backgroundColor:'#db2777' }}
         ><Heart size={14}/>マスモンとして登録する</button>
       </div>

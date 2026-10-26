@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66c95fdc424d976e
+// source-sha256: 9c121e9d34da2091
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -29934,22 +29934,23 @@ const RewardSummaryCard = ({
     levelAfter: summary.breederLevelAfter,
     onComplete: () => markPresented('breeder')
   })), React.createElement("div", {
-    className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
+    "data-reward-gold": true,
+    className: "pt-2 border-t border-white/10 text-[11px]"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-amber-300 font-black flex items-center gap-1"
   }, React.createElement(Gem, {
     size: 12
   }), "ダイヤ"), React.createElement("span", {
-    className: "text-white font-mono font-bold flex items-baseline gap-1"
-  }, React.createElement("span", {
-    className: "text-slate-500 text-[10px]"
-  }, summary.goldBefore.toLocaleString(), " →"), React.createElement(CountUpNumber, {
-    from: summary.goldBefore,
-    to: summary.goldAfter,
+    className: "text-white font-mono font-bold"
+  }, "+", React.createElement(CountUpNumber, {
+    from: 0,
+    to: Math.max(0, summary.goldAfter - summary.goldBefore),
     onComplete: () => markPresented('gold')
-  }), summary.goldAfter > summary.goldBefore && React.createElement("span", {
-    className: "text-amber-300 text-[10px]"
-  }, "(+", (summary.goldAfter - summary.goldBefore).toLocaleString(), ")"))), summary.psycheGain > 0 && React.createElement("div", {
+  }))), React.createElement("div", {
+    className: "mt-0.5 text-right text-[9px] font-mono font-bold text-slate-300"
+  }, "所持 ", summary.goldBefore.toLocaleString(), " → ", summary.goldAfter.toLocaleString())), summary.psycheGain > 0 && React.createElement("div", {
     className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
   }, React.createElement("span", {
     className: "text-fuchsia-300 font-black flex items-center gap-1"
@@ -58014,7 +58015,12 @@ function MasuDonationScreen({
     onBack: onLeaveDonation,
     backLabel: "神殿へ戻る",
     disabled: donationProcessing
-  }), React.createElement("p", {
+  }), React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, React.createElement(AssistantBubble, {
+    scene: "donation",
+    compact: true
+  })), React.createElement("p", {
     className: "shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
@@ -59080,7 +59086,7 @@ function MasuSoulRankScreen({
     }), React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, React.createElement(AssistantBubble, {
-      scene: "temple",
+      scene: "soulRank",
       compact: true
     })), React.createElement(ScreenLead, null, "超越後、現在のLv上限まで育ったマスモンを次の魂格へ進化できます。進化しても現在Lvは上がらず、Lv上限だけが100解放されます。"), React.createElement("div", {
       className: "shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2"
@@ -59768,7 +59774,7 @@ function MasuOfferingScreen({
     }), React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, React.createElement(AssistantBubble, {
-      scene: "temple",
+      scene: "offering",
       compact: true
     })), introVisible && React.createElement("div", {
       "data-offering-intro": true,
@@ -65309,7 +65315,8 @@ function ChampionScreen({
   speciesChallengeBattleRunRef
 }) {
   return React.createElement("div", {
-    className: "fixed inset-0 flex flex-col items-center p-6 text-center",
+    "data-champion-screen": true,
+    className: "fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch",
     style: {
       position: 'fixed',
       inset: 0,
@@ -65319,12 +65326,12 @@ function ChampionScreen({
       background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
     }
   }, React.createElement(EndConfetti, null), React.createElement("div", {
-    className: "relative z-10 shrink-0 flex flex-col items-center"
+    className: "relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
   }, React.createElement(Crown, {
     size: 64,
-    className: "mh-end-crown text-white animate-bounce mb-3"
+    className: "mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"
   }), React.createElement("h1", {
-    className: "mh-end-title text-3xl font-black italic text-white uppercase"
+    className: "mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl"
   }, "CHAMPION"), !isQuickMode(runMode) && React.createElement("div", {
     className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"
   }, React.createElement("div", {
@@ -65336,21 +65343,23 @@ function ChampionScreen({
     duration: 1400,
     format: v => v.toLocaleString()
   })))), React.createElement("div", {
-    className: "relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
+    "data-champion-rewards": true,
+    className: "relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
   }, masuRegisterButtonNode(), speciesChallengeClearCardNode(), finalRewardSummary && React.createElement(RewardSummaryCard, {
     key: resultProcessing ? 'locked' : 'ready',
     summary: finalRewardSummary,
     onPresentationComplete: resultProcessing ? undefined : () => setChampionPresentationComplete(true)
-  }), runHighlights.rankingFailed && React.createElement(RankingFailedNote, null), React.createElement("div", {
-    className: "w-full max-w-xs mx-auto mt-3 text-left"
+  }), runHighlights.rankingFailed && React.createElement(RankingFailedNote, null))), React.createElement("div", {
+    "data-champion-bubble": true,
+    className: "relative z-10 w-full max-w-xs mx-auto mt-2 shrink-0 text-left [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, React.createElement(AssistantBubble, {
     scene: "resultWin",
     condition: runHighlights.firstWin ? 'firstWin' : runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
     compact: true
-  })))), isQuickMode(runMode) && autoRepeat && React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2"
+  })), isQuickMode(runMode) && autoRepeat && React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, React.createElement("button", {
     onClick: () => setAutoRepeatEnabled(false),
     className: "min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black"
@@ -65373,12 +65382,12 @@ function ChampionScreen({
       });
     },
     disabled: resultActionPending,
-    className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50"
+    className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50 [@media(max-height:700px)]:py-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, "種族チャレンジ選択へ戻る"), React.createElement("button", {
     onClick: () => runResultActionOnce(returnToHome),
     disabled: resultActionPending,
     "aria-busy": resultActionPending,
-    className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:700px)]:py-2.5 [@media(max-height:700px)]:text-base [@media(max-height:700px)]:rounded-2xl [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
   }, resultActionPending ? '処理中…' : 'HOMEへ'));
 }
 function GameOverScreen({
@@ -88218,6 +88227,52 @@ const CARD_VS_CSS = `
 .mh-vs-fade { animation: mhVsFade .3s ease-out both }
 @media (prefers-reduced-motion: reduce) { .mh-vs-foe, .mh-vs-mon-foe, .mh-vs-mon-me, .mh-vs-pop, .mh-vs-fade { animation-duration: .01s } }
 `;
+const cardVsBoxOf = src => typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null;
+const CardVsArt = ({
+  src,
+  alt,
+  aspect,
+  spread = 1,
+  className = '',
+  style = {},
+  ...rest
+}) => {
+  const box = cardVsBoxOf(src);
+  if (!box) return React.createElement("img", _extends({
+    src: src,
+    alt: alt,
+    draggable: false,
+    className: `w-full object-contain object-bottom ${className}`,
+    style: {
+      aspectRatio: `${aspect}`,
+      ...style
+    }
+  }, rest));
+  const [x0, y0, x1, y1, a] = box;
+  const fw = Math.max(0.01, x1 - x0),
+    fh = Math.max(0.01, y1 - y0);
+  const ca = fw * a / fh;
+  const wP = ca >= aspect * spread ? 100 * spread / fw : 100 * a / (fh * aspect);
+  const hP = wP * aspect / a;
+  return React.createElement("div", _extends({
+    className: "relative w-full",
+    style: {
+      aspectRatio: `${aspect}`,
+      ...style
+    }
+  }, rest), React.createElement("img", {
+    src: src,
+    alt: alt,
+    draggable: false,
+    className: `absolute max-w-none ${className}`,
+    style: {
+      width: `${wP}%`,
+      height: `${hP}%`,
+      left: `${50 - (x0 + fw / 2) * wP}%`,
+      top: `${100 - y1 * hP}%`
+    }
+  }));
+};
 const CardVsMonsters = ({
   db,
   monsters,
@@ -88238,13 +88293,22 @@ const CardVsMonsters = ({
       animationDelay: `${start + i * step}ms`,
       maxWidth: 140
     }
-  }, React.createElement("img", {
-    src: art || CARD_IMG(m.img),
+  }, art ? React.createElement(CardVsArt, {
+    src: art,
+    alt: m.name,
+    aspect: 1,
+    spread: 1.1,
+    className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
+    style: {
+      width: 'min(100%, 19vh, 140px)'
+    }
+  }) : React.createElement("img", {
+    src: CARD_IMG(m.img),
     alt: m.name,
     draggable: false,
-    className: `${art ? 'object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]' : 'rounded-md object-cover'} w-full`,
+    className: "w-full rounded-md object-cover",
     style: {
-      aspectRatio: art ? '1 / 1' : '63 / 88',
+      aspectRatio: '63 / 88',
       maxHeight: 'min(19vh, 140px)'
     }
   }), React.createElement("span", {
@@ -88319,14 +88383,11 @@ const CardVsIntro = ({
     style: {
       width: 'min(34vw, 30vh, 150px)'
     }
-  }, who ? React.createElement("img", {
+  }, who ? React.createElement(CardVsArt, {
+    "data-card-vs-foe-art": true,
     src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
     alt: who.name,
-    draggable: false,
-    className: "w-full object-contain object-bottom",
-    style: {
-      aspectRatio: '3 / 4'
-    }
+    aspect: 3 / 4
   }) : React.createElement("span", {
     "data-card-vs-foe-icon": true,
     className: "block aspect-square w-full"
@@ -97268,6 +97329,11 @@ const cardPvpCleanAct = raw => {
       b,
       no: f.no
     };
+  }
+  if (raw.toss !== undefined) {
+    if (!Array.isArray(raw.toss)) return null;
+    act.toss = raw.toss.slice(0, 20).map(i => cardPvpInt(i, 20));
+    if (act.toss.some(i => i === null)) return null;
   }
   if (raw.form !== undefined) {
     if (raw.form !== 'air' && raw.form !== 'ground') return null;
@@ -112205,13 +112271,13 @@ function MonsterHeroGame() {
     }, "登録できます"), React.createElement("span", {
       className: "text-[10px] font-black text-pink-200"
     }, mainHero?.name || 'このモンスター', "をマスモンに！")), React.createElement("div", {
-      className: "text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center"
+      className: "text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center [@media(max-height:700px)]:hidden"
     }, "今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます"), React.createElement("button", {
       onClick: () => {
         setMasuNameInput(mainHero?.name || '');
         setShowMasuRegisterModal(true);
       },
-      className: "w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95",
+      className: "w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95 [@media(max-height:700px)]:py-2",
       style: {
         backgroundColor: '#db2777'
       }
