@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 12696c9c5914e824
+// source-sha256: b38bc8a46a634b07
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:21";
+const BUILD_DATE = "2026-10-27 01:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90160,6 +90160,7 @@ const CardBattleBoard = ({
     const tm = t ? st.players[t.p].mons[t.m] : null;
     return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
+  const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const stageRef = useRef(null);
   const [stageFit, setStageFit] = useState(0);
@@ -90520,9 +90521,25 @@ const CardBattleBoard = ({
     "data-card-log": true,
     className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
-  }, pendingText && React.createElement("div", {
+  }, pendingText && (guardAtk ? React.createElement("button", _extends({
+    type: "button",
+    "data-card-guard-attack": guardAtk.no
+  }, press(guardAtk.no, () => setDetail(guardAtk.no)), {
+    className: "flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]"
+  }), stageFit < 3 && React.createElement("img", {
+    src: CARD_IMG(guardAtk.img),
+    alt: guardAtk.name,
+    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : 'h-[52px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "block text-rose-200"
+  }, pendingText), guardAtk.text && stageFit < 2 && React.createElement("span", {
+    "data-card-guard-attack-text": true,
+    className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`
+  }, guardAtk.text))) : React.createElement("div", {
     className: "text-rose-200"
-  }, pendingText), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
+  }, pendingText)), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), React.createElement("div", {
