@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3d422fe4fc6f7524
+// generated-sha256: ec249cdb3a468005
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -2908,8 +2908,13 @@ const DEX_ENTRY_STATUSES = Object.freeze([
 const dexDraftMonsterList = () => {
   if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
   const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
-  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  const list = Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  // 実装予告を出した子(draftAnnounced)は「未実装」の先頭に並べる(2026-10-27 社長室カゲあつ。
+  // 予告で「図鑑の未実装に並べました」と書いたのに、58体の最後にいて見つけにくかった)。ほかの子の順は変えない
+  return [...list.filter(dexDraftAnnounced), ...list.filter(mon => !dexDraftAnnounced(mon))];
 };
+// 実装予告を出した案の子か。図鑑の札を「未実装」ではなく「近日実装」にする
+const dexDraftAnnounced = (mon) => !!(mon && mon.draft && mon.draftAnnounced);
 // 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
 const dexEntryLineageOf = (mon) => {
   if (!mon) return monsterLineageOf(null);
@@ -6455,10 +6460,14 @@ const MASU_COLOR_REGION_HUES = {
   // 口の左右それぞれから色距離ベースのflood-fillで輪郭を実測し、行ごとに(瞳を挟んだ
   // 左右を橋渡ししないよう)セグメント単位で矩形を積み重ねている
   Suezo: [{ hue: 45, sMin: 0.3, vMin: 0.55 }, { hue: 45, sMin: 0.3, vMax: 0.55 }, { posBbox: [[0.2799,0.4901,0.2922,0.4935],[0.2773,0.4935,0.293,0.497],[0.7078,0.4935,0.7236,0.497],[0.2764,0.497,0.293,0.5004],[0.7061,0.497,0.7262,0.5004],[0.2773,0.5004,0.2939,0.5039],[0.7044,0.5004,0.727,0.5039],[0.2816,0.5039,0.2956,0.5073],[0.7035,0.5039,0.7244,0.5073],[0.2825,0.5073,0.2991,0.5108],[0.7009,0.5073,0.7201,0.5108],[0.2833,0.5108,0.3025,0.5142],[0.6983,0.5108,0.7184,0.5142],[0.2833,0.5142,0.306,0.5177],[0.6949,0.5142,0.7167,0.5177],[0.2842,0.5177,0.3094,0.5211],[0.6914,0.5177,0.715,0.5211],[0.2859,0.5211,0.3137,0.5246],[0.688,0.5211,0.7132,0.5246],[0.2885,0.5246,0.3181,0.528],[0.6837,0.5246,0.7106,0.528],[0.2937,0.528,0.3224,0.5315],[0.6802,0.528,0.7063,0.5315],[0.298,0.5315,0.3258,0.5349],[0.6759,0.5315,0.7003,0.5349],[0.3032,0.5349,0.331,0.5384],[0.6716,0.5349,0.6951,0.5384],[0.3049,0.5384,0.3362,0.5418],[0.6673,0.5384,0.6925,0.5418],[0.3066,0.5418,0.3431,0.5453],[0.6621,0.5418,0.6899,0.5453],[0.3092,0.5453,0.3465,0.5487],[0.6569,0.5453,0.6882,0.5487],[0.3109,0.5487,0.3517,0.5522],[0.6509,0.5487,0.6865,0.5522],[0.3135,0.5522,0.3578,0.5557],[0.6448,0.5522,0.6848,0.5557],[0.3161,0.5557,0.3647,0.5591],[0.6388,0.5557,0.6822,0.5591],[0.3187,0.5591,0.3716,0.5626],[0.6319,0.5591,0.6796,0.5626],[0.3213,0.5626,0.3793,0.566],[0.6233,0.5626,0.677,0.566],[0.3239,0.566,0.388,0.5695],[0.6146,0.566,0.6753,0.5695],[0.3265,0.5695,0.3974,0.5729],[0.6034,0.5695,0.6718,0.5729],[0.329,0.5729,0.4112,0.5764],[0.5922,0.5729,0.6692,0.5764],[0.3325,0.5764,0.4225,0.5798],[0.5827,0.5764,0.6666,0.5798],[0.3351,0.5798,0.438,0.5833],[0.5646,0.5798,0.6632,0.5833],[0.3385,0.5833,0.4673,0.5867],[0.5447,0.5833,0.6606,0.5867],[0.342,0.5867,0.5553,0.5902],[0.5102,0.5867,0.6571,0.5902],[0.3454,0.5902,0.6511,0.5936],[0.5232,0.5902,0.6537,0.5936],[0.3498,0.5936,0.6502,0.5971],[0.3506,0.5971,0.6459,0.6005],[0.6362,0.5971,0.6459,0.6005],[0.3541,0.6005,0.6442,0.604],[0.6328,0.6005,0.6425,0.604],[0.3584,0.604,0.639,0.6074],[0.6284,0.604,0.6382,0.6074],[0.3636,0.6074,0.6347,0.6109],[0.3679,0.6109,0.6304,0.6143],[0.3713,0.6143,0.6261,0.6178],[0.3782,0.6178,0.6209,0.6212],[0.3843,0.6212,0.6157,0.6247],[0.3894,0.6247,0.6097,0.6281],[0.3955,0.6281,0.6037,0.6316],[0.5663,0.6281,0.6054,0.6316],[0.4024,0.6316,0.57,0.635],[0.5594,0.6316,0.5968,0.635],[0.4093,0.635,0.5614,0.6385],[0.5508,0.635,0.5898,0.6385],[0.4145,0.6385,0.5519,0.6419],[0.5016,0.6385,0.5829,0.6419],[0.4222,0.6419,0.5105,0.6454],[0.5025,0.6419,0.5778,0.6454],[0.4326,0.6454,0.5597,0.6488],[0.5085,0.6454,0.5691,0.6488],[0.4412,0.6488,0.5571,0.6523],[0.543,0.6488,0.5597,0.6523],[0.4533,0.6523,0.545,0.6557],[0.5292,0.6523,0.5484,0.6557],[0.4636,0.6557,0.5286,0.6592],[0.4964,0.6557,0.5346,0.6592]], noAAGuard: true, noEdgeGuard: true }],
-  // ほぼ単色の岩肌のため色相だけでは部位を分けられないが、3部位に分けたいという要望を受け、
-  // 位置だけで区切るposBbox(色を問わない)を使って両腕・両脚を強制的に別部位にした
-  // (頭部・胴体は他のどのposBboxにも属さない残りとして自動的に染色①になる)
-  Golem: [{ hue: 30, sMin: 0.08 }, { posBbox: [[0.0, 0.20, 0.30, 0.82], [0.70, 0.20, 1.0, 0.82]] }, { posBbox: [[0.0, 0.82, 1.0, 1.0]] }],
+  // ほぼ単色の岩肌のため色相だけでは部位を分けられない。前は位置(posBbox)の縦横の直線で両腕・両脚を分けていたが、
+  // 2026-10-27 社長の決定で、石の切れ目で分け直した配信マスク(EXACT_DYE_MASKS・tools/image/refine-dye-mask.js)にした。
+  // ①=頭・胴・脚 / ②=両腕(肩の石も腕) / ③=足元の石。ここは「3レイヤーある」ことを知らせる控え
+  Golem: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。全身の紫がかった青毛(染色①)、白い胸元・腹(染色②)、
   // 頭上の角(染色③、地味な差し色なので未設定時は染色①の色を引き継ぐ。MASU_COLOR_FALLBACK_REGION参照)
   // の3部位。新イラストはICON/IMGとも同じ構図(process-new-art.jsで正方形に統一済み)で作成しているため、
@@ -7076,7 +7085,7 @@ const _getUndineExactRegion = (nx, ny) => {
 const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK,
   // 2026-10-26 から、色相ルール・埋め込み部位マップで分けていた子も、境目を絵の線へ寄せ直した配信マスクで染める
   // (tools/image/refine-dye-mask.js。分け方は前と同じ)。配信マスクは下の色相ルール・埋め込み部位マップより優先される
-  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK,
+  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK, Golem:GOLEM_DYE_MASK,
   // キュービ・オリヒメ(2026-10-27・案の段階・5部位)
   Kyubi:KYUBI_DYE_MASK, Orihime:ORIHIME_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
@@ -34993,8 +35002,10 @@ const DEX_STATUS_STYLE = {
   locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
   draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100',
 };
-const DexStatusTag = ({ status, size = 'sm' }) => {
-  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+// announced: 実装予告を出した案の子。「未実装」の代わりに「近日実装」と出す(色は未実装と同じ)
+const DexStatusTag = ({ status, size = 'sm', announced = false }) => {
+  const found = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  const def = announced && found.id === 'draft' ? { ...found, label:'近日実装' } : found;
   return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
 };
 
@@ -35052,7 +35063,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                       <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{mon.name}</div>
                       {unlocked
                         ? <div className="text-[10px] font-black text-amber-400/80 leading-tight">{monsterCategoryName(category)}</div>
-                        : <DexStatusTag status={section.id}/>}
+                        : <DexStatusTag status={section.id} announced={dexDraftAnnounced(mon)}/>}
                       {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
                     </button>
                   );
@@ -35197,7 +35208,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{mon.name}</div>
             {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
-            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md"/></div>}
+            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md" announced={dexDraftAnnounced(mon)}/></div>}
             {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
                 左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
             <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
@@ -51650,7 +51661,8 @@ const cardResolveTarget = (db, st) => {
   if (dmg > 0) dmg = Math.max(0, dmg + cardFieldDmgAdd(st, main));
   let reflected = 0;
   if (pd.reflect) {
-    if (pd.reflect.keep) reflected = Math.floor(dmg * pd.reflect.frac);
+    // カウンター(keep): 半分(切り捨て)を返し、残りだけ受ける(5ダメージなら2を返して3を受ける。2026-10-27 社長)
+    if (pd.reflect.keep) { reflected = Math.floor(dmg * pd.reflect.frac); dmg -= reflected; }
     else { reflected = dmg; dmg = 0; }
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
@@ -51974,7 +51986,12 @@ const cardApplyAction = (db, st0, act) => {
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
     st.active = cardOther(p);
     // 歌う: 相手の番を飛ばす(引く・攻撃・ガッツ置きが無い。その番の数だけ進めて、こちらの番へ)
-    if (st.skip === st.active) { st.skip = null; st.turn += 1; cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p; }
+    //   飛ばした番では「攻撃できない」(吠え・吹き飛ばしなど)を使い切らず、次の本当の番(2つ先)まで残す(2026-10-27 社長)
+    if (st.skip === st.active) {
+      st.skip = null; st.turn += 1;
+      st.players[st.active].mons.forEach((m) => { if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2; });
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p;
+    }
     cardBeginTurn(st);
     return st;
   }
@@ -52234,7 +52251,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const re = cardEff(c, 'reduce'); if (re && !noReduce) after = Math.max(0, dmg - re.n);
     if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
     if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
-    const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg : 0;
+    const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg - Math.floor(dmg * rf.frac) : 0; // カウンターは返した残りだけ受ける
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
       after = target.life <= dmg && cm.life > dmg ? 0 : dmg; // 倒れそうな味方を、硬い子がかばう
@@ -52451,7 +52468,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   momosuke: {  },
   kiki: { easy: -0.9 },
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: -0.05 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
-  dra: { easy: -1.5, normal: -1.5, master: 0.5 },   // MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
+  dra: { easy: -1.5, normal: -1.5, expert: 0.5, master: 0.5 },   // EXPERT はカウンターの直し(半分返して残りを受ける・2026-10-27)で 38% を下回ったので揺らぎを足した(57%)。MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
   atsu: { easy: -1.5, normal: -3, hard: -2.1 },
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
@@ -60162,7 +60179,8 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   2 → 3: 必殺技の応酬・封印でカード投げとボンバなどの出せる手・ガッツにする手札の番号の確かめ(#3821)
 //   3 → 4: ドレインは実際に減ったライフだけ回復(2026-10-27)
 //   4 → 5: 防御でマイナスされない技には −N・半分・0 の防御の札を出せない(社長の答え 案A・2026-10-27)
-const CARD_REPLAY_RULES = 5; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない
+//   5 → 6: カウンターは半分を返して残りを受ける・歌うで飛ばした番では「攻撃できない」を使い切らない(2026-10-27 社長)
+const CARD_REPLAY_RULES = 6; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
