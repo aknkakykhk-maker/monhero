@@ -1099,6 +1099,89 @@ const sbUpsertBreederProfile = async ({ breederId, userName, icon, profileFrame 
     clearTimeout(timer);
   }
 };
+// ===== ブリーダーLvを1人1行で持つ表 breeder_levels(2026-10-27) =====
+//
+// ブリーダーLvのランキングは、これまで rankings の level を全部読んで並べていた。
+// そのため、裏周回やMFバトルカードだけで遊んで rankings に1行も送っていない人は、Lvが高くても載らなかった
+// (社長の決定「ブリーダーLvランキングに、裏周回・MFバトルカードだけの人も載るようにする」)。
+// そこで「レベルが上がった時」と「ゲームを開いた時」の2回だけ、今のLvを1人1行の表へ送る
+// (Supabaseの無料分を気にするため、送るきっかけはこの2つに限る)。
+// ★ランキングはこの表から並べ、まだ表に来ていない人は今までどおり rankings の level で補う。
+//   rankings は一切変えない・消さない(CLAUDE.md ⑦)。
+// ★表がまだ無い環境(SQL未適用)では何もせず、今までどおりの表示になる。
+const BREEDER_LEVELS_TABLE = 'breeder_levels';
+const BREEDER_LEVELS_SELECT = 'breeder_id,user_name,level,icon';
+const BREEDER_LEVELS_PAGE_SIZE = 1000;
+const BREEDER_LEVELS_MAX_PAGES = 30;
+let _breederLevelsUnavailable = false;
+// 1人1行をupsertする。何度呼んでも行は増えない。失敗しても進行は止めない
+const sbUpsertBreederLevel = async ({ breederId, userName, icon, level }) => {
+  if (_breederLevelsUnavailable) return false;
+  const id = typeof breederId === 'string' ? breederId.trim() : '';
+  const lv = Math.floor(Number(level));
+  if (!id || !Number.isFinite(lv) || lv < 1) return false;   // IDが作れていない端末・壊れた値は何もしない
+  const row = {
+    breeder_id: id,
+    user_name: userName || '名無しのブリーダー',
+    icon: icon ?? null,
+    level: lv,
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?on_conflict=breeder_id`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([row]), signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) { _breederLevelsUnavailable = true; return false; }
+      throw new Error(`breeder_levels upsert ${res.status}: ${body || res.statusText}`);
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 表の全行を読み、rankings の行と同じ形(user_name / level / icon / breeder_id)で返す。
+// 表が無い・読めないときは空の配列(呼び出し側は rankings だけで並べる)
+const sbFetchBreederLevelRows = async (requestId = 'untracked') => {
+  if (_breederLevelsUnavailable) return [];
+  const all = [];
+  let pageSize = BREEDER_LEVELS_PAGE_SIZE;
+  let offset = 0;
+  for (let page = 0; page < BREEDER_LEVELS_MAX_PAGES; page++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?select=${BREEDER_LEVELS_SELECT}`
+        + `&order=level.desc.nullslast,breeder_id.asc&limit=${pageSize}&offset=${offset}`;
+      const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+      const body = await res.text();
+      if (!res.ok) {
+        if (_isMissingTableError(res.status, body)) { _breederLevelsUnavailable = true; return []; }
+        throw new Error(`breeder_levels ${res.status}: ${body || res.statusText}`);
+      }
+      const rows = JSON.parse(body || '[]');
+      const got = Array.isArray(rows) ? rows : [];
+      all.push(...got);
+      rankingLog(requestId, 'breeder-levels-page', { page, offset, pageSize, received: got.length, total: all.length });
+      if (got.length === 0) break;
+      // サーバー側の上限で1ページの件数が要求より少ないことがある。1ページ目の件数をそのサーバーの1ページ分とみなす
+      if (page === 0 && got.length < pageSize) pageSize = got.length;
+      if (got.length < pageSize) break;
+      offset += got.length;
+    } catch (error) {
+      // 読めなかったときは、読めたぶんだけ返す(足りない人は rankings の level で補われる)
+      console.error('[ranking] breeder_levels fetch failed:', error && error.message ? error.message : error);
+      break;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return all.filter(r => r && typeof r === 'object' && Number(r.level) > 0);
+};
 // ===== 記録そのものから拾う「その人の最後に分かっている枠」(2026-09-16) =====
 //
 // breeder_profiles に登録があるのは、この版のゲームを開いた人だけ。まだ開いていない人は
