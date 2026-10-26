@@ -43,3 +43,6 @@
 
 ## 2026-10-26 M/B管理の各一覧
 → [damedashi-2026-10-26/mb/README.md](damedashi-2026-10-26/mb/README.md)(3件)
+
+## 2026-10-26 神殿の各画面
+→ [damedashi-2026-10-26/temple/README.md](damedashi-2026-10-26/temple/README.md)(3件)
