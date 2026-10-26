@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9510339b7cc3fddc
+// source-sha256: 31ed0ee4001b6142
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -31919,8 +31919,6 @@ const RhythmOptions = ({
     full: true
   }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
     full: true
-  }), field('道の奥行き', segments('roadDepth', RHYTHM_ROAD_DEPTH_LABELS), '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。', {
-    full: true
   }))), React.createElement("section", {
     "data-rhythm-options-group": "遊び方",
     className: card
@@ -31978,7 +31976,9 @@ const RhythmOptions = ({
     suffix: '%'
   }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
     full: true
-  }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('道の奥行き', segments('roadDepth', RHYTHM_ROAD_DEPTH_LABELS), '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。', {
+    full: true
+  }), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
     full: true

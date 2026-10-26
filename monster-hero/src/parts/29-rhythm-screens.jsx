@@ -240,8 +240,6 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。',{full:true})}
 {field('道の幅（横向き）',segments('roadWidth',RHYTHM_ROAD_WIDTH_LABELS),
               '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。',{full:true})}
-{field('道の奥行き',segments('roadDepth',RHYTHM_ROAD_DEPTH_LABELS),
-              '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。',{full:true})}
 </div>
 </section>
 <section data-rhythm-options-group="遊び方" className={card}>
@@ -306,6 +304,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {/* 演奏中は曲名を薄くする(2026-09-27)。既定は ON */}
 {field('演奏中は曲名を薄くする',toggle('hudSongFade'),
               '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。')}
+{field('道の奥行き',segments('roadDepth',RHYTHM_ROAD_DEPTH_LABELS),
+              '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。',{full:true})}
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
