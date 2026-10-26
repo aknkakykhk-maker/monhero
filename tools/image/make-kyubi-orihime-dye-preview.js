@@ -33,6 +33,8 @@ const DYE_CANDIDATES = {
     B: { style: '紅葉ぎつね', colors: [c(15,60,40), c(25,85,95), c(40,15,100), c(45,85,95), c(15,60,35)], bg: ['#2a0e05', '#a0401a', '#ffc27a'], accent: '#ffd9a0', dots: ['rgba(255,200,120,.6)', 'rgba(255,140,90,.5)'] },
     C: { style: '月夜ぎつね', colors: [c(230,55,45), c(230,35,85), c(220,18,100), c(280,60,70), c(230,30,22)], bg: ['#070c2a', '#24366e', '#8fb2e8'], accent: '#cfe0ff', dots: ['rgba(200,220,255,.6)', 'rgba(170,140,255,.45)'] },
     D: { style: '桜ぎつね', colors: [c(340,35,95), c(340,30,100), c(350,8,100), c(330,70,90), c(340,18,100)], bg: ['#2a0b1f', '#a04a78', '#ffd0e4'], accent: '#ffd8ea', dots: ['rgba(255,200,225,.6)', 'rgba(255,255,255,.45)'] },
+    // C を色の札と濃さだけで作り直した物(遊ぶ人が染色の画面でそのまま選べる形。2026-10-27)
+    C2: { style: '月夜ぎつね', colors: ['blue@55', 'blue_light@80', 'blue_light@45', 'purple', 'black'], bg: ['#070c2a', '#24366e', '#8fb2e8'], accent: '#cfe0ff', dots: ['rgba(200,220,255,.6)', 'rgba(170,140,255,.45)'] },
     E: { style: '黒ぎつね', colors: [c(0,0,22), c(0,0,30), c(0,0,35), c(0,85,80), c(0,0,15)], bg: ['#0a0a0a', '#3a1018', '#c0303a'], accent: '#ffb0b0', dots: ['rgba(255,120,120,.5)', 'rgba(255,255,255,.3)'] },
   },
   Orihime: {
@@ -41,17 +43,56 @@ const DYE_CANDIDATES = {
     C: { style: '新緑', colors: [c(120,50,55), c(90,30,100), c(60,40,100), c(150,60,40), c(150,60,40)], bg: ['#06200f', '#2f7a3f', '#e0f7b0'], accent: '#dcffc8', dots: ['rgba(220,255,190,.6)', 'rgba(255,255,255,.4)'] },
     D: { style: '雪月花', colors: [c(220,10,100), c(210,15,100), c(0,0,100), c(220,40,40), c(220,40,40)], bg: ['#0e1630', '#4a5a88', '#eef3ff'], accent: '#eef4ff', dots: ['rgba(255,255,255,.6)', 'rgba(200,220,255,.5)'] },
     E: { style: '紅の織姫', colors: [c(350,60,55), c(350,25,100), c(40,60,100), c(350,80,40), c(350,80,40)], bg: ['#2a0510', '#8a1a35', '#ffc0cc'], accent: '#ffd0da', dots: ['rgba(255,190,200,.6)', 'rgba(255,240,200,.4)'] },
-    // 2026-10-27 社長「A〜E のどれでもない」→ A〜E と似た色(水色・茶・緑・白紺・えんじ)を外して作り直した5案
-    F: { style: '星空', colors: [c(45,40,100), c(270,30,95), c(45,70,95), c(270,70,40), c(270,70,40)], bg: ['#0c0620', '#3a1f6e', '#f3d27a'], accent: '#ffe9a8', dots: ['rgba(255,230,150,.7)', 'rgba(200,170,255,.5)'] },
-    G: { style: '桜', colors: [c(340,40,100), c(345,18,100), c(340,55,90), c(0,0,100), c(340,30,100)], bg: ['#3a1024', '#c25a86', '#ffe4ee'], accent: '#ffe0ec', dots: ['rgba(255,210,230,.7)', 'rgba(255,255,255,.5)'] },
-    H: { style: '黒と朱', colors: [c(0,0,18), c(0,0,85), c(0,0,25), c(8,85,85), c(0,0,18)], bg: ['#080808', '#3a0c08', '#e0452a'], accent: '#ffb39a', dots: ['rgba(255,120,80,.55)', 'rgba(255,255,255,.3)'] },
-    I: { style: '月光', colors: [c(210,8,92), c(220,20,90), c(200,15,100), c(235,70,35), c(235,70,35)], bg: ['#05081e', '#1e2a6a', '#d8e0f0'], accent: '#e4ecff', dots: ['rgba(230,240,255,.65)', 'rgba(160,180,255,.45)'] },
-    J: { style: '朝顔', colors: [c(255,55,75), c(330,35,100), c(320,45,100), c(235,65,80), c(330,55,85)], bg: ['#120a3a', '#5a3aa8', '#ffc4e6'], accent: '#ffd6f0', dots: ['rgba(255,190,230,.6)', 'rgba(180,160,255,.5)'] },
+    // 2026-10-27 社長「A〜E のどれでもない」→ A〜E と似た色(水色・茶・緑・白紺・えんじ)を外して作り直した5案。
+    // 遊ぶ人が染色の画面でそのまま選べるよう、カスタムではなく色の札と濃さだけで染める
+    F: { style: '星空', colors: ['yellow_light', 'purple_light', 'yellow', 'purple', 'purple'], bg: ['#0c0620', '#3a1f6e', '#f3d27a'], accent: '#ffe9a8', dots: ['rgba(255,230,150,.7)', 'rgba(200,170,255,.5)'] },
+    G: { style: '桜', colors: ['pink', 'pink_light', 'red_light', 'white', 'pink_light'], bg: ['#3a1024', '#c25a86', '#ffe4ee'], accent: '#ffe0ec', dots: ['rgba(255,210,230,.7)', 'rgba(255,255,255,.5)'] },
+    H: { style: '黒と朱', colors: ['black', 'gray', 'black', 'red', 'black'], bg: ['#080808', '#3a0c08', '#e0452a'], accent: '#ffb39a', dots: ['rgba(255,120,80,.55)', 'rgba(255,255,255,.3)'] },
+    I: { style: '月光', colors: ['gray', 'blue_light', 'white', 'blue', 'blue'], bg: ['#05081e', '#1e2a6a', '#d8e0f0'], accent: '#e4ecff', dots: ['rgba(230,240,255,.65)', 'rgba(160,180,255,.45)'] },
+    J: { style: '朝顔', colors: ['purple', 'pink_light', 'pink', 'blue', 'magenta'], bg: ['#120a3a', '#5a3aa8', '#ffc4e6'], accent: '#ffd6f0', dots: ['rgba(255,190,230,.6)', 'rgba(180,160,255,.5)'] },
   },
 };
 // 予告に載せる配色(2026-10-27 社長: キュービ C 月夜ぎつね。オリヒメはマスクが固まってから選ぶ。いまは仮の A)
 const CHOSEN = { Kyubi: 'C', Orihime: 'A' };
 const NAMES = { Kyubi: 'キュービ', Orihime: 'オリヒメ' };
+// 部位の名前(社長が決めた区分け)。染色イメージの下の表に、この順で ①〜⑤ を並べる
+const REGION_NAMES = {
+  Kyubi: ['①髪', '②しっぽ・耳の毛', '③服の白・胸元の毛・首の襟', '④胸の紫・下駄・提灯の紫の房', '⑤手袋・脚'],
+  Orihime: ['①髪・耳', '②しっぽ・羽衣', '③上の着物・帯', '④外の羽織', '⑤手袋・靴下'],
+};
+// 染色イメージの下に「どの色の札・どの濃さで染めたか」の表を描く(2026-10-27 社長「どの色と透明度とかわかるようにして」)。
+// 値は手で書かず、染めるのに使った colors から出す。色の札の名前と見本の色はゲームの MASU_COLOR_LABELS・MASU_COLOR_SWATCH を
+// そのまま読むので、染色の画面の呼び方と同じになる。スマホの更新履歴(幅340pxほど)でも読めるよう、字は大きめにする
+const TABLE_ROW = 112, TABLE_HEAD = 120;
+const hsvHex = (h, s, v) => { const f = (n) => { const k = (n + h / 60) % 6; return Math.round(255 * v * (1 - s * Math.max(0, Math.min(k, 4 - k, 1)))); }; return '#' + [f(5), f(3), f(1)].map((n) => n.toString(16).padStart(2, '0')).join(''); };
+const describeColor = (dye, colorId) => {
+  if (!colorId) return { swatch: null, name: '元の色のまま', alpha: null };
+  const { base, alpha } = dye.splitColorAlpha(colorId);
+  const m = /^custom:(\d+):(\d+):(\d+)$/.exec(base);
+  if (m) return { swatch: hsvHex(+m[1], +m[2] / 100, +m[3] / 100), name: 'カスタム', note: `(色相${m[1]}・彩度${m[2]}・明るさ${m[3]})`, alpha };
+  return { swatch: dye.MASU_COLOR_SWATCH[base] || '#888888', name: dye.MASU_COLOR_LABELS[base] || base, alpha };
+};
+const drawDyeTable = (x, top, W, dye, p) => {
+  const names = REGION_NAMES[p.baseId] || [];
+  const h = TABLE_HEAD + TABLE_ROW * names.length + 30;
+  x.fillStyle = '#16122a'; x.fillRect(0, top, W, h);
+  x.lineWidth = 12; x.strokeStyle = p.accent; x.strokeRect(6, top - 6, W - 12, h);
+  x.save(); x.font = '58px MPR'; x.fillStyle = p.accent; x.textBaseline = 'middle';
+  x.fillText('染め方(染色の画面で選ぶ色と濃さ)', 60, top + TABLE_HEAD / 2 + 6); x.restore();
+  names.forEach((label, i) => {
+    const y = top + TABLE_HEAD + i * TABLE_ROW + TABLE_ROW / 2;
+    const d = describeColor(dye, p.colors[i]);
+    if (i % 2 === 0) { x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(30, y - TABLE_ROW / 2, W - 60, TABLE_ROW); }
+    x.save(); x.textBaseline = 'middle';
+    x.font = '56px MPR'; x.fillStyle = '#ffffff'; x.fillText(label, 60, y);
+    if (d.swatch) { x.fillStyle = d.swatch; x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 5; x.beginPath(); x.roundRect(1010, y - 40, 80, 80, 14); x.fill(); x.stroke(); }
+    x.font = '60px MPR'; x.fillStyle = '#fff6d8'; x.fillText(d.name, 1120, d.note ? y - 14 : y);
+    if (d.note) { x.font = '30px MPR'; x.fillStyle = 'rgba(255,255,255,.7)'; x.fillText(d.note, 1120, y + 38); }
+    if (d.alpha !== null) { x.font = '60px MPR'; x.fillStyle = '#ffffff'; x.textAlign = 'right'; x.fillText(`濃さ ${d.alpha}%`, W - 60, y); }
+    x.restore();
+  });
+  return h;
+};
 const PREVIEWS = [
   { baseId: 'Kyubi', out: 'kyubi-dye-preview.jpg', name: NAMES.Kyubi, ...DYE_CANDIDATES.Kyubi[CHOSEN.Kyubi] },
   { baseId: 'Orihime', out: 'orihime-dye-preview.jpg', name: NAMES.Orihime, ...DYE_CANDIDATES.Orihime[CHOSEN.Orihime] },
@@ -148,7 +189,12 @@ const dyed = async (dye, url, baseId, colors) => {
     x.fillText('※「染色もどき」で部位ごとに染めた例です', W - 40, H - 36); x.restore();
     x.lineWidth = 12; x.strokeStyle = p.accent; x.strokeRect(6, 6, W - 12, H - 12);
     const outPath = path.join(process.env.CANDIDATES && process.env.OUT_DIR ? path.resolve(process.env.OUT_DIR) : path.join(ROOT, 'monster-hero', 'images', 'events'), p.out);
-    const info = await sharp(c.toBuffer('image/png')).resize(1000, 520).jpeg({ quality: 80, mozjpeg: true }).toFile(outPath);
+    // 下に表の帯を足す(高さは部位の数で決まる)
+    const tableH = TABLE_HEAD + TABLE_ROW * (REGION_NAMES[p.baseId] || []).length + 30;
+    const full = createCanvas(W, H + tableH), fx = full.getContext('2d');
+    fx.drawImage(c, 0, 0);
+    drawDyeTable(fx, H, W, dye, p);
+    const info = await sharp(full.toBuffer('image/png')).resize(1000, Math.round((H + tableH) / 2)).jpeg({ quality: 80, mozjpeg: true }).toFile(outPath);
     console.log(`書き出しました: ${path.relative(ROOT, outPath)} (${Math.round(info.size / 1024)}KB)`);
   }
 })().catch((e) => { console.error(e); process.exit(1); });
