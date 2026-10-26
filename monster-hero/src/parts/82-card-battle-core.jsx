@@ -1088,15 +1088,23 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.14 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14
   kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.3 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
-  atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0.03, master: 0 },
+  atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0, master: 0 },   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
-const cardAiPolicy = (habitId, levelId) => {
+// 同じ血統で組んだ試合だけの、カードの出し方の雑さの足し引き(2026-10-26。HARD から上でも同じ血統で組むようにしたぶん)。
+//   モッチーの仲間(みゅあ)は強く、ドラゴンの仲間(あつ)・グジラの仲間(ドラ)は弱かったので、その試合だけ戻す。MASTER は雑さがもう0なので強くはできない
+const CARD_AI_SAME_BLOOD_PLAY = Object.freeze({
+  mua: { hard: 0.25, expert: 0.1 },
+  atsu: { hard: -0.1, expert: -0.1 },
+  dra: { expert: -0.06 },
+});
+// opts.sameBlood … 同じ血統で組んだデッキか(cardAiBuildDeck の返り値の sameBlood)
+const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
-  const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0;
+  const add = (((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0) + (opts && opts.sameBlood ? (((CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId]) || 0) : 0);
   return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) } };
 };
 
@@ -1411,6 +1419,9 @@ const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', ki
 //   2体目・3体目をえらぶたびに、この割合で好きな子の血統の仲間(派生・混血を含む)からえらぶ。
 //   割合は強さごとの値 × 仲間の多さ(仲間が5体以上で1、4体で0.75、3体で0.5、2体で0.25、1体だけなら0)。MASTER は入れない(下の cardAiPickTrio)
 const CARD_AI_SAME_BLOOD = Object.freeze({ easy: 0.3, normal: 0.28 });
+// HARD から上でも、1試合ごとにこの割合 × 仲間の多さで、同じ血統で組む試合にする(2026-10-26 社長「マスターでもたまに同じ血統や3体全部同じが出るでいい」)。
+//   その試合では、2体目を仲間の中でいちばん強い子(数え直した点数 cardAiTeamValue)にし、3体目も半分は仲間から(3体とも同じ血統)
+const CARD_AI_SAME_BLOOD_HI = Object.freeze({ hard: 0.2, expert: 0.12, master: 0.1 });
 // HARD から上は割合でなく点数でえらぶ(2026-10-26 社長「同じメインのメリットは同じ攻撃カードを入れられること、同じサブのメリットは同じ防御カードを使えること。
 //   だからといってその組み方が強いわけではないと思う」)。仲間(同じ血統の子)の点数は、チームとして数え直す(cardAiTeamValue)
 //   ・ふつうの点数(cardAiMonScore)は子ごとに「使える良い技の上位10枚」を数えるので、同じ血統の子どうしでは同じ技を2回・3回数えてしまう。
@@ -1605,7 +1616,21 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
   const usedNos = new Set([fav.species]);   // 同じ子(キラ・別絵キラ)を2体入れない
+  const hiRate = byScore ? (CARD_AI_SAME_BLOOD_HI[levelId] || 0) * cardAiSameBloodScale(familySize) : 0;
+  const sameGame = hiRate > 0 && family.length > 0 && rand() < hiRate;
+  const sameThree = sameGame && rand() < 0.5;
   for (let k = 0; k < 2; k++) {
+    // HARD から上の「同じ血統で組む試合」: 仲間の中でいちばん強い子(数え直した点数)
+    if (sameGame && (k === 0 || sameThree)) {
+      const team = out.map((no) => cardMonsterOf(db, no));
+      const famLeft = family.filter((m) => !m.variant && !usedNos.has(m.species));
+      if (famLeft.length) {
+        const m = famLeft.map((x) => ({ x, v: cardAiTeamValue(db, who, team, x, cfg.maxWave) + counter(x) })).reduce((a2, b2) => (b2.v > a2.v ? b2 : a2)).x;
+        out.push(m.no);
+        usedNos.add(m.species);
+        continue;
+      }
+    }
     // 同じ血統の仲間からえらぶ(割合は sameRate)
     const famLeft = family.filter((m) => !usedNos.has(m.species));
     if (sameRate > 0 && famLeft.length && rand() < sameRate) {
@@ -1693,7 +1718,9 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => cardOf(db, n).name === x.c.name).length; add(x.c, CARD_DECK_COPY_MAX - have); }
   heavy = -99; // それでも50枚に届かなければ、重い技の上限を外して埋める
   for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => cardOf(db, n).name === x.c.name).length; add(x.c, CARD_DECK_COPY_MAX - have); }
-  return { monsters: monsters.slice(), cards };
+  // sameBlood … 好きな子と同じ血統の子が2体以上(相手の考え方 cardAiPolicy の opts.sameBlood に渡す)
+  const sameBlood = mons.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
+  return { monsters: monsters.slice(), cards, sameBlood };
 };
 
 // デッキが決まりどおりか(3体・別々のモンスター・50枚・同じ名前は3枚まで・使えないカードが無い)。だめなら理由の文の配列
