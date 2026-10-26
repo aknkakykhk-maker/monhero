@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 068168c75c049a7b
+// source-sha256: 4b6d5ed673efccc2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99053,6 +99053,17 @@ const CardPvpLobby = ({
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
   const [selfBid, setSelfBid] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [myRating, setMyRating] = useState(null);
+  useEffect(() => {
+    if (!selfBid || typeof sbFetchMyCardPvpRating !== 'function') return undefined;
+    let alive = true;
+    void sbFetchMyCardPvpRating(selfBid).then(x => {
+      if (alive && x) setMyRating(x);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [selfBid]);
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -99337,7 +99348,27 @@ const CardPvpLobby = ({
     accent: "text-sky-200",
     onBack: back,
     note: cardPvpOpen() ? 'ほかのブリーダーと1対1で戦えます' : 'ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)'
-  }), React.createElement("div", {
+  }), room.phase === 'idle' && deck && React.createElement("div", {
+    "data-card-pvp-me-summary": true,
+    className: "hidden landscape:block rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-white"
+  }, React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-300"
+  }, "使うデッキ"), React.createElement("p", {
+    className: "truncate text-[14px] font-black"
+  }, deck.name || 'デッキ'), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1.5"
+  }, (deck.monsters || []).map((no, i) => {
+    const m = cardMonsterOf(CARD_BATTLE_DATA, no);
+    return React.createElement("img", {
+      key: `${no}-${i}`,
+      src: CARD_IMG(m ? m.img : no),
+      alt: m ? m.name : no,
+      className: "aspect-[5/7] w-full rounded-[5px] object-cover"
+    });
+  })), myRating && React.createElement("p", {
+    "data-card-pvp-me-rating": true,
+    className: "mt-2 text-[13px] font-black text-sky-200 tabular-nums"
+  }, "強さ ", myRating.rating, myRating.games > 0 ? `(${myRating.games}試合)` : '')), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
   }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
     "data-card-pvp-penalty": true,
@@ -100174,7 +100205,20 @@ const CardPvpHistory = ({
     accent: "text-sky-200",
     onBack: onBack,
     note: `新しい${CARD_PVP_HISTORY_MAX}試合まで・押すと相手のデッキ`
-  }), React.createElement("div", {
+  }), list && list.length > 0 && (() => {
+    const w = list.filter(x => x.outcome === 'win').length;
+    const latest = list.find(x => x.rating);
+    return React.createElement("div", {
+      "data-card-pvp-history-total": true,
+      className: "mb-2 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2 text-[13px] font-black text-white tabular-nums landscape:flex-col landscape:gap-1"
+    }, React.createElement("span", null, list.length, "試合 ", React.createElement("span", {
+      className: "text-amber-300"
+    }, w, "勝"), " ", React.createElement("span", {
+      className: "text-slate-300"
+    }, list.length - w, "敗")), latest && React.createElement("span", {
+      className: "text-sky-200"
+    }, "強さ ", latest.rating.after));
+  })(), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
   }, list && list.length === 0 && React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-[13px] font-bold text-slate-300",
