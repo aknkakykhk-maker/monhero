@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 社長「バトル中とかに自分のアイコンとかも出るようにしたいね」→ 文は社長「この文で」(結果の画面を足す)2026-10-26
+    date: "2026-10-26 20:25", type:'update', group:'cardBattle', title:'対戦の画面に自分のアイコンが出るようになりました', status:'new',
+    items:[
+      'MFバトルカードの対戦の画面・対戦開始の画面・結果の画面に、自分のプロフィールのアイコン(フレーム付き)と名前が出るようになりました。',
+    ],
+  },
+  {
     // MFバトルカードの公開(社長「この文で」2026-10-26)。印 RELEASE_FLAGS.cardBattle が立つまで出ない。日時は公開の時刻(実時刻)
     date: "2026-10-26 17:36", type:'content', group:'cardBattle', title:'新しい遊び「MFバトルカード」が始まりました', status:'new', releaseFlag:'cardBattle',
     image: 'images/events/card-battle-teaser.jpg?v=dc64e1718761',
