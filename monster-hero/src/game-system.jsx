@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e5617b6a9b895dee
+// generated-sha256: 559c4415cb89847c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 04:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -55492,8 +55492,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 練習試合でドラの窓が出ているあいだは、番の札を出さない(縦の画面は窓が真ん中寄りにあり、札が窓と「次へ」に重なった) */}
       {turnBanner && !bigCard && !(tutorial && tutSay) && (
         <div key={turnBanner.key} data-card-turn-banner={turnBanner.me ? 'me' : 'foe'} aria-live="polite" className="pointer-events-none absolute inset-0 z-[53] flex items-center justify-center"
-          // 横の画面は左の盤の上だけ(右の手札・ドラの説明の窓にかけない。練習試合で「次へ」にかぶっていた)
-          style={wide ? { right: 'calc(min(42%, 420px) + 8px)' } : undefined}>
+          // 横の画面も画面全体(ふちの光りが盤と手札の境で切れて見えた。2026-10-27 ソランドくん)。練習試合はドラの窓が出ているあいだ札を出さないので、「次へ」にはかからない
+          >
           {/* 画面のふちを光らせる(自分=金・相手=青)。相手の番は全体を少し暗く */}
           <span aria-hidden="true" data-card-turn-edge className={`mh-card-turn-edge absolute inset-0 ${turnBanner.me ? 'shadow-[inset_0_0_0_3px_rgba(252,211,77,.9),inset_0_0_40px_rgba(251,191,36,.55)]' : 'bg-slate-950/30 shadow-[inset_0_0_0_3px_rgba(96,165,250,.8),inset_0_0_40px_rgba(59,130,246,.45)]'}`}/>
           {/* 横いっぱいの帯が左からさっと入って、右へ抜ける(2026-10-26 社長 OK の改良の案 A・カゲあつくん 3)。帯をタップで消える */}

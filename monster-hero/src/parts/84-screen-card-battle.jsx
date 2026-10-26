@@ -1517,8 +1517,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 練習試合でドラの窓が出ているあいだは、番の札を出さない(縦の画面は窓が真ん中寄りにあり、札が窓と「次へ」に重なった) */}
       {turnBanner && !bigCard && !(tutorial && tutSay) && (
         <div key={turnBanner.key} data-card-turn-banner={turnBanner.me ? 'me' : 'foe'} aria-live="polite" className="pointer-events-none absolute inset-0 z-[53] flex items-center justify-center"
-          // 横の画面は左の盤の上だけ(右の手札・ドラの説明の窓にかけない。練習試合で「次へ」にかぶっていた)
-          style={wide ? { right: 'calc(min(42%, 420px) + 8px)' } : undefined}>
+          // 横の画面も画面全体(ふちの光りが盤と手札の境で切れて見えた。2026-10-27 ソランドくん)。練習試合はドラの窓が出ているあいだ札を出さないので、「次へ」にはかからない
+          >
           {/* 画面のふちを光らせる(自分=金・相手=青)。相手の番は全体を少し暗く */}
           <span aria-hidden="true" data-card-turn-edge className={`mh-card-turn-edge absolute inset-0 ${turnBanner.me ? 'shadow-[inset_0_0_0_3px_rgba(252,211,77,.9),inset_0_0_40px_rgba(251,191,36,.55)]' : 'bg-slate-950/30 shadow-[inset_0_0_0_3px_rgba(96,165,250,.8),inset_0_0_40px_rgba(59,130,246,.45)]'}`}/>
           {/* 横いっぱいの帯が左からさっと入って、右へ抜ける(2026-10-26 社長 OK の改良の案 A・カゲあつくん 3)。帯をタップで消える */}
