@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4ebd98a1b546e3e
+// source-sha256: 9874434619fbabc5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 21:50";
+const BUILD_DATE = "2026-10-26 22:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -6811,6 +6811,7 @@ const Audio_ = (() => {
     previewRequest = 0;
   let jingleSource = null,
     jingleTimer = null;
+  let bgmOnce = null;
   let currentKey = null,
     bgmVolumePct = 0,
     seVolumePct = 0,
@@ -7196,15 +7197,22 @@ const Audio_ = (() => {
     stopOthers();
     const source = ctx.createBufferSource();
     applyTrackGain(track);
+    const once = !!(bgmOnce && bgmOnce.key === key);
     source.buffer = buffer;
-    source.loop = track.loop !== false;
+    source.loop = once ? false : track.loop !== false;
     source.connect(bgmGain);
     bgmSource = source;
     bgmSourceKey = key;
     source.onended = () => {
-      if (bgmSource === source) {
-        bgmSource = null;
-        bgmSourceKey = null;
+      if (bgmSource !== source) return;
+      bgmSource = null;
+      bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) {
+        bgmOnce = null;
+        try {
+          o.onEnd && o.onEnd();
+        } catch (e) {}
       }
     };
     try {
@@ -7217,7 +7225,17 @@ const Audio_ = (() => {
   };
   const playBGM = key => {
     const track = resolveTrack(key);
-    if (!track) return Promise.resolve();
+    if (!track) {
+      const o = bgmOnce;
+      if (o && o.key === key) {
+        bgmOnce = null;
+        try {
+          o.onFail && o.onFail();
+        } catch (e) {}
+      }
+      return Promise.resolve();
+    }
+    if (bgmOnce && bgmOnce.key !== track.id) bgmOnce = null;
     currentKey = track.id;
     const request = ++bgmRequest;
     if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
@@ -7236,7 +7254,23 @@ const Audio_ = (() => {
     return loadBuffer(bufKey).then(buffer => {
       rememberSongBuffer(bufKey);
       startBgmBuffer(track.id, track, buffer, request);
-    }).catch(() => {});
+    }).catch(() => {
+      const o = bgmOnce;
+      if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) {
+        bgmOnce = null;
+        try {
+          o.onFail && o.onFail();
+        } catch (e) {}
+      }
+    });
+  };
+  const setBgmOnce = (key, handlers = {}) => {
+    const track = key ? resolveTrack(key) : null;
+    bgmOnce = key ? {
+      key: track ? track.id : key,
+      onEnd: handlers.onEnd || null,
+      onFail: handlers.onFail || null
+    } : null;
   };
   let fadeRequest = 0;
   const fadeToBGM = (key, ms = 800) => {
@@ -8686,6 +8720,7 @@ const Audio_ = (() => {
     playSeFile,
     preloadSE,
     playBGM,
+    setBgmOnce,
     fadeToBGM,
     stopBGM,
     startRhythmTrack,
@@ -85568,6 +85603,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   topAssist: 'mh_card_top_assist_v1',
   rankSync: 'mh_card_rank_sync_v1',
   bgm: 'mh_card_bgm_v1',
+  cpuPlaylist: 'mh_card_cpu_playlist_v1',
   settings: 'mh_card_settings_v1',
   aiTalk: 'mh_card_ai_talk_v1'
 });
@@ -85671,6 +85707,110 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
     top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
     cpu: r.cpu === 'auto' || typeof r.cpu === 'string' && isTrack(r.cpu) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp
+  };
+};
+const CARD_PLAYLIST_MAX = 5;
+const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
+  mua: Object.freeze(['melo_toriko']),
+  kiki: Object.freeze(['eiki_boss']),
+  momosuke: Object.freeze(['melo_crossing_field']),
+  kyuko: Object.freeze(['melo_toward_the_stars_short']),
+  dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']),
+  atsu: Object.freeze(['melo_against_my_own_shadow'])
+});
+const cardNormalizePlaylistList = (v, isTrack = () => true) => {
+  const out = [];
+  for (const id of Array.isArray(v) ? v : []) {
+    if (out.length >= CARD_PLAYLIST_MAX) break;
+    if (typeof id === 'string' && isTrack(id) && !out.includes(id)) out.push(id);
+  }
+  return out;
+};
+const cardNormalizeCpuPlaylist = (v, isTrack = () => true) => {
+  const src = cardIsPlainObject(v) && cardIsPlainObject(v.assistants) ? v.assistants : {};
+  const assistants = {};
+  for (const who of Object.keys(CARD_CPU_PLAYLIST_DEFAULT)) {
+    const list = cardNormalizePlaylistList(src[who], isTrack);
+    assistants[who] = list.length ? list : [...CARD_CPU_PLAYLIST_DEFAULT[who]];
+  }
+  return {
+    v: 1,
+    assistants
+  };
+};
+const cardShufflePlaylist = (list, avoid = null, rnd = Math.random) => {
+  const order = [...list];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  if (order.length >= 2 && avoid != null && order[0] === avoid) {
+    const j = 1 + Math.floor(rnd() * (order.length - 1));
+    [order[0], order[j]] = [order[j], order[0]];
+  }
+  return order;
+};
+const cardPlaylistPlayer = (io, rnd = Math.random) => {
+  let run = null;
+  const stop = () => {
+    if (run) {
+      run = null;
+      io.setOnce(null);
+    }
+  };
+  const start = (list, playing = null) => {
+    const ids = (Array.isArray(list) ? list : []).filter((id, i, a) => typeof id === 'string' && id && a.indexOf(id) === i);
+    stop();
+    if (ids.length < 2) {
+      if (ids[0]) io.play(ids[0]);
+      return;
+    }
+    const me = {
+      list: ids,
+      order: cardShufflePlaylist(ids, playing, rnd),
+      at: 0,
+      fails: 0
+    };
+    run = me;
+    const next = () => {
+      const last = me.order[me.at];
+      me.at += 1;
+      if (me.at >= me.order.length) {
+        me.order = cardShufflePlaylist(me.list, last, rnd);
+        me.at = 0;
+      }
+      playAt();
+    };
+    const playAt = () => {
+      if (run !== me) return;
+      const key = me.order[me.at];
+      io.setOnce(key, {
+        onEnd: () => {
+          if (run !== me) return;
+          me.fails = 0;
+          next();
+        },
+        onFail: () => {
+          if (run !== me) return;
+          me.fails += 1;
+          if (me.fails >= me.list.length) {
+            stop();
+            io.silence();
+            return;
+          }
+          next();
+        }
+      });
+      io.play(key);
+      const after = me.order[me.at + 1];
+      if (after && io.preload) io.preload(after);
+    };
+    playAt();
+  };
+  return {
+    start,
+    stop,
+    active: () => !!run
   };
 };
 const CARD_SETTINGS_DEFAULT = Object.freeze({
@@ -88150,16 +88290,12 @@ const CardNameFit = ({
     className: "mh-nf-b"
   }, two.map(row)));
 };
-const CARD_AI_BGM = Object.freeze({
-  mua: 'melo_toriko',
-  kiki: 'eiki_boss',
-  momosuke: 'melo_crossing_field',
-  kyuko: 'melo_toward_the_stars_short',
-  dra: 'melo_mou_hitotsu_no_sekai_e',
-  atsu: 'melo_against_my_own_shadow'
-});
+const CARD_AI_BGM = Object.freeze(Object.fromEntries(Object.entries(CARD_CPU_PLAYLIST_DEFAULT).map(([who, list]) => [who, list[0]])));
 const CARD_PVP_BGM = 'ichika_battle';
-const cardCpuBgm = (bgm, who) => bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : CARD_AI_BGM[who] || null;
+const cardCpuPlaylistOf = (playlist, who) => {
+  const list = playlist && playlist.assistants && Array.isArray(playlist.assistants[who]) ? playlist.assistants[who] : [];
+  return list.length ? list : CARD_AI_BGM[who] ? [CARD_AI_BGM[who]] : [];
+};
 const cardIsBgmTrack = id => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some(t => t.id === id);
 const CARD_SPECIES_ART = Object.freeze({
   tiger: 'Tiger',
@@ -90664,6 +90800,70 @@ const CardAssistantArt = ({
     className: "h-full w-full object-contain object-bottom"
   }));
 };
+const CardPlaylistRows = ({
+  list,
+  onChange,
+  bgmPreview,
+  tag
+}) => {
+  const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
+  const choices = keep => tracks.filter(t => t.id === keep || !list.includes(t.id));
+  const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
+  return React.createElement("div", {
+    "data-card-playlist-rows": tag,
+    "data-card-playlist-count": list.length
+  }, React.createElement("ol", {
+    className: "mt-1 space-y-1.5"
+  }, list.map((id, i) => React.createElement("li", {
+    key: `${i}-${id}`,
+    "data-card-playlist-row": id,
+    className: "flex items-center gap-1.5"
+  }, React.createElement("span", {
+    className: "w-4 shrink-0 text-center text-[11px] font-black text-slate-400"
+  }, i + 1), React.createElement("select", {
+    "data-card-playlist-change": i,
+    "aria-label": `${i + 1}曲目を変える`,
+    value: id,
+    className: selectClass,
+    onChange: e => {
+      const next = [...list];
+      next[i] = e.target.value;
+      onChange(next);
+    }
+  }, choices(id).map(t => React.createElement("option", {
+    key: t.id,
+    value: t.id
+  }, t.name))), bgmPreview && React.createElement("button", {
+    type: "button",
+    "data-card-playlist-preview": id,
+    onClick: () => bgmPreview.toggle(id),
+    className: "min-h-[44px] min-w-[52px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black"
+  }, bgmPreview.playing === id ? '停止' : '試聴'), React.createElement("button", {
+    type: "button",
+    "data-card-playlist-remove": i,
+    "aria-label": `${i + 1}曲目を外す`,
+    disabled: list.length <= 1,
+    onClick: () => onChange(list.filter((_, k) => k !== i)),
+    className: `min-h-[44px] min-w-[44px] shrink-0 rounded-xl px-1 text-xs font-black ${list.length <= 1 ? 'bg-slate-800 text-slate-600' : 'bg-rose-800/80 text-white'}`
+  }, "外す")))), list.length < CARD_PLAYLIST_MAX ? React.createElement("select", {
+    "data-card-playlist-add": true,
+    "aria-label": "曲を足す",
+    value: "",
+    className: `mt-1.5 w-full ${selectClass}`,
+    onChange: e => {
+      if (e.target.value) onChange([...list, e.target.value]);
+    }
+  }, React.createElement("option", {
+    value: ""
+  }, `＋ 曲を足す(あと${CARD_PLAYLIST_MAX - list.length}曲)`), choices(null).map(t => React.createElement("option", {
+    key: t.id,
+    value: t.id
+  }, t.name))) : React.createElement("p", {
+    "data-card-playlist-full": true,
+    className: "mt-1.5 text-[10px] font-bold text-slate-400",
+    style: JA_LABEL_STYLE
+  }, jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)));
+};
 const CardQuickRunDetail = ({
   quickRun,
   autoReady,
@@ -90735,6 +90935,21 @@ const CardBattleScreen = ({
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  const [plWho, setPlWho] = useState(null);
+  const [plCopy, setPlCopy] = useState(null);
+  const bgmPreviewRef = useRef(bgmPreview);
+  bgmPreviewRef.current = bgmPreview;
+  const stopBgmPreview = () => {
+    const p = bgmPreviewRef.current;
+    if (p && p.playing && p.stop) p.stop();
+  };
+  useEffect(() => {
+    if (view !== 'options') {
+      stopBgmPreview();
+      setPlCopy(null);
+    }
+  }, [view]);
+  useEffect(() => () => stopBgmPreview(), []);
   useEffect(() => {
     const go = c => {
       if (c) setView('pvp');
@@ -90801,7 +91016,7 @@ const CardBattleScreen = ({
     try {
       await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
     } catch (_) {}
-    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null)]);
+    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null), storeGet(K.bgm, null), storeGet(K.settings, null), storeGet(K.cpuPlaylist, null)]);
     const next = {
       collection: cardNormalizeCollection(collection),
       decks: cardNormalizeDecks(decks),
@@ -90812,7 +91027,8 @@ const CardBattleScreen = ({
       unlocked: cardUnlockedWithRecord(unlocked, record),
       tutorial: cardNormalizeTutorial(tutorial),
       bgm: normalizeCardBgm(bgm, cardIsBgmTrack),
-      settings: normalizeCardSettings(settings)
+      settings: normalizeCardSettings(settings),
+      cpuPlaylist: cardNormalizeCpuPlaylist(cpuPlaylist, cardIsBgmTrack)
     };
     setSave(next);
     if (onSettings) onSettings(next.settings);
@@ -91074,7 +91290,7 @@ const CardBattleScreen = ({
       intro,
       cpuSameBlood: !!cpuDeck.sameBlood
     });
-    onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
+    onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who));
     onNavigate('CARD_BATTLE');
   };
   if (view === 'starter') {
@@ -91722,6 +91938,127 @@ const CardBattleScreen = ({
     }, jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')))));
   }
   if (view === 'options') {
+    const plWhoList = foes.length ? foes : allAssistants.filter(a => CARD_CPU_PLAYLIST_DEFAULT[a.id]);
+    const plCur = plWhoList.some(a => a.id === plWho) ? plWho : plWhoList[0] && plWhoList[0].id;
+    const plSave = assistants => {
+      void persist({
+        cpuPlaylist: cardNormalizeCpuPlaylist({
+          v: 1,
+          assistants
+        }, cardIsBgmTrack)
+      });
+    };
+    const plList = cardCpuPlaylistOf(save.cpuPlaylist, plCur);
+    const plIsDefault = plList.length === 1 && plList[0] === CARD_AI_BGM[plCur];
+    const cpuPlaylistPanel = React.createElement("div", {
+      "data-card-playlist": true,
+      className: "mt-3 border-t border-white/10 pt-2.5"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-slate-200"
+    }, "助手と対戦"), React.createElement("p", {
+      className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('助手ごとに5曲まで選べます。対戦中は、選んだ曲を1曲ずつ、毎回ちがう順番で流します')), React.createElement("div", {
+      className: "mt-2 grid grid-cols-3 gap-1.5"
+    }, plWhoList.map(a => React.createElement("button", {
+      key: a.id,
+      type: "button",
+      "data-card-playlist-who": a.id,
+      "aria-pressed": a.id === plCur,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setPlWho(a.id);
+      },
+      className: `min-h-[40px] min-w-0 rounded-xl border px-1 text-[11px] font-black ${a.id === plCur ? 'border-amber-300 bg-amber-600/85 text-white' : 'border-white/15 bg-slate-900/75 text-slate-200'}`
+    }, jaWrap(a.name), React.createElement("small", {
+      className: "ml-0.5 text-[10px] opacity-80"
+    }, cardCpuPlaylistOf(save.cpuPlaylist, a.id).length, "曲")))), plCur && React.createElement("div", {
+      "data-card-playlist-edit": plCur,
+      className: "mt-2"
+    }, React.createElement(CardPlaylistRows, {
+      tag: "who",
+      list: plList,
+      bgmPreview: bgmPreview,
+      onChange: next => plSave({
+        ...save.cpuPlaylist.assistants,
+        [plCur]: next
+      })
+    }), React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-playlist-reset": true,
+      disabled: plIsDefault,
+      onClick: () => plSave({
+        ...save.cpuPlaylist.assistants,
+        [plCur]: [...CARD_CPU_PLAYLIST_DEFAULT[plCur]]
+      }),
+      className: `min-h-[44px] rounded-xl px-1 text-[11px] font-black ${plIsDefault ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-white'}`
+    }, jaWrap('はじめの曲に戻す')), React.createElement("button", {
+      type: "button",
+      "data-card-playlist-copy-open": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setPlCopy({
+          list: [...plList],
+          confirm: false
+        });
+      },
+      className: "min-h-[44px] rounded-xl bg-indigo-800 px-1 text-[11px] font-black text-white"
+    }, jaWrap('全員に同じ曲を入れる')))), plCopy && React.createElement("div", {
+      "data-card-playlist-copy": true,
+      className: "mt-2.5 rounded-xl border border-indigo-300/40 bg-indigo-950/60 p-2.5"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-white"
+    }, jaWrap('全員に同じ曲を入れる')), React.createElement("p", {
+      className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('ここで選んだ1〜5曲を、助手みんなの曲にします。あとから助手ごとに直せます')), React.createElement(CardPlaylistRows, {
+      tag: "copy",
+      list: plCopy.list,
+      bgmPreview: bgmPreview,
+      onChange: next => setPlCopy({
+        list: next,
+        confirm: false
+      })
+    }), plCopy.confirm ? React.createElement("div", {
+      "data-card-playlist-copy-confirm": true,
+      className: "mt-2"
+    }, React.createElement("p", {
+      className: "text-[11px] font-black leading-snug text-amber-200",
+      style: JA_WRAP_STYLE
+    }, jaWrap('助手ごとに選んでいた曲は、この曲に置き換わります。よろしいですか?')), React.createElement("div", {
+      className: "mt-1.5 grid grid-cols-2 gap-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-playlist-copy-cancel": true,
+      onClick: () => setPlCopy(null),
+      className: "min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white"
+    }, "やめる"), React.createElement("button", {
+      type: "button",
+      "data-card-playlist-copy-ok": true,
+      onClick: () => {
+        const list = [...plCopy.list];
+        plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).map(who => [who, list])));
+        setPlCopy(null);
+      },
+      className: "min-h-[44px] rounded-xl bg-amber-500 text-[12px] font-black text-slate-900"
+    }, "置き換える"))) : React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-playlist-copy-cancel": true,
+      onClick: () => setPlCopy(null),
+      className: "min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white"
+    }, "やめる"), React.createElement("button", {
+      type: "button",
+      "data-card-playlist-copy-go": true,
+      onClick: () => setPlCopy({
+        ...plCopy,
+        confirm: true
+      }),
+      className: "min-h-[44px] rounded-xl bg-indigo-600 text-[12px] font-black text-white"
+    }, jaWrap('全員に入れる')))));
     const bgmPanel = React.createElement("div", {
       "data-card-options-bgm": true,
       className: SCREEN_PANEL_CLASS
@@ -91729,7 +92066,7 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-white"
     }, "音"), React.createElement("b", {
       className: "mt-2 block text-[12px] font-black text-slate-200"
-    }, "対戦のBGM"), [['top', 'トップ画面'], ['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
+    }, "対戦のBGM"), [['top', 'トップ画面'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
       key: k,
       className: "mt-2 block text-left"
     }, React.createElement("span", {
@@ -91749,20 +92086,15 @@ const CardBattleScreen = ({
         });
       },
       className: "min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white"
-    }, k === 'cpu' && React.createElement("option", {
-      value: "auto"
-    }, "おまかせ(相手の助手に合わせる)"), (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
+    }, (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''))), bgmPreview && save.bgm[k] !== 'auto' && React.createElement("button", {
+    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''))), bgmPreview && React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => bgmPreview.toggle(save.bgm[k]),
       className: "min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black"
-    }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴')))), React.createElement("p", {
-      className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
-      style: JA_LABEL_STYLE
-    }, jaWrap('「おまかせ」のときは、対戦する助手に合わせて決まった曲が流れます')), React.createElement("p", {
+    }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴')))), cpuPlaylistPanel, React.createElement("p", {
       "data-card-options-se": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
@@ -101223,6 +101555,33 @@ function MonsterHeroGame() {
   const rhythmEventThanksStoryIdFor = event => event && RHYTHM_EVENT_THANKS_STORY_BY_EVENT[event.id] || null;
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   const [cardBgm, setCardBgm] = useState(null);
+  const cardBgmRef = useRef(null);
+  cardBgmRef.current = cardBgm;
+  const cardPlaylistRef = useRef(null);
+  if (!cardPlaylistRef.current) cardPlaylistRef.current = cardPlaylistPlayer({
+    setOnce: (key, handlers) => Audio_.setBgmOnce(key, handlers),
+    play: key => {
+      cardBgmRef.current = key;
+      setCardBgm(key);
+    },
+    preload: key => Audio_.preloadBGM(key),
+    silence: () => {
+      cardBgmRef.current = '__silence_bgm__';
+      setCardBgm('__silence_bgm__');
+    }
+  });
+  const stopCardPlaylist = () => cardPlaylistRef.current.stop();
+  const playCardBgm = arg => {
+    if (Array.isArray(arg)) {
+      cardPlaylistRef.current.start(arg, cardBgmRef.current);
+      return;
+    }
+    stopCardPlaylist();
+    setCardBgm(arg);
+  };
+  useEffect(() => {
+    if (gameState !== 'CARD_BATTLE') stopCardPlaylist();
+  }, [gameState]);
   const [cardQuickAutoStart, setCardQuickAutoStart] = useState(false);
   const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   const [cardOrigin, setCardOrigin] = useState('home');
@@ -123458,7 +123817,7 @@ function MonsterHeroGame() {
       exitLabel: cardOrigin === 'debug' ? 'デバッグ設定へ戻る' : 'HOMEへ戻る',
       seenStoryIds: rhythmEventStorySeen || [],
       debug: cardOrigin === 'debug',
-      onBgm: setCardBgm,
+      onBgm: playCardBgm,
       onQuickLoops: awardCardQuickLoops,
       quickRun: cardQuickRunView(),
       quickAutoReady: autoQuickRunConfigured(autoSettings),
@@ -123472,6 +123831,10 @@ function MonsterHeroGame() {
       topAssistant: cardTopAssistant,
       bgmPreview: {
         toggle: toggleBgmPreview,
+        stop: () => {
+          Audio_.stopPreview();
+          setPreviewTrackId(null);
+        },
         playing: previewTrackId
       },
       rank: {
