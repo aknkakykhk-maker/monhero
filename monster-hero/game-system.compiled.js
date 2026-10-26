@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6a8deb99ac15670
+// source-sha256: a37b06be4c746384
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 22:53";
+const BUILD_DATE = "2026-10-26 22:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90764,39 +90764,91 @@ const cardArtBox = src => new Promise(resolve => {
   img.onerror = () => resolve(null);
   img.src = src;
 });
+const CARD_ART_KNOWN_BOX = Object.freeze({
+  myua_wink: Object.freeze({
+    nw: 1536,
+    nh: 1024,
+    x: 379,
+    y: 28,
+    w: 760,
+    h: 996
+  })
+});
+const cardArtKnownBox = (who, expression, src) => {
+  if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
+  const ex = assistantExpressionName(who, expression);
+  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
+  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
+};
+const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
+  if (!known) {
+    resolve(null);
+    return;
+  }
+  const img = new Image();
+  img.onload = () => resolve(img.naturalWidth === known.nw && img.naturalHeight === known.nh ? known : null);
+  img.onerror = () => resolve(null);
+  img.src = src;
+});
 const CardAssistantArt = ({
   src,
   alt,
   className = '',
-  style = null
+  style = null,
+  knownBox = null
 }) => {
   const ref = useRef(null);
-  const [fit, setFit] = useState(null);
+  const [box, setBox] = useState(null);
+  const [size, setSize] = useState({
+    w: 0,
+    h: 0
+  });
   useEffect(() => {
     let alive = true;
-    setFit(null);
-    void cardArtBox(src).then(box => {
-      const el = ref.current;
-      if (!alive || !box || !el) return;
-      const W = el.clientWidth,
-        H = el.clientHeight;
-      if (!W || !H) return;
-      const sc = Math.min(H / box.h, W / box.w);
-      setFit({
-        width: box.nw * sc,
-        left: W / 2 - (box.x + box.w / 2) * sc,
-        top: H - (box.y + box.h) * sc,
-        artH: Math.round(box.h * sc),
-        artW: Math.round(box.w * sc)
-      });
+    setBox(null);
+    void cardArtKnownBoxFor(src, knownBox).then(known => known ? {
+      ...known,
+      known: true
+    } : cardArtBox(src)).then(b => {
+      if (alive) setBox(b || null);
     });
     return () => {
       alive = false;
     };
-  }, [src]);
+  }, [src, knownBox]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setSize(cur => cur.w === el.clientWidth && cur.h === el.clientHeight ? cur : {
+      w: el.clientWidth,
+      h: el.clientHeight
+    });
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const fit = (() => {
+    const W = size.w,
+      H = size.h;
+    if (!box || !W || !H) return null;
+    const sc = Math.min(H / box.h, W / box.w);
+    return {
+      width: box.nw * sc,
+      left: W / 2 - (box.x + box.w / 2) * sc,
+      top: H - (box.y + box.h) * sc,
+      artH: Math.round(box.h * sc),
+      artW: Math.round(box.w * sc)
+    };
+  })();
   return React.createElement("div", {
     ref: ref,
     "data-card-assistant-art": true,
+    "data-card-art-known": box && box.known ? '1' : undefined,
     "data-card-art-h": fit ? fit.artH : undefined,
     "data-card-art-w": fit ? fit.artW : undefined,
     className: `relative shrink-0 overflow-hidden ${className}`,
@@ -91635,6 +91687,7 @@ const CardBattleScreen = ({
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
+      knownBox: cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink')),
       alt: a.name,
       className: "w-[42%] landscape:hidden",
       style: {
