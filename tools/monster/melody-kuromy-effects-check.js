@@ -35,7 +35,7 @@ const game = read('monster-hero/src/game-system.jsx');
 // ---------- ① 本体の登録 ----------
 const sd = {};
 vm.createContext(sd);
-vm.runInContext(`${allies.replace(/\b[A-Z][A-Z0-9_]*_(IMG|ICON|FACE_ICON)\b/g, "'img'")}\nglobalThis.M=ALL_PLAYER_MONSTERS;globalThis.N=HERO_ATK_NAMES;globalThis.D=UPCOMING_MONSTER_DRAFTS;`, sd);
+vm.runInContext(`${allies.replace(/\b[A-Z0-9_]+_(IMG|ICON|FACE_ICON)\b/g, "'img'")}\nglobalThis.M=ALL_PLAYER_MONSTERS;globalThis.N=HERO_ATK_NAMES;globalThis.D=UPCOMING_MONSTER_DRAFTS;`, sd);
 const { M, N, D } = sd;
 check('メロディーとクロミーが本体の一覧にいて、案の段階からは外れた', !!M.Melody && !!M.Kuromy && !D.Melody && !D.Kuromy);
 check('能力値がユーザーと決めた値(メロディー 760/135/105/160・クロミー 680/125/175/110)',
