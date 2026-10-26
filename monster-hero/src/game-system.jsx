@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4a4cbf964c710acf
+// generated-sha256: 70e8dbdedb88e22e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34121,10 +34121,11 @@ function BreederMarketScreen({
                 const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
                 const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
                 const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'cardPoint', cost:offer.cost };
+                const soon=offer.available===false; // まだ仲間にできない子(予告中)は近日追加。ダイヤショップとは別に、この札の available で開く(メロディー等はダイヤは近日・ここは販売中)
                 const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
                 return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-disc':offer.id}}
-                  item={item} owned={owned} comingSoon={false}
-                  canBuy={!owned&&cp>=offer.cost&&!busy}
+                  item={item} owned={owned} comingSoon={soon}
+                  canBuy={!soon&&!owned&&cp>=offer.cost&&!busy}
                   disabled={purchaseProcessing}
                   onZoom={()=>onZoomIcon(disc||item)}
                   onBuy={()=>openSheet({ item, confirm:()=>cardShop.onExchange(offer),
@@ -34185,10 +34186,11 @@ function BreederMarketScreen({
             const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
             const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
             const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
+                const soon=offer.available===false; // まだ仲間にできない子(予告中)は近日追加。ダイヤショップとは別に、この札の available で開く(メロディー等はダイヤは近日・ここは販売中)
             const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-disc':offer.id}}
-              item={item} owned={owned} comingSoon={false}
-              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              item={item} owned={owned} comingSoon={soon}
+              canBuy={!soon&&!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(disc||item)}
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false,
@@ -69291,6 +69293,8 @@ function MonsterHeroGame() {
 
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
+    if (offer?.available === false) return { ok:false, reason:'soon' };
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -69452,6 +69456,8 @@ function MonsterHeroGame() {
   };
   // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはビートP
   const exchangeCardPoints = async (offer) => {
+    // 予告中(まだ仲間にできない)の子の円盤石は交換しない(ビートP交換所と同じ)
+    if (offer?.available === false) return { ok:false, reason:'soon' };
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');

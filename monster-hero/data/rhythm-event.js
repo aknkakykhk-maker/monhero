@@ -371,6 +371,8 @@ const RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS = Object.freeze([
   rhythmEventDiscOffer('Pandora', 'パンドラ'),
   rhythmEventDiscOffer('Eiki', 'エイキ'),
   rhythmEventDiscOffer('KenshiMocchi', '剣士モッチー'),
+  rhythmEventDiscOffer('Kyubi', 'キュービ', { available:false }),
+  rhythmEventDiscOffer('Orihime', 'オリヒメ', { available:false }),
 ]);
 // アシストカード(2026-10-03)。1枚につき1回だけ交換できる(持っていれば交換できない)。
 // 交換するとアシストカードが解放される(保存先はダイヤショップで買ったときと同じ mh_unlocked_teachings)。
