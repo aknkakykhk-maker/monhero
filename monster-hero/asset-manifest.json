@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "id": "be3d23d5c25e",
+  "id": "757042cd08ea",
   "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117694759,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257269897,"count":1719},"core":{"bytes":14171373,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
@@ -1724,7 +1724,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"cc4fee8bae18","size":239870,"pack":"core"},
+    "tailwind.css": {"v":"8d2d52f1914c","size":239870,"pack":"core"},
     "data/images/images-ally.js": {"v":"5ad4f7999ca5","size":39965,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"642e85aae599","size":56498,"pack":"core"},
