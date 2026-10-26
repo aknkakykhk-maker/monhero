@@ -28791,7 +28791,7 @@ const sadSongHellNotes=((t,h,f,s,T,F,S)=>[
   t(216541,7,4,0),h(216715,7,4,217064),t(217152,6,2,0),t(217239,8,4,0),
 // </sad-song-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sadSongHellChart=mhChart(38,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
+const sadSongHellChart=mhChart(43,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
 
 // ===== SAD SONG short ver.(2026-10-18 追加。全編の頭から1つ目のサビの終わりまで) =====
 const SAD_SONG_SHORT_DURATION_MS=82440;
@@ -37920,7 +37920,7 @@ const mfIchikaMixHellNotes=((t,h,f,s,T,F,S)=>[
   f(143294,9,3),
 // </atsu-cup-theme-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const mfIchikaMixHellChart=mhChart(30,mfIchikaMixHellNotes,ATSU_CUP_THEME_V3_DURATION_MS,6);
+const mfIchikaMixHellChart=mhChart(35,mfIchikaMixHellNotes,ATSU_CUP_THEME_V3_DURATION_MS,6);
 const monsterHeroHellNotes=((t,h,f,s,T,F,S)=>[
 // <monster-hero-v4-hell-notes>
   t(2198,2,2,0),t(2718,3,3,0),t(2805,1,3,0),f(2891,4,2),
@@ -38588,7 +38588,7 @@ const sixEternelRemixHellNotes=((t,h,f,s,T,F,S)=>[
   t(149239,9,3,0),
 // </six-eternel-remix-beat-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sixEternelRemixHellChart=mhChart(39,sixEternelRemixHellNotes,SIX_ETERNEL_REMIX_BEAT_DURATION_MS,6);
+const sixEternelRemixHellChart=mhChart(44,sixEternelRemixHellNotes,SIX_ETERNEL_REMIX_BEAT_DURATION_MS,6);
 const stayWithMeHellNotes=((t,h,f,s,T,F,S)=>[
 // <pandora-boss-v3-hell-notes>
   t(1852,1,3,0),t(2381,3,3,0),t(2558,5,3,0),T(3087,8,2,1),
@@ -38802,7 +38802,7 @@ const stayWithMeHellNotes=((t,h,f,s,T,F,S)=>[
   f(270985,3,3),T(271515,3,3,1),T(271691,3,3,1),
 // </pandora-boss-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const stayWithMeHellChart=mhChart(37,stayWithMeHellNotes,PANDORA_BOSS_DURATION_MS,6);
+const stayWithMeHellChart=mhChart(48,stayWithMeHellNotes,PANDORA_BOSS_DURATION_MS,6);
 const kikiIssenHellNotes=((t,h,f,s,T,F,S)=>[
 // <eiki-boss-v3-hell-notes>
   t(1930,4,2,0),t(1930,0,2,0),T(2124,7,2,1),t(2124,3,2,0),
@@ -39844,7 +39844,7 @@ const torikoHellNotes=((t,h,f,s,T,F,S)=>[
   t(76481,5,4,0),T(77370,7,3,1),T(77815,10,1,1),
 // </toriko-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const torikoHellChart=mhChart(28,torikoHellNotes,TORIKO_DURATION_MS,6);
+const torikoHellChart=mhChart(32,torikoHellNotes,TORIKO_DURATION_MS,6);
 const song4uHitasuraHellNotes=((t,h,f,s,T,F,S)=>[
 // <4u-hitasura-v3-hell-notes>
   T(2064,2,2,1),t(3926,4,1,0),t(4650,2,2,0),S(5167,6305,[[5167,2.5,2,0,0],[5271,2.835,2,0,0],[5374,3.168,2,0,0],[5477,3.5,2,0,0],[5581,3.834,2,0.25,0],[5684,4.166,2,0.5,0],[5788,4.5,2,0.75,0],[5891,3.503,2,1,0],[5995,2.497,2,1,0],[6098,1.5,2,1,0],[6202,0.746,2,1,0],[6305,0,2,1,0]],0,'L'),
@@ -41946,7 +41946,7 @@ const stayWithMeShortHellNotes=((t,h,f,s,T,F,S)=>[
   T(174911,9,3,1),
 // </stay-with-me-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const stayWithMeShortHellChart=mhChart(32,stayWithMeShortHellNotes,STAY_WITH_ME_SHORT_DURATION_MS,6);
+const stayWithMeShortHellChart=mhChart(44,stayWithMeShortHellNotes,STAY_WITH_ME_SHORT_DURATION_MS,6);
 const kikiIssenShortHellNotes=((t,h,f,s,T,F,S)=>[
 // <kiki-issen-short-v3-hell-notes>
   T(1976,7,2,1),t(1976,3,2,0),T(2170,8,2,1),t(2170,3,2,0),
@@ -42101,7 +42101,7 @@ const kikiIssenShortHellNotes=((t,h,f,s,T,F,S)=>[
   T(192576,7,3,1),T(192963,5,3,1),
 // </kiki-issen-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const kikiIssenShortHellChart=mhChart(39,kikiIssenShortHellNotes,KIKI_ISSEN_SHORT_DURATION_MS,6);
+const kikiIssenShortHellChart=mhChart(44,kikiIssenShortHellNotes,KIKI_ISSEN_SHORT_DURATION_MS,6);
 const crazyPartyNightHellNotes=((t,h,f,s,T,F,S)=>[
 // <crazy-party-night-v3-hell-notes>
   f(2778,3,4),T(3716,7,4,1),T(3950,4,6,1),T(4184,8,4,1),
@@ -45491,6 +45491,7 @@ const rhythmMonLayersOn=()=>{try{return typeof localStorage!=='undefined'&&local
 //   空中のノーツは厚い立方体、空中スライドは厚みのある管。床にはっきりした影と柱。色・判定はそのまま(GPU の帯は使わない)
 // 'c3' = 案3の1段目(2026-10-16 社長「案3までやる」・docs/playbot/reports/2026-10-16/floor3d-look/): 参考動画の見やすさは「明るさ・透け・光のにじみ」から来ている。
 //   空中のタップを明るく薄い板+光る縁(案1)、空中スライドを白い芯から手の色がにじむ半透明の光の帯(案2)にする。色・判定はそのまま(GPU の帯は使わない)
+//   ★2026-10-27 社長の選択「案A」で c3 の見た目を既定にした(キーが無い人も c3 と同じ。描き手の attach の case3)。空中のノーツの見た目を「立体」(RHYTHM_SKY_NOTE_LOOK '3d')にした人と、ほかの試作の値のときは今までどおり
 // 'c3b' = 案3の2段目: 1段目の見た目+カメラを寝かせる(RHYTHM_PROJECTION_CAMERA.set(true)。演奏画面が演奏を始めるときに入れる。判定・入力も同じ計算を通るのでそろう)
 // 'a3d' = 段階A(本物の3D・docs/playbot/reports/2026-10-16/floor3d-estimate.md): 空中のタップを光の当たる箱、空中スライドを丸い管として
 //   ノーツの WebGL の層の中で描く(rhythmCreateGpuSky3d)。地上・道は今のまま。WebGL で描いていないときは今の見た目
@@ -48277,7 +48278,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     // options.gpuBand … スライドの帯を GPU に置いて描く(WebGL のときだけ。作れなければ今までどおり CPU で刻む)
-    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f&&f!=='a3d'?false:RHYTHM_SKY_NOTE_LOOK.id==='3d';case3=f==='c3'||f==='c3b';skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
+    attach(next,options={}){{const f=rhythmFloor3dPreference();floor3d=f==='on'||f==='on2'||f==='on3';floor3d2=f==='on2';floor3d3=f==='on3';sky3dWanted=f&&f!=='a3d'?false:RHYTHM_SKY_NOTE_LOOK.id==='3d';case3=!sky3dWanted&&(f===''||f==='c3'||f==='c3b');skySeen=false;}sparkSprites=rhythmHitSparkActive();canvas=next||null;backend='2d';ctx=null;gpuBandWanted=!!options.gpuBand&&!floor3d2&&!floor3d3&&!sky3dWanted;hitArea=null;skyHitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}
       // 段階A: 3Dの部品(シェーダー)は演奏前のここで作っておく(曲の最初のコマで組み立てない)
       if(sky3dWanted&&backend==='webgl'&&ctx)void ctx.sky3d;},
     get backend(){return backend;},
