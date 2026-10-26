@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-27 02:36", type:'update', group:'rhythm', title:'モンヒロビートの HELL の一部で、表示の Lv. を実際の難しさに合わせました', status:'new',
+    items:[
+      '押さえながら叩く所や、手が重なる所が多い HELL の Lv. を上げました(Stay With Me ～Locked Fate～ など)。譜面・スコア・ランキングは変わりません。',
+    ],
+  },
+  {
     // ゴーストのカード(社長「この文で」2026-10-27・カード部の4行の案)
     date: "2026-10-27 02:17", type:'update', group:'cardBattle', title:'MFバトルカード: ゴーストのカードが入りました', status:'new', releaseFlag:'cardBattle',
     image:'images/card-battle/l/C-024.jpg?v=2caad892d4e3',
@@ -567,7 +573,7 @@ const CHANGELOG = [
     items:[
       '「Toward the Stars, Paradise or Truth」「ROSE」「ROSE short ver.」「SAD SONG」「SAD SONG short ver.」の HELL の譜面を作り直しました。',
       '近いレーンで地上と空中のノーツが立て続けに来て、どちらの高さか見分けにくい所をなくしました。地上と空中の行き来は、指を離した位置へ移る形が中心です。',
-      'レベルは「Toward the Stars, Paradise or Truth」Lv.50 ／「ROSE」Lv.51 ／「ROSE short ver.」Lv.49 ／「SAD SONG」Lv.39 ／「SAD SONG short ver.」Lv.42 です。',
+      'レベルは「Toward the Stars, Paradise or Truth」Lv.50 ／「ROSE」Lv.51 ／「ROSE short ver.」Lv.49 ／「SAD SONG」Lv.43 ／「SAD SONG short ver.」Lv.43 です。',
       'これまでの HELL のスコアやランキングの記録は、そのまま残ります。',
     ],
   },
@@ -736,7 +742,7 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「SAD SONG」の全編（3分39秒）を追加しました。曲えらびからすぐ遊べます。',
       'EASY から MASTER までに加えて、空中のノーツが出る HELL があります。HELL は MASTER をクリアすると開きます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.39 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.21 ／ MASTER Lv.29 ／ HELL Lv.43 です。',
       'ノーツ数は 350 ／ 394 ／ 536 ／ 652 ／ 742 です。',
     ],
     assistantNotice:{ id:'update_notice_sad_song_v1', type:'content' },
