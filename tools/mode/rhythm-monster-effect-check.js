@@ -38,7 +38,7 @@ ok('用意する・しないが変わったら作り直す(依存に入ってい
 ok('canvas 版の顔は DOM の要素を重ねない(毎フレーム拡大して描き直させない)',
   !game.includes('data-rhythm-canvas-face aria-hidden')&&game.includes('RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.glow'));
 ok('いちばん軽い段では能力名の大きな表示も出さない',
-  game.includes("const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monsterNoteEffect,'NONE');")
+  game.includes("const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monsterNoteEffect,'NONE')&&!monAbOff('flash');")
   // 出した印をフレームの記録へ残す(RHYTHM_FRAME_DIAG.cue)。出す条件は同じ showAbilityFlash
   &&/if\(showAbilityFlash\)\{?(?:RHYTHM_FRAME_DIAG\.cue\('flash'\);)?setAbilityFlash\(`\$\{abilityFlash\.ability\}！`\);/.test(game)
   &&game.includes('if(showAbilityFlash)scheduleAbilityClear();'));
@@ -48,7 +48,7 @@ ok('いちばん軽い段では能力名の大きな表示も出さない',
 // phase を書き換えてアニメを切り替え、700msのタイマーまで張っていた。
 // 踏んだその瞬間にスタイルの計算が走るので、跳ねない段では何もしないのが正しい。
 ok('いちばん軽い段では、踏んだときのマスモンへの反応を丸ごと飛ばす',
-  game.includes("if(monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'NONE')){")
+  game.includes("if(monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'NONE')&&!monAbOff('hop')){")
   &&!/if\(monsterHit\)\{\s*\/\/ モンスターノーツだけは振動も強くする/.test(game));
 // 振動は「タップ時の振動」の管轄。演出量のブロックの中で呼ぶと、
 // 演出量を下げただけで強さが変わり、しかもモンスターノーツでは2回走っていた。
@@ -58,7 +58,8 @@ ok('振動は1か所だけで、モンスターノーツのときだけ強くす
 ok('モンスターノーツかどうかは演出量のブロックの外で1回だけ出す',
   game.includes("const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);"));
 // どの段でも残すもの。ここが消えると「取れたことが分からない」になる
-ok('どの段でも音は鳴る',/if\(monsterHit\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
+// monAbOff('se') はデバッグの犯人さがし(mh_rhythm_mon_ab_v1・2026-10-27)だけで止まる。既定では必ず鳴る
+ok('どの段でも音は鳴る',/if\(monsterHit(?:&&!monAbOff\('se'\))?\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game)&&game.includes("const monAb=monsterHit&&monAbSet?"));
 ok('どの段でも能力そのものは効く(見た目だけの分岐にする)',
   !/monsterNoteEffect[^\n]{0,80}rhythmActivateMonsterAbility/.test(game)
   &&game.includes('const activated=rhythmActivateMonsterAbility({ability:monster.ability,state:run.abilities,life:run.life,songTimeMs});'));
