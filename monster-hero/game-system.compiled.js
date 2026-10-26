@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f75747c592a18654
+// source-sha256: 2ab909372ee47700
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 10:45";
+const BUILD_DATE = "2026-10-26 11:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85030,6 +85030,13 @@ const CARD_AI_FAVORITE = Object.freeze({
   dra: 'zilla',
   atsu: 'dragon'
 });
+const CARD_AI_SAME_BLOOD = Object.freeze({
+  easy: 0.3,
+  normal: 0.28,
+  hard: 0.25,
+  expert: 0.2
+});
+const cardAiSameBloodScale = familySize => Math.max(0, Math.min(1, (familySize - 1) / 4));
 const CARD_AI_BUILD = Object.freeze({
   easy: {
     maxWave: 1,
@@ -85066,9 +85073,9 @@ const CARD_AI_BUILD = Object.freeze({
 });
 const CARD_AI_DECK_TUNE = Object.freeze({
   mua: {
-    easy: -0.7,
-    normal: -2.1,
-    hard: -2.2
+    easy: 0.4,
+    normal: -1.4,
+    hard: -1.5
   },
   momosuke: {},
   kiki: {
@@ -85088,7 +85095,8 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   atsu: {
     easy: -1.5,
     normal: -3,
-    hard: -2.1
+    hard: -2.6,
+    expert: -0.15
   }
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
@@ -85237,14 +85245,26 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       ko: false
     })).length * 1.2;
   }
+  const family = favs.filter(m => m.species !== fav.species);
+  const familySize = new Set(favs.map(m => m.species)).size;
+  const sameRate = cfg.best ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
   const scored = cands.map(m => ({
     m,
     v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m)
   }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  const usedNos = new Set([fav.species]);
   for (let k = 0; k < 2; k++) {
-    const left = scored.filter(x => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    const famLeft = family.filter(m => !usedNos.has(m.species));
+    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+      const w = famLeft.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
+      const m = famLeft[cardAiPickIndex(w, rand)];
+      out.push(m.no);
+      usedNos.add(m.species);
+      continue;
+    }
+    const left = scored.filter(x => !usedNos.has(x.m.species) && !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];else if (cfg.best && k === 1 && cfg.lastTop > 1) {
@@ -85256,6 +85276,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     }
     out.push(pick.m.no);
     usedSpecies.add(pick.m.species);
+    usedNos.add(pick.m.species);
   }
   return out;
 };

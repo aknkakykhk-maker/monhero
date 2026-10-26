@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f80e79dc2777a61
+// generated-sha256: 08c47af2e6281f1f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 10:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 11:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51480,6 +51480,11 @@ const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', ki
 // 強さごとの組み方(社長の決め)。maxWave … 技などのカードの弾(好きな子の技は、その子の弾まで使える) / noise … カードの選び方の雑さ /
 // temp … 残り2体の選び方のゆらぎ(大きいほど型に合わない子も入る) / stray … 気まぐれな子(型と関係なく)が1体混ざる割合 /
 // best … いちばん強い組み合わせ(相手のデッキも見る)
+// 同じ血統の2体・3体(2026-10-26 社長「3体編成も実際あるから組まれるようにして」)。
+//   2体目・3体目をえらぶたびに、この割合で好きな子の血統の仲間(派生・混血を含む)からえらぶ。
+//   割合は強さごとの値 × 仲間の多さ(仲間が5体以上で1、4体で0.75、3体で0.5、2体で0.25、1体だけなら0)。MASTER は入れない(下の cardAiPickTrio)
+const CARD_AI_SAME_BLOOD = Object.freeze({ easy: 0.3, normal: 0.28, hard: 0.25, expert: 0.2 });
+const cardAiSameBloodScale = (familySize) => Math.max(0, Math.min(1, (familySize - 1) / 4));
 const CARD_AI_BUILD = Object.freeze({
   easy:   { maxWave: 1, noise: 1.6, temp: 3.0, stray: 0.3 },              // 好きな子優先の気分屋・組み方は雑
   normal: { maxWave: 1, noise: 0.8, temp: 1.5, stray: 0 },                // 型に合う子が中心・カードは適当に
@@ -51492,12 +51497,12 @@ const CARD_AI_BUILD = Object.freeze({
 // 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
 // tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
 const CARD_AI_DECK_TUNE = Object.freeze({
-  mua: { easy: -0.7, normal: -2.1, hard: -2.2 },
+  mua: { easy: 0.4, normal: -1.4, hard: -1.5 },   // 同じ血統(モッチーの仲間)で組むようになって強くなった分を戻した(2026-10-26。前は -0.7・-2.1・-2.2)
   momosuke: {  },
   kiki: { easy: -0.9 },
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: 1 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
   dra: { easy: -1.5, normal: -1.5 },
-  atsu: { easy: -1.5, normal: -3, hard: -2.1 },
+  atsu: { easy: -1.5, normal: -3, hard: -2.6, expert: -0.15 },   // 同じ血統(ドラゴンの仲間)で弱くなった分を戻した(2026-10-26。前は HARD -2.1・EXPERT 0)
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
@@ -51638,11 +51643,26 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     const evadeRate = pc.filter((c) => cardHasEff(c, 'evade')).length / pc.length;
     counter = (m) => areaRate * (m.life || 0) * 1.5 + evadeRate * Object.values(db.cards).filter((c) => c.ready && cardHasEff(c, 'noEvade') && cardUsableBy(c, { ...m, ko: false })).length * 1.2;
   }
+  // 好きな子の血統の仲間(好きな子とは別の子。キラ・別絵キラは同じ子として1つに数える)
+  const family = favs.filter((m) => m.species !== fav.species);
+  const familySize = new Set(favs.map((m) => m.species)).size;
+  const sameRate = cfg.best ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
+  // MASTER は今までどおり(仲間を点でくらべる形は、あつの勝率が 44%→19% に下がった。点が高くても実際の対戦では弱い組みだった。2026-10-26 測定)
   const scored = cands.map((m) => ({ m, v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m) }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  const usedNos = new Set([fav.species]);   // 同じ子(キラ・別絵キラ)を2体入れない
   for (let k = 0; k < 2; k++) {
-    const left = scored.filter((x) => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    // 同じ血統の仲間からえらぶ(割合は sameRate)
+    const famLeft = family.filter((m) => !usedNos.has(m.species));
+    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+      const w = famLeft.map((m) => (String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2));
+      const m = famLeft[cardAiPickIndex(w, rand)];
+      out.push(m.no);
+      usedNos.add(m.species);
+      continue;
+    }
+    const left = scored.filter((x) => !usedNos.has(x.m.species) && !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];   // 気まぐれ
@@ -51651,6 +51671,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     else { const top = Math.max(...left.map((x) => x.v)); pick = left[cardAiPickIndex(left.map((x) => Math.exp((x.v - top) / cfg.temp)), rand)]; }
     out.push(pick.m.no);
     usedSpecies.add(pick.m.species);
+    usedNos.add(pick.m.species);
   }
   return out;
 };
