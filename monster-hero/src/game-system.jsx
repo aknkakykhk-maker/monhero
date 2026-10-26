@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0e44f3b28d039b6b
+// generated-sha256: b678faea85e51a59
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54569,18 +54569,51 @@ const CARD_DRAG_THRESHOLD = 10; // 指がこれだけ動いたら「運ぶ」(�
 const CARD_ME = 0;
 const cardDeciderOf = (st) => (st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st));
 
-// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し
+// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し。
+// 2回続けてタップ(CARD_DOUBLE_TAP_MS の内。モンヒロバトルの手札と同じ間・10-core)でも詳しい画面(2026-10-26 社長「ダブルタップでも見られるように」)。
+//   press(no, onTap, opt) の opt:
+//     double … false ならダブルタップを使わない(デッキ編成。1タップで入れる・続けて入れられるを残す。社長の決め)
+//     hold   … true なら1回目のタップを CARD_DOUBLE_TAP_MS 待ってから動かす(押すと技が決まってしまう所。2回目が来たら動かさずに詳しい画面)
+//     undo   … 1回目をすぐ動かす所で、2回目が来たときに1回目を取り消す関数
+//   iPhone の Safari がダブルタップで画面を拡大しないよう、押せるカードには data-card-press を付け、その印にだけ touch-action: manipulation を当てる
+if (typeof document !== 'undefined' && document.head && !document.getElementById('mh-card-press-css')) {
+  const el = document.createElement('style');
+  el.id = 'mh-card-press-css';
+  el.textContent = '[data-card-press]{touch-action:manipulation}';
+  document.head.appendChild(el);
+}
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return (no, onTap) => ({
-    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms); },
+  const last = useRef(null);    // 前のタップ { no, at }
+  const pending = useRef(null); // hold で待っている1回目
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(pending.current); }, []);
+  return (no, onTap, opt = {}) => ({
+    'data-card-press': true,
+    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; clearTimeout(pending.current); onLong(no); }, ms); },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
     onPointerCancel: () => clearTimeout(timer.current),
     onContextMenu: (e) => e.preventDefault(),
-    onClick: (e) => { if (fired.current) { fired.current = false; return; } if (onTap) onTap(e); },
+    onClick: (e) => {
+      if (fired.current) { fired.current = false; return; }
+      const now = Date.now();
+      if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
+        last.current = null;
+        if (pending.current) { clearTimeout(pending.current); pending.current = null; }
+        else if (opt.undo) opt.undo();
+        onLong(no);
+        return;
+      }
+      last.current = { no, at: now };
+      if (!onTap) return;
+      if (opt.hold && opt.double !== false) {
+        clearTimeout(pending.current);
+        pending.current = setTimeout(() => { pending.current = null; onTap(); }, CARD_DOUBLE_TAP_MS);
+        return;
+      }
+      onTap(e);
+    },
   });
 };
 
@@ -54898,7 +54931,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return (
-    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
+    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap, { hold: mark === 'target' || mark === 'user' }) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
       {opp ? <>{info}{artEl}</> : <>{artEl}{info}</>}
     </div>
   );
@@ -55533,6 +55566,31 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const mon = el.closest('[data-card-mon]');
     return mon ? mon.getAttribute('data-card-mon') : null;
   };
+  // 手札を2回続けてタップ(CARD_DOUBLE_TAP_MS の内)したら、詳しい画面(社長 2026-10-26)。
+  //   1回目は、選ぶ・ガッツに選ぶ(2回目で元に戻せる)はすぐ動かし、2回目が来たら1回目の前の選び方へ戻す。
+  //   守りの番は、1回押すと守りが決まることがあるので、1回目を待ってから動かす(2回目が来たら動かさない)
+  const handTap = useRef({ last: null, pending: null });
+  useEffect(() => () => clearTimeout(handTap.current.pending), []);
+  const tapHandOrDouble = (i, no) => {
+    const h = handTap.current;
+    const now = Date.now();
+    if (h.last && h.last.i === i && h.last.no === no && now - h.last.at < CARD_DOUBLE_TAP_MS) {
+      const before = h.last.before;
+      h.last = null;
+      if (h.pending) { clearTimeout(h.pending); h.pending = null; }
+      else if (before) { setSel(before.sel); setPicks(before.picks); setHint(before.hint); }
+      setDetail(no);
+      return;
+    }
+    if (mode === 'guard') {
+      h.last = { i, no, at: now, before: null };
+      clearTimeout(h.pending);
+      h.pending = setTimeout(() => { h.pending = null; tapHand(i); }, CARD_DOUBLE_TAP_MS);
+      return;
+    }
+    h.last = { i, no, at: now, before: { sel, picks, hint } };
+    tapHand(i);
+  };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
     // 手札を運ぶ操作を使わない(オプション)ときは、置ける所を作らない(タップと長押しだけ)
@@ -55570,7 +55628,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHand(i);
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);
     };
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
@@ -55866,7 +55924,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
@@ -57217,7 +57275,7 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
   const name = c ? c.name : m ? m.name : no;
   return (
-    <button type="button" data-card-deck-tile={no} {...press(no, onTap)} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+    <button type="button" data-card-deck-tile={no} {...press(no, onTap, { double: false })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
       {/* 「入/持」の札は絵の右下(カードの名前は絵の上にあるので、上に置くと名前が隠れた。2026-10-24 改善部の点検 V5) */}
       <span className="relative block w-full">
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
@@ -57235,6 +57293,7 @@ const CARD_DECK_VIEWS = Object.freeze([{ id: 'mon', label: 'モンスター' }, 
 const CARD_DECK_SORTS = Object.freeze([{ id: 'kind', label: '種類順' }, { id: 'guts', label: 'ガッツ順' }, { id: 'no', label: '番号順' }]);
 // 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」
 // onDetail … 名前の右の「i」を押したときに詳しい画面を開く(長押しに気づかない人のため。2026-10-26)
+// デッキ編成はダブルタップを使わない(続けて押すと続けて入れる。2026-10-26 社長「デッキ編成は詳細ボタンを作る」)
 // unusable … デッキの3体のだれも使えない技(混血のメイン・サブの直しで、前に組んだデッキに残ることがある)。保存の中身は変えず、帯で見せるだけ
 const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove, onDetail = null, unusable = false }) => {
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
@@ -57242,7 +57301,7 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
   return (
     <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
       {unusable && <span data-card-deck-unusable-tag={no} className="pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200">このデッキの子は使えない</span>}
-      <button type="button" data-card-deck-tile={no} {...press(no, onAdd)} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
+      <button type="button" data-card-deck-tile={no} {...press(no, onAdd, { double: false })} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
@@ -57366,7 +57425,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
                 const m = no ? cardMonsterOf(db, no) : null;
                 const size = short ? { maxWidth: 'min(52px, 6vh)' } : undefined;
                 return m
-                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
+                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no), { double: false })} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
                   : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setView('mon')} style={size} className="flex aspect-[5/7] w-[15%] max-w-[52px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[18px] text-white/50 landscape:max-w-[40px]">＋</button>;
               })}
               <div className="min-w-0 flex-1 text-right">
