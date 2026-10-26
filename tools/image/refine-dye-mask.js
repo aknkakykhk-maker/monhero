@@ -42,6 +42,18 @@ const CONFIGS = {
   ] },
   // 黒目は②。明るい下半分と右のふちが体①に入っていた。黒目②から、色が続くかぎり体①へ広げる(黒目のまわりの黒い線で止まる)。
   // 最初は円で指示していて、円を y=405 で切った所に黒目の上のふちが体のまま残っていた(2026-10-27 部長の指摘で作り直し)
+  // 頭のてっぺんの暗い紫(明るさ0.36〜0.47)は後ろの髪②なのに、四角い③(光る髪)のかたまりになっていた。
+  // ②から、明るさ0.5以下の画素をたどって③へ広げる(光る髪は明るいので動かない)
+  Illumine: { grow: [{ from: 2, to: 1, diff: 40, val: [0, 0.5], box: [230, 60, 580, 280] }] },
+  // 脚は体の毛①なのに、脚の中の四角い所だけが①で、まわりは雲②になっていた。脚は赤茶のふちの線で囲まれているので、
+  // ①から色の差の小さい画素をたどって広げる(ふちの線で止まる)
+  // ボタンの目の中の花(水色)は⑤(区分け「⑤=ボタンの目」)なのに①だった。⑤から、目の中だけたどる。
+  // 顔の左下の雲(淡い桃・水色)に③(帽子)が入り込んでいたので、②からたどって戻す
+  Dreamy: { grow: [
+    { from: 1, to: 0, diff: 25, hue: [12, 58], sat: [0.15, 1], box: [150, 480, 420, 712] },
+    { from: 0, to: 4, diff: 90, hue: [170, 358], box: [232, 160, 275, 220] },
+    { from: 2, to: 1, diff: 30, box: [185, 160, 255, 220] },
+  ] },
   // 黒目は彩度1.0、まぶたの黄色は0.57なので、彩度0.85以上の画素だけ進む
   // 黒目のふちの暗い帯も黒目なので、暗い画素(線の扱い)も進む(lines)
   Suezo: { grow: [{ from: 0, to: 1, diff: 40, sat: [0.85, 1], lines: true, box: [400, 360, 760, 690] }] },
@@ -193,6 +205,7 @@ const refine = (srcData, Lin, W, H, cfg) => {
       for (const i of front) for (const j of nb4(i)) {
         if (!(Array.isArray(g.from) ? g.from.includes(L[j]) : L[j] === g.from) || !inB(j) || (isLine(j) && !g.lines) || !opaque(j) || d(px(i), px(j)) > g.diff) continue;
         if (g.sat) { const sa = hsvOf(srcData, j)[1]; if (sa < g.sat[0] || sa > g.sat[1]) continue; }
+        if (g.val) { const va = hsvOf(srcData, j)[2]; if (va < g.val[0] || va > g.val[1]) continue; }
         if (g.hue) { const h = hsvOf(srcData, j)[0]; if (!(g.hue[0] <= g.hue[1] ? (h >= g.hue[0] && h <= g.hue[1]) : (h >= g.hue[0] || h <= g.hue[1]))) continue; }
         L[j] = g.to; grown++; next.push(j);
       }
