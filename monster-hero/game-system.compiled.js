@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 715a52786dee9e0b
+// source-sha256: 4f555d3364200234
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84681,7 +84681,7 @@ const cardGuardOptions = (db, st) => {
     }
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll');
     if (re) {
-      if (re.kinds.includes(atkCard.kind)) out.push({
+      if (re.kinds.includes(atkCard.kind) && !cardHasEff(atkCard, 'noBlockReduce') && !fl.attachNoBlockReduce) out.push({
         type: 'guard',
         hand: hi,
         mon: tgt.m
@@ -86006,10 +86006,11 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const c = cardOf(db, me.hand[o.hand]);
     let after = dmg;
     if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
+    const noReduce = cardHasEff(main, 'noBlockReduce') || !!(pd.flags || {}).attachNoBlockReduce;
     const re = cardEff(c, 'reduce');
-    if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
-    if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
-    if (cardHasEff(c, 'reduceAll') && !cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) after = 0;
+    if (re && !noReduce) after = Math.max(0, dmg - re.n);
+    if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
+    if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0;
     const rf = cardEff(c, 'reflect');
     if (rf) after = rf.keep ? dmg : 0;
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
@@ -89612,7 +89613,7 @@ const cardGuardBlockReasons = (db, st) => {
     const ev = cardEff(c, 'evade');
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
     let why = null;
-    if (!c.ready) why = `「${c.name}」は準備中`;else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;
+    if (!c.ready) why = `「${c.name}」は準備中`;else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
     if (why && !out.includes(why)) out.push(why);
   });
   return out.slice(0, 2);
@@ -93946,10 +93947,11 @@ const CardBattleScreen = ({
       className: "py-1 text-right text-amber-200"
     }, rec.byLevel.win[lv]), React.createElement("td", {
       className: "py-1 text-right text-slate-300"
-    }, rec.byLevel.lose[lv]))))), React.createElement("p", {
+    }, rec.byLevel.lose[lv]))))), CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && React.createElement("p", {
+      "data-card-record-levels-note": true,
       className: "mt-1 text-[10px] font-bold text-slate-500",
       style: JA_LABEL_STYLE
-    }, jaWrap('難易度別の数は、この記録ができてからのぶんです'))), React.createElement("div", {
+    }, jaWrap('難易度別の数は、この表ができてからのぶんです'))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -93967,7 +93969,7 @@ const CardBattleScreen = ({
     }, u)))), React.createElement("p", {
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-500",
       style: JA_WRAP_STYLE
-    }, jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')))));
+    }, jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')))));
   }
   if (view === 'options') {
     const plWhoList = foes.length ? foes : allAssistants.filter(a => CARD_CPU_PLAYLIST_DEFAULT[a.id]);
@@ -100128,7 +100130,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 4;
+const CARD_REPLAY_RULES = 5;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
