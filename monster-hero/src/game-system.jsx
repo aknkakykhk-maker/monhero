@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 72af98d860a15bcc
+// generated-sha256: 8f9a44b9911f9cbc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51460,7 +51460,8 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll');
-    if (re) { if (re.kinds.includes(atkCard.kind)) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
+    // 防御でマイナスされない技(技そのもの・渾身を付けたちから技)には、−N・半分・0 の防御の札は出せない(効かないので。社長の答え 2026-10-27・案A。回避されない技の回避の札と同じ扱い)
+    if (re) { if (re.kinds.includes(atkCard.kind) && !cardHasEff(atkCard, 'noBlockReduce') && !fl.attachNoBlockReduce) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
     const rf = cardEff(c, 'reflect');
     if (rf) { if (rf.kinds.includes(atkCard.kind) && !pd.reflect) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
   });
@@ -52193,9 +52194,11 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const c = cardOf(db, me.hand[o.hand]);
     let after = dmg;
     if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-    const re = cardEff(c, 'reduce'); if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
-    if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
-    if (cardHasEff(c, 'reduceAll') && !cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
+    // 防御でマイナスされない技(技そのもの・渾身を付けたちから技)には、−N・半分・0 のどの防御も効かない(2026-10-26 総点検A: −N と半分は渾身を見ていなかった)
+    const noReduce = cardHasEff(main, 'noBlockReduce') || !!(pd.flags || {}).attachNoBlockReduce;
+    const re = cardEff(c, 'reduce'); if (re && !noReduce) after = Math.max(0, dmg - re.n);
+    if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
+    if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
     const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg : 0;
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
@@ -54553,6 +54556,8 @@ const cardGuardBlockReasons = (db, st) => {
     else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
     else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;
     else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
+    // 防御でマイナスされない技(技そのもの・渾身つき)には −N・半分・0 の防御は出せない(案A)。はね返す防御は別
+    else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
     if (why && !out.includes(why)) out.push(why);
   });
   return out.slice(0, 2);
@@ -60061,7 +60066,8 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
 //   2 → 3: 必殺技の応酬・封印でカード投げとボンバなどの出せる手・ガッツにする手札の番号の確かめ(#3821)
 //   3 → 4: ドレインは実際に減ったライフだけ回復(2026-10-27)
-const CARD_REPLAY_RULES = 4; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン
+//   4 → 5: 防御でマイナスされない技には −N・半分・0 の防御の札を出せない(社長の答え 案A・2026-10-27)
+const CARD_REPLAY_RULES = 5; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
