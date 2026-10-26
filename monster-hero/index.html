@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '9b8a820681d6';
+var GAME_BUILD = '5f5e37d6be21';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -2277,6 +2277,21 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     var l = document.getElementById('loading');
     if (l) l.innerHTML = '<div style="color:#f88;padding:16px;text-align:center;font-weight:900">読み込みに失敗しました<br>通信環境を確認して再読み込みしてください</div>';
   }
+  // 事前ダウンロードの置き場(mh-code-v1・sw.js)にためた本体が壊れていたとき、その本体を置き場から消す。
+  // 消さないと、版が変わるまで毎回「壊れた物を読む → 取り直す」になる。取り直し(&retry=)は SW が素通しするので、消し終わるのを待たない
+  function evictCachedGame(){
+    try {
+      if (!window.caches) return;
+      caches.has('mh-code-v1').then(function(has){
+        if (!has) return;
+        return caches.open('mh-code-v1').then(function(c){
+          return c.keys().then(function(keys){
+            keys.forEach(function(r){ if (/\/game-system\.compiled\.js\?/.test(r.url)) c.delete(r); });
+          });
+        });
+      }).catch(function(){});
+    } catch (e) {}
+  }
   function loadGame(){
     attempts++;
     window.__mhBoot.say('ゲーム本体を読み込み中');
@@ -2284,6 +2299,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     script.src = 'game-system.compiled.js?v=' + GAME_BUILD + (attempts > 1 ? '&retry=' + Date.now() : '');
     script.onload = function(){
       if (typeof MonsterHeroGame === 'undefined') {
+        evictCachedGame();
         if (attempts < 2) loadGame(); else showLoadError();
         return;
       }
@@ -2291,6 +2307,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     };
     script.onerror = function(){
       script.remove();
+      evictCachedGame();
       if (attempts < 2) loadGame(); else { window.__mhBoot.fail('game-system.compiled.js'); showLoadError(); }
     };
     document.body.appendChild(script);

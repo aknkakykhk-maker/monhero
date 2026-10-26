@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "id": "d07bb47b0874",
+  "id": "59c7636a8f28",
   "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117694759,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257269897,"count":1719},"core":{"bytes":14131535,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
@@ -1743,6 +1743,6 @@
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"5b251dd8c1e7","size":837514,"pack":"core"},
     "data/card-battle-cards.js": {"v":"c2b5285eda05","size":112387,"pack":"core"},
-    "game-system.compiled.js": {"v":"9b8a820681d6","size":6447605,"pack":"core"}
+    "game-system.compiled.js": {"v":"5f5e37d6be21","size":6447605,"pack":"core"}
   }
 }
