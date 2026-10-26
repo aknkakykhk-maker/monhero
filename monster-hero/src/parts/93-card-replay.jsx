@@ -14,7 +14,7 @@
 
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
-const CARD_REPLAY_RULES = 2; // 2: ドレインは実際に減ったライフだけ回復(2026-10-27)
+const CARD_REPLAY_RULES = 3; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27) / 3: ドレインは実際に減ったライフだけ回復(2026-10-27)
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
