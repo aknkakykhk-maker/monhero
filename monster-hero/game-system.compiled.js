@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: babbc07ced9303f9
+// source-sha256: 07ad071839d4dac2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -81923,6 +81923,29 @@ const RaidJackHpBar = ({
     }
   }));
 };
+const RaidJackFitName = ({
+  label,
+  size = 9,
+  className = 'text-slate-100'
+}) => React.createElement("span", {
+  className: `mt-0.5 w-full overflow-hidden whitespace-nowrap font-black leading-tight [container-type:inline-size] ${className}`
+}, React.createElement("span", {
+  className: "block",
+  style: {
+    fontSize: `min(${size}px, calc(100cqw / ${[...String(label || '')].length + 0.3}))`
+  }
+}, label));
+const RaidJackFitTitle = ({
+  text
+}) => React.createElement("span", {
+  "data-raid-jack-fit-title": true,
+  className: "block min-w-0 flex-1 overflow-hidden whitespace-nowrap [container-type:inline-size]"
+}, React.createElement("span", {
+  className: "block pr-1",
+  style: {
+    fontSize: `min(1.25rem, calc(100cqw / ${[...text].length + 0.8}))`
+  }
+}, text));
 const RaidJackRewardChips = ({
   reward
 }) => React.createElement("span", {
@@ -81945,8 +81968,9 @@ const RaidJackRewardRow = ({
 }, React.createElement("div", {
   className: "w-[68px] shrink-0"
 }, React.createElement("div", {
-  className: "text-[10px] font-black leading-tight text-orange-200"
-}, label), note && React.createElement("div", {
+  className: "text-[10px] font-black leading-tight text-orange-200",
+  style: JA_WRAP_STYLE
+}, jaWrap(label)), note && React.createElement("div", {
   className: "text-[8px] leading-tight text-slate-400"
 }, note)), React.createElement("div", {
   className: "min-w-0 flex-1"
@@ -82007,7 +82031,7 @@ const RaidJackRewardList = ({
   const have = Array.isArray(claimed) ? claimed : [];
   return React.createElement("div", {
     "data-raid-jack-reward-list": true,
-    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "ジャックの報酬一覧",
@@ -82185,7 +82209,7 @@ const RaidJackRankingList = ({
   const title = useSrc && maxHit ? `${srcName}の最大ダメージ(${src === 'rhythm' ? '1曲' : '1戦'}あたり・${maxTierName})` : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${RAID_JACK_A_TIERS[tierIdx].name.replace('ジャック', '')}`})` : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return React.createElement("div", {
     "data-raid-jack-ranking-list": true,
-    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3",
+    className: "fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3",
     role: "dialog",
     "aria-modal": "true",
     "aria-label": "ジャックのランキング",
@@ -82218,8 +82242,10 @@ const RaidJackRankingList = ({
       setSrc('all');
     }
   }), React.createElement("div", {
+    className: "mb-1.5 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0"
+  }, React.createElement("div", {
     "data-raid-jack-ranking-kinds": true,
-    className: "mb-2 flex shrink-0 gap-1.5 text-[10px] font-black"
+    className: "flex shrink-0 gap-1.5"
   }, React.createElement("button", {
     type: "button",
     "data-raid-jack-ranking-kind": "total",
@@ -82232,16 +82258,16 @@ const RaidJackRankingList = ({
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
   }, "1戦の最大ダメージ")), tab === 'a' && React.createElement("div", {
     "data-raid-jack-ranking-sources": true,
-    className: "mb-2 flex shrink-0 gap-1.5 text-[10px] font-black"
+    className: "flex shrink-0 gap-1.5 border-l border-white/15 pl-1.5"
   }, [['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート']].map(([id, label]) => React.createElement("button", {
     type: "button",
     key: id,
     "data-raid-jack-ranking-source": id,
     onClick: () => setSrc(id),
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${src === id ? 'border-fuchsia-300 bg-fuchsia-900 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
-  }, label))), maxHit && React.createElement("div", {
+  }, label)))), maxHit && React.createElement("div", {
     "data-raid-jack-ranking-max-tiers": true,
-    className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
+    className: "mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0"
   }, [{
     id: 'all',
     name: '全難易度',
@@ -82258,7 +82284,7 @@ const RaidJackRankingList = ({
     className: `min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxTier === t.n ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`
   }, t.name))), tab === 'a' && !maxHit && React.createElement("div", {
     "data-raid-jack-ranking-tiers": true,
-    className: "mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black"
+    className: "mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0"
   }, RAID_JACK_A_TIERS.map((t, i) => React.createElement("button", {
     type: "button",
     key: t.id,
@@ -82422,7 +82448,9 @@ const RaidJackScreen = ({
     className: `${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`,
     "data-raid-jack-screen": true
   }, React.createElement(ScreenHead, {
-    title: "カボチャの大王ジャック",
+    title: React.createElement(RaidJackFitTitle, {
+      text: "カボチャの大王ジャック"
+    }),
     icon: "🎃",
     accent: "text-orange-200",
     onBack: onBack,
@@ -82736,9 +82764,9 @@ const RaidJackPrepScreen = ({
       "data-raid-mon-range": at >= 0 ? at : undefined,
       "aria-pressed": !!role,
       className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`
-    }, faceOf(mon, 'h-12 w-12'), React.createElement("span", {
-      className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-    }, mon.name), monsterTypeProtoOn() && (() => {
+    }, faceOf(mon, 'h-12 w-12'), React.createElement(RaidJackFitName, {
+      label: mon.name
+    }), monsterTypeProtoOn() && (() => {
       const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main];
       return t ? React.createElement("span", {
         "data-raid-mon-type": monsterTypeOf(mon.baseId || mon.id).main,
@@ -82799,9 +82827,9 @@ const RaidJackPrepScreen = ({
       className: "text-[9px] font-black text-slate-200"
     }, "距離")), mon ? faceOf(mon, 'mt-0.5 h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8') : React.createElement("span", {
       className: `mt-0.5 flex h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`
-    }, "+"), React.createElement("span", {
-      className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-    }, mon ? mon.name : active ? 'ここに入る' : '空き'), React.createElement("span", {
+    }, "+"), React.createElement(RaidJackFitName, {
+      label: mon ? mon.name : active ? 'ここに入る' : '空き'
+    }), React.createElement("span", {
       "data-raid-slot-apt": mon ? r : undefined,
       className: `text-[10px] font-black leading-tight tabular-nums ${mon ? pctTone(pct) : 'text-slate-600'}`
     }, mon ? formatAptPct(pct) : '—'), mon && step === 'party' && React.createElement("span", {
@@ -82883,9 +82911,9 @@ const RaidJackPrepScreen = ({
     "data-raid-teach": t.id,
     onClick: () => toggleTeach(t.id),
     className: `flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`
-  }, cardIconNode(t.icon, 40, t.id), React.createElement("span", {
-    className: "mt-0.5 w-full truncate text-[9px] font-black text-slate-100"
-  }, t.baseName)), typeof onOpenTeachingDetail === 'function' && React.createElement("button", {
+  }, cardIconNode(t.icon, 40, t.id), React.createElement(RaidJackFitName, {
+    label: t.baseName
+  })), typeof onOpenTeachingDetail === 'function' && React.createElement("button", {
     type: "button",
     "data-raid-teach-detail": t.id,
     "aria-label": `${t.baseName}の効果を見る`,
