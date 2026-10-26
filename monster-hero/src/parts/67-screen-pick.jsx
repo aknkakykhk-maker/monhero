@@ -593,7 +593,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
               </>);})()}
-              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
+              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>くわしく見る <ChevronRight size={11}/></div>
             </>),
           })}
         </button>);})}
@@ -746,8 +746,9 @@ function PickSlotScreen({
       {/* 供モンの合流では、強化フェーズのどこにいるかを出す(ラン開始時の配置では出さない) */}
       {phasePlan&&<PhaseSteps plan={phasePlan} current="slot" nextWave={wave>0?wave+1:null} className="shrink-0 mb-2"/>}
       <div className="shrink-0 flex flex-col items-center">
-        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ) */}
-        <div className="relative mb-2 flex items-center justify-center">
+        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ)。
+            はずむ動き(animate-bounce)は絵の高さの1/4ほど上へ跳ぶので、そのぶん上に余白を置く(.mh-phase-bounce-room。絵が小さくなる背の低い画面では余白も小さく。70-bootstrap.jsx)(はずんだときに頭が画面の上で切れていた。2026-10-26 カゲあつくんの見回り) */}
+        <div data-pick-hero className="mh-phase-bounce-room relative mb-2 flex items-center justify-center">
           <span aria-hidden="true" className="mh-ph-rune"/>
           <span aria-hidden="true" className="mh-ph-floor"/>
           {mon?.imgUrl?(<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="mon" masuColors={mon.colors} className="mh-phase-hero relative z-10 shrink-0 w-24 h-24 object-contain animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"/>):(<div className="mh-phase-hero relative z-10 text-6xl animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]">{mon?.emoji}</div>)}

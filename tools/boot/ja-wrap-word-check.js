@@ -17,7 +17,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const args = process.argv.slice(2), argOf = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
 const P = (f) => fs.readFileSync(path.join(ROOT, 'monster-hero', f), 'utf8');
 let failed = 0;
-// 言葉の途中で折れてよい数。2026-10-26 に0まで直した(直す前 140)。台詞を書き足して増えたら、41-screen-ui.jsx の jaWrapPoints の決まりか JA_WORDS_KEEP を直す
+// 言葉の途中で折れてよい数。2026-10-26 に0まで直した(直す前 140。数と助数詞・カタカナの造語も足した)。台詞を書き足して増えたら、41-screen-ui.jsx の jaWrapPoints の決まりか JA_WORDS_KEEP を直す
 const JA_WRAP_WORD_LIMIT = 0;
 const check = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!cond) failed++; };
 
@@ -59,6 +59,8 @@ check('台詞を集められた', bubble.length >= 500 && story.length >= 300 &&
       ['「お・ご」と漢字', (l, r) => /(?:^|[^ぁ-ゖ])[おご]$/.test(l) && new RegExp(`^${K}`).test(r)],
       ['くっついた言葉(読み|合い)', (l, r) => new RegExp(`${K}[きしちひみりっ]$`).test(l) && !/少し$/.test(l) && new RegExp(`^${K}`).test(r)],
       ['カタカナと英字', (l, r) => new RegExp(`${KA}$`).test(l) && /^[A-Za-zＡ-Ｚ]/.test(r)],
+      // 数と助数詞・単位(「1／曲ずつ」「5／倍」「Lv.／12」。2026-10-26 クラフト)
+      ['数と助数詞', (l, r) => (/[0-9０-９]$/.test(l) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連%％]|時間|ms|P|Lv)/.test(r)) || (/(?:Lv\.?|×|約|第)$/.test(l) && /^[0-9０-９]/.test(r))],
     ];
     const sets = [['お話', story, [[320, 256, 13], [375, 311, 13], [390, 326, 13]]], ['吹き出し', bubble, [[320, 190, 12], [375, 245, 12], [390, 260, 12]]], ['カード', card, [[320, 170, 12], [375, 225, 12], [390, 240, 12]]]];
     const out = { lines: 0, breaks: 0, bad: [], byRule: {} };

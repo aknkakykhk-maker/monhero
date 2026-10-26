@@ -27,7 +27,7 @@ for (const [kind, fn] of [['スコア', 'renderScoreRankingEntry'], ['ブリー�
 }
 
 // --- ② 古い記録の受け皿 ---
-for (const text of ['勇者モン情報なし', '編成情報なし（過去の記録）', 'ブリーダーLv情報なし', '絆Lv情報なし', 'スコア情報なし']) {
+for (const text of ['勇者モンの記録なし', '編成の記録なし（過去の記録）', 'ブリーダーLvの記録なし', '絆Lvの記録なし', 'スコアの記録なし']) {
   check(`古い記録でも代わりの文言が出る: ${text}`, has(text));
 }
 check('ブリーダーLv集計後も編成・スコアを保持', has('{ ...r, userName: name, level: lv }'));

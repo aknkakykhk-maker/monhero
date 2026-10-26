@@ -202,10 +202,13 @@ const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
     {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
   </span>
 );
+// 血統名は「…」で切らず、2行まで折り返す(2026-10-26。幅320pxでは28体中13種が「モッ…」「ライ…」と切れ、
+// 360pxでもウンディーネ・ユグドラシルが切れていた)。札の高さは顔アイコン(28px)で決まり、2行の字はその中に収まるので
+// 札の大きさは変わらない。5文字以上は少し小さい字にして、なるべく1行で読めるようにする
 const DexLineageChip = ({ lineage, iconUrl }) => (
-  <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
+  <span data-dex-lineage className="flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1">
     {iconUrl?<DexMonsterIcon src={iconUrl} lineage/>:<span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
-    <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
+    <span data-dex-lineage-name className={`${String(lineage.name||'').length>=5?'text-[10px]':'text-[11px]'} min-w-0 font-black text-amber-100 leading-[1.2] line-clamp-2 [overflow-wrap:anywhere]`}>{lineage.name}</span>
   </span>
 );
 // 立ち絵の <img> そのもの。待機アニメ(withMonsterIdleArt)は絵の要素を複製して重ねるので、
@@ -415,6 +418,10 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
         </div>)}
       </div>
     </div>}
+      {item.giftHow&&<div data-market-frame-gift className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
+        <div className="text-amber-300 leading-snug" style={JA_WRAP_STYLE}>{jaWrap(`手に入れ方：${item.giftHow}`)}</div>
+        <div className="mt-1 text-[11px] text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('マーケットでは買えません。プレゼントで届きます')}</div>
+      </div>}
       {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
         <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
         <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
@@ -422,7 +429,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
       {!item.groupMembers&&<div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>}
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
-      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
+      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{item.giftOnly?'プレゼント':marketPriceText(item)}</span></div>
     </div>
     <div className="mt-3"><MarketModalClose onClick={onClose}/></div>
   </MarketModal>;
@@ -489,7 +496,7 @@ const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', 
     {error&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{error}</p>}
     <div className="mt-3 grid grid-cols-1 gap-2">
       <button type="button" disabled={!canConfirm} onClick={()=>onConfirm&&onConfirm(count)} className={`mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`}>{meta.verb}する</button>
-      <MarketModalClose onClick={onCancel} label="キャンセル" disabled={pending}/>
+      <MarketModalClose onClick={onCancel} label="やめる" disabled={pending}/>
     </div>
   </MarketModal>;
 };
@@ -969,11 +976,11 @@ const HELP_DATA_TITLES = {
   cardBeatPointRewards: 'MFバトルカードの1戦でもらえるビートP',
   cardPacks: 'パックの弾と入っている種族',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
-  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
-  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
+  raidJackTiersA: 'レイドバトルのジャック(段階別の共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階別のライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
   tacticsHateGains: '🔥(ヘイト)の増え方',
-  tacticsHateTypes: 'タイプごとの🔥',
+  tacticsHateTypes: 'タイプ別の🔥',
   tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
@@ -994,11 +1001,11 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
-  assistantBondRewards: '仲良し度のLvごとのごほうび(助手ごとに1回)',
+  assistantBondRewards: '仲良し度Lvのごほうび(助手ひとりにつき1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
-  psycheRewards: '難易度ごとにもらえる虹のプシュケー',
-  rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  psycheRewards: '難易度別にもらえる虹のプシュケー',
+  rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
   rhythmHellEntry: 'はじめての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
