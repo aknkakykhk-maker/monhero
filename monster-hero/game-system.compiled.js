@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ea2edbda147f1d4f
+// source-sha256: 7c0b5f7e93acf69a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -129454,7 +129454,9 @@ function MonsterHeroGame() {
           className: `${MASU_DETAIL_ACTION_CLASS} border-teal-400/45 bg-teal-950/60 text-teal-100`
         }, React.createElement("span", {
           className: "text-[15px] leading-none"
-        }, "🎓"), React.createElement("span", null, "トレーニング")), React.createElement("button", {
+        }, "🎓"), React.createElement("span", {
+          className: "whitespace-nowrap max-[359px]:text-[10px]"
+        }, "トレーニング")), React.createElement("button", {
           type: "button",
           "aria-label": `${masu.name}を染色`,
           onClick: () => {
