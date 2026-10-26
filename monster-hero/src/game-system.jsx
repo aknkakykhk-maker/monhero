@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: baa25b14b5446257
+// generated-sha256: 32dff4c1ee772aa7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 00:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 00:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39827,8 +39827,13 @@ const tacticsAimParts = (parts, totalText = '') => {
 //   6字までは1行、12字までは2行、それより長いときは3行に割り、1行の字数でカードの幅(100cqw)を
 //   割った大きさまで字を小さくする(箱の左右の余白4pxと字の丸めのぶん、6px引いてから割る)。cqw が使えない端末では、この指定が捨てられて今までの 11px になる
 // boxHeight を渡すと、その高さに行数ぶん収まる大きさでも頭打ちにする(背の低い画面で技名の欄が縮むため)
+// カタカナだけの1語(クロノキネシス など)は、割ると「クロノキ/ネシス」と言葉の途中で折れるので、10文字までは1行のまま字を縮める
+// (2026-10-26 カゲあつくんの見回り。MFバトルカードの手札と同じ考え方)
+const handCardOneWord = (name) => /^[ァ-ヶー・]+$/.test(String(name || ''));
 const handCardNameFit = (name, boxHeight) => {
   const n = [...String(name || '')].length || 1;
+  const oneWord = handCardOneWord(name) && n <= 10;
+  if (oneWord && n > 6) return { fontSize: `min(11px, calc((100cqw - 6px) / ${n}))`, lineHeight: '1.15', whiteSpace: 'nowrap' };
   const lines = n <= 6 ? 1 : n <= 12 ? 2 : 3;
   const perLine = Math.ceil(n / lines);
   const lh = lines === 3 ? 1.08 : 1.15;

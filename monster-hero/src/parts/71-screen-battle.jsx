@@ -48,8 +48,13 @@ const tacticsAimParts = (parts, totalText = '') => {
 //   6字までは1行、12字までは2行、それより長いときは3行に割り、1行の字数でカードの幅(100cqw)を
 //   割った大きさまで字を小さくする(箱の左右の余白4pxと字の丸めのぶん、6px引いてから割る)。cqw が使えない端末では、この指定が捨てられて今までの 11px になる
 // boxHeight を渡すと、その高さに行数ぶん収まる大きさでも頭打ちにする(背の低い画面で技名の欄が縮むため)
+// カタカナだけの1語(クロノキネシス など)は、割ると「クロノキ/ネシス」と言葉の途中で折れるので、10文字までは1行のまま字を縮める
+// (2026-10-26 カゲあつくんの見回り。MFバトルカードの手札と同じ考え方)
+const handCardOneWord = (name) => /^[ァ-ヶー・]+$/.test(String(name || ''));
 const handCardNameFit = (name, boxHeight) => {
   const n = [...String(name || '')].length || 1;
+  const oneWord = handCardOneWord(name) && n <= 10;
+  if (oneWord && n > 6) return { fontSize: `min(11px, calc((100cqw - 6px) / ${n}))`, lineHeight: '1.15', whiteSpace: 'nowrap' };
   const lines = n <= 6 ? 1 : n <= 12 ? 2 : 3;
   const perLine = Math.ceil(n / lines);
   const lh = lines === 3 ? 1.08 : 1.15;
