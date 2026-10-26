@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c1546fcc1ccae17
+// source-sha256: 393e70171eb5d306
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64151,7 +64151,7 @@ function PickSlotScreen({
         size: 20
       }), React.createElement("span", {
         className: `relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade, " ", perSlotApt ? 'この距離で' : '合流後', " ", formatAptPct(after))) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
+      }, grade, " ", perSlotApt ? `この距離で ${formatAptPct(after)}` : `合流すると ${aptGradeToPct(grade) === 0 ? '+' : ''}${formatAptPct(aptGradeToPct(grade))}`)) : React.createElement(React.Fragment, null, s.imgUrl ? React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -119726,7 +119726,7 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between gap-2 mb-0.5 flex-wrap"
     }, React.createElement("div", {
       className: "text-[10px] text-cyan-400 uppercase font-bold"
-    }, "間合い適性（距離補正）", growth && React.createElement("span", {
+    }, aptCurrentPct ? 'この子の得意な距離' : '間合い適性（距離補正）', growth && React.createElement("span", {
       className: "ml-1 text-slate-500 normal-case"
     }, "タップで詳細")), aptPointsLabel), React.createElement("div", {
       className: "grid grid-cols-4 gap-1 mt-1"
@@ -119742,15 +119742,11 @@ function MonsterHeroGame() {
       }, label), React.createElement("span", {
         "data-dist-apt-grade": true,
         className: `flex h-[22px] w-full items-center justify-center rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade), React.createElement("span", {
+      }, grade), cur != null && React.createElement("span", {
+        className: "text-[8px] font-bold leading-none text-slate-400"
+      }, "合流すると"), React.createElement("span", {
         className: `text-[10px] font-mono font-black leading-none ${pct > 0 ? 'text-cyan-300' : pct < 0 ? 'text-red-300' : 'text-slate-500'}`
-      }, formatAptPct(pct)), cur != null && React.createElement("span", {
-        className: "w-full text-center leading-tight mt-0.5"
-      }, React.createElement("span", {
-        className: "block text-[10px] text-slate-400 font-mono"
-      }, "現在 ", formatAptPct(cur)), React.createElement("span", {
-        className: `block text-[10px] font-mono font-black ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`
-      }, "→ ", formatAptPct(cur + pct))), gain && (gain.baseUp > 0 || gain.enhance > 0) && React.createElement("span", {
+      }, cur != null && pct === 0 ? '+' : '', formatAptPct(pct)), gain && (gain.baseUp > 0 || gain.enhance > 0) && React.createElement("span", {
         className: "flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5"
       }, growthGainBadge('base', gain.baseUp), growthGainBadge('enhance', gain.enhance)));
       return React.createElement("div", {
@@ -119764,9 +119760,31 @@ function MonsterHeroGame() {
         onClick: () => setGrowthAptOpen(aptOpen ? null : openKey),
         className: `w-full min-w-0 flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1 active:scale-95 ${aptOpen ? 'border-fuchsia-400/70 bg-fuchsia-950/40' : 'border-white/10 bg-black/20'}`
       }, cell) : cell, aptExtra ? aptExtra(idx, grade) : null);
-    })), openAptEntry && renderGrowthAptDetail(openAptEntry), React.createElement("div", {
-      className: "text-[10px] text-slate-500 font-bold mt-1 leading-tight"
-    }, "置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます")), renderSkillSection(mon), (() => {
+    })), openAptEntry && renderGrowthAptDetail(openAptEntry), aptCurrentPct && React.createElement("details", {
+      "data-apt-detail": true,
+      className: "mt-1 rounded-lg bg-black/30 px-2 py-1"
+    }, React.createElement("summary", {
+      className: "cursor-pointer text-[10px] font-black text-cyan-300"
+    }, "くわしく(現在の補正 → 合流したあと)"), React.createElement("div", {
+      className: "grid grid-cols-4 gap-1 mt-1"
+    }, RANGE_LABELS.map((label, idx) => {
+      const grade = getDistAptitude(mon, idx);
+      const pct = aptDeltaPct ? aptDeltaPct[idx] || 0 : aptGradeToPct(grade);
+      const cur = aptCurrentPct[idx] || 0;
+      return React.createElement("span", {
+        key: idx,
+        className: "text-center leading-tight"
+      }, React.createElement("span", {
+        className: "block text-[9px] font-black text-slate-300"
+      }, label), React.createElement("span", {
+        className: "block text-[10px] text-slate-400 font-mono"
+      }, "現在 ", formatAptPct(cur)), React.createElement("span", {
+        className: `block text-[10px] font-mono font-black ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`
+      }, "→ ", formatAptPct(cur + pct)));
+    }))), React.createElement("div", {
+      className: "text-[10px] text-slate-500 font-bold mt-1 leading-tight",
+      style: JA_WRAP_STYLE
+    }, jaWrap('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます'))), renderSkillSection(mon), (() => {
       const exDef = typeof tacticsExDefOf === 'function' ? raidExDefOf(mon.id) : null;
       if (!exDef) return null;
       const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
