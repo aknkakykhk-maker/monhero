@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c3d83529c66ec28
+// source-sha256: 0bcdf5ff58ac0dab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -83873,6 +83873,7 @@ const cardLoseGuts = (st, p, n) => {
   for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
   return k;
 };
+const cardHandIdxsOk = (hand, idxs) => Array.isArray(idxs) && idxs.every(i => Number.isInteger(i) && i >= 0 && i < hand.length) && new Set(idxs).size === idxs.length;
 const cardTakeFromHand = (st, p, idxs) => {
   const me = st.players[p];
   const sorted = [...new Set(idxs)].sort((a, b) => b - a);
@@ -83914,7 +83915,7 @@ const cardAttachMods = cards => {
   });
   return m;
 };
-const cardFieldBanned = (db, st, p, mi, card, idxs) => {
+const cardFieldBanned = (db, st, p, mi, card, idxs, extra = 0, target = null) => {
   if (!st.field || !card) return false;
   const kinds = cardFieldEff(st, 'fieldBanKind');
   if (kinds && mi >= 0 && kinds.kinds.includes(card.kind)) return true;
@@ -83927,7 +83928,9 @@ const cardFieldBanned = (db, st, p, mi, card, idxs) => {
   let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(card.kind)) mult *= mon.mult.n;
   if (mon && mon.charge && mon.charge.kinds.includes(card.kind)) mult *= mon.charge.n;
-  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add) * mult + cardFieldDmgAdd(st, card));
+  const mv = cardEff(card, 'multVs');
+  if (mv && target && cardMonType(target, st.turn) === mv.type) mult *= mv.n;
+  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add + extra) * mult + cardFieldDmgAdd(st, card));
   return ban.max !== undefined && dmg <= ban.max || ban.min !== undefined && dmg >= ban.min;
 };
 const cardFieldClear = st => {
@@ -84273,24 +84276,28 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (cardHasEff(card, 'tossBonus')) {
-          tossSets(idxs).forEach(toss => opp.mons.forEach((t, j) => {
-            if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{
-              p: cardOther(p),
-              m: j
-            }], false)) out.push({
-              type: 'attack',
-              mon: mi,
-              hand: idxs,
-              target: {
+          tossSets(idxs).forEach(toss => {
+            if (cardFieldBanned(db, st, p, mi, card, idxs, toss.length)) return;
+            opp.mons.forEach((t, j) => {
+              if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{
                 p: cardOther(p),
                 m: j
-              },
-              toss
+              }], false)) out.push({
+                type: 'attack',
+                mon: mi,
+                hand: idxs,
+                target: {
+                  p: cardOther(p),
+                  m: j
+                },
+                toss
+              });
             });
-          }));
+          });
           return;
         }
-        if (cardFieldBanned(db, st, p, mi, card, idxs)) return;
+        const byTarget = cardHasEff(card, 'multVs') && !cardHasEff(card, 'area') && !cardHasEff(card, 'split');
+        if (!byTarget && cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
           cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => out.push(form ? {
@@ -84338,7 +84345,7 @@ const cardAttackOptions = (db, st) => {
           if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{
             p: cardOther(p),
             m: j
-          }], false)) out.push({
+          }], false) && !(byTarget && cardFieldBanned(db, st, p, mi, card, idxs, 0, t))) out.push({
             type: 'attack',
             mon: mi,
             hand: idxs,
@@ -85299,7 +85306,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'discard') return null;
     const q = st.pendingDiscard.p;
     const idxs = (act.hand || []).slice(0, st.pendingDiscard.n);
-    if (idxs.length !== st.pendingDiscard.n || idxs.some(i => i < 0 || i >= st.players[q].hand.length)) return null;
+    if (idxs.length !== st.pendingDiscard.n || !cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].discard.push(...taken);
     cardLog(st, `${st.players[q].name}は手札を${taken.length}枚捨てた`);
@@ -85310,6 +85317,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'setupGuts') return null;
     const idxs = (act.hand || []).slice(0, CARD_BATTLE_SETUP_GUTS_MAX);
     const q = cardOther(st.first);
+    if (!cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[q].name}は始める前に${taken.length}枚をガッツにした`);
@@ -85370,6 +85378,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax');
     if (gm && (act.hand || []).length > gm.n) return null;
+    if (!cardHandIdxsOk(st.players[p].hand, act.hand || [])) return null;
     const taken = cardTakeFromHand(st, p, act.hand || []);
     st.players[p].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
@@ -99675,7 +99684,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 3;
+const CARD_REPLAY_RULES = 4;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
