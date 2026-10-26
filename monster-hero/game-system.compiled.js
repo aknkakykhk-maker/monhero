@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ee12038b37a87697
+// source-sha256: 81a800e50eec96f9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89871,7 +89871,7 @@ const CardResultTalk = ({
     alt: a.name,
     className: "w-[46%]",
     style: {
-      height: 'min(220px, 28vh, max(110px, calc(100vh - 460px)))'
+      height: 'min(220px, 28vh, max(110px, calc(var(--mh-vh) - 460px)))'
     }
   }), React.createElement("div", {
     className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",

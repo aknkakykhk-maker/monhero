@@ -278,7 +278,7 @@ const CardResultTalk = ({ a, lineScene, talkFacts }) => {
   const face = ai ? ai.face : line ? line.face : 'normal';
   return (
     <div data-card-result-talk={ai ? 'ai' : 'line'} className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh, max(110px, calc(100vh - 460px)))' }}/>
+      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh, max(110px, calc(var(--mh-vh) - 460px)))' }}/>
       <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{cardJaWrap(text)}</div>
     </div>
   );

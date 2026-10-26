@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2329e9ce70e0ea6d
+// generated-sha256: f65a54d729602c21
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54732,7 +54732,7 @@ const CardResultTalk = ({ a, lineScene, talkFacts }) => {
   const face = ai ? ai.face : line ? line.face : 'normal';
   return (
     <div data-card-result-talk={ai ? 'ai' : 'line'} className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh, max(110px, calc(100vh - 460px)))' }}/>
+      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh, max(110px, calc(var(--mh-vh) - 460px)))' }}/>
       <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{cardJaWrap(text)}</div>
     </div>
   );
