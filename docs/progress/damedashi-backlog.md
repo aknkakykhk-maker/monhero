@@ -34,3 +34,6 @@
 
 ## 2026-10-26 イベント・カボチャの大王ジャック
 → [damedashi-2026-10-26/raid/README.md](damedashi-2026-10-26/raid/README.md)(4件。1は横で挑戦できない)
+
+## 2026-10-26 横向きで指が届かないボタン
+→ [damedashi-2026-10-26/landscape-reach/README.md](damedashi-2026-10-26/landscape-reach/README.md)(4件。1〜3は横で押せない)
