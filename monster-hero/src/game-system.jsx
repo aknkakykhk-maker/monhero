@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f73c5579c90a2921
+// generated-sha256: 7c4b173eb13c6a49
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -32989,6 +32989,22 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
   );
 };
 // ==== 強化フェーズの共通部品ここまで ====
+
+// お話や大事な窓が出ているあいだは、画面の上に重なる知らせ(新しいバージョンの帯など)を出すのを待つ。
+// 閉じたら出す(2026-10-27 社長室カゲあつくんの指摘「お話の吹き出しの頭を隠す」)。
+// 見るのは、お話の舞台(data-story-stage)と、窓(aria-modal・role="dialog")。待っているあいだだけ1秒ごとに見直す
+const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"],[role="dialog"]';
+const overlayOpenNow = () => typeof document !== 'undefined' && !!document.querySelector(OVERLAY_WAIT_SELECTOR);
+function WaitForOverlayClose({ children }) {
+  const [blocked, setBlocked] = useState(overlayOpenNow);
+  useEffect(() => {
+    const tick = () => setBlocked(overlayOpenNow());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return blocked ? null : children;
+}
 
 // ---- part: 42-picker-sheet.jsx ----
 // ==== 共通部品: 一覧から選ぶ窓(PickerSheet) ====
@@ -77344,7 +77360,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     </div>,
     document.body
   ) : null;
-  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
+  // お話や大事な窓が出ているあいだは出さずに待ち、閉じてから出す(WaitForOverlayClose・41-screen-ui.jsx)
+  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(<WaitForOverlayClose>{
     updateNoticeSmall ? (
       <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
         className="fixed z-[100000] right-3 flex items-stretch gap-1"
@@ -77354,10 +77371,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     ) : (
       <div aria-live="assertive" data-update-notice="full" data-update-notice-place="top" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
-        <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
+        <button type="button" onClick={reloadLatestVersion} className="flex-1 min-w-0 flex items-center justify-center gap-2 min-h-[48px] px-3 py-2 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[13px] leading-tight shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18} className="shrink-0"/>{/* 「更新す/る」のように言葉の途中で折れないよう、2つの言葉をそれぞれ折れない塊にする。
+            狭い画面で折れるのは2つのあいだだけ。「更新する」は右のボタンに見えるよう分ける(2026-10-27 カゲあつくんの指摘) */}<span className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1"><span className="whitespace-nowrap">新しいバージョンがあります</span><span className="whitespace-nowrap rounded-lg bg-slate-950/15 px-2 py-0.5">更新する</span></span></button>
         <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
       </div>
-    ),
+    )
+  }</WaitForOverlayClose>,
     document.body
   ) : null;
   const titleModal = showChangelog ? (
