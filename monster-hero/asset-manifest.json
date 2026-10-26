@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "0f9497d3652e",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117696197,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257271335,"count":1719},"core":{"bytes":14191149,"count":22}},
+  "id": "c296a10d89e5",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117692351,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257267489,"count":1719},"core":{"bytes":14191149,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1545,7 +1545,7 @@
     "images/monsters/idle/zan-blade-l.png": {"v":"d988979ee3f3","size":2505,"pack":"battle"},
     "images/monsters/idle/zan-blade-r.png": {"v":"211c111c42d3","size":2493,"pack":"battle"},
     "images/monsters/idle/zan-body.png": {"v":"1975513b862d","size":4922,"pack":"battle"},
-    "images/monsters/illumine-dye-mask.PNG": {"v":"f129752bb07a","size":23516,"pack":"battle"},
+    "images/monsters/illumine-dye-mask.PNG": {"v":"ecdc51013525","size":19670,"pack":"battle"},
     "images/monsters/illumine.png": {"v":"856c3192a848","size":142702,"pack":"battle"},
     "images/monsters/jell.png": {"v":"7d1a439b82e5","size":162884,"pack":"battle"},
     "images/monsters/joker.png": {"v":"6b89ffd17807","size":128102,"pack":"battle"},
@@ -1725,7 +1725,7 @@
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
     "tailwind.css": {"v":"aa1738a923a0","size":240221,"pack":"core"},
-    "data/images/images-ally.js": {"v":"99369832c5fe","size":39965,"pack":"core"},
+    "data/images/images-ally.js": {"v":"0ae57e5e9467","size":39965,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"51d6430d98dd","size":56492,"pack":"core"},
     "data/lineages.js": {"v":"1c389c9822bb","size":25432,"pack":"core"},
