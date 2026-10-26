@@ -40,7 +40,7 @@ check('元RhythmTapTestのunmount cleanupを維持',
 const releaseDate=release.match(/const RHYTHM_RELEASE_DATE='([^']+)'/)?.[1];
 const dataBuild=release.match(/const RHYTHM_DATA_BUILD='([^']+)'/)?.[1];
 const compiledBuild=release.match(/const RHYTHM_COMPILED_BUILD='([^']+)'/)?.[1];
-const buildDate=source.match(/const BUILD_DATE = "([^"]+)";/)?.[1];
+const buildDate=index.match(/window\.__mhBuildDate = '([^']+)';/)?.[1];
 const bridgeTargetsCurrentVersion=version.build===dataBuild;
 check('data-only橋渡し対象versionはリリース追記と一致',!bridgeTargetsCurrentVersion||version.build===releaseDate);
 check('data-only橋渡し使用時は既存compiledへ正しく写す',!bridgeTargetsCurrentVersion||(compiledBuild===buildDate&&release.includes('if(data?.build===RHYTHM_DATA_BUILD)')&&release.includes('build:RHYTHM_COMPILED_BUILD')));
