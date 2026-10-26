@@ -1887,8 +1887,13 @@ const DEX_ENTRY_STATUSES = Object.freeze([
 const dexDraftMonsterList = () => {
   if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
   const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
-  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  const list = Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  // 実装予告を出した子(draftAnnounced)は「未実装」の先頭に並べる(2026-10-27 社長室カゲあつ。
+  // 予告で「図鑑の未実装に並べました」と書いたのに、58体の最後にいて見つけにくかった)。ほかの子の順は変えない
+  return [...list.filter(dexDraftAnnounced), ...list.filter(mon => !dexDraftAnnounced(mon))];
 };
+// 実装予告を出した案の子か。図鑑の札を「未実装」ではなく「近日実装」にする
+const dexDraftAnnounced = (mon) => !!(mon && mon.draft && mon.draftAnnounced);
 // 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
 const dexEntryLineageOf = (mon) => {
   if (!mon) return monsterLineageOf(null);
