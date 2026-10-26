@@ -180,7 +180,10 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 04:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+// 画面に出す版の日時(JST・version.json の build と同じ値)。index.html が window.__mhBuildDate で渡す(tools/stamp-version.js が打つ)。
+// 本体の中に日時を書くと、ビルドのたびに本体の中身が変わり、GAME_BUILD(中身のハッシュ)も毎回変わって、
+// 事前ダウンロードにためた本体を使えないため(2026-10-27 速さ部)。読めないとき(本体だけを vm で動かす検査など)は空にする
+const BUILD_DATE = (typeof window !== 'undefined' && typeof window.__mhBuildDate === 'string') ? window.__mhBuildDate : '';
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -375,8 +378,8 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
-    ['🔓','種族ごとに難易度を解放していく'],
-    ['🏅','記録は種族ごとに別々に残る'],
+    ['🔓','種族別に難易度を解放していく'],
+    ['🏅','記録は種族別に残る'],
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'],
@@ -436,8 +439,8 @@ const TACTICS_SPECIES_MODE = Object.freeze({
   tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
-    ['🔓','種族ごとに難易度を解放していく'],
-    ['🏅','記録は種族ごとに別々に残る'],
+    ['🔓','種族別に難易度を解放していく'],
+    ['🏅','記録は種族別に残る'],
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。クラシックバトルの種族チャレンジと同じしばりで、戦い方だけがタクティクスバトルになります。'],
@@ -828,7 +831,7 @@ const BATTLE_SYSTEMS = Object.freeze([
     highlights: Object.freeze([
       Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']),
       Object.freeze(['🃏', 'カードと間合いを選んで戦う']),
-      Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる']),
+      Object.freeze(['📈', 'WAVEのたびに強化を選んで積み上げる']),
     ]),
     note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
     points: Object.freeze([

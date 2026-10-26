@@ -86,14 +86,31 @@ const check = (name, ok, detail = '') => {
       await page.waitForTimeout(250);
     }
 
+    // DEBUG MENU の節は前回の開き閉じを覚えているので、開いていれば閉じずにそのまま使う(押すと逆に閉じてしまう)
+    const openDebugTutorialFold = async () => {
+      for (const label of ['⚔️ バトル', '📖 チュートリアル']) {
+        const summary = page.locator('summary').filter({ hasText: label }).first();
+        await summary.waitFor({ state: 'attached', timeout: 15000 });
+        const isOpen = await summary.evaluate((el) => !!el.parentElement && el.parentElement.open);
+        if (!isOpen) await summary.click();
+      }
+    };
+
     // --- ① デバッグ設定からチュートリアルを始める(ふだんの初回案内・ヘルプと同じ台本) ---
     await page.getByRole('button', { name: '設定' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByRole('button', { name: 'ヘルプ' }).dispatchEvent('click', {}, { timeout: 15000 });
+    // 遊ぶ人の入口: ヘルプの「バトルのれんしゅう」から開いて、始めるボタンがあること(押すとここで流れが変わるので押さない)
+    const helpCard = page.getByRole('button', { name: /バトルのれんしゅう/ }).first();
+    await helpCard.waitFor({ timeout: 15000 });
+    check('ヘルプに「バトルのれんしゅう」の入口がある', await helpCard.count() === 1);
+    await helpCard.dispatchEvent('click');
+    check('ヘルプの「バトルのれんしゅう」を開くと、始めるボタンがある',
+      await page.getByRole('button', { name: /バトルのれんしゅうを始める/ }).count() === 1);
+    await page.getByRole('button', { name: '項目一覧' }).first().dispatchEvent('click');
     await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
-    // DEBUG MENU は節ごとに畳んであるアコーディオン。「⚔️ バトル」→「📖 チュートリアル」の順に開く
+    // DEBUG MENU は節ごとに畳んであるアコーディオン。「⚔️ バトル」→「📖 チュートリアルと旧画面」の順に開く
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
-    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
-    await page.locator('summary').filter({ hasText: '📖 チュートリアル' }).first().click();
+    await openDebugTutorialFold();
     const startButton = page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' });
     check('デバッグ設定にチュートリアルの入口がある', await startButton.count() === 1);
     await startButton.dispatchEvent('click');
@@ -210,7 +227,7 @@ const check = (name, ok, detail = '') => {
     // --- ⑥ 勇者モン選択まで進む ---
     for (let i = 0; i < 4; i++) if (!(await tapNext())) break;
     await startOfDiff('Beginner').dispatchEvent('click');
-    await page.getByRole('heading', { name: '勇者モンを選択' }).waitFor({ timeout: 15000 });
+    await page.getByRole('heading', { name:'勇者モンをえらぶ' }).waitFor({ timeout: 15000 });
     check('練習のまま勇者モン選択まで進む', true);
     // ★練習は記録を残さないために debugBattleRef を立てるので、その副作用で
     //   勇者モン選択へ「🛠 デバッグ最強モン」(Mocchiのコピーでidも同じ)が割り込み、
@@ -266,10 +283,9 @@ const check = (name, ok, detail = '') => {
 
     // --- ⑦ やめると始めた場所へ帰り、既読は書き換わらない ---
     await page.locator('button').filter({ hasText: /^やめる$/ }).first().dispatchEvent('click');
-    // 帰ってきた DEBUG MENU は節が畳まれた状態なので、開き直して入口があることを確かめる
+    // 帰ってきた DEBUG MENU は前回の開き閉じを覚えている。入口があることを開いた状態で確かめる
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 15000 });
-    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
-    await page.locator('summary').filter({ hasText: '📖 チュートリアル' }).first().click();
+    await openDebugTutorialFold();
     await page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' }).waitFor({ timeout: 15000 });
     check('やめると始めた場所(デバッグ設定)へ帰る', true);
     const seen = await page.evaluate(() => localStorage.getItem('mh_battle_tutorial_seen_v1'));

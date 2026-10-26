@@ -1,5 +1,41 @@
 // ==== 画面: バトル ====
 //
+// 【横向きで背の低い画面の並べ方】(2026-10-26 社長が案Aを選んだ。docs/progress/battle-landscape/)
+// 縦持ち用の1列(幅=画面の高さ)のままだと、844×390 では敵の絵が潰れ、手札が画面の下に隠れて
+// 「手札と敵を同時に見られない」。横で背の低いときだけ、左に 上の帯・敵の帯・敵の絵と予告・バフ・4枠
+// (タクティクスも横1列)、右に 手札とボタン の2列にする。条件は難易度えらびの2列(#3790)と同じ。
+// 縦画面には効かない(@media の外には何も書かない)。クラシックとタクティクスは同じ組み方。
+// 画面の真ん中に出す札(data-battle-float)は左の列の真ん中へ、列の右端に寄せる札
+// (data-battle-float-right="右からの余白")は左の列の右端へ寄せる(右の手札にかからないように)。
+// 右の列の幅は MFバトルカードの横向き(カード部ブレイブくん)にそろえて、画面の幅の42%・最大420px(844 で約354px)。
+const BATTLE_LANDSCAPE_HAND_W = 'min(42vw, 420px)';
+const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 520px) {
+#root > div[data-mh-portrait-layout="true"]:has([data-battle-speed]) { max-width: none !important; }
+[data-battle-speed] { display: grid !important; grid-template-columns: minmax(0,1fr) ${BATTLE_LANDSCAPE_HAND_W};
+  grid-template-rows: auto auto minmax(0,1fr) auto auto auto; }
+[data-battle-speed] > * { grid-column: 1; }
+[data-battle-speed] > [data-battle-stage-bg] { grid-column: 1 / -1; grid-row: 1 / -1; }
+[data-battle-speed] > [data-battle-header] { grid-row: 1; }
+[data-battle-speed] > [data-enemy-bar] { grid-row: 2; }
+[data-battle-speed] > [data-battle-stage] { grid-row: 3; min-height: 0 !important; overflow: hidden !important; }
+[data-battle-speed] > [data-battle-buffs] { grid-row: 4; }
+[data-battle-speed] > [data-tactics-board-band] { grid-row: 5; padding-top: 2px !important; padding-bottom: 2px !important; }
+[data-battle-speed] > [data-tactics-ex-intro] { grid-row: 6; }
+[data-tactics-board-band] .grid.grid-cols-4, [data-tactics-debug-layout] { height: 112px !important; }
+[data-tactics-debug-layout] { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-template-rows: minmax(0,1fr) !important; }
+[data-battle-speed] > [data-battle-hand] { grid-column: 2; grid-row: 1 / -1; height: auto !important; min-height: 0;
+  border-top: 0 !important; border-left: 1px solid rgba(255,255,255,.14); overflow-x: hidden; overflow-y: auto; }
+[data-battle-hand] > div:first-child { flex-wrap: wrap; row-gap: 4px; margin-bottom: 6px !important; }
+[data-battle-hand] > div:first-child > span:first-child { flex: 0 0 100% !important; }
+[data-battle-hand] > div:last-child { flex: 0 1 auto !important; flex-wrap: wrap !important; overflow: visible !important;
+  align-content: flex-start; justify-content: center; row-gap: 6px; }
+[data-battle-hand] > div:last-child > * { flex: 0 0 31% !important; max-width: 31% !important; height: 116px !important; }
+[data-battle-float] { left: calc((100vw - ${BATTLE_LANDSCAPE_HAND_W}) / 2) !important; }
+[data-battle-float-right] { left: auto !important; transform: none !important; }
+[data-battle-float-right="8"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 8px) !important; }
+[data-battle-float-right="76"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 76px) !important; }
+}`;
+//
 // 【誰が攻撃を食らったか】
 // 枠ごとに何が起きたか(tacticsSlotFx)を、浮かぶ数字だけでなく**枠そのもの**でも出す
 // (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい
@@ -1022,7 +1058,7 @@ const kindOfTacticsSlotFx = (fx) => {
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
 function BattleScreen({
-  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
+  battleOverlayOpen = false, applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
   battleTutorialAllowsEmergency, battleTutorialCardAllowed, battleTutorialCardKind,
   battleTutorialCardTarget, battleTutorialNeed, battleTutorialNeedCard, battleTutorialSpotClass,
@@ -1536,6 +1572,7 @@ function BattleScreen({
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-enemy-down={enemyDefeating?'true':undefined} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined} data-fx-auto={autoLoadOn?'watch':undefined}>
+        <style>{BATTLE_LANDSCAPE_CSS}</style>
         {/* 性能計測(デバッグ限定)。デバッグ設定で ON にしたときだけ出る。触っても戦闘の邪魔をしないよう、指は素通りさせる */}
         {perfOn&&tacticsNewLayout&&perfSnap&&(
           <div data-battle-perf-panel className="pointer-events-none fixed left-1 z-[65000] rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold leading-tight text-amber-100" style={{top:'calc(env(safe-area-inset-top) + 2px)'}}>
@@ -1565,7 +1602,7 @@ function BattleScreen({
           ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
+          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン) */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
@@ -1683,7 +1720,7 @@ function BattleScreen({
         )}
         {/* レイドバトルの強化が入ったターンの帯(数秒で消える。操作の邪魔をしない) */}
         {raidGrowth&&raidGrowthBanner&&(
-          <div key={raidGrowthBanner.key} data-raid-growth-banner aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
+          <div key={raidGrowthBanner.key} data-raid-growth-banner data-battle-float aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
             <div className="text-[13px] font-black text-emerald-300">⬆ {raidGrowth.turn}ターン目 強化！</div>
             <div className="mt-0.5 text-[11px] font-black text-white">味方の全ステータス +{raidGrowth.stepPct}%<span className="text-slate-300">(ここまで合計 +{raidGrowth.statPct}%)</span></div>
             <div className="text-[10px] font-black text-sky-200">自動回復 ライフ{raidGrowth.lifeRate}%・ガッツ{raidGrowth.gutsRate}%</div>
@@ -1708,7 +1745,7 @@ function BattleScreen({
             強化の札が増えて舞台が絵より低くなったときは、safe が上そろえへ戻してくれる
             (中央のままだと上へスクロールできず、頭の「!」や技名が読めなくなる)。
             safe を知らないブラウザは宣言ごと捨てるので、クラスの justify-start が残る */}
-        <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center',...(enemyImageOnlyAttack?{overflow:'visible',zIndex:70}:{})}}>
+        <main data-battle-stage className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center',...(enemyImageOnlyAttack?{overflow:'visible',zIndex:70}:{})}}>
           {/* 敵のまわりのボタンは左の1列にまとめる(2026-09-22 ユーザー指示
               「敵周りのボタンを整理したほうがいい。添付イメージ画像のように左にきれいに並べるなど」)。
               ★もとは左(ステータス・緊急)と右(解析・ログ・魂格効果)に分かれていて、敵の絵を両側から
@@ -1832,7 +1869,7 @@ function BattleScreen({
             {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.raidJackPumpkin?'Pumpkin':enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
               </div>,document.body
             )}
@@ -1840,7 +1877,7 @@ function BattleScreen({
                 「ランダム効果のものが何が発動したかわからない」)。技名の札(上の14%)と重ならないよう、その下へ縦に並べる。
                 押せる場所は塞がない。body へ出すのは技名の札と同じ理由(画面の揺れで位置がずれないように) */}
             {Array.isArray(luckBanners)&&luckBanners.length>0&&ReactDOM.createPortal(
-              <div data-battle-luck-banners className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
+              <div data-battle-luck-banners data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
                 {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
                   className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
                   style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
@@ -1850,13 +1887,13 @@ function BattleScreen({
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]">☠️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]">必 殺 技</div>
               </div>
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='CHARGE'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
@@ -1868,7 +1905,7 @@ function BattleScreen({
                 貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
                 出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='PIERCE_CHARGE'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>
@@ -1880,11 +1917,13 @@ function BattleScreen({
                 【置き場所】丸枠(敵の円)の中には置かないこと。丸枠は transform を持つため
                 独自の重ね順の島になり、いくらz-indexを上げても、枠の外へ巨大に描くムーの
                 裏へ回ってしまう。必殺技の警告と同じこの階層に置くと前面に出る */}
-            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
+            {/* ★敵の解析・ステータス・ログなどを上に開いているあいだは出さない(body の直下へ出すので、
+                開いた画面の上に重なって残っていた。2026-10-26 ダメダシの見回り クラシック#2) */}
+            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&!battleOverlayOpen&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
               // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
               // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
               // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
-              <div className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
+              <div data-battle-float-right="8" className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
                 <div className="mh-enemy-move-hint">
                   <span aria-hidden="true">🏃</span>
                   <span>{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？</span>
@@ -1940,7 +1979,7 @@ function BattleScreen({
                 必殺技の警告・移動の予告と同じこの階層＝丸枠の外なら前面に出る。
                 寄せ先は画面の右端ではなく遊ぶ列(最大600px)の右端にして、広い画面でも列に収める */}
             {enemyNoticeShown&&isMooBoss(enemy?.id)&&(
-              <div data-enemy-notice-moo className="fixed left-1/2 pointer-events-none"
+              <div data-enemy-notice-moo data-battle-float-right="76" className="fixed left-1/2 pointer-events-none"
                 style={{top:'max(112px,16dvh)',transform:'translateX(calc(min(50vw, 300px) - 100% - 76px))',zIndex:focusedCard?5:40}}>
                 {enemyNoticeCard()}
               </div>
@@ -2895,16 +2934,19 @@ function BattleScreen({
             })}
           </div>
         </div>
-        {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える */}
-        {tacticsExIntroVisible&&<div data-tactics-ex-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
-          <div className="flex items-start gap-1">
+        {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える
+            ★縦が短い画面(640px以下)では、案内を盤の下側に重ねて出す。段として場所を取ると、縮められるのが敵の段だけなので
+              320×568 で敵の絵が 16px までつぶれていた(2026-10-26 ダメダシの見回り タクティクス#1)。
+              みゅあの説明が盤にかかるのは社長の決めごと(コメントはカードなどにかぶらせてよい)。下のモンビーの案内も同じ */}
+        {tacticsExIntroVisible&&<div data-tactics-ex-intro className="relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0">
+          <div className="flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="tacticsExIntro" compact/></div>
             <button type="button" onClick={dismissTacticsExIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
         {/* ∞周回にした最初の1回だけ、モンビーへ行けることを伝える(PR8) */}
-        {quickRhythmIntroVisible&&<div data-quick-rhythm-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
-          <div className="flex items-start gap-1">
+        {quickRhythmIntroVisible&&<div data-quick-rhythm-intro className="relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0">
+          <div className="flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="quickRhythmIntro" compact/></div>
             <button type="button" onClick={dismissQuickRhythmIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
@@ -2912,7 +2954,7 @@ function BattleScreen({
         {/* 手札の帯(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
             まっ黒なべた塗りだったので、上から下へわずかに起こし、上端に細い光を引いて
             板が1枚手前にあるように見せる。塗りだけなので描き直しは起きない */}
-        <div className="shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm" style={{height:'clamp(172px,23dvh,196px)',
+        <div data-battle-hand className="shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm" style={{height:'clamp(172px,23dvh,196px)',
           backgroundImage:'linear-gradient(180deg, rgba(20,29,52,.94) 0%, rgba(12,18,34,.97) 52%, rgba(7,11,22,.99) 100%)',
           boxShadow:'inset 0 1px 0 rgba(255,255,255,.07), 0 -10px 28px rgba(0,0,0,.16)'}}>
           <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
