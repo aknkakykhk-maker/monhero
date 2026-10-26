@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "f665216fcdb8",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120870145,"count":651},"card":{"bytes":31268880,"count":906},"all":{"bytes":259526471,"count":1650}},
+  "id": "4369f1d44a62",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120908902,"count":651},"card":{"bytes":31268880,"count":906},"all":{"bytes":259565228,"count":1650}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1278,7 +1278,7 @@
     "images/lineage-icons/worm.png": {"v":"3b39e38ca672","size":20842,"pack":"battle"},
     "images/lineage-icons/yggdrasil.png": {"v":"612ee0b767e7","size":23624,"pack":"battle"},
     "images/lineage-icons/zan.png": {"v":"be0f440b9156","size":18737,"pack":"battle"},
-    "images/monster-icons/face/ark.png": {"v":"1ddd19baef6b","size":22180,"pack":"battle"},
+    "images/monster-icons/face/ark.png": {"v":"b5e3a96b27c0","size":60937,"pack":"battle"},
     "images/monster-icons/face/arrowhead.png": {"v":"92e7ed5fa2c1","size":36277,"pack":"battle"},
     "images/monster-icons/face/c010.png": {"v":"42dbe96e69c5","size":57319,"pack":"battle"},
     "images/monster-icons/face/c012.png": {"v":"5722ee95967f","size":58119,"pack":"battle"},
