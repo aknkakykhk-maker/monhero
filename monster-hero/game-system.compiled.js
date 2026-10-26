@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e15454a29b0273af
+// source-sha256: 5ac2b196f30dae73
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70423,7 +70423,7 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
   }, "⚔️"), React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
-  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && !battleOverlayOpen && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
+  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && !battleOverlayOpen && !enemyDefeating && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
     "data-battle-float-right": "8",
     className: "fixed left-1/2 pointer-events-none",
     style: {
