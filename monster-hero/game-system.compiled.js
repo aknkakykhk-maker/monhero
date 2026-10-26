@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 83144fc286804ad2
+// source-sha256: 59454723afe7c324
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:00";
+const BUILD_DATE = "2026-10-27 03:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -93145,6 +93145,12 @@ const CardBattleScreen = ({
       onClick: () => setView('foe')
     }, "相手をえらぶ")));
   }
+  if (view === 'replays') return React.createElement(CardReplayList, {
+    onOpen: id => {
+      void openReplay(id, 'replays');
+    },
+    onBack: () => setView('record')
+  });
   if (view === 'record') {
     const rec = save.record;
     const r = rec.rank;
@@ -93160,7 +93166,21 @@ const CardBattleScreen = ({
       note: "MFバトルカード"
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, React.createElement("div", {
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-replays-open": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setView('replays');
+      },
+      className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+    }, React.createElement("span", null, React.createElement("b", {
+      className: "block text-[14px] font-black text-sky-100"
+    }, "▶ 過去の対戦"), React.createElement("small", {
+      className: "block text-[11px] font-bold text-slate-400"
+    }, "遊んだ試合を、はじめから見返せます")), React.createElement("span", {
+      className: "text-[18px] text-slate-400"
+    }, "›")), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -98415,9 +98435,9 @@ const CardPvpRankingList = ({
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 const CARD_REPLAY_RULES = 1;
-const CARD_REPLAY_MAX = 10;
-const CARD_REPLAY_FAV_MAX = 3;
-const CARD_REPLAY_BYTES_MAX = 150000;
+const CARD_REPLAY_MAX = 50;
+const CARD_REPLAY_FAV_MAX = 10;
+const CARD_REPLAY_BYTES_MAX = 750000;
 const CARD_REPLAY_ACTS_MAX = 2000;
 const CARD_REPLAY_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const cardReplayPrint = st => {
@@ -98485,7 +98505,8 @@ const cardReplayNormalizeOne = raw => {
     seeds,
     acts,
     prints: typeof raw.prints === 'string' && /^[0-9a-z]*$/.test(raw.prints) && raw.prints.length === acts.length * 4 ? raw.prints : '',
-    fav: raw.fav === true
+    fav: raw.fav === true,
+    turn: Number.isInteger(raw.turn) && raw.turn >= 0 && raw.turn < 10000 ? raw.turn : null
   };
 };
 const cardReplayNormalize = raw => {
@@ -98682,6 +98703,7 @@ const cardReplayMake = (db, {
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
+  one.turn = built.states[built.states.length - 1].turn;
   return one;
 };
 const cardReplayFromPvp = (db, {
@@ -98737,14 +98759,68 @@ const cardReplayNoteIds = box => {
   return box;
 };
 const cardReplayLoad = async () => cardReplayNoteIds(cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null)));
+const CARD_REPLAY_PROBE_KEY = '__mh_card_replay_probe__';
+const CARD_REPLAY_ROOM = 131072;
+const cardReplayWrite = async box => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true;
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_REPLAY_KEY, box);
+  try {
+    window.localStorage.setItem(CARD_REPLAY_KEY, JSON.stringify(box));
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+const cardReplayRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try {
+    window.localStorage.setItem(CARD_REPLAY_PROBE_KEY, 'x'.repeat(CARD_REPLAY_ROOM));
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    try {
+      window.localStorage.removeItem(CARD_REPLAY_PROBE_KEY);
+    } catch (_) {}
+  }
+};
+const cardReplayStore = async (box, keepId = null) => {
+  const b = {
+    v: 1,
+    list: box.list.slice()
+  };
+  for (let n = 0; n <= CARD_REPLAY_MAX + 1; n++) {
+    const ok = await cardReplayWrite(b);
+    if (ok && cardReplayRoomLeft()) return b;
+    let drop = -1;
+    for (let i = b.list.length - 1; i >= 0; i--) {
+      if (!b.list[i].fav && b.list[i].id !== keepId) {
+        drop = i;
+        break;
+      }
+    }
+    if (drop < 0) {
+      const rest = keepId ? b.list.filter(r => r.id !== keepId) : b.list;
+      if (rest.length === b.list.length) return ok ? b : null;
+      const back = {
+        v: 1,
+        list: rest
+      };
+      return (await cardReplayWrite(back)) ? back : null;
+    }
+    b.list.splice(drop, 1);
+  }
+  return null;
+};
 const cardReplaySave = async rec => {
   if (!rec) return false;
   try {
     const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
     if (!box.list.some(r => r.id === rec.id)) return false;
-    const ok = await storeSet(CARD_REPLAY_KEY, box);
-    if (ok) cardReplayNoteIds(box);
-    return ok;
+    const done = await cardReplayStore(box, rec.id);
+    if (!done) return false;
+    cardReplayNoteIds(done);
+    return done.list.some(r => r.id === rec.id);
   } catch (_) {
     return false;
   }
@@ -98755,11 +98831,10 @@ const cardReplayFav = async (id, on) => {
       box,
       ok
     } = cardReplaySetFav(await storeGet(CARD_REPLAY_KEY, null), id, on);
-    if (ok) {
-      await storeSet(CARD_REPLAY_KEY, box);
-      cardReplayNoteIds(box);
-    }
-    return ok;
+    if (!ok) return false;
+    const done = await cardReplayStore(box);
+    if (done) cardReplayNoteIds(done);
+    return !!done;
   } catch (_) {
     return false;
   }
@@ -98934,6 +99009,133 @@ const CardReplayBar = ({
       onExit();
     }
   }, "とじる")));
+};
+const CARD_REPLAY_OUTCOME = Object.freeze({
+  win: '勝ち',
+  lose: '負け',
+  surrender: '投了',
+  foeSurrender: '勝ち',
+  timeout: '負け',
+  foeTimeout: '勝ち',
+  foeLeft: '勝ち',
+  left: '負け',
+  draw: '引き分け'
+});
+const cardReplayWhen = at => {
+  if (!Number.isFinite(at) || at <= 0) return '';
+  const d = new Date(at + 9 * 3600 * 1000);
+  const p2 = n => String(n).padStart(2, '0');
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+};
+const CardReplayList = ({
+  onOpen,
+  onBack
+}) => {
+  const [box, setBox] = useState(null);
+  const [note, setNote] = useState('');
+  useEffect(() => {
+    let live = true;
+    void cardReplayLoad().then(b => {
+      if (live) setBox(b);
+    }).catch(() => {
+      if (live) setBox({
+        v: 1,
+        list: []
+      });
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const favs = box ? box.list.filter(r => r.fav).length : 0;
+  const toggleFav = async r => {
+    Audio_.fgSe.tap();
+    if (!r.fav && favs >= CARD_REPLAY_FAV_MAX) {
+      setNote(`★は${CARD_REPLAY_FAV_MAX}試合までです。ほかの★を外してから付けてください`);
+      return;
+    }
+    const ok = await cardReplayFav(r.id, !r.fav);
+    if (!ok) {
+      setNote('★を保存できませんでした');
+      return;
+    }
+    setNote('');
+    setBox(await cardReplayLoad());
+  };
+  const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-replay-list": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "過去の対戦",
+    accent: "text-sky-200",
+    onBack: onBack,
+    note: `新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-1.5 pb-4`
+  }, note && React.createElement("p", {
+    "data-card-replay-note": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, note), !box && React.createElement("div", {
+    className: "py-6 text-center text-[13px] font-bold text-slate-400"
+  }, "読み込み中…"), box && !box.list.length && React.createElement("div", {
+    "data-card-replay-empty": true,
+    className: "py-6 text-center text-[13px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだありません。助手と対戦かマルチ対戦を遊ぶと、ここに残ります')), box && box.list.map(r => {
+    const a = r.kind === 'cpu' && r.foe.who ? assistants.find(x => x.id === r.foe.who) : null;
+    const res = CARD_REPLAY_OUTCOME[r.outcome] || '';
+    const win = res === '勝ち';
+    return React.createElement("div", {
+      key: r.id,
+      "data-card-replay-row": r.id,
+      className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-2 py-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "data-card-replay-open": r.id,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        onOpen(r.id);
+      },
+      className: "flex min-w-0 flex-1 items-center gap-2 text-left"
+    }, React.createElement("span", {
+      className: "block h-[38px] w-[38px] shrink-0 overflow-hidden rounded-xl bg-black/40"
+    }, a ? React.createElement("img", {
+      src: assistantFaceImage(a, 'normal'),
+      alt: "",
+      className: "h-full w-full object-cover object-top"
+    }) : typeof CardPvpAvatar === 'function' ? React.createElement(CardPvpAvatar, {
+      icon: r.foe.icon || '🙂',
+      frame: r.foe.frame,
+      className: "h-full w-full"
+    }) : React.createElement("span", {
+      className: "text-[20px]"
+    }, "🙂")), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("span", {
+      className: "flex items-center gap-1.5"
+    }, React.createElement("b", {
+      className: "truncate text-[13px] font-black text-white"
+    }, r.foe.name), React.createElement("small", {
+      className: `shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`
+    }, r.kind === 'pvp' ? 'マルチ' : '助手と対戦')), React.createElement("span", {
+      className: "block text-[11px] font-bold text-slate-400"
+    }, cardReplayWhen(r.at), r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`)), React.createElement("span", {
+      "data-card-replay-result": r.outcome || '',
+      className: `shrink-0 text-[13px] font-black ${win ? 'text-amber-200' : 'text-slate-300'}`
+    }, res)), React.createElement("button", {
+      type: "button",
+      "data-card-replay-fav": r.id,
+      "aria-pressed": r.fav,
+      "aria-label": r.fav ? '★を外す' : '★を付ける',
+      onClick: () => {
+        void toggleFav(r);
+      },
+      className: `min-h-[40px] min-w-[40px] shrink-0 rounded-lg text-[20px] ${r.fav ? 'text-amber-300' : 'text-slate-600'}`
+    }, "★"));
+  })));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_layers',
