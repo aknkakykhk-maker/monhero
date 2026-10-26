@@ -374,7 +374,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('結果が出て、デバッグ用の記録として1回送られる', posts.length === 1 && JSON.parse(posts[0].body).event_id === 'raid_jack_debug' && JSON.parse(posts[0].body).tier === 2, JSON.stringify(posts.map((p) => p.body)));
     const usedState = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_raid_jack_v1') || '{}'));
     check('今日の使用回数が1回増えている(中断しても戻らない)', usedState.a && usedState.a.used === 1 && usedState.a.extra === 1, JSON.stringify(usedState.a));
-    await page.locator('[data-raid-jack-result]').getByRole('button', { name: 'もどる' }).click();
+    await page.locator('[data-raid-jack-result]').getByRole('button', { name: '戻る' }).click();
     await page.locator('[data-raid-jack-debug]').waitFor({ timeout: 20000 });
 
     // ⑤ B

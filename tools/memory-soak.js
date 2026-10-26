@@ -8,6 +8,7 @@
 //   node tools/memory-soak.js --mode idle   --minutes 10      HOMEで放っておく(ゲームが勝手に増やしていないか)
 //   … --infra-every <回> で Chromium の中の内訳(memory-infra・プロセスごとの部品の大きさ)を取る間隔(既定 20 回ごと・はじめと終わりは必ず)
 //   … --snapshot-at 10,40 --snapshot-dir <フォルダ> で、その分を過ぎたときのページのメモリの写しを書き出す(比べるのは tools/heap-snapshot-diff.js)
+//   … --churn で、画面の部品を作っては捨てる量を種類ごとに数える(blink_gc の跡地が増える元を探す・2026-10-26)
 //   … --bgm-light を足すと、場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1)を入れて測る(2026-10-16)
 //
 // 合格・不合格の検査ではなく、数字を出す道具。1回ごとに強制的にガベージコレクションをしてから測るので、
@@ -46,6 +47,17 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
   const s = await openSession({ playwright, pageUrl: PAGE_URL, port: PORT, out, rand: makeRand(20261010), persona: 'メモリ計測', report });
   // 音の「解いたあとの大きさ」を数える(計測用の見張りで、ゲームには何も足さない)。
   // decodeAudioData が返した AudioBuffer の 長さ×チャンネル×4バイト を足し、曲ごとの大きさも控える
+  // --churn: 画面の部品(要素)を作っては捨てる量を、部品の種類(タグ＋最初のクラス)ごとに数える(2026-10-26・blink_gc の跡地が増える元を探す)。
+  // 生きている部品が増えなくても、たくさん作って捨てると Chromium の置き場の跡地が増える。測るたびに数え直す
+  const CHURN = args.includes('--churn');
+  if (CHURN) await s.context.addInitScript(() => {
+    window.__churn = { add: new Map(), del: new Map(), adds: 0, dels: 0 };
+    const sig = (n) => `${n.tagName ? n.tagName.toLowerCase() : '?'}${n.classList && n.classList[0] ? '.' + n.classList[0] : ''}${n.dataset && Object.keys(n.dataset)[0] ? '[' + Object.keys(n.dataset)[0] + ']' : ''}`;
+    const count = (map, n) => { if (n.nodeType !== 1) return 0; let c = 1 + n.getElementsByTagName('*').length; const k = sig(n); map.set(k, (map.get(k) || 0) + c); return c; };
+    const start = () => new MutationObserver((list) => { for (const m of list) { for (const n of m.addedNodes) window.__churn.adds += count(window.__churn.add, n); for (const n of m.removedNodes) window.__churn.dels += count(window.__churn.del, n); } })
+      .observe(document.documentElement, { childList: true, subtree: true });
+    if (document.documentElement) start(); else document.addEventListener('DOMContentLoaded', start);
+  });
   // --bgm-light: 場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1・2026-10-16)を入れて測る
   if (args.includes('--bgm-light')) await s.context.addInitScript(() => { try { localStorage.setItem('mh_bgm_light_v1', 'on'); } catch (e) {} });
   await s.context.addInitScript(() => {
@@ -205,6 +217,10 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
     rows.push(row);
     const first = rows[0];
     sampleNo += 1;
+    if (CHURN) {
+      const ch = await s.page.evaluate(() => { const c = window.__churn; if (!c) return null; const top = [...c.add.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6); const r = { adds: c.adds, dels: c.dels, top }; c.add = new Map(); c.del = new Map(); c.adds = 0; c.dels = 0; return r; }).catch(() => null);
+      if (ch) console.log(`    入れ替わり(前の測りから): 作った部品 ${ch.adds} / 捨てた部品 ${ch.dels} / 多い順: ${ch.top.map(([k, n]) => `${k} ${n}`).join('・')}`);
+    }
     console.log(`${String(row.label).padEnd(16)} ${String(row.sec).padStart(5)}秒  heap ${String(row.heapMB).padStart(6)}MB (${row.heapMB - first.heapMB >= 0 ? '+' : ''}${(row.heapMB - first.heapMB).toFixed(1)})  全体 ${String(row.rss).padStart(5)}MB (${row.rss - first.rss >= 0 ? '+' : ''}${row.rss - first.rss})  nodes ${String(row.nodes).padStart(6)} (${row.nodes - first.nodes >= 0 ? '+' : ''}${row.nodes - first.nodes})  listeners ${String(row.listeners).padStart(5)} (${row.listeners - first.listeners >= 0 ? '+' : ''}${row.listeners - first.listeners})  docs ${row.docs}  canvas ${row.canvases} img ${row.imgs}  音: 解いた${row.decoded}本(${row.decodedMB}MB)・持っている${row.kept}本(うち曲 ${row.songKept}本・作り直し ${row.rebuilds}回: ${row.songNames})  作ったcanvas ${row.made} blob残り ${row.blobs} Image ${row.newImages} タイマー ${row.timers} 音の部品 ${row.sources}`);
     console.log(`    描画の面: canvas ${row.canvasMB}MB(2d ${row.ctx2d}・WebGL ${row.webgl}・Offscreen ${row.offscreen})・ImageBitmap 残り ${row.bitmapsAlive} / 画像: img ${row.imgMB}MB(${row.imgSrcs}種類)・背景画像の要素 ${row.cssBg} / プロセス: ${Object.entries(row.procs || {}).map(([k, v]) => `${k} ${v}MB(${v - ((first.procs || {})[k] || 0) >= 0 ? '+' : ''}${v - ((first.procs || {})[k] || 0)})`).join('・')}`);
     if (sampleNo === 1 || sampleNo % INFRA_EVERY === 0) await infraDump(label);

@@ -57,15 +57,16 @@ const debugTrialsOrdered = (seen) => DEBUG_TRIALS.map((t, i) => ({ t, i, fresh: 
   .sort((a, b) => (Number(b.fresh) - Number(a.fresh)) || String(b.t.added).localeCompare(String(a.t.added)) || (a.i - b.i)).map((x) => ({ ...x.t, fresh: x.fresh }));
 
 // onChange … 入/切を押したあとに呼ぶ(本体の画面が同じキーを覚えている state を読み直すため)
-function DebugTrialsPanel({ onChange }) {
+// bare … デバッグメニューのまとまり(DebugMenuGroup)の中に置くとき。見出しと枠はまとまりの側が持つので出さない
+function DebugTrialsPanel({ onChange, bare = false }) {
   const [, setTick] = useState(0);
   const seen = debugTrialsSeen();
   const list = debugTrialsOrdered(seen);
   if (!list.length) return null;
   const toggle = (trial, on) => { debugTrialWrite(trial, on); debugTrialsMarkSeen(trial.id); setTick((n) => n + 1); try { if (onChange) onChange(trial, on); } catch (e) {} };
   return (
-    <section data-debug-trials className="rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3">
-      <h3 className="text-[12px] font-black text-lime-200">🧪 確認待ちの試作<small className="ml-1 text-[9px] font-bold text-lime-100/70">({list.length})</small></h3>
+    <section data-debug-trials className={bare ? '' : 'rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3'}>
+      {!bare && <h3 className="text-[12px] font-black text-lime-200">🧪 確認待ちの試作<small className="ml-1 text-[9px] font-bold text-lime-100/70">({list.length})</small></h3>}
       <p className="mt-0.5 text-[9px] font-bold leading-relaxed text-lime-100/75">iPhone で確かめてほしい試作です。「入」にして遊び、気になる所があれば「切」で元に戻せます。新しいものほど上に出ます。</p>
       <div className="mt-2 space-y-2">
         {list.map((trial) => {
