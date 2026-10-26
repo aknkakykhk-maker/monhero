@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 500d207fcc77e3ac
+// generated-sha256: c451277a95e317c4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54956,16 +54956,19 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   // 動き(85-card-battle-motion.jsx): attack … SkillFxMotion で技の動き / hit 揺れ / dodge よける(残像) / jump 跳んでよける / guard 防ぐ(光の盾と数字) / KO は倒れたまま
   // 横画面(wide)は高さ390で上下2段を収めるので、絵をいちばん小さくする
-  const artSize = wide ? 'max-h-[40px] max-w-[56px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  // 横画面は、まんなかが空いていたので、絵を大きくする(2026-10-27 ソランドくん「場のモンスターの絵と場のカードが小さい」)。
+  //   高さは画面の高さから決める(40〜64px。844×390 で 64px・667×375 で 56px ほど。上下の帯とまんなかの 64px を引いた残りを2段で分ける)
+  const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
+  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art
-    ? <img src={art} alt="" className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
+    ? <img src={art} alt="" style={wide ? { maxHeight: wideArtH } : undefined} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
-    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? 'h-[40px]' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
-      style={mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : undefined}>
+    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
+      style={{ ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
         : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
@@ -55530,7 +55533,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const rank = (i) => { const c = cardOf(db, me.hand[i]); return c ? (c.user === 'breeder' ? 9 : (CARD_KIND_ORDER[c.kind] ?? 8)) : 10; };
     return idx.sort((a, b) => rank(a) - rank(b) || a - b);
   })();
-  const handLarge = settings.handText === 'LARGE' && !tiny; // 手札の字を大きく(狭い画面では、ふつうのまま)
+  const handLarge = settings.handText === 'LARGE' && !tiny;
+  // 手札の小さい段は縦の画面だけ(横画面は右の列の幅に余裕がある。2026-10-27 ソランドくん「手札のカードも小さい」)
+  const handTiny = tiny && !wide; // 手札の字を大きく(狭い画面では、ふつうのまま)
   const tapHand = (i) => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
@@ -55721,7 +55726,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!el || stageFit >= 3) return;
     if (el.scrollHeight > el.clientHeight + 1) setStageFit((f) => Math.min(3, f + 1));
   });
-  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey]);
+  // 横と縦が切りかわったときも測り直す(はじめは縦の並びで測って詰めたまま、横の並びで手札が小さく残っていた)
+  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey, wide]);
   React.useLayoutEffect(() => {
     const b = boardRef.current;
     const f = b && b.querySelector('[data-card-footer]');
@@ -55982,12 +55988,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
-              <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
+              <div className={`mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
                 <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
-                {tiny ? <>
+                {handTiny ? <>
                   <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                   <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                 </> : compact ? <>
