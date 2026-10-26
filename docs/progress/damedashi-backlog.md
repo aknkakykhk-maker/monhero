@@ -7,3 +7,6 @@
 
 ## 2026-10-26 モンヒロビート
 → [damedashi-2026-10-26/beat/README.md](damedashi-2026-10-26/beat/README.md)(10件)
+
+## 2026-10-26 モンヒロバトル
+→ [damedashi-2026-10-26/battle/README.md](damedashi-2026-10-26/battle/README.md)(9件)
