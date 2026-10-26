@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b10b61d0e3d9926
+// source-sha256: 861901de52da684f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:40";
+const BUILD_DATE = "2026-10-27 01:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -76681,7 +76681,7 @@ function RhythmMultiAloneHint({
   return React.createElement("div", {
     "data-rhythm-multi-alone-hint": true,
     className: "mt-1.5 rounded-xl border border-amber-300/40 bg-amber-950/40 p-2 text-[11px] font-bold leading-snug text-amber-100"
-  }, "いまはメンバーが集まりにくいようです。このまま待つか、友だちとプライベートルームで遊ぶのもおすすめです。", onLeave && React.createElement("button", {
+  }, "いまはメンバーが集まりにくいようです。このまま待つか、フレンドとプライベートルームで遊ぶのもおすすめです。", onLeave && React.createElement("button", {
     type: "button",
     onClick: onLeave,
     className: "mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black"
@@ -77982,7 +77982,7 @@ function RhythmMultiScreen({
     className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
     info: quickRunInfo,
     onRestart: onRestartQuickRun,
     onResume: onResumeQuickRun,
@@ -78230,7 +78230,7 @@ function RhythmMultiScreen({
       className: "block text-[18px] font-black italic leading-tight"
     }, "プライベート"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-900/80"
-    }, "合言葉で友だちと遊ぶ"))), ms.multi && React.createElement("button", {
+    }, "合言葉でフレンドと遊ぶ"))), ms.multi && React.createElement("button", {
       "data-rhythm-mode-ranking": true,
       type: "button",
       onClick: () => openRankHub('national'),
@@ -78410,7 +78410,7 @@ function RhythmMultiScreen({
       className: "block text-base font-black text-sky-100"
     }, "プライベートルーム"), React.createElement("small", {
       className: "block text-[11px] font-bold text-slate-400"
-    }, "合言葉で、友だちだけと遊べます")), React.createElement("button", {
+    }, "合言葉で、フレンドだけと遊べます")), React.createElement("button", {
       type: "button",
       "aria-label": "閉じる",
       onClick: () => setPrivateOpen(false),
@@ -78421,7 +78421,7 @@ function RhythmMultiScreen({
       className: "block text-[13px] font-black text-white"
     }, "部屋をつくる"), React.createElement("p", {
       className: "text-[11px] font-bold leading-snug text-slate-300"
-    }, "合言葉(ルームコード)ができます。友だちに伝えて入ってもらいましょう"), React.createElement("button", {
+    }, "合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう"), React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
       onClick: createPrivate,
@@ -78547,7 +78547,7 @@ function RhythmMultiScreen({
       type: "button",
       className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black",
       onClick: shareCode
-    }, copied ? 'コピーした!' : '友だちに送る')), view && room && React.createElement("div", {
+    }, copied ? 'コピーした!' : 'フレンドに送る')), view && room && React.createElement("div", {
       "data-rhythm-multi-select-time-row": true,
       className: "mt-1.5 flex flex-wrap items-center gap-1.5"
     }, React.createElement("small", {
