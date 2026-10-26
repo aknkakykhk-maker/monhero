@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c5506c03b5e836b
+// source-sha256: f396848d76cb60a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89695,11 +89695,7 @@ const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
   const last = useRef(null);
-  const pending = useRef(null);
-  useEffect(() => () => {
-    clearTimeout(timer.current);
-    clearTimeout(pending.current);
-  }, []);
+  useEffect(() => () => clearTimeout(timer.current), []);
   return (no, onTap, opt = {}) => ({
     'data-card-press': true,
     onPointerDown: () => {
@@ -89708,7 +89704,6 @@ const useCardLongPress = (onLong, ms = 450) => {
       timer.current = setTimeout(() => {
         fired.current = true;
         last.current = null;
-        clearTimeout(pending.current);
         onLong(no);
       }, ms);
     },
@@ -89724,10 +89719,7 @@ const useCardLongPress = (onLong, ms = 450) => {
       const now = Date.now();
       if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
         last.current = null;
-        if (pending.current) {
-          clearTimeout(pending.current);
-          pending.current = null;
-        } else if (opt.undo) opt.undo();
+        if (opt.undo) opt.undo();
         onLong(no);
         return;
       }
@@ -89735,16 +89727,7 @@ const useCardLongPress = (onLong, ms = 450) => {
         no,
         at: now
       };
-      if (!onTap) return;
-      if (opt.hold && opt.double !== false) {
-        clearTimeout(pending.current);
-        pending.current = setTimeout(() => {
-          pending.current = null;
-          onTap();
-        }, CARD_DOUBLE_TAP_MS);
-        return;
-      }
-      onTap(e);
+      if (onTap) onTap(e);
     }
   });
 };
@@ -90330,9 +90313,7 @@ const CardMonSlot = ({
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return React.createElement("div", _extends({
     "data-card-mon": `${p}-${m}`
-  }, press ? press(mon.no, onTap, {
-    hold: mark === 'target' || mark === 'user'
-  }) : {
+  }, press ? press(mon.no, onTap) : {
     onClick: onTap
   }, {
     className: `relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`,
@@ -91228,39 +91209,20 @@ const CardBattleBoard = ({
     return mon ? mon.getAttribute('data-card-mon') : null;
   };
   const handTap = useRef({
-    last: null,
-    pending: null
+    last: null
   });
-  useEffect(() => () => clearTimeout(handTap.current.pending), []);
   const tapHandOrDouble = (i, no) => {
     const h = handTap.current;
     const now = Date.now();
     if (h.last && h.last.i === i && h.last.no === no && now - h.last.at < CARD_DOUBLE_TAP_MS) {
       const before = h.last.before;
       h.last = null;
-      if (h.pending) {
-        clearTimeout(h.pending);
-        h.pending = null;
-      } else if (before) {
+      if (before) {
         setSel(before.sel);
         setPicks(before.picks);
         setHint(before.hint);
       }
       setDetail(no);
-      return;
-    }
-    if (mode === 'guard') {
-      h.last = {
-        i,
-        no,
-        at: now,
-        before: null
-      };
-      clearTimeout(h.pending);
-      h.pending = setTimeout(() => {
-        h.pending = null;
-        tapHand(i);
-      }, CARD_DOUBLE_TAP_MS);
       return;
     }
     h.last = {
