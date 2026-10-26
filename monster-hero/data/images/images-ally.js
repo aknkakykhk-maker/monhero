@@ -609,4 +609,9 @@ const ART_ANCHORS = Object.freeze({
   HYBRID_C020: Object.freeze({ face: Object.freeze([0.5, 0.25]) }),
   HYBRID_C043: Object.freeze({ face: Object.freeze([0.41, 0.165]) }),
   HYBRID_C045: Object.freeze({ face: Object.freeze([0.5, 0.15]) }),
+  HYBRID_C044: Object.freeze({ face: Object.freeze([0.335, 0.21]) }),
+  HYBRID_C032: Object.freeze({ face: Object.freeze([0.5, 0.11]) }),
+  HYBRID_C037: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  HYBRID_C014: Object.freeze({ face: Object.freeze([0.359, 0.21]) }),
+  HYBRID_C011: Object.freeze({ face: Object.freeze([0.503, 0.11]) }),
 });
