@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d4fb756e3f633c4f
+// generated-sha256: 18b32c48d2005487
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54249,11 +54249,12 @@ const cardResultCutWhy = (outcome, r) => {
   return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
 };
 const CARD_FOE_BUILD_NOTE = Object.freeze({
-  easy: '残りの2体は気分でえらぶ(気まぐれな子が混ざることも)。カードは第1弾だけで、組み方は雑',
-  normal: '残りの2体は型に合う子が中心。カードは型に合うものを、ざっくり入れる',
-  hard: '残りの2体は、型に合う子をしっかりえらぶ。第1弾のカードで、型どおりに組む',
-  expert: '残りの2体は、型に合う子をしっかりえらぶ。全部の弾から、強いカードを優先して組む',
-  master: 'いちばん強い組み合わせで、全部の弾から本気で組む。あなたのデッキを見て、残りの2体をえらび直すことも',
+  //   遊ぶ人の目で書く(「組み方は雑」「型どおり」は作り手の言葉だった。2026-10-26 カゲあつくんの通しの点検)
+  easy: '好きな子を中心に、のんびり組んでくる。気まぐれな子が混ざることも(カードは第1弾から)',
+  normal: '好きな子と、戦い方に合う子で組んでくる。カードはざっくり選ぶ',
+  hard: '戦い方に合う子とカードで、しっかり組んでくる(カードは第1弾から)',
+  expert: '戦い方に合う子と、全部の弾の強いカードで、しっかり組んでくる',
+  master: '全部の弾から本気で組んでくる。あなたのデッキを見て、モンスターを選び直すことも',
 });
 const CardFoeStyle = ({ db, who, level }) => {
   const style = cardFoeStyle(who);
