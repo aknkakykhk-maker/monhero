@@ -12,6 +12,9 @@
 //   ⑤ 320×568: オプションの「「守らない」」がかぎかっこの中で折れない(QA 12)
 //   ⑥ 320・375: 練習試合クリアのドラの台詞の「ひととおり」が言葉の途中で折れない(QA 10。台詞を同じ幅の吹き出しに描いて確かめる)
 //   ⑦ 実行時エラーが無い
+//   ⑧ 320・390: カードの大写しのあいだ、後ろの記録の字と助手の吹き出しが消えている(見回り2回目の新4)
+//   ⑨ 320×568: カララギマンゴーを選んで狙うとき・「攻撃できない」の子がいるときも、下のボタンが画面の中(最後の見回り)
+//   ⑩ 助手全員の結果の台詞で、記号だけが行頭に来ない(最後の見回り)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -47,6 +50,7 @@ const sceneScript = (cfg) => {
     st.phase = 'main'; st.pending = null; st.pendingDiscard = null; st.active = cfg.active || 0; st.turn = 2; st.first = 0;
     if (cfg.field) st.field = { no: cfg.field, p: 1, effects: (db.cards[cfg.field].effects || []).map((e) => ({ ...e })) };
     if (cfg.pray) st.pendingPray = { p: 0, by: 1, no: cfg.pray };
+    if (cfg.stun !== undefined) me.mons[cfg.stun].stunTurn = st.turn;
     // 相手の場の子を名前で決める(長い名前を出す)
     (cfg.oppMons || []).forEach((name, i) => { const x = Object.values(db.monsters).find((y) => y.name === name); if (x) opp.mons[i] = { ...opp.mons[i], no: x.no, species: x.species, name: x.name, type: x.type, life: x.life, max: x.life, main: x.main || null, sub: x.sub || null }; });
     me.breederUsed = false; me.mons.forEach((x) => { x.attacks = 0; });
@@ -115,6 +119,7 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
   const server = await serve();
   const browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
+  const bigLog = [];
   try {
     // ① 横の画面: 相手の番から始めて、自分の番の始めのまとめを待つ
     {
@@ -149,11 +154,21 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
     for (const [w, h] of [[320, 568], [390, 844]]) {
       // ② 番の帯のあいだ、記録の字が消えている
       const page = await openBattle(browser, { ...base, active: 1, mode: 'wait', viewport: { width: w, height: h } }, errors);
-      const seen = await page.locator('[data-card-turn-banner="me"]').waitFor({ timeout: 70000 }).then(() => true).catch(() => false);
-      // まとめが帯の上に重なるので、閉じてから帯を撮る
-      if (seen && await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
-      if (seen && await page.locator('[data-card-turn-banner]').count()) await shot(page, `qa7-turn-banner-${w}`);
-      const op = seen ? await page.evaluate(() => { const b = document.querySelector('[data-card-turn-banner]'); const l = document.querySelector('[data-card-log]'); return { banner: !!b, log: l ? Number(getComputedStyle(l).opacity) : null }; }) : null;
+      // ② 帯を見張り、出ているあいだの後ろの記録の字の濃さを取る
+      let op = null, seen = false;
+      for (let t = 0; t < 600 && !seen; t++) {
+        const r = await page.evaluate(() => {
+          const l = document.querySelector('[data-card-log]');
+          return { big: !!document.querySelector('[data-card-big]'), banner: !!document.querySelector('[data-card-turn-banner="me"]'), log: l ? (getComputedStyle(l).visibility === 'hidden' ? 0 : Number(getComputedStyle(l).opacity)) : null };
+        });
+        if (r.banner) {
+          seen = true; op = { banner: true, log: r.log };
+          // まとめが帯の上に重なるので、閉じてから帯を撮る
+          if (await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
+          if (await page.locator('[data-card-turn-banner]').count()) await shot(page, `qa7-turn-banner-${w}`);
+        }
+        if (!seen) await page.waitForTimeout(100);
+      }
       check(`② ${w}×${h}: 番の帯のあいだ、後ろの記録の字が消えている`, op && op.banner && op.log !== null && op.log < 0.2, JSON.stringify(op));
       // ③ 場のモンスターの名前(帯が消えてまとめを閉じてから)
       await page.locator('[data-card-turn-banner]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
@@ -179,6 +194,31 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       check(`④ ${w}×${h}: 捨て札の一覧の名前が切れずにカードの幅に収まる`, dn.length === DISCARD.length && dn.every((x) => !x.over && x.name.length >= 5), JSON.stringify(dn.filter((x) => x.over)));
       await page.close();
     }
+    // ⑧ 自分の番に手札の1枚目の技を使って、カードの大写しを出す。出ているあいだの後ろの記録の字の濃さを取る
+    for (const [w, h] of [[320, 568], [390, 844]]) {
+      const page = await openBattle(browser, { ...base, active: 0, mode: 'attack', viewport: { width: w, height: h } }, errors);
+      await page.waitForTimeout(600);
+      if (await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
+      await page.locator('[data-card-hand-card="0"]').click();
+      await page.waitForTimeout(200);
+      const user = page.locator('[data-card-mon].ring-amber-300').first();
+      if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
+      // 攻撃の技は狙う相手を押す・特殊技は「使う」を押す
+      const tgt = page.locator('[data-card-mon].ring-rose-400').first();
+      if (await tgt.count()) await tgt.click();
+      else await page.getByRole('button', { name: '使う' }).click().catch(() => {});
+      for (let t = 0; t < 50; t++) {
+        const r = await page.evaluate(() => {
+          if (!document.querySelector('[data-card-big]')) return null;
+          // 記録の字と助手の吹き出しのうち、見えている物の濃さのいちばん大きい値(どちらも無ければ0)
+          const seen = [...document.querySelectorAll('[data-card-log], [data-card-bubble]')].map((l) => (getComputedStyle(l).visibility === 'hidden' ? 0 : Number(getComputedStyle(l).opacity)));
+          return Math.max(0, ...seen);
+        });
+        if (r !== null) { await page.waitForTimeout(250); bigLog.push(`${w}:${r}`); await shot(page, `qa-new4-bigcard-${w}`); break; }
+        await page.waitForTimeout(100);
+      }
+      await page.close();
+    }
     // ⑤ オプション(320)
     {
       const page = await openBattle(browser, { ...base, stopAtTop: true, viewport: { width: 320, height: 568 } }, errors);
@@ -202,6 +242,61 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
         }, vw);
         check(`⑥ ${vw}幅: ドラの台詞の「ひととおり」が言葉の途中で折れない`, r.rects === 1, JSON.stringify(r));
       }
+      await page.close();
+    }
+    check('⑧ 320・390: カードの大写しのあいだ、後ろの記録の字と吹き出しが消えている', bigLog.length > 0 && bigLog.every((x) => Number(x.split(':')[1]) < 0.2), `${bigLog.length}回見た: ${[...new Set(bigLog)].join(' / ')}`);
+    // ⑨ 320×568: 背の高い名前のカード(カララギマンゴー)を選び、自分の子が「攻撃できない」のときも、下のボタンが画面の中(最後の見回り)
+    {
+      const page = await openBattle(browser, { ...base, hand: ['113', '026', '100', '100', '100'], stun: 1, active: 0, mode: 'attack', viewport: { width: 320, height: 568 } }, errors);
+      await page.waitForTimeout(600);
+      if (await page.locator('[data-card-turn-summary]').count()) await page.locator('[data-card-turn-summary]').click().catch(() => {});
+      await page.locator('[data-card-hand-card="0"]').click();
+      await page.waitForTimeout(400);
+      const r = await page.evaluate(() => {
+        const b = [...document.querySelectorAll('[data-card-footer] button')].find((x) => x.getClientRects().length);
+        const q = b && b.getBoundingClientRect();
+        return { stunned: document.querySelectorAll('[data-card-stunned]').length, bottom: q ? Math.round(q.bottom * 10) / 10 : null, h: innerHeight };
+      });
+      await shot(page, 'qa-final-target-320');
+      check('⑨ 320×568: カララギマンゴーを選んで狙うとき・「攻撃できない」の子がいるときも、下のボタンが画面の中', r.stunned >= 1 && r.bottom !== null && r.bottom <= r.h, JSON.stringify(r));
+      await page.close();
+    }
+    // ⑩ 助手全員の結果の台詞(勝ち・負け)を、結果の吹き出しの本文の幅(320〜390の画面の幅)で描き、記号だけが行頭に来ない(負けの「！w」が落ちた。最後の見回り)
+    {
+      const page = await openBattle(browser, { ...base, stopAtTop: true, viewport: { width: 320, height: 568 } }, errors);
+      const bad = await page.evaluate(async () => {
+        /* eslint-disable no-undef */
+        const host = document.createElement('div');
+        host.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;background:#fff;color:#1f1333;font-size:13px;font-weight:800;line-height:1.375';
+        document.body.appendChild(host);
+        const root = ReactDOM.createRoot(host);
+        const out = [];
+        const lines = [];
+        Object.keys(CARD_BATTLE_LINES).forEach((who) => ['win', 'lose'].forEach((sc) => (CARD_BATTLE_LINES[who][sc] || []).forEach((e) => lines.push([who, sc, Array.isArray(e) ? e[0] : e]))));
+        for (const width of [112, 118, 124, 130, 140, 150, 160, 170]) {
+          host.style.width = `${width}px`;
+          for (const [who, sc, text] of lines) {
+            root.render(React.createElement('div', { style: { wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' } }, cardJaWrap(text)));
+            await new Promise((r) => setTimeout(r, 0));
+            // 行の頭の字を拾う(字ごとの位置が前の字より下なら、そこが行の頭)
+            const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+            let prevTop = null, n;
+            const range = document.createRange();
+            while ((n = walker.nextNode())) {
+              for (let i = 0; i < n.length; i++) {
+                const ch = n.data[i]; if (/\s/.test(ch)) continue;
+                range.setStart(n, i); range.setEnd(n, i + 1);
+                const rc = range.getClientRects()[0]; if (!rc) continue;
+                if (prevTop !== null && rc.top > prevTop + 4 && /[！？!?…‥〜～♡♪wｗ、。」』）)]/.test(ch)) out.push(`${who}/${sc}/${width}px:「${text}」の「${ch}」`);
+                prevTop = rc.top;
+              }
+            }
+          }
+        }
+        root.unmount(); host.remove();
+        return { count: lines.length, out };
+      });
+      check(`⑩ 助手全員の結果の台詞(${bad.count}本)で、記号だけが行頭に来ない(幅112〜170px)`, bad.count > 20 && bad.out.length === 0, bad.out.slice(0, 4).join(' / '));
       await page.close();
     }
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
