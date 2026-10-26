@@ -108,6 +108,16 @@ const run = async () => {
   assert.strictEqual(merged.map(r => `${r.userName}:${r.level}`).join(','), '裏周回さん:120,昔の人:70,チャレンジさん:50');
   console.log('OK: 裏周回だけの人も載り、同じ人は高いほうの1行・表に来ていない人は rankings で補われる');
 
+  // 検査の中で navigator.webdriver を偽る(人の端末に見せる)と、ゲームの「自動操作は本物へ書かない」止めが効かない。
+  // そういう検査は Supabase を必ず差し替えること(2026-10-27・debug-passphrase-browser-check が本番の表へ行を足していた)
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.name === 'node_modules' ? [] : e.isDirectory() ? walk(d + '/' + e.name) : e.name.endsWith('.js') ? [d + '/' + e.name] : []);
+  const spoofers = walk('tools').filter((f) => /defineProperty\([^)]*['"]webdriver['"]/.test(fs.readFileSync(f, 'utf8')));
+  for (const f of spoofers) {
+    const t = fs.readFileSync(f, 'utf8');
+    assert(/route\([^)]*supabase/i.test(t), `${f}: webdriver を偽るのに Supabase を差し替えていない(本番へ書いてしまう)`);
+  }
+  console.log(`OK: webdriver を偽る検査(${spoofers.length}本)は Supabase を差し替えている`);
+
   // SQL
   const dir = 'docs/sql/rankings/';
   const apply = fs.readFileSync(dir + 'BREEDER_LEVELS_APPLY.sql', 'utf8');

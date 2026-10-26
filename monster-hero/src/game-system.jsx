@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b1b61ca877c5422a
+// generated-sha256: cf286aa64785a780
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 04:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17781,6 +17781,8 @@ const sbUpsertBreederProfile = async ({ breederId, userName, icon, profileFrame 
 // ★表がまだ無い環境(SQL未適用)では何もせず、今までどおりの表示になる。
 const BREEDER_LEVELS_TABLE = 'breeder_levels';
 const BREEDER_LEVELS_SELECT = 'breeder_id,user_name,level,icon';
+// これ未満のLvは表へ送らない(Lv.1の端末が行を積み上げないように。送る側=60-app.jsx の effect が使う)
+const BREEDER_LEVEL_PUBLISH_MIN = 2;
 const BREEDER_LEVELS_PAGE_SIZE = 1000;
 const BREEDER_LEVELS_MAX_PAGES = 30;
 let _breederLevelsUnavailable = false;
@@ -61701,7 +61703,9 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!dataLoaded || !onboarded || onboardingPreview) return;
     const level = Math.floor(Number(levelInfo(breederXp).level));   // breederLevel は下で作るので、ここでは経験値から求める
-    if (!Number.isFinite(level) || level < 1 || lastPublishedBreederLevelRef.current >= level) return;
+    // Lv.1(まだ1つも上がっていない端末)は送らない。順位の最下位で載っても意味が無く、遊ばずに閉じた端末や
+    // 検査・試しの端末が、本物の表へ「名前だけ入った Lv.1 の行」を積み上げるのを防ぐ(2026-10-27)。Lv.2 になったときに送る
+    if (!Number.isFinite(level) || level < BREEDER_LEVEL_PUBLISH_MIN || lastPublishedBreederLevelRef.current >= level) return;
     lastPublishedBreederLevelRef.current = level;
     (async () => {
       try {
