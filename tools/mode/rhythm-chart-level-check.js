@@ -183,13 +183,19 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   // 2026-10-20 夕方からは公開中の HELL 9譜面すべて(Grievous Lady は試作の枠の MASTER の段に置いてある)。表示は v2 の値のまま(v3 は新曲から)
   // 2026-10-21 作り直した5譜面は v3 の値(Toward 50・ROSE 51・ROSE short 49・SAD SONG 39・SAD SONG short 42。同じ日に残りの見分けにくい所も直した)
   // 2026-10-22 指が同じ位置に来る形を直した(社長の決定)ので、SAD SONG 38・SAD SONG short 43・Sheriruth 50 に変わった(測った値どおり)
-  const SET={toward_the_stars_short_hell_debug:50,rose_hell_debug:51,rose_short_hell_debug:49,sad_song_hell_debug:38,sad_song_short_hell_debug:43,
+  // 2026-10-27 SAD SONG は社長の値(LEVEL_OVERRIDES・43)を表示にしたので、下の「社長の値」の組で見る
+  const SET={toward_the_stars_short_hell_debug:50,rose_hell_debug:51,rose_short_hell_debug:49,sad_song_short_hell_debug:43,
     sheriruth_hell_debug:50,grievous_lady_hell:64,against_my_own_shadow_hell_debug:49,kaze_ga_soyogu_hell_debug:21};
   for(const [id,want] of Object.entries(SET)){
     const d=id==='grievous_lady_hell'?'MASTER':'HELL',song=all.find(x=>x.songId===id),c=song&&song.difficulties[d],f=REWORKED_V3.includes(id)?'v3':'v2';
     check(`${id} の HELL は Lv.${want}(新しい測り方(${f})の値・譜面の数字と表示が同じ)`,!!c&&c.level===want&&L.shownLevel(id,d,c)===want&&L.chartLevel(c,{formula:f}).level===want,
       c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,d,c)} / ${f} ${L.chartLevel(c,{formula:f}).level} / v1 ${L.chartLevel(c,{formula:'v1'}).level}`:'譜面が無い');
   }
+  // 2026-10-27 社長の値(表示の Lv. だけ上げた HELL 7譜面・譜面は1音も変えない): 譜面の数字と表示が社長の値で、式の値より上
+  {const BOSS={stay_with_me:48,stay_with_me_short:44,sad_song:43,six_eternel_remix:44,kiki_issen_short:44,mf_ichika_mix:35,toriko:32};
+    for(const [base,want] of Object.entries(BOSS)){const id=`${base}_hell_debug`,song=all.find(x=>x.songId===id),c=song&&song.difficulties.HELL;
+      check(`${base} の HELL は社長の値 Lv.${want}(譜面の数字と表示が同じ・式の値より上)`,!!c&&c.level===want&&L.shownLevel(id,'HELL',c)===want&&L.shownLevel(base,'HELL',c)===want&&L.chartLevel(c,{formula:'v3'}).level<want,
+        c?`譜面 ${c.level} / 表示 ${L.shownLevel(id,'HELL',c)} / v3 ${L.chartLevel(c,{formula:'v3'}).level}`:'譜面が無い');}}
   // ② 押さえている手の側に来るノーツ: 右で押さえている間に右へ来るタップは数え、左へ来るタップは数えない
   const hold={type:'HOLD',lane:4,subLane:8,subLaneWidth:2,timeMs:1000,endTimeMs:3000};
   const taps=(lane)=>Array.from({length:10},(_,i)=>({type:'TAP',lane,subLane:lane*2,subLaneWidth:2,timeMs:1200+i*150}));

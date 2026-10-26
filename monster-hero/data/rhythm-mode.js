@@ -28791,7 +28791,7 @@ const sadSongHellNotes=((t,h,f,s,T,F,S)=>[
   t(216541,7,4,0),h(216715,7,4,217064),t(217152,6,2,0),t(217239,8,4,0),
 // </sad-song-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sadSongHellChart=mhChart(38,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
+const sadSongHellChart=mhChart(43,sadSongHellNotes,SAD_SONG_DURATION_MS,6);
 
 // ===== SAD SONG short ver.(2026-10-18 追加。全編の頭から1つ目のサビの終わりまで) =====
 const SAD_SONG_SHORT_DURATION_MS=82440;
@@ -37920,7 +37920,7 @@ const mfIchikaMixHellNotes=((t,h,f,s,T,F,S)=>[
   f(143294,9,3),
 // </atsu-cup-theme-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const mfIchikaMixHellChart=mhChart(30,mfIchikaMixHellNotes,ATSU_CUP_THEME_V3_DURATION_MS,6);
+const mfIchikaMixHellChart=mhChart(35,mfIchikaMixHellNotes,ATSU_CUP_THEME_V3_DURATION_MS,6);
 const monsterHeroHellNotes=((t,h,f,s,T,F,S)=>[
 // <monster-hero-v4-hell-notes>
   t(2198,2,2,0),t(2718,3,3,0),t(2805,1,3,0),f(2891,4,2),
@@ -38588,7 +38588,7 @@ const sixEternelRemixHellNotes=((t,h,f,s,T,F,S)=>[
   t(149239,9,3,0),
 // </six-eternel-remix-beat-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const sixEternelRemixHellChart=mhChart(39,sixEternelRemixHellNotes,SIX_ETERNEL_REMIX_BEAT_DURATION_MS,6);
+const sixEternelRemixHellChart=mhChart(44,sixEternelRemixHellNotes,SIX_ETERNEL_REMIX_BEAT_DURATION_MS,6);
 const stayWithMeHellNotes=((t,h,f,s,T,F,S)=>[
 // <pandora-boss-v3-hell-notes>
   t(1852,1,3,0),t(2381,3,3,0),t(2558,5,3,0),T(3087,8,2,1),
@@ -38802,7 +38802,7 @@ const stayWithMeHellNotes=((t,h,f,s,T,F,S)=>[
   f(270985,3,3),T(271515,3,3,1),T(271691,3,3,1),
 // </pandora-boss-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const stayWithMeHellChart=mhChart(37,stayWithMeHellNotes,PANDORA_BOSS_DURATION_MS,6);
+const stayWithMeHellChart=mhChart(48,stayWithMeHellNotes,PANDORA_BOSS_DURATION_MS,6);
 const kikiIssenHellNotes=((t,h,f,s,T,F,S)=>[
 // <eiki-boss-v3-hell-notes>
   t(1930,4,2,0),t(1930,0,2,0),T(2124,7,2,1),t(2124,3,2,0),
@@ -39844,7 +39844,7 @@ const torikoHellNotes=((t,h,f,s,T,F,S)=>[
   t(76481,5,4,0),T(77370,7,3,1),T(77815,10,1,1),
 // </toriko-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const torikoHellChart=mhChart(28,torikoHellNotes,TORIKO_DURATION_MS,6);
+const torikoHellChart=mhChart(32,torikoHellNotes,TORIKO_DURATION_MS,6);
 const song4uHitasuraHellNotes=((t,h,f,s,T,F,S)=>[
 // <4u-hitasura-v3-hell-notes>
   T(2064,2,2,1),t(3926,4,1,0),t(4650,2,2,0),S(5167,6305,[[5167,2.5,2,0,0],[5271,2.835,2,0,0],[5374,3.168,2,0,0],[5477,3.5,2,0,0],[5581,3.834,2,0.25,0],[5684,4.166,2,0.5,0],[5788,4.5,2,0.75,0],[5891,3.503,2,1,0],[5995,2.497,2,1,0],[6098,1.5,2,1,0],[6202,0.746,2,1,0],[6305,0,2,1,0]],0,'L'),
@@ -41946,7 +41946,7 @@ const stayWithMeShortHellNotes=((t,h,f,s,T,F,S)=>[
   T(174911,9,3,1),
 // </stay-with-me-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const stayWithMeShortHellChart=mhChart(32,stayWithMeShortHellNotes,STAY_WITH_ME_SHORT_DURATION_MS,6);
+const stayWithMeShortHellChart=mhChart(44,stayWithMeShortHellNotes,STAY_WITH_ME_SHORT_DURATION_MS,6);
 const kikiIssenShortHellNotes=((t,h,f,s,T,F,S)=>[
 // <kiki-issen-short-v3-hell-notes>
   T(1976,7,2,1),t(1976,3,2,0),T(2170,8,2,1),t(2170,3,2,0),
@@ -42101,7 +42101,7 @@ const kikiIssenShortHellNotes=((t,h,f,s,T,F,S)=>[
   T(192576,7,3,1),T(192963,5,3,1),
 // </kiki-issen-short-v3-hell-notes>
 ])(mhTap,mhHoldV2,mhFlick,mhSlideV2,mhSkyTap,mhSkyFlick,mhSkySlide);
-const kikiIssenShortHellChart=mhChart(39,kikiIssenShortHellNotes,KIKI_ISSEN_SHORT_DURATION_MS,6);
+const kikiIssenShortHellChart=mhChart(44,kikiIssenShortHellNotes,KIKI_ISSEN_SHORT_DURATION_MS,6);
 const crazyPartyNightHellNotes=((t,h,f,s,T,F,S)=>[
 // <crazy-party-night-v3-hell-notes>
   f(2778,3,4),T(3716,7,4,1),T(3950,4,6,1),T(4184,8,4,1),
