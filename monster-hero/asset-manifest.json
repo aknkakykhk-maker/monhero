@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "190ec8dba65d",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120878355,"count":651},"card":{"bytes":31286500,"count":906},"all":{"bytes":259552301,"count":1650}},
+  "id": "3f4615d9feb0",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121191194,"count":654},"card":{"bytes":31286500,"count":906},"all":{"bytes":259865140,"count":1653}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1359,6 +1359,7 @@
     "images/monsters/ark.png": {"v":"a9dce68b24d4","size":121164,"pack":"battle"},
     "images/monsters/arrowhead.png": {"v":"64f1d371ad4d","size":120361,"pack":"battle"},
     "images/monsters/c010.png": {"v":"e53142331a97","size":74517,"pack":"battle"},
+    "images/monsters/c011.png": {"v":"44e731f843ea","size":112663,"pack":"battle"},
     "images/monsters/c012.png": {"v":"38661b85c0b6","size":79153,"pack":"battle"},
     "images/monsters/c013.png": {"v":"fca923cd46e8","size":76858,"pack":"battle"},
     "images/monsters/c015.png": {"v":"8a8916e3668f","size":64598,"pack":"battle"},
@@ -1367,6 +1368,7 @@
     "images/monsters/c018.png": {"v":"47a9f8c64bb3","size":53821,"pack":"battle"},
     "images/monsters/c019.png": {"v":"2ca0d628318e","size":110228,"pack":"battle"},
     "images/monsters/c020.png": {"v":"81b9fd3f3ec0","size":74515,"pack":"battle"},
+    "images/monsters/c032.png": {"v":"5b63d78632ff","size":104723,"pack":"battle"},
     "images/monsters/c033.png": {"v":"6640e061ae35","size":76115,"pack":"battle"},
     "images/monsters/c034.png": {"v":"994f5cc54350","size":67819,"pack":"battle"},
     "images/monsters/c035.png": {"v":"eb9c14059560","size":121956,"pack":"battle"},
@@ -1377,6 +1379,7 @@
     "images/monsters/c041.png": {"v":"1ca881589d31","size":97946,"pack":"battle"},
     "images/monsters/c042.png": {"v":"e5a483c55e02","size":89456,"pack":"battle"},
     "images/monsters/c043.png": {"v":"71b585e27dc5","size":119048,"pack":"battle"},
+    "images/monsters/c044.png": {"v":"997468609578","size":95453,"pack":"battle"},
     "images/monsters/c045.png": {"v":"86b2b98d136d","size":129331,"pack":"battle"},
     "images/monsters/c051.png": {"v":"c0a0df62c4f7","size":188631,"pack":"battle"},
     "images/monsters/c052.png": {"v":"ef445601b28a","size":137167,"pack":"battle"},

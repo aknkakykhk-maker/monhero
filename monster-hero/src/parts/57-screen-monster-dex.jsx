@@ -348,7 +348,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
           <div data-dex-side="left" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
-            {unlocked&&monsterIdleRigOf(mon.id)
+            {mon.imgUrl&&monsterIdleRigOf(mon.id)
               ? <button type="button" data-dex-idle-toggle aria-pressed={idleMotion} onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}
                   className={`w-full max-w-[124px] min-h-[44px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black shadow-lg active:scale-95 ${idleMotion?'border-amber-300/60 bg-slate-950/85 text-amber-100':'border-white/20 bg-slate-800 text-slate-300'}`}>
                   <DexSideLabel text={idleMotion?'⏸ 動きを止める':'▶ 動かす'}/>
@@ -367,7 +367,11 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div data-dex-art className="relative shrink-0 aspect-square flex items-center justify-center" style={{height:'clamp(152px, 22dvh, 190px)'}}>
             {unlocked
               ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>
-              : <DexMonsterArt mon={mon} alt={mon.name}/>}
+              // 未入手・未実装も同じく待機アニメで動かす(2026-10-26 社長)。色は元の色だけ。
+              // 立ち絵がまだ無い子(アンキロックスなど)は影で出す
+              : mon.imgUrl
+                ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>
+                : <DexMonsterArt mon={mon} alt="立ち絵のないモンスター" hidden/>}
           </div>
           {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外(右の列)に置く。
               演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
@@ -410,7 +414,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
             {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
                 3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
             <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
-              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(monsterDexDescription(mon.id))}</p>
+              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(dexEntryDescription(mon))}</p>
             </div>
             {unlocked?(<>
               <ScreenTabs className="mt-2" value={tab} onChange={onSelectTab}

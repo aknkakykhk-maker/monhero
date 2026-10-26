@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 96e53b366945190d
+// generated-sha256: 2b86a3a6b979d08f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 23:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 23:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2923,6 +2923,12 @@ const dexEntryStatusOf = (mon, unlockedIds) => {
   const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   if (!mon || !playable[mon.id]) return 'draft';
   return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+// 図鑑の説明。案の子でまだ文が無い子は、文を作らず「？？？」で空けておく(2026-10-26 社長が文を決めるまで)
+const dexEntryDescription = (mon) => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
 };
 // 並びは 入手済み → 未入手 → 未実装。それぞれの中は今までの図鑑の並び(種族順)のまま
 const dexScreenEntries = (unlockedIds) => {
@@ -15428,6 +15434,24 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Gentle: { body:'breathe', bodyMask:null, parts:[] },
   Vesuvios: { body:'breathe', bodyMask:null, parts:[] },
   MooHybrid: { body:'breathe', bodyMask:null, parts:[] },
+  Baron: { body:'breathe', bodyMask:null, parts:[] },
+  Aquarius: { body:'sway', bodyMask:null, parts:[] },
+  Plumler: { body:'hop', bodyMask:null, parts:[] },
+  StrikeReaper: { body:'sway', bodyMask:null, parts:[] },
+  DarkHam: { body:'hop', bodyMask:null, parts:[] },
+  HellFat: { body:'jelly', bodyMask:null, parts:[] },
+  UrokoGel: { body:'jelly', bodyMask:null, parts:[] },
+  WakakusaKenzai: { body:'sway', bodyMask:null, parts:[] },
+  Garant: { body:'heavy', bodyMask:null, parts:[] },
+  MimiNyaa: { body:'breathe', bodyMask:null, parts:[] },
+  BenihimeSou: { body:'sway', bodyMask:null, parts:[] },
+  MurasakiChu: { body:'jelly', bodyMask:null, parts:[] },
+  ArmorDragon: { body:'heavy', bodyMask:null, parts:[] },
+  Kermadix: { body:'heavy', bodyMask:null, parts:[] },
+  Gigalon: { body:'breathe', bodyMask:null, parts:[] },
+  BlueMountainHybrid: { body:'heavy', bodyMask:null, parts:[] },
+  MagnaBeetle: { body:'heavy', bodyMask:null, parts:[] },
+  GinGiLiger: { body:'breathe', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -34600,7 +34624,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
           <div data-dex-side="left" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
-            {unlocked&&monsterIdleRigOf(mon.id)
+            {mon.imgUrl&&monsterIdleRigOf(mon.id)
               ? <button type="button" data-dex-idle-toggle aria-pressed={idleMotion} onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}
                   className={`w-full max-w-[124px] min-h-[44px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black shadow-lg active:scale-95 ${idleMotion?'border-amber-300/60 bg-slate-950/85 text-amber-100':'border-white/20 bg-slate-800 text-slate-300'}`}>
                   <DexSideLabel text={idleMotion?'⏸ 動きを止める':'▶ 動かす'}/>
@@ -34619,7 +34643,11 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div data-dex-art className="relative shrink-0 aspect-square flex items-center justify-center" style={{height:'clamp(152px, 22dvh, 190px)'}}>
             {unlocked
               ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>
-              : <DexMonsterArt mon={mon} alt={mon.name}/>}
+              // 未入手・未実装も同じく待機アニメで動かす(2026-10-26 社長)。色は元の色だけ。
+              // 立ち絵がまだ無い子(アンキロックスなど)は影で出す
+              : mon.imgUrl
+                ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>
+                : <DexMonsterArt mon={mon} alt="立ち絵のないモンスター" hidden/>}
           </div>
           {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外(右の列)に置く。
               演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
@@ -34662,7 +34690,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
             {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
                 3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
             <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
-              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(monsterDexDescription(mon.id))}</p>
+              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(dexEntryDescription(mon))}</p>
             </div>
             {unlocked?(<>
               <ScreenTabs className="mt-2" value={tab} onChange={onSelectTab}

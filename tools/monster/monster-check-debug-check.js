@@ -67,7 +67,12 @@ check('待機アニメの枠があり、図鑑・バトルと同じ withMonsterI
   const fx = fs.readFileSync(path.join(root, 'monster-hero/src/parts/24-battle-fx.jsx'), 'utf8');
   const ally = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
   const draftIds = [...(ally.match(/const UPCOMING_MONSTER_DRAFTS = Object\.freeze\(\{[\s\S]*?\n\}\);/) || [''])[0].matchAll(/^  (\w+): Object\.freeze/gm)].map(m => m[1]);
-  const noRig = draftIds.filter(id => !new RegExp(`^  ${id}: \\{ body:`, 'm').test(fx));
+  // 立ち絵がまだ無い子(imgUrl:null。2026-10-26 社長「影で並べる」のアンキロックス・ソボロベント)は、動かす絵が無いのでリグを持てない。
+  // 外してよいのは「本当に絵が無い」と実データで確かめた子だけ。絵が届いて imgUrl が付いたら、また見張る
+  const noArt = new Set(DRAFTS.filter(mon => !mon.imgUrl).map(mon => mon.id));
+  const noRig = draftIds.filter(id => !noArt.has(id) && !new RegExp(`^  ${id}: \\{ body:`, 'm').test(fx));
+  check('立ち絵の無い案の子は、影の子(アンキロックス・ソボロベント)だけ',
+    [...noArt].sort().join() === ['Ankylox', 'Soborobent'].sort().join(), [...noArt].join('・') || 'なし');
   // 技名(2026-09-29 ユーザーが送った参考の技画像から当てはめた。元の値は docs/spec/YGGDRASIL_SKILLS.md)
   for (const id of draftIds) {
     const atk = (ally.match(new RegExp(`^  ${id}:\\s*\\[([^\\]]*)\\]`, 'm')) || [, ''])[1].split(',').filter(Boolean);

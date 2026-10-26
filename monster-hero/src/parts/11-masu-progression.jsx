@@ -1906,6 +1906,12 @@ const dexEntryStatusOf = (mon, unlockedIds) => {
   if (!mon || !playable[mon.id]) return 'draft';
   return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
 };
+// 図鑑の説明。案の子でまだ文が無い子は、文を作らず「？？？」で空けておく(2026-10-26 社長が文を決めるまで)
+const dexEntryDescription = (mon) => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
+};
 // 並びは 入手済み → 未入手 → 未実装。それぞれの中は今までの図鑑の並び(種族順)のまま
 const dexScreenEntries = (unlockedIds) => {
   const base = dexMonsterList();

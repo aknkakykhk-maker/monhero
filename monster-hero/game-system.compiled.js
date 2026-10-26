@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bcd172ea8487360c
+// source-sha256: 3b453d6a7d303b08
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 23:01";
+const BUILD_DATE = "2026-10-26 23:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -2926,6 +2926,11 @@ const dexEntryStatusOf = (mon, unlockedIds) => {
   const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   if (!mon || !playable[mon.id]) return 'draft';
   return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+const dexEntryDescription = mon => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
 };
 const dexScreenEntries = unlockedIds => {
   const base = dexMonsterList();
@@ -25336,6 +25341,96 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     parts: []
   },
   MooHybrid: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Baron: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Aquarius: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Plumler: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  StrikeReaper: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  DarkHam: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  HellFat: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  UrokoGel: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  WakakusaKenzai: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Garant: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  MimiNyaa: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  BenihimeSou: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  MurasakiChu: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  ArmorDragon: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Kermadix: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Gigalon: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  BlueMountainHybrid: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  MagnaBeetle: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  GinGiLiger: {
     body: 'breathe',
     bodyMask: null,
     parts: []
@@ -55237,7 +55332,7 @@ function MonsterDexDetailScreen({
   }, React.createElement("div", {
     "data-dex-side": "left",
     className: "flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1"
-  }, unlocked && monsterIdleRigOf(mon.id) ? React.createElement("button", {
+  }, mon.imgUrl && monsterIdleRigOf(mon.id) ? React.createElement("button", {
     type: "button",
     "data-dex-idle-toggle": true,
     "aria-pressed": idleMotion,
@@ -55278,9 +55373,14 @@ function MonsterDexDetailScreen({
     alt: mon.name,
     motion: idleMotion,
     colors: dexSelectedColors(masuMons, mon.id, dexColorKey)
+  }) : mon.imgUrl ? React.createElement(DexMonsterIdleArt, {
+    mon: mon,
+    alt: mon.name,
+    motion: idleMotion
   }) : React.createElement(DexMonsterArt, {
     mon: mon,
-    alt: mon.name
+    alt: "立ち絵のないモンスター",
+    hidden: true
   })), React.createElement("div", {
     "data-dex-side": "right",
     className: "flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1"
@@ -55381,7 +55481,7 @@ function MonsterDexDetailScreen({
     }
   }, React.createElement("p", {
     className: "font-bold leading-relaxed text-slate-200 break-words"
-  }, helpWrap(monsterDexDescription(mon.id)))), unlocked ? React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
+  }, helpWrap(dexEntryDescription(mon)))), unlocked ? React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     className: "mt-2",
     value: tab,
     onChange: onSelectTab,
