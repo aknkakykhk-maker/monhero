@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bbd965f3f4b2e3e9
+// generated-sha256: 1b42f52c5f9e9ed0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71952,21 +71952,24 @@ function MonsterHeroGame() {
   const renderLoginBonusList = (todayDay) => (
     <div className="text-left">
       <div className="text-[10px] font-black text-slate-400 mb-1 tracking-wider">7日間のログインボーナス</div>
-      <div className="max-h-[34vh] overflow-y-auto mh-scroll space-y-1 pr-0.5">
+      {/* 横持ち(高さ 375 など)では3日目までしか見えず、続きがあることも分からなかった(2026-10-27 横持ちの見回り)。
+          横持ちは一覧を高めに・行を低めにして、それでもあふれるときだけ続きがあると書く(ScrollMoreList・41-screen-ui.jsx)。
+          ごほうびは1つずつ折れない塊にし、折れるのは区切り(/)のところだけ(「スキップチケッ/ト」と途中で折らない) */}
+      <ScrollMoreList data-login-bonus-list moreText="窓の中を下へ送ると、7日目まで見られます" className="max-h-[34vh] overflow-y-auto mh-scroll grid grid-cols-1 gap-1 pr-0.5 landscape:max-h-[46vh]">
         {LOGIN_BONUS_REWARDS.map((rewards, idx) => {
           const day = idx + 1;
           const phase = day < todayDay ? 'done' : day === todayDay ? 'today' : 'next';
           return (
-            <div key={day} className={`rounded-xl border px-2.5 py-1.5 flex items-start gap-2 ${phase==='today'?'bg-amber-500/15 border-amber-300':phase==='done'?'bg-black/30 border-white/10 opacity-60':'bg-black/25 border-white/10'}`}>
+            <div key={day} className={`rounded-xl border px-2.5 py-1.5 landscape:py-1 flex items-start gap-2 ${phase==='today'?'bg-amber-500/15 border-amber-300':phase==='done'?'bg-black/30 border-white/10 opacity-60':'bg-black/25 border-white/10'}`}>
               <div className="shrink-0 w-12 text-center">
                 <div className={`text-[11px] font-black leading-tight ${phase==='today'?'text-amber-200':'text-slate-300'}`}>{day}日目</div>
                 <div className={`text-[7px] font-black leading-tight ${phase==='today'?'text-amber-300':phase==='done'?'text-emerald-400':'text-slate-500'}`}>{phase==='today'?'今日':phase==='done'?'受取済み':'これから'}</div>
               </div>
-              <div className="flex-1 min-w-0 text-[10px] font-bold text-cyan-200 leading-tight break-words">{rewards.map(r=>giftRewardText(r)).join('　/　')}</div>
+              <div className="flex-1 min-w-0 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[10px] font-bold text-cyan-200 leading-tight">{rewards.map((r,ri)=><span key={ri} className="whitespace-nowrap">{ri>0&&<span className="mr-1.5 text-cyan-200/50">/</span>}{giftRewardText(r)}</span>)}</div>
             </div>
           );
         })}
-      </div>
+      </ScrollMoreList>
       <div className="text-[8px] text-slate-500 font-bold mt-1 leading-relaxed">7日目まで受け取ると1日目に戻ります。報酬はギフトボックスへ届きます。</div>
     </div>
   );

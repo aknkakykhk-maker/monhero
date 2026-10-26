@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb5615d524d459cf
+// source-sha256: d2fd2a14dbf26b2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114077,14 +114077,16 @@ function MonsterHeroGame() {
     className: "text-left"
   }, React.createElement("div", {
     className: "text-[10px] font-black text-slate-400 mb-1 tracking-wider"
-  }, "7日間のログインボーナス"), React.createElement("div", {
-    className: "max-h-[34vh] overflow-y-auto mh-scroll space-y-1 pr-0.5"
+  }, "7日間のログインボーナス"), React.createElement(ScrollMoreList, {
+    "data-login-bonus-list": true,
+    moreText: "窓の中を下へ送ると、7日目まで見られます",
+    className: "max-h-[34vh] overflow-y-auto mh-scroll grid grid-cols-1 gap-1 pr-0.5 landscape:max-h-[46vh]"
   }, LOGIN_BONUS_REWARDS.map((rewards, idx) => {
     const day = idx + 1;
     const phase = day < todayDay ? 'done' : day === todayDay ? 'today' : 'next';
     return React.createElement("div", {
       key: day,
-      className: `rounded-xl border px-2.5 py-1.5 flex items-start gap-2 ${phase === 'today' ? 'bg-amber-500/15 border-amber-300' : phase === 'done' ? 'bg-black/30 border-white/10 opacity-60' : 'bg-black/25 border-white/10'}`
+      className: `rounded-xl border px-2.5 py-1.5 landscape:py-1 flex items-start gap-2 ${phase === 'today' ? 'bg-amber-500/15 border-amber-300' : phase === 'done' ? 'bg-black/30 border-white/10 opacity-60' : 'bg-black/25 border-white/10'}`
     }, React.createElement("div", {
       className: "shrink-0 w-12 text-center"
     }, React.createElement("div", {
@@ -114092,8 +114094,13 @@ function MonsterHeroGame() {
     }, day, "日目"), React.createElement("div", {
       className: `text-[7px] font-black leading-tight ${phase === 'today' ? 'text-amber-300' : phase === 'done' ? 'text-emerald-400' : 'text-slate-500'}`
     }, phase === 'today' ? '今日' : phase === 'done' ? '受取済み' : 'これから')), React.createElement("div", {
-      className: "flex-1 min-w-0 text-[10px] font-bold text-cyan-200 leading-tight break-words"
-    }, rewards.map(r => giftRewardText(r)).join('　/　')));
+      className: "flex-1 min-w-0 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[10px] font-bold text-cyan-200 leading-tight"
+    }, rewards.map((r, ri) => React.createElement("span", {
+      key: ri,
+      className: "whitespace-nowrap"
+    }, ri > 0 && React.createElement("span", {
+      className: "mr-1.5 text-cyan-200/50"
+    }, "/"), giftRewardText(r)))));
   })), React.createElement("div", {
     className: "text-[8px] text-slate-500 font-bold mt-1 leading-relaxed"
   }, "7日目まで受け取ると1日目に戻ります。報酬はギフトボックスへ届きます。"));
