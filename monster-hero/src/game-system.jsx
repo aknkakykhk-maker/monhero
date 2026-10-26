@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bbfe3230640042a2
+// generated-sha256: acdcdea771c82d1d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -59077,16 +59077,19 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           </div>
         </div>
         {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けたときは出さない */}
-        <div className={`${SCREEN_FOOTER_CLASS} flex flex-wrap gap-2`}>
+        {/* 上の段に「もう1戦」、下の段に「この対戦を見る」「部屋を出る」を並べる(320px でも3つが詰まらないように) */}
+        <div className={`${SCREEN_FOOTER_CLASS} flex flex-col gap-2`}>
           {!room.foeGone && r.reason !== '相手が抜けた' && (
             <button type="button" data-card-pvp-again={room.again ? 'waiting' : room.foeAgain ? 'foe' : 'ready'} disabled={!!room.again} className={`${btn} mh-button-primary`}
               onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.again(); }}>
               {room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'}
             </button>
           )}
+          <div className="flex gap-2">
           {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${btn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
           {room.foeGone && <p data-card-pvp-foe-gone className="flex-1 self-center text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
           <button type="button" data-card-pvp-leave className={`${btn} ${room.foeGone || r.reason === '相手が抜けた' ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          </div>
         </div>
       </div>
     );

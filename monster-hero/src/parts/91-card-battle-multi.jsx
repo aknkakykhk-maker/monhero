@@ -1019,16 +1019,19 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           </div>
         </div>
         {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けたときは出さない */}
-        <div className={`${SCREEN_FOOTER_CLASS} flex flex-wrap gap-2`}>
+        {/* 上の段に「もう1戦」、下の段に「この対戦を見る」「部屋を出る」を並べる(320px でも3つが詰まらないように) */}
+        <div className={`${SCREEN_FOOTER_CLASS} flex flex-col gap-2`}>
           {!room.foeGone && r.reason !== '相手が抜けた' && (
             <button type="button" data-card-pvp-again={room.again ? 'waiting' : room.foeAgain ? 'foe' : 'ready'} disabled={!!room.again} className={`${btn} mh-button-primary`}
               onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.again(); }}>
               {room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'}
             </button>
           )}
+          <div className="flex gap-2">
           {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${btn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
           {room.foeGone && <p data-card-pvp-foe-gone className="flex-1 self-center text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
           <button type="button" data-card-pvp-leave className={`${btn} ${room.foeGone || r.reason === '相手が抜けた' ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          </div>
         </div>
       </div>
     );
