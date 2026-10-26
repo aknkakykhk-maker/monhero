@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e6536689bc6b387
+// generated-sha256: 24641acd73b9bb91
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,10 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+// 画面に出す版の日時(JST・version.json の build と同じ値)。index.html が window.__mhBuildDate で渡す(tools/stamp-version.js が打つ)。
+// 本体の中に日時を書くと、ビルドのたびに本体の中身が変わり、GAME_BUILD(中身のハッシュ)も毎回変わって、
+// 事前ダウンロードにためた本体を使えないため(2026-10-27 速さ部)。読めないとき(本体だけを vm で動かす検査など)は空にする
+const BUILD_DATE = (typeof window !== 'undefined' && typeof window.__mhBuildDate === 'string') ? window.__mhBuildDate : '';
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7621,13 +7624,26 @@ const monsterArtUrlNeedsContain = (url) => {
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
       const monster = all[baseId];
       if (!monster) continue;
-      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
+      const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[baseId] : null;
+      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon, thumb]) {
         if (each) urls.add(each);
       }
     }
     _monsterArtContainUrls = urls;
   }
   return _monsterArtContainUrls.has(url);
+};
+// 小さい枠(画面で 64px 以下)に出すモンスターの絵(2026-10-27 オート無限周回のメモリ対策・社長の決定)。
+// 30体ほどはアイコンが立ち絵そのもの(1024四方前後)で、48px の丸い枠にもその大きさのまま展開されていた。
+// ビルドで作った「短い辺 192px の小さい版」(MONSTER_THUMBS・tools/image/make-monster-thumbs.js)があれば、それを返す。
+// ・専用のアイコンを持つ子(アイコンが立ち絵と別の絵)は、絵が変わってしまうのでアイコンのまま
+// ・大きく出す所(図鑑・大きい立ち絵)と、染色する絵には使わない(呼ぶ側で決める)
+const monsterSmallIconUrl = (base) => {
+  if (!base) return '';
+  const icon = base.iconUrl || base.imgUrl || '';
+  if (base.iconUrl && base.iconUrl !== base.imgUrl) return icon;
+  const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[base.id] : null;
+  return thumb || icon;
 };
 // 部位マスクは絵にぴったり重ねる必要がある。絵は object-fit(cover/contain)で枠へ収めるのに、
 // マスクだけ既定の mask-size:100% 100%(枠いっぱいへ引き伸ばす)にすると、絵とマスクで縮尺が
@@ -11574,10 +11590,11 @@ const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.c
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
+// 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
 const MarketBalanceBar = ({ balances }) => (
   <div data-market-balances className={`mb-2 shrink-0 grid gap-2 ${balances.length>=3?'grid-cols-3':balances.length===2?'grid-cols-2':'grid-cols-1'}`}>
-    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];return(
-      <div key={currency} data-market-balance={currency} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`}>
+    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];const one=balances.length===1;return(
+      <div key={currency} data-market-balance={currency} className={`flex items-center justify-center rounded-2xl border ${one?'flex-row-reverse gap-2 py-1.5':'flex-col py-2'} ${meta.bar}`}>
         <div className="flex items-baseline gap-1">
           <span aria-hidden="true" className="text-[11px]">{meta.emoji}</span>
           <span className="font-mono text-base font-black">{Math.max(0, Math.floor(Number(value)||0)).toLocaleString()}</span>
@@ -12432,12 +12449,13 @@ const useBubbleCollapse = (collapseKey) => {
 //   compact     … 縦の場所が取れない画面(選択画面・リザルト)向けの小さい表示
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
 //   collapseKey … 渡すと吹き出しを小さくたためる(たたんだことを mh_bubble_collapsed_v1 に覚える)。画面ごとに別のキー
+//   collapseHidden … たたんだら札も出さず何も描かない(ひらく入口が画面の別の所にあるとき。ヘルプの上の助手の顔)
 // footerSpace … 吹き出しの下の行の左に空ける幅(px)。HOME はそこへ「💬 おしゃべり」を重ねる(2026-10-16)。指定が無ければ今までどおり
 // 吹き出しの本文の折り方(jaWrap・JA_LABEL_STYLE は 41-screen-ui.jsx)。一部だけを描く検査では無いことがあるので、無ければそのまま出す
 const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
 // (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
 const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
@@ -12519,6 +12537,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   if (bubbleHidden) return null;
   // たたんでいる間は、小さな顔と「ひとこと」の札だけ(押すとひらく)
   if (collapseKey && collapsed) {
+    if (collapseHidden) return null;
     return (
       <div data-bubble-collapsed className="w-full flex items-center gap-2">
         <AssistantFace who={who} size={32} accent={color} expression={face}/>
@@ -32271,7 +32290,9 @@ const jaWrapPoints = (text) => {
         //   かぎかっこの中は名前ごと包む決まり(jaWrapPieces)に任せる(つなぐと「「フリーマッチ」／と……」と最後の行に字が残った)
         || (/[ァ-ヶー]$/.test(prev) && /^[ァ-ヶ]/.test(seg) && !/[「『][^」』]*$/.test(cur) && (cur.match(/[ァ-ヶー]+$/) || [''])[0].length + (seg.match(/^[ァ-ヶー]+/) || [''])[0].length <= 7)));
       const soft = !hard && !kaoStart(pos) && (
-        (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
+        // 数の並び「2・4・6」は「・」のあとでも折らない(「WAVE2・／4・6で」と折れた。2026-10-26 見回り ヘルプ記事 320)。長い並び(「3・5・7・9・10」)は②で中を分ける
+        (/[0-9０-９]・$/.test(cur) && /^[0-9０-９]/.test(seg))
+        ||         (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
         || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
         // ひらがなで始まる区切りは、手前が助詞・句読点のときだけ折る(文節で折る)。活用の途中(「いけ|ませ|ん」「強|く|な|け|れ|ば」「聞い|てい」)では折らない
         || (/^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev))
@@ -32313,13 +32334,15 @@ const jaWrapPoints = (text) => {
     //   ブラウザに好きな所で折られる(「冷めてしまいます／ぞ」)。柔らかい区切りのうち、「て・で」のあと(冷めて|しまいますぞ)、
     //   漢字・カタカナの前、の順に選ぶ。どちらの側も3字以上残し、なるべく真ん中で。空白は元から折れるので、空白で分けた部分ごとに数える
     const runLetters = (parts) => Math.max(...parts.join('').split(/\s+/).map(visible));
+    // 小さい「っ」のあとにひらがなが続く所(「終わっちゃっ|たら」「なっ|た」)は言葉の途中なので、ここでは分けない(2026-10-26 カゲあつくんの点検)
+    const midSokuon = (parts, k) => /っ$/.test(parts[k - 1]) && /^[ぁ-ゖ]/.test(parts[k]);
     const chunks = [];
     const split = (g) => {
       if (runLetters(g.parts) <= JA_WRAP_LINE || g.parts.length < 2) { chunks.push(g.parts.join('')); return; }
       const total = visible(g.parts.join(''));
       let best = -1, bestScore = -1;
       for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')), right = total - left;
         // どちらの側にも字(かな・漢字)を3字以上残す。決まった言い方(「いって|らっしゃい」)の中では分けない
         if (letters(g.parts.slice(0, k).join('')) < 3 || letters(g.parts.slice(k).join('')) < 3 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -32328,7 +32351,7 @@ const jaWrapPoints = (text) => {
       }
       // 3字ずつ残せる所が無ければ、前だけ2字まで許す(「二度|おいしいってやつ。」)。後ろ(語尾)は3字を守る
       if (best < 0) for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')), right = total - left;
         // 後ろは字が3字以上か、句読点も入れて4字以上(「せいいっぱい|でつ……。」)
         if (letters(g.parts.slice(0, k).join('')) < 2 || (letters(g.parts.slice(k).join('')) < 3 && right < 4) || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -32350,7 +32373,7 @@ const jaWrapPoints = (text) => {
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
 const jaKeepWhole = (seg) => ([...seg].length <= JA_WRAP_LINE || (!/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14))
-  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
+  && (/[…‥～〜♡]/u.test(seg) || /[0-9０-９]・[0-9０-９]/.test(seg) /* 数の並び「2・4・6」。ブラウザは「・」のあとで折る */ || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
   || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 // かたまり1つを、折らない枠で包む所([字, true])とそのままの所([字, false])に分ける(jaWrap と検査 ja-wrap-lines-check.js が使う)。
 // 空白で分けてから部分ごとに決める(空白をまたいで包むと、「大丈夫！ いってらっしゃい〜」が1行のまま吹き出しからはみ出した。2026-10-24)。
@@ -33742,8 +33765,18 @@ function BreederMarketScreen({
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche','hero_proof_shard','transcend_fruit_rainbow','hero_proof'];
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
-  const renderSectionTabs = (section) => <ScreenTabs value={activeSectionTab(section)} onChange={(key)=>selectSectionTab(section,key)}
-    items={SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}))}/>;
+  // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
+  //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
+  const renderSectionTabs = (section, scroll=false) => {
+    const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
+    const value=activeSectionTab(section);
+    if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
+    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5">
+      {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
+        className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
+    </div>;
+  };
   const soulRankRespecItem = marketItems.find(item=>item.id===SOUL_RANK_RESPEC_ITEM_ID) || null;
   const sectionMeta = {
     diamond:{label:'ダイヤショップ',emoji:'💎'},
@@ -33804,7 +33837,7 @@ function BreederMarketScreen({
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='icon'?<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
@@ -33880,9 +33913,6 @@ function BreederMarketScreen({
           :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
           :marketSection==='card'?[{currency:'cardPoint',value:cardShop?cardShop.point:0}]
           :[{currency:'beatPoint',value:safeEventPoints}]}/>
-        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
-        {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
-          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍{Number(campaign.loopBoost)>0?`。演奏でのクイック周回も${campaign.loopBoost}倍`:''}（{rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）</MarketNotice>:null;})()}
         {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
       </>}
 
@@ -33967,8 +33997,12 @@ function BreederMarketScreen({
       })()}
 
       {marketSection==='event'&&<>
-        {renderSectionTabs('event')}
+        {renderSectionTabs('event', true)}
         <div className={SCREEN_LIST_CLASS}>
+        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す。
+            品物の一覧の先頭に置く(上の固まった所に置くと、320×568 で品物が1段の半分しか見えなかった。2026-10-26 ダメダシくん) */}
+        {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
+          return campaign?<MarketNotice tone="info" data-event-point-campaign>{jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost)>0?`・演奏のクイック周回も${campaign.loopBoost}倍`:''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）`)}</MarketNotice>:null;})()}
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
           {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
@@ -41771,7 +41805,7 @@ function BattleScreen({
           ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
+          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン) */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
@@ -45159,13 +45193,13 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <p data-friend-code className="my-2 text-center text-3xl font-black tracking-widest text-pink-200">{myCode ? friendsFormatCode(myCode) : '— — — —'}</p>
               <button type="button" disabled={!myCode} onClick={copyCode} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>コードをコピー</button>
               <button type="button" data-friend-share-link disabled={!myCode} onClick={shareLink} className={`${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`}>招待リンクを送る（LINEなど）</button>
-              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。</p>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。</p>
             </div>
             <div className={SCREEN_PANEL_CLASS}>
               <ScreenSectionLabel>コードで申請する</ScreenSectionLabel>
               <input type="text" value={codeInput} onChange={(event) => setCodeInput(event.target.value.slice(0, 16))}
                 inputMode="text" autoCapitalize="characters" autoComplete="off" autoCorrect="off" spellCheck={false}
-                placeholder="友だちのフレンドコード" aria-label="友だちのフレンドコード"
+                placeholder="相手のフレンドコード" aria-label="相手のフレンドコード"
                 className="mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"/>
               <button type="button" disabled={busy || !friendsNormalizeCode(codeInput)} onClick={sendByCode} className={`${btn} mt-2 w-full border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>フレンド申請を送る</button>
               <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">ランキングの名前をタップしても、その人に申請できます。</p>
@@ -55230,12 +55264,25 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   中身が変わるたびに 0 から測り直す(描く前に測るので、ちらつかない)
   const stageRef = useRef(null);
   const [stageFit, setStageFit] = useState(0);
+  // 盤全体に入り切らないときの詰め方(2026-10-26 統括部長「下のボタンが、たまに下が少し切れる」。320×568 でホームバーの余白があると、
+  //   下の帯が盤の外へ 8〜24px 出ていた)。いちばん下の帯の下のはしが盤の外なら、1段ずつ詰める。
+  //   0 … ふつう / 1 … まんなかの最小の高さを 64→40px / 2 … 手札のカードを少し小さく・上の持ち上げ分を詰める。段や画面の大きさが変わったら 0 から測り直す
+  const [boardFit, setBoardFit] = useState(0);
+  const [boardFitKey, setBoardFitKey] = useState(0);
+  useEffect(() => { const on = () => setBoardFitKey((k) => k + 1); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
   React.useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el || stageFit >= 3) return;
     if (el.scrollHeight > el.clientHeight + 1) setStageFit((f) => Math.min(3, f + 1));
+  });
+  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey]);
+  React.useLayoutEffect(() => {
+    const b = boardRef.current;
+    const f = b && b.querySelector('[data-card-footer]');
+    if (!f || boardFit >= 2) return;
+    if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit((x) => Math.min(2, x + 1));
   });
 
   const strip = (p) => {
@@ -55378,7 +55425,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
       {/* 入り切らないときも上から並べる(safe center)。吹き出しの上が切れないように */}
-      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className="relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1" style={{ justifyContent: 'safe center' }}>
+      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1`} style={{ justifyContent: 'safe center' }}>
         {/* 案A: 番が替わったときの帯は、盤全体の真ん中へ移した(下の data-card-turn-banner。2026-10-26 ソラシドさん) */}
         {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。押すと次の台詞へ進む(練習試合は指の操作を下へ通す)。
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
@@ -55476,14 +55523,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       {/* 選んだ手札は上へ少し持ち上がる。その分の高さ(pt-2)を手札の箱の中に取っておき、上の案内の帯に重ならないようにする(2026-10-24 改善部の点検 V3) */}
       {/* 相手の番で、自分が守る場面でないあいだは、手札を少し暗くする(2026-10-26 ソラシドさん) */}
-      <div data-card-hand data-card-hand-dim={mode === 'wait' ? '1' : undefined} className={`flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2 transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`}>
+      <div data-card-hand data-card-hand-dim={mode === 'wait' ? '1' : undefined} data-card-board-fit={boardFit || undefined} className={`flex shrink-0 items-end justify-center gap-1 px-1 pb-1 ${boardFit >= 2 ? 'pt-1' : 'pt-2'} transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`}>
         {handOrder.map((i) => {
           const no = me.hand[i];
           const c = cardOf(db, no);
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
@@ -55503,7 +55550,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           );
         })}
       </div>
-      <div data-card-footer className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
+      {/* 画面の下の安全域(ホームバーの所)は、体(body)がもう余白に取っている。ここでも取ると二重になり、
+          下の帯が高くなっていた(2026-10-26 統括部長「下のボタンが少し切れる」)。ここは 8px だけ。入り切らないときの詰め方は boardFit */}
+      <div data-card-footer className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1">
         {replay ? <CardReplayBar replay={replay} at={replayAt} onSeek={replaySeek} onExit={() => onFinish({ outcome: 'replayExit', st })}/> : footer}
       </div>
       </div>
@@ -56347,6 +56396,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">強さ</span>
             <span className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>勝つと次の強さが開きます</span>
           </div>
+          {/* 鍵が付いているときは、どの強さで勝てば開くかを1行で出す(EASY で勝っても HARD は開かない。2026-10-26 社長が迷った) */}
+          {(() => {
+            const lock = debug ? null : CARD_LEVEL_ORDER.find((lv) => !cardLevelOpen(save.unlocked, lv));
+            const prev = lock ? CARD_LEVEL_ORDER[CARD_LEVEL_ORDER.indexOf(lock) - 1] : null;
+            return lock && prev ? <p data-card-level-hint={lock} className="px-0.5 text-[11px] font-bold text-amber-200/90" style={JA_LABEL_STYLE}>{jaWrap(`🔒 ${CARD_LEVEL_LABEL[lock]} は ${CARD_LEVEL_LABEL[prev]} で勝つと開きます`)}</p> : null;
+          })()}
           <div className="grid grid-cols-5 gap-1">
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
@@ -62068,14 +62123,16 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    // 48px の丸い枠なので小さい版を出す(見た目は同じ・展開する大きさが約1/25)。染めている子は元の絵のまま(2026-10-27 社長の決定)
+    const smallIconSrc = monsterSmallIconUrl(base);
     const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
           {masu
-            ? <DyedMonsterImage baseId={masu.baseId} src={iconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
+            ? <DyedMonsterImage baseId={masu.baseId} src={getMasuColors(masu).some(Boolean) ? iconSrc : smallIconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
             : (iconSrc
-              ? <img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
+              ? <img src={smallIconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
         {/* ロックの印。左上だけ空いている(左下=強化P・右下=超越P・右上=マスモンの札・下の中央=転生★)。
@@ -62205,8 +62262,10 @@ function MonsterHeroGame() {
   const [helpTopicId, setHelpTopicId] = useState(null);
   // 助手の吹き出しの開閉。今は絵文字と一言だけだが、助手キャラを実装したら
   // HELP_ASSISTANT(data/help.js)に絵や音声を足すだけでここはそのまま使える
-  const [helpAssistantOpen, setHelpAssistantOpen] = useState(true);
-  const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setHelpAssistantOpen(true); setShowHelp(true); };
+  // ヘルプの上の助手の吹き出し。開閉は「小さくたたむ」と同じ記憶(mh_bubble_collapsed_v1 の 'help')。顔を押すと開閉する(2026-10-26 開発部 e01・e02)
+  const [helpBubbleFolded, setHelpBubbleFolded] = useBubbleCollapse('help');
+  const helpAssistantOpen = !helpBubbleFolded;
+  const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setShowHelp(true); };
   // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
   // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
   const [trainingPicks, setTrainingPicks] = useState([]);
@@ -65065,7 +65124,7 @@ function MonsterHeroGame() {
         const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data && data.build && data.build !== BUILD_DATE) { setLatestBuild(data.build); setUpdateAvailable(true); }
+        if (!cancelled && data && data.build && BUILD_DATE && data.build !== BUILD_DATE) { setLatestBuild(data.build); setUpdateAvailable(true); }
       } catch {}
     };
     checkVersion();
@@ -65600,6 +65659,16 @@ function MonsterHeroGame() {
       //   「一度も出ない」ほうがはるかに困る
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      // 6レーン・見た目の案内は「前と変わったよ」のお知らせ。モンヒロビートをまだ1曲も遊んでいない人には出さない
+      // (2026-10-26 カゲあつ「はじめての人に、みゅあが更新の話をして、曲が3つ半しか見えない」)。見たことにして閉じておく
+      {
+        const best = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+        const beatPlayed = !!best && typeof best === 'object' && Object.values(best).some((bySong) => bySong && typeof bySong === 'object'
+          && Object.values(bySong).some((rec) => rec && typeof rec === 'object' && (rec.played === true || rec.clear === true || Number(rec.bestScore) > 0)));
+        if (!beatPlayed) {
+          for (const key of [RHYTHM_SIX_LANE_INTRO_KEY, RHYTHM_LOOK_INTRO_KEY]) { try { await storeSet(key, true, false); } catch {} }
+        }
+      }
       setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
       setRhythmLookIntroSeen(await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
@@ -71760,6 +71829,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // distDamageは攻撃カードだけが距離別へ加算し、反射などは空配列のままにする。
   const resolveEnemyDefeat = async ({remainingHp, damage, distDamage=[0,0,0,0]}) => {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    // ★このランの世代。WAVE_RESULT へ進める前に、まだ同じランかを見る(battleWait と同じ考え方)。
+    //   途中の await(ミッションの保存)のあいだに HOME へ抜ける(returnToHome → abandonRunAnimations で世代+1)と、
+    //   抜けたあとに WAVE_RESULT へ進み、周回は終わっているので中身の無い真っ暗な画面のまま戻らなかった
+    //   (2026-10-26・rhythm-background-run-check で、モンビーから「ホームへ戻る」を押すと6回に1回ほど)
+    const defeatGeneration = runGenerationRef.current;
     // 不死(死者の再起)を持つ難易度の対象WAVEだけ、撃破を確定させずに起き上がらせる。
     // 撃破ロック(enemyDefeatResolvedRef)はまだ立てない。ここで立てると、起き上がった敵を
     // もう一度倒したときにWAVEクリアが確定しなくなる。
@@ -71840,7 +71914,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
+    setTimeout(()=>{setDefeatFx(null); if(runGenerationRef.current!==defeatGeneration)return; advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
     return true;
   };
 
@@ -82010,7 +82084,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           ? [cat.summary + 'について説明するよ。', `この中には「${cat.topics.map(t=>t.title).join('」「')}」があるよ。気になるものをタップしてね。`]
           : null;
         const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };
-        const backLabel = topic ? cat.title : cat ? 'ヘルプへ' : '閉じる';
+        // 記事の上の戻るは短く「項目一覧」(戻り先のカテゴリ名は長く「← 基本ルール…」と切れていた。2026-10-26 開発部 e02)
+        const backLabel = topic ? '項目一覧' : cat ? 'ヘルプへ' : '閉じる';
         const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
         const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
         const topicIndex = topic ? cat.topics.findIndex(t=>t.id===topic.id) : -1;
@@ -82021,15 +82096,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const helpNewBadge = <span data-help-new aria-label="新しい項目" className="shrink-0 text-[17px] leading-none">🆕</span>;
         return (
         <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#000000',zIndex:99999}}>
-          <header className="shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
+          <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} className="shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>setHelpAssistantOpen(v=>!v)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={48} accent={accent} expression={assistantExpression}/></button>
+            <button onClick={()=>setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
           </header>
           {helpAssistantOpen&&(
-            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1.5 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
+            <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
-              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight}/>
+              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey="help" collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
