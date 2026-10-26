@@ -410,15 +410,15 @@ const BREEDER_MARKET_ITEMS = [
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
   { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:150000 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
-  { id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1 },
+  { id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_FACE_ICON, cost:1 },
   { id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1 },
   { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000 },
   // ミーア。正式な本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
-  { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_IMG, cost:1 },
+  { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_FACE_ICON, cost:1 },
   { id:'mia_disc_icon', name:"ミーアの円盤石アイコン", type:'icon', icon:MIA_DISC_ICON, cost:1 },
   { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:150000 },
   // パンドラ。保存済みの本体・円盤石画像を各商品で共用する。
-  { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_IMG, cost:1 },
+  { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_FACE_ICON, cost:1 },
   { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:PANDORA_DISC_ICON, cost:1 },
   { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:PANDORA_DISC_ICON, cost:300000 },
   // エイキ。ザン・ミタラシ・アーク・イブリースと同じく専用の顔クロップ(EIKI_FACE_ICON)を
