@@ -372,7 +372,7 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       const look = () => page.evaluate(() => {
         const b = document.querySelector('[data-card-turn-banner]'), btn = b && b.querySelector('button'), nameEl = b && b.querySelector('[data-card-turn-name]');
         const r = btn && btn.getBoundingClientRect();
-        return { banner: b ? b.getAttribute('data-card-turn-banner') : '', text: nameEl ? nameEl.innerText : '', edge: !!(b && b.querySelector('[data-card-turn-edge]')), inside: !!r && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, cut: !!nameEl && nameEl.scrollWidth > nameEl.clientWidth + 1,
+        return { banner: b ? b.getAttribute('data-card-turn-banner') : '', text: nameEl ? nameEl.innerText : '', edge: !!(b && b.querySelector('[data-card-turn-edge]')), inside: !!btn && btn.offsetWidth <= innerWidth + 1 && !!r && r.top >= -40 && r.bottom <= innerHeight + 40,   // 帯は左からさっと入る動きの途中があるので、横は帯の長さで見る(2026-10-27 改良の案 A) cut: !!nameEl && nameEl.scrollWidth > nameEl.clientWidth + 1,
           side: (document.querySelector('[data-card-side-active]') || { getAttribute: () => '' }).getAttribute('data-card-side-active'), dim: !!document.querySelector('[data-card-hand-dim]'), headMe: !!document.querySelector('[data-card-head-turn-me]'),
           bubble: (() => { const q = document.querySelector('[data-card-bubble]'); return q ? getComputedStyle(q).visibility : 'none'; })() };
       });
