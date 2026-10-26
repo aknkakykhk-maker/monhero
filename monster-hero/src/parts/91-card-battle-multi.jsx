@@ -128,8 +128,9 @@ const cardPvpReward = (outcome, facts) => {
   if (f.ownTurns < CARD_MIN_OWN_TURNS || outcome === 'left') return { point: 0, loops: 0, short: f.ownTurns < CARD_MIN_OWN_TURNS };
   const W = CARD_PVP_REWARD.win, L = CARD_PVP_REWARD.lose;
   if (outcome === 'win') return { point: W.point, loops: W.loops, short: false };
-  if (outcome === 'surrender') return { point: Math.min(L.point, f.kos * CARD_SURRENDER_POINT_PER_KO), loops: Math.min(L.loops, Math.round((f.kos * L.loops) / 3)), short: false };
-  return { point: L.point, loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)), short: false };
+  // 負けのビートPも自分の番の数で減らす(82 の cardLoseScaled。2026-10-26 社長)。投了の最大は減ったあとの負けの数
+  if (outcome === 'surrender') return { point: Math.min(cardLoseScaled(L.point, f.ownTurns), f.kos * CARD_SURRENDER_POINT_PER_KO), loops: Math.min(L.loops, Math.round((f.kos * L.loops) / 3)), short: false };
+  return { point: cardLoseScaled(L.point, f.ownTurns), loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)), short: false };
 };
 
 // 封(山札の切り方とデッキ)。終わるまで中身は見せず、指紋だけを先に渡す

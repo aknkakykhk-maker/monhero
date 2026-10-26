@@ -298,10 +298,14 @@ const decksAndSaves = () => {
   ok(r2.got === 200 && !r2.capped && r2.bonus === 0 && r2.total === 200, '1日の上限が残っている(1,480 もらったあとでも満額のはず)');
   ok(E.cardCpuReward(daily, 'easy', 'surrender', { ownTurns: 5, kos: 0 }).total === 0, '倒さずに降参でカードポイントが出てしまう');
   ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 2 }).total === 20, '2体倒して降参は20のはず');
-  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 7 }).total === 60, '降参は負けの数(EASY 60)を超えない');
+  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 10, kos: 7 }).total === 60, '降参は負けの数(EASY 60・自分の番10回)を超えない');
   // 負けは勝ちの 3/4(切り捨て)。2026-10-26 社長「助手とのバトルも負けても報酬もっとあげよう」
   const loseWant = { easy: [60, 10], normal: [82, 12], hard: [105, 13], expert: [127, 15], master: [150, 16] };
   ok(Object.entries(loseWant).every(([lv, [pt]]) => E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), lv, 'lose', full).total === pt), '負けは勝ちの 3/4(60・82・105・127・150)のはず');
+  // 負けのビートPも自分の番の数で減る(10回で満額・切り捨て)。投了の最大も減ったあとの負けの数(2026-10-26 社長)
+  const d0 = () => E.cardNormalizeDaily(null, 'd');
+  ok(E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 3, kos: 0 }).total === 45 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 7, kos: 0 }).total === 105 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 15, kos: 0 }).total === 150, '負けのビートPが自分の番の数で減らない(MASTER 3回で45・7回で105・10回以上で150のはず)');
+  ok(E.cardCpuReward(d0(), 'easy', 'surrender', { ownTurns: 3, kos: 3 }).total === 18, '投了の最大が、減ったあとの負けの数(EASY 3回で18)になっていない');
   const sh = E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'win', { ownTurns: 2, kos: 3 });
   ok(sh.total === 0 && sh.short && !sh.daily.firstWin, '自分の番を3回やる前に終わった試合でカードポイントが出る');
   const L = (lv, o, f) => E.cardCpuLoops(lv, o, f);

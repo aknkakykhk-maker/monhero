@@ -300,7 +300,7 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   const R = E.cardPvpReward;
   const eq = (a, b) => a.point === b[0] && a.loops === b[1];
   // 2026-10-26 社長: 勝ちは MASTER の2倍(400・44周)、負けと投了は MASTER と同じ(負けは勝ちの 3/4 = 150・自分の番10回で16周)
-  check('⑦ 勝ち 400・44周 / 負け 150・16周(自分の番10回で満額)', eq(R('win', { ownTurns: 12, kos: 3 }), [400, 44]) && eq(R('lose', { ownTurns: 10, kos: 0 }), [150, 16]) && eq(R('lose', { ownTurns: 5, kos: 0 }), [150, 8]));
+  check('⑦ 勝ち 400・44周 / 負け 150・16周(ビートPも周回も自分の番10回で満額)', eq(R('win', { ownTurns: 12, kos: 3 }), [400, 44]) && eq(R('lose', { ownTurns: 10, kos: 0 }), [150, 16]) && eq(R('lose', { ownTurns: 5, kos: 0 }), [75, 8]) && eq(R('lose', { ownTurns: 3, kos: 0 }), [45, 4]) && eq(R('surrender', { ownTurns: 3, kos: 3 }), [30, 16]));
   check('⑦ 勝ちは MASTER の2倍・負けと投了は MASTER と同じ数になる', ['lose', 'surrender'].every((o) => [[10, 0], [5, 1], [8, 2], [12, 3]].every(([t, k]) => { const f = { ownTurns: t, kos: k }; return R(o, f).point === E.cardCpuReward({ cpuPoint: 0, firstWin: true }, 'master', o, f).base && R(o, f).loops === E.cardCpuLoops('master', o, f); }))
     && R('win', { ownTurns: 10, kos: 3 }).point === E.CARD_AI_LEVELS.master.point * 2 && R('win', { ownTurns: 10, kos: 3 }).loops === E.CARD_AI_LEVELS.master.loops * 2);
   check('⑦ 投了は倒した数で決める・自分の番が3回より前に終わったら0', eq(R('surrender', { ownTurns: 8, kos: 2 }), [20, 11]) && eq(R('win', { ownTurns: 2, kos: 3 }), [0, 0]) && R('win', { ownTurns: 2, kos: 3 }).short === true);
