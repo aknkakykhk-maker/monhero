@@ -218,7 +218,22 @@ function writeAll(cache) {
     const aimed = (r) => { const f = fixedOf(r); return f && f.length === wantSet.size && f.every((n) => wantSet.has(n)) && alliesOf(r).every((n) => wantSet.has(n)); };
     const rs = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && ['clear', 'wipe', 'timeout'].includes(r.result)
       && (fixedOf(r) ? aimed(r) : alliesOf(r).slice().sort().join(',') === want));
-    return rs.length ? { 回数: rs.length, クリア: rs.filter((r) => r.result === 'clear').length } : null;
+    if (!rs.length) return null;
+    const out = { 回数: rs.length, クリア: rs.filter((r) => r.result === 'clear').length };
+    // 比べ(2026-10-27 ジン部長「アリーナくんのパーティの比べを実戦で確認へ」): 固定した回と同じボットの版で、同じ勇者・同じ難易度を
+    //   ふだんの選び方(固定なし・順番に試す回 rotate は除く)で遊んだ回。届いた WAVE はクリアを 11 と数える
+    const vers = new Set(rs.filter(fixedOf).map((r) => r.bot.ver));
+    if (vers.size) {
+      const wave = (r) => (r.result === 'clear' ? 11 : Number(r.wave) || 0);
+      const avg = (xs) => xs.reduce((a, r) => a + wave(r), 0) / xs.length;
+      const base = realRuns.filter((r) => r.mode === 'tacticsPro' && r.difficulty === d && r.hero === NAME[h] && ['clear', 'wipe', 'timeout'].includes(r.result)
+        && r.bot && vers.has(r.bot.ver) && !r.bot.fixedAllies && !r.bot.rotate);
+      const fx = rs.filter(fixedOf);
+      out.比べ = base.length
+        ? `パーティを固定した ${fx.length} 回は届いた WAVE 平均 ${avg(fx).toFixed(1)}(クリア ${fx.filter((r) => r.result === 'clear').length})。同じ勇者・同じボットで供モンをふだんどおり選んだ ${base.length} 回は ${avg(base).toFixed(1)}(クリア ${base.filter((r) => r.result === 'clear').length})。クリアは 11 と数えた。回数が少なく、ぶれは大きい`
+        : `パーティを固定した ${fx.length} 回は届いた WAVE 平均 ${avg(fx).toFixed(1)}。同じボットでふだんどおり選んだ回はまだ無い`;
+    }
+    return out;
   };
   // なぜ噛み合うか(機械が書く1〜2行): 得意な枠の分かれ方と EX の役
   const EX_ROLE = { coverAll: '守り', partyGuard: '守り', damageBack: '守り', lifeSpring: '支え', cookieBox: '支え', partyBoost: '支え', multiBuff: '支え', present: '支え', timeStop: '支え' };
@@ -364,7 +379,7 @@ function writeAll(cache) {
       o(`- トレーニング: ${det.train.text}(${det.train.all.map((y) => `${TRAINING_JA[y.kk.split(':')[1]]} ${d === 'Hard' ? sgn(y.v * 100, 0) : sgn(y.v)}`).join('・')})`);
       o(`- 固有技の強化ポイント: ${det.unique.text}(${det.unique.all.map((y) => `${UNIQUE_JA[y.kk.split(':')[1]]} ${d === 'Hard' ? sgn(y.v * 100, 0) : sgn(y.v)}`).join('・')})`);
       const rr = realOf(h, allies, d);
-      o(`- 実戦: ${rr ? `${rr.回数} 回・クリア ${rr.クリア} 回` : 'まだ無い'}`);
+      o(`- 実戦: ${rr ? `${rr.回数} 回・クリア ${rr.クリア} 回${rr.比べ ? `(${rr.比べ})` : ''}` : 'まだ無い'}`);
       ev.evidenceMd(partyEvidence(x, d, base, scanAll.length, det), '').forEach((t) => o(t));
     }
   }
