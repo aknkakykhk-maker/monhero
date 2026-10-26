@@ -169,6 +169,9 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
       await page.waitForTimeout(150);
       const mode = await page.evaluate(() => (document.querySelector('[data-card-battle]') || { getAttribute: () => '' }).getAttribute('data-card-mode'));
       if (mode === 'guard') { const pass = page.getByRole('button', { name: /守らない/ }); if (await pass.count()) await pass.click().catch(() => {}); }
+      // 自分の番は何もせずに終える(相手の番を何度も回して、相手が技を出す場面を待つ)
+      if (mode === 'attack') await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click({ timeout: 1000 }).catch(() => {});
+      if (mode === 'guts') await page.getByRole('button', { name: /ターン終了$/ }).click({ timeout: 1000 }).catch(() => {});
     }
     check('③ 相手(助手)が技を出すときも、先に大きく出る(「相手」の札)', /相手/.test(bigFoe), bigFoe.replace(/\s+/g, ' ').slice(0, 60));
     check('④ 相手がガッツにするとき(裏のまま)も、ガッツの山へ飛ぶ・「+n」が出る', foeFly > 0, String(foeFly));

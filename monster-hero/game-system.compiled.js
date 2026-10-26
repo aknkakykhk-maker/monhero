@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d4cfdbf3ccc5aa59
+// source-sha256: 8ab6a68536b1a120
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 12:19";
+const BUILD_DATE = "2026-10-26 12:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87505,6 +87505,7 @@ const CARD_IMAGE_SET = Object.freeze({
   imageDir: 'images/card-battle'
 });
 const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}.jpg`;
+const CARD_BACK_IMG = (size = 's') => CARD_IMG('back', size);
 const CARD_KIND_LABEL = Object.freeze({
   pow: 'ちから',
   int: 'かしこさ',
@@ -88131,7 +88132,12 @@ const CardMonSlot = ({
     className: `mh-card-flip-face ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`
   }), mon.ko && React.createElement("span", {
     className: "mh-card-flip-back",
-    "aria-hidden": "true"
+    "aria-hidden": "true",
+    style: {
+      backgroundImage: `url(${CARD_BACK_IMG()})`,
+      backgroundSize: '100% 100%',
+      border: 0
+    }
   })), React.createElement("div", {
     className: `${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`
   }, React.createElement("div", {
@@ -88245,11 +88251,10 @@ const CardGutsFlight = ({
         height: h,
         transform: `translate(${go ? tx : fx}px, ${go ? ty : fy}px) scale(${go ? 0.55 : 1})`,
         opacity: go ? 0.2 : 1,
-        transition: `transform 480ms cubic-bezier(.5,0,.75,.4) ${it.delay}ms, opacity 480ms ease-in ${it.delay}ms`,
-        background: it.img ? undefined : 'linear-gradient(135deg, #7c3aed, #312e81)'
+        transition: `transform 480ms cubic-bezier(.5,0,.75,.4) ${it.delay}ms, opacity 480ms ease-in ${it.delay}ms`
       }
-    }, it.img && React.createElement("img", {
-      src: it.img,
+    }, React.createElement("img", {
+      src: it.img || CARD_BACK_IMG(),
       alt: "",
       className: "h-full w-full object-cover"
     }));
@@ -89130,9 +89135,11 @@ const CardBattleBoard = ({
     }, p === CARD_CPU && React.createElement("span", {
       "data-card-hand-of": p,
       className: "flex"
-    }, pl.hand.map((_, i) => React.createElement("b", {
+    }, pl.hand.map((_, i) => React.createElement("img", {
       key: i,
-      className: "-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"
+      src: CARD_BACK_IMG(),
+      alt: "",
+      className: "-ml-1 h-[18px] w-[13px] rounded-[2px] object-cover shadow-[0_0_0_1px_rgba(255,255,255,.35)] first:ml-0"
     }))), React.createElement("span", {
       "data-card-deck-of": p,
       className: `rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`
@@ -92621,29 +92628,23 @@ const CardPackOpen = ({
     }), React.createElement("div", {
       className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
     }, React.createElement("div", {
-      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] border-2 border-white/50 ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back' : ''}`,
       style: {
-        background: `repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px), linear-gradient(160deg, ${pack.color}, #0f172a)`,
         containerType: 'inline-size'
       }
-    }, React.createElement("span", {
+    }, React.createElement("img", {
+      src: CARD_BACK_IMG(),
+      alt: "",
+      draggable: false,
+      className: "absolute inset-0 h-full w-full rounded-[5px] object-cover"
+    }), c.slot === 'mon' && React.createElement("span", {
       "aria-hidden": "true",
-      className: "pointer-events-none absolute inset-[6%] rounded-[4px] border border-white/40"
-    }), React.createElement("span", {
-      "aria-hidden": "true",
-      className: "relative grid aspect-square w-[58%] place-items-center rounded-full border-2 border-amber-200/80 bg-black/40 shadow-[0_0_10px_rgba(0,0,0,.5)]"
-    }, React.createElement("span", {
-      className: "text-center font-black leading-none text-amber-100",
+      className: "relative mt-[62%] grid aspect-square w-[30%] place-items-center rounded-full border-2 border-amber-200/90 bg-black/55 font-black leading-none text-amber-200 shadow-[0_0_10px_rgba(0,0,0,.5)]",
       style: {
-        fontSize: '17cqw',
+        fontSize: '14cqw',
         textShadow: '0 1px 2px #000'
       }
-    }, c.slot === 'mon' ? '★' : 'MF', React.createElement("span", {
-      className: "block font-black tracking-tight text-white/80",
-      style: {
-        fontSize: '7cqw'
-      }
-    }, "BATTLE CARD")))), React.createElement("div", {
+    }, "★")), React.createElement("div", {
       className: `mh-pack-face mh-pack-front ${rare ? c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front' : ''}`
     }, React.createElement("img", {
       src: CARD_IMG(card ? card.img : m ? m.img : c.no),
