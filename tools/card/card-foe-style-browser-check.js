@@ -10,6 +10,9 @@
 //   ③ 強さで組み方の説明が変わる(EASY は気分屋・HARD は相性のいい3体 など。82 の CARD_AI_BUILD と同じ決め)
 //   ⑤ どの助手を選んでも、強さのボタンが送らずに全部見える(「対戦する」の帯に潜らない)
 //   ④ 字が切れていない(1行のままの字が箱からはみ出さない)・数字(重みや勝率)を出していない(「1体」〜「4体」「第1弾」だけは数として出す)
+//   ⑥ 紹介欄の立ち絵が、透明な余白を除いて欄の高さに合う(2026-10-26 社長「みゅあの立ち絵だけ小さい」)。
+//      みゅあの標準の服は測ってある輪郭を使う(canvas の getImageData が失敗しても小さくならない)・きき→みゅあの切り替え・
+//      狭い縦画面・大きさの変更・横向き→縦向きに戻したあとも合う・着替えの服には標準の服の輪郭を当てない
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -68,11 +71,17 @@ const seed = (withAuto) => `(() => {
   const fatal = [];
   let VIEW = { width: 844, height: 390 };
   const SHOT = process.env.CARD_SHOT_DIR || '';
-  const open = async (withAuto) => {
+  // mode … 'canvasFail'(canvas の画素の読み取りを失敗させる)・'costume'(みゅあにハロウィンの服を着せる)
+  const open = async (withAuto, mode = '') => {
     const context = await browser.newContext({ viewport: VIEW });
     const page = await context.newPage();
     page.on('pageerror', (e) => fatal.push(e.message));
     await page.addInitScript(seed(withAuto));
+    if (mode === 'canvasFail') await page.addInitScript(() => { CanvasRenderingContext2D.prototype.getImageData = function () { throw new Error('検査: 画素を読めない端末のまね'); }; });
+    if (mode === 'costume') await page.addInitScript(() => {
+      localStorage.setItem('mh_assistant_costume_owned_v1', JSON.stringify(['mua_halloween_2026']));
+      localStorage.setItem('mh_assistant_costume_worn_v1', JSON.stringify({ mua: 'mua_halloween_2026' }));
+    });
     await page.addInitScript(quiet.eventStorySeed());
     await page.addInitScript(quiet.updateNoticeSeed());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
@@ -172,6 +181,49 @@ const seed = (withAuto) => `(() => {
         await page.click('[data-card-foe="dra"]'); await page.waitForTimeout(300);
         await page.screenshot({ path: path.join(SHOT, 'foe-style-390-dra.png') });
       }
+      await context.close();
+    }
+    // ⑥ 紹介欄の立ち絵の大きさ。data-card-art-h(絵の透明でない所の高さ)が、欄の高さと合うか
+    const art = (page) => page.evaluate(() => {
+      const el = document.querySelector('[data-card-top="foe"] [data-card-assistant-art]');
+      if (!el) return null;
+      const img = el.querySelector('img');
+      return { boxH: el.clientHeight, artH: Number(el.getAttribute('data-card-art-h') || 0), known: el.getAttribute('data-card-art-known') === '1', src: img ? img.getAttribute('src') : '' };
+    });
+    const waitArt = async (page) => {
+      await page.waitForFunction(() => { const el = document.querySelector('[data-card-top="foe"] [data-card-assistant-art]'); return el && el.clientHeight > 0 && el.getAttribute('data-card-art-h') && Math.abs(Number(el.getAttribute('data-card-art-h')) - el.clientHeight) <= 2; }, null, { timeout: 6000 }).catch(() => {});
+      await page.waitForTimeout(120);
+      return art(page);
+    };
+    const fits = (a) => !!a && a.boxH > 0 && Math.abs(a.artH - a.boxH) <= 2;
+    const show = (a) => (a ? `欄${a.boxH}px・絵${a.artH}px${a.known ? '・測った輪郭' : ''}` : 'なし');
+    for (const mode of ['', 'canvasFail', 'costume']) {
+      VIEW = { width: 390, height: 664 };
+      const { context, page } = await open(false, mode);
+      await enterCard(page);
+      await page.click('[data-card-cpu]');
+      await page.click('[data-card-mode-assistant]');
+      await page.waitForSelector('[data-card-top="foe"]', { timeout: 8000 });
+      await page.click('[data-card-foe="kiki"]');
+      const kiki = await waitArt(page);
+      await page.click('[data-card-foe="mua"]');
+      const mua = await waitArt(page);
+      const name = mode === 'canvasFail' ? '画素を読めない端末' : mode === 'costume' ? 'ハロウィンの服' : 'ふつう';
+      if (mode === 'costume') {
+        check(`⑥ ${name}: 着替えの服には標準の服の輪郭を当てず、絵の高さが欄に合う`, /halloween/.test(mua && mua.src) && !mua.known && fits(mua), show(mua));
+      } else {
+        check(`⑥ ${name}: きき→みゅあに替えても、みゅあの標準の服の立ち絵が欄の高さに合う(測った輪郭を使う)`, fits(mua) && mua.known, `きき ${show(kiki)} / みゅあ ${show(mua)}`);
+        if (!mode) check('⑥ ふつう: ききの立ち絵も欄の高さに合う', fits(kiki), show(kiki));
+        await page.setViewportSize({ width: 340, height: 600 });
+        const narrow = await waitArt(page);
+        check(`⑥ ${name}: 狭い縦画面(340×600)に変えても合う`, fits(narrow), show(narrow));
+        await page.setViewportSize({ width: 844, height: 390 });
+        await page.waitForTimeout(500);
+        await page.setViewportSize({ width: 390, height: 664 });
+        const back = await waitArt(page);
+        check(`⑥ ${name}: 横向き→縦向きに戻したあとも合う`, fits(back), show(back));
+      }
+      if (SHOT && !mode) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'foe-art-mua-390.png') }); }
       await context.close();
     }
     check('どこでも実行時エラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
