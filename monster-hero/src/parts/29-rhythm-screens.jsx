@@ -357,7 +357,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 </div>
 </section>
 <section data-rhythm-options-group="音ごとの大きさ" className={card}>
-{!wide&&<h3 className={head}>◆ 音ごとの大きさ</h3>}
+{!wide&&<h3 className={head}>◆ 音の種類別の大きさ</h3>}
 <div className={wide?`mt-1 ${grid}`:`mt-3 ${grid}`}>
 {field('フリック音の大きさ',stepper('noteSeFlickVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
               'タップ音量に対する大きさです。フリックは触れた瞬間ではなく、払えたときに「シュッ」と鳴ります。0%で鳴らしません。',{full:true})}
@@ -373,14 +373,14 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
               <button type="button" data-rhythm-se-preview="flick" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'flick')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">フリック音</button>
               <button type="button" data-rhythm-se-preview="end" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'end')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">ロングの終わり</button>
               <button type="button" data-rhythm-se-preview="hold" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'hold')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">押さえている間</button>
-              <button type="button" data-rhythm-se-preview="judge" onClick={()=>{['MARVELOUS','GREAT','GOOD'].forEach((id,i)=>setTimeout(()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'tap',id),i*260));}} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100">判定ごと<span className="block text-[10px] text-fuchsia-300">良い順に3回</span></button>
+              <button type="button" data-rhythm-se-preview="judge" onClick={()=>{['MARVELOUS','GREAT','GOOD'].forEach((id,i)=>setTimeout(()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'tap',id),i*260));}} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100">判定の音<span className="block text-[10px] text-fuchsia-300">良い順に3回</span></button>
             </div>
 </div>
 </section>
 <section className={card}>
           <details data-rhythm-option-help className="mt-3">
             <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量について詳しく</summary>
-            <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+            <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
             {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
             <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
             {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ */}
@@ -1161,9 +1161,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
             <div className="min-w-0 [container-type:inline-size]">
               <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
-              <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[22px] leading-tight':'text-[12px] leading-snug'}`}
-                style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
-                {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
+              {/* 「まだ遊んでいません」は、細い札(横の小さい画面)では「…」にせず「まだ／遊んでいません」の2行にし、長いほうの7字が入る大きさにする(2026-10-26) */}
+              <b data-rhythm-demo-best className={`block font-black tabular-nums text-amber-100 ${best&&best.played?'truncate text-[22px] leading-tight':'break-keep text-[12px] leading-tight'}`}
+                style={{fontSize:best&&best.played?`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`:'min(12px, calc(100cqw / 7.4))'}}>
+                {best&&best.played?best.bestScore.toLocaleString():<>まだ<wbr/>遊んでいません</>}
               </b>
               <span data-rhythm-demo-combo className="block whitespace-nowrap text-[9px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
@@ -1207,8 +1208,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {/* ボタンが細い端末でも「1,000,000」が切れないよう、幅に合わせて8px〜6pxで収める(2026-09-26) */}
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
+                // 鍵の文字は、下限の6pxでも1行に入らない細い端末(320幅の HELL「MASTERで解放」)では「…」にせず「MASTERで／解放」の2行に折る(2026-10-26)
+                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
+                  style={{fontSize:rhythmTitleFitSize(lockedFitText,8,6,2)}}>{need}<wbr/>で解放</span>;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-                  style={{fontSize:rhythmTitleFitSize(open?text:lockedFitText,8,6,2)}}>{text}</span>;})()}
+                  style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
@@ -1390,8 +1394,8 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
       </video>}
       <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:'6px',marginTop:'14px'}}>{pages.map((_,i)=><i key={i} style={{display:'block',width:i===index?'18px':'6px',height:'6px',borderRadius:'999px',background:i===index?'#f472b6':'rgba(148,163,184,.5)'}}/>)}</div>
       <div style={{display:'grid',gridTemplateColumns:index>0?'1fr 2fr':'1fr',gap:'8px',marginTop:'14px'}}>
-        {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>もどる</button>}
-        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'とじる':'つぎへ'}</button>
+        {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>戻る</button>}
+        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'閉じる':'つぎへ'}</button>
       </div>
     </section>
   </div>;

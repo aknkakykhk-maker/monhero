@@ -1368,7 +1368,7 @@ function RhythmMultiRecordSheet({ songName, onClose }) {
             ))}
           </div>
           <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto">
-            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400">まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります</li>}
+            {rec.recent.length === 0 && <li className="text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります')}</li>}
             {rec.recent.map((x) => (
               <li key={x.round} data-rhythm-multi-record-row className="rounded-xl bg-slate-800/70 px-2 py-1.5 text-[11px] font-bold leading-snug">
                 <div className="flex items-center gap-2">
@@ -1545,6 +1545,10 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhms-title{background:linear-gradient(90deg,#67e8f9,#f0abfc 55%,#fde68a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px rgba(240,171,252,.45))}
 .mhms-glow{position:absolute;left:50%;top:46%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(244,114,182,.45),rgba(168,85,247,.18) 55%,transparent 75%);animation:mhmsPulse 3.6s ease-in-out infinite}
 .mhms-float{animation:mhmsFloat 4.5s ease-in-out infinite}
+.mhms-art-box{container-type:size}
+.mhms-art-img{width:var(--mhms-w)}
+@supports (width:1cqh){.mhms-art-img{width:min(max(var(--mhms-w),var(--mhms-cover)),var(--mhms-cap))}}
+@container (max-height:120px){.mhms-art-img{left:30%!important}}
 .mhms-card{position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.18)}
 .mhms-card::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:mhmsShine 3.8s ease-in-out infinite}
 .mhms-card.free::after{animation-delay:1.9s}
@@ -1647,20 +1651,22 @@ const RHYTHM_MODE_SELECT_CSS = `
 // ももすけ・ドラの絵は正方形で、ももすけは右端に別の絵のかけらが入っている。顔の位置(cx, cy・絵の幅と高さに対する割合)を
 // 枠の真ん中(横)・top(縦)に合わせ、枠の幅の zoom 倍に広げて、かけらを枠の外へ出す
 // (高さで合わせると、縦画面の縦長の枠で大きくなりすぎて耳が切れた)
+// show … 枠の背が低いときも、絵の高さのうち少なくともこの割合は枠に入れる(2026-10-26 社長「小さいスマホで立ち絵が頭だけ」)。
+//   絵の幅は「いつもの幅(zoom)」と「絵の高さ×show が枠の高さに収まる幅」の小さいほう。枠が十分に高ければ今までと同じ見え方
 const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   // ももすけは表情ごとに体の位置が違い、かけらも左(angry・happy)と右(crying・wink)にある。
   // 透明でない部分を数えて決めた体の真ん中(cxBy)へ合わせ、体の幅だけが入る 1.5 倍に広げる(2026-10-03)
-  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42,
+  momosuke: { zoom: 1.5, cx: 0.5, cy: 0.48, top: 0.42, show: 0.55,
     cxBy: { angry: 0.545, happy: 0.545, crying: 0.44, wink: 0.46, excited: 0.38, surprise: 0.38, normal: 0.645, troubled: 0.655 } },
-  dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4 },
+  dra: { zoom: 0.85, cx: 0.5, cy: 0.5, top: 0.4, show: 0.75 },
   // あつ(2026-10-22)。大きい絵は 768x1024(縦長・腰から上・頭に王冠)。絵の上端(王冠のてっぺん)を枠の上から3%に置き、頭の中心(絵の幅の48%)を真ん中へ。
   // 社長「左肩切れてるように見える」→ 引いて下と左右をぼかした形 →「もっとアップにして切れてる感じ無くしたほうがいい」で、
   // 絵の端がすべて枠の外へ出るよう 1.1 倍に広げた(切れるのは枠の左右と下だけ・両肩は同じくらい・王冠は枠の中)。
   // 顔の大きさと高さは みゅあ・きき と並べて合わせた(1.25 倍はききより顔が大きくなった)
-  atsu: { zoom: 1.1, cx: 0.48, cy: 0, top: 0.02 },
+  atsu: { zoom: 1.1, cx: 0.48, cy: 0, top: 0.02, show: 0.6 },
   // きゅうこ(2026-10-22)。大きい絵は 384x512(胸から上・髪のてっぺんが絵の上端近く)。
   // 社長「立ち絵もうちょい引かせたい」(2026-10-23)で、3案から「もう少し引く」を選んだ: 枠の幅の0.75倍。髪全体と胸元のフリルまで入る
-  kyuko: { zoom: 0.75, cx: 0.5, cy: 0, top: 0.06 },
+  kyuko: { zoom: 0.75, cx: 0.5, cy: 0, top: 0.06, show: 0.8 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -1722,18 +1728,27 @@ function ModeSelectAssistToggles({ assistant, showArt, showComment, onToggle, cl
 }
 // 助手の枠。上に立ち絵、その下にコメント(絵に重ねない。2026-10-04・ユーザー指摘「助手コメントが助手に被ってる」)。
 // 立ち絵とコメントは別々にオン・オフできる。両方オフなら枠ごと出さない
+// 表に無い助手(みゅあ・きき・ハロウィンの衣装など)は、枠いっぱいに広げて上から22%(横向きは30%)の所を中心に見せる。背の低い枠でも絵の高さの8割は入れる
+const RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW = 0.8;
 function ModeSelectAssistantPanel({ assistant, showArt, showComment, onToggle }) {
+  // 絵の縦横の比(読み込んでから分かる)。分かるまでは、いつもの幅で出す
+  const [artRatio, setArtRatio] = React.useState(null);
+  const artSrc = assistant && assistant.image;
+  React.useEffect(() => { setArtRatio(null); }, [artSrc]);
   if (!assistant || !(showArt || showComment)) return null;
+  const onArtLoad = (e) => { const im = e.currentTarget; if (im.naturalWidth > 0) setArtRatio(im.naturalHeight / im.naturalWidth); };
+  // 背の低い枠の上限(絵の高さ×show が枠の高さ)。cqh は枠の高さ(mhms-art-box の container-type:size)
+  const capOf = (show) => (artRatio ? `${(100 / (artRatio * show)).toFixed(2)}cqh` : '9999px');
   return (
     <div data-rhythm-mode-assistant className={`mhms-glass mhms-in-left relative mx-3 mt-3 flex flex-col overflow-hidden rounded-3xl landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none landscape:shadow-none ${showArt ? 'min-h-[150px] flex-1' : 'flex-none'}`}>
       {showArt && (
-        <div data-rhythm-mode-assistant-art-box className="relative min-h-0 flex-1 overflow-hidden">
+        <div data-rhythm-mode-assistant-art-box className="mhms-art-box relative min-h-0 flex-1 overflow-hidden">
           <span aria-hidden="true" className="mhms-glow" />
           <ModeSelectAssistToggles assistant={assistant} showArt={showArt} showComment={showComment} onToggle={onToggle} cls="absolute bottom-1.5 right-1.5 z-20" withLabel={false} />
           <div className="mhms-float pointer-events-none absolute inset-0">
             {RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]
-              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} className="absolute max-w-none" style={{ width: `${fr.zoom * 100}%`, height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
-              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />}
+              ? (() => { const fr = RHYTHM_MODE_ASSISTANT_FRAMES[assistant.id]; const ex = (/_([a-z]+)\.png$/i.exec(assistant.image || '') || [])[1]; const cx = (fr.cxBy && fr.cxBy[ex]) || fr.cx; const masks = [Number.isFinite(fr.fadeBottom) ? `linear-gradient(to bottom, #000 ${fr.fadeBottom * 100}%, transparent 100%)` : null, Number.isFinite(fr.fadeSides) ? `linear-gradient(to right, transparent 0%, #000 ${fr.fadeSides * 100}%, #000 ${100 - fr.fadeSides * 100}%, transparent 100%)` : null].filter(Boolean); const mask = masks.length ? { WebkitMaskImage: masks.join(', '), maskImage: masks.join(', '), WebkitMaskComposite: masks.length > 1 ? 'source-in' : undefined, maskComposite: masks.length > 1 ? 'intersect' : undefined } : {}; return <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none" style={{ '--mhms-w': `${fr.zoom * 100}%`, '--mhms-cover': '0px', '--mhms-cap': capOf(fr.show || 1), height: 'auto', left: '50%', top: `${fr.top * 100}%`, transform: `translate(-${cx * 100}%, -${fr.cy * 100}%)`, ...mask }} />; })()
+              : <img data-rhythm-mode-assistant-art src={assistant.image} alt="" draggable={false} onLoad={onArtLoad} className="mhms-art-img absolute max-w-none [--mhms-y:0.22] landscape:[--mhms-y:0.3]" style={{ '--mhms-w': '100%', '--mhms-cover': artRatio ? `${(100 / artRatio).toFixed(2)}cqh` : '0px', '--mhms-cap': capOf(RHYTHM_MODE_ASSISTANT_DEFAULT_SHOW), height: 'auto', left: '50%', top: 'calc(var(--mhms-y) * 100%)', transform: 'translate(-50%, calc(var(--mhms-y) * -100%))' }} />}
           </div>
         </div>
       )}
@@ -2384,9 +2399,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
+              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26) */}
               {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
                 <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
-                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+                  className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
               ))}
             </div>
           </div>
@@ -2462,7 +2478,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 )}
               {friendsOn && view && view.mode === 'private' && (
                 <section data-rhythm-multi-friend-invite className={card}>
-                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'}</button>
+                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'}</button>
                   {invitePanel && (
                     <div className="mt-2 space-y-1">
                       {roster === null && <p className="text-[11px] font-bold text-slate-400">フレンドを読み込んでいます…</p>}

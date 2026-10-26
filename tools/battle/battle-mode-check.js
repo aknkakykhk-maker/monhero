@@ -260,7 +260,11 @@ check('タクティクスプロはプロ扱い・タクティクス種族は種�
 check('既存のランキング行を書き換える処理を足していない',
   !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source)
     // フレンド機能(friendsPatchLink)の PATCH は、フレンドの申請の表を書き換えるもの。ランキングの表ではない(2026-10)
-    && !/method:\s*'PATCH'/.test(source.replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, ''))
+    // MFバトルカードのマルチ対戦の招待を断る(sbDeclineCardInvite)の PATCH は、招待の表(card_battle_invites)の時刻を書き換えるもの。
+    //   ランキングの表ではない(2026-10-26 #3678)。例外にするのは、この関数の中の card_battle_invites への PATCH だけ
+    && !/method:\s*'PATCH'/.test(source
+      .replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, '')
+      .replace(/const sbDeclineCardInvite = async[\s\S]*?cardPvpInviteRequest\(`card_battle_invites\?[^`]*`, \{ method: 'PATCH', [^}]*\}, prefer: 'return=minimal' \}\);/, ''))
     && !has('DELETE FROM') && !has('migrateRanking'));
 
 // --- ③ WAVEごとの自動成長 ---
@@ -422,7 +426,7 @@ check('ランキングボタンはチャレンジのときだけ出す',
 // クイックでも同じ高さの案内を出し、下に続く表示の位置がモードでずれないようにする
 check('ランキングボタンはモードのタブと同じ幅', has('className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40'));
 check('ランキングボタンはモードのタブのすぐ下にある',
-  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度を選択'));
+  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度をえらぶ'));
 check('クイックでも同じ高さの案内を出す', has('クイックモードはランキング対象外です') && count('w-full h-10 rounded-xl') === 2, `${count('w-full h-10 rounded-xl')}か所`);
 // 最低の高さ(min-h)ではなく決め打ちの高さ(h-10)にする。ボタンの中身によっては
 // min-hを超えて伸びてしまい、クイック側の空き場所とずれるため
