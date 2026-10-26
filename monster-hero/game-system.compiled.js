@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cf5814308ce7d73b
+// source-sha256: 0a154b50c69bfbca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 13:13";
+const BUILD_DATE = "2026-10-26 13:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -84595,17 +84595,30 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     easy: -0.075,
     normal: -0.15,
     hard: -0.105,
-    expert: 0.03,
+    expert: 0,
     master: 0
   }
 });
-const cardAiPolicy = (habitId, levelId) => {
+const CARD_AI_SAME_BLOOD_PLAY = Object.freeze({
+  mua: {
+    hard: 0.25,
+    expert: 0.1
+  },
+  atsu: {
+    hard: -0.1,
+    expert: -0.1
+  },
+  dra: {
+    expert: -0.06
+  }
+});
+const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
-  const add = (CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0;
+  const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId] || 0) + (opts && opts.sameBlood ? (CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId] || 0 : 0);
   return {
     habit,
     level: {
@@ -85034,6 +85047,11 @@ const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
   normal: 0.28
 });
+const CARD_AI_SAME_BLOOD_HI = Object.freeze({
+  hard: 0.2,
+  expert: 0.12,
+  master: 0.1
+});
 const CARD_AI_TEAM = Object.freeze({
   atk: 0.04,
   guard: 0.06,
@@ -85280,7 +85298,23 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
   const usedNos = new Set([fav.species]);
+  const hiRate = byScore ? (CARD_AI_SAME_BLOOD_HI[levelId] || 0) * cardAiSameBloodScale(familySize) : 0;
+  const sameGame = hiRate > 0 && family.length > 0 && rand() < hiRate;
+  const sameThree = sameGame && rand() < 0.5;
   for (let k = 0; k < 2; k++) {
+    if (sameGame && (k === 0 || sameThree)) {
+      const team = out.map(no => cardMonsterOf(db, no));
+      const famLeft = family.filter(m => !m.variant && !usedNos.has(m.species));
+      if (famLeft.length) {
+        const m = famLeft.map(x => ({
+          x,
+          v: cardAiTeamValue(db, who, team, x, cfg.maxWave) + counter(x)
+        })).reduce((a2, b2) => b2.v > a2.v ? b2 : a2).x;
+        out.push(m.no);
+        usedNos.add(m.species);
+        continue;
+      }
+    }
     const famLeft = family.filter(m => !usedNos.has(m.species));
     if (sameRate > 0 && famLeft.length && rand() < sameRate) {
       const w = famLeft.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
@@ -85394,9 +85428,11 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
     const have = cards.filter(n => cardOf(db, n).name === x.c.name).length;
     add(x.c, CARD_DECK_COPY_MAX - have);
   }
+  const sameBlood = mons.filter(m => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
   return {
     monsters: monsters.slice(),
-    cards
+    cards,
+    sameBlood
   };
 };
 const cardDeckProblems = (db, deck) => {
@@ -88770,7 +88806,9 @@ const CardBattleBoard = ({
     name: pvp.name,
     accent: '#38bdf8'
   } : ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
-  const policy = useMemo(() => cardAiPolicy(game.who, game.level), [game.who, game.level]);
+  const policy = useMemo(() => cardAiPolicy(game.who, game.level, {
+    sameBlood: !!game.cpuSameBlood
+  }), [game.who, game.level, game.cpuSameBlood]);
   const [st, setSt] = useState(game.st);
   const [sel, setSel] = useState(null);
   const [picks, setPicks] = useState([]);
@@ -90856,7 +90894,8 @@ const CardBattleScreen = ({
       who: pick.who,
       level: pick.level,
       settings: save.settings,
-      intro
+      intro,
+      cpuSameBlood: !!cpuDeck.sameBlood
     });
     onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
