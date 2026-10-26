@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6aa5727d4d2fe848
+// generated-sha256: 537b08e06bb43599
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 12:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 12:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -53324,6 +53324,8 @@ const cardMotionDemoAction = (db, st, step) => {
 // カードの絵(道具 tools/card/card-image-build.js が © を消して縮めたもの)。s=240×336(手札・場)/ l=480×672(詳しい画面)。フォルダごと使う
 const CARD_IMAGE_SET = Object.freeze({ imageDir: 'images/card-battle' });
 const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}.jpg`;
+// カードの裏面(2026-10-26 社長から届いた絵。images/card-battle/{s,l}/back.jpg・作り方は tools/art-sources/card-battle/card-back/README.md)
+const CARD_BACK_IMG = (size = 's') => CARD_IMG('back', size);
 const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御', fld: '全体' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
@@ -53708,7 +53710,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       {/* 倒れたら、倒れる動きのあとカードを裏返して暗くする(設計書 5-3)。小さい画面(tiny)はカードを小さく */}
       <span data-card-flip={mon.ko ? 'ko' : undefined} className={`relative block ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} shrink-0 ${mon.ko ? 'mh-card-flip' : ''}`}>
         <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className={`mh-card-flip-face ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`}/>
-        {mon.ko && <span className="mh-card-flip-back" aria-hidden="true"/>}
+        {mon.ko && <span className="mh-card-flip-back" aria-hidden="true" style={{ backgroundImage: `url(${CARD_BACK_IMG()})`, backgroundSize: '100% 100%', border: 0 }}/>}
       </span>
       <div className={`${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`}>
         <div className="truncate text-[12px] font-black leading-tight">{mon.name}</div>
@@ -53772,8 +53774,9 @@ const CardGutsFlight = ({ g, still = false }) => {
           <span key={k} data-card-guts-fly={g.p} className="absolute left-0 top-0 block overflow-hidden rounded-[4px] border border-amber-200/80 shadow-[0_4px_10px_rgba(0,0,0,.6)]"
             style={{ width: w, height: h, transform: `translate(${go ? tx : fx}px, ${go ? ty : fy}px) scale(${go ? 0.55 : 1})`, opacity: go ? 0.2 : 1,
               transition: `transform 480ms cubic-bezier(.5,0,.75,.4) ${it.delay}ms, opacity 480ms ease-in ${it.delay}ms`,
-              background: it.img ? undefined : 'linear-gradient(135deg, #7c3aed, #312e81)' }}>
-            {it.img && <img src={it.img} alt="" className="h-full w-full object-cover"/>}
+            }}>
+            {/* 自分の手札は表の絵、相手の手札と山札の上は裏面の絵 */}
+            <img src={it.img || CARD_BACK_IMG()} alt="" className="h-full w-full object-cover"/>
           </span>
         );
       })}
@@ -54407,7 +54410,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     const pl = st.players[p];
     return (
       <div className={`flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`}>
-        {p === CARD_CPU && <span data-card-hand-of={p} className="flex">{pl.hand.map((_, i) => <b key={i} className="-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"/>)}</span>}
+        {p === CARD_CPU && <span data-card-hand-of={p} className="flex">{pl.hand.map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className="-ml-1 h-[18px] w-[13px] rounded-[2px] object-cover shadow-[0_0_0_1px_rgba(255,255,255,.35)] first:ml-0"/>)}</span>}
         <span data-card-deck-of={p} className={`rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`}>山札 {pl.deck.length}</span>
         <span data-card-guts-of={p} {...(p === CARD_ME ? { 'data-card-guts-drop': true } : {})} className={`flex items-center gap-0.5 rounded-md border ${tiny ? 'px-1' : 'px-1.5'} py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`}>ガッツ {pl.guts.length}</span>
         <button type="button" onClick={() => setDiscard({ tab: p })} className={`rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`}>捨て札 {pl.discard.length}</button>
@@ -55977,12 +55980,11 @@ const CardPackOpen = ({ db, result, onDone }) => {
                 <div key={`${pi}-${i}`} className="mh-pack-deal flex flex-col items-center" style={{ animationDelay: `${i * 70}ms` }}>
                   <button type="button" data-card-pack-card={i} data-card-pack-flipped={on ? 1 : 0} data-card-pack-rarity={c.rarity} {...(on ? press(c.no, () => setDetail(c.no)) : { onClick: () => flip(i) })} className="mh-pack-card relative w-full active:scale-95" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
                     <div className={`mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`}>
-                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] border-2 border-white/50 ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ background: `repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px), linear-gradient(160deg, ${pack.color}, #0f172a)`, containerType: 'inline-size' }}>
-                        {/* カードの裏の柄(2026-10-24 改善部の点検 V7「無地に🃏だけ」): 内側の枠・斜めの模様・まんなかの紋。モンスターの枠は金の★ */}
-                        <span aria-hidden="true" className="pointer-events-none absolute inset-[6%] rounded-[4px] border border-white/40"/>
-                        <span aria-hidden="true" className="relative grid aspect-square w-[58%] place-items-center rounded-full border-2 border-amber-200/80 bg-black/40 shadow-[0_0_10px_rgba(0,0,0,.5)]">
-                          <span className="text-center font-black leading-none text-amber-100" style={{ fontSize: '17cqw', textShadow: '0 1px 2px #000' }}>{c.slot === 'mon' ? '★' : 'MF'}<span className="block font-black tracking-tight text-white/80" style={{ fontSize: '7cqw' }}>BATTLE CARD</span></span>
-                        </span></div>
+                      <div className={`mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${rare && !on ? (c.rarity === 'alt' ? 'mh-pack-alt-back' : 'mh-pack-kira-back') : ''}`} style={{ containerType: 'inline-size' }}>
+                        {/* カードの裏面(2026-10-26 社長から届いた絵)。キラ・別絵キラは今までどおり光って揺れる。モンスターの枠は金の★を重ねる */}
+                        <img src={CARD_BACK_IMG()} alt="" draggable={false} className="absolute inset-0 h-full w-full rounded-[5px] object-cover"/>
+                        {c.slot === 'mon' && <span aria-hidden="true" className="relative mt-[62%] grid aspect-square w-[30%] place-items-center rounded-full border-2 border-amber-200/90 bg-black/55 font-black leading-none text-amber-200 shadow-[0_0_10px_rgba(0,0,0,.5)]" style={{ fontSize: '14cqw', textShadow: '0 1px 2px #000' }}>★</span>}
+                      </div>
                       <div className={`mh-pack-face mh-pack-front ${rare ? (c.rarity === 'alt' ? 'mh-pack-alt-front' : 'mh-pack-kira-front') : ''}`}>
                         <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={name} draggable={false} className="h-full w-full rounded-[5px] object-cover"/>
                       </div>
