@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 240297cb26d8cfca
+// source-sha256: 4f8f3cf5e46aee14
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:50";
+const BUILD_DATE = "2026-10-27 01:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16261,6 +16261,17 @@ const marketLabelFitSize = label => {
 const marketLabelNodes = label => marketLabelSegments(label).map((seg, index) => React.createElement(React.Fragment, {
   key: index
 }, index > 0 && React.createElement("wbr", null), seg));
+const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
+  const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
+  const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
+  const fromMs = diamond ? Date.parse(diamond.from) : NaN;
+  if (!Number.isFinite(fromMs)) return undefined;
+  const jst = new Date(fromMs + 9 * 3600 * 1000);
+  const lines = [`${jst.getUTCMonth() + 1}/${jst.getUTCDate()}から`];
+  if (typeof assistantCostumeSaleIn === 'function' && assistantCostumeSaleIn(costume, 'beatPoint')) lines.push('いまはビートP', '交換所で買えます');
+  return lines;
+};
 const MarketProductCard = ({
   item,
   owned = false,
@@ -53309,7 +53320,7 @@ function BreederMarketScreen({
       item: item,
       owned: owned,
       comingSoon: comingSoon || frameLocked || giftLocked,
-      comingSoonLabel: giftLocked ? String(item.giftHow || 'プレゼントで届きます').split(/(?<=を)/) : frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
+      comingSoonLabel: giftLocked ? String(item.giftHow || 'プレゼントで届きます').split(/(?<=を)/) : item.type === 'costume' && comingSoon ? marketCostumeSoonLabel(item) : frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
       canBuy: canBuy,
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
