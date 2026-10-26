@@ -673,17 +673,19 @@ async function main() {
       else if (meta.needsCanvas && !hasCanvas) res = { status: 'SKIP', sec: 0, output: 'canvas が無い' };
       else if (meta.needsReact && !hasReact) res = { status: 'SKIP', sec: 0, output: 'react が無い' };
       else {
-        if (room && !ROOM_OUTSIDE.has(command.split(' ')[0])) {
+        // 部屋に入れるのは番号を使う検査(ブラウザ・配信)だけ。それ以外は取り合いが起きないので今までどおり外で回す(CI の短い検査も変わらない)
+        const usesPorts = meta.needsPlaywright || meta.needsServer || meta.ownServer;
+        if (room && usesPorts && !ROOM_OUTSIDE.has(command.split(' ')[0])) {
           // 部屋の中で回す。共有の配信が要る検査は、部屋の中に専用の配信を立てる
           // (外の配信は部屋の中から見えないので、--no-server(--parallel の組)でも部屋の中には立てる)
           res = runOneInRoom(command, opts.timeoutSec, meta.needsServer && !meta.ownServer);
         } else {
-          // 外で回す(部屋が使えない・外につながる前提の検査)。部屋が使えるときは、外で回す物どうしを順番待ちにする
-          const unlock = room ? await takeOutsideLock() : null;
+          // 外で回す(部屋が使えない・番号を使わない・外につながる前提の検査)。外で番号を使う物どうしは順番待ちにする
+          const unlock = room && usesPorts ? await takeOutsideLock() : null;
           try {
             if (meta.ownServer) await releaseServer(); else if (meta.needsServer) await ensureServer();
             res = runOne(command, opts.timeoutSec);
-            if (room) await releaseServer();
+            if (unlock) await releaseServer();
           } finally { if (unlock) unlock(); }
         }
       }
