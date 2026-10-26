@@ -126,7 +126,7 @@ function ProfileScreen({
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
   costumeEnabled=false, wornCostume=null, onOpenCostumePicker=null,
-  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
+  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenDex, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
@@ -226,6 +226,13 @@ function ProfileScreen({
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"/>
                 <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{frameName}</b></span>
               </button>
+              {/* アイコン・フレーム図鑑(2026-10-25)。集めたもの・まだのものを一覧で見る */}
+              {onboarded&&!onboardingPreview&&onOpenDex&&(
+                <button type="button" data-profile-tile="dex" onClick={onOpenDex} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">📖</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-emerald-300">図鑑</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>アイコン・<wbr/>フレーム</b></span>
+                </button>
+              )}
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">👗</span>
