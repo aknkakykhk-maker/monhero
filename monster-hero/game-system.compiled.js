@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f1d84af0a9227cf
+// source-sha256: 38cf2a1a5123d1d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 10:08";
+const BUILD_DATE = "2026-10-26 10:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87413,6 +87413,14 @@ const CARD_LEVEL_LABEL = Object.freeze({
   expert: 'EXPERT',
   master: 'MASTER'
 });
+const CARD_LEVEL_TONE = Object.freeze({
+  easy: 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100',
+  normal: 'border-sky-300/70 bg-sky-500/20 text-sky-100',
+  hard: 'border-amber-300/70 bg-amber-500/20 text-amber-100',
+  expert: 'border-rose-300/70 bg-rose-500/20 text-rose-100',
+  master: 'border-fuchsia-300/80 bg-fuchsia-500/25 text-fuchsia-100',
+  tutorial: 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100'
+});
 const CardResultBanner = ({
   title,
   sub,
@@ -89046,7 +89054,8 @@ const CardBattleBoard = ({
       background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)'
     }
   }, React.createElement("div", {
-    className: `flex ${compact ? 'h-[36px]' : 'h-[44px]'} shrink-0 items-center justify-between bg-black/35 px-2`
+    "data-card-head": true,
+    className: `flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2 py-0.5`
   }, React.createElement("div", {
     className: "flex shrink-0 items-center gap-1.5"
   }, React.createElement("button", {
@@ -89062,19 +89071,25 @@ const CardBattleBoard = ({
     "aria-label": "ターンごとの記録を見る"
   }, "記録")), pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
-  }) : tiny && !wide ? React.createElement("span", {
-    className: "flex-1"
   }) : React.createElement("span", {
-    className: "min-w-0 truncate text-[15px] font-black"
-  }, "MFバトルカード"), React.createElement("span", {
-    className: "flex shrink-0 items-center gap-1.5"
+    "data-card-level-badge": tutorial ? 'tutorial' : game.level,
+    className: `shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE[tutorial ? 'tutorial' : game.level] || CARD_LEVEL_TONE.easy}`
+  }, tutorial ? '練習' : CARD_LEVEL_LABEL[game.level] || ''), React.createElement("span", {
+    "data-card-head-right": true,
+    className: "flex min-w-0 flex-1 items-center justify-end gap-1.5"
   }, quickRun && React.createElement("span", {
     "data-card-battle-quick-run": quickRun.stopped ? 'stopped' : 'live',
     "aria-label": quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`,
-    className: `rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`
+    className: `shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`
   }, "⚔ ", quickRun.loops, "周目"), React.createElement("span", {
-    className: "text-[12px] font-bold text-violet-200"
-  }, "ターン ", Math.max(1, st.turn), " ・ ", st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`))), React.createElement("div", {
+    "data-card-head-turn": true,
+    className: `min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`,
+    style: JA_WRAP_STYLE
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "ターン ", Math.max(1, st.turn)), " ・ ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, st.active === CARD_ME ? 'あなたの番' : `${who.name}の番`)))), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
