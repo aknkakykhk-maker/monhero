@@ -136,10 +136,11 @@ const CHANGELOG = [
 | --- | --- | --- |
 | `date` | ○ | `"YYYY-MM-DD HH:MM"`（JST実時刻。①のとおり） |
 | `type` | ○ | `update`（機能追加・変更） / `fix`（不具合修正・不具合情報タブへ出る） / `issue`（調査中・不具合情報タブへ出る） / `market` / `mode` / `content` / `feature` |
-| `title` | ○ | 一覧に出る1行。**正式名称で書く**（音ゲーは「モンヒロビート」。略称「モンビー」はキャラの会話だけ） |
+| `title` | ○ | 一覧に出る1行。**正式名称で書く**（音ゲーは「モンヒロビート」。略称「モンビー」はキャラの会話だけ）。**頭に遊びの名前（「MFバトルカード: 」「モンヒロビート：」「モンヒロバトル: 」「タクティクスバトル：」「バトル：」など）を付けない**（2026-10-27 社長。どの遊びの話かは一覧のまとまりの見出しで分かる）。代わりに `group` を書く |
 | `status` | ○ | `'new'`（NEWマーク） |
 | `items` | ○ | 本文の配列。**空にしない**（空だと告知が作られない） |
-| `group` | 任意 | `monster`（新モンスター・新血統） / `cardBattle`（MFバトルカード） / `rhythm` / `masu` / `battle` / `items` / `ranking` / `assistant` / `ui` / `other`。**書かなければタイトルと本文から自動で見当が付く**ので、見当が外れるときだけ書く |
+| `group` | 任意 | `monster`（新モンスター・新血統） / `cardBattle`（MFバトルカード） / `rhythm` / `masu` / `battle` / `items` / `ranking` / `assistant` / `ui` / `other`。**書かなければタイトルと本文から自動で見当が付く**。題の頭に遊びの名前を付けなくなったので、MFバトルカード・モンヒロビートの話は**必ず書く**（書かないと「カード」「バトル」の字でバトルの下へ入る） |
+| `idTitle` | 触らない | 題を書き直した項目の元の題。既読の id はここから作る（無いと読んだ人の既読が外れて NEW に戻る）。**すでに出ている項目の題を直すときは、元の題をここへ残す**。新しく書く項目には付けない |
 | `assistantNotice` | 大きい追加のみ | ③を見る |
 | `image` | 新曲のとき必須 | `'images/song-art/◯◯.jpg'`。`?v=` は手で書かない |
 | `gallery` | 任意 | `[{ caption, image }]`。本文の下に「■見出し」と絵を順に並べる（染色イメージなど）。一覧の詳細にだけ出て、助手の告知には出ない。`?v=` は手で書かない |
@@ -234,6 +235,7 @@ node tools/run-checks.js --area required 2>&1 | tail -20
 ```bash
 node tools/boot/changelog-order-check.js              # 日時・書式・並び・コミット時刻とのズレ（毎回）
 node tools/changelog/dev-entry-check.js               # 作業メモが更新情報に並んでいないか（毎回）
+node tools/changelog/title-prefix-check.js            # 題の頭に遊びの名前が付いていないか（毎回）
 node tools/changelog/type-badge-check.js              # 不具合と新機能が見分けられるか
 node tools/changelog/changelog-group-check.js         # 話題ごとのまとめ
 node tools/changelog/collapsed-detail-check.js        # 一覧→詳細の開き方（実ブラウザ）
@@ -295,6 +297,12 @@ git push -u origin <branch>
 ### レベルとノーツ数を1行に詰める
 `EASY Lv.14（376ノーツ）／…` は折り返した画面で数字が追えない。
 `レベルは EASY Lv.◯ ／ … です。` と `ノーツ数は ◯ ／ … です。` の**2行に分ける**。
+
+### 題の頭に遊びの名前を付ける
+「MFバトルカード: ゴーストのカードが入りました」のように頭へ遊びの名前を付けていた(2026-10-27 社長が止めた)。
+一覧はまとまり(🃏 MFバトルカード・🎵 モンヒロビート など)の見出しの下に並ぶので、頭の名前は二重になる。
+すでに出ていた239件は頭だけ外し、言い回し・本文・日時・並びは変えていない。そのとき `idTitle`(元の題)と
+`group`(それまでのまとまり)を残したので、既読も見出しも前のまま。`title-prefix-check.js` が見張る。
 
 ### 略称で書く
 画面に出る名前は**正式名称**。「モンビー」を使ってよいのはキャラクターが愛称として呼ぶ会話だけ。
