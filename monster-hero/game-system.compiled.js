@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd33f48d8b670a24
+// source-sha256: 3b7e8534dc051e5f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:40";
+const BUILD_DATE = "2026-10-27 04:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -88853,6 +88853,48 @@ const CARD_LEVEL_TONE = Object.freeze({
   master: 'border-fuchsia-300/80 bg-fuchsia-500/25 text-fuchsia-100',
   tutorial: 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100'
 });
+const CardCountUp = ({
+  to = 0,
+  ms = 900
+}) => {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const goal = Number.isFinite(Number(to)) ? Math.max(0, Math.round(Number(to))) : 0;
+    if (!goal || typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setN(goal);
+      return undefined;
+    }
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = now => {
+      const k = Math.min(1, (now - t0) / ms);
+      setN(Math.round(goal * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return React.createElement(React.Fragment, null, n);
+};
+const CardConfetti = ({
+  n = 28
+}) => React.createElement("div", {
+  "aria-hidden": "true",
+  "data-card-confetti": true,
+  className: "pointer-events-none fixed inset-0 z-[5] overflow-hidden"
+}, Array.from({
+  length: n
+}, (_, i) => React.createElement("i", {
+  key: i,
+  className: "mh-card-confetti absolute top-0 block h-[14px] w-[8px] rounded-[2px]",
+  style: {
+    left: `${i * 37 % 100}%`,
+    background: ['#fbbf24', '#f472b6', '#60a5fa', '#34d399', '#f87171', '#ffffff'][i % 6],
+    animationDelay: `${i % 7 * 0.09}s`,
+    '--cf-x': `${i * 53 % 60 - 30}px`,
+    '--cf-r': `${i * 97 % 360}deg`
+  }
+})));
 const CardResultBanner = ({
   title,
   sub,
@@ -90272,15 +90314,29 @@ const CardBattleBoard = ({
     }, demoAt.current === 0 ? 1400 : 1700);
     return () => clearTimeout(t);
   }, [st, paused]);
+  const endNow = useRef(null);
   useEffect(() => {
     if (st.winner === null || finished.current || tutorial || replay) return undefined;
     finished.current = true;
-    const t = setTimeout(() => onFinish({
-      outcome: st.winner === CARD_ME ? 'win' : 'lose',
-      st,
-      comeback: !!talk.current.behind[st.winner]
-    }), CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
-    return () => clearTimeout(t);
+    const go = () => {
+      clearTimeout(t);
+      endNow.current = null;
+      onFinish({
+        outcome: st.winner === CARD_ME ? 'win' : 'lose',
+        st,
+        comeback: !!talk.current.behind[st.winner]
+      });
+    };
+    const t = setTimeout(go, CARD_RESULT_WAIT_MS[settings.resultWait] || 2200);
+    const at = Date.now();
+    endNow.current = () => {
+      if (Date.now() - at >= 600) go();
+    };
+    if (st.winner === CARD_ME && !game.demo && Audio_.fgSe.victory) Audio_.fgSe.victory();
+    return () => {
+      clearTimeout(t);
+      endNow.current = null;
+    };
   }, [st.winner]);
   const me = st.players[CARD_ME];
   const opp = st.players[CARD_CPU];
@@ -91330,7 +91386,29 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
-  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), downBand && !bigCard && !turnBanner && React.createElement("div", {
+  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), st.winner !== null && !tutorial && !replay && React.createElement("div", {
+    "data-card-end-fx": st.winner === CARD_ME ? 'win' : 'lose',
+    role: "button",
+    "aria-label": "結果へ進む",
+    onClick: () => {
+      if (endNow.current) endNow.current();
+    },
+    className: `mh-card-end absolute inset-0 z-[58] flex cursor-pointer flex-col items-center justify-center overflow-hidden ${st.winner === CARD_ME ? 'bg-[radial-gradient(circle_at_50%_45%,rgba(120,53,15,.35),rgba(2,6,23,.78))]' : 'bg-slate-900/70'}`
+  }, st.winner === CARD_ME && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-card-end-rays pointer-events-none absolute left-1/2 top-[44%] h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+  }), st.winner === CARD_ME && React.createElement(CardConfetti, null), React.createElement("b", {
+    "data-card-end-title": true,
+    className: `mh-card-end-title relative block font-black italic leading-none ${st.winner === CARD_ME ? 'text-amber-200 [-webkit-text-stroke:2px_#7c2d12] [text-shadow:0_6px_0_#7c2d12,0_0_40px_rgba(251,191,36,.9)]' : 'text-slate-300 [text-shadow:0_4px_0_#0f172a]'}`,
+    style: {
+      fontSize: st.winner === CARD_ME ? 'clamp(64px, 22vw, 96px)' : 'clamp(44px, 15vw, 64px)'
+    }
+  }, st.winner === CARD_ME ? 'WIN!' : 'LOSE'), React.createElement("span", {
+    className: `relative mt-2 px-4 text-center text-[15px] font-black ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`,
+    style: JA_LABEL_STYLE
+  }, st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'), React.createElement("span", {
+    className: "absolute bottom-5 text-[12px] font-bold text-white/70"
+  }, "タップで次へ")), downBand && !bigCard && !turnBanner && React.createElement("div", {
     key: downBand.key,
     "data-card-down-band": downBand.p === CARD_ME ? 'me' : 'foe',
     className: "pointer-events-none absolute inset-0 z-[52] flex items-center justify-center",
@@ -93147,7 +93225,7 @@ const CardBattleScreen = ({
       "data-card-outcome": result.outcome,
       "data-card-gain": result.demo ? undefined : r.total,
       className: SCREEN_SHELL_CLASS
-    }, React.createElement(ScreenHead, {
+    }, win && React.createElement(CardConfetti, null), React.createElement(ScreenHead, {
       title: win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…',
       accent: win ? 'text-amber-200' : 'text-slate-300',
       onBack: () => setView('top')
@@ -93176,7 +93254,14 @@ const CardBattleScreen = ({
       outcome: win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'
     }), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
-    }, React.createElement("div", {
+    }, !result.demo && r.total > 0 && React.createElement("div", {
+      "data-card-gain-count": true,
+      className: "mb-1 text-center text-[32px] font-black leading-none text-amber-200 [text-shadow:0_0_16px_rgba(251,191,36,.55)]"
+    }, "+", React.createElement(CardCountUp, {
+      to: r.total
+    }), React.createElement("span", {
+      className: "ml-1 text-[14px]"
+    }, "ビートP")), React.createElement("div", {
       className: "text-[13px] font-black text-amber-200"
     }, "もらったビートP: ", r.total), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
@@ -93187,7 +93272,7 @@ const CardBattleScreen = ({
     }, jaWrap(cardResultCutWhy(result.outcome, r))), r.bonus > 0 && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
     }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-slate-400",
+      className: "mt-1 text-[11px] font-bold text-slate-500",
       style: JA_LABEL_STYLE
     }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && result.quick && React.createElement("div", {
       "data-card-quick-loops": result.quick ? result.loops : 0,
@@ -137495,6 +137580,16 @@ const createAnimationStyle = () => {
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
     /* 当たった子の白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
+    /* 勝った・負けた瞬間(2026-10-26 改良の案 C)。決着の動きを少し見せてから出す */
+    .mh-card-end { animation: mhCardEndIn .35s ease-out .25s both; }
+    @keyframes mhCardEndIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    .mh-card-end-title { animation: mhCardEndTitle .5s cubic-bezier(.2,1.4,.4,1) .3s both; }
+    @keyframes mhCardEndTitle { 0% { opacity: 0; transform: scale(.3); } 100% { opacity: 1; transform: scale(1); } }
+    .mh-card-end-rays { background: repeating-conic-gradient(rgba(253,230,138,.28) 0 8deg, rgba(253,230,138,0) 8deg 20deg); -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%); animation: mhCardEndRays 6s linear infinite; }
+    @keyframes mhCardEndRays { 0% { transform: translate(-50%,-50%) rotate(0deg); } 100% { transform: translate(-50%,-50%) rotate(360deg); } }
+    .mh-card-confetti { animation: mhCardConfetti 1.8s ease-in both; }
+    @keyframes mhCardConfetti { 0% { opacity: 0; transform: translate(0,-20px) rotate(0deg); } 10% { opacity: 1; } 100% { opacity: .9; transform: translate(var(--cf-x), 105vh) rotate(var(--cf-r)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-end, .mh-card-end-title, .mh-card-end-rays, .mh-card-confetti { animation: none; } }
     /* 大事な場面の台詞のカットイン(右から入る。2026-10-26 改良の案 B) */
     .mh-card-cutin { animation: mhCardCutin .35s cubic-bezier(.2,.9,.3,1.2) both; }
     @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
