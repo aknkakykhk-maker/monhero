@@ -202,12 +202,13 @@ const useBubbleCollapse = (collapseKey) => {
 //   compact     … 縦の場所が取れない画面(選択画面・リザルト)向けの小さい表示
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
 //   collapseKey … 渡すと吹き出しを小さくたためる(たたんだことを mh_bubble_collapsed_v1 に覚える)。画面ごとに別のキー
+//   collapseHidden … たたんだら札も出さず何も描かない(ひらく入口が画面の別の所にあるとき。ヘルプの上の助手の顔)
 // footerSpace … 吹き出しの下の行の左に空ける幅(px)。HOME はそこへ「💬 おしゃべり」を重ねる(2026-10-16)。指定が無ければ今までどおり
 // 吹き出しの本文の折り方(jaWrap・JA_LABEL_STYLE は 41-screen-ui.jsx)。一部だけを描く検査では無いことがあるので、無ければそのまま出す
 const bubbleWrap = (text) => (typeof jaWrap === 'function' ? jaWrap(text) : text);
 // (どちらも後ろの部品で宣言されるので、読み込み時ではなく描くときに引く)
 const bubbleWrapStyle = () => (typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined);
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null, collapseHidden=false }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
   // 設定「助手のひとこと」で隠すか。開いた画面ごとに1回だけ決め、見ているあいだに消えたり出たりしない
@@ -289,6 +290,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   if (bubbleHidden) return null;
   // たたんでいる間は、小さな顔と「ひとこと」の札だけ(押すとひらく)
   if (collapseKey && collapsed) {
+    if (collapseHidden) return null;
     return (
       <div data-bubble-collapsed className="w-full flex items-center gap-2">
         <AssistantFace who={who} size={32} accent={color} expression={face}/>
