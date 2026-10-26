@@ -516,7 +516,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     for (const k of ['in', 'out']) {
       await page.locator(`[data-card-result-demo="${k}"]`).click();
       await page.waitForTimeout(300);
-      demoTxt[k] = await page.locator('[data-card-quick-loops]').innerText().catch(() => '');
+      demoTxt[k] = (await page.locator('[data-card-quick-loops]').count()) ? await page.locator('[data-card-quick-loops]').innerText() : '';
       await shot(page, `16-result-loops-${k}`);
       await page.locator('[data-card-top="result"] button').first().click();
       await page.waitForTimeout(300);
@@ -541,7 +541,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.waitForTimeout(250);
     }
     check(`⑬ 結果の画面の助手の絵が、${whoIds.length}人とも同じ大きさで足元が枠の下にそろう`, whoIds.length >= 6 && artBad.length === 0, artBad.join(' / ') || whoIds.join('・'));
-    check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(入るとき・入らないとき)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && /^クイック周回をしていないときは入りません$/.test(demoTxt.out.trim()), JSON.stringify(demoTxt).slice(0, 200));
+    check('⑬ 結果の画面に「クイック周回 ◯周ぶん」が出る(周回中だけ。していないときは何も出さない。2026-10-26 カゲあつくんの点検)', /クイック周回 16周ぶん/.test(demoTxt.in) && /16周ぶん進みました/.test(demoTxt.in) && demoTxt.out === '', JSON.stringify(demoTxt).slice(0, 200));
     // ⑬ パックを開ける見本(デバッグ・保存しない。1パック目の最後は別絵キラ・2パック目の最後はキラ)
     //   キラ以上は真ん中に大きく出る(data-card-pack-spot)。鳴らした効果音(data-card-pack-se)に、破る音・めくる音・キラの音(crit＋levelUp)・別絵キラの音(crit＋fusion)がそろう
     await page.locator('[data-card-pack-open-demo]').dispatchEvent('click');
