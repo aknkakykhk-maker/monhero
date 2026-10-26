@@ -2655,7 +2655,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
   // ---- ランキング ----
   if (view === 'ranking') {
-    return <CardRankingBoard onBack={() => setView('top')} renderBreederIcon={rank && rank.renderBreederIcon} selfName={(rank && rank.profile && rank.profile.name) || ''} record={save.record} dex={cardDexCounts(db, save.collection)} sendOn={!!(rank && rank.send) && !debug}/>;
+    return <CardRankingBoard onBack={() => setView('top')} renderBreederIcon={rank && rank.renderBreederIcon} selfName={(rank && rank.profile && rank.profile.name) || ''} record={save.record} dex={cardDexCounts(db, save.collection)} sendOn={!!(rank && rank.send) && !debug}
+      syncArgs={rank && rank.profile ? { db, record: save.record, collection: save.collection, profile: rank.profile } : null}/>;
   }
 
   // ---- トップ(モンヒロビートのモードえらび・モンヒロバトルの入口と同じ作り。社長 台帳 #3513) ----
