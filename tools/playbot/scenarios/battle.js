@@ -85,7 +85,7 @@ const readBattle = (s) => s.page.evaluate(() => {
 
 // WAVE の合間(結果 → 報酬えらび など)。人と同じく「次へ進む」を押し、選ぶ画面では1つ選ぶ。
 // バトルへ戻れば 'battle'、ランが終われば 'over'
-const BACKWARD = /^(キャンセル|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる/;
+const BACKWARD = /^(キャンセル|やめる|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる/;
 async function betweenWaves(s) {
   for (let i = 0; i < 20; i++) {
     const st = await readBattle(s);

@@ -8,7 +8,7 @@ const FORWARD = /^(TAP TO START|トップ画面へ進む|次へ|つぎへ|はじ
 // 「はじめての設定」で、決定より先に済ませること(名前 → アイコン)。押したものは2度押さない
 const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
 // 進まないボタン。ほかに押せるものがあるときは選ばない
-const BACKWARD = /^(キャンセル|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く/;
+const BACKWARD = /^(キャンセル|やめる|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く/;
 
 async function newPlayerScenario(s, { maxSteps = 150 } = {}) {
   const { page, rand } = s;
