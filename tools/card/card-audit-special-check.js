@@ -310,6 +310,10 @@ nonAttach.forEach((c) => {
     const s = clone(r.st); s.field = { no: 'F260', p: Q, effects: db.cards.F260.effects.map((e) => ({ ...e })) };
     const s2 = act(s, { type: 'endAttacks' });
     check('B 034「力をためる」: 灼熱の地のダメージで、次の技2倍の印が消える', s2.players[P].mons[0].charge === null, JSON.stringify(s2.players[P].mons[0].charge));
+    const s3 = clone(r.st); s3.players[P].hand = ['253']; s3.players[P].guts = Array(3).fill('100'); s3.players[P].breederUsed = false;
+    const o = E.cardAttackOptions(db, s3).find((x) => x.type === 'breeder' && x.target && x.target.p === P && x.target.m === 0);
+    if (!o) check('B 253: 冬虫散で力をためた子を選べる', false);
+    else check('B 253「冬虫散」: 味方のライフを減らしたら、その子の次の技2倍の印が消える', act(s3, o).players[P].mons[0].charge === null);
   }
 }
 
