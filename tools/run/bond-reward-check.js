@@ -145,6 +145,8 @@ check('レベル情報が累計経験値も持つ', bondLevelInfo(1234).totalXp 
 check('リザルトのバーがLv変化と累計を出す',
   source.includes('Lv.{levelBefore.level} → Lv.{levelAfter.level}')
     && source.includes('累計 {totalBefore.toLocaleString()} → {totalAfter.toLocaleString()}'));
-check('リザルトのダイヤが増えた分も出す', source.includes('(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})'));
+// 2026-10-27 数の出し方をブリーダー経験値とそろえた: 右に「+増えた分」、下の小さい行に持っている数の変化
+check('リザルトのダイヤが増えた分も出す', source.includes('to={Math.max(0, summary.goldAfter-summary.goldBefore)}')
+  && source.includes('所持 {summary.goldBefore.toLocaleString()} → {summary.goldAfter.toLocaleString()}'));
 
 process.exit(failed ? 1 : 0);
