@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fb59071656c32170
+// generated-sha256: e9332229f7d25832
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51650,7 +51650,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
   mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.075, master: 0.12 },
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.14 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.3 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.1 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)が効くようになって(2026-10-27)プレイヤー役が強くなったぶん 0.3 → 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
   atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0, master: 0 },   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
