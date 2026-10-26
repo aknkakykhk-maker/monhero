@@ -44,6 +44,7 @@ const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'デスファイナル': 2, 'ニードルターン': 4, 'ファイナルボム': 5, 'サテラアタック': 3, 'メテオドライブ': 3, 'マインドフレア': 4,
   'ヒップアタック': 3, 'マッハトルネード': 3, 'デルタアタック': 3, 'スピンカッター': 3, 'ダブルチョップ': 3, 'ボディーブロー': 4,
   'ワンツーパンチ': 4, 'マシンガンパンチ': 5,
+  'ピコピコハンマー': 4, 'ゴーストラッシュ': 4, // ゴースト(2026-10-27)
 });
 const cardNameScript = (c) => (/[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o');
 const cardNameSplit = (text) => {
@@ -2330,6 +2331,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">強さ</span>
             <span className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>勝つと次の強さが開きます</span>
           </div>
+          {/* 鍵が付いているときは、どの強さで勝てば開くかを1行で出す(EASY で勝っても HARD は開かない。2026-10-26 社長が迷った) */}
+          {(() => {
+            const lock = debug ? null : CARD_LEVEL_ORDER.find((lv) => !cardLevelOpen(save.unlocked, lv));
+            const prev = lock ? CARD_LEVEL_ORDER[CARD_LEVEL_ORDER.indexOf(lock) - 1] : null;
+            return lock && prev ? <p data-card-level-hint={lock} className="px-0.5 text-[11px] font-bold text-amber-200/90" style={JA_LABEL_STYLE}>{jaWrap(`🔒 ${CARD_LEVEL_LABEL[lock]} は ${CARD_LEVEL_LABEL[prev]} で勝つと開きます`)}</p> : null;
+          })()}
           <div className="grid grid-cols-5 gap-1">
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
