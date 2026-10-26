@@ -86,7 +86,9 @@ const dataTablePrelude = [
   // (カードのデータ本体 CARD_BATTLE_DATA は持ち込まない。種族名は表の id で並ぶ)
   grab(cardCore, 'const CARD_AI_LEVELS = Object.freeze({', '// くせの重み'),
   (cardCore.match(/^const CARD_LEVEL_ORDER = .*$/m) || [''])[0],
-  (cardCore.match(/^const CARD_CPU_LOSE_POINT = .*$/m) || [''])[0],
+  (cardCore.match(/^const CARD_LOSE_SHARE = .*$/m) || [''])[0],
+  (cardCore.match(/^const cardLosePoint = .*$/m) || [''])[0],
+  (cardCore.match(/^const cardLoseLoops = .*$/m) || [''])[0],
   (cardCore.match(/^const CARD_PVP_REWARD = .*$/m) || [''])[0],
   grab(cardPack, 'const CARD_PACKS = Object.freeze([', '// 全モンスター(any)'),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
