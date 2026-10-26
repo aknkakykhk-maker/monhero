@@ -21,7 +21,7 @@ const HAM_IMG = "images/monsters/ham.png?v=106321d09a72";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=38f7f50cd68b";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
-const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=e6c4b23ee988";
+const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=ac56746b5791";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
@@ -109,6 +109,7 @@ const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=ce9b0ee85836";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
+const GOLEM_DYE_MASK = "images/monsters/golem-dye-mask.PNG?v=b6b1cf1c4bf0";
 const MONOL_IMG = "images/monsters/monol.png?v=64e141b7fbb1";
 const OBORO_IMG = "images/monsters/oboro.png?v=b9f9b77e528d";
 const PLANT_IMG = "images/monsters/plant.PNG?v=398cacbadab3";
@@ -128,7 +129,7 @@ const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=c4c739ed5b
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
 const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
-const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
+const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=72185954c1f9";
 // 2026年9月に追加準備中のレア「剣士モッチー」(モッチー×？？？)。正式実装まではデバッグ専用。
 // 染色は5部位で、承認済みマスクの色分けがそのままリポジトリ仕様に合っている
 // (赤=①肌 / 緑=②コート・ブーツ / 青=③髪 / 黄=④左手の剣 / マゼンタ=⑤右手の剣)。
@@ -168,11 +169,16 @@ const KUROMY_DYE_MASK = "images/monsters/kuromy-dye-mask.PNG?v=7e06f8e564b2";
 // 元絵は tools/art-sources/new-monsters-2026-10-22/。透明な余白を切って高さ916pxへ縮め、256色へ減色(グラデーションの段が出ないよう誤差拡散)
 const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
 const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=ecdc51013525";
-const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
+const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=c6419eaba43c";
 const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
 // 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
 // ケンタウロスは背景に散ったごく薄い光の画素(不透明度64未満)を消してから取り込んだ
+// キュービ・オリヒメ(2026-10-27・案の段階)。元絵は tools/art-sources/kyubi-orihime-2026-10-27/。高さ916px・256色(sharp)
+const KYUBI_IMG = "images/monsters/kyubi.png?v=f3711a72a817";
+const KYUBI_DYE_MASK = "images/monsters/kyubi-dye-mask.PNG?v=fc6210422555";
+const ORIHIME_DYE_MASK = "images/monsters/orihime-dye-mask.PNG?v=5868e56697c0";
+const ORIHIME_IMG = "images/monsters/orihime.png?v=86ff26c44dcb";
 const MF_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
 const MF_GALI_IMG = "images/monsters/gali.png?v=802cb6ce6f64";
 const MF_NAGA_IMG = "images/monsters/naga.png?v=07114a6c8886";
@@ -309,15 +315,15 @@ const KENSHI_MOCCHI_ICON = KENSHI_MOCCHI_IMG;
 // そのまま顔アイコンとして使えるモンスターだけ、base64 を重複させず変数参照にしている。
 const MOCCHI_FACE_ICON = "images/monster-icons/face/mocchi.png?v=96be4cbc1468";
 const HAM_FACE_ICON = "images/monster-icons/face/ham.png?v=fbe8e4f70214";
-const TIGER_FACE_ICON = TIGER_ICON;
+const TIGER_FACE_ICON = "images/monster-icons/face/tiger.png?v=1557ff181186";
 const PIXIE_FACE_ICON = "images/monster-icons/face/pixie.png?v=d33b92e39fa0";
-const MIA_FACE_ICON = MIA_IMG;
-const PANDORA_FACE_ICON = PANDORA_IMG;
+const MIA_FACE_ICON = "images/monster-icons/face/mia.png?v=35b65c9e07c6";
+const PANDORA_FACE_ICON = "images/monster-icons/face/pandora.png?v=2f1277f1d3bb";
 const SUEZO_FACE_ICON = "images/monster-icons/face/suezo.png?v=696938ca7d63";
 const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=8ef71840d1d5";
 const MONOL_FACE_ICON = MONOL_ICON;
 const OBORO_FACE_ICON = OBORO_ICON;
-const PLANT_FACE_ICON = PLANT_IMG;
+const PLANT_FACE_ICON = "images/monster-icons/face/plant.png?v=b79e75dedc41";
 const YGGDRASIL_ICON = YGGDRASIL_IMG;
 const MEL_WHIP_ICON = MEL_WHIP_IMG;
 const GHOST_ICON = GHOST_IMG;
@@ -329,16 +335,16 @@ const DREAMY_ICON = DREAMY_IMG;
 const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=b4a2ad9cdd58";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=b5e3a96b27c0";
-const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=9663afec97f9";
-const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d920ec35a";
+const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=bdd570ce943a";
+const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=31dc864654c1";
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
 const UNDINE_FACE_ICON = "images/monster-icons/face/undine.png?v=fe1ba930173b";
 const YAOBIKUNI_FACE_ICON = "images/monster-icons/face/yaobikuni.png?v=32838d8bdd5a";
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
-const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
-const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
+const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=32b08d1fc0cd";
+const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=a4f626c0fde8";
 const GHOST_FACE_ICON = "images/monster-icons/face/ghost.png?v=fdbc8d32d2cd";
 const SPOOKY_FACE_ICON = "images/monster-icons/face/spooky.png?v=2c047a771ffe";
 const MELODY_FACE_ICON = "images/monster-icons/face/melody.png?v=95bbe06158e4";
@@ -372,7 +378,7 @@ const HYBRID_C056_FACE_ICON = "images/monster-icons/face/c056.png?v=ed4aac02295a
 const HYBRID_C057_FACE_ICON = "images/monster-icons/face/c057.png?v=13230681ef1d";
 const HYBRID_C058_FACE_ICON = "images/monster-icons/face/c058.png?v=3bfcaaa0ceaf";
 const HYBRID_C059_FACE_ICON = "images/monster-icons/face/c059.png?v=106d33ba40e0";
-const HYBRID_C060_FACE_ICON = "images/monster-icons/face/c060.png?v=6068ebe63111";
+const HYBRID_C060_FACE_ICON = "images/monster-icons/face/c060.png?v=7b1d704aac06";
 const HYBRID_C061_FACE_ICON = "images/monster-icons/face/c061.png?v=920ea9e836ad";
 const HYBRID_C062_FACE_ICON = "images/monster-icons/face/c062.png?v=07f17eb1dfee";
 const HYBRID_C055_FACE_ICON = "images/monster-icons/face/c055.png?v=a71918e0b84b";
@@ -393,7 +399,7 @@ const HYBRID_C034_FACE_ICON = "images/monster-icons/face/c034.png?v=ec1be7dcb7a6
 const HYBRID_C035_FACE_ICON = "images/monster-icons/face/c035.png?v=895f6b37c7db";
 const HYBRID_C036_FACE_ICON = "images/monster-icons/face/c036.png?v=cb3c4f4a19a6";
 const HYBRID_C038_FACE_ICON = "images/monster-icons/face/c038.png?v=4eaeb9ce0c27";
-const HYBRID_C039_FACE_ICON = "images/monster-icons/face/c039.png?v=673f2f41e714";
+const HYBRID_C039_FACE_ICON = "images/monster-icons/face/c039.png?v=a42c3f14dd98";
 const HYBRID_C040_FACE_ICON = "images/monster-icons/face/c040.png?v=c09a8d93ef8e";
 const HYBRID_C041_FACE_ICON = "images/monster-icons/face/c041.png?v=e5b9e37dddf1";
 const HYBRID_C042_FACE_ICON = "images/monster-icons/face/c042.png?v=9331e5dd8316";
@@ -406,6 +412,8 @@ const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=b3722ab1b74e
 const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=9fcfee53438b";
 const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=4ee1ce8f7085";
 const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
+const KYUBI_FACE_ICON = "images/monster-icons/face/kyubi.png?v=6648b970a72f";
+const ORIHIME_FACE_ICON = "images/monster-icons/face/orihime.png?v=887beb2d000f";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,
@@ -525,9 +533,102 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   metalner: LINEAGE_ICON_METALNER,
   worm: LINEAGE_ICON_WORM,
   centaur: LINEAGE_ICON_CENTAUR,
+  kyubi: LINEAGE_ICON_KYUBI,
   unknown: LINEAGE_ICON_RAREMON,
 });
 
+// 顔アイコンが全身絵そのものの子(顔アイコンを作っていない)。モノリスは顔のない板、オボロゲソウ・プラントは顔が体の下にあるので、全身のほうが分かりやすい。
+// ライガー・ミーア・パンドラは顔アイコンの案を社長が選ぶまでのあいだ。ここに無い子の顔アイコンが全身絵だと、tools/image/art-anchor-check.js が止める
+const ART_FACE_FULL_BODY = Object.freeze(['MONOL', 'OBORO']);
+// 顔のまんなか(2026-10-26 社長「顔アイコンと全身絵のずれが出ない仕組み」)。全身絵(◯◯_IMG)の中で、顔アイコンの丸のまんなかに来る点(0〜1)。
+// 顔(目のあいだ・鼻)のまんなかを書く。顔アイコンは tools/image/make-face-icons.js がこの点を丸のまんなかに置いて作る。
+// 新しい子を足したら、ここにも書く(tools/image/art-anchor-check.js が、書いていない子を止める)。書き出しは tools/image/art-anchors.js
+const ART_ANCHORS = Object.freeze({
+  MOCCHI: Object.freeze({ face: Object.freeze([0.5, 0.246]) }),
+  SUEZO: Object.freeze({ face: Object.freeze([0.5, 0.465]) }),
+  PIXIE: Object.freeze({ face: Object.freeze([0.494, 0.232]) }),
+  GOLEM: Object.freeze({ face: Object.freeze([0.492, 0.155]) }),
+  MITARASHI: Object.freeze({ face: Object.freeze([0.493, 0.259]) }),
+  IBLIS: Object.freeze({ face: Object.freeze([0.476, 0.32]), zoom: 1.15 }),
+  ZAN: Object.freeze({ face: Object.freeze([0.5, 0.229]) }),
+  ARK: Object.freeze({ face: Object.freeze([0.5, 0.393]) }),
+  HAM: Object.freeze({ face: Object.freeze([0.51, 0.356]) }),
+  SNEGUROCHKA: Object.freeze({ face: Object.freeze([0.461, 0.24]), zoom: 1.185 }),
+  EIKI: Object.freeze({ face: Object.freeze([0.5, 0.119]) }),
+  KENSHI_MOCCHI: Object.freeze({ face: Object.freeze([0.5, 0.272]) }),
+  UNDINE: Object.freeze({ face: Object.freeze([0.472, 0.148]) }),
+  YAOBIKUNI: Object.freeze({ face: Object.freeze([0.482, 0.145]) }),
+  YGGDRASIL: Object.freeze({ face: Object.freeze([0.505, 0.324]), zoom: 1.218 }),
+  TIGER: Object.freeze({ face: Object.freeze([0.49, 0.304]) }),
+  MIA: Object.freeze({ face: Object.freeze([0.497, 0.214]) }),
+  PANDORA: Object.freeze({ face: Object.freeze([0.482, 0.208]) }),
+  PLANT: Object.freeze({ face: Object.freeze([0.5, 0.522]), zoom: 1.302 }),
+  MEL_WHIP: Object.freeze({ face: Object.freeze([0.549, 0.333]), zoom: 1.341 }),
+  GHOST: Object.freeze({ face: Object.freeze([0.5, 0.387]) }),
+  SPOOKY: Object.freeze({ face: Object.freeze([0.5, 0.337]) }),
+  MELODY: Object.freeze({ face: Object.freeze([0.51, 0.312]) }),
+  KUROMY: Object.freeze({ face: Object.freeze([0.57, 0.378]) }),
+  ILLUMINE: Object.freeze({ face: Object.freeze([0.49, 0.238]) }),
+  DREAMY: Object.freeze({ face: Object.freeze([0.45, 0.147]) }),
+  MF_DINO: Object.freeze({ face: Object.freeze([0.347, 0.168]) }),
+  MF_NAGA: Object.freeze({ face: Object.freeze([0.5, 0.166]) }),
+  MF_HENGER: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  MF_ARROWHEAD: Object.freeze({ face: Object.freeze([0.499, 0.637]) }),
+  MF_ZILLA: Object.freeze({ face: Object.freeze([0.421, 0.241]) }),
+  MF_JOKER: Object.freeze({ face: Object.freeze([0.52, 0.246]) }),
+  MF_JELL: Object.freeze({ face: Object.freeze([0.494, 0.133]) }),
+  MF_MEW: Object.freeze({ face: Object.freeze([0.426, 0.368]) }),
+  MF_METALNER: Object.freeze({ face: Object.freeze([0.511, 0.199]) }),
+  MF_CENTAUR: Object.freeze({ face: Object.freeze([0.553, 0.279]) }),
+  MF_COLORPANDORA: Object.freeze({ face: Object.freeze([0.5, 0.314]) }),
+  MF_GALI: Object.freeze({ face: Object.freeze([0.485, 0.169]) }),
+  MF_DRAGON: Object.freeze({ face: Object.freeze([0.496, 0.13]) }),
+  MF_DURAHAN: Object.freeze({ face: Object.freeze([0.434, 0.239]) }),
+  MF_PHOENIX: Object.freeze({ face: Object.freeze([0.494, 0.377]) }),
+  MF_WORM: Object.freeze({ face: Object.freeze([0.5, 0.683]) }),
+  HYBRID_C051: Object.freeze({ face: Object.freeze([0.4, 0.277]) }),
+  HYBRID_C052: Object.freeze({ face: Object.freeze([0.5, 0.184]) }),
+  HYBRID_C053: Object.freeze({ face: Object.freeze([0.485, 0.36]) }),
+  HYBRID_C054: Object.freeze({ face: Object.freeze([0.5, 0.159]) }),
+  HYBRID_C056: Object.freeze({ face: Object.freeze([0.497, 0.205]) }),
+  HYBRID_C057: Object.freeze({ face: Object.freeze([0.509, 0.135]) }),
+  HYBRID_C058: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  HYBRID_C059: Object.freeze({ face: Object.freeze([0.5, 0.525]) }),
+  HYBRID_C060: Object.freeze({ face: Object.freeze([0.515, 0.435]), zoom: 0.871 }),
+  HYBRID_C061: Object.freeze({ face: Object.freeze([0.5, 0.475]) }),
+  HYBRID_C062: Object.freeze({ face: Object.freeze([0.5, 0.649]) }),
+  HYBRID_C055: Object.freeze({ face: Object.freeze([0.5, 0.387]) }),
+  HYBRID_C063: Object.freeze({ face: Object.freeze([0.521, 0.26]) }),
+  HYBRID_C064: Object.freeze({ face: Object.freeze([0.44, 0.184]) }),
+  HYBRID_C065: Object.freeze({ face: Object.freeze([0.485, 0.235]) }),
+  HYBRID_C010: Object.freeze({ face: Object.freeze([0.356, 0.25]) }),
+  HYBRID_C012: Object.freeze({ face: Object.freeze([0.5, 0.425]) }),
+  HYBRID_C013: Object.freeze({ face: Object.freeze([0.5, 0.15]) }),
+  HYBRID_C015: Object.freeze({ face: Object.freeze([0.5, 0.328]) }),
+  HYBRID_C016: Object.freeze({ face: Object.freeze([0.487, 0.185]) }),
+  HYBRID_C017: Object.freeze({ face: Object.freeze([0.49, 0.2]) }),
+  HYBRID_C018: Object.freeze({ face: Object.freeze([0.5, 0.45]) }),
+  HYBRID_C019: Object.freeze({ face: Object.freeze([0.5, 0.19]) }),
+  HYBRID_C033: Object.freeze({ face: Object.freeze([0.5, 0.185]) }),
+  HYBRID_C034: Object.freeze({ face: Object.freeze([0.35, 0.2]) }),
+  HYBRID_C035: Object.freeze({ face: Object.freeze([0.505, 0.275]) }),
+  HYBRID_C036: Object.freeze({ face: Object.freeze([0.5, 0.2]) }),
+  HYBRID_C038: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  HYBRID_C039: Object.freeze({ face: Object.freeze([0.381, 0.3]), zoom: 0.819 }),
+  HYBRID_C040: Object.freeze({ face: Object.freeze([0.5, 0.45]) }),
+  HYBRID_C041: Object.freeze({ face: Object.freeze([0.5, 0.625]) }),
+  HYBRID_C042: Object.freeze({ face: Object.freeze([0.5, 0.18]) }),
+  HYBRID_C020: Object.freeze({ face: Object.freeze([0.5, 0.25]) }),
+  HYBRID_C043: Object.freeze({ face: Object.freeze([0.41, 0.165]) }),
+  HYBRID_C045: Object.freeze({ face: Object.freeze([0.5, 0.15]) }),
+  HYBRID_C044: Object.freeze({ face: Object.freeze([0.335, 0.21]) }),
+  HYBRID_C032: Object.freeze({ face: Object.freeze([0.5, 0.11]) }),
+  HYBRID_C037: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  HYBRID_C014: Object.freeze({ face: Object.freeze([0.359, 0.21]) }),
+  HYBRID_C011: Object.freeze({ face: Object.freeze([0.503, 0.11]) }),
+  KYUBI: Object.freeze({ face: Object.freeze([0.53, 0.23]) }),
+  ORIHIME: Object.freeze({ face: Object.freeze([0.557, 0.225]) }),
+});
 // <monster-thumbs>
 // 小さい枠(64px 以下)で使うモンスターの小さい版。tools/image/make-monster-thumbs.js が作る(手で書かない)
 const MONSTER_THUMBS = {
@@ -561,3 +662,195 @@ const MONSTER_THUMBS = {
   "Zan": "images/monster-thumbs/zan.png?v=2cfc30f16541",
 };
 // </monster-thumbs>
+// <art-content-boxes>
+// 立ち絵の中身の範囲 [左, 上, 右, 下(画像に対する割合), 横÷縦]。キーは images/ の下の道。tools/image/make-art-content-boxes.js が作る(手で書かない)
+// 使う所: MFバトルカードの対戦開始(VS)の画面で、助手とモンスターの見た目の大きさをそろえる(83-card-battle-vs.jsx の CardVsArt)
+const ART_CONTENT_BOXES = {
+  "monsters/SNEGUROCHKA.PNG": [0.187, 0.099, 0.729, 0.844, 0.667],
+  "monsters/SNEGUROCHKA_AWAKENED.PNG": [0.227, 0.143, 0.748, 0.859, 0.667],
+  "monsters/ark.png": [0.054, 0.207, 0.947, 0.794, 1],
+  "monsters/arrowhead.png": [0, 0, 1, 1, 1.061],
+  "monsters/c010.png": [0, 0, 1, 1, 0.929],
+  "monsters/c011.png": [0, 0, 1, 1, 1.147],
+  "monsters/c012.png": [0, 0, 1, 1, 0.865],
+  "monsters/c013.png": [0, 0, 1, 1, 0.657],
+  "monsters/c014.png": [0.001, 0, 0.999, 1, 0.866],
+  "monsters/c015.png": [0, 0, 1, 1, 0.614],
+  "monsters/c016.png": [0, 0, 1, 1, 0.742],
+  "monsters/c017.png": [0, 0, 1, 1, 0.933],
+  "monsters/c018.png": [0, 0, 1, 1, 0.705],
+  "monsters/c019.png": [0, 0, 1, 1, 1.008],
+  "monsters/c020.png": [0, 0, 1, 1, 0.816],
+  "monsters/c032.png": [0, 0, 1, 0.999, 1.066],
+  "monsters/c033.png": [0, 0, 1, 1, 0.94],
+  "monsters/c034.png": [0, 0, 1, 1, 0.825],
+  "monsters/c035.png": [0, 0, 1, 1, 0.917],
+  "monsters/c036.png": [0, 0, 1, 1, 0.791],
+  "monsters/c037.png": [0, 0, 1, 1, 0.636],
+  "monsters/c038.png": [0, 0, 1, 1, 1.115],
+  "monsters/c039.png": [0, 0, 1, 1, 0.805],
+  "monsters/c040.png": [0, 0, 1, 1, 1.138],
+  "monsters/c041.png": [0, 0, 1, 1, 1.238],
+  "monsters/c042.png": [0, 0, 1, 1, 0.972],
+  "monsters/c043.png": [0, 0, 1, 1, 0.942],
+  "monsters/c044.png": [0, 0, 1, 1, 1.029],
+  "monsters/c045.png": [0, 0, 1, 1, 1.037],
+  "monsters/c051.png": [0, 0, 1, 1, 0.996],
+  "monsters/c052.png": [0, 0, 1, 1, 0.797],
+  "monsters/c053.png": [0, 0, 1, 1, 1.021],
+  "monsters/c054.png": [0, 0, 1, 1, 0.915],
+  "monsters/c055.png": [0, 0, 1, 1, 0.623],
+  "monsters/c056.png": [0, 0, 1, 1, 0.955],
+  "monsters/c057.png": [0, 0, 0.999, 1, 0.869],
+  "monsters/c058.png": [0, 0, 1, 1, 0.646],
+  "monsters/c059.png": [0.001, 0, 1, 1, 0.89],
+  "monsters/c060.png": [0, 0, 1, 1, 0.485],
+  "monsters/c061.png": [0, 0, 1, 1, 1.205],
+  "monsters/c062.png": [0, 0, 1, 1, 1.233],
+  "monsters/c063.png": [0, 0, 1, 1, 1.096],
+  "monsters/c064.png": [0, 0, 1, 1, 0.702],
+  "monsters/c065.png": [0.001, 0.001, 0.999, 1, 0.972],
+  "monsters/centaur.png": [0, 0, 0.998, 1, 0.562],
+  "monsters/colorpandora.png": [0.002, 0, 0.998, 1, 0.604],
+  "monsters/dino.png": [0, 0.001, 1, 1, 0.83],
+  "monsters/dragon.png": [0, 0, 1, 1, 1.057],
+  "monsters/dreamy-dye-mask.PNG": [0, 0, 1, 0.999, 0.699],
+  "monsters/dreamy.png": [0, 0, 1, 1, 0.699],
+  "monsters/durahan.png": [0, 0, 1, 1, 0.757],
+  "monsters/eiki-dye-mask.PNG": [0.001, 0.004, 1, 1, 0.841],
+  "monsters/eiki.png": [0, 0, 1, 1, 0.841],
+  "monsters/gali.png": [0, 0, 1, 1, 0.771],
+  "monsters/ghost-dye-mask.PNG": [0, 0, 1, 1, 0.671],
+  "monsters/ghost.png": [0, 0, 1, 1, 0.671],
+  "monsters/golem-dye-mask.PNG": [0.129, 0.053, 0.873, 0.902, 1],
+  "monsters/golem.png": [0.129, 0.053, 0.873, 0.902, 1],
+  "monsters/ham.png": [0.242, 0.053, 0.758, 0.946, 1],
+  "monsters/henger.png": [0, 0, 1, 1, 1.171],
+  "monsters/iblis.png": [0.054, 0.053, 0.904, 0.788, 1],
+  "monsters/illumine-dye-mask.PNG": [0, 0, 1, 1, 0.865],
+  "monsters/illumine.png": [0, 0, 1, 1, 0.865],
+  "monsters/jell.png": [0, 0, 1, 1, 0.787],
+  "monsters/joker.png": [0, 0, 1, 1, 0.933],
+  "monsters/kenshi-mocchi-dye-mask.PNG": [0.123, 0.053, 0.872, 0.951, 1],
+  "monsters/kenshi-mocchi.png": [0.121, 0.049, 0.88, 0.957, 1],
+  "monsters/kuromy-dye-mask.PNG": [0, 0, 1, 1, 0.62],
+  "monsters/kuromy.png": [0, 0, 1, 1, 0.62],
+  "monsters/kyubi-dye-mask.PNG": [0.044, 0, 0.999, 1, 0.861],
+  "monsters/kyubi.png": [0, 0, 1, 1, 0.861],
+  "monsters/mel-whip-dye-mask.PNG": [0.002, 0, 0.998, 0.969, 0.692],
+  "monsters/mel-whip.png": [0, 0, 1, 1, 0.692],
+  "monsters/melody-dye-mask.PNG": [0, 0, 1, 1, 0.806],
+  "monsters/melody.png": [0, 0, 1, 1, 0.806],
+  "monsters/metalner.png": [0, 0, 1, 1, 0.63],
+  "monsters/mew.png": [0, 0.001, 1, 1, 0.705],
+  "monsters/mia-wing-body.png": [0, 0, 1, 1, 0.667],
+  "monsters/mia-wing-left.png": [0, 0.302, 0.43, 0.51, 0.667],
+  "monsters/mia-wing-right.png": [0.57, 0.302, 1, 0.513, 0.667],
+  "monsters/mia.PNG": [0.005, 0.01, 0.996, 0.952, 0.667],
+  "monsters/mitarashi.png": [0.095, 0.069, 0.905, 0.935, 1],
+  "monsters/mocchi-dye-mask.PNG": [0.18, 0.047, 0.822, 0.938, 1],
+  "monsters/mocchi.png": [0.183, 0.051, 0.827, 0.933, 1],
+  "monsters/monol.png": [0.205, 0.045, 0.795, 0.954, 1],
+  "monsters/naga.png": [0, 0, 1, 1, 1.061],
+  "monsters/oboro.png": [0.045, 0.082, 0.955, 0.918, 1],
+  "monsters/orihime-dye-mask.PNG": [0.174, 0, 1, 1, 0.868],
+  "monsters/orihime.png": [0, 0, 1, 1, 0.868],
+  "monsters/pandora-angel.PNG": [0.172, 0.005, 0.953, 0.962, 0.667],
+  "monsters/pandora-devil.PNG": [0.025, 0.009, 0.854, 0.96, 0.667],
+  "monsters/pandora-dye-mask.PNG": [0.035, 0.012, 0.948, 0.961, 0.667],
+  "monsters/pandora.PNG": [0.025, 0.006, 0.948, 0.961, 0.667],
+  "monsters/phoenix.png": [0, 0, 1, 1, 0.969],
+  "monsters/pixie.png": [0.27, 0.136, 0.754, 0.948, 1],
+  "monsters/plant-dye-mask.PNG": [0.05, 0.139, 0.95, 0.817, 1],
+  "monsters/plant.PNG": [0.05, 0.139, 0.95, 0.861, 1],
+  "monsters/snegurochka.png": [0.282, 0.054, 0.718, 0.946, 1],
+  "monsters/spooky-dye-mask.PNG": [0, 0, 1, 1, 0.841],
+  "monsters/spooky.png": [0, 0, 1, 1, 0.841],
+  "monsters/suezo-dye-mask.PNG": [0.243, 0.225, 0.757, 0.894, 1],
+  "monsters/suezo.png": [0.243, 0.225, 0.758, 0.894, 1],
+  "monsters/tiger-dye-mask.PNG": [0.25, 0.147, 0.97, 0.876, 1],
+  "monsters/tiger.PNG": [0.248, 0.146, 0.97, 0.876, 1],
+  "monsters/tiger.png": [0.213, 0.138, 0.956, 0.913, 1],
+  "monsters/undine-dye-mask.PNG": [0.213, 0.01, 0.916, 0.98, 0.667],
+  "monsters/undine.PNG": [0.213, 0.01, 0.916, 0.98, 0.667],
+  "monsters/worm.png": [0, 0, 1, 1, 1.259],
+  "monsters/yaobikuni-dye-mask2.PNG": [0.239, 0.002, 0.893, 0.977, 0.667],
+  "monsters/yaobikuni.PNG": [0.239, 0.002, 0.893, 0.979, 0.667],
+  "monsters/yggdrasil-dye-mask.PNG": [0, 0.001, 1, 1, 0.828],
+  "monsters/yggdrasil.png": [0, 0.001, 1, 1, 0.828],
+  "monsters/zan.png": [0.074, 0.048, 0.925, 0.951, 1],
+  "monsters/zilla.png": [0, 0, 1, 1, 0.987],
+  "assistant/atsu_angry.PNG": [0, 0.002, 1, 1, 0.75],
+  "assistant/atsu_crying.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/atsu_excited.PNG": [0, 0.003, 1, 1, 0.75],
+  "assistant/atsu_happy.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/atsu_normal.PNG": [0, 0.005, 1, 1, 0.75],
+  "assistant/atsu_surprise.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/atsu_troubled.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/atsu_wink.PNG": [0, 0.014, 1, 1, 0.75],
+  "assistant/dra_angry.PNG": [0.115, 0.102, 0.893, 0.826, 1],
+  "assistant/dra_crying.PNG": [0.122, 0.115, 0.88, 0.818, 1],
+  "assistant/dra_excited.PNG": [0.12, 0.12, 0.88, 0.82, 1],
+  "assistant/dra_happy.PNG": [0.073, 0.104, 0.885, 0.823, 1],
+  "assistant/dra_normal.PNG": [0.117, 0.107, 0.88, 0.82, 1],
+  "assistant/dra_surprise.PNG": [0.065, 0.102, 0.88, 0.826, 1],
+  "assistant/dra_troubled.PNG": [0.117, 0.112, 0.883, 0.82, 1],
+  "assistant/dra_wink.PNG": [0.128, 0.112, 0.872, 0.815, 1],
+  "assistant/halloween/kiki_angry.PNG": [0.076, 0, 0.93, 1, 1],
+  "assistant/halloween/kiki_crying.PNG": [0.069, 0, 0.968, 1, 1],
+  "assistant/halloween/kiki_excited.PNG": [0.03, 0, 0.99, 1, 1],
+  "assistant/halloween/kiki_happy.PNG": [0.074, 0.001, 0.942, 1, 1],
+  "assistant/halloween/kiki_normal.PNG": [0.071, 0.004, 0.943, 1, 1],
+  "assistant/halloween/kiki_surprise.PNG": [0.044, 0.002, 0.963, 1, 1],
+  "assistant/halloween/kiki_troubled.PNG": [0.067, 0, 0.961, 1, 1],
+  "assistant/halloween/kiki_wink.PNG": [0.045, 0.001, 0.953, 1, 1],
+  "assistant/halloween/momosuke_angry.PNG": [0, 0, 1, 1, 1],
+  "assistant/halloween/momosuke_crying.PNG": [0, 0, 1, 1, 1],
+  "assistant/halloween/momosuke_excited.PNG": [0, 0, 1, 1, 1],
+  "assistant/halloween/momosuke_happy.PNG": [0, 0, 1, 1, 1],
+  "assistant/halloween/momosuke_normal.PNG": [0, 0, 1, 1, 1],
+  "assistant/halloween/momosuke_surprise.PNG": [0, 0, 1, 1, 1],
+  "assistant/halloween/momosuke_troubled.PNG": [0.007, 0, 1, 1, 1],
+  "assistant/halloween/momosuke_wink.PNG": [0, 0, 1, 1, 1],
+  "assistant/halloween/myua_angry.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/halloween/myua_crying.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/halloween/myua_excited.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/halloween/myua_happy.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/halloween/myua_normal.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/halloween/myua_surprise.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/halloween/myua_troubled.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/halloween/myua_wink.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/kiki_angry.PNG": [0.313, 0.01, 0.686, 1, 1.5],
+  "assistant/kiki_crying.PNG": [0.313, 0.014, 0.685, 1, 1.5],
+  "assistant/kiki_excited.PNG": [0.322, 0.012, 0.684, 1, 1.5],
+  "assistant/kiki_happy.PNG": [0.316, 0.014, 0.689, 1, 1.5],
+  "assistant/kiki_normal.PNG": [0.31, 0.017, 0.702, 1, 1.5],
+  "assistant/kiki_surprise.PNG": [0.311, 0.011, 0.691, 1, 1.5],
+  "assistant/kiki_troubled.PNG": [0.313, 0.009, 0.688, 1, 1.5],
+  "assistant/kiki_wink.PNG": [0.319, 0.006, 0.69, 1, 1.5],
+  "assistant/kyuko_angry.PNG": [0, 0, 1, 0.992, 0.75],
+  "assistant/kyuko_crying.PNG": [0.01, 0, 1, 0.99, 0.75],
+  "assistant/kyuko_excited.PNG": [0, 0, 1, 0.992, 0.75],
+  "assistant/kyuko_happy.PNG": [0.008, 0.014, 1, 1, 0.75],
+  "assistant/kyuko_normal.PNG": [0, 0.012, 0.982, 1, 0.75],
+  "assistant/kyuko_surprise.PNG": [0.01, 0.012, 0.987, 1, 0.75],
+  "assistant/kyuko_troubled.PNG": [0, 0.004, 1, 0.992, 0.75],
+  "assistant/kyuko_wink.PNG": [0, 0.012, 0.979, 0.992, 0.75],
+  "assistant/momosuke_angry.PNG": [0.023, 0.006, 0.994, 1, 1],
+  "assistant/momosuke_crying.PNG": [0.047, 0.004, 0.963, 1, 1],
+  "assistant/momosuke_excited.PNG": [0.02, 0.012, 1, 1, 1],
+  "assistant/momosuke_happy.PNG": [0.053, 0.027, 0.982, 1, 1],
+  "assistant/momosuke_normal.PNG": [0.049, 0.018, 0.988, 1, 1],
+  "assistant/momosuke_surprise.PNG": [0.035, 0.014, 0.986, 1, 1],
+  "assistant/momosuke_troubled.PNG": [0.063, 0.018, 0.959, 1, 1],
+  "assistant/momosuke_wink.PNG": [0, 0.014, 1, 1, 1],
+  "assistant/myua_angry.PNG": [0.199, 0.026, 0.79, 1, 1.5],
+  "assistant/myua_crying.PNG": [0.215, 0.019, 0.762, 1, 1.5],
+  "assistant/myua_excited.PNG": [0.159, 0.014, 0.777, 1, 1.5],
+  "assistant/myua_happy.PNG": [0.234, 0.024, 0.745, 1, 1.5],
+  "assistant/myua_normal.PNG": [0.257, 0.025, 0.724, 1, 1.5],
+  "assistant/myua_surprise.PNG": [0.211, 0.026, 0.766, 1, 1.5],
+  "assistant/myua_troubled.PNG": [0.21, 0.015, 0.774, 1, 1.5],
+  "assistant/myua_wink.PNG": [0.247, 0.026, 0.742, 1, 1.5],
+};
+// </art-content-boxes>
