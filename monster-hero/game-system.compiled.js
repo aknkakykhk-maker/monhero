@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9452315cae845323
+// source-sha256: 197e5410dca88d50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64395,9 +64395,9 @@ function PickTeachingScreen({
     }, BREEDER_EVO_NAMES[ot.id]?.[ot.evoLevel] || ot.name), React.createElement("span", {
       className: `shrink-0 text-[8px] font-black font-mono ${ot.evoLevel >= TEACHING_MAX_LEVEL ? 'text-amber-300' : 'text-slate-400'}`
     }, ot.evoLevel >= TEACHING_MAX_LEVEL ? 'MAX' : `Lv.${ot.evoLevel}`))))), React.createElement("div", {
-      className: "w-full max-w-sm mx-auto flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col"
+      className: "w-full max-w-sm [@media(orientation:landscape)_and_(max-height:520px)]:max-w-xl mx-auto flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col"
     }, React.createElement("div", {
-      className: "grid grid-cols-2 gap-x-3 gap-y-4 w-full m-auto px-1 pb-1 pt-3"
+      className: `grid grid-cols-2 gap-x-3 gap-y-4 w-full m-auto px-1 pb-1 pt-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-3 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-2 [@media(orientation:landscape)_and_(max-height:520px)]:gap-y-3`
     }, teachingPool.map((t, cardIndex) => {
       const owned = ownedTeachings.find(ot => ot.id === t.id);
       const level = owned ? owned.evoLevel : 0;
@@ -64413,7 +64413,7 @@ function PickTeachingScreen({
         },
         "data-ph-kind": kindOf(owned, isMax),
         "data-ph-on": owned && !isMax ? '' : undefined,
-        className: `mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''}`
+        className: `mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[132px] [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:pt-3 [@media(orientation:landscape)_and_(max-height:520px)]:gap-1 active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''}`
       }, React.createElement("i", {
         "aria-hidden": "true",
         className: "mh-ph-ring"
@@ -64471,7 +64471,7 @@ function PickTeachingScreen({
         return kindOf(o, !!o && o.evoLevel >= TEACHING_MAX_LEVEL);
       })(),
       "data-ph-on": "",
-      className: "mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full"
+      className: "mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-xl [@media(orientation:landscape)_and_(max-height:520px)]:h-full [@media(orientation:landscape)_and_(max-height:520px)]:p-4 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:gap-y-1 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[auto_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[auto_auto_minmax(0,1fr)_auto] [@media(orientation:landscape)_and_(max-height:520px)]:items-start"
     }, React.createElement("i", {
       "aria-hidden": "true",
       className: "mh-ph-ring"
@@ -64479,7 +64479,7 @@ function PickTeachingScreen({
       "aria-hidden": "true",
       className: "mh-ph-sparkle"
     }), React.createElement("div", {
-      className: "relative shrink-0 flex items-center justify-center",
+      className: "relative shrink-0 flex items-center justify-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center",
       style: {
         '--ph': '243,210,122'
       }
@@ -64489,7 +64489,7 @@ function PickTeachingScreen({
     }), React.createElement("span", {
       className: "mh-ph-medal relative z-10 rounded-2xl p-1.5 text-6xl leading-none"
     }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id))), React.createElement("h3", {
-      className: "mh-ph-title relative text-lg font-black shrink-0"
+      className: "mh-ph-title relative text-lg font-black shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center [@media(orientation:landscape)_and_(max-height:520px)]:text-center"
     }, (() => {
       const t = selectedTeachingCard;
       const owned = ownedTeachings.find(ot => ot.id === t.id);
@@ -64499,12 +64499,12 @@ function PickTeachingScreen({
       const level = owned ? owned.evoLevel : 0;
       const isMax = !!owned && level >= TEACHING_MAX_LEVEL;
       return React.createElement("div", {
-        className: "-mt-1 mb-1 flex shrink-0 flex-col items-center gap-1"
+        className: "-mt-1 mb-1 flex shrink-0 flex-col items-center gap-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-3 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0"
       }, levelPips(owned ? level + 1 : 0, isMax ? -1 : owned ? level + 1 : 0), React.createElement("span", {
         className: `text-[10px] font-black ${isMax ? 'text-amber-300' : owned ? 'text-purple-200' : 'text-emerald-300'}`
       }, owned ? isMax ? 'MAXレベルです' : `Lv.${level} → Lv.${level + 1} に強化` : '新しく習得します'));
     })(), React.createElement("div", {
-      className: "relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
+      className: "relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-stretch [@media(orientation:landscape)_and_(max-height:520px)]:mb-1"
     }, getFullEvolutionDetails(selectedTeachingCard).map(info => {
       const owned = ownedTeachings.find(ot => ot.id === selectedTeachingCard.id);
       const currentLvl = owned ? owned.evoLevel : -1;
@@ -64526,7 +64526,7 @@ function PickTeachingScreen({
         style: JA_WRAP_STYLE
       }, jaWrap(info.desc)));
     })), React.createElement("div", {
-      className: "relative flex gap-2 w-full mt-auto shrink-0"
+      className: "relative flex gap-2 w-full mt-auto shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-4"
     }, React.createElement("button", {
       onClick: () => setSelectedTeachingCard(null),
       className: "mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs"
@@ -83099,8 +83099,9 @@ const RaidJackPrepScreen = ({
   }, ranges.map(r => slot(r))), step !== 'teach' && React.createElement("div", {
     "data-raid-guide": true,
     title: guide,
-    className: "mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:truncate [@media(max-height:640px)]:py-0.5"
-  }, guide));
+    className: "mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug",
+    style: JA_LABEL_STYLE
+  }, jaWrap(guide)));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
     "data-raid-jack-prep": true,
