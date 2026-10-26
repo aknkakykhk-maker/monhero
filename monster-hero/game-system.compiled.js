@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 54b4836883a15117
+// source-sha256: 12da17424ed9c2db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:24";
+const BUILD_DATE = "2026-10-27 03:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -74980,7 +74980,7 @@ function FriendsScreen({
     className: `${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`
   }, "招待リンクを送る（LINEなど）"), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。")), React.createElement("div", {
+  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), React.createElement("div", {
     className: SCREEN_PANEL_CLASS
   }, React.createElement(ScreenSectionLabel, null, "コードで申請する"), React.createElement("input", {
     type: "text",
@@ -74991,8 +74991,8 @@ function FriendsScreen({
     autoComplete: "off",
     autoCorrect: "off",
     spellCheck: false,
-    placeholder: "友だちのフレンドコード",
-    "aria-label": "友だちのフレンドコード",
+    placeholder: "相手のフレンドコード",
+    "aria-label": "相手のフレンドコード",
     className: "mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"
   }), React.createElement("button", {
     type: "button",
