@@ -49,3 +49,6 @@
 
 ## 2026-10-26 ストーリー(イベント回想)
 → [damedashi-2026-10-26/story/README.md](damedashi-2026-10-26/story/README.md)(3件)
+
+## 2026-10-26 マスモンのいるデータで(3周目)
+→ [damedashi-2026-10-26/masu-filled/README.md](damedashi-2026-10-26/masu-filled/README.md)(4件)
