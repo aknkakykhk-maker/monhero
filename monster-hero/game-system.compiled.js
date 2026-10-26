@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 014ae93266ecdeb7
+// source-sha256: 2851b86297cad0dc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:35";
+const BUILD_DATE = "2026-10-27 02:44";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -7813,7 +7813,8 @@ const Audio_ = (() => {
       return {
         kind,
         key: String(key || ''),
-        src: url.split('/').pop().split('?')[0]
+        src: url.split('/').pop().split('?')[0],
+        name: String(track?.name || '')
       };
     };
     const list = [];
@@ -12221,7 +12222,7 @@ const AudioTroubleshootPanel = ({
   }, "いまゲームの音はオフです。上の「🔇 音がオフです」を押してオンにしてください。"), lowVolume && React.createElement("p", {
     "data-audio-low-volume": true,
     className: "mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200"
-  }, "音量がとても小さいままです（BGM ", info.bgmVolumePct, " ／ SE ", info.seVolumePct, "）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。"), row('音の出口', stateView.label, stateView.tone), row('効果音エンジン', seView.label, seView.tone), row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400'), React.createElement("div", {
+  }, "音量がとても小さいままです（BGM ", info.bgmVolumePct, " ／ SE ", info.seVolumePct, "）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。"), row('音の出口', stateView.label, stateView.tone), row('効果音エンジン', seView.label, seView.tone), row('いま鳴っている曲', playing ? playing.name || playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400'), React.createElement("div", {
     className: "mt-2"
   }, React.createElement("div", {
     className: "flex items-center justify-between gap-2"
@@ -35821,6 +35822,38 @@ const RhythmTapTest = ({
   const [judgeTextPos] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
+  useEffect(() => {
+    if (!tutorialProp) return undefined;
+    const place = () => {
+      const banner = tutorialBannerRef.current,
+        area = banner && banner.offsetParent;
+      if (!area) return;
+      const hud = document.querySelector('[data-rhythm-hud]');
+      if (!hud) return;
+      const rectOf = el => typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.rectOf ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect();
+      const ar = rectOf(area);
+      let bottom = rectOf(hud).bottom;
+      for (const el of hud.children) {
+        const r = rectOf(el);
+        if (r.height > 0) bottom = Math.max(bottom, r.bottom);
+      }
+      const below = Math.ceil(bottom - ar.top + 6);
+      if (!Number.isFinite(below)) return;
+      const top = `max(14%, ${below}px)`;
+      if (banner.style.top !== top) banner.style.top = top;
+    };
+    place();
+    const timers = [setTimeout(place, 250), setTimeout(place, 1200)];
+    window.addEventListener('resize', place);
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+    const hud = document.querySelector('[data-rhythm-hud]');
+    if (ro && hud) ro.observe(hud);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('resize', place);
+      if (ro) ro.disconnect();
+    };
+  }, [tutorialProp]);
   const calibrationBannerRef = useRef(null),
     calibrationTapsRef = useRef(-1);
   const hasHold = chart.notes.some(note => note.type === 'HOLD');
@@ -89644,6 +89677,7 @@ const CardBattleBoard = ({
     n: 0
   });
   const bubbleRef = useRef(null);
+  const guarding = !!(st.pending && st.pending.defender === CARD_ME && !tutorial);
   const bubbleQ = useRef([]);
   const bubbleLeft = useRef({});
   const showBubble = b => {
@@ -89719,7 +89753,7 @@ const CardBattleBoard = ({
     if (!tutorial) say('start');
   }, []);
   useEffect(() => {
-    if (!bubble || tutorial || bigCard || turnBanner) return undefined;
+    if (!bubble || tutorial || bigCard || turnBanner || guarding) return undefined;
     const key = bubble.key;
     const ms = bubbleLeft.current[key] ?? cardBubbleMs(bubble.text);
     const at = Date.now();
@@ -89730,7 +89764,7 @@ const CardBattleBoard = ({
         [key]: Math.max(800, ms - (Date.now() - at))
       };
     };
-  }, [bubble && bubble.key, !!bigCard, !!turnBanner]);
+  }, [bubble && bubble.key, !!bigCard, !!turnBanner, guarding]);
   useEffect(() => {
     if (tutorial && tutStage) setTutQ(tutStage.lines.slice());
   }, [tutI]);
@@ -90733,7 +90767,7 @@ const CardBattleBoard = ({
     "data-card-bubble-face": bubble.face || face,
     "data-card-bubble-ms": tutorial ? undefined : cardBubbleMs(bubble.text),
     onClick: tutorial ? undefined : nextBubble,
-    className: `${bigCard || turnBanner ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
+    className: `${bigCard || turnBanner || guarding ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -90778,7 +90812,7 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && stageFit < 3 && !turnSummary && React.createElement("div", {
+  })), action && stageFit < 3 && !turnSummary && !guardAtk && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     "data-card-action-side": action.side,
@@ -90813,7 +90847,7 @@ const CardBattleBoard = ({
     className: "ml-1 text-[10px] font-bold text-emerald-200"
   }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), React.createElement("div", {
     "data-card-log": true,
-    className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
+    className: `relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && (guardAtk ? React.createElement("button", _extends({
     type: "button",
@@ -118649,12 +118683,12 @@ function MonsterHeroGame() {
     }, React.createElement("span", {
       className: "text-xs font-black text-slate-300"
     }, label), React.createElement("div", {
-      className: "flex gap-2 mt-1"
+      className: "flex flex-wrap gap-2 mt-1"
     }, React.createElement("select", {
       "aria-label": `${selected.id === 'battle' ? `${selectedMode.label} ` : ''}${label}`,
       value: bgmArrangement[scene],
       onChange: e => changeBgmArrangement(scene, e.target.value),
-      className: "min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
+      className: "min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
     }, BGM_TRACKS.map(track => React.createElement("option", {
       key: track.id,
       value: track.id
@@ -118662,15 +118696,15 @@ function MonsterHeroGame() {
       type: "button",
       "aria-label": `${label}を試聴`,
       onClick: () => toggleBgmPreview(bgmArrangement[scene]),
-      className: "shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black"
+      className: "flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black"
     }, previewTrackId === bgmArrangement[scene] ? '停止' : '試聴'), React.createElement("button", {
       type: "button",
       "data-bgm-scene-default": scene,
       "aria-label": `${label}をデフォルトの曲にする`,
       disabled: bgmArrangement[scene] === DEFAULT_BGM_ARRANGEMENT[scene],
       onClick: () => changeBgmArrangement(scene, DEFAULT_BGM_ARRANGEMENT[scene]),
-      className: "shrink-0 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:opacity-40"
-    }, "デフォルト"))))));
+      className: "flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400"
+    }, bgmArrangement[scene] === DEFAULT_BGM_ARRANGEMENT[scene] ? 'デフォルト中' : 'デフォルトにする'))))));
   })(), React.createElement("button", {
     className: "mh-dialog-choice mt-4",
     onClick: () => setBgmArrangement({

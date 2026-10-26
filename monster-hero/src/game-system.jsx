@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3cdf9b74866bfbf3
+// generated-sha256: 65955855608abcea
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 02:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6116,7 +6116,8 @@ const Audio_ = (() => {
     const entry = (kind, key) => {
       const track = resolveTrack(key);
       const url = String(track?.url || track?.src || '');
-      return { kind, key: String(key || ''), src: url.split('/').pop().split('?')[0] };
+      // name … 曲の名前(音量設定の「音が出ないとき」に出す。ファイル名ではプレイヤーに分からないため。2026-10-26)
+      return { kind, key: String(key || ''), src: url.split('/').pop().split('?')[0], name: String(track?.name || '') };
     };
     const list = [];
     // 鳴らしているのは同時に1つ(BGM / 試聴 / ジングル のどれか)
@@ -8594,7 +8595,8 @@ const AudioTroubleshootPanel = ({ info, peak, muted, onTest, onRepair, repairing
       {lowVolume && <p data-audio-low-volume className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200">音量がとても小さいままです（BGM {info.bgmVolumePct} ／ SE {info.seVolumePct}）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。</p>}
       {row('音の出口', stateView.label, stateView.tone)}
       {row('効果音エンジン', seView.label, seView.tone)}
-      {row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400')}
+      {/* 曲の名前で出す(名前の分からない音だけファイル名)。2026-10-26 ダメダシの見回り s02 */}
+      {row('いま鳴っている曲', playing ? (playing.name || playing.src) : 'なし', playing ? 'text-slate-200' : 'text-slate-400')}
       <div className="mt-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] font-black text-slate-400">実際に出ている音</span>
@@ -22198,6 +22200,27 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const [judgeTextPos]=useState(()=>RHYTHM_JUDGE_TEXT_POS.id);
 
   const tutorialBannerRef=useRef(null),tutorialStepRef=useRef(null);
+  // 練習の説明の箱は top:14% に置いているが、狭い縦(320×640)では左上の時間の行に、横向きでは右上の一時停止に重なった
+  // (2026-10-26 社長室の指摘)。箱の上端を「14%」と「HUD の下端+6px」の低いほうにする。触るのは箱の置き場所だけ
+  useEffect(()=>{
+    if(!tutorialProp)return undefined;
+    // 箱は演奏の枠の中、HUD はその外(演奏画面の main)にあるので、どちらも画面の上での位置(回転していれば回転を戻した位置)で比べる
+    const place=()=>{const banner=tutorialBannerRef.current,area=banner&&banner.offsetParent;if(!area)return;
+      const hud=document.querySelector('[data-rhythm-hud]');if(!hud)return;
+      const rectOf=el=>typeof RHYTHM_VIEW_ROTATION!=='undefined'&&RHYTHM_VIEW_ROTATION.rectOf?RHYTHM_VIEW_ROTATION.rectOf(el):el.getBoundingClientRect();
+      const ar=rectOf(area);let bottom=rectOf(hud).bottom;
+      // HUD の中の部品が HUD の箱より下へはみ出していても拾う(一時停止の丸など)
+      for(const el of hud.children){const r=rectOf(el);if(r.height>0)bottom=Math.max(bottom,r.bottom);}
+      const below=Math.ceil(bottom-ar.top+6);if(!Number.isFinite(below))return;
+      const top=`max(14%, ${below}px)`;if(banner.style.top!==top)banner.style.top=top;};
+    place();
+    const timers=[setTimeout(place,250),setTimeout(place,1200)];
+    window.addEventListener('resize',place);
+    const ro=typeof ResizeObserver==='function'?new ResizeObserver(place):null;
+    const hud=document.querySelector('[data-rhythm-hud]');
+    if(ro&&hud)ro.observe(hud);
+    return()=>{timers.forEach(clearTimeout);window.removeEventListener('resize',place);if(ro)ro.disconnect();};
+  },[tutorialProp]);
   // タイミング合わせの案内(いま何回ぶん数えたか・途中経過のずれ)を書き換えるための控え。
   // 数えた回数が変わったときだけDOMへ書く(毎フレームReactを動かさない)
   const calibrationBannerRef=useRef(null),calibrationTapsRef=useRef(-1);
@@ -54460,6 +54483,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   ・技や守りが出ても消さない。カードの大写しのあいだは見えないので、時間を止める
   //   ・押すと次の台詞へ(無ければ消える)。遊ぶ人の操作は止めない
   const bubbleRef = useRef(null);
+  // 自分が守りを選んでいるあいだは、吹き出しを出さない(時間も止める。上の札・まんなかの攻撃カードと重なった。2026-10-27 カゲあつくん)
+  const guarding = !!(st.pending && st.pending.defender === CARD_ME && !tutorial);
   const bubbleQ = useRef([]);
   const bubbleLeft = useRef({});   // 大写しで止めたときの残り時間 { key: ms }
   const showBubble = (b) => {
@@ -54502,13 +54527,13 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   useEffect(() => { if (!tutorial) say('start'); }, []);
   // 出しておく時間。大写しのカード・番の札が出ているあいだは止め、消えたら残りから数え直す。練習試合はみゅあの台詞の流れ(下)が決める
   useEffect(() => {
-    if (!bubble || tutorial || bigCard || turnBanner) return undefined;   // 番の札のあいだも見えないので止める(ブレイブくんの #番の札)
+    if (!bubble || tutorial || bigCard || turnBanner || guarding) return undefined;   // 番の札のあいだも見えないので止める(ブレイブくんの #番の札)
     const key = bubble.key;
     const ms = bubbleLeft.current[key] ?? cardBubbleMs(bubble.text);
     const at = Date.now();
     const t = setTimeout(nextBubble, ms);
     return () => { clearTimeout(t); bubbleLeft.current = { [key]: Math.max(800, ms - (Date.now() - at)) }; };
-  }, [bubble && bubble.key, !!bigCard, !!turnBanner]);
+  }, [bubble && bubble.key, !!bigCard, !!turnBanner, guarding]);
   // 練習試合: 段が変わったら、その段の台詞を出す。みゅあの台詞は吹き出しに出して、少ししたら次へ。ドラの台詞は説明の窓に出す
   useEffect(() => { if (tutorial && tutStage) setTutQ(tutStage.lines.slice()); }, [tutI]);
   useEffect(() => {
@@ -55137,7 +55162,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && (
-          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} className={`${bigCard || turnBanner ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} className={`${bigCard || turnBanner || guarding ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
             {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
               : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>}
@@ -55155,7 +55180,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               : pvp ? <CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/> : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
-        {action && stageFit < 3 && !turnSummary && (
+        {action && stageFit < 3 && !turnSummary && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
           <div key={action.key} data-card-action data-card-action-side={action.side} className={`relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
             {/* 案A: どちらが使った技か(相手=赤・自分=金) */}
             <span data-card-fit className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? '相手' : '自分'}</span>
@@ -55173,7 +55198,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           </button>
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
-        <div data-card-log className={`relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
+        <div data-card-log className={`relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
             ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
@@ -75965,7 +75990,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
       ['autoPostWaveBgm','AUTO時 強化フェーズBGM'],
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
-    ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="shrink-0 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:opacity-40">デフォルト</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
+    ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span>{/* 曲の欄は1行ぜんぶ使い、試聴・デフォルトはその下に並べる(横に並べると 320〜390 幅で曲名が「HOMEテー」と切れていた。2026-10-26 ダメダシの見回り) */}<div className="flex flex-wrap gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] w-full basis-full bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}{track.id===DEFAULT_BGM_ARRANGEMENT[scene]?'（デフォルト）':''}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="flex-1 min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button>{/* 場面ごとにデフォルトの曲へ戻す(下の「デフォルトに戻す」は全部の場面がまとめて戻る)。すでにデフォルトなら押せない。
+   押せないときは「デフォルト中」と出して、壊れた札ではなく「いまデフォルト」だと分かるようにする */}<button type="button" data-bgm-scene-default={scene} aria-label={`${label}をデフォルトの曲にする`} disabled={bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]} onClick={()=>changeBgmArrangement(scene,DEFAULT_BGM_ARRANGEMENT[scene])} className="flex-1 min-h-[44px] rounded-xl bg-slate-700 px-2 text-xs font-black disabled:bg-transparent disabled:border disabled:border-white/15 disabled:text-slate-400">{bgmArrangement[scene]===DEFAULT_BGM_ARRANGEMENT[scene]?'デフォルト中':'デフォルトにする'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{/* 大事なボタンを使い方より上に置く(320・375 で開いたとき、窓の下で切れていた。2026-10-26 ダメダシの見回り s03) */}{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice mh-button mh-button-primary justify-center text-center" style={{justifyContent:'center'}} onClick={saveBackupFile}><span style={JA_LABEL_STYLE}>{jaWrap('バックアップファイルを保存')}</span>（.mhsave）</button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルを保存」を押す</div><div>2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ</div><div>3. Android / PCはダウンロードフォルダへ直接保存されます</div><div>4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く</div><div style={{marginTop:8,fontWeight:900,color:'#fff'}}>保存ファイル名</div><code style={{display:'block',marginTop:2,wordBreak:'break-all',color:'#c4b5fd'}}>MonsterHero_Backup_YYYYMMDD_HHMM.mhsave</code><div style={{marginTop:6,color:'#94a3b8'}}>※ YYYYMMDD_HHMM は保存した日時に置き換わります。</div></div>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={generateBackupCode}><span style={JA_LABEL_STYLE}>{jaWrap('バックアップコードを作成')}</span></button></>:<><button data-mhsave-action="import" className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupFile}><span style={JA_LABEL_STYLE}>{jaWrap('バックアップファイルから復元')}</span>（.mhsave）</button><div style={{background:'rgba(15,23,42,.72)',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,padding:'12px 14px',margin:'10px 0',textAlign:'left',fontSize:12,lineHeight:1.65,color:'#e2e8f0'}}><div style={{fontWeight:900,color:'#fff',marginBottom:4}}>使い方</div><div>1. 上の「バックアップファイルから復元」を押す</div><div>2. 保存した <code style={{color:'#c4b5fd'}}>MonsterHero_Backup_....mhsave</code> を選ぶ</div><div>3. 復元後、ゲームは自動で再読み込みされます</div><div style={{marginTop:7,color:'#fbbf24'}}>※ 選んだバックアップ内のデータで現在のセーブが上書きされます。</div></div><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice justify-center text-center" style={{justifyContent:'center'}} onClick={restoreFromBackupCode}><span style={JA_LABEL_STYLE}>{jaWrap('このコードで復元する')}</span></button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
   ) : null;
