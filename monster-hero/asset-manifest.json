@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "c296a10d89e5",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117692351,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257267489,"count":1719},"core":{"bytes":14191149,"count":22}},
+  "id": "256bc2a00a81",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117687996,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257263134,"count":1719},"core":{"bytes":14191149,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1463,7 +1463,7 @@
     "images/monsters/colorpandora.png": {"v":"9deee820503c","size":120359,"pack":"battle"},
     "images/monsters/dino.png": {"v":"ac797293f479","size":127071,"pack":"battle"},
     "images/monsters/dragon.png": {"v":"3c00722a5a78","size":155475,"pack":"battle"},
-    "images/monsters/dreamy-dye-mask.PNG": {"v":"0a38c9def40d","size":22342,"pack":"battle"},
+    "images/monsters/dreamy-dye-mask.PNG": {"v":"c6419eaba43c","size":17987,"pack":"battle"},
     "images/monsters/dreamy.png": {"v":"14e1f738cec9","size":171922,"pack":"battle"},
     "images/monsters/durahan.png": {"v":"9cbb4a00954c","size":127423,"pack":"battle"},
     "images/monsters/eiki-dye-mask.PNG": {"v":"6b5ab28ef5b4","size":53024,"pack":"battle"},
@@ -1725,7 +1725,7 @@
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
     "tailwind.css": {"v":"aa1738a923a0","size":240221,"pack":"core"},
-    "data/images/images-ally.js": {"v":"0ae57e5e9467","size":39965,"pack":"core"},
+    "data/images/images-ally.js": {"v":"54df358a0edc","size":39965,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"51d6430d98dd","size":56492,"pack":"core"},
     "data/lineages.js": {"v":"1c389c9822bb","size":25432,"pack":"core"},
