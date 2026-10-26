@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef21b763a6e707be
+// source-sha256: 3be13fef1e411895
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:55";
+const BUILD_DATE = "2026-10-27 01:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -129884,13 +129884,16 @@ function MonsterHeroGame() {
       }, mode.emoji), React.createElement("div", {
         className: "flex-1 min-w-0"
       }, React.createElement("h3", {
-        className: "text-base font-black truncate",
+        "data-mode-help-title": true,
+        className: "text-base font-black leading-tight",
         style: {
-          color: mode.color
+          color: mode.color,
+          ...JA_WRAP_STYLE
         }
-      }, mode.label, "とは？"), React.createElement("p", {
-        className: "text-[10px] text-slate-400"
-      }, mode.tagline)), React.createElement("button", {
+      }, jaWrap(`${mode.label}とは？`)), React.createElement("p", {
+        className: "text-[10px] text-slate-400",
+        style: JA_WRAP_STYLE
+      }, jaWrap(mode.tagline))), React.createElement("button", {
         onClick: () => setModeInfoId(null),
         "aria-label": "説明を閉じる",
         className: "mh-hit-expand relative shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
