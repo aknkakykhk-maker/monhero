@@ -63,6 +63,8 @@ def snap(lab,B=None):
     return np.where(out<0,lab,out)
 if 'NOSNAP' not in dir(): lab=snap(lab)
 if 'KEEPZERO' in dir(): lab[KEEPZERO]=0
+# 仕上げ(snap)で戻されてしまう細かい所は、規則の側で POST(lab) を定義してここで決める
+if 'POST' in dir(): POST(lab)
 lab=np.where(a>8,lab,0)
 COL={1:(255,0,0),2:(0,255,0),3:(0,0,255),4:(255,255,0),5:(255,0,255)}
 o=np.zeros((H,Wd,4),np.uint8)

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "7873f60deebc",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":122465600,"count":670},"card":{"bytes":31268880,"count":906},"all":{"bytes":261121926,"count":1669}},
+  "id": "37ff51827a74",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":122465596,"count":670},"card":{"bytes":31268880,"count":906},"all":{"bytes":261121922,"count":1669}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1502,7 +1502,7 @@
     "images/monsters/kenshi-mocchi.png": {"v":"63509132e701","size":351678,"pack":"battle"},
     "images/monsters/kuromy-dye-mask.PNG": {"v":"7e06f8e564b2","size":15405,"pack":"battle"},
     "images/monsters/kuromy.png": {"v":"02bdee0dc9f6","size":128890,"pack":"battle"},
-    "images/monsters/kyubi-dye-mask.PNG": {"v":"d852e935c025","size":17696,"pack":"battle"},
+    "images/monsters/kyubi-dye-mask.PNG": {"v":"fc6210422555","size":17692,"pack":"battle"},
     "images/monsters/kyubi.png": {"v":"f3711a72a817","size":121911,"pack":"battle"},
     "images/monsters/mel-whip-dye-mask.PNG": {"v":"b7353a79a018","size":20460,"pack":"battle"},
     "images/monsters/mel-whip.png": {"v":"629452e35b02","size":176141,"pack":"battle"},
