@@ -129,7 +129,7 @@ const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=c4c739ed5b
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
 const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
-const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
+const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=72185954c1f9";
 // 2026年9月に追加準備中のレア「剣士モッチー」(モッチー×？？？)。正式実装まではデバッグ専用。
 // 染色は5部位で、承認済みマスクの色分けがそのままリポジトリ仕様に合っている
 // (赤=①肌 / 緑=②コート・ブーツ / 青=③髪 / 黄=④左手の剣 / マゼンタ=⑤右手の剣)。
