@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-10-27 02:19", type:'update', group:'monster', title:'新血統「キュービ」実装予告', status:'new',
+    date: "2026-10-27 03:54", type:'update', group:'monster', title:'新血統「キュービ」実装予告', status:'new',
     image: 'images/events/kyubi-orihime-notice.jpg?v=b88248014de9',
     items:[
       '新しい血統「キュービ」のモンスター「キュービ」と「オリヒメ」を近日実装します。',
@@ -47,8 +47,8 @@ const CHANGELOG = [
       '染め方：HOMEの「M/B管理」→「マスモン一覧(バトル)」で染めたい子を選び、「育成・カスタム」の「🎨 染色」を押します(マーケットの「染色もどき」を1つ使います)。①〜⑤の部位ごとに色と濃さを選び、「この色に染める」で決まります。',
     ],
     gallery: [
-      { caption:'キュービ 染色イメージ「月夜ぎつね」(①髪 ②しっぽ・耳の毛 ③服の白・胸元の毛・首の襟 ④胸の紫・下駄・提灯の紫の房 ⑤手袋・脚)', image:'images/events/kyubi-dye-preview.jpg?v=422c0a1260e3' },
-      { caption:'オリヒメ 染色イメージ「桜」(①髪・耳 ②しっぽ・羽衣 ③上の着物・帯 ④外の羽織 ⑤手袋・靴下)', image:'images/events/orihime-dye-preview.jpg?v=4f3bfcf8c13b' },
+      { caption:'キュービ 染色イメージ「月夜ぎつね」(①髪 ②しっぽ・耳の毛 ③服の白・胸元の毛・首の襟 ④胸の紫・下駄・提灯の紫の房 ⑤手袋・脚)', image:'images/events/kyubi-dye-preview.jpg?v=8703a8f86ce2' },
+      { caption:'オリヒメ 染色イメージ「桜」(①髪・耳 ②しっぽ・羽衣 ③上の着物・帯 ④外の羽織 ⑤手袋・靴下)', image:'images/events/orihime-dye-preview.jpg?v=74577cf2f16a' },
     ],
   },
   {
