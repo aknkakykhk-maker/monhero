@@ -16,7 +16,10 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
-const rankSrc = read('monster-hero/src/parts/90-card-rank.jsx').split('// ---- 画面: ランキング')[0];
+// 画面の部品(JSX)より前の、通信と計算の所だけ読む(戦績の表 CardBattleStatsPanel・ランキングの画面より前)
+const rankAll = read('monster-hero/src/parts/90-card-rank.jsx');
+const rankCut = ['// 戦績の表', '// ---- 画面: ランキング'].map((k) => rankAll.indexOf(k)).filter((i) => i > 0);
+const rankSrc = rankAll.slice(0, Math.min(...rankCut));
 const missingFn = (read('monster-hero/src/parts/26-supabase.jsx').match(/const _isMissingTableError = [\s\S]*?\n};\n/) || [''])[0];
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };

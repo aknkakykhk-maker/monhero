@@ -320,7 +320,7 @@ check('バトル初回案内は表示時に記録し、完了時だけ練習を�
     && has("if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }")
     && has('if(last) endBattleTutorial(true)') && has('endBattleTutorial(false)'));
 check('デバッグはデバッグ設定からだけ開ける',
-  has('💖 みゅあデバッグ') && source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
+  has('💬 助手') && source.indexOf('💬 助手') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 // デバッグから「名前入力のところ」を含めて通しで見られること。
 // 見るだけなので、名前・アイコン・完了フラグのどれも保存しない
 // 初回導線は「助手えらび」から通しで再生できる(以前は名前入力からだけだったのを統合した)
@@ -407,7 +407,7 @@ check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));
 
 // --- ④ 共通コンポーネント ---
-check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0 })'));
+check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false, footerSpace=0, maxLines=0, collapseKey=null })'));
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',

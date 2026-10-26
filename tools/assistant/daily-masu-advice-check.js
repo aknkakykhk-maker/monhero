@@ -56,7 +56,7 @@ check('本文は選んでいる助手のものを出す',
   source.includes("const assistantSceneLinesFor = (scene) =>")
     && source.includes('assistantSceneLines(scene, null, assistantBondLevelNow, selectedAssistantId)'));
 check('DEBUGの8体確認は対象外モーダルを表示する',
-  source.includes('表示条件の対象外です。') && source.includes('eligible=dailyMasuAdvice.eligible!==false'));
+  source.includes('いまは出ない案内です。') && source.includes('eligible=dailyMasuAdvice.eligible!==false'));
 check('本文領域に可視色と最小高さがある',
   source.includes("minHeight:'44px',color:'#ffffff',visibility:'visible'")
     && source.includes("minHeight:'36px',color:'#ffffff',backgroundColor:'#0f172a',display:'block'"));
