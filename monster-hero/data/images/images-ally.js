@@ -328,7 +328,7 @@ const ILLUMINE_ICON = ILLUMINE_IMG;
 const DREAMY_ICON = DREAMY_IMG;
 const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=b4a2ad9cdd58";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
-const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=1ddd19baef6b";
+const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=b5e3a96b27c0";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=9663afec97f9";
 const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d920ec35a";
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
