@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 294cd804e108ad22
+// source-sha256: 7529e595b11fcb4c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15827,51 +15827,11 @@ const MARKET_FRAME_BOX_PX = 56;
 const MARKET_FRAME_AVATAR_PX = 40;
 const MARKET_FRAME_RING_BOX = 1.2;
 const MARKET_PROFILE_ICON_STYLES = {
-  Tiger: {
-    scale: 2.31,
-    x: 3,
-    y: 38
-  },
   kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
-  snegurochka_icon: {
-    scale: 4.28,
-    x: 11,
-    y: 111
-  },
   snegurochka_awakened_icon: {
     scale: 4.28,
     x: 9,
     y: 100
-  },
-  iblis_icon: {
-    scale: 1.30,
-    x: 0,
-    y: -11
-  },
-  mia_icon: {
-    scale: 3.2,
-    x: 0,
-    y: 94
-  },
-  pandora_icon: {
-    scale: 2.4,
-    x: 0,
-    y: 72
-  },
-  plant_icon: {
-    scale: 1.25,
-    x: 0,
-    y: -3
-  },
-  yggdrasil_icon: {
-    scale: 1.2,
-    x: 0,
-    y: -8.9
-  },
-  mel_whip_icon: {
-    scale: 1.35,
-    x: -1.6,
-    y: -10.5
   },
   mua: {
     scale: 1.06,
@@ -28518,7 +28478,7 @@ const sbFetchBreederLevelRows = async (requestId = 'untracked') => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
     try {
-      const url = `${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?select=${BREEDER_LEVELS_SELECT}` + `&order=level.desc.nullslast,breeder_id.asc&limit=${pageSize}&offset=${offset}`;
+      const url = `${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?select=${BREEDER_LEVELS_SELECT}` + `&level=gte.${BREEDER_LEVEL_PUBLISH_MIN}&order=level.desc.nullslast,breeder_id.asc&limit=${pageSize}&offset=${offset}`;
       const res = await fetch(url, {
         headers: SB_HEADERS,
         cache: 'no-store',
@@ -28553,7 +28513,7 @@ const sbFetchBreederLevelRows = async (requestId = 'untracked') => {
       clearTimeout(timer);
     }
   }
-  return all.filter(r => r && typeof r === 'object' && Number(r.level) > 0);
+  return all.filter(r => r && typeof r === 'object' && Number(r.level) >= BREEDER_LEVEL_PUBLISH_MIN);
 };
 let _recordLookById = new Map();
 let _recordLookByName = new Map();
@@ -63314,8 +63274,9 @@ function ProPartyPicker({
     "data-pro-party-done": true,
     disabled: !hero,
     onClick: () => onDone(hero, ids.filter(id => id && id !== hero.id).map(id => byId.get(id))),
-    className: "min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
-  }, hero ? '次へ(距離をえらぶ)' : '勇者モンをえらんでください')));
+    className: "min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500",
+    style: JA_LABEL_STYLE
+  }, jaWrap(hero ? '次へ(距離をえらぶ)' : '勇者モンをえらんでください'))));
   return React.createElement("div", {
     "data-pro-party-step": "members",
     className: "w-full flex-1 min-h-0 flex flex-col"
@@ -63428,7 +63389,7 @@ function PickHeroAllyScreen({
       className: "min-w-0"
     }, React.createElement("h2", {
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
-    }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("p", {
+    }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
       className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
@@ -63604,7 +63565,7 @@ function PickHeroAllyScreen({
       });
       return React.createElement(React.Fragment, null, allyCarousel && React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
-      }, "左右にスワイプして供モンを選択"), allyCarousel && React.createElement("div", {
+      }, "左右にスワイプして供モンをえらぶ"), allyCarousel && React.createElement("div", {
         className: "relative h-0"
       }, React.createElement("button", {
         "aria-label": "前の供モン",
@@ -68886,6 +68847,7 @@ const kindOfTacticsSlotFx = fx => {
   return null;
 };
 function BattleScreen({
+  battleOverlayOpen = false,
   applyTurnDamageReduction,
   attackAnim,
   autoBattle,
@@ -70235,7 +70197,7 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
   }, "⚔️"), React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
-  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
+  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && !battleOverlayOpen && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
     className: "fixed left-1/2 pointer-events-none",
     style: {
       top: '22%',
@@ -71874,9 +71836,9 @@ function BattleScreen({
     }, RANGE_LABELS[i], "距離")));
   }))), tacticsExIntroVisible && React.createElement("div", {
     "data-tactics-ex-intro": true,
-    className: "shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1"
+    className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
   }, React.createElement("div", {
-    className: "flex items-start gap-1"
+    className: "flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement(AssistantBubble, {
@@ -71889,9 +71851,9 @@ function BattleScreen({
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
   }, "×"))), quickRhythmIntroVisible && React.createElement("div", {
     "data-quick-rhythm-intro": true,
-    className: "shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1"
+    className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
   }, React.createElement("div", {
-    className: "flex items-start gap-1"
+    className: "flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement(AssistantBubble, {
@@ -83913,6 +83875,7 @@ const cardLoseGuts = (st, p, n) => {
   for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
   return k;
 };
+const cardHandIdxsOk = (hand, idxs) => Array.isArray(idxs) && idxs.every(i => Number.isInteger(i) && i >= 0 && i < hand.length) && new Set(idxs).size === idxs.length;
 const cardTakeFromHand = (st, p, idxs) => {
   const me = st.players[p];
   const sorted = [...new Set(idxs)].sort((a, b) => b - a);
@@ -83954,7 +83917,7 @@ const cardAttachMods = cards => {
   });
   return m;
 };
-const cardFieldBanned = (db, st, p, mi, card, idxs) => {
+const cardFieldBanned = (db, st, p, mi, card, idxs, extra = 0, target = null) => {
   if (!st.field || !card) return false;
   const kinds = cardFieldEff(st, 'fieldBanKind');
   if (kinds && mi >= 0 && kinds.kinds.includes(card.kind)) return true;
@@ -83967,7 +83930,9 @@ const cardFieldBanned = (db, st, p, mi, card, idxs) => {
   let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(card.kind)) mult *= mon.mult.n;
   if (mon && mon.charge && mon.charge.kinds.includes(card.kind)) mult *= mon.charge.n;
-  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add) * mult + cardFieldDmgAdd(st, card));
+  const mv = cardEff(card, 'multVs');
+  if (mv && target && cardMonType(target, st.turn) === mv.type) mult *= mv.n;
+  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add + extra) * mult + cardFieldDmgAdd(st, card));
   return ban.max !== undefined && dmg <= ban.max || ban.min !== undefined && dmg >= ban.min;
 };
 const cardFieldClear = st => {
@@ -84313,24 +84278,28 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (cardHasEff(card, 'tossBonus')) {
-          tossSets(idxs).forEach(toss => opp.mons.forEach((t, j) => {
-            if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{
-              p: cardOther(p),
-              m: j
-            }], false)) out.push({
-              type: 'attack',
-              mon: mi,
-              hand: idxs,
-              target: {
+          tossSets(idxs).forEach(toss => {
+            if (cardFieldBanned(db, st, p, mi, card, idxs, toss.length)) return;
+            opp.mons.forEach((t, j) => {
+              if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{
                 p: cardOther(p),
                 m: j
-              },
-              toss
+              }], false)) out.push({
+                type: 'attack',
+                mon: mi,
+                hand: idxs,
+                target: {
+                  p: cardOther(p),
+                  m: j
+                },
+                toss
+              });
             });
-          }));
+          });
           return;
         }
-        if (cardFieldBanned(db, st, p, mi, card, idxs)) return;
+        const byTarget = cardHasEff(card, 'multVs') && !cardHasEff(card, 'area') && !cardHasEff(card, 'split');
+        if (!byTarget && cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
           cardSpeTargets(db, st, p, mi, card).forEach(target => forms.forEach(form => out.push(form ? {
@@ -84378,7 +84347,7 @@ const cardAttackOptions = (db, st) => {
           if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{
             p: cardOther(p),
             m: j
-          }], false)) out.push({
+          }], false) && !(byTarget && cardFieldBanned(db, st, p, mi, card, idxs, 0, t))) out.push({
             type: 'attack',
             mon: mi,
             hand: idxs,
@@ -84419,7 +84388,7 @@ const cardGuardOptions = (db, st) => {
     if (forbid.includes(c.kind)) return;
     if (cardGuardCost(st, c) > guts) return;
     if (pride && c.kind === 'dge') return;
-    if (fl.attachNoZeroGuard && !c.guts) return;
+    if (fl.attachNoZeroGuard && cardGuardCost(st, c) === 0) return;
     if (fl.bind && c.name === fl.bind) return;
     if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
       if (tgt.p === q) me.mons.forEach((m, mi) => {
@@ -85338,7 +85307,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'discard') return null;
     const q = st.pendingDiscard.p;
     const idxs = (act.hand || []).slice(0, st.pendingDiscard.n);
-    if (idxs.length !== st.pendingDiscard.n || idxs.some(i => i < 0 || i >= st.players[q].hand.length)) return null;
+    if (idxs.length !== st.pendingDiscard.n || !cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].discard.push(...taken);
     cardLog(st, `${st.players[q].name}は手札を${taken.length}枚捨てた`);
@@ -85349,6 +85318,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'setupGuts') return null;
     const idxs = (act.hand || []).slice(0, CARD_BATTLE_SETUP_GUTS_MAX);
     const q = cardOther(st.first);
+    if (!cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[q].name}は始める前に${taken.length}枚をガッツにした`);
@@ -85409,6 +85379,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax');
     if (gm && (act.hand || []).length > gm.n) return null;
+    if (!cardHandIdxsOk(st.players[p].hand, act.hand || [])) return null;
     const taken = cardTakeFromHand(st, p, act.hand || []);
     st.players[p].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
@@ -93792,7 +93763,7 @@ const CardBattleScreen = ({
     }, (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''))), bgmPreview && React.createElement("button", {
+    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''))), bgmPreview && React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => bgmPreview.toggle(save.bgm[k]),
@@ -93801,7 +93772,7 @@ const CardBattleScreen = ({
       "data-card-options-se": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')));
+    }, jaWrap('音の大きさは、ゲーム全体の設定の「音量」で変えられます')));
     const quickAutoPanel = React.createElement("div", {
       "data-card-options-quick": true,
       "data-card-setting": "quickAutoStart",
@@ -99714,7 +99685,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 1;
+const CARD_REPLAY_RULES = 3;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
@@ -128165,7 +128136,7 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between"
       }, React.createElement("b", {
         className: "text-[10px] text-cyan-100"
-      }, "供モンを選択"), React.createElement("strong", {
+      }, "供モンをえらぶ"), React.createElement("strong", {
         className: "rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950"
       }, selectedAllies.length, " / 3体")), React.createElement("p", {
         className: "mt-1 text-[8px] leading-relaxed text-cyan-200"
@@ -131275,6 +131246,7 @@ function MonsterHeroGame() {
       onClick: () => setShowBackup(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs mt-3"
     }, "閉じる"))), gameState === 'BATTLE' && React.createElement(BattleScreen, {
+      battleOverlayOpen: !!(showHeroInfo || showBattleLog || showEnemyInfo || showDeckInfo || waveScanPreview),
       applyTurnDamageReduction: applyTurnDamageReduction,
       attackAnim: attackAnim,
       autoBattle: autoBattle,
@@ -133444,13 +133416,16 @@ function MonsterHeroGame() {
       "aria-label": "バトルの記録"
     }, React.createElement("header", {
       className: "flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-slate-950/95 px-5 py-3"
-    }, React.createElement("div", null, React.createElement("h3", {
+    }, React.createElement("div", {
+      className: "min-w-0"
+    }, React.createElement("h3", {
       className: "text-lg font-black italic uppercase text-amber-300"
     }, "Battle Log"), React.createElement("small", {
-      className: "font-black text-slate-400"
-    }, "古い順・いちばん下が最新（最大", BATTLE_LOG_LIMIT, "件）")), React.createElement("button", {
+      className: "block font-black text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap(`古い順・いちばん下が最新（最大${BATTLE_LOG_LIMIT}件）`))), React.createElement("button", {
       onClick: () => setShowBattleLog(false),
-      className: "min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90"
+      className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-white/10 px-5 text-[11px] text-white active:scale-90"
     }, "閉じる")), React.createElement("div", {
       "data-battle-log-list": true,
       ref: el => {
@@ -133946,7 +133921,10 @@ function MonsterHeroGame() {
       onClick: () => setShowHeroInfo(false),
       className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
     }, "戻る")), React.createElement("div", {
-      className: "flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll"
+      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll",
+      style: {
+        justifyContent: 'safe center'
+      }
     }, mainHero.imgUrl ? React.createElement(DyedMonsterImage, {
       baseId: mainHero.id,
       src: mainHero.imgUrl,
@@ -134016,11 +133994,14 @@ function MonsterHeroGame() {
         className: "mt-0.5 text-[9px] font-black text-fuchsia-200"
       }, "EX「", exInfo.def.name, "」", exInfo.styleLabel ? `：いまは${exInfo.styleLabel}` : exInfo.active ? '：効果中' : '', exInfo.remaining.unlimited ? '' : `（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`));
     })), !isTacticsMode(runMode) && React.createElement("div", {
-      className: "grid grid-cols-2 gap-6 text-left"
+      className: "grid grid-cols-2 gap-x-3 gap-y-6 text-left"
     }, React.createElement("div", null, React.createElement("div", {
       className: "text-[9px] text-pink-400 font-black uppercase"
     }, "ライフ"), React.createElement("div", {
-      className: "text-xl font-mono font-black"
+      className: "font-mono font-black whitespace-nowrap",
+      style: {
+        fontSize: 'clamp(13px,4.2vw,1.25rem)'
+      }
     }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), React.createElement("div", null, React.createElement("div", {
       className: "text-[9px] text-red-400 font-black uppercase"
     }, "ちから"), React.createElement("div", {
@@ -134036,7 +134017,10 @@ function MonsterHeroGame() {
     }, "(被ダメ -", Math.round(getPermaBuff('dmgCutPct') * 100), "%)"))), React.createElement("div", null, React.createElement("div", {
       className: "text-[9px] text-amber-400 font-black uppercase"
     }, "ガッツ"), React.createElement("div", {
-      className: "text-xl font-mono font-black"
+      className: "font-mono font-black whitespace-nowrap",
+      style: {
+        fontSize: 'clamp(13px,4.2vw,1.25rem)'
+      }
     }, guts, " / ", effectiveMaxGuts))), React.createElement("div", {
       className: "bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"
     }, React.createElement("div", {
