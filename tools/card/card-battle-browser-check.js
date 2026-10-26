@@ -343,6 +343,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (!r) return; stageSamples += 1; if (r.bubble) stageBubbleSamples += 1; r.out.forEach((x) => stageClip.add(x)); (r.seen || []).forEach((x) => fitSeen.add(x));
     };
     const fitShots = new Set();
+    let sumChip = null;   // 相手の番のまとめの1行(出たときだけ見る)
     const deadline = Date.now() + 150000;
     while (Date.now() < deadline && (gutsTurns < 6 || (dragAttack === null && gutsTurns < 12))) {
       const mode = await page.locator('[data-card-battle]').getAttribute('data-card-mode').catch(() => null);
@@ -357,7 +358,20 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       }
       if (SHOT && !fitShots.has('banner') && await page.locator('[data-card-turn-banner]').count()) { fitShots.add('banner'); await page.waitForTimeout(300); await shot(page, '42-turn-banner'); }
       if (SHOT && !fitShots.has('big') && await page.locator('[data-card-big]').count()) { fitShots.add('big'); await page.waitForTimeout(300); await shot(page, '43-big-card'); }
-      if (SHOT && !fitShots.has('sum') && await page.locator('[data-card-turn-summary]').count()) { fitShots.add('sum'); await page.waitForTimeout(300); await shot(page, '44-turn-summary'); }
+      if (!fitShots.has('sum') && await page.locator('[data-card-turn-summary-chip]').count()) {
+        // 相手の番のまとめは、まず小さな1行(相手と自分のモンスターにかぶらない)。押すと窓が開く(2026-10-26 カゲあつくんの通しの点検)
+        fitShots.add('sum');
+        sumChip = await page.evaluate(() => {
+          const c = document.querySelector('[data-card-turn-summary-chip]').getBoundingClientRect();
+          const over = [...document.querySelectorAll('[data-card-mon]')].filter((x) => { const q = x.getBoundingClientRect(); return q.height > 0 && c.bottom > q.top + 1 && c.top < q.bottom - 1 && c.right > q.left + 1 && c.left < q.right - 1; }).map((x) => x.getAttribute('data-card-mon'));
+          return { h: Math.round(c.height), over };
+        });
+        if (SHOT) await shot(page, '44a-turn-summary-chip');
+        await page.locator('[data-card-turn-summary-chip]').click().catch(() => {});
+        await page.waitForTimeout(300);
+        sumChip.opened = await page.locator('[data-card-turn-summary]').count();
+        if (SHOT) await shot(page, '44-turn-summary');
+      }
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
@@ -481,6 +495,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check(`⑲ 相手のターンの見せ方(番の帯・技の帯の札・大きいカード・まとめ・記録の一覧)が出て、字が切れない`,
       ['番の帯', '技の帯の札', '大きいカードの文', 'まとめ', '記録の一覧'].every((x) => fitSeen.has(x)) && ![...stageClip].some((x) => /番の帯|大きいカード|まとめ|記録の一覧|技の帯の札/.test(x)),
       `見えたもの: ${[...fitSeen].join('・')}`);
+    check('⑩-2 相手の番のまとめは小さな1行で、モンスターにかぶらず、押すと開く', !sumChip || (sumChip.h <= 28 && !sumChip.over.length && sumChip.opened === 1), JSON.stringify(sumChip));
     check('⑩ 技を出すと、攻撃した子がモンヒロの技の動きをする', motionSeen || poseSeen.has('attack'), `見えた動き: ${[...poseSeen].join('・')}`);
     check('⑤ 自分の番を何ターンも進められる(技・守り・ガッツ)', gutsTurns >= 3 && errors.length === 0, `技 ${myActions} 回・守りの番 ${guards} 回・ターン終了 ${gutsTurns} 回`);
     // 捨て札の一覧

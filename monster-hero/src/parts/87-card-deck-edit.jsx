@@ -203,7 +203,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           <div className="w-full max-w-[420px] rounded-2xl border border-white/15 bg-slate-900 p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-2">
               {advisor.face && <img src={advisor.face} alt="" className="h-12 w-12 shrink-0 rounded-full border-2 object-cover" style={{ borderColor: advisor.accent }}/>}
-              <div data-card-deck-ask-text className="min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1.5 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: advisor.accent, ...JA_WRAP_STYLE }}>{ask.busy ? 'うーん、どうしようかな…' : ask.text}</div>
+              <div data-card-deck-ask-text className="min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1.5 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: advisor.accent, ...JA_WRAP_STYLE }}>{cardJaWrap(ask.busy ? 'うーん、どうしようかな…' : ask.text)}</div>
             </div>
             {!ask.busy && ask.picks.length > 0 && (
               <div className="mt-2 space-y-1">
