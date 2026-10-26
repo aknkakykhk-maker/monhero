@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 81d551a5383ec23e
+// source-sha256: bf26a3cbc21d1dd0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:17";
+const BUILD_DATE = "2026-10-27 03:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10462,13 +10462,21 @@ const monsterArtUrlNeedsContain = url => {
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
       const monster = all[baseId];
       if (!monster) continue;
-      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
+      const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[baseId] : null;
+      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon, thumb]) {
         if (each) urls.add(each);
       }
     }
     _monsterArtContainUrls = urls;
   }
   return _monsterArtContainUrls.has(url);
+};
+const monsterSmallIconUrl = base => {
+  if (!base) return '';
+  const icon = base.iconUrl || base.imgUrl || '';
+  if (base.iconUrl && base.iconUrl !== base.imgUrl) return icon;
+  const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[base.id] : null;
+  return thumb || icon;
 };
 const monsterArtMaskSize = (className, style) => {
   const fit = style?.objectFit || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '') || (/(^|\s)object-cover(\s|$)/.test(className || '') ? 'cover' : '');
@@ -69505,7 +69513,7 @@ function BattleScreen({
   }, "DEBUG"), !isRaidJackMode(runMode) && React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), React.createElement("span", {
-    className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
+    className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight",
     style: {
       color: battleModeInfo(runMode).color,
       borderColor: `${battleModeInfo(runMode).color}66`,
@@ -101826,6 +101834,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? mon ? monsterPowerOf(mon) : null : masu ? masuPowerOf(masu) : monsterPowerOf(base);
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const smallIconSrc = monsterSmallIconUrl(base);
     const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return React.createElement(React.Fragment, null, React.createElement("div", {
       className: "relative shrink-0",
@@ -101836,14 +101845,14 @@ function MonsterHeroGame() {
       className: `${MONSTER_CARD_ICON_CLASS} border ${masu ? fused ? 'border-amber-400 ring-1 ring-amber-400' : 'border-pink-400/40' : 'border-white/10'}`
     }, masu ? React.createElement(DyedMonsterImage, {
       baseId: masu.baseId,
-      src: iconSrc,
+      src: getMasuColors(masu).some(Boolean) ? iconSrc : smallIconSrc,
       alt: masu.name,
       draggable: false,
       masuColors: getMasuColors(masu),
       style: MONSTER_CARD_NO_SELECT,
       className: "w-full h-full object-cover"
     }) : iconSrc ? React.createElement("img", {
-      src: iconSrc,
+      src: smallIconSrc,
       alt: base.name,
       draggable: false,
       style: monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT),
@@ -113185,6 +113194,7 @@ function MonsterHeroGame() {
     distDamage = [0, 0, 0, 0]
   }) => {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    const defeatGeneration = runGenerationRef.current;
     const revivalDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const revived = extremeRevivedEnemyStats(enemy, revivalDifficulty, wave, enemyRevivalUsedRef.current);
     if (revived) {
@@ -113305,6 +113315,7 @@ function MonsterHeroGame() {
     }]);
     setTimeout(() => {
       setDefeatFx(null);
+      if (runGenerationRef.current !== defeatGeneration) return;
       advanceRunStage('WAVE_RESULT');
     }, battleMs(defeatFxOn ? 1600 : 500));
     return true;
