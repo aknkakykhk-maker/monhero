@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a193fd82c3c24dce
+// source-sha256: a01914f826db8f19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84681,7 +84681,7 @@ const cardGuardOptions = (db, st) => {
     }
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll');
     if (re) {
-      if (re.kinds.includes(atkCard.kind)) out.push({
+      if (re.kinds.includes(atkCard.kind) && !cardHasEff(atkCard, 'noBlockReduce') && !fl.attachNoBlockReduce) out.push({
         type: 'guard',
         hand: hi,
         mon: tgt.m
@@ -86006,10 +86006,11 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const c = cardOf(db, me.hand[o.hand]);
     let after = dmg;
     if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
+    const noReduce = cardHasEff(main, 'noBlockReduce') || !!(pd.flags || {}).attachNoBlockReduce;
     const re = cardEff(c, 'reduce');
-    if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
-    if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
-    if (cardHasEff(c, 'reduceAll') && !cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) after = 0;
+    if (re && !noReduce) after = Math.max(0, dmg - re.n);
+    if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
+    if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0;
     const rf = cardEff(c, 'reflect');
     if (rf) after = rf.keep ? dmg : 0;
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
@@ -89612,7 +89613,7 @@ const cardGuardBlockReasons = (db, st) => {
     const ev = cardEff(c, 'evade');
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll') || cardEff(c, 'reflect');
     let why = null;
-    if (!c.ready) why = `「${c.name}」は準備中`;else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;
+    if (!c.ready) why = `「${c.name}」は準備中`;else if ((st.forbid[q] || []).includes(c.kind)) why = `このターンは${c.kind === 'dge' ? '回避' : '防御'}を使えません`;else if (c.guts > me.guts.length) why = `「${c.name}」はガッツが足りません(あと${c.guts - me.guts.length})`;else if (cardHasEff(c, 'cover')) why = `「${c.name}」は味方が狙われたときに、別の子が使います`;else if (target && t.p === q && !cardUsableBy(c, target)) why = `「${c.name}」は${target.name}が使えるカードではありません`;else if (ev && cardHasEff(atk, 'noEvade')) why = `「${atk.name}」は回避できません`;else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map(k => kindName[k] || k).join('・')}にしか使えません`;else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
     if (why && !out.includes(why)) out.push(why);
   });
   return out.slice(0, 2);
@@ -89621,16 +89622,30 @@ const CARD_CPU = 1;
 const CARD_DRAG_THRESHOLD = 10;
 const CARD_ME = 0;
 const cardDeciderOf = st => st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st);
+if (typeof document !== 'undefined' && document.head && !document.getElementById('mh-card-press-css')) {
+  const el = document.createElement('style');
+  el.id = 'mh-card-press-css';
+  el.textContent = '[data-card-press]{touch-action:manipulation}';
+  document.head.appendChild(el);
+}
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return (no, onTap) => ({
+  const last = useRef(null);
+  const pending = useRef(null);
+  useEffect(() => () => {
+    clearTimeout(timer.current);
+    clearTimeout(pending.current);
+  }, []);
+  return (no, onTap, opt = {}) => ({
+    'data-card-press': true,
     onPointerDown: () => {
       fired.current = false;
       clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         fired.current = true;
+        last.current = null;
+        clearTimeout(pending.current);
         onLong(no);
       }, ms);
     },
@@ -89643,7 +89658,30 @@ const useCardLongPress = (onLong, ms = 450) => {
         fired.current = false;
         return;
       }
-      if (onTap) onTap(e);
+      const now = Date.now();
+      if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
+        last.current = null;
+        if (pending.current) {
+          clearTimeout(pending.current);
+          pending.current = null;
+        } else if (opt.undo) opt.undo();
+        onLong(no);
+        return;
+      }
+      last.current = {
+        no,
+        at: now
+      };
+      if (!onTap) return;
+      if (opt.hold && opt.double !== false) {
+        clearTimeout(pending.current);
+        pending.current = setTimeout(() => {
+          pending.current = null;
+          onTap();
+        }, CARD_DOUBLE_TAP_MS);
+        return;
+      }
+      onTap(e);
     }
   });
 };
@@ -90220,7 +90258,9 @@ const CardMonSlot = ({
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return React.createElement("div", _extends({
     "data-card-mon": `${p}-${m}`
-  }, press ? press(mon.no, onTap) : {
+  }, press ? press(mon.no, onTap, {
+    hold: mark === 'target' || mark === 'user'
+  }) : {
     onClick: onTap
   }, {
     className: `relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`,
@@ -91109,6 +91149,54 @@ const CardBattleBoard = ({
     const mon = el.closest('[data-card-mon]');
     return mon ? mon.getAttribute('data-card-mon') : null;
   };
+  const handTap = useRef({
+    last: null,
+    pending: null
+  });
+  useEffect(() => () => clearTimeout(handTap.current.pending), []);
+  const tapHandOrDouble = (i, no) => {
+    const h = handTap.current;
+    const now = Date.now();
+    if (h.last && h.last.i === i && h.last.no === no && now - h.last.at < CARD_DOUBLE_TAP_MS) {
+      const before = h.last.before;
+      h.last = null;
+      if (h.pending) {
+        clearTimeout(h.pending);
+        h.pending = null;
+      } else if (before) {
+        setSel(before.sel);
+        setPicks(before.picks);
+        setHint(before.hint);
+      }
+      setDetail(no);
+      return;
+    }
+    if (mode === 'guard') {
+      h.last = {
+        i,
+        no,
+        at: now,
+        before: null
+      };
+      clearTimeout(h.pending);
+      h.pending = setTimeout(() => {
+        h.pending = null;
+        tapHand(i);
+      }, CARD_DOUBLE_TAP_MS);
+      return;
+    }
+    h.last = {
+      i,
+      no,
+      at: now,
+      before: {
+        sel,
+        picks,
+        hint
+      }
+    };
+    tapHand(i);
+  };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
     const d = {
@@ -91175,7 +91263,7 @@ const CardBattleBoard = ({
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHand(i);
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);
     };
     window.addEventListener('pointermove', onMove, {
       passive: false
@@ -91773,6 +91861,7 @@ const CardBattleBoard = ({
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
+      "data-card-press": true,
       onPointerDown: e => handDown(e, i, no),
       onContextMenu: e => e.preventDefault(),
       onDragStart: e => e.preventDefault(),
@@ -93858,10 +93947,11 @@ const CardBattleScreen = ({
       className: "py-1 text-right text-amber-200"
     }, rec.byLevel.win[lv]), React.createElement("td", {
       className: "py-1 text-right text-slate-300"
-    }, rec.byLevel.lose[lv]))))), React.createElement("p", {
+    }, rec.byLevel.lose[lv]))))), CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && React.createElement("p", {
+      "data-card-record-levels-note": true,
       className: "mt-1 text-[10px] font-bold text-slate-500",
       style: JA_LABEL_STYLE
-    }, jaWrap('難易度別の数は、この記録ができてからのぶんです'))), React.createElement("div", {
+    }, jaWrap('難易度別の数は、この表ができてからのぶんです'))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -93879,7 +93969,7 @@ const CardBattleScreen = ({
     }, u)))), React.createElement("p", {
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-500",
       style: JA_WRAP_STYLE
-    }, jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')))));
+    }, jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')))));
   }
   if (view === 'options') {
     const plWhoList = foes.length ? foes : allAssistants.filter(a => CARD_CPU_PLAYLIST_DEFAULT[a.id]);
@@ -94567,7 +94657,9 @@ const CardDeckTile = ({
   return React.createElement("button", _extends({
     type: "button",
     "data-card-deck-tile": no
-  }, press(no, onTap), {
+  }, press(no, onTap, {
+    double: false
+  }), {
     className: `relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`,
     style: {
       WebkitUserSelect: 'none',
@@ -94637,7 +94729,9 @@ const CardDeckPickTile = ({
   }, "このデッキの子は使えない"), React.createElement("button", _extends({
     type: "button",
     "data-card-deck-tile": no
-  }, press(no, onAdd), {
+  }, press(no, onAdd, {
+    double: false
+  }), {
     className: `block w-full active:scale-95 ${!canAdd && inDeck === 0 || unusable ? 'opacity-45' : ''}`,
     style: {
       WebkitUserSelect: 'none',
@@ -94887,7 +94981,9 @@ const CardDeckEditor = ({
       key: i,
       type: "button",
       "data-card-deck-mon": i
-    }, press(no, () => removeOne(no)), {
+    }, press(no, () => removeOne(no), {
+      double: false
+    }), {
       "aria-label": `${m.name}を外す`,
       className: "relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]",
       style: size
@@ -100034,7 +100130,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 4;
+const CARD_REPLAY_RULES = 5;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
