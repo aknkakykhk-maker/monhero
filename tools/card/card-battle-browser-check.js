@@ -292,6 +292,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ 詳しい画面はタップで閉じる', await page.locator('[data-card-detail]').count() === 0);
 
     // ⑤ 自分の番を進める(使えるカードを出す → 狙える相手 → 攻撃おわり → ガッツ)
+    let guardAtk = null;   // 守りの番の相手の攻撃カード
     let myActions = 0, guards = 0, gutsTurns = 0, shotGuard = false, shotTarget = false, motionSeen = false, poseSeen = new Set();
     // ⑫ 運ぶ操作: 指(マウス)で手札を持って、置ける所まで運んで離す
     let dragAttack = null, dragGuts = null, dragNoGlow = null, dragTries = 0, dragShotNo = false;
@@ -356,7 +357,24 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (mode === 'setup') { await page.getByRole('button', { name: /始める$/ }).click(); continue; }
       if (mode === 'discard') { const n = await page.locator('[data-card-hand-card]').count(); for (let i = 0; i < n; i++) await page.locator(`[data-card-hand-card="${i}"]`).click(); await page.getByRole('button', { name: /捨てる$/ }).click().catch(() => {}); continue; }
       if (mode === 'guard') {
-        if (!shotGuard) { await shot(page, '07-guard'); layoutSeen.push(...(await layoutIssues(page)).map((x) => `守りの番: ${x}`)); shotGuard = true; }
+        if (!shotGuard) {
+          await shot(page, '07-guard'); layoutSeen.push(...(await layoutIssues(page)).map((x) => `守りの番: ${x}`)); shotGuard = true;
+          // 守りを選ぶあいだ、受けている相手の攻撃カード(絵・名前・ダメージ・効果)が出て、手札・ボタンに重ならず、押すと詳しい画面が開く(2026-10-26 ソラシドさん)
+          guardAtk = await page.evaluate(() => {
+            const el = document.querySelector('[data-card-guard-attack]');
+            if (!el) return { shown: false };
+            const r = el.getBoundingClientRect();
+            const over = ['[data-card-hand]', '[data-card-footer]'].filter((s) => { const q = document.querySelector(s); if (!q) return false; const b = q.getBoundingClientRect(); return r.bottom > b.top + 1 && r.top < b.bottom - 1 && r.right > b.left + 1 && r.left < b.right - 1; });
+            const img = el.querySelector('img'); const fit = Number(document.querySelector('[data-card-stage]').getAttribute('data-card-stage-fit'));
+            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
+          });
+          if (guardAtk.shown) {
+            await page.locator('[data-card-guard-attack]').click();
+            guardAtk.detail = await page.locator('[data-card-detail]').waitFor({ timeout: 2000 }).then(() => true).catch(() => false);
+            if (SHOT) await shot(page, '07b-guard-attack-detail');
+            if (guardAtk.detail) { await page.locator('[data-card-detail]').click({ position: { x: 4, y: 4 } }).catch(() => {}); await page.waitForTimeout(200); guardAtk.closed = !(await page.locator('[data-card-detail]').count()); }
+          }
+        }
         guards += 1;
         await page.getByRole('button', { name: '守らない' }).click();
         continue;
@@ -447,6 +465,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ 技を相手のモンスターまで運んで離すと使える(置ける所の上で光る)', dragAttack === true, `${dragAttack}(試した回数 ${dragTries + (dragAttack === true ? 1 : 0)})`);
     check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
     check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
+    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
       `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
@@ -616,6 +635,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-dex]').waitFor({ timeout: 5000 });
     const dexTotal = await page.locator('[data-card-dex-total]').innerText();
     const dex1 = await page.locator('[data-card-dex-tile]').count();
+    const dexPart1 = await page.locator('[data-card-dex-part]').innerText();   // 「(第1弾 1 / 59)」。以前は「このパック」で、どの弾か分からなかった
     const haveTiles = await page.locator('[data-card-dex-tile]:not([data-card-dex-have="0"])').count();
     if (SHOT) await shot(page, '23-dex-1');
     await page.locator('[data-card-dex-tab="hybrid"]').click();
@@ -633,7 +653,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 混血・派生の数はデータから数える(2026-10-25 に派生25枚が増えた。図鑑だけの子も並ぶ)
     const hybridCount = await page.evaluate(() => Object.values(CARD_BATTLE_DATA.monsters).filter((m) => String(m.wave) === 'hybrid').length);
     check('⑮ カード図鑑: 見かたのタブが3つ', dexModes === 3, JSON.stringify({ dexModes }));
-    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
+    check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び(見出しは「第1弾 ◯ / ◯」)、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && /^\(第1弾 \d+ \/ \d+\)$/.test(dexPart1) && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexPart1, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
     // ⑮-2 血統別・種類別(2026-10-26 社長): 札の数・札ごとの集めた数・種類の言葉と並びがデッキ編成の絞り込みと同じ
     await page.locator('[data-card-dex-show="all"]').click();
     await page.getByRole('tab', { name: '血統別' }).click();
@@ -641,6 +661,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const spTabs = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').count();
     const spFirst = await page.locator('[data-card-dex-tile]').count();
     const spPart = await page.locator('[data-card-dex-part]').innerText();
+    const spLabel = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').first().evaluate((e) => e.firstChild.textContent);
     const spWant = await page.evaluate(() => CARD_PACKS.reduce((a, p) => a + p.species.length, 0));
     if (SHOT) await shot(page, '24b-dex-species');
     await page.getByRole('tab', { name: '種類別' }).click();
@@ -653,7 +674,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.waitForTimeout(150);
     const fldTiles = await page.locator('[data-card-dex-tile]').count();
     if (SHOT) await shot(page, '24c-dex-kind');
-    check('⑮-2 カード図鑑: 血統別(弾の種族の数だけ札・最初の血統に並ぶ・「この血統」の集めた数)と種類別(デッキ編成と同じ言葉と並び・モンスターは全部・全体は15枚)', spTabs === spWant && spFirst >= 10 && /この血統 \d+ \/ \d+/.test(spPart) && JSON.stringify(kindLabels) === JSON.stringify(deckLabels) && dexMonTiles === monWant && fldTiles === 15, JSON.stringify({ spTabs, spWant, spFirst, spPart, kindLabels, dexMonTiles, monWant, fldTiles }));
+    check('⑮-2 カード図鑑: 血統別(弾の種族の数だけ札・最初の血統に並ぶ・選んだ血統の名前で集めた数)と種類別(デッキ編成と同じ言葉と並び・モンスターは全部・全体は15枚)', spTabs === spWant && spFirst >= 10 && spPart.includes(`(${spLabel} `) && /\d+ \/ \d+\)/.test(spPart) && JSON.stringify(kindLabels) === JSON.stringify(deckLabels) && dexMonTiles === monWant && fldTiles === 15, JSON.stringify({ spTabs, spWant, spFirst, spPart, spLabel, kindLabels, dexMonTiles, monWant, fldTiles }));
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
     // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する

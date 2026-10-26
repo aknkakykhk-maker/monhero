@@ -414,7 +414,9 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
             {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
                 3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
             <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
-              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(dexEntryDescription(mon))}</p>
+              {/* 社長が改行して決めた文(プラント・ミーア・パンドラ・ギンギライガー・アンキロックス)は、改行のまま出す。
+                  以前は改行が空白になり、2行目が1行目の続きにつながっていた */}
+              <p className="font-bold leading-relaxed text-slate-200 break-words whitespace-pre-line">{helpWrap(dexEntryDescription(mon))}</p>
             </div>
             {unlocked?(<>
               <ScreenTabs className="mt-2" value={tab} onChange={onSelectTab}
