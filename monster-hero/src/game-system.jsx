@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c59a67017cc9334e
+// generated-sha256: 9c74e5de6d4f4681
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56793,6 +56793,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): ビートP・その日の数・記録(pvp の勝ち負け)・クイック周回
     // その日はじめての勝ちの +50 は、助手と対戦と同じ印(daily.firstWin)を使う。どちらで勝っても合わせて1日1回(2026-10-26 社長)
     // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
+    // ★クイック周回のあとの書き直しにも firstWin を入れる(抜けていて、印が消えて1日に何度も +50 になっていた。2026-10-27 総点検)
     const pvpReward = async (r) => {
       const base = cardPvpReward(r.reward, r.facts);
       // 書く直前に読み直す(助手と対戦と同じ。古い中身で記録・その日の数を上書きしない)
@@ -56806,7 +56807,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
-      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
+      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
       return { ...got, saved: ok, quick };
     };
     return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {

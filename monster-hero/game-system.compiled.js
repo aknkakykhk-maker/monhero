@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc6c0624abc27e8c
+// source-sha256: 143722f5b677dd62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93493,6 +93493,7 @@ const CardBattleScreen = ({
         daily: {
           ...daily,
           pvpPoint: daily.pvpPoint + got.point,
+          firstWin: daily.firstWin || bonus > 0,
           quickLoops: (daily.quickLoops || 0) + got.loops
         }
       }, {

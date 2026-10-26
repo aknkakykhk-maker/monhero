@@ -219,6 +219,15 @@ E.CARD_PACKS.forEach((p, pi) => {
   const i = p84.indexOf('const pvpReward = async');
   const body = p84.slice(i, p84.indexOf('\n    };', i));
   const writes = body.split('await persist(').slice(1).map((s) => s.slice(0, s.indexOf(', {') > 0 && s.indexOf('}, ') > 0 ? s.indexOf('}, ') : s.length));
+  // 場面: マルチで勝って裏の周回が入る → そのあと助手と対戦で勝つ。2回目の書き直し(周回)のあとも印が残り、+50 は付かない
+  {
+    const dailyAfterPvp = { ...day, pvpPoint: 400 + 50, firstWin: true }; // 1回目の保存(+50 を付けた)
+    const dailyAfterQuick = { ...dailyAfterPvp, pvpPoint: dailyAfterPvp.pvpPoint, firstWin: dailyAfterPvp.firstWin || true, quickLoops: 44 }; // 2回目(周回)の保存の形
+    const cpu = E.cardCpuReward(E.cardNormalizeDaily(dailyAfterQuick, '2026-10-27'), 'master', 'win', { ownTurns: 8, kos: 3 });
+    check('C 場面: マルチで勝って周回が入ったあと、助手と対戦で勝っても +50 は付かない', cpu.bonus === 0 && cpu.total === 200);
+    const pvp2 = !E.cardNormalizeDaily(dailyAfterQuick, '2026-10-27').firstWin;
+    check('C 場面: マルチで勝って周回が入ったあと、もう一度マルチで勝っても +50 は付かない', pvp2 === false);
+  }
   check('C マルチの結果: その日の数を書くどの保存にも、はじめての勝ちの印(firstWin)が入っている', writes.length >= 2 && writes.every((w) => !/daily:/.test(w) || /firstWin/.test(w)), `保存 ${writes.length}か所`);
 }
 
