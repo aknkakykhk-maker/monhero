@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202610270236';
+var GAME_BUILD = '202610270241';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -596,6 +596,15 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
   [data-mh-view-rotation="true"] [data-rhythm-look-intro-portrait] { display: none; }
   [data-mh-view-rotation="true"] [data-rhythm-look-intro-landscape] { display: block; }
   [data-mh-view-rotation="true"] [data-rhythm-look-intro] { position: absolute; z-index: 30; left: 8px; bottom: 8px; width: min(50%, 420px); border: 1px solid rgba(34,211,238,.45); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+  /* 6レーンの案内(曲えらびを開いた最初の1回だけ)も、横持ちは左下へ浮かせる(2026-10-26 ビート部)。
+     上に置いたままだと右の列(難易度・決定)が70px押し下げられ、667×375・640×320・844×390 のどれでも「決定」が画面の外へ出ていた。
+     見た目の案内と同じ場所なので、両方あるときは6レーンの案内を先に出し、閉じたら見た目の案内が出る(兄弟の順で隠す) */
+  @media (orientation: landscape) {
+    [data-rhythm-six-lane-intro] { position: absolute; z-index: 31; left: max(8px, env(safe-area-inset-left)); bottom: max(8px, env(safe-area-inset-bottom)); width: min(50%, 420px); border: 1px solid rgba(34,211,238,.45); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+    [data-rhythm-six-lane-intro] ~ [data-rhythm-look-intro] { display: none; }
+  }
+  [data-mh-view-rotation="true"] [data-rhythm-six-lane-intro] { position: absolute; z-index: 31; left: 8px; bottom: 8px; width: min(50%, 420px); border: 1px solid rgba(34,211,238,.45); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+  [data-mh-view-rotation="true"] [data-rhythm-six-lane-intro] ~ [data-rhythm-look-intro] { display: none; }
   /* モンヒロビートの曲えらび: 縦が低い画面(高さ700px以下)では、曲の詳細のジャケットを小さくして曲の一覧に場所を残す(2026-10-07)。
      幅320×高さ568では一覧の高さが16pxしかなく、曲を1つも選べなかった(プレイボットの小さい画面係が見つけた)。
      ★助手のひとことを畳むのは部品の側(29-rhythm-screens.jsx の noticeOpenShort)。絵を90度回しているときは横持ちの並びなので触らない */
