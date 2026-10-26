@@ -16,6 +16,7 @@
 //   ⑨ 320×568: カララギマンゴーを選んで狙うとき・「攻撃できない」の子がいるときも、下のボタンが画面の中(最後の見回り)
 //   ⑩ 助手全員の結果の台詞で、記号だけが行頭に来ない(最後の見回り)
 //   ⑫ 対戦開始の画面(VS)の自分側にも、自分のアイコンが出る
+//   ⑬ 助手と対戦の結果の画面に「自分 vs 助手・勝ち負け」の1行(マルチの結果は card-pvp-browser-check)
 //   ⑪ 320・375・390・横844: 自分の帯に自分のアイコン(フレーム付き)と名前が出る・名前が切れない・手札にかからない
 const http = require('http');
 const path = require('path');
@@ -327,6 +328,20 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       await page.close();
     }
     check('⑫ 対戦開始の画面(VS)の自分側に、自分のアイコンが出る(320・375・390・横844)', vsSeen.length === 4 && vsSeen.every((x) => x.endsWith(':true')), vsSeen.join(' / '));
+    // ⑬ 助手と対戦の結果の画面に「自分のアイコン+名前 vs 助手の顔+名前・勝ち負け」の1行が出る(投了して見る)。320 と 390
+    for (const [w, h] of [[320, 568], [390, 844]]) {
+      const page = await openBattle(browser, { ...base, active: 0, mode: 'attack', viewport: { width: w, height: h } }, errors);
+      await page.waitForTimeout(400);
+      await page.locator('[data-card-quit]').click();
+      await page.getByRole('button', { name: '投了する' }).click();
+      const ok = await page.locator('[data-card-result-vs]').waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+      await page.waitForTimeout(500);
+      const r = ok ? await page.locator('[data-card-result-vs]').evaluate((el) => ({ text: el.innerText.replace(/\s+/g, ' '), icon: !!el.querySelector('[data-card-result-me-icon] img, [data-card-result-me-icon] span'),
+        cut: [...el.querySelectorAll('span')].some((x) => getComputedStyle(x).whiteSpace === 'nowrap' && x.scrollWidth > x.clientWidth + 1), right: el.getBoundingClientRect().right <= innerWidth })) : null;
+      await shot(page, `result-vs-${w}`);
+      check(`⑬ ${w}×${h}: 助手と対戦の結果に「自分 vs 助手・勝ち負け」の1行(名前は切れない)`, r && r.icon && /検査ブリーダー/.test(r.text) && /ももすけ/.test(r.text) && /投了/.test(r.text) && !r.cut && r.right, JSON.stringify(r));
+      await page.close();
+    }
     check('⑦ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
