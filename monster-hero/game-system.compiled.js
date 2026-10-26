@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 748def632eecddfc
+// source-sha256: 259c3110e1c18b0a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93145,8 +93145,17 @@ const CardBattleScreen = ({
       alt: x.name,
       className: "h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"
     }), React.createElement("span", {
-      className: "text-[13px] font-black"
-    }, x.name), save.record.beaten[x.id] && React.createElement("span", {
+      className: "block w-full",
+      style: {
+        containerType: 'inline-size'
+      }
+    }, React.createElement("span", {
+      "data-card-foe-name": true,
+      className: "block whitespace-nowrap text-center font-black",
+      style: {
+        fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))`
+      }
+    }, x.name)), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
     }, "勝")))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"

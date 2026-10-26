@@ -2310,7 +2310,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             {foes.map((x) => (
               <button key={x.id} type="button" data-card-foe={x.id} onClick={() => { Audio_.fgSe.tap(); setFoe((f) => ({ ...f, who: x.id })); }} className={`relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`} style={foe.who === x.id ? { borderColor: x.accent } : undefined}>
                 <img src={assistantFaceImage(x, 'normal')} alt={x.name} className="h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"/>
-                <span className="text-[13px] font-black">{x.name}</span>
+                {/* 名前は折らない。横の小さい画面(568×320)では札が細く「みゅ/あ」「もも/すけ」と折れたので、入らなければ字を小さくする(2026-10-26 ソランドくん) */}
+                <span className="block w-full" style={{ containerType: 'inline-size' }}><span data-card-foe-name className="block whitespace-nowrap text-center font-black" style={{ fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))` }}>{x.name}</span></span>
                 {save.record.beaten[x.id] && <span className="absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900">勝</span>}
               </button>
             ))}
