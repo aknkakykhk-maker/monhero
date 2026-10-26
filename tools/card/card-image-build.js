@@ -33,6 +33,34 @@ const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // �
 const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9 };
 const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT_JA, x1: 674 };
 
+// キラの地が粒の模様の絵(ゴーストのキラ C-024S・2026-10-27)は、上下の色をつなぐと縦じまの四角が浮く。
+// すぐ上(dy<0)・すぐ下(dy>0)の、文字の無い同じ模様の行をそのまま写して埋める(©は板の中なので上から・URL は板の外なので下から)
+const COPY_FILL = {
+  'C-024S.jpg': [{ ...BAND.monster[0], dy: -24 }, { ...BAND.monster[1], dy: 22 }],
+};
+// 写したままだと明るさの差で四角の縁が見えるので、縁(四角のすぐ外の1列・1行)での「元 − 写す元」の差を、
+// 内側へなだらかに広げて足す(差の面を Jacobi で解く。四角は 200×20 ほどなので軽い)
+const copyRect = (px, ch, r) => {
+  const w = r.x1 - r.x0 + 3, h = r.y1 - r.y0 + 3; // 外の1列・1行を含む
+  for (let c = 0; c < ch; c += 1) {
+    const d = new Float32Array(w * h);
+    const fixed = new Uint8Array(w * h);
+    for (let j = 0; j < h; j += 1) for (let i = 0; i < w; i += 1) {
+      if (i && j && i < w - 1 && j < h - 1) continue;
+      const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
+      d[j * w + i] = px[(y * W + x) * ch + c] - px[((y + r.dy) * W + x) * ch + c];
+      fixed[j * w + i] = 1;
+    }
+    for (let it = 0; it < 1500; it += 1) for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
+      d[j * w + i] = (d[j * w + i - 1] + d[j * w + i + 1] + d[(j - 1) * w + i] + d[(j + 1) * w + i]) / 4;
+    }
+    for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
+      const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
+      px[(y * W + x) * ch + c] = Math.max(0, Math.min(255, Math.round(px[((y + r.dy) * W + x) * ch + c] + d[j * w + i])));
+    }
+  }
+};
+
 // ★混血の絵は「C051.jpg」と「-」が無い名前なので、C のあとに数字が続くものもモンスターカードにする
 //   (前は技カードとして扱っていて、© が残り、右下の「No. C-051」を塗りつぶしていた・2026-10-24 に気づいた)
 const isMonster = (file) => /^C-?\d/.test(path.basename(file));
@@ -91,6 +119,8 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   // 文字を描き直した版(card-battle-ja/F*.jpg・カード部)は、もう枠にそろえてあるので切り出さない
   const { data, info } = await sharp(isField(file) && !file.startsWith(JA) ? await normalizeField(file) : file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   if (info.width !== W || info.height !== H) throw new Error(`${file}: 大きさが ${info.width}×${info.height}(${W}×${H} のはず)`);
+  const copies = COPY_FILL[path.basename(file)];
+  if (copies) { copies.forEach((r) => copyRect(data, info.channels, r)); return sharp(data, { raw: { width: W, height: H, channels: info.channels } }); }
   const rects = [...(isMonster(file) ? BAND.monster : BAND.skill)];
   // 全体カードの © は場所がほかの技カードと違う(絵の右下 y≈708〜722)ので、文字を描き直す段(card-image-ja.js の field)で消してある。ここでは消さない
   if (artCopyright && !isMonster(file) && !(isField(file) && file.startsWith(JA))) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
