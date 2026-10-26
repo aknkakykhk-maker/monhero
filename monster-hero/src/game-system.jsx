@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 16b5f7b8ee68cc23
+// generated-sha256: 3e97c1af5a1b6d04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 02:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8502,8 +8502,9 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
       <div data-custom-color-numbers className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5">
         <span className="h-6 w-6 shrink-0 rounded-full border border-white/30" style={{ backgroundColor: previewColor }} aria-hidden="true"></span>
         <span className="min-w-0 flex-1">
-          <b className="block font-mono text-[12px] font-black leading-tight text-white">{`#${[pr, pg, pb].map((n) => n.toString(16).padStart(2, '0')).join('').toUpperCase()}`}</b>
-          <small className="block text-[10px] font-bold leading-tight text-slate-300">色相 {Math.round(h)}°・鮮やかさ {Math.round(s * 100)}%・明るさ {Math.round(v * 100)}%</small>
+          {/* 呼び方と幅は、モンスター部の予告の色の表と同じ(色相 0〜360・彩度 0〜100・明るさ 0〜100)。数字は色id custom:色相:彩度:明度 と同じ丸め方 */}
+          <b className="block text-[12px] font-black leading-tight text-white [word-break:keep-all]">カスタム(色相{Math.round(h)}・<wbr/>彩度{Math.round(s * 100)}・<wbr/>明るさ{Math.round(v * 100)})</b>
+          <small className="block text-[9px] font-bold leading-tight text-slate-400 [word-break:keep-all]">色相 0〜360・<wbr/>彩度 0〜100・<wbr/>明るさ 0〜100</small>
         </span>
       </div>
     </div>
@@ -79786,7 +79787,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 )}
                 <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
                 {/* この部位の濃さ(透け具合)も数字で出す。濃さは染色の画面のつまみで変える(色を決めても引き継ぐ) */}
-                <p data-custom-color-alpha className="-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">この部位の濃さ {colorAlphaOf(sourceColors[idx])}%<span className="text-slate-500">(濃さは染色の画面のつまみで変えられます)</span></p>
+                <p data-custom-color-alpha className="-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">濃さ{colorAlphaOf(sourceColors[idx])}%<span className="text-slate-500">(濃さは染色の画面のつまみで変えられます)</span></p>
                 <div className="flex gap-2 mt-1 shrink-0">
                   <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
                   <button onClick={applyCustom} className="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95">この色に決定</button>

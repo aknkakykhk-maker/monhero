@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c22508bcefd25511
+// source-sha256: 9bcc0bee41b2b0f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:45";
+const BUILD_DATE = "2026-10-27 02:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12078,10 +12078,10 @@ const CustomColorPicker = ({
   }), React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("b", {
-    className: "block font-mono text-[12px] font-black leading-tight text-white"
-  }, `#${[pr, pg, pb].map(n => n.toString(16).padStart(2, '0')).join('').toUpperCase()}`), React.createElement("small", {
-    className: "block text-[10px] font-bold leading-tight text-slate-300"
-  }, "色相 ", Math.round(h), "°・鮮やかさ ", Math.round(s * 100), "%・明るさ ", Math.round(v * 100), "%"))));
+    className: "block text-[12px] font-black leading-tight text-white [word-break:keep-all]"
+  }, "カスタム(色相", Math.round(h), "・", React.createElement("wbr", null), "彩度", Math.round(s * 100), "・", React.createElement("wbr", null), "明るさ", Math.round(v * 100), ")"), React.createElement("small", {
+    className: "block text-[9px] font-bold leading-tight text-slate-400 [word-break:keep-all]"
+  }, "色相 0〜360・", React.createElement("wbr", null), "彩度 0〜100・", React.createElement("wbr", null), "明るさ 0〜100"))));
 };
 const VolumeSlider = ({
   label,
@@ -127668,7 +127668,7 @@ function MonsterHeroGame() {
       }), React.createElement("p", {
         "data-custom-color-alpha": true,
         className: "-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]"
-      }, "この部位の濃さ ", colorAlphaOf(sourceColors[idx]), "%", React.createElement("span", {
+      }, "濃さ", colorAlphaOf(sourceColors[idx]), "%", React.createElement("span", {
         className: "text-slate-500"
       }, "(濃さは染色の画面のつまみで変えられます)")), React.createElement("div", {
         className: "flex gap-2 mt-1 shrink-0"
