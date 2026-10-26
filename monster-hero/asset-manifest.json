@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "d08230f05ad9",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120941654,"count":652},"card":{"bytes":31268880,"count":906},"all":{"bytes":259597980,"count":1651}},
+  "id": "6ee9e3363cde",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120961319,"count":653},"card":{"bytes":31268880,"count":906},"all":{"bytes":259617645,"count":1652}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1346,6 +1346,7 @@
     "images/monster-icons/face/snegurochka.png": {"v":"31dc864654c1","size":28826,"pack":"battle"},
     "images/monster-icons/face/spooky.png": {"v":"2c047a771ffe","size":20163,"pack":"battle"},
     "images/monster-icons/face/suezo.png": {"v":"696938ca7d63","size":17608,"pack":"battle"},
+    "images/monster-icons/face/tiger.png": {"v":"1557ff181186","size":19665,"pack":"battle"},
     "images/monster-icons/face/undine.png": {"v":"fe1ba930173b","size":66167,"pack":"battle"},
     "images/monster-icons/face/worm.png": {"v":"2edd20512375","size":51421,"pack":"battle"},
     "images/monster-icons/face/yaobikuni.png": {"v":"32838d8bdd5a","size":63292,"pack":"battle"},

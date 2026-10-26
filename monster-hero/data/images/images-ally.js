@@ -299,7 +299,7 @@ const KENSHI_MOCCHI_ICON = KENSHI_MOCCHI_IMG;
 // そのまま顔アイコンとして使えるモンスターだけ、base64 を重複させず変数参照にしている。
 const MOCCHI_FACE_ICON = "images/monster-icons/face/mocchi.png?v=96be4cbc1468";
 const HAM_FACE_ICON = "images/monster-icons/face/ham.png?v=fbe8e4f70214";
-const TIGER_FACE_ICON = TIGER_ICON;
+const TIGER_FACE_ICON = "images/monster-icons/face/tiger.png?v=1557ff181186";
 const PIXIE_FACE_ICON = "images/monster-icons/face/pixie.png?v=d33b92e39fa0";
 const MIA_FACE_ICON = MIA_IMG;
 const PANDORA_FACE_ICON = PANDORA_IMG;
@@ -514,7 +514,7 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
 
 // 顔アイコンが全身絵そのものの子(顔アイコンを作っていない)。モノリスは顔のない板、オボロゲソウ・プラントは顔が体の下にあるので、全身のほうが分かりやすい。
 // ライガー・ミーア・パンドラは顔アイコンの案を社長が選ぶまでのあいだ。ここに無い子の顔アイコンが全身絵だと、tools/image/art-anchor-check.js が止める
-const ART_FACE_FULL_BODY = Object.freeze(['TIGER', 'MIA', 'PANDORA', 'MONOL', 'OBORO']);
+const ART_FACE_FULL_BODY = Object.freeze(['MIA', 'PANDORA', 'MONOL', 'OBORO']);
 // 顔のまんなか(2026-10-26 社長「顔アイコンと全身絵のずれが出ない仕組み」)。全身絵(◯◯_IMG)の中で、顔アイコンの丸のまんなかに来る点(0〜1)。
 // 顔(目のあいだ・鼻)のまんなかを書く。顔アイコンは tools/image/make-face-icons.js がこの点を丸のまんなかに置いて作る。
 // 新しい子を足したら、ここにも書く(tools/image/art-anchor-check.js が、書いていない子を止める)。書き出しは tools/image/art-anchors.js
@@ -534,6 +534,7 @@ const ART_ANCHORS = Object.freeze({
   UNDINE: Object.freeze({ face: Object.freeze([0.472, 0.148]) }),
   YAOBIKUNI: Object.freeze({ face: Object.freeze([0.482, 0.145]) }),
   YGGDRASIL: Object.freeze({ face: Object.freeze([0.505, 0.324]), zoom: 1.218 }),
+  TIGER: Object.freeze({ face: Object.freeze([0.49, 0.304]) }),
   PLANT: Object.freeze({ face: Object.freeze([0.5, 0.522]), zoom: 1.302 }),
   MEL_WHIP: Object.freeze({ face: Object.freeze([0.549, 0.333]), zoom: 1.341 }),
   GHOST: Object.freeze({ face: Object.freeze([0.5, 0.387]) }),
