@@ -64,7 +64,7 @@ for (const [id, spec] of Object.entries(SPEC)) {
   check(`${spec.name}は専用モーション waterBurst`, m.atkMotion === 'waterBurst');
   check(`${spec.name}の勇者特性は氷海の支配者`, m.trait === '氷海の支配者');
   check(`${spec.name}の勇者特性説明`, m.traitDesc === '勇者モンにすると：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率+50%（上限100%）');
-  check(`${spec.name}の固有効果は絶氷の楔`, /絶氷の楔/.test(m.unique.effectDesc) && /30%減少/.test(m.unique.effectDesc) && /消費ガッツ3%減/.test(m.unique.effectDesc));
+  check(`${spec.name}の固有効果は絶氷の楔`, /絶氷の楔/.test(m.unique.effectDesc) && /30%へる/.test(m.unique.effectDesc) && /要るガッツが3%へる/.test(m.unique.effectDesc));
   check(`${spec.name}の固有技IDが自分を指す`, m.unique.monId === id);
 }
 
@@ -171,9 +171,10 @@ check('スネグーラチカの性能は変えていない',
     && JSON.stringify(sneg.distAptitude) === JSON.stringify(['D', 'E', 'B', 'A'])
     && JSON.stringify(sneg.plusStats) === JSON.stringify({ hp: 150, atk: 40, def: 10, guts: 40 }));
 check('スネグーラチカの固有技名は変えていない', sneg.unique.names[3] === 'プレゼントキッス' && sneg.unique.names[8] === 'メリークリスマス');
-check('スネグーラチカの画像・アイコン調整は変えていない',
+// 2026-10-27 社長: マーケットの寄り方(A)で顔アイコンを作り直し、手書きの寄せは外した(顔の寄せは tools/image/art-anchor-check.js が見張る)
+check('スネグーラチカの画像は変えていない・マーケットの手書きの寄せは無い',
   imagesSrc.includes('const SNEGUROCHKA_ICON = SNEGUROCHKA_IMG;')
-    && source.includes('snegurochka_icon: { scale: 4.28, x: 11, y: 111 }'));
+    && !/^\s+snegurochka_icon: \{/m.test(source));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

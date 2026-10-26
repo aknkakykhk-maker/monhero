@@ -35,7 +35,8 @@ const checks = [
   ['勇者特性「吸収」', plant?.trait === '吸収' && plant.traitDesc === oboro.traitDesc],
   ['Plantも吸収の実効果対象', game.includes("existingAbsorb:(mainHero?.id==='Oboro'||mainHero?.id==='Plant')?30:0")],
   ['Plantもドレインの実効果対象', game.includes("card.monId==='Oboro'||card.monId==='Plant'")],
-  ['本体画像を全用途で再利用', plant?.imgUrl === plant?.iconUrl && plant?.iconUrl === plant?.faceIconUrl && /plant\.PNG\?v=[0-9a-f]{12}/.test(plant.imgUrl)],
+  // 2026-10-27 社長: 顔アイコンはマーケットの寄り方(A)で作った専用の絵にした(全部の画面で同じ寄り方)
+  ['本体画像を立ち絵・アイコンで再利用し、顔アイコンは専用の絵', plant?.imgUrl === plant?.iconUrl && /plant\.PNG\?v=[0-9a-f]{12}/.test(plant.imgUrl) && /monster-icons\/face\/plant\.png\?v=[0-9a-f]{12}/.test(plant?.faceIconUrl || '')],
   ['Plantはプラント純血', lineageMap.Plant?.main === 'plant' && lineageMap.Plant?.sub === 'plant'],
   ['プラント血統の代表はPlant', lineagesById.plant?.monId === 'Plant'],
   ['主血統プラントの対象はPlantとOboro', JSON.stringify(Object.keys(monsters).filter(id => lineageMap[id]?.main === 'plant').sort()) === JSON.stringify(['Oboro', 'Plant'])],
@@ -45,7 +46,7 @@ const checks = [
   ['Plantの背景を色相だけで染めない', /Plant: \[[\s\S]*?bbox: \[0\.08,0\.26,0\.92,0\.76\][\s\S]*?posBbox: \[\[0\.35,0\.49,0\.65,0\.80\][\s\S]*?\n  \],/.test(game)],
   ['Plantは初期解放しない', !starters.includes('Plant')],
   ['Plant円盤石画像参照', /const PLANT_DISC_ICON = "images\/disc-icons\/plant-disc\.PNG\?v=[0-9a-f]{12}"/.test(breeder)],
-  ['プラントの通常アイコンは1pt', /id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1/.test(breeder)],
+  ['プラントの通常アイコンは1pt(顔アイコンの絵)', /id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_FACE_ICON, cost:1/.test(breeder)],
   ['プラントの円盤石アイコンは1pt', /id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1/.test(breeder)],
   ['プラントの円盤石は購入可能・150000ダイヤ', /id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000/.test(breeder) && !/id:'Plant'[^\n]*available:false/.test(breeder)],
   ['円盤石購入は既存キーへ解放IDを保存', game.includes("if (item.type === 'disc')") && game.includes("storeSet('mh_unlocked_monsters', next, false)")],

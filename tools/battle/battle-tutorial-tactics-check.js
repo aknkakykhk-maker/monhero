@@ -190,7 +190,7 @@ const check = (name, ok, detail = '') => {
     // --- ⑥ 勇者モン → 距離 → 教え → バトル ---
     for (let i = 0; i < 4; i++) if (!(await tapNext())) break;
     await startOfDiff('Beginner').dispatchEvent('click');
-    await page.getByRole('heading', { name: '勇者モンを選択' }).waitFor({ timeout: 15000 });
+    await page.getByRole('heading', { name:'勇者モンをえらぶ' }).waitFor({ timeout: 15000 });
     check('練習のまま勇者モン選択まで進む', true);
     check('練習の勇者モン選択にデバッグ個体が並ばない',
       await page.getByText('デバッグ最強モン').count() === 0);

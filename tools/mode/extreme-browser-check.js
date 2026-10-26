@@ -210,7 +210,7 @@ const extremeTabInfo = () => {
     });
     await page.waitForTimeout(1500);
     const heroText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('EXTREMEを押すと勇者モン選択へ進む', started && heroText.includes('勇者モンを選択'), heroText.slice(0, 70));
+    check('EXTREMEを押すと勇者モン選択へ進む', started && heroText.includes('勇者モンをえらぶ'), heroText.slice(0, 70));
 
     // 勇者モンを1体選んでバトルへ
     await page.evaluate(() => { [...document.querySelectorAll('button')].find(b => b.textContent.includes('モッチー'))?.click(); });
