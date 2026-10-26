@@ -654,7 +654,7 @@ HOME の「MFバトルカード」
 - 台詞は、その子のくせ(5-5)と、ゲームの中の話し方の決まり(`ASSISTANTS` の一人称・語尾・くせ・台帳の決め)に合わせる。**全文は、作る前にカゲあつくん → 社長の順で見てもらう**。
 
 **BGM**(社長: バトルと同じように自分で決められる。決めていないときは、相手の助手に合わせて曲が変わる)
-- 決め方は、いまのバトルの BGM 設定(`13-bgm-and-rhythm-settings.jsx` の `BGM_BATTLE_MODE_TABS`・`normalizeBgmArrangement`)と同じ形: BGM の設定画面に「MFバトルカード」のタブを足し、「コンピューター戦」「対人戦」の枠を並べる。コンピューター戦の枠の既定は「おまかせ(相手の助手に合わせる)」。
+- 決め方は、いまのバトルの BGM 設定(`13-bgm-and-rhythm-settings.jsx` の `BGM_BATTLE_MODE_TABS`・`normalizeBgmArrangement`)と同じ形: BGM の設定画面に「MFバトルカード」のタブを足し、「コンピューター戦」「対人戦」の枠を並べる。コンピューター戦の枠の既定は「おまかせ(相手の助手に合わせる)」。**助手と対戦の1曲えらびは、2026-10-26 に下の「助手と対戦の曲の並び」へ替えた(`cpu` の値は残すが使わない)。**
 - 保存は新しいキー `mh_card_bgm_v1`(`{ top: 曲id, cpu:'auto' か 曲id, pvp: 曲id }`。top は 2026-10-26 に足した)。読むときは `normalizeCardBgm` を通し、無い項目・知らない曲idは既定にする。既定はトップ画面が「MF × ICHIKA MIX」(`atsu_cup_theme`・2026-10-26 社長「入ったときのBGMをMFいちかみっくすに」)、対戦は前のとおり(助手と対戦は助手ごとの曲・練習試合はみゅあの曲・マルチは `ichika_battle`)。オプションで選んだ人の値は書き換えない。いまの `mh_bgm_arrangement` は触らない
 
 | 相手 | 「おまかせ」のときの曲(社長が1人ずつ決めた。台帳 #3438) | 曲の id |
@@ -666,6 +666,16 @@ HOME の「MFバトルカード」
 | ドラ | もう一つの世界へ | `melo_mou_hitotsu_no_sekai_e` |
 | あつ | Against My Own Shadow | `melo_against_my_own_shadow` |
 | 対人戦の既定 | バトルテーマ by いちか | `ichika_battle` |
+
+**助手と対戦の曲の並び**(2026-10-26 社長の依頼。実装済み)
+- 助手と対戦では、助手ごとに **1〜5曲** を選べる(オプションの「音」の「助手と対戦」)。既定は上の表の曲1つ(82 の `CARD_CPU_PLAYLIST_DEFAULT`。84 の `CARD_AI_BGM` はここから作る)。
+- 流し方: 対戦を始めるたびにシャッフルし、**全部を1回ずつ**流す。1曲が最後まで流れたらすぐ次へ。1周が終わったら並べ直し、**直前の曲が次の周の1曲目にならない**。2曲なら交互、1曲ならふつうに繰り返す(82 の `cardPlaylistPlayer`)。
+- 音の側: 14-audio の `Audio_.setBgmOnce(曲id, { onEnd, onFail })` でその曲だけ繰り返さずに流し、**最後まで流れたときだけ** 次へ進む(止めた・別の曲にした・裏へ回ったときは進まない)。ほかの曲を鳴らすと印が外れるので、ほかの画面の曲には効かない。先に読むのは次の1曲だけ。
+- 止めるとき: 対戦の画面(`CARD_BATTLE`)を出たら・ほかの曲にしたら止める(60-app の `playCardBgm`)。止めたあとに古い読み込みが終わっても、並びは進まない。
+- 読めない曲は飛ばす。並びの曲が続けて全部読めなければ、並びをやめて BGM を止める(対戦は続く。何度も読み直さない)。
+- オプション: 助手を選ぶ札(遊べる助手だけ)・曲の行(変える・試聴・外す)・曲を足す・はじめの曲に戻す・全員に同じ曲を入れる(確かめてから。やめれば何も変わらない)。同じ曲は選ぶ一覧に出さない。1曲のときは外せない。直すたびにその場で保存し、開いただけでは保存しない。試聴はオプションを閉じたら止める。
+- 保存は新しいキー `mh_card_cpu_playlist_v1`(`{ v:1, assistants:{ 助手id: [曲id…] } }`。`cardNormalizeCpuPlaylist`)。**前の1曲えらび(`mh_card_bgm_v1` の `cpu`)は使わなくなったが、消さない・書き換えない**。トップ画面・マルチ対戦・練習試合(みゅあの曲)はこれまでどおり。
+- 検査: `tools/card/card-cpu-playlist-check.js`(流す順・保存の読み方)・`tools/card/card-cpu-playlist-browser-check.js`(画面・保存・本物の音の出口・対戦)。
 
 **裏でクイック∞周回**(社長: ほかのモードと同じく、MFバトルカードを遊んでいるあいだも回り続ける)
 - 手本はモンヒロビート(`60-app.jsx` の `RHYTHM_BACKGROUND_RUN_SCREENS`・`rhythmBackgroundRun`・`returnToBackgroundRun`、[`QUICK_RHYTHM_LINK.md`](QUICK_RHYTHM_LINK.md))。
@@ -798,6 +808,7 @@ HOME の「MFバトルカード」
 | `mh_card_daily_v1` | `{ day:'YYYY-MM-DD', cpuCoin, pvpCoin, firstWin, foes:{ ブリーダーid: 戦った数 } }` | 今日の0 |
 | `mh_card_record_v1` | `{ cpu:{win,lose,surrender}, pvp:{win,lose}, recent:[…30件] }` | 0 |
 | `mh_card_bgm_v1` | `{ top: 曲id, cpu:'auto' か 曲id, pvp: 曲id }` BGM(5-3) | `{ top:'atsu_cup_theme', cpu:'auto', pvp:'ichika_battle' }`(top は 2026-10-26) |
+| `mh_card_cpu_playlist_v1` | `{ v:1, assistants:{ 助手id: [曲id 1〜5] } }` 助手と対戦の曲の並び(2026-10-26。`cardNormalizeCpuPlaylist`) | 助手ごとの曲1つ(上の表) |
 | `mh_card_cpu_unlocked_v1` | `{ hard, expert, master }` コンピューター戦の難易度を開いた印(5-5) | EASY・NORMAL だけ開いている |
 | `mh_card_settings_v1` | 対戦中の設定(演出・速さ・助手のひとこと・操作・自動・表示。項目は 82 の `CARD_SETTING_GROUPS`)・裏の周回の自動(`quickAutoStart`) | 既定値(`normalizeCardSettings` を通す。足した項目は前からの人にも既定値で補う。前の `speed:"fast"` は考える時間「はやい」・結果まで「短め」に引き継ぐ) |
 | `mh_card_ai_talk_v1` | 助手のおしゃべり(AI)の入/切 `{ on }`(仕様 `docs/spec/CARD_ASSISTANT_TALK.md`) | 入(`cardNormalizeAiTalk`) |
