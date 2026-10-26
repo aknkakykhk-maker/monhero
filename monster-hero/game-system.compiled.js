@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 179ea2bbe29ef541
+// source-sha256: 528127261fea0f63
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -40232,8 +40232,8 @@ const RhythmTapTest = ({
       }, React.createElement("b", {
         className: "shrink-0 text-lg font-black leading-none"
       }, failed ? 'FAILED' : 'CLEAR'), React.createElement("small", {
-        className: "min-w-0 text-[9px] font-black leading-snug"
-      }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
+        className: "min-w-0 break-keep text-[9px] font-black leading-snug"
+      }, failed ? React.createElement(React.Fragment, null, "ライフが0に", React.createElement("wbr", null), "なったまま", React.createElement("wbr", null), "曲が", React.createElement("wbr", null), "終わりました", React.createElement("wbr", null), "（DOWN）") : React.createElement(React.Fragment, null, "ライフを", React.createElement("wbr", null), "残して", React.createElement("wbr", null), "最後まで", React.createElement("wbr", null), "演奏しました")));
     })())), !tutorialProp && React.createElement("div", {
       className: "mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"
     }, React.createElement("span", {
@@ -40453,9 +40453,9 @@ const RhythmTapTest = ({
         "data-rhythm-live-log": true,
         className: "mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2"
       }, React.createElement("div", {
-        className: "flex items-baseline justify-between"
+        className: "flex items-baseline justify-between gap-2"
       }, React.createElement("b", {
-        className: "text-[11px] font-black tracking-wider text-cyan-200"
+        className: "shrink-0 whitespace-nowrap text-[11px] font-black tracking-wider text-cyan-200"
       }, "ライブログ"), React.createElement("small", {
         className: "text-[9px] font-bold text-slate-400"
       }, "棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS")), React.createElement("div", {
@@ -84973,7 +84973,9 @@ const cardResolveTarget = (db, st) => {
   const ar = cardEff(main, 'area');
   const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || ar && ar.only && cardMonType(target, st.turn) !== ar.only);
   if (missed) dmg = 0;
-  const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker;
+  const atkMon1 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  const noEvadeHere = cardIsHybridMon(target) && (!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && !cardIsHybridMon(atkMon1) || !!(pd.flags || {}).attachNoEvadeHybrid);
+  const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker && !noEvadeHere;
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
@@ -89647,7 +89649,7 @@ const cardMonArt = mon => {
   return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`;
+const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
 const cardUserLabel = (db, c) => {
   if (!c) return '';
   if (c.user === 'any') return '全モンスター';
@@ -93508,6 +93510,7 @@ const CardBattleScreen = ({
         daily: {
           ...daily,
           pvpPoint: daily.pvpPoint + got.point,
+          firstWin: daily.firstWin || bonus > 0,
           quickLoops: (daily.quickLoops || 0) + got.loops
         }
       }, {
@@ -100229,7 +100232,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 7;
+const CARD_REPLAY_RULES = 8;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
@@ -106794,7 +106797,7 @@ function MonsterHeroGame() {
   };
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
@@ -106805,7 +106808,7 @@ function MonsterHeroGame() {
       step: 0,
       live: true
     });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
   useEffect(() => {
     if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt();
   }, [bootPhase, battleCardArtDebug]);
@@ -106858,14 +106861,14 @@ function MonsterHeroGame() {
   }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!tacticsIntroPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay && !loginBonusPopup)) return;
     setTacticsIntroPending(false);
     setEventReplay({
       id: 'tactics_intro',
       step: 0,
       live: true
     });
-  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay, loginBonusPopup]);
   const rhythmEventLiveCatchUpRef = useRef(false);
   useEffect(() => {
     if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
@@ -108309,6 +108312,14 @@ function MonsterHeroGame() {
           setMomosukeIntroSeenFlag(true);
         } catch {}
       }
+      if (!wasOnboarded) {
+        for (const [on, key] of [[EVENT_REPLAY_RELEASE_FLAGS.assistantChat, ASSISTANT_CHAT_STORY_SEEN_KEY], [EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes, TACTICS_TYPES_STORY_SEEN_KEY], [EVENT_REPLAY_RELEASE_FLAGS.cardBattle, CARD_BATTLE_INTRO_STORY_SEEN_KEY]]) {
+          if (!on) continue;
+          try {
+            if ((await storeGet(key, false, false)) !== true) await storeSet(key, true, false);
+          } catch {}
+        }
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try {
           setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
@@ -108360,7 +108371,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -133475,6 +133486,7 @@ function MonsterHeroGame() {
         setEventReplay(null);
       };
       return React.createElement("div", {
+        "data-event-story": eventReplay.id,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',

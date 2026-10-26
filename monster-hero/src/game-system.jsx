@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e94492592a2b3308
+// generated-sha256: cc2885dbdbcb435d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24486,7 +24486,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {/* 「叩いて練習する」(tutorialProp)は記録にもランクにも関わらないので、CLEAR と「次のランクまで」は出さず、ひとことだけにする
     (2026-10-26 カゲあつ「全部MISSでも大きくCLEAR、次のランクFまであと600,000と出る」) */}
 {tutorialProp&&<p data-rhythm-result-practice className="mt-1.5 rounded-xl border-2 border-cyan-300/50 bg-cyan-950/40 px-2 py-1.5 text-[12px] font-black leading-snug text-cyan-100" style={JA_WRAP_STYLE}>{jaWrap('おつかれさま！本番の曲で遊んでみよう')}<small className="mt-0.5 block text-[9px] font-bold text-cyan-200/80" style={JA_WRAP_STYLE}>{jaWrap('練習のスコアは記録に残りません')}</small></p>}
-{!tutorialProp&&(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mt-1.5 flex items-center gap-2 rounded-xl border-2 px-2 py-1"><b className="shrink-0 text-lg font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="min-w-0 text-[9px] font-black leading-snug">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
+{!tutorialProp&&(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mt-1.5 flex items-center gap-2 rounded-xl border-2 px-2 py-1"><b className="shrink-0 text-lg font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="min-w-0 break-keep text-[9px] font-black leading-snug">{/* 折ってよい所だけ <wbr>(横向きで「演奏しま／した」と折れていた・2026-10-27) */failed?<>ライフが0に<wbr/>なったまま<wbr/>曲が<wbr/>終わりました<wbr/>（DOWN）</>:<>ライフを<wbr/>残して<wbr/>最後まで<wbr/>演奏しました</>}</small></div>;})()}
     </div>
   </div>
   {!tutorialProp&&<div className="mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"><span className="tracking-wider text-slate-400">BEST SCORE</span><b data-rhythm-result-best className="tabular-nums text-slate-100">{result.bestScore.toLocaleString()}</b></div>}
@@ -24579,7 +24579,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
 {(()=>{const sections=Array.isArray(result.liveLog)?result.liveLog:[];if(!sections.some(section=>section.total>0))return null;const worst=sections.filter(section=>section.total>=3&&(section.bad+section.miss)>0).sort((a,b)=>(b.bad+b.miss)/b.total-(a.bad+a.miss)/a.total)[0]||null;return <div data-rhythm-live-log className="mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2">
-  <div className="flex items-baseline justify-between"><b className="text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
+  <div className="flex items-baseline justify-between gap-2"><b className="shrink-0 whitespace-nowrap text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
   <div className="mt-2 grid grid-cols-8 items-end gap-1" style={{height:'44px'}}>{sections.map((section,i)=>{const rate=section.rate==null?0:section.rate;const color=section.total===0?'#334155':rate>=.9?'#fbbf24':rate>=.7?'#e879f9':rate>=.5?'#f87171':'#60a5fa';return <i key={i} data-rhythm-live-log-bar={String(i)} className="block rounded-t" style={{height:`${Math.max(6,Math.round(rate*100))}%`,background:color,opacity:section.total===0?.4:(section===worst?1:.85),outline:section===worst?'2px solid rgba(251,113,133,.9)':'none'}}/>;})}</div>
   <div className="mt-1 grid grid-cols-8 gap-1 text-center text-[9px] font-black tabular-nums">{sections.map((section,i)=><span key={i} className={section.bad+section.miss>0?'text-rose-300':'text-slate-500'}>{section.total===0?'−':section.bad+section.miss}</span>)}</div>
   <div className="mt-0.5 flex justify-between text-[8px] font-bold tabular-nums text-slate-500"><span>0:00</span><span>{rhythmClockLabel(result.liveLogEndMs)}</span></div>
@@ -51651,7 +51651,10 @@ const cardResolveTarget = (db, st) => {
   const ar = cardEff(main, 'area');
   const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || (ar && ar.only && cardMonType(target, st.turn) !== ar.only));
   if (missed) dmg = 0;
-  const evaded = pd.evaded || (pd.evadeAll && t.p !== pd.attacker); // みんな下がれ
+  // みんな下がれ: 純血のプライド(純血の子の攻撃)と純血のスピードのときは、派生の味方は一緒に回避できない(かばう回避も止める。2026-10-27 社長・案A)
+  const atkMon1 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  const noEvadeHere = cardIsHybridMon(target) && ((!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && !cardIsHybridMon(atkMon1)) || !!(pd.flags || {}).attachNoEvadeHybrid);
+  const evaded = pd.evaded || (pd.evadeAll && t.p !== pd.attacker && !noEvadeHere);
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
@@ -54577,7 +54580,7 @@ const cardMonArt = (mon) => {
   return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`);
+const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '');   // 全体カードはダメージが無い(「ダメージnull」と出ていた)
 const cardUserLabel = (db, c) => {
   if (!c) return '';
   if (c.user === 'any') return '全モンスター';
@@ -56805,6 +56808,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): ビートP・その日の数・記録(pvp の勝ち負け)・クイック周回
     // その日はじめての勝ちの +50 は、助手と対戦と同じ印(daily.firstWin)を使う。どちらで勝っても合わせて1日1回(2026-10-26 社長)
     // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
+    // ★クイック周回のあとの書き直しにも firstWin を入れる(抜けていて、印が消えて1日に何度も +50 になっていた。2026-10-27 総点検)
     const pvpReward = async (r) => {
       const base = cardPvpReward(r.reward, r.facts);
       // 書く直前に読み直す(助手と対戦と同じ。古い中身で記録・その日の数を上書きしない)
@@ -56818,7 +56822,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
-      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
+      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
       return { ...got, saved: ok, quick };
     };
     return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
@@ -60208,7 +60212,8 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   4 → 5: 防御でマイナスされない技には −N・半分・0 の防御の札を出せない(社長の答え 案A・2026-10-27)
 //   5 → 6: カウンターは半分を返して残りを受ける・歌うで飛ばした番では「攻撃できない」を使い切らない(2026-10-27 社長)
 //   6 → 7: 挑発・レロレロのあと、挑発した子に当たらない全員攻撃は出せない・冬虫散と灼熱の地のダメージでも溜めが終わる(総点検D・2026-10-27)
-const CARD_REPLAY_RULES = 7; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う
+//   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
+const CARD_REPLAY_RULES = 8; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -65982,9 +65987,10 @@ function MonsterHeroGame() {
     if (!rhythmEventStoryPending) return;
     // ★バトルのれんしゅうの案内の判定が終わり、れんしゅうの最中でないことも見る。
     //   はじめての人は「れんしゅうの案内 →(見る/見ない)→ れんしゅう → HOME → お話」の順になり、重ならない(2026-10-10・G8)
+    // ★ログインボーナスの窓が出ているあいだも待つ(2026-10-27 カゲあつ「お話がログインボーナスの窓の上に重なる」)。窓を閉じてから流す
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay
-      && battleGuideChecked && battleTutorialStep == null)) return;
+      && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
@@ -65995,7 +66001,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
   // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
   useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
@@ -66067,10 +66073,10 @@ function MonsterHeroGame() {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
-      && !rhythmEventStoryPending && !eventReplay)) return;
+      && !rhythmEventStoryPending && !eventReplay && !loginBonusPopup)) return;
     setTacticsIntroPending(false);
     setEventReplay({ id: 'tactics_intro', step: 0, live: true });
-  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay, loginBonusPopup]);
   // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
   //   「開催中か」を見ていたのは起動したときの1回だけだったので、15:00より前から
   //   ゲームを開いたままだった人には、会話も助手の告知も出なかった
@@ -67626,6 +67632,17 @@ function MonsterHeroGame() {
       else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
       // タクティクスバトルの導入。**公開しているときだけ**見に行く。
       // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
+      // 2026-10-27 社長「開催中のイベントだけ出す」: はじめての人が HOME に来た直後、昔のお知らせのお話(ことのはの鈴・タイプ・MFバトルカードのはじまり)が
+      // 続けて流れていた。はじめての人には見た扱いにする(プロフィールのイベント回想からいつでも見られる。前から遊んでいる人は今までどおり)。
+      // 印は既存のキーに true を書くだけ(新しいキーは足さない)。下で印を読む前に書くので、読み込みの途中で一度だけ流れることもない
+      if (!wasOnboarded) {
+        for (const [on, key] of [[EVENT_REPLAY_RELEASE_FLAGS.assistantChat, ASSISTANT_CHAT_STORY_SEEN_KEY],
+          [EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes, TACTICS_TYPES_STORY_SEEN_KEY],
+          [EVENT_REPLAY_RELEASE_FLAGS.cardBattle, CARD_BATTLE_INTRO_STORY_SEEN_KEY]]) {
+          if (!on) continue;
+          try { if ((await storeGet(key, false, false)) !== true) await storeSet(key, true, false); } catch {}
+        }
+      }
       // 難易度 HELL のお話を見たか。HELL の公開(rhythmHell)のあとだけ読む(公開前は回想にも出さないので要らない)
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
@@ -67680,7 +67697,8 @@ function MonsterHeroGame() {
       if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID,
+        // きゅうこの加入(2026-10-27 社長「開催中のイベントだけ出す」)。見た扱いにすると、マーケットのカード「きゅうこ」もふつうに並ぶ
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -83207,7 +83225,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
