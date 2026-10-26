@@ -51,6 +51,9 @@ const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=c7c5ba3d8031";
 // イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコン。商品はこのファイルの下の BREEDER_MARKET_ITEMS(近日追加)
 const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=8368da2a70b6";
 const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=3f5815550d74";
+// キュービ・オリヒメ(2026-10-27・案の段階)。マーケットの「近日追加」の商品は開発部が作る
+const KYUBI_DISC_ICON = "images/disc-icons/kyubi-disc.PNG?v=3ba6c9096afd";
+const ORIHIME_DISC_ICON = "images/disc-icons/orihime-disc.PNG?v=2463cbd1dd9e";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
