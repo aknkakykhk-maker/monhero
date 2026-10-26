@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 897656cf2e383f37
+// generated-sha256: f00a58c2a7e50700
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51952,7 +51952,11 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const q = pd.defender;
   const me = st.players[q];
   const { habit } = policy;
-  const opts = cardGuardOptions(db, st);
+  // 生き残りが2体以下のときは、守りをためしに当てて「守らなければ負けないのに、守ると負ける」守り(肉を切らせて・かばう など)を外す
+  const loseAfter = (a) => { try { const s = cardAiSettle(db, cardApplyAction(db, st, a)); return !!s && s.winner !== null && s.winner !== undefined && s.winner !== q; } catch (_) { return false; } };
+  const few = me.mons.filter((m) => !m.ko).length <= 2;
+  const passLoses = few && loseAfter({ type: 'pass' });
+  const opts = cardGuardOptions(db, st).filter((o) => !few || passLoses || !loseAfter(o));
   if (!opts.length) return { type: 'pass' };
   const main = cardOf(db, pd.main);
   const tgt = pd.targets[pd.ti];
@@ -52018,7 +52022,48 @@ const cardAiChooseGuts = (db, st, policy) => {
   order.forEach((o) => { if (o.k <= -9) pick.push(o.i); });
   for (const o of order) { if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break; if (!pick.includes(o.i)) pick.push(o.i); }
   const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感
-  return { type: 'guts', hand: gm ? pick.slice(0, gm.n) : pick };
+  // 山札切れを自分から呼ばない(2026-10-27 あつさん「山札を気にせず負ける」):
+  //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
+  return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, cardAiGutsCap(me)) };
+};
+// ガッツにしてよい枚数の上限(次の番に引く枚数が山札を超えないように)。山札が5枚以上あれば上限なし
+const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length)));
+
+// ---- 自分で負けにいく手を選ばない(2026-10-27 遊ぶ人の声。カード部の割り当て) ----
+// ソラシドさん「最後の1体しかいないのに自爆して負ける」・あつさん「山札を気にせず負ける」。
+// 危ない部品を持つ手だけ、ためしに打って(相手は守らない・選ぶ段は先頭)、次のどれかになる手は選ばない(どの強さでも。雑な手のときも)
+//   ・その手で自分のモンスターが全員倒れて負ける(相手も同時に全滅して勝てるなら選んでよい。攻撃した側の勝ち・ルール⑧)
+//   ・その手で山札が減り、次の自分の番に引く枚数より山札が少なくなる(もともと足りないときは、その手のせいではないので数えない)
+const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse',
+  'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
+const cardAiDrawNeed = (pl) => (pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length);
+const cardAiSettle = (db, st) => {
+  let s = st;
+  for (let i = 0; i < 40 && s && s.winner === null; i++) {
+    let a = null;
+    if (s.pendingPray) a = { type: 'pray' };
+    else if (s.pendingReveal) a = { type: 'reveal' };
+    else if (s.pendingChoice) a = { type: 'choose', pick: s.pendingChoice.cands[0] };
+    else if (s.pendingDiscard) a = { type: 'discard', hand: s.players[s.pendingDiscard.p].hand.map((_, k) => k).slice(0, s.pendingDiscard.n) };
+    else if (s.pending) a = { type: 'pass' };
+    if (!a) break;
+    s = cardApplyAction(db, s, a) || null;
+  }
+  return s;
+};
+// その手で自分から負けるか(true なら選ばない)。p … 手を出す人
+const cardAiLosesBy = (db, st, opt, p = st.active) => {
+  if (!opt || !Array.isArray(opt.hand) || (opt.type !== 'attack' && opt.type !== 'breeder')) return false;
+  const me = st.players[p];
+  const risky = opt.hand.some((i) => { const c = cardOf(db, me.hand[i]); return c && (c.effects || []).some((e) => CARD_AI_RISKY_EFFS.includes(e.t)); });
+  if (!risky) return false;
+  let s;
+  try { s = cardAiSettle(db, cardApplyAction(db, st, opt)); } catch (_) { return false; }
+  if (!s) return false;
+  if (s.winner !== null && s.winner !== undefined) return s.winner !== p;
+  const after = s.players[p];
+  if (after.deck.length < me.deck.length && after.deck.length < cardAiDrawNeed(after) && me.deck.length >= cardAiDrawNeed(me)) return true;
+  return false;
 };
 
 // 影縛りを付けた手に、名指しする守りの名前を入れる。手札を読む難易度は相手の手札の守り、
@@ -52070,9 +52115,9 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
     const hand = st.players[st.active].hand;
     const gm = cardFieldEff(st, 'fieldGutsMax');
-    return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, gm ? gm.n : 99) };
+    return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, cardAiGutsCap(st.players[st.active]))) };
   }
-  const opts = cardAttackOptions(db, st);
+  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o)); // 自分で負けにいく手は、どの強さでも選ばない
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
