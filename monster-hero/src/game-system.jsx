@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a78ed0666129f70b
+// generated-sha256: e7cc4dfcce7d85c3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58123,6 +58123,15 @@ const cardPvpApplyRemote = (db, st, msg) => {
       if (!cardOf(db, msg.discard[i]) || (have !== CARD_PVP_HIDDEN && have !== msg.discard[i])) return null;
     }
     next.players[1].discard = msg.discard.slice();
+    // 捨て札から選ぶ段(回避プログラム・悪夢など)の候補は、本物の捨て札で作り直す。払ったガッツはこちらでは仮の札のまま捨て札に入るので、
+    //   絞り込みのある札だと候補が相手の端末より少なくなり、相手が選んだ手をはねて試合が止まった(2026-10-27 総点検D)。いま使った札は選べない
+    const ch = next.pendingChoice;
+    if (ch && ch.p === 1 && ch.src === 'discard' && !(st.pendingChoice)) {
+      const fa = cardPvpFlip(msg.act);
+      const e = cardEff(cardOf(db, ch.card), 'choose');
+      const used = Array.isArray(fa.hand) ? fa.hand.length : 0;
+      if (e) ch.cands = cardChoiceCands(db, next, 1, fa.mon !== undefined ? fa.mon : -1, e, next.players[1].discard.length - used);
+    }
   }
   next.players[1].deck = next.players[1].deck.map(() => CARD_PVP_HIDDEN); // 山札へ戻した札(伝説のちから・時間稼ぎなど)も仮の札に
   return next;
