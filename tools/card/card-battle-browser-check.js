@@ -329,6 +329,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
+      // カードの大写し(2026-10-26)が出ているあいだは、画面のタップが「先へ進む」になる。消えるのを待ってから次の手
+      if (await page.locator('[data-card-big]').count()) { await page.waitForFunction(() => !document.querySelector('[data-card-big]'), null, { timeout: 5000 }).catch(() => {}); continue; }
       if (mode === 'setup') { await page.getByRole('button', { name: /始める$/ }).click(); continue; }
       if (mode === 'discard') { const n = await page.locator('[data-card-hand-card]').count(); for (let i = 0; i < n; i++) await page.locator(`[data-card-hand-card="${i}"]`).click(); await page.getByRole('button', { name: /捨てる$/ }).click().catch(() => {}); continue; }
       if (mode === 'guard') {
@@ -381,7 +383,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
               await page.mouse.up();
               tried = true;
               await page.waitForTimeout(300);
-              const changed = (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              // 自分の手は、先にカードを大きく出してから効く(2026-10-26)。大写しが出たら「使えた」、消えるまで待つ
+              const bigMine = (await page.locator('[data-card-big="me"]').count()) > 0;
+              const changed = bigMine || (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              if (bigMine) await page.waitForTimeout(1000);
               if (changed) { myActions += 1; dragAttack = true; dragNoGlow = midGlow === 0; }
               break;
             }
