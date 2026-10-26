@@ -21,7 +21,7 @@ const HAM_IMG = "images/monsters/ham.png?v=106321d09a72";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=38f7f50cd68b";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
-const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=e6c4b23ee988";
+const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=ac56746b5791";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
@@ -167,12 +167,17 @@ const KUROMY_DYE_MASK = "images/monsters/kuromy-dye-mask.PNG?v=7e06f8e564b2";
 // イルミネ・ドリーミィ(2026-10-22・案の段階・イルミネ×イルミネ / イルミネ×ニャー)。
 // 元絵は tools/art-sources/new-monsters-2026-10-22/。透明な余白を切って高さ916pxへ縮め、256色へ減色(グラデーションの段が出ないよう誤差拡散)
 const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
-const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=f129752bb07a";
-const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
+const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=ecdc51013525";
+const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=c6419eaba43c";
 const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
 // 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
 // ケンタウロスは背景に散ったごく薄い光の画素(不透明度64未満)を消してから取り込んだ
+// キュービ・オリヒメ(2026-10-27・案の段階)。元絵は tools/art-sources/kyubi-orihime-2026-10-27/。高さ916px・256色(sharp)
+const KYUBI_IMG = "images/monsters/kyubi.png?v=f3711a72a817";
+const KYUBI_DYE_MASK = "images/monsters/kyubi-dye-mask.PNG?v=fc6210422555";
+const ORIHIME_DYE_MASK = "images/monsters/orihime-dye-mask.PNG?v=5868e56697c0";
+const ORIHIME_IMG = "images/monsters/orihime.png?v=86ff26c44dcb";
 const MF_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
 const MF_GALI_IMG = "images/monsters/gali.png?v=802cb6ce6f64";
 const MF_NAGA_IMG = "images/monsters/naga.png?v=07114a6c8886";
@@ -309,15 +314,15 @@ const KENSHI_MOCCHI_ICON = KENSHI_MOCCHI_IMG;
 // そのまま顔アイコンとして使えるモンスターだけ、base64 を重複させず変数参照にしている。
 const MOCCHI_FACE_ICON = "images/monster-icons/face/mocchi.png?v=96be4cbc1468";
 const HAM_FACE_ICON = "images/monster-icons/face/ham.png?v=fbe8e4f70214";
-const TIGER_FACE_ICON = TIGER_ICON;
+const TIGER_FACE_ICON = "images/monster-icons/face/tiger.png?v=1557ff181186";
 const PIXIE_FACE_ICON = "images/monster-icons/face/pixie.png?v=d33b92e39fa0";
-const MIA_FACE_ICON = MIA_IMG;
-const PANDORA_FACE_ICON = PANDORA_IMG;
+const MIA_FACE_ICON = "images/monster-icons/face/mia.png?v=35b65c9e07c6";
+const PANDORA_FACE_ICON = "images/monster-icons/face/pandora.png?v=2f1277f1d3bb";
 const SUEZO_FACE_ICON = "images/monster-icons/face/suezo.png?v=696938ca7d63";
 const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=8ef71840d1d5";
 const MONOL_FACE_ICON = MONOL_ICON;
 const OBORO_FACE_ICON = OBORO_ICON;
-const PLANT_FACE_ICON = PLANT_IMG;
+const PLANT_FACE_ICON = "images/monster-icons/face/plant.png?v=b79e75dedc41";
 const YGGDRASIL_ICON = YGGDRASIL_IMG;
 const MEL_WHIP_ICON = MEL_WHIP_IMG;
 const GHOST_ICON = GHOST_IMG;
@@ -329,16 +334,16 @@ const DREAMY_ICON = DREAMY_IMG;
 const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=b4a2ad9cdd58";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=b5e3a96b27c0";
-const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=9663afec97f9";
-const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d920ec35a";
+const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=bdd570ce943a";
+const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=31dc864654c1";
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
 const UNDINE_FACE_ICON = "images/monster-icons/face/undine.png?v=fe1ba930173b";
 const YAOBIKUNI_FACE_ICON = "images/monster-icons/face/yaobikuni.png?v=32838d8bdd5a";
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
-const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
-const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
+const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=32b08d1fc0cd";
+const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=a4f626c0fde8";
 const GHOST_FACE_ICON = "images/monster-icons/face/ghost.png?v=fdbc8d32d2cd";
 const SPOOKY_FACE_ICON = "images/monster-icons/face/spooky.png?v=2c047a771ffe";
 const MELODY_FACE_ICON = "images/monster-icons/face/melody.png?v=95bbe06158e4";
@@ -406,6 +411,8 @@ const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=b3722ab1b74e
 const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=9fcfee53438b";
 const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=4ee1ce8f7085";
 const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
+const KYUBI_FACE_ICON = "images/monster-icons/face/kyubi.png?v=6648b970a72f";
+const ORIHIME_FACE_ICON = "images/monster-icons/face/orihime.png?v=887beb2d000f";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,
@@ -525,9 +532,100 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   metalner: LINEAGE_ICON_METALNER,
   worm: LINEAGE_ICON_WORM,
   centaur: LINEAGE_ICON_CENTAUR,
+  kyubi: LINEAGE_ICON_KYUBI,
   unknown: LINEAGE_ICON_RAREMON,
 });
 
+// 顔アイコンが全身絵そのものの子(顔アイコンを作っていない)。モノリスは顔のない板、オボロゲソウ・プラントは顔が体の下にあるので、全身のほうが分かりやすい。
+// ライガー・ミーア・パンドラは顔アイコンの案を社長が選ぶまでのあいだ。ここに無い子の顔アイコンが全身絵だと、tools/image/art-anchor-check.js が止める
+const ART_FACE_FULL_BODY = Object.freeze(['MONOL', 'OBORO']);
+// 顔のまんなか(2026-10-26 社長「顔アイコンと全身絵のずれが出ない仕組み」)。全身絵(◯◯_IMG)の中で、顔アイコンの丸のまんなかに来る点(0〜1)。
+// 顔(目のあいだ・鼻)のまんなかを書く。顔アイコンは tools/image/make-face-icons.js がこの点を丸のまんなかに置いて作る。
+// 新しい子を足したら、ここにも書く(tools/image/art-anchor-check.js が、書いていない子を止める)。書き出しは tools/image/art-anchors.js
+const ART_ANCHORS = Object.freeze({
+  MOCCHI: Object.freeze({ face: Object.freeze([0.5, 0.246]) }),
+  SUEZO: Object.freeze({ face: Object.freeze([0.5, 0.465]) }),
+  PIXIE: Object.freeze({ face: Object.freeze([0.494, 0.232]) }),
+  GOLEM: Object.freeze({ face: Object.freeze([0.492, 0.155]) }),
+  MITARASHI: Object.freeze({ face: Object.freeze([0.493, 0.259]) }),
+  IBLIS: Object.freeze({ face: Object.freeze([0.476, 0.32]), zoom: 1.15 }),
+  ZAN: Object.freeze({ face: Object.freeze([0.5, 0.229]) }),
+  ARK: Object.freeze({ face: Object.freeze([0.5, 0.393]) }),
+  HAM: Object.freeze({ face: Object.freeze([0.51, 0.356]) }),
+  SNEGUROCHKA: Object.freeze({ face: Object.freeze([0.461, 0.24]), zoom: 1.185 }),
+  EIKI: Object.freeze({ face: Object.freeze([0.5, 0.119]) }),
+  KENSHI_MOCCHI: Object.freeze({ face: Object.freeze([0.5, 0.272]) }),
+  UNDINE: Object.freeze({ face: Object.freeze([0.472, 0.148]) }),
+  YAOBIKUNI: Object.freeze({ face: Object.freeze([0.482, 0.145]) }),
+  YGGDRASIL: Object.freeze({ face: Object.freeze([0.505, 0.324]), zoom: 1.218 }),
+  TIGER: Object.freeze({ face: Object.freeze([0.49, 0.304]) }),
+  MIA: Object.freeze({ face: Object.freeze([0.497, 0.214]) }),
+  PANDORA: Object.freeze({ face: Object.freeze([0.482, 0.208]) }),
+  PLANT: Object.freeze({ face: Object.freeze([0.5, 0.522]), zoom: 1.302 }),
+  MEL_WHIP: Object.freeze({ face: Object.freeze([0.549, 0.333]), zoom: 1.341 }),
+  GHOST: Object.freeze({ face: Object.freeze([0.5, 0.387]) }),
+  SPOOKY: Object.freeze({ face: Object.freeze([0.5, 0.337]) }),
+  MELODY: Object.freeze({ face: Object.freeze([0.51, 0.312]) }),
+  KUROMY: Object.freeze({ face: Object.freeze([0.57, 0.378]) }),
+  ILLUMINE: Object.freeze({ face: Object.freeze([0.49, 0.238]) }),
+  DREAMY: Object.freeze({ face: Object.freeze([0.45, 0.147]) }),
+  MF_DINO: Object.freeze({ face: Object.freeze([0.347, 0.168]) }),
+  MF_NAGA: Object.freeze({ face: Object.freeze([0.5, 0.166]) }),
+  MF_HENGER: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  MF_ARROWHEAD: Object.freeze({ face: Object.freeze([0.499, 0.637]) }),
+  MF_ZILLA: Object.freeze({ face: Object.freeze([0.421, 0.241]) }),
+  MF_JOKER: Object.freeze({ face: Object.freeze([0.52, 0.246]) }),
+  MF_JELL: Object.freeze({ face: Object.freeze([0.494, 0.133]) }),
+  MF_MEW: Object.freeze({ face: Object.freeze([0.426, 0.368]) }),
+  MF_METALNER: Object.freeze({ face: Object.freeze([0.511, 0.199]) }),
+  MF_CENTAUR: Object.freeze({ face: Object.freeze([0.553, 0.279]) }),
+  MF_COLORPANDORA: Object.freeze({ face: Object.freeze([0.5, 0.314]) }),
+  MF_GALI: Object.freeze({ face: Object.freeze([0.485, 0.169]) }),
+  MF_DRAGON: Object.freeze({ face: Object.freeze([0.496, 0.13]) }),
+  MF_DURAHAN: Object.freeze({ face: Object.freeze([0.434, 0.239]) }),
+  MF_PHOENIX: Object.freeze({ face: Object.freeze([0.494, 0.377]) }),
+  MF_WORM: Object.freeze({ face: Object.freeze([0.5, 0.683]) }),
+  HYBRID_C051: Object.freeze({ face: Object.freeze([0.4, 0.277]) }),
+  HYBRID_C052: Object.freeze({ face: Object.freeze([0.5, 0.184]) }),
+  HYBRID_C053: Object.freeze({ face: Object.freeze([0.485, 0.36]) }),
+  HYBRID_C054: Object.freeze({ face: Object.freeze([0.5, 0.159]) }),
+  HYBRID_C056: Object.freeze({ face: Object.freeze([0.497, 0.205]) }),
+  HYBRID_C057: Object.freeze({ face: Object.freeze([0.509, 0.135]) }),
+  HYBRID_C058: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  HYBRID_C059: Object.freeze({ face: Object.freeze([0.5, 0.525]) }),
+  HYBRID_C060: Object.freeze({ face: Object.freeze([0.515, 0.435]) }),
+  HYBRID_C061: Object.freeze({ face: Object.freeze([0.5, 0.475]) }),
+  HYBRID_C062: Object.freeze({ face: Object.freeze([0.5, 0.649]) }),
+  HYBRID_C055: Object.freeze({ face: Object.freeze([0.5, 0.387]) }),
+  HYBRID_C063: Object.freeze({ face: Object.freeze([0.521, 0.26]) }),
+  HYBRID_C064: Object.freeze({ face: Object.freeze([0.44, 0.184]) }),
+  HYBRID_C065: Object.freeze({ face: Object.freeze([0.485, 0.235]) }),
+  HYBRID_C010: Object.freeze({ face: Object.freeze([0.356, 0.25]) }),
+  HYBRID_C012: Object.freeze({ face: Object.freeze([0.5, 0.425]) }),
+  HYBRID_C013: Object.freeze({ face: Object.freeze([0.5, 0.15]) }),
+  HYBRID_C015: Object.freeze({ face: Object.freeze([0.5, 0.328]) }),
+  HYBRID_C016: Object.freeze({ face: Object.freeze([0.487, 0.185]) }),
+  HYBRID_C017: Object.freeze({ face: Object.freeze([0.49, 0.2]) }),
+  HYBRID_C018: Object.freeze({ face: Object.freeze([0.5, 0.45]) }),
+  HYBRID_C019: Object.freeze({ face: Object.freeze([0.5, 0.19]) }),
+  HYBRID_C033: Object.freeze({ face: Object.freeze([0.5, 0.185]) }),
+  HYBRID_C034: Object.freeze({ face: Object.freeze([0.35, 0.2]) }),
+  HYBRID_C035: Object.freeze({ face: Object.freeze([0.505, 0.275]) }),
+  HYBRID_C036: Object.freeze({ face: Object.freeze([0.5, 0.2]) }),
+  HYBRID_C038: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  HYBRID_C039: Object.freeze({ face: Object.freeze([0.381, 0.3]) }),
+  HYBRID_C040: Object.freeze({ face: Object.freeze([0.5, 0.45]) }),
+  HYBRID_C041: Object.freeze({ face: Object.freeze([0.5, 0.625]) }),
+  HYBRID_C042: Object.freeze({ face: Object.freeze([0.5, 0.18]) }),
+  HYBRID_C020: Object.freeze({ face: Object.freeze([0.5, 0.25]) }),
+  HYBRID_C043: Object.freeze({ face: Object.freeze([0.41, 0.165]) }),
+  HYBRID_C045: Object.freeze({ face: Object.freeze([0.5, 0.15]) }),
+  HYBRID_C044: Object.freeze({ face: Object.freeze([0.335, 0.21]) }),
+  HYBRID_C032: Object.freeze({ face: Object.freeze([0.5, 0.11]) }),
+  HYBRID_C037: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
+  HYBRID_C014: Object.freeze({ face: Object.freeze([0.359, 0.21]) }),
+  HYBRID_C011: Object.freeze({ face: Object.freeze([0.503, 0.11]) }),
+});
 // <monster-thumbs>
 // 小さい枠(64px 以下)で使うモンスターの小さい版。tools/image/make-monster-thumbs.js が作る(手で書かない)
 const MONSTER_THUMBS = {
