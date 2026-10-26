@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95607eb5f8427c76
+// source-sha256: 0c2b887e233d2f4e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91417,11 +91417,13 @@ const CardBattleBoard = ({
     "data-card-head-turn-me": turnMe ? '1' : undefined,
     className: `min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`,
     style: JA_WRAP_STYLE
-  }, React.createElement("span", {
+  }, replay && st.phase === 'setup' ? React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "はじまり") : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap"
   }, "ターン ", Math.max(1, st.turn)), " ・ ", React.createElement("span", {
     className: `whitespace-nowrap ${turnMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`
-  }, turnMe ? 'あなたの番' : `${who.name}の番`)))), React.createElement("div", {
+  }, turnMe ? 'あなたの番' : `${who.name}の番`))))), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
@@ -91449,7 +91451,7 @@ const CardBattleBoard = ({
     className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`
   }, who.name, React.createElement("small", {
     className: "block text-[10px] font-bold text-rose-200"
-  }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
+  }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦')), React.createElement("div", {
     className: "ml-auto"
   }, strip(CARD_CPU))), replay && React.createElement("div", {
     "data-card-replay-foe-hand": true,
@@ -92972,7 +92974,8 @@ const CardBattleScreen = ({
               deckName: log.deckName
             },
             outcome,
-            reason: ''
+            reason: '',
+            level: game.level
           });
           if (rec && (await cardReplaySave(rec))) replayId = rec.id;
         }
@@ -100036,7 +100039,8 @@ const cardReplayNormalizeOne = raw => {
     acts,
     prints: typeof raw.prints === 'string' && /^[0-9a-z]*$/.test(raw.prints) && raw.prints.length === acts.length * 4 ? raw.prints : '',
     fav: raw.fav === true,
-    turn: Number.isInteger(raw.turn) && raw.turn >= 0 && raw.turn < 10000 ? raw.turn : null
+    turn: Number.isInteger(raw.turn) && raw.turn >= 0 && raw.turn < 10000 ? raw.turn : null,
+    level: typeof raw.level === 'string' && /^[a-z]{3,12}$/.test(raw.level) ? raw.level : null
   };
 };
 const cardReplayNormalize = raw => {
@@ -100190,6 +100194,14 @@ const cardReplayCaption = (states, i) => {
   }
   return lines.filter(l => l.kind !== 'turn').map(l => l.text).filter(Boolean).slice(-2).join(' / ');
 };
+const cardReplayActText = (type, name) => {
+  if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'pass') return `${name}は守らなかった`;
+  if (type === 'reveal') return `${name}は手札を見せた`;
+  if (type === 'pray') return `${name}はおいのりをした`;
+  if (type === 'guts' || type === 'setupGuts') return `${name}は${type === 'setupGuts' ? '始める前に' : ''}ガッツにしなかった`;
+  return '';
+};
 const cardReplayMake = (db, {
   kind,
   match,
@@ -100200,7 +100212,8 @@ const cardReplayMake = (db, {
   history,
   foe,
   outcome,
-  reason
+  reason,
+  level = null
 }) => {
   const rec = {
     v: 1,
@@ -100226,7 +100239,8 @@ const cardReplayMake = (db, {
     seeds: seeds.map(n => n >>> 0),
     acts: (history || []).map(e => [e.by, e.act]),
     prints: '',
-    fav: false
+    fav: false,
+    level
   };
   const one = cardReplayNormalizeOne(rec);
   if (!one) return null;
@@ -100270,7 +100284,8 @@ const cardReplayFromCpu = (db, {
   history,
   foe,
   outcome,
-  reason
+  reason,
+  level = null
 }) => cardReplayMake(db, {
   kind: 'cpu',
   match: id,
@@ -100281,7 +100296,8 @@ const cardReplayFromCpu = (db, {
   history,
   foe,
   outcome,
-  reason
+  reason,
+  level
 });
 let _cardReplayIds = new Set();
 const cardReplayNoteIds = box => {
@@ -100390,7 +100406,7 @@ const cardReplayGameOf = (db, rec) => {
     key: `replay-${rec.id}-${Date.now()}`,
     st: built.states[0],
     who: rec.kind === 'cpu' && rec.foe.who ? rec.foe.who : 'pvp',
-    level: 'normal',
+    level: rec.level,
     replay: {
       id: rec.id,
       kind: rec.kind,
@@ -100398,6 +100414,8 @@ const cardReplayGameOf = (db, rec) => {
       stop: built.stop,
       total: rec.acts.length,
       turns: cardReplayTurnStarts(built.states),
+      by: rec.acts.map(a => a[0]),
+      types: rec.acts.map(a => a[1].type),
       foe: {
         name: rec.foe.name,
         icon: rec.foe.icon || '🙂',
@@ -100443,7 +100461,11 @@ const CardReplayBar = ({
     return () => clearTimeout(t);
   }, [auto, at, speed]);
   const st = replay.states[at];
-  const caption = cardReplayCaption(replay.states, at);
+  const prev = at > 0 ? replay.states[at - 1] : null;
+  const by = at > 0 && replay.by ? replay.by[at - 1] : null;
+  const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
+  const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `${prev.turn}番目の番` : 'はじまり'}・${byName}`;
+  const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
   const btn = 'mh-button mh-button-secondary min-h-[40px] flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40';
   const go = n => {
     Audio_.fgSe.tap();
@@ -100455,8 +100477,9 @@ const CardReplayBar = ({
   }, React.createElement("div", {
     className: "flex items-center justify-between gap-2 text-[11px] font-bold text-sky-100"
   }, React.createElement("span", {
-    "data-card-replay-turn": true
-  }, st && st.turn >= 1 ? `${st.turn}番目の番・${st.active === 0 ? 'あなた' : replay.foe.name}` : 'はじまり'), React.createElement("span", {
+    "data-card-replay-turn": true,
+    "data-card-replay-by": by === null ? undefined : by
+  }, label), React.createElement("span", {
     "data-card-replay-step": true,
     className: "text-slate-300"
   }, at, "/", replay.total, "手")), React.createElement("div", {
