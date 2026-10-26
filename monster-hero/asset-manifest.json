@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b47c6df66e7e",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117694759,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257269897,"count":1719},"core":{"bytes":14153719,"count":22}},
+  "id": "f556bf3bdcda",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":117694759,"count":692},"card":{"bytes":32187692,"count":934},"all":{"bytes":257269897,"count":1719},"core":{"bytes":14154233,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1724,7 +1724,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"68be695ad5e7","size":239846,"pack":"core"},
+    "tailwind.css": {"v":"c553c6c78d0f","size":239846,"pack":"core"},
     "data/images/images-ally.js": {"v":"5ad4f7999ca5","size":39965,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"642e85aae599","size":56498,"pack":"core"},
@@ -1738,11 +1738,11 @@
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"ddcb715aad87","size":76361,"pack":"core"},
     "data/changelog.js": {"v":"092471b3ad30","size":1446049,"pack":"core"},
-    "data/help.js": {"v":"43482f5d5d29","size":645652,"pack":"core"},
+    "data/help.js": {"v":"c19cc278f555","size":645652,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"fac21def3297","size":837514,"pack":"core"},
     "data/card-battle-cards.js": {"v":"c2b5285eda05","size":112387,"pack":"core"},
-    "game-system.compiled.js": {"v":"478d90a23b97","size":6468441,"pack":"core"}
+    "game-system.compiled.js": {"v":"2e6a1737b5e8","size":6468955,"pack":"core"}
   }
 }
