@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac0d848ca990d699
+// source-sha256: b980ab9c617fdfdf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -41245,7 +41245,7 @@ const DebugScreenHead = ({
 }, React.createElement("h2", {
   className: "truncate text-sm font-black text-white"
 }, title), note && React.createElement("small", {
-  className: "block truncate text-[9px] font-bold text-slate-400"
+  className: "block text-[9px] font-bold leading-snug text-slate-400 [overflow-wrap:anywhere]"
 }, note)), React.createElement("span", {
   "data-debug-saves": saves ? 'yes' : 'no',
   className: `ml-auto shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black ${saves ? 'bg-rose-700 text-white' : 'border border-white/15 bg-slate-900 text-slate-300'}`
@@ -73683,17 +73683,11 @@ function MonsterCheckDebugScreen({
       "data-monster-check-debug": true,
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
-    }, React.createElement("header", {
-      className: "flex items-center gap-2"
-    }, React.createElement("button", {
-      "aria-label": "デバッグ設定へ戻る",
-      onClick: onBack,
-      className: "p-3 text-slate-400 active:scale-90"
-    }, React.createElement(ArrowLeft, {
-      size: 20
-    })), React.createElement("h2", {
-      className: "text-lg font-black italic text-emerald-300 uppercase tracking-widest"
-    }, "新モンスター確認")), React.createElement("div", {
+    }, React.createElement(DebugScreenHead, {
+      title: "新モンスター確認",
+      note: "全種を所持・解放に関係なく表示",
+      onBack: onBack
+    }), React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, React.createElement("p", {
       className: "p-6 text-center text-[11px] font-bold text-slate-400"
@@ -73780,17 +73774,11 @@ function MonsterCheckDebugScreen({
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
       }
-    }, React.createElement("div", {
-      className: "flex items-center gap-2 mb-2 shrink-0"
-    }, React.createElement("button", {
-      onClick: onBack,
-      className: "p-3 text-slate-400 active:scale-90",
-      "aria-label": "デバッグ設定へ戻る"
-    }, React.createElement(ArrowLeft, {
-      size: 20
-    })), React.createElement("h2", {
-      className: "text-lg font-black italic text-emerald-300 uppercase tracking-widest"
-    }, "新モンスター確認")), React.createElement("div", {
+    }, React.createElement(DebugScreenHead, {
+      title: "新モンスター確認",
+      note: "全種を所持・解放に関係なく表示",
+      onBack: onBack
+    }), React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/70 to-slate-950 px-3 py-2 flex items-center justify-between gap-2"
     }, React.createElement("span", {
       className: "text-[9px] font-black text-emerald-300 uppercase tracking-widest shrink-0"
@@ -124489,24 +124477,17 @@ function MonsterHeroGame() {
         }
       }, React.createElement("div", {
         className: "mh-debug-banner"
-      }, "DEBUG・模様は保存されません"), React.createElement("header", {
-        className: "flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"
-      }, React.createElement("button", {
-        "aria-label": "戻る",
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-300"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("div", {
-        className: "min-w-0"
-      }, React.createElement("small", {
-        className: "block text-[8px] font-black text-fuchsia-400"
-      }, "PATTERN CUSTOM TEST"), React.createElement("h2", {
-        className: "truncate text-xs font-black"
-      }, selected ? selected.name : 'マスモン模様カスタム')), selected && React.createElement("button", {
-        onClick: () => setPatternMasuId(null),
-        className: "ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black"
-      }, "変更")), eligible.length === 0 ? React.createElement("section", {
+      }, "DEBUG・模様は保存されません"), React.createElement("div", {
+        className: "px-2 pt-1 border-b border-white/10"
+      }, React.createElement(DebugScreenHead, {
+        title: selected ? selected.name : 'マスモン模様カスタムテスト',
+        note: "模様は保存されません",
+        onBack: () => setGameState('DEBUG_SETTINGS'),
+        right: selected && React.createElement("button", {
+          onClick: () => setPatternMasuId(null),
+          className: "min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black"
+        }, "変更")
+      })), eligible.length === 0 ? React.createElement("section", {
         className: "flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300"
       }, "カスタマイズできる所持マスモンがいません") : !selected ? React.createElement("section", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4"
@@ -125009,18 +124990,11 @@ function MonsterHeroGame() {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
         }
-      }, React.createElement("header", {
-        className: "flex items-center gap-2 mb-3 shrink-0"
-      }, React.createElement("button", {
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("div", null, React.createElement("small", {
-        className: "text-[8px] font-black text-fuchsia-400"
-      }, "DEBUG・保存されません"), React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "プロフィールの見た目"))), React.createElement("div", {
+      }, React.createElement(DebugScreenHead, {
+        title: "プロフィールの見た目",
+        note: "顔アイコンの拡大・位置を決めてコピー／フレームとの相性",
+        onBack: () => setGameState('DEBUG_SETTINGS')
+      }), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3"
       }, React.createElement("input", {
         type: "search",
@@ -125174,18 +125148,12 @@ function MonsterHeroGame() {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
         }
-      }, React.createElement("header", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, React.createElement("button", {
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("div", null, React.createElement("small", {
-        className: "text-[8px] font-black text-amber-300"
-      }, "DEBUG・本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します"), React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "育成マークの見た目"))), React.createElement("div", {
+      }, React.createElement(DebugScreenHead, {
+        title: "育成マークの見た目",
+        note: "本番と同じ★・オーラ・バッジ／「試す準備」だけ保存します",
+        saves: true,
+        onBack: () => setGameState('DEBUG_SETTINGS')
+      }), React.createElement("div", {
         role: "tablist",
         "aria-label": "見る段階",
         className: "shrink-0 mb-2 grid grid-cols-4 gap-1"
@@ -127660,19 +127628,12 @@ function MonsterHeroGame() {
           paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
         }
-      }, React.createElement("header", {
-        className: "flex items-center gap-2 mb-3 shrink-0"
-      }, React.createElement("button", {
-        "aria-label": "デバッグ設定へ戻る",
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("div", null, React.createElement("small", {
-        className: "text-[8px] font-black text-emerald-300"
-      }, "DEBUG・保存先 ", SPECIES_CHALLENGE_PROGRESS_KEY), React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "種族チャレンジ進行確認"))), React.createElement("section", {
+      }, React.createElement(DebugScreenHead, {
+        title: "種族チャレンジ進行確認",
+        note: `保存先 ${SPECIES_CHALLENGE_PROGRESS_KEY}`,
+        saves: true,
+        onBack: () => setGameState('DEBUG_SETTINGS')
+      }), React.createElement("section", {
         className: "shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3"
       }, React.createElement("button", {
         "data-species-challenge-production-flow": true,
