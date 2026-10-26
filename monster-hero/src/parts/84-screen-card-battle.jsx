@@ -2631,7 +2631,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- トップ(モンヒロビートのモードえらび・モンヒロバトルの入口と同じ作り。社長 台帳 #3513) ----
   //   上: 英字の小見出しと題 / まんなか: 助手の大きい立ち絵と吹き出し / その下: 色つきの大きい札 2×2 / いちばん下: 小さいボタンの列
   // 吹き出しの文は言葉の切れ目で折る(「どこまでいく/かな」のように折れないように)
-  const topAssistantShown = topAssistant ? { ...topAssistant, text: <span style={JA_WRAP_STYLE}>{jaWrap(topAssistant.text)}</span> } : null;
+  // 台詞は文字のまま渡す(入口の吹き出し ModeSelectAssistantPanel が jaWrap で折る。前は折った部品を渡し、「[object Object]」と出た。2026-10-27)
+  const topAssistantShown = topAssistant;
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
   const go = (v) => () => { Audio_.fgSe.tap(); setNotice(''); setView(v); };
   const bigCards = [
