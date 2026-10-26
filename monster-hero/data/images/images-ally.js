@@ -21,7 +21,7 @@ const HAM_IMG = "images/monsters/ham.png?v=106321d09a72";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=38f7f50cd68b";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
-const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=e6c4b23ee988";
+const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=ac56746b5791";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
@@ -168,7 +168,7 @@ const KUROMY_DYE_MASK = "images/monsters/kuromy-dye-mask.PNG?v=7e06f8e564b2";
 // 元絵は tools/art-sources/new-monsters-2026-10-22/。透明な余白を切って高さ916pxへ縮め、256色へ減色(グラデーションの段が出ないよう誤差拡散)
 const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
 const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=ecdc51013525";
-const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
+const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=c6419eaba43c";
 const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
 // 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
