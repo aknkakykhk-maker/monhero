@@ -263,6 +263,8 @@ const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-065': HYBRID_C065_IMG,
   // 剣士モッチー(2026-10-26 パックに追加)。立ち絵はゲームのモンスターのもの(KENSHI_MOCCHI_IMG)。キラ・別絵キラも同じ
   'C-066': KENSHI_MOCCHI_IMG, 'C-066S': KENSHI_MOCCHI_IMG, 'C-066V': KENSHI_MOCCHI_IMG,
+  // パンドラ(2026-10-26 パックに追加)。立ち絵はゲームのモンスターのもの(PANDORA_IMG)。キラ・別絵キラも同じ
+  'C-067': PANDORA_IMG, 'C-067S': PANDORA_IMG, 'C-067V': PANDORA_IMG,
 });
 
 const MOCCHI_ICON = MOCCHI_IMG;
@@ -427,6 +429,8 @@ const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-065': HYBRID_C065_FACE_ICON,
   // 剣士モッチー(2026-10-26 パックに追加)。立ち絵・顔はゲームのモンスターのものを使う。キラ・別絵キラも同じ
   'C-066': KENSHI_MOCCHI_FACE_ICON, 'C-066S': KENSHI_MOCCHI_FACE_ICON, 'C-066V': KENSHI_MOCCHI_FACE_ICON,
+  // パンドラ(2026-10-26 パックに追加)。顔はゲームと同じ(PANDORA_FACE_ICON)。キラ・別絵キラも同じ
+  'C-067': PANDORA_FACE_ICON, 'C-067S': PANDORA_FACE_ICON, 'C-067V': PANDORA_FACE_ICON,
 });
 
 // 血統別のアイコン(エンブレム・144x146・金の枠つき)。2026-10-05・ユーザー提供の37個(blood-icons.zip)。
