@@ -46,3 +46,6 @@
 
 ## 2026-10-26 神殿の各画面
 → [damedashi-2026-10-26/temple/README.md](damedashi-2026-10-26/temple/README.md)(3件)
+
+## 2026-10-26 ストーリー(イベント回想)
+→ [damedashi-2026-10-26/story/README.md](damedashi-2026-10-26/story/README.md)(3件)
