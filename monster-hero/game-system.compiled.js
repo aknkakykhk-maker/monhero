@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5dc7dce1b0457cb4
+// source-sha256: 2887b9035e2e2b2c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 12:01";
+const BUILD_DATE = "2026-10-26 12:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -50568,7 +50568,7 @@ const jaWrapPoints = text => {
         g = groups[groups.length - 1],
         cur = g.parts.join('');
       const hard = inKao(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg));
-      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
         g.hard.push(hard);
@@ -86805,7 +86805,7 @@ const CARD_RULE_PAGES = Object.freeze([{
   id: 'guts',
   emoji: '💰',
   title: 'ガッツ',
-  lines: ['技を使うためのもの。カード1枚で1ガッツ', 'ガッツはプレイヤーごと(モンスターごとではない)。何枚あるかは相手にも見える', '使ったガッツは捨て札へ。ガッツにしたカードは技として使い直せない', 'ガッツをためすぎると山札が減る。山札切れに気をつけよう']
+  lines: ['技を使うためのもの。カード1枚で1ガッツ', 'ガッツはプレイヤーが持つもの(モンスターそれぞれではない)。何枚あるかは相手にも見える', '使ったガッツは捨て札へ。ガッツにしたカードは技として使い直せない', 'ガッツをためすぎると山札が減る。山札切れに気をつけよう']
 }, {
   id: 'field',
   emoji: '☁️',
@@ -88026,7 +88026,7 @@ const CardTurnLogSheet = ({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "mb-2 text-[15px] font-black text-amber-200"
-  }, "ターンごとの記録"), React.createElement("div", {
+  }, "ターンの記録"), React.createElement("div", {
     className: "min-h-0 flex-1 space-y-2 overflow-y-auto mh-scroll"
   }, list.map(t => React.createElement("div", {
     key: t.turn,
@@ -89255,7 +89255,7 @@ const CardBattleBoard = ({
     "data-card-log-open": true,
     onClick: () => setLogSheet(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
-    "aria-label": "ターンごとの記録を見る"
+    "aria-label": "ターンの記録を見る"
   }, "記録")), pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
   }) : React.createElement("span", {
@@ -90849,7 +90849,7 @@ const CardBattleScreen = ({
     }, rec.byLevel.lose[lv]))))), React.createElement("p", {
       className: "mt-1 text-[10px] font-bold text-slate-500",
       style: JA_LABEL_STYLE
-    }, jaWrap('難易度ごとの数は、この記録ができてからのぶんです'))), React.createElement("div", {
+    }, jaWrap('難易度別の数は、この記録ができてからのぶんです'))), React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -90910,7 +90910,7 @@ const CardBattleScreen = ({
     }, bgmPreview.playing === save.bgm[k] ? '停止' : '試聴')))), React.createElement("p", {
       className: "mt-1.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('「おまかせ」のときは、対戦する助手ごとに決まった曲が流れます')), React.createElement("p", {
+    }, jaWrap('「おまかせ」のときは、対戦する助手に合わせて決まった曲が流れます')), React.createElement("p", {
       "data-card-options-se": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
@@ -91755,7 +91755,11 @@ const CardDeckEditor = ({
     style: JA_LABEL_STYLE
   }, jaWrap(notice))), React.createElement("div", {
     "data-card-deck-chips": true,
-    className: "mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible"
+    className: "mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0",
+    style: land ? undefined : {
+      WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)',
+      maskImage: 'linear-gradient(to right, #000 82%, transparent)'
+    }
   }, CARD_DECK_VIEWS.map(f => React.createElement("button", {
     key: f.id,
     type: "button",
@@ -91765,7 +91769,7 @@ const CardDeckEditor = ({
       setNotice('');
     },
     className: chip(view === f.id)
-  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length + deck.monsters.length}` : f.label)), canAsk && React.createElement("button", {
+  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length}枚+${deck.monsters.length}体` : f.label)), canAsk && React.createElement("button", {
     type: "button",
     "data-card-deck-ask": true,
     onClick: () => {
@@ -91851,7 +91855,7 @@ const CardDeckEditor = ({
       setAsk(null);
     },
     className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-2xl border border-white/20 bg-slate-800 font-black"
-  }, "とじる"))), detail && React.createElement(CardDetailModal, {
+  }, "閉じる"))), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
@@ -92724,7 +92728,7 @@ const CardShopSheet = ({
   "data-card-shop-sheet-close": true,
   onClick: onClose,
   className: "mh-button mh-button-primary min-h-[46px] w-full rounded-2xl text-[14px] font-black active:scale-[.98] landscape:min-h-[40px]"
-}, "とじる")))), detail && React.createElement(CardDetailModal, {
+}, "閉じる")))), detail && React.createElement(CardDetailModal, {
   db: db,
   no: detail,
   onClose: () => setDetail(null)
@@ -92839,7 +92843,7 @@ const CardPackRateSheet = ({
   }, cardShopName(db, x.no)))), React.createElement("td", {
     className: `${td} text-right tabular-nums`
   }, cardShopPct(x.p))));
-  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つごとの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターは、キラの無い通常のモンスターとして出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(天井)。` : null, `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
+  const notes = [`1パックは${pack.tech ? `技などの枠${pack.tech}枚と、` : ''}モンスターの枠${pack.mon}枚です。割合は、枠1つあたりの割合です。`, pack.tech ? `技などの枠は、${r.tech.length}種類から同じ割合で出ます。` : null, pack.mon && Object.keys(r.rarity).length > 1 ? 'モンスターの枠は、まずレア度を決めてから、そのレア度のモンスターから1枚出ます。' : null, '混血のモンスターも、ほかのモンスターと同じく、そのカードのレア度(通常・キラ・別絵キラ)の割合の中から出ます。', '同じレア度のモンスターは、どれも同じ割合で出ます。', pack.pity ? `このパックでキラも別絵キラも出ないまま${CARD_PACK_PITY_AT}パック開けると、つぎのパックのモンスターの枠は必ずキラ以上になります(キラが出ないまま続くのを止める決まり。「天井」と呼びます)。` : null, `だぶったカードはビートPになります(技などは4枚目から1枚${CARD_DUP_POINT.tech}・モンスターは2枚目から${CARD_DUP_POINT.normal}〔キラ${CARD_DUP_POINT.kira}・別絵キラ${CARD_DUP_POINT.alt}〕)。`, '新しいカードは、できしだい追加されます。'].filter(Boolean);
   return React.createElement(CardShopSheet, {
     tag: "rates",
     title: `${pack.name} 提供割合`,
@@ -92847,7 +92851,7 @@ const CardPackRateSheet = ({
     detail: detail,
     setDetail: setDetail,
     db: db
-  }, React.createElement(CardShopHead, null, "レア度ごとの割合(モンスターの枠)"), React.createElement("table", {
+  }, React.createElement(CardShopHead, null, "レア度別の割合(モンスターの枠)"), React.createElement("table", {
     "data-card-rate-rarity": true,
     className: "w-full border-collapse text-slate-100"
   }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
