@@ -13,3 +13,6 @@
 
 ## 2026-10-26 HOME
 → [damedashi-2026-10-26/home/README.md](damedashi-2026-10-26/home/README.md)(6件)
+
+## 2026-10-26 マーケット
+→ [damedashi-2026-10-26/market/README.md](damedashi-2026-10-26/market/README.md)(4件)
