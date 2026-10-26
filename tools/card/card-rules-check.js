@@ -273,6 +273,16 @@ const decksAndSaves = () => {
       // オプションに並べる項目は、どれも normalizeCardSettings が持つ名前・選択肢
       && E.CARD_SETTING_GROUPS.every((g) => g.items.every((it) => it.bool ? typeof E.normalizeCardSettings(null)[it.key] === 'boolean' : it.options.some((o) => o.id === E.normalizeCardSettings(null)[it.key]) && it.options.every((o) => E.normalizeCardSettings({ [it.key]: o.id })[it.key] === o.id))) && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).autoPass === false && E.normalizeCardSettings({ speed: 'x' }).speed === 'normal', '演出の設定の読み込みが合わない');
   }
+  // 同じ血統の2体・3体(2026-10-26 社長「3体編成も実際あるから組まれるようにして」): 仲間の多いみゅあは出る・仲間のいないももすけは出ない・同じ子は2体入らない
+  {
+    const blood = (no) => { const m = db.monsters[no]; return String(m.wave) === 'hybrid' ? m.main : m.species; };
+    const count = (who, lv) => { let two = 0, three = 0, dup = 0; for (let g = 0; g < 60; g++) { const d = E.cardAiBuildDeck(db, who, lv, E.cardAiSeededRand(`same:${who}:${lv}:${g}`)); const b = d.monsters.map(blood); const same = b.filter((x) => x === b[0]).length; if (same === 2) two += 1; if (same === 3) three += 1; if (new Set(d.monsters.map((no) => db.monsters[no].species)).size < 3) dup += 1; } return { two, three, dup }; };
+    const mua = count('mua', 'normal');
+    ok(mua.two > 0 && mua.three > 0, `みゅあ(モッチーの仲間が多い)のデッキに同じ血統の2体・3体が出ない(${JSON.stringify(mua)})`);
+    const momo = count('momosuke', 'normal');
+    ok(momo.two === 0 && momo.three === 0, `ももすけ(メタルナーの仲間がいない)のデッキに同じ血統が出た(${JSON.stringify(momo)})`);
+    ok(['mua', 'kyuko', 'dra', 'atsu'].every((w) => ['easy', 'expert', 'master'].every((lv) => count(w, lv).dup === 0)), '助手のデッキに同じ子(キラ・別絵キラを含む)が2体入った');
+  }
   // ポイントはビートPと同じ財布(2026-10-26 社長)。保存先はビートPのキーで、CARD_SAVE_KEYS には入れない
   // (デバッグの「カードバトルの記録を消す」が CARD_SAVE_KEYS を全部消すので、入っているとビートPまで消える)
   ok(E.CARD_POINT_STORE_KEY === 'mh_rhythm_event_points_v1', `ポイントの保存先がビートPのキーではない(${E.CARD_POINT_STORE_KEY})`);
