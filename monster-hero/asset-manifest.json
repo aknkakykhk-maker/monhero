@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b86ef066166b",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121751660,"count":661},"card":{"bytes":31267785,"count":906},"all":{"bytes":260406891,"count":1660}},
+  "id": "86d9f47da9ff",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121751660,"count":661},"card":{"bytes":31267742,"count":906},"all":{"bytes":260406848,"count":1660}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -659,7 +659,7 @@
     "images/card-battle/l/C032.jpg": {"v":"9636d8f28876","size":48640,"pack":"card"},
     "images/card-battle/l/C033.jpg": {"v":"2f4b24efe090","size":54932,"pack":"card"},
     "images/card-battle/l/C034.jpg": {"v":"9c8e03183e54","size":54932,"pack":"card"},
-    "images/card-battle/l/C035.jpg": {"v":"12a3bae450d8","size":57092,"pack":"card"},
+    "images/card-battle/l/C035.jpg": {"v":"dda556ac0503","size":57059,"pack":"card"},
     "images/card-battle/l/C036.jpg": {"v":"908fb067ce09","size":53222,"pack":"card"},
     "images/card-battle/l/C037.jpg": {"v":"d20d84bdf827","size":42365,"pack":"card"},
     "images/card-battle/l/C038.jpg": {"v":"3d67370d1767","size":52977,"pack":"card"},
@@ -1112,7 +1112,7 @@
     "images/card-battle/s/C032.jpg": {"v":"c9c72e07442b","size":17347,"pack":"card"},
     "images/card-battle/s/C033.jpg": {"v":"54073546575e","size":19384,"pack":"card"},
     "images/card-battle/s/C034.jpg": {"v":"128c04324a85","size":19000,"pack":"card"},
-    "images/card-battle/s/C035.jpg": {"v":"73713b7d1513","size":20503,"pack":"card"},
+    "images/card-battle/s/C035.jpg": {"v":"cf047bfae69b","size":20493,"pack":"card"},
     "images/card-battle/s/C036.jpg": {"v":"760e5242aeb6","size":19456,"pack":"card"},
     "images/card-battle/s/C037.jpg": {"v":"6833caa330d1","size":15016,"pack":"card"},
     "images/card-battle/s/C038.jpg": {"v":"618d2f3a9f92","size":18894,"pack":"card"},

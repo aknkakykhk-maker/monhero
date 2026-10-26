@@ -36,6 +36,12 @@ const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // �
 const ART_COPYRIGHT_JA = { ...ART_COPYRIGHT, blur: 9, x1: 678, y1: 725, frame: { below: 728, right: 679, x1: 692, y1: 734 } };
 const ART_COPYRIGHT_BREEDER = { ...ART_COPYRIGHT, blur: 9, x1: 674 };
 
+// 日本語にした絵に残った英語の字の欠片。ヨロイモッチー(C-035)のサブの札で「デュラハン」の左に白い欠片が残っていた
+// (英語の DURAHAN が札の左端近くまであり、札の丸い角を守る所に重なっていた。2026-10-27 カード追加部パックくんの見回り)
+const PATCH = {
+  'C035.jpg': [{ x0: 562, y0: 810, x1: 573, y1: 836, from: 560 }],
+};
+
 // ★混血の絵は「C051.jpg」と「-」が無い名前なので、C のあとに数字が続くものもモンスターカードにする
 //   (前は技カードとして扱っていて、© が残り、右下の「No. C-051」を塗りつぶしていた・2026-10-24 に気づいた)
 const isMonster = (file) => /^C-?\d/.test(path.basename(file));
@@ -105,6 +111,10 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
     const cp = (x, y, sx, sy) => { for (let c = 0; c < ch; c += 1) data[(y * W + x) * ch + c] = data[(sy * W + sx) * ch + c]; };
     for (let y = f.below; y <= f.y1; y += 1) for (let x = r.x0; x <= f.x1; x += 1) cp(x, y, r.x0 - 8, y);   // 窓の下: 左の枠の同じ行
     for (let y = r.y0; y < f.below; y += 1) for (let x = f.right; x <= f.x1; x += 1) cp(x, y, f.x1 + 4, y); // 窓の右: 右の枠の同じ行
+  }
+  // 日本語にした絵に残った、英語の字の欠片(1枚ずつ)。四角の中を、行ごとに左の from 列の色で塗る
+  for (const p of PATCH[path.basename(file)] || []) {
+    for (let y = p.y0; y <= p.y1; y += 1) for (let x = p.x0; x <= p.x1; x += 1) for (let c = 0; c < info.channels; c += 1) data[(y * W + x) * info.channels + c] = data[(y * W + p.from) * info.channels + c];
   }
   return sharp(data, { raw: { width: W, height: H, channels: info.channels } });
 };
