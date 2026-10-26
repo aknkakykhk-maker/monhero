@@ -4106,6 +4106,12 @@ const createAnimationStyle = () => {
        背の低い器では .mh-phase-tall(助手の吹き出し・説明・合計の欄など、無くても選べるもの)を畳む。
        自前で画面を回しているとき(data-mh-view-rotation)も、器の高さで判定するので同じく効く。 */
     .mh-phase { container-type: size; }
+    /* モンヒロバトルのモード・難易度の札: 横の背の低い画面では中身を左右2段に流す(縦向き用の高い札のままだと下半分が画面の外に出て、
+       「難易度を選ぶ」「この難易度で挑戦」が最初は見えなかった。2026-10-26 ダメダシくんの見回り)。絶対位置の飾りは流れに入らない */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .mh-land-cols { display: block !important; height: auto !important; columns: 2; column-gap: 14px; }
+      .mh-land-cols > * { break-inside: avoid; }
+    }
     /* .mh-phase-card は min-h-[112px] と一緒に付ける。背の低い器ではその下限だけを外す */
     .mh-phase-gain { font-size: clamp(20px, 7vw, 30px); }
     /* .mh-phase-mid … SE(667px)くらいから畳むもの(補足の説明文)。絵も一回り小さくする */
