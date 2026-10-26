@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1cdcab5f60d283b
+// source-sha256: e4ba96e69eb4d961
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -63388,7 +63388,7 @@ function PickHeroAllyScreen({
       className: "min-w-0"
     }, React.createElement("h2", {
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
-    }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), React.createElement("p", {
+    }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
       className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
@@ -63564,7 +63564,7 @@ function PickHeroAllyScreen({
       });
       return React.createElement(React.Fragment, null, allyCarousel && React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
-      }, "左右にスワイプして供モンを選択"), allyCarousel && React.createElement("div", {
+      }, "左右にスワイプして供モンをえらぶ"), allyCarousel && React.createElement("div", {
         className: "relative h-0"
       }, React.createElement("button", {
         "aria-label": "前の供モン",
@@ -84379,7 +84379,7 @@ const cardGuardOptions = (db, st) => {
     if (forbid.includes(c.kind)) return;
     if (cardGuardCost(st, c) > guts) return;
     if (pride && c.kind === 'dge') return;
-    if (fl.attachNoZeroGuard && !c.guts) return;
+    if (fl.attachNoZeroGuard && cardGuardCost(st, c) === 0) return;
     if (fl.bind && c.name === fl.bind) return;
     if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
       if (tgt.p === q) me.mons.forEach((m, mi) => {
@@ -99674,7 +99674,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 1;
+const CARD_REPLAY_RULES = 2;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
@@ -128125,7 +128125,7 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between"
       }, React.createElement("b", {
         className: "text-[10px] text-cyan-100"
-      }, "供モンを選択"), React.createElement("strong", {
+      }, "供モンをえらぶ"), React.createElement("strong", {
         className: "rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950"
       }, selectedAllies.length, " / 3体")), React.createElement("p", {
         className: "mt-1 text-[8px] leading-relaxed text-cyan-200"

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d49990e2eea39ad6
+// generated-sha256: 9f16f51b841ec789
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38639,7 +38639,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2>
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
         <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
@@ -38767,7 +38767,7 @@ function PickHeroAllyScreen({
               onDetail={m=>setCurrentPickingMon(m)}/>
           );
           return (<>
-        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンを選択</div>}
+        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンをえらぶ</div>}
         {allyCarousel&&<div className="relative h-0">
           <button aria-label="前の供モン" disabled={allyCardIndex===0} onClick={()=>stepAlly(-1)} className="absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
           <button aria-label="次の供モン" disabled={allyCardIndex>=list.length-1} onClick={()=>stepAlly(1)} className="absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
@@ -50722,7 +50722,7 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //                pure(純血の子)/ breederMaxGuts(n)(そのガッツ以下のブリーダーのカードに付ける)
 //         attachAdd(n) +n / attachCost(n) 払うガッツ-n / attachCostHalf 半分(切り上げ)/ attachFree 0 /
 //         attachNoEvade 回避されない / attachNoGuard 回避も防御もされない / attachNoBlockReduce 防御で減らない /
-//         attachNoZeroGuard 0ガッツの守りは出せない / attachNoGuardIfGuarded このターンもう守った子は守れない /
+//         attachNoZeroGuard そのとき払うガッツが0の守りは出せない / attachNoGuardIfGuarded このターンもう守った子は守れない /
 //         attachNoEvadeHybrid 混血(派生)の子は回避できない / attachBind 守りの札を1つ名前で名指し(act.bind)/ attachSelfIfHit(n)
 //         付ける札は1回の攻撃に2枚まで(ブリーダーのカードは1枚)
 //   特殊: draw(n) / peekHand / discardOpp(n) 相手が選んで捨てる / heal(n) 味方1体 / forbidThisTurn(kinds) このターン相手は回避(防御)を使えない
@@ -51265,7 +51265,8 @@ const cardGuardOptions = (db, st) => {
     if (forbid.includes(c.kind)) return;
     if (cardGuardCost(st, c) > guts) return;
     if (pride && c.kind === 'dge') return; // 純血のプライド: 回避の札は出せない(狙われた派生の子)
-    if (fl.attachNoZeroGuard && !c.guts) return; // 集中
+    // 集中: そのとき払うガッツが0の守りは出せない(全体カードのホリィの声援で0になった札も止める・師匠のまなざしで1になった札は出せる。2026-10-27 案A)
+    if (fl.attachNoZeroGuard && cardGuardCost(st, c) === 0) return;
     if (fl.bind && c.name === fl.bind) return; // 影縛りで名指しされた札
     // ---- 区切り5 ----
     // 狙われていなくても出せる守り(吹き上げる・ひきずりこむ): 味方のだれかが狙われているとき、カードの持ち主が出す
@@ -59834,7 +59835,7 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
 
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
-const CARD_REPLAY_RULES = 1;
+const CARD_REPLAY_RULES = 2; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -80158,7 +80159,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     : <ChevronRight size={16} className="shrink-0 text-slate-500"/>}
                 </button>;})}</div>}
               {selection.step==='hero'&&<>{heroCandidates.length?heroCandidates.map(entry=>monsterCard(entry,selection.heroId===entry.entryId,()=>chooseHero(entry.entryId),false,selection.heroId===entry.entryId?'勇者':'')):<p className="rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400">この種族の解放済みベースモン／所持マスモンがいません。</p>}</>}
-              {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンを選択</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">供モンは最大3体。0体のままでも次へ進めます。同じモンスターは勇者・供モンを通して1体までなので（重複不可）、実際に選べる数はその種族のモンスターの種類によって変わります。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const sameMonsterTaken=!selected&&usedAllyBaseIds.has(entry.baseId);const disabled=sameMonsterTaken||(!selected&&selectedAllies.length>=3);return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':sameMonsterTaken?'選択済み':'');})}</>}
+              {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンをえらぶ</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">供モンは最大3体。0体のままでも次へ進めます。同じモンスターは勇者・供モンを通して1体までなので（重複不可）、実際に選べる数はその種族のモンスターの種類によって変わります。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const sameMonsterTaken=!selected&&usedAllyBaseIds.has(entry.baseId);const disabled=sameMonsterTaken||(!selected&&selectedAllies.length>=3);return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':sameMonsterTaken?'選択済み':'');})}</>}
               {selection.step==='confirm'&&<div className="space-y-3"><section className="rounded-2xl border-2 border-cyan-400/40 bg-slate-900/90 p-4"><small className="font-black tracking-widest text-cyan-300">MISSION</small><h3 className="mt-1 text-lg font-black">{speciesChallengeSpeciesName(selection.speciesId)} 限定</h3>{/* 初回クリア報酬は1度きり。すでに受け取っている組み合わせでは、
                     もらえるかのように見せず「受取済み」と分かる形にする */}
                 {(()=>{const claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,selection.speciesId,selection.difficultyId);return <p data-species-confirm-reward={claimed?'claimed':'first'} className={`text-[10px] ${claimed?'text-slate-400':'text-amber-300'}`}>{difficultyLabel(selection.difficultyId)} ・ {claimed?<span>初回報酬 <span className="line-through">超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</span> <span className="font-black text-emerald-300">✅ 受取済み</span></span>:<span>初回報酬 超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</span>}</p>;})()}</section><div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div><div><b className="mb-1 block text-[9px] text-cyan-300">供モン（{selectedAllies.length}体）</b>{selectedAllies.length?<div className="space-y-2">{selectedAllies.map(id=>entryById(id)&&monsterCard(entryById(id),true,()=>{},false,'選択中'))}</div>:<p className="rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400">供モンなしで出撃</p>}</div>{/* 保存する/しないの注意書きも、デバッグから入ったときだけ。通常プレイでは出さない */}
