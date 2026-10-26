@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c50c46df6296bdd
+// source-sha256: 28fd65373b3abc47
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 14:04";
+const BUILD_DATE = "2026-10-26 14:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -92200,6 +92200,21 @@ const CardDeckEditor = ({
     cards: deck0.cards.slice()
   }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  const chipsRow = useRef(null);
+  useEffect(() => {
+    try {
+      const row = chipsRow.current;
+      if (!row) return;
+      const idx = CARD_DECK_VIEWS.findIndex(f => f.id === view);
+      if (idx <= 2) {
+        row.scrollLeft = 0;
+        return;
+      }
+      const el = row.querySelector(`[data-card-deck-filter="${view}"]`);
+      if (!el) return;
+      if (el.offsetLeft < row.scrollLeft) row.scrollLeft = el.offsetLeft - 8;else if (el.offsetLeft + el.offsetWidth > row.scrollLeft + row.clientWidth - 24) row.scrollLeft = el.offsetLeft + el.offsetWidth - row.clientWidth + 32;
+    } catch (_) {}
+  }, [view]);
   const [sort, setSort] = useState('kind');
   const [usableOnly, setUsableOnly] = useState(true);
   const [notice, setNotice] = useState('');
@@ -92401,8 +92416,9 @@ const CardDeckEditor = ({
     className: "text-[12px] font-black text-amber-200",
     style: JA_LABEL_STYLE
   }, jaWrap(notice))), React.createElement("div", {
+    ref: chipsRow,
     "data-card-deck-chips": true,
-    className: "mh-scroll mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0",
+    className: "mh-scroll relative mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0",
     style: land ? undefined : {
       WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)',
       maskImage: 'linear-gradient(to right, #000 82%, transparent)'
@@ -92416,7 +92432,7 @@ const CardDeckEditor = ({
       setNotice('');
     },
     className: chip(view === f.id)
-  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキに入れた ${deck.cards.length}枚+${deck.monsters.length}体` : f.label)), canAsk && React.createElement("button", {
+  }, f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label)), canAsk && React.createElement("button", {
     type: "button",
     "data-card-deck-ask": true,
     onClick: () => {
