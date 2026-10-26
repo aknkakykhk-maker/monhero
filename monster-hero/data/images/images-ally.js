@@ -21,7 +21,7 @@ const HAM_IMG = "images/monsters/ham.png?v=106321d09a72";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=38f7f50cd68b";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
-const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=e6c4b23ee988";
+const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=ac56746b5791";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
