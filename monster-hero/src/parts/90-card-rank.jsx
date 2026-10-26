@@ -6,13 +6,18 @@
 // 送ってよいのは、本当に対戦して勝った記録だけ(cardRecordAfter の rankable。公開前・デバッグの入口からの対戦は数えない・送らない)。
 // デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)
 const CARD_RANK_TABLE = 'card_battle_ranks';
+// 2026-10-26 社長「ブリーダーIDで数える形に直す」: これからは一人ひとりの ID(breeder_id)で上書きする新しい表へ書く。
+// 古い表(名前で1行)は消さず書き換えず、まだ新しい表に来ていない人の行として読むだけ。SQL: docs/sql/card-battle-ranks/CARD_BATTLE_RANKS_V2_APPLY.sql
+// 新しい表がまだ無い環境では、今までどおり古い表へ書く
+const CARD_RANK_TABLE_V2 = 'card_battle_ranks_v2';
 const CARD_RANK_SELECT = 'user_name,breeder_id,icon,profile_frame,week_key,'
   + CARD_LEVEL_ORDER.map((lv) => `wins_${lv},week_wins_${lv}`).join(',') + ',best_streak,current_streak,dex_count,dex_total,updated_at';
 const CARD_RANK_FETCH_LIMIT = 150;
 const CARD_RANK_SHOW_LIMIT = 50;
 const CARD_RANK_CACHE_MS = 60 * 1000;
-let _cardRanksUnavailable = false;
-const cardRanksUnavailable = () => _cardRanksUnavailable;
+let _cardRanksUnavailable = false;   // 古い表(card_battle_ranks)が無い
+let _cardRanksV2Unavailable = false; // 新しい表(card_battle_ranks_v2)が無い
+const cardRanksUnavailable = () => _cardRanksUnavailable && _cardRanksV2Unavailable;
 const cardRankCache = new Map();
 
 // カード図鑑の集めた種類(図鑑の「集めた種類」と同じ数え方: 全モンスター＋技・ブリーダー)
@@ -40,16 +45,18 @@ const cardRankEntryFromRow = (row) => {
     updatedAt: String(row.updated_at || ''),
   };
 };
-// 改名で同じ人が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)
+// 改名で同じ人が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)。
+// 新しい表の行(e.v2)は、古い表の同じ人の行より先に選ぶ。ID の無い古い行は、同じ名前の人が新しい表にいれば出さない(IDができる前の同じ人)
 const cardRankMerge = (entries) => {
   const byKey = new Map();
-  (Array.isArray(entries) ? entries : []).forEach((e) => {
-    if (!e) return;
+  const list = (Array.isArray(entries) ? entries : []).filter(Boolean);
+  list.forEach((e) => {
     const key = e.breederId || `name:${e.userName}`;
     const cur = byKey.get(key);
-    if (!cur || e.updatedAt > cur.updatedAt) byKey.set(key, e);
+    if (!cur || (e.v2 && !cur.v2) || (!!e.v2 === !!cur.v2 && e.updatedAt > cur.updatedAt)) byKey.set(key, e);
   });
-  return [...byKey.values()];
+  const v2Names = new Set(list.filter((e) => e.v2).map((e) => e.userName));
+  return [...byKey.values()].filter((e) => e.v2 || e.breederId || !v2Names.has(e.userName));
 };
 // 何で並べるか。kind: 'wins'(period: 'week' | 'total', level)/ 'streak' / 'dex'
 const cardRankColumn = ({ kind, period, level }) => (kind === 'streak' ? 'best_streak' : kind === 'dex' ? 'dex_count'
@@ -57,12 +64,11 @@ const cardRankColumn = ({ kind, period, level }) => (kind === 'streak' ? 'best_s
 const cardRankValue = (e, { kind, period, level }) => (kind === 'streak' ? e.bestStreak : kind === 'dex' ? e.dexCount
   : (period === 'week' ? e.weekWins : e.wins)[level] || 0);
 
-// 表から上位を取る。表が無ければ null
-const sbFetchCardRanks = async (q, now = Date.now()) => {
-  if (_cardRanksUnavailable) return null;
+// 1つの表から上位を取る。表が無ければ null(以後その表へはアクセスしない)
+const sbFetchCardRankRows = async (table, q, now) => {
   const column = cardRankColumn(q);
   const week = q.kind === 'wins' && q.period === 'week' ? `&week_key=eq.${cardWeekKeyJst(now)}` : '';
-  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}`
+  const url = `${SUPABASE_URL}/rest/v1/${table}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}`
     + `&order=${column}.desc.nullslast,updated_at.asc&limit=${CARD_RANK_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -70,21 +76,48 @@ const sbFetchCardRanks = async (q, now = Date.now()) => {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
-      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return null; }
-      throw new Error(`${CARD_RANK_TABLE} ${res.status}: ${body || res.statusText}`);
+      if (_isMissingTableError(res.status, body)) return null;
+      throw new Error(`${table} ${res.status}: ${body || res.statusText}`);
     }
     const rows = JSON.parse(body || '[]');
-    const entries = cardRankMerge((Array.isArray(rows) ? rows : []).map(cardRankEntryFromRow));
-    entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
-    return entries;
+    return Array.isArray(rows) ? rows : [];
   } finally {
     clearTimeout(timer);
   }
 };
-// 上書き保存。同じ人(同じ名前)は何度書いても1行のまま、最新の値になる
+// 表から上位を取る(新しい表と古い表を合わせて、同じ人は1行に)。どちらの表も無ければ null
+const sbFetchCardRanks = async (q, now = Date.now()) => {
+  if (cardRanksUnavailable()) return null;
+  const [v2Rows, oldRows] = await Promise.all([
+    _cardRanksV2Unavailable ? Promise.resolve(null) : sbFetchCardRankRows(CARD_RANK_TABLE_V2, q, now),
+    _cardRanksUnavailable ? Promise.resolve(null) : sbFetchCardRankRows(CARD_RANK_TABLE, q, now),
+  ]);
+  if (v2Rows === null) _cardRanksV2Unavailable = true;
+  if (oldRows === null) _cardRanksUnavailable = true;
+  if (v2Rows === null && oldRows === null) return null;
+  const entries = cardRankMerge([
+    ...(v2Rows || []).map((r) => { const e = cardRankEntryFromRow(r); return e ? { ...e, v2: true } : null; }),
+    ...(oldRows || []).map(cardRankEntryFromRow),
+  ]);
+  entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
+  return entries;
+};
+// 上書き保存。ID があれば新しい表へ ID で(同じ人は何度書いても1行)。ID が無い・新しい表が無いときは、今までどおり古い表へ名前で
 const sbUpsertCardRank = async (row) => {
-  if (_cardRanksUnavailable || !row) return false;
-  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?on_conflict=user_name`;
+  if (!row) return false;
+  if (typeof row.breeder_id === 'string' && row.breeder_id && !_cardRanksV2Unavailable) {
+    const r = await sbUpsertCardRankTo(CARD_RANK_TABLE_V2, 'breeder_id', row);
+    if (r !== null) return r;
+    _cardRanksV2Unavailable = true; // 新しい表がまだ無い(SQL を流す前)。古い表へ書く
+  }
+  if (_cardRanksUnavailable) return false;
+  const r = await sbUpsertCardRankTo(CARD_RANK_TABLE, 'user_name', row);
+  if (r === null) { _cardRanksUnavailable = true; return false; }
+  return r;
+};
+// 1つの表へ上書き。表が無ければ null
+const sbUpsertCardRankTo = async (table, conflict, row) => {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflict}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -95,8 +128,8 @@ const sbUpsertCardRank = async (row) => {
     });
     if (!res.ok) {
       const body = await res.text();
-      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return false; }
-      throw new Error(`${CARD_RANK_TABLE} upsert ${res.status}: ${body || res.statusText}`);
+      if (_isMissingTableError(res.status, body)) return null;
+      throw new Error(`${table} upsert ${res.status}: ${body || res.statusText}`);
     }
     return true;
   } finally {
@@ -106,7 +139,7 @@ const sbUpsertCardRank = async (row) => {
 // 記録から1行を作って送る(前に送った中身と同じなら送らない)。呼ぶのは「ランキングに数えてよい対戦」のあとだけ
 const cardRankSync = async (db, { record, collection, profile }) => {
   try {
-    if (_cardRanksUnavailable || !profile) return false;
+    if (cardRanksUnavailable() || !profile) return false;
     const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
     const dex = cardDexCounts(db, collection);
     const row = cardRankRow(record, { dexCount: dex.count, dexTotal: dex.total, userName: profile.name, icon: profile.icon, profileFrame: profile.frame, breederId, now: Date.now() });
@@ -119,6 +152,113 @@ const cardRankSync = async (db, { record, collection, profile }) => {
     console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
     return false;
   }
+};
+
+// ---- プロフィール・フレンドの MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」) ----
+// 中身: 助手と対戦の強さごとの勝ち数・いちばん長い連勝・マルチ対戦の勝ち負けと強さの点数・カード図鑑で集めた数。
+// 自分: 端末の保存(mh_card_record_v1・mh_card_collection_v1)を読むだけ(書かない)。強さの点数は表から読む
+// フレンド: ランキングの表 card_battle_ranks_v2(無ければ card_battle_ranks)・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
+const cardStatsGet = async (path) => {
+  if (typeof SUPABASE_URL === 'undefined') return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+    if (!res.ok) return null;
+    const rows = JSON.parse((await res.text()) || '[]');
+    return Array.isArray(rows) ? rows : null;
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
+const CARD_STATS_ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+// その人の強さの点数の行(マルチ対戦)。無ければ null
+const sbFetchCardPvpRatingOf = async (breederId) => {
+  if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
+  const rows = await cardStatsGet(`card_battle_pvp_ratings?select=rating,wins,loses&breeder_id=eq.${breederId}&limit=1`);
+  const r = rows && rows[0];
+  if (!r) return null;
+  const n = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
+  return { rating: Number.isFinite(Number(r.rating)) ? Math.floor(Number(r.rating)) : null, win: n(r.wins), lose: n(r.loses) };
+};
+// いまのカードの種類数(図鑑の分母。cardDexCounts と同じ数え方)
+const cardStatsDexTotal = () => { try { return cardDexCounts(CARD_BATTLE_DATA, {}).total; } catch (_) { return 0; } };
+// 自分の戦績(保存から)。何も遊んでいなければ played が 0
+const cardStatsOfSelf = async () => {
+  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
+  if (!db) return null;
+  const record = cardNormalizeRecord(await storeGet(CARD_SAVE_KEYS.record, null));
+  const rawCol = await storeGet(CARD_SAVE_KEYS.collection, null);
+  const dex = cardDexCounts(db, cardIsPlainObject(rawCol) ? rawCol : {});
+  const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+  const rating = await sbFetchCardPvpRatingOf(id).catch(() => null);
+  return {
+    wins: record.rank.total, bestStreak: record.rank.streak.best, dex,
+    pvp: { win: record.pvp.win, lose: record.pvp.lose, rating: rating ? rating.rating : null },
+    played: record.cpu.win + record.cpu.lose + record.cpu.surrender + record.pvp.win + record.pvp.lose,
+  };
+};
+// フレンドの戦績(表から)。表に行が無ければ null
+const cardStatsOfFriend = async (breederId) => {
+  if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
+  // 新しい表(ID で1行)を先に見て、まだ移っていない人は古い表の行を読む(2026-10-26 ブリーダーIDで数える形)
+  const v2 = _cardRanksV2Unavailable ? null : await cardStatsGet(`${CARD_RANK_TABLE_V2}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&limit=1`);
+  const rows = v2 && v2.length ? v2 : await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
+  const e = rows && rows[0] ? cardRankEntryFromRow(rows[0]) : null;
+  const pvp = await sbFetchCardPvpRatingOf(breederId);
+  if (!e && !pvp) return null;
+  const wins = e ? e.wins : Object.fromEntries(CARD_LEVEL_ORDER.map((lv) => [lv, 0]));
+  return {
+    // 図鑑の分母は、表の dex_total(その人が最後に送ったときの数で、古いことがある)ではなく、いまのカードの種類数にそろえる(自分と同じ数え方)
+    wins, bestStreak: e ? e.bestStreak : 0, dex: e ? { count: e.dexCount, total: cardStatsDexTotal() || e.dexTotal } : null,
+    pvp: pvp ? { win: pvp.win, lose: pvp.lose, rating: pvp.rating } : { win: 0, lose: 0, rating: null },
+    played: CARD_LEVEL_ORDER.reduce((a, lv) => a + wins[lv], 0) + (pvp ? pvp.win + pvp.lose : 0) + (e && e.dexCount > 0 ? 1 : 0),
+  };
+};
+// 戦績の表(自分のプロフィールとフレンドのプロフィールで共用。見た目はモンヒロビートの実績の表にそろえる)
+const CardBattleStatsPanel = ({ stats, who = 'self' }) => {
+  if (!stats || !stats.played) return null;
+  const cell = 'rounded-lg bg-black/30 px-1 py-1';
+  const val = (n) => `text-[13px] font-black tabular-nums ${n > 0 ? 'text-white' : 'text-slate-500'}`;
+  return (
+    <section data-card-stats={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
+      <b className="block text-[12px] font-black text-amber-100">MFバトルカードの戦績</b>
+      <small className="mb-2 block text-[9px] font-bold text-slate-400">助手と対戦の、強さごとの勝ち数</small>
+      <div className="grid grid-cols-5 gap-1 text-center">
+        {CARD_LEVEL_ORDER.map((lv) => (
+          <div key={lv} data-card-stats-level={lv} className={cell}>
+            <span className="block whitespace-nowrap text-[9px] font-black text-slate-300">{CARD_LEVEL_LABEL[lv]}</span>
+            <b className={`block ${val(stats.wins[lv] || 0)}`}>{stats.wins[lv] || 0}</b>
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-3 gap-1 text-center">
+        <div data-card-stats-streak className={cell}>
+          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">いちばん長い連勝</span>
+          <b className={`block ${val(stats.bestStreak)}`}>{stats.bestStreak}</b>
+        </div>
+        <div data-card-stats-pvp className={cell}>
+          <span className="block whitespace-nowrap text-[9px] font-black text-sky-200">マルチ対戦</span>
+          <b className={`block ${val(stats.pvp.win + stats.pvp.lose)}`}>{stats.pvp.win}勝{stats.pvp.lose}敗</b>
+          {Number.isFinite(stats.pvp.rating) && <span className="block text-[9px] font-bold text-sky-100">強さ {stats.pvp.rating}</span>}
+        </div>
+        <div data-card-stats-dex className={cell}>
+          <span className="block whitespace-nowrap text-[9px] font-black text-emerald-200">カード図鑑</span>
+          {stats.dex ? <b className={`block ${val(stats.dex.count)}`}>{stats.dex.count}<span className="text-[9px] font-bold text-slate-400">/{stats.dex.total}</span></b> : <b className="block text-[13px] font-black text-slate-500">-</b>}
+        </div>
+      </div>
+    </section>
+  );
+};
+// 自分のプロフィールに置く版(読み込みまで含む)。MFバトルカードを一度も遊んでいなければ出さない
+const CardBattleStatsSelf = () => {
+  const [stats, setStats] = useState(null);
+  useEffect(() => { let alive = true; cardStatsOfSelf().then((x) => { if (alive) setStats(x); }).catch(() => {}); return () => { alive = false; }; }, []);
+  return <CardBattleStatsPanel stats={stats} who="self"/>;
+};
+// フレンドのプロフィールに置く版。表に記録が無ければ出さない
+const CardBattleStatsFriend = ({ breederId }) => {
+  const [stats, setStats] = useState(null);
+  useEffect(() => { let alive = true; setStats(null); cardStatsOfFriend(breederId).then((x) => { if (alive) setStats(x); }).catch(() => {}); return () => { alive = false; }; }, [breederId]);
+  return <CardBattleStatsPanel stats={stats} who="friend"/>;
 };
 
 // ---- 画面: ランキング(トップの「ランキング」から) ----

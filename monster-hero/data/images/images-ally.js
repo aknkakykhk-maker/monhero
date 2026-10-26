@@ -21,6 +21,7 @@ const HAM_IMG = "images/monsters/ham.png?v=106321d09a72";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=38f7f50cd68b";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
+const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=4b767f62e7d6";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
@@ -101,11 +102,12 @@ const IDLE_DREAMY_BEADS_R_MASK = "images/monsters/idle/dreamy-beads-r.png?v=b454
 const IDLE_DREAMY_BODY_MASK = "images/monsters/idle/dreamy-body.png?v=6b6215543408";
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
-const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
+const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=2876d57411ef";
 // パンドラの箱(タクティクスEX)の間だけ出す、悪魔・天使の姿。起動時には読まない(箱を使うときに先読みする)
 const PANDORA_DEVIL_IMG = "images/monsters/pandora-devil.PNG?v=5ce010729f00";
 const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
+const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=d0fb67000c05";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
 const MONOL_IMG = "images/monsters/monol.png?v=64e141b7fbb1";
 const OBORO_IMG = "images/monsters/oboro.png?v=b9f9b77e528d";
@@ -119,8 +121,9 @@ const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=9843be5ed231";
 // 2026年8月に追加した人魚2体。いただいた立ち絵をそのまま使い、丸いアイコンでの見え方は
 // 画像を作り直さず MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せている
 const UNDINE_IMG = "images/monsters/undine.PNG?v=bf5593ae061a";
+const UNDINE_DYE_MASK = "images/monsters/undine-dye-mask.PNG?v=b7a80da70f6e";
 const YAOBIKUNI_IMG = "images/monsters/yaobikuni.PNG?v=e23821f9d695";
-const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=33881ea3c9bf";
+const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=cc159d62d79f";
 // 2026年8月に追加準備中のレア「エイキ」(ザン×？？？)。正式実装まではデバッグ専用。
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
@@ -194,7 +197,7 @@ const HYBRID_C052_IMG = "images/monsters/c052.png?v=ef445601b28a";
 const HYBRID_C053_IMG = "images/monsters/c053.png?v=ffa75a7fabaa";
 const HYBRID_C054_IMG = "images/monsters/c054.png?v=94f20e8b1d54";
 const HYBRID_C055_IMG = "images/monsters/c055.png?v=ce688625bfa6";
-const HYBRID_C056_IMG = "images/monsters/c056.png?v=c83f29cf8474";
+const HYBRID_C056_IMG = "images/monsters/c056.png?v=56ec6e0a965c";
 const HYBRID_C057_IMG = "images/monsters/c057.png?v=7ab1f75096ae";
 const HYBRID_C058_IMG = "images/monsters/c058.png?v=596afc1e78b0";
 const HYBRID_C059_IMG = "images/monsters/c059.png?v=1964b2187f85";
@@ -225,6 +228,13 @@ const HYBRID_C042_IMG = "images/monsters/c042.png?v=e5a483c55e02";
 const HYBRID_C020_IMG = "images/monsters/c020.png?v=81b9fd3f3ec0";
 const HYBRID_C043_IMG = "images/monsters/c043.png?v=71b585e27dc5";
 const HYBRID_C045_IMG = "images/monsters/c045.png?v=86b2b98d136d";
+// 2026-10-26 社長から届いた5体(案の子・図鑑の「未実装」に並ぶ)。元絵は tools/art-sources/<名前>-2026-10-26/。
+// MFバトルカードの画面にはまだつながない(社長に聞いてから HYBRID_MONSTER_IMGS へ足す)
+const HYBRID_C011_IMG = "images/monsters/c011.png?v=44e731f843ea";
+const HYBRID_C032_IMG = "images/monsters/c032.png?v=5b63d78632ff";
+const HYBRID_C014_IMG = "images/monsters/c014.png?v=dde0b6c82d78";
+const HYBRID_C037_IMG = "images/monsters/c037.png?v=8479c3319aac";
+const HYBRID_C044_IMG = "images/monsters/c044.png?v=997468609578";
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-010': HYBRID_C010_IMG,
   'C-012': HYBRID_C012_IMG,
@@ -318,7 +328,7 @@ const ILLUMINE_ICON = ILLUMINE_IMG;
 const DREAMY_ICON = DREAMY_IMG;
 const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=b4a2ad9cdd58";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
-const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=1ddd19baef6b";
+const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=b5e3a96b27c0";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=9663afec97f9";
 const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d920ec35a";
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
@@ -358,7 +368,7 @@ const HYBRID_C051_FACE_ICON = "images/monster-icons/face/c051.png?v=4853c5670318
 const HYBRID_C052_FACE_ICON = "images/monster-icons/face/c052.png?v=6b18c1fd8234";
 const HYBRID_C053_FACE_ICON = "images/monster-icons/face/c053.png?v=b662c2469e1b";
 const HYBRID_C054_FACE_ICON = "images/monster-icons/face/c054.png?v=3963d6c624b6";
-const HYBRID_C056_FACE_ICON = "images/monster-icons/face/c056.png?v=85ff6a92b817";
+const HYBRID_C056_FACE_ICON = "images/monster-icons/face/c056.png?v=ed4aac02295a";
 const HYBRID_C057_FACE_ICON = "images/monster-icons/face/c057.png?v=13230681ef1d";
 const HYBRID_C058_FACE_ICON = "images/monster-icons/face/c058.png?v=3bfcaaa0ceaf";
 const HYBRID_C059_FACE_ICON = "images/monster-icons/face/c059.png?v=106d33ba40e0";
@@ -390,6 +400,12 @@ const HYBRID_C042_FACE_ICON = "images/monster-icons/face/c042.png?v=9331e5dd8316
 const HYBRID_C020_FACE_ICON = "images/monster-icons/face/c020.png?v=12bdba21a409";
 const HYBRID_C043_FACE_ICON = "images/monster-icons/face/c043.png?v=656a46dd72a0";
 const HYBRID_C045_FACE_ICON = "images/monster-icons/face/c045.png?v=cbe99cc190ae";
+// 2026-10-26 社長が選んだ顔アイコン(案の子・カードの画面の HYBRID_MONSTER_FACE_ICONS へはまだ入れない)
+const HYBRID_C044_FACE_ICON = "images/monster-icons/face/c044.png?v=8c4395c28bd3";
+const HYBRID_C011_FACE_ICON = "images/monster-icons/face/c011.png?v=b3722ab1b74e";
+const HYBRID_C037_FACE_ICON = "images/monster-icons/face/c037.png?v=9fcfee53438b";
+const HYBRID_C014_FACE_ICON = "images/monster-icons/face/c014.png?v=4ee1ce8f7085";
+const HYBRID_C032_FACE_ICON = "images/monster-icons/face/c032.png?v=ca64158c5e7b";
 // カードの対戦画面などが番号から引く顔アイコンの表(立ち絵の HYBRID_MONSTER_IMGS と同じ番号)
 const HYBRID_MONSTER_FACE_ICONS = Object.freeze({
   'C-010': HYBRID_C010_FACE_ICON,
@@ -511,3 +527,37 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   centaur: LINEAGE_ICON_CENTAUR,
   unknown: LINEAGE_ICON_RAREMON,
 });
+
+// <monster-thumbs>
+// 小さい枠(64px 以下)で使うモンスターの小さい版。tools/image/make-monster-thumbs.js が作る(手で書かない)
+const MONSTER_THUMBS = {
+  "Ark": "images/monster-thumbs/ark.png?v=7c0bea019d24",
+  "Dreamy": "images/monster-thumbs/dreamy.png?v=52dd72eedb84",
+  "Eiki": "images/monster-thumbs/eiki.png?v=16fc18f0557a",
+  "Ghost": "images/monster-thumbs/ghost.png?v=2f425d0bdb0c",
+  "Golem": "images/monster-thumbs/golem.png?v=0f4c785f6be0",
+  "Ham": "images/monster-thumbs/ham.png?v=ebd15987815c",
+  "Iblis": "images/monster-thumbs/iblis.png?v=03f0805f8042",
+  "Illumine": "images/monster-thumbs/illumine.png?v=34fc3f9c816a",
+  "KenshiMocchi": "images/monster-thumbs/kenshimocchi.png?v=7bbc8093cc81",
+  "Kuromy": "images/monster-thumbs/kuromy.png?v=535ef98e1c61",
+  "Melody": "images/monster-thumbs/melody.png?v=05b88d6a561e",
+  "MelWhip": "images/monster-thumbs/melwhip.png?v=539bb81b4667",
+  "Mia": "images/monster-thumbs/mia.png?v=43ee24870aa3",
+  "Mitarashi": "images/monster-thumbs/mitarashi.png?v=46c8880e15ea",
+  "Mocchi": "images/monster-thumbs/mocchi.png?v=eaf570b00efc",
+  "Monol": "images/monster-thumbs/monol.png?v=0d4176ea4f28",
+  "Oboro": "images/monster-thumbs/oboro.png?v=7afb7f26ae0a",
+  "Pandora": "images/monster-thumbs/pandora.png?v=ec9af7e742ec",
+  "Pixie": "images/monster-thumbs/pixie.png?v=34c3db90a5e0",
+  "Plant": "images/monster-thumbs/plant.png?v=03fa6abc2b43",
+  "Snegurochka": "images/monster-thumbs/snegurochka.png?v=153ac32620dd",
+  "Spooky": "images/monster-thumbs/spooky.png?v=e6e5ff907240",
+  "Suezo": "images/monster-thumbs/suezo.png?v=9886bc06c718",
+  "Tiger": "images/monster-thumbs/tiger.png?v=695831514b53",
+  "Undine": "images/monster-thumbs/undine.png?v=f78c64c06d9f",
+  "Yaobikuni": "images/monster-thumbs/yaobikuni.png?v=888eb3250dfd",
+  "Yggdrasil": "images/monster-thumbs/yggdrasil.png?v=b92e61bd9054",
+  "Zan": "images/monster-thumbs/zan.png?v=2cfc30f16541",
+};
+// </monster-thumbs>

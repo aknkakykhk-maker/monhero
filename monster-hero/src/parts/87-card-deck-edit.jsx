@@ -35,9 +35,10 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
 //   mon … モンスター / deck … デッキに入れたもの(モンスターも) / ほか … 技など(CARD_DECK_FILTERS)
 const CARD_DECK_VIEWS = Object.freeze([{ id: 'mon', label: 'モンスター' }, { id: 'deck', label: 'デッキに入れた' }, ...CARD_DECK_FILTERS.map((f) => (f.id === 'all' ? { ...f, label: '技など全部' } : f))]);
 const CARD_DECK_SORTS = Object.freeze([{ id: 'kind', label: '種類順' }, { id: 'guts', label: 'ガッツ順' }, { id: 'no', label: '番号順' }]);
-// 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」。
+// 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」
+// onDetail … 名前の右の「i」を押したときに詳しい画面を開く(長押しに気づかない人のため。2026-10-26)
 // デッキ編成はダブルタップを使わない(続けて押すと続けて入れる。2026-10-26 社長「デッキ編成は詳細ボタンを作る」)
-const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove }) => {
+const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove, onDetail = null }) => {
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
   const name = c ? c.name : m ? m.name : no;
   return (
@@ -45,7 +46,11 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
       <button type="button" data-card-deck-tile={no} {...press(no, onAdd, { double: false })} className={`block w-full active:scale-95 ${!canAdd && inDeck === 0 ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
       </button>
-      <CardNameFit name={name} className="mt-0.5 font-bold leading-tight text-slate-100"/>
+      {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
+      <div className="mt-0.5 flex items-center gap-0.5">
+        <CardNameFit name={name} className="min-w-0 flex-1 font-bold leading-tight text-slate-100"/>
+        {onDetail && <button type="button" data-card-deck-info={no} onClick={(e) => { e.stopPropagation(); Audio_.fgSe.tap(); onDetail(); }} aria-label={`${name}の詳細`} className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-slate-950/80 font-serif text-[11px] font-black italic leading-none text-white active:scale-90">i</button>}
+      </div>
       <div className="mt-0.5 flex items-center justify-between gap-0.5">
         <button type="button" data-card-deck-minus={no} disabled={inDeck === 0} onClick={onRemove} aria-label={`${name}を1枚外す`} className="flex h-[28px] w-[27px] shrink-0 items-center justify-center rounded-md bg-rose-600 text-[18px] font-black leading-none text-white active:scale-90 disabled:bg-slate-700 disabled:text-slate-500">−</button>
         <span data-card-deck-in={no} className="min-w-0 whitespace-nowrap text-center text-[11px] font-black tabular-nums text-white">{inDeck}<span className="text-[9px] text-slate-400">/{limit}</span></span>
@@ -128,7 +133,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
   const tile = (no) => {
     const inDeck = countOf(no);
     const limit = cardMonsterOf(db, no) ? 1 : Math.min(3, col[no] || 0);
-    return <CardDeckPickTile key={no} db={db} no={no} inDeck={inDeck} limit={limit} canAdd={!cardDeckAddReason(db, deck, no, col)} press={press} onAdd={() => add(no)} onRemove={() => removeOne(no)}/>;
+    return <CardDeckPickTile key={no} db={db} no={no} inDeck={inDeck} limit={limit} canAdd={!cardDeckAddReason(db, deck, no, col)} press={press} onAdd={() => add(no)} onRemove={() => removeOne(no)} onDetail={() => setDetail(no)}/>;
   };
   const chip = (on) => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
   const footer = (
@@ -308,11 +313,12 @@ const CardDex = ({ db, collection, onBack }) => {
   const all = useMemo(() => cardDexAll(db), [db]);
   const tabList = useMemo(() => cardDexTabsOf(db, mode).map((t) => ({ ...t, list: cardDexListOf(db, mode, t.id, all) })), [db, mode, all]);
   const tab = tabs[mode];
-  const list = (tabList.find((t) => t.id === tab) || tabList[0] || { list: [] }).list;
+  const curTab = tabList.find((t) => t.id === tab) || tabList[0] || { list: [] };
+  const list = curTab.list;
   const shown = list.filter((no) => (show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true));
   const haveIn = (arr) => arr.filter((no) => col[no] > 0).length;
   const chip = (on) => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
-  const unit = CARD_DEX_UNIT[mode];
+  const unit = curTab.label || CARD_DEX_UNIT[mode];   // 選んでいるタブの名前(「第1弾 1/59」)。2026-10-26 カゲあつくんの通しの点検
   // 選んでいる札を見える所へ(見かたを替えたとき、前の見かたの横の位置が残って選んだ札が隠れていた)
   const tabRow = useRef(null);
   //   ★scrollIntoView は使わない(縦にも動いて画面ごとずれる。viewport-height-check)。列の横の位置だけを動かす
@@ -546,7 +552,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
                     </div>
                     {on && rare && <div aria-hidden="true" className={`mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`}/>}
                     {on && c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
-                    {on && !c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                    {/* NEW は、その種類をはじめて手に入れた1枚だけ(前から持っている・同じパックの2枚目には付けない。89 の fresh。2026-10-26 巡回)。fresh が無い札(見本)は前のまま */}
+                    {on && !c.dup && (c.fresh === undefined || c.fresh) && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
                     {on && rare && <span className={`absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
                   </button>
                   <CardNameFit name={on ? name : '\u00a0'} className="mt-0.5 font-bold leading-tight text-slate-100"/>
@@ -557,7 +564,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
         )}
         {phase === 'open' && allOpen && (
           <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
-            {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
+            {/* 「だぶった」だと、同じカードが2枚出たのに「ありません」と読めた(2026-10-26 巡回 → 社長が文をOK) */}
+            {packPoint > 0 ? <>持てる数をこえたカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'ビートPに変わったカードはありません'}
             {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
           </div>
         )}

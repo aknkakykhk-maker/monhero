@@ -205,10 +205,10 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         {onOpenDebug && <SettingsMenuLink icon="🧪" label="デバッグ設定" desc="確認待ちの試作・検証用(この端末だけ)" onClick={onOpenDebug}/>}
         <SettingsMenuLink icon="⚔️" label="バトル設定" desc="タクティクスの画面・画面の軽さ・待機中の動き" onClick={() => setBattleSettingsOpen(true)} data-open-battle-settings/>
         <SettingsMenuLink icon="🎚️" label="音量設定" desc="効果音とBGMの大きさ・音が出ないとき" onClick={onOpenAudioSettings}/>
-        <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面ごとに流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
+        <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面に合わせて流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
         <SettingsMenuLink icon="🖼️" label="タイトル画像アレンジ" desc="タイトル画面の絵を選ぶ" onClick={onOpenTitleArt} data-open-title-art/>
         <SettingsMenuLink icon="🏡" label="ホーム画面アレンジ" desc="ホーム画面の背景を選ぶ" onClick={onOpenHomeArt} data-open-home-art/>
-        <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面ごとにハロウィン／クラシックを選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
+        <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面の見た目(ハロウィン／クラシック)を選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
         {/* 入/切に関係なく出す(切のままだと、プレイヤーに戻す手段が無い)。対応していない端末はページの中で知らせる */}
         <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>
@@ -265,16 +265,30 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
 
 // タイトル画像アレンジ・ホーム画面アレンジで使う「絵を選ぶ」窓。
 // options は { id, label, desc, src } の並び(TITLE_ART_OPTIONS / HOME_ART_OPTIONS)
+// 設定まわりの窓(更新履歴・設定・音量設定・BGMアレンジ・データ引き継ぎ・タイトル画像/ホーム画面アレンジ・画面テーマ)は、
+// 外側の暗いところを押すと閉じる(ほかの窓と同じ閉じ方。2026-10-26 ダメダシの見回り 6)。
+// 押し始めも外側だったときだけ閉じる … 音量のつまみを引いて窓の外で離したときや、窓の中の字を選んで外で離したときに閉じないように。
+// onPointerDown の stopPropagation … 下のタイトル画面へ「押した」を伝えない(前からの作り)
+const settingsBackdropProps = (onClose) => ({
+  onPointerDown: (e) => { e.stopPropagation(); e.currentTarget.dataset.downOnBackdrop = e.target === e.currentTarget ? '1' : ''; },
+  onClick: (e) => {
+    const ok = e.target === e.currentTarget && e.currentTarget.dataset.downOnBackdrop === '1';
+    e.currentTarget.dataset.downOnBackdrop = '';
+    if (ok) onClose();
+  },
+});
+
 function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onChange, onClose }) {
   const auto=value==='auto';
   return (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
+    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
       <div className="mh-title-dialog" data-art-picker={pickerId} style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
         <div className="mh-dialog-head"><h3>{heading}</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
-        <p className="text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
-        {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック) */}
-        <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
-        <div className="grid grid-cols-2 gap-3">{options.map(option=>{
+        <p className="shrink-0 text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
+        {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック)。
+            shrink-0 … 窓は縦に並べる作りなので、中身が窓より高いと札が縮められ、2行目「いまは〜を出しています」が下の枠にかかっていた(320。2026-10-26 ダメダシの見回り s04) */}
+        <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
+        <div className="shrink-0 grid grid-cols-2 gap-3">{options.map(option=>{
           const selected=value===option.id;
           return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>onChange(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}>
             <img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>
@@ -284,7 +298,7 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
             <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small>
           </button>;
         })}</div>
-        <button type="button" className="mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" onClick={onClose}>決定</button>
+        <button type="button" className="shrink-0 mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]" onClick={onClose}>決定</button>
       </div>
     </div>
   );
@@ -301,7 +315,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
   const chip = (selected) => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
   return (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
+    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
       <div className="mh-title-dialog" data-screen-theme-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
         <div className="mh-dialog-head"><h3>画面テーマ</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
         <p className="text-[11px] font-bold leading-relaxed text-slate-300">画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。</p>

@@ -11,7 +11,7 @@
 //   ⑤ どの助手を選んでも、強さのボタンが送らずに全部見える(「対戦する」の帯に潜らない)
 //   ④ 字が切れていない(1行のままの字が箱からはみ出さない)・数字(重みや勝率)を出していない(「1体」〜「4体」「第1弾」だけは数として出す)
 //   ⑥ 紹介欄の立ち絵が、透明な余白を除いて欄の高さに合う(2026-10-26 社長「みゅあの立ち絵だけ小さい」)。
-//      みゅあの標準の服は測ってある輪郭を使う(canvas の getImageData が失敗しても小さくならない)・きき→みゅあの切り替え・
+//      助手の標準の服は測ってある輪郭を使う(canvas の getImageData が失敗しても小さくならない)・きき→みゅあの切り替え・
 //      狭い縦画面・大きさの変更・横向き→縦向きに戻したあとも合う・着替えの服には標準の服の輪郭を当てない
 const http = require('http');
 const path = require('path');
@@ -149,8 +149,10 @@ const seed = (withAuto) => `(() => {
           if (WANT[who] && r.label !== WANT[who]) bad.push(`${who}: 型が ${r.label}(${WANT[who]} のはず)`);
           if (r.mons !== 1) bad.push(`${who}: 好きなモンスターが ${r.mons}体`);
           if (r.prefer !== (who === 'atsu' && lv === 'hard')) bad.push(`${who} ${lv}: よく使うカードの出かたが違う`);
-          if (lv === 'easy' && !/^EASY: .*気分/.test(r.note)) bad.push(`${who} EASY: ${r.note}`);
-          if (lv === 'hard' && !/^HARD: 残りの2体は、型に合う子/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
+          if (lv === 'easy' && !/^EASY: 好きな子を中心に/.test(r.note)) bad.push(`${who} EASY: ${r.note}`);
+          if (lv === 'hard' && !/^HARD: 戦い方に合う子/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
+          // 作り手の言葉を出さない(2026-10-26 カゲあつくんの通しの点検で「組み方は雑」「型どおりに組む」)
+          if (/雑|型どおり|型に合う/.test(r.note)) bad.push(`${who} ${lv}: 作り手の言葉(${r.note})`);
           if (r.clipped.length) bad.push(`${who}: 字が切れている(${r.clipped.join('・')})`);
           if (/[0-9０-９]/.test(r.text.replace(/[1-4]体|第[0-9]弾/g, ''))) bad.push(`${who}: 数字を出している(${(r.text.replace(/[1-4]体|第[0-9]弾/g, '').match(/.{0,8}[0-9０-９].{0,8}/) || [''])[0]})`);
         }
@@ -213,7 +215,19 @@ const seed = (withAuto) => `(() => {
         check(`⑥ ${name}: 着替えの服には標準の服の輪郭を当てず、絵の高さが欄に合う`, /halloween/.test(mua && mua.src) && !mua.known && fits(mua), show(mua));
       } else {
         check(`⑥ ${name}: きき→みゅあに替えても、みゅあの標準の服の立ち絵が欄の高さに合う(測った輪郭を使う)`, fits(mua) && mua.known, `きき ${show(kiki)} / みゅあ ${show(mua)}`);
-        if (!mode) check('⑥ ふつう: ききの立ち絵も欄の高さに合う', fits(kiki), show(kiki));
+        // ききも標準の服の絵なので、画素を読めない端末でも測った輪郭で合う(2026-10-26 助手全員の表 card-art-box-build)
+        check(`⑥ ${name}: ききの立ち絵も欄の高さに合う${mode ? '(測った輪郭を使う)' : ''}`, fits(kiki) && (!mode || kiki.known), show(kiki));
+        if (mode === 'canvasFail') {
+          const all = [];
+          for (const who of await page.evaluate(() => [...document.querySelectorAll('[data-card-foe]')].map((b) => b.getAttribute('data-card-foe')))) {
+            await page.click(`[data-card-foe="${who}"]`);
+            const r = await waitArt(page);
+            if (!fits(r) || !r.known) all.push(`${who} ${show(r)}`);
+          }
+          check(`⑥ ${name}: どの助手を選んでも、標準の服の立ち絵が欄の高さに合う`, all.length === 0, all.join(' / '));
+          await page.click('[data-card-foe="mua"]');
+          await waitArt(page);
+        }
         await page.setViewportSize({ width: 340, height: 600 });
         const narrow = await waitArt(page);
         check(`⑥ ${name}: 狭い縦画面(340×600)に変えても合う`, fits(narrow), show(narrow));

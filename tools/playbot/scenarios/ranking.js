@@ -47,7 +47,7 @@ async function rankingScenario(s, { rhythm } = {}) {
   // ランキングの上に並ぶタブ(この曲・総合・週間・イベント)を1つずつ押す。
   // ★タブは窓ではなく画面の上部にある。戻る・更新・閉じるものは押さない
   const tabs = (await s.listButtons()).filter((b) => b.y < 160 && b.label.length <= 10
-    && !/^(閉じる|とじる|×|戻る|もどる|キャンセル|OK|更新|←)$|話しかける|説明|^\(無名|^BUTTON$/.test(b.label));
+    && !/^(閉じる|とじる|×|戻る|もどる|キャンセル|やめる|OK|更新|←)$|話しかける|説明|^\(無名|^BUTTON$/.test(b.label));
   const pressed = [];
   for (const b of tabs.slice(0, 8)) {
     s.state.step += 1;

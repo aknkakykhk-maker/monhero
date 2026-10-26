@@ -201,7 +201,7 @@ const friendsGroup = (selfId, rows) => {
 };
 // 最後に開いた時刻から「いま」「◯分前」「◯時間前」「◯日前」の文を作る(表示用の純粋な計算)
 const friendsLastSeenText = (updatedAtMs, nowMs) => {
-  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間は不明';
+  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間はわかりません';
   const diff = Math.max(0, nowMs - updatedAtMs);
   if (diff < FRIENDS_ONLINE_MS) return 'いま遊んでいるかも';
   const minutes = Math.floor(diff / 60000);
