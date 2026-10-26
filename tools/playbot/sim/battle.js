@@ -32,7 +32,7 @@
 //   結果に敵のライフの合計(enemyHpTotal)・再生(regenTotal)・最後の一撃の余り(overkill)を足した。比べた結果は docs/playbot/reports/tier/lab/training.md
 // ★11 版目(2026-10-22 社長「ヘイトをシミュレーターに入れて」): 敵の狙いにゲームと同じヘイトを入れた(tools/playbot/sim/hate-sim-check.js が見張る)。
 // ★10 版目(2026-10-16): EX=best(上手な遊び方)の列はトレーニングもドミノ倒し+走り込み(ハカセくんの決定)。bot の列は実戦のボットと同じまま
-// ★11 版目(2026-10-16): EX=best の列は緊急回復も上手な使い方(emergency 'best' = ガッツの平均 40% 未満で押す)・剣士モッチーの初期スタイル(heroStyle。強い難易度はずっと片手盾)
+// ★14 版目(2026-10-16 に作り、10/27 にヘイト入りの 13 版目の上へ載せ直した): EX=best の列は緊急回復も上手な使い方(emergency 'best' = ガッツの平均 40% 未満で押す)・剣士モッチーの初期スタイル(heroStyle。強い難易度はずっと片手盾)
 // ★まだ入れていないもの: 魂格(Tier の対象外)・強化ポイントでガッツ+10・緊急回復の上手な使い方。近似したものは md の頭(APPROX)に書く。
 const fs = require('fs');
 const path = require('path');
@@ -1725,7 +1725,7 @@ if (require.main === module) {
   const bossCell = (x) => (x.boss > 0 ? `${pct(x.bossWin)}(${pct(x.boss)})` : '—');
   out(`# 簡易シミュレーター(タクティクスプロ・${DIFFS.join(' / ')}・各 ${RUNS} 回・EX の使い方 ${MODES.join(' / ')})`);
   out();
-  out(`\`node tools/playbot/sim/battle.js\` の出力(11 版目・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}(EX=best の列は ${trainingFor("best") === "atkhp" ? "ドミノ倒し+走り込み" : trainingFor("best")}・緊急回復はガッツの平均 40% 未満で押す・剣士モッチーは強い難易度でずっと片手盾)・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
+  out(`\`node tools/playbot/sim/battle.js\` の出力(14 版目・ヘイト・スキル・アシカ・トレーニング・間合いボーナス・固有技の強化・緊急回復入り。トレーニング ${TRAINING}(EX=best の列は ${trainingFor("best") === "atkhp" ? "ドミノ倒し+走り込み" : trainingFor("best")}・緊急回復はガッツの平均 40% 未満で押す・剣士モッチーは強い難易度でずっと片手盾)・アシカ ${ASSIST}・間合いボーナス ${DIST_BONUS ? 'on' : 'off'}・固有技の強化 ${UNIQUE_UP ? 'on' : 'off'}・緊急回復 ${EM_LIST.map((em) => EM_JA[em] || em).join(' / ')}。1つ目の「${EM_JA[EMERGENCY] || EMERGENCY}」で EX の使い方3通り・実戦との突き合わせ・bot と best の差を出し、2つ目からは EX=best だけを列に足した)。式はゲームのコード(60-app.jsx・19-difficulties・22-enemy・32-tactics-units)から写したもの。`);
   out();
   out('**2 版目で入れたもの**(社長の決まり「ステは弱いけどスキル系で調整してるから、そこもちゃんと見て判断して」):');
   out();
