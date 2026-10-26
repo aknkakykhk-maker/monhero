@@ -12,7 +12,7 @@ const index = fs.readFileSync(path.join(root, 'monster-hero', 'index.html'), 'ut
 const rhythmRelease = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'rhythm-step3-release.js'), 'utf8');
 const calibrationPath = path.join(root, 'monster-hero', 'data', 'rhythm-geometry-calibration.js');
 const calibration = fs.existsSync(calibrationPath) ? fs.readFileSync(calibrationPath, 'utf8') : '';
-const buildDate = source.match(/const BUILD_DATE = "([^"]+)";/)?.[1];
+const buildDate = index.match(/window\.__mhBuildDate = '([^']+)';/)?.[1];
 const releaseDate = rhythmRelease.match(/const RHYTHM_RELEASE_DATE='([^']+)'/)?.[1];
 const dataBuild = rhythmRelease.match(/const RHYTHM_DATA_BUILD='([^']+)'/)?.[1];
 const compiledBuild = rhythmRelease.match(/const RHYTHM_COMPILED_BUILD='([^']+)'/)?.[1];
@@ -50,6 +50,10 @@ const checks = [
   // 本体JSのキャッシュキーは、本体を書き出したあとに中身のハッシュで打つ(2026-10-27 から。stamp-game-build.js)
   ['出荷時に本体JSのキャッシュキーも更新', fs.readFileSync(path.join(__dirname, 'build.js'), 'utf8').includes("require('./stamp-game-build').stampGameBuild()") && fs.readFileSync(path.join(__dirname, 'stamp-game-build.js'), 'utf8').includes("createHash('sha256').update(fs.readFileSync(COMPILED))")],
   ['全出荷の更新バナー用versionをBUILD_DATEと一緒に更新', stampTool.includes("version.json") && stampTool.includes('BUILD_DATE、version.json を')],
+  // 画面に出す日時は index.html から渡す(2026-10-27 速さ部)。本体の中に日時を書くと、ビルドのたびに本体の中身と
+  // キャッシュキー(GAME_BUILD = 中身のハッシュ)が変わり、事前ダウンロードにためた本体が使えなくなる
+  ['本体の中に日時を書かない(本体のハッシュがビルドのたびに変わらない)', !/const BUILD_DATE = ["'`]\d/.test(source) && source.includes("const BUILD_DATE = (typeof window !== 'undefined' && typeof window.__mhBuildDate === 'string') ? window.__mhBuildDate : '';") && !/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(fs.readFileSync(path.join(__dirname, 'stamp-version.js'), 'utf8').match(/BUILD_DATE_LINE[\s\S]*?process\.exit/)?.[0] || '')],
+  ['日時を読めないときは更新のお知らせを出さない(空と比べない)', source.includes('data.build && BUILD_DATE && data.build !== BUILD_DATE')],
   ['通常ビルドが日時更新を必ず実行', fs.readFileSync(path.join(__dirname, 'build.js'), 'utf8').includes("require('./stamp-version')")],
 ];
 

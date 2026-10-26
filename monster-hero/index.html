@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":39965,"data/images/images-enemy.js":2926,"data/ally-monsters.js":56498,"data/lineages.js":25432,"data/breeder.js":105915,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":3891085,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":76361,"data/changelog.js":1445126,"data/help.js":645446,"data/rhythm-step3-release.js":8517,"data/assistants.js":837514,"data/card-battle-cards.js":112387,"tailwind.css":239627,"game-system.compiled.js":6447627,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":39965,"data/images/images-enemy.js":2926,"data/ally-monsters.js":56498,"data/lineages.js":25432,"data/breeder.js":105915,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":3891085,"data/rhythm-lane-svg.js":11949,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":76361,"data/changelog.js":1447183,"data/help.js":646233,"data/rhythm-step3-release.js":8517,"data/assistants.js":837514,"data/card-battle-cards.js":112387,"tailwind.css":239870,"game-system.compiled.js":6478608,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,8 +98,11 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = 'e8d4f51bf224';
+var GAME_BUILD = 'f9d8bb59d51c';
 window.__mhGameBuild = GAME_BUILD;
+// 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
+// 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
+window.__mhBuildDate = '2026-10-27 03:50';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -132,7 +135,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=5a884300cfb1" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=d6117659963c" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -2255,12 +2258,12 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=ddcb715aad87" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=b30e097ff8fe" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=c7a4af26fc62" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=296e937322f4" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=465ed6e5b746" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
-<script src="data/assistants.js?v=5b251dd8c1e7" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
+<script src="data/assistants.js?v=fac21def3297" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
 <script src="data/card-battle-cards.js?v=c2b5285eda05" onload="__mhBoot.done('data/card-battle-cards.js','カードを読み込み中')" onerror="__mhBoot.fail('data/card-battle-cards.js')"></script>
 <script>
 (function(){
@@ -2277,6 +2280,21 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     var l = document.getElementById('loading');
     if (l) l.innerHTML = '<div style="color:#f88;padding:16px;text-align:center;font-weight:900">読み込みに失敗しました<br>通信環境を確認して再読み込みしてください</div>';
   }
+  // 事前ダウンロードの置き場(mh-code-v1・sw.js)にためた本体が壊れていたとき、その本体を置き場から消す。
+  // 消さないと、版が変わるまで毎回「壊れた物を読む → 取り直す」になる。取り直し(&retry=)は SW が素通しするので、消し終わるのを待たない
+  function evictCachedGame(){
+    try {
+      if (!window.caches) return;
+      caches.has('mh-code-v1').then(function(has){
+        if (!has) return;
+        return caches.open('mh-code-v1').then(function(c){
+          return c.keys().then(function(keys){
+            keys.forEach(function(r){ if (/\/game-system\.compiled\.js\?/.test(r.url)) c.delete(r); });
+          });
+        });
+      }).catch(function(){});
+    } catch (e) {}
+  }
   function loadGame(){
     attempts++;
     window.__mhBoot.say('ゲーム本体を読み込み中');
@@ -2284,6 +2302,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     script.src = 'game-system.compiled.js?v=' + GAME_BUILD + (attempts > 1 ? '&retry=' + Date.now() : '');
     script.onload = function(){
       if (typeof MonsterHeroGame === 'undefined') {
+        evictCachedGame();
         if (attempts < 2) loadGame(); else showLoadError();
         return;
       }
@@ -2291,6 +2310,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     };
     script.onerror = function(){
       script.remove();
+      evictCachedGame();
       if (attempts < 2) loadGame(); else { window.__mhBoot.fail('game-system.compiled.js'); showLoadError(); }
     };
     document.body.appendChild(script);

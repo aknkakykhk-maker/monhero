@@ -132,6 +132,8 @@ const publish = (ver, sw = null) => {
     } else { notYet('古い版の本体が置き場から消える'); }
 
     console.log('③ 途中で失敗したとき');
+    // 置き場に B があると SW がそれを返し、失敗が起きない。置き場に無い(はじめての版)ときの失敗を真似るため、先に本体だけ外す
+    if (built) await page.evaluate(async ({ name, file }) => { const c = await caches.open(name); for (const req of await c.keys()) if (req.url.includes(file)) await c.delete(req); }, { name: CODE_CACHE, file: GAME_JS });
     failGame = true;
     check('本体の1回目の取得(先読みも)が 500 でも、取り直しで B の本体が動く', (await boot(B)) === 'B', JSON.stringify(log.filter(x => x.path === GAME_JS)));
     const retried = log.filter(x => x.path === GAME_JS && /[?&]retry=/.test(x.query));
