@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4677e79f0a4dd8ac
+// generated-sha256: 1d1c020b8e3479a1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11295,15 +11295,14 @@ const MARKET_FRAME_RING_BOX = 1.2;
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
-  Tiger: { scale: 2.31, x: 3, y: 38 },
+  // ライガー(Tiger)はここで寄せない。顔アイコンを社長が選んだ A(頭まるごと)で作ったので、どの画面でも同じ絵のまま出す(2026-10-26)
   // アーク(ark_icon)はここで寄せない。顔アイコン(make-face-icons.js の ARK)を顔が真ん中に来るよう作り直したので、どの画面でも同じ絵のまま出す(2026-10-26)
   kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
-  snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
+  // スネグーラチカ・プラント・ユグドラシル・メルホイップはここで寄せない。この寄り方(社長が選んだ A)で顔アイコンを作り直し、
+  // どの画面でも同じ絵のまま出す(2026-10-26。基準は data/images/images-ally.js の ART_ANCHORS)
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
-  // イブリース。1.42は「頭上のボールを枠の外へ出す」ために選んだ倍率だったが、
-  // 顔に寄りすぎて角も上下も切れていた(2026-09-05・ユーザー指摘「近すぎる」)。
-  // 角と光輪が丸ごと入るところまで引いた。ボールは元絵の一部なので出してよい。
-  iblis_icon: { scale: 1.30, x: 0, y: -11 },
+  // イブリース・パンドラはここで寄せない。社長が選んだ寄り方(イブリース=輪まで入れる案1・パンドラ=A)で顔アイコンを作り、
+  // どの画面でも同じ絵のまま出す(2026-10-27)
   // ウンディーネ・ヤオビクニの本人アイコンは、エイキ・剣士モッチーと同じく専用の顔クロップ
   // (UNDINE_FACE_ICON / YAOBIKUNI_FACE_ICON)を使うので、ここでの拡大・位置調整は要らない
   // (元から丸枠向けに切り出してある)。
@@ -11315,20 +11314,7 @@ const MARKET_PROFILE_ICON_STYLES = {
   // 倍率で解こうとせず、顔クロップを作るのが正解だった(tools/image/make-face-icons.js)。
   // なお見た目を変えるときは **実機と同じ40pxで描いて確かめる**こと。
   // 190pxの大きな丸で見ると、40pxでは潰れて消える耳や髪が「入っている」ように見える。
-  mia_icon: { scale: 3.2, x: 0, y: 94 },
-  // パンドラ。1.8では顔が小さく、ほかのアイコンより引いて見えた
-  // (2026-09-05・ユーザー指摘「少し遠い」)。角と光輪が切れない範囲で寄せた。
-  pandora_icon: { scale: 2.4, x: 0, y: 72 },
-  // プラント。ほかのアイコンが枠の8〜10割を埋めているのに、ここだけ7割ほどしか
-  // 埋まっておらず、1つだけ引いて見えた(2026-09-05・ユーザー指摘「全部見直して統一して」)。
-  // 花の先が切れない範囲で寄せた。
-  plant_icon: { scale: 1.25, x: 0, y: -3 },
-  // ユグドラシル・メルホイップ(2026-09-29 ユーザー指示「少しアイコンが小さめだから顔を基準にもう少し近づけて」)。
-  // 顔アイコン(256px)の顔の真ん中を枠の中心へ持ってきて寄せる。4案を見比べてユーザーが選んだ倍率
-  // (ユグドラシル ×1.2 は角と耳を残す案。メルホイップ ×1.35)。移動量は「-(顔の位置-128)/256×100×倍率」%
-  // ユグドラシルの顔の真ん中は (128,147)、メルホイップは (131,148)
-  yggdrasil_icon: { scale: 1.2, x: 0, y: -8.9 },
-  mel_whip_icon: { scale: 1.35, x: -1.6, y: -10.5 },
+  // ミーア(mia_icon)はここで寄せない。社長が選んだ寄り方(A を左へ寄せた案2)で顔アイコンを作ったので、どの画面でも同じ絵のまま出す(2026-10-27)
   // みゅあ(アシストカードのアイコン)。顔が枠の中央より左に寄っていた。
   // 寄せたぶんを覆えるよう倍率も少しだけ上げている(x=2 なら s>=1.04)。
   mua: { scale: 1.06, x: 2, y: 4 },
@@ -17894,7 +17880,7 @@ const sbFetchBreederLevelRows = async (requestId = 'untracked') => {
     const timer = setTimeout(() => controller.abort(), 8000);
     try {
       const url = `${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?select=${BREEDER_LEVELS_SELECT}`
-        + `&order=level.desc.nullslast,breeder_id.asc&limit=${pageSize}&offset=${offset}`;
+        + `&level=gte.${BREEDER_LEVEL_PUBLISH_MIN}&order=level.desc.nullslast,breeder_id.asc&limit=${pageSize}&offset=${offset}`;
       const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
       const body = await res.text();
       if (!res.ok) {
@@ -17918,7 +17904,9 @@ const sbFetchBreederLevelRows = async (requestId = 'untracked') => {
       clearTimeout(timer);
     }
   }
-  return all.filter(r => r && typeof r === 'object' && Number(r.level) > 0);
+  // 送る側(Lv.2から)と同じ線。表に残っている Lv.1 の行(検査・試しの端末が足した「テスト」など)は、
+  // 消さずに、ランキングを作るときだけ外す(2026-10-27・社長「消さない」)。上の &level=gte でも外しているが、念のためここでも
+  return all.filter(r => r && typeof r === 'object' && Number(r.level) >= BREEDER_LEVEL_PUBLISH_MIN);
 };
 // ===== 記録そのものから拾う「その人の最後に分かっている枠」(2026-09-16) =====
 //
@@ -24694,7 +24682,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {/* 抽選の結果。当たりは大きく「LUCKY RUSH!!」、はずれは小さく「+2pt」 */}
 {luckyBanner&&<div key={luckyBanner.id} data-rhythm-lucky-banner data-kind={luckyBanner.kind} aria-hidden="true"><b>{luckyBanner.text}</b></div>}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
-                {/* 能力名の文字は、その大きさ・太さで初めて出る瞬間(最初のモンスターノーツ)に文字の形を用意するので、その1回だけ重かった(2026-10-13)。同じ書式で見えないまま置いておき、曲の前に用意を済ませる。見えない(visibility:hidden)ので、見た目・押せる所は変わらない */}{monsters.some(m=>m&&m.ability)&&<div data-rhythm-ability-warm aria-hidden="true" className="pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-lg font-black" style={{visibility:'hidden'}}>{monsters.filter(m=>m&&m.ability).map(m=>m.ability.name).join('')}！</div>}{/* 能力名の札は最初から置いておき、出すときは文字と印(data-on)だけを書き換える。出し入れや演奏画面全体の作り直しをすると、その瞬間だけ重かった(2026-10-15 計測・4回目のモンスターノーツ) */}{monsters.some(m=>m&&m.ability)&&<div ref={abilityFlashRef} data-rhythm-ability-flash data-on="0" className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',visibility:'hidden',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{'\u00a0'}</div>}{canvasNotes?<canvas key={webglNotes?'webgl':'2d'} ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
+                {/* 能力名の文字は、その大きさ・太さで初めて出る瞬間(最初のモンスターノーツ)に文字の形を用意するので、その1回だけ重かった(2026-10-13)。同じ書式で見えないまま置いておき、曲の前に用意を済ませる。見えない(visibility:hidden)ので、見た目・押せる所は変わらない */}{monsters.some(m=>m&&m.ability)&&<div data-rhythm-ability-warm aria-hidden="true" className="pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-lg font-black" style={{visibility:'hidden'}}>{monsters.filter(m=>m&&m.ability).map(m=>m.ability.name).join('')}！</div>}{/* 能力名の札の高さ: 縦は判定の文字の下(下から12%+78px)。横は高さが足りず、同じ値だと判定の文字(MARVELOUS など)の真ん中に重なって判定が読めなかったので、判定ラインより下の空いた帯へ出す(2026-10-27) */}{/* 能力名の札は最初から置いておき、出すときは文字と印(data-on)だけを書き換える。出し入れや演奏画面全体の作り直しをすると、その瞬間だけ重かった(2026-10-15 計測・4回目のモンスターノーツ) */}{monsters.some(m=>m&&m.ability)&&<div ref={abilityFlashRef} data-rhythm-ability-flash data-on="0" className="pointer-events-none absolute bottom-[calc(12%+78px)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100 landscape:bottom-[3%]" style={{visibility:'hidden',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{'\u00a0'}</div>}{canvasNotes?<canvas key={webglNotes?'webgl':'2d'} ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
     隠すのはレーンの台形の中だけ(laneCoverStyle の clip-path)。左右の空きにあるコンボ数・マスモン・背景は隠さない。
     ノーツ(z-5)より前、判定ライン(z-6)より前(上端から伸びるので判定ラインとは重ならない)、HUD(z-30)より後ろ。
     ★隠すだけで、ノーツが流れる速さ・判定のタイミングは変わらない */}
@@ -38614,7 +38602,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       <div className="shrink-0 flex gap-2 pt-2">
         <button type="button" data-pro-party-back onClick={()=>setStep('members')} className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">← 選び直す</button>
         <button type="button" data-pro-party-done disabled={!hero} onClick={()=>onDone(hero,ids.filter(id=>id&&id!==hero.id).map(id=>byId.get(id)))}
-          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください'}</button>
+          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500" style={JA_LABEL_STYLE}>{jaWrap(hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください')}</button>
       </div>
     </div>
   );
@@ -41342,7 +41330,7 @@ const kindOfTacticsSlotFx = (fx) => {
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
 function BattleScreen({
-  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
+  battleOverlayOpen = false, applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
   battleTutorialAllowsEmergency, battleTutorialCardAllowed, battleTutorialCardKind,
   battleTutorialCardTarget, battleTutorialNeed, battleTutorialNeedCard, battleTutorialSpotClass,
@@ -42200,7 +42188,9 @@ function BattleScreen({
                 【置き場所】丸枠(敵の円)の中には置かないこと。丸枠は transform を持つため
                 独自の重ね順の島になり、いくらz-indexを上げても、枠の外へ巨大に描くムーの
                 裏へ回ってしまう。必殺技の警告と同じこの階層に置くと前面に出る */}
-            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
+            {/* ★敵の解析・ステータス・ログなどを上に開いているあいだは出さない(body の直下へ出すので、
+                開いた画面の上に重なって残っていた。2026-10-26 ダメダシの見回り クラシック#2) */}
+            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&!battleOverlayOpen&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
               // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
               // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
               // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
@@ -43215,16 +43205,19 @@ function BattleScreen({
             })}
           </div>
         </div>
-        {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える */}
-        {tacticsExIntroVisible&&<div data-tactics-ex-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
-          <div className="flex items-start gap-1">
+        {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える
+            ★縦が短い画面(640px以下)では、案内を盤の下側に重ねて出す。段として場所を取ると、縮められるのが敵の段だけなので
+              320×568 で敵の絵が 16px までつぶれていた(2026-10-26 ダメダシの見回り タクティクス#1)。
+              みゅあの説明が盤にかかるのは社長の決めごと(コメントはカードなどにかぶらせてよい)。下のモンビーの案内も同じ */}
+        {tacticsExIntroVisible&&<div data-tactics-ex-intro className="relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0">
+          <div className="flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="tacticsExIntro" compact/></div>
             <button type="button" onClick={dismissTacticsExIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
         {/* ∞周回にした最初の1回だけ、モンビーへ行けることを伝える(PR8) */}
-        {quickRhythmIntroVisible&&<div data-quick-rhythm-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
-          <div className="flex items-start gap-1">
+        {quickRhythmIntroVisible&&<div data-quick-rhythm-intro className="relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0">
+          <div className="flex items-start gap-1 [@media(max-height:640px)]:absolute [@media(max-height:640px)]:inset-x-0 [@media(max-height:640px)]:bottom-0 [@media(max-height:640px)]:z-30 [@media(max-height:640px)]:border-t [@media(max-height:640px)]:border-fuchsia-400/30 [@media(max-height:640px)]:bg-slate-950/95 [@media(max-height:640px)]:px-2 [@media(max-height:640px)]:py-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="quickRhythmIntro" compact/></div>
             <button type="button" onClick={dismissQuickRhythmIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
@@ -49535,6 +49528,20 @@ const RaidJackHpBar = ({ left, max, tone = 'orange' }) => {
 };
 
 // 報酬1つぶんの中身(ダイヤ・虹のプシュケー・魂格の結晶・虹の超越の実・勇者の証。0のものは出さない)
+// 名前を「…」で切らず、枠の幅に合わせて字を縮めて1行に収める(320 で「オボロゲ…」と切れていた。2026-10-27 カゲあつくん)。
+//   編成の枠の名前(67-screen-pick.jsx・#3857)と同じ形
+const RaidJackFitName = ({ label, size = 9, className = 'text-slate-100' }) => (
+  <span className={`mt-0.5 w-full overflow-hidden whitespace-nowrap font-black leading-tight [container-type:inline-size] ${className}`}>
+    <span className="block" style={{ fontSize: `min(${size}px, calc(100cqw / ${[...String(label || '')].length + 0.3}))` }}>{label}</span>
+  </span>
+);
+// 画面の見出しも同じ形で縮める(320 で「カボチャの大王ジャッ」と右の端で切れていた。2026-10-27 ダメダシくん)。
+//   見出しの残りの幅いっぱいに置き、字の数で割った大きさ(上限は見出しのふだんの 20px)にする。斜体ぶん少し余らせる
+const RaidJackFitTitle = ({ text }) => (
+  <span data-raid-jack-fit-title className="block min-w-0 flex-1 overflow-hidden whitespace-nowrap [container-type:inline-size]">
+    <span className="block pr-1" style={{ fontSize: `min(1.25rem, calc(100cqw / ${[...text].length + 0.8}))` }}>{text}</span>
+  </span>
+);
 const RaidJackRewardChips = ({ reward }) => (
   <span className="flex flex-wrap gap-x-2 gap-y-0.5">
     {raidJackRewardParts(reward).map((p) => (
@@ -49545,7 +49552,8 @@ const RaidJackRewardChips = ({ reward }) => (
 const RaidJackRewardRow = ({ label, note, reward, got, dataKey }) => (
   <div data-raid-jack-reward-row={dataKey} className="flex items-start gap-2 border-b border-white/5 py-1.5 last:border-b-0">
     <div className="w-[68px] shrink-0">
-      <div className="text-[10px] font-black leading-tight text-orange-200">{label}</div>
+      {/* 「初めて倒した／とき」と言葉の途中で折れていたので、言葉の切れ目で折る(2026-10-27 カゲあつくん) */}
+      <div className="text-[10px] font-black leading-tight text-orange-200" style={JA_WRAP_STYLE}>{jaWrap(label)}</div>
       {note && <div className="text-[8px] leading-tight text-slate-400">{note}</div>}
     </div>
     <div className="min-w-0 flex-1"><RaidJackRewardChips reward={reward} /></div>
@@ -49585,7 +49593,7 @@ const RaidJackRewardList = ({ onClose, claimed, initialTab = 'a' }) => {
   const [tab, setTab] = useState(initialTab);
   const have = Array.isArray(claimed) ? claimed : [];
   return (
-    <div data-raid-jack-reward-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3" role="dialog" aria-modal="true" aria-label="ジャックの報酬一覧"
+    <div data-raid-jack-reward-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3" role="dialog" aria-modal="true" aria-label="ジャックの報酬一覧"
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
       <div className="mb-2 flex shrink-0 items-center justify-between">
         <div className="text-[14px] font-black text-orange-200">🎃 ジャックの報酬一覧</div>
@@ -49706,29 +49714,33 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
     : useSrc ? `${srcName}で与えたダメージの合計(${useAll ? '全段階の合計' : `${RAID_JACK_A_TIERS[tierIdx].name.replace('ジャック', '')}`})`
     : maxHit ? `${tab === 'a' ? 'レイドバトル' : 'グランドスラム'}の最大ダメージ(1戦あたり・${maxTierName})` : useAll ? 'レイドバトルの累計ダメージ(全段階の合計)' : tab === 'a' ? `${RAID_JACK_A_TIERS[tierIdx].name}への貢献ランキング` : 'グランドスラムの累計ダメージ(5難易度の合計)';
   return (
-    <div data-raid-jack-ranking-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950/95 p-3" role="dialog" aria-modal="true" aria-label="ジャックのランキング"
+    <div data-raid-jack-ranking-list className="fixed inset-0 z-[32000] flex flex-col bg-slate-950 p-3" role="dialog" aria-modal="true" aria-label="ジャックのランキング"
       style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
       <div className="mb-2 flex shrink-0 items-center justify-between">
         <div className="text-[14px] font-black text-orange-200">🏆 ジャックのランキング</div>
         <button type="button" data-raid-jack-ranking-close onClick={onClose} aria-label="ランキングを閉じる" className="min-h-[40px] rounded-xl border border-white/20 bg-white/10 px-4 text-[11px] font-black text-white active:scale-95">閉じる</button>
       </div>
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={(next) => { setTab(next); setMaxTier(0); setSrc('all'); }} />
-      <div data-raid-jack-ranking-kinds className="mb-2 flex shrink-0 gap-1.5 text-[10px] font-black">
+      {/* 絞り込みの札は2段まで(320 で4段になり、ランキングが下の半分しか使えなかった。2026-10-27 ダメダシくん)。
+          種類と遊び方を1段にまとめ、入りきらないぶんは横に送る */}
+      <div className="mb-1.5 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0">
+      <div data-raid-jack-ranking-kinds className="flex shrink-0 gap-1.5">
         <button type="button" data-raid-jack-ranking-kind="total" onClick={() => setMaxHit(false)}
           className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{tab === 'a' ? '貢献・累計' : '累計ダメージ'}</button>
         <button type="button" data-raid-jack-ranking-kind="max" onClick={() => setMaxHit(true)}
           className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxHit ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>1戦の最大ダメージ</button>
       </div>
       {tab === 'a' && (
-        <div data-raid-jack-ranking-sources className="mb-2 flex shrink-0 gap-1.5 text-[10px] font-black">
+        <div data-raid-jack-ranking-sources className="flex shrink-0 gap-1.5 border-l border-white/15 pl-1.5">
           {[['all', '合計'], ['battle', 'バトル'], ['rhythm', 'モンヒロビート']].map(([id, label]) => (
             <button type="button" key={id} data-raid-jack-ranking-source={id} onClick={() => setSrc(id)}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${src === id ? 'border-fuchsia-300 bg-fuchsia-900 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{label}</button>
           ))}
         </div>
       )}
+      </div>
       {maxHit && (
-        <div data-raid-jack-ranking-max-tiers className="mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black">
+        <div data-raid-jack-ranking-max-tiers className="mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0">
           {[{ id: 'all', name: '全難易度', n: 0 }, ...raidJackTiers(tab).map((t, i) => ({ id: t.id, name: t.name.replace('ジャック', ''), n: i + 1 }))].map((t) => (
             <button type="button" key={t.id} data-raid-jack-ranking-max-tier={t.n} onClick={() => setMaxTier(t.n)}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${maxTier === t.n ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name}</button>
@@ -49736,7 +49748,7 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
         </div>
       )}
       {tab === 'a' && !maxHit && (
-        <div data-raid-jack-ranking-tiers className="mb-2 flex shrink-0 flex-wrap gap-1.5 text-[10px] font-black">
+        <div data-raid-jack-ranking-tiers className="mb-2 flex shrink-0 gap-1.5 overflow-x-auto mh-scroll whitespace-nowrap text-[10px] font-black [&>*]:shrink-0">
           {RAID_JACK_A_TIERS.map((t, i) => (
             <button type="button" key={t.id} data-raid-jack-ranking-tier={t.id} onClick={() => { setTierIdx(i); setAllMode(false); }}
               className={`min-h-[34px] rounded-xl border px-2.5 active:scale-95 ${!useAll && tierIdx === i ? 'border-orange-300 bg-orange-800 text-white' : 'border-white/10 bg-slate-900 text-slate-300'}`}>{t.name.replace('ジャック', '')}</button>
@@ -49866,7 +49878,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto mh-scroll`} data-raid-jack-screen>
       {/* 横向きの背の低い画面(844×390 など)では、上の札だけで高さを使い切り、一覧が0になって挑戦のボタンが画面の下の外に出ていた
           (送ることもできず挑戦できない。ダメダシ見回り 10/26 raid #1)。その画面だけ、画面ごと下へ送れる形にする */}
-      <ScreenHead title="カボチャの大王ジャック" icon="🎃" accent="text-orange-200" onBack={onBack}
+      <ScreenHead title={<RaidJackFitTitle text="カボチャの大王ジャック" />} icon="🎃" accent="text-orange-200" onBack={onBack}
         note={forced ? '(デバッグ表示・別のイベントIDの記録)' : '全員でジャックを倒そう'} />
       {guideVisible && (
         <div data-raid-jack-guide className="mb-2 shrink-0">
@@ -50068,7 +50080,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     <button type="button" onClick={() => pickMon(mon)} data-raid-mon={k} data-raid-mon-role={role || undefined} data-raid-mon-range={at >= 0 ? at : undefined} aria-pressed={!!role}
       className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${role ? 'border-sky-300 bg-sky-950/60' : 'border-white/10 bg-slate-900/60'}`}>
       {faceOf(mon, 'h-12 w-12')}
-      <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon.name}</span>
+      <RaidJackFitName label={mon.name} />
       {/* タイプの印(2026-10-19・社長「タイプわかるようにしてほしい」)。札が狭いのでメインだけ。サブは詳細(i)に出る */}
       {monsterTypeProtoOn() && (() => { const t = MONSTER_TYPES[monsterTypeOf(mon.baseId || mon.id).main]; return t ? <span data-raid-mon-type={monsterTypeOf(mon.baseId || mon.id).main} className="mt-0.5 flex w-full items-center justify-center gap-px truncate rounded-full border border-white/15 bg-black/30 px-0.5 text-[8px] font-black leading-[12px] tracking-tight text-slate-200"><span aria-hidden="true">{cardIconNode(t.icon, 8)}</span>{t.label}</span> : null; })()}
       {/* 置いた距離(置いていなければ、いま光っている枠の距離)での適性 */}
@@ -50097,7 +50109,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           className={`flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? (isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : heroPick ? 'border-amber-200/50 bg-sky-950/40' : 'border-sky-300/60 bg-sky-950/40') : 'border-dashed border-white/20 bg-slate-900/40'}`}>
           <span className="flex items-center gap-0.5">{rangeChip(r)}<span className="text-[9px] font-black text-slate-200">距離</span></span>
           {mon ? faceOf(mon, 'mt-0.5 h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8') : <span className={`mt-0.5 flex h-10 w-10 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8 items-center justify-center rounded-full border border-dashed text-[16px] font-black ${active ? 'border-orange-200 text-orange-100' : 'border-white/25 text-slate-500'}`}>+</span>}
-          <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{mon ? mon.name : (active ? 'ここに入る' : '空き')}</span>
+          <RaidJackFitName label={mon ? mon.name : (active ? 'ここに入る' : '空き')} />
           <span data-raid-slot-apt={mon ? r : undefined} className={`text-[10px] font-black leading-tight tabular-nums ${mon ? pctTone(pct) : 'text-slate-600'}`}>{mon ? formatAptPct(pct) : '—'}</span>
           {mon && step === 'party' && <span aria-hidden="true" className="absolute right-1 top-[18px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-700 text-[9px] font-black leading-none text-slate-100">×</span>}
         </button>
@@ -50151,7 +50163,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
                 className={`flex w-full flex-col items-center rounded-xl border-2 p-1 text-center active:scale-95 ${teachIds.includes(t.id) ? 'border-orange-300 bg-orange-950/50' : 'border-white/10 bg-slate-900/60'}`}>
                 {/* 手札のカードと同じ見え方(きき のように全身の絵は、カード用の拡大・位置の補正で顔に寄せる) */}
                 {cardIconNode(t.icon, 40, t.id)}
-                <span className="mt-0.5 w-full truncate text-[9px] font-black text-slate-100">{t.baseName}</span>
+                <RaidJackFitName label={t.baseName} />
               </button>
               {/* アシカの効果も見られるようにする(2026-10-13・ユーザー指示)。モンスターの札と同じ右上の i。押しても選ぶ/外すは変わらない */}
               {typeof onOpenTeachingDetail === 'function' && (
@@ -50938,6 +50950,9 @@ const cardLoseGuts = (st, p, n) => {
   for (let i = 0; i < k; i++) me.discard.push(me.guts.pop());
   return k;
 };
+// 手札の番号の組が正しいか(整数・手札の中・重ならない)。ガッツにする手・捨てる手で使う
+//   2026-10-27 総点検 E: 確かめていなかったので、手札に無い番号を送ると、何も無いガッツが増えた(マルチで相手が送る手も同じ)
+const cardHandIdxsOk = (hand, idxs) => Array.isArray(idxs) && idxs.every((i) => Number.isInteger(i) && i >= 0 && i < hand.length) && new Set(idxs).size === idxs.length;
 const cardTakeFromHand = (st, p, idxs) => {
   const me = st.players[p];
   const sorted = [...new Set(idxs)].sort((a, b) => b - a);
@@ -50977,7 +50992,9 @@ const cardAttachMods = (cards) => {
 };
 // 全体カードで、その手が出せないか(がんじがらめ: モンスターの特殊技 / 必殺技の応酬・封印: 最終的なダメージで決める)
 //   最終的なダメージ … 書いてある数・同時に使う組・付けた札(+n・×n)・次のターンn倍・静の構え・全体カードの足し引き(守る前の数)
-const cardFieldBanned = (db, st, p, mi, card, idxs) => {
+//   extra … カード投げで捨てる枚数(ダメージに足す)/ target … 狙う子(ボンバのように「空中の子には2倍」の技は、狙う子で数が変わる)
+//   2026-10-27 総点検 E: カード投げは捨てる枚数を、ボンバ・牙きり・地雷針・大旋風は狙う子の2倍を数えていなかった(応酬・封印をすり抜けた/出せる手を止めていた)
+const cardFieldBanned = (db, st, p, mi, card, idxs, extra = 0, target = null) => {
   if (!st.field || !card) return false;
   const kinds = cardFieldEff(st, 'fieldBanKind');
   if (kinds && mi >= 0 && kinds.kinds.includes(card.kind)) return true;
@@ -50990,7 +51007,9 @@ const cardFieldBanned = (db, st, p, mi, card, idxs) => {
   let mult = mods.mult;
   if (mon && mon.mult && mon.mult.turn === st.turn && mon.mult.kinds.includes(card.kind)) mult *= mon.mult.n;
   if (mon && mon.charge && mon.charge.kinds.includes(card.kind)) mult *= mon.charge.n;
-  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add) * mult + cardFieldDmgAdd(st, card));
+  const mv = cardEff(card, 'multVs');
+  if (mv && target && cardMonType(target, st.turn) === mv.type) mult *= mv.n;
+  const dmg = Math.max(0, (cardBaseDamage(db, st, p, mi, card, cards) + mods.add + extra) * mult + cardFieldDmgAdd(st, card));
   return (ban.max !== undefined && dmg <= ban.max) || (ban.min !== undefined && dmg >= ban.min);
 };
 // 場の全体カードを置く・外す。外すときは出した人の捨て札へ、持ちょうを元に戻す(悪天候・空間のひずみ)
@@ -51222,10 +51241,12 @@ const cardAttackOptions = (db, st) => {
         const cost = cardActionCost(db, st, p, me.hand, idxs);
         if (cost > guts) return;
         if (cardHasEff(card, 'tossBonus')) {
-          tossSets(idxs).forEach((toss) => opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j }, toss }); }));
+          tossSets(idxs).forEach((toss) => { if (cardFieldBanned(db, st, p, mi, card, idxs, toss.length)) return; opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j }, toss }); }); });
           return;
         }
-        if (cardFieldBanned(db, st, p, mi, card, idxs)) return; // 全体カード: がんじがらめ・必殺技の応酬・必殺技の封印
+        // 全体カード: がんじがらめ・必殺技の応酬・必殺技の封印(狙う子で数が変わる技は、下で1体ずつ見る)
+        const byTarget = cardHasEff(card, 'multVs') && !cardHasEff(card, 'area') && !cardHasEff(card, 'split');
+        if (!byTarget && cardFieldBanned(db, st, p, mi, card, idxs)) return;
         if (card.kind === 'spe') {
           // 変形・トランスフォーム: 空中か地上かを選ぶ(手に form を持たせる)
           const forms = cardHasEff(card, 'form') ? ['air', 'ground'] : [undefined];
@@ -51243,7 +51264,7 @@ const cardAttackOptions = (db, st) => {
           cardSplits(card.damage || 0, alive).forEach((sp) => { const ts = sp.map((x, j) => (x > 0 ? { p: cardOther(p), m: j } : null)).filter(Boolean); if (cardTauntOk(st, p, ts, false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: null, split: sp }); });
           return;
         }
-        opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false)) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j } }); });
+        opp.mons.forEach((t, j) => { if (cardCanTarget(card, t, st.turn) && cardTauntOk(st, p, [{ p: cardOther(p), m: j }], false) && !(byTarget && cardFieldBanned(db, st, p, mi, card, idxs, 0, t))) out.push({ type: 'attack', mon: mi, hand: idxs, target: { p: cardOther(p), m: j } }); });
       });
     });
   });
@@ -51483,6 +51504,7 @@ const cardResolveTarget = (db, st) => {
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
   if (pd.endure && dmg >= target.life && target.life > 0) dmg = target.life - 1; // 根性: ライフ1で残る
   if (target.safeUntil >= st.turn) dmg = 0; // ぬいぐるみ
+  const lifeBefore = target.life; // ドレインは、実際に減ったライフだけ回復する
   target.life = Math.max(0, target.life - dmg);
   if (dmg > 0) target.charge = null; // 静の構えはダメージを受けると終わる
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
@@ -51496,7 +51518,8 @@ const cardResolveTarget = (db, st) => {
     const gl = cardEff(main, 'gutsLossOnHit');
     if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
-    if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) { const h = Math.min(dmg, atkMon.max - atkMon.life); atkMon.life += h; if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`); }
+    // ドレイン: 「与えたダメージ分」は、実際に減ったライフ(残りライフ1の子を倒したら1。2026-10-27 社長が案Aに決めた)
+    if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) { const h = Math.min(lifeBefore - target.life, atkMon.max - atkMon.life); atkMon.life += h; if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`); }
   }
   if (!evaded || cardHasEff(main, 'halfOnEvade')) { if (!evaded) pd.hitAnyNotEvaded = true; }
   if (evaded) pd.evadedAny = true;
@@ -51734,7 +51757,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'discard') return null;
     const q = st.pendingDiscard.p;
     const idxs = (act.hand || []).slice(0, st.pendingDiscard.n);
-    if (idxs.length !== st.pendingDiscard.n || idxs.some((i) => i < 0 || i >= st.players[q].hand.length)) return null;
+    if (idxs.length !== st.pendingDiscard.n || !cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].discard.push(...taken);
     cardLog(st, `${st.players[q].name}は手札を${taken.length}枚捨てた`);
@@ -51745,6 +51768,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'setupGuts') return null;
     const idxs = (act.hand || []).slice(0, CARD_BATTLE_SETUP_GUTS_MAX);
     const q = cardOther(st.first);
+    if (!cardHandIdxsOk(st.players[q].hand, idxs)) return null;
     const taken = cardTakeFromHand(st, q, idxs);
     st.players[q].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[q].name}は始める前に${taken.length}枚をガッツにした`);
@@ -51792,6 +51816,7 @@ const cardApplyAction = (db, st0, act) => {
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感: ガッツの段で n 枚まで
     if (gm && (act.hand || []).length > gm.n) return null;
+    if (!cardHandIdxsOk(st.players[p].hand, act.hand || [])) return null;
     const taken = cardTakeFromHand(st, p, act.hand || []);
     st.players[p].guts.push(...taken);
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
@@ -56815,14 +56840,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''}</option>)}
                   </select>
                   {bgmPreview && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
                 </div>
               </label>
             ))}
             {cpuPlaylistPanel}
-            <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')}</p>
+            <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('音の大きさは、ゲーム全体の設定の「音量」で変えられます')}</p>
           </div>
     );
     // 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形(上の bgmPanel)
@@ -59849,7 +59874,9 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
 
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
-const CARD_REPLAY_RULES = 2; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)
+//   2 → 3: 必殺技の応酬・封印でカード投げとボンバなどの出せる手・ガッツにする手札の番号の確かめ(#3821)
+//   3 → 4: ドレインは実際に減ったライフだけ回復(2026-10-27)
+const CARD_REPLAY_RULES = 4; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -80375,8 +80402,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       「編成画面の狭さをなんとかしたい」)。編集は別の行に44pxの帯を持っていて、
                       毎回やることではないのに一覧をそのぶん押し下げていた。 */}
                   <div className="flex items-center gap-2">
-                  <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1" role="tablist" aria-label="編成セット" style={{scrollbarWidth:'none'}}>
-                    {monsterPartySets.names.map((name,index)=><button key={index} role="tab" aria-selected={editingPartySetIndex===index} onClick={()=>switchMonsterPartySet(index)} className={`flex shrink-0 min-w-[76px] min-h-[44px] items-center justify-center gap-1 rounded-xl border px-2.5 active:scale-95 ${editingPartySetIndex===index?'border-indigo-300 bg-indigo-600/40':'border-slate-700 bg-slate-800'}`}><span className="min-w-0 truncate text-[11px] font-black">{index+1}. {name}</span>{monsterPartySets.activeIndex===index&&<span className="shrink-0 text-[11px] font-black text-emerald-300" aria-label="使用中">✓</span>}</button>)}
+                  {/* 5つのタブを1行に全部見せる(2026-10-27・320/390幅で「3.セッ…」から先が切れていた)。
+                      名前を出すのは編集中のセットだけで、残りは番号だけの細いタブにする。 */}
+                  <div className="flex min-w-0 flex-1 gap-1" role="tablist" aria-label="編成セット">
+                    {monsterPartySets.names.map((name,index)=>{const editing=editingPartySetIndex===index;return <button key={index} role="tab" aria-selected={editing} aria-label={`${index+1}. ${name}`} title={`${index+1}. ${name}`} onClick={()=>switchMonsterPartySet(index)} className={`flex min-h-[44px] items-center justify-center gap-0.5 rounded-xl border active:scale-95 ${editing?'min-w-0 flex-1 px-1.5 border-indigo-300 bg-indigo-600/40':'w-[30px] shrink-0 border-slate-700 bg-slate-800'}`}><span className="min-w-0 truncate text-[11px] font-black">{editing?`${index+1}. ${name}`:index+1}</span>{monsterPartySets.activeIndex===index&&<span className="shrink-0 text-[11px] font-black text-emerald-300" aria-label="使用中">✓</span>}</button>;})}
                   </div>
                   {/* セット名を変えるのもコピーも、毎回やることではない。
                       畳んでおいて、必要なときだけ開く(2026-09-07・ユーザー指摘
@@ -81885,6 +81914,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* BATTLE */}
         {gameState==='BATTLE'&&(
           <BattleScreen
+            battleOverlayOpen={!!(showHeroInfo||showBattleLog||showEnemyInfo||showDeckInfo||waveScanPreview)}
             applyTurnDamageReduction={applyTurnDamageReduction} attackAnim={attackAnim} autoBattle={autoBattle}
             autoBattleRef={autoBattleRef} autoRepeat={autoRepeat} battleIntimidate={battleIntimidate}
             battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle} battleFxSettings={battleFxEffective} onBattleFxAutoStep={setBattleFxAutoLoad}
@@ -83105,11 +83135,11 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {showBattleLog&&(
         <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="バトルの記録">
           <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-slate-950/95 px-5 py-3">
-            <div>
+            <div className="min-w-0">
               <h3 className="text-lg font-black italic uppercase text-amber-300">Battle Log</h3>
-              <small className="font-black text-slate-400">古い順・いちばん下が最新（最大{BATTLE_LOG_LIMIT}件）</small>
+              <small className="block font-black text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`古い順・いちばん下が最新（最大${BATTLE_LOG_LIMIT}件）`)}</small>
             </div>
-            <button onClick={()=>setShowBattleLog(false)} className="min-h-[44px] rounded-full bg-white/10 px-6 text-[11px] text-white active:scale-90">閉じる</button>
+            <button onClick={()=>setShowBattleLog(false)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-full bg-white/10 px-5 text-[11px] text-white active:scale-90">閉じる</button>
           </header>
           <div data-battle-log-list ref={el=>{ if(el) el.scrollTop=el.scrollHeight; }} className="flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3">
             {battleLog.length===0
@@ -83311,7 +83341,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         </div>
       )}
       {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
-      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
+      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll" style={{justifyContent:'safe center'}}>{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
   下のブロックはパーティ合計(ガードの段階などを決める値)なので、そのまま残す */}
 {isTacticsMode(runMode)&&(<div data-tactics-status className="space-y-1.5 text-left">
   <div className="text-[9px] font-black uppercase tracking-widest text-indigo-300">1体ずつのステータス</div>
@@ -83341,7 +83371,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
   })}
 </div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない
                   (2026-09-22 ユーザー選択「消す」)。ちから・丈夫さは平均でしかなく、
-                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">ちから</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} 丈夫さ+{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{helpWrap(mainHero.traitDesc)}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
+                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-x-3 gap-y-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="font-mono font-black whitespace-nowrap" style={{fontSize:'clamp(13px,4.2vw,1.25rem)'}}>{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">ちから</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} 丈夫さ+{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="font-mono font-black whitespace-nowrap" style={{fontSize:'clamp(13px,4.2vw,1.25rem)'}}>{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{helpWrap(mainHero.traitDesc)}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
         <SoulBattleEffects

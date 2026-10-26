@@ -196,11 +196,10 @@ withEff('drain').forEach((c) => {
     const r3 = hit(st3, optWith(st3, [c.no], 0), guardBy(ev.no)(st3));
     if (!r3.noGuard) check(`C drain ${c.no}: 回避されたら回復しない`, r3.dmg[0] === 0 && r3.st.players[0].mons[0].life === 30);
   }
-  // 倒しきったとき: いまの作りは、相手の残りライフにかかわらず書いてある数ぶん回復する(「与えたダメージ分」を、減ったライフと読むなら1)。
-  // 読み方を部長に聞いている(2026-10-27)。決まるまでは注記だけ出す
+  // 倒しきったとき: 「与えたダメージ分」は実際に減ったライフ(2026-10-27 社長が案Aに決めた)。残りライフ1の子を倒したら1だけ回復
   const st4 = atkScene(c, { life: [[0, 0, 30], [1, 0, 1]] });
   const r4 = hit(st4, optWith(st4, [c.no], 0));
-  notes.push(`drain ${c.no} ${c.name}: 残りライフ1の子を倒したときの回復は ${r4.st.players[0].mons[0].life - 30}(減ったライフで数えるなら1)`);
+  check(`C drain ${c.no}: 残りライフ1の子を倒したときの回復は1(実際に減ったライフ)`, r4.st.players[0].mons[0].life === 31, `回復 ${r4.st.players[0].mons[0].life - 30}`);
 });
 
 // returnOnHit: 当てたら手札へ。回避されて0なら捨て札へ
