@@ -12,6 +12,7 @@
 //   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
+//   オプション: --no-room(検査を「自分だけのネットワークの部屋」で回さない。下の【部屋】)
 //   node tools/run-checks.js --area all --parallel 5 … 全部を5組に分けて同時に回す(1時間弱)(2026-10-23。1本ずつだと2時間を超える)
 //     組は前回かかった時間(run-checks-times.json)で平らに分ける。同じポートを使う検査は同じ組へ、
 //     自分で :8899 を立てる検査と時間を測る検査(perf・fps など)は、最後に1本ずつ回す。結果は1つにまとめて出す
@@ -29,6 +30,14 @@
 // ・ふつうは並列にしない。実ブラウザ検査が固定ポート(8899 / 8977 など)を使うため、ぶつかる。
 //   --parallel N のときだけ、ぶつからない組に分けて同時に回す(共有の配信 :8899 は親が1つ立てて、全部の組で使う)。
 // ・playwright が入っていない環境では、それを要る検査を SKIP として数える(NG にはしない)。react・canvas も同じ。
+// ・【部屋】(2026-10-27 速さ部)Linux では、検査を1本ずつ「自分だけのネットワークの部屋」(network namespace)の中で回す。
+//   部屋の中の localhost は外と別物なので、作業ツリーを2つ並べて同時に回しても 8899・8977 など決め打ちの番号を取り合わない
+//   (以前は時間切れや「ページが開けない」で誤って NG になり、1本ずつ順番待ちしていた)。検査の中身は変えない。
+//   ・共有の配信(:8899)が要る検査は、部屋の中に専用の配信を立てて回す
+//   ・部屋の中からは外へ通信できない。外(本番の Supabase など)につながる前提の検査は ROOM_OUTSIDE に並べ、
+//     今までどおり外で回す。外で回す物は、ほかの run-checks と鍵(ROOM_OUTSIDE_LOCK)で1本ずつ順番待ちにする
+//   ・検査が終わると部屋ごと閉じるので、中の配信や Chromium の残りは外に残らない(時間切れは強制終了で部屋ごと止める)
+//   ・部屋を作れない環境(GitHub Actions・Mac など)は、黙って今までどおり外で回す。--no-room で部屋を使わない
 // ・既存の GitHub Actions は触らない。CI に何を足すかは、この結果(所要時間)を見て別途決める。
 const fs = require('fs');
 const path = require('path');
@@ -38,6 +47,63 @@ const { spawn, spawnSync } = require('child_process');
 const TOOLS_DIR = __dirname;
 const REPO_ROOT = path.resolve(TOOLS_DIR, '..');
 const SERVER_PORT = 8899;
+
+// ---- 部屋(network namespace)----
+// 部屋の中の lo は下がっているので Python で上げる(ip の道具が無い入れ物もあるため ioctl で直接)
+const ROOM_LO_UP = "import socket,fcntl,struct\ns=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)\nf=struct.unpack('16sH14s',fcntl.ioctl(s,0x8913,struct.pack('16sH14s',b'lo',0,b'\\0'*14)))[1]\nfcntl.ioctl(s,0x8914,struct.pack('16sH14s',b'lo',f|1,b'\\0'*14))";
+// 部屋の中では外へ出られない。外につながる前提の検査は、ここに並べて外で回す(2026-10-27 に --changed 403本を部屋で回して確かめた)
+const ROOM_OUTSIDE = new Set([
+  // 本番の Supabase のランキングを読む前提(通信を止めていない)。部屋の中だとランキングの状態が変わって落ちる
+  'card/card-battle-browser-check.js',
+]);
+// 外で回す検査どうしの順番待ちの鍵(同じ入れ物の中の、ほかの run-checks と分け合う)
+const ROOM_OUTSIDE_LOCK = path.join(require('os').tmpdir(), 'mh-run-checks-outside.lock');
+let roomUsable = null;
+function canUseRoom(opts) {
+  if (roomUsable !== null) return roomUsable;
+  roomUsable = false;
+  if (!opts.room || process.platform !== 'linux') return roomUsable;
+  const probe = spawnSync('unshare', ['-rnpf', '--kill-child', 'python3', '-c', ROOM_LO_UP], { stdio: 'ignore', timeout: 10000 });
+  roomUsable = !probe.error && probe.status === 0;
+  return roomUsable;
+}
+// 部屋の中で1本回す。sh が部屋の pid 1 になり、検査(node)を子として回す。sh が終わると部屋ごと閉じ、残りの子も止まる
+const ROOM_SCRIPT = [
+  'python3 -c "$MH_ROOM_LO_UP" || exit 97',
+  'if [ "$MH_ROOM_SERVE" = 1 ]; then',
+  '  python3 "$MH_ROOM_SERVE_PY" ' + SERVER_PORT + ' >/dev/null 2>&1 &',
+  '  i=0; until python3 -c "import socket; socket.create_connection((\'127.0.0.1\', ' + SERVER_PORT + '), 0.2)" 2>/dev/null || [ $i -ge 50 ]; do sleep 0.1; i=$((i+1)); done',
+  'fi',
+  '"$@"; exit $?',
+].join('\n');
+function runOneInRoom(command, timeoutSec, withServer) {
+  const [file, ...args] = command.split(' ');
+  const t0 = Date.now();
+  const r = spawnSync('unshare', ['-rnpf', '--kill-child', 'sh', '-c', ROOM_SCRIPT, 'sh', process.execPath, path.join(TOOLS_DIR, file), ...args], {
+    cwd: REPO_ROOT, encoding: 'utf8', timeout: timeoutSec * 1000, maxBuffer: 64 * 1024 * 1024,
+    // unshare は SIGTERM では止まらない。強制終了すると部屋の pid 1 も止まり、中の物がまとめて止まる
+    killSignal: 'SIGKILL',
+    env: { ...process.env, MH_CHECK_ROOM: '1', MH_ROOM_LO_UP: ROOM_LO_UP, MH_ROOM_SERVE: withServer ? '1' : '', MH_ROOM_SERVE_PY: path.join(TOOLS_DIR, 'serve.py') },
+  });
+  const sec = (Date.now() - t0) / 1000;
+  const output = (r.stdout || '') + (r.stderr || '');
+  if (r.error && r.error.code === 'ETIMEDOUT') return { status: 'TIMEOUT', sec, output };
+  if (r.status === 97) return { status: 'NG', sec, output: output + '\n部屋の lo を上げられなかった(--no-room で部屋を使わずに回せます)', code: r.status };
+  return { status: r.status === 0 ? 'OK' : 'NG', sec, output, code: r.status };
+}
+// 外で回す検査の順番待ち。鍵はディレクトリを作れた人のもの。持ち主がもういなければ(止まった run-checks の残り)取り直す
+async function takeOutsideLock() {
+  for (let waited = 0; ; waited++) {
+    try { fs.mkdirSync(ROOM_OUTSIDE_LOCK); fs.writeFileSync(path.join(ROOM_OUTSIDE_LOCK, 'pid'), String(process.pid)); return () => { try { fs.rmSync(ROOM_OUTSIDE_LOCK, { recursive: true, force: true }); } catch {} }; }
+    catch (e) {
+      let owner = 0; try { owner = Number(fs.readFileSync(path.join(ROOM_OUTSIDE_LOCK, 'pid'), 'utf8')); } catch {}
+      let alive = false; if (owner) { try { process.kill(owner, 0); alive = true; } catch {} }
+      if (!alive && waited > 2) { try { fs.rmSync(ROOM_OUTSIDE_LOCK, { recursive: true, force: true }); } catch {} continue; }
+      if (waited === 0) console.log('  (外で回す検査の順番待ち: ほかの run-checks が使い終わるのを待つ)');
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+}
 
 // CLAUDE.md ⑤⑥ が「触ったら必ず通す」と決めているもの。build.js は --check で呼ぶ
 // (ここで本ビルドをすると version が進んでしまうため)。
@@ -280,7 +346,7 @@ function planForChanges(files, areas, wide, limit) {
 }
 
 function parseArgs(argv) {
-  const opts = { areas: [], list: false, server: true, timeoutSec: 600, json: null, changed: false, plan: false, wide: false, base: null, limit: 40 };
+  const opts = { areas: [], list: false, server: true, room: true, timeoutSec: 600, json: null, changed: false, plan: false, wide: false, base: null, limit: 40 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--list') opts.list = true;
@@ -291,6 +357,7 @@ function parseArgs(argv) {
     else if (a === '--limit') opts.limit = Number(argv[++i]) || opts.limit;
     else if (a === '--base') opts.base = argv[++i];
     else if (a === '--no-server') opts.server = false;
+    else if (a === '--no-room') opts.room = false;
     else if (a === '--area') opts.areas.push(...String(argv[++i] || '').split(',').filter(Boolean));
     else if (a === '--timeout') opts.timeoutSec = Number(argv[++i]) || opts.timeoutSec;
     else if (a === '--json') opts.json = argv[++i];
@@ -467,7 +534,7 @@ async function runParallel(commands, opts, wanted) {
   if (opts.server) { server = await startServer(); console.log(`  (${server.note})`); }
   const runLane = (lane, idx) => new Promise((resolve) => {
     const list = path.join(tmp, `lane${idx}.txt`), out = path.join(tmp, `lane${idx}.json`);
-    const args = [__filename, '--lane', String(idx), '--no-server', '--timeout', String(opts.timeoutSec), '--json', out, '--script', lane.commands.join(',')];
+    const args = [__filename, '--lane', String(idx), '--no-server', '--timeout', String(opts.timeoutSec), '--json', out, '--script', lane.commands.join(','), ...(opts.room ? [] : ['--no-room'])];
     const child = spawn(process.execPath, args, { cwd: REPO_ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
     let buf = '';
     const onData = (d) => { buf += d; let k; while ((k = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, k); buf = buf.slice(k + 1); if (/^(OK|NG|TIMEOUT|SKIP|MISSING)\s/.test(line)) console.log(`[組${idx + 1}] ${line}`); } };
@@ -592,7 +659,8 @@ async function main() {
   let server = null;
   const ensureServer = async () => { if (!server && opts.server) { server = await startServer(); console.log(`  (${server.note})`); } };
   const releaseServer = async () => { if (server) { server.stop(); server = null; for (let i = 0; i < 50 && await portOpen(SERVER_PORT); i++) await new Promise(r => setTimeout(r, 100)); } };
-  console.log(`検査 ${commands.length} 本 / 領域: ${wanted.join(', ')} / playwright: ${hasPlaywright ? 'あり' : 'なし'} / canvas: ${hasCanvas ? 'あり' : 'なし'} / 配信: ${opts.server ? '必要なときだけ自動起動' : '起動しない(--no-server)'}`);
+  const room = canUseRoom(opts);
+  console.log(`検査 ${commands.length} 本 / 領域: ${wanted.join(', ')} / playwright: ${hasPlaywright ? 'あり' : 'なし'} / canvas: ${hasCanvas ? 'あり' : 'なし'} / 配信: ${opts.server ? '必要なときだけ自動起動' : '起動しない(--no-server)'} / 部屋: ${room ? '1本ずつ自分だけのネットワークの部屋で回す(同時に回しても番号を取り合わない)' : opts.room ? '作れないので外で回す' : '使わない(--no-room)'}`);
 
   const results = [];
   const started = Date.now();
@@ -605,8 +673,19 @@ async function main() {
       else if (meta.needsCanvas && !hasCanvas) res = { status: 'SKIP', sec: 0, output: 'canvas が無い' };
       else if (meta.needsReact && !hasReact) res = { status: 'SKIP', sec: 0, output: 'react が無い' };
       else {
-        if (meta.ownServer) await releaseServer(); else if (meta.needsServer) await ensureServer();
-        res = runOne(command, opts.timeoutSec);
+        if (room && !ROOM_OUTSIDE.has(command.split(' ')[0])) {
+          // 部屋の中で回す。共有の配信が要る検査は、部屋の中に専用の配信を立てる
+          // (外の配信は部屋の中から見えないので、--no-server(--parallel の組)でも部屋の中には立てる)
+          res = runOneInRoom(command, opts.timeoutSec, meta.needsServer && !meta.ownServer);
+        } else {
+          // 外で回す(部屋が使えない・外につながる前提の検査)。部屋が使えるときは、外で回す物どうしを順番待ちにする
+          const unlock = room ? await takeOutsideLock() : null;
+          try {
+            if (meta.ownServer) await releaseServer(); else if (meta.needsServer) await ensureServer();
+            res = runOne(command, opts.timeoutSec);
+            if (room) await releaseServer();
+          } finally { if (unlock) unlock(); }
+        }
       }
       results.push({ command, ...res, needsServer: !!meta.needsServer, needsPlaywright: !!meta.needsPlaywright });
       const mark = res.status === 'OK' ? 'OK  ' : res.status === 'SKIP' ? 'SKIP' : res.status === 'NG' ? 'NG  ' : res.status;
