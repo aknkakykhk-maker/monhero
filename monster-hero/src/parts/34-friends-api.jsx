@@ -486,7 +486,8 @@ const sbSendRoomInvite = (selfIdRaw, targetIdRaw, roomCode) => friendsGuard(asyn
   const code = typeof roomCode === 'string' ? roomCode.toUpperCase() : '';
   if (!selfId || !targetId || selfId === targetId || !FRIEND_INVITE_CODE_RE.test(code)) return 'error';
   await friendsRequest(`friend_invites?on_conflict=sender_id,target_id`, {
-    method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: code }],
+    // 時刻も書く(表には書き換えで時刻を新しくする仕掛けが無いので、同じ相手への2回目の招待が古いまま届かなかった。2026-10-26)
+    method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: code, created_at: new Date().toISOString() }],
     prefer: 'resolution=merge-duplicates,return=minimal' });
   return 'invited';
 });
