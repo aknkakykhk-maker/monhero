@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9351f8983897674b
+// generated-sha256: 3973a81bb50c029b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 22:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 22:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5431,6 +5431,10 @@ const Audio_ = (() => {
   // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
   let bgmSource = null, bgmSourceKey = null, bgmRequest = 0, previewSource = null, previewKey = null, previewRequest = 0;
   let jingleSource = null, jingleTimer = null;
+  // 1回だけ流す曲(MFバトルカードの助手と対戦の曲の並び。2026-10-26)。{ key, onEnd, onFail }
+  //   この曲だけ繰り返さずに流し、最後まで流れ終わったときだけ onEnd を呼ぶ(止めた・別の曲にした・裏へ回ったときは呼ばない)。
+  //   読み込めなかったときは onFail。ほかの曲を鳴らしたら外れる(ほかの画面の曲には効かない)
+  let bgmOnce = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
   let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
@@ -5728,16 +5732,25 @@ const Audio_ = (() => {
     stopOthers();
     const source = ctx.createBufferSource();
     applyTrackGain(track);
-    source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    source.buffer = buffer; source.loop = once ? false : track.loop !== false; source.connect(bgmGain);
     bgmSource = source; bgmSourceKey = key;
-    source.onended = () => { if (bgmSource === source) { bgmSource = null; bgmSourceKey = null; } };
+    // 止めるとき(stopSource)は onended を外してから止めるので、ここへ来るのは最後まで流れたときだけ
+    source.onended = () => {
+      if (bgmSource !== source) return;
+      bgmSource = null; bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) { bgmOnce = null; try { o.onEnd && o.onEnd(); } catch (e) {} }
+    };
     try { source.start(0); } catch (e) { stopOthers(); return; }
     // 止まったままのAudioContextで鳴らしても無音のままになる。すぐに復帰を試す
     // (失敗しても、次のタップで bindResumeOnGesture が鳴らし直す)
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
   const playBGM = (key) => {
-    const track = resolveTrack(key); if (!track) return Promise.resolve();
+    const track = resolveTrack(key);
+    if (!track) { const o = bgmOnce; if (o && o.key === key) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} } return Promise.resolve(); }
+    if (bgmOnce && bgmOnce.key !== track.id) bgmOnce = null;
     currentKey = track.id;
     const request = ++bgmRequest;
     if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
@@ -5750,7 +5763,16 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
+    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {
+      // 1回だけ流す曲が読み込めなかったら、並びの次へ進めてもらう(この呼び出しが今も最新のときだけ。止めた後には呼ばない)
+      const o = bgmOnce;
+      if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} }
+    });
+  };
+  // key を1回だけ流す曲にする(鳴らすのは playBGM)。null で外す。handlers … { onEnd(), onFail() }
+  const setBgmOnce = (key, handlers = {}) => {
+    const track = key ? resolveTrack(key) : null;
+    bgmOnce = key ? { key: track ? track.id : key, onEnd: handlers.onEnd || null, onFail: handlers.onFail || null } : null;
   };
   // 今の曲を ms かけて小さくしてから、次の曲へ移す(2026-10-17 会話イベントの途中で曲を替える。社長「途中で変わるのいいね」)。
   // 鳴っていない・同じ曲のときは playBGM と同じ。下げているあいだに別の曲が決まったら、そちらを優先する
@@ -6181,7 +6203,7 @@ const Audio_ = (() => {
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 15-dye-and-art.jsx ----
@@ -51915,6 +51937,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   topAssist: 'mh_card_top_assist_v1', // トップの助手の「立ち絵/コメント」の出し入れ(84。無ければ両方ON)
   rankSync: 'mh_card_rank_sync_v1',   // ランキングへ最後に送った行の中身(同じなら送り直さない。90-card-rank.jsx)
   bgm: 'mh_card_bgm_v1',              // 対戦の BGM { cpu: 'auto' か 曲id, pvp: 曲id }(設計書 5-3。いまの mh_bgm_arrangement は触らない)
+  cpuPlaylist: 'mh_card_cpu_playlist_v1', // 助手と対戦の曲の並び { v:1, assistants:{ 助手id: [曲id 1〜5] } }(2026-10-26。cardNormalizeCpuPlaylist)
   settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
 });
@@ -51988,6 +52011,81 @@ const normalizeCardBgm = (v, isTrack = () => true) => {
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
   };
+};
+// 助手と対戦の曲の並び(2026-10-26 社長の依頼)。助手ごとに1〜5曲を選び、対戦中は全部を1回ずつシャッフルで流す
+//   既定は助手ごとの曲1つ(台帳 #3438 の助手の曲。84 の CARD_AI_BGM はここから作る)。この並びがあれば、助手と対戦では
+//   mh_card_bgm_v1 の cpu(前の1曲えらび)は使わない。前の値は消さない・書き換えない(⑦)
+//   ★知らない助手・知らない曲id・同じ曲の2つ目・6曲目からは落とす。0曲になった助手は既定の1曲に戻す。読むだけでは保存しない
+const CARD_PLAYLIST_MAX = 5;
+const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
+  mua: Object.freeze(['melo_toriko']), kiki: Object.freeze(['eiki_boss']), momosuke: Object.freeze(['melo_crossing_field']),
+  kyuko: Object.freeze(['melo_toward_the_stars_short']), dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']), atsu: Object.freeze(['melo_against_my_own_shadow']),
+});
+const cardNormalizePlaylistList = (v, isTrack = () => true) => {
+  const out = [];
+  for (const id of Array.isArray(v) ? v : []) {
+    if (out.length >= CARD_PLAYLIST_MAX) break;
+    if (typeof id === 'string' && isTrack(id) && !out.includes(id)) out.push(id);
+  }
+  return out;
+};
+const cardNormalizeCpuPlaylist = (v, isTrack = () => true) => {
+  const src = cardIsPlainObject(v) && cardIsPlainObject(v.assistants) ? v.assistants : {};
+  const assistants = {};
+  for (const who of Object.keys(CARD_CPU_PLAYLIST_DEFAULT)) {
+    const list = cardNormalizePlaylistList(src[who], isTrack);
+    assistants[who] = list.length ? list : [...CARD_CPU_PLAYLIST_DEFAULT[who]];
+  }
+  return { v: 1, assistants };
+};
+// 1周ぶんの順を作る(全部を1回ずつ)。avoid … 直前に流れた曲。2曲以上なら、その曲を1曲目にしない(周の境目で同じ曲が続かない)
+const cardShufflePlaylist = (list, avoid = null, rnd = Math.random) => {
+  const order = [...list];
+  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  if (order.length >= 2 && avoid != null && order[0] === avoid) { const j = 1 + Math.floor(rnd() * (order.length - 1)); [order[0], order[j]] = [order[j], order[0]]; }
+  return order;
+};
+// 並びを流す係(60-app が使う)。音の出し方は io で受け取る(検査が node で動かせるように)
+//   io … { setOnce(曲id か null, { onEnd, onFail }) 1回だけ流す曲を決める / play(曲id) 鳴らす / preload(曲id) 先に読む / silence() BGMを止める }
+//   start(並び, いま鳴っている曲) … 2曲以上なら、全部を1回ずつシャッフルで流す(対戦を始めるたびに呼ぶ=順を作り直す)。1曲以下はふつうに鳴らす
+//   ・流れ終わった(onEnd)ときだけ次へ。1周が終わったら、直前の曲が1曲目にならないよう並べ直す
+//   ・読み込めない曲(onFail)は飛ばす。並びの曲が続けて全部だめなら、並びをやめて止める(何度も読み直さない)
+//   ・stop() のあと、または新しい start() のあとは、前の並びの onEnd・onFail が遅れて来ても何もしない
+const cardPlaylistPlayer = (io, rnd = Math.random) => {
+  let run = null;
+  const stop = () => { if (run) { run = null; io.setOnce(null); } };
+  const start = (list, playing = null) => {
+    const ids = (Array.isArray(list) ? list : []).filter((id, i, a) => typeof id === 'string' && id && a.indexOf(id) === i);
+    stop();
+    if (ids.length < 2) { if (ids[0]) io.play(ids[0]); return; }
+    const me = { list: ids, order: cardShufflePlaylist(ids, playing, rnd), at: 0, fails: 0 };
+    run = me;
+    const next = () => {
+      const last = me.order[me.at];
+      me.at += 1;
+      if (me.at >= me.order.length) { me.order = cardShufflePlaylist(me.list, last, rnd); me.at = 0; }
+      playAt();
+    };
+    const playAt = () => {
+      if (run !== me) return;
+      const key = me.order[me.at];
+      io.setOnce(key, {
+        onEnd: () => { if (run !== me) return; me.fails = 0; next(); },
+        onFail: () => {
+          if (run !== me) return;
+          me.fails += 1;
+          if (me.fails >= me.list.length) { stop(); io.silence(); return; }
+          next();
+        },
+      });
+      io.play(key);
+      // 次の1曲だけ先に読んでおく(並びの曲を全部いっぺんには読まない)
+      const after = me.order[me.at + 1];
+      if (after && io.preload) io.preload(after);
+    };
+    playAt();
+  };
+  return { start, stop, active: () => !!run };
 };
 // 演出の設定。speed … 'normal' / 'fast'(相手の考える間と、決着から結果までを短くする)
 //   autoPass … 守れるカードが1枚も無いとき、自動で「守らない」にする(既定は ON。理由の一言は少し見せてから進む)
@@ -53504,13 +53602,14 @@ const CardNameFit = ({ name, size = 10, min = 7, className = '', style = null, t
 };
 // 相手の助手ごとの対戦の既定の曲(社長 台帳 #3438)。対人戦は ichika_battle(対人戦の区切りで使う)
 // ききは綺季一閃のフル版(eiki_boss)。きゅうこの Toward the Stars はゲームに short 版しかないので、それを使う
-const CARD_AI_BGM = Object.freeze({
-  mua: 'melo_toriko', kiki: 'eiki_boss', momosuke: 'melo_crossing_field',
-  kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
-});
+//   曲の値は 82 の CARD_CPU_PLAYLIST_DEFAULT(助手と対戦の曲の並びの既定)に1か所で書いてある
+const CARD_AI_BGM = Object.freeze(Object.fromEntries(Object.entries(CARD_CPU_PLAYLIST_DEFAULT).map(([who, list]) => [who, list[0]])));
 const CARD_PVP_BGM = 'ichika_battle';
-// 助手と対戦の曲: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手の曲(CARD_AI_BGM)
-const cardCpuBgm = (bgm, who) => (bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : (CARD_AI_BGM[who] || null));
+// 助手と対戦の曲の並び(2026-10-26): オプションで助手ごとに決めた1〜5曲。前の1曲えらび(mh_card_bgm_v1 の cpu)は使わない
+const cardCpuPlaylistOf = (playlist, who) => {
+  const list = playlist && playlist.assistants && Array.isArray(playlist.assistants[who]) ? playlist.assistants[who] : [];
+  return list.length ? list : (CARD_AI_BGM[who] ? [CARD_AI_BGM[who]] : []);
+};
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
@@ -54964,12 +55063,45 @@ const CardAssistantArt = ({ src, alt, className = '', style = null }) => {
   );
 };
 
+// 助手と対戦の曲の並びを直す行(オプション。2026-10-26)。list … 曲idの並び(1〜5)。onChange(新しい並び) … 直すたびに呼ぶ(保存するかは呼ぶ側)
+// 同じ曲は選べない(ほかの行で使っている曲は一覧に出さない)。1曲だけのときは外せない(0曲にしない)
+const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
+  const tracks = typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : [];
+  const choices = (keep) => tracks.filter((t) => t.id === keep || !list.includes(t.id));
+  const selectClass = 'min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white';
+  return (
+    <div data-card-playlist-rows={tag} data-card-playlist-count={list.length}>
+      <ol className="mt-1 space-y-1.5">
+        {list.map((id, i) => (
+          <li key={`${i}-${id}`} data-card-playlist-row={id} className="flex items-center gap-1.5">
+            <span className="w-4 shrink-0 text-center text-[11px] font-black text-slate-400">{i + 1}</span>
+            <select data-card-playlist-change={i} aria-label={`${i + 1}曲目を変える`} value={id} className={selectClass}
+              onChange={(e) => { const next = [...list]; next[i] = e.target.value; onChange(next); }}>
+              {choices(id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            {bgmPreview && <button type="button" data-card-playlist-preview={id} onClick={() => bgmPreview.toggle(id)} className="min-h-[44px] min-w-[52px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === id ? '停止' : '試聴'}</button>}
+            <button type="button" data-card-playlist-remove={i} aria-label={`${i + 1}曲目を外す`} disabled={list.length <= 1} onClick={() => onChange(list.filter((_, k) => k !== i))}
+              className={`min-h-[44px] min-w-[44px] shrink-0 rounded-xl px-1 text-xs font-black ${list.length <= 1 ? 'bg-slate-800 text-slate-600' : 'bg-rose-800/80 text-white'}`}>外す</button>
+          </li>
+        ))}
+      </ol>
+      {list.length < CARD_PLAYLIST_MAX
+        ? <select data-card-playlist-add aria-label="曲を足す" value="" className={`mt-1.5 w-full ${selectClass}`} onChange={(e) => { if (e.target.value) onChange([...list, e.target.value]); }}>
+            <option value="">{`＋ 曲を足す(あと${CARD_PLAYLIST_MAX - list.length}曲)`}</option>
+            {choices(null).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        : <p data-card-playlist-full className="mt-1.5 text-[10px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)}</p>}
+    </div>
+  );
+};
+
 // onQuickLoops(loops) … 1戦ぶんをクイック周回の周回クリアとして配る(60-app の awardCardQuickLoops。裏で回していればその周回へ、いなければ AUTO設定のクイックへ)。配れたら配った中身、配れなければ null
 // quickRun … 裏のクイック∞周回のようす({ live, loops, stopped, xp, gold, info }。60-app の cardQuickRunView)。周回をしていなければ null。対戦中は盤のヘッダーに「⚔ ◯周目」だけ出す
 // onOpenMarket … マーケットの「MFバトルカード」の売り場へ(60-app)
 // topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
 // rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
-// bgmPreview … オプションの BGM の試聴({ toggle(曲id), playing: 鳴らしている曲id }。60-app の BGM アレンジと同じもの)
+// bgmPreview … オプションの BGM の試聴({ toggle(曲id), stop(), playing: 鳴らしている曲id }。60-app の BGM アレンジと同じもの)。オプションを閉じたら止める
+// onBgm(曲id か 曲idの並び) … 鳴らす曲。助手と対戦だけ並び(2曲以上なら 60-app が全部を1回ずつシャッフルで流す)
 // バトルカードのトップの上の帯(60-app の renderCardQuickRunStrip)の「詳細」を押したときの窓(2026-10-26 社長「横の経験値とかを詳細ボタンの中に入れればいいよ」)。
 // 数は帯・対戦の盤と同じ所(60-app の cardQuickRunView)から読む。描くのは 60-app(帯と同じ所)
 // quickRun … { live, loops, stopped, xp, gold, difficulty, info:{ wave, reason } } か null(一度も回していない)
@@ -55011,6 +55143,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
+  // オプションの「助手と対戦」の曲の並び: 直している助手と、全員へ写すときの下書き({ list, confirm })
+  const [plWho, setPlWho] = useState(null);
+  const [plCopy, setPlCopy] = useState(null);
+  // 試聴は、オプションを閉じたら・この画面を出たら止める(試聴の曲がほかの画面に残らない)
+  const bgmPreviewRef = useRef(bgmPreview);
+  bgmPreviewRef.current = bgmPreview;
+  const stopBgmPreview = () => { const p = bgmPreviewRef.current; if (p && p.playing && p.stop) p.stop(); };
+  useEffect(() => { if (view !== 'options') { stopBgmPreview(); setPlCopy(null); } }, [view]);
+  useEffect(() => () => stopBgmPreview(), []);
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
   useEffect(() => { const go = (c) => { if (c) setView('pvp'); }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
   const [kitPick, setKitPick] = useState(null);
@@ -55046,10 +55187,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const K = CARD_SAVE_KEYS;
     // 前のカードポイントの残りを、ビートPへ1回だけ移す(印つき。82 の cardMigratePointsOnce)。失敗しても遊びは止めない
     try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 次に開いたときにやり直す */ }
-    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings] = await Promise.all([
+    const [collection, decks, point, starter, daily, record, unlocked, tutorial, bgm, settings, cpuPlaylist] = await Promise.all([
       storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null),
       storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null), storeGet(K.tutorial, null),
-      storeGet(K.bgm, null), storeGet(K.settings, null),
+      storeGet(K.bgm, null), storeGet(K.settings, null), storeGet(K.cpuPlaylist, null),
     ]);
     const next = {
       collection: cardNormalizeCollection(collection), decks: cardNormalizeDecks(decks), point: cardNormalizePoint(point),
@@ -55057,6 +55198,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 解放は、記録(勝ち数・最近の対戦)から開いているはずの強さも足す(82 の cardUnlockedWithRecord。保存は書き換えない)
       unlocked: cardUnlockedWithRecord(unlocked, record), tutorial: cardNormalizeTutorial(tutorial),
       bgm: normalizeCardBgm(bgm, cardIsBgmTrack), settings: normalizeCardSettings(settings),
+      cpuPlaylist: cardNormalizeCpuPlaylist(cpuPlaylist, cardIsBgmTrack),
     };
     setSave(next);
     if (onSettings) onSettings(next.settings);
@@ -55196,7 +55338,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
     setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood });
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
-    onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
+    onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
     onNavigate('CARD_BATTLE');
   };
 
@@ -55487,24 +55629,74 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- オプション(BGM・演出) ----
   if (view === 'options') {
     // 裏のクイック周回の自動(社長 2026-10-25「モンヒロビートと同じように」)。編成は AUTO設定の「モンヒロビート中に回すクイック周回」と同じものを使う
+    // 助手と対戦の曲の並び(2026-10-26 社長の依頼)。助手ごとに1〜5曲。直すたびにその場で保存する(開いただけでは保存しない)
+    const plWhoList = foes.length ? foes : allAssistants.filter((a) => CARD_CPU_PLAYLIST_DEFAULT[a.id]);
+    const plCur = plWhoList.some((a) => a.id === plWho) ? plWho : (plWhoList[0] && plWhoList[0].id);
+    const plSave = (assistants) => { void persist({ cpuPlaylist: cardNormalizeCpuPlaylist({ v: 1, assistants }, cardIsBgmTrack) }); };
+    const plList = cardCpuPlaylistOf(save.cpuPlaylist, plCur);
+    const plIsDefault = plList.length === 1 && plList[0] === CARD_AI_BGM[plCur];
+    const cpuPlaylistPanel = (
+          <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
+            <b className="block text-[12px] font-black text-slate-200">助手と対戦</b>
+            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手ごとに5曲まで選べます。対戦中は、選んだ曲を1曲ずつ、毎回ちがう順番で流します')}</p>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {plWhoList.map((a) => (
+                <button key={a.id} type="button" data-card-playlist-who={a.id} aria-pressed={a.id === plCur} onClick={() => { Audio_.fgSe.tap(); setPlWho(a.id); }}
+                  className={`min-h-[40px] min-w-0 rounded-xl border px-1 text-[11px] font-black ${a.id === plCur ? 'border-amber-300 bg-amber-600/85 text-white' : 'border-white/15 bg-slate-900/75 text-slate-200'}`}>
+                  {jaWrap(a.name)}<small className="ml-0.5 text-[10px] opacity-80">{cardCpuPlaylistOf(save.cpuPlaylist, a.id).length}曲</small>
+                </button>
+              ))}
+            </div>
+            {plCur && (
+              <div data-card-playlist-edit={plCur} className="mt-2">
+                <CardPlaylistRows tag="who" list={plList} bgmPreview={bgmPreview} onChange={(next) => plSave({ ...save.cpuPlaylist.assistants, [plCur]: next })}/>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <button type="button" data-card-playlist-reset disabled={plIsDefault} onClick={() => plSave({ ...save.cpuPlaylist.assistants, [plCur]: [...CARD_CPU_PLAYLIST_DEFAULT[plCur]] })}
+                    className={`min-h-[44px] rounded-xl px-1 text-[11px] font-black ${plIsDefault ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-white'}`}>{jaWrap('はじめの曲に戻す')}</button>
+                  <button type="button" data-card-playlist-copy-open onClick={() => { Audio_.fgSe.tap(); setPlCopy({ list: [...plList], confirm: false }); }}
+                    className="min-h-[44px] rounded-xl bg-indigo-800 px-1 text-[11px] font-black text-white">{jaWrap('全員に同じ曲を入れる')}</button>
+                </div>
+              </div>
+            )}
+            {plCopy && (
+              <div data-card-playlist-copy className="mt-2.5 rounded-xl border border-indigo-300/40 bg-indigo-950/60 p-2.5">
+                <b className="block text-[12px] font-black text-white">{jaWrap('全員に同じ曲を入れる')}</b>
+                <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ここで選んだ1〜5曲を、助手みんなの曲にします。あとから助手ごとに直せます')}</p>
+                <CardPlaylistRows tag="copy" list={plCopy.list} bgmPreview={bgmPreview} onChange={(next) => setPlCopy({ list: next, confirm: false })}/>
+                {plCopy.confirm
+                  ? <div data-card-playlist-copy-confirm className="mt-2">
+                      <p className="text-[11px] font-black leading-snug text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('助手ごとに選んでいた曲は、この曲に置き換わります。よろしいですか?')}</p>
+                      <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                        <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
+                        <button type="button" data-card-playlist-copy-ok onClick={() => { const list = [...plCopy.list]; plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).map((who) => [who, list]))); setPlCopy(null); }}
+                          className="min-h-[44px] rounded-xl bg-amber-500 text-[12px] font-black text-slate-900">置き換える</button>
+                      </div>
+                    </div>
+                  : <div className="mt-2 grid grid-cols-2 gap-1.5">
+                      <button type="button" data-card-playlist-copy-cancel onClick={() => setPlCopy(null)} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black text-white">やめる</button>
+                      <button type="button" data-card-playlist-copy-go onClick={() => setPlCopy({ ...plCopy, confirm: true })} className="min-h-[44px] rounded-xl bg-indigo-600 text-[12px] font-black text-white">{jaWrap('全員に入れる')}</button>
+                    </div>}
+              </div>
+            )}
+          </div>
+    );
     const bgmPanel = (
           <div data-card-options-bgm className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">音</div>
             <b className="mt-2 block text-[12px] font-black text-slate-200">対戦のBGM</b>
-            {[['top', 'トップ画面'], ['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
+            {[['top', 'トップ画面'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
               <label key={k} className="mt-2 block text-left">
                 <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
-                    {k === 'cpu' && <option value="auto">おまかせ(相手の助手に合わせる)</option>}
                     {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''}</option>)}
                   </select>
-                  {bgmPreview && (save.bgm[k] !== 'auto') && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
+                  {bgmPreview && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
                 </div>
               </label>
             ))}
-            <p className="mt-1.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('「おまかせ」のときは、対戦する助手に合わせて決まった曲が流れます')}</p>
+            {cpuPlaylistPanel}
             <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')}</p>
           </div>
     );
@@ -62625,6 +62817,24 @@ function MonsterHeroGame() {
   const [rhythmEventStorySeen, setRhythmEventStorySeen] = useState(null);
   // MFバトルカードの画面が決めた曲(null なら HOME の曲)。保存はしない
   const [cardBgm, setCardBgm] = useState(null);
+  // MFバトルカードの助手と対戦の曲の並び(2026-10-26)。2曲以上なら、全部を1回ずつシャッフルで流し、流れ終わったら次へ(82 の cardPlaylistPlayer・14-audio の setBgmOnce)
+  //   対戦の画面を出たら止める。古い読み込みがあとから終わっても、止めた並びは進めない。並びの曲が全部読めなければ BGM を止める(対戦は続く)
+  const cardBgmRef = useRef(null);
+  cardBgmRef.current = cardBgm;
+  const cardPlaylistRef = useRef(null);
+  if (!cardPlaylistRef.current) cardPlaylistRef.current = cardPlaylistPlayer({
+    setOnce: (key, handlers) => Audio_.setBgmOnce(key, handlers),
+    play: (key) => { cardBgmRef.current = key; setCardBgm(key); },
+    preload: (key) => Audio_.preloadBGM(key),
+    silence: () => { cardBgmRef.current = '__silence_bgm__'; setCardBgm('__silence_bgm__'); },
+  });
+  const stopCardPlaylist = () => cardPlaylistRef.current.stop();
+  const playCardBgm = (arg) => {
+    if (Array.isArray(arg)) { cardPlaylistRef.current.start(arg, cardBgmRef.current); return; }
+    stopCardPlaylist();
+    setCardBgm(arg);
+  };
+  useEffect(() => { if (gameState !== 'CARD_BATTLE') stopCardPlaylist(); }, [gameState]);
   // MFバトルカードのオプションの「開いたら自動で始める」(mh_card_settings_v1.quickAutoStart)。カードを開いたとき・オプションで変えたときに入れる
   const [cardQuickAutoStart, setCardQuickAutoStart] = useState(false);
   // HOME の「MFバトルカード 近日公開」の札を押したときの予告の小窓(保存しない)
@@ -77602,11 +77812,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {renderCardQuickRunStrip()}
         {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
-        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
+        {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={playCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
-          bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
+          bgmPreview={{toggle:toggleBgmPreview,stop:()=>{Audio_.stopPreview();setPreviewTrackId(null);},playing:previewTrackId}}
           /* ランキングへ送るのは公開してから(台帳 #3513「公開前は、デバッグの人の記録も送らない」)。デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。デバッグ設定の入口からの対戦は 84 の debug(cardOrigin==='debug')で外す */
           rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon,
             // 対戦の盤の自分の帯に出すアイコン(フレーム付き)。絵のアイコンはランキングと同じ部品、絵文字のアイコンはその枠の中に出す(2026-10-26 社長)
