@@ -689,7 +689,8 @@ async function chooseBetween(s, mem, log) {
     if (!log.data.build.heroStyle) {
       const styles = await s.page.evaluate(() => [...document.querySelectorAll('[data-hero-initial-style] [data-hero-style]')].map((b) => ({ id: b.getAttribute('data-hero-style'), label: (b.innerText || '').trim() })));
       if (styles.length) {
-        const diff = (log.data.meta || {}).difficulty || '';
+        // 配置の画面ではまだ meta.difficulty が入っていないことがある。そのときは回すときに指定した難易度
+        const diff = (log.data.meta || {}).difficulty || process.env.PLAYBOT_TACTICS_DIFF || '';
         // 勇者モンの名前は、選んだ直後でまだ build.hero に入っていないことがある。そのときは最後に押した子
         const hero = log.data.build.hero || mem.lastPicked || '';
         const tried = (id) => loadKnowledge().runs.filter((r) => r.difficulty === diff && r.hero === hero && (r.heroStyle || 'sword') === id).length;
@@ -705,17 +706,25 @@ async function chooseBetween(s, mem, log) {
         };
         const fallback = diff === 'Hard' || diff === 'Normal' || diff === 'Beginner' ? 'sword' : 'shield';
         const ranked = styles.map((x) => ({ id: x.id, v: reached(x.id) })).filter((x) => x.v != null).sort((p, q) => q.v - p.v);
+        // ★2026-10-16 ハカセくん: ダイスくんのシミュ(11版)で Master だけ片手盾が到達 WAVE 1.73 → 3.17(各300回)。
+        //   Master は記録の多い少ないによらず片手盾(記録が片手剣1回しか無く、片手剣を選び続けていた)
+        const simPick = diff === 'Master' && styles.some((x) => x.id === 'shield') ? 'shield' : '';
         const want = fixed || (envStyle === 'explore' ? [...styles].sort((a, z) => tried(a.id) - tried(z.id))[0].id
-          : ranked.length ? ranked[0].id : (styles.some((x) => x.id === fallback) ? fallback : styles[0].id));
+          : simPick || (ranked.length ? ranked[0].id : (styles.some((x) => x.id === fallback) ? fallback : styles[0].id)));
         // 押して、本当に選ばれたか(aria-pressed)を確かめる。効いていなければもう1回だけ押す。記録は実際に選ばれているもの
         const pressStyle = () => s.page.evaluate((id) => document.querySelector(`[data-hero-initial-style] [data-hero-style="${id}"]`)?.click(), want);
         const pressedNow = () => s.page.evaluate(() => (document.querySelector('[data-hero-initial-style] [data-hero-style][aria-pressed="true"]') || {}).getAttribute?.('data-hero-style') || '');
+        // PLAYBOT_SHOT_DIR=<フォルダ> で、押す前と押した後の画面を残す(報告用)
+        const shotDir = process.env.PLAYBOT_SHOT_DIR || '';
+        const shot = (name) => shotDir && s.page.screenshot({ path: require('path').join(shotDir, `hero-style-${diff || 'x'}-${name}.png`) }).catch(() => {});
+        await shot('before');
         await pressStyle();
         await s.wait(300);
         if ((await pressedNow()) !== want) { await pressStyle(); await s.wait(400); }
         const got = (await pressedNow()) || want;
+        await shot('after');
         log.data.build.heroStyle = got;
-        log.note(`初期スタイル: ${(styles.find((x) => x.id === got) || {}).label || got}(${fixed ? '指定どおり' : envStyle === 'explore' ? `${hero || '?'}で試した回数の少ないものから` : ranked.length ? `この難易度でいちばん届いたもの(平均 WAVE ${ranked[0].v.toFixed(1)})` : '記録が無いので難易度の既定'}${got !== want ? `。※${want}を押したが選ばれなかった` : ''})`);
+        log.note(`初期スタイル: ${(styles.find((x) => x.id === got) || {}).label || got}(${fixed ? '指定どおり' : envStyle === 'explore' ? `${hero || '?'}で試した回数の少ないものから` : simPick ? 'Master はシミュの結果で片手盾' : ranked.length ? `この難易度でいちばん届いたもの(平均 WAVE ${ranked[0].v.toFixed(1)})` : '記録が無いので難易度の既定'}${got !== want ? `。※${want}を押したが選ばれなかった` : ''})`);
       }
     }
     const best = placeBtns.sort((a, z) => GRADE.indexOf(a.split(/\s+/)[1]) - GRADE.indexOf(z.split(/\s+/)[1]))[0];
