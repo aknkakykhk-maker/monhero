@@ -360,6 +360,11 @@ const decksAndSaves = () => {
     const saved = { hard: false };
     W(saved, recWins({ normal: 1 }));
     ok(saved.hard === false, '保存値(引数)を書き換えてしまう');
+    // 助手の立ち絵の範囲の表(84 の CARD_ART_KNOWN_BOX)が、今の絵と合っている(絵を差し替えたら tools/card/card-art-box-build.js で書き直す)
+    {
+      const r = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'card-art-box-build.js'), '--check'], { encoding: 'utf8' });
+      ok(r.status === 0, `助手の立ち絵の範囲の表が今の絵と合っていない(${(r.stdout || r.stderr || '').trim().split('\n').pop()})`);
+    }
     ok(/unlocked: cardUnlockedWithRecord\(unlocked, record\)/.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '84-screen-card-battle.jsx'), 'utf8')), 'カードの画面の読み込みで、記録から開いている強さを足していない');
   }
 };
