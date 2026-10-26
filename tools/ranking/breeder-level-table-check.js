@@ -80,6 +80,8 @@ const run = async () => {
   const eff = app.slice(app.indexOf('const lastPublishedBreederLevelRef'), app.indexOf('// ===== フレンド機能'));
   assert(eff.includes('if (!dataLoaded || !onboarded || onboardingPreview) return;'), '読み終えた後・はじめての設定の後・プレビュー中は送らない');
   assert(eff.includes('lastPublishedBreederLevelRef.current >= level) return;'), '同じ・低いLvは送り直さない');
+  assert(eff.includes('level < BREEDER_LEVEL_PUBLISH_MIN'), 'Lv.1の端末は送らない(行を積み上げない)');
+  assert(/const BREEDER_LEVEL_PUBLISH_MIN = 2;/.test(src), 'Lv.2から送る');
   assert(eff.includes('sbUpsertBreederLevel('), '送る関数を呼ぶ');
   assert(/\[dataLoaded, onboarded, onboardingPreview, breederXp, breederName, breederIcon\]/.test(eff), 'きっかけは読み終え・Lv(経験値)の変化だけ');
   assert(!/breederLevel\b/.test(eff.replace(/\/\/.*$/gm, '')), 'breederLevel(下で作る)を先に使わない');
