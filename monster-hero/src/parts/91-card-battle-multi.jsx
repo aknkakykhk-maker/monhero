@@ -1009,7 +1009,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'}</p>
             {/* 自分は数えない(「1人」が自分のことか分からない。カゲあつくん) */}
             <p data-card-pvp-waiting={Math.max(0, room.lobbyCount - 1)} className="mt-1 text-[13px] font-bold text-sky-100">{room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'}</p>
-            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - (now - room.seekAt)) / 1000))}秒</p>}
+            {/* now は1秒ごとの時計なので、さがし始めた直後は seekAt より古い(経過が負になり「あと91秒」と出ていた。2026-10-27) */}
+            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000))}秒</p>}
             {!room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && (
               <div data-card-pvp-nobody className="mt-3 space-y-2">
                 <p className="text-[13px] font-bold text-amber-100">いまは、だれも来ませんでした</p>

@@ -267,6 +267,15 @@ const cardFoeStyle = (who) => {
   return v <= 1.2 ? CARD_FOE_STYLES.balance : (CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance);
 };
 // 強さごとの組み方の説明(82 の CARD_AI_BUILD と同じ決め。数字は出さない)
+// 結果の画面: 負け・投了で満額より減ったか(r は cardCpuReward の返り値。古い形・マルチの形には full が無いので出さない)
+const cardResultCut = (r) => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
+//   投了は「番の数で減った分」と「倒した数×10」の小さいほう(82 の cardCpuBasePoint)なので、効いたほうの理由を出す
+const cardResultCutWhy = (outcome, r) => {
+  const turns = `自分の番が${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
+  if (outcome !== 'surrender') return turns;
+  const byKo = (Number(r.kos) || 0) * CARD_SURRENDER_POINT_PER_KO;
+  return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
+};
 const CARD_FOE_BUILD_NOTE = Object.freeze({
   easy: '残りの2体は気分でえらぶ(気まぐれな子が混ざることも)。カードは第1弾だけで、組み方は雑',
   normal: '残りの2体は型に合う子が中心。カードは型に合うものを、ざっくり入れる',
@@ -1136,6 +1145,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const tm = t ? st.players[t.p].mons[t.m] : null;
     return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
+  // 自分が守る番に受けている攻撃カード(相手が守る番・練習試合は出さない)
+  const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
   // まんなかに入り切らないときの詰め方(2026-10-25 社長の実機「コメントが切れてる」。iPhone の字は行が高く、上下が切れた)。
   //   0 … ふつう / 1 … 記録は新しい1行だけ / 2 … 技の帯の絵を省く / 3 … 技の帯を隠す。吹き出しと記録の最後の1行は必ず残す。
@@ -1250,9 +1261,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {/* 案A: 番が替わったときの帯は、盤全体の真ん中へ移した(下の data-card-turn-banner。2026-10-26 ソラシドさん) */}
         {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。指の操作は下へ通す。
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
+            番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && (
-          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`${bigCard ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`${bigCard || turnBanner ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
             {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
               : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>}
@@ -1289,7 +1301,17 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
         <div data-card-log className={`relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
-          {pendingText && <div className="text-rose-200">{pendingText}</div>}
+          {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
+          {pendingText && (guardAtk
+            ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
+              {/* まんなかに入り切らないときは、効果の文を1行に → 効果の文を省く → 絵を省く(stageFit。320×568 で下が切れた) */}
+              {stageFit < 3 && <img src={CARD_IMG(guardAtk.img)} alt={guardAtk.name} className={`${tiny || stageFit >= 2 ? 'h-[36px]' : 'h-[52px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`}/>}
+              <span className="min-w-0 flex-1">
+                <span className="block text-rose-200">{pendingText}</span>
+                {guardAtk.text && stageFit < 2 && <span data-card-guard-attack-text className={`${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`}>{guardAtk.text}</span>}
+              </span>
+            </button>
+            : <div className="text-rose-200">{pendingText}</div>)}
           {(pendingText ? [] : (compact || tutorial || stageFit >= 1) ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} className={i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'}>{l.text}</div>)}
         </div>
       </div>
@@ -2277,18 +2299,17 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             foeNode={<img src={assistantFaceImage(a, 'normal')} alt="" className="h-8 w-8 rounded-lg border-2 bg-black object-cover object-top" style={{ borderColor: a.accent }}/>} foeName={a.name} outcome={win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'}/>}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-amber-200">もらったビートP: {r.total}</div>
-            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {r.got}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300">{CARD_LEVEL_LABEL[result.level]}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${r.got}` : r.got}</div>
+            {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
             {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
             {r.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
-            {!r.short && result.loops > 0 && (
+            {!r.short && result.loops > 0 && result.quick && (
               <div data-card-quick-loops={result.quick ? result.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
-                {result.quick
-                  ? <>
+                {result.quick && <>
                     <div className="text-[13px] font-black text-sky-200">クイック周回 {result.loops}周ぶん</div>
                     <div className="mt-0.5 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>裏のクイック周回({(result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase()) || 'AUTO設定'})が{result.loops}周ぶん進みました</div>
                     {result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && <div data-card-quick-loops-range className="mt-0.5 text-[11px] font-bold text-sky-100">{result.quick.fromLoop}周目 → {result.quick.toLoop}周目</div>}
-                  </>
-                  : <div className="text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('クイック周回をしていないときは入りません')}</div>}
+                  </>}
               </div>
             )}
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>

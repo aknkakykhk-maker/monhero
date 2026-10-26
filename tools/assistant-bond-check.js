@@ -310,7 +310,7 @@ for (const [label, needle] of Object.entries({
   '画面別の件数表示': 'このLvで{usable}件',
 })) check(`デバッグ: ${label}`, has(needle));
 check('デバッグはデバッグ設定からだけ開ける',
-  source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
+  source.indexOf('💬 助手') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 
 
 // ==========================================================================
