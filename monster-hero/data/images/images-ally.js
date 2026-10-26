@@ -21,7 +21,7 @@ const HAM_IMG = "images/monsters/ham.png?v=106321d09a72";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=38f7f50cd68b";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
-const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=4b767f62e7d6";
+const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=e6c4b23ee988";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
@@ -102,12 +102,12 @@ const IDLE_DREAMY_BEADS_R_MASK = "images/monsters/idle/dreamy-beads-r.png?v=b454
 const IDLE_DREAMY_BODY_MASK = "images/monsters/idle/dreamy-body.png?v=6b6215543408";
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
-const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=2876d57411ef";
+const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3bacac1187f6";
 // パンドラの箱(タクティクスEX)の間だけ出す、悪魔・天使の姿。起動時には読まない(箱を使うときに先読みする)
 const PANDORA_DEVIL_IMG = "images/monsters/pandora-devil.PNG?v=5ce010729f00";
 const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
-const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=d0fb67000c05";
+const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=ce9b0ee85836";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
 const MONOL_IMG = "images/monsters/monol.png?v=64e141b7fbb1";
 const OBORO_IMG = "images/monsters/oboro.png?v=b9f9b77e528d";
@@ -121,9 +121,9 @@ const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=9843be5ed231";
 // 2026年8月に追加した人魚2体。いただいた立ち絵をそのまま使い、丸いアイコンでの見え方は
 // 画像を作り直さず MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せている
 const UNDINE_IMG = "images/monsters/undine.PNG?v=bf5593ae061a";
-const UNDINE_DYE_MASK = "images/monsters/undine-dye-mask.PNG?v=b7a80da70f6e";
+const UNDINE_DYE_MASK = "images/monsters/undine-dye-mask.PNG?v=6c4f4f4c6f53";
 const YAOBIKUNI_IMG = "images/monsters/yaobikuni.PNG?v=e23821f9d695";
-const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=cc159d62d79f";
+const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=c4c739ed5b60";
 // 2026年8月に追加準備中のレア「エイキ」(ザン×？？？)。正式実装まではデバッグ専用。
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
