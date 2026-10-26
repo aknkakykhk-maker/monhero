@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cb68978cad776d79
+// source-sha256: a8cf8f75fbb1ea83
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:03";
+const BUILD_DATE = "2026-10-27 00:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90801,20 +90801,75 @@ const cardArtBox = src => new Promise(resolve => {
   img.src = src;
 });
 const CARD_ART_KNOWN_BOX = Object.freeze({
-  myua_wink: Object.freeze({
-    nw: 1536,
-    nh: 1024,
-    x: 379,
-    y: 28,
-    w: 760,
-    h: 996
-  })
+  atsu_angry: [768, 1024, 0, 2, 768, 1022],
+  atsu_crying: [768, 1024, 0, 4, 768, 1020],
+  atsu_excited: [768, 1024, 0, 4, 768, 1020],
+  atsu_happy: [768, 1024, 0, 0, 768, 1024],
+  atsu_normal: [768, 1024, 0, 5, 768, 1019],
+  atsu_surprise: [768, 1024, 0, 0, 768, 1024],
+  atsu_troubled: [768, 1024, 0, 3, 768, 1021],
+  atsu_wink: [768, 1024, 0, 14, 768, 1010],
+  dra_angry: [384, 384, 44, 39, 299, 278],
+  dra_crying: [384, 384, 47, 45, 291, 269],
+  dra_excited: [384, 384, 46, 46, 292, 269],
+  dra_happy: [384, 384, 28, 40, 312, 276],
+  dra_normal: [384, 384, 45, 42, 293, 273],
+  dra_surprise: [384, 384, 25, 39, 313, 278],
+  dra_troubled: [384, 384, 45, 43, 294, 272],
+  dra_wink: [384, 384, 49, 43, 286, 270],
+  kiki_angry: [1536, 1024, 481, 10, 573, 1014],
+  kiki_crying: [1536, 1024, 480, 15, 572, 1009],
+  kiki_excited: [1536, 1024, 495, 12, 556, 1012],
+  kiki_happy: [1536, 1024, 486, 14, 573, 1010],
+  kiki_normal: [1536, 1024, 476, 17, 603, 1007],
+  kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
+  kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
+  kiki_wink: [1536, 1024, 490, 7, 569, 1017],
+  kyuko_angry: [384, 512, 0, 0, 384, 508],
+  kyuko_crying: [384, 512, 4, 0, 380, 507],
+  kyuko_excited: [384, 512, 0, 0, 384, 508],
+  kyuko_happy: [384, 512, 3, 7, 381, 505],
+  kyuko_normal: [384, 512, 0, 6, 377, 506],
+  kyuko_surprise: [384, 512, 4, 6, 375, 506],
+  kyuko_troubled: [384, 512, 0, 2, 384, 506],
+  kyuko_wink: [384, 512, 0, 6, 375, 502],
+  momosuke_angry: [512, 512, 12, 3, 497, 509],
+  momosuke_crying: [512, 512, 25, 2, 468, 510],
+  momosuke_excited: [512, 512, 10, 6, 502, 506],
+  momosuke_happy: [512, 512, 28, 14, 475, 498],
+  momosuke_normal: [512, 512, 25, 9, 478, 503],
+  momosuke_surprise: [512, 512, 18, 7, 486, 505],
+  momosuke_troubled: [512, 512, 32, 9, 459, 503],
+  momosuke_wink: [512, 512, 0, 7, 512, 505],
+  myua_angry: [1536, 1024, 306, 27, 907, 997],
+  myua_crying: [1536, 1024, 332, 19, 839, 1005],
+  myua_excited: [1536, 1024, 245, 15, 948, 1009],
+  myua_happy: [1536, 1024, 360, 26, 783, 998],
+  myua_normal: [1536, 1024, 396, 26, 715, 998],
+  myua_surprise: [1536, 1024, 325, 27, 852, 997],
+  myua_troubled: [1536, 1024, 323, 15, 866, 1009],
+  myua_wink: [1536, 1024, 379, 28, 760, 996]
 });
+const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
+  nw: v[0],
+  nh: v[1],
+  x: v[2],
+  y: v[3],
+  w: v[4],
+  h: v[5]
+} : null;
 const cardArtKnownBox = (who, expression, src) => {
   if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
   const ex = assistantExpressionName(who, expression);
-  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
-  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
+  return src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? cardArtBoxOf(CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`]) : null;
+};
+const cardArtKnownBoxBySrc = src => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS)) return null;
+  for (const who of ASSISTANTS) {
+    const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
+    if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
+  }
+  return null;
 };
 const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
   if (!known) {
@@ -90842,7 +90897,7 @@ const CardAssistantArt = ({
   useEffect(() => {
     let alive = true;
     setBox(null);
-    void cardArtKnownBoxFor(src, knownBox).then(known => known ? {
+    void cardArtKnownBoxFor(src, knownBox || cardArtKnownBoxBySrc(src)).then(known => known ? {
       ...known,
       known: true
     } : cardArtBox(src)).then(b => {
@@ -90851,7 +90906,7 @@ const CardAssistantArt = ({
     return () => {
       alive = false;
     };
-  }, [src, knownBox]);
+  }, [src]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
@@ -91729,7 +91784,6 @@ const CardBattleScreen = ({
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
-      knownBox: cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink')),
       alt: a.name,
       className: "w-[42%] landscape:hidden",
       style: {
