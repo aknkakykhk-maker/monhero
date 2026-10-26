@@ -261,21 +261,20 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await shot(page, '03-foe');
     await page.locator('[data-card-start]').click();
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
-    // ㉒ 台詞は、相手が先に動いても、字の数で決めた時間(最低 3 秒)は出ている(2026-10-27 社長「すぐ流れる。とくに開始のとき」)
+    // ㉒ 始まりの台詞は、相手が先に動いても、字の数で決めた時間(最低 3 秒)は出ている(2026-10-27 社長「すぐ流れる。とくに開始のとき」)
     const startTalk = await page.evaluate(async () => {
       const t0 = performance.now();
-      // 見はじめたときにもう出ている台詞は、出はじめが分からないので測らない。そのあと新しく出た台詞を測る
-      const pre = (document.querySelector('[data-card-bubble]') || {}).textContent || null;
+      // 始まりの台詞は対戦の画面が開いた瞬間に出る。見えない間(番の札)も字は残るので textContent で見る
       let first = null;
-      while (performance.now() - t0 < 16000) {
+      while (performance.now() - t0 < 9000) {
         const el = document.querySelector('[data-card-bubble]');
-        if (!first && el && el.textContent !== pre) first = { text: el.textContent, ms: Number(el.getAttribute('data-card-bubble-ms')), at: performance.now() };
+        if (!first && el) first = { text: el.textContent, ms: Number(el.getAttribute('data-card-bubble-ms')), at: performance.now() };
         if (first && (!el || el.textContent !== first.text)) return { ...first, shown: Math.round(performance.now() - first.at) };
         await new Promise((r) => setTimeout(r, 100));
       }
       return first ? { ...first, shown: Math.round(performance.now() - first.at), still: true } : null;
     });
-    check('㉒ 対戦の台詞が、読む前に消えない(字の数で決めた時間は出ている)', !startTalk || (startTalk.ms >= 3000 && (startTalk.still || startTalk.shown >= startTalk.ms - 300)), JSON.stringify(startTalk));
+    check('㉒ 始まりの台詞が、読む前に消えない(字の数で決めた時間は出ている)', !!startTalk && (startTalk.ms >= 3000 && (startTalk.still || startTalk.shown >= startTalk.ms - 300)), JSON.stringify(startTalk));
     const hand = await page.locator('[data-card-hand-card]').count();
     const mons = await page.locator('[data-card-mon]').count();
     check('④ 対戦が始まり、手札5枚・場の6体が出る', hand === 5 && mons === 6, `手札${hand}・場${mons}`);
