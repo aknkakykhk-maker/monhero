@@ -379,7 +379,15 @@ const CardReplayList = ({ onOpen, onBack }) => {
   const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   return (
     <div data-mh-screen data-card-replay-list className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note={`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`}/>
+      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note="押すと、はじめから見返せます"/>
+      {/* 一覧の外は、横画面では左の列に積まれる。残っている数と★の数を出す(2026-10-27 ツナグくんの見回り「左が見出しだけで空いている」) */}
+      <div data-card-replay-side className={`${SCREEN_PANEL_CLASS} mb-2 shrink-0`}>
+        <div className="grid grid-cols-2 gap-1.5 text-center">
+          <div className="rounded-xl bg-black/30 py-1"><small className="block text-[10px] font-bold text-slate-400">残っている試合</small><b data-card-replay-count className="text-[14px] font-black text-sky-100">{box ? box.list.length : '-'}<small className="text-[10px] text-slate-400">/{CARD_REPLAY_MAX}</small></b></div>
+          <div className="rounded-xl bg-black/30 py-1"><small className="block text-[10px] font-bold text-slate-400">★</small><b data-card-replay-favs className="text-[14px] font-black text-amber-200">{favs}<small className="text-[10px] text-slate-400">/{CARD_REPLAY_FAV_MAX}</small></b></div>
+        </div>
+        <p className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません`)}</p>
+      </div>
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
         {note && <p data-card-replay-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{note}</p>}
         {!box && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
