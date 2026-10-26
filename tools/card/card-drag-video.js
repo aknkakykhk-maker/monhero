@@ -113,9 +113,9 @@ const serve = () => new Promise((resolve) => {
       if (mode === 'attack') {
         const usable = await page.locator('[data-card-hand-card]').evaluateAll((els) => els.map((e, i) => (e.className.includes('opacity-45') ? -1 : i)).filter((i) => i >= 0));
         if (!attacked && usable.length) {
-          const before = await page.locator('[data-card-log]').innerText();
+          const before = await page.locator('[data-card-log]').textContent();
           await slowCarry(await center(page.locator(`[data-card-hand-card="${usable[0]}"]`)), await center(page.locator('[data-card-mon="0-1"]')), await center(page.locator('[data-card-mon="1-1"]')));
-          if ((await page.locator('[data-card-log]').innerText()) !== before) { attacked = true; await page.waitForTimeout(1500); continue; }
+          if ((await page.locator('[data-card-log]').textContent()) !== before) { attacked = true; await page.waitForTimeout(1500); continue; }
         }
         await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click(); continue;
       }
