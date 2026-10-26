@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f6c88ead88cfb5a
+// source-sha256: 2dd3a8ac3bbe9444
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110078,6 +110078,21 @@ function MonsterHeroGame() {
     setRhythmEventPoints(next.point);
     return next;
   };
+  const cardShopLocked = fn => typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function' ? navigator.locks.request('mh_card_shop', () => fn()) : fn();
+  const cardShopTry = async (read, make) => cardShopLocked(async () => {
+    for (let tries = 0; tries < 3; tries++) {
+      const raw = await read();
+      const out = make(raw);
+      if (!out.entries) return out;
+      if (JSON.stringify(await read()) !== JSON.stringify(raw)) continue;
+      return (await saveStoredValuesOrRollback(out.entries, storeGet, storeSet)) ? out : {
+        fail: 'save'
+      };
+    }
+    return {
+      fail: 'save'
+    };
+  });
   const buyCardPacks = async (packId, count) => {
     if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return {
       ok: false,
@@ -110087,16 +110102,40 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]);
-      const point = cardNormalizePoint(rawPoint);
-      const split = rawSplit !== true;
-      const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
-      const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, {
-        collection: cardNormalizeCollection(rawCol),
-        pity: pity0,
-        point
-      }, Math.random);
-      if (!r) {
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]), ([rawCol, rawPity, rawPoint, rawSplit]) => {
+        const point = cardNormalizePoint(rawPoint);
+        const split = rawSplit !== true;
+        const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
+        const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, {
+          collection: cardNormalizeCollection(rawCol),
+          pity: pity0,
+          point
+        }, Math.random);
+        if (!r) return {
+          fail: 'points'
+        };
+        return {
+          r,
+          entries: [{
+            key: K.collection,
+            before: rawCol,
+            next: r.collection
+          }, {
+            key: K.pity,
+            before: rawPity,
+            next: r.pity
+          }, {
+            key: CARD_POINT_STORE_KEY,
+            before: rawPoint,
+            next: r.point
+          }, ...(split ? [{
+            key: K.pitySplit,
+            before: rawSplit,
+            next: true
+          }] : [])]
+        };
+      });
+      if (res.fail === 'points') {
         void loadCardShop();
         setMarketExchangeError('ビートPが足りません。');
         return {
@@ -110104,30 +110143,14 @@ function MonsterHeroGame() {
           reason: 'points'
         };
       }
-      const saved = await saveStoredValuesOrRollback([{
-        key: K.collection,
-        before: rawCol,
-        next: r.collection
-      }, {
-        key: K.pity,
-        before: rawPity,
-        next: r.pity
-      }, {
-        key: CARD_POINT_STORE_KEY,
-        before: rawPoint,
-        next: r.point
-      }, ...(split ? [{
-        key: K.pitySplit,
-        before: rawSplit,
-        next: true
-      }] : [])], storeGet, storeSet);
-      if (!saved) {
+      if (res.fail) {
         setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
         return {
           ok: false,
           reason: 'save'
         };
       }
+      const r = res.r;
       setCardShopState(cur => ({
         ...(cur || {}),
         point: r.point,
@@ -110163,15 +110186,39 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]);
-      const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, {
-        collection: cardNormalizeCollection(rawCol),
-        decks: cardNormalizeDecks(rawDecks),
-        point: cardNormalizePoint(rawPoint),
-        starter: cardNormalizeStarter(rawStarter),
-        shop: cardNormalizeShop(rawShop)
-      }, Date.now());
-      if (!r) {
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]), ([rawCol, rawDecks, rawPoint, rawStarter, rawShop]) => {
+        const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, {
+          collection: cardNormalizeCollection(rawCol),
+          decks: cardNormalizeDecks(rawDecks),
+          point: cardNormalizePoint(rawPoint),
+          starter: cardNormalizeStarter(rawStarter),
+          shop: cardNormalizeShop(rawShop)
+        }, Date.now());
+        if (!r) return {
+          fail: 'points'
+        };
+        return {
+          r,
+          entries: [{
+            key: K.collection,
+            before: rawCol,
+            next: r.collection
+          }, {
+            key: K.decks,
+            before: rawDecks,
+            next: r.decks
+          }, {
+            key: CARD_POINT_STORE_KEY,
+            before: rawPoint,
+            next: r.point
+          }, {
+            key: K.shop,
+            before: rawShop,
+            next: r.shop
+          }]
+        };
+      });
+      if (res.fail === 'points') {
         void loadCardShop();
         setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。');
         return {
@@ -110179,30 +110226,14 @@ function MonsterHeroGame() {
           reason: 'points'
         };
       }
-      const saved = await saveStoredValuesOrRollback([{
-        key: K.collection,
-        before: rawCol,
-        next: r.collection
-      }, {
-        key: K.decks,
-        before: rawDecks,
-        next: r.decks
-      }, {
-        key: CARD_POINT_STORE_KEY,
-        before: rawPoint,
-        next: r.point
-      }, {
-        key: K.shop,
-        before: rawShop,
-        next: r.shop
-      }], storeGet, storeSet);
-      if (!saved) {
+      if (res.fail) {
         setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
         return {
           ok: false,
           reason: 'save'
         };
       }
+      const r = res.r;
       setCardShopState(cur => ({
         ...(cur || {}),
         point: r.point,
