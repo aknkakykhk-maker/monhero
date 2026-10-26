@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b32774a028b5d074
+// generated-sha256: c8b817d276db10a0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -8878,8 +8878,10 @@ const releasedForPlayers = (item) => !item
 const CHANGELOG_TYPES = ['update', 'issue'];
 // 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
 // ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。
+// ★idTitle は、題を書き直した項目の元の題(2026-10-27 社長「題の頭に遊びの名前を付けない」で頭を外した239件)。
+//   id は元の題から作り続ける。題から作り直すと、読んだ人の既読(mh_changelog_seen_ids_*)が外れて全部 NEW に戻る。
 const changelogEntryId = entry => {
-  const source = entry.id || [entry.type, entry.title, ...(entry.items || [])].join('\u001f');
+  const source = entry.id || [entry.type, entry.idTitle || entry.title, ...(entry.items || [])].join('\u001f');
   let hash = 2166136261;
   for (let i=0;i<source.length;i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }
   return `${entry.type || 'notice'}-${(hash >>> 0).toString(36)}`;
@@ -42352,7 +42354,8 @@ function BattleScreen({
                 裏へ回ってしまう。必殺技の警告と同じこの階層に置くと前面に出る */}
             {/* ★敵の解析・ステータス・ログなどを上に開いているあいだは出さない(body の直下へ出すので、
                 開いた画面の上に重なって残っていた。2026-10-26 ダメダシの見回り クラシック#2) */}
-            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&!battleOverlayOpen&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
+            {/* ★敵を倒したあと(結果の画面へ移るまで)も出さない。WAVE の合間に残って列の外へ出ていた(2026-10-27 セコンドくんの見回り) */}
+            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&!battleOverlayOpen&&!enemyDefeating&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
               // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
               // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
               // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
@@ -46920,7 +46923,7 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
   if (!alone || Date.now() - since < RHYTHM_MULTI_ALONE_HINT_MS) return null;
   return (
     <div data-rhythm-multi-alone-hint className="mt-1.5 rounded-xl border border-amber-300/40 bg-amber-950/40 p-2 text-[11px] font-bold leading-snug text-amber-100">
-      いまはメンバーが集まりにくいようです。このまま待つか、友だちとプライベートルームで遊ぶのもおすすめです。
+      いまはメンバーが集まりにくいようです。このまま待つか、フレンドとプライベートルームで遊ぶのもおすすめです。
       {onLeave && <button type="button" onClick={onLeave} className="mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black">モードえらびへ戻る</button>}
     </div>
   );
@@ -47036,7 +47039,7 @@ function RhythmMultiBuddyInfoSheet({ m, masu, songName, resolveIconUrl, onClose 
             <button data-rhythm-multi-buddy-info-close type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <RhythmBuddyDetail masu={masu} mon={state.mons[masu.id]} dayKey={dayKey} songName={songName} onBack={null} />
+            <RhythmBuddyDetail masu={masu} mon={state.mons[masu.id]} dayKey={dayKey} songName={songName} ownerName={m && m.name} onBack={null} />
           </div>
           <button type="button" onClick={onClose} className="mt-2 min-h-[44px] w-full shrink-0 rounded-xl bg-slate-700 text-sm font-black">閉じる</button>
         </section>
@@ -47532,7 +47535,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const buddyInfoPhase = view && view.room ? view.room.phase : '';
   React.useEffect(() => { if (buddyInfoPhase === 'playing') setBuddyInfoId(''); }, [buddyInfoPhase]);
   const buddySheetLayer = buddySheet === 'pick' ? (
-    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
+    <RhythmBuddySheet masuMons={masuMons} masuPicker={masuPicker} breederName={profile && profile.name} songName={buddySongName} tickets={buddyTickets} pick={callBuddy} onClose={() => setBuddySheet('')}
       calledIds={(view && view.myCpus ? view.myCpus : []).map((c) => c.masuId)} />
   ) : null;
   const buddyCallButton = (extra = '') => (view && RHYTHM_MULTI.canSummon() && masuMons.length > 0 ? (
@@ -47757,7 +47760,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       <button data-rhythm-multi-back type="button" aria-label="戻る" className="min-h-[44px] min-w-[44px] max-[380px]:min-w-[36px] shrink-0 rounded-xl text-lg font-black text-slate-300" onClick={onBackClick}>←</button>
       <div className="min-w-0 flex-1 leading-none">
         <b className="block truncate text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
-        <small className="mt-0.5 block truncate text-[10px] font-black text-fuchsia-200">▶ {step}{view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : ''}</small>
+        <small className="mt-0.5 block truncate text-[10px] font-black text-fuchsia-200">▶ {step}{view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : ''}</small>
       </div>
       {/* クイック∞周回を裏で回しているときの進み具合(曲えらびの帯と同じ中身)。対戦の待ち時間も周回は進む */}
       {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[38%] max-[480px]:max-w-[24%]" />}
@@ -47897,9 +47900,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </button>
               {/* マルチ: フリーマッチ(だれとでも)。ベテランは無くした(2026-10-03・ユーザー指示) */}
               {ms.multi && <button data-rhythm-multi-free type="button" onClick={() => searchRoom('free')}
-                className="mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
+                className="mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 max-[359px]:gap-0.5 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.12s' }}>
                 <span aria-hidden="true" className="mhms-mark">FREE MATCH</span>
-                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🎮</span>
+                {/* 320幅では3行(題・説明・待ち人数)が札の下の端で切れていた。細い端末だけ絵文字を小さくし、間を詰める(2026-10-26 カゲあつ) */}
+                <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none max-[359px]:text-2xl">🎮</span>
                 <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small><RhythmMultiLobbyCount /></span>
               </button>}
               {/* プライベートルーム: 友だちと遊ぶ。作成と、コードを入れての入室は、押すと開くシートへ(2026-10-07・「ダサいので一新して」) */}
@@ -47907,7 +47911,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 className="mhms-card private mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-blue-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2" style={{ animationDelay: '.2s' }}>
                 <span aria-hidden="true" className="mhms-mark">PRIVATE</span>
                 <span aria-hidden="true" className="mhms-ico relative text-3xl leading-none">🔑</span>
-                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">プライベート</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">合言葉で友だちと遊ぶ</small></span>
+                <span className="relative min-w-0"><b className="block text-[18px] font-black italic leading-tight">プライベート</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">合言葉でフレンドと遊ぶ</small></span>
               </button>}
               {/* ランキング: 全国ランキングとマスモンランキング */}
               {ms.multi && <button data-rhythm-mode-ranking type="button" onClick={() => openRankHub('national')}
@@ -47975,12 +47979,12 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div data-rhythm-mode-private-sheet className="absolute inset-x-0 bottom-0 flex max-h-[90%] flex-col gap-3 overflow-y-auto rounded-t-3xl border-t border-sky-300/40 bg-slate-900 p-4 shadow-2xl landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-full landscape:w-[min(440px,62%)] landscape:rounded-none landscape:border-l landscape:border-t-0" style={{ paddingBottom: 'calc(1rem + var(--mh-sa-bottom))' }}>
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className="text-2xl leading-none">🔑</span>
-                <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-sky-100">プライベートルーム</b><small className="block text-[11px] font-bold text-slate-400">合言葉で、友だちだけと遊べます</small></div>
+                <div className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black text-sky-100">プライベートルーム</b><small className="block text-[11px] font-bold text-slate-400">合言葉で、フレンドだけと遊べます</small></div>
                 <button type="button" aria-label="閉じる" onClick={() => setPrivateOpen(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </div>
               <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
                 <b className="block text-[13px] font-black text-white">部屋をつくる</b>
-                <p className="text-[11px] font-bold leading-snug text-slate-300">合言葉(ルームコード)ができます。友だちに伝えて入ってもらいましょう</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-300">合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう</p>
                 <button data-rhythm-multi-create type="button" onClick={createPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">＋ 部屋をつくる</button>
               </section>
               <section className="space-y-1.5 rounded-2xl border border-violet-300/25 bg-slate-950/50 p-3">
@@ -48053,7 +48057,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                     <b data-rhythm-multi-room-code className="block text-2xl font-black leading-none tracking-[0.3em] text-cyan-200">{view.code}</b>
                     {view.status !== 'open' && <small className="block text-[9px] font-black text-amber-300">{view.status === 'connecting' ? 'ルームへつないでいます…' : 'つなぎ直しています…'}</small>}
                   </div>
-                  <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : '友だちに送る'}</button>
+                  <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : 'フレンドに送る'}</button>
                 </div>}
                 {/* 選曲の制限時間。部屋主が決める(ほかの人には、決まった時間だけ見せる)。2026-10-07・ユーザー指示 */}
                 {view && room && <div data-rhythm-multi-select-time-row className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -48815,7 +48819,14 @@ function RhythmBuddyScoreChart({ recent, songName }) {
 }
 
 // 1体の詳しい画面
-function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
+// 「呼び方」の欄は、型(「◯◯ちゃん」)ではなく持ち主の名前を入れて出す(「テストちゃん」。2026-10-27 ダメダシ e01)。名前が無いときは型のまま
+const rhythmBuddyCallText = (call, name) => {
+  if (!call) return '';
+  if (call.call) return call.call;
+  const n = String(name || '').trim();
+  return n && typeof call.suf === 'string' ? `${n}${call.suf}` : call.label;
+};
+function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = '' }) {
   const m = rhythmBuddyNormalizeMon(mon);
   const info = rhythmBuddyLevelInfo(m.exp);
   const mood = rhythmBuddyMood(masu.id, dayKey, m);
@@ -48834,7 +48845,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
     // 性別は決まっている種(ウンディーネ種・ピクシー種)だけ出す(2026-10-16)
     ...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []),
     ['self', '一人称', persona.self],
-    ['call', '呼び方', persona.call.label],
+    ['call', '呼び方', rhythmBuddyCallText(persona.call, ownerName)],
     ['quirk', '口ぐせ', persona.quirk.label],
     ['food', '好物', persona.food],
     ['hobby', '趣味', persona.hobby],
@@ -49178,7 +49189,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [] }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '' }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -49212,7 +49223,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
-            ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
+            ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} ownerName={breederName} onBack={() => setDetailId('')} />
             : masuPicker
               ? <div data-rhythm-buddy-picker>
                 {masuPicker.renderSortFilterBar({ singleType: true })}
@@ -49262,7 +49273,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
 }
 
 // 画面: マスモン一覧(モンヒロビート)。M/B管理と、モンヒロビートのモードえらびから開く
-function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLabel = 'M/B管理へ戻る' }) {
+function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLabel = 'M/B管理へ戻る', breederName = '' }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -49285,7 +49296,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       {!detail && <div className="mb-2 shrink-0">{listControls.bar}</div>}
       <div className={`w-full ${SCREEN_LIST_CLASS}`}>
         {detail
-          ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
+          ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} ownerName={breederName} onBack={() => setDetailId('')} />
           : <RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} settings={listControls.settings} />}
       </div>
       {listControls.sheet}
@@ -50143,7 +50154,9 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
         </div>
       </div>
 
-      <div className={SCREEN_FOOTER_CLASS}>
+      {/* 横向きの背の低い画面は画面ごと下へ送る形なので、挑戦のボタンが画面3つぶん下にあった(2026-10-27 ジン部長)。
+          その画面だけ、送っても画面の下に貼り付けて、すぐ押せるようにする。後ろの一覧が透けないよう地を敷く。画面の下の余白(30px)に止まるので、その下も影で同じ地にする。縦画面は変えない */}
+      <div data-raid-jack-footer className={`${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_60px_0_0_#020617]`}>
         {/* レイドバトルは「バトル」と「モンヒロビート」の2つの挑み方(2026-10-06・ユーザー指示)。回数は同じものを使う。
             挑めないとき(開始前・未解放・倒された・回数切れ)は、これまでどおり理由を出す1つのボタンにする */}
         {tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? (
@@ -56918,6 +56931,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): ビートP・その日の数・記録(pvp の勝ち負け)・クイック周回
     // その日はじめての勝ちの +50 は、助手と対戦と同じ印(daily.firstWin)を使う。どちらで勝っても合わせて1日1回(2026-10-26 社長)
     // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
+    // ★クイック周回のあとの書き直しにも firstWin を入れる(抜けていて、印が消えて1日に何度も +50 になっていた。2026-10-27 総点検)
     const pvpReward = async (r) => {
       const base = cardPvpReward(r.reward, r.facts);
       // 書く直前に読み直す(助手と対戦と同じ。古い中身で記録・その日の数を上書きしない)
@@ -56931,7 +56945,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
-      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
+      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
       return { ...got, saved: ok, quick };
     };
     return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
@@ -57257,11 +57271,24 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return (
       <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
-        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+        {/* 一覧の外は、横画面では左の列に積まれる(左が見出しだけで空いていた。2026-10-27 ツナグくんの見回り)。縦では今までどおり一覧の上 */}
+        <div data-card-options-side className="mb-2 shrink-0 space-y-2">
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
+          {/* 項目の目次(横画面だけ)。押すと右の一覧のその項目へ移る */}
+          <div data-card-options-toc className={`${SCREEN_PANEL_CLASS} hidden landscape:block`}>
+            <div className="text-[11px] font-bold text-slate-400">項目</div>
+            <div className="mt-1 grid grid-cols-3 gap-1">
+              {[...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map((g) => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => (
+                <button key={label} type="button" data-card-options-jump={label} onClick={() => { Audio_.fgSe.tap(); const el = document.querySelector(`[data-card-options] ${sel}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                  className="min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100">{jaWrap(label)}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {cardTalkOpen() && (
             <div data-card-ai-talk-panel className={SCREEN_PANEL_CLASS}>
               <div className="flex items-center gap-2">
@@ -60672,7 +60699,15 @@ const CardReplayList = ({ onOpen, onBack }) => {
   const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   return (
     <div data-mh-screen data-card-replay-list className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note={`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`}/>
+      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note="押すと、はじめから見返せます"/>
+      {/* 一覧の外は、横画面では左の列に積まれる。残っている数と★の数を出す(2026-10-27 ツナグくんの見回り「左が見出しだけで空いている」) */}
+      <div data-card-replay-side className={`${SCREEN_PANEL_CLASS} mb-2 shrink-0`}>
+        <div className="grid grid-cols-2 gap-1.5 text-center">
+          <div className="rounded-xl bg-black/30 py-1"><small className="block text-[10px] font-bold text-slate-400">残っている試合</small><b data-card-replay-count className="text-[14px] font-black text-sky-100">{box ? box.list.length : '-'}<small className="text-[10px] text-slate-400">/{CARD_REPLAY_MAX}</small></b></div>
+          <div className="rounded-xl bg-black/30 py-1"><small className="block text-[10px] font-bold text-slate-400">★</small><b data-card-replay-favs className="text-[14px] font-black text-amber-200">{favs}<small className="text-[10px] text-slate-400">/{CARD_REPLAY_FAV_MAX}</small></b></div>
+        </div>
+        <p className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません`)}</p>
+      </div>
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
         {note && <p data-card-replay-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{note}</p>}
         {!box && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
@@ -79428,10 +79463,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     // ★札は「選ぶ」ボタンと、右の「？(詳しいルール)」ボタンの2つでできている。準備中でも中身は読める
                     return (
                     <div key={sys.id} data-battle-system-card={sys.id} className={`relative${sysSpot}`}>
+                    {/* 縦が低い端末(高さ600px以下・320×568)では札を70pxに詰め、上の助手の立ち絵の枠へ回す(#3703 の直し残し・2026-10-27 ダメダシ「バトルの入口は肩まで」) */}
                       <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
                         disabled={soon||tutorialLocked} onClick={()=>openBattleSystem(sys.id)}
                         aria-label={soon?`${sys.label}（準備中）`:sys.label}
-                        className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
+                        className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] portrait:[@media(max-height:600px)]:min-h-[70px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
                         <span aria-hidden="true" className="mhms-mark">{look.mark}</span>
                         <span aria-hidden="true" className="mhms-ico relative shrink-0 text-3xl leading-none">{sys.emoji}</span>
                         <span className="relative min-w-0 flex-1" style={{containerType:'inline-size'}}>
@@ -81552,7 +81588,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* マスモン一覧: ラン終了時に登録した固有インスタンス。タップで詳細・改名・強化ポイント使用 */}
         {/* マスモン一覧(モンヒロビート)。M/B管理とモンヒロビートのモードえらびから開き、開いた画面へ戻る */}
         {gameState==='RHYTHM_MASU_BEAT'&&(
-          <MasuBeatScreen masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} tickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)}
+          <MasuBeatScreen masuMons={masuMons} songs={rhythmDemoSongs(RHYTHM_SONGS)} tickets={ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID)} breederName={breederName}
             onBack={()=>setGameState(masuBeatBack)} backLabel={masuBeatBack==='MB_MANAGEMENT'?'M/B管理へ戻る':'モードえらびへ戻る'}/>
         )}
         {gameState==='MASU_MONS'&&(
