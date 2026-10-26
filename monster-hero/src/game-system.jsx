@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc319970ba9fecc5
+// generated-sha256: c5eab57f67b1a540
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59590,7 +59590,10 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
 
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
-const CARD_REPLAY_RULES = 1;
+const CARD_REPLAY_RULES = 2;
+// 上げ方(2026-10-27 カード部で決めた): ルールの結果が変わる PR は、マージ直前に main の値を見て、自分の値が main 以下なら main+1 にする
+//   (同じ値に上げた PR どうしは取り込みでぶつからないので、ぶつかるのを待たない)。助手の打ち方だけの変更は上げない
+//   1 → 2: 混血は攻撃・特殊=メイン、防御・回避=サブだけ(#3865)
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す

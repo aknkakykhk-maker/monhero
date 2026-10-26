@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d218a6128b6667d4
+// source-sha256: 956dfe7a4863adab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99250,7 +99250,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 1;
+const CARD_REPLAY_RULES = 2;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
