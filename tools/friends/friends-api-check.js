@@ -346,7 +346,7 @@ const statusOf = (a, b) => {
     && api.friendsLastSeenText(now - 30 * 60 * 1000, now) === '30分前に開きました'
     && api.friendsLastSeenText(now - 5 * 3600 * 1000, now) === '5時間前に開きました'
     && api.friendsLastSeenText(now - 3 * 24 * 3600 * 1000, now) === '3日前に開きました'
-    && api.friendsLastSeenText(0, now).includes('不明'));
+    && api.friendsLastSeenText(0, now).includes('わかりません'));
 
   console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');
   process.exit(failed ? 1 : 0);

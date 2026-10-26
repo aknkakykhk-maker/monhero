@@ -422,7 +422,7 @@ check('ランキングボタンはチャレンジのときだけ出す',
 // クイックでも同じ高さの案内を出し、下に続く表示の位置がモードでずれないようにする
 check('ランキングボタンはモードのタブと同じ幅', has('className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40'));
 check('ランキングボタンはモードのタブのすぐ下にある',
-  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度を選択'));
+  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度をえらぶ'));
 check('クイックでも同じ高さの案内を出す', has('クイックモードはランキング対象外です') && count('w-full h-10 rounded-xl') === 2, `${count('w-full h-10 rounded-xl')}か所`);
 // 最低の高さ(min-h)ではなく決め打ちの高さ(h-10)にする。ボタンの中身によっては
 // min-hを超えて伸びてしまい、クイック側の空き場所とずれるため
