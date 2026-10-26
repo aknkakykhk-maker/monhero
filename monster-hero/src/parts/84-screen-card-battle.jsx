@@ -11,6 +11,8 @@
 // カードの絵(道具 tools/card/card-image-build.js が © を消して縮めたもの)。s=240×336(手札・場)/ l=480×672(詳しい画面)。フォルダごと使う
 const CARD_IMAGE_SET = Object.freeze({ imageDir: 'images/card-battle' });
 const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}.jpg`;
+// カードの裏面(2026-10-26 社長から届いた絵。images/card-battle/{s,l}/back.jpg・作り方は tools/art-sources/card-battle/card-back/README.md)
+const CARD_BACK_IMG = (size = 's') => CARD_IMG('back', size);
 const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御', fld: '全体' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
@@ -395,7 +397,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
       {/* 倒れたら、倒れる動きのあとカードを裏返して暗くする(設計書 5-3)。小さい画面(tiny)はカードを小さく */}
       <span data-card-flip={mon.ko ? 'ko' : undefined} className={`relative block ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} shrink-0 ${mon.ko ? 'mh-card-flip' : ''}`}>
         <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className={`mh-card-flip-face ${tiny ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] object-cover shadow ${mon.ko ? 'grayscale opacity-40' : ''}`}/>
-        {mon.ko && <span className="mh-card-flip-back" aria-hidden="true"/>}
+        {mon.ko && <span className="mh-card-flip-back" aria-hidden="true" style={{ backgroundImage: `url(${CARD_BACK_IMG()})`, backgroundSize: '100% 100%', border: 0 }}/>}
       </span>
       <div className={`${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`}>
         <div className="truncate text-[12px] font-black leading-tight">{mon.name}</div>
@@ -459,8 +461,9 @@ const CardGutsFlight = ({ g, still = false }) => {
           <span key={k} data-card-guts-fly={g.p} className="absolute left-0 top-0 block overflow-hidden rounded-[4px] border border-amber-200/80 shadow-[0_4px_10px_rgba(0,0,0,.6)]"
             style={{ width: w, height: h, transform: `translate(${go ? tx : fx}px, ${go ? ty : fy}px) scale(${go ? 0.55 : 1})`, opacity: go ? 0.2 : 1,
               transition: `transform 480ms cubic-bezier(.5,0,.75,.4) ${it.delay}ms, opacity 480ms ease-in ${it.delay}ms`,
-              background: it.img ? undefined : 'linear-gradient(135deg, #7c3aed, #312e81)' }}>
-            {it.img && <img src={it.img} alt="" className="h-full w-full object-cover"/>}
+            }}>
+            {/* 自分の手札は表の絵、相手の手札と山札の上は裏面の絵 */}
+            <img src={it.img || CARD_BACK_IMG()} alt="" className="h-full w-full object-cover"/>
           </span>
         );
       })}
@@ -1094,7 +1097,7 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     const pl = st.players[p];
     return (
       <div className={`flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`}>
-        {p === CARD_CPU && <span data-card-hand-of={p} className="flex">{pl.hand.map((_, i) => <b key={i} className="-ml-1 h-[18px] w-[13px] rounded-[2px] border border-violet-300 bg-gradient-to-br from-violet-600 to-indigo-900 first:ml-0"/>)}</span>}
+        {p === CARD_CPU && <span data-card-hand-of={p} className="flex">{pl.hand.map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className="-ml-1 h-[18px] w-[13px] rounded-[2px] object-cover shadow-[0_0_0_1px_rgba(255,255,255,.35)] first:ml-0"/>)}</span>}
         <span data-card-deck-of={p} className={`rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`}>山札 {pl.deck.length}</span>
         <span data-card-guts-of={p} {...(p === CARD_ME ? { 'data-card-guts-drop': true } : {})} className={`flex items-center gap-0.5 rounded-md border ${tiny ? 'px-1' : 'px-1.5'} py-0.5 text-amber-100 ${p === CARD_ME && dropOver === 'guts' ? 'border-emerald-300 bg-emerald-400/30 ring-4 ring-emerald-300' : 'border-amber-300/40 bg-amber-500/10'}`}>ガッツ {pl.guts.length}</span>
         <button type="button" onClick={() => setDiscard({ tab: p })} className={`rounded-md border border-white/20 bg-white/10 ${tiny ? 'px-1' : 'px-1.5'} py-0.5`}>捨て札 {pl.discard.length}</button>
@@ -1571,6 +1574,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   if (!save) return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="MFバトルカード" onBack={onExit}/><ScreenEmpty emoji="⏳" lines={['読み込み中…']}/></div>;
 
   if (screen === 'CARD_BATTLE' && game) {
+    // 対戦開始の画面(83-card-battle-vs.jsx)。出し終わるかタップしたら、対戦の画面へ(場はもう作ってあり、見せるだけ)
+    if (game.intro) return <CardVsIntro key={`vs-${game.key}`} db={db} intro={game.intro} onDone={() => setGame((g) => (g && g.key === game.key ? { ...g, intro: null } : g))}/>;
     return <CardBattleBoard key={game.key} db={db} game={game} meProfile={rank && rank.profile} quickRun={quickRun ? { loops: quickRun.loops, stopped: quickRun.stopped } : null} onFinish={async ({ outcome, st, comeback = false }) => {
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
@@ -1618,11 +1623,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const activeDeck = save.decks.decks.find((d) => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
+  // 対戦開始の画面に出す、こちらの名前と、場の3体(0=こちら・1=相手)
+  const myName = (rank && rank.profile && rank.profile.name) || 'あなた';
+  const vsMons = (st, side) => ((st && st.players && st.players[side] && st.players[side].mons) || []).map((m) => m.no);
 
   // 練習試合(チュートリアル)を始める。相手はみゅあ・デッキはドラが貸す(選んだスターターとは別)
   const startTutorial = () => {
     setResult(null);
-    setGame({ key: `tutorial-${Date.now()}`, st: cardTutorialGame(db), who: 'mua', level: 'easy', tutorial: true });
+    const tst = cardTutorialGame(db);
+    const mua = allAssistants.find((a) => a.id === 'mua');
+    // 練習試合はみゅあで短く(ひとことは1つ・デッキ名は出さない。2026-10-26 社長 案A)
+    const intro = { mode: 'tutorial', foe: { who: 'mua', name: mua ? mua.name : 'みゅあ', line: CARD_VS_TUTORIAL_LINE, monsters: vsMons(tst, CARD_CPU) }, me: { name: '練習試合', monsters: vsMons(tst, CARD_ME) } };
+    setGame({ key: `tutorial-${Date.now()}`, st: tst, who: 'mua', level: 'easy', tutorial: true, intro });
     onBgm && onBgm(CARD_AI_BGM.mua); // 練習試合は、みゅあの曲(#3634 の前と同じ)
     onNavigate('CARD_BATTLE');
   };
@@ -1637,7 +1649,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 検査のときだけ: 始まりの場を決めた形に差しかえる(window.__mhCardScene が関数のときだけ。ふだんの遊びでは無い)
     if (typeof window !== 'undefined' && typeof window.__mhCardScene === 'function') { try { st = window.__mhCardScene(cardClone(st)) || st; } catch (_) { /* 差しかえに失敗したら、ふつうの始まりのまま */ } }
     setResult(null);
-    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings });
+    // 対戦開始の画面: 相手の助手のひとこと(助手ごと・難易度ごと)と、組んだ中身から付けたデッキ名
+    const intro = { mode: 'assistant',
+      foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
+      me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
+    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro });
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
     onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
@@ -1713,7 +1729,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     };
     return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
-      setGame({ ...g, settings: save.settings });
+      // 対戦開始の画面: 相手の名前・アイコン・相手がデッキ編成で付けたデッキ名(古い版の相手は送ってこないので出さない)
+      const pv = g.pvp || {};
+      const intro = { mode: 'pvp', foe: { name: pv.name || 'あいて', icon: pv.icon || '🙂', deckName: pv.deckName || null, monsters: vsMons(g.st, CARD_CPU) },
+        me: { name: myName, deckName: (activeDeck && activeDeck.name) || null, monsters: vsMons(g.st, CARD_ME) } };
+      setGame({ ...g, settings: save.settings, intro });
       onBgm && onBgm(save.bgm.pvp || null);
       onNavigate('CARD_BATTLE');
     }}/>;
@@ -1735,7 +1755,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             ))}
           </div>
           {/* 強さのボタンは助手の顔のすぐ下(紹介の欄が長いと、下の「対戦する」の帯に潜っていた。2026-10-25 社長の実機) */}
-          <ScreenSectionLabel note="勝つと次の強さが開きます">強さ</ScreenSectionLabel>
+          {/* 見出しの部品(ScreenSectionLabel)の注記は9pxで小さすぎた(見回り #16)。ほかの画面は変えず、ここだけ11pxで書く */}
+          <div className="flex items-baseline gap-2 px-0.5 pt-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">強さ</span>
+            <span className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>勝つと次の強さが開きます</span>
+          </div>
           <div className="grid grid-cols-5 gap-1">
             {CARD_LEVEL_ORDER.map((lv) => {
               const open = cardLevelOpen(save.unlocked, lv) || debug;
