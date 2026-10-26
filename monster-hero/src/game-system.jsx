@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c637feed73739e2d
+// generated-sha256: 78317ecc1e71a702
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 09:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 09:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51816,11 +51816,14 @@ const cardNormalizeDaily = (v, today) => {
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
-// 対戦の BGM。cpu は 'auto'(相手の助手に合わせる)か曲id、pvp は曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
-const CARD_BGM_DEFAULT = Object.freeze({ cpu: 'auto', pvp: 'ichika_battle' });
+// MFバトルカードの BGM。top … トップ画面(練習試合の外)/ cpu … 'auto'(相手の助手に合わせる)か曲id / pvp … 曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
+// 既定は3つとも「MF × ICHIKA MIX」(atsu_cup_theme。2026-10-26 社長「MFいちかみっくす」)。前は cpu 'auto'・pvp 'ichika_battle' で、トップはHOMEの曲だった。
+//   ★mh_card_bgm_v1 は、オプションで曲を選んだときにだけ書く。選んだ人の値はそのまま読む(書き換えない)。top は足した項目なので、前からの人も既定で補う
+const CARD_BGM_DEFAULT = Object.freeze({ top: 'atsu_cup_theme', cpu: 'atsu_cup_theme', pvp: 'atsu_cup_theme' });
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
   return {
+    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
   };
@@ -52406,6 +52409,8 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D21: 'まずは光ってる所だよ',
   D22: 'あわてなくていい。光ってる所からな',
 });
+// みゅあの台詞の表情(吹き出しの顔。2026-10-26 社長「表情別にして」)。書いていない台詞は happy
+const CARD_TUTORIAL_FACE = Object.freeze({ M1: 'wink', M2: 'happy', M3: 'excited', M4: 'surprise', M5: 'troubled', M6: 'surprise', M7: 'crying', M8: 'happy' });
 const CARD_TUTORIAL_WRONG = Object.freeze(['D21', 'D22']);
 const CARD_TUTORIAL_POINT = 100;
 // 使うカード: ステップ(ピクシーの回避)・パンチ(ディノの技)・ソバット(みゅあのハムの技)
@@ -53076,6 +53081,8 @@ const CARD_AI_BGM = Object.freeze({
   kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
 });
 const CARD_PVP_BGM = 'ichika_battle';
+// 助手と対戦・練習試合の曲: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手の曲(CARD_AI_BGM)
+const cardCpuBgm = (bgm, who) => (bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : (CARD_AI_BGM[who] || CARD_BGM_DEFAULT.cpu));
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
@@ -53522,14 +53529,14 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     lastLine.current = { ...lastLine.current, [scene]: line.index };
     setFace(line.face);
     const key = `${Date.now()}-${scene}`;
-    setBubble({ text: line.text, key });
+    setBubble({ text: line.text, key, face: line.face });
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
     if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
       talk.current.n += 1;
       void cardTalkFetch('moment', { who: game.who, facts: cardTalkMomentFacts(db, ai.next, CARD_CPU, ai.scene), samples: cardTalkSamples(game.who, scene) }).then((r) => {
         if (!r) return;
-        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text } : cur));
+        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text, face: r.face } : cur));
         setFace(r.face);
       });
     }
@@ -53541,8 +53548,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (!tutorial || !tutQ.length) return undefined;
     const head = tutQ[0];
     if (head[0] === 'M') {
-      setFace('happy');
-      setBubble({ text: CARD_TUTORIAL_LINES[head], key: `t-${head}-${Date.now()}` });
+      const tf = CARD_TUTORIAL_FACE[head] || 'happy';
+      setFace(tf);
+      setBubble({ text: CARD_TUTORIAL_LINES[head], key: `t-${head}-${Date.now()}`, face: tf });
       const t = setTimeout(() => { setBubble(null); setTutQ((q) => q.slice(1)); }, 2100);
       return () => clearTimeout(t);
     }
@@ -54092,10 +54100,12 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             {turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`}
           </div>
         )}
-        {/* 相手の助手の吹き出し(まんなかのいちばん上。相手のモンスターにはかけない。指の操作は下へ通す) */}
+        {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。指の操作は下へ通す。
+            顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && (
-          <div key={bubble.key} data-card-bubble className={`pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
-            <span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span>
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+            <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>
+            <span className="min-w-0"><span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span></span>
           </div>
         )}
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
@@ -54150,11 +54160,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             if (tutStage.onNext) setSt((cur) => cardTutorialMutate(db, cur, tutStage.onNext));
             setTutI((i) => i + 1);
           };
+          // 縦の画面: 手札のすぐ上に重ねて出す(場所を取らない。下のボタンが画面の外へ押し出されていた・2026-10-26 社長の実機)。
+          //   窓の文字の上は指の操作を下(自分のモンスター)へ通し、「次へ」だけ押せる。横の画面は右の列に今までどおり並べる
+          //   重なりは 45(技を出す子の動き 40 より上・ダメージの数字 50 と大きいカード 55 より下)
           return (
-            <div data-card-tutor={tutStage.id} className="relative z-[30] mx-2 mb-1 flex shrink-0 items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950 px-2 py-1.5 shadow-lg">
+            <div className={wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'}>
+            <div data-card-tutor={tutStage.id} className={`${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`}>
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
               <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
-              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
+              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
+            </div>
             </div>
           );
       })()}
@@ -54426,6 +54441,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return next;
   };
   useEffect(() => { void load(); }, []);
+  // トップ画面(結果・デッキ編成なども)の曲。対戦の画面へ入るときは、それぞれの曲に替える
+  const topBgm = save && save.bgm ? save.bgm.top : null;
+  useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm); }, [screen, topBgm]);
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
   useEffect(() => { if (screen === 'CARD_TOP' && game && !result) setGame(null); }, [screen]);
 
@@ -54447,7 +54465,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
-        onBgm && onBgm(null);
+        onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
         setView('pvp');
         return;
@@ -54457,7 +54475,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
         const ok = await persist({ tutorial: fin.tutorial, point: save.point + fin.reward });
         setResult({ tutorial: true, done: outcome === 'tutorialDone', reward: ok ? fin.reward : 0, saved: ok });
-        onBgm && onBgm(null);
+        onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
         setView('result');
         return;
@@ -54479,7 +54497,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
       const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts });
-      onBgm && onBgm(null);
+      onBgm && onBgm(save.bgm.top);
       onNavigate('CARD_TOP');
       setView('result');
     }}/>;
@@ -54495,7 +54513,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const startTutorial = () => {
     setResult(null);
     setGame({ key: `tutorial-${Date.now()}`, st: cardTutorialGame(db), who: 'mua', level: 'easy', tutorial: true });
-    onBgm && onBgm(CARD_AI_BGM.mua);
+    onBgm && onBgm(cardCpuBgm(save && save.bgm, 'mua'));
     onNavigate('CARD_BATTLE');
   };
   const startBattle = (pick = foe) => {
@@ -54511,7 +54529,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     setResult(null);
     setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings });
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
-    onBgm && onBgm(save.bgm.cpu !== 'auto' ? save.bgm.cpu : (CARD_AI_BGM[pick.who] || null));
+    onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
   };
 
@@ -54586,7 +54604,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return <CardPvpLobby deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
       setResult(null);
       setGame({ ...g, settings: save.settings });
-      onBgm && onBgm(save.bgm.pvp || null);
+      onBgm && onBgm(save.bgm.pvp || CARD_BGM_DEFAULT.pvp);
       onNavigate('CARD_BATTLE');
     }}/>;
   }
@@ -54789,14 +54807,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div data-card-options-bgm className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">音</div>
             <b className="mt-2 block text-[12px] font-black text-slate-200">対戦のBGM</b>
-            {[['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
+            {[['top', 'トップ画面'], ['cpu', '助手と対戦・練習試合'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
               <label key={k} className="mt-2 block text-left">
                 <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
                     {k === 'cpu' && <option value="auto">おまかせ(相手の助手に合わせる)</option>}
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{k === 'pvp' && t.id === CARD_BGM_DEFAULT.pvp ? '(デフォルト)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''}</option>)}
                   </select>
                   {bgmPreview && (save.bgm[k] !== 'auto') && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
                 </div>
@@ -54977,7 +54995,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               const demo = cardMotionDemo(db);
               setResult(null);
               setGame({ key: `demo-${Date.now()}`, st: demo.st, who: 'mua', level: 'easy', demo: { steps: demo.steps } });
-              onBgm && onBgm(CARD_AI_BGM.mua);
+              onBgm && onBgm(cardCpuBgm(save.bgm, 'mua'));
               onNavigate('CARD_BATTLE');
             }}>技の動きの見本を流す(保存しない)</button>
             <button type="button" className="mh-button mh-button-danger min-h-[44px] w-full rounded-xl text-[12px] font-black" onClick={() => setConfirmReset(true)}>カードバトルの記録を消して、スターター選びからやり直す</button>
@@ -55243,10 +55261,16 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
 };
 
 // ==================== カード図鑑(区切り2) ====================
-// 弾ごとのタブ(第1〜4弾・混血)。持っている/持っていない・枚数・準備中。持っていないカードは暗い絵で出す(何が集まるか分かるように)
+// 持っている/持っていない・枚数・準備中。持っていないカードは暗い絵で出す(何が集まるか分かるように)
 // ★C-060C(ファンの描いた絵)はカードの表に入っていない(社長)。並べるのはカードの表にあるものだけ
-// 図鑑のタブはパックと同じ第1〜8弾+混血(2026-10-25 社長「パックは8弾まで」)。混血は、その弾のタブと「混血」の両方に出る
+// 見かたは3つ(2026-10-26 社長「血統ごと・種類ごとでも見られるように」):
+//   弾ごと   … パックと同じ第1〜8弾+混血(2026-10-25 社長「パックは8弾まで」)。混血は、その弾と「混血」の両方に出る
+//   血統ごと … パックの弾の順に種族を並べる。混血はメインの種族に出る。全モンスター・ブリーダー・全体のカードは「種類ごと」で見る
+//   種類ごと … デッキ編成の絞り込み(CARD_DECK_FILTERS)と同じ言葉と並び。先頭に「モンスター」
+// どの見かたでも、並べるカードは弾ごとの図鑑と同じもの(数え方がずれないように、全部の集まりから絞る)
+const CARD_DEX_MODES = Object.freeze([{ id: 'pack', label: '弾ごと' }, { id: 'species', label: '血統ごと' }, { id: 'kind', label: '種類ごと' }]);
 const CARD_DEX_TABS = Object.freeze([...CARD_PACKS.map((p) => ({ id: String(p.no), label: `第${p.no}弾` })), { id: 'hybrid', label: '混血' }]);
+const CARD_DEX_KINDS = Object.freeze([{ id: 'mon', label: 'モンスター' }, ...CARD_DECK_FILTERS.filter((f) => f.id !== 'all')]);
 const cardDexList = (db, tab) => {
   if (tab === 'hybrid') return Object.values(db.monsters).filter((m) => String(m.wave) === 'hybrid').map((m) => m.no).sort();
   const pack = CARD_PACKS.find((p) => String(p.no) === tab);
@@ -55254,26 +55278,69 @@ const cardDexList = (db, tab) => {
   const all = cardPackAllCards(db, pack);
   return [...all.monsters, ...all.cards];
 };
+const cardDexAll = (db) => [...new Set(CARD_DEX_TABS.flatMap((t) => cardDexList(db, t.id)))];   // 混血は弾のタブと「混血」の両方にあるので1回だけ数える
+const cardDexSpeciesOf = (db, no) => {
+  const m = cardMonsterOf(db, no);
+  if (m) return String(m.wave) === 'hybrid' ? m.main : m.species;
+  const c = cardOf(db, no);
+  return c && c.user !== 'any' && c.user !== 'breeder' ? c.user : null;
+};
+// 見かたごとのタブ。label は図鑑の札に出す名前(血統は、その種族のふつうのモンスターカードの名前)
+const cardDexTabsOf = (db, mode) => {
+  if (mode === 'species') return CARD_PACKS.flatMap((p) => p.species).map((sp) => ({ id: sp, label: (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp }));
+  if (mode === 'kind') return CARD_DEX_KINDS;
+  return CARD_DEX_TABS;
+};
+const cardDexListOf = (db, mode, tab, all = cardDexAll(db)) => {
+  if (mode === 'species') return all.filter((no) => cardDexSpeciesOf(db, no) === tab);
+  if (mode === 'kind') return all.filter((no) => (tab === 'mon' ? !!cardMonsterOf(db, no) : !cardMonsterOf(db, no) && !!cardOf(db, no) && cardDeckFilterOk(cardOf(db, no), tab)));
+  return cardDexList(db, tab);
+};
+const CARD_DEX_UNIT = Object.freeze({ pack: 'この弾', species: 'この血統', kind: 'この種類' });
 const CardDex = ({ db, collection, onBack }) => {
-  const [tab, setTab] = useState('1');
+  const [mode, setMode] = useState('pack');
+  const [tabs, setTabs] = useState({ pack: '1', species: CARD_PACKS[0].species[0], kind: 'mon' });
   const [show, setShow] = useState('all');
   const [detail, setDetail] = useState(null);
   const press = useCardLongPress((no) => setDetail(no));
   const col = collection || {};
-  const all = [...new Set(CARD_DEX_TABS.flatMap((t) => cardDexList(db, t.id)))];   // 混血は弾のタブと「混血」の両方にあるので1回だけ数える
-  const list = cardDexList(db, tab);
+  const all = useMemo(() => cardDexAll(db), [db]);
+  const tabList = useMemo(() => cardDexTabsOf(db, mode).map((t) => ({ ...t, list: cardDexListOf(db, mode, t.id, all) })), [db, mode, all]);
+  const tab = tabs[mode];
+  const list = (tabList.find((t) => t.id === tab) || tabList[0] || { list: [] }).list;
   const shown = list.filter((no) => (show === 'have' ? col[no] > 0 : show === 'miss' ? !(col[no] > 0) : true));
   const haveIn = (arr) => arr.filter((no) => col[no] > 0).length;
+  const chip = (on) => `shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
+  const unit = CARD_DEX_UNIT[mode];
+  // 選んでいる札を見える所へ(見かたを替えたとき、前の見かたの横の位置が残って選んだ札が隠れていた)
+  const tabRow = useRef(null);
+  //   ★scrollIntoView は使わない(縦にも動いて画面ごとずれる。viewport-height-check)。列の横の位置だけを動かす
+  useEffect(() => {
+    try {
+      const row = tabRow.current; const el = row && row.querySelector('[aria-pressed="true"]');
+      if (!el) return;
+      if (el.offsetLeft < row.scrollLeft) row.scrollLeft = el.offsetLeft - 8;
+      else if (el.offsetLeft + el.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollLeft = el.offsetLeft + el.offsetWidth - row.clientWidth + 8;
+    } catch (_) { /* 古い端末は動かさない */ }
+  }, [mode, tab]);
   return (
     <div data-mh-screen data-card-dex className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="カード図鑑" accent="text-amber-200" onBack={onBack}/>
       <div className={`${SCREEN_PANEL_FLAT_CLASS} mb-2 shrink-0 text-[12px] font-bold text-slate-300`}>
         集めた種類 <b data-card-dex-total className="text-[15px] text-amber-200">{haveIn(all)}</b> / {all.length}
-        <span className="ml-2 text-slate-400">(この弾 {haveIn(list)} / {list.length})</span>
+        <span data-card-dex-part className="ml-2 text-slate-400">({unit} {haveIn(list)} / {list.length})</span>
       </div>
-      <ScreenTabs value={tab} onChange={setTab} items={CARD_DEX_TABS.map((t) => ({ id: t.id, label: t.label }))}/>
+      <ScreenTabs value={mode} onChange={(m) => { setMode(m); }} items={CARD_DEX_MODES.map((t) => ({ id: t.id, label: t.label }))}/>
+      {/* 見かたの中の札は1列(デッキ編成の絞り込みと同じ。縦は横に流す・横の画面は折り返す)。札ごとに集めた数を出す */}
+      <div key={mode} ref={tabRow} data-card-dex-tabs={mode} className="mh-scroll relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible">
+        {tabList.map((t) => (
+          <button key={t.id} type="button" data-card-dex-tab={t.id} aria-pressed={t.id === tab} onClick={() => setTabs((v) => ({ ...v, [mode]: t.id }))} className={chip(t.id === tab)}>
+            {t.label}<span className={`ml-1 text-[10px] ${t.id === tab ? 'text-slate-800' : 'text-slate-500'}`}>{haveIn(t.list)}/{t.list.length}</span>
+          </button>
+        ))}
+      </div>
       <div className="mb-1.5 flex shrink-0 gap-1">
-        {[['all', '全部'], ['have', '持っている'], ['miss', 'まだ']].map(([k, label]) => <button key={k} type="button" data-card-dex-show={k} onClick={() => setShow(k)} className={`rounded-full px-2.5 py-1 text-[11px] font-black ${show === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`}>{label}</button>)}
+        {[['all', '全部'], ['have', '持っている'], ['miss', 'まだ']].map(([k, label]) => <button key={k} type="button" data-card-dex-show={k} onClick={() => setShow(k)} className={chip(show === k)}>{label}</button>)}
       </div>
       <div className={`${SCREEN_LIST_CLASS} pb-2`}>
         {shown.length ? (
@@ -55294,7 +55361,7 @@ const CardDex = ({ db, collection, onBack }) => {
               );
             })}
           </div>
-        ) : <ScreenEmpty emoji="🃏" lines={[show === 'have' ? 'この弾のカードはまだ持っていません' : 'この弾は全部集まっています']}/>}
+        ) : <ScreenEmpty emoji="🃏" lines={[show === 'have' ? `${unit}のカードはまだ持っていません` : `${unit}は全部集まっています`]}/>}
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
     </div>
