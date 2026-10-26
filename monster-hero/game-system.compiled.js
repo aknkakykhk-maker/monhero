@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57ac08a40bfbfec0
+// source-sha256: 3ad95bee96f5ec90
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104280,12 +104280,15 @@ function MonsterHeroGame() {
     minHeight: '112px'
   };
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
-  const monsterCardName = (node, className = 'text-white', band = false) => React.createElement("div", {
-    className: `mh-monster-card-name text-[11px] font-black w-full text-center ${band ? 'min-h-[28px] px-1 py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center' : 'h-[16px] truncate leading-tight'} ${className}`,
-    style: band ? {
-      textShadow: '0 1px 2px rgba(0,0,0,.95)'
-    } : undefined
-  }, node);
+  const monsterCardName = (node, className = 'text-white', band = false) => {
+    const long = band && typeof node === 'string' && node.length >= 9;
+    return React.createElement("div", {
+      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : 'h-[16px] truncate leading-tight'} ${className}`,
+      style: band ? {
+        textShadow: '0 1px 2px rgba(0,0,0,.95)'
+      } : undefined
+    }, node);
+  };
   const monsterCardInfo = (node, sub) => node || sub ? React.createElement("div", {
     className: "w-full flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 leading-none",
     style: {
@@ -130300,6 +130303,7 @@ function MonsterHeroGame() {
         })), renderMonsterCardBody({
           masu,
           base,
+          nameBand: true,
           status: selected ? React.createElement("span", {
             className: "text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white leading-none"
           }, "放牧中") : null
