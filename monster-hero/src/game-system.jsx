@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3973a81bb50c029b
+// generated-sha256: 96e53b366945190d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 22:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 23:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2889,6 +2889,56 @@ const dexMainLineages = () => {
     if (!lineage || seen.has(lineage.id)) return false;
     seen.add(lineage.id); return true;
   });
+};
+// 図鑑の画面に並べる全員(2026-10-26 社長「モンスターのデータめちゃくちゃ入れたから全部図鑑に入れて。
+// ただ、入手済みと未入手と未実装と分ける。未入手と未実装は、グラフィックと図鑑説明とメイン・サブしか見えない」)。
+//   入手済み(owned) … 解放済み(mh_unlocked_monsters)。今までどおり全部見える
+//   未入手(locked)  … 遊べるがまだ解放していない子
+//   未実装(draft)   … 案の段階の子(UPCOMING_MONSTER_DRAFTS)。まだ遊べない
+// 案の子は dexMonsterList へは混ぜない。あちらは種族チャレンジ・絆ランキング・ヘルプの血統一覧なども見ていて、
+// 遊べない子がそこへ出てしまうため。図鑑の一覧と詳細だけがこちらを使う。保存は読むだけ
+const DEX_ENTRY_STATUSES = Object.freeze([
+  Object.freeze({ id:'owned', label:'入手済み' }),
+  Object.freeze({ id:'locked', label:'未入手' }),
+  Object.freeze({ id:'draft', label:'未実装' }),
+]);
+const dexDraftMonsterList = () => {
+  if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+};
+// 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
+const dexEntryLineageOf = (mon) => {
+  if (!mon) return monsterLineageOf(null);
+  const draft = mon.draft && mon.draftLineage && !lineageEntryMap()[mon.id] ? mon.draftLineage : null;
+  if (!draft) return monsterLineageOf(mon.id);
+  return { main: lineageById(draft.main), sub: lineageById(draft.sub != null ? draft.sub : draft.main), known: true };
+};
+const dexEntryCategoryOf = (mon) => {
+  const { main, sub } = dexEntryLineageOf(mon);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const dexEntryStatusOf = (mon, unlockedIds) => {
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  if (!mon || !playable[mon.id]) return 'draft';
+  return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+// 並びは 入手済み → 未入手 → 未実装。それぞれの中は今までの図鑑の並び(種族順)のまま
+const dexScreenEntries = (unlockedIds) => {
+  const base = dexMonsterList();
+  const all = [...base, ...dexDraftMonsterList()];
+  return DEX_ENTRY_STATUSES.flatMap(s => all.filter(mon => dexEntryStatusOf(mon, unlockedIds) === s.id));
+};
+// 図鑑の画面の絞り込みチップ。今までの主血統の並びはそのままにして、案の子にしかいない種族を後ろへ足す
+const dexScreenMainLineages = () => {
+  const list = dexMainLineages().slice();
+  const seen = new Set(list.map(l => l.id));
+  for (const mon of dexDraftMonsterList()) {
+    const main = dexEntryLineageOf(mon).main;
+    if (main && main.id !== 'unknown' && !seen.has(main.id)) { seen.add(main.id); list.push(main); }
+  }
+  return list;
 };
 
 // ==================== 総合力 ====================
@@ -34403,11 +34453,25 @@ function MonsterTypeBadge({ monId, size = 'sm', compact = false }) {
   return <span data-monster-type-badge={monId} className={`inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`}>{chip(t.main, false)}{t.sub && chip(t.sub, true)}</span>;
 }
 
+// 図鑑の札(入手済み・未入手・未実装)。一覧の区切りの見出しと、詳細の名前の下で同じ色を使う
+const DEX_STATUS_STYLE = {
+  owned: 'border-amber-300/60 bg-amber-500/15 text-amber-100',
+  locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
+  draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100',
+};
+const DexStatusTag = ({ status, size = 'sm' }) => {
+  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
+};
+
 function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineage, onOpenDetail, onBackToManagement }) {
       const monsters=dexMonsterList();
       const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
-      const filters=dexMainLineages();
-      const shown=dexLineageFilter==='all'?monsters:monsters.filter(mon=>monsterLineageOf(mon.id).main.id===dexLineageFilter);
+      // 入手済み → 未入手 → 未実装 の順に、区切りの見出しを付けて並べる(2026-10-26 社長)
+      const entries=dexScreenEntries(unlockedMonsterIds);
+      const filters=dexScreenMainLineages();
+      const shown=dexLineageFilter==='all'?entries:entries.filter(mon=>dexEntryLineageOf(mon).main.id===dexLineageFilter);
+      const sections=DEX_ENTRY_STATUSES.map(s=>({...s,list:shown.filter(mon=>dexEntryStatusOf(mon,unlockedMonsterIds)===s.id)})).filter(s=>s.list.length>0);
       const chipClass=(on)=>`shrink-0 min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-white/10 text-amber-200/80'}`;
       return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
@@ -34424,39 +34488,53 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
           ))}
         </div>
         <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}>
-          <div className="grid grid-cols-3 gap-2.5 pb-4">
-            {shown.map(mon=>{
-              const unlocked=unlockedMonsterIds.includes(mon.id);
-              const iconSrc=mon.iconUrl||mon.imgUrl||'';
-              const category=monsterCategoryOf(mon.id);
-              return (
-                <button key={mon.id} type="button" data-dex-entry aria-label={unlocked?`${mon.name}の図鑑を見る`:'まだ出会っていないモンスター'}
-                  onClick={()=>onOpenDetail(mon.id)}
-                  className="w-full min-h-[124px] rounded-2xl border border-white/10 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none">
-                  {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
-                      少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
-                  <DexMonsterIcon src={iconSrc} hidden={!unlocked}/>
-                  <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{unlocked?mon.name:'？？？'}</div>
-                  <div className="text-[10px] font-black text-amber-400/80 leading-tight">{unlocked?monsterCategoryName(category):'未発見'}</div>
-                  {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
-                </button>
-              );
-            })}
-          </div>
+          {sections.map(section=>(
+            <section key={section.id} data-dex-section={section.id} className="pb-3">
+              {/* 区切りの見出し。数は「この区切りの数 / いま並んでいる全員」 */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <DexStatusTag status={section.id} size="md"/>
+                <span data-dex-section-count className="text-[11px] font-mono font-black text-amber-100 tabular-nums">{section.list.length}<span className="text-slate-400 text-[10px]"> / {shown.length}</span></span>
+                <span className="flex-1 h-px bg-amber-500/25" aria-hidden="true"/>
+              </div>
+              <div className="grid grid-cols-3 gap-2.5">
+                {section.list.map(mon=>{
+                  const unlocked=section.id==='owned';
+                  const iconSrc=mon.iconUrl||mon.imgUrl||'';
+                  const category=unlocked?monsterCategoryOf(mon.id):null;
+                  return (
+                    <button key={mon.id} type="button" data-dex-entry data-dex-entry-status={section.id} aria-label={`${mon.name}の図鑑を見る`}
+                      onClick={()=>onOpenDetail(mon.id)}
+                      className={`w-full min-h-[124px] rounded-2xl border ${section.id==='draft'?'border-dashed border-fuchsia-300/30':'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`}>
+                      {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
+                          少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
+                      <DexMonsterIcon src={iconSrc}/>
+                      <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{mon.name}</div>
+                      {unlocked
+                        ? <div className="text-[10px] font-black text-amber-400/80 leading-tight">{monsterCategoryName(category)}</div>
+                        : <DexStatusTag status={section.id}/>}
+                      {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
           {shown.length===0&&<ScreenEmpty emoji="📖" lines={['この血統のモンスターはまだいません。']}/>}
         </div>
       </div>);}
 
 function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masuMons, dexColorKey, onSelectColor, tryDyeDraft, onOpenTryDye, onTryDyeChange, onTryDyeCustom, onTryDyeReset, onCloseTryDye, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
+      // 前後へ移る順も一覧と同じ(入手済み → 未入手 → 未実装)。未入手と未実装は、立ち絵・説明・血統だけを見せる
       const [idleMotion,toggleIdleMotion]=useDexIdleMotion();
-      const monsters=dexMonsterList();
+      const monsters=dexScreenEntries(unlockedMonsterIds);
       const [colorSheetOpen,setColorSheetOpen]=useState(false); // 色の見本にするマスモンの一覧(開いているあいだだけ)
       const index=monsters.findIndex(m=>m.id===dexMonsterId);
       const mon=index>=0?monsters[index]:null;
       if(!mon){ onMissing(); return null; }
-      const unlocked=unlockedMonsterIds.includes(mon.id);
-      const {main,sub}=monsterLineageOf(mon.id);
-      const category=monsterCategoryOf(mon.id);
+      const status=dexEntryStatusOf(mon,unlockedMonsterIds);
+      const unlocked=status==='owned';
+      const {main,sub}=dexEntryLineageOf(mon);
+      const category=dexEntryCategoryOf(mon);
       const categoryClass=category==='rare'?'bg-amber-600 text-white':category==='pure'?'bg-emerald-700 text-white':'bg-indigo-700 text-white';
       // 攻撃演出そのものは MONSTER_ATTACK_PREVIEW で再生する。ここでは立ち絵を静止で見せ、
       // 途中で移動・離脱したときに向こうの再生が残らないよう止める口だけ持つ
@@ -34541,7 +34619,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div data-dex-art className="relative shrink-0 aspect-square flex items-center justify-center" style={{height:'clamp(152px, 22dvh, 190px)'}}>
             {unlocked
               ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>
-              : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
+              : <DexMonsterArt mon={mon} alt={mon.name}/>}
           </div>
           {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外(右の列)に置く。
               演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
@@ -34569,23 +34647,24 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
         {/* 下半分: 情報カード */}
         <div className="flex-1 min-h-0 pt-3">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
-            <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
+            <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{mon.name}</div>
             {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
+            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md"/></div>}
+            {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
+                左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
+            <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
+              <span className="text-[10px] font-black text-amber-300 shrink-0">血統</span>
+              {lineageChip(main)}
+              <span className="text-[12px] font-black text-amber-300 shrink-0 text-center">×</span>
+              {lineageChip(sub)}
+              <span data-dex-category className={`shrink-0 min-w-[42px] text-center text-[10px] font-black px-1.5 py-1 rounded-full ${categoryClass}`}>{monsterCategoryName(category)}</span>
+            </div>
+            {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
+                3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
+            <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
+              <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(monsterDexDescription(mon.id))}</p>
+            </div>
             {unlocked?(<>
-              {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
-                  左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
-              <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
-                <span className="text-[10px] font-black text-amber-300 shrink-0">血統</span>
-                {lineageChip(main)}
-                <span className="text-[12px] font-black text-amber-300 shrink-0 text-center">×</span>
-                {lineageChip(sub)}
-                <span data-dex-category className={`shrink-0 min-w-[42px] text-center text-[10px] font-black px-1.5 py-1 rounded-full ${categoryClass}`}>{monsterCategoryName(category)}</span>
-              </div>
-              {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
-                  3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
-              <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll text-[11px]" style={{height:'calc(1.625em * 3)'}}>
-                <p className="font-bold leading-relaxed text-slate-200 break-words">{helpWrap(monsterDexDescription(mon.id))}</p>
-              </div>
               <ScreenTabs className="mt-2" value={tab} onChange={onSelectTab}
                 items={tabs.map(([id,label])=>({id,label,color:'#d97706'}))}/>
               <div className="flex-1 min-h-0 overflow-y-auto mh-scroll pr-0.5">
@@ -34639,7 +34718,9 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
               </div>
             </>):(
               <div className="flex-1 min-h-0 flex items-center justify-center">
-                <ScreenEmpty emoji="❓" lines={['まだ出会っていないモンスターです','マーケットで円盤石を手に入れて解放すると、血統・能力・技が図鑑に記録されます。']}/>
+                <ScreenEmpty emoji={status==='draft'?'🛠️':'🔒'} lines={status==='draft'
+                  ?['まだ仲間にできないモンスターです','能力・技・特性は、まだ記録されていません。']
+                  :['まだ入手していないモンスターです','マーケットで円盤石を手に入れて解放すると、能力・技・特性が図鑑に記録されます。']}/>
               </div>
             )}
           </div>
