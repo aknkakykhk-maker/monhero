@@ -194,7 +194,7 @@ const cardNormalizeTutorial = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return { done: r.done === true, skipped: r.skipped === true, rewarded: r.rewarded === true, at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0 };
 };
-// 終わった・飛ばしたときの保存とカードポイント(はじめて最後までやったときだけ 100。1日の上限とは別)
+// 終わった・飛ばしたときの保存とビートP(はじめて最後までやったときだけ 100。1日の上限とは別)
 const cardTutorialFinish = (tutorial, outcome, now) => {
   const t = cardNormalizeTutorial(tutorial);
   const done = outcome === 'done';

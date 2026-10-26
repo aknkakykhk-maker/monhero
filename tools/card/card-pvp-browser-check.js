@@ -174,7 +174,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const chatSeen = await B.locator('[data-card-bubble]').filter({ hasText: 'よろしく！' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
     check('⑥ 定型のチャットが、相手の画面の吹き出しに出る', chatSeen);
     await shot(B, 'pvp-04-chat');
-    const pointBefore = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+    const pointBefore = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
     await B.evaluate(() => window.__fakeWsDrop(9000));
     const offSeen = await B.locator('[data-card-pvp-signal]').filter({ hasText: '電波が途切れています' }).waitFor({ timeout: 6000 }).then(() => true).catch(() => false);
     const foeQuietSeen = await A.locator('[data-card-pvp-signal]').filter({ hasText: '相手の電波が途切れています' }).waitFor({ timeout: 12000 }).then(() => true).catch(() => false);
@@ -206,10 +206,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('④ 終わってから山札を見せ合って、両方で「正しく終わった」', vA === 'ok' && vB === 'ok', `${vA} / ${vB} ${vA !== 'ok' ? await A.locator('[data-card-pvp-verify]').innerText().catch(() => '') : ''}`);
     const rewardA = await A.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => A.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
     const rewardB = await B.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => B.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
-    const pointAfter = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
-    check('⑥ 終わったら、2台とも報酬が出る', /カードポイント|ごほうびはありません/.test(rewardA) && /カードポイント|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
+    const pointAfter = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
+    check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
     // ★この検査は2台が同じブラウザの保存を使うので、あとから書いた側(+200 か +50)が残る。実際は別の端末なので、両方それぞれに入る
-    check('⑥ カードポイントが増えている(勝ち+200・負け+50 のどちらかが残る)', [200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
+    // ★A と B は同じ ctx(保存先を共有)なので、2台が同じビートPへほぼ同時に書く(本当の2台では保存先が別なので起きない)。
+    //   書く直前に読み直して差を足す(2026-10-26)ので、ふつうは2台ぶん(+250)が残るが、読み直しと書き込みの間に
+    //   もう片方が割り込むと、あとから書いたほうだけ(+200 か +50)が残る。どれも「報酬が入った」ことに変わりはない
+    check('⑥ ビートPが増えている(同じ保存先の2台ぶん+250、割り込まれたときは片方の+200か+50)', [250, 200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
     const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
     check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
     // ⑥ 54本の台詞を、いまの吹き出しと同じ幅・同じ文字に入れて、言葉の途中で折れていないか測る(かたまり1つが2行にまたがっていない)

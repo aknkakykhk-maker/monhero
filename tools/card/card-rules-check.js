@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -225,7 +225,7 @@ const decksAndSaves = () => {
   // 保存の読み込み: 無い・壊れた値でも既定値になる
   [undefined, null, 'x', 5, [], { a: 'b' }].forEach((bad) => {
     ok(JSON.stringify(E.cardNormalizeCollection(bad)) === '{}' || cardIsObj(E.cardNormalizeCollection(bad)), 'コレクションの正規化');
-    ok(bad === 5 ? E.cardNormalizePoint(bad) === 5 : E.cardNormalizePoint(bad) === 0, `カードポイントの正規化(${JSON.stringify(bad)})`);
+    ok(bad === 5 ? E.cardNormalizePoint(bad) === 5 : E.cardNormalizePoint(bad) === 0, `ポイント(ビートP)の正規化(${JSON.stringify(bad)})`);
     ok(Array.isArray(E.cardNormalizeDecks(bad).decks), 'デッキの正規化');
     ok(E.cardNormalizeDaily(bad, '2026-10-24').cpuPoint === 0, '1日の記録の正規化');
     ok(E.cardNormalizeRecord(bad).cpu.win === 0, '戦績の正規化');
@@ -260,9 +260,9 @@ const decksAndSaves = () => {
     // 対戦の BGM と演出の設定(無い・壊れた・知らない曲は既定へ)
     const tracks = new Set(['melo_toriko', 'ichika_battle']);
     const isT = (id) => tracks.has(id);
-    // 既定は3つとも MF × ICHIKA MIX(2026-10-26 社長)。選んで保存した人の値はそのまま(前の既定 auto・ichika_battle を保存している人も書き換えない)
-    ok(JSON.stringify(E.normalizeCardBgm(null, isT)) === '{"top":"atsu_cup_theme","cpu":"atsu_cup_theme","pvp":"atsu_cup_theme"}' && E.normalizeCardBgm({ cpu: 'nope', pvp: 'nope' }, isT).cpu === 'atsu_cup_theme'
-      && E.normalizeCardBgm({ cpu: 'melo_toriko' }, isT).cpu === 'melo_toriko' && JSON.stringify(E.normalizeCardBgm({ cpu: 'auto', pvp: 'ichika_battle' }, isT)) === '{"top":"atsu_cup_theme","cpu":"auto","pvp":"ichika_battle"}', '対戦のBGMの読み込みで、既定・知らない曲の戻し・選んだ人の値が合わない');
+    // 既定はトップ画面だけ MF × ICHIKA MIX(2026-10-26 社長)。対戦は前のとおり auto・ichika_battle。選んで保存した人の値はそのまま
+    ok(JSON.stringify(E.normalizeCardBgm(null, isT)) === '{"top":"atsu_cup_theme","cpu":"auto","pvp":"ichika_battle"}' && E.normalizeCardBgm({ cpu: 'nope', pvp: 'nope' }, isT).cpu === 'auto'
+      && E.normalizeCardBgm({ cpu: 'melo_toriko' }, isT).cpu === 'melo_toriko' && JSON.stringify(E.normalizeCardBgm({ cpu: 'melo_toriko', pvp: 'ichika_battle' }, isT)) === '{"top":"atsu_cup_theme","cpu":"melo_toriko","pvp":"ichika_battle"}', '対戦のBGMの読み込みで、既定・知らない曲の戻し・選んだ人の値が合わない');
     ok(JSON.stringify(E.normalizeCardSettings(null)) === '{"speed":"normal","autoPass":true,"quickAutoStart":false,"think":"NORMAL","resultWait":"NORMAL","motion":"FULL","shake":"ON","damageNum":"ON","bubble":"NORMAL","confirmUse":"OFF","confirmEnd":"OFF","press":"NORMAL","drag":"ON","gutsPick":"OFF","handText":"NORMAL","handSort":"DRAW"}'
       && E.normalizeCardSettings({ quickAutoStart: true }).quickAutoStart === true && E.normalizeCardSettings({ quickAutoStart: 'yes' }).quickAutoStart === false
       // 前の「はやい」(speed:'fast')だけを持つ人は、相手が考える時間「はやい」・結果までの間「短め」で始まる(足す前と同じ速さ)
@@ -273,7 +273,12 @@ const decksAndSaves = () => {
       // オプションに並べる項目は、どれも normalizeCardSettings が持つ名前・選択肢
       && E.CARD_SETTING_GROUPS.every((g) => g.items.every((it) => it.bool ? typeof E.normalizeCardSettings(null)[it.key] === 'boolean' : it.options.some((o) => o.id === E.normalizeCardSettings(null)[it.key]) && it.options.every((o) => E.normalizeCardSettings({ [it.key]: o.id })[it.key] === o.id))) && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).autoPass === false && E.normalizeCardSettings({ speed: 'x' }).speed === 'normal', '演出の設定の読み込みが合わない');
   }
-  // カードポイントとクイック周回(案A・台帳 #3484): 1日の上限なし(台帳 #3531)・はじめての勝ちは+50
+  // ポイントはビートPと同じ財布(2026-10-26 社長)。保存先はビートPのキーで、CARD_SAVE_KEYS には入れない
+  // (デバッグの「カードバトルの記録を消す」が CARD_SAVE_KEYS を全部消すので、入っているとビートPまで消える)
+  ok(E.CARD_POINT_STORE_KEY === 'mh_rhythm_event_points_v1', `ポイントの保存先がビートPのキーではない(${E.CARD_POINT_STORE_KEY})`);
+  ok(!Object.values(E.CARD_SAVE_KEYS).includes(E.CARD_POINT_STORE_KEY), 'CARD_SAVE_KEYS にビートPのキーが入っている(記録を消すとビートPも消える)');
+  ok(E.CARD_SAVE_KEYS.point === 'mh_card_point_v1', '前のカードポイントのキー(mh_card_point_v1)の名前が変わった(消さずに残す)');
+  // ビートP(前のカードポイント)とクイック周回(案A・台帳 #3484): 1日の上限なし(台帳 #3531)・はじめての勝ちは+50
   const full = { ownTurns: 10, kos: 0 };
   let daily = E.cardNormalizeDaily(null, '2026-10-24');
   const r1 = E.cardCpuReward(daily, 'master', 'win', full);
