@@ -52,7 +52,7 @@ const INT1 = find((c) => c.user !== 'breeder' && c.user !== 'any' && c.kind === 
 // その札の持ち主の種族を先頭にした3体(モッチー・スエゾー・ピクシーで埋める)
 const spFor = (no) => { const u = db.cards[no].user; return [...new Set([u, ...SP0])].filter((x) => x !== 'any' && x !== 'breeder').slice(0, 3); };
 const SPE = find((c) => c.user === 'mocchi' && c.kind === 'spe', 'モッチーの特殊');
-const BLK = find((c) => ['golem', 'any'].includes(c.user) && c.kind === 'blk' && (c.effects || []).some((e) => e.t === 'reduce' && e.kinds.includes('pow')) && c.effects.length === 1, '防御(減らす)');
+const BLK = find((c) => c.user === 'any' && c.kind === 'blk' && (c.effects || []).some((e) => e.t === 'reduce' && e.kinds.includes('pow')) && c.effects.length === 1, '誰でも使える防御(減らす)。混血は防御・回避をサブの種族の札だけ使う(#3865)ので、誰でもの札にする');
 const DGE = find((c) => ['golem', 'any'].includes(c.user) && c.kind === 'dge' && (c.effects || []).some((e) => e.t === 'evade' && e.kinds.includes('pow')), '回避(ゴーレムか誰でも)');
 const PRAY = '280';
 const F = { draw: 'F115', fight: 'F116', crucible: 'F117', holly: 'F118', duel: 'F119', chaos: 'F120', pride: 'F255', master: 'F256', bind: 'F257', seal: 'F258', ground: 'F259', burn: 'F260', spark: 'F261', air: 'F262', long: 'F263' };
