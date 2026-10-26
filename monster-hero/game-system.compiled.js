@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae03b4ea6093a34c
+// source-sha256: 8e88d20df96c462c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100510,6 +100510,12 @@ const cardWatchApply = (db, st, e) => {
   if (Array.isArray(e.d)) {
     if (Array.isArray(e.d[e.by]) && !e.d[e.by].includes(CARD_PVP_HIDDEN) && e.d[e.by].length !== next.players[e.by].discard.length) return null;
     [0, 1].forEach(p => cardWatchPatchOne(db, next.players[p], e.d[p]));
+  }
+  const ch = next.pendingChoice;
+  if (ch && ch.p === e.by && ch.src === 'discard' && !st.pendingChoice) {
+    const ce = cardEff(cardOf(db, ch.card), 'choose');
+    const used = Array.isArray(e.act.hand) ? e.act.hand.length : 0;
+    if (ce) ch.cands = cardChoiceCands(db, next, e.by, e.act.mon !== undefined ? e.act.mon : -1, ce, next.players[e.by].discard.length - used);
   }
   next.players.forEach(x => {
     x.deck = x.deck.map(() => CARD_PVP_HIDDEN);

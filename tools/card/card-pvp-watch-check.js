@@ -12,6 +12,7 @@
 //   ④ 途中から見る人(はじめの何手かを、あとからまとめてもらう)も同じ場になる
 //   ⑤ 受け取った知らせの掃除(知らない形・大きすぎる数・手札の番号の形)
 //   ⑥ 対戦中の一覧の並び(フレンドの試合が先・古い知らせは消える)
+//   ⑦ 捨て札から絞り込んで選ぶ札(回避プログラム・悪夢)と全体カードの多い試合でも、マルチと観戦で手がはねられない
 const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = require('crypto');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(GAME, p), 'utf8');
@@ -133,6 +134,58 @@ check(`② フレンドが相手側でも(下に出す人を入れ替えても)�
 check(`③ 見る人の場の山札は全部仮の札・手札とガッツの本物の札は、流れた知らせに出た札だけ(${okHidden}/${N}戦)`, okHidden === N);
 check(`④ 途中から見る人も、はじめからの手をまとめてもらって同じ場になる(${okLate}/${N}戦)`, okLate === N);
 
+// ⑦ 選ぶ段(捨て札から絞り込んで選ぶ札)で止まらない: 回避プログラム(186)・悪夢(303)などを多く入れ、全体カード(師匠のまなざし・ホリィの声援)も出す。
+//   払ったガッツが仮の札のまま捨て札に入り、候補がずれて手がはねられていた(2026-10-27 #3862 がマルチを直した。観戦も同じ形にそろえた)
+{
+  const CH = ['186', '303', '022', '137', '122', '094', '304', '095', '149'];
+  const FL = ['F256', 'F118', 'F115'];
+  const own = { '186': 'henger', '303': 'joker', '022': 'gali', '137': 'phoenix', '094': 'hare', '304': 'joker', '095': 'hare', '149': 'jell' };
+  const trios = [['henger', 'joker', 'gali'], ['phoenix', 'hare', 'jell'], ['henger', 'joker', 'hare']];
+  const monOf = (sp) => Object.values(db.monsters).filter((m) => m.species === sp && !m.main && !m.variant).map((m) => m.no).sort()[0];
+  const deckOf = (sps, r) => {
+    const ms = sps.map(monOf).map((no) => db.monsters[no]);
+    const cards = []; const named = {};
+    const add = (no) => { const c = db.cards[no]; if (!c || !c.ready || (named[c.name] || 0) >= 3) return; named[c.name] = (named[c.name] || 0) + 1; cards.push(no); };
+    CH.forEach((no) => { if (!own[no] || sps.includes(own[no])) { add(no); add(no); add(no); } });
+    FL.forEach((no) => { add(no); add(no); });
+    const pool = Object.values(db.cards).filter((c) => c.ready && c.kind !== 'fld' && (c.user === 'any' || ms.some((m) => c.user === m.species)) && !(c.effects || []).some((e) => e.t === 'attach'));
+    for (let i = 0; cards.length < 50 && i < 5000; i++) add(pool[Math.floor(r() * pool.length)].no);
+    return { monsters: ms.map((m) => m.no), cards };
+  };
+  let games = 0, chooses = 0, pvpNg = 0, watchNg = 0, ex = '';
+  for (let n = 0; n < 200; n++) {
+    const r = rng(9000 + n);
+    const dA = deckOf(trios[n % 3], r), dB = deckOf(trios[(n + 1) % 3], r);
+    if (E.cardDeckProblems(db, dA).length || E.cardDeckProblems(db, dB).length) continue;
+    games++;
+    const firstA = n % 2;
+    let A = E.cardPvpNewGame(db, { myDeck: dA, mySeed: (n * 7919 + 13) >>> 0, foeMonsters: dB.monsters, first: firstA, names: ['A', 'B'] });
+    let B = E.cardPvpNewGame(db, { myDeck: dB, mySeed: (n * 104729 + 7) >>> 0, foeMonsters: dA.monsters, first: 1 - firstA, names: ['B', 'A'] });
+    let W = E.cardWatchNewGame(db, { p: [{ name: 'A', mons: dA.monsters, count: 50 }, { name: 'B', mons: dB.monsters, count: 50 }], first: firstA });
+    const pol = E.cardAiPolicy('kyuko', 'easy');
+    for (let steps = 1; A.winner === null && steps < 2500; steps++) {
+      const aTurn = E.cardPvpDecider(A) === 0;
+      const [me, foe] = aTurn ? [A, B] : [B, A];
+      const legal = E.cardLegalActions(db, me);
+      const pref = legal.filter((a) => (a.type === 'attack' || a.type === 'breeder') && a.hand.some((i) => CH.includes(me.players[0].hand[i]) || FL.includes(me.players[0].hand[i])));
+      let act = pref.length && r() < 0.8 ? E.cardAiFillBind(db, me, pref[Math.floor(r() * pref.length)], pol) : E.cardAiChooseAction(db, me, pol, r);
+      let next = act && E.cardApplyAction(db, me, act);
+      if (!next) { act = E.cardPvpTimeoutAct(me); next = E.cardApplyAction(db, me, act); }
+      if (!next) break;
+      if (act.type === 'choose') chooses++;
+      const reveal = E.cardPvpRevealOf(me, act);
+      const msg = E.cardPvpCleanMessage(JSON.parse(JSON.stringify({ t: 'act', from: 'x', seq: steps, act, reveal, discard: next.players[0].discard })));
+      const other = E.cardPvpApplyRemote(db, foe, msg);
+      if (!other) { pvpNg++; if (!ex) ex = `${n}戦${steps}手目: マルチで手がはねられた(${act.type})`; break; }
+      const back = E.cardPvpPatchDiscard(db, next, other.players[0].discard);
+      const entry = aTurn ? { by: 0, act, reveal, d: [next.players[0].discard, next.players[1].discard] } : { by: 1, act: E.cardPvpFlip(act), reveal: msg.reveal, d: [other.players[0].discard, other.players[1].discard] };
+      if (aTurn) { A = back; B = other; } else { B = back; A = other; }
+      const w2 = W && E.cardWatchApply(db, W, entry);
+      if (W && !w2) { watchNg++; if (!ex) ex = `${n}戦${steps}手目: 観戦で手が当てられない(${act.type})`; W = null; } else W = w2;
+    }
+  }
+  check(`⑦ 捨て札から選ぶ札(回避プログラム・悪夢など)と全体カードが多い試合でも、マルチと観戦で手がはねられない(${games}戦・選ぶ手${chooses}回)`, pvpNg === 0 && watchNg === 0 && chooses > 100, `マルチ ${pvpNg}・観戦 ${watchNg} ${ex}`);
+}
 // ③ 流す知らせの形: 手札・山札・封(seed・salt)・デッキの中身の項目が無い
 {
   const src = read('src/parts/94-card-spectate.jsx');

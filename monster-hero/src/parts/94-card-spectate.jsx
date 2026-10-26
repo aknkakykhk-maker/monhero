@@ -73,6 +73,14 @@ const cardWatchApply = (db, st, e) => {
     if (Array.isArray(e.d[e.by]) && !e.d[e.by].includes(CARD_PVP_HIDDEN) && e.d[e.by].length !== next.players[e.by].discard.length) return null;
     [0, 1].forEach((p) => cardWatchPatchOne(db, next.players[p], e.d[p]));
   }
+  // 捨て札から選ぶ段(回避プログラム・悪夢など)の候補は、本物にした捨て札で作り直す(91 の cardPvpApplyRemote と同じ。#3862)。
+  //   払ったガッツは仮の札のまま捨て札に入るので、絞り込みのある札だと候補が少なくなり、次の「選ぶ」手が当てられなかった。いま使った札は選べない
+  const ch = next.pendingChoice;
+  if (ch && ch.p === e.by && ch.src === 'discard' && !st.pendingChoice) {
+    const ce = cardEff(cardOf(db, ch.card), 'choose');
+    const used = Array.isArray(e.act.hand) ? e.act.hand.length : 0;
+    if (ce) ch.cands = cardChoiceCands(db, next, e.by, e.act.mon !== undefined ? e.act.mon : -1, ce, next.players[e.by].discard.length - used);
+  }
   // 山札は両方とも仮の札のまま(山札へ戻した札も)
   next.players.forEach((x) => { x.deck = x.deck.map(() => CARD_PVP_HIDDEN); });
   return next;
