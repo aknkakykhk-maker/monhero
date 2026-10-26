@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aeac8a18c66fc267
+// generated-sha256: 9a5d1a9a49acc089
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51868,7 +51868,9 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
   const add = (((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0) + (opts && opts.sameBlood ? (((CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId]) || 0) : 0);
-  return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) } };
+  // opts.playerRole … 勝率を測るときのプレイヤー役(tools/card の検査・道具だけが付ける)。山札切れを気にしない前の打ち方のまま
+  //   (2026-10-27 ソランド判断: 人が相手のときと測り方をそろえるため。プレイヤー役まで山札切れを避けると、守り型のドラが EXPERT 34%・MASTER 36% に下がった)
+  return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) }, playerRole: !!(opts && opts.playerRole) };
 };
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
@@ -52041,7 +52043,11 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const q = pd.defender;
   const me = st.players[q];
   const { habit } = policy;
-  const opts = cardGuardOptions(db, st);
+  // 生き残りが2体以下のときは、守りをためしに当てて「守らなければ負けないのに、守ると負ける」守り(肉を切らせて・かばう など)を外す
+  const loseAfter = (a) => { try { const s = cardAiSettle(db, cardApplyAction(db, st, a)); return !!s && s.winner !== null && s.winner !== undefined && s.winner !== q; } catch (_) { return false; } };
+  const few = me.mons.filter((m) => !m.ko).length <= 2;
+  const passLoses = few && loseAfter({ type: 'pass' });
+  const opts = cardGuardOptions(db, st).filter((o) => !few || passLoses || !loseAfter(o));
   if (!opts.length) return { type: 'pass' };
   const main = cardOf(db, pd.main);
   const tgt = pd.targets[pd.ti];
@@ -52107,7 +52113,48 @@ const cardAiChooseGuts = (db, st, policy) => {
   order.forEach((o) => { if (o.k <= -9) pick.push(o.i); });
   for (const o of order) { if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break; if (!pick.includes(o.i)) pick.push(o.i); }
   const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感
-  return { type: 'guts', hand: gm ? pick.slice(0, gm.n) : pick };
+  // 山札切れを自分から呼ばない(2026-10-27 あつさん「山札を気にせず負ける」):
+  //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
+  return { type: 'guts', hand: (gm ? pick.slice(0, gm.n) : pick).slice(0, policy.playerRole ? 99 : cardAiGutsCap(me)) };
+};
+// ガッツにしてよい枚数の上限(次の番に引く枚数が山札を超えないように)。山札が5枚以上あれば上限なし
+const cardAiGutsCap = (me) => (me.deck.length >= CARD_BATTLE_HAND_MAX ? 99 : Math.max(0, me.hand.length - (CARD_BATTLE_HAND_MAX - me.deck.length)));
+
+// ---- 自分で負けにいく手を選ばない(2026-10-27 遊ぶ人の声。カード部の割り当て) ----
+// ソラシドさん「最後の1体しかいないのに自爆して負ける」・あつさん「山札を気にせず負ける」。
+// 危ない部品を持つ手だけ、ためしに打って(相手は守らない・選ぶ段は先頭)、次のどれかになる手は選ばない(どの強さでも。雑な手のときも)
+//   ・その手で自分のモンスターが全員倒れて負ける(相手も同時に全滅して勝てるなら選んでよい。攻撃した側の勝ち・ルール⑧)
+//   ・その手で山札が減り、次の自分の番に引く枚数より山札が少なくなる(もともと足りないときは、その手のせいではないので数えない)
+const CARD_AI_RISKY_EFFS = ['selfDamage', 'selfDamageIfHit', 'selfDamageIfEvaded', 'attachSelfIfHit', 'lastWish', 'selfHurt', 'fuse',
+  'draw', 'deckToGuts', 'rush', 'refresh', 'choose', 'fieldMill', 'fieldDrawOnPlay', 'fieldBurn'];
+const cardAiDrawNeed = (pl) => (pl.hand.length >= CARD_BATTLE_HAND_MAX ? 1 : CARD_BATTLE_HAND_MAX - pl.hand.length);
+const cardAiSettle = (db, st) => {
+  let s = st;
+  for (let i = 0; i < 40 && s && s.winner === null; i++) {
+    let a = null;
+    if (s.pendingPray) a = { type: 'pray' };
+    else if (s.pendingReveal) a = { type: 'reveal' };
+    else if (s.pendingChoice) a = { type: 'choose', pick: s.pendingChoice.cands[0] };
+    else if (s.pendingDiscard) a = { type: 'discard', hand: s.players[s.pendingDiscard.p].hand.map((_, k) => k).slice(0, s.pendingDiscard.n) };
+    else if (s.pending) a = { type: 'pass' };
+    if (!a) break;
+    s = cardApplyAction(db, s, a) || null;
+  }
+  return s;
+};
+// その手で自分から負けるか(true なら選ばない)。p … 手を出す人
+const cardAiLosesBy = (db, st, opt, p = st.active, policy = null) => {
+  if (!opt || !Array.isArray(opt.hand) || (opt.type !== 'attack' && opt.type !== 'breeder')) return false;
+  const me = st.players[p];
+  const risky = opt.hand.some((i) => { const c = cardOf(db, me.hand[i]); return c && (c.effects || []).some((e) => CARD_AI_RISKY_EFFS.includes(e.t)); });
+  if (!risky) return false;
+  let s;
+  try { s = cardAiSettle(db, cardApplyAction(db, st, opt)); } catch (_) { return false; }
+  if (!s) return false;
+  if (s.winner !== null && s.winner !== undefined) return s.winner !== p;
+  const after = s.players[p];
+  if (!(policy && policy.playerRole) && after.deck.length < me.deck.length && after.deck.length < cardAiDrawNeed(after) && me.deck.length >= cardAiDrawNeed(me)) return true;
+  return false;
 };
 
 // 影縛りを付けた手に、名指しする守りの名前を入れる。手札を読む難易度は相手の手札の守り、
@@ -52159,9 +52206,9 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
     const hand = st.players[st.active].hand;
     const gm = cardFieldEff(st, 'fieldGutsMax');
-    return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, gm ? gm.n : 99) };
+    return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
   }
-  const opts = cardAttackOptions(db, st);
+  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
@@ -55593,7 +55640,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           </button>
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
-        <div data-card-log className={`relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
+        <div data-card-log className={`relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
             ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
@@ -55634,7 +55681,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {wide && tutorBox}
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
       {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
-      {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
+      {/* 守れるカードが無いときは、下の理由の1行だけにする(「使える回避・防御はありません」と2回言っていた。2026-10-27 カゲあつくん) */}
+      {guide && !tutorial && !(mode === 'guard' && !guardOpts.length && !hint) && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
       {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
       {mode === 'guard' && tutorial && st.pending && st.pending.evaded && <div data-card-tutor-guard-done className="mx-auto mb-1 shrink-0 rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap('「これで守る」を押してください')}</div>}
       {mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && (
