@@ -662,7 +662,8 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
               <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
               <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{levelLabel[lv] || lv}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
             </table>
-            <p className={small} style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この記録ができてからのぶんです')}</p>
+            {/* 難易度別は 2026-10-24 から数えている。それより前から遊んでいて、合計と合わない人にだけ断る(はじめての人には出さない) */}
+            {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className={small} style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
           </div>
           <div data-card-record-wins className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">勝ち方(助手と対戦)</div>
@@ -687,7 +688,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
               {cell('いまの連勝', r.streak.now, '連勝')}
               {cell('最高の連勝', r.streak.best, '連勝')}
             </div>
-            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')}</p>
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
           </div>
           <div data-card-record-other className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">ほか</div>
