@@ -48,10 +48,12 @@ const run = async () => {
   // 読む: ページ送り(1ページ目の件数をそのサーバーの1ページ分とみなす)
   calls.length = 0;
   pages.push([{ breeder_id: 'a', user_name: 'A', level: 9, icon: null }, { breeder_id: 'b', user_name: 'B', level: 8, icon: null }],
-             [{ breeder_id: 'c', user_name: 'C', level: 7, icon: null }, { breeder_id: 'd', user_name: 'D', level: 0, icon: null }], []);
+             [{ breeder_id: 'c', user_name: 'C', level: 7, icon: null }, { breeder_id: 'd', user_name: 'D', level: 0, icon: null }],
+             [{ breeder_id: 'e', user_name: 'テスト', level: 1, icon: '🐣' }], []);
   const rows = await ctx.fetchRows('t');
-  assert.strictEqual(JSON.stringify(rows.map(r => r.breeder_id)), '["a","b","c"]', 'Lv0の行は捨て、全ページを集める');
+  assert.strictEqual(JSON.stringify(rows.map(r => r.breeder_id)), '["a","b","c"]', 'Lv.1以下の行(表に残るテスト行など)は外し、全ページを集める');
   assert(calls.every(c => /select=breeder_id,user_name,level,icon/.test(c.url)), '読む列は4つだけ');
+  assert(calls.every(c => /level=gte\.2(&|$)/.test(c.url)), 'サーバー側でも Lv.2 以上だけを頼む(通信量も減らす)');
   console.log('OK: 読む関数は全ページを集める(列は4つだけ)');
 
   // 表が無い: 空で、以後は通信しない
@@ -80,6 +82,8 @@ const run = async () => {
   const eff = app.slice(app.indexOf('const lastPublishedBreederLevelRef'), app.indexOf('// ===== フレンド機能'));
   assert(eff.includes('if (!dataLoaded || !onboarded || onboardingPreview) return;'), '読み終えた後・はじめての設定の後・プレビュー中は送らない');
   assert(eff.includes('lastPublishedBreederLevelRef.current >= level) return;'), '同じ・低いLvは送り直さない');
+  assert(eff.includes('level < BREEDER_LEVEL_PUBLISH_MIN'), 'Lv.1の端末は送らない(行を積み上げない)');
+  assert(/const BREEDER_LEVEL_PUBLISH_MIN = 2;/.test(src), 'Lv.2から送る');
   assert(eff.includes('sbUpsertBreederLevel('), '送る関数を呼ぶ');
   assert(/\[dataLoaded, onboarded, onboardingPreview, breederXp, breederName, breederIcon\]/.test(eff), 'きっかけは読み終え・Lv(経験値)の変化だけ');
   assert(!/breederLevel\b/.test(eff.replace(/\/\/.*$/gm, '')), 'breederLevel(下で作る)を先に使わない');
@@ -105,6 +109,16 @@ const run = async () => {
   ]);
   assert.strictEqual(merged.map(r => `${r.userName}:${r.level}`).join(','), '裏周回さん:120,昔の人:70,チャレンジさん:50');
   console.log('OK: 裏周回だけの人も載り、同じ人は高いほうの1行・表に来ていない人は rankings で補われる');
+
+  // 検査の中で navigator.webdriver を偽る(人の端末に見せる)と、ゲームの「自動操作は本物へ書かない」止めが効かない。
+  // そういう検査は Supabase を必ず差し替えること(2026-10-27・debug-passphrase-browser-check が本番の表へ行を足していた)
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.name === 'node_modules' ? [] : e.isDirectory() ? walk(d + '/' + e.name) : e.name.endsWith('.js') ? [d + '/' + e.name] : []);
+  const spoofers = walk('tools').filter((f) => /defineProperty\([^)]*['"]webdriver['"]/.test(fs.readFileSync(f, 'utf8')));
+  for (const f of spoofers) {
+    const t = fs.readFileSync(f, 'utf8');
+    assert(/route\([^)]*supabase/i.test(t), `${f}: webdriver を偽るのに Supabase を差し替えていない(本番へ書いてしまう)`);
+  }
+  console.log(`OK: webdriver を偽る検査(${spoofers.length}本)は Supabase を差し替えている`);
 
   // SQL
   const dir = 'docs/sql/rankings/';

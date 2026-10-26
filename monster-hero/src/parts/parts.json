@@ -342,6 +342,10 @@
       "role": "MFバトルカードのマルチ対戦(人どうし)。部屋と通信(CARD_PVP・Broadcast だけ)・相手の見えない札・届いた手の当て方・終わってからのなぞり直し・合言葉の部屋の画面。いまはデバッグ設定からだけ"
     },
     {
+      "file": "92-card-pvp-history.jsx",
+      "role": "MFバトルカードのマルチ対戦の履歴と相手のデッキ(端末の中だけ・mh_card_pvp_history_v1・新しい30試合)。91 から cardPvpHistoryBegin/cardPvpHistoryRecord を呼ぶ"
+    },
+    {
       "file": "93-card-replay.jsx",
       "role": "MFバトルカードの過去の対戦を見る(リプレイ)。記録の保存 mh_card_replays_v1(10試合・お気に入り3)・なぞり直し・1手ごとの場の指紋・再生の帯(84 の盤面の下に出す)"
     },
