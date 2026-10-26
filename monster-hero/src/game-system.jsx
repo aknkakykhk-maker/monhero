@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cc2885dbdbcb435d
+// generated-sha256: c6d1d7e1867b817f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60053,8 +60053,30 @@ const cardPvpHistoryWhen = (at) => {
 const cardPvpHistoryLoad = async () => {
   try { return cardPvpNormalizeHistory(await storeGet(CARD_PVP_HISTORY_KEY, [], false)); } catch (_) { return []; }
 };
+// 書く。localStorage へは直に書き、いっぱいでも、ゲーム全体の「保存できない」の数に入れない(知らせやクイック周回の停止を巻き込まない)。
+//   過去の対戦(93 の cardReplayWrite・cardReplayRoomLeft・cardReplayStore)と同じ作り。2026-10-27 保存の見回り(ミカエシくん・部長)
+const CARD_PVP_HISTORY_PROBE_KEY = '__mh_card_pvp_history_probe__'; // mh_ で始めない(バックアップに混ぜない)
+const CARD_PVP_HISTORY_ROOM = 131072;                                // 書いたあとに残す空き(ほかのセーブが書けるように)
+const cardPvpHistoryPut = async (list) => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true; // はじめてのプレビュー中は書かない(storeSet と同じ)
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_PVP_HISTORY_KEY, list, false);
+  try { window.localStorage.setItem(CARD_PVP_HISTORY_KEY, JSON.stringify(list)); return true; } catch (_) { return false; }
+};
+const cardPvpHistoryRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try { window.localStorage.setItem(CARD_PVP_HISTORY_PROBE_KEY, 'x'.repeat(CARD_PVP_HISTORY_ROOM)); return true; } catch (_) { return false; } finally { try { window.localStorage.removeItem(CARD_PVP_HISTORY_PROBE_KEY); } catch (_) { /* 消せなくても続ける */ } }
+};
+// 書けない・書いたあと空きが無いときは、古い試合から減らして書き直す(いちばん新しい試合は残す)。それでも入らなければあきらめる(ゲームは止めない)
 const cardPvpHistoryWrite = async (fn) => {
-  try { const next = fn(await cardPvpHistoryLoad()); await storeSet(CARD_PVP_HISTORY_KEY, next, false); return next; } catch (_) { return null; }
+  try {
+    const list = fn(await cardPvpHistoryLoad()).slice();
+    for (;;) {
+      const ok = await cardPvpHistoryPut(list);
+      if (ok && cardPvpHistoryRoomLeft()) return list;
+      if (list.length <= 1) return ok ? list : null;
+      list.pop();
+    }
+  } catch (_) { return null; }
 };
 
 // ---- 強さの点数の増減(自分の行だけ読む。表が無い・読めないときは null) ----

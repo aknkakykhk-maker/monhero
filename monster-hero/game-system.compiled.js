@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 528127261fea0f63
+// source-sha256: 2367ccf9980cb86f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99963,11 +99963,40 @@ const cardPvpHistoryLoad = async () => {
     return [];
   }
 };
+const CARD_PVP_HISTORY_PROBE_KEY = '__mh_card_pvp_history_probe__';
+const CARD_PVP_HISTORY_ROOM = 131072;
+const cardPvpHistoryPut = async list => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true;
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_PVP_HISTORY_KEY, list, false);
+  try {
+    window.localStorage.setItem(CARD_PVP_HISTORY_KEY, JSON.stringify(list));
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+const cardPvpHistoryRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try {
+    window.localStorage.setItem(CARD_PVP_HISTORY_PROBE_KEY, 'x'.repeat(CARD_PVP_HISTORY_ROOM));
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    try {
+      window.localStorage.removeItem(CARD_PVP_HISTORY_PROBE_KEY);
+    } catch (_) {}
+  }
+};
 const cardPvpHistoryWrite = async fn => {
   try {
-    const next = fn(await cardPvpHistoryLoad());
-    await storeSet(CARD_PVP_HISTORY_KEY, next, false);
-    return next;
+    const list = fn(await cardPvpHistoryLoad()).slice();
+    for (;;) {
+      const ok = await cardPvpHistoryPut(list);
+      if (ok && cardPvpHistoryRoomLeft()) return list;
+      if (list.length <= 1) return ok ? list : null;
+      list.pop();
+    }
   } catch (_) {
     return null;
   }
