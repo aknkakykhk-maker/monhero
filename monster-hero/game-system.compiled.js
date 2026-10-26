@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e325ab677b1a8ad
+// source-sha256: 98ab595594707836
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -128507,24 +128507,26 @@ function MonsterHeroGame() {
     }, React.createElement("div", {
       className: "flex items-center gap-2"
     }, React.createElement("div", {
-      className: "flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1",
+      className: "flex min-w-0 flex-1 gap-1",
       role: "tablist",
-      "aria-label": "編成セット",
-      style: {
-        scrollbarWidth: 'none'
-      }
-    }, monsterPartySets.names.map((name, index) => React.createElement("button", {
-      key: index,
-      role: "tab",
-      "aria-selected": editingPartySetIndex === index,
-      onClick: () => switchMonsterPartySet(index),
-      className: `flex shrink-0 min-w-[76px] min-h-[44px] items-center justify-center gap-1 rounded-xl border px-2.5 active:scale-95 ${editingPartySetIndex === index ? 'border-indigo-300 bg-indigo-600/40' : 'border-slate-700 bg-slate-800'}`
-    }, React.createElement("span", {
-      className: "min-w-0 truncate text-[11px] font-black"
-    }, index + 1, ". ", name), monsterPartySets.activeIndex === index && React.createElement("span", {
-      className: "shrink-0 text-[11px] font-black text-emerald-300",
-      "aria-label": "使用中"
-    }, "✓")))), React.createElement("button", {
+      "aria-label": "編成セット"
+    }, monsterPartySets.names.map((name, index) => {
+      const editing = editingPartySetIndex === index;
+      return React.createElement("button", {
+        key: index,
+        role: "tab",
+        "aria-selected": editing,
+        "aria-label": `${index + 1}. ${name}`,
+        title: `${index + 1}. ${name}`,
+        onClick: () => switchMonsterPartySet(index),
+        className: `flex min-h-[44px] items-center justify-center gap-0.5 rounded-xl border active:scale-95 ${editing ? 'min-w-0 flex-1 px-1.5 border-indigo-300 bg-indigo-600/40' : 'w-[30px] shrink-0 border-slate-700 bg-slate-800'}`
+      }, React.createElement("span", {
+        className: "min-w-0 truncate text-[11px] font-black"
+      }, editing ? `${index + 1}. ${name}` : index + 1), monsterPartySets.activeIndex === index && React.createElement("span", {
+        className: "shrink-0 text-[11px] font-black text-emerald-300",
+        "aria-label": "使用中"
+      }, "✓"));
+    })), React.createElement("button", {
       type: "button",
       "data-party-set-edit-toggle": true,
       onClick: () => toggleScreenNote('partySetEdit'),
