@@ -209,7 +209,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const pointAfter = await A.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
     // ★この検査は2台が同じブラウザの保存を使うので、あとから書いた側(+200 か +50)が残る。実際は別の端末なので、両方それぞれに入る
-    check('⑥ カードポイントが増えている(勝ち+200・負け+50 のどちらかが残る)', [200, 50].includes(pointAfter - pointBefore), `${pointBefore} → ${pointAfter}`);
+    // ★A と B は同じ ctx(保存先を共有)。ポイントはビートPになり、書く直前に読み直して差を足す(2026-10-26)ので、
+    //   2台ぶん(勝ち+200・負け+50)がどちらも残る。前は覚えていた数で上書きしていたので、片方だけが残っていた
+    check('⑥ ビートPが増えている(同じ保存先の2台ぶん: 勝ち+200と負け+50の両方が残る)', pointAfter - pointBefore === 250, `${pointBefore} → ${pointAfter}`);
     const lineA = await A.locator('[data-card-pvp-line]').innerText().catch(() => ''), lineB = await B.locator('[data-card-pvp-line]').innerText().catch(() => '');
     check('⑥ 結果の画面で、立ち絵の助手が勝ち・負けの台詞を言う', !!lineA && !!lineB && lineA !== lineB, `${lineA} / ${lineB}`);
     // ⑥ 54本の台詞を、いまの吹き出しと同じ幅・同じ文字に入れて、言葉の途中で折れていないか測る(かたまり1つが2行にまたがっていない)
