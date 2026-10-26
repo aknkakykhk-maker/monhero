@@ -58,7 +58,178 @@ const PRAY = '280';
 const F = { draw: 'F115', fight: 'F116', crucible: 'F117', holly: 'F118', duel: 'F119', chaos: 'F120', pride: 'F255', master: 'F256', bind: 'F257', seal: 'F258', ground: 'F259', burn: 'F260', spark: 'F261', air: 'F262', long: 'F263' };
 const startMain = () => { const st = newGame(); return st; }; // 先攻 A のターン1・攻撃の段
 
-// ================= A. 全体カード(次の区切りで足す) =================
+// ================= A. 全体カード =================
+{
+  // 置く: ブリーダーの1枚に数える・前の全体カードは出した人の捨て札へ
+  let st = startMain(); setHand(st, 0, [F.draw, F.fight]); setGuts(st, 0, 5);
+  const handBefore = 2, deckBefore = st.players[0].deck.length;
+  // 相手(B)は手札があるのでおいのりの窓が開く。B は出さない
+  let s = act(st, opts(st).find((o) => o.type === 'breeder' && o.hand[0] === 0));
+  check('おいのりの窓: 相手が全体カードを出した瞬間に、相手の決める番になる', s && s.pendingPray && E.cardDecider(s) === 1);
+  s = act(s, { type: 'pray' });
+  check('F115 冷静な判断: 出した時に1枚引く・場に残る・ガッツ1を払う', s && s.field && s.field.no === F.draw && s.players[0].hand.length === handBefore - 1 + 1 && s.players[0].deck.length === deckBefore - 1 && s.players[0].guts.length === 4);
+  check('全体カードはブリーダーのカード1枚に数える(同じ番に2枚目の全体カードは出せない)', !opts(s).some((o) => o.type === 'breeder'));
+  // 次の番(B)で別の全体カード → 前の札(A が出した)は A の捨て札へ
+  let t = field(newGame(), F.draw, 0); setHand(t, 0, [F.fight]); setGuts(t, 0, 5); t.players[1].hand = [];
+  const dA = t.players[0].discard.length;
+  t = act(t, opts(t).find((o) => o.type === 'breeder'));
+  check('入れ替わり: 新しい全体カードが出ると、前の札は出した人の捨て札へ行き、場は新しい札だけ', t && t.field.no === F.fight && t.players[0].discard.includes(F.draw) && t.players[0].discard.length === dA + 1 + 2);
+}
+{
+  // 壮絶な戦い +1(ちから・かしこさ)・守りで0になったら足さない
+  let st = field(startMain(), F.fight); setHand(st, 0, [POW3]); setGuts(st, 0, 5);
+  const a = opts(st).find((o) => o.type === 'attack' && o.hand[0] === 0 && o.target && o.target.m === 0);
+  const r = hitFor(st, a);
+  check('F116 壮絶な戦い: ちから3が当たると4', r && r.dmg === 4, r && r.dmg);
+  // 守りで0(回避)→ +1 しない
+  let s = act(st, a); s.players[1].hand = [DGE]; s.players[1].guts = setGuts(E.cardClone(s), 1, 5).players[1].guts;
+  const g = E.cardGuardOptions(db, s).find((o) => o.hand === 0);
+  s = g ? act(s, g) : null; while (s && s.pending) s = act(s, { type: 'pass' });
+  check('F116 壮絶な戦い: 回避して0のときは +1 しない(ダメージ0のときは足さない)', s && s.players[1].mons[0].life === s.players[1].mons[0].max, g ? '' : '回避の候補が無い');
+}
+{
+  const i3 = db.cards[INT3].damage, i1 = db.cards[INT1].damage;
+  let st = field(startMain(), F.crucible); setHand(st, 0, [INT3]); setGuts(st, 0, 9);
+  const r = hitFor(st, opts(st).find((o) => o.type === 'attack' && o.hand[0] === 0 && o.target && o.target.m === 0));
+  check(`F117 興奮のるつぼ: かしこさ${i3}が当たると${i3 - 2}`, r && r.dmg === i3 - 2, r && r.dmg);
+  const st2 = field(newGame({ sp0: spFor(INT1) }), F.crucible); setHand(st2, 0, [INT1]); setGuts(st2, 0, 9);
+  const o1 = opts(st2).find((o) => o.type === 'attack' && o.hand[0] === 0 && o.target && o.target.m === 0);
+  const r1 = o1 && hitFor(st2, o1);
+  check('F117 興奮のるつぼ: かしこさ1・2は0になり、ライフは増えない(0より下にしない)', r1 && r1.dmg === 0, r1 && r1.dmg);
+  let st3 = field(startMain(), F.crucible); setHand(st3, 0, [POW3]); setGuts(st3, 0, 5);
+  const r3 = hitFor(st3, opts(st3).find((o) => o.type === 'attack' && o.hand[0] === 0 && o.target && o.target.m === 0));
+  check('F117 興奮のるつぼ: ちから技には効かない', r3 && r3.dmg === db.cards[POW3].damage);
+  let st4 = field(startMain(), F.spark); setHand(st4, 0, [INT3]); setGuts(st4, 0, 9);
+  const r4 = hitFor(st4, opts(st4).find((o) => o.type === 'attack' && o.hand[0] === 0 && o.target && o.target.m === 0));
+  check(`F261 飛び散る火花: かしこさ${i3}が当たると${i3 + 1}`, r4 && r4.dmg === i3 + 1, r4 && r4.dmg);
+}
+{
+  const c2 = db.cards[POW3];
+  const st = field(startMain(), F.holly);
+  check('F118 ホリィの声援: 要るガッツ -1(攻撃も守りも)・0より下にしない', E.cardActionCost(db, st, 0, [POW3], [0]) === Math.max(0, c2.guts - 1) && E.cardGuardCost(st, { guts: 0 }) === 0 && E.cardGuardCost(st, { guts: 2 }) === 1);
+  const sm = field(startMain(), F.master);
+  check('F256 師匠のまなざし: 要るガッツ +1(ガッツ0の札も1)', E.cardActionCost(db, sm, 0, [POW3], [0]) === c2.guts + 1 && E.cardGuardCost(sm, { guts: 0 }) === 1);
+  // 足りないと出せない
+  setHand(sm, 0, [POW3]); setGuts(sm, 0, c2.guts);
+  check('F256 師匠のまなざし: 書いてあるガッツちょうどでは、もう出せない', !opts(sm).some((o) => o.type === 'attack'));
+}
+{
+  // 必殺技の応酬(3以下は出せない)・封印(4以上は出せない)
+  let st = field(startMain(), F.duel); setHand(st, 0, [POW3, POW4]); setGuts(st, 0, 9);
+  const o = opts(st);
+  check('F119 必殺技の応酬: ちから3は出せない・4以上は出せる', !o.some((x) => x.type === 'attack' && x.hand[0] === 0) && o.some((x) => x.type === 'attack' && x.hand[0] === 1));
+  let st2 = field(startMain(), F.seal); setHand(st2, 0, [POW3, POW4]); setGuts(st2, 0, 9);
+  const o2 = opts(st2);
+  check('F258 必殺技の封印: ちから4以上は出せない・3は出せる', o2.some((x) => x.type === 'attack' && x.hand[0] === 0) && !o2.some((x) => x.type === 'attack' && x.hand[0] === 1));
+  // 壮絶な戦いとは同時に場に出ないが、+1 の札(飛び散る火花)が無くても、組(付ける札)で4になるなら出せる、は card-rules-check が見ている
+}
+{
+  // カード投げ(169・かしこさ0・捨てた枚数を足す): 応酬では捨てて4以上のときだけ・封印では3枚以下のときだけ
+  const toss = '169';
+  const ghost = monNo('ghost');
+  if (ghost && db.cards[toss] && db.cards[toss].ready) {
+    const mk = (fno) => { const s = newGame({ sp0: ['ghost', 'suezo', 'pixie'] }); field(s, fno); setHand(s, 0, [toss, POW3, POW3, POW3, POW3]); setGuts(s, 0, 9); return s; };
+    const dl = opts(mk(F.duel)).filter((x) => x.type === 'attack' && x.hand[0] === 0);
+    check('カード投げ×必殺技の応酬: 捨てる枚数が3以下の手は出せない(最終的なダメージ3以下)', dl.length > 0 && dl.every((x) => (x.toss || []).length >= 4), `${dl.length}手・捨てる枚数 ${[...new Set(dl.map((x) => (x.toss || []).length))].join(',')}`);
+    const sl = opts(mk(F.seal)).filter((x) => x.type === 'attack' && x.hand[0] === 0);
+    check('カード投げ×必殺技の封印: 4枚捨てる手は出せない(最終的なダメージ4以上)', sl.length > 0 && sl.every((x) => (x.toss || []).length <= 3), `${sl.length}手`);
+  } else check('カード投げ(169)がある', false);
+}
+{
+  // ボンバ(空中に2倍): 封印のとき、空中の子へは4で出せない・地上の子へは2で出せる。応酬のときは逆
+  const bomba = '191';
+  const mk = (fno) => { const s = newGame({ sp0: ['mew', 'suezo', 'pixie'] }); field(s, fno); setHand(s, 0, [bomba]); setGuts(s, 0, 9); return s; };
+  const tg = (o) => o.filter((x) => x.type === 'attack' && x.hand[0] === 0).map((x) => x.target.m).sort().join(',');
+  const s0 = mk(F.seal);
+  const airIdx = s0.players[1].mons.map((m, i) => (E.cardMonType(m, s0.turn) === 'air' ? i : -1)).filter((i) => i >= 0).join(',');
+  check('ボンバ×必殺技の封印: 空中の子へ(2倍で4)は出せず、地上の子へは出せる', tg(opts(s0)) === [0, 1, 2].filter((i) => !airIdx.split(',').includes(String(i))).join(','), `狙える ${tg(opts(s0))}・空中 ${airIdx}`);
+  check('ボンバ×必殺技の応酬: 空中の子へ(2倍で4)だけ出せる', tg(opts(mk(F.duel))) === airIdx, `狙える ${tg(opts(mk(F.duel)))}`);
+}
+{
+  // 大混乱: ドローの前に、その番の人の山札の上から2枚を捨てる(先攻の1ターン目は引かないので捨てない)
+  let st = field(startMain(), F.chaos); setHand(st, 0, []); st.players[1].hand = [POW3, POW3];
+  const d1 = st.players[1].deck.length, dis1 = st.players[1].discard.length;
+  let s = act(st, { type: 'endAttacks' }); s = act(s, { type: 'guts', hand: [] });
+  check('F120 大混乱: 相手の番のはじめに、相手の山札の上から2枚が捨て札へ・そのあと5枚まで引く', s && s.players[1].discard.length === dis1 + 2 && s.players[1].deck.length === d1 - 2 - 3 && s.players[1].hand.length === 5);
+  let st2 = field(startMain(), F.chaos); st2.players[1].deck = st2.players[1].deck.slice(0, 2); st2.players[1].hand = [POW3];
+  let s2 = act(act(st2, { type: 'endAttacks' }), { type: 'guts', hand: [] });
+  check('F120 大混乱: 捨てて山札が無くなり、引けなければ負け(山札切れ)', s2 && s2.winner === 0 && /山札切れ/.test(s2.reason || ''));
+}
+{
+  // 純血のプライド: 純血の子の攻撃に、派生の子は回避を出せない(防御は出せる)
+  const hy = Object.values(db.monsters).find((m) => m.main === 'golem' && m.ready !== false && !m.variant);
+  if (hy) {
+    const s = newGame({ sp1: ['golem', 'hare', 'gali'] });
+    s.players[1].mons[0] = { ...s.players[1].mons[0], no: hy.no, species: hy.species, main: hy.main, sub: hy.sub || null, name: hy.name };
+    field(s, F.pride); setHand(s, 0, [POW3]); setGuts(s, 0, 9);
+    let a = act(s, opts(s).find((o) => o.type === 'attack' && o.target && o.target.m === 0));
+    a.players[1].hand = [DGE, BLK]; a.players[1].guts = setGuts(E.cardClone(a), 1, 9).players[1].guts;
+    const g = E.cardGuardOptions(db, a);
+    check('F255 純血のプライド: 純血の子の攻撃に、派生の子は回避を出せない・防御は出せる', !g.some((o) => o.hand === 0) && g.some((o) => o.hand === 1), JSON.stringify(g));
+    const s2 = E.cardClone(s); s2.field = null;
+    let a2 = act(s2, opts(s2).find((o) => o.type === 'attack' && o.target && o.target.m === 0));
+    a2.players[1].hand = [DGE]; a2.players[1].guts = a.players[1].guts;
+    check('F255 純血のプライド: 場に無ければ、派生の子も回避を出せる', E.cardGuardOptions(db, a2).some((o) => o.hand === 0));
+  } else check('ゴーレムがメインの派生の子がいる', false);
+}
+{
+  const st = field(startMain(), F.bind); setHand(st, 0, [SPE]); setGuts(st, 0, 9);
+  check('F257 がんじがらめ: モンスターは特殊技を出せない', !opts(st).some((o) => o.type === 'attack'));
+  const BSPE = find((c) => c.user === 'breeder' && c.kind === 'spe' && !eff(c, 'fuse') && !eff(c, 'attach'), 'ブリーダーの特殊');
+  const st2 = field(startMain(), F.bind); setHand(st2, 0, [BSPE]); setGuts(st2, 0, 9);
+  const can = opts(st2).some((o) => o.type === 'breeder');
+  check('F257 がんじがらめ: ブリーダーの特殊は出せる(設計書のとおり)', can || !E.cardLegalActions(db, (() => { const x = E.cardClone(st2); x.field = null; return x; })()).some((o) => o.type === 'breeder'), db.cards[BSPE].name);
+}
+{
+  // 悪天候・空間のひずみ: 全員の持ちょうを変える。場から無くなると元に戻る。ジャンプなどの空中より先
+  const st = startMain(); setHand(st, 0, [F.ground]); setGuts(st, 0, 9); st.players[1].hand = [];
+  st.players[1].mons[0].airUntil = 99;
+  let s = act(st, opts(st).find((o) => o.type === 'breeder'));
+  const types = (x) => x.players.flatMap((pl) => pl.mons.map((m) => E.cardMonType(m, x.turn))).join(',');
+  check('F259 悪天候: 全員が地上(空中の子も・ジャンプで空中の子も)', s && types(s).split(',').every((t) => t === 'ground'), types(s));
+  // 次に空間のひずみ(B が出す)→ 全員空中。さらに冷静な判断で消える → 元に戻る
+  s = act(act(s, { type: 'endAttacks' }), { type: 'guts', hand: [] });
+  s.players[1].hand = [F.air]; s.players[1].guts = setGuts(E.cardClone(s), 1, 9).players[1].guts; s.players[0].hand = [];
+  s = act(s, opts(s).find((o) => o.type === 'breeder'));
+  check('F262 空間のひずみ: 悪天候と入れ替わると、全員が空中', s && types(s).split(',').every((t) => t === 'air'), types(s));
+  s = act(act(s, { type: 'endAttacks' }), { type: 'guts', hand: [] });
+  s.players[0].hand = [F.draw]; s.players[1].hand = [];
+  s = act(s, opts(s).find((o) => o.type === 'breeder'));
+  // B の先頭の子は、ジャンプで空中のまま(airUntil)。ほかは本来の持ちょう
+  const orig = s.players.flatMap((pl, p) => pl.mons.map((m, i) => (p === 1 && i === 0 ? 'air' : m.type))).join(',');
+  check('持ちょうの全体カードが場から無くなると、本来の持ちょうに戻る(ジャンプの空中は残る)', s && types(s) === orig, `${types(s)} / 本来 ${orig}`);
+}
+{
+  // 灼熱の地: 攻撃おわりに、攻撃した側の全員に1ダメージ。最後の1体が倒れたら相手の勝ち
+  const st = field(startMain(), F.burn); setHand(st, 0, []);
+  const before = st.players[0].mons.map((m) => m.life);
+  const s = act(st, { type: 'endAttacks' });
+  check('F260 灼熱の地: 攻撃おわりに、攻撃した側の全員が1ダメージ・相手は減らない', s && s.players[0].mons.every((m, i) => m.life === before[i] - 1) && s.players[1].mons.every((m) => m.life === m.max));
+  const st2 = field(startMain(), F.burn); st2.players[0].mons.forEach((m, i) => { if (i) { m.ko = true; m.life = 0; } else m.life = 1; });
+  const s2 = act(st2, { type: 'endAttacks' });
+  check('F260 灼熱の地: 最後の1体が倒れたら相手の勝ち', s2 && s2.winner === 1);
+}
+{
+  // 長期戦の予感: ガッツの段で2枚まで
+  const st = field(startMain(), F.long); setHand(st, 0, [POW3, POW3, POW3]);
+  const s = act(st, { type: 'endAttacks' });
+  check('F263 長期戦の予感: ガッツの段で3枚はだめ・2枚はよい', act(s, { type: 'guts', hand: [0, 1, 2] }) === null && !!act(s, { type: 'guts', hand: [0, 1] }));
+  check('F263 長期戦の予感: 同じ番号を重ねて3枚に見せても2枚より多くはならない', (() => { const x = act(s, { type: 'guts', hand: [0, 0, 1] }); return x === null || x.players[0].guts.length <= s.players[0].guts.length + 2; })());
+}
+{
+  // おいのり: 出すと、出た全体カードは効かずに出した人の捨て札へ・前から場にあった全体カードは残る・ガッツ0
+  let st = field(startMain(), F.spark, 1); setHand(st, 0, [F.draw]); setGuts(st, 0, 5); st.players[1].hand = [PRAY, POW3]; st.players[1].guts = [];
+  const handA = st.players[0].hand.length;
+  let s = act(st, opts(st).find((o) => o.type === 'breeder'));
+  const p = opts(s).find((o) => o.hand);
+  s = p ? act(s, p) : null;
+  check('おいのり: 出た全体カードは効かず(引かない)出した人の捨て札へ・前の全体カードは場に残る', s && s.field && s.field.no === F.spark && s.players[0].discard.includes(F.draw) && s.players[0].hand.length === handA - 1 && s.players[1].discard.includes(PRAY));
+  check('おいのり: 相手の番に出すので、相手のブリーダーの1枚には数えない', s && !s.players[1].breederUsed);
+  // 師匠のまなざしが場にあると、おいのりもガッツ1。ガッツ0なら窓は開かない
+  let st2 = field(startMain(), F.master, 1); setHand(st2, 0, [F.draw]); setGuts(st2, 0, 5); st2.players[1].hand = [PRAY]; st2.players[1].guts = [];
+  const s2 = act(st2, opts(st2).find((o) => o.type === 'breeder'));
+  check('おいのり×師匠のまなざし: ガッツが足りなければ窓は開かない(全体カードはそのまま置かれる)', s2 && !s2.pendingPray && s2.field.no === F.draw);
+}
 
 // ================= B. ルールの本体 =================
 {
