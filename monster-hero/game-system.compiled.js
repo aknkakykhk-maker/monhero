@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fb844b6c3c95f696
+// source-sha256: a4d0820e343a360d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:55";
+const BUILD_DATE = "2026-10-27 01:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16521,7 +16521,16 @@ const MarketItemDetail = ({
     style: {
       overflowWrap: 'anywhere'
     }
-  }, String(m.name || '').replace(/のアイコン$/, '')))))), item.frameCondition && React.createElement("div", {
+  }, String(m.name || '').replace(/のアイコン$/, '')))))), item.giftHow && React.createElement("div", {
+    "data-market-frame-gift": true,
+    className: "mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black"
+  }, React.createElement("div", {
+    className: "text-amber-300 leading-snug",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`手に入れ方：${item.giftHow}`)), React.createElement("div", {
+    className: "mt-1 text-[11px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('マーケットでは買えません。プレゼントで届きます'))), item.frameCondition && React.createElement("div", {
     "data-market-frame-condition": true,
     className: "mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black"
   }, React.createElement("div", {
@@ -16546,7 +16555,7 @@ const MarketItemDetail = ({
     className: "text-slate-400"
   }, "値段"), React.createElement("span", {
     className: `font-mono ${meta.text}`
-  }, marketPriceText(item)))), React.createElement("div", {
+  }, item.giftOnly ? 'プレゼント' : marketPriceText(item)))), React.createElement("div", {
     className: "mt-3"
   }, React.createElement(MarketModalClose, {
     onClick: onClose
@@ -30694,8 +30703,9 @@ const RhythmLandscapeHint = ({
   className = ''
 }) => React.createElement("p", {
   "data-rhythm-landscape-hint": true,
-  className: `hidden portrait:block rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold leading-relaxed text-cyan-100 ${className}`
-}, "📱 横画面にも対応しています。端末を横にすると、曲の一覧と選んだ曲を左右に並べて見られます。曲えらびの「🔄 横」ボタンからも切り替えられます。");
+  className: `hidden portrait:block rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold leading-relaxed text-cyan-100 ${className}`,
+  style: JA_WRAP_STYLE
+}, jaWrap('📱 横画面にも対応しています。端末を横にすると、曲の一覧と選んだ曲を左右に並べて見られます。曲えらびの「🔄 横」ボタンからも切り替えられます。'));
 const screenOrientationApi = () => {
   if (typeof window === 'undefined') return null;
   const o = window.screen && window.screen.orientation;
@@ -31291,7 +31301,7 @@ const RhythmOptions = ({
       set(key, id);
       if (onPick) onPick(id);
     },
-    className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
+    className: `break-keep border-r border-white/10 ${items.length >= 5 ? 'px-0 tracking-tight' : 'px-1'} text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, text)));
   const hellSegments = (name, items) => React.createElement("div", {
     className: `grid ${items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
@@ -31322,8 +31332,9 @@ const RhythmOptions = ({
   }, React.createElement("summary", {
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
   }, "▸ 詳しく"), React.createElement("p", {
-    className: `mt-1 ${note}`
-  }, description)));
+    className: `mt-1 ${note}`,
+    style: JA_WRAP_STYLE
+  }, typeof description === 'string' ? jaWrap(description) : description)));
   const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 gap-2' : 'grid-cols-2'}`;
   const previewBgm = async () => {
     previewRef.current?.stop();
@@ -34633,10 +34644,12 @@ const RhythmMonsterNoteGuide = () => {
     "aria-hidden": "true",
     className: "text-[11px] text-amber-200/80"
   }, "詳しく ▼")), React.createElement("p", {
-    className: "mt-2 text-[11px] font-bold leading-relaxed text-amber-50/90"
-  }, "ここで設定したマスモンは、曲の途中で金色の「モンスターノーツ」になって流れてきます。 ノーツの真ん中には、そのマスモンの染色を反映した絵が出ます。"), React.createElement("ul", {
-    className: "mt-2 space-y-1 text-[11px] font-bold leading-relaxed text-amber-50/90"
-  }, React.createElement("li", null, "・設定した順に、", React.createElement("b", null, "1体につき1回・最大", RHYTHM_MONSTER_SLOT_MAX, "回"), "出てきます。"), React.createElement("li", null, "・出てくるのは曲のだいたい ", ratios.join(' / '), " あたりです（曲の切れ目に合わせるので前後します）。"), React.createElement("li", null, "・", React.createElement("b", null, RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')), " で取ると、そのマスモンの能力が出ます。GOOD・BAD・MISSでは出ません。"), React.createElement("li", null, "・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。"), React.createElement("li", null, "・いまはTAPのノーツだけがモンスターノーツになります。"))), React.createElement("details", {
+    className: "mt-2 text-[11px] font-bold leading-relaxed text-amber-50/90",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ここで設定したマスモンは、曲の途中で金色の「モンスターノーツ」になって流れてきます。ノーツの真ん中には、そのマスモンの染色を反映した絵が出ます。')), React.createElement("ul", {
+    className: "mt-2 space-y-1 text-[11px] font-bold leading-relaxed text-amber-50/90",
+    style: JA_WRAP_STYLE
+  }, React.createElement("li", null, jaWrapParts('・設定した順に、', React.createElement("b", null, jaWrap(`1体につき1回・最大${RHYTHM_MONSTER_SLOT_MAX}回`)), '出てきます。')), React.createElement("li", null, jaWrap(`・出てくるのは曲のだいたい ${ratios.join(' / ')} あたりです（曲の切れ目に合わせるので前後します）。`)), React.createElement("li", null, jaWrapParts('・', React.createElement("b", null, RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')), ' で取ると、そのマスモンの能力が出ます。GOOD・BAD・MISSでは出ません。')), React.createElement("li", null, jaWrap('・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。')), React.createElement("li", null, jaWrap('・いまはTAPのノーツだけがモンスターノーツになります。')))), React.createElement("details", {
     className: "rounded-2xl border border-white/15 bg-slate-900/70 p-4"
   }, React.createElement("summary", {
     className: "flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-black text-white"
@@ -34644,10 +34657,11 @@ const RhythmMonsterNoteGuide = () => {
     "aria-hidden": "true",
     className: "text-[11px] text-slate-400"
   }, "詳しく ▼")), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "能力は", React.createElement("b", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrapParts('能力は', React.createElement("b", {
     className: "text-slate-200"
-  }, "主血統"), "で決まります。副血統では変わりません。育成・染色でも変わりません。"), React.createElement("ul", {
+  }, "主血統"), 'で決まります。副血統では変わりません。育成・染色でも変わりません。')), React.createElement("ul", {
     "data-rhythm-ability-table": true,
     className: "mt-2 space-y-2"
   }, rhythmAbilityRows().map(({
@@ -34667,10 +34681,12 @@ const RhythmMonsterNoteGuide = () => {
   }, ability.name)), React.createElement("p", {
     className: "mt-1.5 text-[11px] font-bold leading-relaxed"
   }, helpWrap(rhythmAbilityEffectText(ability))), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
+    className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80",
+    style: JA_WRAP_STYLE
   }, "主血統: ", lineages.join(' / '))))), React.createElement("p", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもMARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもMARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 いたずらのあいだは、BAD・MISSでもライフが減らず、コンボも切れません（判定そのものは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。'))));
 };
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
@@ -34705,7 +34721,8 @@ const RhythmMonsterSlotsPanel = ({
     className: "shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200"
   }, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "体")), React.createElement("ol", {
     "data-rhythm-monster-steps": true,
-    className: "mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px] font-black leading-snug text-fuchsia-50/90"
+    className: "mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px] font-black leading-snug text-fuchsia-50/90",
+    style: JA_WRAP_STYLE
   }, React.createElement("li", {
     className: "rounded-lg border border-fuchsia-300/25 bg-slate-950/50 px-1.5 py-2"
   }, React.createElement("span", {
@@ -34714,13 +34731,14 @@ const RhythmMonsterSlotsPanel = ({
     className: "rounded-lg border border-amber-300/30 bg-slate-950/50 px-1.5 py-2"
   }, React.createElement("span", {
     className: "block text-base leading-none"
-  }, "🌟"), "曲の途中で", React.createElement("br", null), "金色のノーツに"), React.createElement("li", {
+  }, "🌟"), "曲の途中で", React.createElement("br", null), jaWrap('金色のノーツに')), React.createElement("li", {
     className: "rounded-lg border border-emerald-300/30 bg-slate-950/50 px-1.5 py-2"
   }, React.createElement("span", {
     className: "block text-base leading-none"
   }, "✨"), RHYTHM_MONSTER_ABILITY_JUDGMENTS[RHYTHM_MONSTER_ABILITY_JUDGMENTS.length - 1], "以上で", React.createElement("br", null), "取ると能力")), React.createElement("p", {
-    className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80"
-  }, "上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。同じ能力は", RHYTHM_MONSTER_SAME_ABILITY_MAX, "体までです。", RHYTHM_MONSTER_SLOT_MAX, "体そろえる必要はなく、1〜3体でも遊べます。"), React.createElement("ol", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。同じ能力は${RHYTHM_MONSTER_SAME_ABILITY_MAX}体までです。${RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。`)), React.createElement("ol", {
     className: "mt-3 space-y-2"
   }, Array.from({
     length: RHYTHM_MONSTER_SLOT_MAX
@@ -40878,6 +40896,114 @@ const DebugMenuRow = ({
 }, "保存")), desc && React.createElement("small", {
   className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
 }, desc));
+const DEBUG_MENU_OPEN_KEY = 'mh_debug_menu_open_v1';
+const debugMenuOpenRead = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(DEBUG_MENU_OPEN_KEY) || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+  } catch (e) {
+    return [];
+  }
+};
+const debugMenuOpenWrite = (id, open) => {
+  try {
+    const set = new Set(debugMenuOpenRead());
+    if (open) set.add(id);else set.delete(id);
+    localStorage.setItem(DEBUG_MENU_OPEN_KEY, JSON.stringify([...set].slice(-40)));
+  } catch (e) {}
+};
+let debugMenuFiltering = false;
+const DebugMenuGroup = ({
+  id,
+  icon = '',
+  title,
+  desc = '',
+  open = false,
+  tone = 'slate',
+  children
+}) => {
+  const [startOpen] = useState(() => open || debugMenuOpenRead().includes(id));
+  const toneClass = tone === 'pin' ? 'border-amber-400/60 bg-amber-950/25' : tone === 'trial' ? 'border-lime-400/50 bg-lime-950/20' : 'border-white/10 bg-slate-900/70';
+  return React.createElement("details", {
+    "data-debug-group": id,
+    open: startOpen,
+    onToggle: e => {
+      if (!open && !debugMenuFiltering) debugMenuOpenWrite(id, e.currentTarget.open);
+    },
+    className: `rounded-2xl border ${toneClass}`
+  }, React.createElement("summary", {
+    className: "flex min-h-[52px] cursor-pointer select-none items-center gap-2 px-3 py-2"
+  }, icon && React.createElement("span", {
+    className: "shrink-0 text-[16px]",
+    "aria-hidden": "true"
+  }, icon), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black leading-tight text-white"
+  }, title), desc && React.createElement("small", {
+    className: "mt-0.5 block text-[9px] font-bold leading-snug text-slate-400"
+  }, desc))), React.createElement("div", {
+    className: "space-y-2 px-3 pb-3"
+  }, children));
+};
+const debugMenuApplyFilter = (root, query) => {
+  if (!root) return 0;
+  const q = String(query || '').trim().toLowerCase();
+  const remembered = debugMenuOpenRead();
+  debugMenuFiltering = !!q;
+  let hits = 0;
+  root.querySelectorAll('[data-debug-group]').forEach(group => {
+    const items = [...group.querySelectorAll(':scope > div button, :scope > div [data-debug-trial]')].filter(el => !el.closest('[data-debug-trial]') || el.matches('[data-debug-trial]'));
+    let groupHits = 0;
+    items.forEach(el => {
+      const ok = !q || (el.innerText || el.textContent || '').toLowerCase().includes(q);
+      el.hidden = !ok;
+      if (ok) groupHits += 1;
+    });
+    group.querySelectorAll(':scope > div details').forEach(d => {
+      const any = [...d.querySelectorAll('button')].some(b => !b.hidden);
+      d.hidden = !!q && !any;
+      if (q && any) d.open = true;
+    });
+    group.hidden = !!q && groupHits === 0;
+    if (q) group.open = groupHits > 0;else group.open = group.dataset.debugGroup === 'pinned' || remembered.includes(group.dataset.debugGroup);
+    hits += groupHits;
+  });
+  return hits;
+};
+const DebugMenuSearch = ({
+  rootRef
+}) => {
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState(null);
+  useEffect(() => {
+    const n = debugMenuApplyFilter(rootRef.current, query);
+    setHits(query.trim() ? n : null);
+  }, [query]);
+  return React.createElement("div", {
+    className: "mb-2 shrink-0"
+  }, React.createElement("label", {
+    className: "flex min-h-[44px] items-center gap-2 rounded-2xl border border-white/15 bg-slate-900 px-3"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[14px]"
+  }, "🔎"), React.createElement("input", {
+    "data-debug-menu-search": true,
+    type: "search",
+    value: query,
+    onChange: e => setQuery(e.target.value),
+    placeholder: "名前で探す(例: 染色・ジャック・未読)",
+    className: "min-w-0 flex-1 bg-transparent text-[13px] font-bold text-white outline-none placeholder:text-slate-500"
+  }), query && React.createElement("button", {
+    type: "button",
+    "data-debug-menu-search-clear": true,
+    onClick: () => setQuery(''),
+    className: "shrink-0 rounded-full bg-slate-700 px-2 py-1 text-[10px] font-black text-slate-100"
+  }, "消す")), hits !== null && React.createElement("p", {
+    "data-debug-menu-search-hits": true,
+    className: "mt-1 text-[10px] font-bold text-slate-400"
+  }, hits ? `${hits}件 見つかりました` : '見つかりませんでした'));
+};
 const TACTICS_START_GUTS_RATE = 0.5;
 const tacticsSafeInt = (value, fallback = 0) => {
   const n = Math.floor(Number(value));
@@ -50566,7 +50692,10 @@ const ScreenHead = ({
 }, React.createElement("h2", {
   className: `flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`,
   style: accentStyle || undefined
-}, icon, title), note && React.createElement("p", {
+}, icon, wrapTitle && typeof title === 'string' ? React.createElement("span", {
+  className: "min-w-0",
+  style: JA_WRAP_STYLE
+}, jaWrap(title)) : title), note && React.createElement("p", {
   className: "mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400",
   style: typeof note === 'string' ? JA_LABEL_STYLE : undefined
 }, typeof note === 'string' ? jaWrap(note) : note)), right && React.createElement("div", {
@@ -50795,7 +50924,7 @@ const jaWrapPoints = text => {
       const prev = segs[i - 1],
         g = groups[groups.length - 1],
         cur = g.parts.join('');
-      const hard = inKao(pos) || inKeepWord(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg) || /^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)) || /[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg));
+      const hard = inKao(pos) || inKeepWord(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg) || /^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)) || /[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg) || /[0-9０-９]$/.test(prev) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連万千百年月時%％]|時間|ms|px|P|Lv|コンボ|ノーツ|ビートP)/.test(seg) || /[0-9０-９][回人体個枚曲周倍つ番件位本段連]$/.test(cur) && /^目/.test(seg) || /(?:Lv\.?|LV\.?|×|x|約|第|全|各|計|最大|最高)$/.test(cur) && /^[0-9０-９]/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[ァ-ヶ]/.test(seg) && !/[「『][^」』]*$/.test(cur) && (cur.match(/[ァ-ヶー]+$/) || [''])[0].length + (seg.match(/^[ァ-ヶー]+/) || [''])[0].length <= 7);
       const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
@@ -50914,6 +51043,9 @@ const jaWrap = text => {
     key: i
   }, i > 0 && !/^\s/.test(seg) && React.createElement("wbr", null), jaWrapPieces(seg).map(([t, kp], k) => kp ? keep(t, k) : t)));
 };
+const jaWrapParts = (...parts) => parts.map((p, i) => React.createElement(React.Fragment, {
+  key: i
+}, typeof p === 'string' ? jaWrap(p) : p));
 const JA_WRAP_STYLE = Object.freeze({
   wordBreak: 'keep-all',
   overflowWrap: 'anywhere',
@@ -53102,13 +53234,14 @@ function BreederMarketScreen({
   const hasDiscIconCards = breederPointItems.some(item => /_disc_icon$/.test(item.id));
   const giftFrameItems = (typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : []).filter(frame => profileFrameGift(frame)).map(frame => ({
     id: frame.id,
-    name: frame.name,
+    name: `${frame.name}のフレーム`,
     emoji: '🖼️',
     type: 'frame',
     currency: 'breederPoint',
     cost: 0,
     desc: frame.desc || '',
-    giftOnly: true
+    giftOnly: true,
+    giftHow: PROFILE_FRAME_GIFT_LABELS[profileFrameGift(frame)] || 'プレゼントで届きます'
   }));
   const breederFrameItems = [...marketItems.filter(item => item.type === 'frame'), ...giftFrameItems];
   const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
@@ -53284,7 +53417,7 @@ function BreederMarketScreen({
       item: item,
       owned: owned,
       comingSoon: comingSoon || frameLocked || giftLocked,
-      comingSoonLabel: giftLocked ? PROFILE_FRAME_GIFT_LABELS[profileFrameGift(profileFrameById(item.id))] || 'プレゼントで届きます' : frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
+      comingSoonLabel: giftLocked ? String(item.giftHow || 'プレゼントで届きます').split(/(?<=を)/) : frameLocked ? profileFrameConditionShort(profileFrameById(item.id), 'breederPoint') || '条件を達成すると買えます' : undefined,
       canBuy: canBuy,
       onZoom: () => onZoomIcon(item),
       onBuy: () => openSheet({
@@ -53300,6 +53433,9 @@ function BreederMarketScreen({
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
       middle: item.groupMembers ? React.createElement(MarketDetailChip, {
         label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : item.giftOnly ? React.createElement(MarketDetailChip, {
+        label: `${item.name}の手に入れ方を見る`,
         onClick: () => onOpenItemDetail(item)
       }) : item.type === 'frame' && frameCondition ? React.createElement(MarketDetailChip, {
         label: `${item.name}の買える条件を見る`,
@@ -53371,9 +53507,14 @@ function BreederMarketScreen({
     expression: cardShopLine.e,
     compact: true
   }) : React.createElement(AssistantBubble, {
+    key: `market-${marketSection || 'top'}`,
     scene: "market",
     compact: true,
-    condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
+    condition: {
+      breeder: 'shopBreeder',
+      exchange: 'shopExchange',
+      event: 'shopEvent'
+    }[marketSection] || (Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null)
   })), !marketSection && React.createElement("div", {
     "data-market-top": true,
     className: `relative ${SCREEN_LIST_CLASS}`
@@ -56315,20 +56456,23 @@ function RhythmHelpScreen({
     onClick: startRhythmPractice,
     className: "mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950"
   }, "🥁 叩いて練習する"), React.createElement("p", {
-    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-  }, "実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。"), onOpenNoteDex && React.createElement(React.Fragment, null, React.createElement("button", {
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。')), onOpenNoteDex && React.createElement(React.Fragment, null, React.createElement("button", {
     "data-rhythm-demo-note-dex": true,
     onClick: onOpenNoteDex,
     className: "mt-3 min-h-[52px] w-full rounded-2xl border border-amber-300/50 bg-slate-900 text-sm font-black text-amber-100"
   }, "📒 ノーツ図鑑"), React.createElement("p", {
-    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-  }, "ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。")), React.createElement("button", {
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。'))), React.createElement("button", {
     "data-rhythm-demo-help-tutorial": true,
     onClick: startRhythmTutorial,
     className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
   }, "🎓 もう一度チュートリアルを見る"), React.createElement("p", {
-    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-  }, "曲えらびへ戻って、助手が最初から説明します。何度でも見られます。"), React.createElement("div", {
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('曲えらびへ戻って、助手が最初から説明します。何度でも見られます。')), React.createElement("div", {
     "data-rhythm-demo-help-list": true,
     className: "mt-4 space-y-2"
   }, topics.length === 0 ? React.createElement("p", {
@@ -56352,16 +56496,18 @@ function RhythmHelpScreen({
   }, React.createElement("span", {
     className: "shrink-0 text-base leading-none"
   }, x.emoji), React.createElement("span", {
-    className: "min-w-0 flex-1 text-[12px] font-black leading-tight text-white"
-  }, x.title), React.createElement(ChevronRight, {
+    className: "min-w-0 flex-1 text-[12px] font-black leading-tight text-white",
+    style: JA_WRAP_STYLE
+  }, jaWrap(x.title)), React.createElement(ChevronRight, {
     size: 16,
     className: "shrink-0 text-slate-500"
   })))))), topic && React.createElement("div", {
     "data-rhythm-demo-help-topic": topic.id,
     className: "space-y-3.5 pb-2"
   }, React.createElement("p", {
-    className: "text-[10px] font-bold leading-relaxed text-cyan-200"
-  }, topic.assistant), renderHelpBlocks(topic.blocks, accent), React.createElement("div", {
+    className: "text-[10px] font-bold leading-relaxed text-cyan-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(topic.assistant)), renderHelpBlocks(topic.blocks, accent), React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, React.createElement("button", {
     "data-rhythm-demo-help-list-back": true,
@@ -56740,8 +56886,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "総合ランキングはただいま準備中です。もうしばらくお待ちください。"), total.status === 'error' && React.createElement("p", {
     "data-rhythm-total-error": true,
-    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-  }, "読み込めませんでした。電波の良い場所で「更新」をお試しください。"), total.status === 'ready' && React.createElement(React.Fragment, null, total.self && total.self.songCount < totalSongCount && React.createElement("button", {
+    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')), total.status === 'ready' && React.createElement(React.Fragment, null, total.self && total.self.songCount < totalSongCount && React.createElement("button", {
     "data-rhythm-total-remaining": true,
     onClick: onGoToSongSelect,
     className: "mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
@@ -56789,8 +56936,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "いま開催しているイベントはありません。次の開催をお待ちください。"), event.status === 'error' && React.createElement("p", {
     "data-rhythm-event-error": true,
-    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-  }, "読み込めませんでした。電波の良い場所で「更新」をお試しください。"), event.status === 'ready' && eventDefinition && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')), event.status === 'ready' && eventDefinition && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-rhythm-event-window": true,
     className: "mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2"
   }, React.createElement("div", {
@@ -56830,8 +56978,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), eventBoard.status === 'error' && React.createElement("p", {
     "data-rhythm-event-board-error": true,
-    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-  }, "この部門を読み込めませんでした。「更新」をお試しください。"), eventBoard.status === 'ready' && React.createElement(React.Fragment, null, !eventBoard.self && React.createElement("div", {
+    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('この部門を読み込めませんでした。「更新」をお試しください。')), eventBoard.status === 'ready' && React.createElement(React.Fragment, null, !eventBoard.self && React.createElement("div", {
     className: "mb-3"
   }, React.createElement("p", {
     "data-rhythm-event-self-empty": true,
@@ -56869,8 +57018,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), songTab && rhythmRanking.status === 'error' && React.createElement("p", {
     "data-rhythm-ranking-error": true,
-    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-  }, "読み込めませんでした。電波の良い場所で「更新」をお試しください。"), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && React.createElement("p", {
+    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && React.createElement("p", {
     "data-rhythm-ranking-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "まだ記録がありません。最初の1件になってみましょう。"), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && React.createElement("ol", {
@@ -63455,7 +63605,8 @@ function PickSlotScreen({
     }), React.createElement("div", {
       className: "shrink-0 flex flex-col items-center"
     }, React.createElement("div", {
-      className: "relative mb-2 flex items-center justify-center"
+      "data-pick-hero": true,
+      className: "mh-phase-bounce-room relative mb-2 flex items-center justify-center"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "mh-ph-rune"
@@ -76620,10 +76771,11 @@ function RhythmMultiChatBubble({
 function RhythmMultiLobbyCount() {
   const [count, setCount] = React.useState(null);
   React.useEffect(() => RHYTHM_MULTI.watchLobby('free', people => setCount(people)), []);
-  return React.createElement("small", {
-    "data-rhythm-multi-lobby-count": true,
-    className: "block truncate text-[10px] font-black leading-tight text-slate-950/80"
-  }, count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません');
+  return (React.createElement("small", {
+      "data-rhythm-multi-lobby-count": true,
+      className: "block truncate pr-2.5 text-[10px] font-black leading-tight text-slate-950/80 max-[359px]:text-[8.5px]"
+    }, count == null ? '待っている人を数えています…' : count > 0 ? `いま${count}人が待っています` : 'いま待っている人はいません')
+  );
 }
 function RhythmMultiAloneHint({
   alone,
@@ -77395,6 +77547,7 @@ function ModeSelectAssistantPanel({
     "data-rhythm-mode-assistant-line": true,
     className: `mhms-bubble ${showArt ? '' : 'mhms-bubble-alone'} relative z-10 m-1.5 shrink-0 rounded-2xl border-2 bg-slate-900/95 px-3 py-1.5 text-[12px] font-bold leading-snug text-white shadow-lg landscape:text-[11px]`,
     style: {
+      ...JA_WRAP_STYLE,
       borderColor: assistant.accent
     }
   }, React.createElement("b", {
@@ -77402,7 +77555,7 @@ function ModeSelectAssistantPanel({
     style: {
       color: assistant.accent
     }
-  }, assistant.name), assistant.text));
+  }, assistant.name), jaWrap(assistant.text)));
 }
 const RHYTHM_BUDDY_LEAVE_GUARD_MS = 500;
 function RhythmQuickRunPill({
@@ -80575,8 +80728,9 @@ function MasuBeatScreen({
     tickets: tickets,
     className: "text-slate-200"
   }), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。")), !detail && React.createElement("div", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('モンヒロビートのマルチで、部屋の「マスモンを呼ぶ」から呼んだマスモンが、一緒に遊ぶほどビートLvが上がって上手になります。バトルの絆や能力とは別に育ちます。'))), !detail && React.createElement("div", {
     className: "mb-2 shrink-0"
   }, listControls.bar), React.createElement("div", {
     className: `w-full ${SCREEN_LIST_CLASS}`
@@ -90160,6 +90314,7 @@ const CardBattleBoard = ({
     const tm = t ? st.players[t.p].mons[t.m] : null;
     return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
+  const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const stageRef = useRef(null);
   const [stageFit, setStageFit] = useState(0);
@@ -90438,7 +90593,7 @@ const CardBattleBoard = ({
     key: bubble.key,
     "data-card-bubble": true,
     "data-card-bubble-face": bubble.face || face,
-    className: `${bigCard ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
+    className: `${bigCard || turnBanner ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -90520,9 +90675,25 @@ const CardBattleBoard = ({
     "data-card-log": true,
     className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
-  }, pendingText && React.createElement("div", {
+  }, pendingText && (guardAtk ? React.createElement("button", _extends({
+    type: "button",
+    "data-card-guard-attack": guardAtk.no
+  }, press(guardAtk.no, () => setDetail(guardAtk.no)), {
+    className: "flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]"
+  }), stageFit < 3 && React.createElement("img", {
+    src: CARD_IMG(guardAtk.img),
+    alt: guardAtk.name,
+    className: `${tiny || stageFit >= 2 ? 'h-[36px]' : 'h-[52px]'} aspect-[5/7] shrink-0 rounded-[4px] object-cover shadow`
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("span", {
+    className: "block text-rose-200"
+  }, pendingText), guardAtk.text && stageFit < 2 && React.createElement("span", {
+    "data-card-guard-attack-text": true,
+    className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`
+  }, guardAtk.text))) : React.createElement("div", {
     className: "text-rose-200"
-  }, pendingText), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
+  }, pendingText)), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
   }, l.text)))), React.createElement("div", {
@@ -97847,7 +98018,8 @@ const debugTrialsOrdered = seen => DEBUG_TRIALS.map((t, i) => ({
   fresh: x.fresh
 }));
 function DebugTrialsPanel({
-  onChange
+  onChange,
+  bare = false
 }) {
   const [, setTick] = useState(0);
   const seen = debugTrialsSeen();
@@ -97863,8 +98035,8 @@ function DebugTrialsPanel({
   };
   return React.createElement("section", {
     "data-debug-trials": true,
-    className: "rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3"
-  }, React.createElement("h3", {
+    className: bare ? '' : 'rounded-2xl border-2 border-lime-400/60 bg-lime-950/30 p-3'
+  }, !bare && React.createElement("h3", {
     className: "text-[12px] font-black text-lime-200"
   }, "🧪 確認待ちの試作", React.createElement("small", {
     className: "ml-1 text-[9px] font-bold text-lime-100/70"
@@ -97921,6 +98093,7 @@ function MonsterHeroGame() {
     setGameStateRaw(next);
   };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false);
+  const debugMenuRootRef = useRef(null);
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
   const [modeInfoId, setModeInfoId] = useState(null);
@@ -124266,40 +124439,18 @@ function MonsterHeroGame() {
     })), React.createElement("h2", {
       className: "text-base font-black text-slate-400 tracking-widest"
     }, "DEBUG MENU")), React.createElement("p", {
-      className: "mb-3 shrink-0 text-[9px] leading-relaxed text-slate-500"
-    }, "用途ごとに畳んであります。見出しを押すと開きます。"), React.createElement("div", {
+      className: "mb-2 shrink-0 text-[9px] leading-relaxed text-slate-500"
+    }, "用途ごとに畳んであります。よく使うものはいちばん上、名前でも探せます。開いた見出しはこの端末に覚えます。"), React.createElement(DebugMenuSearch, {
+      rootRef: debugMenuRootRef
+    }), React.createElement("div", {
+      ref: debugMenuRootRef,
       className: "flex-1 overflow-y-auto mh-scroll space-y-2"
-    }, React.createElement(DebugTrialsPanel, {
-      onChange: trial => {
-        if (/^rhythm_floor3d/.test(trial.id)) setRhythmFloor3dPref(rhythmFloor3dPreference());
-      }
-    }), React.createElement("button", {
-      "data-debug-assistant-chat": true,
-      onClick: () => setAssistantChatOpen(true),
-      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
-    }, "💬 助手とおしゃべり(試す)", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
-    }, "公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います")), React.createElement("button", {
-      "data-debug-assistant-daily-lines": true,
-      onClick: async () => {
-        if (typeof assistantDailyLinesDebugOn !== 'undefined') assistantDailyLinesDebugOn = true;
-        setAssistantDailyLinesDebugMsg('作っています…');
-        const r = await requestAssistantDailyLines(true);
-        const st = typeof assistantDailyLinesState !== 'undefined' ? assistantDailyLinesState : null;
-        const n = st ? Object.values(st.lines).reduce((s, l) => s + l.length, 0) : 0;
-        setAssistantDailyLinesDebugMsg(r === 'ok' ? `${n}個できました。HOMEなどの吹き出しに3回に1回くらいまざります` : '作れませんでした(今までどおりのセリフだけが出ます)');
-      },
-      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
-    }, "🗨️ ふだんの吹き出しを作る(試す)", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
-    }, assistantDailyLinesDebugMsg || '今の助手のひとことを今日のぶんまとめて作り、この起動のあいだ今のセリフにまぜて出します')), React.createElement("details", {
-      className: "rounded-2xl border border-emerald-500/40 bg-emerald-950/20"
-    }, React.createElement("summary", {
-      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-emerald-200"
-    }, "🧬 モンスター", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "新モンスター確認・画像と染色・転生／限界突破／超越の見た目・アイコン調整")), React.createElement("div", {
-      className: "space-y-2 border-t border-emerald-500/30 p-3"
+    }, React.createElement(DebugMenuGroup, {
+      id: "pinned",
+      title: "⭐ よく使う",
+      desc: "新モンスター確認・染色マスク・MFバトルカード・ビート・データの用意・デバッグ戦",
+      open: true,
+      tone: "pin"
     }, React.createElement("button", {
       "data-debug-monster-check": true,
       onClick: () => setGameState('MONSTER_CHECK_DEBUG'),
@@ -124314,16 +124465,42 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "🖌️ 染色マスク編集", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "全ベースモンを選択して直接描画・PNG出力")), React.createElement("button", {
+    }, "全ベースモンを選択して直接描画・PNG出力")), React.createElement(DebugMenuRow, {
+      "data-debug-card-battle": true,
+      icon: "🃏",
+      label: "MFバトルカード",
+      desc: "助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます",
+      tone: "save",
       onClick: () => {
-        setPatternMasuId(null);
-        setPatternSettings(makePatternSettings());
-        setGameState('MASU_PATTERN_DEBUG');
-      },
+        setCardOrigin('debug');
+        setGameState('CARD_TOP');
+      }
+    }), React.createElement("button", {
+      "data-debug-rhythm-mode": true,
+      onClick: openRhythmDebug,
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
-    }, "🎨 マスモン模様カスタムテスト", React.createElement("small", {
+    }, "🎵 モンヒロビート デバッグ", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "模様は保存されません")), React.createElement("button", {
+    }, "曲・難易度・設定・BEST保存基盤を確認")), React.createElement("button", {
+      "data-debug-data-setup": true,
+      onClick: () => setGameState('DEBUG_DATA_SETUP'),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "🧰 データを用意する", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す")), React.createElement(DebugMenuRow, {
+      "data-debug-battle-setup": true,
+      icon: "🛠",
+      label: "デバッグ戦",
+      desc: "モード・難易度・敵を選んで戦う。結果は保存されません",
+      onClick: () => {
+        selectDebugBattle(debugBattleModeId, debugBattleDifficultyId);
+        setGameState('DEBUG_BATTLE_SETUP');
+      }
+    })), React.createElement(DebugMenuGroup, {
+      id: "monster-look",
+      title: "🧬 モンスターの見た目",
+      desc: "育成マーク(転生・限界突破・超越)・模様・プロフィールの顔アイコン"
+    }, React.createElement("button", {
       "data-debug-transcend": true,
       onClick: () => {
         setTranscendDebugId(null);
@@ -124334,18 +124511,69 @@ function MonsterHeroGame() {
     }, "⭐ 育成マークの見た目", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "転生のオーラ・限界突破の★・超越マークを1画面で見比べる／超越を試す準備もここ")), React.createElement("button", {
+      onClick: () => {
+        setPatternMasuId(null);
+        setPatternSettings(makePatternSettings());
+        setGameState('MASU_PATTERN_DEBUG');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "🎨 マスモン模様カスタムテスト", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "模様は保存されません")), React.createElement("button", {
       onClick: () => setGameState('BREEDER_ICON_DEBUG'),
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "🙂 プロフィールの見た目", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "顔アイコンの拡大・位置を決めてコピー／フレームとの相性もここで見る")))), React.createElement("details", {
-      className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20"
-    }, React.createElement("summary", {
-      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200"
-    }, "⚔️ バトル", React.createElement("small", {
+    }, "顔アイコンの拡大・位置を決めてコピー／フレームとの相性もここで見る"))), React.createElement(DebugMenuGroup, {
+      id: "rhythm",
+      title: "🎵 モンヒロビート・お話",
+      desc: "体験版・全ストーリー・イベントの会話と告知の再生"
+    }, React.createElement("button", {
+      "data-debug-rhythm-demo": true,
+      onClick: openRhythmDemo,
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "🎼 モンヒロビート 体験版（正式導線）", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "モード選択・デバッグ戦・種族チャレンジ・ダンジョンRPG・チュートリアル")), React.createElement("div", {
-      className: "space-y-2 border-t border-fuchsia-500/30 p-3"
+    }, "公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度")), React.createElement("button", {
+      "data-debug-story-list": true,
+      onClick: () => setShowDebugStoryList(true),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "📖 全ストーリーを確認", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-fuchsia-200/80"
+    }, "公開前・未閲覧のものも含め、すべてのイベント回想を日付順に開けます(見たことにはしません)")), React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
+      "data-debug-rhythm-event-intro": true,
+      onClick: debugPlayRhythmEventIntro,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "🏆 イベント開催を再生（会話→告知）"), React.createElement("button", {
+      "data-debug-rhythm-event-story": true,
+      onClick: debugPlayRhythmEventStory,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "イベント会話だけ再生"), React.createElement("button", {
+      "data-debug-rhythm-event-thanks": true,
+      onClick: debugPlayRhythmEventThanks,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "閉幕とお礼の会話を再生"), React.createElement("button", {
+      "data-debug-rhythm-event-thanks-symphony": true,
+      onClick: debugPlayRhythmEventThanksSymphony,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "閉幕とお礼(第2回)を再生"), React.createElement("button", {
+      "data-debug-rhythm-event-notice": true,
+      onClick: debugPlayRhythmEventNotice,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "イベント告知だけ再生"), React.createElement("button", {
+      "data-debug-rhythm-event-reward": true,
+      onClick: debugPlayRhythmEventReward,
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "入賞の受け取り画面を見る"), React.createElement("button", {
+      "data-debug-rhythm-event-reset": true,
+      onClick: debugResetRhythmEventSeen,
+      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "イベントを未読へ戻す"))), React.createElement(DebugMenuGroup, {
+      id: "battle",
+      title: "⚔️ バトル",
+      desc: "モードえらび・すべて解放・種族チャレンジ・RPGの試作・チュートリアルと旧画面"
     }, React.createElement("button", {
       "data-debug-battle-mode": true,
       onClick: () => {
@@ -124380,48 +124608,6 @@ function MonsterHeroGame() {
     }, "🔓 すべて解放してバトル", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "全モンスター・全アシストカード・全難易度を選べます・解放は保存されず、記録・ランキング・報酬もつきません")), React.createElement("button", {
-      type: "button",
-      "data-battle-card-art-toggle": true,
-      "aria-pressed": battleCardArtDebug,
-      onClick: () => setBattleCardArtDebug(BATTLE_CARD_ART_DEBUG.set(!battleCardArtDebug)),
-      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battleCardArtDebug ? 'border-2 border-fuchsia-300 bg-fuchsia-500 text-slate-900' : 'border-2 border-fuchsia-400/40 bg-fuchsia-950/30 text-fuchsia-100'}`
-    }, "🃏 行動カードの絵(試作): ", battleCardArtDebug ? '新しい絵' : '今のカード', React.createElement("span", {
-      className: "block text-[10px] font-bold opacity-80"
-    }, "押すと切り替わります。タクティクスの手札に出ます(この端末だけ)")), React.createElement("button", {
-      type: "button",
-      "data-battle-perf-toggle": true,
-      "aria-pressed": battlePerfOn,
-      onClick: () => setBattlePerfOn(BATTLE_PERF.setEnabled(!battlePerfOn)),
-      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battlePerfOn ? 'border-2 border-amber-300 bg-amber-500 text-slate-900' : 'border-2 border-amber-400/40 bg-amber-950/30 text-amber-100'}`
-    }, "📈 バトルの性能計測：", battlePerfOn ? 'ON' : 'OFF', React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "タクティクス新画面の左上に、コマの速さ・かくつき・自動で軽くした記録を出します（次のバトルから）")), React.createElement(DebugMenuRow, {
-      "data-debug-battle-setup": true,
-      icon: "🛠",
-      label: "デバッグ戦",
-      desc: "モード・難易度・敵を選んで戦う。結果は保存されません",
-      onClick: () => {
-        selectDebugBattle(debugBattleModeId, debugBattleDifficultyId);
-        setGameState('DEBUG_BATTLE_SETUP');
-      }
-    }), React.createElement(DebugMenuRow, {
-      "data-debug-raid-jack": true,
-      icon: "🎃",
-      label: "ジャック確認",
-      desc: "定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります",
-      tone: "save",
-      onClick: () => setGameState('RAID_JACK_DEBUG')
-    }), React.createElement(DebugMenuRow, {
-      "data-debug-card-battle": true,
-      icon: "🃏",
-      label: "MFバトルカード",
-      desc: "助手と対戦・デッキ編成・パック(作っている途中)。カードバトルの新しい保存キー(mh_card_*)だけを書きます",
-      tone: "save",
-      onClick: () => {
-        setCardOrigin('debug');
-        setGameState('CARD_TOP');
-      }
-    }), React.createElement("button", {
       "data-debug-species-challenge": true,
       onClick: async () => {
         await loadSpeciesChallengeProgress();
@@ -124481,71 +124667,30 @@ function MonsterHeroGame() {
     }, "旧バトルチュートリアルを見る（旧バトル画面・記録は残りません）"), React.createElement("button", {
       onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'tactics'),
       className: "min-h-[50px] rounded-xl border border-orange-400/50 bg-orange-950/40 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "タクティクスのれんしゅうを見る（公開前・記録は残りません）"))))), React.createElement("details", {
-      className: "rounded-2xl border border-indigo-400/40 bg-indigo-950/30"
-    }, React.createElement("summary", {
-      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-cyan-200"
-    }, "🎵 モンヒロビート", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "音ゲーデバッグ・体験版の導線・イベントの会話と告知")), React.createElement("div", {
-      className: "space-y-2 border-t border-indigo-400/30 p-3"
+    }, "タクティクスのれんしゅうを見る（公開前・記録は残りません）")))), React.createElement(DebugMenuGroup, {
+      id: "assistant",
+      title: "💬 助手",
+      desc: "おしゃべり・吹き出し・初回プレイ・セリフと表情・仲良し度・お知らせ・ワンポイント"
     }, React.createElement("button", {
-      "data-debug-rhythm-mode": true,
-      onClick: openRhythmDebug,
-      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
-    }, "🎵 モンヒロビート デバッグ", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "曲・難易度・設定・BEST保存基盤を確認")), React.createElement("button", {
-      "data-debug-rhythm-demo": true,
-      onClick: openRhythmDemo,
-      className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
-    }, "🎼 モンヒロビート 体験版（正式導線）", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度")), React.createElement("button", {
-      "data-debug-story-list": true,
-      onClick: () => setShowDebugStoryList(true),
-      className: "w-full min-h-[58px] rounded-2xl border-2 border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
-    }, "📖 全ストーリーを確認", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-fuchsia-200/80"
-    }, "公開前・未閲覧のものも含め、すべてのイベント回想を日付順に開けます(見たことにはしません)")), React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
-    }, React.createElement("button", {
-      "data-debug-rhythm-event-intro": true,
-      onClick: debugPlayRhythmEventIntro,
-      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "🏆 イベント開催を再生（会話→告知）"), React.createElement("button", {
-      "data-debug-rhythm-event-story": true,
-      onClick: debugPlayRhythmEventStory,
-      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "イベント会話だけ再生"), React.createElement("button", {
-      "data-debug-rhythm-event-thanks": true,
-      onClick: debugPlayRhythmEventThanks,
-      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "閉幕とお礼の会話を再生"), React.createElement("button", {
-      "data-debug-rhythm-event-thanks-symphony": true,
-      onClick: debugPlayRhythmEventThanksSymphony,
-      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "閉幕とお礼(第2回)を再生"), React.createElement("button", {
-      "data-debug-rhythm-event-notice": true,
-      onClick: debugPlayRhythmEventNotice,
-      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "イベント告知だけ再生"), React.createElement("button", {
-      "data-debug-rhythm-event-reward": true,
-      onClick: debugPlayRhythmEventReward,
-      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "入賞の受け取り画面を見る"), React.createElement("button", {
-      "data-debug-rhythm-event-reset": true,
-      onClick: debugResetRhythmEventSeen,
-      className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 text-cyan-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "イベントを未読へ戻す")))), React.createElement("details", {
-      className: "rounded-2xl border border-pink-500/50 bg-pink-950/25"
-    }, React.createElement("summary", {
-      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-pink-200"
-    }, "💖 みゅあデバッグ", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "初回プレイの再生・セリフと表情・親密度・アップデート通知・ワンポイント案内")), React.createElement("div", {
-      className: "space-y-2 border-t border-pink-500/30 p-3"
-    }, React.createElement("div", {
+      "data-debug-assistant-chat": true,
+      onClick: () => setAssistantChatOpen(true),
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "💬 助手とおしゃべり(試す)", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
+    }, "公開前の会話の窓を、いま選んでいる助手で開きます。本物の返事が来るので、1回ごとに回数を使います")), React.createElement("button", {
+      "data-debug-assistant-daily-lines": true,
+      onClick: async () => {
+        if (typeof assistantDailyLinesDebugOn !== 'undefined') assistantDailyLinesDebugOn = true;
+        setAssistantDailyLinesDebugMsg('作っています…');
+        const r = await requestAssistantDailyLines(true);
+        const st = typeof assistantDailyLinesState !== 'undefined' ? assistantDailyLinesState : null;
+        const n = st ? Object.values(st.lines).reduce((s, l) => s + l.length, 0) : 0;
+        setAssistantDailyLinesDebugMsg(r === 'ok' ? `${n}個できました。HOMEなどの吹き出しに3回に1回くらいまざります` : '作れませんでした(今までどおりのセリフだけが出ます)');
+      },
+      className: "w-full min-h-[58px] rounded-2xl border-2 border-pink-400/50 bg-pink-950/40 text-pink-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
+    }, "🗨️ ふだんの吹き出しを作る(試す)", React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed text-pink-200/80"
+    }, assistantDailyLinesDebugMsg || '今の助手のひとことを今日のぶんまとめて作り、この起動のあいだ今のセリフにまぜて出します')), React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, React.createElement("button", {
       "data-debug-onboarding-preview": true,
@@ -124618,30 +124763,16 @@ function MonsterHeroGame() {
         window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
       },
       className: "min-h-[50px] rounded-xl border border-rose-400/60 bg-rose-950/50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "初回状態へ戻す（セーブは消えません）"))), React.createElement("details", {
-      className: "rounded-2xl border border-slate-500/40 bg-slate-900/50"
-    }, React.createElement("summary", {
-      className: "cursor-pointer select-none px-3 py-3 text-[11px] font-black text-slate-200"
-    }, "🛠 その他", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "修行テスト・画面エラーの受け止め")), React.createElement("div", {
-      className: "space-y-2 border-t border-slate-500/30 p-3"
+    }, "初回状態へ戻す（セーブは消えません）")), React.createElement(DebugMenuGroup, {
+      id: "save",
+      title: "💾 保存データ・端末",
+      desc: "修行テスト・事前ダウンロード(OFFにすると端末の曲と絵を消す)"
     }, React.createElement("button", {
-      "data-debug-data-setup": true,
-      onClick: () => setGameState('DEBUG_DATA_SETUP'),
-      className: "w-full min-h-[58px] rounded-2xl border-2 border-rose-400/60 bg-rose-950/50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
-    }, "🧰 データを用意する", React.createElement("small", {
-      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "ダイヤ・アイテム・テストのマスモンを配る／ログインボーナスとミッションをもう一度出す")), React.createElement("button", {
       onClick: openDebugTraining,
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "🎲 修行テスト", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
     }, "報酬・進行は保存されません")), React.createElement("button", {
-      "data-debug-screen-error": true,
-      onClick: () => setDebugThrowScreenError(true),
-      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
-    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null), React.createElement("button", {
       type: "button",
       "data-asset-cache-toggle": true,
       "aria-pressed": assetCacheOn,
@@ -124649,7 +124780,52 @@ function MonsterHeroGame() {
       className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${assetCacheOn ? 'border-2 border-emerald-300 bg-emerald-500 text-slate-900' : 'border-2 border-emerald-400/40 bg-emerald-950/30 text-emerald-100'}`
     }, "📥 事前ダウンロード：", assetCacheOn ? 'ON' : 'OFF', React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します")))))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
+    }, "設定に「ダウンロード」が出ます。OFFにすると、端末に入れた曲・画像を消します"))), React.createElement(DebugMenuGroup, {
+      id: "online",
+      title: "🌐 イベント・通信",
+      desc: "ジャック(レイド)の定義・期間・端末とサーバーの記録"
+    }, React.createElement(DebugMenuRow, {
+      "data-debug-raid-jack": true,
+      icon: "🎃",
+      label: "ジャック確認",
+      desc: "定義・期間と回数・端末の記録・サーバー(別のイベントID)の確認。端末の記録を書き換える操作があります",
+      tone: "save",
+      onClick: () => setGameState('RAID_JACK_DEBUG')
+    })), React.createElement(DebugMenuGroup, {
+      id: "view",
+      title: "📐 表示の確認",
+      desc: "バトルの性能計測・行動カードの絵(試作)・画面エラーの受け止め"
+    }, React.createElement("button", {
+      type: "button",
+      "data-battle-perf-toggle": true,
+      "aria-pressed": battlePerfOn,
+      onClick: () => setBattlePerfOn(BATTLE_PERF.setEnabled(!battlePerfOn)),
+      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battlePerfOn ? 'border-2 border-amber-300 bg-amber-500 text-slate-900' : 'border-2 border-amber-400/40 bg-amber-950/30 text-amber-100'}`
+    }, "📈 バトルの性能計測：", battlePerfOn ? 'ON' : 'OFF', React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "タクティクス新画面の左上に、コマの速さ・かくつき・自動で軽くした記録を出します（次のバトルから）")), React.createElement("button", {
+      type: "button",
+      "data-battle-card-art-toggle": true,
+      "aria-pressed": battleCardArtDebug,
+      onClick: () => setBattleCardArtDebug(BATTLE_CARD_ART_DEBUG.set(!battleCardArtDebug)),
+      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battleCardArtDebug ? 'border-2 border-fuchsia-300 bg-fuchsia-500 text-slate-900' : 'border-2 border-fuchsia-400/40 bg-fuchsia-950/30 text-fuchsia-100'}`
+    }, "🃏 行動カードの絵(試作): ", battleCardArtDebug ? '新しい絵' : '今のカード', React.createElement("span", {
+      className: "block text-[10px] font-bold opacity-80"
+    }, "押すと切り替わります。タクティクスの手札に出ます(この端末だけ)")), React.createElement("button", {
+      "data-debug-screen-error": true,
+      onClick: () => setDebugThrowScreenError(true),
+      className: "min-h-[50px] rounded-xl border border-pink-400/50 bg-pink-950/40 text-pink-50 px-2 text-center text-[11px] font-black leading-tight active:scale-95"
+    }, "⚠️ 画面エラーの受け止めを試す"), debugThrowScreenError && React.createElement(DebugThrowScreenError, null)), React.createElement(DebugMenuGroup, {
+      id: "trials",
+      title: "🧪 確認待ちの試作",
+      desc: "iPhone で確かめてほしい試作の入/切",
+      tone: "trial"
+    }, React.createElement(DebugTrialsPanel, {
+      bare: true,
+      onChange: trial => {
+        if (/^rhythm_floor3d/.test(trial.id)) setRhythmFloor3dPref(rhythmFloor3dPreference());
+      }
+    })))), gameState === 'RAID_JACK' && React.createElement(RaidJackScreen, {
       initialTier: raidJackReturnTierRef.current,
       onBack: () => {
         raidJackReturnTierRef.current = 0;
@@ -135978,16 +136154,20 @@ const createAnimationStyle = () => {
     .mh-phase { container-type: size; }
     /* .mh-phase-card は min-h-[112px] と一緒に付ける。背の低い器ではその下限だけを外す */
     .mh-phase-gain { font-size: clamp(20px, 7vw, 30px); }
+    /* 配置の画面ではずむ絵の上の余白(絵の高さ96pxの1/4。背の低い器では絵といっしょに小さく。67-screen-pick.jsx) */
+    .mh-phase-bounce-room { padding-top: 24px; }
     /* .mh-phase-mid … SE(667px)くらいから畳むもの(補足の説明文)。絵も一回り小さくする */
     @container (max-height: 720px) {
       .mh-phase-mid { display: none !important; }
       .mh-phase-hero { width: 64px !important; height: 64px !important; margin-bottom: 4px !important; font-size: 44px; }
+      .mh-phase-bounce-room { padding-top: 16px; }
     }
     @container (max-height: 560px) {
       .mh-phase-tall { display: none !important; }
       .mh-phase-card { min-height: 0 !important; }
       .mh-phase-gain { font-size: 18px; }
       .mh-phase-hero { width: 44px !important; height: 44px !important; font-size: 32px; }
+      .mh-phase-bounce-room { padding-top: 11px; }
       /* トレーニングの4枚は横1列に並べ替える(2列2行だと1枚の高さが60px台になり名前しか見えなかった) */
       .mh-phase-cards { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; grid-template-rows: minmax(0, 1fr) !important; }
       .mh-phase-card-icon, .mh-phase-stat-label, .mh-phase-bar { display: none !important; }
