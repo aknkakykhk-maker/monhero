@@ -828,5 +828,5 @@ const Audio_ = (() => {
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, setBgmOnce, fadeToBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
