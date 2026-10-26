@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4d5decebd7a20db
+// generated-sha256: 62b2485786cc8db1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 19:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 20:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -54912,7 +54912,8 @@ const CardAssistantArt = ({ src, alt, className = '', style = null }) => {
 // topAssistant … トップに出す助手の立ち絵とひとこと({ id, name, accent, image, text }。60-app が場面 cardTop から選ぶ)
 // rank … ランキング({ send: 送ってよいか, profile: { name, icon, frame }, renderBreederIcon })。送るのは公開後のふつうの対戦だけ
 // bgmPreview … オプションの BGM の試聴({ toggle(曲id), playing: 鳴らしている曲id }。60-app の BGM アレンジと同じもの)
-// トップの周回の札を押したときの詳細(2026-10-26)。数は本編の帯・対戦の盤と同じ所(60-app の cardQuickRunView)から読む
+// バトルカードのトップの上の帯(60-app の renderCardQuickRunStrip)の「詳細」を押したときの窓(2026-10-26 社長「横の経験値とかを詳細ボタンの中に入れればいいよ」)。
+// 数は帯・対戦の盤と同じ所(60-app の cardQuickRunView)から読む。描くのは 60-app(帯と同じ所)
 // quickRun … { live, loops, stopped, xp, gold, difficulty, info:{ wave, reason } } か null(一度も回していない)
 const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 0, onClose }) => {
   const live = !!quickRun && !quickRun.stopped;
@@ -54940,7 +54941,7 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
           {quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200')}
           {row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')}
         </div>
-        <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(autoReady
+        <p className="mt-2 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(autoReady || quickRun
           ? '助手と対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。'
           : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')}</p>
         <button type="button" data-card-quick-detail-close onClick={onClose} className="mh-button mt-3 min-h-[44px] w-full rounded-2xl border border-white/15 bg-slate-800 text-[14px] font-black text-white active:scale-[.98]">閉じる</button>
@@ -54948,7 +54949,7 @@ const CardQuickRunDetail = ({ quickRun, autoReady, autoDifficulty, todayLoops = 
     </div>
   );
 };
-const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, quickAutoDifficulty = null, onSettings = null }) => {
+const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
   const [view, setView] = useState('top');
@@ -54957,7 +54958,6 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [kitPick, setKitPick] = useState(null);
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
   const [game, setGame] = useState(null);
-  const [showQuick, setShowQuick] = useState(false); // トップの周回の札の詳細
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
@@ -55518,19 +55518,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <button type="button" aria-label={exitLabel} onClick={onExit} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300 active:scale-90">←</button>
         <div className="min-w-0 flex-1 leading-none">
           <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MF BATTLE CARD ・ TOP</small>
-          <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider max-[359px]:text-[14px] max-[359px]:tracking-normal">MFバトルカード</b>
+          <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">MFバトルカード</b>
           <small className="block truncate text-[9px] font-black text-slate-300/90">{debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう'}</small>
         </div>
-        {/* 裏のクイック周回の札(2026-10-26 社長「クイック何周してるかわかるようにしてほしい。押したら詳細見れるような作り」)。
-            対戦の盤の「⚔ ◯周目」と同じ言葉・色。押すと詳細の窓 */}
-        <button type="button" data-card-quick-pill={!quickRun ? 'none' : quickRun.stopped ? 'stopped' : 'live'} onClick={() => { Audio_.fgSe.tap(); setShowQuick(true); }}
-          aria-label={!quickRun ? 'クイック周回のようすを見る' : quickRun.stopped ? '裏のクイック周回は止まっています。詳しく見る' : `裏のクイック周回 ${quickRun.loops}周目。詳しく見る`}
-          className={`min-h-[32px] min-w-[32px] shrink-0 whitespace-nowrap rounded-full border px-2 text-[11px] font-black active:scale-95 max-[359px]:px-1.5 ${!quickRun ? 'border-white/20 bg-slate-950/70 text-slate-300' : quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/70 text-fuchsia-100'}`}>
-          ⚔{!quickRun ? <span className="max-[359px]:hidden"> クイック</span> : ` ${quickRun.loops}周目`}
-        </button>
         <span data-card-point-pill className="shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"><span aria-hidden="true">🎟️</span> <span data-card-point>{save.point}</span></span>
       </header>
-      {showQuick && <CardQuickRunDetail quickRun={quickRun} autoReady={quickAutoReady} autoDifficulty={quickAutoDifficulty} todayLoops={cardNormalizeDaily(save.daily, cardTodayJst()).quickLoops} onClose={() => setShowQuick(false)}/>}
       <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`}>
         <ModeSelectAssistantPanel assistant={topAssistantShown} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist}/>
         <div data-card-top-menu className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:overflow-y-auto landscape:py-2 landscape:[&>*:first-child]:mt-auto landscape:[&>*:last-child]:mb-auto [@media(orientation:landscape)_and_(max-height:360px)]:space-y-1.5">
@@ -63069,17 +63061,27 @@ function MonsterHeroGame() {
   // MFバトルカードのトップ(デッキ編成・図鑑・ルールなどトップの中の画面も)の上に出す、裏の周回の帯。
   // モンヒロビートのモードえらびと同じ帯(RhythmQuickRunPill)に、獲得ダイヤ・獲得経験値と「⚔ バトルへ」を足す。
   // 対戦中(CARD_BATTLE)は出さない(盤のヘッダーに「⚔ ◯周目」だけ。CardBattleBoard の quickRun)
+  // 帯の「詳細」の窓。今日バトルカードで足した周回は、カードの保存(その日の数)を開くときに読む
+  const [cardQuickDetail, setCardQuickDetail] = useState(null);
+  const openCardQuickDetail = async () => {
+    let loops = 0;
+    try { loops = cardNormalizeDaily(await storeGet(CARD_SAVE_KEYS.daily, null, false), cardTodayJst()).quickLoops; } catch (_) { loops = 0; }
+    setCardQuickDetail({ loops });
+  };
   const renderCardQuickRunStrip = () => {
     if (gameState !== 'CARD_TOP') return null;
     const view = cardQuickRunView();
     if (!view) return null;
-    return (
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null;
+    return (<>
+      {cardQuickDetail && <CardQuickRunDetail quickRun={view} autoReady={autoQuickRunConfigured(autoSettings)} autoDifficulty={autoDifficulty} todayLoops={cardQuickDetail.loops} onClose={() => setCardQuickDetail(null)}/>}
       <div data-card-quick-run={view.stopped ? 'stopped' : 'live'} className="relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1">
         <RhythmQuickRunPill info={view.info} onRestart={() => startQuickRunFromRhythm()} onResume={() => resumeQuickRunFromRhythm()} widthClass="min-w-0 flex-1"/>
-        {!view.info.finished && <small data-card-quick-run-gain className="shrink-0 text-[10px] font-black text-slate-300">ダイヤ+{view.gold.toLocaleString()}・経験値+{view.xp.toLocaleString()}</small>}
+        {/* ダイヤ・経験値の数は帯から外し、「詳細」の窓へ(帯が狭くて「◯周目」が「…」で切れていた。2026-10-26 社長) */}
+        <button type="button" data-card-quick-run-detail onClick={() => { Audio_.fgSe.tap(); void openCardQuickDetail(); }} className="min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-95">詳細</button>
         {view.live && <button type="button" data-card-quick-run-back onClick={() => { setCardBgm(null); returnToBackgroundRun(); }} className="min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-fuchsia-50 active:scale-95">⚔ バトルへ</button>}
       </div>
-    );
+    </>);
   };
   // ===== ∞周回の進捗を、バトル画面の空いているところにも出す =====
   // 超省エネは演出を出さないぶん画面が大きく空くので、そこへ積み上がりを置く
@@ -77466,7 +77468,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
-          quickAutoReady={autoQuickRunConfigured(autoSettings)} quickAutoDifficulty={autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
+          quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
           /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4aae1ddd019f1eb7
+// source-sha256: a8b33c1161ac01f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 19:54";
+const BUILD_DATE = "2026-10-26 20:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90621,7 +90621,7 @@ const CardQuickRunDetail = ({
   }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(autoReady ? '助手と対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')), React.createElement("button", {
+  }, jaWrap(autoReady || quickRun ? '助手と対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')), React.createElement("button", {
     type: "button",
     "data-card-quick-detail-close": true,
     onClick: onClose,
@@ -90643,7 +90643,6 @@ const CardBattleScreen = ({
   bgmPreview = null,
   quickRun = null,
   quickAutoReady = false,
-  quickAutoDifficulty = null,
   onSettings = null
 }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
@@ -90662,7 +90661,6 @@ const CardBattleScreen = ({
     level: 'easy'
   });
   const [game, setGame] = useState(null);
-  const [showQuick, setShowQuick] = useState(false);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
@@ -91908,34 +91906,17 @@ const CardBattleScreen = ({
   }, React.createElement("small", {
     className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300"
   }, "MF BATTLE CARD ・ TOP"), React.createElement("b", {
-    className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider max-[359px]:text-[14px] max-[359px]:tracking-normal"
+    className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
   }, "MFバトルカード"), React.createElement("small", {
     className: "block truncate text-[9px] font-black text-slate-300/90"
-  }, debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう')), React.createElement("button", {
-    type: "button",
-    "data-card-quick-pill": !quickRun ? 'none' : quickRun.stopped ? 'stopped' : 'live',
-    onClick: () => {
-      Audio_.fgSe.tap();
-      setShowQuick(true);
-    },
-    "aria-label": !quickRun ? 'クイック周回のようすを見る' : quickRun.stopped ? '裏のクイック周回は止まっています。詳しく見る' : `裏のクイック周回 ${quickRun.loops}周目。詳しく見る`,
-    className: `min-h-[32px] min-w-[32px] shrink-0 whitespace-nowrap rounded-full border px-2 text-[11px] font-black active:scale-95 max-[359px]:px-1.5 ${!quickRun ? 'border-white/20 bg-slate-950/70 text-slate-300' : quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/70 text-fuchsia-100'}`
-  }, "⚔", !quickRun ? React.createElement("span", {
-    className: "max-[359px]:hidden"
-  }, " クイック") : ` ${quickRun.loops}周目`), React.createElement("span", {
+  }, debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう')), React.createElement("span", {
     "data-card-point-pill": true,
     className: "shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, "🎟️"), " ", React.createElement("span", {
     "data-card-point": true
-  }, save.point))), showQuick && React.createElement(CardQuickRunDetail, {
-    quickRun: quickRun,
-    autoReady: quickAutoReady,
-    autoDifficulty: quickAutoDifficulty,
-    todayLoops: cardNormalizeDaily(save.daily, cardTodayJst()).quickLoops,
-    onClose: () => setShowQuick(false)
-  }), React.createElement("div", {
+  }, save.point))), React.createElement("div", {
     className: `relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown && assist.modeSelectArt ? '' : 'portrait:justify-center'}`
   }, React.createElement(ModeSelectAssistantPanel, {
     assistant: topAssistantShown,
@@ -101653,11 +101634,30 @@ function MonsterHeroGame() {
       }
     };
   };
+  const [cardQuickDetail, setCardQuickDetail] = useState(null);
+  const openCardQuickDetail = async () => {
+    let loops = 0;
+    try {
+      loops = cardNormalizeDaily(await storeGet(CARD_SAVE_KEYS.daily, null, false), cardTodayJst()).quickLoops;
+    } catch (_) {
+      loops = 0;
+    }
+    setCardQuickDetail({
+      loops
+    });
+  };
   const renderCardQuickRunStrip = () => {
     if (gameState !== 'CARD_TOP') return null;
     const view = cardQuickRunView();
     if (!view) return null;
-    return React.createElement("div", {
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null : null;
+    return React.createElement(React.Fragment, null, cardQuickDetail && React.createElement(CardQuickRunDetail, {
+      quickRun: view,
+      autoReady: autoQuickRunConfigured(autoSettings),
+      autoDifficulty: autoDifficulty,
+      todayLoops: cardQuickDetail.loops,
+      onClose: () => setCardQuickDetail(null)
+    }), React.createElement("div", {
       "data-card-quick-run": view.stopped ? 'stopped' : 'live',
       className: "relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1"
     }, React.createElement(RhythmQuickRunPill, {
@@ -101665,10 +101665,15 @@ function MonsterHeroGame() {
       onRestart: () => startQuickRunFromRhythm(),
       onResume: () => resumeQuickRunFromRhythm(),
       widthClass: "min-w-0 flex-1"
-    }), !view.info.finished && React.createElement("small", {
-      "data-card-quick-run-gain": true,
-      className: "shrink-0 text-[10px] font-black text-slate-300"
-    }, "ダイヤ+", view.gold.toLocaleString(), "・経験値+", view.xp.toLocaleString()), view.live && React.createElement("button", {
+    }), React.createElement("button", {
+      type: "button",
+      "data-card-quick-run-detail": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void openCardQuickDetail();
+      },
+      className: "min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-95"
+    }, "詳細"), view.live && React.createElement("button", {
       type: "button",
       "data-card-quick-run-back": true,
       onClick: () => {
@@ -101676,7 +101681,7 @@ function MonsterHeroGame() {
         returnToBackgroundRun();
       },
       className: "min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-fuchsia-50 active:scale-95"
-    }, "⚔ バトルへ"));
+    }, "⚔ バトルへ")));
   };
   const renderQuickRunBattleBand = () => {
     if (!(gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && quickRunProgress && !quickRunProgress.finished)) return null;
@@ -123338,7 +123343,6 @@ function MonsterHeroGame() {
       onQuickLoops: awardCardQuickLoops,
       quickRun: cardQuickRunView(),
       quickAutoReady: autoQuickRunConfigured(autoSettings),
-      quickAutoDifficulty: autoQuickRunConfigured(autoSettings) ? (DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null : null,
       onSettings: settings => setCardQuickAutoStart(!!(settings && settings.quickAutoStart)),
       onOpenMarket: () => {
         setCardMarketEntry(true);

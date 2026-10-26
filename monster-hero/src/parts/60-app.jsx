@@ -5203,17 +5203,27 @@ function MonsterHeroGame() {
   // MFバトルカードのトップ(デッキ編成・図鑑・ルールなどトップの中の画面も)の上に出す、裏の周回の帯。
   // モンヒロビートのモードえらびと同じ帯(RhythmQuickRunPill)に、獲得ダイヤ・獲得経験値と「⚔ バトルへ」を足す。
   // 対戦中(CARD_BATTLE)は出さない(盤のヘッダーに「⚔ ◯周目」だけ。CardBattleBoard の quickRun)
+  // 帯の「詳細」の窓。今日バトルカードで足した周回は、カードの保存(その日の数)を開くときに読む
+  const [cardQuickDetail, setCardQuickDetail] = useState(null);
+  const openCardQuickDetail = async () => {
+    let loops = 0;
+    try { loops = cardNormalizeDaily(await storeGet(CARD_SAVE_KEYS.daily, null, false), cardTodayJst()).quickLoops; } catch (_) { loops = 0; }
+    setCardQuickDetail({ loops });
+  };
   const renderCardQuickRunStrip = () => {
     if (gameState !== 'CARD_TOP') return null;
     const view = cardQuickRunView();
     if (!view) return null;
-    return (
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null;
+    return (<>
+      {cardQuickDetail && <CardQuickRunDetail quickRun={view} autoReady={autoQuickRunConfigured(autoSettings)} autoDifficulty={autoDifficulty} todayLoops={cardQuickDetail.loops} onClose={() => setCardQuickDetail(null)}/>}
       <div data-card-quick-run={view.stopped ? 'stopped' : 'live'} className="relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1">
         <RhythmQuickRunPill info={view.info} onRestart={() => startQuickRunFromRhythm()} onResume={() => resumeQuickRunFromRhythm()} widthClass="min-w-0 flex-1"/>
-        {!view.info.finished && <small data-card-quick-run-gain className="shrink-0 text-[10px] font-black text-slate-300">ダイヤ+{view.gold.toLocaleString()}・経験値+{view.xp.toLocaleString()}</small>}
+        {/* ダイヤ・経験値の数は帯から外し、「詳細」の窓へ(帯が狭くて「◯周目」が「…」で切れていた。2026-10-26 社長) */}
+        <button type="button" data-card-quick-run-detail onClick={() => { Audio_.fgSe.tap(); void openCardQuickDetail(); }} className="min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-95">詳細</button>
         {view.live && <button type="button" data-card-quick-run-back onClick={() => { setCardBgm(null); returnToBackgroundRun(); }} className="min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-fuchsia-50 active:scale-95">⚔ バトルへ</button>}
       </div>
-    );
+    </>);
   };
   // ===== ∞周回の進捗を、バトル画面の空いているところにも出す =====
   // 超省エネは演出を出さないぶん画面が大きく空くので、そこへ積み上がりを置く
@@ -19600,7 +19610,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
-          quickAutoReady={autoQuickRunConfigured(autoSettings)} quickAutoDifficulty={autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
+          quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
           /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
