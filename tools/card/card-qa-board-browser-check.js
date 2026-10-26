@@ -118,8 +118,13 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
   try {
     // ① 横の画面: 相手の番から始めて、自分の番の始めのまとめを待つ
     {
-      const page = await openBattle(browser, { ...base, active: 1, mode: 'wait', viewport: { width: 844, height: 390 } }, errors);
-      const ok = await page.locator('[data-card-turn-summary]').waitFor({ timeout: 70000 }).then(() => true).catch(() => false);
+      // まとめは、相手が何かした番のあとにだけ出て、少しで自動で閉じる。出なかった試合はやり直す(3試合まで)
+      let page = null, ok = false;
+      for (let tries = 0; tries < 3 && !ok; tries++) {
+        if (page) await page.close();
+        page = await openBattle(browser, { ...base, active: 1, mode: 'wait', viewport: { width: 844, height: 390 } }, errors);
+        ok = await page.locator('[data-card-turn-summary]').waitFor({ timeout: 70000 }).then(() => true).catch(() => false);
+      }
       await page.waitForTimeout(500);
       const r = ok ? await page.evaluate(() => {
         const q = (s) => { const e = document.querySelector(s); return e && e.getBoundingClientRect(); };
