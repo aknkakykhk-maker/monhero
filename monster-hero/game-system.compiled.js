@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e6dfc5cca9e7aa2
+// source-sha256: 2197082aeec92471
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88227,6 +88227,52 @@ const CARD_VS_CSS = `
 .mh-vs-fade { animation: mhVsFade .3s ease-out both }
 @media (prefers-reduced-motion: reduce) { .mh-vs-foe, .mh-vs-mon-foe, .mh-vs-mon-me, .mh-vs-pop, .mh-vs-fade { animation-duration: .01s } }
 `;
+const cardVsBoxOf = src => typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null;
+const CardVsArt = ({
+  src,
+  alt,
+  aspect,
+  spread = 1,
+  className = '',
+  style = {},
+  ...rest
+}) => {
+  const box = cardVsBoxOf(src);
+  if (!box) return React.createElement("img", _extends({
+    src: src,
+    alt: alt,
+    draggable: false,
+    className: `w-full object-contain object-bottom ${className}`,
+    style: {
+      aspectRatio: `${aspect}`,
+      ...style
+    }
+  }, rest));
+  const [x0, y0, x1, y1, a] = box;
+  const fw = Math.max(0.01, x1 - x0),
+    fh = Math.max(0.01, y1 - y0);
+  const ca = fw * a / fh;
+  const wP = ca >= aspect * spread ? 100 * spread / fw : 100 * a / (fh * aspect);
+  const hP = wP * aspect / a;
+  return React.createElement("div", _extends({
+    className: "relative w-full",
+    style: {
+      aspectRatio: `${aspect}`,
+      ...style
+    }
+  }, rest), React.createElement("img", {
+    src: src,
+    alt: alt,
+    draggable: false,
+    className: `absolute max-w-none ${className}`,
+    style: {
+      width: `${wP}%`,
+      height: `${hP}%`,
+      left: `${50 - (x0 + fw / 2) * wP}%`,
+      top: `${100 - y1 * hP}%`
+    }
+  }));
+};
 const CardVsMonsters = ({
   db,
   monsters,
@@ -88247,13 +88293,22 @@ const CardVsMonsters = ({
       animationDelay: `${start + i * step}ms`,
       maxWidth: 140
     }
-  }, React.createElement("img", {
-    src: art || CARD_IMG(m.img),
+  }, art ? React.createElement(CardVsArt, {
+    src: art,
+    alt: m.name,
+    aspect: 1,
+    spread: 1.1,
+    className: "drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]",
+    style: {
+      width: 'min(100%, 19vh, 140px)'
+    }
+  }) : React.createElement("img", {
+    src: CARD_IMG(m.img),
     alt: m.name,
     draggable: false,
-    className: `${art ? 'object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]' : 'rounded-md object-cover'} w-full`,
+    className: "w-full rounded-md object-cover",
     style: {
-      aspectRatio: art ? '1 / 1' : '63 / 88',
+      aspectRatio: '63 / 88',
       maxHeight: 'min(19vh, 140px)'
     }
   }), React.createElement("span", {
@@ -88328,14 +88383,11 @@ const CardVsIntro = ({
     style: {
       width: 'min(34vw, 30vh, 150px)'
     }
-  }, who ? React.createElement("img", {
+  }, who ? React.createElement(CardVsArt, {
+    "data-card-vs-foe-art": true,
     src: assistantFullImage(who, foe.line && foe.line.e || 'happy'),
     alt: who.name,
-    draggable: false,
-    className: "w-full object-contain object-bottom",
-    style: {
-      aspectRatio: '3 / 4'
-    }
+    aspect: 3 / 4
   }) : React.createElement("span", {
     "data-card-vs-foe-icon": true,
     className: "block aspect-square w-full"
