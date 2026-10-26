@@ -30,27 +30,27 @@ const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=0f5cf76eb420";
 const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=39933ff87253";
 const ARK_DISC_ICON = "images/disc-icons/ark.png?v=55e7c1c5d1e9";
 const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=4d6d7f7f7234";
-const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=5404026ef24a";
-const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=3829b6f730f5";
-const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=99f34b0b4228";
-const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=23d828f69f14";
-const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=da09c07c8624";
-const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=adee72203d0a";
-const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
+const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=f693eca4429a";
+const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=974a914257f8";
+const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=6c1c56545861";
+const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=491367d07445";
+const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=6ec351898278";
+const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=c0d353e28482";
+const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=e26faa4a8580";
 // 剣士モッチーの円盤石。絵は node tools/image/make-disc-icon.js が共通の土台へ重ねて作ったもの
-const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
+const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=130c85db1281";
 // 近日公開予定のユグドラシル・メルホイップの円盤石(2026-09-28)。作り方は剣士モッチーと同じ
-const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=16a7bd3b4eed";
+const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=ceb1014354a3";
 // ゴースト・スプーキー(2026-10-05・案の段階)。マーケットにはまだ並べていない
-const GHOST_DISC_ICON = "images/disc-icons/ghost-disc.PNG?v=2745f9d5900d";
-const SPOOKY_DISC_ICON = "images/disc-icons/spooky-disc.PNG?v=804ca5b41a07";
-const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
+const GHOST_DISC_ICON = "images/disc-icons/ghost-disc.PNG?v=0583141e2a3b";
+const SPOOKY_DISC_ICON = "images/disc-icons/spooky-disc.PNG?v=cbd74baebb63";
+const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=fe9d907bed9a";
 // メロディー・クロミー(2026-10-07・実装予告)。作り方はほかの円盤石と同じ(make-disc-icon.js)。?v= は build.js が打ち直す
-const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=634ff5eb63a4";
-const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=8b1aa76636ad";
+const MELODY_DISC_ICON = "images/disc-icons/melody-disc.PNG?v=494f3e2f723a";
+const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=c7c5ba3d8031";
 // イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコン。商品はこのファイルの下の BREEDER_MARKET_ITEMS(近日追加)
-const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=5e82d79e0bfb";
-const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=66626d663904";
+const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=8368da2a70b6";
+const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=3f5815550d74";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
