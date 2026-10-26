@@ -342,6 +342,11 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   check('⑨ 「マルチ対戦」のボタンは、デバッグか公開の印のときだけ押せる', /data-card-mode-multi disabled=\{!\(debug \|\| cardPvpOpen\(\)\)\}/.test(p84));
   check('⑨ 「準備中」の札は、公開の印が立つまで(ボタン・ランキング)', /\{!cardPvpOpen\(\) && <span[^\n]*準備中/.test(p84) && /\{!cardPvpOpen\(\) && <span[^\n]*準備中/.test(p90));
   check('⑨ 強さの点数へ届けるのは、公開後のふつうの入口だけ(rank.send で、デバッグではない)', /rankSend=\{!!\(rank && rank\.send\) && !debug\}/.test(p84));
+  // デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分はランキングへ送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。
+  // 外すのはデバッグ設定の入口から入った対戦だけ(84 の debug = cardOrigin==='debug')
+  const p60 = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('⑨ ランキングへ送るかは公開の印だけで決め、合言葉の端末をまるごと外さない(デバッグ設定の入口は 84 の debug で外す)',
+    /rank=\{\{send:EVENT_REPLAY_RELEASE_FLAGS\.cardBattle===true,/.test(p60) && /debug=\{cardOrigin==='debug'\}/.test(p60) && /const rankable = !!\(rank && rank\.send\) && !debug;/.test(p84));
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();
