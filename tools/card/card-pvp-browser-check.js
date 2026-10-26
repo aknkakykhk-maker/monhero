@@ -22,6 +22,7 @@
 //   ⑩ もう一度送ると知らせがまた出て、「参加する」でマルチの入口へ移って同じ部屋に入り、対戦が始まる
 //   ⑪ 招待のようすの見分け(届いている・時間切れ・断られた)
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
+//   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -115,6 +116,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(invites.map((x) => ({ sender_id: 'friend-x', room_code: x.room_code, created_at: x.created_at }))) });
       }
       if (/\/rpc\/card_battle_pvp_report/.test(req.url())) { try { reports.push(JSON.parse(req.postData() || '{}')); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 200, contentType: 'application/json', body: '"wait"' }); }
+      // 強さの点数の表の自分の行(マルチの履歴の増減・92)。2人が届けた試合だけを数えた偽の点数(勝ち +16・負け -16)
+      const ratingOf = /card_battle_pvp_ratings\?.*breeder_id=eq\.([^&]+)/.exec(req.url());
+      if (ratingOf) {
+        const bid = decodeURIComponent(ratingOf[1]);
+        const done = [...new Set(reports.map((x) => x.p_match_id))].filter((m) => reports.filter((x) => x.p_match_id === m).length >= 2).map((m) => reports.find((x) => x.p_match_id === m));
+        const mineDone = done.filter((x) => x.p_me === bid || x.p_foe === bid);
+        const wins = mineDone.filter((x) => x.p_winner === bid).length, loses = mineDone.length - wins;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mineDone.length ? [{ rating: 1500 + 16 * (wins - loses), wins, loses }] : []) });
+      }
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
     await ctx.addInitScript((ic) => {
@@ -206,9 +216,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑥ 上の帯に持ち時間が出る', (await A.locator('[data-card-pvp-clock]').count()) === 1 && /秒/.test(await A.locator('[data-card-pvp-clock]').innerText()));
     await A.locator('[data-card-pvp-chat]').click();
     await A.locator('[data-card-pvp-stamp="0"]').click();
-    const chatSeen = await B.locator('[data-card-bubble]').filter({ hasText: 'よろしく！' }).waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
-    // 吹き出しの顔は、相手(A)のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた)。A のアイコンは id なので絵になる
-    const chatIcon = await B.locator('[data-card-bubble] [data-card-bubble-pvp-icon]').evaluate((el) => el.querySelectorAll('img').length).catch(() => 0);
+    // 吹き出しの文と、顔(相手 A のアイコン。助手の顔の絵を引いて、空の白い枠が出ていた)が、同じときに出ているか。A のアイコンは id なので絵になる
+    // ★吹き出しは、だれかがカードを使うと消える(84)。この検査は自動で打つのですぐ消えるので、出ている瞬間をページの中で見張る(2026-10-27 あとから数えて 0 になっていた)
+    const chatState = await B.waitForFunction(() => {
+      const b = [...document.querySelectorAll('[data-card-bubble]')].find((el) => el.textContent.includes('よろしく！'));
+      if (b) window.__chatBubbleSeen = true;
+      const icon = b ? b.querySelectorAll('[data-card-bubble-pvp-icon] img').length : 0;
+      return icon > 0 ? { seen: true, icon } : false;
+    }, null, { timeout: 5000, polling: 'raf' }).then((h) => h.jsonValue()).catch(async () => ({ seen: await B.evaluate(() => window.__chatBubbleSeen === true).catch(() => false), icon: 0 }));
+    const chatSeen = chatState.seen, chatIcon = chatState.icon;
     check('⑥ 定型のチャットが、相手の画面の吹き出しに出る・顔は相手のアイコン', chatSeen && chatIcon >= 1, `アイコンの絵 ${chatIcon}`);
     await shot(B, 'pvp-04-chat');
     const beatP = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
@@ -387,8 +403,35 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const mine = reports.slice(reportsBefore);
     check('⑦ 終わったら2台とも、同じ試合・同じ勝った人で強さの点数へ届ける', mine.length === 2 && mine[0].p_match_id && mine[0].p_match_id === mine[1].p_match_id && mine[0].p_winner === mine[1].p_winner,
       JSON.stringify(mine.map((x) => [x.p_match_id, x.p_winner])));
-    // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
+    // ⑬ マルチの履歴(92・2026-10-27 社長「過去のマルチの戦績とかで相手のデッキが見れるように」): 2試合とも端末に残り、相手のデッキが全部見える・点数の増減が書かれる
+    const histOf = (page) => page.evaluate(async () => (typeof cardPvpHistoryLoad === 'function' ? cardPvpHistoryLoad() : null));
+    let histA = null;
+    for (let i = 0; i < 70; i++) { histA = await histOf(A); if (histA && histA.length >= 2 && histA[0].rating) break; await A.waitForTimeout(500); }
+    const histB = await histOf(B);
+    check('⑬ マルチの履歴: 2台とも2試合が残り、新しい試合が先頭・相手のデッキ(3体と50枚)・自分のデッキ・相手の名前',
+      !!histA && histA.length === 2 && !!histB && histB.length === 2 && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
+      JSON.stringify((histA || []).map((x) => [x.match, x.outcome, x.verify, x.foeDeck && x.foeDeck.cards.length, x.rating])));
+    const deltaA = histA && histA[0].rating ? histA[0].rating.after - histA[0].rating.before : null;
+    check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +16・負け -16。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 16 : -16), JSON.stringify(histA && histA[0].rating));
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    await A.locator('[data-card-pvp-history-open]').click();
+    await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
+    const rowsText = await A.locator('[data-card-pvp-history-row]').allInnerTexts();
+    await shot(A, 'pvp-09-history');
+    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === 2 && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
+    await A.locator('[data-card-pvp-history-row]').first().click();
+    await A.locator('[data-card-pvp-history="detail"]').waitFor({ timeout: 10000 });
+    const foeTiles = await A.evaluate(() => ({ mons: document.querySelectorAll('[data-card-pvp-history-mon]').length, total: [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }));
+    await shot(A, 'pvp-09-history-deck');
+    check('⑬ 行を押すと、相手のデッキ(3体と、同じ札をまとめた50枚)', foeTiles.mons === 3 && foeTiles.total === 50, JSON.stringify(foeTiles));
+    await A.locator('[data-card-pvp-history-tab="me"]').click();
+    const myTiles = await A.evaluate(() => [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0));
+    check('⑬ 「自分のデッキ」で、その試合で使った自分のデッキ(50枚)', myTiles === 50, String(myTiles));
+    await A.locator('[data-card-pvp-history="detail"] button').first().click();
+    await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
+    await A.locator('[data-card-pvp-history="list"] button').first().click();
+    await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
     await A.locator('[data-card-pvp-invite-open]').click();
     await shot(A, 'pvp-07-invite-pick');
     await A.locator('[data-card-pvp-invite-pick] [data-card-pvp-invite-to="friend-x"]').click();

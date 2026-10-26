@@ -4,7 +4,7 @@
 //
 // 説明の正本: docs/spec/ASSET_PREFETCH.md。見ること:
 //  ① 一覧(asset-manifest.json)が音源・画像の中身と合っている / SW が扱うのは音源と画像だけ(コードの形)
-//  ② 既定で ON(保存値なし・壊れた値も)。SW が登録され、ページを支配する。HTML・JS・CSS・JSON を SW が返していない(=ゲーム本体の更新を止めない)
+//  ② 既定で ON(保存値なし・壊れた値も)。SW が登録され、ページを支配する。HTML・JSON を SW が返さず、JS・CSS は ?v= が一覧とぴったり同じものだけ返す(=ゲーム本体の更新を止めない。2026-10-27 から本体・データもためる)
 //  ③ まとまりのダウンロードで、全部が端末に入る。取り消すと途中で止まる。端末から消すと0件になる
 //  ④ アップデートの真似(絵を1枚差し替え、一覧の版を変える)で、古い版が消え、新しい中身が返る
 //  ⑤ OFFで SW が外れ、ためたものが消える
@@ -31,8 +31,13 @@ console.log('① 一覧とコードの形');
   const r = require('../build-asset-manifest').run({ check: true });
   check('asset-manifest.json がいまの音源・画像と合っている', r.ok, r.reason || '');
   const sw = fs.readFileSync(path.join(GAME, 'sw.js'), 'utf8');
-  check('SW が respondWith するのは audio/ images/ data/images/ の音源・画像(拡張子つき)だけ',
-    sw.includes("/^(audio|images|data\\/images)\\/.+\\.(mp3|png|jpe?g|webp)$/i.test(path)) return;") && (sw.match(/respondWith\(/g) || []).length === 1);
+  check('SW が respondWith するのは audio/ images/ data/images/ の音源・画像(拡張子つき)と、本体・データの JS・CSS だけ',
+    sw.includes("/^(audio|images|data\\/images)\\/.+\\.(mp3|png|jpe?g|webp)$/i.test(path)) return;") && (sw.match(/respondWith\(/g) || []).length === 2
+      && /if \(path && CODE_PATH_RE\.test\(path\)\)/.test(sw));
+  check('本体・データは ?v= 付き・retry なしのときだけ受け持ち、止め札(CODE_CACHE_OFF)と切で素通しになる',
+    /if \(disabled \|\| CODE_CACHE_OFF \|\| !url\.searchParams\.get\('v'\) \|\| url\.searchParams\.has\('retry'\)\) return;/.test(sw)
+      && /const CODE_CACHE_OFF = false;/.test(sw));
+  check('本体・データは、URL の版が一覧とぴったり同じときだけ返す・ためる', /e\.pack === 'core' && e\.v === v/.test(sw));
   check('SW はページ本体(navigate)に respondWith しない', /req\.mode === 'navigate'\)[\s\S]{0,200}?return;\s*\}/.test(sw));
   check('SW は Range つきの取得に手を出さない', /req\.headers\.has\('range'\)\) return;/.test(sw));
   check('SW は localStorage に触れない', !/localStorage/.test(sw.replace(/\/\/.*$/gm, '')));
@@ -112,8 +117,16 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
     await waitFor(page, () => typeof ASSET_CACHE !== 'undefined' && !!navigator.serviceWorker.controller);
     check('ONにすると SW がページを支配する', await page.evaluate(() => !!navigator.serviceWorker.controller && ASSET_CACHE.enabled));
     await page.waitForTimeout(3000);
-    const codeFromSw = fromSw.filter(u => /\.(html|js|css|json)(\?|$)/.test(new URL(u).pathname + '?'));
-    check('HTML・JS・CSS・JSON を SW が返していない', codeFromSw.length === 0, codeFromSw.slice(0, 3).join(' '));
+    const pageFromSw = fromSw.filter(u => /\.(html|json)(\?|$)/.test(new URL(u).pathname + '?'));
+    check('HTML・JSON を SW が返していない', pageFromSw.length === 0, pageFromSw.slice(0, 3).join(' '));
+    // JS・CSS は ?v= が一覧とぴったり同じものだけ SW から返る(本体・データをためる。2026-10-27)
+    const coreMap = await page.evaluate(async () => { const m = await (await fetch('asset-manifest.json?t=' + Date.now())).json(); return Object.fromEntries(Object.entries(m.files).filter(([, f]) => f.pack === 'core').map(([k, f]) => [k, f.v])); });
+    const badCode = fromSw.filter(u => /\.(js|css)$/.test(new URL(u).pathname)).filter(u => { const x = new URL(u); const p = decodeURIComponent(x.pathname.replace(/^\/monster-hero\//, '')); return coreMap[p] !== x.searchParams.get('v') || x.searchParams.has('retry'); });
+    check('SW が返した JS・CSS は、どれも一覧の版とぴったり同じ', badCode.length === 0, badCode.slice(0, 3).join(' '));
+    await page.reload({ waitUntil: 'load' });
+    await waitFor(page, () => typeof ASSET_CACHE !== 'undefined');
+    const codeHits = fromSw.filter(u => /game-system\.compiled\.js\?v=/.test(u)).length;
+    check('2回目に開くと、本体(game-system.compiled.js)が SW の置き場から返る', codeHits > 0, `${codeHits}回`);
     // 設定の「ダウンロード」が出る
     const opened = await page.evaluate(() => typeof ASSET_PACKS !== 'undefined' && ASSET_PACKS.map(p => p.id).join(','));
     check('まとまりは モンヒロビート・バトル・バトルカード・全部', opened === 'beat,battle,card,all', opened);
@@ -126,7 +139,7 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
       const m = await (await fetch('asset-manifest.json', { cache: 'no-store' })).json();
       const cardCount = Object.values(m.files).filter(f => f.pack === 'card').length;
       const allCount = st.packs.all ? st.packs.all.count : -1;
-      return { released, debug, shown, cardCount, allCount, nonCard: Object.values(m.files).filter(f => f.pack !== 'card').length };
+      return { released, debug, shown, cardCount, allCount, nonCard: Object.values(m.files).filter(f => f.pack !== 'card' && f.pack !== 'core').length };
     });
     check('公開前の遊ぶ人には「バトルカード」を出さず、「全部」にもカードの絵を入れない(一覧にはカードの絵が入っている)',
       cardGate.released || cardGate.debug || (cardGate.shown === 'beat,battle,all' && cardGate.cardCount > 400 && cardGate.allCount === cardGate.nonCard), JSON.stringify(cardGate));
@@ -202,12 +215,14 @@ const waitFor = async (page, fn, arg, timeout = 120000) => page.waitForFunction(
     }
 
     console.log('⑤ OFFで外す');
+    const codeBefore = await page.evaluate(async () => (await caches.has('mh-code-v1')) ? (await (await caches.open('mh-code-v1')).keys()).length : 0);
+    check('OFFにする前は、本体・データが mh-code-v1 にたまっている', codeBefore > 0, `${codeBefore}件`);
     await page.evaluate(() => ASSET_CACHE.setEnabled(false));
     const off = await page.evaluate(async () => ({
       regs: (await navigator.serviceWorker.getRegistrations()).length,
-      caches: (await caches.keys()).filter(n => n.startsWith('mh-assets-')),
+      caches: (await caches.keys()).filter(n => n.startsWith('mh-assets-') || n.startsWith('mh-code-')),
     }));
-    check('OFFにすると SW が外れ、ためたものが消える', off.regs === 0 && off.caches.length === 0, JSON.stringify(off));
+    check('OFFにすると SW が外れ、ためたもの(画像・音源・本体・データ)が消える', off.regs === 0 && off.caches.length === 0, JSON.stringify(off));
 
     console.log('⑦ 既定が切だったころに曲を選んだ端末');
     {
