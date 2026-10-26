@@ -1566,7 +1566,7 @@ const ASSISTANT_SCENES = {
     lines: [
       { e:'excited', t:'モンスター図鑑だよ！ 血統もぜんぶ載ってるの、すごくない？' },
       { e:'normal',  t:'主血統でしぼりこめるよ。同じ血統の子を並べて見てみて〜' },
-      { e:'wink',    t:'まだ出会ってない子はシルエット。集めがいあるぢゃん(ΦωΦ)ﾌﾌﾌ…' },
+      { e:'wink',    t:'まだ出会ってない子も、絵と説明は見れるよ。集めがいあるぢゃん(ΦωΦ)ﾌﾌﾌ…' },
       { e:'happy',   t:'詳細の左右ボタンか、横になぞると次の子へ行けるよ〜' },
       { e:'normal',  t:'「能力」に出るのは種そのものの基礎値。育てた子の値じゃないから気をつけて！' },
     ],
@@ -1717,7 +1717,7 @@ const ASSISTANT_SCENES = {
       lowGold: [
         { e:'troubled', t:'ダイヤがちょっと心もとないかも…！' },
         { e:'normal',   t:'バトルで稼いでからまた来よ！ 逃げないから大丈夫だよ〜。' },
-        { e:'troubled', t:'今日は見るだけにしとく？ next timeってことで♪' },
+        { e:'troubled', t:'今日は見るだけにしとく？ また今度ってことで♪' },
         { e:'wink',     t:'寄付でもダイヤになるよ。無理はしないでね〜！' },
         { e:'happy',    t:'欲しいものメモっといて、貯まったら来よ〜。' },
       ],
@@ -3378,7 +3378,7 @@ addAssistantLinePack({
     monsterDex: [
       { e:'normal',   t:'モンスター図鑑。血統と区分がひと目でわかりまつ。' },
       { e:'happy',    t:'主血統でしぼりこむと、同じ系統の子が並ぶよ♪♪' },
-      { e:'wink',     t:'未解放の子はシルエット。マーケットの円盤石で会えまつ。' },
+      { e:'wink',     t:'「未入手」の子は、マーケットの円盤石で会えまつ。' },
       { e:'excited',  t:'技のタブでは、進化していく技名まで確認できるよ♪' },
       { e:'normal',   t:'「能力」に出るのは種そのものの数値。育てた子の値ではないよ。' },
     ],
@@ -5611,7 +5611,7 @@ addAssistantLinePack({
     ],
     monsterDex: [
       { e:'wink',    t:'血統でしぼれるよ。並べると似てて笑えるw' },
-      { e:'normal',  t:'シルエットの子はまだ会ってないやつね。' },
+      { e:'normal',  t:'「未入手」の札の子は、まだ会ってないやつね。' },
       { e:'happy',   t:'埋まってくと嬉しいでしょ？ 分かるよ♡' },
     ],
     mbManagement: [
@@ -7614,6 +7614,93 @@ addAssistantLinePack({
     ],
   },
 });
+
+// マーケットの売り場ごとのひとこと(2026-10-26 カゲあつくん「どの店でも同じ台詞・英語まじり」)。
+// ダイヤが足りないときの台詞(lowGold)は、入口とダイヤショップだけで出す。ほかの売り場はここから(55-screen-breeder-market.jsx の condition)。
+// みゅあの分だけ。ほかの助手は、いつものマーケットの台詞に落ちる
+addAssistantLinePack({
+  id: 'marketShopsMua',
+  label: 'マーケットの売り場ごとのひとこと',
+  lines: {},
+  conditions: {
+    market: {
+      shopBreeder: [
+        { e:'happy',   t:'ブリーダーPは、レベルが上がるともらえるよ♪' },
+        { e:'excited', t:'アイコンもフレームも、プロフィールで使えるんだ〜！' },
+        { e:'wink',    t:'アイコンは「詳細」で、中身を全部見られるよ。' },
+        { e:'normal',  t:'フレームには、条件を達成すると買えるのもあるからね。' },
+        { e:'happy',   t:'お気に入りの顔、見つかった？ (ΦωΦ)ﾌﾌﾌ…' },
+      ],
+      shopExchange: [
+        { e:'normal',  t:'虹のプシュケーと勇者の証は、ここで交換できるよ。' },
+        { e:'happy',   t:'持ってる数は、上に出てるからね〜♪' },
+        { e:'wink',    t:'交換したものは、マスモンを強くするのに使うんだ！' },
+        { e:'excited', t:'素材が貯まったら、一気に交換しちゃお！' },
+        { e:'normal',  t:'足りない素材は、バトルやミッションで集めよ〜。' },
+      ],
+      shopEvent: [
+        { e:'excited', t:'ビートPは、モンヒロビートやバトルカードで貯まるよ♪' },
+        { e:'happy',   t:'ここはイベントがないときも交換できるんだ〜！' },
+        { e:'wink',    t:'円盤石とアシストは、1つにつき1回だけ交換できるよ。' },
+        { e:'normal',  t:'欲しいもの、ゆっくり選んでいいからね。' },
+        { e:'happy',   t:'新しい子の円盤石も、ここに並ぶよ♪' },
+      ],
+    },
+  },
+});
+
+// ほかの助手も、アイテム交換所・ビートP交換所では「アイコンはブリーダーP、ほかはダイヤ」と言わないよう、その売り場の話を足す(2026-10-26 ダメダシくん)。
+// ブリーダーP交換所は、いつもの台詞(アイコンはブリーダーP)が合っているので足さない。呼び方の決め: きき・きゅうこ・あつはモンヒロビート、ドラはモンビー、ももすけはモンビート
+addAssistantLinePack({ id: 'marketShopsKiki', assistantId: 'kiki', label: 'マーケットの売り場ごとのひとこと(kiki)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'虹のプシュケーと勇者の証は、ここで交換できまつよ。' },
+    { e:'happy',   t:'持ってる素材の数は、上に出てるでつ。' },
+  ],
+  shopEvent: [
+    { e:'excited', t:'ビートPは、モンヒロビートやバトルカードで貯まりまつよ。' },
+    { e:'happy',   t:'ここはイベントがないときも交換できるでつ♪' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsDra', assistantId: 'dra', label: 'マーケットの売り場ごとのひとこと(dra)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここだな。持ってる数は上に出てるぞ' },
+    { e:'wink',    t:'交換したもので、マスモンを強くしていけ' },
+  ],
+  shopEvent: [
+    { e:'normal',  t:'ビートPはモンビーやバトルカードで貯まるぞ' },
+    { e:'wink',    t:'円盤石とアシストは、1つにつき1回だけだな' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsMomosuke', assistantId: 'momosuke', label: 'マーケットの売り場ごとのひとこと(momosuke)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここ。足りない分はバトルで集めなよw' },
+    { e:'wink',    t:'持ってる数は上に出てるからね' },
+  ],
+  shopEvent: [
+    { e:'happy',   t:'ビートPはモンビートとかバトルカードで貯まるよw' },
+    { e:'normal',  t:'ここ、イベントない日も交換できるんだよね' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsAtsu', assistantId: 'atsu', label: 'マーケットの売り場ごとのひとこと(atsu)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はここだね！ 持ってる数は上に出てるよ笑' },
+    { e:'excited', t:'交換したら、マスモンを鍛えにいこう！' },
+  ],
+  shopEvent: [
+    { e:'happy',   t:'ビートPはモンヒロビートやバトルカードで貯まるよ！' },
+    { e:'normal',  t:'円盤石とアシストは、1つにつき1回だけ交換できるんだ！' },
+  ],
+} } });
+addAssistantLinePack({ id: 'marketShopsKyuko', assistantId: 'kyuko', label: 'マーケットの売り場ごとのひとこと(kyuko)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換はこちらですね。持っている数は上に出ています' },
+    { e:'happy',   t:'交換したものは、マスモンを強くするのに使います' },
+  ],
+  shopEvent: [
+    { e:'normal',  t:'ビートPは、モンヒロビートやバトルカードで貯まります' },
+    { e:'happy',   t:'ここはイベントがないときも交換できますよ' },
+  ],
+} } });
 
 const ASSISTANT_PACKS_APPLIED = {};
 const applyAssistantLinePacks = () => {
