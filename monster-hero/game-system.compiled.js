@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4065409bbe2780ed
+// source-sha256: 729efa360e4ed93a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74980,7 +74980,7 @@ function FriendsScreen({
     className: `${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`
   }, "招待リンクを送る（LINEなど）"), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。")), React.createElement("div", {
+  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), React.createElement("div", {
     className: SCREEN_PANEL_CLASS
   }, React.createElement(ScreenSectionLabel, null, "コードで申請する"), React.createElement("input", {
     type: "text",
@@ -74991,8 +74991,8 @@ function FriendsScreen({
     autoComplete: "off",
     autoCorrect: "off",
     spellCheck: false,
-    placeholder: "友だちのフレンドコード",
-    "aria-label": "友だちのフレンドコード",
+    placeholder: "相手のフレンドコード",
+    "aria-label": "相手のフレンドコード",
     className: "mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"
   }), React.createElement("button", {
     type: "button",
@@ -90761,6 +90761,13 @@ const CardBattleBoard = ({
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const stageRef = useRef(null);
   const [stageFit, setStageFit] = useState(0);
+  const [boardFit, setBoardFit] = useState(0);
+  const [boardFitKey, setBoardFitKey] = useState(0);
+  useEffect(() => {
+    const on = () => setBoardFitKey(k => k + 1);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => {
     setStageFit(0);
@@ -90769,6 +90776,15 @@ const CardBattleBoard = ({
     const el = stageRef.current;
     if (!el || stageFit >= 3) return;
     if (el.scrollHeight > el.clientHeight + 1) setStageFit(f => Math.min(3, f + 1));
+  });
+  React.useLayoutEffect(() => {
+    setBoardFit(0);
+  }, [mode, boardFitKey]);
+  React.useLayoutEffect(() => {
+    const b = boardRef.current;
+    const f = b && b.querySelector('[data-card-footer]');
+    if (!f || boardFit >= 2) return;
+    if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit(x => Math.min(2, x + 1));
   });
   const strip = p => {
     const pl = st.players[p];
@@ -91108,7 +91124,7 @@ const CardBattleBoard = ({
     ref: stageRef,
     "data-card-stage": true,
     "data-card-stage-fit": stageFit,
-    className: "relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1",
+    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1`,
     style: {
       justifyContent: 'safe center'
     }
@@ -91299,7 +91315,8 @@ const CardBattleBoard = ({
   }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), React.createElement("div", {
     "data-card-hand": true,
     "data-card-hand-dim": mode === 'wait' ? '1' : undefined,
-    className: `flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2 transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`
+    "data-card-board-fit": boardFit || undefined,
+    className: `flex shrink-0 items-end justify-center gap-1 px-1 pb-1 ${boardFit >= 2 ? 'pt-1' : 'pt-2'} transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`
   }, handOrder.map(i => {
     const no = me.hand[i];
     const c = cardOf(db, no);
@@ -91316,7 +91333,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${tiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -91352,10 +91369,7 @@ const CardBattleBoard = ({
     }, cardCaption(c)))));
   })), React.createElement("div", {
     "data-card-footer": true,
-    className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1",
-    style: {
-      paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
-    }
+    className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1"
   }, replay ? React.createElement(CardReplayBar, {
     replay: replay,
     at: replayAt,
