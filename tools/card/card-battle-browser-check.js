@@ -192,7 +192,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (stageId === 'guard' && mode === 'guard') {
         if (await page.locator('[data-card-bubble]').count()) { await page.waitForTimeout(250); continue; }
         if (await page.getByRole('button', { name: 'これで守る' }).count()) { const b = page.getByRole('button', { name: 'これで守る' }); if (await b.isEnabled()) await b.click(); }
-        else { await shot(page, '13-tutorial-guard'); await handCard('ステップ').click(); }
+        // 守りの番の手札は、1回目のタップを CARD_DOUBLE_TAP_MS 待ってから決める(2回目が来たら詳しい画面。#3873)。
+        //   すぐ次の回でもう一度押すと2回続けたタップになって詳しい画面が開くので、「これで守る」が出るまで待つ
+        else { await shot(page, '13-tutorial-guard'); await handCard('ステップ').click(); await page.getByRole('button', { name: 'これで守る' }).waitFor({ timeout: 3000 }).catch(() => {}); }
         await page.waitForTimeout(300); continue;
       }
       if (stageId === 'attack' && mode === 'attack') {
