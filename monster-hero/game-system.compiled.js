@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 528248c40e301b4c
+// source-sha256: 26c81c0cf258bc45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89070,7 +89070,9 @@ const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'ダブルチョップ': 3,
   'ボディーブロー': 4,
   'ワンツーパンチ': 4,
-  'マシンガンパンチ': 5
+  'マシンガンパンチ': 5,
+  'ピコピコハンマー': 4,
+  'ゴーストラッシュ': 4
 });
 const cardNameScript = c => /[ァ-ヴー]/.test(c) ? 'k' : /[ぁ-ゖ]/.test(c) ? 'h' : /[一-龯々]/.test(c) ? 'j' : 'o';
 const cardNameSplit = text => {
