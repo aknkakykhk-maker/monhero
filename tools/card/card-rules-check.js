@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardUnlockedWithRecord, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardIsGuardKind, cardUnlockedWithRecord, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardIsHybridMon, cardDeckDeadCount, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -176,7 +176,8 @@ const decksAndSaves = () => {
     const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
       let win = 0, n = 0, sd = 1;
       // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体。2026-10-25)。MASTER はプレイヤー役のデッキを見る
-      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!d.sameBlood }), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
+      // プレイヤー役は山札の上限を見ない(playerRole。2026-10-27 ソランド判断・ドラ EXPERT の測り方をそろえるため。人が相手のときと同じ測り方)
+      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!d.sameBlood }), E.cardAiPolicy('kyuko', lv, { playerRole: true })], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
       return [w, win / n];
     });
     const bad = rates.filter(([, r]) => r < 0.38 || r > 0.65);
@@ -217,9 +218,10 @@ const decksAndSaves = () => {
     ok(!p.length, `助手 ${w}(${lv})のデッキ: ${p.join('・')}`);
     ok(d.cards.every((no) => db.cards[no].ready), `助手 ${w}(${lv})のデッキに準備中のカード`);
     // 弾の制限: 全モンスター・ブリーダーのカードは決めた弾まで。各モンスターの技は、その子の弾まで(後の弾の好きな子も EASY から戦える)
-    const mw = (m) => (String(m.wave) === 'hybrid' ? Number((Object.values(db.monsters).find((x) => !x.variant && x.species === m.main && String(x.wave) !== 'hybrid') || { wave: 4 }).wave) : Number(m.wave));
+    // 混血の防御・回避は、サブの種族の弾まで(サブ？？？の子はメインのまま。2026-10-27 社長の決め)
+    const mw = (m, c) => { if (String(m.wave) !== 'hybrid') return Number(m.wave); const sp = E.cardIsGuardKind(c.kind) && m.sub && m.sub !== 'unknown' ? m.sub : m.main; return Number((Object.values(db.monsters).find((x) => !x.variant && x.species === sp && String(x.wave) !== 'hybrid') || { wave: 4 }).wave); };
     const maxW = E.CARD_AI_BUILD[lv].maxWave;
-    const badWave = d.cards.filter((no) => { const c = db.cards[no]; if (c.user === 'any' || c.user === 'breeder') return c.wave > maxW; return !d.monsters.some((mno) => { const m = db.monsters[mno]; return E.cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxW, mw(m)); }); });
+    const badWave = d.cards.filter((no) => { const c = db.cards[no]; if (c.user === 'any' || c.user === 'breeder') return c.wave > maxW; return !d.monsters.some((mno) => { const m = db.monsters[mno]; return E.cardUsableBy(c, { ...m, ko: false }) && c.wave <= Math.max(maxW, mw(m, c)); }); });
     ok(!badWave.length, `助手 ${w}(${lv})のデッキに使えない弾のカード: ${[...new Set(badWave)].slice(0, 4).join('・')}`);
   })));
   // 保存の読み込み: 無い・壊れた値でも既定値になる
@@ -1006,6 +1008,22 @@ const pendingCards = () => {
     const a = find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no);
     ok(a && a.hand.some((i) => st.players[0].hand[i] === '150'), '150: ゲルがゴーレムの技を出せない');
     ok(!find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === gol.no && x.hand.length === 1), '150: ものまねを付けずに出せてしまう'); }
+  // ---- 混血のメイン・サブ(2026-10-27 社長「ヘルファットがモッチーの守備技使ってきます」「サブが？？？は純血扱い」) ----
+  //   混血: 攻撃・特殊はメインの種族だけ、防御・回避はサブの種族だけ。サブが？？？の子は純血と同じ(メインの種族の札を全部)
+  { const mon = (no) => ({ ...db.monsters[no], ko: false });
+    const hf = mon('C-056'), km = mon('C-066'), pd = mon('C-067');
+    ok(!E.cardUsableBy(db.cards['106'], hf) && !E.cardUsableBy(db.cards['107'], hf), '混血: ヘルファット(メイン モッチー)がモッチーの守りを使える');
+    ok(E.cardUsableBy(db.cards['307'], hf) && E.cardUsableBy(db.cards['308'], hf), '混血: ヘルファットがサブ(ジョーカー)の守りを使えない');
+    ok(E.cardUsableBy(db.cards['100'], hf) && !E.cardUsableBy(db.cards['297'], hf), '混血: ヘルファットの攻撃がメイン(モッチー)だけになっていない');
+    ok(E.cardIsHybridMon(hf) && !E.cardIsHybridMon(km) && !E.cardIsHybridMon(pd), 'サブが？？？の子が純血あつかいになっていない');
+    ok(E.cardUsableBy(db.cards['106'], km) && E.cardUsableBy(db.cards['100'], km), 'サブが？？？の剣士モッチーが、モッチーの攻撃・守りを使えない');
+    // デッキの3体のだれも使えない札の数(ヘルファットだけのモッチーの守り)
+    ok(E.cardDeckDeadCount(db, { monsters: ['C-056', 'C-003', 'C-005'], cards: ['106', '106', '307', '100'] }) === 2 && E.cardDeckDeadCount(db, { monsters: ['C-056', 'C-009', 'C-005'], cards: ['106'] }) === 0, '使えないカードの数え方が違う');
+    // 守るとき: ヘルファットはモッチーの守りを出せず、ジョーカーの守りは出せる
+    let st = scene({ mons: [['C-001', 'C-003', 'C-005'], ['C-056', 'C-003', 'C-005']], hands: [[plainOf('tiger', 'pow').no], ['106', '307']], guts: [9, 9] });
+    const a = find(E.cardAttackOptions(db, st), (x) => x.target && x.target.p === 1 && x.target.m === 0);
+    if (a) { st = act(st, a); const gs = E.cardGuardOptions(db, st).map((o) => st.players[1].hand[o.hand]);
+      ok(!gs.includes('106') && gs.includes('307'), `混血: ヘルファットの守りの候補が違う(${JSON.stringify(gs)})`); } }
   // ---- 区切り7: モンスターが入れ替わる ----
   // ヒノトリの復活(128): 倒れたヒノトリをライフ4で戻す。そのターンは攻撃できない
   { ready('128'); const ph = monOf('phoenix'); let st = scene({ mons: [[ph, 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['128', plainOf('phoenix', 'pow') ? plainOf('phoenix', 'pow').no : gol.no], []], guts: [9, 0] });
