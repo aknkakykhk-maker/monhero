@@ -593,7 +593,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
               </>);})()}
-              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
+              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>くわしく見る <ChevronRight size={11}/></div>
             </>),
           })}
         </button>);})}
