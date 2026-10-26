@@ -2086,8 +2086,10 @@ const CARD_SURRENDER_POINT_PER_KO = 10;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
-// 対人戦(区切り4で使う。数は案A): 勝ち・負け(最後まで)・途中で抜けた で分かれる。同じ相手からは1日3戦まで
-const CARD_PVP_REWARD = Object.freeze({ win: { point: 200, loops: 24 }, lose: { point: 50, loops: 12 }, left: { point: 0, loops: 0 }, dailyMax: 2200, sameFoePerDay: 3 });
+// マルチ対戦: 勝ち・負け(最後まで)・途中で抜けた で分かれる。
+//   2026-10-26 社長: 勝ちは MASTER の2倍(ビートP 400・44周)、負けは MASTER と同じ(25・自分の番10回で11周。投了も MASTER と同じ)、抜けたら0。
+//   1日の上限(dailyMax)はなくした。sameFoePerDay は数だけ置いてある(91 の cardPvpReward は使っていない)
+const CARD_PVP_REWARD = Object.freeze({ win: { point: CARD_AI_LEVELS.master.point * 2, loops: CARD_AI_LEVELS.master.loops * 2 }, lose: { point: CARD_CPU_LOSE_POINT, loops: Math.floor(CARD_AI_LEVELS.master.loops / 2) }, left: { point: 0, loops: 0 }, sameFoePerDay: 3 });
 // その人が自分の番を何回やったか(1ターン目は先攻の番)
 const cardOwnTurns = (st, p) => {
   const t = Math.max(0, Number(st && st.turn) || 0);

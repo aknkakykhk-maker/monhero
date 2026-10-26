@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ca643207796dcb08
+// generated-sha256: 67fd1d98797c10a1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 18:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 19:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52185,8 +52185,10 @@ const CARD_SURRENDER_POINT_PER_KO = 10;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
-// 対人戦(区切り4で使う。数は案A): 勝ち・負け(最後まで)・途中で抜けた で分かれる。同じ相手からは1日3戦まで
-const CARD_PVP_REWARD = Object.freeze({ win: { point: 200, loops: 24 }, lose: { point: 50, loops: 12 }, left: { point: 0, loops: 0 }, dailyMax: 2200, sameFoePerDay: 3 });
+// マルチ対戦: 勝ち・負け(最後まで)・途中で抜けた で分かれる。
+//   2026-10-26 社長: 勝ちは MASTER の2倍(ビートP 400・44周)、負けは MASTER と同じ(25・自分の番10回で11周。投了も MASTER と同じ)、抜けたら0。
+//   1日の上限(dailyMax)はなくした。sameFoePerDay は数だけ置いてある(91 の cardPvpReward は使っていない)
+const CARD_PVP_REWARD = Object.freeze({ win: { point: CARD_AI_LEVELS.master.point * 2, loops: CARD_AI_LEVELS.master.loops * 2 }, lose: { point: CARD_CPU_LOSE_POINT, loops: Math.floor(CARD_AI_LEVELS.master.loops / 2) }, left: { point: 0, loops: 0 }, sameFoePerDay: 3 });
 // その人が自分の番を何回やったか(1ターン目は先攻の番)
 const cardOwnTurns = (st, p) => {
   const t = Math.max(0, Number(st && st.turn) || 0);

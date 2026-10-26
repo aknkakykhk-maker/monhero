@@ -23,7 +23,7 @@ vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-c
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardLegalActions, cardAiFillBind, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
-    cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine };`, ctx);
+    cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine, cardCpuReward, cardCpuLoops, CARD_AI_LEVELS };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -299,8 +299,11 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   // ⑦ 報酬と持ち時間
   const R = E.cardPvpReward;
   const eq = (a, b) => a.point === b[0] && a.loops === b[1];
-  check('⑦ 勝ち 200・24周 / 負け 50・12周(自分の番10回で満額)', eq(R('win', { ownTurns: 12, kos: 3 }), [200, 24]) && eq(R('lose', { ownTurns: 10, kos: 0 }), [50, 12]) && eq(R('lose', { ownTurns: 5, kos: 0 }), [50, 6]));
-  check('⑦ 投了は倒した数で決める・自分の番が3回より前に終わったら0', eq(R('surrender', { ownTurns: 8, kos: 2 }), [20, 8]) && eq(R('win', { ownTurns: 2, kos: 3 }), [0, 0]) && R('win', { ownTurns: 2, kos: 3 }).short === true);
+  // 2026-10-26 社長: 勝ちは MASTER の2倍(400・44周)、負けと投了は MASTER と同じ(25・自分の番10回で11周)
+  check('⑦ 勝ち 400・44周 / 負け 25・11周(自分の番10回で満額)', eq(R('win', { ownTurns: 12, kos: 3 }), [400, 44]) && eq(R('lose', { ownTurns: 10, kos: 0 }), [25, 11]) && eq(R('lose', { ownTurns: 5, kos: 0 }), [25, 5]));
+  check('⑦ 勝ちは MASTER の2倍・負けと投了は MASTER と同じ数になる', ['lose', 'surrender'].every((o) => [[10, 0], [5, 1], [8, 2], [12, 3]].every(([t, k]) => { const f = { ownTurns: t, kos: k }; return R(o, f).point === E.cardCpuReward({ cpuPoint: 0, firstWin: true }, 'master', o, f).base && R(o, f).loops === E.cardCpuLoops('master', o, f); }))
+    && R('win', { ownTurns: 10, kos: 3 }).point === E.CARD_AI_LEVELS.master.point * 2 && R('win', { ownTurns: 10, kos: 3 }).loops === E.CARD_AI_LEVELS.master.loops * 2);
+  check('⑦ 投了は倒した数で決める・自分の番が3回より前に終わったら0', eq(R('surrender', { ownTurns: 8, kos: 2 }), [20, 7]) && eq(R('win', { ownTurns: 2, kos: 3 }), [0, 0]) && R('win', { ownTurns: 2, kos: 3 }).short === true);
   check('⑦ 何戦してももらえる(1日の上限・同じ相手の制限を使わない)', !/dailyMax|sameFoePerDay|pvpPoint\s*[<>]/.test(multi));
   const st0 = E.cardPvpNewGame(db, { myDeck: g.deckA, mySeed: 3, foeMonsters: g.deckB.monsters, first: 1, names: ['A', 'B'] });
   check('⑦ 始める前・攻撃の番は60秒、守りの番は15秒', E.cardPvpLimitMs(st0) === 60000 && E.cardPvpLimitMs({ ...st0, pending: {} }) === 15000);
