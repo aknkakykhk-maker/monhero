@@ -689,8 +689,9 @@ const helpDataRows = (id) => {
     case 'cardBeatPointRewards': {
       if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
       const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
-      const lose = typeof CARD_CPU_LOSE_POINT !== 'undefined' ? CARD_CPU_LOSE_POINT : 0;
-      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose}`]);
+      // 負けは勝ちの 3/4(82 の cardLosePoint。2026-10-26)
+      const lose = (lv) => (typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0);
+      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
       if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
       return rows;
     }

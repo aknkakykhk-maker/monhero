@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b420109dbfc404b
+// source-sha256: 1d1b7fa2dec80644
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 20:01";
+const BUILD_DATE = "2026-10-26 20:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16750,8 +16750,8 @@ const helpDataRows = id => {
       {
         if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
         const label = lv => typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
-        const lose = typeof CARD_CPU_LOSE_POINT !== 'undefined' ? CARD_CPU_LOSE_POINT : 0;
-        const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose}`]);
+        const lose = lv => typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0;
+        const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
         if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
         return rows;
       }
@@ -86149,26 +86149,27 @@ const cardGrantStarter = (db, {
     }
   };
 };
-const CARD_CPU_LOSE_POINT = 25;
+const CARD_LOSE_SHARE = 3 / 4;
+const cardLosePoint = level => Math.floor(level.point * CARD_LOSE_SHARE);
+const cardLoseLoops = level => Math.floor(level.loops * CARD_LOSE_SHARE);
+const cardLoseScaled = (n, ownTurns) => Math.floor(n * Math.min(1, Math.max(0, Number(ownTurns) || 0) / CARD_LOSE_FULL_TURNS));
 const CARD_SURRENDER_POINT_PER_KO = 10;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
 const CARD_PVP_REWARD = Object.freeze({
   win: {
-    point: 200,
-    loops: 24
+    point: CARD_AI_LEVELS.master.point * 2,
+    loops: CARD_AI_LEVELS.master.loops * 2
   },
   lose: {
-    point: 50,
-    loops: 12
+    point: cardLosePoint(CARD_AI_LEVELS.master),
+    loops: cardLoseLoops(CARD_AI_LEVELS.master)
   },
   left: {
     point: 0,
     loops: 0
-  },
-  dailyMax: 2200,
-  sameFoePerDay: 3
+  }
 });
 const cardOwnTurns = (st, p) => {
   const t = Math.max(0, Number(st && st.turn) || 0);
@@ -86186,14 +86187,14 @@ const cardCpuBasePoint = (levelId, outcome, facts) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
   if (outcome === 'win') return level.point;
-  if (outcome === 'lose') return CARD_CPU_LOSE_POINT;
-  if (outcome === 'surrender') return Math.min(CARD_CPU_LOSE_POINT, facts.kos * CARD_SURRENDER_POINT_PER_KO);
+  if (outcome === 'lose') return cardLoseScaled(cardLosePoint(level), facts.ownTurns);
+  if (outcome === 'surrender') return Math.min(cardLoseScaled(cardLosePoint(level), facts.ownTurns), facts.kos * CARD_SURRENDER_POINT_PER_KO);
   return 0;
 };
 const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
-  const loseFull = Math.floor(level.loops / 2);
+  const loseFull = cardLoseLoops(level);
   if (outcome === 'win') return level.loops;
   if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
   if (outcome === 'surrender') return Math.min(loseFull, Math.round(facts.kos * loseFull / 3));
@@ -91092,15 +91093,22 @@ const CardBattleScreen = ({
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
-      const got = cardPvpReward(r.reward, r.facts);
+      const base = cardPvpReward(r.reward, r.facts);
       const daily = cardNormalizeDaily(save.daily, cardTodayJst());
       const record = cardNormalizeRecord(save.record);
       const win = r.outcome === 'win';
+      const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+      const got = {
+        ...base,
+        point: base.point + bonus,
+        bonus
+      };
       const ok = await persist({
         point: save.point + got.point,
         daily: {
           ...daily,
-          pvpPoint: daily.pvpPoint + got.point
+          pvpPoint: daily.pvpPoint + got.point,
+          firstWin: daily.firstWin || bonus > 0
         },
         record: {
           ...record,
@@ -94348,12 +94356,12 @@ const cardPvpReward = (outcome, facts) => {
     short: false
   };
   if (outcome === 'surrender') return {
-    point: Math.min(L.point, f.kos * CARD_SURRENDER_POINT_PER_KO),
+    point: Math.min(cardLoseScaled(L.point, f.ownTurns), f.kos * CARD_SURRENDER_POINT_PER_KO),
     loops: Math.min(L.loops, Math.round(f.kos * L.loops / 3)),
     short: false
   };
   return {
-    point: L.point,
+    point: cardLoseScaled(L.point, f.ownTurns),
     loops: Math.floor(L.loops * Math.min(1, f.ownTurns / CARD_LOSE_FULL_TURNS)),
     short: false
   };
