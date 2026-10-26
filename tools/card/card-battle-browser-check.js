@@ -368,7 +368,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         if (dragAttack === null && usable.length) {
           // 技を相手のモンスターまで運ぶ。途中で自分の場(置けない所)の上を通るときは光らない
           // ★相手の上で光るかを見てから離す。光らない札(自分の子に使う札など)は元の場所へ戻して離し(使わない)、次の札で試す
-          const logBefore = await page.locator('[data-card-log]').innerText();
+          const logBefore = await page.locator('[data-card-log]').textContent();
           const mine = await center(page.locator('[data-card-mon="0-0"]'));
           let tried = false;
           for (const hi of usable.slice(0, 5)) {
@@ -390,7 +390,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
               await page.waitForTimeout(300);
               // 自分の手は、先にカードを大きく出してから効く(2026-10-26)。大写しが出たら「使えた」、消えるまで待つ
               const bigMine = (await page.locator('[data-card-big="me"]').count()) > 0;
-              const changed = bigMine || (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              const changed = bigMine || (await page.locator('[data-card-log]').textContent()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
               if (bigMine) await page.waitForTimeout(1000);
               if (changed) { myActions += 1; dragAttack = true; dragNoGlow = midGlow === 0; }
               break;

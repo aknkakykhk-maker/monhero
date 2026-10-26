@@ -124,12 +124,12 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const usable = await page.locator('[data-card-bind-name][data-card-bind-usable="1"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-bind-name')));
     check('① 狙った子が使える守りが先に並ぶ(緊急回避は全モンスターの回避なので入る)', usable.includes('緊急回避') && names.slice(0, usable.length).every((x) => usable.includes(x)), usable.join('・'));
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'bind-pick.png') }); }
-    const log0 = await page.locator('[data-card-log]').innerText().catch(() => '');
+    const log0 = await page.locator('[data-card-log]').textContent().catch(() => '');
     const lifeOf = async () => { const t = await page.locator('[data-card-mon="1-0"]').innerText().catch(() => ''); const m = t.match(/(\d+)\s*\/\s*(\d+)/); return m ? Number(m[1]) : null; };
     const life0 = await lifeOf();
     await page.locator('[data-card-bind-pick]').getByRole('button', { name: 'やめる' }).click();
     await page.waitForTimeout(300);
-    const log1 = await page.locator('[data-card-log]').innerText().catch(() => '');
+    const log1 = await page.locator('[data-card-log]').textContent().catch(() => '');
     const mode1 = await page.locator('[data-card-battle]').getAttribute('data-card-mode');
     check('② 「やめる」で閉じる。技は出ていない', (await page.locator('[data-card-bind-pick]').count()) === 0 && log1 === log0 && mode1 === 'attack', `窓 ${await page.locator('[data-card-bind-pick]').count()}・段 ${mode1}`);
     // もう一度開いて「緊急回避」を名指し
