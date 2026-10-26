@@ -104,6 +104,12 @@ if (process.argv.includes('--check')) {
   // 事前ダウンロードの一覧(asset-manifest.json)が、いまの音源・画像の中身と合っているか。
   // 古いままだと、差し替えた絵や音を端末が落とし直さない
   {
+    // モンスターの小さい版(tools/image/make-monster-thumbs.js)が、今の立ち絵から作られているか
+    {
+      const { spawnSync } = require('child_process');
+      const t = spawnSync(process.execPath, [path.join(__dirname, 'image', 'make-monster-thumbs.js'), '--check'], { encoding: 'utf8' });
+      if (t.status !== 0) { process.stderr.write(t.stderr || t.stdout || ''); process.exit(1); }
+    }
     const r = require('./build-asset-manifest').run({ check: true });
     if (!r.ok) { console.error(`NG: ${r.reason}。node tools/build.js を実行してください`); process.exit(1); }
   }
@@ -148,6 +154,14 @@ if (process.argv.includes('--check')) {
   console.log(r.changed
     ? `tailwind.css を作り直しました(${Math.round(r.size / 1024)} KB / ${r.fingerprint})`
     : `tailwind.css は最新でした(${r.fingerprint})`);
+}
+
+// モンスターの小さい版を作る(元の立ち絵が変わったときだけ作り直す)。一覧を images-ally.js に書くので、
+// ?v= を打つ stamp-version と、事前ダウンロードの一覧(asset-manifest)より前に置く(2026-10-27 オート無限周回のメモリ対策)
+{
+  const { spawnSync } = require('child_process');
+  const t = spawnSync(process.execPath, [path.join(__dirname, 'image', 'make-monster-thumbs.js')], { encoding: 'utf8' });
+  if (t.status !== 0) { process.stderr.write(t.stderr || t.stdout || ''); process.exit(1); }
 }
 
 // 事前ダウンロード(Service Worker)が使う音源・画像の一覧と版の印を作り直す(build-asset-manifest.js)

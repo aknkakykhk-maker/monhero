@@ -524,3 +524,37 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
   centaur: LINEAGE_ICON_CENTAUR,
   unknown: LINEAGE_ICON_RAREMON,
 });
+
+// <monster-thumbs>
+// 小さい枠(64px 以下)で使うモンスターの小さい版。tools/image/make-monster-thumbs.js が作る(手で書かない)
+const MONSTER_THUMBS = {
+  "Ark": "images/monster-thumbs/ark.png?v=7c0bea019d24",
+  "Dreamy": "images/monster-thumbs/dreamy.png?v=52dd72eedb84",
+  "Eiki": "images/monster-thumbs/eiki.png?v=16fc18f0557a",
+  "Ghost": "images/monster-thumbs/ghost.png?v=2f425d0bdb0c",
+  "Golem": "images/monster-thumbs/golem.png?v=0f4c785f6be0",
+  "Ham": "images/monster-thumbs/ham.png?v=ebd15987815c",
+  "Iblis": "images/monster-thumbs/iblis.png?v=03f0805f8042",
+  "Illumine": "images/monster-thumbs/illumine.png?v=34fc3f9c816a",
+  "KenshiMocchi": "images/monster-thumbs/kenshimocchi.png?v=7bbc8093cc81",
+  "Kuromy": "images/monster-thumbs/kuromy.png?v=535ef98e1c61",
+  "Melody": "images/monster-thumbs/melody.png?v=05b88d6a561e",
+  "MelWhip": "images/monster-thumbs/melwhip.png?v=539bb81b4667",
+  "Mia": "images/monster-thumbs/mia.png?v=43ee24870aa3",
+  "Mitarashi": "images/monster-thumbs/mitarashi.png?v=46c8880e15ea",
+  "Mocchi": "images/monster-thumbs/mocchi.png?v=eaf570b00efc",
+  "Monol": "images/monster-thumbs/monol.png?v=0d4176ea4f28",
+  "Oboro": "images/monster-thumbs/oboro.png?v=7afb7f26ae0a",
+  "Pandora": "images/monster-thumbs/pandora.png?v=ec9af7e742ec",
+  "Pixie": "images/monster-thumbs/pixie.png?v=34c3db90a5e0",
+  "Plant": "images/monster-thumbs/plant.png?v=03fa6abc2b43",
+  "Snegurochka": "images/monster-thumbs/snegurochka.png?v=153ac32620dd",
+  "Spooky": "images/monster-thumbs/spooky.png?v=e6e5ff907240",
+  "Suezo": "images/monster-thumbs/suezo.png?v=9886bc06c718",
+  "Tiger": "images/monster-thumbs/tiger.png?v=695831514b53",
+  "Undine": "images/monster-thumbs/undine.png?v=f78c64c06d9f",
+  "Yaobikuni": "images/monster-thumbs/yaobikuni.png?v=888eb3250dfd",
+  "Yggdrasil": "images/monster-thumbs/yggdrasil.png?v=b92e61bd9054",
+  "Zan": "images/monster-thumbs/zan.png?v=2cfc30f16541",
+};
+// </monster-thumbs>
