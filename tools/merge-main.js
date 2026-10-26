@@ -78,8 +78,15 @@ function resolveCore() {
   const src = fs.readFileSync(file, 'utf8');
   const hunk = /<{7}[^\n]*\n([\s\S]*?)={7}\n([\s\S]*?)>{7}[^\n]*\n/g;
   let onlyBuildDate = true;
+  // 2026-10-27 から BUILD_DATE は本体の外(index.html の window.__mhBuildDate)から読む形になった(速さ部)。
+  // 古い形(時刻を書いた1行)と新しい形(説明のコメント+window から読む1行)がぶつかったら、必ず新しい形を取る。
+  // こちら側を取るだけだと、古い main から作ったブランチで古い形へ巻き戻ってしまう
+  const lines = (t) => t.split('\n').filter(l => l.trim());
+  const isOld = (t) => lines(t).length > 0 && lines(t).every(l => /^const BUILD_DATE = "/.test(l));
+  const isNew = (t) => t.includes('window.__mhBuildDate') && lines(t).every(l => /^\/\//.test(l.trim()) || /^const BUILD_DATE = /.test(l));
   const out = src.replace(hunk, (all, ours, theirs) => {
-    const lines = (t) => t.split('\n').filter(l => l.trim());
+    if (isOld(ours) && isNew(theirs)) return theirs;
+    if (isNew(ours) && (isOld(theirs) || isNew(theirs))) return ours;
     if (![...lines(ours), ...lines(theirs)].every(l => /^const BUILD_DATE = /.test(l))) onlyBuildDate = false;
     return ours;
   });
