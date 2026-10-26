@@ -84,6 +84,8 @@ const CARD_AI_BGM = Object.freeze({
   kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
 });
 const CARD_PVP_BGM = 'ichika_battle';
+// 助手と対戦の曲: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手の曲(CARD_AI_BGM)
+const cardCpuBgm = (bgm, who) => (bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : (CARD_AI_BGM[who] || null));
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
@@ -530,14 +532,14 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     lastLine.current = { ...lastLine.current, [scene]: line.index };
     setFace(line.face);
     const key = `${Date.now()}-${scene}`;
-    setBubble({ text: line.text, key });
+    setBubble({ text: line.text, key, face: line.face });
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
     if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
       talk.current.n += 1;
       void cardTalkFetch('moment', { who: game.who, facts: cardTalkMomentFacts(db, ai.next, CARD_CPU, ai.scene), samples: cardTalkSamples(game.who, scene) }).then((r) => {
         if (!r) return;
-        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text } : cur));
+        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text, face: r.face } : cur));
         setFace(r.face);
       });
     }
@@ -549,8 +551,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (!tutorial || !tutQ.length) return undefined;
     const head = tutQ[0];
     if (head[0] === 'M') {
-      setFace('happy');
-      setBubble({ text: CARD_TUTORIAL_LINES[head], key: `t-${head}-${Date.now()}` });
+      const tf = CARD_TUTORIAL_FACE[head] || 'happy';
+      setFace(tf);
+      setBubble({ text: CARD_TUTORIAL_LINES[head], key: `t-${head}-${Date.now()}`, face: tf });
       const t = setTimeout(() => { setBubble(null); setTutQ((q) => q.slice(1)); }, 2100);
       return () => clearTimeout(t);
     }
@@ -1100,10 +1103,12 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             {turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`}
           </div>
         )}
-        {/* 相手の助手の吹き出し(まんなかのいちばん上。相手のモンスターにはかけない。指の操作は下へ通す) */}
+        {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。指の操作は下へ通す。
+            顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && (
-          <div key={bubble.key} data-card-bubble className={`pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
-            <span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span>
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+            <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>
+            <span className="min-w-0"><span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span></span>
           </div>
         )}
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
@@ -1158,11 +1163,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             if (tutStage.onNext) setSt((cur) => cardTutorialMutate(db, cur, tutStage.onNext));
             setTutI((i) => i + 1);
           };
+          // 縦の画面: 手札のすぐ上に重ねて出す(場所を取らない。下のボタンが画面の外へ押し出されていた・2026-10-26 社長の実機)。
+          //   窓の文字の上は指の操作を下(自分のモンスター)へ通し、「次へ」だけ押せる。横の画面は右の列に今までどおり並べる
+          //   重なりは 45(技を出す子の動き 40 より上・ダメージの数字 50 と大きいカード 55 より下)
           return (
-            <div data-card-tutor={tutStage.id} className="relative z-[30] mx-2 mb-1 flex shrink-0 items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950 px-2 py-1.5 shadow-lg">
+            <div className={wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'}>
+            <div data-card-tutor={tutStage.id} className={`${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`}>
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
               <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
-              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
+              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
+            </div>
             </div>
           );
       })()}
@@ -1434,6 +1444,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return next;
   };
   useEffect(() => { void load(); }, []);
+  // トップ画面(結果・デッキ編成なども)の曲。対戦の画面へ入るときは、それぞれの曲に替える
+  const topBgm = save && save.bgm ? save.bgm.top : null;
+  useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm); }, [screen, topBgm]);
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
   useEffect(() => { if (screen === 'CARD_TOP' && game && !result) setGame(null); }, [screen]);
 
@@ -1455,7 +1468,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
-        onBgm && onBgm(null);
+        onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
         setView('pvp');
         return;
@@ -1465,7 +1478,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
         const ok = await persist({ tutorial: fin.tutorial, point: save.point + fin.reward });
         setResult({ tutorial: true, done: outcome === 'tutorialDone', reward: ok ? fin.reward : 0, saved: ok });
-        onBgm && onBgm(null);
+        onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
         setView('result');
         return;
@@ -1487,7 +1500,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
       const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts });
-      onBgm && onBgm(null);
+      onBgm && onBgm(save.bgm.top);
       onNavigate('CARD_TOP');
       setView('result');
     }}/>;
@@ -1503,7 +1516,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const startTutorial = () => {
     setResult(null);
     setGame({ key: `tutorial-${Date.now()}`, st: cardTutorialGame(db), who: 'mua', level: 'easy', tutorial: true });
-    onBgm && onBgm(CARD_AI_BGM.mua);
+    onBgm && onBgm(CARD_AI_BGM.mua); // 練習試合は、みゅあの曲(#3634 の前と同じ)
     onNavigate('CARD_BATTLE');
   };
   const startBattle = (pick = foe) => {
@@ -1519,7 +1532,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     setResult(null);
     setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings });
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
-    onBgm && onBgm(save.bgm.cpu !== 'auto' ? save.bgm.cpu : (CARD_AI_BGM[pick.who] || null));
+    onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
   };
 
@@ -1797,14 +1810,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div data-card-options-bgm className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">音</div>
             <b className="mt-2 block text-[12px] font-black text-slate-200">対戦のBGM</b>
-            {[['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
+            {[['top', 'トップ画面'], ['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
               <label key={k} className="mt-2 block text-left">
                 <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
                     {k === 'cpu' && <option value="auto">おまかせ(相手の助手に合わせる)</option>}
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{k === 'pvp' && t.id === CARD_BGM_DEFAULT.pvp ? '(デフォルト)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''}</option>)}
                   </select>
                   {bgmPreview && (save.bgm[k] !== 'auto') && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
                 </div>
