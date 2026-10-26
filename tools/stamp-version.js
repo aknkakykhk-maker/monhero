@@ -1,4 +1,6 @@
-// BUILD_DATE、version.json、index.htmlの本体JSキャッシュキーを「今の日本時間」に揃える。
+// BUILD_DATE(index.html の window.__mhBuildDate)と version.json を「今の日本時間」に揃え、data/*.js・tailwind.css・画像のキャッシュキーを中身のハッシュに合わせる。
+// 本体JSのキャッシュキー(index.html の GAME_BUILD)は、本体を書き出したあとに stamp-game-build.js が中身のハッシュで打つ
+// (2026-10-27 まではここで時刻を打っていた)。
 // CHANGELOGはユーザー向け更新だけの正本とし、デバッグ・内部修正では自動更新しない。
 //
 //   node stamp-version.js            … 現在時刻(JST)で更新する
@@ -8,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, readPartsManifest } = require('./harness');
+const { REPO_ROOT } = require('./harness');
 
 // JSTの「YYYY-MM-DD HH:MM」を作る(実行環境のタイムゾーンに依存しないよう明示的に変換する)
 function nowJst() {
@@ -26,40 +28,20 @@ if (process.argv.includes('--print')) {
   process.exit(0);
 }
 
-const src = fs.readFileSync(GAME_SYSTEM, 'utf8');
-const replaced = src.replace(/const BUILD_DATE = "[^"]*";/, `const BUILD_DATE = "${stamp}";`);
-// 同じ分に2回実行すると置換後の内容が元と同じになる。これを「宣言が無い」と誤判定して
-// 中断すると、build.js の変換まで走らず compiled が古いまま出荷されてしまう。
-// 宣言が実在するかどうかで判定する。
-if (!/const BUILD_DATE = "[^"]*";/.test(src)) {
-  console.error('NG: BUILD_DATE の宣言が見つかりませんでした');
-  process.exit(1);
-}
 const indexPath = path.join(REPO_ROOT, 'monster-hero', 'index.html');
 const index = fs.readFileSync(indexPath, 'utf8');
-const gameBuild = stamp.replace(/[- :]/g, '');
-let replacedIndex = index.replace(/var GAME_BUILD = '[^']*';/, `var GAME_BUILD = '${gameBuild}';`);
-if (!/var GAME_BUILD = '[^']*';/.test(index)) {
-  console.error('NG: index.html の GAME_BUILD 宣言が見つかりませんでした');
+// 画面に出す版の日時は、本体ではなく index.html の window.__mhBuildDate に打つ(2026-10-27 速さ部)。
+// 本体の中に書くと、ビルドのたびに本体の中身が変わり、本体のキャッシュキー(中身のハッシュ)も毎回変わるため
+const BUILD_DATE_LINE = /window\.__mhBuildDate = '[^']*';/;
+if (!BUILD_DATE_LINE.test(index)) {
+  console.error('NG: index.html の window.__mhBuildDate が見つかりませんでした');
   process.exit(1);
 }
-fs.writeFileSync(GAME_SYSTEM, replaced);
-// 編集元は parts 側なので、BUILD_DATE を持つ部品にも同じ値を書く(game-system.jsx と parts を同時に進め、
-// build.js の「どちらが変わったか」の判定で食い違いにならないようにする)
-for (const name of readPartsManifest()) {
-  const partPath = path.join(PARTS_DIR, name);
-  const before = fs.readFileSync(partPath, 'utf8');
-  if (!/const BUILD_DATE = "[^"]*";/.test(before)) continue;
-  const after = before.replace(/const BUILD_DATE = "[^"]*";/, `const BUILD_DATE = "${stamp}";`);
-  if (after !== before) fs.writeFileSync(partPath, after);
-}
-// 両方に同じ値を書いたので本文は一致しているが、game-system.jsx のヘッダに書いたハッシュが古いまま残る。
-// ここで書き直しておかないと、次に parts を編集したとき build.js が「両方が別々に変わった」と誤って止まる
-require('./harness').syncPartsAndGameSystem();
+let replacedIndex = index.replace(BUILD_DATE_LINE, `window.__mhBuildDate = '${stamp}';`);
 fs.writeFileSync(path.join(REPO_ROOT, 'monster-hero', 'version.json'), `{"build": "${stamp}"}\n`);
 
 // data/*.js のキャッシュキー(?v=)を中身のハッシュに合わせる。
-// 本体(game-system.compiled.js)はGAME_BUILDで毎回更新されるが、データ側は手書きの固定値だったため、
+// 本体(game-system.compiled.js)はGAME_BUILDで更新されるが、データ側は手書きの固定値だったため、
 // data/breeder.js だけ古いままブラウザに残り「本体は新しいのにデータが古い」状態で
 // 参照エラー → 画面が真っ暗、という不具合が起きた。
 // 中身が変わったファイルだけキーが変わるので、変えていないファイルは再ダウンロードされない。
@@ -148,7 +130,7 @@ if (imageChanged) {
   fs.writeFileSync(indexPath, redone);
 }
 
-console.log(`BUILD_DATE、version.json、GAME_BUILD を ${stamp} に更新しました（CHANGELOGは変更しません）`);
+console.log(`BUILD_DATE、version.json を ${stamp} に更新しました（CHANGELOGは変更しません）`);
 console.log(`data/*.js のキャッシュキー: ${dataKeys.join(' / ')}`);
 console.log(`tailwind.css のキャッシュキー: ${tailwindKey}`);
 console.log(`画像のキャッシュキー: ${imageCount}枚`);
