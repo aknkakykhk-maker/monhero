@@ -260,7 +260,11 @@ check('タクティクスプロはプロ扱い・タクティクス種族は種�
 check('既存のランキング行を書き換える処理を足していない',
   !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source)
     // フレンド機能(friendsPatchLink)の PATCH は、フレンドの申請の表を書き換えるもの。ランキングの表ではない(2026-10)
-    && !/method:\s*'PATCH'/.test(source.replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, ''))
+    // MFバトルカードのマルチ対戦の招待を断る(sbDeclineCardInvite)の PATCH は、招待の表(card_battle_invites)の時刻を書き換えるもの。
+    //   ランキングの表ではない(2026-10-26 #3678)。例外にするのは、この関数の中の card_battle_invites への PATCH だけ
+    && !/method:\s*'PATCH'/.test(source
+      .replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, '')
+      .replace(/const sbDeclineCardInvite = async[\s\S]*?cardPvpInviteRequest\(`card_battle_invites\?[^`]*`, \{ method: 'PATCH', [^}]*\}, prefer: 'return=minimal' \}\);/, ''))
     && !has('DELETE FROM') && !has('migrateRanking'));
 
 // --- ③ WAVEごとの自動成長 ---
