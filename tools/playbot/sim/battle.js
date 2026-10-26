@@ -960,11 +960,14 @@ function botTeachingScore(st, t) {
 }
 // 選ぶ。st.assist: 'bot'(いまのボット)・カードの id(そのカードがあれば必ず。無ければボットの点数)・'none'(選ばない)
 // アシカの Tier(asika-tier.md 14 版目の総合)の並び。'rank' の選び方で使う
+// 強い難易度の目安: WAVE 1 の敵の攻撃力(Hard 78・Expert 156・Master 260。2026-10-27 時点)。勇者のライフは 250〜930 と幅が広いので割らない
+const ASSIST_RANK_ATK = Number(process.env.SIM_ASSIST_RANK_ATK ?? 120);
 const ASSIST_RANK = ['mua', 'momosuke', 'atsu', 'oryo', 'poltz', 'kiki', 'meloso', 'dra', 'cadmium', 'myaru'];
 function chooseTeaching(st, pool) {
   if (!pool.length || st.assist === 'none') return null;
   // 'rank' = アシカの Tier の上から順に取る(15 版目の候補。asika-tier.md の総合の並び)。強化できるものも含め、上のカードを先に
-  if (st.assist === 'rank') {
+  // 'auto' = 強い難易度(WAVE 1 の敵の攻撃力が ASSIST_RANK_ATK 以上 = Expert・Master)だけ 'rank'、ほかはボットと同じ
+  if (st.assist === 'rank' || (st.assist === 'auto' && st.strongRun)) {
     const order = (st.assistRank || ASSIST_RANK);
     const pick = pool.filter((t) => { const o = ownedTeaching(st, t.id); return !o || o.evoLevel < 2; })
       .sort((a, z) => (order.indexOf(a.id) < 0 ? 99 : order.indexOf(a.id)) - (order.indexOf(z.id) < 0 ? 99 : order.indexOf(z.id)))[0];
@@ -1514,7 +1517,7 @@ function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', se
     // 緊急回復(7 版目): 'auto'(① AUTO と同じ条件)・'brink'(② 全滅の手前だけ)・'bot'(①+②。2026-10-10 からのブラウザのボット arena-1 と同じ)・'none'(使わない。それまでのボット)
     emergency, emergencyUses: 0, emergencyCfg, discardBlocked, revive,
   };
-  if (assist !== 'bot' && assist !== 'none' && assist !== 'rank' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
+  if (assist !== 'bot' && assist !== 'none' && assist !== 'rank' && assist !== 'auto' && !TEACH_BY_ID[assist]) throw new Error(`アシカの選び方が分からない: ${assist}`);
   if (!TRAINING_PLANS.includes(training)) throw new Error(`トレーニングの選び方が分からない: ${training}`);
   if (!REVIVE_PLANS.includes(revive)) throw new Error(`起こすかの決め方が分からない: ${revive}`);
   if (!UNIQUE_PLANS.includes(uniquePlan)) throw new Error(`固有技の強化の入れ方が分からない: ${uniquePlan}`);
@@ -1533,6 +1536,7 @@ function simulateRun({ heroId, allies = [], hate = true, difficulty = 'Hard', se
   }
   if (heroStyle && heroDef && heroDef.heroInitialStyle) st.ex = G.setTacticsExInitialStyle(G.createTacticsExState(), { def: heroDef, slot: st.heroSlot, monId: heroId, style: heroStyle });
   const waiting = allies.slice();
+  { const e1 = G.createBattleEnemy(1, difficulty, null, null, 1, { mode: 'tacticsPro' }); st.strongRun = !!e1 && e1.atk >= ASSIST_RANK_ATK; }
   learnTeaching(st, chooseTeaching(st, teachingPool(st, 'start'))); // ランの始めに1枚(PICK_TEACHING)
   for (let w = 1; w <= maxWave; w++) {
     st.wave = w;
