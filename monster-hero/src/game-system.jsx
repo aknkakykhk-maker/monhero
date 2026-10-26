@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 78877bd36aa39319
+// generated-sha256: d4c6b37a4dcf34e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 01:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 01:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -78584,7 +78584,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenEventReplayList={()=>{setEventReplayGroupId(null);setShowEventReplayList(true);}}
             onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}
             rhythmHistoryCount={rhythmHistoryCount}
-            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
+            /* 仲良し度の並びは、会った助手だけ(2026-10-27 社長「仲良し度だけ会ってから出す」)。助手えらびの小窓と同じ判定:
+               ももすけは最初の会話を見たか(momosukeIntroSeenFlag)、あつなどは加入のお話を見たか(assistantsUnlockedFrom) */
+            unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag)}
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}
