@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0935619c0d67eecf
+// source-sha256: 94f95f574b18002f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:41";
+const BUILD_DATE = "2026-10-27 02:43";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -7813,7 +7813,8 @@ const Audio_ = (() => {
       return {
         kind,
         key: String(key || ''),
-        src: url.split('/').pop().split('?')[0]
+        src: url.split('/').pop().split('?')[0],
+        name: String(track?.name || '')
       };
     };
     const list = [];
@@ -12221,7 +12222,7 @@ const AudioTroubleshootPanel = ({
   }, "いまゲームの音はオフです。上の「🔇 音がオフです」を押してオンにしてください。"), lowVolume && React.createElement("p", {
     "data-audio-low-volume": true,
     className: "mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200"
-  }, "音量がとても小さいままです（BGM ", info.bgmVolumePct, " ／ SE ", info.seVolumePct, "）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。"), row('音の出口', stateView.label, stateView.tone), row('効果音エンジン', seView.label, seView.tone), row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400'), React.createElement("div", {
+  }, "音量がとても小さいままです（BGM ", info.bgmVolumePct, " ／ SE ", info.seVolumePct, "）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。"), row('音の出口', stateView.label, stateView.tone), row('効果音エンジン', seView.label, seView.tone), row('いま鳴っている曲', playing ? playing.name || playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400'), React.createElement("div", {
     className: "mt-2"
   }, React.createElement("div", {
     className: "flex items-center justify-between gap-2"
