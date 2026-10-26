@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca1f10c2c6a01cf8
+// source-sha256: cd8ad11b1cc816d3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 04:53";
+const BUILD_DATE = "2026-10-27 05:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90208,7 +90208,7 @@ const CardBattleBoard = ({
     setSel(null);
     setPicks([]);
     setHint('');
-    if (scene) say(scene, {
+    if (scene && next.winner === null) say(scene, {
       scene: flip || scene,
       next
     });
@@ -90332,6 +90332,7 @@ const CardBattleBoard = ({
     return () => clearTimeout(t);
   }, [st, paused]);
   const endNow = useRef(null);
+  const endFx = st.winner !== null && !tutorial && !replay;
   useEffect(() => {
     if (st.winner === null || finished.current || tutorial || replay) return undefined;
     finished.current = true;
@@ -91067,7 +91068,7 @@ const CardBattleBoard = ({
     p: CARD_CPU,
     m: m,
     mark: markOf(CARD_CPU, m),
-    fx: fx.filter(f => f.p === CARD_CPU && f.m === m),
+    fx: endFx ? [] : fx.filter(f => f.p === CARD_CPU && f.m === m),
     onTap: () => tapMon(CARD_CPU, m),
     press: press,
     compact: compact,
@@ -91090,7 +91091,7 @@ const CardBattleBoard = ({
     "data-card-bubble-ms": tutorial ? undefined : cardBubbleMs(bubble.text),
     onClick: tutorial ? undefined : nextBubble,
     "data-card-bubble-cut": bubble.cut ? '1' : undefined,
-    className: `${bigCard || turnBanner || guarding ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubble.cut ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 px-2 py-1 ${tiny ? 'text-[13px]' : 'text-[15px]'} font-black leading-snug text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
+    className: `${bigCard || turnBanner || guarding || endFx ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubble.cut ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 px-2 py-1 ${tiny ? 'text-[13px]' : 'text-[15px]'} font-black leading-snug text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -91139,7 +91140,7 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && stageFit < 3 && !turnSummary && !guardAtk && React.createElement("div", {
+  })), action && !endFx && stageFit < 3 && !turnSummary && !guardAtk && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     "data-card-action-side": action.side,
@@ -91174,7 +91175,7 @@ const CardBattleBoard = ({
     className: "ml-1 text-[10px] font-bold text-emerald-200"
   }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), React.createElement("div", {
     "data-card-log": true,
-    className: `relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard || downBand ? 'invisible' : ''}`,
+    className: `relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && (guardAtk ? React.createElement("button", _extends({
     type: "button",
@@ -91212,7 +91213,7 @@ const CardBattleBoard = ({
     p: CARD_ME,
     m: m,
     mark: markOf(CARD_ME, m),
-    fx: fx.filter(f => f.p === CARD_ME && f.m === m),
+    fx: endFx ? [] : fx.filter(f => f.p === CARD_ME && f.m === m),
     onTap: () => tapMon(CARD_ME, m),
     press: press,
     compact: compact,
@@ -91423,7 +91424,7 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: "mr-1 rounded bg-emerald-400 px-1 text-[10px] font-black text-emerald-950"
-  }, "全体カード"), jaWrap(cardOf(db, bigCard.cards[0]).text || ''))), st.winner !== null && !tutorial && !replay && React.createElement("div", {
+  }, "全体カード"), jaWrap(cardOf(db, bigCard.cards[0]).text || ''))), endFx && React.createElement("div", {
     "data-card-end-fx": st.winner === CARD_ME ? 'win' : 'lose',
     role: "button",
     "aria-label": "結果へ進む",
