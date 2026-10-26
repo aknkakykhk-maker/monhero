@@ -1785,6 +1785,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView('pvp');
         return;
       }
+      // デバッグの「技の動きの見本」(game.demo)は、終わっても・投了しても何も保存しない(ボタンに「保存しない」と書いてある)。トップへ戻すだけ
+      if (game.demo) {
+        onBgm && onBgm(save.bgm.top);
+        onNavigate('CARD_TOP');
+        setView('top');
+        return;
+      }
       if (game.tutorial) {
         // 練習試合: 終えた・飛ばしたの印と、はじめて最後までやったときだけビートP 100(1日の上限とは別)
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
