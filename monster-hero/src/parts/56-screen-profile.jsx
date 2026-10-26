@@ -295,7 +295,7 @@ function ProfileScreen({
               <Users size={18} className="text-pink-300 shrink-0"/>
               <span className="flex-1 min-w-0 text-left">
                 <b className="block text-[13px] font-black text-pink-100">フレンド</b>
-                <small className={`block truncate text-[10px] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`申請が${Number(friendRequestCount)}件届いています`:'申請・プロフィール'}</small>
+                <small data-profile-friends-note className={`block text-[10px] leading-tight [word-break:keep-all] [overflow-wrap:anywhere] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`申請が${Number(friendRequestCount)}件届いています`:'申請・プロフィール'}</small>
               </span>
               {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
             </button>
