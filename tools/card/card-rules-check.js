@@ -176,7 +176,7 @@ const decksAndSaves = () => {
     const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
       let win = 0, n = 0, sd = 1;
       // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体。2026-10-25)。MASTER はプレイヤー役のデッキを見る
-      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
+      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!d.sameBlood }), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
       return [w, win / n];
     });
     const bad = rates.filter(([, r]) => r < 0.38 || r > 0.65);
