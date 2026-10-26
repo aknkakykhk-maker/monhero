@@ -625,6 +625,8 @@ const ART_ANCHORS = Object.freeze({
   HYBRID_C037: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
   HYBRID_C014: Object.freeze({ face: Object.freeze([0.359, 0.21]) }),
   HYBRID_C011: Object.freeze({ face: Object.freeze([0.503, 0.11]) }),
+  KYUBI: Object.freeze({ face: Object.freeze([0.53, 0.23]) }),
+  ORIHIME: Object.freeze({ face: Object.freeze([0.557, 0.225]) }),
 });
 // <monster-thumbs>
 // 小さい枠(64px 以下)で使うモンスターの小さい版。tools/image/make-monster-thumbs.js が作る(手で書かない)
