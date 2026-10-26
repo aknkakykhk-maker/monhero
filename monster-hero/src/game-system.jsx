@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 373efe1777576b79
+// generated-sha256: 459643737b7a1457
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55425,7 +55425,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     <div ref={boardRef} data-mh-screen data-card-battle data-card-mode={mode} data-card-wide={wide ? 'true' : undefined} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden text-white" style={{ background: 'radial-gradient(ellipse at 50% 45%,#3b2a6b 0%,#1b1438 55%,#0d0a1f 100%)' }}>
       <div data-card-head className={`flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2 py-0.5`}>
         <div className="flex shrink-0 items-center gap-1.5">
-          <button type="button" data-card-quit onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{replay ? 'とじる' : tutorial ? '飛ばす' : '投了'}</button>
+          <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{replay ? 'とじる' : tutorial ? '飛ばす' : '投了'}</button>
           {pvpLive && <CardPvpChat/>}
           {!tutorial && <button type="button" data-card-log-open onClick={() => setLogSheet(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200" aria-label="ターンの記録を見る">記録</button>}
         </div>
@@ -55597,7 +55597,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 画面の下の安全域(ホームバーの所)は、体(body)がもう余白に取っている。ここでも取ると二重になり、
           下の帯が高くなっていた(2026-10-26 統括部長「下のボタンが少し切れる」)。ここは 8px だけ。入り切らないときの詰め方は boardFit */}
       <div data-card-footer className="flex shrink-0 gap-2 px-2.5 pb-2 pt-1">
-        {replay ? <CardReplayBar replay={replay} at={replayAt} onSeek={replaySeek} onExit={() => onFinish({ outcome: 'replayExit', st })}/> : footer}
+        {replay ? <CardReplayBar replay={replay} at={replayAt} onSeek={replaySeek}/> : footer}
       </div>
       </div>
       </div>
@@ -56593,6 +56593,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   }
 
   // ---- 記録 ----
+  // 過去の対戦の一覧(93-card-replay.jsx。2026-10-27 社長「記録にも残してそこからみれるように」)
+  if (view === 'replays') return <CardReplayList onOpen={(id) => { void openReplay(id, 'replays'); }} onBack={() => setView('record')}/>;
   if (view === 'record') {
     const rec = save.record;
     const r = rec.rank;
@@ -56601,6 +56603,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       <div data-mh-screen data-card-record-view className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="記録" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); setView('replays'); }}
+            className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
+            <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+            <span className="text-[18px] text-slate-400">›</span>
+          </button>
           {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
@@ -59504,14 +59511,15 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
 //   ・ルールを直したあとに昔の試合をなぞり直すと、途中で合わなくなることがある。記録には、ルールの版と「1手ごとの場の短い指紋」を一緒に書き、
 //     なぞり直して手が当たらない・指紋が合わなくなったら、そこで止めて「ここまでしか見られません」と出す(勝手に別の試合にしない)
 //
-// 保存: 新しいキー mh_card_replays_v1(端末の中だけ)。新しい10試合まで・お気に入りは3つまで(消さない)・合わせて約150KBまで
+// 保存: 新しいキー mh_card_replays_v1(端末の中だけ)。新しい50試合まで・お気に入りは10まで(消さない)・合わせて約750KBまで
+//   (2026-10-27 社長「過去の対戦は記録にも残してそこからみれるようにはできないの？」→ 10試合・お気に入り3 から増やした。記録の画面の「過去の対戦」)
 
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
 const CARD_REPLAY_RULES = 1;
-const CARD_REPLAY_MAX = 10;               // 取っておく試合の数(お気に入りを含む)
-const CARD_REPLAY_FAV_MAX = 3;            // お気に入りの数
-const CARD_REPLAY_BYTES_MAX = 150000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
+const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
+const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
+const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
 const CARD_REPLAY_ACTS_MAX = 2000;        // 1試合の手の数の上限(壊れた記録で固まらないように)
 const CARD_REPLAY_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
@@ -59575,6 +59583,8 @@ const cardReplayNormalizeOne = (raw) => {
     decks, seeds, acts,
     prints: typeof raw.prints === 'string' && /^[0-9a-z]*$/.test(raw.prints) && raw.prints.length === acts.length * 4 ? raw.prints : '',
     fav: raw.fav === true,
+    // 最後の番(一覧の「◯番まで」。2026-10-27 に足した項目。前の記録には無いので null)
+    turn: Number.isInteger(raw.turn) && raw.turn >= 0 && raw.turn < 10000 ? raw.turn : null,
   };
 };
 // 保存の全体 { v:1, list:[記録…](新しい順) }。壊れていたら空・壊れた1件は捨てる・同じ id は前の1件だけ
@@ -59692,6 +59702,7 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
   const built = cardReplayBuild(db, one);
   if (built.stop !== null) return null;
   one.prints = built.states.slice(1).map(cardReplayPrint).join('');
+  one.turn = built.states[built.states.length - 1].turn;
   return one;
 };
 // マルチの試合から(91 の tryVerify で、なぞり直しが通ったときだけ)
@@ -59706,22 +59717,57 @@ const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, 
 let _cardReplayIds = new Set();
 const cardReplayNoteIds = (box) => { _cardReplayIds = new Set(box.list.map((r) => r.id)); return box; };
 const cardReplayLoad = async () => cardReplayNoteIds(cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null)));
+// 書く。localStorage へは直に書き、いっぱいでも、ゲーム全体の「保存できない」の数に入れない(ほかのセーブの見張りを巻き込まない)
+const CARD_REPLAY_PROBE_KEY = '__mh_card_replay_probe__'; // mh_ で始めない(バックアップに混ぜない)
+const CARD_REPLAY_ROOM = 131072;                          // 書いたあとに残す空き(ほかのセーブが書けるように)
+const cardReplayWrite = async (box) => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true; // はじめてのプレビュー中は書かない(storeSet と同じ)
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_REPLAY_KEY, box);
+  try { window.localStorage.setItem(CARD_REPLAY_KEY, JSON.stringify(box)); return true; } catch (_) { return false; }
+};
+// 書いたあとも空きが残っているか(試しに書いてすぐ消す)
+const cardReplayRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try { window.localStorage.setItem(CARD_REPLAY_PROBE_KEY, 'x'.repeat(CARD_REPLAY_ROOM)); return true; } catch (_) { return false; } finally { try { window.localStorage.removeItem(CARD_REPLAY_PROBE_KEY); } catch (_) { /* 消せなくても続ける */ } }
+};
+// いっぱいのときは、古い試合(お気に入りでない物)から消して書き直す。それでも入らなければ、この試合はあきらめる(ゲームは止めない)
+const cardReplayStore = async (box, keepId = null) => {
+  const b = { v: 1, list: box.list.slice() };
+  for (let n = 0; n <= CARD_REPLAY_MAX + 1; n++) {
+    const ok = await cardReplayWrite(b);
+    if (ok && cardReplayRoomLeft()) return b;
+    let drop = -1;
+    for (let i = b.list.length - 1; i >= 0; i--) { if (!b.list[i].fav && b.list[i].id !== keepId) { drop = i; break; } }
+    if (drop < 0) {
+      // 消せる古い試合が無い: 新しい試合を外して、もう一度だけ書く
+      const rest = keepId ? b.list.filter((r) => r.id !== keepId) : b.list;
+      if (rest.length === b.list.length) return ok ? b : null;
+      const back = { v: 1, list: rest };
+      return (await cardReplayWrite(back)) ? back : null;
+    }
+    b.list.splice(drop, 1);
+  }
+  return null;
+};
 // 書く直前に読み直して足す(同じ端末でゲームを2つ開いていても、片方の記録を消さない)
 const cardReplaySave = async (rec) => {
   if (!rec) return false;
   try {
     const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
     if (!box.list.some((r) => r.id === rec.id)) return false;
-    const ok = await storeSet(CARD_REPLAY_KEY, box);
-    if (ok) cardReplayNoteIds(box);
-    return ok;
+    const done = await cardReplayStore(box, rec.id);
+    if (!done) return false;
+    cardReplayNoteIds(done);
+    return done.list.some((r) => r.id === rec.id);
   } catch (_) { return false; }
 };
 const cardReplayFav = async (id, on) => {
   try {
     const { box, ok } = cardReplaySetFav(await storeGet(CARD_REPLAY_KEY, null), id, on);
-    if (ok) { await storeSet(CARD_REPLAY_KEY, box); cardReplayNoteIds(box); }
-    return ok;
+    if (!ok) return false;
+    const done = await cardReplayStore(box);
+    if (done) cardReplayNoteIds(done);
+    return !!done;
   } catch (_) { return false; }
 };
 // 履歴の画面から「この試合を見られるか」をすぐ引く(試合の番号。控えは読み込みのときに作る)
@@ -59745,7 +59791,8 @@ const cardReplayGameOf = (db, rec) => {
 // ---- 再生の帯(84 の盤面のいちばん下に出す) ----
 // at … いまの手の番号(0 = はじめ)。onSeek(n) で場を差し替える
 const CARD_REPLAY_SPEEDS = Object.freeze([{ id: 1, label: '×1', ms: 1400 }, { id: 2, label: '×2', ms: 650 }]);
-const CardReplayBar = ({ replay, at, onSeek, onExit }) => {
+// とじるのは上の帯の「とじる」だけ(2つ並んでいた。2026-10-27 言葉の見直し7)
+const CardReplayBar = ({ replay, at, onSeek }) => {
   const [auto, setAuto] = useState(false);
   const [speed, setSpeed] = useState(1);
   const last = replay.states.length - 1;
@@ -59780,7 +59827,66 @@ const CardReplayBar = ({ replay, at, onSeek, onExit }) => {
         <button type="button" data-card-replay-next className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(at + 1); }}>▶</button>
         <button type="button" data-card-replay-next-turn className={btn} disabled={at >= last} onClick={() => { setAuto(false); go(turnIdx + 1 < turns.length ? turns[turnIdx + 1] : last); }}>▶番</button>
         <button type="button" data-card-replay-speed className={btn} onClick={() => { Audio_.fgSe.tap(); setSpeed((v) => (v === 1 ? 2 : 1)); }}>{(CARD_REPLAY_SPEEDS.find((x) => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label}</button>
-        <button type="button" data-card-replay-exit className={btn} onClick={() => { Audio_.fgSe.tap(); onExit(); }}>とじる</button>
+      </div>
+    </div>
+  );
+};
+
+// ---- 過去の対戦の一覧(記録の画面の「過去の対戦」。2026-10-27 社長) ----
+// 一覧は見出し(日時・相手・種類・勝ち負け・何番まで)だけを出し、なぞり直しは押して開いたときだけ(50試合でも重くしない)
+const CARD_REPLAY_OUTCOME = Object.freeze({ win: '勝ち', lose: '負け', surrender: '投了', foeSurrender: '勝ち', timeout: '負け', foeTimeout: '勝ち', foeLeft: '勝ち', left: '負け', draw: '引き分け' });
+const cardReplayWhen = (at) => {
+  if (!Number.isFinite(at) || at <= 0) return '';
+  const d = new Date(at + 9 * 3600 * 1000); // JST
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+};
+const CardReplayList = ({ onOpen, onBack }) => {
+  const [box, setBox] = useState(null);
+  const [note, setNote] = useState('');
+  useEffect(() => { let live = true; void cardReplayLoad().then((b) => { if (live) setBox(b); }).catch(() => { if (live) setBox({ v: 1, list: [] }); }); return () => { live = false; }; }, []);
+  const favs = box ? box.list.filter((r) => r.fav).length : 0;
+  const toggleFav = async (r) => {
+    Audio_.fgSe.tap();
+    if (!r.fav && favs >= CARD_REPLAY_FAV_MAX) { setNote(`★は${CARD_REPLAY_FAV_MAX}試合までです。ほかの★を外してから付けてください`); return; }
+    const ok = await cardReplayFav(r.id, !r.fav);
+    if (!ok) { setNote('★を保存できませんでした'); return; }
+    setNote('');
+    setBox(await cardReplayLoad());
+  };
+  const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
+  return (
+    <div data-mh-screen data-card-replay-list className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note={`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`}/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
+        {note && <p data-card-replay-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{note}</p>}
+        {!box && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
+        {box && !box.list.length && <div data-card-replay-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだありません。助手と対戦かマルチ対戦を遊ぶと、ここに残ります')}</div>}
+        {box && box.list.map((r) => {
+          const a = r.kind === 'cpu' && r.foe.who ? assistants.find((x) => x.id === r.foe.who) : null;
+          const res = CARD_REPLAY_OUTCOME[r.outcome] || '';
+          const win = res === '勝ち';
+          return (
+            <div key={r.id} data-card-replay-row={r.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-2 py-1.5">
+              <button type="button" data-card-replay-open={r.id} onClick={() => { Audio_.fgSe.tap(); onOpen(r.id); }} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                <span className="block h-[38px] w-[38px] shrink-0 overflow-hidden rounded-xl bg-black/40">
+                  {a ? <img src={assistantFaceImage(a, 'normal')} alt="" className="h-full w-full object-cover object-top"/>
+                    : typeof CardPvpAvatar === 'function' ? <CardPvpAvatar icon={r.foe.icon || '🙂'} frame={r.foe.frame} className="h-full w-full"/> : <span className="text-[20px]">🙂</span>}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5">
+                    <b className="truncate text-[13px] font-black text-white">{r.foe.name}</b>
+                    <small className={`shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`}>{r.kind === 'pvp' ? 'マルチ' : '助手と対戦'}</small>
+                  </span>
+                  <span className="block text-[11px] font-bold text-slate-400">{cardReplayWhen(r.at)}{r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`}</span>
+                </span>
+                <span data-card-replay-result={r.outcome || ''} className={`shrink-0 text-[13px] font-black ${win ? 'text-amber-200' : 'text-slate-300'}`}>{res}</span>
+              </button>
+              <button type="button" data-card-replay-fav={r.id} aria-pressed={r.fav} aria-label={r.fav ? '★を外す' : '★を付ける'} onClick={() => { void toggleFav(r); }}
+                className={`min-h-[40px] min-w-[40px] shrink-0 rounded-lg text-[20px] ${r.fav ? 'text-amber-300' : 'text-slate-600'}`}>★</button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
