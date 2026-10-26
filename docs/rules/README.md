@@ -23,6 +23,7 @@ node tools/ctx.js rules 音量       その語に触れている節だけ
 | [`SCOPE.md`](SCOPE.md) | ⑩・⑩-2 | 質問に答えるとき／譜面生成ツールを触るとき |
 | [`CHART_ENGINE.md`](CHART_ENGINE.md) | ⑩-2 | 譜面の作り方(最新リビジョンだけ・手の決まり)を触るとき |
 | [`CONVERSATION.md`](CONVERSATION.md) | 会話言語 | 英語禁止のフックの経緯 |
+| [`NEW_DEPT_BRIEF.md`](NEW_DEPT_BRIEF.md) | — | 新しい部署を作るとき・新しい部署になったとき(共通の申し送り) |
 
 ## 節の置き場所(2026-10-09 にルートから移したもの)
 
