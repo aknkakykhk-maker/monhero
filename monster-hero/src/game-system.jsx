@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f20c5d3ca53706e
+// generated-sha256: a8f144b11311d78c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -34701,7 +34701,9 @@ function ProfileScreen({
                           <AssistantFace who={who} size={30} accent={who.accent} expression={active?'happy':'normal'}/>
                           <span className="min-w-0 flex-1">
                             <b className="block text-[12px] font-black leading-tight text-white break-words [text-wrap:balance]">{who.name}{active&&'（選択中）'}</b>
-                            <small className="block text-[10px] text-slate-400 truncate">Lv.{lv} {t?t.title:''}</small>
+                            {/* 幅320で「Lv.1 はじめま…」と切れていた(2026-10-27 ダメダシくんの指摘 e02)。切らずに出す。
+                                「はじめまし/て」と言葉の途中で折れないよう、Lv と名前をそれぞれ折れない塊にし、折れるのはそのあいだだけ */}
+                            <small className="flex flex-wrap gap-x-1 text-[10px] leading-snug text-slate-400"><span className="whitespace-nowrap">Lv.{lv}</span>{t&&t.title?<span className="whitespace-nowrap">{t.title}</span>:null}</small>
                           </span>
                         </button>
                       );
