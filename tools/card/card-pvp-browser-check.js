@@ -313,6 +313,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
     await A.locator('[data-card-pvp-invite-open]').click();
+    await shot(A, 'pvp-07-invite-pick');
     await A.locator('[data-card-pvp-invite-pick] [data-card-pvp-invite-to="friend-x"]').click();
     await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
     const code3 = (await A.locator('[data-card-pvp-room]').innerText()).trim();

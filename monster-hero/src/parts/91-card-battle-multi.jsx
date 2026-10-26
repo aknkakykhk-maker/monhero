@@ -351,6 +351,8 @@ const sbFetchCardInvites = async (selfId, nowMs) => {
   return (Array.isArray(rows) ? rows : []).map((row) => ({ senderId: typeof row.sender_id === 'string' ? row.sender_id : '', roomCode: rhythmMultiNormalizeCode(row.room_code), createdAt: Date.parse(row.created_at) || 0 }))
     .filter((x) => CARD_PVP_INVITE_ID_RE.test(x.senderId) && x.roomCode && nowMs - x.createdAt <= CARD_PVP_INVITE_TTL_MS);
 };
+// 招待の残りの秒数(0〜180)。端末の時計がずれていても、3分より長くは出さない
+const cardPvpInviteLeftSec = (at, nowMs) => Math.max(0, Math.min(CARD_PVP_INVITE_TTL_MS / 1000, Math.ceil((CARD_PVP_INVITE_TTL_MS - (nowMs - at)) / 1000)));
 // 断る: 受け手が、その招待の時刻をいちばん古い値へ書き換える(表は消せない。古い招待はどの版でも出ない)。送り手はこれを読んで「断られました」と出す
 const CARD_PVP_INVITE_DECLINED_AT = '1970-01-01T00:00:00.000Z';
 const sbDeclineCardInvite = async (selfId, senderId) => {
@@ -444,7 +446,7 @@ const CardPvpInviteNotice = ({ enabled = false, busy = false, onAccept }) => {
     <div data-card-pvp-notice={x.roomCode} role="alert" className="pointer-events-none fixed inset-x-0 top-0 z-[41000] flex justify-center px-3" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
       <div className="pointer-events-auto w-full max-w-md rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 p-3 text-white shadow-2xl">
         <p className="text-[13px] font-black text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、MFバトルカードのマルチ対戦の招待が届いています`)}</p>
-        <p className="mt-0.5 text-[11px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_INVITE_TTL_MS - (now - x.createdAt)) / 1000))}秒</p>
+        <p className="mt-0.5 text-[11px] font-bold text-slate-300 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</p>
         <div className="mt-2 flex gap-2">
           <button type="button" data-card-pvp-notice-decline className="mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[13px] font-black text-slate-200"
             onClick={() => { Audio_.fgSe.tap(); close(); void sbDeclineCardInvite(selfId, x.senderId); }}>断る</button>
@@ -936,7 +938,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
               {invites.slice(0, 3).map((x) => (
                 <div key={`${x.senderId}-${x.roomCode}`} className="flex items-center gap-2">
                   <p className="min-w-0 flex-1 text-[13px] font-bold text-emerald-50" style={JA_WRAP_STYLE}>{jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`)}
-                    <small className="block text-[11px] text-emerald-200/80 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_INVITE_TTL_MS - (now - x.createdAt)) / 1000))}秒</small></p>
+                    <small className="block text-[11px] text-emerald-200/80 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</small></p>
                   <button type="button" data-card-pvp-decline={x.roomCode} className="mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200"
                     onClick={() => { Audio_.fgSe.tap(); declineInvite(x); }}>断る</button>
                   <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
@@ -988,7 +990,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
                           // 招待のようす: 届いている(あと何秒)・断られた・時間切れ・送れなかった。断られた・時間切れ・送れなかったら、もう一度送れる
                           const sent = invited[f.otherId];
                           const state = sent && sent.ok ? cardPvpInviteState(sent, sentRows[f.otherId], now) : sent ? 'ng' : '';
-                          const label = state === 'live' ? `招待しました(あと${Math.max(0, Math.ceil((CARD_PVP_INVITE_TTL_MS - (now - sent.at)) / 1000))}秒)` : state === 'declined' ? '断られました' : state === 'expired' ? '時間切れ' : state === 'ng' ? '送れませんでした' : '';
+                          const label = state === 'live' ? `招待しました(あと${cardPvpInviteLeftSec(sent.at, now)}秒)` : state === 'declined' ? '断られました' : state === 'expired' ? '時間切れ' : state === 'ng' ? '送れませんでした' : '';
                           return (<>
                             {label && <span data-card-pvp-invite-state={state} className={`shrink-0 text-[11px] font-bold tabular-nums ${state === 'live' ? 'text-emerald-200' : 'text-amber-200'}`}>{label}</span>}
                             {state !== 'live' && (

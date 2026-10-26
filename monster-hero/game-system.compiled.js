@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f1ed08b9416c2191
+// source-sha256: b7291bc1c0e00938
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 18:56";
+const BUILD_DATE = "2026-10-26 19:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -94771,6 +94771,7 @@ const sbFetchCardInvites = async (selfId, nowMs) => {
     createdAt: Date.parse(row.created_at) || 0
   })).filter(x => CARD_PVP_INVITE_ID_RE.test(x.senderId) && x.roomCode && nowMs - x.createdAt <= CARD_PVP_INVITE_TTL_MS);
 };
+const cardPvpInviteLeftSec = (at, nowMs) => Math.max(0, Math.min(CARD_PVP_INVITE_TTL_MS / 1000, Math.ceil((CARD_PVP_INVITE_TTL_MS - (nowMs - at)) / 1000)));
 const CARD_PVP_INVITE_DECLINED_AT = '1970-01-01T00:00:00.000Z';
 const sbDeclineCardInvite = async (selfId, senderId) => {
   if (!CARD_PVP_INVITE_ID_RE.test(String(selfId)) || !CARD_PVP_INVITE_ID_RE.test(String(senderId))) return false;
@@ -94913,7 +94914,7 @@ const CardPvpInviteNotice = ({
     style: JA_WRAP_STYLE
   }, jaWrap(`${x.name || 'フレンド'}さんから、MFバトルカードのマルチ対戦の招待が届いています`)), React.createElement("p", {
     className: "mt-0.5 text-[11px] font-bold text-slate-300 tabular-nums"
-  }, "あと", Math.max(0, Math.ceil((CARD_PVP_INVITE_TTL_MS - (now - x.createdAt)) / 1000)), "秒"), React.createElement("div", {
+  }, "あと", cardPvpInviteLeftSec(x.createdAt, now), "秒"), React.createElement("div", {
     className: "mt-2 flex gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -96018,7 +96019,7 @@ const CardPvpLobby = ({
     style: JA_WRAP_STYLE
   }, jaWrap(`${x.name || 'フレンド'}さんから、マルチ対戦の招待が届いています`), React.createElement("small", {
     className: "block text-[11px] text-emerald-200/80 tabular-nums"
-  }, "あと", Math.max(0, Math.ceil((CARD_PVP_INVITE_TTL_MS - (now - x.createdAt)) / 1000)), "秒")), React.createElement("button", {
+  }, "あと", cardPvpInviteLeftSec(x.createdAt, now), "秒")), React.createElement("button", {
     type: "button",
     "data-card-pvp-decline": x.roomCode,
     className: "mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200",
@@ -96121,7 +96122,7 @@ const CardPvpLobby = ({
   }, f.userName), (() => {
     const sent = invited[f.otherId];
     const state = sent && sent.ok ? cardPvpInviteState(sent, sentRows[f.otherId], now) : sent ? 'ng' : '';
-    const label = state === 'live' ? `招待しました(あと${Math.max(0, Math.ceil((CARD_PVP_INVITE_TTL_MS - (now - sent.at)) / 1000))}秒)` : state === 'declined' ? '断られました' : state === 'expired' ? '時間切れ' : state === 'ng' ? '送れませんでした' : '';
+    const label = state === 'live' ? `招待しました(あと${cardPvpInviteLeftSec(sent.at, now)}秒)` : state === 'declined' ? '断られました' : state === 'expired' ? '時間切れ' : state === 'ng' ? '送れませんでした' : '';
     return React.createElement(React.Fragment, null, label && React.createElement("span", {
       "data-card-pvp-invite-state": state,
       className: `shrink-0 text-[11px] font-bold tabular-nums ${state === 'live' ? 'text-emerald-200' : 'text-amber-200'}`
