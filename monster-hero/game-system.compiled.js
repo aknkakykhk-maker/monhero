@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 178e57c23db6fbc7
+// source-sha256: d7275921ccfc3566
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109016,6 +109016,7 @@ function MonsterHeroGame() {
         point
       }, Math.random);
       if (!r) {
+        void loadCardShop();
         setMarketExchangeError('ビートPが足りません。');
         return {
           ok: false,
@@ -109090,6 +109091,7 @@ function MonsterHeroGame() {
         shop: cardNormalizeShop(rawShop)
       }, Date.now());
       if (!r) {
+        void loadCardShop();
         setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。');
         return {
           ok: false,
