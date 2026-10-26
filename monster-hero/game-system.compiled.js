@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9127fad070ce97b2
+// source-sha256: 32075664759ed4da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17464,7 +17464,8 @@ const AssistantBubble = ({
   defaultOpen = false,
   footerSpace = 0,
   maxLines = 0,
-  collapseKey = null
+  collapseKey = null,
+  collapseHidden = false
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
@@ -17556,6 +17557,7 @@ const AssistantBubble = ({
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
   if (collapseKey && collapsed) {
+    if (collapseHidden) return null;
     return React.createElement("div", {
       "data-bubble-collapsed": true,
       className: "w-full flex items-center gap-2"
@@ -51190,7 +51192,7 @@ const jaWrapPoints = text => {
         g = groups[groups.length - 1],
         cur = g.parts.join('');
       const hard = inKao(pos) || inKeepWord(pos) || !kaoStart(pos) && (/^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev) || /^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg) || /^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)) || /[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg) || /[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg) || /[0-9０-９]$/.test(prev) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連万千百年月時%％]|時間|ms|px|P|Lv|コンボ|ノーツ|ビートP)/.test(seg) || /[0-9０-９][回人体個枚曲周倍つ番件位本段連]$/.test(cur) && /^目/.test(seg) || /(?:Lv\.?|LV\.?|×|x|約|第|全|各|計|最大|最高)$/.test(cur) && /^[0-9０-９]/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[ァ-ヶ]/.test(seg) && !/[「『][^」』]*$/.test(cur) && (cur.match(/[ァ-ヶー]+$/) || [''])[0].length + (seg.match(/^[ァ-ヶー]+/) || [''])[0].length <= 7);
-      const soft = !hard && !kaoStart(pos) && (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
+      const soft = !hard && !kaoStart(pos) && (/[0-9０-９]・$/.test(cur) && /^[0-9０-９]/.test(seg) || /^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6 || /^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev) || /^[ぁ-ゖ]/.test(seg) && !JA_PARTICLE_END.test(prev) || /^[ァ-ヶー]+$/.test(seg) && /^[ァ-ヶー]+$/.test(prev) && (seg.length === 1 || prev.length === 1) || /(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg) || /(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg) || /[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg) || /^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || '') || /で$/.test(prev) && /^(?:す|つ|しょ)/.test(seg));
       if (hard || soft) {
         g.parts.push(seg);
         g.hard.push(hard);
@@ -51277,7 +51279,7 @@ const jaWrapPoints = text => {
     return s;
   }
 };
-const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
+const jaKeepWhole = seg => ([...seg].length <= JA_WRAP_LINE || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14) && (/[…‥～〜♡]/u.test(seg) || /[0-9０-９]・[0-9０-９]/.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg) || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
 const jaWrapPieces = seg => {
   const out = [];
@@ -101886,11 +101888,11 @@ function MonsterHeroGame() {
   };
   const [helpCatId, setHelpCatId] = useState(null);
   const [helpTopicId, setHelpTopicId] = useState(null);
-  const [helpAssistantOpen, setHelpAssistantOpen] = useState(true);
+  const [helpBubbleFolded, setHelpBubbleFolded] = useBubbleCollapse('help');
+  const helpAssistantOpen = !helpBubbleFolded;
   const openHelp = () => {
     setHelpCatId(null);
     setHelpTopicId(null);
-    setHelpAssistantOpen(true);
     setShowHelp(true);
   };
   const [trainingPicks, setTrainingPicks] = useState([]);
@@ -131696,7 +131698,7 @@ function MonsterHeroGame() {
       const goBack = () => {
         if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
       };
-      const backLabel = topic ? cat.title : cat ? 'ヘルプへ' : '閉じる';
+      const backLabel = topic ? '項目一覧' : cat ? 'ヘルプへ' : '閉じる';
       const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
       const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
@@ -131717,7 +131719,7 @@ function MonsterHeroGame() {
           zIndex: 99999
         }
       }, React.createElement("header", {
-        className: "shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl",
+        className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl",
         style: {
           backgroundColor: '#0f172a',
           paddingTop: 'calc(0.75rem + env(safe-area-inset-top))'
@@ -131739,16 +131741,16 @@ function MonsterHeroGame() {
           color: accent
         }
       }, headTitle)), React.createElement("button", {
-        onClick: () => setHelpAssistantOpen(v => !v),
+        onClick: () => setHelpBubbleFolded(helpAssistantOpen),
         "aria-label": "助手のひとことを開く",
         className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
       }, React.createElement(AssistantFace, {
         who: activeAssistant,
-        size: 48,
+        size: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 32 : 48,
         accent: accent,
         expression: assistantExpression
       }))), helpAssistantOpen && React.createElement("div", {
-        className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1.5 border-b border-white/5",
+        className: "shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5",
         style: {
           backgroundColor: 'rgba(15,23,42,0.75)'
         }
@@ -131760,7 +131762,10 @@ function MonsterHeroGame() {
         helpRef: assistantHelpRef,
         expression: assistantExpression,
         accent: accent,
-        compact: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight
+        compact: typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight,
+        collapseKey: "help",
+        collapseHidden: true,
+        maxLines: topic ? typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 1 : 2 : typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight ? 2 : 0
       })), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black",
         style: {
