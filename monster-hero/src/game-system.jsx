@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9ea75111cd0342fa
+// generated-sha256: c7bc362d549f6490
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 13:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 13:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52512,7 +52512,7 @@ const CARD_VS_LINES = Object.freeze({
     master: { e: 'wink', t: 'いちばん強い組み合わせで来たよ。止めてみなよ？' },
   },
   momosuke: {
-    easy: { e: 'happy', t: 'ももと遊んでくれるの？ やさしくしてあげよっかな〜w' },
+    easy: { e: 'happy', t: 'ももと遊んでくれるの？ 《やさしく》して《あげよっかな〜w》' },
     normal: { e: 'wink', t: 'いじわるの準備、できてるよ？♡' },
     hard: { e: 'happy', t: 'ちくちくいくからね。泣いても知らないよ〜w' },
     expert: { e: 'wink', t: 'とっておきの意地悪、ぜんぶ持ってきたよ♡' },
@@ -52523,26 +52523,26 @@ const CARD_VS_LINES = Object.freeze({
     normal: { e: 'happy', t: 'じっくりためて、大きいのを当てまつ！' },
     hard: { e: 'excited', t: 'ガッツ、たっぷりためてきまちた。どっかんいきまつよ(˘ω˘)9' },
     expert: { e: 'excited', t: '全部の弾から大技を集めまちた。覚悟してくだちゃい！' },
-    master: { e: 'wink', t: 'いちばん強いききで、お相手しまつね。' },
+    master: { e: 'wink', t: 'いちばん強いききで、《お相手》しまつね。' },
   },
   kyuko: {
     easy: { e: 'happy', t: '気楽にいこうねぇ。数えるのは、ほどほどに笑' },
     normal: { e: 'happy', t: 'ガッツと手札の数え合い、始めよっかw' },
     hard: { e: 'wink', t: '三手先まで、もう見えてるよ笑' },
     expert: { e: 'excited', t: '全部の弾から読み筋を組んできたよw' },
-    master: { e: 'wink', t: 'きみのデッキも見て組み直したよ。読み合い、しよっか' },
+    master: { e: 'wink', t: 'きみのデッキも見て《組み直したよ。》読み合い、しよっか' },
   },
   dra: {
     easy: { e: 'happy', t: '気楽にいこうな。おでは守ってるだけだよ' },
     normal: { e: 'happy', t: 'まずは守りを固めるとこからだな' },
-    hard: { e: 'excited', t: '打ってこい。全部はね返してやるよ' },
+    hard: { e: 'excited', t: '打ってこい。全部《はね返して》やるよ' },
     expert: { e: 'excited', t: '全部の弾から一番かたい守りを持ってきた' },
     master: { e: 'wink', t: '本気の要塞だ。崩せるもんなら崩してみな' },
   },
   atsu: {
-    easy: { e: 'happy', t: 'ゆるくいこうぜ笑 全体攻撃はちょっとだけな' },
-    normal: { e: 'excited', t: 'まとめて吹っ飛ばすぞ！ 楽しもうぜ笑' },
-    hard: { e: 'excited', t: '全員まとめていくからな。覚悟しとけよ笑' },
+    easy: { e: 'happy', t: 'ゆるくいこうぜ笑 《全体攻撃》はちょっとだけな' },
+    normal: { e: 'excited', t: 'まとめて吹っ飛ばすぞ！ 《楽しもうぜ笑》' },
+    hard: { e: 'excited', t: '全員まとめていくからな。《覚悟しとけよ笑》' },
     expert: { e: 'excited', t: '全部の弾から全体攻撃を集めてきた！' },
     master: { e: 'wink', t: '本気のあつだ。一気に終わらせるぞ！' },
   },
@@ -52690,7 +52690,8 @@ const CardVsIntro = ({ db, intro, onDone }) => {
             </div>
             <div className="mh-vs-fade min-w-0 flex-1 pb-1" style={{ animationDelay: '250ms' }}>
               <b className="block text-[16px] font-black leading-tight" style={JA_LABEL_STYLE}>{foe.name || 'あいて'}</b>
-              {foe.line && foe.line.t && <p data-card-vs-line className="mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900" style={JA_WRAP_STYLE}>{helpWrap(foe.line.t)}</p>}
+              {/* 《》で囲んだ言葉は途中で折らない(《》は出さない。ルールの画面と同じ cardRuleLine。言葉の切れ目の道具が「や/さしく」と切ったため。見回り 新2) */}
+              {foe.line && foe.line.t && <p data-card-vs-line className="mt-1 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[12px] font-bold leading-snug text-slate-900" style={JA_WRAP_STYLE}>{cardRuleLine(foe.line.t)}</p>}
             </div>
           </div>
           <CardVsDeckName text={foe.deckName} tone="foe"/>
