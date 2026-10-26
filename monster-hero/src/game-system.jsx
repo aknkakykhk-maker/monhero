@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e67c14459a0fa787
+// generated-sha256: 7b6927a97ee0dbe5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56821,14 +56821,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''}</option>)}
                   </select>
                   {bgmPreview && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
                 </div>
               </label>
             ))}
             {cpuPlaylistPanel}
-            <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')}</p>
+            <p data-card-options-se className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('音の大きさは、ゲーム全体の設定の「音量」で変えられます')}</p>
           </div>
     );
     // 対戦の BGM(社長「バトルと同じように自分で決められる」)。いまの BGM アレンジと同じ、曲の一覧から選んで試聴できる形(上の bgmPanel)

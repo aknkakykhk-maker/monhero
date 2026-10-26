@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6aa7fb381aa2a7b0
+// source-sha256: babbc07ced9303f9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93764,7 +93764,7 @@ const CardBattleScreen = ({
     }, (typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map(t => React.createElement("option", {
       key: t.id,
       value: t.id
-    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''))), bgmPreview && React.createElement("button", {
+    }, t.name, t.id === CARD_BGM_DEFAULT[k] ? '(はじめの曲)' : ''))), bgmPreview && React.createElement("button", {
       type: "button",
       "data-card-bgm-preview": k,
       onClick: () => bgmPreview.toggle(save.bgm[k]),
@@ -93773,7 +93773,7 @@ const CardBattleScreen = ({
       "data-card-options-se": true,
       className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('効果音とBGMの大きさは、ゲーム全体の設定の「音量」と同じです(MFバトルカードだけ別にはしていません)')));
+    }, jaWrap('音の大きさは、ゲーム全体の設定の「音量」で変えられます')));
     const quickAutoPanel = React.createElement("div", {
       "data-card-options-quick": true,
       "data-card-setting": "quickAutoStart",
