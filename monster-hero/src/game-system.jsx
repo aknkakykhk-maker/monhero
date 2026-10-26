@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d02e2c1be2d6a278
+// generated-sha256: 9bc8133dc8bd16c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -50752,7 +50752,7 @@ const loadAssistantChatMemoFor = async (assistantId) => {
 //                pure(純血の子)/ breederMaxGuts(n)(そのガッツ以下のブリーダーのカードに付ける)
 //         attachAdd(n) +n / attachCost(n) 払うガッツ-n / attachCostHalf 半分(切り上げ)/ attachFree 0 /
 //         attachNoEvade 回避されない / attachNoGuard 回避も防御もされない / attachNoBlockReduce 防御で減らない /
-//         attachNoZeroGuard 0ガッツの守りは出せない / attachNoGuardIfGuarded このターンもう守った子は守れない /
+//         attachNoZeroGuard そのとき払うガッツが0の守りは出せない / attachNoGuardIfGuarded このターンもう守った子は守れない /
 //         attachNoEvadeHybrid 混血(派生)の子は回避できない / attachBind 守りの札を1つ名前で名指し(act.bind)/ attachSelfIfHit(n)
 //         付ける札は1回の攻撃に2枚まで(ブリーダーのカードは1枚)
 //   特殊: draw(n) / peekHand / discardOpp(n) 相手が選んで捨てる / heal(n) 味方1体 / forbidThisTurn(kinds) このターン相手は回避(防御)を使えない
@@ -51295,7 +51295,8 @@ const cardGuardOptions = (db, st) => {
     if (forbid.includes(c.kind)) return;
     if (cardGuardCost(st, c) > guts) return;
     if (pride && c.kind === 'dge') return; // 純血のプライド: 回避の札は出せない(狙われた派生の子)
-    if (fl.attachNoZeroGuard && !c.guts) return; // 集中
+    // 集中: そのとき払うガッツが0の守りは出せない(全体カードのホリィの声援で0になった札も止める・師匠のまなざしで1になった札は出せる。2026-10-27 案A)
+    if (fl.attachNoZeroGuard && cardGuardCost(st, c) === 0) return;
     if (fl.bind && c.name === fl.bind) return; // 影縛りで名指しされた札
     // ---- 区切り5 ----
     // 狙われていなくても出せる守り(吹き上げる・ひきずりこむ): 味方のだれかが狙われているとき、カードの持ち主が出す
@@ -59867,7 +59868,7 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 const CARD_REPLAY_RULES = 2;
 // 上げ方(2026-10-27 カード部で決めた): ルールの結果が変わる PR は、マージ直前に main の値を見て、自分の値が main 以下なら main+1 にする
 //   (同じ値に上げた PR どうしは取り込みでぶつからないので、ぶつかるのを待たない)。助手の打ち方だけの変更は上げない
-//   1 → 2: 混血は攻撃・特殊=メイン、防御・回避=サブだけ(#3865)
+//   1 → 2: 混血は攻撃・特殊=メイン、防御・回避=サブだけ(#3865)・集中(274)を「そのとき払うガッツ」で数える(#3869)
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
