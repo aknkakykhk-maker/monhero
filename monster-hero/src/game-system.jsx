@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3e3f71d0d047940f
+// generated-sha256: 8cb42b31063e8f9b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 11:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 12:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -55494,8 +55494,9 @@ const CardDex = ({ db, collection, onBack }) => {
         <span data-card-dex-part className="ml-2 text-slate-400">({unit} {haveIn(list)} / {list.length})</span>
       </div>
       <ScreenTabs value={mode} onChange={(m) => { setMode(m); }} items={CARD_DEX_MODES.map((t) => ({ id: t.id, label: t.label }))}/>
-      {/* 見かたの中の札は1列(デッキ編成の絞り込みと同じ。縦は横に流す・横の画面は折り返す)。札ごとに集めた数を出す */}
-      <div key={mode} ref={tabRow} data-card-dex-tabs={mode} className="mh-scroll relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1 landscape:flex-wrap landscape:overflow-visible">
+      {/* 見かたの中の札は1列で横に流す(横の画面でも折り返さない。血統別の24個を折り返すと左の列からはみ出し、下の「全部・持っている・まだ」が画面の外に出た)。札ごとに集めた数を出す
+          ★mh-scroll を付けない。横画面では「mh-scroll の付いた子」を右の列いっぱいの一覧として置くので、札が一覧に重なって押せなくなった(2026-10-26 見回り) */}
+      <div key={mode} ref={tabRow} data-card-dex-tabs={mode} className="relative mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1">
         {tabList.map((t) => (
           <button key={t.id} type="button" data-card-dex-tab={t.id} aria-pressed={t.id === tab} onClick={() => setTabs((v) => ({ ...v, [mode]: t.id }))} className={chip(t.id === tab)}>
             {t.label}<span className={`ml-1 text-[10px] ${t.id === tab ? 'text-slate-800' : 'text-slate-500'}`}>{haveIn(t.list)}/{t.list.length}</span>
