@@ -1919,7 +1919,8 @@ function BattleScreen({
                 裏へ回ってしまう。必殺技の警告と同じこの階層に置くと前面に出る */}
             {/* ★敵の解析・ステータス・ログなどを上に開いているあいだは出さない(body の直下へ出すので、
                 開いた画面の上に重なって残っていた。2026-10-26 ダメダシの見回り クラシック#2) */}
-            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&!battleOverlayOpen&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
+            {/* ★敵を倒したあと(結果の画面へ移るまで)も出さない。WAVE の合間に残って列の外へ出ていた(2026-10-27 セコンドくんの見回り) */}
+            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&!battleOverlayOpen&&!enemyDefeating&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
               // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
               // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
               // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
