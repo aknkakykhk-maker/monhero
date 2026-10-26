@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9874434619fbabc5
+// source-sha256: 1e3f2e1dff424f34
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 22:18";
+const BUILD_DATE = "2026-10-26 22:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -87153,11 +87153,13 @@ const CardVsIntro = ({
       aspectRatio: '3 / 4'
     }
   }) : React.createElement("span", {
-    className: "flex aspect-square w-full items-center justify-center rounded-full bg-slate-900/70 leading-none",
-    style: {
-      fontSize: 'min(16vw, 15vh, 72px)'
-    }
-  }, typeof cardIconNode === 'function' ? cardIconNode(foe.icon || '🙂', 72) : '🙂')), React.createElement("div", {
+    "data-card-vs-foe-icon": true,
+    className: "block aspect-square w-full"
+  }, React.createElement(CardPvpAvatar, {
+    icon: foe.icon,
+    frame: foe.frame,
+    className: "h-full w-full"
+  }))), React.createElement("div", {
     className: "mh-vs-fade min-w-0 flex-1 pb-1",
     style: {
       animationDelay: '250ms'
@@ -90091,11 +90093,12 @@ const CardBattleBoard = ({
     className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
   }, pvp ? React.createElement("span", {
     "data-card-pvp-foe": true,
-    className: "grid h-[42px] w-[42px] place-items-center rounded-xl border-2 bg-black text-[24px]",
-    style: {
-      borderColor: who.accent
-    }
-  }, cardIconNode(pvp.icon, 30)) : React.createElement("img", {
+    className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
+  }, React.createElement(CardPvpAvatar, {
+    icon: pvp.icon,
+    frame: pvp.frame,
+    className: "h-full w-full"
+  })) : React.createElement("img", {
     src: assistantFaceImage(who, face),
     alt: who.name,
     className: `${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`,
@@ -90177,7 +90180,11 @@ const CardBattleBoard = ({
     }
   }, breederFx.p === CARD_ME ? meProfile && meProfile.icon ? cardIconNode(meProfile.icon, 34) : React.createElement("span", {
     className: "text-[26px]"
-  }, "🧑") : pvp ? cardIconNode(pvp.icon, 34) : React.createElement("img", {
+  }, "🧑") : pvp ? React.createElement(CardPvpAvatar, {
+    icon: pvp.icon,
+    frame: pvp.frame,
+    className: "h-full w-full"
+  }) : React.createElement("img", {
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
@@ -91045,7 +91052,32 @@ const CardBattleScreen = ({
   useEffect(() => {
     if (screen === 'CARD_TOP' && game && !result) setGame(null);
   }, [screen]);
-  const persist = async patch => {
+  const freshCardSave = async () => {
+    const K = CARD_SAVE_KEYS;
+    let raw = {
+      daily: save.daily,
+      record: save.record,
+      unlocked: save.unlocked
+    };
+    try {
+      const [d, r, u] = await Promise.all([storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null)]);
+      raw = {
+        daily: d,
+        record: r,
+        unlocked: u
+      };
+    } catch (_) {}
+    const record = cardNormalizeRecord(cardIsPlainObject(raw.record) ? raw.record : save.record);
+    const u0 = cardNormalizeCpuUnlocked(raw.unlocked);
+    const merged = Object.fromEntries(Object.keys(u0).map(lv => [lv, u0[lv] || save.unlocked[lv] === true]));
+    return {
+      daily: cardNormalizeDaily(raw.daily === null ? save.daily : raw.daily, cardTodayJst()),
+      record,
+      unlocked: cardUnlockedWithRecord(merged, record),
+      raw
+    };
+  };
+  const persist = async (patch, befores = {}) => {
     const K = CARD_SAVE_KEYS;
     let fixed = patch;
     let pointBefore = null;
@@ -91063,7 +91095,7 @@ const CardBattleScreen = ({
     } : {
       key: K[k],
       next,
-      before: save[k] === undefined ? null : save[k]
+      before: k in befores ? befores[k] : save[k] === undefined ? null : save[k]
     });
     const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
     if (ok) setSave(cur => ({
@@ -91144,24 +91176,25 @@ const CardBattleScreen = ({
           return;
         }
         const facts = cardResultFacts(st, CARD_ME);
-        const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome, facts);
+        const fresh = await freshCardSave();
+        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
         const loops = cardCpuLoops(game.level, outcome, facts);
         const rankable = !!(rank && rank.send) && !debug;
-        const nextRecord = cardRecordAfter(save.record, {
+        const nextRecord = cardRecordAfter(fresh.record, {
           who: game.who,
           level: game.level,
           outcome,
           at: Date.now(),
           rankable
         });
-        const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
-        const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !save.unlocked[lv]) || null;
+        const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
+        const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
         const ok = await persist({
           point: save.point + reward.total,
           daily: reward.daily,
           record: nextRecord,
           unlocked: nextUnlocked
-        });
+        }, fresh.raw);
         if (ok && rankable) void cardRankSync(db, {
           record: nextRecord,
           collection: save.collection,
@@ -91180,6 +91213,8 @@ const CardBattleScreen = ({
             ...reward.daily,
             quickLoops: (reward.daily.quickLoops || 0) + loops
           }
+        }, {
+          daily: reward.daily
         });
         const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, {
           cpu: CARD_CPU,
@@ -91424,8 +91459,9 @@ const CardBattleScreen = ({
   if (view === 'pvp') {
     const pvpReward = async r => {
       const base = cardPvpReward(r.reward, r.facts);
-      const daily = cardNormalizeDaily(save.daily, cardTodayJst());
-      const record = cardNormalizeRecord(save.record);
+      const fresh = await freshCardSave();
+      const daily = fresh.daily;
+      const record = fresh.record;
       const win = r.outcome === 'win';
       const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
       const got = {
@@ -91447,7 +91483,7 @@ const CardBattleScreen = ({
             lose: record.pvp.lose + (win ? 0 : 1)
           }
         }
-      });
+      }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) {
         try {
@@ -91462,6 +91498,12 @@ const CardBattleScreen = ({
           pvpPoint: daily.pvpPoint + got.point,
           quickLoops: (daily.quickLoops || 0) + got.loops
         }
+      }, {
+        daily: {
+          ...daily,
+          pvpPoint: daily.pvpPoint + got.point,
+          firstWin: daily.firstWin || bonus > 0
+        }
       });
       return {
         ...got,
@@ -91471,6 +91513,7 @@ const CardBattleScreen = ({
     };
     return React.createElement(CardPvpLobby, {
       meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
+      meFrame: rank && rank.profile && rank.profile.frame || null,
       deck: activeDeck,
       deckIssues: deckIssues,
       onBack: () => setView('mode'),
@@ -91487,6 +91530,7 @@ const CardBattleScreen = ({
           foe: {
             name: pv.name || 'あいて',
             icon: pv.icon || '🙂',
+            frame: pv.frame || null,
             deckName: pv.deckName || null,
             monsters: vsMons(g.st, CARD_CPU)
           },
@@ -94684,6 +94728,7 @@ const CardRankingBoard = ({
   })));
 };
 const cardPvpOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
+const CARD_PVP_ICON_MAX = 64;
 const CARD_PVP_HIDDEN = -1;
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
@@ -95011,7 +95056,8 @@ const cardPvpCleanMessage = raw => {
       t: 'hb',
       from,
       name: rhythmMultiText(raw.name, CARD_PVP_NAME_MAX),
-      icon: rhythmMultiText(raw.icon, 8),
+      icon: rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX),
+      fr: typeof raw.fr === 'string' ? raw.fr.slice(0, 40) : null,
       at: Number.isFinite(raw.at) ? raw.at : 0,
       mons: mons && mons.length === 3 && !mons.includes(null) ? mons : null,
       count: cardPvpInt(raw.count, 60),
@@ -95137,6 +95183,66 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
+const cardPvpIconIds = () => {
+  const out = [];
+  try {
+    Object.keys(ALL_PLAYER_MONSTERS).forEach(k => {
+      if (ALL_PLAYER_MONSTERS[k] && ALL_PLAYER_MONSTERS[k].iconUrl) out.push(k);
+    });
+  } catch (_) {}
+  try {
+    BREEDER_MARKET_ITEMS.forEach(m => {
+      if (m && m.type === 'icon' && typeof m.id === 'string') out.push(m.id);
+    });
+  } catch (_) {}
+  return out;
+};
+const cardPvpIconId = v => {
+  if (typeof v !== 'string' || !v) return '';
+  if (isImageIconValue(v)) return v;
+  const ids = cardPvpIconIds();
+  if (ids.includes(v)) return v;
+  if ([...v].length === 8 && /^[A-Za-z0-9_-]+$/.test(v)) {
+    const hit = ids.filter(k => k.startsWith(v)).sort((a, b) => a.length - b.length || (a < b ? -1 : 1));
+    if (hit.length) return hit[0];
+  }
+  return v;
+};
+const cardPvpIconSrc = v => {
+  const id = cardPvpIconId(v);
+  if (!id) return null;
+  if (isImageIconValue(id)) return id;
+  try {
+    const m = ALL_PLAYER_MONSTERS[id];
+    if (m && m.iconUrl) return m.faceIconUrl || m.iconUrl;
+  } catch (_) {}
+  try {
+    const it = BREEDER_MARKET_ITEMS.find(x => x.id === id && x.type === 'icon');
+    if (it) return it.icon;
+  } catch (_) {}
+  return null;
+};
+const cardPvpIconEmoji = v => typeof v === 'string' && v && !/^[\x20-\x7e]+$/.test(v) && [...v].length <= 4 ? v : '';
+const CardPvpAvatar = ({
+  icon,
+  frame = null,
+  className = 'h-8 w-8'
+}) => {
+  const src = cardPvpIconSrc(icon);
+  const emoji = src ? '' : cardPvpIconEmoji(icon);
+  return React.createElement(ProfileAvatar, {
+    src: src || undefined,
+    id: cardPvpIconId(icon) || undefined,
+    frameId: frame || null,
+    fit: true,
+    small: true,
+    className: `${className} shrink-0`,
+    fallback: React.createElement("span", {
+      "data-card-pvp-avatar-fallback": true,
+      className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-[18px] leading-none"
+    }, emoji || '👤')
+  });
+};
 let _cardPvpRatingsUnavailable = false;
 const sbCardPvpReport = async ({
   match,
@@ -95518,6 +95624,7 @@ const CARD_PVP = (() => {
     t: 'hb',
     name: s.me.name,
     icon: s.me.icon,
+    fr: s.me.fr || null,
     at: s.me.at,
     mons: s.deck.monsters,
     count: s.deck.cards.length,
@@ -95588,6 +95695,7 @@ const CARD_PVP = (() => {
         pvp: {
           name: s.foe.name || 'あいて',
           icon: s.foe.icon || '🙂',
+          frame: s.foe.fr || null,
           deckName: s.foe.dn || null
         }
       }
@@ -95682,6 +95790,7 @@ const CARD_PVP = (() => {
         id: msg.from,
         name: msg.name || 'あいて',
         icon: msg.icon || '🙂',
+        fr: msg.fr || null,
         at: msg.at,
         mons: msg.mons,
         count: msg.count,
@@ -95929,7 +96038,8 @@ const CARD_PVP = (() => {
       me: {
         id: rhythmMultiMakeId('c'),
         name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX),
-        icon: rhythmMultiText(profile.icon || '🙂', 8),
+        icon: rhythmMultiText(profile.icon || '🙂', CARD_PVP_ICON_MAX),
+        fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null,
         at: Date.now(),
         bid: typeof bid === 'string' ? bid : null,
         dn: rhythmMultiText(typeof deck.name === 'string' ? deck.name : '', 30) || null
@@ -96128,6 +96238,7 @@ const CARD_PVP = (() => {
     report: async ({
       frame = null
     } = {}) => {
+      if (!frame && s && s.me && s.me.fr) frame = s.me.fr;
       if (!s || !s.result || s.reported === s.match || !s.match || !s.me.bid || !s.foe || !s.foe.bid) return null;
       if (s.result.verify !== 'ok' && s.result.verify !== 'skip') return null;
       s = {
@@ -96189,6 +96300,7 @@ const cardPvpPhrases = text => String(text).split(/(?<=、)/).map((x, i) => Reac
 }, x));
 const CardPvpLobby = ({
   meIcon = null,
+  meFrame = null,
   deck,
   deckIssues = [],
   onStart,
@@ -96340,7 +96452,8 @@ const CardPvpLobby = ({
       if (alive) {
         setProfile({
           name: typeof name === 'string' && name ? name : 'ブリーダー',
-          icon: typeof icon === 'string' && icon ? icon : '🙂'
+          icon: typeof icon === 'string' && icon ? icon : '🙂',
+          frame: typeof meFrame === 'string' && meFrame ? meFrame : null
         });
         setProfileReady(true);
       }
@@ -96401,9 +96514,10 @@ const CardPvpLobby = ({
     }, cardPvpLineNode(line.text))), React.createElement(CardResultVsRow, {
       meIcon: meIcon,
       meName: profile.name,
-      foeNode: React.createElement("span", {
-        className: "grid h-8 w-8 place-items-center rounded-full border-2 border-sky-300/70 bg-black text-[18px]"
-      }, room.foe && room.foe.icon ? cardIconNode(room.foe.icon, 22) : '🙂'),
+      foeNode: React.createElement(CardPvpAvatar, {
+        icon: room.foe && room.foe.icon,
+        frame: room.foe && room.foe.fr
+      }),
       foeName: foeName,
       outcome: win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'
     }), React.createElement("div", {
@@ -96832,12 +96946,13 @@ const CardPvpRankingList = ({
     className: "w-7 text-right text-[13px] font-black text-amber-200"
   }, i + 1), renderBreederIcon ? renderBreederIcon({
     userName: e.userName,
-    icon: e.icon,
+    icon: cardPvpIconId(e.icon),
     profileFrame: e.profileFrame,
     breederId: e.breederId
-  }) : React.createElement("span", {
-    "aria-hidden": "true"
-  }, cardIconNode(e.icon || '🙂', 22)), React.createElement("span", {
+  }) : React.createElement(CardPvpAvatar, {
+    icon: e.icon,
+    frame: e.profileFrame
+  }), React.createElement("span", {
     className: "min-w-0 flex-1 truncate text-[13px] font-bold text-white"
   }, e.userName || 'ブリーダー'), React.createElement("span", {
     className: "text-[11px] font-bold text-slate-300"

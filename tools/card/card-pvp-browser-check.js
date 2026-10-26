@@ -93,7 +93,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const patches = [];
     const livePages = [];
     let relayQueue = Promise.resolve(); // 届いた順に配る(2台の手の順番を入れ替えない)
-    const makeCtx = async () => {
+    // icon … その台のプロフィールのアイコン(A はアイコンの id・B は絵文字。相手の画面で絵に直って出るかを見る)
+    const makeCtx = async (icon = '🐣') => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
     await ctx.exposeBinding('__fakeWsRelay', (_src, topic, payload, id, pid) => {
       relayQueue = relayQueue.then(() => Promise.all(livePages.filter((pg) => !pg.isClosed()).map((pg) => pg.evaluate(([t, pl, i, pi]) => { if (window.__fakeWsRecv) window.__fakeWsRecv(t, pl, i, pi); }, [topic, payload, id, pid]).catch(() => {}))));
@@ -115,18 +116,18 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (/\/rpc\/card_battle_pvp_report/.test(req.url())) { try { reports.push(JSON.parse(req.postData() || '{}')); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 200, contentType: 'application/json', body: '"wait"' }); }
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
-    await ctx.addInitScript(() => {
+    await ctx.addInitScript((ic) => {
       if (localStorage.getItem('mh_onboarded')) return;
       const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
-      put('mh_breeder_name', '検査ブリーダー'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
+      put('mh_breeder_name', '検査ブリーダー'); put('mh_breeder_icon', ic); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true);
       put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_masu_migrated', true);
       put('mh_inherited_unique_level_compensation_v1', true); put('mh_inherited_unique_level_compensation_pending_v1', false);
-    });
+    }, icon);
     await ctx.addInitScript(eventStorySeed());
     await ctx.addInitScript(FAKE_WS);
     return ctx;
     };
-    const ctxA = await makeCtx(), ctxB = await makeCtx();
+    const ctxA = await makeCtx('snegurochka_icon'), ctxB = await makeCtx('🐣');
     const boot = async (page) => {
       livePages.push(page);
       page.on('pageerror', (e) => errors.push(String(e)));
@@ -314,6 +315,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const vsRow = await A.locator('[data-card-result-vs]').innerText().catch(() => '');
     await shot(A, 'pvp-06-result-vs');
     check('⑦ マルチの結果の画面に、自分と相手のアイコン・名前・勝ち負けの1行が出る', /検査ブリーダー/.test(vsRow) && /vs/.test(vsRow) && /勝ち|負け|投了/.test(vsRow), vsRow.replace(/\s+/g, ' '));
+    // 相手のアイコン(2026-10-26 本番で「sneguroc」と字が出た): A の画面では B の絵文字、B の画面では A のアイコンの id が絵になって出る。字の id は出ない
+    const foeIconA = await A.locator('[data-card-result-vs]').evaluate((el) => ({ fb: (el.querySelector('[data-card-pvp-avatar-fallback]') || {}).innerText || '', text: el.innerText })).catch(() => null);
+    const foeIconB = await B.locator('[data-card-result-vs]').evaluate((el) => ({ img: el.querySelectorAll('img').length, fb: !!el.querySelector('[data-card-pvp-avatar-fallback]'), text: el.innerText })).catch(() => null);
+    check('⑦ 相手のアイコン: id は絵になり(B の画面)、絵文字は絵文字で出る(A の画面)。id の字はどこにも出ない',
+      foeIconA && /🐣/.test(foeIconA.fb) && foeIconB && foeIconB.img >= 1 && !foeIconB.fb && !/snegur/.test(foeIconA.text + foeIconB.text), JSON.stringify({ foeIconA, foeIconB }));
+    const iconRule = await A.evaluate(() => [cardPvpIconId('sneguroc'), !!cardPvpIconSrc('sneguroc'), cardPvpIconSrc('zzzzzzzz'), cardPvpIconEmoji('zzzzzzzz'), cardPvpIconEmoji('🐣')].join(','));
+    check('⑦ 古い版が8文字で切って送った値も絵に直す・分からない値は字を出さない', /^snegurochka[a-z_]*,true,,,🐣$/.test(iconRule), iconRule);
     check('⑦ だれとでもの対戦も最後まで戦えて、片方が勝ち・片方が負け', !!r2[0] && !!r2[1] && r2[0] !== r2[1], r2.join(' / '));
     for (let i = 0; i < 40 && reports.length - reportsBefore < 2; i++) await A.waitForTimeout(500);
     const mine = reports.slice(reportsBefore);
