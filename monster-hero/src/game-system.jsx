@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: af19524e443af1cf
+// generated-sha256: 444e918cb73cf005
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 21:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 22:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -55069,9 +55069,28 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
   useEffect(() => { if (screen === 'CARD_TOP' && game && !result) setGame(null); }, [screen]);
 
+  // 対戦の結果を書く直前に、その日の数・記録・解放を保存から読み直す(2026-10-26 社長「ハード解放したのに、いつのまにか消えてた」)。
+  //   この画面は開いたときに1回だけ読んだ中身(save)を持ち続けるので、同じ端末でゲームを2つ開いていたり、
+  //   解放の前から開きっぱなしの画面で勝ったりすると、古い中身で解放・記録を上書きしていた。読み直した値の上に足す
+  //   解放は、読み直した値・手元の値・記録から開いているはずの強さを合わせる(閉じる向きには変えない)
+  //   raw … 読んだそのままの値(失敗したときに戻す値)
+  const freshCardSave = async () => {
+    const K = CARD_SAVE_KEYS;
+    let raw = { daily: save.daily, record: save.record, unlocked: save.unlocked };
+    try {
+      const [d, r, u] = await Promise.all([storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null)]);
+      raw = { daily: d, record: r, unlocked: u };
+    } catch (_) { /* 読めなければ手元の値で続ける */ }
+    const record = cardNormalizeRecord(cardIsPlainObject(raw.record) ? raw.record : save.record);
+    const u0 = cardNormalizeCpuUnlocked(raw.unlocked);
+    const merged = Object.fromEntries(Object.keys(u0).map((lv) => [lv, u0[lv] || save.unlocked[lv] === true]));
+    return { daily: cardNormalizeDaily(raw.daily === null ? save.daily : raw.daily, cardTodayJst()), record, unlocked: cardUnlockedWithRecord(merged, record), raw };
+  };
+
   // 保存はまとめて1つの取引で(失敗したら全部戻す)
   // ポイントはビートP(CARD_POINT_STORE_KEY)。モンヒロビートでも増えるので、書く直前に読み直し、この画面で足した分(差)だけを足す
-  const persist = async (patch) => {
+  // befores … 失敗したときに戻す値(読み直した値)。無い項目は手元の save の値に戻す
+  const persist = async (patch, befores = {}) => {
     const K = CARD_SAVE_KEYS;
     let fixed = patch;
     let pointBefore = null;
@@ -55081,7 +55100,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     }
     const entries = Object.entries(fixed).map(([k, next]) => (k === 'point'
       ? { key: CARD_POINT_STORE_KEY, next, before: pointBefore }
-      : { key: K[k], next, before: save[k] === undefined ? null : save[k] }));
+      : { key: K[k], next, before: k in befores ? befores[k] : save[k] === undefined ? null : save[k] }));
     const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
     if (ok) setSave((cur) => ({ ...cur, ...fixed }));
     if (ok && patch.settings && onSettings) onSettings(patch.settings); // 周回の自動(quickAutoStart)は 60-app が見る
@@ -55115,20 +55134,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       }
       // 自分の番の数・倒した数で決める(かかった時間は見ない)。案A・台帳 #3484
       const facts = cardResultFacts(st, CARD_ME);
-      const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome, facts);
+      const fresh = await freshCardSave();
+      const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
       const loops = cardCpuLoops(game.level, outcome, facts);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
       const rankable = !!(rank && rank.send) && !debug;
-      const nextRecord = cardRecordAfter(save.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
-      const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
-      const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !save.unlocked[lv]) || null;
-      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked });
+      const nextRecord = cardRecordAfter(fresh.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
+      const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
+      const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
+      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw);
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
       // 足せた周の数を、その日の数へ足す(トップの周回の札の詳細「今日バトルカードで足した周回」)
-      if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } });
+      if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
       // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
       const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts });
@@ -55240,16 +55260,18 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
     const pvpReward = async (r) => {
       const base = cardPvpReward(r.reward, r.facts);
-      const daily = cardNormalizeDaily(save.daily, cardTodayJst());
-      const record = cardNormalizeRecord(save.record);
+      // 書く直前に読み直す(助手と対戦と同じ。古い中身で記録・その日の数を上書きしない)
+      const fresh = await freshCardSave();
+      const daily = fresh.daily;
+      const record = fresh.record;
       const win = r.outcome === 'win';
       const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
       const got = { ...base, point: base.point + bonus, bonus };
       const ok = await persist({ point: save.point + got.point, daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 },
-        record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } });
+        record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
-      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } });
+      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
       return { ...got, saved: ok, quick };
     };
     return <CardPvpLobby meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {

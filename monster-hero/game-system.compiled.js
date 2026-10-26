@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4ebd98a1b546e3e
+// source-sha256: 4e52f8be456a3069
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 21:50";
+const BUILD_DATE = "2026-10-26 22:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -90829,7 +90829,32 @@ const CardBattleScreen = ({
   useEffect(() => {
     if (screen === 'CARD_TOP' && game && !result) setGame(null);
   }, [screen]);
-  const persist = async patch => {
+  const freshCardSave = async () => {
+    const K = CARD_SAVE_KEYS;
+    let raw = {
+      daily: save.daily,
+      record: save.record,
+      unlocked: save.unlocked
+    };
+    try {
+      const [d, r, u] = await Promise.all([storeGet(K.daily, null), storeGet(K.record, null), storeGet(K.cpuUnlocked, null)]);
+      raw = {
+        daily: d,
+        record: r,
+        unlocked: u
+      };
+    } catch (_) {}
+    const record = cardNormalizeRecord(cardIsPlainObject(raw.record) ? raw.record : save.record);
+    const u0 = cardNormalizeCpuUnlocked(raw.unlocked);
+    const merged = Object.fromEntries(Object.keys(u0).map(lv => [lv, u0[lv] || save.unlocked[lv] === true]));
+    return {
+      daily: cardNormalizeDaily(raw.daily === null ? save.daily : raw.daily, cardTodayJst()),
+      record,
+      unlocked: cardUnlockedWithRecord(merged, record),
+      raw
+    };
+  };
+  const persist = async (patch, befores = {}) => {
     const K = CARD_SAVE_KEYS;
     let fixed = patch;
     let pointBefore = null;
@@ -90847,7 +90872,7 @@ const CardBattleScreen = ({
     } : {
       key: K[k],
       next,
-      before: save[k] === undefined ? null : save[k]
+      before: k in befores ? befores[k] : save[k] === undefined ? null : save[k]
     });
     const ok = await saveStoredValuesOrRollback(entries, storeGet, storeSet);
     if (ok) setSave(cur => ({
@@ -90928,24 +90953,25 @@ const CardBattleScreen = ({
           return;
         }
         const facts = cardResultFacts(st, CARD_ME);
-        const reward = cardCpuReward(cardNormalizeDaily(save.daily, cardTodayJst()), game.level, outcome, facts);
+        const fresh = await freshCardSave();
+        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
         const loops = cardCpuLoops(game.level, outcome, facts);
         const rankable = !!(rank && rank.send) && !debug;
-        const nextRecord = cardRecordAfter(save.record, {
+        const nextRecord = cardRecordAfter(fresh.record, {
           who: game.who,
           level: game.level,
           outcome,
           at: Date.now(),
           rankable
         });
-        const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(save.unlocked, game.level) : save.unlocked;
-        const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !save.unlocked[lv]) || null;
+        const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
+        const opened = CARD_LEVEL_ORDER.find(lv => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
         const ok = await persist({
           point: save.point + reward.total,
           daily: reward.daily,
           record: nextRecord,
           unlocked: nextUnlocked
-        });
+        }, fresh.raw);
         if (ok && rankable) void cardRankSync(db, {
           record: nextRecord,
           collection: save.collection,
@@ -90964,6 +90990,8 @@ const CardBattleScreen = ({
             ...reward.daily,
             quickLoops: (reward.daily.quickLoops || 0) + loops
           }
+        }, {
+          daily: reward.daily
         });
         const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, {
           cpu: CARD_CPU,
@@ -91208,8 +91236,9 @@ const CardBattleScreen = ({
   if (view === 'pvp') {
     const pvpReward = async r => {
       const base = cardPvpReward(r.reward, r.facts);
-      const daily = cardNormalizeDaily(save.daily, cardTodayJst());
-      const record = cardNormalizeRecord(save.record);
+      const fresh = await freshCardSave();
+      const daily = fresh.daily;
+      const record = fresh.record;
       const win = r.outcome === 'win';
       const bonus = r.reward === 'win' && base.point > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
       const got = {
@@ -91231,7 +91260,7 @@ const CardBattleScreen = ({
             lose: record.pvp.lose + (win ? 0 : 1)
           }
         }
-      });
+      }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) {
         try {
@@ -91245,6 +91274,12 @@ const CardBattleScreen = ({
           ...daily,
           pvpPoint: daily.pvpPoint + got.point,
           quickLoops: (daily.quickLoops || 0) + got.loops
+        }
+      }, {
+        daily: {
+          ...daily,
+          pvpPoint: daily.pvpPoint + got.point,
+          firstWin: daily.firstWin || bonus > 0
         }
       });
       return {
