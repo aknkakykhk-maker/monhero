@@ -44,7 +44,7 @@ levels.forEach((lv) => {
         for (let g = 0; g < games; g++) {
           // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体・カードも少しずつ変わる。2026-10-25)。MASTER はプレイヤー役のデッキを見る
           const mine = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) });
-          const st = E.cardSimulate(db, { decks: [mine, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + seed++, first: g % 2 });
+          const st = E.cardSimulate(db, { decks: [mine, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!mine.sameBlood }), E.cardAiPolicy('kyuko', lv)], seed: 7000 + seed++, first: g % 2 });
           if (st.winner === 0) win[w] += 1;
           play[w] += 1;
         }
@@ -60,7 +60,7 @@ levels.forEach((lv) => {
     const a = who[i], b = who[j];
     let aw = 0;
     for (let g = 0; g < games; g++) {
-      const st = E.cardSimulate(db, { decks: [decks[a], decks[b]], policies: [E.cardAiPolicy(a, lv), E.cardAiPolicy(b, lv)], seed: 9000 + seed++, first: g % 2 });
+      const st = E.cardSimulate(db, { decks: [decks[a], decks[b]], policies: [E.cardAiPolicy(a, lv, { sameBlood: !!decks[a].sameBlood }), E.cardAiPolicy(b, lv, { sameBlood: !!decks[b].sameBlood })], seed: 9000 + seed++, first: g % 2 });
       if (st.winner === 0) aw += 1;
       play[a] += 1; play[b] += 1;
     }
