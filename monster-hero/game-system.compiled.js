@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e50757c08dfa74ce
+// source-sha256: ba6b372b117271f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -12544,7 +12544,7 @@ const RELEASE_FLAGS = {
 const releasedForPlayers = item => !item || (!item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true) && (!item.unreleasedFlag || RELEASE_FLAGS[item.unreleasedFlag] !== true);
 const CHANGELOG_TYPES = ['update', 'issue'];
 const changelogEntryId = entry => {
-  const source = entry.id || [entry.type, entry.title, ...(entry.items || [])].join('\u001f');
+  const source = entry.id || [entry.type, entry.idTitle || entry.title, ...(entry.items || [])].join('\u001f');
   let hash = 2166136261;
   for (let i = 0; i < source.length; i++) {
     hash ^= source.charCodeAt(i);
@@ -70561,7 +70561,7 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
   }, "⚔️"), React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
-  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && !battleOverlayOpen && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
+  }, "貫 通 技 準 備")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && !battleOverlayOpen && !enemyDefeating && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(React.createElement("div", {
     "data-battle-float-right": "8",
     className: "fixed left-1/2 pointer-events-none",
     style: {
@@ -77558,7 +77558,7 @@ function RhythmMultiAloneHint({
   return React.createElement("div", {
     "data-rhythm-multi-alone-hint": true,
     className: "mt-1.5 rounded-xl border border-amber-300/40 bg-amber-950/40 p-2 text-[11px] font-bold leading-snug text-amber-100"
-  }, "いまはメンバーが集まりにくいようです。このまま待つか、友だちとプライベートルームで遊ぶのもおすすめです。", onLeave && React.createElement("button", {
+  }, "いまはメンバーが集まりにくいようです。このまま待つか、フレンドとプライベートルームで遊ぶのもおすすめです。", onLeave && React.createElement("button", {
     type: "button",
     onClick: onLeave,
     className: "mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black"
@@ -77763,6 +77763,7 @@ function RhythmMultiBuddyInfoSheet({
       mon: state.mons[masu.id],
       dayKey: dayKey,
       songName: songName,
+      ownerName: m && m.name,
       onBack: null
     })), React.createElement("button", {
       type: "button",
@@ -78569,6 +78570,7 @@ function RhythmMultiScreen({
   const buddySheetLayer = buddySheet === 'pick' ? React.createElement(RhythmBuddySheet, {
     masuMons: masuMons,
     masuPicker: masuPicker,
+    breederName: profile && profile.name,
     songName: buddySongName,
     tickets: buddyTickets,
     pick: callBuddy,
@@ -78861,7 +78863,7 @@ function RhythmMultiScreen({
     className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
     info: quickRunInfo,
     onRestart: onRestartQuickRun,
     onResume: onResumeQuickRun,
@@ -79069,7 +79071,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-free": true,
       type: "button",
       onClick: () => searchRoom('free'),
-      className: "mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 max-[359px]:gap-0.5 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.12s'
       }
@@ -79078,7 +79080,7 @@ function RhythmMultiScreen({
       className: "mhms-mark"
     }, "FREE MATCH"), React.createElement("span", {
       "aria-hidden": "true",
-      className: "mhms-ico relative text-3xl leading-none"
+      className: "mhms-ico relative text-3xl leading-none max-[359px]:text-2xl"
     }, "🎮"), React.createElement("span", {
       className: "relative min-w-0"
     }, React.createElement("b", {
@@ -79109,7 +79111,7 @@ function RhythmMultiScreen({
       className: "block text-[18px] font-black italic leading-tight"
     }, "プライベート"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-900/80"
-    }, "合言葉で友だちと遊ぶ"))), ms.multi && React.createElement("button", {
+    }, "合言葉でフレンドと遊ぶ"))), ms.multi && React.createElement("button", {
       "data-rhythm-mode-ranking": true,
       type: "button",
       onClick: () => openRankHub('national'),
@@ -79289,7 +79291,7 @@ function RhythmMultiScreen({
       className: "block text-base font-black text-sky-100"
     }, "プライベートルーム"), React.createElement("small", {
       className: "block text-[11px] font-bold text-slate-400"
-    }, "合言葉で、友だちだけと遊べます")), React.createElement("button", {
+    }, "合言葉で、フレンドだけと遊べます")), React.createElement("button", {
       type: "button",
       "aria-label": "閉じる",
       onClick: () => setPrivateOpen(false),
@@ -79300,7 +79302,7 @@ function RhythmMultiScreen({
       className: "block text-[13px] font-black text-white"
     }, "部屋をつくる"), React.createElement("p", {
       className: "text-[11px] font-bold leading-snug text-slate-300"
-    }, "合言葉(ルームコード)ができます。友だちに伝えて入ってもらいましょう"), React.createElement("button", {
+    }, "合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう"), React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
       onClick: createPrivate,
@@ -79426,7 +79428,7 @@ function RhythmMultiScreen({
       type: "button",
       className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black",
       onClick: shareCode
-    }, copied ? 'コピーした!' : '友だちに送る')), view && room && React.createElement("div", {
+    }, copied ? 'コピーした!' : 'フレンドに送る')), view && room && React.createElement("div", {
       "data-rhythm-multi-select-time-row": true,
       className: "mt-1.5 flex flex-wrap items-center gap-1.5"
     }, React.createElement("small", {
@@ -80706,12 +80708,19 @@ function RhythmBuddyScoreChart({
     className: "w-[4.8rem] shrink-0 text-right tabular-nums"
   }, x.score.toLocaleString())))));
 }
+const rhythmBuddyCallText = (call, name) => {
+  if (!call) return '';
+  if (call.call) return call.call;
+  const n = String(name || '').trim();
+  return n && typeof call.suf === 'string' ? `${n}${call.suf}` : call.label;
+};
 function RhythmBuddyDetail({
   masu,
   mon,
   dayKey,
   songName,
-  onBack
+  onBack,
+  ownerName = ''
 }) {
   const m = rhythmBuddyNormalizeMon(mon);
   const info = rhythmBuddyLevelInfo(m.exp);
@@ -80726,7 +80735,7 @@ function RhythmBuddyDetail({
   const persona = rhythmBuddyPersona(masu.id, m.trait, masu.baseId);
   const favs = rhythmBuddyPersonaSongs(m);
   const bdayToday = rhythmBuddyIsBirthday(persona, Date.now());
-  const profile = [...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []), ['self', '一人称', persona.self], ['call', '呼び方', persona.call.label], ['quirk', '口ぐせ', persona.quirk.label], ['food', '好物', persona.food], ['hobby', '趣味', persona.hobby], ['birthday', '誕生日', `${persona.birthday.month}月${persona.birthday.day}日`], ['habit', '叩き方のくせ', persona.habit.label], ['like', '好きな曲', favs.like ? songName(favs.like) : 'まだない'], ['dislike', '苦手な曲', favs.dislike ? songName(favs.dislike) : 'まだない']];
+  const profile = [...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []), ['self', '一人称', persona.self], ['call', '呼び方', rhythmBuddyCallText(persona.call, ownerName)], ['quirk', '口ぐせ', persona.quirk.label], ['food', '好物', persona.food], ['hobby', '趣味', persona.hobby], ['birthday', '誕生日', `${persona.birthday.month}月${persona.birthday.day}日`], ['habit', '叩き方のくせ', persona.habit.label], ['like', '好きな曲', favs.like ? songName(favs.like) : 'まだない'], ['dislike', '苦手な曲', favs.dislike ? songName(favs.dislike) : 'まだない']];
   return React.createElement("div", {
     "data-rhythm-buddy-detail": true,
     className: "space-y-2"
@@ -81323,7 +81332,8 @@ function RhythmBuddySheet({
   tickets = 0,
   pick,
   onClose,
-  calledIds = []
+  calledIds = [],
+  breederName = ''
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -81382,6 +81392,7 @@ function RhythmBuddySheet({
     mon: state.mons[detail.id],
     dayKey: dayKey,
     songName: songName,
+    ownerName: breederName,
     onBack: () => setDetailId('')
   }) : masuPicker ? React.createElement("div", {
     "data-rhythm-buddy-picker": true
@@ -81464,7 +81475,8 @@ function MasuBeatScreen({
   songs = [],
   tickets = 0,
   onBack,
-  backLabel = 'M/B管理へ戻る'
+  backLabel = 'M/B管理へ戻る',
+  breederName = ''
 }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
@@ -81505,6 +81517,7 @@ function MasuBeatScreen({
     mon: state.mons[detail.id],
     dayKey: dayKey,
     songName: songName,
+    ownerName: breederName,
     onBack: () => setDetailId('')
   }) : React.createElement(RhythmBuddyList, {
     masuMons: masuMons,
@@ -82988,7 +83001,8 @@ const RaidJackScreen = ({
     renderIcon: renderIcon,
     cardClass: cardClass
   }))), React.createElement("div", {
-    className: SCREEN_FOOTER_CLASS
+    "data-raid-jack-footer": true,
+    className: `${SCREEN_FOOTER_CLASS} [@media(orientation:landscape)_and_(max-height:520px)]:sticky [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0 [@media(orientation:landscape)_and_(max-height:520px)]:z-20 [@media(orientation:landscape)_and_(max-height:520px)]:-mx-4 [@media(orientation:landscape)_and_(max-height:520px)]:-mb-4 [@media(orientation:landscape)_and_(max-height:520px)]:px-4 [@media(orientation:landscape)_and_(max-height:520px)]:pb-3 [@media(orientation:landscape)_and_(max-height:520px)]:bg-slate-950 [@media(orientation:landscape)_and_(max-height:520px)]:shadow-[0_60px_0_0_#020617]`
   }, tab === 'a' && open && isOpenTier && !closedTier && remaining > 0 && (RELEASE_FLAGS.raidJackRhythm === true || forced) ? React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("button", {
@@ -89787,7 +89801,7 @@ const cardMonArt = mon => {
   return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`;
+const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
 const cardUserLabel = (db, c) => {
   if (!c) return '';
   if (c.user === 'any') return '全モンスター';
@@ -93648,6 +93662,7 @@ const CardBattleScreen = ({
         daily: {
           ...daily,
           pvpPoint: daily.pvpPoint + got.point,
+          firstWin: daily.firstWin || bonus > 0,
           quickLoops: (daily.quickLoops || 0) + got.loops
         }
       }, {
@@ -94395,7 +94410,8 @@ const CardBattleScreen = ({
       onBack: () => setView('top'),
       note: "MFバトルカード"
     }), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+      "data-card-options-side": true,
+      className: "mb-2 shrink-0 space-y-2"
     }, React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
@@ -94409,7 +94425,29 @@ const CardBattleScreen = ({
       onToggle: toggleAssist,
       cls: "",
       withLabel: true
-    }))), cardTalkOpen() && React.createElement("div", {
+    }))), React.createElement("div", {
+      "data-card-options-toc": true,
+      className: `${SCREEN_PANEL_CLASS} hidden landscape:block`
+    }, React.createElement("div", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "項目"), React.createElement("div", {
+      className: "mt-1 grid grid-cols-3 gap-1"
+    }, [...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map(g => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-card-options-jump": label,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        const el = document.querySelector(`[data-card-options] ${sel}`);
+        if (el) el.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      },
+      className: "min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100"
+    }, jaWrap(label)))))), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, cardTalkOpen() && React.createElement("div", {
       "data-card-ai-talk-panel": true,
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
@@ -100994,8 +101032,34 @@ const CardReplayList = ({
     title: "過去の対戦",
     accent: "text-sky-200",
     onBack: onBack,
-    note: `新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`
+    note: "押すと、はじめから見返せます"
   }), React.createElement("div", {
+    "data-card-replay-side": true,
+    className: `${SCREEN_PANEL_CLASS} mb-2 shrink-0`
+  }, React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5 text-center"
+  }, React.createElement("div", {
+    className: "rounded-xl bg-black/30 py-1"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "残っている試合"), React.createElement("b", {
+    "data-card-replay-count": true,
+    className: "text-[14px] font-black text-sky-100"
+  }, box ? box.list.length : '-', React.createElement("small", {
+    className: "text-[10px] text-slate-400"
+  }, "/", CARD_REPLAY_MAX))), React.createElement("div", {
+    className: "rounded-xl bg-black/30 py-1"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "★"), React.createElement("b", {
+    "data-card-replay-favs": true,
+    className: "text-[14px] font-black text-amber-200"
+  }, favs, React.createElement("small", {
+    className: "text-[10px] text-slate-400"
+  }, "/", CARD_REPLAY_FAV_MAX)))), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-snug text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません`))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-1.5 pb-4`
   }, note && React.createElement("p", {
     "data-card-replay-note": true,
@@ -106885,7 +106949,7 @@ function MonsterHeroGame() {
   };
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
@@ -106896,7 +106960,7 @@ function MonsterHeroGame() {
       step: 0,
       live: true
     });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
   useEffect(() => {
     if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt();
   }, [bootPhase, battleCardArtDebug]);
@@ -106949,14 +107013,14 @@ function MonsterHeroGame() {
   }, [cardBattleIntroSeenLoaded, cardBattleIntroSeenFlag, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!tacticsIntroPending) return;
-    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !rhythmEventStoryPending && !eventReplay && !loginBonusPopup)) return;
     setTacticsIntroPending(false);
     setEventReplay({
       id: 'tactics_intro',
       step: 0,
       live: true
     });
-  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay, loginBonusPopup]);
   const rhythmEventLiveCatchUpRef = useRef(false);
   useEffect(() => {
     if (RELEASE_FLAGS.rhythmWeeklyRanking !== true) return;
@@ -108400,6 +108464,14 @@ function MonsterHeroGame() {
           setMomosukeIntroSeenFlag(true);
         } catch {}
       }
+      if (!wasOnboarded) {
+        for (const [on, key] of [[EVENT_REPLAY_RELEASE_FLAGS.assistantChat, ASSISTANT_CHAT_STORY_SEEN_KEY], [EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes, TACTICS_TYPES_STORY_SEEN_KEY], [EVENT_REPLAY_RELEASE_FLAGS.cardBattle, CARD_BATTLE_INTRO_STORY_SEEN_KEY]]) {
+          if (!on) continue;
+          try {
+            if ((await storeGet(key, false, false)) !== true) await storeSet(key, true, false);
+          } catch {}
+        }
+      }
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try {
           setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true);
@@ -108451,7 +108523,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -125157,7 +125229,7 @@ function MonsterHeroGame() {
           disabled: soon || tutorialLocked,
           onClick: () => openBattleSystem(sys.id),
           "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
-          className: `mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon ? 'opacity-60 grayscale' : ''}`,
+          className: `mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] portrait:[@media(max-height:600px)]:min-h-[70px] ${soon ? 'opacity-60 grayscale' : ''}`,
           style: {
             animationDelay: `${.05 + idx * .07}s`
           }
@@ -130481,6 +130553,7 @@ function MonsterHeroGame() {
       masuMons: masuMons,
       songs: rhythmDemoSongs(RHYTHM_SONGS),
       tickets: ownedItemCount(ownedItems, RHYTHM_BUDDY_TICKET_ITEM_ID),
+      breederName: breederName,
       onBack: () => setGameState(masuBeatBack),
       backLabel: masuBeatBack === 'MB_MANAGEMENT' ? 'M/B管理へ戻る' : 'モードえらびへ戻る'
     }), gameState === 'MASU_MONS' && React.createElement(MasuMonsScreen, {
@@ -133566,6 +133639,7 @@ function MonsterHeroGame() {
         setEventReplay(null);
       };
       return React.createElement("div", {
+        "data-event-story": eventReplay.id,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
