@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4287dd62e29b48cf
+// generated-sha256: 8707a6c06e852b4d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -24682,7 +24682,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {/* 抽選の結果。当たりは大きく「LUCKY RUSH!!」、はずれは小さく「+2pt」 */}
 {luckyBanner&&<div key={luckyBanner.id} data-rhythm-lucky-banner data-kind={luckyBanner.kind} aria-hidden="true"><b>{luckyBanner.text}</b></div>}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
-                {/* 能力名の文字は、その大きさ・太さで初めて出る瞬間(最初のモンスターノーツ)に文字の形を用意するので、その1回だけ重かった(2026-10-13)。同じ書式で見えないまま置いておき、曲の前に用意を済ませる。見えない(visibility:hidden)ので、見た目・押せる所は変わらない */}{monsters.some(m=>m&&m.ability)&&<div data-rhythm-ability-warm aria-hidden="true" className="pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-lg font-black" style={{visibility:'hidden'}}>{monsters.filter(m=>m&&m.ability).map(m=>m.ability.name).join('')}！</div>}{/* 能力名の札は最初から置いておき、出すときは文字と印(data-on)だけを書き換える。出し入れや演奏画面全体の作り直しをすると、その瞬間だけ重かった(2026-10-15 計測・4回目のモンスターノーツ) */}{monsters.some(m=>m&&m.ability)&&<div ref={abilityFlashRef} data-rhythm-ability-flash data-on="0" className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',visibility:'hidden',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{'\u00a0'}</div>}{canvasNotes?<canvas key={webglNotes?'webgl':'2d'} ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
+                {/* 能力名の文字は、その大きさ・太さで初めて出る瞬間(最初のモンスターノーツ)に文字の形を用意するので、その1回だけ重かった(2026-10-13)。同じ書式で見えないまま置いておき、曲の前に用意を済ませる。見えない(visibility:hidden)ので、見た目・押せる所は変わらない */}{monsters.some(m=>m&&m.ability)&&<div data-rhythm-ability-warm aria-hidden="true" className="pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-lg font-black" style={{visibility:'hidden'}}>{monsters.filter(m=>m&&m.ability).map(m=>m.ability.name).join('')}！</div>}{/* 能力名の札の高さ: 縦は判定の文字の下(下から12%+78px)。横は高さが足りず、同じ値だと判定の文字(MARVELOUS など)の真ん中に重なって判定が読めなかったので、判定ラインより下の空いた帯へ出す(2026-10-27) */}{/* 能力名の札は最初から置いておき、出すときは文字と印(data-on)だけを書き換える。出し入れや演奏画面全体の作り直しをすると、その瞬間だけ重かった(2026-10-15 計測・4回目のモンスターノーツ) */}{monsters.some(m=>m&&m.ability)&&<div ref={abilityFlashRef} data-rhythm-ability-flash data-on="0" className="pointer-events-none absolute bottom-[calc(12%+78px)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100 landscape:bottom-[3%]" style={{visibility:'hidden',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{'\u00a0'}</div>}{canvasNotes?<canvas key={webglNotes?'webgl':'2d'} ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
     隠すのはレーンの台形の中だけ(laneCoverStyle の clip-path)。左右の空きにあるコンボ数・マスモン・背景は隠さない。
     ノーツ(z-5)より前、判定ライン(z-6)より前(上端から伸びるので判定ラインとは重ならない)、HUD(z-30)より後ろ。
     ★隠すだけで、ノーツが流れる速さ・判定のタイミングは変わらない */}
@@ -32990,6 +32990,22 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
 };
 // ==== 強化フェーズの共通部品ここまで ====
 
+// お話や大事な窓が出ているあいだは、画面の上に重なる知らせ(新しいバージョンの帯など)を出すのを待つ。
+// 閉じたら出す(2026-10-27 社長室カゲあつくんの指摘「お話の吹き出しの頭を隠す」)。
+// 見るのは、お話の舞台(data-story-stage)と、窓(aria-modal・role="dialog")。待っているあいだだけ1秒ごとに見直す
+const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"],[role="dialog"]';
+const overlayOpenNow = () => typeof document !== 'undefined' && !!document.querySelector(OVERLAY_WAIT_SELECTOR);
+function WaitForOverlayClose({ children }) {
+  const [blocked, setBlocked] = useState(overlayOpenNow);
+  useEffect(() => {
+    const tick = () => setBlocked(overlayOpenNow());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return blocked ? null : children;
+}
+
 // ---- part: 42-picker-sheet.jsx ----
 // ==== 共通部品: 一覧から選ぶ窓(PickerSheet) ====
 //
@@ -35245,6 +35261,15 @@ function RhythmInfoScreen({
 
 // 曲えらびのアシスト・ミラー譜面の切り替え(キー・絵・名前・ONの色)。縦は上の題名の行、横はジャケットの右に同じものを置く
 const RHYTHM_SELECT_PLAY_MODES=[['assistMode','🛟','アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔','ミラー譜面','border-sky-300 bg-sky-600/80 text-white']];
+// デバッグの全解放の曲えらび(debugAll)で並べる曲。'proto' は試作の枠だけ、それ以外は公開曲・公開前・デバッグ用の曲と試作の枠を全部。
+// 譜面が1つも無い曲(曲の一覧の部品も並べない)は先に外して、切り替えに出す曲の数と一覧をそろえる
+const rhythmDebugSelectSongs=(filter)=>{
+  const proto=typeof RHYTHM_PROTO_SONGS!=='undefined'&&Array.isArray(RHYTHM_PROTO_SONGS)?RHYTHM_PROTO_SONGS:[];
+  const playable=song=>!!song&&RHYTHM_PLAY_DIFFICULTIES.some(d=>rhythmChartPlayable(song,d.id));
+  return (filter==='proto'?[...proto]:[...RHYTHM_SONGS,...proto]).filter(playable);
+};
+// 切り替えに出す曲の数。一覧は同じ曲の版(full・short など)を1行にまとめるので、その行の数で数える
+const rhythmDebugSelectRowCount=(filter)=>new Set(rhythmDebugSelectSongs(filter).map(song=>rhythmSongVersionHead(song.songId))).size;
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
@@ -35254,12 +35279,18 @@ function RhythmSongSelectScreen({
   rhythmBackgroundRun, rhythmBestRecords, rhythmSettings, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
   rhythmSongListScrollRef, runStage, runStageRef, saveRhythmSelectView, setQuickRunDetailOpen,
   setQuickRunStartError, setQuickRunStopConfirm, setRhythmSelectedDifficultyId, setRhythmSelectedSongId, spotClass,
-  startQuickRunFromRhythm, wave, monsterSlots=[], raidChallenge=null,
+  startQuickRunFromRhythm, wave, monsterSlots=[], raidChallenge=null, debugAll=false,
 }) {
-      const songs=rhythmDemoSongs(RHYTHM_SONGS);
+      // ★デバッグの全解放の曲えらび(debugAll・2026-10-26 社長室「デバッグモードが分かりにくい: モンヒロビートのデバッグの曲えらびを本物と同じ画面に」)。
+      //   同じ画面を使い、曲は公開曲・公開前・試作の枠を全部、難易度は HELL まで、鍵は見ない(unlockAll)。演奏は記録しない(呼ぶ側が from:'proto')。
+      //   デバッグで意味の無いもの(周回の帯と入口・イベントやビートPの案内・一度きりの案内・ランキング)は出さない。本物の曲えらびは何も変わらない
+      if(debugAll){quickRunProgress=null;raidChallenge=null;rhythmEventNotice=null;quickRhythmBackgroundVisible=false;rhythmSixLaneIntroVisible=false;rhythmLookIntroVisible=false;exitingQuickRun=false;}
+      // 試作の枠だけに絞る切り替え(社長室「試作の切り替えを目立つ形で」)。画面を離れたら「すべて」に戻る
+      const [debugSongFilter,setDebugSongFilter]=useState('all');
+      const songs=debugAll?rhythmDebugSelectSongs(debugSongFilter):rhythmDemoSongs(RHYTHM_SONGS);
       // 5難易度 + HELL(HELL は譜面がある曲だけボタンに出る。rhythmDemoDifficulties が空の譜面を外す)
       // レイドバトルへ挑んでいるあいだも同じ(2026-10-21 社長「選べるようにして重みも上げる」。HELL の重みは RAID_JACK_RHYTHM_DIFFICULTY_FACTORS)
-      const difficulties=rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
+      const difficulties=debugAll?RHYTHM_PLAY_DIFFICULTIES:rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice
@@ -35268,7 +35299,7 @@ function RhythmSongSelectScreen({
       // ビートP交換所は常設。獲得案内は、開催中だけ「獲得期間中」を出す
       // (2026-09-24・ユーザー指示「いつでももらえるように。ただしイベント時の1/5」。
       //  非開催中の「いつでも貯まります」の帯は 2026-09-26 に外した)。
-      const beatPointReleased=RELEASE_FLAGS.rhythmEventPoints===true;
+      const beatPointReleased=!debugAll&&RELEASE_FLAGS.rhythmEventPoints===true;
       const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;
       const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
@@ -35329,7 +35360,7 @@ function RhythmSongSelectScreen({
       // 横持ちはヘッダーの空きへ入れる。中身は1つ作って使い回す(2つ書くと片方だけ直す事故になる)。
       // ★塗りつぶしをやめて枠だけにし、主張を抑える。モンヒロビートだけで遊ぶ人には
       //   関係のないボタンなので、大きく出しすぎない(2026-09-07・ユーザー指摘)
-      const quickRunStartNode = !quickRunProgress && !runStage
+      const quickRunStartNode = !debugAll && !quickRunProgress && !runStage
         ? (repeatTemplateForNewRun()
           ? <button type="button" data-quick-run-start-button onClick={()=>{if(!startQuickRunFromRhythm())setQuickRunStartError(true);}}
               className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">⚔ 裏でクイックの∞周回を始める</button>
@@ -35350,11 +35381,11 @@ function RhythmSongSelectScreen({
       // ★裏で周回が動いているときの帯(負けて止まった・始め直すなど)は畳まない。大事な知らせは見えたままにする
       const selectNoticeShort=useRhythmShortPortrait();
       const selectNoticesOpen=rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView),rhythmPlayedSongCount(rhythmBestRecords),selectNoticeShort);
-      const quickRunStartRowVisible=!quickRunProgress&&!runStage;
+      const quickRunStartRowVisible=!debugAll&&!quickRunProgress&&!runStage;
       const foldedNoticeCount=selectNoticesOpen?0:
         [!!rhythmEventNotice,!!rhythmSixLaneIntroVisible,!!rhythmLookIntroVisible,!!quickRhythmBackgroundVisible].filter(Boolean).length;
       return (
-      <main data-rhythm-demo-home className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+      <main data-rhythm-demo-home={debugAll?undefined:true} data-rhythm-debug-select={debugAll?true:undefined} className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
         {/* 周回を締めているあいだ。いまは報酬の付与と記録だけで端末の中で完結するので
             ほぼ一瞬だが、まれに引っかかったときに二度押しされないよう薄い幕だけ残す
             (2026-09-14・ユーザー指摘「待ち時間が長くてストレス」。
@@ -35376,7 +35407,7 @@ function RhythmSongSelectScreen({
           {/* ★押したあとはHOMEへ抜けるまで数秒かかる(報酬の付与・送信・バトルの演出の終わり待ち)。
               そのあいだは押せなくし、何を待っているのかを畫面で言う(2026-09-13) */}
           {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
-          <button data-rhythm-song-select-back type="button" aria-label="モードえらびへ戻る" title="モードえらびへ戻る"
+          <button data-rhythm-song-select-back type="button" aria-label={debugAll?'モンヒロビートのデバッグへ戻る':'モードえらびへ戻る'} title={debugAll?'デバッグへ戻る':'モードえらびへ戻る'}
             onClick={onExit}
             className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
@@ -35384,7 +35415,7 @@ function RhythmSongSelectScreen({
           <div className="min-w-0 flex-1">
             {/* 「体験版」の札は、右のボタンの幅を空けるためこの小さな行へ入れた(2026-10-01)。
                 題名はヘルプや案内と同じ呼び名「曲えらび」にそろえた(以前は「楽曲選択」) */}
-            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"><span className="max-[359px]:hidden">MONBEAT</span><span data-rhythm-demo-badge className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">体験版</span></small>
+            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"><span className="max-[359px]:hidden">MONBEAT</span><span data-rhythm-demo-badge data-rhythm-debug-select-badge={debugAll?true:undefined} className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">{debugAll?'記録しない':'体験版'}</span></small>
             {/* 幅の狭い端末(320px など)は縦の題名の行にアシスト・ミラーが入るので、♪と字の間隔を詰めて「曲えらび」を収める(2026-10-19) */}
             <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"><span className="max-[359px]:hidden">🎵 </span>曲えらび</h2>
             {beatPointReleased&&Number.isFinite(beatPointBalance)&&<small data-rhythm-beat-point-balance aria-label={`所持ビートP ${beatPointBalance.toLocaleString()}`}
@@ -35421,6 +35452,13 @@ function RhythmSongSelectScreen({
             onClick={onOpenOptions}
             className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`}><span aria-hidden="true" className="text-base leading-none">⚙️</span><span className="text-[9px] font-black leading-none">設定</span></button>
         </header>
+        {/* デバッグの全解放のときだけ: 試作の枠だけに絞る切り替え(社長室「試作の切り替えを目立つ形で」)。曲の数も出す */}
+        {debugAll&&(()=>{const protoCount=rhythmDebugSelectRowCount('proto'),allCount=rhythmDebugSelectRowCount('all');
+          return <div data-rhythm-debug-song-filter role="radiogroup" aria-label="並べる曲" className="grid shrink-0 grid-cols-2 gap-1.5 border-b border-amber-400/30 bg-amber-950/30 px-2 py-1.5">
+            {[['all',`すべての曲(${allCount})`],['proto',`🧪 試作だけ(${protoCount})`]].map(([id,label])=>{const on=debugSongFilter===id;
+              return <button key={id} type="button" role="radio" aria-checked={on} data-rhythm-debug-song-filter-option={id} onClick={()=>setDebugSongFilter(id)}
+                className={`min-h-[40px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on?'border-amber-300 bg-amber-500/80 text-slate-950':'border-white/15 bg-slate-900/80 text-amber-100'}`}>{label}</button>;})}
+          </div>;})()}
         {/* レイドバトルのモンヒロビート挑戦で開いたときの帯(2026-10-06・ユーザー指示)。遊んだ1曲のスコアが、ジャックへのダメージになる */}
         {raidChallenge&&<div data-raid-challenge-banner role="status" className="shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100">
           🎃 レイドバトル「{raidChallenge.tierName}」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)
@@ -35602,14 +35640,16 @@ function RhythmSongSelectScreen({
           onDifficultyId={setRhythmSelectedDifficultyId}
           spotClass={spotClass}
           onPlay={onPlaySong}
-          notice={<AssistantBubble scene="rhythmHome" compact/>}
+          notice={debugAll?null:<AssistantBubble scene="rhythmHome" compact/>}
+          unlockAll={debugAll}
+          playLabel={debugAll?'決定(記録しない)':undefined}
           noticeHidden={foldedNoticeCount}
           toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}
           onView={saveRhythmSelectView}
-          listScrollTop={rhythmSongListScrollRef.current}
-          onListScrollTop={top=>{rhythmSongListScrollRef.current=top;}}
-          actionExtra={song=><button type="button" data-rhythm-demo-ranking data-rhythm-ranking-place="action" onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
+          listScrollTop={rhythmSongListScrollRef?rhythmSongListScrollRef.current:null}
+          onListScrollTop={top=>{if(rhythmSongListScrollRef)rhythmSongListScrollRef.current=top;}}
+          actionExtra={debugAll?null:song=><button type="button" data-rhythm-demo-ranking data-rhythm-ranking-place="action" onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
             className="flex min-h-[46px] w-[46px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-300/60 bg-amber-500/10 leading-none text-amber-100"><span aria-hidden="true" className="text-base leading-none">🏆</span><span className="text-[8px] font-black leading-none">順位</span></button>}
           footer={song=><>
             {/* アシストモードとミラー譜面は、アワーノーツと同じく「遊ぶ前にその場で」切り替えられるようにする
@@ -35623,7 +35663,7 @@ function RhythmSongSelectScreen({
             {/* 2026-09-26 に見本の形へ(ユーザー指示「見本の形がかなり理想」)。縦は1行の横長ボタン、
                 横はジャケットの右(自己ベストの下)へ入るので、絵文字とON/OFFだけの小さなボタンにする */}
             {/* 縦画面ではこの段を出さない(2026-10-19)。アシスト・ミラーは上の題名の行へ、ランキングは「決定」の右へ移した */}
-            <div data-rhythm-play-modes className="hidden grid-cols-3 gap-1.5 landscape:grid">
+            <div data-rhythm-play-modes className={`hidden ${debugAll?'grid-cols-2':'grid-cols-3'} gap-1.5 landscape:grid`}>
               {RHYTHM_SELECT_PLAY_MODES.map(([key,icon,name,on])=>{
                 const active=!!(rhythmSettings&&rhythmSettings[key]);
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
@@ -35631,8 +35671,8 @@ function RhythmSongSelectScreen({
                   onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
                   className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}><span aria-hidden="true">{icon}</span><span className="landscape:hidden">{name}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></button>;
               })}
-              <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
-                className="flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="landscape:hidden">ランキング</span></button>
+              {!debugAll&&<button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
+                className="flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="landscape:hidden">ランキング</span></button>}
             </div>
             {rhythmSettings&&rhythmSettings.assistMode&&<p data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-snug text-emerald-200">アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。</p>}
           </>}/>
@@ -51504,6 +51544,7 @@ const cardResolveTarget = (db, st) => {
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
   if (pd.endure && dmg >= target.life && target.life > 0) dmg = target.life - 1; // 根性: ライフ1で残る
   if (target.safeUntil >= st.turn) dmg = 0; // ぬいぐるみ
+  const lifeBefore = target.life; // ドレインは、実際に減ったライフだけ回復する
   target.life = Math.max(0, target.life - dmg);
   if (dmg > 0) target.charge = null; // 静の構えはダメージを受けると終わる
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
@@ -51517,7 +51558,8 @@ const cardResolveTarget = (db, st) => {
     const gl = cardEff(main, 'gutsLossOnHit');
     if (gl && t.p !== pd.attacker && !pd.noGutsLoss) { const k = cardLoseGuts(st, t.p, gl.n); if (k) cardLog(st, `${st.players[t.p].name}はガッツを${k}失った`); }
     if (cardHasEff(main, 'stunOnHit')) { target.stunTurn = st.turn + 1; cardLog(st, `${target.name}は次のターン攻撃できない`); }
-    if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) { const h = Math.min(dmg, atkMon.max - atkMon.life); atkMon.life += h; if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`); }
+    // ドレイン: 「与えたダメージ分」は、実際に減ったライフ(残りライフ1の子を倒したら1。2026-10-27 社長が案Aに決めた)
+    if (cardHasEff(main, 'drain') && atkMon && !atkMon.ko) { const h = Math.min(lifeBefore - target.life, atkMon.max - atkMon.life); atkMon.life += h; if (h) cardLog(st, `${atkMon.name}はライフを${h}回復`); }
   }
   if (!evaded || cardHasEff(main, 'halfOnEvade')) { if (!evaded) pd.hitAnyNotEvaded = true; }
   if (evaded) pd.evadedAny = true;
@@ -59767,8 +59809,9 @@ const cardPvpHistoryRecord = async (room, { rankable = false } = {}) => {
 
 // ---- 画面: マルチの履歴 ----
 // onBack … マルチ対戦の入口へ / onOpenReplay(match) … リプレイ(93・ミカエシくん)。replayHas(match) が真の試合だけ「▶ この対戦を見る」(どちらも 84 から 91 を通して渡す)
+// 横画面では右の列が広いので、絵が大きくなりすぎないよう幅に上限(縦画面の幅と同じくらい。2026-10-27)
 const CardPvpHistoryDeck = ({ db, deck, press, tone }) => (
-  <div className="space-y-2">
+  <div className="mx-auto w-full max-w-[440px] space-y-2">
     <div className="grid grid-cols-3 gap-1.5">
       {deck.monsters.map((no, i) => {
         const m = cardMonsterOf(db, no);
@@ -59873,7 +59916,8 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
 //   2 → 3: 必殺技の応酬・封印でカード投げとボンバなどの出せる手・ガッツにする手札の番号の確かめ(#3821)
-const CARD_REPLAY_RULES = 3; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821
+//   3 → 4: ドレインは実際に減ったライフだけ回復(2026-10-27)
+const CARD_REPLAY_RULES = 4; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -77312,7 +77356,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     </div>,
     document.body
   ) : null;
-  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(
+  // お話や大事な窓が出ているあいだは出さずに待ち、閉じてから出す(WaitForOverlayClose・41-screen-ui.jsx)
+  const updateNotice = (updateNoticeVisible && updateNoticeMode !== 'OFF' && !updateNoticeOnPlay) ? ReactDOM.createPortal(<WaitForOverlayClose>{
     updateNoticeSmall ? (
       <div aria-live="assertive" data-update-notice="mini" data-update-notice-place="top"
         className="fixed z-[100000] right-3 flex items-stretch gap-1"
@@ -77322,10 +77367,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     ) : (
       <div aria-live="assertive" data-update-notice="full" data-update-notice-place="top" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
-        <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
+        <button type="button" onClick={reloadLatestVersion} className="flex-1 min-w-0 flex items-center justify-center gap-2 min-h-[48px] px-3 py-2 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-[13px] leading-tight shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18} className="shrink-0"/>{/* 「更新す/る」のように言葉の途中で折れないよう、2つの言葉をそれぞれ折れない塊にする。
+            狭い画面で折れるのは2つのあいだだけ。「更新する」は右のボタンに見えるよう分ける(2026-10-27 カゲあつくんの指摘) */}<span className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1"><span className="whitespace-nowrap">新しいバージョンがあります</span><span className="whitespace-nowrap rounded-lg bg-slate-950/15 px-2 py-0.5">更新する</span></span></button>
         <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
       </div>
-    ),
+    )
+  }</WaitForOverlayClose>,
     document.body
   ) : null;
   const titleModal = showChangelog ? (
@@ -77957,7 +78004,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='AUTO_SETTINGS'&&(()=>{
           const strategies = [
-            ['random','ランダム','AUTOが候補からランダムに選択'],
+            ['random','ランダム','AUTOが候補からランダムに選ぶ'],
             ['offense','火力重視','攻撃・ちから系を優先'],
             ['defense','耐久重視','ライフ・丈夫さ系を優先'],
             ['guts','ガッツ重視','ガッツ系を優先'],
@@ -77972,11 +78019,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenHead title="AUTO設定" accent="text-indigo-300" note="AUTOで戦うときの方針と供モンを決めておく" onBack={()=>setGameState('MB_MANAGEMENT')} backLabel="M/B管理へ戻る"/>
             <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-3`}>
               <section className={SCREEN_PANEL_CLASS}><h3 className="text-[13px] font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-white/10 bg-slate-950/60'}`}><span className="block text-[12px] font-black">{label}</span><span className="block mt-1 text-[10px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
-              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未指定（ランダム）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
+              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">おまかせ（AUTOがランダムに選ぶ）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`} ${ally.slot===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{ally.slot===slot&&'✓'}{label}</button>)}</div></div></div>)}</section>
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">モンヒロビートを開いたら自動で始める</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲えらびの上の帯から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings className={`${SCREEN_PANEL_CLASS} space-y-3`}>
                 <div><h3 className="text-[13px] font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-400">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-2">
@@ -79699,41 +79746,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           />
         )}
 
-        {gameState==='RHYTHM_DEBUG_SELECT'&&(()=>{
+        {gameState==='RHYTHM_DEBUG_SELECT'&&(
           // デバッグの全解放の曲えらび(2026-10-11 社長の依頼)。デバッグ設定からしか来られない(プレイヤーには見えない)。
-          // 曲: 公開している曲・公開前の曲・デバッグ用の曲(RHYTHM_SONGS)と試作の枠(RHYTHM_PROTO_SONGS)を全部。
+          // 2026-10-26 社長室「デバッグの曲えらびを本物と同じ画面に」: 本物の曲えらび(RhythmSongSelectScreen)を debugAll で使う。
+          // 曲: 公開している曲・公開前の曲・デバッグ用の曲(RHYTHM_SONGS)と試作の枠(RHYTHM_PROTO_SONGS)を全部(「試作だけ」に絞れる)。
           // 難易度: 5難易度と HELL。解放の鍵は見ない(unlockAll)。HELL の公開の印(RELEASE_FLAGS.rhythmHell)は触らない。
           // 演奏は from:'proto'(周回の報酬・自己ベスト・クリア回数・実績・ランキングのどれにも入れない。CLAUDE.md ⑦)。
-          // 自己ベストの表示は読むだけ(書き換えない)
-          const songs=[...RHYTHM_SONGS,...RHYTHM_PROTO_SONGS];
-          return <main data-rhythm-debug-select className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
-            <header className="z-10 flex shrink-0 items-center gap-1 border-b border-amber-400/30 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
-              <button type="button" aria-label="モンヒロビートのデバッグへ戻る" title="デバッグへ戻る" onClick={()=>setGameState('RHYTHM_DEBUG')}
-                className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
-              <div className="min-w-0 flex-1">
-                <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT<span data-rhythm-debug-select-badge className="rounded-full border border-amber-300/70 bg-amber-500/20 px-1.5 py-px text-[8px] tracking-normal text-amber-100">デバッグ(記録しない)</span></small>
-                <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 曲えらび(全解放)</h2>
-              </div>
-              <RhythmOrientationButton/>
-              <button type="button" data-rhythm-debug-select-options onClick={()=>{setRhythmOptionsBack('RHYTHM_DEBUG_SELECT');setGameState('RHYTHM_OPTIONS');}}
-                aria-label="オプション" title="オプション"
-                className="flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/50 bg-cyan-950/60 px-1 text-[9px] font-black text-cyan-100"><span aria-hidden="true" className="text-base leading-none">⚙️</span><span>オプション</span></button>
-            </header>
-            <RhythmSongSelect
-              songs={songs}
-              difficulties={RHYTHM_PLAY_DIFFICULTIES}
-              bestRecords={rhythmBestRecords}
-              unlockAll
-              songId={rhythmDebugSelectSongId}
-              difficultyId={rhythmDebugSelectDifficultyId}
-              onSongId={setRhythmDebugSelectSongId}
-              onDifficultyId={setRhythmDebugSelectDifficultyId}
-              view={rhythmDebugSelectView}
-              onView={setRhythmDebugSelectView}
-              playLabel="決定(記録しない)"
-              onPlay={(song,difficulty)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'proto',backTo:'RHYTHM_DEBUG_SELECT'});setGameState('RHYTHM_PLAY');}}/>
-          </main>;
-        })()}
+          // 自己ベストの表示は読むだけ(書き換えない)。アシスト・ミラー・オプションは本物と同じ設定を、その場で変えられる
+          <RhythmSongSelectScreen
+            debugAll
+            monsterSlots={rhythmMonsterSlots}
+            rhythmSettings={rhythmSettings}
+            onToggleRhythmSetting={async key=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:!rhythmSettings[key]});setRhythmSettings(saved);}}
+            onExit={()=>setGameState('RHYTHM_DEBUG')}
+            onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEBUG_SELECT');setGameState('RHYTHM_OPTIONS');}}
+            onPlaySong={(song,difficulty)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'proto',backTo:'RHYTHM_DEBUG_SELECT'});setGameState('RHYTHM_PLAY');}}
+            rhythmBestRecords={rhythmBestRecords}
+            rhythmSelectView={rhythmDebugSelectView}
+            saveRhythmSelectView={setRhythmDebugSelectView}
+            rhythmSelectedSongId={rhythmDebugSelectSongId}
+            rhythmSelectedDifficultyId={rhythmDebugSelectDifficultyId}
+            setRhythmSelectedSongId={setRhythmDebugSelectSongId}
+            setRhythmSelectedDifficultyId={setRhythmDebugSelectDifficultyId}
+            spotClass={spotClass}
+          />
+        )}
         {gameState==='RHYTHM_DEBUG'&&(
           <main data-rhythm-debug-screen className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)'}}>
             <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1"><small className="block text-[8px] font-black text-cyan-300">DEBUG ONLY・STEP 1</small><h2 className="text-sm font-black">モンヒロビート 基盤確認</h2></div><button data-rhythm-options-open onClick={()=>{setRhythmOptionsBack('RHYTHM_DEBUG');setGameState('RHYTHM_OPTIONS');}} className="min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100">⚙️ オプション</button></header>
@@ -80399,8 +80436,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       「編成画面の狭さをなんとかしたい」)。編集は別の行に44pxの帯を持っていて、
                       毎回やることではないのに一覧をそのぶん押し下げていた。 */}
                   <div className="flex items-center gap-2">
-                  <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1" role="tablist" aria-label="編成セット" style={{scrollbarWidth:'none'}}>
-                    {monsterPartySets.names.map((name,index)=><button key={index} role="tab" aria-selected={editingPartySetIndex===index} onClick={()=>switchMonsterPartySet(index)} className={`flex shrink-0 min-w-[76px] min-h-[44px] items-center justify-center gap-1 rounded-xl border px-2.5 active:scale-95 ${editingPartySetIndex===index?'border-indigo-300 bg-indigo-600/40':'border-slate-700 bg-slate-800'}`}><span className="min-w-0 truncate text-[11px] font-black">{index+1}. {name}</span>{monsterPartySets.activeIndex===index&&<span className="shrink-0 text-[11px] font-black text-emerald-300" aria-label="使用中">✓</span>}</button>)}
+                  {/* 5つのタブを1行に全部見せる(2026-10-27・320/390幅で「3.セッ…」から先が切れていた)。
+                      名前を出すのは編集中のセットだけで、残りは番号だけの細いタブにする。 */}
+                  <div className="flex min-w-0 flex-1 gap-1" role="tablist" aria-label="編成セット">
+                    {monsterPartySets.names.map((name,index)=>{const editing=editingPartySetIndex===index;return <button key={index} role="tab" aria-selected={editing} aria-label={`${index+1}. ${name}`} title={`${index+1}. ${name}`} onClick={()=>switchMonsterPartySet(index)} className={`flex min-h-[44px] items-center justify-center gap-0.5 rounded-xl border active:scale-95 ${editing?'min-w-0 flex-1 px-1.5 border-indigo-300 bg-indigo-600/40':'w-[30px] shrink-0 border-slate-700 bg-slate-800'}`}><span className="min-w-0 truncate text-[11px] font-black">{editing?`${index+1}. ${name}`:index+1}</span>{monsterPartySets.activeIndex===index&&<span className="shrink-0 text-[11px] font-black text-emerald-300" aria-label="使用中">✓</span>}</button>;})}
                   </div>
                   {/* セット名を変えるのもコピーも、毎回やることではない。
                       畳んでおいて、必要なときだけ開く(2026-09-07・ユーザー指摘
