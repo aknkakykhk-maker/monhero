@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 489b8bab1a25f965
+// source-sha256: 24abb2acfa15a011
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -128514,7 +128514,9 @@ function MonsterHeroGame() {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, unifiedMonsterEntriesDraft.length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🔍",
-      lines: ['表示するモンスターがいません。', '上の「表示」「種族」で絞り込みを見直してください。']
+      lines: [jaWrap('表示するモンスターがいません。'), React.createElement("span", {
+        style: JA_LABEL_STYLE
+      }, jaWrap('上の「表示」「種族」で絞り込みを見直してください。'))]
     }), React.createElement("div", {
       className: "grid grid-cols-3 gap-2.5 pb-4"
     }, unifiedMonsterEntriesDraft.map(e => {
@@ -128726,7 +128728,9 @@ function MonsterHeroGame() {
       className: SCREEN_LIST_CLASS
     }, unifiedMonsterEntriesSingleType.filter(e => e.type === 'base').length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🔍",
-      lines: ['表示するベースモンがいません。', '上の「表示」「種族」で絞り込みを見直してください。']
+      lines: [jaWrap('表示するベースモンがいません。'), React.createElement("span", {
+        style: JA_LABEL_STYLE
+      }, jaWrap('上の「表示」「種族」で絞り込みを見直してください。'))]
     }), React.createElement("div", {
       className: "grid grid-cols-3 gap-2.5 pb-4"
     }, unifiedMonsterEntriesSingleType.filter(e => e.type === 'base').map(e => {
@@ -128777,7 +128781,9 @@ function MonsterHeroGame() {
       }, React.createElement(AssistantBubble, {
         scene: "pasture",
         compact: true
-      })), React.createElement(ScreenLead, null, "HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。"), React.createElement("div", {
+      })), React.createElement(ScreenLead, null, React.createElement("span", {
+        style: JA_WRAP_STYLE
+      }, jaWrap('HOMEに表示するマスモンをタップで選んでください。0体でも保存できます。'))), React.createElement("div", {
         className: "grid grid-cols-5 gap-2 mb-2 shrink-0",
         "aria-label": "選択中の放牧マスモン"
       }, Array.from({
@@ -128811,7 +128817,9 @@ function MonsterHeroGame() {
         className: SCREEN_LIST_CLASS
       }, pastureEntries.length === 0 && React.createElement(ScreenEmpty, {
         emoji: "🌱",
-        lines: ['放牧できるマスモンがいません。', 'バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。']
+        lines: [jaWrap('放牧できるマスモンがいません。'), React.createElement("span", {
+          style: JA_LABEL_STYLE
+        }, jaWrap('バトルでマスモンを登録するか、上の「表示」「種族」を見直してください。'))]
       }), React.createElement("div", {
         className: "grid grid-cols-3 gap-2.5 pb-4"
       }, pastureEntries.map(({
