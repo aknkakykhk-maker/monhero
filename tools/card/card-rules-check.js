@@ -423,7 +423,7 @@ const packs = () => {
   const rand = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   ok(E.CARD_SAVE_KEYS.pity === 'mh_card_pack_pity_v1' && E.CARD_SAVE_KEYS.shop === 'mh_card_shop_v1' && E.CARD_SAVE_KEYS.pitySplit === 'mh_card_pack_pity_split_v1', 'パックの保存キーの名前が違う');
   // 8弾の分け方(2026-10-25 社長が決めた案。種族3つずつ・第1〜3弾はスターターキットの顔ぶれ・混血はメインの種族の弾)
-  const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
+  const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger', 'ghost'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
   // 混血・派生は主の種族の弾へ(#3575)。2026-10-25 の派生25枚も同じ決め(立ち絵の無い5枚は図鑑だけで、パックには出ない)
   // 剣士モッチー(2026-10-26)はふつう・キラ・別絵キラの3枚。名前は1つとして数える
   const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス', '剣士モッチー'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル', 'パンドラ'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
@@ -438,7 +438,8 @@ const packs = () => {
     const n = all.monsters.length + all.cards.length;
     // 派生25枚(2026-10-25)で、第1〜3・5弾は少し増えた。第1弾は剣士モッチー3枚(2026-10-26)で59(社長「このまま59にする」)、
     // 第2弾はパンドラ3枚(2026-10-26)で60
-    ok(n >= 48 && n <= 60, `${p.name}の種類が50前後でない(${n})`);
+    // 第4弾はゴースト(14枚・2026-10-27 社長「第4弾にヘンガーと並べる」)を足して4種族なので、ほかより多い
+    ok(n >= 48 && n <= (p.id === 'p4' ? 72 : 60), `${p.name}の種類が50前後でない(${n})`);
     const hy = [...new Set(all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name))].sort();
     ok(JSON.stringify(hy) === JSON.stringify(HYBRID[p.id].slice().sort()), `${p.name}の混血が決めた案と違う(${hy.join('・')})`);
     const shared = all.cards.filter((no) => db.cards[no].user === 'any' || db.cards[no].user === 'breeder').length;
@@ -937,6 +938,41 @@ const pendingCards = () => {
     ready(no); const r1 = hitWith(meScene(sp, [no]), [no]); if (r1) ok(r1.dmg[0] === db.cards[no].damage, `${no}: 1枚のダメージが違う`);
     const r2 = hitWith(meScene(sp, [no, no]), [no, no]); if (r2) ok(r2.dmg[0] === two, `${no}: 2枚同時で${two}にならない(${r2 && r2.dmg[0]})`);
   });
+  // ---- ゴースト(2026-10-27): カード投げ・のりうつる・ゴーストラッシュ・帽子に隠れる ----
+  // カード投げ(169): 捨てる手札の組ごとに手がある。捨てた枚数がダメージになり、捨てた札は捨て札へ
+  { ready('169'); const gh = monOf('ghost'); ok(gh === 'C-024' && db.monsters[gh].life === 5 && db.monsters[gh].type === 'air', 'ゴーストがライフ5・空中でない');
+    const st = meScene('ghost', ['169', '100', '100', gol.no], 0);
+    const os = E.cardAttackOptions(db, st).filter((x) => st.players[0].hand[x.hand[0]] === '169' && x.target && x.target.m === 0);
+    ok(os.length === 8 && os.every((x) => Array.isArray(x.toss)), `169: 捨てる組ごとの手にならない(${os.length})`);
+    [0, 1, 3].forEach((k) => { const a = os.find((x) => x.toss.length === k); if (!a) { ok(false, `169: ${k}枚捨てる手が無い`); return; }
+      const r = hitOnce(st, a); ok(r.dmg[0] === k, `169: ${k}枚捨てて${k}ダメージにならない(${r.dmg[0]})`);
+      ok(r.st.players[0].hand.length === 3 - k && r.st.players[0].discard.length === k + 1, `169: ${k}枚捨てたあとの手札・捨て札の数が合わない`); });
+    ok(!E.cardApplyAction(db, st, { ...os[0], toss: [0] }), '169: 技の札そのものを捨てる手が通る');
+    ok(!E.cardApplyAction(db, st, { ...os[0], toss: [9] }), '169: 無い手札を捨てる手が通る'); }
+  // のりうつる(174): KOされた味方1体を、この子の今のライフで戻し(もとの最大まで)、この子はKO。戻った子はそのターン攻撃できない
+  { ready('174'); let st = scene({ mons: [[monOf('ghost'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['174', gol.no], []], guts: [9, 0] });
+    ok(!find(E.cardAttackOptions(db, st), (x) => st.players[0].hand[x.hand[0]] === '174'), '174: KOされた味方がいないのに出せる');
+    st.players[0].mons[1].ko = true; st.players[0].mons[1].life = 0; st.players[0].mons[0].life = 3;
+    const os = E.cardAttackOptions(db, st).filter((x) => st.players[0].hand[x.hand[0]] === '174');
+    ok(os.length === 1 && os[0].target && os[0].target.p === 0 && os[0].target.m === 1, `174: 狙いがKOされた味方にならない(${JSON.stringify(os)})`);
+    if (os[0]) { const s1 = act(st, os[0]); const [g, b] = s1.players[0].mons;
+      ok(g.ko && !b.ko && b.life === 3, `174: ゴーストがKO・味方がライフ3で戻らない(${g.ko} ${b.ko} ${b.life})`);
+      ok(!find(E.cardAttackOptions(db, s1), (x) => x.mon === 1 && st.players[0].hand[x.hand[0]] === gol.no), '174: 戻った子がそのターン攻撃できる');
+      ok(s1.winner === null, '174: のりうつったら勝ち負けが決まった'); }
+    // 戻る子のもとの最大より多くはならない(ヒノトリはライフ4)
+    let st2 = scene({ mons: [[monOf('ghost'), monOf('phoenix'), 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['174'], []], guts: [9, 0] });
+    st2.players[0].mons[1].ko = true; st2.players[0].mons[1].life = 0;
+    const s2 = useSpe(st2, '174'); if (s2) ok(s2.players[0].mons[1].life === s2.players[0].mons[1].max, `174: 戻る子のライフが最大を超えた(${s2.players[0].mons[1].life})`); }
+  // ゴーストラッシュ(175): このターン、技を何枚でも
+  { ready('175'); let st = scene({ mons: [[monOf('ghost'), 'C-003', 'C-005'], ['C-001', 'C-003', 'C-005']], hands: [['175', '165', '165', '170'], []], guts: [20, 0] }); big(st);
+    st = useSpe(st, '175'); if (st) { for (const no of ['165', '165', '170']) { const a = find(E.cardAttackOptions(db, st), (x) => x.mon === 0 && st.players[0].hand[x.hand[0]] === no); ok(a, `175: ${no} を続けて出せない`); if (!a) break; st = hitOnce(st, a).st; }
+      ok(st.players[1].mons[0].life === 40 - 2 - 2 - 2, `175: 3枚のダメージが合わない(${st.players[1].mons[0].life})`); } }
+  // 帽子に隠れる(176): ちから技・かしこさ技のダメージを0に(特殊は守れない)
+  { ready('176'); const gh = monOf('ghost');
+    const st = atkScene({ oppMons: [gh, 'C-003', 'C-005'], oppHand: ['176'] }); ok(st, '176: 場面が作れない');
+    if (st) { const g = guardWith(st, '176'); ok(g, '176: ちから技に出せない'); if (g) ok(lifeAfter(st, g).players[1].mons[0].life === 40, '176: ちから技が0にならない'); }
+    const st2 = atkScene({ no: '170', myMons: [gh, 'C-003', 'C-001'], oppMons: [gh, 'C-003', 'C-005'], oppHand: ['176'] }); // ソウルビーム(かしこさ・文なし)
+    if (st2) { const g = guardWith(st2, '176'); ok(g, '176: かしこさ技に出せない'); if (g) ok(lifeAfter(st2, g).players[1].mons[0].life === 40, '176: かしこさ技が0にならない'); } else ok(false, '176: かしこさ技の場面が作れない'); }
   // 右掌(285)・左掌(286・メタルナー): 2種類なら4
   { ready('285'); ready('286'); const r = hitWith(meScene('metalner', ['285', '286']), ['285', '286']); if (r) ok(r.dmg[0] === 4, '285/286: 2種類で4にならない'); }
   // コンビネーション(227・ドラゴン): しっぽアタック・かみつきが手札に1枚ずつあるときだけ。払うのは4だけ・相手全員に8
