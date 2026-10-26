@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef5db485b68385da
+// source-sha256: e891a571b0811d91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:07";
+const BUILD_DATE = "2026-10-27 01:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -100012,7 +100012,7 @@ function MonsterHeroGame() {
       height: '20px'
     }
   }, React.createElement("span", {
-    className: "text-[9px] text-amber-400/70 font-black"
+    className: "shrink-0 whitespace-nowrap text-[9px] text-amber-400/70 font-black"
   }, "総合力"), React.createElement("span", {
     className: "text-[14px] font-mono font-black text-amber-200 tabular-nums"
   }, formatMonsterPower(power)));
@@ -104989,8 +104989,13 @@ function MonsterHeroGame() {
       onClick: () => openModal('sort'),
       className: "flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95"
     }, React.createElement("span", {
-      className: "text-[11px] font-black text-white truncate"
-    }, "並べ替え: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), React.createElement(ChevronRight, {
+      "data-monster-sort-label": true,
+      className: "min-w-0 text-left leading-tight"
+    }, React.createElement("small", {
+      className: "block text-[9px] font-black text-slate-400"
+    }, "並べ替え"), React.createElement("b", {
+      className: "block truncate text-[11px] font-black text-white"
+    }, currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼'))), React.createElement(ChevronRight, {
       size: 14,
       className: "text-slate-400 shrink-0"
     })), React.createElement("button", {
@@ -125870,8 +125875,9 @@ function MonsterHeroGame() {
       }, renderMonsterCardBody({
         base: m,
         info: React.createElement("div", {
-          className: "text-[10px] text-pink-400 font-bold text-center leading-none"
-        }, masuCount > 0 ? `マスモン${masuCount}体` : 'マスモン未登録'),
+          className: "text-[10px] text-pink-400 font-bold text-center leading-none",
+          style: JA_LABEL_STYLE
+        }, jaWrap(masuCount > 0 ? `マスモン${masuCount}体` : 'マスモン未登録')),
         status: monsterDisplayFlags.active && e.active ? React.createElement("span", {
           className: "text-[10px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white leading-none"
         }, "編成中") : null
