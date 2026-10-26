@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5df98d5a3b1bd684
+// source-sha256: 3447a9172f3e1549
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -140788,7 +140788,7 @@ const createAnimationStyle = () => {
     .mh-disc-rebirth-art{width:min(62vw,240px);aspect-ratio:1;margin-top:8px;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.35);filter:drop-shadow(0 0 24px rgba(253,230,138,.75)) brightness(2.2);animation:mhDiscBorn .8s 1.6s cubic-bezier(.2,1.4,.4,1) forwards}
     .mh-disc-rebirth-art img{width:100%;height:100%;object-fit:contain}
     /* 背の低い画面(横画面 844×390 など)では立ち絵を小さくして、「閉じる」まで画面に収める(はみ出して押せなかった。2026-10-27 パックの見回り) */
-    @media (max-height:560px){.mh-disc-rebirth-art{width:min(62vw,240px,max(96px,calc(100vh - 214px)));margin-top:4px}.mh-disc-rebirth-close{margin-top:8px}}
+    @media (max-height:560px){.mh-disc-rebirth-art{width:min(62vw,240px,max(96px,calc(var(--mh-vh,100svh) - 214px)));margin-top:4px}.mh-disc-rebirth-close{margin-top:8px}}
     .mh-disc-rebirth-name{opacity:0;margin-top:6px;font-size:24px;font-weight:1000;line-height:1.2;color:#fff;text-shadow:0 2px 0 #7c3aed,0 0 18px rgba(244,114,182,.7);animation:mhDiscUp .45s 2.05s ease-out forwards}
     .mh-disc-rebirth-name span{font-size:15px;color:#fbcfe8;margin-left:2px}
     .mh-disc-rebirth-note{opacity:0;margin-top:6px;font-size:11px;font-weight:700;line-height:1.6;color:#cbd5e1;animation:mhDiscUp .45s 2.25s ease-out forwards}
