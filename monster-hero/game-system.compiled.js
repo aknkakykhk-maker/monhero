@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef21b763a6e707be
+// source-sha256: cb054c522224227d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:55";
+const BUILD_DATE = "2026-10-27 01:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -120177,12 +120177,12 @@ function MonsterHeroGame() {
               });
             }
           },
-          className: `grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss ? 'border-amber-400/40 min-h-[120px]' : 'border-white/10 min-h-[64px]'}`
+          className: `grid grid-cols-[34px_clamp(64px,22vw,104px)_minmax(0,1fr)_72px] max-[429px]:grid-cols-[30px_56px_minmax(0,1fr)] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss ? 'border-amber-400/40 min-h-[120px]' : 'border-white/10 min-h-[64px]'}`
         }, React.createElement("b", {
-          className: `${boss ? 'text-amber-300' : 'text-indigo-300'} whitespace-nowrap`
+          className: `max-[429px]:row-span-2 ${boss ? 'text-amber-300' : 'text-indigo-300'} whitespace-nowrap`
         }, "W", index + 1), React.createElement("div", {
           "data-wave-art": true,
-          className: "relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden"
+          className: "relative w-[clamp(64px,22vw,104px)] max-[429px]:w-[56px] max-[429px]:row-span-2 h-full min-h-[60px] flex items-center justify-center overflow-hidden"
         }, enemy.imgUrl ? React.createElement("img", {
           src: enemy.imgUrl,
           alt: enemy.name,
@@ -120191,15 +120191,22 @@ function MonsterHeroGame() {
         }) : React.createElement("span", {
           className: "text-3xl"
         }, enemy.emoji)), React.createElement("div", {
-          className: "min-w-0"
+          className: "min-w-0",
+          style: {
+            containerType: 'inline-size'
+          }
         }, React.createElement("b", {
-          className: `block truncate whitespace-nowrap ${boss ? 'text-amber-300' : ''}`,
-          title: enemy.name
+          "data-wave-name": true,
+          className: `block whitespace-nowrap ${boss ? 'text-amber-300' : ''}`,
+          title: enemy.name,
+          style: {
+            fontSize: `min(1em, calc(100cqw / ${[...String(enemy.name || '')].length + 0.3}))`
+          }
         }, enemy.name), boss && React.createElement("span", {
           className: "block text-[9px] leading-tight font-black text-amber-400"
         }, "BOSS")), React.createElement("div", {
           "data-wave-stats": true,
-          className: "w-[72px] text-right text-[10px] whitespace-nowrap"
+          className: "w-[72px] text-right text-[10px] whitespace-nowrap max-[429px]:col-start-3 max-[429px]:flex max-[429px]:w-auto max-[429px]:gap-2 max-[429px]:text-left"
         }, React.createElement("div", null, "ライフ ", React.createElement("b", null, enemy.maxHp.toLocaleString())), React.createElement("div", null, "攻撃力 ", React.createElement("b", null, enemy.atk.toLocaleString()))));
       }))));
     })(), gameState === 'BATTLE_MENU' && React.createElement("div", {
@@ -120349,7 +120356,7 @@ function MonsterHeroGame() {
           });
           if (difficulties[best]?.[0] !== safeDifficulty) setDifficulty(difficulties[best][0]);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[429px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -120359,7 +120366,7 @@ function MonsterHeroGame() {
         const active = key === safeDifficulty;
         return React.createElement("article", {
           key: key,
-          className: `snap-center shrink-0 w-[82%] max-[359px]:w-[90%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `snap-center shrink-0 w-[82%] max-[429px]:w-[90%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
             background: `linear-gradient(160deg,color-mix(in srgb,${setting.text} 28%,#1d0d45),#150b38 55%,#0a1030)`,
@@ -120797,7 +120804,7 @@ function MonsterHeroGame() {
           if (modeLoopTimerRef.current) clearTimeout(modeLoopTimerRef.current);
           modeLoopTimerRef.current = setTimeout(recenterModeLoop, 180);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll max-[359px]:!px-[4%]",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain pt-1 pb-4 mh-scroll max-[429px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -120822,7 +120829,7 @@ function MonsterHeroGame() {
         return React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           "data-battle-mode": m.id,
-          className: `mhbt-tile snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[366px] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'}`,
+          className: `mhbt-tile snap-center shrink-0 w-[82%] max-[429px]:w-[90%] h-[366px] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'}`,
           style: {
             '--acc': m.color
           }
@@ -121012,7 +121019,7 @@ function MonsterHeroGame() {
           });
           if (difficulties[best]?.id !== extremeDifficulty) setExtremeDifficulty(difficulties[best].id);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[359px]:!px-[4%]",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll max-[429px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -121030,7 +121037,7 @@ function MonsterHeroGame() {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
-          className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
+          className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[429px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
           style: {
             '--acc': theme.accent
           }
@@ -121283,7 +121290,7 @@ function MonsterHeroGame() {
           });
           if (difficulties[best]?.[0] !== selectedDifficulty) chooseDifficulty(difficulties[best][0]);
         },
-        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll max-[359px]:!px-[4%]",
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll max-[429px]:!px-[4%]",
         style: {
           paddingLeft: '11%',
           paddingRight: '11%',
@@ -121311,7 +121318,7 @@ function MonsterHeroGame() {
           "aria-disabled": !quickUnlocked,
           "data-difficulty-card": key,
           "data-difficulty-look": key,
-          className: `mhbt-tile mhbt-d-${key} ${BATTLE_DIFFICULTY_DARK_LOOKS.has(key) ? 'dark' : ''} snap-center shrink-0 w-[82%] max-[359px]:w-[90%] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${quickUnlocked ? '' : 'dim'}`,
+          className: `mhbt-tile mhbt-d-${key} ${BATTLE_DIFFICULTY_DARK_LOOKS.has(key) ? 'dark' : ''} snap-center shrink-0 w-[82%] max-[429px]:w-[90%] px-4 pt-3.5 pb-4 transition-all flex flex-col ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${quickUnlocked ? '' : 'dim'}`,
           style: {
             '--acc': setting.text
           }
@@ -121376,7 +121383,7 @@ function MonsterHeroGame() {
         }, "🎖️ 勇者の証片：", heroProofShardReward, "個")))), React.createElement("div", {
           className: "mt-auto grid grid-cols-[minmax(0,1fr)] gap-1.5 pt-2"
         }, React.createElement("div", {
-          className: "flex min-w-0 items-stretch gap-1.5 max-[359px]:flex-col"
+          className: "flex min-w-0 items-stretch gap-1.5 max-[429px]:flex-col"
         }, !species && React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => {
