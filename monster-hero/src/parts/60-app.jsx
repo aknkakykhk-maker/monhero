@@ -16414,7 +16414,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(t.id==='momosuke') return level===0?"ガッツ 50%回復・ライフ/ガッツ上限 3%アップ・丈夫さ 3%アップ（次のターンから）":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 3%アップ・ガッツ上限 5%アップ・丈夫さ 3%アップ（次のターンから）":"ライフ・ガッツ 90%回復・ライフ上限 5%アップ・ガッツ上限 8%アップ・丈夫さ 5%アップ（次のターンから）");
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
-    if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
+    if(t.id==='kiki') return `次の${level+2}ターン 使えるカード +1枚・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
     if(t.id==='kyuko'){
       const tier=KYUKO_TIERS[Math.min(level,KYUKO_TIERS.length-1)];
       return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
@@ -20336,7 +20336,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
              data-mh-screen は横画面で左右2カラムへ組み替えるための目印 */
           return (
             <div data-mh-screen className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
-              <ScreenHead title={`${item?.name||''}を使う対象を選択`} accent="text-teal-400" onBack={()=>setPendingItemUse(null)} backLabel="アイテムへ戻る"/>
+              <ScreenHead title={`${item?.name||''}を使う相手を選ぶ`} accent="text-teal-400" onBack={()=>setPendingItemUse(null)} backLabel="アイテムへ戻る"/>
               <ScreenLead>対象のマスモンをタップしてください</ScreenLead>
               <div className={SCREEN_LIST_CLASS}>
                 {masuMons.length===0?(
@@ -20860,7 +20860,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
-              <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl">
+              <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs max-h-full overflow-y-auto mh-scroll flex flex-col gap-3 shadow-2xl">
                 <div className="flex items-center justify-between shrink-0">
                   <h3 className="text-sm font-black text-white">🎨 カスタムカラー</h3>
                   <button onClick={()=>setCustomColorPicker(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
@@ -20869,6 +20869,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={previewColors} className="w-full h-full object-cover"/></div>
                 )}
                 <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
+                {/* この部位の濃さ(透け具合)も数字で出す。濃さは染色の画面のつまみで変える(色を決めても引き継ぐ) */}
+                <p data-custom-color-alpha className="-mt-1 text-center text-[10px] font-bold text-slate-300 [word-break:keep-all] [overflow-wrap:anywhere]">濃さ{colorAlphaOf(sourceColors[idx])}%<span className="text-slate-500">(濃さは染色の画面のつまみで変えられます)</span></p>
                 <div className="flex gap-2 mt-1 shrink-0">
                   <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
                   <button onClick={applyCustom} className="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95">この色に決定</button>
@@ -22837,7 +22839,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             });
           }
         }
-        const title = card.type==='atk'?'通常技を選択':(card.type==='range_atk'?'距離技を選択':'固有技を選択');
+        const title = card.type==='atk'?'通常技をえらぶ':(card.type==='range_atk'?'距離技をえらぶ':'固有技をえらぶ');
         return (
           <div className="fixed inset-0 z-[60000] flex items-end justify-center" style={{backgroundColor:'rgba(0,0,0,0.85)'}} onClick={()=>setSkillPicker(null)}>
             <div className="bg-slate-900 border-t-2 border-x-2 border-indigo-500 rounded-t-3xl p-4 w-full max-w-md max-h-[75vh] flex flex-col gap-2" onClick={e=>e.stopPropagation()} style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
