@@ -193,7 +193,7 @@ function MasuTranscendEnhanceScreen({
             {!normalized.transcended&&<div data-transcend-not-yet className="rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] font-bold text-slate-400 leading-relaxed">この個体はまだ神殿で超越していませんが、超越強化はいつでも使えます。あとで正式に超越しても、ここで上げた基礎値と残っている超越ポイントはそのまま引き継がれます。<br/>神殿の「超越」（Lv上限400→500・超越マーク）は、これまでどおりLv.{MAX_MASU_LEVEL_CAP}・限界突破{FINAL_BREAKTHROUGH_COUNT}回が必要です。</div>}
           </div>
           <div className={`${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto grid grid-cols-2 gap-2`}>
-            <button type="button" onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95">キャンセル</button>
+            <button type="button" onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="mh-button mh-button-secondary min-h-[52px] rounded-xl bg-slate-800 text-slate-200 font-black text-[12px] disabled:opacity-30 active:scale-95">やめる</button>
             <button type="button" data-transcend-commit disabled={planUsed<=0} onClick={()=>commitTranscendPlan(masu, plan)} className="mh-button mh-button-primary min-h-[52px] rounded-xl bg-sky-500 text-slate-950 font-black text-[13px] disabled:opacity-30 active:scale-95">この配分で確定（{planUsed}P）</button>
           </div>
           {/* 超越ポイントのリセット。何が何点戻るのかを出してから確定させる */}
@@ -267,7 +267,7 @@ function MasuTranscendEnhanceScreen({
                 <div className="grid grid-cols-2 gap-2">
                   {fruitChoices.map(({itemId,name,have})=><button key={itemId} data-transcend-fruit-select={itemId} disabled={have<=0} aria-pressed={transcendFruitItemId===itemId} onClick={()=>{setTranscendFruitItemId(itemId);setTranscendFruitConfirmAmount(0);setTranscendFruitError('');}} className={`mh-button mh-button-secondary min-h-[64px] rounded-xl border p-2 text-[11px] font-black active:scale-95 disabled:opacity-30 ${transcendFruitItemId===itemId?'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200':'border-white/10 bg-slate-800 text-slate-200'}`}><span className="block leading-tight">{name}</span><span className="mt-1 block font-mono text-[12px]">所持 ×{have}</span></button>)}
                 </div>
-                {!transcendFruitItemId?<div className="rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200">使用する実を明示選択してください</div>:<>
+                {!transcendFruitItemId?<div className="rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200">使う実を選んでください</div>:<>
                   <div className="grid grid-cols-3 gap-2">{[[1,'1'],[10,'10'],[selectedFruitHave,'MAX']].map(([amount,label])=><button key={label} data-transcend-fruit-amount={label} disabled={selectedFruitHave<amount||amount<=0} onClick={()=>requestFruitUse(amount)} className="min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30">{label}</button>)}</div>
                   <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/25 p-3 text-[10px] font-black"><div className="flex justify-between"><span className="text-slate-300">現在の超越ポイント</span><span className="font-mono">{points}P</span></div><div className="flex justify-between"><span className="text-slate-300">使用後（選択中）</span><span className="font-mono text-emerald-200">{points} → {points+(transcendFruitConfirmAmount||1)}P</span></div></div>
                 </>}
