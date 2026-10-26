@@ -377,6 +377,25 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
     const [A3, B3] = send(A2, B2, { type: 'choose', pick }, 2);
     check(`⑩ ${no}「${db.cards[no].name}」: 払ったガッツの札を選んでも、相手の端末で当てられる`, !!B3 && same(A3, B3));
   });
+  // ⑪ カード投げ(169・2026-10-27 総点検D): 手の「捨てる手札(toss)」が知らせの掃除で落ちて、受ける側で必ずはねて試合が止まっていた。0枚・2枚とも
+  [[], [1, 2]].forEach((toss) => {
+    const H = E.CARD_PVP_HIDDEN;
+    const mon = Object.values(db.monsters).find((m) => m.species === db.cards['169'].user && !m.main).no;
+    const dA = { monsters: [mon, 'C-003', 'C-005'], cards: Array(50).fill('100') }, dB = { monsters: ['C-001', 'C-003', 'C-009'], cards: Array(50).fill('100') };
+    const A = E.cardPvpNewGame(db, { myDeck: dA, mySeed: 1, foeMonsters: dB.monsters, first: 0, names: ['A', 'B'] });
+    const B = E.cardPvpNewGame(db, { myDeck: dB, mySeed: 2, foeMonsters: dA.monsters, first: 1, names: ['B', 'A'] });
+    [A, B].forEach((s0, i) => { s0.phase = 'main'; s0.turn = 1; s0.active = i; });
+    A.players[0].hand = ['169', '100', '100']; A.players[0].guts = Array(9).fill('100'); B.players[1].hand = [H, H, H]; B.players[1].guts = Array(9).fill(H);
+    const send = (from, to, act, seq) => { const n = E.cardApplyAction(db, from, act); return [n, n && E.cardPvpApplyRemote(db, to, E.cardPvpCleanMessage(JSON.parse(JSON.stringify({ t: 'act', from: 'x', seq, act, reveal: E.cardPvpRevealOf(from, act), discard: n.players[0].discard }))))]; };
+    const o = E.cardLegalActions(db, A).find((a) => a.type === 'attack' && Array.isArray(a.toss) && JSON.stringify(a.toss) === JSON.stringify(toss) && a.target);
+    if (!o) return check(`⑪ カード投げ(${toss.length}枚): 場面が作れる`, false);
+    const [A2, B2] = send(A, B, o, 1);
+    check(`⑪ カード投げ(${toss.length}枚捨てる): 相手の端末で当てられる`, !!B2);
+    if (!B2) return;
+    const [A3] = send(B2, A2, { type: 'pass' }, 2).reverse();
+    const B3 = E.cardApplyAction(db, B2, { type: 'pass' });
+    check(`⑪ カード投げ(${toss.length}枚捨てる): 守らなかったあと、2台の場(ライフ・捨て札の数)が同じ`, !!A3 && !!B3 && same(A3, B3) && A3.players[1].mons[0].life === A3.players[1].mons[0].max - toss.length - (db.cards['169'].damage || 0));
+  });
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();
