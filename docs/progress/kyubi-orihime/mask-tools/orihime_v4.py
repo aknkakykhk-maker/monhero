@@ -131,9 +131,18 @@ for _y in range(313,320):
     if _xs:
         _x=max(_xs)
         lab[_y,_x+1:600][lab[_y,_x+1:600]==1]=2
+# 羽織の縁を多角形で切った跡を消す: しっぽになっている羽織の紫のうち、羽織とつながる塊は羽織(2026-10-27)
+_rp=op&(lab==2)&(h>=235)&(h<290)&(s>0.25)&(v<0.75)
+_lb,_n=nd.label(_rp)
+_touch=np.unique(_lb[nd.binary_dilation(lab==4,iterations=2)&_rp])
+lab[np.isin(_lb,_touch[_touch>0])]=4
 SNAPB=4
 LINEW=6
 # 左目の目じり(まつげの赤い差し色と白目)。髪の紺は除く
 eyecorner=box(0.476,0.258,0.497,0.285)&~((h>=220)&(h<300)&(v<0.75))
 lab[op&eyecorner]=0
-KEEPZERO=(op&eyes)|(op&eyecorner)|furin
+# 頭のてっぺんの金の飾りは染めない(2026-10-27 社長)。金色の画素と、そのまわり2pxの線
+_gold=box(0.538,0.100,0.590,0.132)&(h>=20)&(h<=60)&(s>0.35)&(v>0.6)
+ornament=op&nd.binary_dilation(_gold,iterations=2)&box(0.535,0.097,0.593,0.135)
+lab[ornament]=0
+KEEPZERO=(op&eyes)|(op&eyecorner)|furin|ornament
