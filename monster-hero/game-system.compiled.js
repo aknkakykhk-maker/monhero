@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2851b86297cad0dc
+// source-sha256: 9b2bf7b46a53e7ec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:44";
+const BUILD_DATE = "2026-10-27 02:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -118736,8 +118736,11 @@ function MonsterHeroGame() {
     },
     onClick: saveBackupFile
   }, React.createElement("span", {
-    style: JA_LABEL_STYLE
-  }, jaWrap('バックアップファイルを保存')), "（.mhsave）"), React.createElement("div", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルを保存（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118783,7 +118786,10 @@ function MonsterHeroGame() {
     },
     onClick: generateBackupCode
   }, React.createElement("span", {
-    style: JA_LABEL_STYLE
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
   }, jaWrap('バックアップコードを作成')))) : React.createElement(React.Fragment, null, React.createElement("button", {
     "data-mhsave-action": "import",
     className: "mh-dialog-choice justify-center text-center",
@@ -118792,8 +118798,11 @@ function MonsterHeroGame() {
     },
     onClick: restoreFromBackupFile
   }, React.createElement("span", {
-    style: JA_LABEL_STYLE
-  }, jaWrap('バックアップファイルから復元')), "（.mhsave）"), React.createElement("div", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルから復元（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118831,7 +118840,10 @@ function MonsterHeroGame() {
     },
     onClick: restoreFromBackupCode
   }, React.createElement("span", {
-    style: JA_LABEL_STYLE
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
   }, jaWrap('このコードで復元する')))), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return React.createElement(React.Fragment, null, React.createElement("main", {
     className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
