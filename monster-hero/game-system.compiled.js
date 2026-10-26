@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3efda3bf0ae8cd9
+// source-sha256: acf1cf41bace8c66
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:17";
+const BUILD_DATE = typeof window !== 'undefined' && typeof window.__mhBuildDate === 'string' ? window.__mhBuildDate : '';
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16466,10 +16466,11 @@ const MarketBalanceBar = ({
   value
 }) => {
   const meta = MARKET_CURRENCY_META[currency];
+  const one = balances.length === 1;
   return React.createElement("div", {
     key: currency,
     "data-market-balance": currency,
-    className: `flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`
+    className: `flex items-center justify-center rounded-2xl border ${one ? 'flex-row-reverse gap-2 py-1.5' : 'flex-col py-2'} ${meta.bar}`
   }, React.createElement("div", {
     className: "flex items-baseline gap-1"
   }, React.createElement("span", {
@@ -51222,6 +51223,7 @@ const jaWrapPoints = text => {
       }
     }
     const runLetters = parts => Math.max(...parts.join('').split(/\s+/).map(visible));
+    const midSokuon = (parts, k) => /っ$/.test(parts[k - 1]) && /^[ぁ-ゖ]/.test(parts[k]);
     const chunks = [];
     const split = g => {
       if (runLetters(g.parts) <= JA_WRAP_LINE || g.parts.length < 2) {
@@ -51232,7 +51234,7 @@ const jaWrapPoints = text => {
       let best = -1,
         bestScore = -1;
       for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')),
           right = total - left;
         if (letters(g.parts.slice(0, k).join('')) < 3 || letters(g.parts.slice(k).join('')) < 3 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -51243,7 +51245,7 @@ const jaWrapPoints = text => {
         }
       }
       if (best < 0) for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')),
           right = total - left;
         if (letters(g.parts.slice(0, k).join('')) < 2 || letters(g.parts.slice(k).join('')) < 3 && right < 4 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -53602,15 +53604,37 @@ function BreederMarketScreen({
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
-  const renderSectionTabs = section => React.createElement(ScreenTabs, {
-    value: activeSectionTab(section),
-    onChange: key => selectSectionTab(section, key),
-    items: SECTION_TABS[section].tabs.map(tab => ({
+  const renderSectionTabs = (section, scroll = false) => {
+    const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
       label: tab.label,
       color: SECTION_TABS[section].color
-    }))
-  });
+    }));
+    const value = activeSectionTab(section);
+    if (!scroll || items.length < 6) return React.createElement(ScreenTabs, {
+      value: value,
+      onChange: key => selectSectionTab(section, key),
+      items: items
+    });
+    return React.createElement("div", {
+      role: "tablist",
+      "data-market-tabs-scroll": section,
+      className: "mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5"
+    }, items.map(tab => {
+      const on = tab.id === value;
+      return React.createElement("button", {
+        key: tab.id,
+        type: "button",
+        role: "tab",
+        "aria-selected": on,
+        onClick: () => selectSectionTab(section, tab.id),
+        className: `mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
+        style: on ? {
+          background: tab.color
+        } : undefined
+      }, tab.label);
+    }));
+  };
   const soulRankRespecItem = marketItems.find(item => item.id === SOUL_RANK_RESPEC_ITEM_ID) || null;
   const sectionMeta = {
     diamond: {
@@ -53710,6 +53734,9 @@ function BreederMarketScreen({
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
       middle: item.groupMembers ? React.createElement(MarketDetailChip, {
         label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : item.type === 'icon' ? React.createElement(MarketDetailChip, {
+        label: `${item.name}の詳細を見る`,
         onClick: () => onOpenItemDetail(item)
       }) : item.giftOnly ? React.createElement(MarketDetailChip, {
         label: `${item.name}の手に入れ方を見る`,
@@ -53899,13 +53926,7 @@ function BreederMarketScreen({
       currency: 'beatPoint',
       value: safeEventPoints
     }]
-  }), marketSection === 'event' && (() => {
-    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
-    return campaign ? React.createElement(MarketNotice, {
-      tone: "info",
-      "data-event-point-campaign": true
-    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopBoost) > 0 ? `。演奏でのクイック周回も${campaign.loopBoost}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt)), "まで）") : null;
-  })(), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
+  }), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     value: activeDiamondTab,
     onChange: onSelectTab,
     items: diamondTabs.map(tab => ({
@@ -54054,9 +54075,15 @@ function BreederMarketScreen({
         onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
       });
     }))));
-  })(), marketSection === 'event' && React.createElement(React.Fragment, null, renderSectionTabs('event'), React.createElement("div", {
+  })(), marketSection === 'event' && React.createElement(React.Fragment, null, renderSectionTabs('event', true), React.createElement("div", {
     className: SCREEN_LIST_CLASS
-  }, React.createElement("div", {
+  }, (() => {
+    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
+    return campaign ? React.createElement(MarketNotice, {
+      tone: "info",
+      "data-event-point-campaign": true
+    }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
+  })(), React.createElement("div", {
     "data-event-point-shop": true,
     "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
@@ -69513,7 +69540,7 @@ function BattleScreen({
   }, "DEBUG"), !isRaidJackMode(runMode) && React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), React.createElement("span", {
-    className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
+    className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight",
     style: {
       color: battleModeInfo(runMode).color,
       borderColor: `${battleModeInfo(runMode).color}66`,
@@ -74954,7 +74981,7 @@ function FriendsScreen({
     className: `${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`
   }, "招待リンクを送る（LINEなど）"), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。")), React.createElement("div", {
+  }, "このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。")), React.createElement("div", {
     className: SCREEN_PANEL_CLASS
   }, React.createElement(ScreenSectionLabel, null, "コードで申請する"), React.createElement("input", {
     type: "text",
@@ -74965,8 +74992,8 @@ function FriendsScreen({
     autoComplete: "off",
     autoCorrect: "off",
     spellCheck: false,
-    placeholder: "友だちのフレンドコード",
-    "aria-label": "友だちのフレンドコード",
+    placeholder: "相手のフレンドコード",
+    "aria-label": "相手のフレンドコード",
     className: "mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"
   }), React.createElement("button", {
     type: "button",
@@ -90735,6 +90762,13 @@ const CardBattleBoard = ({
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const stageRef = useRef(null);
   const [stageFit, setStageFit] = useState(0);
+  const [boardFit, setBoardFit] = useState(0);
+  const [boardFitKey, setBoardFitKey] = useState(0);
+  useEffect(() => {
+    const on = () => setBoardFitKey(k => k + 1);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => {
     setStageFit(0);
@@ -90743,6 +90777,15 @@ const CardBattleBoard = ({
     const el = stageRef.current;
     if (!el || stageFit >= 3) return;
     if (el.scrollHeight > el.clientHeight + 1) setStageFit(f => Math.min(3, f + 1));
+  });
+  React.useLayoutEffect(() => {
+    setBoardFit(0);
+  }, [mode, boardFitKey]);
+  React.useLayoutEffect(() => {
+    const b = boardRef.current;
+    const f = b && b.querySelector('[data-card-footer]');
+    if (!f || boardFit >= 2) return;
+    if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit(x => Math.min(2, x + 1));
   });
   const strip = p => {
     const pl = st.players[p];
@@ -91082,7 +91125,7 @@ const CardBattleBoard = ({
     ref: stageRef,
     "data-card-stage": true,
     "data-card-stage-fit": stageFit,
-    className: "relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1",
+    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1`,
     style: {
       justifyContent: 'safe center'
     }
@@ -91273,7 +91316,8 @@ const CardBattleBoard = ({
   }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), React.createElement("div", {
     "data-card-hand": true,
     "data-card-hand-dim": mode === 'wait' ? '1' : undefined,
-    className: `flex shrink-0 items-end justify-center gap-1 px-1 pb-1 pt-2 transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`
+    "data-card-board-fit": boardFit || undefined,
+    className: `flex shrink-0 items-end justify-center gap-1 px-1 pb-1 ${boardFit >= 2 ? 'pt-1' : 'pt-2'} transition-[opacity,filter] ${mode === 'wait' ? 'opacity-60 saturate-[.6]' : ''}`
   }, handOrder.map(i => {
     const no = me.hand[i];
     const c = cardOf(db, no);
@@ -91290,7 +91334,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${tiny ? 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${tiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -91326,10 +91370,7 @@ const CardBattleBoard = ({
     }, cardCaption(c)))));
   })), React.createElement("div", {
     "data-card-footer": true,
-    className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1",
-    style: {
-      paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
-    }
+    className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1"
   }, replay ? React.createElement(CardReplayBar, {
     replay: replay,
     at: replayAt,
@@ -92962,7 +93003,15 @@ const CardBattleScreen = ({
     }, "強さ"), React.createElement("span", {
       className: "text-[11px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
-    }, "勝つと次の強さが開きます")), React.createElement("div", {
+    }, "勝つと次の強さが開きます")), (() => {
+      const lock = debug ? null : CARD_LEVEL_ORDER.find(lv => !cardLevelOpen(save.unlocked, lv));
+      const prev = lock ? CARD_LEVEL_ORDER[CARD_LEVEL_ORDER.indexOf(lock) - 1] : null;
+      return lock && prev ? React.createElement("p", {
+        "data-card-level-hint": lock,
+        className: "px-0.5 text-[11px] font-bold text-amber-200/90",
+        style: JA_LABEL_STYLE
+      }, jaWrap(`🔒 ${CARD_LEVEL_LABEL[lock]} は ${CARD_LEVEL_LABEL[prev]} で勝つと開きます`)) : null;
+    })(), React.createElement("div", {
       className: "grid grid-cols-5 gap-1"
     }, CARD_LEVEL_ORDER.map(lv => {
       const open = cardLevelOpen(save.unlocked, lv) || debug;
@@ -104661,7 +104710,7 @@ function MonsterHeroGame() {
         });
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data && data.build && data.build !== BUILD_DATE) {
+        if (!cancelled && data && data.build && BUILD_DATE && data.build !== BUILD_DATE) {
           setLatestBuild(data.build);
           setUpdateAvailable(true);
         }
@@ -105204,6 +105253,17 @@ function MonsterHeroGame() {
       } catch (e) {}
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
+      {
+        const best = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+        const beatPlayed = !!best && typeof best === 'object' && Object.values(best).some(bySong => bySong && typeof bySong === 'object' && Object.values(bySong).some(rec => rec && typeof rec === 'object' && (rec.played === true || rec.clear === true || Number(rec.bestScore) > 0)));
+        if (!beatPlayed) {
+          for (const key of [RHYTHM_SIX_LANE_INTRO_KEY, RHYTHM_LOOK_INTRO_KEY]) {
+            try {
+              await storeSet(key, true, false);
+            } catch {}
+          }
+        }
+      }
       setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
       setRhythmLookIntroSeen((await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
@@ -113004,6 +113064,7 @@ function MonsterHeroGame() {
     distDamage = [0, 0, 0, 0]
   }) => {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    const defeatGeneration = runGenerationRef.current;
     const revivalDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const revived = extremeRevivedEnemyStats(enemy, revivalDifficulty, wave, enemyRevivalUsedRef.current);
     if (revived) {
@@ -113124,6 +113185,7 @@ function MonsterHeroGame() {
     }]);
     setTimeout(() => {
       setDefeatFx(null);
+      if (runGenerationRef.current !== defeatGeneration) return;
       advanceRunStage('WAVE_RESULT');
     }, battleMs(defeatFxOn ? 1600 : 500));
     return true;

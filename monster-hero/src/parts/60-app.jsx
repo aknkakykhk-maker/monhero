@@ -5518,7 +5518,7 @@ function MonsterHeroGame() {
         const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data && data.build && data.build !== BUILD_DATE) { setLatestBuild(data.build); setUpdateAvailable(true); }
+        if (!cancelled && data && data.build && BUILD_DATE && data.build !== BUILD_DATE) { setLatestBuild(data.build); setUpdateAvailable(true); }
       } catch {}
     };
     checkVersion();
@@ -6053,6 +6053,16 @@ function MonsterHeroGame() {
       //   「一度も出ない」ほうがはるかに困る
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      // 6レーン・見た目の案内は「前と変わったよ」のお知らせ。モンヒロビートをまだ1曲も遊んでいない人には出さない
+      // (2026-10-26 カゲあつ「はじめての人に、みゅあが更新の話をして、曲が3つ半しか見えない」)。見たことにして閉じておく
+      {
+        const best = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+        const beatPlayed = !!best && typeof best === 'object' && Object.values(best).some((bySong) => bySong && typeof bySong === 'object'
+          && Object.values(bySong).some((rec) => rec && typeof rec === 'object' && (rec.played === true || rec.clear === true || Number(rec.bestScore) > 0)));
+        if (!beatPlayed) {
+          for (const key of [RHYTHM_SIX_LANE_INTRO_KEY, RHYTHM_LOOK_INTRO_KEY]) { try { await storeSet(key, true, false); } catch {} }
+        }
+      }
       setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
       setRhythmLookIntroSeen(await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
@@ -12213,6 +12223,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // distDamageは攻撃カードだけが距離別へ加算し、反射などは空配列のままにする。
   const resolveEnemyDefeat = async ({remainingHp, damage, distDamage=[0,0,0,0]}) => {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    // ★このランの世代。WAVE_RESULT へ進める前に、まだ同じランかを見る(battleWait と同じ考え方)。
+    //   途中の await(ミッションの保存)のあいだに HOME へ抜ける(returnToHome → abandonRunAnimations で世代+1)と、
+    //   抜けたあとに WAVE_RESULT へ進み、周回は終わっているので中身の無い真っ暗な画面のまま戻らなかった
+    //   (2026-10-26・rhythm-background-run-check で、モンビーから「ホームへ戻る」を押すと6回に1回ほど)
+    const defeatGeneration = runGenerationRef.current;
     // 不死(死者の再起)を持つ難易度の対象WAVEだけ、撃破を確定させずに起き上がらせる。
     // 撃破ロック(enemyDefeatResolvedRef)はまだ立てない。ここで立てると、起き上がった敵を
     // もう一度倒したときにWAVEクリアが確定しなくなる。
@@ -12293,7 +12308,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
+    setTimeout(()=>{setDefeatFx(null); if(runGenerationRef.current!==defeatGeneration)return; advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
     return true;
   };
 

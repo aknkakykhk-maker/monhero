@@ -642,7 +642,9 @@ function crossCheck(d, jsonText) {
     // 節が無い・0体は「出力の作り直し忘れ」(battle.js はこの節を必ず出す。改善部 2026-10-10)
     if (!/^## 緊急回復の効き目/m.test(smd)) p.push('sim.md に「## 緊急回復の効き目」の節が無い(node tools/playbot/sim/battle.js で作り直す)');
     else if (!inMd.size) p.push('sim.md の「緊急回復の効き目」の表が0体(作り直し忘れの疑い)');
-    for (const n of inMd) if (!inJson.has(n)) p.push(`${n}: sim.md の「緊急回復の効き目」にあるが、tier.json に "緊急回復" が無い(battle.js --tier-json で入れ直す)`);
+    // Tier 表に載っていない子(新しく入ってまだ実戦の回が無い子。シミュレーターは回す)は照合しない(2026-10-27 ダイスくん)
+    const tierNames = new Set(d.モンスター.map((m) => m.名前));
+    for (const n of inMd) if (tierNames.has(n) && !inJson.has(n)) p.push(`${n}: sim.md の「緊急回復の効き目」にあるが、tier.json に "緊急回復" が無い(battle.js --tier-json で入れ直す)`);
     for (const n of inJson) if (!inMd.has(n)) p.push(`${n}: tier.json に "緊急回復" があるが、sim.md の「緊急回復の効き目」に無い`);
   }
   // おすすめパーティ(party.md の難易度ごとの表 | 順位 | 勇者 | 供モン | 点 | 確か |。供モンは「・」でつなぐ)
