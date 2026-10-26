@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8271f637c35cf3f0
+// generated-sha256: 86990dd65a569e04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63625,7 +63625,9 @@ function MonsterHeroGame() {
   //   1つの画面の中では出す行がそろっているので、空の行を捨てても高さは食い違わない。
   const MONSTER_CARD_STYLE = { minHeight: '112px' };
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
-  const monsterCardName = (node, className='text-white', band=false) => <div className={`mh-monster-card-name text-[11px] font-black w-full text-center ${band?'min-h-[28px] px-1 py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center':'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div>;
+  // 名前帯(band)は名前を切らずに折り返す。名前は12字まで付けられるので、9字以上は字を1段小さくし、左右の余白も詰めて
+  // 320幅でも2行(1行6字)に収める(2026-10-27・部長「切らずに全部出す・2行まで」。11pxだと12字で3行になっていた)
+  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div> };
   // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた。
   // ★ただし**入りきらなければ折り返す**(2026-09-18)。字を読める大きさへ上げたら、
   //   「絆 397/400」と「+456P」がカード幅(約96px)を超え、ハートが枠の外へはみ出した。
@@ -81396,7 +81398,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   return <div key={id} className="relative"><button disabled={disabled} onClick={()=>toggleDraftPasture(id)} aria-pressed={selected} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30':'border-slate-800 bg-slate-900'} disabled:opacity-40`}>
                     {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                     {renderMonsterCardBody({
-                      masu, base,
+                      masu, base, nameBand:true,
                       status: selected?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white leading-none">放牧中</span>:null,
                     })}
                   </button><button onClick={(ev)=>{ev.stopPropagation();setMasuMonDetail(masu);}} aria-label={`${masu.name}の詳細`} className="mh-hit-expand absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button></div>;
