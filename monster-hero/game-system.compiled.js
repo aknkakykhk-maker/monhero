@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afde294aedc76cb0
+// source-sha256: 3494f139b044b0a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:45";
+const BUILD_DATE = "2026-10-27 00:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10273,24 +10273,24 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.55
   }],
   Kyubi: [{
-    gloss: 0.5
-  }, {
-    gloss: 0.79
+    gloss: 0.39
   }, {
     gloss: 0.53
   }, {}, {
-    gloss: 0.68
+    gloss: 0.79
+  }, {
+    gloss: 0.53
   }],
   Orihime: [{
     gloss: 0.51
   }, {
     gloss: 0.25
   }, {
-    gloss: 0.53
-  }, {
     gloss: 0.44
   }, {
-    gloss: 0.53
+    gloss: 0.55
+  }, {
+    gloss: 0.49
   }]
 };
 const _NO_REGION_DYE = {
