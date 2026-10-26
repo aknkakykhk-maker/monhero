@@ -172,7 +172,7 @@ const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // ケンタウロスは背景に散ったごく薄い光の画素(不透明度64未満)を消してから取り込んだ
 // キュービ・オリヒメ(2026-10-27・案の段階)。元絵は tools/art-sources/kyubi-orihime-2026-10-27/。高さ916px・256色(sharp)
 const KYUBI_IMG = "images/monsters/kyubi.png?v=f3711a72a817";
-const KYUBI_DYE_MASK = "images/monsters/kyubi-dye-mask.PNG?v=0d55e5438f0a";
+const KYUBI_DYE_MASK = "images/monsters/kyubi-dye-mask.PNG?v=7429bc5364d7";
 const ORIHIME_DYE_MASK = "images/monsters/orihime-dye-mask.PNG?v=a4fb9b341dd4";
 const ORIHIME_IMG = "images/monsters/orihime.png?v=86ff26c44dcb";
 const MF_DINO_IMG = "images/monsters/dino.png?v=ac797293f479";
