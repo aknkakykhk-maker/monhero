@@ -194,7 +194,7 @@ const HYBRID_C052_IMG = "images/monsters/c052.png?v=ef445601b28a";
 const HYBRID_C053_IMG = "images/monsters/c053.png?v=ffa75a7fabaa";
 const HYBRID_C054_IMG = "images/monsters/c054.png?v=94f20e8b1d54";
 const HYBRID_C055_IMG = "images/monsters/c055.png?v=ce688625bfa6";
-const HYBRID_C056_IMG = "images/monsters/c056.png?v=c83f29cf8474";
+const HYBRID_C056_IMG = "images/monsters/c056.png?v=2000080ba495";
 const HYBRID_C057_IMG = "images/monsters/c057.png?v=7ab1f75096ae";
 const HYBRID_C058_IMG = "images/monsters/c058.png?v=596afc1e78b0";
 const HYBRID_C059_IMG = "images/monsters/c059.png?v=1964b2187f85";
