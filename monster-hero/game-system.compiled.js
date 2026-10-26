@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55d372be6f0b7d29
+// source-sha256: 26093ab18a4f5519
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 08:51";
+const BUILD_DATE = "2026-10-26 09:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -125154,25 +125154,41 @@ function MonsterHeroGame() {
       })) : icons;
       const ownedCount = list.filter(x => x.owned).length;
       const myIconSrc = resolveIconUrl(breederIcon);
-      const avatarOf = (x, view, className, fit) => isFrame ? React.createElement(ProfileAvatar, {
-        src: view === 'frame' ? null : myIconSrc,
-        id: breederIcon,
-        frameId: view === 'icon' ? null : x.id,
-        alt: x.name,
-        className: className,
-        fit: fit,
-        fallback: view === 'frame' ? null : React.createElement(User, {
-          size: 22,
-          className: "text-indigo-400"
-        })
-      }) : React.createElement(ProfileAvatar, {
-        src: view === 'frame' ? null : x.src,
-        id: x.id,
-        frameId: view === 'icon' ? null : profileFrameId,
-        alt: x.name,
-        className: className,
-        fit: fit
-      });
+      const dexBoxRatio = isFrame ? Math.max(1, ...frames.map(frame => profileFrameBoxRatio(frame.id))) : profileFrameBoxRatio(profileFrameId);
+      const avatarOf = (x, view, size) => {
+        const face = Math.round(size / dexBoxRatio);
+        const st = {
+          width: face,
+          height: face,
+          flexShrink: 0
+        };
+        return React.createElement("span", {
+          "data-dex-avatar": true,
+          style: {
+            width: size,
+            height: size,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }
+        }, isFrame ? React.createElement(ProfileAvatar, {
+          src: view === 'frame' ? null : myIconSrc,
+          id: breederIcon,
+          frameId: view === 'icon' ? null : x.id,
+          alt: x.name,
+          style: st,
+          fallback: view === 'frame' ? null : React.createElement(User, {
+            size: 22,
+            className: "text-indigo-400"
+          })
+        }) : React.createElement(ProfileAvatar, {
+          src: view === 'frame' ? null : x.src,
+          id: x.id,
+          frameId: view === 'icon' ? null : profileFrameId,
+          alt: x.name,
+          style: st
+        }));
+      };
       const howTo = x => {
         if (!isFrame) return x.source === 'starter' ? 'はじめから使える' : x.source === 'market' ? 'マーケットで買える' : 'プレゼントで届いた';
         const unlock = profileFrameUnlock(x.frame);
@@ -125217,7 +125233,8 @@ function MonsterHeroGame() {
         const go = d => setLookDexZoom((lookDexZoom + d + n) % n);
         const vw = typeof window !== 'undefined' ? window.innerWidth : 390,
           vh = typeof window !== 'undefined' ? window.innerHeight : 664;
-        const box = Math.max(120, Math.min(vw - 96, 340, Math.round(vh * 0.42)));
+        const box = Math.max(120, Math.min(vw - 48, 360, Math.round(vh * 0.40)));
+        const topPad = Math.max(4, Math.round((vh - 150 - box - 260) / 2));
         const selected = isFrame ? normalizeProfileFrameId(profileFrameId) === x.id : breederIcon === x.id;
         const choose = () => {
           if (!x.owned) return;
@@ -125228,12 +125245,42 @@ function MonsterHeroGame() {
           }
         };
         let touchX = null;
+        const navButton = 'mh-button mh-button-secondary flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[26px] font-black leading-none text-white active:scale-90';
         return React.createElement("div", {
           "data-dex-zoom": x.id,
           style: {
             ...shell,
-            background: '#020617',
-            overflowY: 'auto'
+            background: '#020617'
+          }
+        }, React.createElement("div", {
+          style: {
+            width: '100%',
+            maxWidth: 480,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px 4px',
+            flexShrink: 0
+          }
+        }, React.createElement("button", {
+          type: "button",
+          "data-dex-zoom-close": true,
+          "aria-label": "一覧へ戻る",
+          onClick: () => setLookDexZoom(null),
+          className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
+        }, React.createElement(ArrowLeft, {
+          size: 20
+        })), React.createElement("span", {
+          className: "text-[12px] font-bold text-slate-400"
+        }, lookDexZoom + 1, " / ", n)), React.createElement("div", {
+          "data-dex-zoom-body": true,
+          style: {
+            flex: 1,
+            minHeight: 0,
+            width: '100%',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column'
           },
           onTouchStart: e => {
             touchX = e.touches && e.touches[0] ? e.touches[0].clientX : null;
@@ -125247,63 +125294,46 @@ function MonsterHeroGame() {
           }
         }, React.createElement("div", {
           style: {
+            margin: '0 auto',
             width: '100%',
             maxWidth: 420,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '0 16px 20px'
+            padding: `${topPad}px 16px 12px`
           }
         }, React.createElement("div", {
-          style: {
-            alignSelf: 'stretch',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 0 4px'
-          }
-        }, React.createElement("button", {
-          type: "button",
-          "data-dex-zoom-close": true,
-          "aria-label": "一覧へ戻る",
-          onClick: () => setLookDexZoom(null),
-          className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
-        }, React.createElement(ArrowLeft, {
-          size: 20
-        })), React.createElement("span", {
-          className: "text-[12px] font-bold text-slate-400"
-        }, lookDexZoom + 1, " / ", n)), React.createElement("div", {
-          style: {
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            alignSelf: 'stretch',
-            height: box
-          }
-        }, React.createElement("button", {
-          type: "button",
-          "data-dex-prev": true,
-          "aria-label": "前へ",
-          onClick: () => go(-1),
-          className: "absolute left-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90"
-        }, "‹"), React.createElement("div", {
           style: {
             width: box,
             height: box,
             position: 'relative',
             opacity: x.owned ? 1 : 0.55
           }
-        }, avatarOf(x, lookDexView, 'w-full h-full', true), !x.owned && React.createElement(Lock, {
+        }, avatarOf(x, lookDexView, box), !x.owned && React.createElement(Lock, {
           size: 34,
           className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]"
-        })), React.createElement("button", {
+        })), React.createElement("div", {
+          className: "mt-3 flex w-full items-center gap-2"
+        }, React.createElement("button", {
+          type: "button",
+          "data-dex-prev": true,
+          "aria-label": "前へ",
+          onClick: () => go(-1),
+          className: navButton
+        }, "‹"), React.createElement("b", {
+          className: "min-w-0 flex-1 text-center text-[18px] font-black leading-tight"
+        }, jaWrap(x.name)), React.createElement("button", {
           type: "button",
           "data-dex-next": true,
           "aria-label": "次へ",
           onClick: () => go(1),
-          className: "absolute right-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90"
-        }, "›")), React.createElement("div", {
+          className: navButton
+        }, "›")), x.desc && React.createElement("p", {
+          className: "mt-1.5 text-center text-[12px] leading-relaxed text-slate-300"
+        }, helpWrap(x.desc)), React.createElement("p", {
+          "data-dex-howto": true,
+          className: "mt-2 text-center text-[12px] font-black leading-snug text-amber-400"
+        }, x.owned ? '' : '🔒 ', helpWrap(`手に入れ方：${howTo(x)}`)), React.createElement("div", {
           className: "mt-3 flex flex-wrap justify-center gap-1.5"
         }, [['both', '重ねて'], ['frame', 'フレームだけ'], ['icon', 'アイコンだけ']].map(([id, label]) => React.createElement("button", {
           key: id,
@@ -125312,14 +125342,7 @@ function MonsterHeroGame() {
           "aria-pressed": lookDexView === id,
           onClick: () => setLookDexView(id),
           className: `rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView === id ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-200'}`
-        }, label))), React.createElement("b", {
-          className: "mt-3 text-center text-[18px] font-black leading-tight"
-        }, jaWrap(x.name)), x.desc && React.createElement("p", {
-          className: "mt-1.5 text-center text-[12px] leading-relaxed text-slate-300"
-        }, helpWrap(x.desc)), React.createElement("p", {
-          "data-dex-howto": true,
-          className: "mt-2 text-center text-[12px] font-black leading-snug text-amber-400"
-        }, x.owned ? '' : '🔒 ', helpWrap(`手に入れ方：${howTo(x)}`)), x.owned ? React.createElement("button", {
+        }, label))), x.owned ? React.createElement("button", {
           type: "button",
           "data-dex-choose": true,
           onClick: choose,
@@ -125327,7 +125350,37 @@ function MonsterHeroGame() {
           className: `mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected ? 'bg-slate-700 text-slate-300' : 'bg-amber-500 text-slate-900'}`
         }, selected ? 'いま使っています' : 'これにする') : React.createElement("div", {
           className: "mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400"
-        }, "まだ持っていません")));
+        }, "まだ持っていません"))), React.createElement("div", {
+          "data-dex-strip": true,
+          style: {
+            flexShrink: 0,
+            width: '100%',
+            maxWidth: 520,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            display: 'flex',
+            gap: 8,
+            padding: '8px 16px 10px',
+            borderTop: '1px solid rgba(255,255,255,.1)',
+            WebkitOverflowScrolling: 'touch'
+          }
+        }, list.map((y, i) => React.createElement("button", {
+          key: y.id,
+          type: "button",
+          "data-dex-strip-item": y.id,
+          "aria-label": y.name,
+          "aria-current": i === lookDexZoom ? 'true' : undefined,
+          onClick: () => setLookDexZoom(i),
+          ref: i === lookDexZoom ? el => {
+            if (el && el.parentElement) {
+              const p = el.parentElement;
+              p.scrollLeft = el.offsetLeft - p.clientWidth / 2 + el.offsetWidth / 2;
+            }
+          } : undefined,
+          className: `relative shrink-0 rounded-xl border-2 p-1 active:scale-95 ${i === lookDexZoom ? 'border-amber-400 bg-amber-950/40' : 'border-slate-700 bg-slate-900'}`
+        }, React.createElement("span", {
+          className: `block ${y.owned ? '' : 'opacity-40'}`
+        }, avatarOf(y, 'both', 40))))));
       }
       return React.createElement("div", {
         "data-dex": true,
@@ -125383,7 +125436,7 @@ function MonsterHeroGame() {
         className: "flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900 px-1 pb-2 pt-4 active:scale-95"
       }, React.createElement("span", {
         className: `relative block ${x.owned ? '' : 'opacity-45'}`
-      }, avatarOf(x, 'both', 'w-12 h-12', true), !x.owned && React.createElement(Lock, {
+      }, avatarOf(x, 'both', 56), !x.owned && React.createElement(Lock, {
         size: 16,
         className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
       })), React.createElement("span", {

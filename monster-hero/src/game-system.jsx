@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1b057f16499b57a7
+// generated-sha256: c637feed73739e2d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 08:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 09:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -78192,9 +78192,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const list=isFrame?frames.map(frame=>({id:frame.id,name:frame.name,desc:frame.desc,frame,owned:frameOwned(frame)})):icons;
           const ownedCount=list.filter(x=>x.owned).length;
           const myIconSrc=resolveIconUrl(breederIcon);
-          const avatarOf=(x,view,className,fit)=>isFrame
-            ? <ProfileAvatar src={view==='frame'?null:myIconSrc} id={breederIcon} frameId={view==='icon'?null:x.id} alt={x.name} className={className} fit={fit} fallback={view==='frame'?null:<User size={22} className="text-indigo-400"/>}/>
-            : <ProfileAvatar src={view==='frame'?null:x.src} id={x.id} frameId={view==='icon'?null:profileFrameId} alt={x.name} className={className} fit={fit}/>;
+          // 顔(アイコンの丸)の大きさを、どのフレームでもそろえる(2026-10-26 社長「フレームごとに表示サイズかわるのおかしくない？」)。
+          // ProfileAvatar の fit はフレームごとに縮め方が違う(profileFrameBoxRatio)ので使わず、いちばん飾りの大きい枠に合わせた1つの比で縮める。
+          // 枠は顔の外へはみ出して描かれる(プロフィール画面と同じ顔と枠の比)
+          // アイコンのタブは、どれもいま使っている枠を重ねるので、その枠の比でよい(小さくしすぎない)
+          const dexBoxRatio=isFrame?Math.max(1, ...frames.map(frame=>profileFrameBoxRatio(frame.id))):profileFrameBoxRatio(profileFrameId);
+          const avatarOf=(x,view,size)=>{
+            const face=Math.round(size/dexBoxRatio);
+            const st={width:face,height:face,flexShrink:0};
+            return (
+              <span data-dex-avatar style={{width:size,height:size,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {isFrame
+                  ? <ProfileAvatar src={view==='frame'?null:myIconSrc} id={breederIcon} frameId={view==='icon'?null:x.id} alt={x.name} style={st} fallback={view==='frame'?null:<User size={22} className="text-indigo-400"/>}/>
+                  : <ProfileAvatar src={view==='frame'?null:x.src} id={x.id} frameId={view==='icon'?null:profileFrameId} alt={x.name} style={st}/>}
+              </span>
+            );
+          };
           const howTo=(x)=>{
             if(!isFrame) return x.source==='starter'?'はじめから使える':x.source==='market'?'マーケットで買える':'プレゼントで届いた';
             const unlock=profileFrameUnlock(x.frame);
@@ -78214,8 +78227,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const n=list.length;
             const go=(d)=>setLookDexZoom((lookDexZoom+d+n)%n);
             const vw=typeof window!=='undefined'?window.innerWidth:390, vh=typeof window!=='undefined'?window.innerHeight:664;
-            // 飾りの大きいフレームも収まる大きさ(飾りは絵の約1.4倍に広がる)。横向きでは高さにも合わせる
-            const box=Math.max(120, Math.min(vw-96, 340, Math.round(vh*0.42))); // 左右の矢印の幅をあける
+            // 絵の大きさ。飾りの大きいフレームも fit で枠の中に収まる。縦長の端末では大きく、横向き・小さい端末では高さに合わせる
+            // (2026-10-26 社長「うわよせでつかいづらい」。上に寄って下半分が空いていたので、真ん中へ寄せ、下に同じ並びの帯を出す)
+            const box=Math.max(120, Math.min(vw-48, 360, Math.round(vh*0.40)));
+            // 上の余白は端末ごとに1つに決める(中身の高さで決めると、説明の長さで絵の位置が前後ごとに動く)。下の文・切り替え・ボタンのぶんはおよそ260
+            const topPad=Math.max(4, Math.round((vh-150-box-260)/2));
             const selected=isFrame?normalizeProfileFrameId(profileFrameId)===x.id:breederIcon===x.id;
             const choose=()=>{
               if(!x.owned) return;
@@ -78223,37 +78239,51 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               else { setBreederIcon(x.id); setOnboardingIcon(x.id); if(!onboardingPreview) storeSet('mh_breeder_icon', x.id, false); }
             };
             let touchX=null;
+            const navButton='mh-button mh-button-secondary flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[26px] font-black leading-none text-white active:scale-90';
             return (
-              <div data-dex-zoom={x.id} style={{...shell,background:'#020617',overflowY:'auto'}}
-                onTouchStart={(e)=>{ touchX=e.touches&&e.touches[0]?e.touches[0].clientX:null; }}
-                onTouchEnd={(e)=>{ const t=e.changedTouches&&e.changedTouches[0]; if(touchX==null||!t) return; const dx=t.clientX-touchX; touchX=null; if(Math.abs(dx)>40) go(dx<0?1:-1); }}>
-                <div style={{width:'100%',maxWidth:420,display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 20px'}}>
-                  <div style={{alignSelf:'stretch',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0 4px'}}>
-                    <button type="button" data-dex-zoom-close aria-label="一覧へ戻る" onClick={()=>setLookDexZoom(null)}
-                      className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-                    <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
-                  </div>
-                  <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center',alignSelf:'stretch',height:box}}>
-                    <button type="button" data-dex-prev aria-label="前へ" onClick={()=>go(-1)} className="absolute left-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90">‹</button>
+              <div data-dex-zoom={x.id} style={{...shell,background:'#020617'}}>
+                <div style={{width:'100%',maxWidth:480,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px 4px',flexShrink:0}}>
+                  <button type="button" data-dex-zoom-close aria-label="一覧へ戻る" onClick={()=>setLookDexZoom(null)}
+                    className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
+                </div>
+                {/* 真ん中の欄。絵が縦のおよそ真ん中に来るよう上をあける。長いとき(横向き)はこの欄だけスクロールする。横になぞると前後へ */}
+                <div data-dex-zoom-body style={{flex:1,minHeight:0,width:'100%',overflowY:'auto',display:'flex',flexDirection:'column'}}
+                  onTouchStart={(e)=>{ touchX=e.touches&&e.touches[0]?e.touches[0].clientX:null; }}
+                  onTouchEnd={(e)=>{ const t=e.changedTouches&&e.changedTouches[0]; if(touchX==null||!t) return; const dx=t.clientX-touchX; touchX=null; if(Math.abs(dx)>40) go(dx<0?1:-1); }}>
+                  <div style={{margin:'0 auto',width:'100%',maxWidth:420,display:'flex',flexDirection:'column',alignItems:'center',padding:`${topPad}px 16px 12px`}}>
                     <div style={{width:box,height:box,position:'relative',opacity:x.owned?1:0.55}}>
-                      {avatarOf(x,lookDexView,'w-full h-full',true)}
+                      {avatarOf(x,lookDexView,box)}
                       {!x.owned&&<Lock size={34} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]"/>}
                     </div>
-                    <button type="button" data-dex-next aria-label="次へ" onClick={()=>go(1)} className="absolute right-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90">›</button>
+                    <div className="mt-3 flex w-full items-center gap-2">
+                      <button type="button" data-dex-prev aria-label="前へ" onClick={()=>go(-1)} className={navButton}>‹</button>
+                      <b className="min-w-0 flex-1 text-center text-[18px] font-black leading-tight">{jaWrap(x.name)}</b>
+                      <button type="button" data-dex-next aria-label="次へ" onClick={()=>go(1)} className={navButton}>›</button>
+                    </div>
+                    {x.desc&&<p className="mt-1.5 text-center text-[12px] leading-relaxed text-slate-300">{helpWrap(x.desc)}</p>}
+                    <p data-dex-howto className="mt-2 text-center text-[12px] font-black leading-snug text-amber-400">{x.owned?'':'🔒 '}{helpWrap(`手に入れ方：${howTo(x)}`)}</p>
+                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {[['both','重ねて'],['frame','フレームだけ'],['icon','アイコンだけ']].map(([id,label])=>(
+                        <button key={id} type="button" data-dex-view={id} aria-pressed={lookDexView===id} onClick={()=>setLookDexView(id)}
+                          className={`rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView===id?'bg-amber-500 text-slate-900':'bg-slate-800 text-slate-200'}`}>{label}</button>
+                      ))}
+                    </div>
+                    {x.owned
+                      ? <button type="button" data-dex-choose onClick={choose} disabled={selected}
+                          className={`mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected?'bg-slate-700 text-slate-300':'bg-amber-500 text-slate-900'}`}>{selected?'いま使っています':'これにする'}</button>
+                      : <div className="mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400">まだ持っていません</div>}
                   </div>
-                  <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                    {[['both','重ねて'],['frame','フレームだけ'],['icon','アイコンだけ']].map(([id,label])=>(
-                      <button key={id} type="button" data-dex-view={id} aria-pressed={lookDexView===id} onClick={()=>setLookDexView(id)}
-                        className={`rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView===id?'bg-amber-500 text-slate-900':'bg-slate-800 text-slate-200'}`}>{label}</button>
-                    ))}
-                  </div>
-                  <b className="mt-3 text-center text-[18px] font-black leading-tight">{jaWrap(x.name)}</b>
-                  {x.desc&&<p className="mt-1.5 text-center text-[12px] leading-relaxed text-slate-300">{helpWrap(x.desc)}</p>}
-                  <p data-dex-howto className="mt-2 text-center text-[12px] font-black leading-snug text-amber-400">{x.owned?'':'🔒 '}{helpWrap(`手に入れ方：${howTo(x)}`)}</p>
-                  {x.owned
-                    ? <button type="button" data-dex-choose onClick={choose} disabled={selected}
-                        className={`mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected?'bg-slate-700 text-slate-300':'bg-amber-500 text-slate-900'}`}>{selected?'いま使っています':'これにする'}</button>
-                    : <div className="mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400">まだ持っていません</div>}
+                </div>
+                {/* 下の帯: 同じ並びを小さく並べ、押すとそこへ飛ぶ。いま見ているものを帯の真ん中へ寄せる */}
+                <div data-dex-strip style={{flexShrink:0,width:'100%',maxWidth:520,overflowX:'auto',overflowY:'hidden',display:'flex',gap:8,padding:'8px 16px 10px',borderTop:'1px solid rgba(255,255,255,.1)',WebkitOverflowScrolling:'touch'}}>
+                  {list.map((y,i)=>(
+                    <button key={y.id} type="button" data-dex-strip-item={y.id} aria-label={y.name} aria-current={i===lookDexZoom?'true':undefined} onClick={()=>setLookDexZoom(i)}
+                      ref={i===lookDexZoom?(el)=>{ if(el&&el.parentElement){ const p=el.parentElement; p.scrollLeft=el.offsetLeft-p.clientWidth/2+el.offsetWidth/2; } }:undefined}
+                      className={`relative shrink-0 rounded-xl border-2 p-1 active:scale-95 ${i===lookDexZoom?'border-amber-400 bg-amber-950/40':'border-slate-700 bg-slate-900'}`}>
+                      <span className={`block ${y.owned?'':'opacity-40'}`}>{avatarOf(y,'both',40)}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             );
@@ -78274,7 +78304,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button key={x.id} type="button" data-dex-item={x.id} data-dex-owned={x.owned?'yes':'no'} onClick={()=>setLookDexZoom(i)}
                       className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900 px-1 pb-2 pt-4 active:scale-95">
                       <span className={`relative block ${x.owned?'':'opacity-45'}`}>
-                        {avatarOf(x,'both','w-12 h-12',true)}
+                        {avatarOf(x,'both',56)}
                         {!x.owned&&<Lock size={16} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
                       </span>
                       <span className={`w-full text-center text-[9px] font-black leading-tight ${x.owned?'text-slate-200':'text-slate-500'}`}>{jaWrap(x.name)}</span>
