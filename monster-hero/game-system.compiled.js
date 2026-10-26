@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9d557310a960f78b
+// source-sha256: cea359946b433a85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:07";
+const BUILD_DATE = "2026-10-27 03:09";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -52863,6 +52863,17 @@ function SettingsScreen({
     className: "mh-button mh-button-danger w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-red-500/40 bg-red-950/50 px-4 py-3 font-black text-red-200 active:scale-[.98]"
   }, "タイトルへ戻る"))));
 }
+const settingsBackdropProps = onClose => ({
+  onPointerDown: e => {
+    e.stopPropagation();
+    e.currentTarget.dataset.downOnBackdrop = e.target === e.currentTarget ? '1' : '';
+  },
+  onClick: e => {
+    const ok = e.target === e.currentTarget && e.currentTarget.dataset.downOnBackdrop === '1';
+    e.currentTarget.dataset.downOnBackdrop = '';
+    if (ok) onClose();
+  }
+});
 function ArtPickerModal({
   pickerId,
   heading,
@@ -52874,10 +52885,9 @@ function ArtPickerModal({
   onClose
 }) {
   const auto = value === 'auto';
-  return React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  return React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(onClose)), React.createElement("div", {
     className: "mh-title-dialog",
     "data-art-picker": pickerId,
     style: {
@@ -52962,10 +52972,9 @@ function ScreenThemeModal({
     onChange('*', choice);
   };
   const chip = selected => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
-  return React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  return React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(onClose)), React.createElement("div", {
     className: "mh-title-dialog",
     "data-screen-theme-picker": true,
     style: {
@@ -85268,7 +85277,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: 0.06,
     hard: 0.15,
     expert: 0,
-    master: 0.3
+    master: 0.1
   },
   dra: {
     easy: -0.075,
@@ -119078,10 +119087,9 @@ function MonsterHeroGame() {
   }, React.createElement(X, {
     size: 18
   }))), document.body) : null;
-  const titleModal = showChangelog ? React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  const titleModal = showChangelog ? React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(closeChangelog)), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
@@ -119292,14 +119300,15 @@ function MonsterHeroGame() {
         rel: "noopener noreferrer"
       }, c.link && c.link.label || '詳しく見る', " ↗"))))));
     })];
-  })()))) : showTitleSettings ? React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  })()))) : showTitleSettings ? React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(() => setShowTitleSettings(false))), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "設定"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: () => setShowTitleSettings(false)
   }, React.createElement(X, {
     size: 18
@@ -119377,9 +119386,9 @@ function MonsterHeroGame() {
     resolved: resolveHomeArt(homeArt),
     onChange: changeHomeArt,
     onClose: () => setShowHomeArt(false)
-  }) : showAudioSettings ? React.createElement("div", {
+  }) : showAudioSettings ? React.createElement("div", _extends({
     className: "mh-title-modal"
-  }, React.createElement("div", {
+  }, settingsBackdropProps(() => setShowAudioSettings(false))), React.createElement("div", {
     className: "mh-title-dialog",
     style: {
       maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
@@ -119388,6 +119397,8 @@ function MonsterHeroGame() {
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "音量設定"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: () => setShowAudioSettings(false)
   }, React.createElement(X, {
     size: 18
@@ -119419,9 +119430,9 @@ function MonsterHeroGame() {
     onTest: testAudioOutput,
     onRepair: repairAudioOutput,
     repairing: audioRepairing
-  }), React.createElement(ReloadLogPanel, null)))) : showBgmArrangement ? React.createElement("div", {
+  }), React.createElement(ReloadLogPanel, null)))) : showBgmArrangement ? React.createElement("div", _extends({
     className: "mh-title-modal"
-  }, React.createElement("div", {
+  }, settingsBackdropProps(closeBgmArrangement)), React.createElement("div", {
     className: "mh-title-dialog",
     style: {
       maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
@@ -119430,6 +119441,8 @@ function MonsterHeroGame() {
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "BGMアレンジ"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: closeBgmArrangement
   }, React.createElement(X, {
     size: 18
@@ -119527,13 +119540,15 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"))) : showBackup ? React.createElement("div", {
+  }, "デフォルトに戻す"))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
-  }, React.createElement("div", {
+  }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "データ引き継ぎ"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: () => setShowBackup(false)
   }, React.createElement(X, {
     size: 18
