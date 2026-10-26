@@ -177,7 +177,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
           await page.waitForTimeout(150);
           const tgt = page.locator('[data-card-mon].ring-rose-400').first();
           if (!(await tgt.count())) { if (await page.getByRole('button', { name: '使う' }).count()) { await page.getByRole('button', { name: '使う' }).click(); fired = true; break; } await page.locator(`[data-card-hand-card="${i}"]`).click(); continue; }
-          const logBefore = await page.locator('[data-card-log]').innerText();
+          const logBefore = await page.locator('[data-card-log]').textContent();
           await tgt.click();
           await page.waitForTimeout(250);
           const sheet = await has('[data-confirm-sheet]');
@@ -185,13 +185,13 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
             if (SHOT) await shot('confirm-use');
             await page.getByRole('button', { name: 'キャンセル' }).click();
             await page.waitForTimeout(250);
-            cancelOk = (await page.locator('[data-card-log]').innerText()) === logBefore && !(await has('[data-confirm-sheet]'));
+            cancelOk = (await page.locator('[data-card-log]').textContent()) === logBefore && !(await has('[data-confirm-sheet]'));
             await tgt.click(); await page.waitForTimeout(250);
           }
           if (await has('[data-confirm-sheet]')) {
             await page.locator('[role="dialog"] button, [data-confirm-sheet] ~ div button').filter({ hasText: /^使う$/ }).first().click().catch(async () => { await page.getByRole('button', { name: '使う' }).last().click(); });
             await page.waitForTimeout(400);
-            if (useOk === null) useOk = (await page.locator('[data-card-log]').innerText()) !== logBefore;
+            if (useOk === null) useOk = (await page.locator('[data-card-log]').textContent()) !== logBefore;
           } else if (useOk === null) useOk = false;
           fired = true;
           break;

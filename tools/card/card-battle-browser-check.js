@@ -19,7 +19,7 @@ const fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const root = path.resolve(__dirname, '..', '..');
-const PORT = 8994;
+const PORT = Number(process.env.CARD_PORT) || 8994; // 別の検査と同時に回すときは CARD_PORT で変える
 const SHOT = process.env.CARD_SHOT_DIR || '';
 // 画面の大きさ(既定は iPhone 13 の 390×844。SE は CARD_VIEWPORT=375x667)
 const [VW, VH] = (process.env.CARD_VIEWPORT || '390x844').split('x').map(Number);
@@ -35,6 +35,9 @@ const serve = () => new Promise((resolve) => {
   server.listen(PORT, () => resolve(server));
 });
 
+// 公開の印(17-release-changelog-login-missions.jsx の RELEASE_FLAGS.cardBattle)。立つとマルチ対戦が開く(91 の cardPvpOpen)。
+// 2026-10-26 社長「公開する」で立てた。マルチの「準備中」を見る所は、印に合わせて見るものを替える
+const RELEASED = /^\s*cardBattle:\s*true\b/m.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8'));
 let failed = 0;
 let lastPage = null;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -47,15 +50,20 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   let browser;
   // 対戦の画面で、相手の場・まんなか・自分の場・手札・下のボタンが上から順に並び、重なっていないか
 const layoutIssues = async (page) => page.evaluate(() => {
-  const box = (sel) => { const els = [...document.querySelectorAll(sel)]; if (!els.length) return null; const r = els.map((e) => e.getBoundingClientRect()); return { top: Math.min(...r.map((x) => x.top)), bottom: Math.max(...r.map((x) => x.bottom)) }; };
+  const box = (sel) => { const els = [...document.querySelectorAll(sel)]; if (!els.length) return null; const r = els.map((e) => e.getBoundingClientRect()); return { top: Math.min(...r.map((x) => x.top)), bottom: Math.max(...r.map((x) => x.bottom)), left: Math.min(...r.map((x) => x.left)), right: Math.max(...r.map((x) => x.right)) }; };
+  // 横の画面は、盤(左)と手札(右)が横に並ぶ。上下の重なりは、左右も重なるときだけ数える(横並びを「かぶる」と数えていた。QA 2)
+  const sideBySide = (a, b) => a.right <= b.left + 1 || b.right <= a.left + 1;
   const opp = box('[data-card-mon^="1-"]'), stage = box('[data-card-stage]'), me = box('[data-card-mon^="0-"]'), hand = box('[data-card-hand]'), foot = box('[data-card-footer]');
   const out = [];
   if (!opp || !stage || !me || !hand || !foot) return ['部品が見つからない'];
   if (opp.bottom > stage.top + 1) out.push('相手の場がまんなかにかかる');
   if (stage.bottom > me.top + 1) out.push('まんなかが自分の場にかかる');
-  if (me.bottom > hand.top + 1) out.push(`自分の場が手札にかかる(${Math.round(me.bottom - hand.top)}px)`);
+  if (me.bottom > hand.top + 1 && !sideBySide(me, hand)) out.push(`自分の場が手札にかかる(${Math.round(me.bottom - hand.top)}px)`);
   if (hand.bottom > foot.top + 1) out.push('手札がボタンにかかる');
   if (foot.bottom > window.innerHeight + 1) out.push('ボタンが画面の外');
+  // 自分の番の始めのまとめは、手札にかからない(横の画面は左の盤のまんなかへ出す)
+  const sum = box('[data-card-turn-summary]');
+  if (sum && sum.bottom > hand.top + 1 && !sideBySide(sum, hand)) out.push('始まりのまとめが手札にかかる');
   if (stage.bottom - stage.top < 60) out.push(`まんなかが狭い(${Math.round(stage.bottom - stage.top)}px)`);
   return out;
 });
@@ -92,7 +100,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     // ⑰ 公開前: ふつうのプレイヤー(デバッグの合言葉の印が無い)には、HOME に MFバトルカードの入口が出ない(社長 #3495・必ず守る)
     await page.waitForTimeout(800);
-    check('⑰ ふつうのプレイヤーの HOME には MFバトルカードの入口が出ない', (await page.locator('[data-home-card-battle]').count()) === 0);
+    // 公開後(#3672 で cardBattle を立てた)は、ふつうのプレイヤーの HOME にも入口が出る
+    if (RELEASED) check('⑰ 公開後: ふつうのプレイヤーの HOME にも MFバトルカードの入口が出る', (await page.locator('[data-home-card-battle]').count()) === 1, String(await page.locator('[data-home-card-battle]').count()));
+    else check('⑰ ふつうのプレイヤーの HOME には MFバトルカードの入口が出ない', (await page.locator('[data-home-card-battle]').count()) === 0);
     // ここまでの保存(既存のキー)を控える。カードバトルが書くのは mh_card_* だけのはず
     await page.waitForTimeout(1500);
     const before = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
@@ -134,10 +144,18 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         if (!el) return null;
         const r = el.getBoundingClientRect();
         if (r.top < 0 || r.bottom > window.innerHeight + 1) return `窓が画面の外(${Math.round(r.top)}〜${Math.round(r.bottom)})`;
+        // 縦の画面の窓は、文字の上の指を下へ通す(pointer-events:none・2026-10-26)。隠れていないかは、ここでだけ指を受ける形にして見る
+        const pe = el.style.pointerEvents; el.style.pointerEvents = 'auto';
+        let cover = '';
         for (const [x, y] of [[r.left + 8, r.top + 4], [r.left + 8, r.bottom - 4], [r.left + r.width / 2, r.top + r.height / 2]]) {
           const hit = document.elementFromPoint(x, y);
-          if (!hit || !el.contains(hit)) return `窓の上に別の物(${hit ? hit.tagName : 'なし'})`;
+          if (!cover && (!hit || !el.contains(hit))) cover = `窓の上に別の物(${hit ? hit.tagName : 'なし'})`;
         }
+        el.style.pointerEvents = pe;
+        if (cover) return cover;
+        // 下のボタン(攻撃おわり・ターン終了など)が画面の中にあって押せる(ドラの窓が増えて、画面の下で切れていた・2026-10-26 社長の実機)
+        const fb = [...document.querySelectorAll('[data-card-footer] button')].find((x) => x.getClientRects().length);
+        if (fb) { const q = fb.getBoundingClientRect(); if (q.bottom > window.innerHeight + 1 || q.top < 0) return `下のボタンが画面の外(${Math.round(q.top)}〜${Math.round(q.bottom)})`; const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); if (!hit || !fb.contains(hit)) return '下のボタンが押せない'; }
         const b = el.querySelector('[data-card-tutor-next]');
         if (b) { const q = b.getBoundingClientRect(); const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); if (!hit || !b.contains(hit)) return '「次へ」が押せない'; }
         return '';
@@ -188,7 +206,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑪ ちがう所を押すと、ドラが「光ってる所」と案内する', wrongShown);
     check(`⑪ ${VW}×${VH} で、ドラの窓が全部見えて「次へ」が押せる(どの台詞でも)`, tutorIssues.size === 0, [...tutorIssues].slice(0, 4).join(' / '));
     check('⑪ 操作の段では、教えている所が光っている', tutorNoFocus.size === 0, [...tutorNoFocus].join('・'));
-    const tut = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem('mh_card_tutorial_v1') || 'null'), point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0') }));
+    const tut = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem('mh_card_tutorial_v1') || 'null'), point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0') }));
     check('⑪ はじめて最後までやると 100(印 done・rewarded)', tut.t && tut.t.done && tut.t.rewarded && tut.point === 400, JSON.stringify(tut));
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
@@ -212,14 +230,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-quit]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
     await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 });
-    const tut2 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+    const tut2 = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
     check('⑪ もう一度やっても(飛ばしても)100 は二度ともらえない', tut2 === 400, String(tut2));
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
     const saved = await page.evaluate(() => ({
       col: JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}'),
       decks: JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'),
-      point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'),
+      point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'),
       starter: JSON.parse(localStorage.getItem('mh_card_starter_v1') || 'null'),
     }));
     const total = Object.values(saved.col).reduce((s, v) => s + v, 0);
@@ -321,6 +339,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
       if ((await page.locator('[data-card-mon] [data-skill-fx]').count()) > 0) poseSeen.add('attack');
       if (mode === 'wait') { await page.waitForTimeout(150); continue; }
+      // カードの大写し(2026-10-26)が出ているあいだは、画面のタップが「先へ進む」になる。消えるのを待ってから次の手
+      if (await page.locator('[data-card-big]').count()) { await page.waitForFunction(() => !document.querySelector('[data-card-big]'), null, { timeout: 5000 }).catch(() => {}); continue; }
       if (mode === 'setup') { await page.getByRole('button', { name: /始める$/ }).click(); continue; }
       if (mode === 'discard') { const n = await page.locator('[data-card-hand-card]').count(); for (let i = 0; i < n; i++) await page.locator(`[data-card-hand-card="${i}"]`).click(); await page.getByRole('button', { name: /捨てる$/ }).click().catch(() => {}); continue; }
       if (mode === 'guard') {
@@ -353,7 +373,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         if (dragAttack === null && usable.length) {
           // 技を相手のモンスターまで運ぶ。途中で自分の場(置けない所)の上を通るときは光らない
           // ★相手の上で光るかを見てから離す。光らない札(自分の子に使う札など)は元の場所へ戻して離し(使わない)、次の札で試す
-          const logBefore = await page.locator('[data-card-log]').innerText();
+          const logBefore = await page.locator('[data-card-log]').textContent();
           const mine = await center(page.locator('[data-card-mon="0-0"]'));
           let tried = false;
           for (const hi of usable.slice(0, 5)) {
@@ -373,7 +393,10 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
               await page.mouse.up();
               tried = true;
               await page.waitForTimeout(300);
-              const changed = (await page.locator('[data-card-log]').innerText()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              // 自分の手は、先にカードを大きく出してから効く(2026-10-26)。大写しが出たら「使えた」、消えるまで待つ
+              const bigMine = (await page.locator('[data-card-big="me"]').count()) > 0;
+              const changed = bigMine || (await page.locator('[data-card-log]').textContent()) !== logBefore || (await page.locator('[data-card-battle]').getAttribute('data-card-mode')) !== 'attack';
+              if (bigMine) await page.waitForTimeout(1000);
               if (changed) { myActions += 1; dragAttack = true; dragNoGlow = midGlow === 0; }
               break;
             }
@@ -436,21 +459,23 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.waitForTimeout(500);
     await shot(page, '09-result');
     const after = await page.evaluate(() => ({
-      point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'),
+      point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'),
       record: JSON.parse(localStorage.getItem('mh_card_record_v1') || 'null'),
       all: Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])),
     }));
     const outcome = await page.locator('[data-card-top="result"]').getAttribute('data-card-outcome');
     const gain = Number(await page.locator('[data-card-top="result"]').getAttribute('data-card-gain'));
     // 投了は倒した相手のモンスター × 10(25まで。案A・台帳 #3484)。結果に出た数だけ増えている
-    if (outcome === 'surrender') check('⑦ 投了のカードポイントは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
+    if (outcome === 'surrender') check('⑦ 投了のビートPは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
     else check(`⑦ 決着(${outcome})で結果が出て戦績が付く`, after.record && after.record.cpu[outcome] === 1);
     // ⑧ 既存のキーを書き換えていない(時刻・起動のたびに変わる記録は除く)
     const volatile = /^mh_(debug_entry|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
-    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after.all[k]);
-    check('⑧ カードバトル以外の保存キーを書き換えていない', changed.length === 0, changed.join(', '));
-    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && !volatile.test(k));
-    check('⑧ 新しく増えた保存キーは mh_card_* だけ', added.length === 0, added.join(', '));
+    // ★ポイントはビートP(2026-10-26 社長「カードポイントを廃止してビートポイントにして」)。ビートPの残高 mh_rhythm_event_points_v1 だけは書いてよい
+    const BEAT_KEY = 'mh_rhythm_event_points_v1';
+    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k) && before[k] !== after.all[k]);
+    check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
+    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k));
+    check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
     await page.locator('[data-card-top="result"] button').first().click();
     await page.waitForTimeout(300);
@@ -540,6 +565,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     }
     await page.evaluate(() => document.querySelectorAll('[data-card-deck-edit] .mh-scroll').forEach((el) => { el.scrollTop = 0; }));
     if (SHOT) await shot(page, '19-deck-edit');
+    // 先頭の3つ(モンスター・デッキ・技など全部)を選んだときは、絞り込みの列が左はしから始まる(2026-10-26 2回目の見回り「ター 3/3」と切れて見えた)
+    const chipsLeft = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); return el ? el.scrollLeft : -1; });
+    check('⑭ 「技など全部」を選んでも、絞り込みの列は左はしから(先頭の「モンスター」が切れない)', chipsLeft === 0, String(chipsLeft));
     const deckReady = await page.locator('[data-card-deck-ready]').getAttribute('data-card-deck-ready');
     // デッキに入れたものだけを出し、「−」で1枚外して「＋」で戻せる(外し方が見える。2026-10-25 社長「外し方がわからない」)
     await page.locator('[data-card-deck-filter="deck"]').click();
@@ -552,7 +580,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const afterPlus = await page.locator('[data-card-deck-count]').innerText();
     const monMinus = await page.locator('[data-card-deck-mon="0"] span').innerText().catch(() => '');
     const chipsRows = await page.evaluate(() => { const el = document.querySelector('[data-card-deck-chips]'); const ys = new Set([...el.children].map((b) => Math.round(b.getBoundingClientRect().top))); return ys.size; });
-    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && chipsRows === 1, JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows }));
+    // 絞り込みは、縦の画面では1列(横に流す)、横の画面では折り返して並べる作り(87 の data-card-deck-chips)。1列は縦のときだけ見る
+    const portrait = VH > VW;
+    check('⑭ デッキに入れたカードは「−」で1枚外れ、「＋」で戻る・上のモンスターにも「−」・絞り込みは縦で1列', /^49/.test(afterMinus.n) && Number(afterMinus.inn.split('/')[0]) === Number(inBefore.split('/')[0]) - 1 && /^50/.test(afterPlus) && monMinus === '−' && (!portrait || chipsRows === 1), JSON.stringify({ firstIn, inBefore, afterMinus, afterPlus, monMinus, chipsRows, portrait }));
     await page.locator('[data-card-deck-save]').click();
     await page.waitForSelector('[data-card-deck-list]', { timeout: 5000 });
     const savedDecks = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'));
@@ -576,7 +606,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const dex1 = await page.locator('[data-card-dex-tile]').count();
     const haveTiles = await page.locator('[data-card-dex-tile]:not([data-card-dex-have="0"])').count();
     if (SHOT) await shot(page, '23-dex-1');
-    await page.getByRole('tab', { name: '混血' }).click();
+    await page.locator('[data-card-dex-tab="hybrid"]').click();
     await page.waitForTimeout(200);
     const dexH = await page.locator('[data-card-dex-tile]').count();
     if (SHOT) await shot(page, '24-dex-hybrid');
@@ -585,14 +615,37 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const dexHHave = await page.locator('[data-card-dex-tile]').count();
     // 図鑑のタブはパックと同じ第1〜8弾+混血(2026-10-25)。集めた種類は、持っているカードの種類と同じ数(混血を2回数えない)
     const ownedKinds = await page.evaluate(() => Object.entries(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).filter(([no, n]) => n > 0 && (CARD_BATTLE_DATA.cards[no] || CARD_BATTLE_DATA.monsters[no])).length);
-    const dexTabs = await page.locator('[data-card-dex] [role="tab"]').count();
+    // 見かた(パック別・血統別・種類別)は上の3つのタブ、その中の第1〜8弾+混血は下の札(2026-10-26)
+    const dexTabs = await page.locator('[data-card-dex-tabs="pack"] [data-card-dex-tab]').count();
+    const dexModes = await page.locator('[data-card-dex] [role="tab"]').count();
     // 混血・派生の数はデータから数える(2026-10-25 に派生25枚が増えた。図鑑だけの子も並ぶ)
     const hybridCount = await page.evaluate(() => Object.values(CARD_BATTLE_DATA.monsters).filter((m) => String(m.wave) === 'hybrid').length);
+    check('⑮ カード図鑑: 見かたのタブが3つ', dexModes === 3, JSON.stringify({ dexModes }));
     check('⑮ カード図鑑: 第1〜8弾+混血のタブで、第1弾が並び、集めた種類が持っている種類と同じ数・混血のタブ・持っているだけの絞り込みが効く', dexTabs === 9 && Number(dexTotal) >= 20 && Number(dexTotal) === ownedKinds && dex1 >= 45 && dex1 <= 60 && haveTiles >= 1 && dexH === hybridCount && hybridCount >= 15 && dexHHave === 0, JSON.stringify({ dexTabs, dexTotal, ownedKinds, dex1, haveTiles, dexH, hybridCount, dexHHave }));
+    // ⑮-2 血統別・種類別(2026-10-26 社長): 札の数・札ごとの集めた数・種類の言葉と並びがデッキ編成の絞り込みと同じ
+    await page.locator('[data-card-dex-show="all"]').click();
+    await page.getByRole('tab', { name: '血統別' }).click();
+    await page.waitForTimeout(200);
+    const spTabs = await page.locator('[data-card-dex-tabs="species"] [data-card-dex-tab]').count();
+    const spFirst = await page.locator('[data-card-dex-tile]').count();
+    const spPart = await page.locator('[data-card-dex-part]').innerText();
+    const spWant = await page.evaluate(() => CARD_PACKS.reduce((a, p) => a + p.species.length, 0));
+    if (SHOT) await shot(page, '24b-dex-species');
+    await page.getByRole('tab', { name: '種類別' }).click();
+    await page.waitForTimeout(200);
+    const kindLabels = await page.locator('[data-card-dex-tabs="kind"] [data-card-dex-tab]').evaluateAll((els) => els.map((e) => e.firstChild.textContent));
+    const deckLabels = await page.evaluate(() => ['モンスター', ...CARD_DECK_FILTERS.filter((f) => f.id !== 'all').map((f) => f.label)]);
+    const dexMonTiles = await page.locator('[data-card-dex-tile]').count();
+    const monWant = await page.evaluate(() => cardDexAll(CARD_BATTLE_DATA).filter((no) => CARD_BATTLE_DATA.monsters[no]).length);
+    await page.locator('[data-card-dex-tab="fld"]').click();
+    await page.waitForTimeout(150);
+    const fldTiles = await page.locator('[data-card-dex-tile]').count();
+    if (SHOT) await shot(page, '24c-dex-kind');
+    check('⑮-2 カード図鑑: 血統別(弾の種族の数だけ札・最初の血統に並ぶ・「この血統」の集めた数)と種類別(デッキ編成と同じ言葉と並び・モンスターは全部・全体は15枚)', spTabs === spWant && spFirst >= 10 && /この血統 \d+ \/ \d+/.test(spPart) && JSON.stringify(kindLabels) === JSON.stringify(deckLabels) && dexMonTiles === monWant && fldTiles === 15, JSON.stringify({ spTabs, spWant, spFirst, spPart, kindLabels, dexMonTiles, monWant, fldTiles }));
     await page.locator('[data-card-dex] button').first().click();
     await page.waitForTimeout(250);
     // ⑯ マーケットの「カードポイント」の売り場: パックを買って開ける・スターターキットを買う・円盤石と交換する
-    await page.evaluate(() => localStorage.setItem('mh_card_point_v1', JSON.stringify(5000)));
+    await page.evaluate(() => localStorage.setItem('mh_rhythm_event_points_v1', JSON.stringify(5000)));
     // 以前の4弾の天井の数(w1 に 4)を入れておく。買ったときに新しい8弾へ1回だけ写り、w1 は消えない
     await page.evaluate(() => localStorage.setItem('mh_card_pack_pity_v1', JSON.stringify({ w1: 4, w3: 2 })));
     const unlockedBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
@@ -651,7 +704,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const flippedAll = await page.locator('[data-card-pack-card][data-card-pack-flipped="1"]').count();
     await page.locator('[data-card-pack-done]').dispatchEvent('click');
     await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
-    const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
+    const afterPack = await page.evaluate(() => ({ point: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null'), col: Object.values(JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}')).reduce((a, n) => a + n, 0) }));
     const split = await page.evaluate(() => ({ flag: JSON.parse(localStorage.getItem('mh_card_pack_pity_split_v1') || 'null'), pity: JSON.parse(localStorage.getItem('mh_card_pack_pity_v1') || 'null') }));
     check('⑯ 以前の天井の数(w1・w3)は消えずに残り、新しい弾へ1回だけ写る(w1→第2・3弾は 4、w3→第6弾は 2)・写した印が付く', split.flag === true && split.pity && split.pity.w1 === 4 && split.pity.w3 === 2 && split.pity.p2 === 4 && split.pity.p3 === 4 && split.pity.p6 === 2, JSON.stringify(split));
     check('⑯ 第1弾パックを5つ(1,350)買って開けると、カードが増え、カードポイントが減り、天井の数が残る(新しい弾 p1 で数える)', packsOpened === 5 && flippedAll === 8 && tearPhase === 'tearing' && afterPack.point <= 5000 - 1350 + 40 * 5 * 5 && afterPack.point >= 3650 && afterPack.col > colBefore && afterPack.pity && typeof afterPack.pity.p1 === 'number' && /技などの枠/.test(rateText), JSON.stringify({ packsOpened, flippedAll, tearPhase, afterPack, colBefore }));
@@ -683,13 +736,13 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const discBuy = page.locator('[data-card-shop-disc] button:not([disabled])').filter({ hasText: /交換|1,500/ }).first();
     let discOk = 'なし';
     if (await discBuy.count()) {
-      const pBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+      const pBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
       await discBuy.click();
       await page.waitForTimeout(300);
       const sheetBtn = page.locator('[role="dialog"] button').filter({ hasText: /交換/ }).last();
       if (await sheetBtn.count()) { await sheetBtn.click(); await page.waitForTimeout(800); }
       const unlockedAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'));
-      const pAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_card_point_v1') || '0'));
+      const pAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
       // 交換前は保存に無いこともある(既定の顔ぶれ)。カードポイントが 1,500 減り、解放済みが前より1体多い(前が無ければ保存ができた)ことを見る
       discOk = pBefore - pAfter === 1500 && Array.isArray(unlockedAfter) && (!Array.isArray(unlockedBefore) || unlockedAfter.length === unlockedBefore.length + 1) ? 1 : `${pBefore}→${pAfter}・${JSON.stringify(unlockedAfter)}`;
       await page.locator('[role="dialog"] button').filter({ hasText: /閉じる|あとで|OK|スキップ/ }).first().click().catch(() => {});
@@ -755,7 +808,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-ranking-tab="multi"]').click();
       const multiSoon = /準備中/.test(await page.locator('[data-card-ranking-multi]').innerText().catch(() => ''));
       if (SHOT) await shot(page, '37-ranking-multi');
-      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(準備中)。公開前は見本の案内が出て、表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && rankWins.preview && rankWins.state !== 'other' && multiSoon, JSON.stringify({ ...rankWins, multiSoon }));
+      check('⑱ ランキング: 勝ち数(今週・通算×5難易度)・連勝・図鑑・マルチ(公開前は準備中・公開後は札なし)。公開前は見本の案内が出て、公開後は合言葉の端末でも HOME から入れば送るので出ない。表が無くても壊れない', rankWins.tabs === 4 && rankWins.levels === 5 && rankWins.periods === 2 && rankWins.mine && (RELEASED ? !rankWins.preview : rankWins.preview) && rankWins.state !== 'other' && (RELEASED ? !multiSoon : multiSoon), JSON.stringify({ ...rankWins, multiSoon }));
       await page.locator('[data-card-ranking] header button').first().click();
       await page.locator('[data-card-options-open]').click();
       await page.locator('[data-card-options]').waitFor({ timeout: 10000 });
@@ -767,7 +820,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-setting="autoPass"] [data-card-setting-option="OFF"]').click();
       await page.waitForTimeout(300);
       const optSaved = await page.evaluate(() => ({ bgm: JSON.parse(localStorage.getItem('mh_card_bgm_v1') || 'null'), settings: JSON.parse(localStorage.getItem('mh_card_settings_v1') || 'null') }));
-      check('⑱ オプション: 対戦のBGMは最初「おまかせ」で、曲・速さ・自動パスを変えると mh_card_bgm_v1・mh_card_settings_v1 に残る',
+      check('⑱ オプション: 対戦のBGMは最初「おまかせ」で(トップ画面だけ MF × ICHIKA MIX)、曲・速さ・自動パスを変えると mh_card_bgm_v1・mh_card_settings_v1 に残る',
         bgmDefault === 'auto' && optSaved.bgm && optSaved.bgm.cpu === 'melo_toriko' && optSaved.settings && optSaved.settings.think === 'FAST' && optSaved.settings.speed === 'fast' && optSaved.settings.autoPass === false, JSON.stringify({ bgmDefault, ...optSaved }));
       if (SHOT) await shot(page, '38-options');
       // 元に戻す(このあとの対戦の検査を、いつもの設定のまま進めるため)
@@ -782,7 +835,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       if (SHOT) { await page.waitForTimeout(900); await shot(page, '33-mode'); }
       const multiOff = await page.locator('[data-card-mode-multi]').isDisabled();
       const multiText = await page.locator('[data-card-mode-multi]').innerText();
-      check('⑰ 対戦は「助手と対戦」と「マルチ対戦(準備中・押せない)」から選ぶ', multiOff && /準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
+      if (RELEASED) check('⑰ 公開後: 対戦は「助手と対戦」と「マルチ対戦(押せる・準備中の札なし)」から選ぶ', !multiOff && !/準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
+      else check('⑰ 対戦は「助手と対戦」と「マルチ対戦(準備中・押せない)」から選ぶ', multiOff && /準備中/.test(multiText) && (await page.locator('[data-card-mode-assistant]').count()) === 1, multiText);
       const shown = await page.evaluate(() => document.body.innerText);
       check('⑰ 画面に「コンピューター戦」が出ていない', !/コンピューター戦/.test(shown));
       const modeText = await page.locator('[data-card-mode-assistant]').innerText();

@@ -177,7 +177,8 @@ const textReply = (obj, usage = { input_tokens: 300, output_tokens: 40, cache_re
   const p84 = parts('84-screen-card-battle.jsx'), p87 = parts('87-card-deck-edit.jsx'), p17 = parts('17-release-changelog-login-missions.jsx');
   ok(/cardTalkFetch\('moment'/.test(p84) && /cardTalkFetch\('after'/.test(p84) && /cardTalkFetch\('deck'/.test(p87), '山場・対戦後・デッキ相談のどれかを呼んでいない');
   ok(/data-card-ai-talk\b/.test(p84) && /cardTalkOpen\(\) &&/.test(p84), 'オプションの入/切が無い・呼べない端末にも出している');
-  ok(/cardAssistantTalk: false/.test(p17), '公開の印(RELEASE_FLAGS.cardAssistantTalk)が無い・もう真になっている');
+  // 公開の印は 2026-10-26 社長「公開する」で真にした。印そのものが残っていることを見る(偽に戻しても通る)
+  ok(/^\s*cardAssistantTalk: (true|false)\b/m.test(p17), '公開の印(RELEASE_FLAGS.cardAssistantTalk)が無い');
   ok(/cur && cur\.key === key/.test(p84), '山場の差しかえが、出したままの吹き出しにだけ効く形になっていない');
 
   if (fails) { console.log(`\n${fails} 件 NG`); process.exit(1); }

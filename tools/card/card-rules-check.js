@@ -18,7 +18,7 @@ const load = () => {
     + `${fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8').split('// ---- 動きの見本')[1].replace(/^[^\n]*\n/, '')}\n;\n`
     // よけ方・盾の数字・ブリーダーのカードの見分け(ルールだけで決まる所)も読む
     + `${(() => { const m = fs.readFileSync(path.join(GAME, 'src', 'parts', '85-card-battle-motion.jsx'), 'utf8'); return m.slice(m.indexOf('// ブリーダーのカードか'), m.indexOf('// 動きの長さ')); })()}\n;\n`
-    + 'this.E = { CARD_BATTLE_DATA, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
+    + 'this.E = { CARD_BATTLE_DATA, cardUnlockedWithRecord, cardDecider, cardMonType, CARD_THINK_PACE, CARD_RESULT_WAIT_MS, CARD_PRESS_MS, CARD_BUBBLE_PER_TURN, CARD_SETTING_GROUPS, cardOf, cardIsBreederCard, cardDodgeIsJump, cardGuardLabel, cardCreateGame, cardApplyAction, cardLegalActions, cardAttackOptions, cardGuardOptions, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardAiSeededRand, cardAiPickTrio, CARD_AI_FAVORITE, cardAiFavoriteCandidates, CARD_AI_BUILD, cardUsableBy, cardSimulate, CARD_AI_LEVELS, CARD_AI_HABITS, CARD_AI_DECKS, cardDeckProblems, cardNormalizeCollection, cardNormalizeDecks, cardNormalizePoint, cardNormalizeDaily, cardNormalizeRecord, cardNormalizeCpuUnlocked, cardGrantStarter, cardCpuReward, cardUnlockAfterWin, cardMotionDemo, cardMotionDemoAction, cardTutorialGame, cardTutorialMutate, cardTutorialAllow, cardTutorialDone, cardTutorialCpu, CARD_TUTORIAL_STAGES, cardTutorialCopyProblems, cardTutorialFinish, CARD_TUTORIAL_LINES, cardCpuLoops, cardOwnTurns, cardDeckAddReason, cardDeckReady, cardDecksPut, cardDecksRemove, CARD_PACKS, cardOpenPack, cardBuyPacks, cardPackRates, cardPackCardRates, cardPackIdOf, cardPackAllCards, cardSplitPity, cardBuyStarter, cardMonRarity, cardNormalizePity, cardNormalizeShop, CARD_SAVE_KEYS, CARD_POINT_STORE_KEY, cardRecordAfter, cardRankRow, cardWeekKeyJst, normalizeCardBgm, normalizeCardSettings };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
 };
@@ -176,7 +176,7 @@ const decksAndSaves = () => {
     const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
       let win = 0, n = 0, sd = 1;
       // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体。2026-10-25)。MASTER はプレイヤー役のデッキを見る
-      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
+      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!d.sameBlood }), E.cardAiPolicy('kyuko', lv)], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
       return [w, win / n];
     });
     const bad = rates.filter(([, r]) => r < 0.38 || r > 0.65);
@@ -225,7 +225,7 @@ const decksAndSaves = () => {
   // 保存の読み込み: 無い・壊れた値でも既定値になる
   [undefined, null, 'x', 5, [], { a: 'b' }].forEach((bad) => {
     ok(JSON.stringify(E.cardNormalizeCollection(bad)) === '{}' || cardIsObj(E.cardNormalizeCollection(bad)), 'コレクションの正規化');
-    ok(bad === 5 ? E.cardNormalizePoint(bad) === 5 : E.cardNormalizePoint(bad) === 0, `カードポイントの正規化(${JSON.stringify(bad)})`);
+    ok(bad === 5 ? E.cardNormalizePoint(bad) === 5 : E.cardNormalizePoint(bad) === 0, `ポイント(ビートP)の正規化(${JSON.stringify(bad)})`);
     ok(Array.isArray(E.cardNormalizeDecks(bad).decks), 'デッキの正規化');
     ok(E.cardNormalizeDaily(bad, '2026-10-24').cpuPoint === 0, '1日の記録の正規化');
     ok(E.cardNormalizeRecord(bad).cpu.win === 0, '戦績の正規化');
@@ -260,7 +260,9 @@ const decksAndSaves = () => {
     // 対戦の BGM と演出の設定(無い・壊れた・知らない曲は既定へ)
     const tracks = new Set(['melo_toriko', 'ichika_battle']);
     const isT = (id) => tracks.has(id);
-    ok(JSON.stringify(E.normalizeCardBgm(null, isT)) === '{"cpu":"auto","pvp":"ichika_battle"}' && E.normalizeCardBgm({ cpu: 'nope', pvp: 'nope' }, isT).cpu === 'auto' && E.normalizeCardBgm({ cpu: 'melo_toriko' }, isT).cpu === 'melo_toriko', '対戦のBGMの読み込みで、既定・知らない曲の戻しが合わない');
+    // 既定はトップ画面だけ MF × ICHIKA MIX(2026-10-26 社長)。対戦は前のとおり auto・ichika_battle。選んで保存した人の値はそのまま
+    ok(JSON.stringify(E.normalizeCardBgm(null, isT)) === '{"top":"atsu_cup_theme","cpu":"auto","pvp":"ichika_battle"}' && E.normalizeCardBgm({ cpu: 'nope', pvp: 'nope' }, isT).cpu === 'auto'
+      && E.normalizeCardBgm({ cpu: 'melo_toriko' }, isT).cpu === 'melo_toriko' && JSON.stringify(E.normalizeCardBgm({ cpu: 'melo_toriko', pvp: 'ichika_battle' }, isT)) === '{"top":"atsu_cup_theme","cpu":"melo_toriko","pvp":"ichika_battle"}', '対戦のBGMの読み込みで、既定・知らない曲の戻し・選んだ人の値が合わない');
     ok(JSON.stringify(E.normalizeCardSettings(null)) === '{"speed":"normal","autoPass":true,"quickAutoStart":false,"think":"NORMAL","resultWait":"NORMAL","motion":"FULL","shake":"ON","damageNum":"ON","bubble":"NORMAL","confirmUse":"OFF","confirmEnd":"OFF","press":"NORMAL","drag":"ON","gutsPick":"OFF","handText":"NORMAL","handSort":"DRAW"}'
       && E.normalizeCardSettings({ quickAutoStart: true }).quickAutoStart === true && E.normalizeCardSettings({ quickAutoStart: 'yes' }).quickAutoStart === false
       // 前の「はやい」(speed:'fast')だけを持つ人は、相手が考える時間「はやい」・結果までの間「短め」で始まる(足す前と同じ速さ)
@@ -271,7 +273,22 @@ const decksAndSaves = () => {
       // オプションに並べる項目は、どれも normalizeCardSettings が持つ名前・選択肢
       && E.CARD_SETTING_GROUPS.every((g) => g.items.every((it) => it.bool ? typeof E.normalizeCardSettings(null)[it.key] === 'boolean' : it.options.some((o) => o.id === E.normalizeCardSettings(null)[it.key]) && it.options.every((o) => E.normalizeCardSettings({ [it.key]: o.id })[it.key] === o.id))) && E.normalizeCardSettings({ speed: 'fast', autoPass: false }).autoPass === false && E.normalizeCardSettings({ speed: 'x' }).speed === 'normal', '演出の設定の読み込みが合わない');
   }
-  // カードポイントとクイック周回(案A・台帳 #3484): 1日の上限なし(台帳 #3531)・はじめての勝ちは+50
+  // 同じ血統の2体・3体(2026-10-26 社長「3体編成も実際あるから組まれるようにして」): 仲間の多いみゅあは出る・仲間のいないももすけは出ない・同じ子は2体入らない
+  {
+    const blood = (no) => { const m = db.monsters[no]; return String(m.wave) === 'hybrid' ? m.main : m.species; };
+    const count = (who, lv) => { let two = 0, three = 0, dup = 0; for (let g = 0; g < 60; g++) { const d = E.cardAiBuildDeck(db, who, lv, E.cardAiSeededRand(`same:${who}:${lv}:${g}`)); const b = d.monsters.map(blood); const same = b.filter((x) => x === b[0]).length; if (same === 2) two += 1; if (same === 3) three += 1; if (new Set(d.monsters.map((no) => db.monsters[no].species)).size < 3) dup += 1; } return { two, three, dup }; };
+    const mua = count('mua', 'normal');
+    ok(mua.two > 0 && mua.three > 0, `みゅあ(モッチーの仲間が多い)のデッキに同じ血統の2体・3体が出ない(${JSON.stringify(mua)})`);
+    const momo = count('momosuke', 'normal');
+    ok(momo.two === 0 && momo.three === 0, `ももすけ(メタルナーの仲間がいない)のデッキに同じ血統が出た(${JSON.stringify(momo)})`);
+    ok(['mua', 'kyuko', 'dra', 'atsu'].every((w) => ['easy', 'expert', 'master'].every((lv) => count(w, lv).dup === 0)), '助手のデッキに同じ子(キラ・別絵キラを含む)が2体入った');
+  }
+  // ポイントはビートPと同じ財布(2026-10-26 社長)。保存先はビートPのキーで、CARD_SAVE_KEYS には入れない
+  // (デバッグの「カードバトルの記録を消す」が CARD_SAVE_KEYS を全部消すので、入っているとビートPまで消える)
+  ok(E.CARD_POINT_STORE_KEY === 'mh_rhythm_event_points_v1', `ポイントの保存先がビートPのキーではない(${E.CARD_POINT_STORE_KEY})`);
+  ok(!Object.values(E.CARD_SAVE_KEYS).includes(E.CARD_POINT_STORE_KEY), 'CARD_SAVE_KEYS にビートPのキーが入っている(記録を消すとビートPも消える)');
+  ok(E.CARD_SAVE_KEYS.point === 'mh_card_point_v1', '前のカードポイントのキー(mh_card_point_v1)の名前が変わった(消さずに残す)');
+  // ビートP(前のカードポイント)とクイック周回(案A・台帳 #3484): 1日の上限なし(台帳 #3531)・はじめての勝ちは+50
   const full = { ownTurns: 10, kos: 0 };
   let daily = E.cardNormalizeDaily(null, '2026-10-24');
   const r1 = E.cardCpuReward(daily, 'master', 'win', full);
@@ -281,14 +298,20 @@ const decksAndSaves = () => {
   ok(r2.got === 200 && !r2.capped && r2.bonus === 0 && r2.total === 200, '1日の上限が残っている(1,480 もらったあとでも満額のはず)');
   ok(E.cardCpuReward(daily, 'easy', 'surrender', { ownTurns: 5, kos: 0 }).total === 0, '倒さずに降参でカードポイントが出てしまう');
   ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 2 }).total === 20, '2体倒して降参は20のはず');
-  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 5, kos: 5 }).total === 25, '降参は負けの25を超えない');
-  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'lose', full).total === 25, '負けはどの難易度も25のはず');
+  ok(E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'easy', 'surrender', { ownTurns: 10, kos: 7 }).total === 60, '降参は負けの数(EASY 60・自分の番10回)を超えない');
+  // 負けは勝ちの 3/4(切り捨て)。2026-10-26 社長「助手とのバトルも負けても報酬もっとあげよう」
+  const loseWant = { easy: [60, 10], normal: [82, 12], hard: [105, 13], expert: [127, 15], master: [150, 16] };
+  ok(Object.entries(loseWant).every(([lv, [pt]]) => E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), lv, 'lose', full).total === pt), '負けは勝ちの 3/4(60・82・105・127・150)のはず');
+  // 負けのビートPも自分の番の数で減る(10回で満額・切り捨て)。投了の最大も減ったあとの負けの数(2026-10-26 社長)
+  const d0 = () => E.cardNormalizeDaily(null, 'd');
+  ok(E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 3, kos: 0 }).total === 45 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 7, kos: 0 }).total === 105 && E.cardCpuReward(d0(), 'master', 'lose', { ownTurns: 15, kos: 0 }).total === 150, '負けのビートPが自分の番の数で減らない(MASTER 3回で45・7回で105・10回以上で150のはず)');
+  ok(E.cardCpuReward(d0(), 'easy', 'surrender', { ownTurns: 3, kos: 3 }).total === 18, '投了の最大が、減ったあとの負けの数(EASY 3回で18)になっていない');
   const sh = E.cardCpuReward(E.cardNormalizeDaily(null, 'd'), 'master', 'win', { ownTurns: 2, kos: 3 });
   ok(sh.total === 0 && sh.short && !sh.daily.firstWin, '自分の番を3回やる前に終わった試合でカードポイントが出る');
   const L = (lv, o, f) => E.cardCpuLoops(lv, o, f);
   ok([['easy', 14], ['normal', 16], ['hard', 18], ['expert', 20], ['master', 22]].every(([lv, n]) => L(lv, 'win', full) === n), '勝ちの周回が案Aと違う');
-  ok(L('normal', 'lose', full) === 8 && L('normal', 'lose', { ownTurns: 5, kos: 0 }) === 4, '負けの周回は勝ちの半分×(自分の番÷10)のはず');
-  ok(L('normal', 'surrender', { ownTurns: 5, kos: 0 }) === 0 && L('normal', 'surrender', { ownTurns: 5, kos: 1 }) === 3 && L('normal', 'surrender', { ownTurns: 5, kos: 2 }) === 5, '降参の周回は倒した数×負けの3分の1のはず');
+  ok(Object.entries(loseWant).every(([lv, [, n]]) => L(lv, 'lose', full) === n) && L('normal', 'lose', { ownTurns: 5, kos: 0 }) === 6, '負けの周回は勝ちの 3/4(10・12・13・15・16)×(自分の番÷10)のはず');
+  ok(L('normal', 'surrender', { ownTurns: 5, kos: 0 }) === 0 && L('normal', 'surrender', { ownTurns: 5, kos: 1 }) === 4 && L('normal', 'surrender', { ownTurns: 5, kos: 2 }) === 8, '降参の周回は倒した数×負けの3分の1のはず');
   ok(L('master', 'win', { ownTurns: 2, kos: 3 }) === 0, '自分の番を3回やる前に終わった試合で周回が出る');
   const g = E.cardCreateGame(db, { decks: [E.cardAiBuildDeck(db, 'speed'), E.cardAiBuildDeck(db, 'speed')], first: 1 });
   g.turn = 7;
@@ -319,6 +342,26 @@ const decksAndSaves = () => {
   const u = E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'normal');
   ok(u.hard && !u.expert, 'NORMAL で勝っても HARD が開かない');
   ok(!E.cardUnlockAfterWin(E.cardNormalizeCpuUnlocked(null), 'easy').hard, 'EASY の勝ちで HARD が開いてしまう');
+  // 記録から開いているはずの強さを足す(2026-10-26 社長「ハード解放したのにできてない」)。保存値は書き換えない
+  {
+    const W = E.cardUnlockedWithRecord;
+    const recWins = (win) => ({ byLevel: { win, lose: {} } });
+    const r1 = W(null, recWins({ normal: 2 }));
+    ok(r1.hard && !r1.expert && !r1.master, 'NORMAL で勝った記録があるのに HARD が開かない(または開きすぎる)');
+    const r2 = W({ hard: true }, recWins({ normal: 1, hard: 1, expert: 3 }));
+    ok(r2.hard && r2.expert && r2.master, 'HARD・EXPERT の勝ちの記録から EXPERT・MASTER が開かない');
+    const r3 = W(null, { recent: [{ at: 1, who: 'mua', level: 'normal', outcome: 'win' }] });
+    ok(r3.hard && !r3.expert, '最近の対戦の勝ち(NORMAL)から HARD が開かない');
+    const r4 = W(null, recWins({ easy: 5 }));
+    ok(!r4.hard && !r4.expert && !r4.master, 'EASY の勝ちだけで HARD が開いてしまう');
+    const r5 = W({ hard: true, expert: true, master: true }, null);
+    ok(r5.hard && r5.expert && r5.master, '開いていた強さが、記録が無いと閉じてしまう');
+    ok(JSON.stringify(W('こわれた', 'こわれた')) === JSON.stringify({ hard: false, expert: false, master: false }), '壊れた保存値で落ちる・開いてしまう');
+    const saved = { hard: false };
+    W(saved, recWins({ normal: 1 }));
+    ok(saved.hard === false, '保存値(引数)を書き換えてしまう');
+    ok(/unlocked: cardUnlockedWithRecord\(unlocked, record\)/.test(fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '84-screen-card-battle.jsx'), 'utf8')), 'カードの画面の読み込みで、記録から開いている強さを足していない');
+  }
 };
 const cardIsObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
@@ -366,7 +409,8 @@ const packs = () => {
   // 8弾の分け方(2026-10-25 社長が決めた案。種族3つずつ・第1〜3弾はスターターキットの顔ぶれ・混血はメインの種族の弾)
   const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
   // 混血・派生は主の種族の弾へ(#3575)。2026-10-25 の派生25枚も同じ決め(立ち絵の無い5枚は図鑑だけで、パックには出ない)
-  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
+  // 剣士モッチー(2026-10-26)はふつう・キラ・別絵キラの3枚。名前は1つとして数える
+  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス', '剣士モッチー'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル', 'パンドラ'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
   const DEX_ONLY = ['C-011', 'C-014', 'C-032', 'C-037', 'C-044'];
   ok(DEX_ONLY.every((no) => db.monsters[no] && db.monsters[no].dexOnly) && Object.values(db.monsters).filter((m) => m.dexOnly).length === DEX_ONLY.length, '立ち絵の無い5枚だけが「図鑑だけ」になっていない');
   ok(['C-020', 'C-044', 'C-045'].every((no) => db.monsters[no].sub === 'unknown'), '副が ??? の3枚の副が unknown でない');
@@ -376,8 +420,10 @@ const packs = () => {
   E.CARD_PACKS.forEach((p) => {
     const all = E.cardPackAllCards(db, p);
     const n = all.monsters.length + all.cards.length;
-    ok(n >= 48 && n <= 58, `${p.name}の種類が50前後でない(${n})`);   // 派生25枚(2026-10-25)で、第1〜3・5弾は少し増えた
-    const hy = all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name).sort();
+    // 派生25枚(2026-10-25)で、第1〜3・5弾は少し増えた。第1弾は剣士モッチー3枚(2026-10-26)で59(社長「このまま59にする」)、
+    // 第2弾はパンドラ3枚(2026-10-26)で60
+    ok(n >= 48 && n <= 60, `${p.name}の種類が50前後でない(${n})`);
+    const hy = [...new Set(all.monsters.filter((no) => String(db.monsters[no].wave) === 'hybrid').map((no) => db.monsters[no].name))].sort();
     ok(JSON.stringify(hy) === JSON.stringify(HYBRID[p.id].slice().sort()), `${p.name}の混血が決めた案と違う(${hy.join('・')})`);
     const shared = all.cards.filter((no) => db.cards[no].user === 'any' || db.cards[no].user === 'breeder').length;
     ok(shared >= 1, `${p.name}に全モンスター・ブリーダーのカードが無い`);

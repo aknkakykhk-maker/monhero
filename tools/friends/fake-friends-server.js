@@ -76,10 +76,11 @@ const createFakeFriendsServer = (options = {}) => {
           row.updated_at = tick();
         } else if (table === 'friend_invites') {
           if (row.sender_id === row.target_id || !/^[A-HJ-NP-Z2-9]{4}$/.test(row.room_code)) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
-          // on_conflict の上書き(同じ2人は1行。created_at は進む)
+          // on_conflict の上書き(同じ2人は1行)。本番の表と同じく、created_at は送られた値だけを書く(送らなければ古いまま。
+          // 前は上書きで時刻が進む作りにしていて、本番で2回目の招待が届かないのを見逃した。2026-10-26)
           const old = rows.find((r) => r.sender_id === row.sender_id && r.target_id === row.target_id);
-          if (old) { Object.assign(old, row, { created_at: tick() }); continue; }
-          row.created_at = tick();
+          if (old) { Object.assign(old, row); continue; }
+          row.created_at = row.created_at || tick();
         } else if (table === 'friend_links') {
           if (row.requester_id === row.target_id) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
           if (rows.some((r) => pairKey(r.requester_id, r.target_id) === pairKey(row.requester_id, row.target_id))) { calls.sqlRejects += 1; return { status: 409, body: { code: '23505' } }; }

@@ -1957,6 +1957,11 @@ function MonsterHeroGame() {
   const [favSort, setFavSort] = useState('bond');
   // 鍵つきの枠を押したとき、その条件を出すためのid(押していなければ null)
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
+  // アイコン・フレーム図鑑(2026-10-25)。開いているか・どちらのタブか・大きく見ている番号(null=一覧)・大きく見るときの見せ方
+  const [showLookDex, setShowLookDex] = useState(false);
+  const [lookDexTab, setLookDexTab] = useState('icon');
+  const [lookDexZoom, setLookDexZoom] = useState(null);
+  const [lookDexView, setLookDexView] = useState('both');
   // もらった飾り枠(2026-09-16)。助手との仲良し度が Lv2/5/7 になると1枚ずつ増える。
   // ★保存キーは新設のみ。既存の mh_* には一切触らない(CLAUDE.md ⑦)
   // ★一度もらったら外さない。助手を切り替えても、条件を変えても残す
@@ -4632,7 +4637,7 @@ function MonsterHeroGame() {
   const [cardTeaserOpen, setCardTeaserOpen] = useState(false);
   // MFバトルカードへどこから入ったか('debug' … デバッグ設定から / 'home' … HOME の入口・公開のお話のあと)。戻るボタンの行き先と、デバッグの道具を出すかに使う
   const [cardOrigin, setCardOrigin] = useState('home');
-  // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「カードポイント」の売り場を出す(デバッグ専用のあいだ。区切り2)
+  // MFバトルカードの「マーケットへ」から入ったときだけ、マーケットに「MFバトルカード」の売り場を出す(デバッグ専用のあいだ。区切り2)
   const [cardMarketEntry, setCardMarketEntryRaw] = useState(false);
   // ★控え(冒頭の cardMarketEntryRef)も同時に入れる。setGameState('BREEDER_MARKET') がすぐあとに読むので、描画を待たない
   const setCardMarketEntry = (next) => { cardMarketEntryRef.current = next === true; setCardMarketEntryRaw(next === true); };
@@ -5185,6 +5190,8 @@ function MonsterHeroGame() {
     return {
       live: cardBackgroundRun,
       loops: quickRunProgress.loops,
+      // いま回している難易度の名前(トップの周回の札の詳細に出す)
+      difficulty: (DIFFICULTY_SETTINGS[difficulty] || quickDifficultySetting(difficulty) || {}).label || null,
       stopped: finished || !cardBackgroundRun,
       xp: Math.floor(quickRunProgress.xp + pending.xp),
       gold: Math.floor(quickRunProgress.gold + pending.gold),
@@ -5196,17 +5203,27 @@ function MonsterHeroGame() {
   // MFバトルカードのトップ(デッキ編成・図鑑・ルールなどトップの中の画面も)の上に出す、裏の周回の帯。
   // モンヒロビートのモードえらびと同じ帯(RhythmQuickRunPill)に、獲得ダイヤ・獲得経験値と「⚔ バトルへ」を足す。
   // 対戦中(CARD_BATTLE)は出さない(盤のヘッダーに「⚔ ◯周目」だけ。CardBattleBoard の quickRun)
+  // 帯の「詳細」の窓。今日バトルカードで足した周回は、カードの保存(その日の数)を開くときに読む
+  const [cardQuickDetail, setCardQuickDetail] = useState(null);
+  const openCardQuickDetail = async () => {
+    let loops = 0;
+    try { loops = cardNormalizeDaily(await storeGet(CARD_SAVE_KEYS.daily, null, false), cardTodayJst()).quickLoops; } catch (_) { loops = 0; }
+    setCardQuickDetail({ loops });
+  };
   const renderCardQuickRunStrip = () => {
     if (gameState !== 'CARD_TOP') return null;
     const view = cardQuickRunView();
     if (!view) return null;
-    return (
+    const autoDifficulty = autoQuickRunConfigured(autoSettings) ? ((DIFFICULTY_SETTINGS[autoSettings.quickRun.difficulty] || quickDifficultySetting(autoSettings.quickRun.difficulty) || {}).label || null) : null;
+    return (<>
+      {cardQuickDetail && <CardQuickRunDetail quickRun={view} autoReady={autoQuickRunConfigured(autoSettings)} autoDifficulty={autoDifficulty} todayLoops={cardQuickDetail.loops} onClose={() => setCardQuickDetail(null)}/>}
       <div data-card-quick-run={view.stopped ? 'stopped' : 'live'} className="relative z-20 flex shrink-0 items-center gap-1.5 border-b border-fuchsia-400/25 bg-slate-950/95 px-2 py-1">
         <RhythmQuickRunPill info={view.info} onRestart={() => startQuickRunFromRhythm()} onResume={() => resumeQuickRunFromRhythm()} widthClass="min-w-0 flex-1"/>
-        {!view.info.finished && <small data-card-quick-run-gain className="shrink-0 text-[10px] font-black text-slate-300">ダイヤ+{view.gold.toLocaleString()}・経験値+{view.xp.toLocaleString()}</small>}
+        {/* ダイヤ・経験値の数は帯から外し、「詳細」の窓へ(帯が狭くて「◯周目」が「…」で切れていた。2026-10-26 社長) */}
+        <button type="button" data-card-quick-run-detail onClick={() => { Audio_.fgSe.tap(); void openCardQuickDetail(); }} className="min-h-[32px] shrink-0 rounded-full border border-white/25 bg-slate-900/80 px-2.5 text-[11px] font-black text-slate-100 active:scale-95">詳細</button>
         {view.live && <button type="button" data-card-quick-run-back onClick={() => { setCardBgm(null); returnToBackgroundRun(); }} className="min-h-[32px] shrink-0 rounded-full border border-fuchsia-300/60 bg-fuchsia-800/70 px-2.5 text-[11px] font-black text-fuchsia-50 active:scale-95">⚔ バトルへ</button>}
       </div>
-    );
+    </>);
   };
   // ===== ∞周回の進捗を、バトル画面の空いているところにも出す =====
   // 超省エネは演出を出さないぶん画面が大きく空くので、そこへ積み上がりを置く
@@ -8091,15 +8108,17 @@ function MonsterHeroGame() {
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
-  // ===== MFバトルカードの「カードポイント」の売り場(区切り2) =====
+  // ===== MFバトルカードの「MFバトルカード」の売り場(区切り2) =====
   // ★どれも保存されている値を読み直してから計算し、まとめて1つの取引で保存する(失敗したら全部戻す)
   // ★カードの保存は mh_card_* の新しいキーだけ。円盤石・アシストカードは、ビートP交換所と同じ入れ物(mh_unlocked_monsters・mh_unlocked_teachings)へ
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
-    const [point, starter, shop, collection] = await Promise.all([storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 前のカードポイントの移しかえ(1回だけ)。次に開いたときにやり直す */ }
+    const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
     // collection … パックの中身・提供割合に「未取得」と、いまの持ち物で決まる出やすさを出すため(読むだけ)
     const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection) };
     setCardShopState(next);
+    setRhythmEventPoints(next.point);
     return next;
   };
   const buyCardPacks = async (packId, count) => {
@@ -8108,26 +8127,27 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(K.point, null), storeGet(K.pitySplit, null)]);
+      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]);
       const point = cardNormalizePoint(rawPoint);
       // 以前の4弾の天井の数は、新しい8弾へ1回だけ写す(印 mh_card_pack_pity_split_v1。以前の数は消さない)
       const split = rawSplit !== true;
       const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
       const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
-      if (!r) { setMarketExchangeError('カードポイントが足りません。'); return { ok:false, reason:'points' }; }
+      if (!r) { setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; }
       const saved = await saveStoredValuesOrRollback([
         { key: K.collection, before: rawCol, next: r.collection },
         { key: K.pity, before: rawPity, next: r.pity },
-        { key: K.point, before: rawPoint, next: r.point },
+        { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
         ...(split ? [{ key: K.pitySplit, before: rawSplit, next: true }] : []),
       ], storeGet, storeSet);
-      if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
+      if (!saved) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
       setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection }));
+      setRhythmEventPoints(r.point); // ビートPと同じ財布なので、ビートP交換所の残高もそろえる
       setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost });
       setGameState('CARD_PACK_OPEN');
       return { ok:true };
     } catch {
-      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
@@ -8137,31 +8157,32 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(K.point, null), storeGet(K.starter, null), storeGet(K.shop, null)]);
+      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]);
       const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, { collection: cardNormalizeCollection(rawCol), decks: cardNormalizeDecks(rawDecks), point: cardNormalizePoint(rawPoint), starter: cardNormalizeStarter(rawStarter), shop: cardNormalizeShop(rawShop) }, Date.now());
-      if (!r) { setMarketExchangeError('買えませんでした(カードポイントが足りないか、もう持っています)。'); return { ok:false, reason:'points' }; }
+      if (!r) { setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。'); return { ok:false, reason:'points' }; }
       const saved = await saveStoredValuesOrRollback([
         { key: K.collection, before: rawCol, next: r.collection },
         { key: K.decks, before: rawDecks, next: r.decks },
-        { key: K.point, before: rawPoint, next: r.point },
+        { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
         { key: K.shop, before: rawShop, next: r.shop },
       ], storeGet, storeSet);
-      if (!saved) { setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。'); return { ok:false, reason:'save' }; }
+      if (!saved) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
       setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop, collection: r.collection }));
+      setRhythmEventPoints(r.point);
       return { ok:true, dupPoint: r.dupPoint };
     } catch {
-      setMarketExchangeError('保存できませんでした。カードポイントは変わっていません。');
+      setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
-  // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはカードポイント
+  // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはビートP
   const exchangeCardPoints = async (offer) => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const rawPoint = await storeGet(K.point, null);
+      const rawPoint = await storeGet(CARD_POINT_STORE_KEY, 0, false);
       const point = cardNormalizePoint(rawPoint);
       const isDisc = offer?.kind==='disc';
       const isAssist = offer?.kind==='assist';
@@ -8171,16 +8192,17 @@ function MonsterHeroGame() {
       const exchange = rhythmEventPointExchangePreview({ offer, eventPoints: point, gold: Math.max(0, Math.floor(Number(gold) || 0)), ownedItems: ownedItemsRef.current, quantity: 1,
         unlockedMonsterIds: Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds, unlockedTeachingIds: Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'カードポイントが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':'このモンスターはもう持っています。'):'交換できませんでした。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':'このモンスターはもう持っています。'):'交換できませんでした。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
-        { key: K.point, before: rawPoint, next: exchange.eventPoints },
+        { key: CARD_POINT_STORE_KEY, before: rawPoint, next: exchange.eventPoints },
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
       ], storeGet, storeSet);
-      if (!saved) { setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。'); return { ok:false, reason:'save' }; }
+      if (!saved) { setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。'); return { ok:false, reason:'save' }; }
       setCardShopState((cur) => ({ ...(cur || {}), point: exchange.eventPoints }));
+      setRhythmEventPoints(exchange.eventPoints);
       if (isDisc) {
         setUnlockedMonsterIds(exchange.unlockedMonsterIds);
         // ビートP交換所と同じく、編成に空きがあれば自動で入れる
@@ -8195,7 +8217,7 @@ function MonsterHeroGame() {
       }
       return exchange;
     } catch {
-      setMarketExchangeError('交換を保存できませんでした。カードポイントと所持品は変更していません。');
+      setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
@@ -16464,7 +16486,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 間合い適性は「距離ごとの与ダメージ補正(%)」。グレードは目安で、実際に効くのは%のほう。
           aptCurrentPctを渡すと、いまの距離補正値からこのモンスターを加えた後の値まで出す。 */}
       <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30 min-w-0"><div className="flex items-center justify-between gap-2 mb-0.5 flex-wrap"><div className="text-[10px] text-cyan-400 uppercase font-bold">間合い適性（距離補正）{growth&&<span className="ml-1 text-slate-500 normal-case">タップで詳細</span>}</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; const gain=growth?growth.apt[idx]:null; const openKey=`${monGrowthKey}:${idx}`; const aptOpen=!!gain&&growthAptOpen===openKey;
-        const cell=(<><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[10px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[10px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{gain&&(gain.baseUp>0||gain.enhance>0)&&<span className="flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5">{growthGainBadge('base',gain.baseUp)}{growthGainBadge('enhance',gain.enhance)}</span>}</>);
+        const cell=(<><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span data-dist-apt-grade className={`flex h-[22px] w-full items-center justify-center rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[10px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[10px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{gain&&(gain.baseUp>0||gain.enhance>0)&&<span className="flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5">{growthGainBadge('base',gain.baseUp)}{growthGainBadge('enhance',gain.enhance)}</span>}</>);
         return(<div key={idx} className="flex flex-col items-center gap-0.5 min-w-0">{gain
           ? <button type="button" data-growth-apt-cell={idx} aria-expanded={aptOpen} aria-label={`${label}距離の間合い適性の内訳を${aptOpen?'閉じる':'開く'}`} onClick={()=>setGrowthAptOpen(aptOpen?null:openKey)} className={`w-full min-w-0 flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1 active:scale-95 ${aptOpen?'border-fuchsia-400/70 bg-fuchsia-950/40':'border-white/10 bg-black/20'}`}>{cell}</button>
           : cell}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div>{openAptEntry&&renderGrowthAptDetail(openAptEntry)}<div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
@@ -16979,7 +17001,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM'],['masuCallEvent','マスモンとセッションのお話 BGM'],['halloweenNightEvent','ハロウィン・ナイトのお話 BGM'],['assistantChatStoryEvent','助手とおしゃべりのお話 BGM'],['atsuJoinStoryEvent','あつ加入のお話 BGM'],['kyukoJoinStoryEvent','きゅうこ加入のお話 BGM'],['cardBattleIntroEvent','MFバトルカードのお話 BGM']]},
       {id:'other',label:'その他',items:[['rhythmModeSelect','モンヒロビート モードえらび BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],
@@ -19584,13 +19606,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             label:`${raidJackDetailMon.name}の詳細`,
           })}</>)}
         {renderCardQuickRunStrip()}
+        {/* MFバトルカードのマルチ対戦: フレンドからの招待の知らせ(どの画面でも。対戦中・演奏中などは出さない。91 の CardPvpInviteNotice) */}
+        <CardPvpInviteNotice enabled={!!cardBattleEntryVisible&&(cardPvpOpen()||!!cardBattleDebugHome)} busy={CARD_PVP_NOTICE_BUSY.includes(gameState)} onAccept={()=>{if(!String(gameState).startsWith('CARD_'))setCardOrigin('home');setGameState('CARD_TOP');}}/>
         {(gameState==='CARD_TOP'||gameState==='CARD_BATTLE'||(gameState==='CARD_PACK_OPEN'&&!cardPackOpen))&&(<CardBattleScreen screen={gameState} onNavigate={setGameState} onExit={()=>{void exitCardBattle();}} exitLabel={cardOrigin==='debug'?'デバッグ設定へ戻る':'HOMEへ戻る'} seenStoryIds={rhythmEventStorySeen||[]} debug={cardOrigin==='debug'} onBgm={setCardBgm} onQuickLoops={awardCardQuickLoops}
           quickRun={cardQuickRunView()}
           quickAutoReady={autoQuickRunConfigured(autoSettings)} onSettings={(settings)=>setCardQuickAutoStart(!!(settings&&settings.quickAutoStart))} onOpenMarket={()=>{setCardMarketEntry(true);setMarketExchangeError('');void loadCardShop();setGameState('BREEDER_MARKET');}}
           topAssistant={cardTopAssistant}
           bgmPreview={{toggle:toggleBgmPreview,playing:previewTrackId}}
-          /* ランキングへ送るのは、公開してから・デバッグでない人だけ(台帳 #3513「公開前は、デバッグの人の記録も送らない」) */
-          rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true&&!cardBattleDebugHome,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon}}/>)}
+          /* ランキングへ送るのは公開してから(台帳 #3513「公開前は、デバッグの人の記録も送らない」)。デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。デバッグ設定の入口からの対戦は 84 の debug(cardOrigin==='debug')で外す */
+          rank={{send:EVENT_REPLAY_RELEASE_FLAGS.cardBattle===true,profile:{name:breederName||'名無しのブリーダー',icon:breederIcon,frame:rankingProfileFrameValue(profileFrameId)},renderBreederIcon:rankingBreederIcon,
+            // 対戦の盤の自分の帯に出すアイコン(フレーム付き)。絵のアイコンはランキングと同じ部品、絵文字のアイコンはその枠の中に出す(2026-10-26 社長)
+            renderMeIcon:()=><ProfileAvatar src={resolveIconUrl(breederIcon)||undefined} id={breederIcon} frameId={rankingProfileFrameValue(profileFrameId)} fit small className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-[18px]">{typeof breederIcon==='string'&&breederIcon&&!resolveIconUrl(breederIcon)&&[...breederIcon].length<=4?breederIcon:'👤'}</span>}/>}}/>)}
         {gameState==='RAID_JACK_DEBUG'&&(<RaidJackDebugScreen onBack={()=>setGameState('DEBUG_SETTINGS')} raidForce={raidJackDebugForce} onToggleRaidForce={()=>setRaidJackDebugForce(v=>!v)} realRules={raidJackDebugRealRules} onToggleRealRules={()=>setRaidJackDebugRealRules(v=>!v)} onOpenRaid={async()=>{setRaidJackDebugForce(true);await openRaidJack();}} onGoHome={returnToHome} onPreviewRhythmResult={(kind)=>{const pumpkin=kind==='pumpkin';const t=pumpkin?RAID_JACK_PUMPKIN:RAID_JACK_A_TIERS[2];const hp=t.hp;const before=Math.floor(hp*0.6);const damage=523456;setRaidJackResult({way:'rhythm',songName:'Monster Hero',difficultyName:'HARD',score:523456,assist:false,kind:'a',tierIndex:pumpkin?RAID_JACK_A_TIERS.length-1:2,tierName:t.name,reason:'rhythm',damage,defeated:false,turns:0,levelUps:0,growths:0,outcome:'sent',opened:false,eventId:'raid_jack_debug',quickAward:null,lifeLeft:pumpkin?hp:Math.max(0,before-damage),lifeBefore:pumpkin?null:before,lifeMax:hp,pumpkin});}} onPreviewDamageFx={(kind)=>{const t=RAID_JACK_A_TIERS[2];const hp=t.hp;setRaidDamageFx(kind==='none'?{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:0,damage:0,assist:true,lifeBefore:Math.floor(hp*0.6),max:hp,pumpkin:false}:{key:`preview-${Date.now()}`,tierIndex:2,tierName:t.name,score:523456,damage:kind==='down'?hp:523456,assist:false,lifeBefore:kind==='down'?Math.floor(hp*0.05):Math.floor(hp*0.6),max:hp,pumpkin:false});}} onStartBattle={(kind,tierIndex,opts)=>{
           // 回数は使わず、別のイベントID(raid_jack_debug)で送る確認用の入口。runMode は反映されてから始まる(useEffect)
           const isB=kind==='b'; const mode=isB?BATTLE_MODE_RAID_JACK_B:BATTLE_MODE_RAID_JACK_A;
@@ -19845,7 +19871,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onOpenNameEdit={(name)=>{setTempName(name);setShowNameEdit(true);}}
             onOpenIconPicker={()=>setShowIconPicker(true)}
-            onOpenFramePicker={()=>setShowFramePicker(true)}
+            onOpenFramePicker={()=>setShowFramePicker(true)} onOpenDex={()=>{ setLookDexZoom(null); setLookDexView('both'); setShowLookDex(true); }}
             costumeEnabled={assistantCostumeFeatureOn()}
             wornCostume={assistantCostumeWornFor(selectedAssistantId)}
             onOpenCostumePicker={()=>{setCostumeAssistantId(selectedAssistantId);setShowCostumePicker(true);}}
@@ -19908,7 +19934,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             initialSection={cardMarketEntry?'card':null}
           />
         )}
-        {/* MFバトルカード: パックを開ける(区切り2)。買うのはマーケットの「カードポイント」の売り場 */}
+        {/* MFバトルカード: パックを開ける(区切り2)。買うのはマーケットの「MFバトルカード」の売り場 */}
         {/* ★条件は「gameState===…&&名前&&(<部品」の形のまま(layout-consistency-check が部品の名前を読み取る)。cardPackOpen はカードの表があるときだけ作られる(buyCardPacks) */}
         {gameState==='CARD_PACK_OPEN'&&cardPackOpen&&(
           <CardPackOpen db={CARD_BATTLE_DATA} result={cardPackOpen} onDone={()=>{setCardPackOpen(null);setGameState('BREEDER_MARKET');}}/>
@@ -21176,6 +21202,147 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {giftFrames.map(cell)}
               </div>
             </PickerSheet>
+          );
+        })()}
+        {showLookDex&&(()=>{
+          // アイコン・フレーム図鑑(2026-10-25 社長「これで作る」)。集めたもの・まだのものを一覧で見て、押すと大きく見られる。
+          // 並ぶのは公開済みのものだけ。贈り物で届く枠は、届く前から手に入れ方を添えて出す(2026-10-25 社長。マーケットの札と同じ言い方)。売っていないアイコン(shop:false)は持っているときだけ出す。
+          // 新しい保存キーは作らない(選んだときは、アイコン・フレームのピッカーと同じ保存先へ書く)
+          const closeDex=()=>{ setShowLookDex(false); setLookDexZoom(null); };
+          const ownedIconIds=new Set(expandOwnedMarketIcons(ownedMarketIcons));
+          const frameOwned=(frame)=>profileFrameOwned(frame.id, ownedProfileFrames);
+          const frames=releasedProfileFrames();
+          const iconSeen=new Set();
+          const icons=[
+            ...STARTER_MONSTER_IDS.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>({id:m.id,name:m.name,src:m.faceIconUrl||m.iconUrl,source:'starter',owned:true})),
+            ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='icon'&&(item.shop!==false||ownedIconIds.has(item.id)))
+              .map(item=>({id:item.id,name:String(item.name||'').replace(/のアイコン$/,''),src:item.icon,source:item.shop===false?'gift':'market',owned:ownedIconIds.has(item.id)})),
+          ].filter(m=>{ const image=String(m.src||'').split('?')[0]; if(iconSeen.has(m.id)||iconSeen.has(image)) return false; iconSeen.add(m.id); iconSeen.add(image); return true; });
+          const isFrame=lookDexTab==='frame';
+          const list=isFrame?frames.map(frame=>({id:frame.id,name:frame.name,desc:frame.desc,frame,owned:frameOwned(frame)})):icons;
+          const ownedCount=list.filter(x=>x.owned).length;
+          const myIconSrc=resolveIconUrl(breederIcon);
+          // 顔(アイコンの丸)の大きさを、どのフレームでもそろえる(2026-10-26 社長「フレームごとに表示サイズかわるのおかしくない？」)。
+          // ProfileAvatar の fit はフレームごとに縮め方が違う(profileFrameBoxRatio)ので使わず、いちばん飾りの大きい枠に合わせた1つの比で縮める。
+          // 枠は顔の外へはみ出して描かれる(プロフィール画面と同じ顔と枠の比)
+          // アイコンのタブは、どれもいま使っている枠を重ねるので、その枠の比でよい(小さくしすぎない)
+          const dexBoxRatio=isFrame?Math.max(1, ...frames.map(frame=>profileFrameBoxRatio(frame.id))):profileFrameBoxRatio(profileFrameId);
+          const avatarOf=(x,view,size)=>{
+            const face=Math.round(size/dexBoxRatio);
+            const st={width:face,height:face,flexShrink:0};
+            return (
+              <span data-dex-avatar style={{width:size,height:size,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {isFrame
+                  ? <ProfileAvatar src={view==='frame'?null:myIconSrc} id={breederIcon} frameId={view==='icon'?null:x.id} alt={x.name} style={st} fallback={view==='frame'?null:<User size={22} className="text-indigo-400"/>}/>
+                  : <ProfileAvatar src={view==='frame'?null:x.src} id={x.id} frameId={view==='icon'?null:profileFrameId} alt={x.name} style={st}/>}
+              </span>
+            );
+          };
+          const howTo=(x)=>{
+            if(!isFrame) return x.source==='starter'?'はじめから使える':x.source==='market'?'マーケットで買える':'プレゼントで届いた';
+            const unlock=profileFrameUnlock(x.frame);
+            if(unlock){ const who=assistantById(unlock.assistantId); return `${(who&&who.name)||''}との仲良し度 Lv${unlock.bondLevel}でもらえる`; }
+            if(profileFrameGift(x.frame)) return PROFILE_FRAME_GIFT_LABELS[profileFrameGift(x.frame)]||'プレゼントで届きます';
+            if(profileFrameSale(x.frame)){ const status=profileFrameConditionStatus(x.frame); return status&&status.text?`マーケットで買える（${status.text}）`:'マーケットで買える'; }
+            return 'はじめから使える';
+          };
+          const tabButton=(id,label)=>(
+            <button key={id} type="button" data-dex-tab={id} aria-pressed={lookDexTab===id} onClick={()=>{ setLookDexTab(id); setLookDexZoom(null); }}
+              className={`flex-1 rounded-xl py-2 text-[13px] font-black active:scale-95 ${lookDexTab===id?'bg-amber-700 text-white':'bg-slate-800 text-slate-300'}`}>{label}</button>
+          );
+          // 画面いっぱいに重ねるので、body の safe-area の余白が効かない。切り欠き・下のバーに戻るボタンが隠れないよう、ここで足す(2026-10-25 社長「戻るボタンがない」)
+          const shell={position:'fixed',inset:0,zIndex:120,display:'flex',flexDirection:'column',alignItems:'center',color:'#fff',paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)',paddingLeft:'env(safe-area-inset-left)',paddingRight:'env(safe-area-inset-right)'};
+          if(lookDexZoom!=null&&list[lookDexZoom]){
+            const x=list[lookDexZoom];
+            const n=list.length;
+            const go=(d)=>setLookDexZoom((lookDexZoom+d+n)%n);
+            const vw=typeof window!=='undefined'?window.innerWidth:390, vh=typeof window!=='undefined'?window.innerHeight:664;
+            // 絵の大きさ。飾りの大きいフレームも fit で枠の中に収まる。縦長の端末では大きく、横向き・小さい端末では高さに合わせる
+            // (2026-10-26 社長「うわよせでつかいづらい」。上に寄って下半分が空いていたので、真ん中へ寄せ、下に同じ並びの帯を出す)
+            const box=Math.max(120, Math.min(vw-48, 360, Math.round(vh*0.40)));
+            // 上の余白は端末ごとに1つに決める(中身の高さで決めると、説明の長さで絵の位置が前後ごとに動く)。下の文・切り替え・ボタンのぶんはおよそ260
+            const topPad=Math.max(4, Math.round((vh-150-box-260)/2));
+            const selected=isFrame?normalizeProfileFrameId(profileFrameId)===x.id:breederIcon===x.id;
+            const choose=()=>{
+              if(!x.owned) return;
+              if(isFrame) selectProfileFrame(x.id);
+              else { setBreederIcon(x.id); setOnboardingIcon(x.id); if(!onboardingPreview) storeSet('mh_breeder_icon', x.id, false); }
+            };
+            let touchX=null;
+            const navButton='mh-button mh-button-secondary flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[26px] font-black leading-none text-white active:scale-90';
+            return (
+              <div data-dex-zoom={x.id} style={{...shell,background:'#020617'}}>
+                <div style={{width:'100%',maxWidth:480,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px 4px',flexShrink:0}}>
+                  <button type="button" data-dex-zoom-close aria-label="一覧へ戻る" onClick={()=>setLookDexZoom(null)}
+                    className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
+                </div>
+                {/* 真ん中の欄。絵が縦のおよそ真ん中に来るよう上をあける。長いとき(横向き)はこの欄だけスクロールする。横になぞると前後へ */}
+                <div data-dex-zoom-body style={{flex:1,minHeight:0,width:'100%',overflowY:'auto',display:'flex',flexDirection:'column'}}
+                  onTouchStart={(e)=>{ touchX=e.touches&&e.touches[0]?e.touches[0].clientX:null; }}
+                  onTouchEnd={(e)=>{ const t=e.changedTouches&&e.changedTouches[0]; if(touchX==null||!t) return; const dx=t.clientX-touchX; touchX=null; if(Math.abs(dx)>40) go(dx<0?1:-1); }}>
+                  <div style={{margin:'0 auto',width:'100%',maxWidth:420,display:'flex',flexDirection:'column',alignItems:'center',padding:`${topPad}px 16px 12px`}}>
+                    <div style={{width:box,height:box,position:'relative',opacity:x.owned?1:0.55}}>
+                      {avatarOf(x,lookDexView,box)}
+                      {!x.owned&&<Lock size={34} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]"/>}
+                    </div>
+                    <div className="mt-3 flex w-full items-center gap-2">
+                      <button type="button" data-dex-prev aria-label="前へ" onClick={()=>go(-1)} className={navButton}>‹</button>
+                      <b className="min-w-0 flex-1 text-center text-[18px] font-black leading-tight">{jaWrap(x.name)}</b>
+                      <button type="button" data-dex-next aria-label="次へ" onClick={()=>go(1)} className={navButton}>›</button>
+                    </div>
+                    {x.desc&&<p className="mt-1.5 text-center text-[12px] leading-relaxed text-slate-300">{helpWrap(x.desc)}</p>}
+                    <p data-dex-howto className="mt-2 text-center text-[12px] font-black leading-snug text-amber-400">{x.owned?'':'🔒 '}{helpWrap(`手に入れ方：${howTo(x)}`)}</p>
+                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {[['both','重ねて'],['frame','フレームだけ'],['icon','アイコンだけ']].map(([id,label])=>(
+                        <button key={id} type="button" data-dex-view={id} aria-pressed={lookDexView===id} onClick={()=>setLookDexView(id)}
+                          className={`rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView===id?'bg-amber-500 text-slate-900':'bg-slate-800 text-slate-200'}`}>{label}</button>
+                      ))}
+                    </div>
+                    {x.owned
+                      ? <button type="button" data-dex-choose onClick={choose} disabled={selected}
+                          className={`mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected?'bg-slate-700 text-slate-300':'bg-amber-500 text-slate-900'}`}>{selected?'いま使っています':'これにする'}</button>
+                      : <div className="mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400">まだ持っていません</div>}
+                  </div>
+                </div>
+                {/* 下の帯: 同じ並びを小さく並べ、押すとそこへ飛ぶ。いま見ているものを帯の真ん中へ寄せる */}
+                <div data-dex-strip style={{flexShrink:0,width:'100%',maxWidth:520,overflowX:'auto',overflowY:'hidden',display:'flex',gap:8,padding:'8px 16px 10px',borderTop:'1px solid rgba(255,255,255,.1)',WebkitOverflowScrolling:'touch'}}>
+                  {list.map((y,i)=>(
+                    <button key={y.id} type="button" data-dex-strip-item={y.id} aria-label={y.name} aria-current={i===lookDexZoom?'true':undefined} onClick={()=>setLookDexZoom(i)}
+                      ref={i===lookDexZoom?(el)=>{ if(el&&el.parentElement){ const p=el.parentElement; p.scrollLeft=el.offsetLeft-p.clientWidth/2+el.offsetWidth/2; } }:undefined}
+                      className={`relative shrink-0 rounded-xl border-2 p-1 active:scale-95 ${i===lookDexZoom?'border-amber-400 bg-amber-950/40':'border-slate-700 bg-slate-900'}`}>
+                      <span className={`block ${y.owned?'':'opacity-40'}`}>{avatarOf(y,'both',40)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div data-dex style={{...shell,background:'#0b1020'}}>
+              <div style={{width:'100%',maxWidth:520,display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
+                <div className="flex items-center gap-1.5 px-3.5 pt-3 pb-2">
+                  <button type="button" data-dex-close aria-label="プロフィールへ戻る" onClick={closeDex}
+                    className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <b className="min-w-0 flex-1 text-[17px] font-black">{jaWrap('アイコン・フレーム図鑑')}</b>
+                </div>
+                <div className="flex gap-2 px-3.5">{tabButton('icon','アイコン')}{tabButton('frame','フレーム')}</div>
+                <p data-dex-count className="px-3.5 pt-2.5 text-[12px] font-black text-amber-300">集めた {ownedCount} / {list.length}</p>
+                <p className="px-3.5 text-[10px] text-slate-400">押すと大きく見られます</p>
+                <div style={{flex:1,minHeight:0,overflowY:'auto',padding:14,display:'grid',gridTemplateColumns:'repeat(4, minmax(0, 1fr))',gap:10,alignContent:'start'}}>
+                  {list.map((x,i)=>(
+                    <button key={x.id} type="button" data-dex-item={x.id} data-dex-owned={x.owned?'yes':'no'} onClick={()=>setLookDexZoom(i)}
+                      className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900 px-1 pb-2 pt-4 active:scale-95">
+                      <span className={`relative block ${x.owned?'':'opacity-45'}`}>
+                        {avatarOf(x,'both',56)}
+                        {!x.owned&&<Lock size={16} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                      </span>
+                      <span className={`w-full text-center text-[9px] font-black leading-tight ${x.owned?'text-slate-200':'text-slate-500'}`}>{jaWrap(x.name)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           );
         })()}
 

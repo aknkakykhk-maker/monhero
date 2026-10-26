@@ -13,6 +13,9 @@
 //   ⑤ 合言葉の端末では、予告の札ではなく、いままでどおり中へ入れる入口が出る
 // (作り)
 //   ⑥ 公開の印(RELEASE_FLAGS.cardBattle)を立てたら、予告の札が下りてふつうの入口に替わる式になっている
+// (公開したあと。2026-10-26 社長「公開する」で印を立てた)
+//   ①〜④ は公開前だけの見た目なので、印が立っているときは代わりに次を見る
+//   ①' ふつうのプレイヤーの HOME に予告の札が出ず、中へ入れる入口が出る(公開のお話は見たことにして開く)
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -34,6 +37,8 @@ const serve = () => new Promise((resolve) => {
   server.listen(PORT, () => resolve(server));
 });
 
+// 公開の印(17-release-changelog-login-missions.jsx の RELEASE_FLAGS.cardBattle)
+const RELEASED = /^\s*cardBattle:\s*true\b/m.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8'));
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
@@ -82,13 +87,18 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       if (!clicked && await page.evaluate(() => !!document.querySelector('.mh-home-scene') && !document.querySelector('[role="dialog"]'))) break;
       await page.waitForTimeout(600);
     }
-    if (!debug) check('④ 起動直後の助手のお知らせに、予告が出る', noticeSeen);
+    if (!debug && !RELEASED) check('④ 起動直後の助手のお知らせに、予告が出る', noticeSeen);
     return { context, page };
   };
   const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, `${name}.png`), style: 'div[style*="2147483647"] > span { display: none !important; }' }).catch(() => {}); } };
   try {
     // ---- ふつうのプレイヤー ----
     let { context, page } = await open(false);
+    if (RELEASED) {
+      console.log('-- 公開の印が立っているので、公開前の予告(①〜④)の代わりに公開後の HOME を見る');
+      check("①' 公開後: ふつうのプレイヤーの HOME に予告の札は出ず、中へ入れる入口が出る", (await page.locator('[data-home-card-battle-teaser]').count()) === 0 && (await page.locator('[data-home-card-battle]').count()) === 1);
+      await shot(page, 'released-home');
+    } else {
     const cardKeys = () => page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('mh_card_')));
     const keysBefore = await cardKeys();
     const teaser = page.locator('[data-home-card-battle-teaser]');
@@ -116,6 +126,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('③ カードの保存(mh_card_*)を1つも書かない', keysBefore.length === 0 && keysAfter.length === 0, keysAfter.join(','));
     const listed = await page.evaluate(() => (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).some((e) => e && /MFバトルカード/.test(e.title || '') && /近日公開/.test(e.title || '') && e.assistantNotice && e.assistantNotice.type === 'content'));
     check('④ 更新履歴に「新コンテンツ『MFバトルカード』近日公開」があり、助手の告知(content)が付いている', listed);
+    }
     await context.close();
     // ---- デバッグの人 ----
     ({ context, page } = await open(true));

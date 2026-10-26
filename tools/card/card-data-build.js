@@ -316,7 +316,8 @@ const build = () => {
   const hy = readJson('hybrid');
   for (const m of hy.monster) {
     if (m.excluded) continue;
-    monsters[m.no] = { no: m.no, species: `hybrid:${m.no}`, name: m.name, type: TYPE[m.type], life: m.life, variant: null,
+    // キラ・別絵キラがある子(剣士モッチー C-066S・C-066V。2026-10-26)は、元の番号(base)の種族を共有する(デッキに同じ子を2体入れられないように)
+    monsters[m.no] = { no: m.no, species: `hybrid:${m.base || m.no}`, name: m.name, type: TYPE[m.type], life: m.life, variant: m.variant || null,
       // 副が ??? の子は sub: 'unknown'(どの種族とも一致しない。このゲームでは ??? がレアの印。社長 2026-10-25)
       main: SPECIES_BY_NAME[m.main] || m.main, sub: m.sub === '？？？' ? 'unknown' : SPECIES_BY_NAME[m.sub] || m.sub, wave: 'hybrid', img: m.img.replace(/\.jpg$/, ''),
       // メインの種族の技が届いていない子は準備中(設計書 4-2。デュラハンは 2026-10-24 に届いた)

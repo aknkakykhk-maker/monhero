@@ -318,8 +318,8 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
   const usesHeroProof=item.currency==='heroProof';
   const usesHeroProofShard=item.currency==='heroProofShard';
   const usesBeatPoint=item.currency==='beatPoint';
-  const usesCardPoint=item.currency==='cardPoint'; // MFバトルカードのカードポイント
-  const priceLabel=usesCardPoint?`${item.cost}カードポイント`:usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
+  const usesCardPoint=item.currency==='cardPoint'; // MFバトルカードのビートP
+  const priceLabel=usesCardPoint?`${item.cost}ビートP`:usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
   return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
@@ -357,8 +357,9 @@ const MARKET_CURRENCY_META = Object.freeze({
   heroProofShard: Object.freeze({ have:'勇者の証片', label:'勇者の証片',   emoji:'🎖️', verb:'交換', format:n=>`勇者の証片${n}個`,   text:'text-amber-100',   bar:'text-amber-100 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
   heroProof:      Object.freeze({ have:'勇者の証', label:'勇者の証',     emoji:'🏅', verb:'交換', format:n=>`勇者の証${n}個`,     text:'text-amber-200',   bar:'text-amber-200 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
   beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換', format:n=>`${n}ビートP`,        text:'text-violet-200',  bar:'text-violet-100 border-violet-500/30 bg-violet-950/30',    border:'border-violet-400/70',  button:'bg-violet-500 text-white',  max:'bg-violet-800' }),
-  // MFバトルカードのカードポイント(マーケットの「カードポイント」の売り場。いまはMFバトルカードのトップから入ったときだけ出す)
-  cardPoint:      Object.freeze({ have:'所持カードポイント', label:'カードポイント', emoji:'🃏', verb:'交換', format:n=>`${n}カードポイント`, text:'text-orange-200',  bar:'text-orange-100 border-orange-500/30 bg-orange-950/30',    border:'border-orange-400/70',  button:'bg-orange-500 text-white',  max:'bg-orange-800' }),
+  // MFバトルカードのビートP(マーケットの「MFバトルカード」の売り場。いまはMFバトルカードのトップから入ったときだけ出す)
+  // ★2026-10-26 にカードポイントをやめてビートPにした(社長)。中身はビートPと同じ財布なので、名前・印・色もビートPにそろえる
+  cardPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換', format:n=>`${n}ビートP`,        text:'text-violet-200',  bar:'text-violet-100 border-violet-500/30 bg-violet-950/30',    border:'border-violet-400/70',  button:'bg-violet-500 text-white',  max:'bg-violet-800' }),
 });
 // 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
@@ -683,6 +684,26 @@ const helpDataRows = (id) => {
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
         `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    // MFバトルカードの1戦でもらえるビートP(2026-10-26 にカードポイントをやめてビートPにした)。強さごとの勝ち・負けとマルチ対戦を 82-card-battle-core.jsx の数から作る
+    // (数を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く・help-render-check)
+    case 'cardBeatPointRewards': {
+      if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
+      const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
+      // 負けは勝ちの 3/4(82 の cardLosePoint。2026-10-26)
+      const lose = (lv) => (typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0);
+      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
+      if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
+      return rows;
+    }
+    // MFバトルカードのパック。弾ごとの種族とキラの割合を 89-card-pack.jsx の CARD_PACKS から作る(弾を足しても自動で並ぶ)
+    case 'cardPacks':
+      if (typeof CARD_PACKS === 'undefined') return [];
+      return CARD_PACKS.map(pack => {
+        const species = typeof cardPackSpeciesLabel === 'function' && typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA
+          ? cardPackSpeciesLabel(CARD_BATTLE_DATA, pack) : pack.species.join('・');
+        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・別絵キラ${pack.rarity.alt}%` : ''}`;
+        return [pack.name, `${species} ／ ${kira}`];
+      });
     // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
     case 'monsterLineages':
       return dexMonsterList().map(mon => {
@@ -945,6 +966,8 @@ const helpDataRows = (id) => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  cardBeatPointRewards: 'MFバトルカードの1戦でもらえるビートP',
+  cardPacks: 'パックの弾と入っている種族',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
   raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
   raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',

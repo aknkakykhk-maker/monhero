@@ -23,7 +23,7 @@ vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-c
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\nthis.E = { CARD_BATTLE_DATA, cardLegalActions, cardAiFillBind, cardAiChooseAction, cardAiPolicy, cardAiBuildDeck, cardDecider, cardClone, cardApplyAction, CARD_PVP_HIDDEN,
     cardPvpFlip, cardPvpRevealOf, cardPvpNewGame, cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpSealText, cardPvpSha256, cardPvpTruthGame, cardPvpVerify, cardPvpCleanMessage, cardPvpCleanAct,
-    cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine };`, ctx);
+    cardPvpReward, cardUsableBy, cardPvpTimeoutAct, cardPvpLimitMs, cardPvpClockKey, cardPvpDecider, cardPvpNormalizePenalty, CARD_PVP_STAMPS, CARD_PVP_TURN_MS, CARD_PVP_GUARD_MS, CARD_PVP_RESULT_LINES, cardPvpResultLine, cardCpuReward, cardCpuLoops, CARD_AI_LEVELS };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -195,11 +195,19 @@ for (let n = 0; n < N; n++) runOne(n);
   N += extra;
 }
 // 派生(混血)のモンスターも全員、マルチの場がずれないか(2026-10-25 統括部長の公開前の確認)。派生を3体ずつ組にし、相手はふつうの3体。追加の試合も①〜④に数える
-const hybrids = Object.values(db.monsters).filter((m) => m.main && m.ready !== false).map((m) => m.no).sort();
+// キラ・別絵キラ(variant)は同じ種族なので入れない(同じ組に入ると「同じモンスターが2体」のデッキになる。剣士モッチーのキラ C-066S など)
+const hybrids = Object.values(db.monsters).filter((m) => m.main && m.ready !== false && !m.variant && !m.dexOnly).map((m) => m.no).sort();
 {
   let k = 0;
-  for (let i = 0; i < hybrids.length; i += 3) {
-    const trio = hybrids.slice(i, i + 3);
+  // 3体ずつの組に、同じ子(キラ・別絵キラ。剣士モッチー C-066・C-066S・C-066V は species が同じ)を入れない。
+  //   番号順に3つずつ切ると C-065・C-066・C-066S が同じ組になり、「同じモンスターが2体」でデッキの決まりに合わなかった(2026-10-26)
+  const trios = [];
+  hybrids.forEach((no) => {
+    const sp = db.monsters[no].species;
+    const t = trios.find((x) => x.length < 3 && !x.some((y) => db.monsters[y].species === sp));
+    if (t) t.push(no); else trios.push([no]);
+  });
+  for (const trio of trios) {
     ['C-003', 'C-001', 'C-005'].forEach((x) => { if (trio.length < 3) trio.push(x); });
     runOne(N + k, [trio, ['C-005', 'C-001', 'C-003']]); k++;
     runOne(N + k, [['C-005', 'C-001', 'C-003'], trio]); k++; // 後攻・相手側でも
@@ -216,6 +224,16 @@ const fieldSeen = new Set(); let prayUsed = 0;
     for (const side of [0, 1]) {
       const n0 = N + k;
       runOne(n0, side ? [['C-005', 'C-001', 'C-003'], ['C-003', 'C-027', 'C-029']] : [['C-003', 'C-027', 'C-029'], ['C-005', 'C-001', 'C-003']], must, { attack: true, must });
+      const g = games[games.length - 1];
+      g.hA.forEach((e) => { if (e.act && e.act.type === 'pray' && e.act.hand) prayUsed++; });
+      [g.A, g.B].forEach((st) => (st.log || []).forEach((l) => { const m = /全体カード「([^」]+)」が場に出た/.exec(l.text); if (m) fieldSeen.add(m[1]); }));
+      k++;
+    }
+  }
+  // まだ場に出ていない全体カードは、その札だけを入れた試合を足す(1枚につき4戦まで)。出るかどうかは助手の見積もりしだいなので、目当ての札を出す手を選ばせる
+  for (const no of fieldNos.filter((x) => !fieldSeen.has(db.cards[x].name))) {
+    for (let t = 0; t < 4 && !fieldSeen.has(db.cards[no].name); t++) {
+      runOne(N + k, [['C-003', 'C-027', 'C-029'], ['C-005', 'C-001', 'C-003']], [no, '280'], { attack: true, must: [no, '280'] });
       const g = games[games.length - 1];
       g.hA.forEach((e) => { if (e.act && e.act.type === 'pray' && e.act.hand) prayUsed++; });
       [g.A, g.B].forEach((st) => (st.log || []).forEach((l) => { const m = /全体カード「([^」]+)」が場に出た/.exec(l.text); if (m) fieldSeen.add(m[1]); }));
@@ -281,8 +299,11 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   // ⑦ 報酬と持ち時間
   const R = E.cardPvpReward;
   const eq = (a, b) => a.point === b[0] && a.loops === b[1];
-  check('⑦ 勝ち 200・24周 / 負け 50・12周(自分の番10回で満額)', eq(R('win', { ownTurns: 12, kos: 3 }), [200, 24]) && eq(R('lose', { ownTurns: 10, kos: 0 }), [50, 12]) && eq(R('lose', { ownTurns: 5, kos: 0 }), [50, 6]));
-  check('⑦ 投了は倒した数で決める・自分の番が3回より前に終わったら0', eq(R('surrender', { ownTurns: 8, kos: 2 }), [20, 8]) && eq(R('win', { ownTurns: 2, kos: 3 }), [0, 0]) && R('win', { ownTurns: 2, kos: 3 }).short === true);
+  // 2026-10-26 社長: 勝ちは MASTER の2倍(400・44周)、負けと投了は MASTER と同じ(負けは勝ちの 3/4 = 150・自分の番10回で16周)
+  check('⑦ 勝ち 400・44周 / 負け 150・16周(ビートPも周回も自分の番10回で満額)', eq(R('win', { ownTurns: 12, kos: 3 }), [400, 44]) && eq(R('lose', { ownTurns: 10, kos: 0 }), [150, 16]) && eq(R('lose', { ownTurns: 5, kos: 0 }), [75, 8]) && eq(R('lose', { ownTurns: 3, kos: 0 }), [45, 4]) && eq(R('surrender', { ownTurns: 3, kos: 3 }), [30, 16]));
+  check('⑦ 勝ちは MASTER の2倍・負けと投了は MASTER と同じ数になる', ['lose', 'surrender'].every((o) => [[10, 0], [5, 1], [8, 2], [12, 3]].every(([t, k]) => { const f = { ownTurns: t, kos: k }; return R(o, f).point === E.cardCpuReward({ cpuPoint: 0, firstWin: true }, 'master', o, f).base && R(o, f).loops === E.cardCpuLoops('master', o, f); }))
+    && R('win', { ownTurns: 10, kos: 3 }).point === E.CARD_AI_LEVELS.master.point * 2 && R('win', { ownTurns: 10, kos: 3 }).loops === E.CARD_AI_LEVELS.master.loops * 2);
+  check('⑦ 投了は倒した数で決める・自分の番が3回より前に終わったら0', eq(R('surrender', { ownTurns: 8, kos: 2 }), [20, 11]) && eq(R('win', { ownTurns: 2, kos: 3 }), [0, 0]) && R('win', { ownTurns: 2, kos: 3 }).short === true);
   check('⑦ 何戦してももらえる(1日の上限・同じ相手の制限を使わない)', !/dailyMax|sameFoePerDay|pvpPoint\s*[<>]/.test(multi));
   const st0 = E.cardPvpNewGame(db, { myDeck: g.deckA, mySeed: 3, foeMonsters: g.deckB.monsters, first: 1, names: ['A', 'B'] });
   check('⑦ 始める前・攻撃の番は60秒、守りの番は15秒', E.cardPvpLimitMs(st0) === 60000 && E.cardPvpLimitMs({ ...st0, pending: {} }) === 15000);
@@ -324,6 +345,11 @@ const base = { myDeck: g.deckA, mySeed: g.seedA, foeDeck: g.deckB, foeSeed: g.se
   check('⑨ 「マルチ対戦」のボタンは、デバッグか公開の印のときだけ押せる', /data-card-mode-multi disabled=\{!\(debug \|\| cardPvpOpen\(\)\)\}/.test(p84));
   check('⑨ 「準備中」の札は、公開の印が立つまで(ボタン・ランキング)', /\{!cardPvpOpen\(\) && <span[^\n]*準備中/.test(p84) && /\{!cardPvpOpen\(\) && <span[^\n]*準備中/.test(p90));
   check('⑨ 強さの点数へ届けるのは、公開後のふつうの入口だけ(rank.send で、デバッグではない)', /rankSend=\{!!\(rank && rank\.send\) && !debug\}/.test(p84));
+  // デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分はランキングへ送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)。
+  // 外すのはデバッグ設定の入口から入った対戦だけ(84 の debug = cardOrigin==='debug')
+  const p60 = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '60-app.jsx'), 'utf8');
+  check('⑨ ランキングへ送るかは公開の印だけで決め、合言葉の端末をまるごと外さない(デバッグ設定の入口は 84 の debug で外す)',
+    /rank=\{\{send:EVENT_REPLAY_RELEASE_FLAGS\.cardBattle===true,/.test(p60) && /debug=\{cardOrigin==='debug'\}/.test(p60) && /const rankable = !!\(rank && rank\.send\) && !debug;/.test(p84));
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
   process.exit(failed ? 1 : 0);
 })();

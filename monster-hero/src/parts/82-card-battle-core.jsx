@@ -1056,7 +1056,7 @@ const cardApplyAction = (db, st0, act) => {
 // 先読みの深さと気まぐれは難易度で決まる(5-5)。★次の1手を選ぶ所・デッキを組む所は差し替えられる口にしておく
 // sloppy … その場の1手を、考えずに選ぶ割合(守りを出し忘れる・手札を適当にガッツへ回す・適当な相手を狙う)
 const CARD_AI_LEVELS = Object.freeze({
-  // point … 勝ったときのカードポイント / loops … 勝ったときのクイック周回(◯周ぶん)。社長が案Aに決めた(台帳 #3484)
+  // point … 勝ったときのビートP / loops … 勝ったときのクイック周回(◯周ぶん)。社長が案Aに決めた(台帳 #3484)
   easy:   { depth: 0, whim: 0.30, sloppy: 0.55, point: 80, loops: 14 },
   normal: { depth: 1, whim: 0.15, sloppy: 0.30, point: 110, loops: 16 },
   hard:   { depth: 2, whim: 0.08, sloppy: 0.15, point: 140, loops: 18 },
@@ -1083,19 +1083,28 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 // デッキの組み方を毎試合変えた(2026-10-25)ので、card-ai-balance.js で勝率がそろうように決め直した。
 // ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
 const CARD_AI_PLAY_TUNE = Object.freeze({
-  mua: { easy: -0.035, normal: -0.105, hard: -0.11, expert: 0.075, master: 0.12 },
-  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.165 },
-  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.345 },
+  // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
+  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.075, master: 0.12 },
+  momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.14 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14
+  kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.3 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: 0, master: 0.12 },
-  atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0.03, master: 0 },
+  atsu: { easy: -0.075, normal: -0.15, hard: -0.105, expert: 0, master: 0 },   // EXPERT は同じ血統(弱い)でも組むようになった(2026-10-26)ので 0.03 → 0
 });
-const cardAiPolicy = (habitId, levelId) => {
+// 同じ血統で組んだ試合だけの、カードの出し方の雑さの足し引き(2026-10-26。HARD から上でも同じ血統で組むようにしたぶん)。
+//   モッチーの仲間(みゅあ)は強く、ドラゴンの仲間(あつ)・グジラの仲間(ドラ)は弱かったので、その試合だけ戻す。MASTER は雑さがもう0なので強くはできない
+const CARD_AI_SAME_BLOOD_PLAY = Object.freeze({
+  mua: { hard: 0.25, expert: 0.1 },
+  atsu: { hard: -0.1, expert: -0.1 },
+  dra: { expert: -0.06 },
+});
+// opts.sameBlood … 同じ血統で組んだデッキか(cardAiBuildDeck の返り値の sameBlood)
+const cardAiPolicy = (habitId, levelId, opts = {}) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   const tune = CARD_AI_TUNE[habitId] === undefined ? 1 : CARD_AI_TUNE[habitId];
   const base = CARD_AI_HABITS[habitId] || CARD_AI_HABITS.kyuko;
   const blend = (CARD_AI_HABIT_BLEND[levelId] || {})[habitId];
   const habit = blend === undefined ? base : Object.fromEntries(Object.entries(base).map(([k, v]) => [k, 1 + (v - 1) * blend]));
-  const add = ((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0;
+  const add = (((CARD_AI_PLAY_TUNE[habitId] || {})[levelId]) || 0) + (opts && opts.sameBlood ? (((CARD_AI_SAME_BLOOD_PLAY[habitId] || {})[levelId]) || 0) : 0);
   return { habit, level: { ...level, sloppy: Math.max(0, Math.min(0.9, (level.sloppy || 0) * tune + add)) } };
 };
 
@@ -1406,12 +1415,43 @@ const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', ki
 // 強さごとの組み方(社長の決め)。maxWave … 技などのカードの弾(好きな子の技は、その子の弾まで使える) / noise … カードの選び方の雑さ /
 // temp … 残り2体の選び方のゆらぎ(大きいほど型に合わない子も入る) / stray … 気まぐれな子(型と関係なく)が1体混ざる割合 /
 // best … いちばん強い組み合わせ(相手のデッキも見る)
+// 同じ血統の2体・3体(2026-10-26 社長「3体編成も実際あるから組まれるようにして」)。
+//   2体目・3体目をえらぶたびに、この割合で好きな子の血統の仲間(派生・混血を含む)からえらぶ。
+//   割合は強さごとの値 × 仲間の多さ(仲間が5体以上で1、4体で0.75、3体で0.5、2体で0.25、1体だけなら0)。MASTER は入れない(下の cardAiPickTrio)
+const CARD_AI_SAME_BLOOD = Object.freeze({ easy: 0.3, normal: 0.28 });
+// HARD から上でも、1試合ごとにこの割合 × 仲間の多さで、同じ血統で組む試合にする(2026-10-26 社長「マスターでもたまに同じ血統や3体全部同じが出るでいい」)。
+//   その試合では、2体目を仲間の中でいちばん強い子(数え直した点数 cardAiTeamValue)にし、3体目も半分は仲間から(3体とも同じ血統)
+const CARD_AI_SAME_BLOOD_HI = Object.freeze({ hard: 0.2, expert: 0.12, master: 0.1 });
+// HARD から上は割合でなく点数でえらぶ(2026-10-26 社長「同じメインのメリットは同じ攻撃カードを入れられること、同じサブのメリットは同じ防御カードを使えること。
+//   だからといってその組み方が強いわけではないと思う」)。仲間(同じ血統の子)の点数は、チームとして数え直す(cardAiTeamValue)
+//   ・ふつうの点数(cardAiMonScore)は子ごとに「使える良い技の上位10枚」を数えるので、同じ血統の子どうしでは同じ技を2回・3回数えてしまう。
+//     デッキに入る同じ技は3枚までなので、同じ技を使える子が増えても技の種類は増えない(これが損)。仲間の点数は「チームにまだ無い技」だけで数える
+//   ・得: すでにえらんだ子と同じ攻撃の技を使える枚数 × atk、同じ回避・防御を使える枚数 × guard(手札で使えずに残るカードが減る)
+//   ・損: 3体の特徴(地上・空中・水中)がそろう … type、同じ血統の子がいる(同じ種族に効く技にまとめてやられやすい)… blood
+const CARD_AI_TEAM = Object.freeze({ atk: 0.04, guard: 0.06, type: 0.8, blood: 0.5 });
+const cardAiSameBloodScale = (familySize) => Math.max(0, Math.min(1, (familySize - 1) / 4));
+const cardAiBloodOf = (m) => (String(m.wave) === 'hybrid' ? m.main : m.species);
+// すでにえらんだ子(team)に仲間 m を足したときの、チームとして数え直した点数(cardAiMonScore と同じ目盛り)
+const cardAiTeamValue = (db, who, team, m, maxWave) => {
+  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const lim = Math.max(maxWave, cardAiMonWave(db, m));
+  const mine = Object.values(db.cards).filter((c) => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= lim && cardUsableBy(c, { ...m, ko: false }));
+  const sharedBy = (c) => team.some((t) => cardUsableBy(c, { ...t, ko: false }));
+  const fresh = mine.filter((c) => !sharedBy(c)).map((c) => cardAiCardValue(c, habit)).sort((x, y) => y - x).slice(0, 10).reduce((x, v) => x + v, 0);
+  const atk = mine.filter((c) => !cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const guard = mine.filter((c) => cardIsGuardKind(c.kind) && sharedBy(c)).length;
+  const sameType = team.length >= 2 && team.every((t) => t.type === m.type) ? 1 : 0;
+  const sameBlood = team.filter((t) => cardAiBloodOf(t) === cardAiBloodOf(m)).length;
+  return fresh + (m.life || 0) * 0.3 + CARD_AI_TEAM.atk * atk + CARD_AI_TEAM.guard * guard - CARD_AI_TEAM.type * sameType - CARD_AI_TEAM.blood * sameBlood;
+};
 const CARD_AI_BUILD = Object.freeze({
   easy:   { maxWave: 1, noise: 1.6, temp: 3.0, stray: 0.3 },              // 好きな子優先の気分屋・組み方は雑
   normal: { maxWave: 1, noise: 0.8, temp: 1.5, stray: 0 },                // 型に合う子が中心・カードは適当に
   hard:   { maxWave: 1, noise: 0.3, temp: 0.8, stray: 0 },                // 好きな子と相性のいい子・癖どおりにしっかり
   expert: { maxWave: 99, noise: 0.15, temp: 0.5, stray: 0 },              // 全部の弾から・強いカードを優先
-  master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
+  // lastTop … 3体目を、点の高い上位◯体から毎試合えらぶ(2026-10-26 社長「MASTER も少しだけ揺らす」)。いちばんの子は2倍えらばれやすい。
+  //   2体目はいちばん強い子のまま。上位4組からえらぶ形や3体目を上位3体からにすると、点は近くても勝率が9〜17点下がる助手が出た(card-ai-balance で測った)
+  master: { maxWave: 99, noise: 0.05, temp: 0.2, stray: 0, best: true, lastTop: 2 },  // いちばん強い組み合わせで本気・相手のデッキを見て選び直す
 });
 // 助手ごとの強さのそろえ(カードの選び方の雑さに足す値。+ で弱く・- で強く。0 より下にはならない)。
 // tools/card/card-ai-balance.js で、プレイヤー役(スターター)への勝率が強さごとにそろうように決めた(2026-10-25)
@@ -1562,18 +1602,56 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     const evadeRate = pc.filter((c) => cardHasEff(c, 'evade')).length / pc.length;
     counter = (m) => areaRate * (m.life || 0) * 1.5 + evadeRate * Object.values(db.cards).filter((c) => c.ready && cardHasEff(c, 'noEvade') && cardUsableBy(c, { ...m, ko: false })).length * 1.2;
   }
-  const scored = cands.map((m) => ({ m, v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m) }));
+  // 好きな子の血統の仲間(好きな子とは別の子。キラ・別絵キラは同じ子として1つに数える)
+  const family = favs.filter((m) => m.species !== fav.species);
+  const familySize = new Set(favs.map((m) => m.species)).size;
+  // EASY・NORMAL は割合(くせとしてときどき)。HARD から上は、仲間も候補に入れて、チームとして数え直した点数(cardAiTeamValue)でくらべる
+  //   ★数え直すのは仲間だけ(ほかの子の点数は今のまま。強さのそろえを動かさないため)。
+  //    数え直さずに仲間をくらべると、あつがドラゴンの仲間ばかりえらび、MASTER の勝率が 44%→19%・EXPERT の同じ血統の組みは 21% に下がった(2026-10-26 測定)
+  const byScore = !CARD_AI_SAME_BLOOD[levelId];
+  const sameRate = byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
+  const isFamily = new Set(family.map((m) => m.no));
+  const pool = byScore ? [...cands, ...family.filter((m) => !m.variant)] : cands;
+  const scored = pool.map((m) => ({ m, v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m) }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
+  const usedNos = new Set([fav.species]);   // 同じ子(キラ・別絵キラ)を2体入れない
+  const hiRate = byScore ? (CARD_AI_SAME_BLOOD_HI[levelId] || 0) * cardAiSameBloodScale(familySize) : 0;
+  const sameGame = hiRate > 0 && family.length > 0 && rand() < hiRate;
+  const sameThree = sameGame && rand() < 0.5;
   for (let k = 0; k < 2; k++) {
-    const left = scored.filter((x) => !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)));
+    // HARD から上の「同じ血統で組む試合」: 仲間の中でいちばん強い子(数え直した点数)
+    if (sameGame && (k === 0 || sameThree)) {
+      const team = out.map((no) => cardMonsterOf(db, no));
+      const famLeft = family.filter((m) => !m.variant && !usedNos.has(m.species));
+      if (famLeft.length) {
+        const m = famLeft.map((x) => ({ x, v: cardAiTeamValue(db, who, team, x, cfg.maxWave) + counter(x) })).reduce((a2, b2) => (b2.v > a2.v ? b2 : a2)).x;
+        out.push(m.no);
+        usedNos.add(m.species);
+        continue;
+      }
+    }
+    // 同じ血統の仲間からえらぶ(割合は sameRate)
+    const famLeft = family.filter((m) => !usedNos.has(m.species));
+    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+      const w = famLeft.map((m) => (String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2));
+      const m = famLeft[cardAiPickIndex(w, rand)];
+      out.push(m.no);
+      usedNos.add(m.species);
+      continue;
+    }
+    const team = out.map((no) => cardMonsterOf(db, no));
+    const left = scored.filter((x) => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || (!usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))))
+      .map((x) => (isFamily.has(x.m.no) ? { ...x, v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave) + counter(x.m) } : x));
     if (!left.length) break;
     let pick;
     if (cfg.stray > 0 && rand() < cfg.stray) pick = left[Math.floor(rand() * left.length) % left.length];   // 気まぐれ
+    else if (cfg.best && k === 1 && cfg.lastTop > 1) { const top = left.slice().sort((x, y) => y.v - x.v || (x.m.no < y.m.no ? -1 : 1)).slice(0, cfg.lastTop); pick = top[cardAiPickIndex(top.map((_, i) => (i === 0 ? 2 : 1)), rand)]; }
     else if (cfg.best) pick = left.reduce((x, y) => (y.v > x.v ? y : x));
     else { const top = Math.max(...left.map((x) => x.v)); pick = left[cardAiPickIndex(left.map((x) => Math.exp((x.v - top) / cfg.temp)), rand)]; }
     out.push(pick.m.no);
     usedSpecies.add(pick.m.species);
+    usedNos.add(pick.m.species);
   }
   return out;
 };
@@ -1640,7 +1718,9 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => cardOf(db, n).name === x.c.name).length; add(x.c, CARD_DECK_COPY_MAX - have); }
   heavy = -99; // それでも50枚に届かなければ、重い技の上限を外して埋める
   for (const x of ranked) { if (cards.length >= CARD_BATTLE_DECK_SIZE) break; const have = cards.filter((n) => cardOf(db, n).name === x.c.name).length; add(x.c, CARD_DECK_COPY_MAX - have); }
-  return { monsters: monsters.slice(), cards };
+  // sameBlood … 好きな子と同じ血統の子が2体以上(相手の考え方 cardAiPolicy の opts.sameBlood に渡す)
+  const sameBlood = mons.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(mons[0])).length >= 2;
+  return { monsters: monsters.slice(), cards, sameBlood };
 };
 
 // デッキが決まりどおりか(3体・別々のモンスター・50枚・同じ名前は3枚まで・使えないカードが無い)。だめなら理由の文の配列
@@ -1724,6 +1804,7 @@ const cardSortKey = (db, no) => {
 
 // ===== 保存の形(6-1)。読むときは必ずここを通す(無い・壊れているときは既定値) =====
 const CARD_SAVE_KEYS = Object.freeze({
+  // point(mh_card_point_v1)は、ビートPをやめてビートPにした(2026-10-26 社長)ので、もう読まない。消さずに残す(⑦)
   collection: 'mh_card_collection_v1', decks: 'mh_card_decks_v1', point: 'mh_card_point_v1', starter: 'mh_card_starter_v1',
   daily: 'mh_card_daily_v1', record: 'mh_card_record_v1', cpuUnlocked: 'mh_card_cpu_unlocked_v1',
   tutorial: 'mh_card_tutorial_v1', // 練習試合(チュートリアル)を終えた・飛ばした・100 を渡した印(86-card-tutorial.jsx)
@@ -1736,6 +1817,36 @@ const CARD_SAVE_KEYS = Object.freeze({
   settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
 });
+// カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
+//   保存先はビートPのもの(25-storage.jsx の RHYTHM_EVENT_POINTS_KEY・mh_rhythm_event_points_v1)。数はビートPのときのまま
+//   ★CARD_SAVE_KEYS には入れない。デバッグの「カードバトルの記録を消す」が CARD_SAVE_KEYS を全部消すので、入れるとビートPまで消える
+//   ★検査(node で 82 だけ読む)では 25-storage が無いので、同じ名前を書いておく
+const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
+// 前のカードポイントの残りを、ビートPへ1回だけ移す(2026-10-26 社長「ビートPに1回だけ移す」。未公開なので社長とデバッグ端末の分だけ)
+//   ・前のキー(mh_card_point_v1)は読むだけ。消さない・書き換えない(⑦)
+//   ・印(mh_card_points_to_beatp_migrated_v1)とビートPを1つの取引で書く。途中で失敗したら両方戻るので、二重に足されることも、印だけ立つこともない
+//   ・壊れた値・0以下は足さない(印は立てる)
+const CARD_POINT_MIGRATED_KEY = 'mh_card_points_to_beatp_migrated_v1';
+const cardPointMigrationAmount = (legacyRaw, migrated) => {
+  if (migrated === true) return 0;
+  if (typeof legacyRaw !== 'number' && typeof legacyRaw !== 'string') return 0;
+  const n = Number(legacyRaw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+};
+// getValue / setValue / saveAll は storeGet / storeSet / saveStoredValuesOrRollback(検査から差し替えて呼べるように引数で受け取る)
+const cardMigratePointsOnce = async (getValue, setValue, saveAll) => {
+  const migrated = await getValue(CARD_POINT_MIGRATED_KEY, null, false);
+  if (migrated === true) return { added: 0, saved: false };
+  const legacy = await getValue(CARD_SAVE_KEYS.point, null, false);
+  const add = cardPointMigrationAmount(legacy, migrated);
+  const entries = [{ key: CARD_POINT_MIGRATED_KEY, before: migrated, next: true }];
+  if (add > 0) {
+    const beatBefore = await getValue(CARD_POINT_STORE_KEY, null, false);
+    entries.push({ key: CARD_POINT_STORE_KEY, before: beatBefore, next: Math.min(Number.MAX_SAFE_INTEGER, cardNormalizePoint(beatBefore) + add) });
+  }
+  const saved = await saveAll(entries, getValue, setValue);
+  return { added: saved ? add : 0, saved };
+};
 const cardIsPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const cardNormalizeCollection = (v) => {
   const out = {};
@@ -1757,17 +1868,22 @@ const cardNormalizeDecks = (v) => {
   const active = cardIsPlainObject(v) && decks.some((d) => d.id === v.active) ? v.active : (decks[0] ? decks[0].id : null);
   return { active, decks };
 };
+// quickLoops … その日にバトルカードの対戦でクイック周回へ足した周の数(2026-10-26 で足した項目。トップの周回の札の詳細に出す。無い人は0)
 const cardNormalizeDaily = (v, today) => {
-  const base = { day: today, cpuPoint: 0, pvpPoint: 0, firstWin: false, foes: {} };
+  const base = { day: today, cpuPoint: 0, pvpPoint: 0, firstWin: false, foes: {}, quickLoops: 0 };
   if (!cardIsPlainObject(v) || v.day !== today) return base;
-  return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
+  return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {}, quickLoops: cardNormalizePoint(v.quickLoops) };
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
-// 対戦の BGM。cpu は 'auto'(相手の助手に合わせる)か曲id、pvp は曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
-const CARD_BGM_DEFAULT = Object.freeze({ cpu: 'auto', pvp: 'ichika_battle' });
+// MFバトルカードの BGM。top … トップ画面(練習試合の外)/ cpu … 'auto'(相手の助手に合わせる)か曲id / pvp … 曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
+// 既定: トップ画面は「MF × ICHIKA MIX」(atsu_cup_theme。2026-10-26 社長「入ったときのBGMをMFいちかみっくすに」)。対戦は前のとおり
+//   助手と対戦は 'auto'(助手ごとの曲)・マルチは ichika_battle(#3634 で一度対戦まで ICHIKA にしたのを戻した)
+//   ★mh_card_bgm_v1 は、オプションで曲を選んだときにだけ書く。選んだ人の値はそのまま読む(書き換えない)。top は足した項目なので、前からの人も既定で補う
+const CARD_BGM_DEFAULT = Object.freeze({ top: 'atsu_cup_theme', cpu: 'auto', pvp: 'ichika_battle' });
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
   return {
+    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
   };
@@ -1945,9 +2061,23 @@ const cardNormalizeCpuUnlocked = (v) => {
   const r = cardIsPlainObject(v) ? v : {};
   return { hard: r.hard === true, expert: r.expert === true, master: r.master === true };
 };
+// 記録から、開いているはずの強さを足す(2026-10-26 社長「ハード解放したのにできてない」)。
+//   1つ下の強さで勝ったことがあれば開いている扱い(NORMAL→HARD・HARD→EXPERT・EXPERT→MASTER)。勝ち数(byLevel)と最近の対戦(recent)の両方を見る。
+//   読み込みのときに足すだけで、保存へは書き戻さない(次に勝ったとき、ふだんどおり一緒に保存される)。数を配る処理ではないので、何度通っても増えない
+const cardUnlockedWithRecord = (unlocked, record) => {
+  const u = cardNormalizeCpuUnlocked(unlocked);
+  const rec = cardNormalizeRecord(record);
+  const wonAt = (lv) => rec.byLevel.win[lv] > 0 || rec.recent.some((x) => x.level === lv && x.outcome === 'win');
+  const out = { ...u };
+  for (let i = 1; i < CARD_LEVEL_ORDER.length - 1; i++) {
+    const next = CARD_LEVEL_ORDER[i + 1];
+    if (!out[next] && wonAt(CARD_LEVEL_ORDER[i])) out[next] = true;
+  }
+  return out;
+};
 const cardLevelOpen = (unlocked, levelId) => levelId === 'easy' || levelId === 'normal' || (unlocked && unlocked[levelId] === true);
 
-// スターターを配る(一度きり。印がある人には二度と配らない)。300 カードポイントもいっしょに
+// スターターを配る(一度きり。印がある人には二度と配らない)。300 ビートPもいっしょに
 const CARD_STARTER_POINT = 300;
 const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now) => {
   if (starter) return null;
@@ -1961,18 +2091,26 @@ const cardGrantStarter = (db, { collection, decks, point, starter }, kitId, now)
 };
 
 // コンピューター戦の結果(4-1・社長が案Aに決めた 台帳 #3484)
-//   カードポイント: 勝ち … 難易度の点 / 負け(最後まで)… どの難易度も 25 / 降参 … 倒した相手のモンスター × 10(25まで。0体なら0)
-//   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの半分 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
+//   ビートP: 勝ち … 難易度の点 / 負け(最後まで)… 勝ちの 3/4(切り捨て)× (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した相手のモンスター × 10(減ったあとの負けの数まで。0体なら0)
+//   ★負けのビートPも自分の番の数で減らす(2026-10-26 社長。すぐ負けて回しても得にならないように)
+//   クイック周回: 勝ち … 難易度の周 / 負け … 勝ちの 3/4 × (自分の番の数 ÷ 10。10回で満額)/ 降参 … 倒した数 × 負けの3分の1(0体なら0)
+//   ★負けを勝ちの 3/4 にしたのは 2026-10-26 社長「助手とのバトルも負けても報酬もっとあげよう」(前はビートP 25・周回は勝ちの半分)
 //   ★かかった時間は見ない(止めて放っておいても増えない)。自分の番を3回やる前に終わった試合は、どちらも0(すぐ降参・すぐ負けで回せないように)
-//   ★負けのポイントを難易度で増やさないのは、MASTER でわざと早く負けるのがいちばん得にならないようにするため
 //   1日の上限は設けない(社長 2026-10-24。#3531 で取り消し)。その日はじめての勝ちの +50 だけは1日1回
-const CARD_CPU_LOSE_POINT = 25;
+// 負けでもらえる割合(勝ちの 3/4)。ビートPもクイック周回も、勝ちの数にこれを掛けて切り捨てる
+const CARD_LOSE_SHARE = 3 / 4;
+const cardLosePoint = (level) => Math.floor(level.point * CARD_LOSE_SHARE);
+const cardLoseLoops = (level) => Math.floor(level.loops * CARD_LOSE_SHARE);
+// 負けの数を、自分の番の数で減らす(10回で満額。切り捨て)。助手と対戦・マルチ対戦の負けと投了で使う
+const cardLoseScaled = (n, ownTurns) => Math.floor(n * Math.min(1, Math.max(0, Number(ownTurns) || 0) / CARD_LOSE_FULL_TURNS));
 const CARD_SURRENDER_POINT_PER_KO = 10;
 const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
-// 対人戦(区切り4で使う。数は案A): 勝ち・負け(最後まで)・途中で抜けた で分かれる。同じ相手からは1日3戦まで
-const CARD_PVP_REWARD = Object.freeze({ win: { point: 200, loops: 24 }, lose: { point: 50, loops: 12 }, left: { point: 0, loops: 0 }, dailyMax: 2200, sameFoePerDay: 3 });
+// マルチ対戦: 勝ち・負け(最後まで)・途中で抜けた で分かれる。
+//   2026-10-26 社長: 勝ちは MASTER の2倍(ビートP 400・44周)、負けは MASTER と同じ(150・自分の番10回で16周。投了も MASTER と同じ)、抜けたら0。
+//   1日の上限(dailyMax)も、同じ相手と1日3戦まで(sameFoePerDay)もなくした(社長「同じ相手の縛りもいらないよ」)
+const CARD_PVP_REWARD = Object.freeze({ win: { point: CARD_AI_LEVELS.master.point * 2, loops: CARD_AI_LEVELS.master.loops * 2 }, lose: { point: cardLosePoint(CARD_AI_LEVELS.master), loops: cardLoseLoops(CARD_AI_LEVELS.master) }, left: { point: 0, loops: 0 } });
 // その人が自分の番を何回やったか(1ターン目は先攻の番)
 const cardOwnTurns = (st, p) => {
   const t = Math.max(0, Number(st && st.turn) || 0);
@@ -1986,15 +2124,15 @@ const cardCpuBasePoint = (levelId, outcome, facts) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
   if (outcome === 'win') return level.point;
-  if (outcome === 'lose') return CARD_CPU_LOSE_POINT;
-  if (outcome === 'surrender') return Math.min(CARD_CPU_LOSE_POINT, facts.kos * CARD_SURRENDER_POINT_PER_KO);
+  if (outcome === 'lose') return cardLoseScaled(cardLosePoint(level), facts.ownTurns);
+  if (outcome === 'surrender') return Math.min(cardLoseScaled(cardLosePoint(level), facts.ownTurns), facts.kos * CARD_SURRENDER_POINT_PER_KO);
   return 0;
 };
 // コンピューター戦のクイック周回(◯周ぶん)。周回クリア扱いにするかどうか(クイックで通したことがあるか)は、配る側(60-app)が決める
 const cardCpuLoops = (levelId, outcome, facts = cardResultFacts(null)) => {
   const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
   if (facts.ownTurns < CARD_MIN_OWN_TURNS) return 0;
-  const loseFull = Math.floor(level.loops / 2);
+  const loseFull = cardLoseLoops(level);
   if (outcome === 'win') return level.loops;
   if (outcome === 'lose') return Math.floor(loseFull * Math.min(1, facts.ownTurns / CARD_LOSE_FULL_TURNS));
   if (outcome === 'surrender') return Math.min(loseFull, Math.round((facts.kos * loseFull) / 3));
