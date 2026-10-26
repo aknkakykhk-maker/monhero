@@ -394,6 +394,12 @@ const jaWrapPieces = (seg) => {
   return out;
 };
 const jaWrap = (text) => {
+  // 文字でない物が来たときの守り(2026-10-27 MFバトルカードのトップの吹き出しに「[object Object]」が出た)。
+  //   画面の部品(React の要素)はそのまま出す。{ text } の形なら text を使う。ほかは出さない
+  if (text && typeof text === 'object') {
+    if (React.isValidElement(text) || Array.isArray(text)) return text;
+    text = typeof text.text === 'string' ? text.text : '';
+  }
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   // ブラウザは「…」「～」「♡」・絵文字・顔文字の手前や中を、印が無くても折り目として扱う。「入れんのじゃ／……」「(っ`･／ω･´)」と

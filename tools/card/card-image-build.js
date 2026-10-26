@@ -28,6 +28,14 @@ const BAND = {
   skill: [{ x0: 402, y0: 957, x1: 690, y1: 989 }],     // 右下: URL の行(© は帯ではなく絵の上にある)
 };
 const ART_COPYRIGHT = { x0: 496, y0: 702, x1: 690, y1: 731, from: 'top' }; // 技カードの絵の右下の「© TECMO, LTD. 1999」
+// 種族の技カードの © は、2026-10-27 から写して消す(社長が「中の案」を選んだ。見本 docs/progress/pack/skill-copyright-sample.jpg)。
+// 前の四角(上の ART_COPYRIGHT)は絵の窓のふち(y 727〜・x 677〜)まで塗っていて、絵の色を縦に引き伸ばした「すじ」になっていた。
+// 字(x 504〜672・y 711〜725)を囲む四角だけを、すぐ上の絵を写して周りになじませる。窓のふちは残す
+const SKILL_COPY = { x0: 498, y0: 706, x1: 676, y1: 726, dy: -22, freeBottom: true, freeRight: true };
+// 写すと斜めの線が大きく途切れる・絵の一部が不自然に写るカードは、写す元をずらす(dy)か、周りから滑らかに埋める(dy:null)
+// (309枚を1枚ずつ前後に並べて見て決めた。2026-10-27 カード追加部パックくん)
+const SKILL_SMOOTH = ['030', '037', '040', '052', '056', '085', '087', '108', '144', '146', '167', '175', '186', '188', '200', '207', '227', '242', '265', '287', '298', '308', '316', '343', '362'];
+const SKILL_COPY_BY = Object.fromEntries(SKILL_SMOOTH.map((n) => [`${n}.jpg`, { dy: null }]));
 // 日本語にした絵(全モンスター・ブリーダー)は、縦じまが目立たないように広くならす(blur)。
 // ブリーダーの絵は右のふちが x≈678 から灰色の枠なので、その手前で止める(ふちの明るい色が左へ伸びて白くにじんでいた・カゲあつくん 113・122・126)
 // 全モンスターの絵(白い枠)は、絵の窓の右のふちが x=679・下のふちが y=728。日本語にする段(card-image-ja.js)で © を塗ったときに、
@@ -59,8 +67,13 @@ const copyRect = (px, ch, r) => {
       const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
       d[j * w + i] = px[(y * W + x) * ch + c] - (r.dy === null ? 0 : px[((y + r.dy) * W + x) * ch + c]);
     }
-    for (let it = 0; it < 1500; it += 1) for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
-      d[j * w + i] = (d[j * w + i - 1] + d[j * w + i + 1] + d[(j - 1) * w + i] + d[(j + 1) * w + i]) / 4;
+    for (let it = 0; it < 1500; it += 1) {
+      for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
+        d[j * w + i] = (d[j * w + i - 1] + d[j * w + i + 1] + d[(j - 1) * w + i] + d[(j + 1) * w + i]) / 4;
+      }
+      // freeBottom・freeRight: 下・右の縁は合わせない(すぐ下が絵の窓のふちで、色が絵とちがうため。ふちの色を絵の中へ引きこまない)
+      if (r.freeBottom) for (let i = 0; i < w; i += 1) d[(h - 1) * w + i] = d[(h - 2) * w + i];
+      if (r.freeRight) for (let j = 0; j < h; j += 1) d[j * w + w - 1] = d[j * w + w - 2]; // 右の縁も同じ(右のふちの明るい色を引きこまない)
     }
     for (let j = 1; j < h - 1; j += 1) for (let i = 1; i < w - 1; i += 1) {
       const x = r.x0 - 1 + i, y = r.y0 - 1 + j;
@@ -144,6 +157,7 @@ const erase = async (file, { artCopyright = true, breeder = false } = {}) => {
   // 全体カードの © は場所がほかの技カードと違う(絵の右下 y≈708〜722)ので、文字を描き直す段(card-image-ja.js の field)で消してある。ここでは消さない
   if (artCopyright && !isMonster(file) && !(isField(file) && file.startsWith(JA))) rects.push(breeder ? ART_COPYRIGHT_BREEDER : file.startsWith(JA) ? ART_COPYRIGHT_JA : ART_COPYRIGHT);
   for (const r of rects) {
+    if (r === ART_COPYRIGHT) { copyRect(data, info.channels, { ...SKILL_COPY, ...(SKILL_COPY_BY[path.basename(file)] || {}) }); continue; }
     fillRect(data, info.channels, r);
     const f = r.frame;
     if (!f) continue;

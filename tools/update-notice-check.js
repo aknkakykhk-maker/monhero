@@ -47,8 +47,9 @@ const checks = [
   ['初回検知で自動再読み込みせず更新ボタンを表示', source.includes('setUpdateAvailable(true)') && !source.includes('if (wasFirstCheck) window.location.reload()')],
   ['更新ボタンをbody直下に表示', source.includes('ReactDOM.createPortal(') && source.includes('document.body') && source.includes('z-[100000]')],
   ['更新時にページURLのキャッシュを回避', source.includes("url.searchParams.set('mh_refresh', Date.now().toString())") && source.includes('window.location.replace(url.toString())')],
-  ['出荷時に本体JSのキャッシュキーも更新', stampTool.includes("index.replace(/var GAME_BUILD = '[^']*';/") && stampTool.includes("stamp.replace(/[- :]/g, '')")],
-  ['全出荷の更新バナー用versionをBUILD_DATEと一緒に更新', stampTool.includes("version.json") && stampTool.includes('BUILD_DATE、version.json、GAME_BUILD')],
+  // 本体JSのキャッシュキーは、本体を書き出したあとに中身のハッシュで打つ(2026-10-27 から。stamp-game-build.js)
+  ['出荷時に本体JSのキャッシュキーも更新', fs.readFileSync(path.join(__dirname, 'build.js'), 'utf8').includes("require('./stamp-game-build').stampGameBuild()") && fs.readFileSync(path.join(__dirname, 'stamp-game-build.js'), 'utf8').includes("createHash('sha256').update(fs.readFileSync(COMPILED))")],
+  ['全出荷の更新バナー用versionをBUILD_DATEと一緒に更新', stampTool.includes("version.json") && stampTool.includes('BUILD_DATE、version.json を')],
   ['通常ビルドが日時更新を必ず実行', fs.readFileSync(path.join(__dirname, 'build.js'), 'utf8').includes("require('./stamp-version')")],
 ];
 

@@ -13,6 +13,7 @@
 //   ⑦ 投了すると結果が出て、カードポイントは増えない・戦績に投了が1つ付く
 //   ⑧ 既存の保存キー(mh_card_ 以外)を1つも書き換えていない
 //   ⑲ まんなかの吹き出しと記録が、行の高い字(iPhone のつもり)でも切れない(2026-10-25 社長の実機)
+//   ㉑ 過去の対戦を見る: 投了で終わった助手と対戦も、結果の画面の「この対戦を見る」から最後まで見られて、戻っても何も増えない
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -153,6 +154,11 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         }
         el.style.pointerEvents = pe;
         if (cover) return cover;
+        // 縦の画面: 窓が自分のモンスター(名前・ライフ)と自分の帯にかぶらない(2026-10-26 カゲあつくんの通しの点検で、ライフの数字が隠れていた)
+        if (document.querySelector('[data-card-battle]').getAttribute('data-card-wide') !== 'true') {
+          const hits = [...document.querySelectorAll(`[data-card-mon^="${CARD_ME}-"], [data-card-me-head]`)].filter((x) => { const q = x.getBoundingClientRect(); return q.height > 0 && r.bottom > q.top + 1 && r.top < q.bottom - 1; });
+          if (hits.length) return `窓が自分の場にかぶる(${hits.map((x) => x.getAttribute('data-card-mon') || '自分の帯').join('・')})`;
+        }
         // 下のボタン(攻撃おわり・ターン終了など)が画面の中にあって押せる(ドラの窓が増えて、画面の下で切れていた・2026-10-26 社長の実機)
         const fb = [...document.querySelectorAll('[data-card-footer] button')].find((x) => x.getClientRects().length);
         if (fb) { const q = fb.getBoundingClientRect(); if (q.bottom > window.innerHeight + 1 || q.top < 0) return `下のボタンが画面の外(${Math.round(q.top)}〜${Math.round(q.bottom)})`; const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); if (!hit || !fb.contains(hit)) return '下のボタンが押せない'; }
@@ -234,6 +240,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑪ もう一度やっても(飛ばしても)100 は二度ともらえない', tut2 === 400, String(tut2));
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
+    // トップの助手の吹き出しは文字で出る(2026-10-27 「[object Object]」と出ていた。部品を文字にしていた)
+    { await page.waitForTimeout(400); const line = await page.locator('[data-rhythm-mode-assistant-line]').innerText().catch(() => ''); check('㉓ トップの助手の吹き出しに、文字でない物(「[object Object]」)が出ない', !/\[object Object\]/.test(line), line.replace(/\s+/g, ' ').slice(0, 80)); }
     const saved = await page.evaluate(() => ({
       col: JSON.parse(localStorage.getItem('mh_card_collection_v1') || '{}'),
       decks: JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null'),
@@ -367,7 +375,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
             const r = el.getBoundingClientRect();
             const over = ['[data-card-hand]', '[data-card-footer]'].filter((s) => { const q = document.querySelector(s); if (!q) return false; const b = q.getBoundingClientRect(); return r.bottom > b.top + 1 && r.top < b.bottom - 1 && r.right > b.left + 1 && r.left < b.right - 1; });
             const img = el.querySelector('img'); const fit = Number(document.querySelector('[data-card-stage]').getAttribute('data-card-stage-fit'));
-            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
+            return { shown: true, fit, no: el.getAttribute('data-card-guard-attack'), img: fit >= 3 || (!!img && img.complete && img.naturalWidth > 0), text: el.innerText.replace(/\s+/g, ' ').slice(0, 60), dmg: /ダメージ\d+/.test(el.innerText), inView: r.top >= 0 && r.bottom <= innerHeight + 1, bubbleShown: !!document.querySelector('[data-card-bubble]:not(.invisible)'), actionBand: !!document.querySelector('[data-card-action]'), logZ: Number(getComputedStyle(document.querySelector('[data-card-log]')).zIndex) || 0, inStage: (() => { const g = document.querySelector('[data-card-stage]').getBoundingClientRect(); return r.top >= g.top - 1 && r.bottom <= g.bottom + 1; })(), over };
           });
           if (guardAtk.shown) {
             await page.locator('[data-card-guard-attack]').click();
@@ -466,7 +474,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('⑫ 技を相手のモンスターまで運んで離すと使える(置ける所の上で光る)', dragAttack === true, `${dragAttack}(試した回数 ${dragTries + (dragAttack === true ? 1 : 0)})`);
     check('⑫ 置けない所(自分の場)の上では光らない', dragNoGlow !== false, String(dragNoGlow));
     check('⑫ ガッツの置き場まで運ぶと、そのカードをガッツにする組に入れる', dragGuts === true, String(dragGuts));
-    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
+    check(`⑨-2 ${VW}×${VH} の守りの番に、相手の攻撃カードが出る(絵・ダメージ・手札とボタンに重ならない・押すと詳しい画面。吹き出しと上の技の札は出さず、攻撃の動きより前)`, !!guardAtk && guardAtk.shown && guardAtk.img && guardAtk.dmg && guardAtk.inView && guardAtk.inStage && !guardAtk.bubbleShown && !guardAtk.actionBand && guardAtk.logZ > 40 && !guardAtk.over.length && guardAtk.detail && guardAtk.closed, JSON.stringify(guardAtk));
     check(`⑨ ${VW}×${VH} で相手の場・まんなか・自分の場・手札・ボタンが重ならない`, layoutSeen.length === 0, layoutSeen.join(' / '));
     check(`⑲ ${VW}×${VH}・行の高い字で、まんなかの吹き出しと記録が切れない`, stageSamples > 5 && stageBubbleSamples > 0 && stageClip.size === 0,
       `${stageSamples}回測った(吹き出しあり ${stageBubbleSamples}回)${stageClip.size ? ' — ' + [...stageClip].join(' / ') : ''}`);
@@ -501,6 +509,28 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     // 投了は倒した相手のモンスター × 10(25まで。案A・台帳 #3484)。結果に出た数だけ増えている
     if (outcome === 'surrender') check('⑦ 投了のビートPは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
     else check(`⑦ 決着(${outcome})で結果が出て戦績が付く`, after.record && after.record.cpu[outcome] === 1);
+    // ㉑ 過去の対戦を見る(93-card-replay.jsx・2026-10-27): 助手と対戦も、結果の画面の「この対戦を見る」から、はじめから見られる(投了で終わっても)
+    {
+      const kept = await page.evaluate(() => { try { const v = JSON.parse(localStorage.getItem('mh_card_replays_v1') || 'null'); return v && v.list ? v.list.map((r) => `${r.kind}:${r.acts.length}`) : []; } catch (_) { return ['壊れている']; } });
+      check('㉑ 助手と対戦の手の一覧が、端末に1試合ぶん残る', kept.length === 1 && /^cpu:\d+$/.test(kept[0]) && Number(kept[0].split(':')[1]) >= 1, kept.join(','));
+      const has = await page.locator('[data-card-result-replay]').count();
+      check('㉑ 結果の画面に「この対戦を見る」が出る', has === 1);
+      if (has) {
+        await page.locator('[data-card-result-replay]').click();
+        await page.locator('[data-card-replay-bar]').waitFor({ timeout: 10000 });
+        const st0 = await page.locator('[data-card-replay-step]').innerText();
+        const faces = await page.locator('[data-card-replay-foe-card] img').count();
+        check('㉑ はじめから始まり、相手の手札が表で並ぶ', /^0\//.test(st0) && faces >= 5, `${st0} 表${faces}`);
+        for (let i = 0; i < 300; i++) { if (await page.locator('[data-card-replay-next-turn]').isDisabled()) break; await page.locator('[data-card-replay-next-turn]').click(); }
+        const end = (await page.locator('[data-card-replay-step]').innerText()).replace('手', '').split('/').map(Number);
+        check('㉑ 最後の手まで見られる・助手は勝手に動かない', end[0] === end[1] && end[1] >= 1, end.join('/'));
+        const pointMid = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
+        await page.locator('[data-card-replay-exit]').click();
+        await page.locator('[data-card-top="result"]').waitFor({ timeout: 10000 });
+        const pointBack = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'));
+        check('㉑ 「とじる」で同じ結果の画面へ戻り、ビートPも戦績も増えない', pointBack === pointMid && pointBack === after.point);
+      }
+    }
     // ⑧ 既存のキーを書き換えていない(時刻・起動のたびに変わる記録は除く)
     const volatile = /^mh_(debug_entry|debug_menu|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
     // ★ポイントはビートP(2026-10-26 社長「カードポイントを廃止してビートポイントにして」)。ビートPの残高 mh_rhythm_event_points_v1 だけは書いてよい
