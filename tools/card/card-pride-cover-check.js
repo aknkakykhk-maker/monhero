@@ -8,6 +8,7 @@
 //   A. プライドあり・純血の子の全体攻撃 → みんな下がれ: 純血の子は回避、派生の味方には当たる
 //   B. プライドなし → これまでどおり全員が回避
 //   C. プライドあり・攻めるのが派生の子 → プライドは効かず、全員が回避
+//   D. 先に狙われたのが派生の子(みんな下がれを出せない)→ 次の純血の子が出す → 残りの派生の子にも当たる(総点検E・ナガメくんの場面2)
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -31,13 +32,14 @@ const EVADE_ALL = '123'; // みんな下がれ(全モンスター)
 const PRIDE = 'F255';
 const hybridMocchi = mons.find((m) => m.main === 'mocchi' && m.sub && m.sub !== 'unknown' && !m.variant); // メインがモッチーの混血(さくら吹雪を使える)
 const hybridDef = mons.find((m) => m.main && m.sub && m.sub !== 'unknown' && !m.variant && m.main !== 'mocchi');
+const hybridDef2 = mons.find((m) => m.main && m.sub && m.sub !== 'unknown' && !m.variant && m.main !== 'mocchi' && m.species !== (hybridDef || {}).species);
 const atkPure = [pureOf('mocchi'), pureOf('golem'), pureOf('dino')];
 const defTeam = [pureOf('golem'), hybridDef && hybridDef.no, pureOf('dino')];
 check('材料がそろう', atkPure.every(Boolean) && defTeam.every(Boolean) && !!hybridMocchi && E.cardHasEff(E.cardOf(db, AREA), 'area') && E.cardHasEff(E.cardOf(db, EVADE_ALL), 'evadeAll') && !!db.cards[PRIDE],
   JSON.stringify({ atkPure, defTeam, hm: hybridMocchi && hybridMocchi.no }));
 
-const run = ({ attackers, pride }) => {
-  const decks = [{ monsters: attackers, cards: Array(50).fill('100') }, { monsters: defTeam, cards: Array(50).fill('100') }];
+const run = ({ attackers, pride, defenders = defTeam }) => {
+  const decks = [{ monsters: attackers, cards: Array(50).fill('100') }, { monsters: defenders, cards: Array(50).fill('100') }];
   let st = E.cardCreateGame(db, { decks, seed: 7, first: 0 });
   st = E.cardApplyAction(db, st, { type: 'setupGuts', hand: [] });
   st.players[0].hand = [AREA]; st.players[1].hand = [EVADE_ALL];
@@ -73,6 +75,16 @@ const run = ({ attackers, pride }) => {
 {
   const r = run({ attackers: [hybridMocchi.no, pureOf('golem'), pureOf('dino')], pride: true });
   check('C 攻めるのが派生の子なら、プライドは効かず全員が回避', r.offered && !!r.dmg && r.dmg.every((d) => d === 0), JSON.stringify(r));
+}
+
+// ---- D ----
+{
+  const defs = [hybridDef.no, pureOf('golem'), hybridDef2.no];
+  const r = run({ attackers: atkPure, pride: true, defenders: defs });
+  check('D 次に狙われた純血の子が、みんな下がれを出せる', r.offered, JSON.stringify(r));
+  check('D 純血の子は回避し、前後の派生の子には当たる', !!r.dmg && r.dmg[0] > 0 && r.dmg[1] === 0 && r.dmg[2] > 0, JSON.stringify(r.dmg));
+  const r2 = run({ attackers: atkPure, pride: false, defenders: defs });
+  check('D プライドなしなら全員が回避', r2.offered && !!r2.dmg && r2.dmg.every((d) => d === 0), JSON.stringify(r2));
 }
 
 if (fails.length) {
