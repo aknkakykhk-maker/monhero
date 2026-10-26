@@ -53,6 +53,7 @@ const APPROVED_MASKS = {
   Undine: 'images/monsters/undine-dye-mask.PNG',
   Tiger: 'images/monsters/tiger-dye-mask.PNG',
   Suezo: 'images/monsters/suezo-dye-mask.PNG',
+  Golem: 'images/monsters/golem-dye-mask.PNG',
   // キュービ・オリヒメ(2026-10-27・案の段階・5部位。社長が濃い色で染めた写真を見て決めた)
   Kyubi: 'images/monsters/kyubi-dye-mask.PNG',
   Orihime: 'images/monsters/orihime-dye-mask.PNG',

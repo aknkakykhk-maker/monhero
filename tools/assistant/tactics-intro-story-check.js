@@ -164,7 +164,8 @@ if (!released) {
     compact.includes('tacticsIntroSeen:tacticsIntroSeenFlag'));
   // ★ほかの会話と重ねない。重ねるとどちらも読めない
   check('ほかの会話が出ているあいだは待つ',
-    compact.includes('&&!rhythmEventStoryPending&&!eventReplay))return;setTacticsIntroPending(false)'));
+    // ログインボーナスの窓とも重ねない(2026-10-27 はじめての人で重なった)
+    compact.includes('&&!rhythmEventStoryPending&&!eventReplay&&!loginBonusPopup))return;setTacticsIntroPending(false)'));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
