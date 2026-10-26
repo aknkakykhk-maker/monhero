@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 689715fab74b8f25
+// source-sha256: c9201d6c456a6aec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84894,11 +84894,8 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
   const opp = st.players[cardOther(p)];
   (card.effects || []).forEach(e => {
     if (e.t === 'draw') {
-      for (let i = 0; i < e.n; i++) {
-        if (!me.deck.length) break;
-        me.hand.push(me.deck.pop());
-      }
-      cardLog(st, `${me.name}は${e.n}枚引いた`);
+      const k = cardDrawN(st, p, e.n);
+      cardLog(st, `${me.name}は${k}枚引いた`);
     }
     if (e.t === 'peekHand') {
       cardEvent(st, {
