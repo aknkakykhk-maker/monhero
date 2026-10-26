@@ -443,14 +443,16 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const outcome = await page.locator('[data-card-top="result"]').getAttribute('data-card-outcome');
     const gain = Number(await page.locator('[data-card-top="result"]').getAttribute('data-card-gain'));
     // 投了は倒した相手のモンスター × 10(25まで。案A・台帳 #3484)。結果に出た数だけ増えている
-    if (outcome === 'surrender') check('⑦ 投了のカードポイントは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
+    if (outcome === 'surrender') check('⑦ 投了のビートPは25まで・結果に出た数だけ増える・戦績に投了が1つ', gain >= 0 && gain <= 25 && after.point === 400 + gain && after.record && after.record.cpu.surrender === 1, JSON.stringify({ gain, point: after.point, cpu: after.record && after.record.cpu }));
     else check(`⑦ 決着(${outcome})で結果が出て戦績が付く`, after.record && after.record.cpu[outcome] === 1);
     // ⑧ 既存のキーを書き換えていない(時刻・起動のたびに変わる記録は除く)
     const volatile = /^mh_(debug_entry|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
-    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after.all[k]);
-    check('⑧ カードバトル以外の保存キーを書き換えていない', changed.length === 0, changed.join(', '));
-    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && !volatile.test(k));
-    check('⑧ 新しく増えた保存キーは mh_card_* だけ', added.length === 0, added.join(', '));
+    // ★ポイントはビートP(2026-10-26 社長「カードポイントを廃止してビートポイントにして」)。ビートPの残高 mh_rhythm_event_points_v1 だけは書いてよい
+    const BEAT_KEY = 'mh_rhythm_event_points_v1';
+    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k) && before[k] !== after.all[k]);
+    check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
+    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k));
+    check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
     await page.locator('[data-card-top="result"] button').first().click();
     await page.waitForTimeout(300);
