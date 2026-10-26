@@ -162,7 +162,9 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
       bossImageWidth:bossImage.width,
       otherImageWidths:cards.slice(0, -1).map(card => card.querySelector('img')?.getBoundingClientRect().width || 0),
       nameLefts:cards.map(card => card.querySelector('[data-wave-art]').nextElementSibling.getBoundingClientRect().left),
-      statsRights:cards.map(card => card.querySelector('[data-wave-stats]').getBoundingClientRect().right),
+      statsLefts:cards.map(card => card.querySelector('[data-wave-stats]').getBoundingClientRect().left),
+      // 名前は「…」で切らず折る(ダメダシ見回り 10/26)。1行に収まらなくても横にはみ出さない
+      namesClipped:cards.some(card => { const n = card.querySelector('[data-wave-name]'); return !n || n.scrollWidth > n.clientWidth + 1; }),
       cardsInside:cards.every(card => card.scrollWidth <= card.clientWidth),
       inside:bossImage.left >= bossRect.left && bossImage.right <= bossRect.right && bossImage.top >= bossRect.top && bossImage.bottom <= bossRect.bottom,
       overlapsText:textRects.some(rect => bossImage.left < rect.right && bossImage.right > rect.left && bossImage.top < rect.bottom && bossImage.bottom > rect.top),
@@ -171,7 +173,8 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   if (layout.bossImageWidth <= Math.max(...layout.otherImageWidths)) throw new Error('ムーが一覧内で最大表示ではありません');
   if (!layout.inside || layout.overlapsText) throw new Error('ムー画像がカード外または文字へ重なっています');
   if (Math.max(...layout.nameLefts)-Math.min(...layout.nameLefts)>1) throw new Error('敵名の基準位置がWAVE間で揃っていません');
-  if (Math.max(...layout.statsRights)-Math.min(...layout.statsRights)>1) throw new Error('能力値の右端がWAVE間で揃っていません');
+  if (Math.max(...layout.statsLefts)-Math.min(...layout.statsLefts)>1) throw new Error('能力値の左端がWAVE間で揃っていません');
+  if (layout.namesClipped) throw new Error('敵名が枠からはみ出しています');
   if (!layout.cardsInside) throw new Error('WAVEカード内の要素が横にはみ出しています');
   await dialog.screenshot({ path:path.join(TOOLS_DIR, 'out', 'battle-wave-details-390x844.png') });
   await dialog.getByRole('button', { name:'閉じる' }).click();
