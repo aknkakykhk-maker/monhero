@@ -49,6 +49,9 @@ const APPROVED_MASKS = {
   // イルミネ・ドリーミィ(2026-10-22・案の段階・5部位)
   Illumine: 'images/monsters/illumine-dye-mask.PNG',
   Dreamy: 'images/monsters/dreamy-dye-mask.PNG',
+  // キュービ・オリヒメ(2026-10-27・案の段階・5部位。社長が濃い色で染めた写真を見て決めた)
+  Kyubi: 'images/monsters/kyubi-dye-mask.PNG',
+  Orihime: 'images/monsters/orihime-dye-mask.PNG',
 };
 // これ未満しか染まらない画素を「染まっていない」とみなす
 const COVER_MIN = 0.5;
