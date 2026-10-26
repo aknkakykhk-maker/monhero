@@ -91,7 +91,7 @@ check('③ 基準の点は、顔の範囲(FACE_BOXES)の中にある', outside.l
 
   // ⑤ 手書きの寄せ。いまある分(2026-10-26)だけを認める。増やすときは基準の側(顔アイコンを作り直す)で直す
   // 円盤石の行(◯◯_disc_icon と、モンスターの id そのもの)は円盤を真ん中に置く値なので数えない。ライガー(Tiger)は顔の行
-  const ALLOWED_MARKET = ['Tiger', 'kiki_icon', 'snegurochka_icon', 'snegurochka_awakened_icon', 'iblis_icon', 'mia_icon', 'pandora_icon', 'plant_icon', 'yggdrasil_icon', 'mel_whip_icon', 'mua'];
+  const ALLOWED_MARKET = ['Tiger', 'kiki_icon', 'snegurochka_awakened_icon', 'iblis_icon', 'mia_icon', 'pandora_icon', 'mua'];
   const ALLOWED_ASSIST = ['kiki'];
   const marketBlock = (market.match(/const MARKET_PROFILE_ICON_STYLES = \{([\s\S]*?)\n\};/) || [])[1] || '';
   const marketKeys = [...marketBlock.matchAll(/^\s{2}([A-Za-z_]+):/gm)].map((m) => m[1]);

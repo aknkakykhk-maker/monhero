@@ -307,7 +307,7 @@ const SUEZO_FACE_ICON = "images/monster-icons/face/suezo.png?v=696938ca7d63";
 const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=8ef71840d1d5";
 const MONOL_FACE_ICON = MONOL_ICON;
 const OBORO_FACE_ICON = OBORO_ICON;
-const PLANT_FACE_ICON = PLANT_IMG;
+const PLANT_FACE_ICON = "images/monster-icons/face/plant.png?v=b79e75dedc41";
 const YGGDRASIL_ICON = YGGDRASIL_IMG;
 const MEL_WHIP_ICON = MEL_WHIP_IMG;
 const GHOST_ICON = GHOST_IMG;
@@ -320,15 +320,15 @@ const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=b4a2ad9cdd58";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=b5e3a96b27c0";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=9663afec97f9";
-const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d920ec35a";
+const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=31dc864654c1";
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
 const UNDINE_FACE_ICON = "images/monster-icons/face/undine.png?v=fe1ba930173b";
 const YAOBIKUNI_FACE_ICON = "images/monster-icons/face/yaobikuni.png?v=32838d8bdd5a";
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
-const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
-const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
+const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=32b08d1fc0cd";
+const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=a4f626c0fde8";
 const GHOST_FACE_ICON = "images/monster-icons/face/ghost.png?v=fdbc8d32d2cd";
 const SPOOKY_FACE_ICON = "images/monster-icons/face/spooky.png?v=2c047a771ffe";
 const MELODY_FACE_ICON = "images/monster-icons/face/melody.png?v=95bbe06158e4";
@@ -514,7 +514,7 @@ const MONSTER_LINEAGE_ICONS = Object.freeze({
 
 // 顔アイコンが全身絵そのものの子(顔アイコンを作っていない)。モノリスは顔のない板、オボロゲソウ・プラントは顔が体の下にあるので、全身のほうが分かりやすい。
 // ライガー・ミーア・パンドラは顔アイコンの案を社長が選ぶまでのあいだ。ここに無い子の顔アイコンが全身絵だと、tools/image/art-anchor-check.js が止める
-const ART_FACE_FULL_BODY = Object.freeze(['TIGER', 'MIA', 'PANDORA', 'MONOL', 'OBORO', 'PLANT']);
+const ART_FACE_FULL_BODY = Object.freeze(['TIGER', 'MIA', 'PANDORA', 'MONOL', 'OBORO']);
 // 顔のまんなか(2026-10-26 社長「顔アイコンと全身絵のずれが出ない仕組み」)。全身絵(◯◯_IMG)の中で、顔アイコンの丸のまんなかに来る点(0〜1)。
 // 顔(目のあいだ・鼻)のまんなかを書く。顔アイコンは tools/image/make-face-icons.js がこの点を丸のまんなかに置いて作る。
 // 新しい子を足したら、ここにも書く(tools/image/art-anchor-check.js が、書いていない子を止める)。書き出しは tools/image/art-anchors.js
@@ -528,13 +528,14 @@ const ART_ANCHORS = Object.freeze({
   ZAN: Object.freeze({ face: Object.freeze([0.5, 0.229]) }),
   ARK: Object.freeze({ face: Object.freeze([0.5, 0.393]) }),
   HAM: Object.freeze({ face: Object.freeze([0.51, 0.356]) }),
-  SNEGUROCHKA: Object.freeze({ face: Object.freeze([0.481, 0.197]) }),
+  SNEGUROCHKA: Object.freeze({ face: Object.freeze([0.461, 0.24]), zoom: 1.185 }),
   EIKI: Object.freeze({ face: Object.freeze([0.5, 0.119]) }),
   KENSHI_MOCCHI: Object.freeze({ face: Object.freeze([0.5, 0.272]) }),
   UNDINE: Object.freeze({ face: Object.freeze([0.472, 0.148]) }),
   YAOBIKUNI: Object.freeze({ face: Object.freeze([0.482, 0.145]) }),
-  YGGDRASIL: Object.freeze({ face: Object.freeze([0.505, 0.289]) }),
-  MEL_WHIP: Object.freeze({ face: Object.freeze([0.542, 0.303]) }),
+  YGGDRASIL: Object.freeze({ face: Object.freeze([0.505, 0.324]), zoom: 1.218 }),
+  PLANT: Object.freeze({ face: Object.freeze([0.5, 0.522]), zoom: 1.302 }),
+  MEL_WHIP: Object.freeze({ face: Object.freeze([0.549, 0.333]), zoom: 1.341 }),
   GHOST: Object.freeze({ face: Object.freeze([0.5, 0.387]) }),
   SPOOKY: Object.freeze({ face: Object.freeze([0.5, 0.337]) }),
   MELODY: Object.freeze({ face: Object.freeze([0.51, 0.312]) }),

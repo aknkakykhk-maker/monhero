@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1e23a5acf88c54ca
+// source-sha256: 37ca36278c4c6950
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:45";
+const BUILD_DATE = "2026-10-27 02:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15648,11 +15648,6 @@ const MARKET_PROFILE_ICON_STYLES = {
     y: 38
   },
   kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
-  snegurochka_icon: {
-    scale: 4.28,
-    x: 11,
-    y: 111
-  },
   snegurochka_awakened_icon: {
     scale: 4.28,
     x: 9,
@@ -15672,21 +15667,6 @@ const MARKET_PROFILE_ICON_STYLES = {
     scale: 2.4,
     x: 0,
     y: 72
-  },
-  plant_icon: {
-    scale: 1.25,
-    x: 0,
-    y: -3
-  },
-  yggdrasil_icon: {
-    scale: 1.2,
-    x: 0,
-    y: -8.9
-  },
-  mel_whip_icon: {
-    scale: 1.35,
-    x: -1.6,
-    y: -10.5
   },
   mua: {
     scale: 1.06,
