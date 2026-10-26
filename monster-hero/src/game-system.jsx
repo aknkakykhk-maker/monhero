@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a3846876ebe0eb8a
+// generated-sha256: c257cbfc2c834b9b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -8878,8 +8878,10 @@ const releasedForPlayers = (item) => !item
 const CHANGELOG_TYPES = ['update', 'issue'];
 // 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
 // ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。
+// ★idTitle は、題を書き直した項目の元の題(2026-10-27 社長「題の頭に遊びの名前を付けない」で頭を外した239件)。
+//   id は元の題から作り続ける。題から作り直すと、読んだ人の既読(mh_changelog_seen_ids_*)が外れて全部 NEW に戻る。
 const changelogEntryId = entry => {
-  const source = entry.id || [entry.type, entry.title, ...(entry.items || [])].join('\u001f');
+  const source = entry.id || [entry.type, entry.idTitle || entry.title, ...(entry.items || [])].join('\u001f');
   let hash = 2166136261;
   for (let i=0;i<source.length;i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }
   return `${entry.type || 'notice'}-${(hash >>> 0).toString(36)}`;
@@ -24486,7 +24488,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {/* 「叩いて練習する」(tutorialProp)は記録にもランクにも関わらないので、CLEAR と「次のランクまで」は出さず、ひとことだけにする
     (2026-10-26 カゲあつ「全部MISSでも大きくCLEAR、次のランクFまであと600,000と出る」) */}
 {tutorialProp&&<p data-rhythm-result-practice className="mt-1.5 rounded-xl border-2 border-cyan-300/50 bg-cyan-950/40 px-2 py-1.5 text-[12px] font-black leading-snug text-cyan-100" style={JA_WRAP_STYLE}>{jaWrap('おつかれさま！本番の曲で遊んでみよう')}<small className="mt-0.5 block text-[9px] font-bold text-cyan-200/80" style={JA_WRAP_STYLE}>{jaWrap('練習のスコアは記録に残りません')}</small></p>}
-{!tutorialProp&&(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mt-1.5 flex items-center gap-2 rounded-xl border-2 px-2 py-1"><b className="shrink-0 text-lg font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="min-w-0 text-[9px] font-black leading-snug">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
+{!tutorialProp&&(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mt-1.5 flex items-center gap-2 rounded-xl border-2 px-2 py-1"><b className="shrink-0 text-lg font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="min-w-0 break-keep text-[9px] font-black leading-snug">{/* 折ってよい所だけ <wbr>(横向きで「演奏しま／した」と折れていた・2026-10-27) */failed?<>ライフが0に<wbr/>なったまま<wbr/>曲が<wbr/>終わりました<wbr/>（DOWN）</>:<>ライフを<wbr/>残して<wbr/>最後まで<wbr/>演奏しました</>}</small></div>;})()}
     </div>
   </div>
   {!tutorialProp&&<div className="mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"><span className="tracking-wider text-slate-400">BEST SCORE</span><b data-rhythm-result-best className="tabular-nums text-slate-100">{result.bestScore.toLocaleString()}</b></div>}
@@ -24579,7 +24581,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
 {(()=>{const sections=Array.isArray(result.liveLog)?result.liveLog:[];if(!sections.some(section=>section.total>0))return null;const worst=sections.filter(section=>section.total>=3&&(section.bad+section.miss)>0).sort((a,b)=>(b.bad+b.miss)/b.total-(a.bad+a.miss)/a.total)[0]||null;return <div data-rhythm-live-log className="mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2">
-  <div className="flex items-baseline justify-between"><b className="text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
+  <div className="flex items-baseline justify-between gap-2"><b className="shrink-0 whitespace-nowrap text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
   <div className="mt-2 grid grid-cols-8 items-end gap-1" style={{height:'44px'}}>{sections.map((section,i)=>{const rate=section.rate==null?0:section.rate;const color=section.total===0?'#334155':rate>=.9?'#fbbf24':rate>=.7?'#e879f9':rate>=.5?'#f87171':'#60a5fa';return <i key={i} data-rhythm-live-log-bar={String(i)} className="block rounded-t" style={{height:`${Math.max(6,Math.round(rate*100))}%`,background:color,opacity:section.total===0?.4:(section===worst?1:.85),outline:section===worst?'2px solid rgba(251,113,133,.9)':'none'}}/>;})}</div>
   <div className="mt-1 grid grid-cols-8 gap-1 text-center text-[9px] font-black tabular-nums">{sections.map((section,i)=><span key={i} className={section.bad+section.miss>0?'text-rose-300':'text-slate-500'}>{section.total===0?'−':section.bad+section.miss}</span>)}</div>
   <div className="mt-0.5 flex justify-between text-[8px] font-bold tabular-nums text-slate-500"><span>0:00</span><span>{rhythmClockLabel(result.liveLogEndMs)}</span></div>
@@ -26252,7 +26254,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'zan_dodge_combo',
     name: '血踊',
     useNote: '5ターン 同じ距離は完全回避・回避で連撃が増える',
-    desc: '5ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与ダメージ10%の連撃」が1回ずつ増える（2回よければ2回）',
+    desc: '5ターンのあいだ、敵をよけるたびにザンの攻撃が増える。\n・敵と同じ距離の枠にいるとき、ザンが狙われた攻撃を完全に回避する\n・回避するたびに、攻撃へ「与えたダメージの10%の連撃」が1回ずつ増える（2回よければ2回）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
@@ -26262,8 +26264,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Ark: Object.freeze({
     id: 'ark_chase_fate',
     name: '抗えぬ宿命を追え',
-    useNote: '5ターン 与ダメ+30%・連撃10%・被ダメ−20%',
-    desc: '5ターンのあいだ、アークが攻めも守りも強くなる。\n・与ダメージ+30%\n・攻撃に「与ダメージ10%の連撃」が1回付く\n・受けるダメージ−20%',
+    useNote: '5ターン 与えるダメージ+30%・連撃10%・受けるダメージ−20%',
+    desc: '5ターンのあいだ、アークが攻めも守りも強くなる。\n・与えるダメージ+30%\n・攻撃に「与えたダメージの10%の連撃」が1回付く\n・受けるダメージ−20%',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
     effect: 'multiBuff',
@@ -26273,8 +26275,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Iblis: Object.freeze({
     id: 'iblis_fallen_brand',
     name: '堕天の烙印',
-    useNote: '5ターン 連撃5%×5・会心UP・丈夫さ+30%',
-    desc: '最大ライフの30%を払って、5ターンのあいだ攻撃が鋭くなる。\n・攻撃に「与ダメージ5%の連撃」が5回付く\n・会心率×1.5、会心ダメージ×1.3\n・丈夫さ+30%\n・ライフが払う量より多いときだけ使える（払って倒れることはない）',
+    useNote: '5ターン 連撃5%×5・会心アップ・丈夫さ+30%',
+    desc: '最大ライフの30%を払って、5ターンのあいだ攻撃が鋭くなる。\n・攻撃に「与えたダメージの5%の連撃」が5回付く\n・会心率×1.5、会心ダメージ×1.3\n・丈夫さ+30%\n・ライフが払う量より多いときだけ使える（払って倒れることはない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
     lifeCostRate: 0.3, conditionText: 'ライフが最大の30%より多いときだけ使える',
@@ -26299,7 +26301,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'mia_on_stage',
     name: 'オン・ステージ！',
     useNote: '4ターン カード+1・使うほどボルテージ上昇',
-    desc: '4ターンのあいだ、味方全員が動きやすくなる。\n・1ターンに使えるカードが+1枚（ミーア自身も+1）\n・味方がカードを1枚使うたびに、ボルテージが1たまる（最大10）\n・ボルテージ1段階ごとに、味方全員の与ダメージ+3%・回復カードの回復量+5%・ライフ自動回復+3%・ガッツ自動回復+2%\n・効果が終わると、ボルテージは0に戻る',
+    desc: '4ターンのあいだ、味方全員が動きやすくなる。\n・1ターンに使えるカードが+1枚（ミーア自身も+1）\n・味方がカードを1枚使うたびに、ボルテージが1たまる（最大10）\n・ボルテージ1段階ごとに、味方全員の与えるダメージ+3%・回復カードの回復量+5%・ライフ自動回復+3%・ガッツ自動回復+2%\n・効果が終わると、ボルテージは0に戻る',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 4,
     cardBonus: 1, voltage: Object.freeze({ max: 10, dmg: 0.03, heal: 0.05, guts: 0.02, hp: 0.03 }),
     effect: 'stage',
@@ -26310,7 +26312,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'snegurochka_present',
     name: 'クリスマスプレゼント',
     useNote: '全員のガッツ回復＋ランダムで2つ(使うほど豪華に)',
-    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与ダメージ+20%\n　被ダメージ−20%\n　連撃 与ダメ10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）\n・レイドバトルでは、WAVEの代わりに戦闘ターンが進むほど豪華になる（2ターンごとに1段階）。早く使えば安定、温存すれば強いプレゼントを狙える',
+    desc: '味方全員にプレゼントを配る（回数は各WAVEで1回）。\n・必ず：全員のガッツが上限の20%回復\n・さらにランダムで2回、中身を引く（同じものは出ない・3ターン続く）：\n　与えるダメージ+20%\n　受けるダメージ−20%\n　連撃 与えたダメージの10%×2回\n　全員のライフが上限の20%回復\n　全員のガッツがさらに上限の20%回復\n　会心率×1.3\n・引くたびに10%の確率で「大当たり」：6つ全部が起き、そこで抽選は終わる\n・WAVEをまたいで使うほど、そのランのプレゼントが豪華になる（効果量・ガッツ回復量・大当たりの確率が少しずつ上がる）\n・レイドバトルでは、WAVEの代わりに戦闘ターンが進むほど豪華になる（2ターンごとに1段階）。早く使えば安定、温存すれば強いプレゼントを狙える',
     maxUses: 1, unlimited: false, usesPerWave: true, withCards: true, duration: 'turns', turns: 3,
     present: Object.freeze({ draws: 2, grow: Object.freeze({ effect: 0.1, fixedGuts: 0.02, jackpot: 0.02, maxLevel: 10 }), fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
@@ -26321,7 +26323,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'undine_spring_of_life',
     name: '生命の泉',
     useNote: '選んだ味方が満タン・ガッツ30%回復＋アクアフィールド(水牢/氷結)',
-    desc: '味方1体（自分でもよい）を選んで、立て直す。使うと「アクアフィールド」も広がる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる。3ターンのあいだ「根性」がつく（ライフが0になる攻撃を、1回だけライフ1で踏ん張る）\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%・与ダメージ+20%\n・どちらも、選んだ子のガッツが上限の30%回復する\n・アクアフィールド（3ターン）：広がった瞬間、味方全員のデバフが消える\n　ウンディーネ・ヤオビクニ・スネグーラチカが、フィールドで最初に使った技で道が決まる\n　通常技を最初に使う→「水牢」：通常技を使うたびに1たまり、1つごとに敵の与ダメージ−10%\n　固有技を最初に使う→「氷結」：固有技を使うたびに1たまり、1つごとに敵の被ダメージ+10%\n　決まった道は変わらず、水牢と氷結は同時にたまらない\n　3つたまると「アクアフィナーレ」：3つ使い切り、敵は1ターン動けず、2ターンのあいだ敵の被ダメージが+50%',
+    desc: '味方1体（自分でもよい）を選んで、立て直す。使うと「アクアフィールド」も広がる。\n・ダウン中の子：すぐ立ち上がり、ライフが満タンになる。3ターンのあいだ「根性」がつく（ライフが0になる攻撃を、1回だけライフ1で踏ん張る）\n・立っている子：ライフが満タンになり、3ターンのあいだライフ上限が+30%・与えるダメージ+20%\n・どちらも、選んだ子のガッツが上限の30%回復する\n・アクアフィールド（3ターン）：広がった瞬間、味方全員のデバフが消える\n　ウンディーネ・ヤオビクニ・スネグーラチカが、フィールドで最初に使った技で道が決まる\n　通常技を最初に使う→「水牢」：通常技を使うたびに1たまり、1つごとに敵が与えるダメージ−10%\n　固有技を最初に使う→「氷結」：固有技を使うたびに1たまり、1つごとに敵が受けるダメージ+10%\n　決まった道は変わらず、水牢と氷結は同時にたまらない\n　3つたまると「アクアフィナーレ」：3つ使い切り、敵は1ターン動けず、2ターンのあいだ敵が受けるダメージが+50%',
     // ★2026-10-03 ユーザー指示で 3回 → 5回
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3, konjo: 1, dmgUp: 0.2 }),
@@ -26349,7 +26351,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'pandora_box',
     name: 'パンドラの箱',
     useNote: '3ターン 毎ターン固有技が出る(強化ダイスキライライ)・最後の希望で味方全回復',
-    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・毎ターン、パンドラの固有技のカードが必ず手札に出る\n・箱のあいだの固有技は「強化ダイスキライライ」になる：威力が2倍・悪魔の力で与ダメージ50%の連撃が2回付く・天使の力で味方全員のライフ・ガッツが上限の15%回復する\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の80%回復する。パンドラはダウンしないが、反動で次の1ターンは動けない（味方のデバフ。アクアフィールドで消せる）\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
+    desc: '3ターンのあいだ、天使と悪魔の力で戦う（ライフ・ガッツ・距離・狙われ方は1体のまま）。\n・パンドラが使えるカードが+1枚\n・毎ターン、パンドラの固有技のカードが必ず手札に出る\n・箱のあいだの固有技は「強化ダイスキライライ」になる：威力が2倍・悪魔の力で与えたダメージの50%の連撃が2回付く・天使の力で味方全員のライフ・ガッツが上限の15%回復する\n・1・2ターン目の終わりに、最大ライフの30%を払う\n・3ターン生き残ると「最後の希望」：ダウン中の味方は立ち上がり、味方全員のライフが満タン・ガッツが上限の80%回復する。パンドラはダウンしないが、反動で次の1ターンは動けない（味方のデバフ。アクアフィールドで消せる）\n・途中で倒れると「最後の希望」は起きず、倒れたときのガッツが、生きている味方へ均等に分けられる',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     pandoraBox: Object.freeze({ costRate: 0.3, selfCardBonus: 1, devilDmg: 2, devilCombo: Object.freeze({ count: 2, rate: 0.5 }), angelRate: 0.15, hopeGutsRate: 0.8, guaranteeUnique: true, lockTurns: 1 }),
     effect: 'pandoraBox',
@@ -26366,7 +26368,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'tiger_thunder_shadow',
     name: '雷狼影',
     useNote: '3ターン雷をため、そのあと3ターン雷纏で強化',
-    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与ダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与ダメージ10%の連撃が1回付く\n・効果中は、もう一度使えない',
+    desc: '3ターンのあいだ雷をため、そのあと3ターン、雷をまとって戦う（効果は合計6ターン）。\n・前半3ターン：ライガーへ置いたカードを使う（行動する）たびに「雷」が1つたまる（ガード・アシストカードも数える。ききの効果でカードが増えたぶんも数える）\n・3ターン目の終わりに「雷纏」が始まる\n・後半3ターン：雷1つにつき、与えるダメージ+30%・会心率+10%・回避率+5%・ライフ自動回復+5%・ガッツ自動回復+5%・与えたダメージの10%の連撃が1回付く\n・効果中は、もう一度使えない',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 6,
     thunder: Object.freeze({ chargeTurns: 3, dmg: 0.3, crit: 0.1, comboRate: 0.1, dodge: 0.05, regenHp: 0.05, regenGuts: 0.05 }),
     effect: 'thunder',
@@ -26403,8 +26405,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Suezo: Object.freeze({
     id: 'suezo_psycho_lock_on',
     name: 'サイコロックオン',
-    useNote: '5ターン 敵の距離を固定・敵の与ダメ−30%・被ダメ+30%',
-    desc: '5ターンのあいだ、念力で敵を縛りつける。\n・敵の距離を固定する（敵が「移動」を選んだときは、何もしない）\n・敵の与ダメージが30%下がる\n・敵の被ダメージが30%上がる（味方の攻撃が通りやすくなる）\n・使った子が倒れても効果は続く',
+    useNote: '5ターン 敵の距離を固定・敵が与えるダメージ−30%・敵が受けるダメージ+30%',
+    desc: '5ターンのあいだ、念力で敵を縛りつける。\n・敵の距離を固定する（敵が「移動」を選んだときは、何もしない）\n・敵が与えるダメージが30%下がる\n・敵が受けるダメージが30%上がる（味方の攻撃が通りやすくなる）\n・使った子が倒れても効果は続く',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     psychoLock: Object.freeze({ enemyDmgDown: 0.3, enemyTakenUp: 0.3 }),
     effect: 'psychoLock',
@@ -26421,7 +26423,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: 'ハムボクシング',
     // 2026-10-22 社長「1回めがクロスカウンターで、数増えるごとにフルカウンター、リベンジカウンターって名前変えられる？ 最大3だよね？」。
     //   技名はカウンターの数で変わる(TACTICS_EX_COUNTER_NAMES)。カウンターは最大3(counter.max)。効く3ターンで出るのは3回までなので、遊び方は変わらない
-    useNote: '3ターン カウンター1・狙われた日に攻撃するとカウンター発動(与ダメ×2×カウンター・最大3)',
+    useNote: '3ターン カウンター1・狙われた日に攻撃するとカウンター発動(与えるダメージ×2×カウンター・最大3)',
     desc: '3ターンのあいだ、ハムがボクシングの構えで敵の攻撃を迎え撃つ。\n・使うと「カウンター」が1つ付く\n・敵が予告した攻撃がハムを狙っているターンに、ハムが攻撃すると、攻撃のタイミングでカウンターの技が発動する\n・敵の攻撃を回避し、そのターンにハムが与えるダメージが「2×カウンターの数」倍になる\n　カウンター1：クロスカウンター(2倍)\n　カウンター2：フルカウンター(4倍)\n　カウンター3：リベンジカウンター(6倍)\n・発動するたび、カウンターが1つ増える(最大3)\n・効果が切れると、カウンターもなくなる',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     counter: Object.freeze({ start: 1, mult: 2, max: 3 }),
@@ -26468,8 +26470,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Yggdrasil: Object.freeze({
     id: 'yggdrasil_world_tree',
     name: '世界樹の守り',
-    useNote: '3ターン 被ダメ−30%・毎ターン全員ライフ20%回復',
-    desc: '3ターンのあいだ、味方全員を守り、癒やす。\n・味方全員の被ダメージ−30%\n・ターン終わりに、味方全員のライフが上限の20%回復',
+    useNote: '3ターン 受けるダメージ−30%・毎ターン全員ライフ20%回復',
+    desc: '3ターンのあいだ、味方全員を守り、癒やす。\n・味方全員の受けるダメージ−30%\n・ターン終わりに、味方全員のライフが上限の20%回復',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     partyTakenRate: 0.3, partyRegenRate: 0.2,
     effect: 'partyGuard',
@@ -26479,7 +26481,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'melwhip_sweets_paradise',
     name: 'スイーツパラダイス',
     useNote: 'このターン 連撃30%×4・先にカードで攻撃',
-    desc: 'このターンだけ、メルホイップの攻撃に連撃が付く。\n・与ダメージ30%の連撃が4回追加される\n・先にEXを使ってから、同じターンにメルホイップのカードで攻撃する',
+    desc: 'このターンだけ、メルホイップの攻撃に連撃が付く。\n・与えたダメージの30%の連撃が4回追加される\n・先にEXを使ってから、同じターンにメルホイップのカードで攻撃する',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
     extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
     effect: 'comboBurst',
@@ -26491,7 +26493,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'ghost_offlia_avoid',
     name: 'オフリィアボイド',
     useNote: '完全回避×2・残っているあいだ会心確定と連撃10%×3',
-    desc: 'ゴーストが「完全回避」を2回ぶんもらう。\n・ゴーストが狙われた攻撃を、完全にかわす（連撃も全体攻撃も、技1回ぶんで1回減る）\n・完全回避が残っているあいだ、ゴーストの攻撃は会心が確定し、与ダメージ10%の連撃が3回付く\n・2回使い切るか、WAVEが変わると終わる',
+    desc: 'ゴーストが「完全回避」を2回ぶんもらう。\n・ゴーストが狙われた攻撃を、完全にかわす（連撃も全体攻撃も、技1回ぶんで1回減る）\n・完全回避が残っているあいだ、ゴーストの攻撃は会心が確定し、与えたダメージの10%の連撃が3回付く\n・2回使い切るか、WAVEが変わると終わる',
     maxUses: 5, unlimited: false, withCards: true, duration: 'wave',
     avoidCharges: 2,
     extraCombos: Object.freeze({ count: 3, rate: 0.1 }),
@@ -26514,8 +26516,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Melody: Object.freeze({
     id: 'melody_melody_box',
     name: 'おねがい♪メロディボックス',
-    useNote: 'クッキーを全部配る・全員回復＋3ターン与ダメ↑被ダメ↓',
-    desc: 'クッキーを全部使って、味方全員へ振る舞う（1個から使える）。\n・使った瞬間に、味方全員のライフが上限の「個数×5%」、ガッツが「個数×4%」回復\n・3ターンのあいだ、味方全員の与ダメージ+「個数×2%」・被ダメージ−「個数×2%」\n・10個で使うと、効果が5ターンに伸びる\n・使うとクッキーは0個に戻る',
+    useNote: 'クッキーを全部配る・全員回復＋3ターン与えるダメージ↑受けるダメージ↓',
+    desc: 'クッキーを全部使って、味方全員へ振る舞う（1個から使える）。\n・使った瞬間に、味方全員のライフが上限の「個数×5%」、ガッツが「個数×4%」回復\n・3ターンのあいだ、味方全員の与えるダメージ+「個数×2%」・受けるダメージ−「個数×2%」\n・10個で使うと、効果が5ターンに伸びる\n・使うとクッキーは0個に戻る',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     stackSpend: Object.freeze({ full: 10, heal: 0.05, guts: 0.04, dmg: 0.02, taken: 0.02, fullTurns: 5 }),
     conditions: Object.freeze(['hasStack']),
@@ -26525,8 +26527,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Kuromy: Object.freeze({
     id: 'kuromy_melody_key',
     name: '悪夢全開！メロディ・キー',
-    useNote: '黒音符を全部使う・3ターン クロミーの与ダメ・会心率・敵の被ダメ↑',
-    desc: '黒音符を全部使って、悪夢魔法を全開にする（1個から使える）。\n・3ターンのあいだ、クロミーの与ダメージ+「個数×4%」・会心率+「個数×3%」\n・3ターンのあいだ、敵の被ダメージ+「個数×2%」\n・10個で使うと、さらにクロミーの攻撃へ与ダメージ30%の連撃が2回付く\n・使うと黒音符は0個に戻る',
+    useNote: '黒音符を全部使う・3ターン クロミーの与えるダメージ・会心率・敵が受けるダメージ↑',
+    desc: '黒音符を全部使って、悪夢魔法を全開にする（1個から使える）。\n・3ターンのあいだ、クロミーの与えるダメージ+「個数×4%」・会心率+「個数×3%」\n・3ターンのあいだ、敵が受けるダメージ+「個数×2%」\n・10個で使うと、さらにクロミーの攻撃へ与えたダメージの30%の連撃が2回付く\n・使うと黒音符は0個に戻る',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     stackSpend: Object.freeze({ full: 10, dmg: 0.04, crit: 0.03, enemyTaken: 0.02, fullCombo: Object.freeze({ count: 2, rate: 0.3 }) }),
     conditions: Object.freeze(['hasStack']),
@@ -51285,7 +51287,8 @@ const cardTauntsOn = (st, p) => (st.taunts || []).filter((t) => t.turn === st.tu
 const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every((t) => {
   const hits = targets.filter((x) => x.p === t.by);
   if (t.mode === 'not') return !hits.some((x) => x.m === t.m);
-  if (area) return !t.noArea || !hits.some((x) => x.m !== t.m);
+  // 全員に当たる技も、縛った子に当たらないもの(空中だけ・地上だけで外れる)は出せない(2026-10-27 総点検D。文「このモンスターにダメージを与える技しか」)
+  if (area) return hits.some((x) => x.m === t.m) && (!t.noArea || !hits.some((x) => x.m !== t.m));
   return hits.every((x) => x.m === t.m);
 });
 // 合体: 生きている味方2体(a のメイン・b のサブ)で出せる混血の組。混血の子は、もとの種族が無いので材料にならない
@@ -51651,7 +51654,10 @@ const cardResolveTarget = (db, st) => {
   const ar = cardEff(main, 'area');
   const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || (ar && ar.only && cardMonType(target, st.turn) !== ar.only));
   if (missed) dmg = 0;
-  const evaded = pd.evaded || (pd.evadeAll && t.p !== pd.attacker); // みんな下がれ
+  // みんな下がれ: 純血のプライド(純血の子の攻撃)と純血のスピードのときは、派生の味方は一緒に回避できない(かばう回避も止める。2026-10-27 社長・案A)
+  const atkMon1 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  const noEvadeHere = cardIsHybridMon(target) && ((!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && !cardIsHybridMon(atkMon1)) || !!(pd.flags || {}).attachNoEvadeHybrid);
+  const evaded = pd.evaded || (pd.evadeAll && t.p !== pd.attacker && !noEvadeHere);
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
     if (pd.reduceAll) dmg = 0;
@@ -51816,7 +51822,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'oppDraw') { const k = cardDrawN(st, cardOther(p), e.n); cardLog(st, `${opp.name}は${k}枚引いた`); }
     if (e.t === 'gutsToDeckShuffle') { const k = me.guts.length; me.deck.push(...me.guts.splice(0)); cardReshuffle(st, p); cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`); }
     if (e.t === 'selfHurt' && tm && tm.safeUntil >= st.turn) cardLog(st, `${tm.name}はダメージを受けない(ぬいぐるみ)`);
-    else if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
+    else if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); tm.charge = null; /* 溜めはダメージで終わる(はね返し・反動と同じ。2026-10-27 総点検D) */ cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
     if (e.t === 'oppGutsLoss') { const k = cardLoseGuts(st, cardOther(p), e.n); cardLog(st, `${opp.name}はガッツを${k}失った`); }
     if (e.t === 'refresh') { const k = me.hand.length; me.discard.push(...me.hand.splice(0)); cardDrawN(st, p, k); cardLog(st, `${me.name}は手札を${k}枚捨てて、引き直した`); }
     if (e.t === 'millOpp') { let k = 0; for (let i = 0; i < e.n && opp.deck.length; i++) { opp.discard.push(opp.deck.pop()); k += 1; } cardLog(st, `${opp.name}の山札を${k}枚捨て札にした`); }
@@ -51959,6 +51965,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.ko) return;
           const d = m.safeUntil >= st.turn ? 0 : burn.n; // ぬいぐるみの子は0
           m.life = Math.max(0, m.life - d);
+          if (d > 0) m.charge = null; // 力をためる・根を張る・静の構えは、ダメージを受けると終わる(2026-10-27 総点検D)
           cardEvent(st, { t: 'hit', p, m: mi, dmg: d, self: true });
           cardLog(st, `灼熱の地: ${m.name}に${d}ダメージ`, { kind: 'hit' });
           if (m.life <= 0) cardKo(st, p, mi);
@@ -54054,7 +54061,8 @@ const CARD_RULE_PAGES = Object.freeze([
     '技はカードに書いてあるモンスターだけが使える。「全モンスター」のカードは誰でも使える',
     'ガッツが足りない技は使えない。ガッツ0の技はガッツが無くても使える',
     'ブリーダーのカードは、モンスターの攻撃とは別に1ターンに1枚まで',
-    '混血モンスターは、攻撃・特殊はメインの種族の技、防御・回避はサブの種族の技も使える',
+    '混血モンスターは、攻撃・特殊はメインの種族の技、防御・回避はサブの種族の技を使う(メインの種族の防御・回避は使えない)',
+    'サブが「？？？」の混血モンスターは、防御・回避もメインの種族の技を使う',
   ] },
   { id: 'guard', emoji: '🛡️', title: '守り', lines: [
     '攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)',
@@ -54575,7 +54583,7 @@ const cardMonArt = (mon) => {
   return cardNewSpeciesArt()[mon.species] || null;
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : `ダメージ${c.damage}`);
+const cardCaption = (c) => (!c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '');   // 全体カードはダメージが無い(「ダメージnull」と出ていた)
 const cardUserLabel = (db, c) => {
   if (!c) return '';
   if (c.user === 'any') return '全モンスター';
@@ -54954,16 +54962,19 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   // 動き(85-card-battle-motion.jsx): attack … SkillFxMotion で技の動き / hit 揺れ / dodge よける(残像) / jump 跳んでよける / guard 防ぐ(光の盾と数字) / KO は倒れたまま
   // 横画面(wide)は高さ390で上下2段を収めるので、絵をいちばん小さくする
-  const artSize = wide ? 'max-h-[40px] max-w-[56px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  // 横画面は、まんなかが空いていたので、絵を大きくする(2026-10-27 ソランドくん「場のモンスターの絵と場のカードが小さい」)。
+  //   高さは画面の高さから決める(40〜64px。844×390 で 64px・667×375 で 56px ほど。上下の帯とまんなかの 64px を引いた残りを2段で分ける)
+  const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
+  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art
-    ? <img src={art} alt="" className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
+    ? <img src={art} alt="" style={wide ? { maxHeight: wideArtH } : undefined} className={`${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`}/>
     : <img src={CARD_IMG(cardMonsterOf(db, mon.no).img)} alt="" className={`${tiny ? 'h-[42px]' : compact ? 'h-[54px]' : 'h-[74px]'} rounded-md object-cover`}/>;
   const mv = motion && !mon.ko ? motion : null;
   // calm … オプションの「画面の揺れ: 揺らさない」。受けたときは揺らさずに光るだけ
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? (calm ? 'mh-card-hit-calm' : 'mh-card-hit') : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = (
-    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? 'h-[40px]' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
-      style={mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : undefined}>
+    <div data-card-art={`${p}-${m}`} className={`relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`}
+      style={{ ...(wide ? { height: wideArtH } : null), ...(mv && mv.type === 'attack' ? { '--atk-dx': `${mv.dx}px`, '--atk-dy': `${mv.dy}px`, zIndex: 40 } : null) }}>
       {mv && mv.type === 'attack' && mv.kind
         ? <SkillFxMotion key={mv.key} kind={mv.kind} image={imgEl}/>
         : <div key={mv ? mv.key : 'still'} data-card-pose={mon.ko ? 'ko' : mv ? mv.type : 'still'} className={`flex items-end justify-center ${poseClass}`}>{imgEl}</div>}
@@ -55423,6 +55434,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const myTurn = !replay && st.winner === null && decider === CARD_ME;
   // どちらの番か(守りの場面でも、番の持ち主は st.active)。場のふち・上の帯の色に使う
   const turnMe = st.active === CARD_ME;
+  // 上の帯の番。見返しでは「いま見せている手を打ったときの場」で数える(下の帯と同じ。1手目は「はじまり」のまま。2026-10-27 カゲあつくんの見直し)
+  const headSt = replay && replayAt > 0 ? replay.states[replayAt - 1] : st;
+  const headMe = headSt.active === CARD_ME;
+  // 見返しでは助手の吹き出しを出さない(まんなかの記録の箱に重なって読めなかった。2026-10-27 カゲあつくんの見直し)
+  useEffect(() => { if (replay && bubble) setBubble(null); }, [bubble && bubble.key]);
   const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait'
     : st.pendingPray ? 'pray'
@@ -55523,7 +55539,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const rank = (i) => { const c = cardOf(db, me.hand[i]); return c ? (c.user === 'breeder' ? 9 : (CARD_KIND_ORDER[c.kind] ?? 8)) : 10; };
     return idx.sort((a, b) => rank(a) - rank(b) || a - b);
   })();
-  const handLarge = settings.handText === 'LARGE' && !tiny; // 手札の字を大きく(狭い画面では、ふつうのまま)
+  const handLarge = settings.handText === 'LARGE' && !tiny;
+  // 手札の小さい段は縦の画面だけ(横画面は右の列の幅に余裕がある。2026-10-27 ソランドくん「手札のカードも小さい」)
+  const handTiny = tiny && !wide; // 手札の字を大きく(狭い画面では、ふつうのまま)
   const tapHand = (i) => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) { tutWrongSay(); return; }
@@ -55714,7 +55732,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!el || stageFit >= 3) return;
     if (el.scrollHeight > el.clientHeight + 1) setStageFit((f) => Math.min(3, f + 1));
   });
-  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey]);
+  // 横と縦が切りかわったときも測り直す(はじめは縦の並びで測って詰めたまま、横の並びで手札が小さく残っていた)
+  React.useLayoutEffect(() => { setBoardFit(0); }, [mode, boardFitKey, wide]);
   React.useLayoutEffect(() => {
     const b = boardRef.current;
     const f = b && b.querySelector('[data-card-footer]');
@@ -55830,7 +55849,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           {/* 裏のクイック∞周回(設計書 5-3)。対戦中は帯もポップアップも出さず、ここに小さく「⚔ ◯周目」だけ。止まったら赤くする */}
           {quickRun && <span data-card-battle-quick-run={quickRun.stopped ? 'stopped' : 'live'} aria-label={quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`} className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`}>⚔ {quickRun.loops}周目</span>}
           {/* 自分の番は目立つ金色の札、相手の番は落ち着いた色(2026-10-26 ソラシドさん「どっちのターンか分かりにくい」) */}
-          <span data-card-head-turn data-card-head-turn-me={turnMe ? '1' : undefined} className={`min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`} style={JA_WRAP_STYLE}>{replay && st.phase === 'setup' ? <span className="whitespace-nowrap">はじまり</span> : <><span className="whitespace-nowrap">ターン {Math.max(1, st.turn)}</span> ・ <span className={`whitespace-nowrap ${turnMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`}>{turnMe ? 'あなたの番' : `${who.name}の番`}</span></>}</span>
+          <span data-card-head-turn data-card-head-turn-me={headMe ? '1' : undefined} className={`min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`} style={JA_WRAP_STYLE}>{headSt.phase === 'setup' && replay ? <span className="whitespace-nowrap">はじまり</span> : <><span className="whitespace-nowrap">ターン {Math.max(1, headSt.turn)}</span> ・ <span className={`whitespace-nowrap ${headMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`}>{headMe ? 'あなたの番' : `${who.name}の番`}</span></>}</span>
         </span>
       </div>
       {/* 横画面(④): 左に「相手の帯〜自分の帯」、右に「案内〜手札〜下のボタン」。縦のときは2つの箱を display:contents にして、今までと同じ縦の並び */}
@@ -55868,7 +55887,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
             番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
-        {bubble && (
+        {bubble && !replay && (
           <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} className={`${bigCard || turnBanner || guarding ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
             {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
@@ -55975,12 +55994,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
-              <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
+              <div className={`mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
                 <CardNameFit name={c ? c.name : no} size={handLarge ? (compact ? 12 : 13) : compact ? 10 : 11} className="font-bold leading-tight" twoLine/>
-                {tiny ? <>
+                {handTiny ? <>
                   <CardNameFit name={`ガッツ${c ? c.guts : '-'}`} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                   <CardNameFit name={cardCaption(c)} size={10} className="font-extrabold leading-[1.1] text-amber-200"/>
                 </> : compact ? <>
@@ -56792,6 +56811,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): ビートP・その日の数・記録(pvp の勝ち負け)・クイック周回
     // その日はじめての勝ちの +50 は、助手と対戦と同じ印(daily.firstWin)を使う。どちらで勝っても合わせて1日1回(2026-10-26 社長)
     // 91 の結果の画面は point をそのまま「もらったビートP」に出すので、+50 を足した合計を返す(bonus は内訳)
+    // ★クイック周回のあとの書き直しにも firstWin を入れる(抜けていて、印が消えて1日に何度も +50 になっていた。2026-10-27 総点検)
     const pvpReward = async (r) => {
       const base = cardPvpReward(r.reward, r.facts);
       // 書く直前に読み直す(助手と対戦と同じ。古い中身で記録・その日の数を上書きしない)
@@ -56805,7 +56825,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
-      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
+      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
       return { ...got, saved: ok, quick };
     };
     return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
@@ -57128,11 +57148,24 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return (
       <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
-        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+        {/* 一覧の外は、横画面では左の列に積まれる(左が見出しだけで空いていた。2026-10-27 ツナグくんの見回り)。縦では今までどおり一覧の上 */}
+        <div data-card-options-side className="mb-2 shrink-0 space-y-2">
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
+          {/* 項目の目次(横画面だけ)。押すと右の一覧のその項目へ移る */}
+          <div data-card-options-toc className={`${SCREEN_PANEL_CLASS} hidden landscape:block`}>
+            <div className="text-[11px] font-bold text-slate-400">項目</div>
+            <div className="mt-1 grid grid-cols-3 gap-1">
+              {[...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map((g) => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => (
+                <button key={label} type="button" data-card-options-jump={label} onClick={() => { Audio_.fgSe.tap(); const el = document.querySelector(`[data-card-options] ${sel}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                  className="min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100">{jaWrap(label)}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {cardTalkOpen() && (
             <div data-card-ai-talk-panel className={SCREEN_PANEL_CLASS}>
               <div className="flex items-center gap-2">
@@ -60181,7 +60214,9 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   3 → 4: ドレインは実際に減ったライフだけ回復(2026-10-27)
 //   4 → 5: 防御でマイナスされない技には −N・半分・0 の防御の札を出せない(社長の答え 案A・2026-10-27)
 //   5 → 6: カウンターは半分を返して残りを受ける・歌うで飛ばした番では「攻撃できない」を使い切らない(2026-10-27 社長)
-const CARD_REPLAY_RULES = 6; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う
+//   6 → 7: 挑発・レロレロのあと、挑発した子に当たらない全員攻撃は出せない・冬虫散と灼熱の地のダメージでも溜めが終わる(総点検D・2026-10-27)
+//   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
+const CARD_REPLAY_RULES = 8; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -60541,7 +60576,15 @@ const CardReplayList = ({ onOpen, onBack }) => {
   const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   return (
     <div data-mh-screen data-card-replay-list className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note={`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません(${CARD_REPLAY_FAV_MAX}試合まで)`}/>
+      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note="押すと、はじめから見返せます"/>
+      {/* 一覧の外は、横画面では左の列に積まれる。残っている数と★の数を出す(2026-10-27 ツナグくんの見回り「左が見出しだけで空いている」) */}
+      <div data-card-replay-side className={`${SCREEN_PANEL_CLASS} mb-2 shrink-0`}>
+        <div className="grid grid-cols-2 gap-1.5 text-center">
+          <div className="rounded-xl bg-black/30 py-1"><small className="block text-[10px] font-bold text-slate-400">残っている試合</small><b data-card-replay-count className="text-[14px] font-black text-sky-100">{box ? box.list.length : '-'}<small className="text-[10px] text-slate-400">/{CARD_REPLAY_MAX}</small></b></div>
+          <div className="rounded-xl bg-black/30 py-1"><small className="block text-[10px] font-bold text-slate-400">★</small><b data-card-replay-favs className="text-[14px] font-black text-amber-200">{favs}<small className="text-[10px] text-slate-400">/{CARD_REPLAY_FAV_MAX}</small></b></div>
+        </div>
+        <p className="mt-1 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`新しい${CARD_REPLAY_MAX}試合まで残ります。★を付けた試合は消えません`)}</p>
+      </div>
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
         {note && <p data-card-replay-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{note}</p>}
         {!box && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
@@ -63621,7 +63664,9 @@ function MonsterHeroGame() {
   //   1つの画面の中では出す行がそろっているので、空の行を捨てても高さは食い違わない。
   const MONSTER_CARD_STYLE = { minHeight: '112px' };
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
-  const monsterCardName = (node, className='text-white', band=false) => <div className={`mh-monster-card-name text-[11px] font-black w-full text-center ${band?'min-h-[28px] px-1 py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center':'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div>;
+  // 名前帯(band)は名前を切らずに折り返す。名前は12字まで付けられるので、9字以上は字を1段小さくし、左右の余白も詰めて
+  // 320幅でも2行(1行6字)に収める(2026-10-27・部長「切らずに全部出す・2行まで」。11pxだと12字で3行になっていた)
+  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div> };
   // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた。
   // ★ただし**入りきらなければ折り返す**(2026-09-18)。字を読める大きさへ上げたら、
   //   「絆 397/400」と「+456P」がカード幅(約96px)を超え、ハートが枠の外へはみ出した。
@@ -65945,9 +65990,10 @@ function MonsterHeroGame() {
     if (!rhythmEventStoryPending) return;
     // ★バトルのれんしゅうの案内の判定が終わり、れんしゅうの最中でないことも見る。
     //   はじめての人は「れんしゅうの案内 →(見る/見ない)→ れんしゅう → HOME → お話」の順になり、重ならない(2026-10-10・G8)
+    // ★ログインボーナスの窓が出ているあいだも待つ(2026-10-27 カゲあつ「お話がログインボーナスの窓の上に重なる」)。窓を閉じてから流す
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay
-      && battleGuideChecked && battleTutorialStep == null)) return;
+      && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
@@ -65958,7 +66004,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
   // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
   useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
@@ -66030,10 +66076,10 @@ function MonsterHeroGame() {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
-      && !rhythmEventStoryPending && !eventReplay)) return;
+      && !rhythmEventStoryPending && !eventReplay && !loginBonusPopup)) return;
     setTacticsIntroPending(false);
     setEventReplay({ id: 'tactics_intro', step: 0, live: true });
-  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay, loginBonusPopup]);
   // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
   //   「開催中か」を見ていたのは起動したときの1回だけだったので、15:00より前から
   //   ゲームを開いたままだった人には、会話も助手の告知も出なかった
@@ -67589,6 +67635,17 @@ function MonsterHeroGame() {
       else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
       // タクティクスバトルの導入。**公開しているときだけ**見に行く。
       // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
+      // 2026-10-27 社長「開催中のイベントだけ出す」: はじめての人が HOME に来た直後、昔のお知らせのお話(ことのはの鈴・タイプ・MFバトルカードのはじまり)が
+      // 続けて流れていた。はじめての人には見た扱いにする(プロフィールのイベント回想からいつでも見られる。前から遊んでいる人は今までどおり)。
+      // 印は既存のキーに true を書くだけ(新しいキーは足さない)。下で印を読む前に書くので、読み込みの途中で一度だけ流れることもない
+      if (!wasOnboarded) {
+        for (const [on, key] of [[EVENT_REPLAY_RELEASE_FLAGS.assistantChat, ASSISTANT_CHAT_STORY_SEEN_KEY],
+          [EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes, TACTICS_TYPES_STORY_SEEN_KEY],
+          [EVENT_REPLAY_RELEASE_FLAGS.cardBattle, CARD_BATTLE_INTRO_STORY_SEEN_KEY]]) {
+          if (!on) continue;
+          try { if ((await storeGet(key, false, false)) !== true) await storeSet(key, true, false); } catch {}
+        }
+      }
       // 難易度 HELL のお話を見たか。HELL の公開(rhythmHell)のあとだけ読む(公開前は回想にも出さないので要らない)
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
@@ -67643,7 +67700,8 @@ function MonsterHeroGame() {
       if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID,
+        // きゅうこの加入(2026-10-27 社長「開催中のイベントだけ出す」)。見た扱いにすると、マーケットのカード「きゅうこ」もふつうに並ぶ
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -81392,7 +81450,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   return <div key={id} className="relative"><button disabled={disabled} onClick={()=>toggleDraftPasture(id)} aria-pressed={selected} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30':'border-slate-800 bg-slate-900'} disabled:opacity-40`}>
                     {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                     {renderMonsterCardBody({
-                      masu, base,
+                      masu, base, nameBand:true,
                       status: selected?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white leading-none">放牧中</span>:null,
                     })}
                   </button><button onClick={(ev)=>{ev.stopPropagation();setMasuMonDetail(masu);}} aria-label={`${masu.name}の詳細`} className="mh-hit-expand absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button></div>;
@@ -83170,7 +83228,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
