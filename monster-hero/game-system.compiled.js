@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c9f0bd0fe2012058
+// source-sha256: f7bdf9f448d4394d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:31";
+const BUILD_DATE = "2026-10-27 02:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -83303,14 +83303,15 @@ const cardGuardCost = (st, c) => cardFieldCostOf(st, c && c.guts || 0);
 const cardFieldDmgAdd = (st, main) => (st && st.field && Array.isArray(st.field.effects) ? st.field.effects : []).filter(e => e.t === 'fieldDmg' && main && e.kinds.includes(main.kind)).reduce((a, e) => a + e.n, 0);
 const cardClone = st => JSON.parse(JSON.stringify(st));
 const cardOther = p => 1 - p;
+const cardIsHybridMon = mon => !!(mon && mon.main && mon.sub && mon.sub !== 'unknown');
 const cardUsableBy = (card, mon) => {
   if (!card || !mon || mon.ko) return false;
   if (card.user === 'any') return true;
   if (card.user === 'breeder') return false;
   if (card.user === mon.species) return true;
-  if (mon.main && card.user === mon.main) return true;
-  if (mon.sub && card.user === mon.sub && cardIsGuardKind(card.kind)) return true;
-  return false;
+  if (!mon.main) return false;
+  if (!cardIsHybridMon(mon)) return card.user === mon.main;
+  return card.user === (cardIsGuardKind(card.kind) ? mon.sub : mon.main);
 };
 const cardMonType = (mon, turn) => mon.fieldType ? mon.fieldType : mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type;
 const cardLog = (st, text, extra) => {
@@ -83616,8 +83617,8 @@ const cardAttachOk = (db, st, p, mon, main, c) => {
   if (w.area && !cardHasEff(main, 'area')) return false;
   if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
   if (w.deckEmpty && me.deck.length) return false;
-  if (w.pure && (mon.main || mon.sub)) return false;
-  if (w.subSpe && !(mon.sub && main.user === mon.sub)) return false;
+  if (w.pure && cardIsHybridMon(mon)) return false;
+  if (w.subSpe && !(cardIsHybridMon(mon) && main.user === mon.sub)) return false;
   return c.user === 'breeder' ? !me.breederUsed || cardBreederFree(st, p) : cardUsableBy(c, mon);
 };
 const cardAttachSets = (db, st, p, mon, main, exclude) => {
@@ -83827,7 +83828,7 @@ const cardAttackOptions = (db, st) => {
       return;
     }
     me.mons.forEach((mon, mi) => {
-      const enabler = card.kind === 'pow' ? 'mimic' : card.kind === 'spe' && mon.sub && card.user === mon.sub ? 'ancient' : null;
+      const enabler = card.kind === 'pow' ? 'mimic' : card.kind === 'spe' && cardIsHybridMon(mon) && card.user === mon.sub ? 'ancient' : null;
       const mimicIdx = enabler ? me.hand.map((n2, j) => ({
         j,
         c: cardOf(db, n2)
@@ -83984,7 +83985,7 @@ const cardGuardOptions = (db, st) => {
   if (pd.redirected) return [];
   const isArea = cardHasEff(atkCard, 'area');
   const atkMon0 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !atkMon0.main && !!target.main;
+  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !cardIsHybridMon(atkMon0) && cardIsHybridMon(target);
   const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
@@ -84031,7 +84032,7 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     if (cardHasEff(c, 'evadeAll')) {
-      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && (target.main || target.sub)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
+      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && cardIsHybridMon(target)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
         type: 'guard',
         hand: hi,
         mon: tgt.m
@@ -84071,7 +84072,7 @@ const cardGuardOptions = (db, st) => {
     if (ev) {
       if (pd.evaded) return;
       if (cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade) return;
-      if (fl.attachNoEvadeHybrid && (target.main || target.sub)) return;
+      if (fl.attachNoEvadeHybrid && cardIsHybridMon(target)) return;
       if (!ev.kinds.includes(atkCard.kind)) return;
       if (ev.minGuts && pd.cost < ev.minGuts) return;
       out.push({
@@ -85187,7 +85188,7 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
-  if (flags.attachNoEvadeHybrid && (tmon.main || tmon.sub)) return 0;
+  if (flags.attachNoEvadeHybrid && cardIsHybridMon(tmon)) return 0;
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
@@ -85218,7 +85219,7 @@ const cardAiScoreField = (db, st, p, card, cost) => {
       v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
     }
     if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
-    if (e.t === 'fieldPurePride') v += (alive(op).filter(m => m.main).length - alive(me).filter(m => m.main).length) * 0.6;
+    if (e.t === 'fieldPurePride') v += (alive(op).filter(cardIsHybridMon).length - alive(me).filter(cardIsHybridMon).length) * 0.6;
     if (e.t === 'fieldBanKind') v += (share(theirs, c => e.kinds.includes(c.kind), 0.2) - share(mine, c => e.kinds.includes(c.kind), 0.2)) * 4;
     if (e.t === 'fieldType') v += (alive(me).filter(m => m.type === e.type).length - alive(op).filter(m => m.type === e.type).length) * 0.2;
     if (e.t === 'fieldBurn') v += (alive(me).length - alive(op).length) * 0.5 - 0.4;

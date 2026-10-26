@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39709bb6779aa7c0
+// generated-sha256: 27654e9db7ba1482
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 02:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 02:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -50520,15 +50520,19 @@ const cardFieldDmgAdd = (st, main) => (st && st.field && Array.isArray(st.field.
 const cardClone = (st) => JSON.parse(JSON.stringify(st));
 const cardOther = (p) => 1 - p;
 
-// その子が、そのカードを使えるか(専用の技は書いてある種族だけ。全モンスターは誰でも。混血はメイン=攻撃・特殊/サブ=防御・回避も)
+// 混血(派生)の子か。サブが「？？？」(unknown)の子(剣士モッチー・パンドラなど・レア)は純血と同じに扱う(2026-10-27 社長「サブが？？？は純血扱い」)
+const cardIsHybridMon = (mon) => !!(mon && mon.main && mon.sub && mon.sub !== 'unknown');
+// その子が、そのカードを使えるか(専用の技は書いてある種族だけ。全モンスターは誰でも)
+//   混血: 攻撃・特殊はメインの種族の札だけ、防御・回避はサブの種族の札だけ(2026-10-27 社長「ヘルファットがモッチーの守備技使ってきます」。
+//   前は「サブの守りも使える」と読み、メインの守りまで使えていた)。サブが？？？の子は純血と同じで、メインの種族の札を全部使える
 const cardUsableBy = (card, mon) => {
   if (!card || !mon || mon.ko) return false;
   if (card.user === 'any') return true;
   if (card.user === 'breeder') return false;
   if (card.user === mon.species) return true;
-  if (mon.main && card.user === mon.main) return true;
-  if (mon.sub && card.user === mon.sub && cardIsGuardKind(card.kind)) return true;
-  return false;
+  if (!mon.main) return false;
+  if (!cardIsHybridMon(mon)) return card.user === mon.main;
+  return card.user === (cardIsGuardKind(card.kind) ? mon.sub : mon.main);
 };
 // いまの特徴(空中・地上・水中)。ジャンプなどで期限つきで空中になる
 const cardMonType = (mon, turn) => (mon.fieldType ? mon.fieldType : mon.waterUntil >= turn ? 'water' : mon.airUntil >= turn ? 'air' : mon.type); // 全体カード(悪天候・空間のひずみ)がいちばん先・ひきずりこむ(水中)は空中より先
@@ -50725,8 +50729,8 @@ const cardAttachOk = (db, st, p, mon, main, c) => {
   if (w.area && !cardHasEff(main, 'area')) return false;
   if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
   if (w.deckEmpty && me.deck.length) return false;
-  if (w.pure && (mon.main || mon.sub)) return false;
-  if (w.subSpe && !(mon.sub && main.user === mon.sub)) return false; // 太古の記憶: サブの種族の特殊技にだけ
+  if (w.pure && cardIsHybridMon(mon)) return false;
+  if (w.subSpe && !(cardIsHybridMon(mon) && main.user === mon.sub)) return false; // 太古の記憶: サブの種族の特殊技にだけ
   return c.user === 'breeder' ? (!me.breederUsed || cardBreederFree(st, p)) : cardUsableBy(c, mon);
 };
 // 付ける札の組み合わせ(0〜2枚。ブリーダーのカードは1枚まで)
@@ -50864,7 +50868,7 @@ const cardAttackOptions = (db, st) => {
     }
     me.mons.forEach((mon, mi) => {
       // ものまね: その子が使えないちから技でも、ものまねを付ければ出せる / 太古の記憶: 混血の子が、サブの種族の特殊技を出せる
-      const enabler = card.kind === 'pow' ? 'mimic' : card.kind === 'spe' && mon.sub && card.user === mon.sub ? 'ancient' : null;
+      const enabler = card.kind === 'pow' ? 'mimic' : card.kind === 'spe' && cardIsHybridMon(mon) && card.user === mon.sub ? 'ancient' : null;
       const mimicIdx = enabler ? me.hand.map((n2, j) => ({ j, c: cardOf(db, n2) })).filter(({ j, c }) => j !== hi && c && c.ready && cardHasEff(c, enabler) && cardUsableBy(c, mon)).map((x) => x.j) : [];
       const byMimic = !cardUsableBy(card, mon) && card.user !== 'breeder' && mimicIdx.length > 0 && !mon.ko;
       if ((!cardUsableBy(card, mon) && !byMimic) || !cardMonCanAttack(db, st, p, mi, card)) return;
@@ -50952,7 +50956,7 @@ const cardGuardOptions = (db, st) => {
   const isArea = cardHasEff(atkCard, 'area');
   // 純血のプライド(全体カード): 純血の子の攻撃に、派生の子は回避を出せない
   const atkMon0 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !atkMon0.main && !!target.main;
+  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !cardIsHybridMon(atkMon0) && cardIsHybridMon(target);
   const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
@@ -50984,7 +50988,7 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     if (cardHasEff(c, 'evadeAll')) {
-      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && (target.main || target.sub)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({ type: 'guard', hand: hi, mon: tgt.m });
+      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && cardIsHybridMon(target)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({ type: 'guard', hand: hi, mon: tgt.m });
       return;
     }
     const en = cardEff(c, 'endure') || cardEff(c, 'takeMult');
@@ -51001,7 +51005,7 @@ const cardGuardOptions = (db, st) => {
     if (ev) {
       if (pd.evaded) return;
       if (cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade) return;
-      if (fl.attachNoEvadeHybrid && (target.main || target.sub)) return; // 純血のスピード
+      if (fl.attachNoEvadeHybrid && cardIsHybridMon(target)) return; // 純血のスピード
       if (!ev.kinds.includes(atkCard.kind)) return;
       if (ev.minGuts && pd.cost < ev.minGuts) return;
       out.push({ type: 'guard', hand: hi, mon: tgt.m });
@@ -51552,7 +51556,7 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
-  if (flags.attachNoEvadeHybrid && (tmon.main || tmon.sub)) return 0; // 純血のスピード
+  if (flags.attachNoEvadeHybrid && cardIsHybridMon(tmon)) return 0; // 純血のスピード
   const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && c.guts <= opp.guts.length && (!ev.minGuts || card.guts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
@@ -51581,7 +51585,7 @@ const cardAiScoreField = (db, st, p, card, cost) => {
       v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
     }
     if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
-    if (e.t === 'fieldPurePride') v += (alive(op).filter((m) => m.main).length - alive(me).filter((m) => m.main).length) * 0.6;
+    if (e.t === 'fieldPurePride') v += (alive(op).filter(cardIsHybridMon).length - alive(me).filter(cardIsHybridMon).length) * 0.6;
     if (e.t === 'fieldBanKind') v += (share(theirs, (c) => e.kinds.includes(c.kind), 0.2) - share(mine, (c) => e.kinds.includes(c.kind), 0.2)) * 4;
     if (e.t === 'fieldType') v += (alive(me).filter((m) => m.type === e.type).length - alive(op).filter((m) => m.type === e.type).length) * 0.2;
     if (e.t === 'fieldBurn') v += (alive(me).length - alive(op).length) * 0.5 - 0.4;
