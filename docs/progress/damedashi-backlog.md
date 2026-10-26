@@ -19,3 +19,6 @@
 
 ## 2026-10-26 図鑑
 → [damedashi-2026-10-26/dex/README.md](damedashi-2026-10-26/dex/README.md)(6件)
+
+## 2026-10-26 設定
+→ [damedashi-2026-10-26/settings/README.md](damedashi-2026-10-26/settings/README.md)(7件)
