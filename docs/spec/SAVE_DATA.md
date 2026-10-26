@@ -73,6 +73,7 @@
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
 | `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
 | `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
+| `mh_card_replays_v1` | object / `cardReplayNormalize` | MFバトルカードの過去の対戦を見る(リプレイ)の記録 `{ v:1, list:[{ v:1, id(試合の番号), kind:'pvp'|'cpu', at, rules(ルールの版), first, names, foe:{ name, icon, frame, deckName, who }, outcome, reason, decks:[自分, 相手], seeds:[自分, 相手], acts:[[by, 手], …], prints(1手ごとの場の指紋4文字ずつ), fav }] }`(新しい順)。新しい10試合まで・お気に入り3つまで(消さない)・合わせて約150KBまで。端末の中だけ(送らない)。壊れた1件は捨て、知らない値は既定で補う。マルチは確かめ(`cardPvpVerify`)が通った試合だけ書く。なぞり直して手が当たらない・指紋が合わない所で止め「ここまでしか見られません」(2026-10-27・93-card-replay.jsx) |
 | `mh_card_decks_v1` | object / `cardNormalizeDecks` | MFバトルカードのデッキ `{ active, decks:[{ id, name, monsters:[3], cards:[50] }] }`(5つまで)。持っていないカードが入っていても消さない |
 | `mh_card_point_v1` | number / `cardNormalizePoint` | MFバトルカードのカードポイント(**2026-10-26 から読まない**。カードポイントをやめてビートPにした・社長。キーは消さずに残す。カードの支払い・受け取りはビートPの `mh_rhythm_event_points_v1`。`CARD_POINT_STORE_KEY`) |
 | `mh_card_points_to_beatp_migrated_v1` | `true` のみ | 前のカードポイント(`mh_card_point_v1`)の残りをビートPへ1回だけ移した印(2026-10-26 社長)。印とビートPを1つの取引で書く(`cardMigratePointsOnce`)。`CARD_SAVE_KEYS` には入れない(デバッグの記録の消去で消えて二重に足されないように)。`tools/card/card-point-migration-check.js` |
@@ -88,6 +89,7 @@
 | `mh_card_rank_sync_v1` | string | MFバトルカードのランキング(表 `card_battle_ranks`)へ最後に送った行の中身。同じなら送り直さない(90-card-rank.jsx) |
 | `mh_card_bgm_v1` | object / `normalizeCardBgm` | MFバトルカードのBGM `{ top: 曲id(トップ画面・2026-10-26 に足した項目), cpu: 'auto'(相手の助手に合わせる)か曲id, pvp: 曲id }`。オプションで曲を選んだときだけ書く。無い項目・知らない曲idは既定(top `atsu_cup_theme` = MF × ICHIKA MIX・cpu `auto`・pvp `ichika_battle`)へ。選んだ人の値は書き換えない |
 | `mh_card_cpu_playlist_v1` | object / `cardNormalizeCpuPlaylist` | MFバトルカードの助手と対戦の曲の並び `{ v:1, assistants:{ 助手id: [曲id 1〜5] } }`(2026-10-26)。オプションで直したときだけ書く。無い・壊れていたら助手ごとの曲1つ。知らない助手・知らない曲・同じ曲の2つ目・6曲目からは落とし、0曲になった助手は既定の1曲。これがあれば助手と対戦では `mh_card_bgm_v1` の `cpu` を使わない(そちらは消さない・書き換えない) |
+| `mh_card_cpu_open_v1` | object / `cardNormalizeCpuOpen` か `null` | MFバトルカードの助手と対戦の、いま遊んでいる試合の印 `{ id, who, level, rankable, at, beat, facts:{ ownTurns, kos } }`。始めたときに書き、ふつうに終わったら結果と同じ取引で `null` にする。残っていて `beat` が15秒より古ければ、次に開いたときに投了として数えて `null` にする(2026-10-26 社長「負け扱いにする」。84-screen-card-battle.jsx)。壊れていたら数えずに `null` |
 | `mh_card_settings_v1` | object / `normalizeCardSettings` | MFバトルカードの演出 `{ speed: 'normal'|'fast', autoPass: 真偽 }`。無い人は ふつう・自動パスON |
 | `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
@@ -249,6 +251,7 @@
 | `mh_debug_entry_v1` | `'1'` / 未設定 | デバッグ専用。デバッグ設定を一度でも開いた端末だけ、設定の画面に「🧪 デバッグ設定」の入口を出す(2026-10-16・ドライバーくん)。ふつうのプレイは書かない |
 | `mh_debug_unlocked_v1` | `'1'` / 未設定 | デバッグ専用(2026-10-20)。デバッグ設定の入口で合言葉が合った端末だけ `'1'`。次から合言葉を聞かない。合言葉そのものは保存しない |
 | `mh_debug_trials_seen_v1` | 文字の配列 / `[]` | デバッグ専用。デバッグ設定の「確認待ちの試作」で、入/切を一度でも押した試作の id(NEW の印を外すため)(2026-10-16)。配列でない・文字でない要素は捨てて読む。最大100件 |
+| `mh_debug_menu_open_v1` | 文字の配列 / `[]` | デバッグ専用。デバッグメニューで開いたままにしているまとまりの id(`monster-look`・`battle` など。2026-10-27)。この端末の見た目だけで、遊び・記録には関わらない。壊れていれば全部閉じた状態で始める |
 | `mh_tactics_hate_proto_v1` | `'on'` / 未設定 | デバッグの「🧪 確認待ちの試作」の「タクティクスのヘイト(試作)」(2026-10-17)。`'on'` = タクティクスバトルで、目立った子ほど狙われやすくなり、名前の横に🔥が出る(数字は `TACTICS_HATE`)。未設定 = 今までの狙い方。ヘイトの値そのものはバトル中だけで保存しない。**2026-10-18 に公開してからは読まない**(公開の印 `RELEASE_FLAGS.tacticsHate` で全員に効く)。キーは消さず残す |
 | `mh_monster_type_proto_v1` | `'on'` / 未設定 | デバッグの「🧪 確認待ちの試作」の「モンスターのタイプ表記(試作)」(2026-10-17)。`'on'` = 図鑑・図鑑の詳細・パーティ選びにタイプの印を出す(表は `MONSTER_TYPES` / `MONSTER_TYPE_OF`)。未設定 = 出さない。タイプはタクティクスのヘイトの増え方にだけ効き、印の入/切とは関係なくヘイトの試作が入なら使われる。**2026-10-18 に公開してからは読まない**(公開の印 `RELEASE_FLAGS.tacticsHate` で全員に出る)。キーは消さず残す |
 | `mh_sky_reach_adapt_proto` | `'1'` / `'0'` / 未設定 | HELL の空中の受け付けの下の境目を、その人の構えに合わせて下げる(案A・2026-10-12・テンポくん)。**未設定なら入**(2026-10-12 社長の決定で既定を入に)。`'0'` は切(固定の境目)を選んだ人。デバッグの切り替えで書く。前は切を選ぶとキーを消していたので、その人も未設定=入になる |

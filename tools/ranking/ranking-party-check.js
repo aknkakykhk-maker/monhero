@@ -16,8 +16,8 @@ for(const token of [
   "const isHero=(m)=>m?.role==='hero'",
   '{RANGE_LABELS[m.slotIndex]}距離',
   '<DyedMonsterImage baseId={rankingMonsterIdOf(m)}',
-  '編成情報なし（過去の記録）',
-  '勇者モン情報なし',
+  '編成の記録なし（過去の記録）',
+  '勇者モンの記録なし',
 ]) assert(src.includes(token), token);
 // 一覧には編成を出さない(50件×最大4体で開いた瞬間に引っかかるため)
 // renderScoreRankingEntryは第3引数(showSpecies、種族チャレンジ「全種族」タブ用)を持つので、

@@ -371,6 +371,8 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                 const rows = sum.records.battle.filter((e) => labels[e.id]);
                 return (
                   <div data-friend-battle className="mt-2 flex flex-col gap-2">
+                    {/* MFバトルカードの戦績(ランキングの表を、その人のブリーダーの番号で読むだけ。記録が無ければ出さない。90-card-rank.jsx) */}
+                    <CardBattleStatsFriend breederId={selected.otherId}/>
                     {rows.length === 0 && <p className="px-1 py-4 text-center text-[11px] font-bold text-slate-500">まだバトルの記録がありません</p>}
                     {rows.map((e) => (
                       <div key={e.id} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
@@ -378,7 +380,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                         <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{labels[e.id].label}</b>
                         <strong className="shrink-0 text-[13px] font-black text-amber-200">{e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`}</strong>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">モードごとの、いちばん良い記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、いちばん良い記録です。</p>
                   </div>);
               })()}
               {profileTab === 'songs' && sum && sum.records && (() => {

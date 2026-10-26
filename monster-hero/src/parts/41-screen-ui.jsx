@@ -75,7 +75,8 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
       </button>
     )}
     <div className="min-w-0 flex-1">
-      <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
+      {/* 折り返す見出しは言葉の切れ目で折る(「マスモン一覧(モンヒロ／ビート)」と名前の途中で折れていた・2026-10-26) */}
+      <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{wrapTitle && typeof title === 'string' ? <span className="min-w-0" style={JA_WRAP_STYLE}>{jaWrap(title)}</span> : title}</h2>
       {/* 注記は文字のときだけ言葉の切れ目で折る(2026-10-24。M/B管理「アシストカードは／ここ」と2字だけ落ちていた) */}
       {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={typeof note === 'string' ? JA_LABEL_STYLE : undefined}>{typeof note === 'string' ? jaWrap(note) : note}</p>}
     </div>
@@ -276,7 +277,16 @@ const jaWrapPoints = (text) => {
         //   長い文節を分ける②でもここでは分けない(柔らかくつなぐと「噛み／合わない」と分けられた)
         //   道具は「噛|み|合わ」と細かく分けるので、すぐ前の区切りではなく、それまでにまとめた文節(cur)の終わりで見る
         || (/[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg))
-        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg))));
+        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg))
+        // 数とそのあとの助数詞・単位は離さない(「1／曲ずつ」「5／倍」「30／%」「3回／目」。2026-10-26 クラフト)。
+        //   手前の「Lv.」「×」「約」「第」と数も離さない(「Lv.／12」「約／20秒」)
+        || (/[0-9０-９]$/.test(prev) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連万千百年月時%％]|時間|ms|px|P|Lv|コンボ|ノーツ|ビートP)/.test(seg))
+        || (/[0-9０-９][回人体個枚曲周倍つ番件位本段連]$/.test(cur) && /^目/.test(seg))
+        || (/(?:Lv\.?|LV\.?|×|x|約|第|全|各|計|最大|最高)$/.test(cur) && /^[0-9０-９]/.test(seg))
+        // カタカナどうしの間は離さない。道具は造語を「マス|モン」「モン|ヒロ|ビート」と分ける(2026-10-26 ダメダシ「(モンヒロ／ビート)」)。
+        //   合わせて7字まで(「ファームバトルカード」のように長いものまでつなぐと1行に入らず、字の途中で折れる)。
+        //   かぎかっこの中は名前ごと包む決まり(jaWrapPieces)に任せる(つなぐと「「フリーマッチ」／と……」と最後の行に字が残った)
+        || (/[ァ-ヶー]$/.test(prev) && /^[ァ-ヶ]/.test(seg) && !/[「『][^」』]*$/.test(cur) && (cur.match(/[ァ-ヶー]+$/) || [''])[0].length + (seg.match(/^[ァ-ヶー]+/) || [''])[0].length <= 7)));
       const soft = !hard && !kaoStart(pos) && (
         (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
         || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
@@ -384,6 +394,12 @@ const jaWrapPieces = (seg) => {
   return out;
 };
 const jaWrap = (text) => {
+  // 文字でない物が来たときの守り(2026-10-27 MFバトルカードのトップの吹き出しに「[object Object]」が出た)。
+  //   画面の部品(React の要素)はそのまま出す。{ text } の形なら text を使う。ほかは出さない
+  if (text && typeof text === 'object') {
+    if (React.isValidElement(text) || Array.isArray(text)) return text;
+    text = typeof text.text === 'string' ? text.text : '';
+  }
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   // ブラウザは「…」「～」「♡」・絵文字・顔文字の手前や中を、印が無くても折り目として扱う。「入れんのじゃ／……」「(っ`･／ω･´)」と
@@ -393,6 +409,8 @@ const jaWrap = (text) => {
   // Chromium が落ちた(行の長さをそろえる text-wrap: balance・pretty のとき。2026-10-24 台詞「本当に極限…！ (>人<;)」で見つけた)
   return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : t))}</React.Fragment>);
 };
+// 太字(<b>)などが混ざった文用。文字の部分だけを jaWrap に通す(2026-10-26 マスモン設定「金色のノー／ツに」)。JA_WRAP_STYLE と一緒に使う
+const jaWrapParts = (...parts) => parts.map((p, i) => <React.Fragment key={i}>{typeof p === 'string' ? jaWrap(p) : p}</React.Fragment>);
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
 // 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
@@ -498,7 +516,7 @@ const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, bo
       className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
     <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
       <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
     </div>
   </ModalFrame>
@@ -511,7 +529,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
     {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
     <div className="mt-4 grid grid-cols-1 gap-2">
       <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
     </div>
   </ModalFrame>
 );

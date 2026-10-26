@@ -71,7 +71,7 @@ async function buyItems(s, { count = 3, double = false } = {}) {
     await s.wait(1200);
     await s.dismissOverlays(4);
     // 二度押しの2回目が、窓の下の別の品物を開くことがある。人と同じく「キャンセル」で閉じる
-    const cancel = (await s.listButtons()).find((b) => b.overlay && /^キャンセル$/.test(b.label));
+    const cancel = (await s.listButtons()).find((b) => b.overlay && /^(キャンセル|やめる)$/.test(b.label));
     if (cancel) { await s.tap(cancel, '開いた窓を閉じる'); await s.wait(500); }
     const after = await storage(s);
     const g = readNum(after.mh_gold);

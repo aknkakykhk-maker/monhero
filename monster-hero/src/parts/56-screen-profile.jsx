@@ -295,7 +295,7 @@ function ProfileScreen({
               <Users size={18} className="text-pink-300 shrink-0"/>
               <span className="flex-1 min-w-0 text-left">
                 <b className="block text-[13px] font-black text-pink-100">フレンド</b>
-                <small className={`block truncate text-[10px] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`申請が${Number(friendRequestCount)}件届いています`:'申請・プロフィール'}</small>
+                <small data-profile-friends-note className={`block text-[10px] leading-tight [word-break:keep-all] [overflow-wrap:anywhere] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`申請が${Number(friendRequestCount)}件届いています`:'申請・プロフィール'}</small>
               </span>
               {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
             </button>
@@ -442,6 +442,8 @@ function ProfileScreen({
         {/* モンヒロビートの実績: 難易度ごとのクリア・フルコンボ・オールエクセレント・オールマーベラスの数。
             フレンドのプロフィールにも同じ表が出る。1曲も遊んでいなければ出さない */}
         {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
+        {/* MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」)。一度も遊んでいなければ出さない。保存は読むだけ(90-card-rank.jsx) */}
+        {onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。

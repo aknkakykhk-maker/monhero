@@ -426,7 +426,7 @@ check('ランキングボタンはチャレンジのときだけ出す',
 // クイックでも同じ高さの案内を出し、下に続く表示の位置がモードでずれないようにする
 check('ランキングボタンはモードのタブと同じ幅', has('className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40'));
 check('ランキングボタンはモードのタブのすぐ下にある',
-  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度を選択'));
+  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度をえらぶ'));
 check('クイックでも同じ高さの案内を出す', has('クイックモードはランキング対象外です') && count('w-full h-10 rounded-xl') === 2, `${count('w-full h-10 rounded-xl')}か所`);
 // 最低の高さ(min-h)ではなく決め打ちの高さ(h-10)にする。ボタンの中身によっては
 // min-hを超えて伸びてしまい、クイック側の空き場所とずれるため
@@ -586,7 +586,7 @@ check('クイック難易度画面に同じ高さで状態が分かる3択を出
 check('クイックの全難易度カードは報酬方針で外寸とボタン位置が変わらない',
   // 2026-10-10 に色のタイルへ作り直してから、固定の高さ(h-[384px])は持たない。報酬方針で変わるのは字だけで、
   // ボタンの段を mt-auto で下へ寄せているので、外寸とボタンの位置は変わらない(2026-10-12 に3つの方針を実際に測って確かめた)
-  /data-difficulty-card=\{key\}[^\n]*className=\{`mhbt-tile[^`]*flex flex-col/.test(source) && has('<div className="mt-auto grid grid-cols-[minmax(0,1fr)] gap-1.5 pt-2">')
+  /data-difficulty-card=\{key\}[^\n]*className=\{`mhbt-tile[^`]*flex flex-col/.test(source) && /<div className="mt-auto grid grid-cols-\[minmax\(0,1fr\)\] gap-1\.5 pt-2[ "]/.test(source) // 2026-10-27 横の背の低い画面だけ2列にするクラスが後ろに付く
     && has('data-difficulty-card={key}') && has('data-difficulty-carousel'));
 // ★見た目は組み直したが、守りたいのは「折り返さない(whitespace-nowrap)」ことと
 //   「経験値・虹のプシュケー・ダイヤの3行が同じ大きさで並ぶ」こと
