@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b0f0dfcc9aad8f3
+// source-sha256: d104ea5a94b8bbcc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:10";
+const BUILD_DATE = "2026-10-27 00:22";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -88619,11 +88619,11 @@ const cardFoeStyle = who => {
   return v <= 1.2 ? CARD_FOE_STYLES.balance : CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance;
 };
 const CARD_FOE_BUILD_NOTE = Object.freeze({
-  easy: '残りの2体は気分でえらぶ(気まぐれな子が混ざることも)。カードは第1弾だけで、組み方は雑',
-  normal: '残りの2体は型に合う子が中心。カードは型に合うものを、ざっくり入れる',
-  hard: '残りの2体は、型に合う子をしっかりえらぶ。第1弾のカードで、型どおりに組む',
-  expert: '残りの2体は、型に合う子をしっかりえらぶ。全部の弾から、強いカードを優先して組む',
-  master: 'いちばん強い組み合わせで、全部の弾から本気で組む。あなたのデッキを見て、残りの2体をえらび直すことも'
+  easy: '好きな子を中心に、のんびり組んでくる。気まぐれな子が混ざることも(カードは第1弾から)',
+  normal: '好きな子と、戦い方に合う子で組んでくる。カードはざっくり選ぶ',
+  hard: '戦い方に合う子とカードで、しっかり組んでくる(カードは第1弾から)',
+  expert: '戦い方に合う子と、全部の弾の強いカードで、しっかり組んでくる',
+  master: '全部の弾から本気で組んでくる。あなたのデッキを見て、モンスターを選び直すことも'
 });
 const CardFoeStyle = ({
   db,

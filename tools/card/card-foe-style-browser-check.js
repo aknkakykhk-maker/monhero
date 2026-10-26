@@ -149,8 +149,10 @@ const seed = (withAuto) => `(() => {
           if (WANT[who] && r.label !== WANT[who]) bad.push(`${who}: 型が ${r.label}(${WANT[who]} のはず)`);
           if (r.mons !== 1) bad.push(`${who}: 好きなモンスターが ${r.mons}体`);
           if (r.prefer !== (who === 'atsu' && lv === 'hard')) bad.push(`${who} ${lv}: よく使うカードの出かたが違う`);
-          if (lv === 'easy' && !/^EASY: .*気分/.test(r.note)) bad.push(`${who} EASY: ${r.note}`);
-          if (lv === 'hard' && !/^HARD: 残りの2体は、型に合う子/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
+          if (lv === 'easy' && !/^EASY: 好きな子を中心に/.test(r.note)) bad.push(`${who} EASY: ${r.note}`);
+          if (lv === 'hard' && !/^HARD: 戦い方に合う子/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
+          // 作り手の言葉を出さない(2026-10-26 カゲあつくんの通しの点検で「組み方は雑」「型どおりに組む」)
+          if (/雑|型どおり|型に合う/.test(r.note)) bad.push(`${who} ${lv}: 作り手の言葉(${r.note})`);
           if (r.clipped.length) bad.push(`${who}: 字が切れている(${r.clipped.join('・')})`);
           if (/[0-9０-９]/.test(r.text.replace(/[1-4]体|第[0-9]弾/g, ''))) bad.push(`${who}: 数字を出している(${(r.text.replace(/[1-4]体|第[0-9]弾/g, '').match(/.{0,8}[0-9０-９].{0,8}/) || [''])[0]})`);
         }
