@@ -56,6 +56,10 @@ const Audio_ = (() => {
   // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
   let bgmSource = null, bgmSourceKey = null, bgmRequest = 0, previewSource = null, previewKey = null, previewRequest = 0;
   let jingleSource = null, jingleTimer = null;
+  // 1回だけ流す曲(MFバトルカードの助手と対戦の曲の並び。2026-10-26)。{ key, onEnd, onFail }
+  //   この曲だけ繰り返さずに流し、最後まで流れ終わったときだけ onEnd を呼ぶ(止めた・別の曲にした・裏へ回ったときは呼ばない)。
+  //   読み込めなかったときは onFail。ほかの曲を鳴らしたら外れる(ほかの画面の曲には効かない)
+  let bgmOnce = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
   let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
@@ -353,16 +357,25 @@ const Audio_ = (() => {
     stopOthers();
     const source = ctx.createBufferSource();
     applyTrackGain(track);
-    source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    source.buffer = buffer; source.loop = once ? false : track.loop !== false; source.connect(bgmGain);
     bgmSource = source; bgmSourceKey = key;
-    source.onended = () => { if (bgmSource === source) { bgmSource = null; bgmSourceKey = null; } };
+    // 止めるとき(stopSource)は onended を外してから止めるので、ここへ来るのは最後まで流れたときだけ
+    source.onended = () => {
+      if (bgmSource !== source) return;
+      bgmSource = null; bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) { bgmOnce = null; try { o.onEnd && o.onEnd(); } catch (e) {} }
+    };
     try { source.start(0); } catch (e) { stopOthers(); return; }
     // 止まったままのAudioContextで鳴らしても無音のままになる。すぐに復帰を試す
     // (失敗しても、次のタップで bindResumeOnGesture が鳴らし直す)
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
   const playBGM = (key) => {
-    const track = resolveTrack(key); if (!track) return Promise.resolve();
+    const track = resolveTrack(key);
+    if (!track) { const o = bgmOnce; if (o && o.key === key) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} } return Promise.resolve(); }
+    if (bgmOnce && bgmOnce.key !== track.id) bgmOnce = null;
     currentKey = track.id;
     const request = ++bgmRequest;
     if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
@@ -375,7 +388,16 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
+    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {
+      // 1回だけ流す曲が読み込めなかったら、並びの次へ進めてもらう(この呼び出しが今も最新のときだけ。止めた後には呼ばない)
+      const o = bgmOnce;
+      if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} }
+    });
+  };
+  // key を1回だけ流す曲にする(鳴らすのは playBGM)。null で外す。handlers … { onEnd(), onFail() }
+  const setBgmOnce = (key, handlers = {}) => {
+    const track = key ? resolveTrack(key) : null;
+    bgmOnce = key ? { key: track ? track.id : key, onEnd: handlers.onEnd || null, onFail: handlers.onFail || null } : null;
   };
   // 今の曲を ms かけて小さくしてから、次の曲へ移す(2026-10-17 会話イベントの途中で曲を替える。社長「途中で変わるのいいね」)。
   // 鳴っていない・同じ曲のときは playBGM と同じ。下げているあいだに別の曲が決まったら、そちらを優先する
@@ -806,5 +828,5 @@ const Audio_ = (() => {
   };
   const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
