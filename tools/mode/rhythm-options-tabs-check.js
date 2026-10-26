@@ -77,7 +77,8 @@ check('項目は枠に入れ、頭に帯のラベルを置く',
 check('説明は畳んでおく(消してはいない)',
   options.includes('<details data-rhythm-option-help')
   && options.includes('▸ 詳しく')
-  && /<summary[^>]*>▸ 詳しく<\/summary>\s*\n\s*<p className=\{`mt-1 \$\{note\}`\}>\{description\}<\/p>/.test(options));
+  // 2026-10-26: 説明は言葉の切れ目で折る(JA_WRAP_STYLE と jaWrap)形になった
+  && /<summary[^>]*>▸ 詳しく<\/summary>\s*\n\s*<p className=\{`mt-1 \$\{note\}`\}(?: style=\{JA_WRAP_STYLE\})?>\{(?:typeof description==='string'\?jaWrap\(description\):)?description\}<\/p>/.test(options));
 
 // ---- 数値は粗く/細かくの4つ ----
 check('数値は粗く動かす／細かく動かすの4つのボタンで変えられる',
