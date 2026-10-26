@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4c4863dc79b3c839
+// source-sha256: 8dfbbd5adae550c8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9399,6 +9399,48 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Kyubi: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
+  Orihime: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -9850,7 +9892,9 @@ const EXACT_DYE_MASKS = Object.freeze({
   Undine: UNDINE_DYE_MASK,
   Tiger: TIGER_DYE_MASK,
   Suezo: SUEZO_DYE_MASK,
-  Golem: GOLEM_DYE_MASK
+  Golem: GOLEM_DYE_MASK,
+  Kyubi: KYUBI_DYE_MASK,
+  Orihime: ORIHIME_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -10237,6 +10281,26 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.71
   }, {
     gloss: 0.55
+  }],
+  Kyubi: [{
+    gloss: 0.39
+  }, {
+    gloss: 0.53
+  }, {}, {
+    gloss: 0.79
+  }, {
+    gloss: 0.53
+  }],
+  Orihime: [{
+    gloss: 0.51
+  }, {
+    gloss: 0.25
+  }, {
+    gloss: 0.44
+  }, {
+    gloss: 0.55
+  }, {
+    gloss: 0.49
   }]
 };
 const _NO_REGION_DYE = {
@@ -10454,7 +10518,7 @@ const MASU_COLOR_FALLBACK_REGION = {
   }
 };
 const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);
 const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(baseId) ? {
   ...style,
   objectFit: 'contain'
@@ -25651,6 +25715,16 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     body: 'drift',
     bodyMask: null,
     parts: []
+  },
+  Kyubi: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Orihime: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
   }
 });
 const MONSTER_IDLE_MASK_STYLE = url => ({
@@ -35392,7 +35466,12 @@ const RhythmResultMoreHint = ({
   React.useEffect(() => {
     const box = document.querySelector('[data-rhythm-result-scroll]');
     if (!box) return undefined;
-    const update = () => setMore(box.scrollHeight - box.scrollTop - box.clientHeight > 24);
+    const update = () => {
+      const targets = [...box.querySelectorAll('[data-rhythm-result-beat-points],[data-rhythm-live-log]')];
+      const last = targets[targets.length - 1];
+      const seen = !!last && last.getBoundingClientRect().top < box.getBoundingClientRect().bottom - 28;
+      setMore(!seen && box.scrollHeight - box.scrollTop - box.clientHeight > 24);
+    };
     update();
     box.addEventListener('scroll', update, {
       passive: true
@@ -48751,13 +48830,22 @@ const FRIEND_PLACE_TEXT = Object.freeze({
   multi: 'みんなで対戦中',
   masu: 'マスモンのお世話中',
   market: 'マーケットを見ています',
-  other: 'ログイン中'
+  other: 'ログイン中',
+  card: 'MFバトルカードで遊び中',
+  cardBattle: 'MFバトルカードで対戦中'
 });
+const FRIEND_SUB_PLACES = Object.freeze(['card', 'cardBattle']);
+const friendsPlaceFromRow = (place, records) => {
+  if (place === 'other' && records && FRIEND_SUB_PLACES.includes(records.pl)) return records.pl;
+  return Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : null;
+};
 const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;
 const FRIEND_PUBLISH_MIN_MS = 15 * 1000;
 const friendsPlaceOfScreen = gameState => {
   const name = typeof gameState === 'string' ? gameState : '';
   if (name === 'HOME') return 'home';
+  if (name === 'CARD_BATTLE') return 'cardBattle';
+  if (name.startsWith('CARD_')) return 'card';
   if (name === 'RHYTHM_MULTI') return 'multi';
   if (name.startsWith('RHYTHM')) return 'rhythm';
   if (name === 'BREEDER_MARKET') return 'market';
@@ -48952,6 +49040,7 @@ const friendsNormalizeRecords = raw => {
   } : null).filter(Boolean).slice(0, FRIEND_RECORD_SONG_MAX);
   const c = raw.collection && typeof raw.collection === 'object' ? raw.collection : {};
   return {
+    pl: FRIEND_SUB_PLACES.includes(raw.pl) ? raw.pl : null,
     battle,
     rhythm: {
       played: friendsInt(raw.rhythm && raw.rhythm.played),
@@ -49028,9 +49117,10 @@ const friendsBuildSummary = ({
 const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   const id = friendsSafeId(breederIdRaw);
   if (!id || !summary) return false;
+  const sub = FRIEND_SUB_PLACES.includes(summary.place) ? summary.place : null;
   const base = {
     breeder_id: id,
-    place: summary.place,
+    place: sub ? 'other' : summary.place,
     started_on: summary.startedOn,
     play_seconds: summary.playSeconds,
     best_bond: summary.bestBond,
@@ -49047,11 +49137,15 @@ const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
   });
   try {
     if (_friendProfileExtraUnavailable) await send(base);else {
+      const records = sub ? {
+        ...(summary.records || {}),
+        pl: sub
+      } : summary.records;
       try {
         await send({
           ...base,
           message: summary.message,
-          records: summary.records
+          records
         });
       } catch (error) {
         if (error && error.status === 400 && /message|records/i.test(String(error.message)) && /column|PGRST204/i.test(String(error.message))) {
@@ -49141,7 +49235,7 @@ const sbFetchFriendSummaries = async ids => {
       const num = value => Number.isFinite(Number(value)) && value !== null ? Number(value) : null;
       const fav = row.favorite && typeof row.favorite === 'object' && !Array.isArray(row.favorite) && typeof row.favorite.monsterId === 'string' ? row.favorite : null;
       byId[row.breeder_id] = {
-        place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, row.place) ? row.place : null,
+        place: friendsPlaceFromRow(row.place, row.records),
         startedOn: typeof row.started_on === 'string' && FRIEND_DAY_RE.test(row.started_on) ? row.started_on : null,
         playSeconds: num(row.play_seconds),
         bestBond: num(row.best_bond),
@@ -57931,7 +58025,11 @@ function MasuDonationScreen({
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
-    "aria-label": "寄付一覧の並べ替え"
+    "aria-label": "寄付一覧の並べ替え",
+    style: {
+      WebkitMaskImage: 'linear-gradient(to right,#000 calc(100% - 18px),transparent)',
+      maskImage: 'linear-gradient(to right,#000 calc(100% - 18px),transparent)'
+    }
   }, React.createElement("span", {
     className: "shrink-0 text-[10px] font-black text-slate-400"
   }, "並べ替え"), options.map(o => {
@@ -57948,8 +58046,11 @@ function MasuDonationScreen({
       },
       "aria-pressed": active,
       "aria-label": o.key === 'power' ? active ? `総合力を${direction}で表示中。押すと${donationSortDir === 'asc' ? '高い順' : '低い順'}に変更` : '総合力を高い順に並べ替え' : undefined,
-      className: `shrink-0 min-h-[44px] px-3 rounded-xl text-[11px] leading-tight font-black border whitespace-nowrap active:scale-95 ${active ? 'border-amber-300/70 bg-amber-500/25 text-amber-100' : 'bg-slate-900 border-white/10 text-slate-300'}`
+      className: `shrink-0 min-h-[44px] px-3 max-[359px]:px-2 rounded-xl text-[11px] leading-tight font-black border whitespace-nowrap active:scale-95 ${active ? 'border-amber-300/70 bg-amber-500/25 text-amber-100' : 'bg-slate-900 border-white/10 text-slate-300'}`
     }, active ? activeLabel : o.label);
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 w-3"
   })), donationError && React.createElement("div", {
     className: "shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"
   }, React.createElement(AlertCircle, {
@@ -57959,7 +58060,7 @@ function MasuDonationScreen({
     className: SCREEN_LIST_CLASS
   }, masuMons.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "💎",
-    lines: ['寄付できるマスモンがいません', 'マスモンを育てると、ここから寄付できます。']
+    lines: ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。']
   }) : React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5 pb-3"
   }, sorted.map(masu => {
@@ -58195,7 +58296,7 @@ function MasuRebirthScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🌈",
-      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
+      lines: masuMons.length === 0 ? ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。'] : ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -58432,7 +58533,7 @@ function MasuReincarnateScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🔄",
-      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
+      lines: masuMons.length === 0 ? ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。'] : ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -58829,7 +58930,7 @@ function MasuTranscendenceScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "✨",
-      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
+      lines: masuMons.length === 0 ? ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。'] : ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -59001,7 +59102,7 @@ function MasuSoulRankScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🏅",
-      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
+      lines: masuMons.length === 0 ? ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。'] : ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -59692,7 +59793,7 @@ function MasuOfferingScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🙏",
-      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
+      lines: masuMons.length === 0 ? ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。'] : ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -59807,7 +59908,7 @@ function MasuOfferingScreen({
     className: "grid grid-cols-4 gap-1.5"
   }, OFFERING_DIAMOND_STEPS.map(step => React.createElement("button", {
     key: step,
-    className: stepBtn,
+    className: `${stepBtn} whitespace-nowrap px-1 max-[359px]:text-[11px] max-[359px]:tracking-tight`,
     onClick: () => setDiamondText(String(Math.min(limits.maxDiamonds, diamondAmount + step)))
   }, "+", fmt(step)))), React.createElement("div", {
     className: "grid grid-cols-2 gap-1.5"
@@ -61873,7 +61974,11 @@ function MasuFusionScreen({
   const fusionSortBar = React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
-    "aria-label": "合体一覧の並べ替え"
+    "aria-label": "合体一覧の並べ替え",
+    style: {
+      WebkitMaskImage: 'linear-gradient(to right,#000 calc(100% - 18px),transparent)',
+      maskImage: 'linear-gradient(to right,#000 calc(100% - 18px),transparent)'
+    }
   }, React.createElement("span", {
     className: "shrink-0 text-[10px] font-black text-slate-400"
   }, "並べ替え"), FUSION_SORT_OPTIONS.map(o => {
@@ -61887,10 +61992,13 @@ function MasuFusionScreen({
         }
       },
       "aria-pressed": active,
-      className: `shrink-0 min-h-[44px] px-3 rounded-xl text-[11px] font-black border whitespace-nowrap active:scale-95 ${active ? 'border-amber-300/70 bg-amber-500/25 text-amber-100' : 'bg-slate-900 border-white/10 text-slate-300'}`
+      className: `shrink-0 min-h-[44px] px-3 max-[359px]:px-2 rounded-xl text-[11px] font-black border whitespace-nowrap active:scale-95 ${active ? 'border-amber-300/70 bg-amber-500/25 text-amber-100' : 'bg-slate-900 border-white/10 text-slate-300'}`
     }, o.label, active && React.createElement("span", {
       className: "ml-0.5"
     }, fusionSortDir === 'asc' ? '▲' : '▼'));
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 w-3"
   }));
   const fusionGuide = renderScreenNote('fusion', '主が残り、副は消えます。副の絆経験値はそのまま主へ加わります。', ['上がった絆レベルの数だけ、主が強化ポイントを獲得します。', '主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます（副の強化は引き継がれません）。', '技を引き継がない合体は0ダイヤ、引き継ぐ合体は3000ダイヤです。', '固有技の引き継ぎは、副が絆Lv.30以上のときだけ選べます。条件を満たすと副の固有技が主に記録されます。']);
   if (fusionStep === 'main') {
@@ -93265,8 +93373,17 @@ const CardBattleScreen = ({
       alt: x.name,
       className: "h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"
     }), React.createElement("span", {
-      className: "text-[13px] font-black"
-    }, x.name), save.record.beaten[x.id] && React.createElement("span", {
+      className: "block w-full",
+      style: {
+        containerType: 'inline-size'
+      }
+    }, React.createElement("span", {
+      "data-card-foe-name": true,
+      className: "block whitespace-nowrap text-center font-black",
+      style: {
+        fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))`
+      }
+    }, x.name)), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
     }, "勝")))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"
@@ -93330,24 +93447,27 @@ const CardBattleScreen = ({
       db: db,
       who: a.id,
       level: foe.level
-    })), React.createElement("div", {
-      className: SCREEN_PANEL_FLAT_CLASS
-    }, React.createElement("div", {
-      className: "text-[12px] font-bold text-slate-300"
-    }, "あなたのデッキ: ", React.createElement("b", {
-      className: "text-white"
-    }, activeDeck ? activeDeck.name : 'なし')), deckIssues.length > 0 && React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-rose-300",
-      style: JA_WRAP_STYLE
-    }, jaWrap(deckIssues.join('・'))), !save.daily.firstWin && React.createElement("div", {
-      className: "mt-1 text-[11px] font-bold text-slate-400",
-      style: JA_WRAP_STYLE
-    }, cardRuleLine('《今日はじめての勝ちで +50》'))), notice && React.createElement("p", {
+    })), notice && React.createElement("p", {
       className: "text-[12px] font-bold text-amber-200",
       style: JA_LABEL_STYLE
     }, jaWrap(notice))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
-    }, React.createElement("button", {
+    }, React.createElement("div", {
+      "data-card-foe-mydeck": true,
+      className: "mb-1.5 px-0.5"
+    }, React.createElement("div", {
+      className: "flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"
+    }, React.createElement("span", {
+      style: JA_LABEL_STYLE
+    }, "あなたのデッキ: ", React.createElement("b", {
+      className: "text-white"
+    }, activeDeck ? activeDeck.name : 'なし')), !save.daily.firstWin && React.createElement("span", {
+      className: "text-[11px] text-slate-400",
+      style: JA_LABEL_STYLE
+    }, cardRuleLine('《今日はじめての勝ちで +50》'))), deckIssues.length > 0 && React.createElement("div", {
+      className: "mt-0.5 text-[12px] font-bold text-rose-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap(deckIssues.join('・')))), React.createElement("button", {
       type: "button",
       "data-card-start": true,
       className: `${btn} mh-button-primary`,
@@ -108921,6 +109041,7 @@ function MonsterHeroGame() {
         point
       }, Math.random);
       if (!r) {
+        void loadCardShop();
         setMarketExchangeError('ビートPが足りません。');
         return {
           ok: false,
@@ -108995,6 +109116,7 @@ function MonsterHeroGame() {
         shop: cardNormalizeShop(rawShop)
       }, Date.now());
       if (!r) {
+        void loadCardShop();
         setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。');
         return {
           ok: false,
@@ -120216,7 +120338,8 @@ function MonsterHeroGame() {
     const power = powerOverride !== undefined ? powerOverride : monsterPowerOf(mon);
     const norm = masu ? normalizeMasuProgression(masu) : null;
     const lvl = masu ? masuBondLevelInfo(masu) : null;
-    const xpPct = lvl ? Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100)) : 0;
+    const bondMaxed = !!(lvl && norm && lvl.level >= norm.levelCap);
+    const xpPct = bondMaxed ? 100 : lvl ? Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100)) : 0;
     const fused = masu ? (masu.fusionHistory || []).length > 0 : false;
     return React.createElement("div", {
       className: "flex items-start gap-3 border-b border-white/10 pb-3 shrink-0"
@@ -120300,7 +120423,7 @@ function MonsterHeroGame() {
       }
     })), React.createElement("div", {
       className: "text-[10px] text-pink-400/70 font-mono tabular-nums"
-    }, lvl.xpIntoLevel.toLocaleString(), " / ", lvl.xpForNext.toLocaleString(), " XP")), masu && onRename && !compact && React.createElement("div", {
+    }, bondMaxed ? 'MAX' : `${lvl.xpIntoLevel.toLocaleString()} / ${lvl.xpForNext.toLocaleString()} XP`)), masu && onRename && !compact && React.createElement("div", {
       "data-masu-lock-row": true,
       className: "grid grid-cols-2 gap-1.5 pt-1"
     }, ['keep', 'rebirth'].map(kind => {
