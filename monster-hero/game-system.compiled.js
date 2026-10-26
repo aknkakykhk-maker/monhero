@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b0f0dfcc9aad8f3
+// source-sha256: 63c0a76026424903
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:10";
+const BUILD_DATE = "2026-10-27 00:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -89097,6 +89097,10 @@ const CardBattleBoard = ({
   const [turnBanner, setTurnBanner] = useState(null);
   const [bigCard, setBigCard] = useState(null);
   const [turnSummary, setTurnSummary] = useState(null);
+  const [sumOpen, setSumOpen] = useState(false);
+  useEffect(() => {
+    setSumOpen(false);
+  }, [turnSummary && turnSummary.key]);
   const [logSheet, setLogSheet] = useState(false);
   const [breederFx, setBreederFx] = useState(null);
   const [beams, setBeams] = useState([]);
@@ -89526,10 +89530,10 @@ const CardBattleBoard = ({
     if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null);
   }, [sel, picks.length, drag]);
   useEffect(() => {
-    if (!turnSummary) return undefined;
+    if (!turnSummary || sumOpen) return undefined;
     const t = setTimeout(() => setTurnSummary(cur => cur && cur.key === turnSummary.key ? null : cur), Math.max(3500, turnSummary.lines.length * 1200));
     return () => clearTimeout(t);
-  }, [turnSummary && turnSummary.key]);
+  }, [turnSummary && turnSummary.key, sumOpen]);
   const stRef = useRef(st);
   stRef.current = st;
   const stepRef = useRef(step);
@@ -90243,7 +90247,7 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && stageFit < 3 && !turnSummary && React.createElement("div", {
+  })), action && stageFit < 3 && !(turnSummary && sumOpen) && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     "data-card-action-side": action.side,
@@ -90276,7 +90280,20 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, cardOf(db, st.field.no).name, React.createElement("small", {
     className: "ml-1 text-[10px] font-bold text-emerald-200"
-  }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), React.createElement("div", {
+  }, "(", st.field.p === CARD_ME ? '自分' : '相手', "が出した)"))), turnSummary && !sumOpen && !bigCard && React.createElement("button", {
+    type: "button",
+    key: turnSummary.key,
+    "data-card-turn-summary-chip": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setSumOpen(true);
+    },
+    className: "absolute bottom-1 left-1/2 z-[7] flex max-w-[92%] -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-rose-300/70 bg-slate-950/90 px-2.5 py-0.5 text-[11px] font-black text-rose-100 shadow active:scale-95"
+  }, React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, `${who.name}のターンにしたこと(${turnSummary.lines.length})`), React.createElement("span", {
+    className: "shrink-0 text-rose-300"
+  }, "▸ 見る")), React.createElement("div", {
     "data-card-log": true,
     className: `relative z-[1] max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
@@ -90556,7 +90573,7 @@ const CardBattleBoard = ({
       fontSize: 'clamp(26px, 9vw, 44px)',
       ...JA_LABEL_STYLE
     }
-  }, turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`)), turnSummary && !bigCard && React.createElement("button", {
+  }, turnBanner.me ? 'あなたの番' : `${turnBanner.name}の番`)), turnSummary && sumOpen && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary": true,

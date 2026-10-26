@@ -141,7 +141,9 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
       for (let tries = 0; tries < 3 && !ok; tries++) {
         if (page) await page.close();
         page = await openBattle(browser, { ...base, active: 1, mode: 'wait', viewport: { width: 844, height: 390 } }, errors);
-        ok = await page.locator('[data-card-turn-summary]').waitFor({ timeout: 70000 }).then(() => true).catch(() => false);
+        // まとめは、まず小さな1行で出て、押すと開く(2026-10-26)
+        ok = await page.locator('[data-card-turn-summary-chip]').waitFor({ timeout: 70000 }).then(() => true).catch(() => false);
+        if (ok) { await page.locator('[data-card-turn-summary-chip]').click(); ok = await page.locator('[data-card-turn-summary]').waitFor({ timeout: 3000 }).then(() => true).catch(() => false); }
       }
       await page.waitForTimeout(500);
       const r = ok ? await page.evaluate(() => {
