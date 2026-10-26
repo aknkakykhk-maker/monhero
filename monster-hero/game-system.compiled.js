@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cddcc0f4ba5a7398
+// source-sha256: 8455d92d5260c1b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 01:56";
+const BUILD_DATE = "2026-10-27 02:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86802,6 +86802,8 @@ const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) =
   const base = cardCpuBasePoint(levelId, outcome, facts);
   const got = base;
   const bonus = outcome === 'win' && base > 0 && !daily.firstWin ? CARD_FIRST_WIN_BONUS : 0;
+  const level = CARD_AI_LEVELS[levelId] || CARD_AI_LEVELS.normal;
+  const full = outcome === 'win' ? level.point : cardLosePoint(level);
   return {
     base,
     got,
@@ -86809,6 +86811,9 @@ const cardCpuReward = (daily, levelId, outcome, facts = cardResultFacts(null)) =
     bonus,
     total: got + bonus,
     short: facts.ownTurns < CARD_MIN_OWN_TURNS,
+    full,
+    ownTurns: facts.ownTurns,
+    kos: facts.kos,
     daily: {
       ...daily,
       cpuPoint: daily.cpuPoint + got,
@@ -89013,6 +89018,14 @@ const cardFoeStyle = who => {
   const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
   return v <= 1.2 ? CARD_FOE_STYLES.balance : CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance;
 };
+const cardBubbleMs = text => Math.min(7000, Math.max(3000, 1800 + 150 * [...String(text || '')].length));
+const cardResultCut = r => !!r && !r.short && Number.isFinite(r.full) && Number.isFinite(r.got) && r.got < r.full;
+const cardResultCutWhy = (outcome, r) => {
+  const turns = `自分の番が${Number(r.ownTurns) || 0}回。${CARD_LOSE_FULL_TURNS}回で満額`;
+  if (outcome !== 'surrender') return turns;
+  const byKo = (Number(r.kos) || 0) * CARD_SURRENDER_POINT_PER_KO;
+  return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
+};
 const CARD_FOE_BUILD_NOTE = Object.freeze({
   easy: '残りの2体は気分でえらぶ(気まぐれな子が混ざることも)。カードは第1弾だけで、組み方は雑',
   normal: '残りの2体は型に合う子が中心。カードは型に合うものを、ざっくり入れる',
@@ -89555,10 +89568,23 @@ const CardBattleBoard = ({
     turn: -1,
     n: 0
   });
-  const bubbleTimer = useRef(null);
-  const hideBubbleLater = () => {
-    clearTimeout(bubbleTimer.current);
-    bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
+  const bubbleRef = useRef(null);
+  const bubbleQ = useRef([]);
+  const bubbleLeft = useRef({});
+  const showBubble = b => {
+    if (bubbleRef.current) {
+      bubbleQ.current = [...bubbleQ.current, b].slice(-3);
+      return;
+    }
+    bubbleRef.current = b;
+    if (b.face) setFace(b.face);
+    setBubble(b);
+  };
+  const nextBubble = () => {
+    const b = bubbleQ.current.shift() || null;
+    bubbleRef.current = b;
+    if (b && b.face) setFace(b.face);
+    setBubble(b);
   };
   const finished = useRef(false);
   const talk = useRef({
@@ -89584,12 +89610,11 @@ const CardBattleBoard = ({
     };
     setFace(line.face);
     const key = `${Date.now()}-${scene}`;
-    setBubble({
+    showBubble({
       text: line.text,
       key,
       face: line.face
     });
-    hideBubbleLater();
     if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
       talk.current.n += 1;
       void cardTalkFetch('moment', {
@@ -89598,19 +89623,39 @@ const CardBattleBoard = ({
         samples: cardTalkSamples(game.who, scene)
       }).then(r => {
         if (!r) return;
-        setBubble(cur => cur && cur.key === key ? {
-          ...cur,
+        bubbleQ.current = bubbleQ.current.map(b => b.key === key ? {
+          ...b,
           text: r.text,
           face: r.face
-        } : cur);
-        setFace(r.face);
+        } : b);
+        if (bubbleRef.current && bubbleRef.current.key === key) {
+          bubbleRef.current = {
+            ...bubbleRef.current,
+            text: r.text,
+            face: r.face
+          };
+          setBubble(bubbleRef.current);
+          setFace(r.face);
+        }
       });
     }
   };
   useEffect(() => {
     if (!tutorial) say('start');
-    return () => clearTimeout(bubbleTimer.current);
   }, []);
+  useEffect(() => {
+    if (!bubble || tutorial || bigCard || turnBanner) return undefined;
+    const key = bubble.key;
+    const ms = bubbleLeft.current[key] ?? cardBubbleMs(bubble.text);
+    const at = Date.now();
+    const t = setTimeout(nextBubble, ms);
+    return () => {
+      clearTimeout(t);
+      bubbleLeft.current = {
+        [key]: Math.max(800, ms - (Date.now() - at))
+      };
+    };
+  }, [bubble && bubble.key, !!bigCard, !!turnBanner]);
   useEffect(() => {
     if (tutorial && tutStage) setTutQ(tutStage.lines.slice());
   }, [tutI]);
@@ -89745,10 +89790,6 @@ const CardBattleBoard = ({
     }
     stRef.current = next;
     const evs = next.events || [];
-    if (!tutorial && evs.some(e => e.t === 'use' || e.t === 'guard')) {
-      clearTimeout(bubbleTimer.current);
-      setBubble(null);
-    }
     const hits = evs.filter(e => e.t === 'hit' || e.t === 'heal').map((e, i) => ({
       ...e,
       key: `${next.log.length}-${i}-${Date.now()}`,
@@ -89965,12 +90006,11 @@ const CardBattleBoard = ({
         });
       },
       onChat: text => {
-        setFace('normal');
-        setBubble({
+        showBubble({
           text,
-          key: `chat-${Date.now()}`
+          key: `chat-${Date.now()}`,
+          face: 'normal'
         });
-        hideBubbleLater();
       }
     });
   }, []);
@@ -90607,7 +90647,9 @@ const CardBattleBoard = ({
     key: bubble.key,
     "data-card-bubble": true,
     "data-card-bubble-face": bubble.face || face,
-    className: `${bigCard || turnBanner ? 'invisible ' : ''}pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
+    "data-card-bubble-ms": tutorial ? undefined : cardBubbleMs(bubble.text),
+    onClick: tutorial ? undefined : nextBubble,
+    className: `${bigCard || turnBanner ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -92659,15 +92701,19 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-amber-200"
     }, "もらったビートP: ", r.total), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", r.got), r.bonus > 0 && React.createElement("div", {
+    }, CARD_LEVEL_LABEL[result.level], "の", win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了', ": ", cardResultCut(r) ? `${r.full} → ${r.got}` : r.got), cardResultCut(r) && React.createElement("div", {
+      "data-card-result-cut": true,
+      className: "text-[11px] font-bold text-slate-400",
+      style: JA_LABEL_STYLE
+    }, jaWrap(cardResultCutWhy(result.outcome, r))), r.bonus > 0 && React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
     }, "今日はじめての勝ち: +", r.bonus), r.short && React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-400",
       style: JA_LABEL_STYLE
-    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && React.createElement("div", {
+    }, jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')), !r.short && result.loops > 0 && result.quick && React.createElement("div", {
       "data-card-quick-loops": result.quick ? result.loops : 0,
       className: "mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5"
-    }, result.quick ? React.createElement(React.Fragment, null, React.createElement("div", {
+    }, result.quick && React.createElement(React.Fragment, null, React.createElement("div", {
       className: "text-[13px] font-black text-sky-200"
     }, "クイック周回 ", result.loops, "周ぶん"), React.createElement("div", {
       className: "mt-0.5 text-[11px] font-bold text-slate-300",
@@ -92675,10 +92721,7 @@ const CardBattleScreen = ({
     }, "裏のクイック周回(", result.quick.quickDifficulty && String(quickDifficultySetting(result.quick.quickDifficulty)?.label || '').toUpperCase() || 'AUTO設定', ")が", result.loops, "周ぶん進みました"), result.quick.live && Number(result.quick.toLoop) > Number(result.quick.fromLoop) && React.createElement("div", {
       "data-card-quick-loops-range": true,
       className: "mt-0.5 text-[11px] font-bold text-sky-100"
-    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目")) : React.createElement("div", {
-      className: "text-[12px] font-bold text-slate-300",
-      style: JA_LABEL_STYLE
-    }, jaWrap('クイック周回をしていないときは入りません'))), React.createElement("div", {
+    }, result.quick.fromLoop, "周目 → ", result.quick.toLoop, "周目"))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
     }, "いまのビートP: ", save.point), result.opened && React.createElement("div", {
       className: "mt-1 text-[13px] font-black text-emerald-300"
@@ -93510,7 +93553,8 @@ const CardDeckPickTile = ({
   canAdd,
   press,
   onAdd,
-  onRemove
+  onRemove,
+  onDetail = null
 }) => {
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
@@ -93534,10 +93578,22 @@ const CardDeckPickTile = ({
     draggable: false,
     onDragStart: e => e.preventDefault(),
     className: "aspect-[5/7] w-full rounded-[5px] object-cover"
-  })), React.createElement(CardNameFit, {
+  })), React.createElement("div", {
+    className: "mt-0.5 flex items-center gap-0.5"
+  }, React.createElement(CardNameFit, {
     name: name,
-    className: "mt-0.5 font-bold leading-tight text-slate-100"
-  }), React.createElement("div", {
+    className: "min-w-0 flex-1 font-bold leading-tight text-slate-100"
+  }), onDetail && React.createElement("button", {
+    type: "button",
+    "data-card-deck-info": no,
+    onClick: e => {
+      e.stopPropagation();
+      Audio_.fgSe.tap();
+      onDetail();
+    },
+    "aria-label": `${name}の詳細`,
+    className: "flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border border-white/50 bg-slate-950/80 font-serif text-[11px] font-black italic leading-none text-white active:scale-90"
+  }, "i")), React.createElement("div", {
     className: "mt-0.5 flex items-center justify-between gap-0.5"
   }, React.createElement("button", {
     type: "button",
@@ -93673,7 +93729,8 @@ const CardDeckEditor = ({
       canAdd: !cardDeckAddReason(db, deck, no, col),
       press: press,
       onAdd: () => add(no),
-      onRemove: () => removeOne(no)
+      onRemove: () => removeOne(no),
+      onDetail: () => setDetail(no)
     });
   };
   const chip = on => `shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${on ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-300'}`;
