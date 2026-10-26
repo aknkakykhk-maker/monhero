@@ -98,7 +98,7 @@ const LAYOUTS = {
   fieldHi: {
     erase: [
       { name: 'title', rect: [182, 47, 505, 114], keep: 'dark', dir: 'col' },
-      { name: 'kind', rect: [60, 65, 190, 220], keep: 'badge' },
+      { name: 'kind', rect: [60, 65, 190, 220], keep: 'badge', tol: 32, grow: 3 },
       { name: 'label', rect: [58, 684, 244, 744], keep: 'hlerp' },
     ],
     draw: (c) => [
@@ -113,7 +113,7 @@ const LAYOUTS = {
       // 札の地は色つき・黒・灰色とさまざまなので、列ごとに上と下の端の色を地と見なし、それと違う点(白い字・黒いふち)を消す(edge)
       // 英語の名前は長いと札の端近くまである(DURAHAN・ARMOR DRAGON など)ので、範囲は札いっぱい
       { name: 'main', rect: [64, 71, 194, 133], keep: 'edge', dir: 'col', grow: 5 },
-      { name: 'type', rect: [547, 75, 667, 195], keep: 'badge', shape: 'circle' },
+      { name: 'type', rect: [547, 75, 667, 195], keep: 'badge', shape: 'circle', ellipse: [608, 134, 48, 50], rim: 56 },
       { name: 'sub', rect: [558, 779, 679, 843], keep: 'edge', dir: 'col', grow: 5, cut: [574, 806] },
       { name: 'name', rect: [40, 916, 240, 966], keep: 'edge', dir: 'col', grow: 6 },
     ],
@@ -208,37 +208,89 @@ const pageScript = async ({ imgUrl, fontUrls, layout, ops }) => {
       if (y > h - r) return (x - cxx) ** 2 + (y - (h - r)) ** 2 <= r * r;
       return true;
     };
-    // 彩度だけで地を探すと、ピンク・灰・黒の札で埋める色が無くなる。
-    // 最頻色の近傍から背景を採る。全体の札は赤い内側だけを行ごとに塗る。
+    // badge: 札の内側の字(白い字・黒いふち・影)だけを消し、まわりの札の色でなめらかに埋める。
+    //   彩度だけで地を探すと、ピンク・灰・黒の札で埋める色が無くなる(混血の右上の札で G/A/W が残った)。
+    //   kind(全体カードの赤い札): 赤い内側を探し、その中の赤くない点を消す。白い縁・黒い枠・濃い赤の影は残す
+    //   type(混血の丸い札): 札でいちばん多い色を地とし、字の入る楕円の中で地と違う点を消す。札の外周・縁は残す
+    //   消す点は字のふちのにじみまで2点ふくらませ、消さない点の色を少しずつ流し込んで埋める(四角で塗らない)
     if (e.keep === 'badge') {
-      const bins = new Map(), redBounds = [];
-      const red = (i) => d[i] > 150 && d[i] - d[i + 1] > 80 && d[i] - d[i + 2] > 80;
-      for (let y = 0; y < h; y++) {
-        const xs = [];
-        for (let x = 0; x < w; x++) {
+      const at = (x, y) => (y * w + x) * 4;
+      const mask = new Uint8Array(w * h);
+      if (e.name === 'kind') {
+        const reddish = (i) => d[i] - Math.max(d[i + 1], d[i + 2]) > 60;
+        const red = (i) => d[i] > 150 && d[i] - d[i + 1] > 80 && d[i] - d[i + 2] > 80;
+        const rows = [], cols = [];
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (red(at(x, y))) { rows[y] = (rows[y] || 0) + 1; cols[x] = (cols[x] || 0) + 1; }
+        const span = (arr, n, min) => { let lo = -1, hi = -1; for (let k = 0; k < n; k++) if ((arr[k] || 0) >= min) { if (lo < 0) lo = k; hi = k; } return [lo, hi]; };
+        const [ry0, ry1] = span(rows, h, 30), [rx0, rx1] = span(cols, w, 30);
+        if (ry0 < 0 || rx0 < 0) throw new Error('全体の札の赤い内側が見つかりません');
+        const m = e.inset ?? 3;
+        // 地の赤(いちばん多い赤のまん中の色)。字のふちのにじみ(橙・薄い赤)も消し、札の下と右の濃い赤の影は残す
+        const reds = [[], [], []];
+        for (let y = ry0 + m; y <= ry1 - m; y++) for (let x = rx0 + m; x <= rx1 - m; x++) { const i = at(x, y); if (red(i)) for (let c = 0; c < 3; c++) reds[c].push(d[i + c]); }
+        const base = reds.map((l) => l.sort((p, q) => p - q)[l.length >> 1]);
+        const shade = (i) => reddish(i) && d[i] < base[0] - 25;
+        for (let y = ry0 + m; y <= ry1 - m; y++) for (let x = rx0 + m; x <= rx1 - m; x++) {
+          const i = at(x, y);
+          if (!reddish(i) || (!shade(i) && Math.hypot(...base.map((v, c) => v - d[i + c])) > (e.tol ?? 55))) mask[y * w + x] = 1;
+        }
+      } else {
+        const bins = new Map();
+        const [cxx, cyy, rx, ry] = e.ellipse;
+        const inEl = (x, y) => ((x + x0 - cxx) / rx) ** 2 + ((y + y0 - cyy) / ry) ** 2 <= 1;
+        const inRim = (x, y) => (x + x0 - cxx) ** 2 + (y + y0 - cyy) ** 2 <= (e.rim ?? 54) ** 2;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
           if (!inShape(x, y)) continue;
-          const i = (y * w + x) * 4;
-          if (e.name === 'kind' && !red(i)) continue;
-          xs.push(x);
-          const key = [d[i], d[i + 1], d[i + 2]].map(v => v >> 4).join(',');
+          const i = at(x, y), key = [d[i], d[i + 1], d[i + 2]].map(v => v >> 4).join(',');
           bins.set(key, (bins.get(key) || 0) + 1);
         }
-        redBounds[y] = xs.length && xs[xs.length - 1] - xs[0] > 40 ? [xs[0], xs[xs.length - 1]] : null;
+        if (!bins.size) throw new Error('札の地の色を採れません: ' + e.name);
+        const seed = [...bins].sort((p, q) => q[1] - p[1])[0][0].split(',').map(v => Number(v) * 16 + 8);
+        const tol = e.tol ?? 40;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = at(x, y);
+          if (inEl(x, y) && Math.hypot(...seed.map((v, c) => v - d[i + c])) > tol) mask[y * w + x] = 1;
+          // 楕円の外でも、札の内側に残った白い字の先(W の上の角など)は消す。札の縁(色のついた明るい輪)は白ではないので残る
+          else if (inRim(x, y) && Math.min(d[i], d[i + 1], d[i + 2]) > 200 && sat(d[i], d[i + 1], d[i + 2]) < 25) mask[y * w + x] = 1;
+          // その字の先の黒いふちも消す(地が黒い札では地と同じ色なので見ない)
+          else if (inRim(x, y) && lum(...seed) > 40 && lum(d[i], d[i + 1], d[i + 2]) < lum(...seed) * 0.6) mask[y * w + x] = 1;
+        }
+        e._limit = (x, y) => inEl(x, y) || inRim(x, y);
       }
-      if (!bins.size) throw new Error('札の背景色を採れません: ' + e.name);
-      const seed = [...bins].sort((a, b) => b[1] - a[1])[0][0].split(',').map(v => Number(v) * 16 + 8);
-      const colors = [[], [], []];
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const i = (y * w + x) * 4;
-        if (!inShape(x, y) || Math.hypot(...seed.map((v, c) => v - d[i + c])) > 40) continue;
-        colors.forEach((list, c) => list.push(d[i + c]));
+      // 字のふちのにじみ(地との中間の色)も消すため、2点ふくらませる
+      for (let pass = 0; pass < (e.grow ?? 2); pass++) {
+        const add = [];
+        for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+          if (mask[y * w + x]) continue;
+          if (e._limit && !e._limit(x, y)) continue;
+          if (mask[y * w + x - 1] || mask[y * w + x + 1] || mask[(y - 1) * w + x] || mask[(y + 1) * w + x]) add.push(y * w + x);
+        }
+        add.forEach((k) => { mask[k] = 1; });
       }
-      const color = colors.map(list => list.sort((a, b) => a - b)[list.length >> 1]);
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        if (!inShape(x, y)) continue;
-        if (e.name === 'kind' && (!redBounds[y] || x < redBounds[y][0] || x > redBounds[y][1])) continue;
-        const i = (y * w + x) * 4;
-        color.forEach((v, c) => { d[i + c] = v; });
+      // 消す点を、消さない点から順に埋める(外側から1点ずつ。そのあと何度かならして、つなぎ目を目立たなくする)
+      const done = new Uint8Array(w * h);
+      for (let k = 0; k < w * h; k++) done[k] = mask[k] ? 0 : 1;
+      let left = mask.reduce((s, v) => s + v, 0);
+      while (left > 0) {
+        const fill = [];
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const k = y * w + x;
+          if (done[k]) continue;
+          let r = 0, g = 0, b = 0, n = 0;
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+            const xx = x + dx, yy = y + dy;
+            if (xx < 0 || yy < 0 || xx >= w || yy >= h || !done[yy * w + xx]) continue;
+            const i = at(xx, yy); r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
+          }
+          if (n) fill.push([k, r / n, g / n, b / n]);
+        }
+        if (!fill.length) throw new Error('札の内側を埋められません: ' + e.name);
+        fill.forEach(([k, r, g, b]) => { d[k * 4] = r; d[k * 4 + 1] = g; d[k * 4 + 2] = b; done[k] = 1; left--; });
+      }
+      for (let it = 0; it < (e.smooth ?? 80); it++) for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const k = y * w + x;
+        if (!mask[k]) continue;
+        for (let c = 0; c < 3; c++) d[k * 4 + c] = (d[(k - 1) * 4 + c] + d[(k + 1) * 4 + c] + d[(k - w) * 4 + c] + d[(k + w) * 4 + c]) / 4;
       }
       cx.putImageData(id, x0, y0);
       continue;
