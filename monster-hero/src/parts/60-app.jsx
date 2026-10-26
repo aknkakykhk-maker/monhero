@@ -2519,14 +2519,16 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    // 48px の丸い枠なので小さい版を出す(見た目は同じ・展開する大きさが約1/25)。染めている子は元の絵のまま(2026-10-27 社長の決定)
+    const smallIconSrc = monsterSmallIconUrl(base);
     const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
           {masu
-            ? <DyedMonsterImage baseId={masu.baseId} src={iconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
+            ? <DyedMonsterImage baseId={masu.baseId} src={getMasuColors(masu).some(Boolean) ? iconSrc : smallIconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
             : (iconSrc
-              ? <img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
+              ? <img src={smallIconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
         {/* ロックの印。左上だけ空いている(左下=強化P・右下=超越P・右上=マスモンの札・下の中央=転生★)。
@@ -12211,6 +12213,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // distDamageは攻撃カードだけが距離別へ加算し、反射などは空配列のままにする。
   const resolveEnemyDefeat = async ({remainingHp, damage, distDamage=[0,0,0,0]}) => {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    // ★このランの世代。WAVE_RESULT へ進める前に、まだ同じランかを見る(battleWait と同じ考え方)。
+    //   途中の await(ミッションの保存)のあいだに HOME へ抜ける(returnToHome → abandonRunAnimations で世代+1)と、
+    //   抜けたあとに WAVE_RESULT へ進み、周回は終わっているので中身の無い真っ暗な画面のまま戻らなかった
+    //   (2026-10-26・rhythm-background-run-check で、モンビーから「ホームへ戻る」を押すと6回に1回ほど)
+    const defeatGeneration = runGenerationRef.current;
     // 不死(死者の再起)を持つ難易度の対象WAVEだけ、撃破を確定させずに起き上がらせる。
     // 撃破ロック(enemyDefeatResolvedRef)はまだ立てない。ここで立てると、起き上がった敵を
     // もう一度倒したときにWAVEクリアが確定しなくなる。
@@ -12291,7 +12298,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
+    setTimeout(()=>{setDefeatFx(null); if(runGenerationRef.current!==defeatGeneration)return; advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
     return true;
   };
 

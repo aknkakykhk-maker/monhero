@@ -379,10 +379,11 @@ const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.c
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
+// 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
 const MarketBalanceBar = ({ balances }) => (
   <div data-market-balances className={`mb-2 shrink-0 grid gap-2 ${balances.length>=3?'grid-cols-3':balances.length===2?'grid-cols-2':'grid-cols-1'}`}>
-    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];return(
-      <div key={currency} data-market-balance={currency} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`}>
+    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];const one=balances.length===1;return(
+      <div key={currency} data-market-balance={currency} className={`flex items-center justify-center rounded-2xl border ${one?'flex-row-reverse gap-2 py-1.5':'flex-col py-2'} ${meta.bar}`}>
         <div className="flex items-baseline gap-1">
           <span aria-hidden="true" className="text-[11px]">{meta.emoji}</span>
           <span className="font-mono text-base font-black">{Math.max(0, Math.floor(Number(value)||0)).toLocaleString()}</span>

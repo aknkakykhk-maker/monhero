@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4571886583c5198
+// generated-sha256: 5b9dc21679e70759
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-27 03:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-27 03:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7046,7 +7046,10 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK,
+  // 2026-10-26 から、色相ルール・埋め込み部位マップで分けていた子も、境目を絵の線へ寄せ直した配信マスクで染める
+  // (tools/image/refine-dye-mask.js。分け方は前と同じ)。配信マスクは下の色相ルール・埋め込み部位マップより優先される
+  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -7618,13 +7621,26 @@ const monsterArtUrlNeedsContain = (url) => {
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
       const monster = all[baseId];
       if (!monster) continue;
-      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
+      const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[baseId] : null;
+      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon, thumb]) {
         if (each) urls.add(each);
       }
     }
     _monsterArtContainUrls = urls;
   }
   return _monsterArtContainUrls.has(url);
+};
+// 小さい枠(画面で 64px 以下)に出すモンスターの絵(2026-10-27 オート無限周回のメモリ対策・社長の決定)。
+// 30体ほどはアイコンが立ち絵そのもの(1024四方前後)で、48px の丸い枠にもその大きさのまま展開されていた。
+// ビルドで作った「短い辺 192px の小さい版」(MONSTER_THUMBS・tools/image/make-monster-thumbs.js)があれば、それを返す。
+// ・専用のアイコンを持つ子(アイコンが立ち絵と別の絵)は、絵が変わってしまうのでアイコンのまま
+// ・大きく出す所(図鑑・大きい立ち絵)と、染色する絵には使わない(呼ぶ側で決める)
+const monsterSmallIconUrl = (base) => {
+  if (!base) return '';
+  const icon = base.iconUrl || base.imgUrl || '';
+  if (base.iconUrl && base.iconUrl !== base.imgUrl) return icon;
+  const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[base.id] : null;
+  return thumb || icon;
 };
 // 部位マスクは絵にぴったり重ねる必要がある。絵は object-fit(cover/contain)で枠へ収めるのに、
 // マスクだけ既定の mask-size:100% 100%(枠いっぱいへ引き伸ばす)にすると、絵とマスクで縮尺が
@@ -11585,10 +11601,11 @@ const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.c
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
+// 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
 const MarketBalanceBar = ({ balances }) => (
   <div data-market-balances className={`mb-2 shrink-0 grid gap-2 ${balances.length>=3?'grid-cols-3':balances.length===2?'grid-cols-2':'grid-cols-1'}`}>
-    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];return(
-      <div key={currency} data-market-balance={currency} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`}>
+    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];const one=balances.length===1;return(
+      <div key={currency} data-market-balance={currency} className={`flex items-center justify-center rounded-2xl border ${one?'flex-row-reverse gap-2 py-1.5':'flex-col py-2'} ${meta.bar}`}>
         <div className="flex items-baseline gap-1">
           <span aria-hidden="true" className="text-[11px]">{meta.emoji}</span>
           <span className="font-mono text-base font-black">{Math.max(0, Math.floor(Number(value)||0)).toLocaleString()}</span>
@@ -20908,7 +20925,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 {favoriteIds.has(song.songId)?'♥':'♡'}
               </button>
             </div>
-            <small className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
+            <small data-rhythm-song-meta className="mt-0.5 block text-[11px] font-bold text-slate-400 landscape:mt-0">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ{/* 刻みの数え方(2026-10-17)のときは「+ 刻み◯」も出す。Lv. には入れない */}{rhythmTickRulesActive()&&difficulty&&rhythmChartTickCount(song,chart,difficulty.id)>0?` + 刻み${rhythmChartTickCount(song,chart,difficulty.id)}`:''}</span></small>
           </div>
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
@@ -33753,8 +33770,18 @@ function BreederMarketScreen({
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche','hero_proof_shard','transcend_fruit_rainbow','hero_proof'];
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
-  const renderSectionTabs = (section) => <ScreenTabs value={activeSectionTab(section)} onChange={(key)=>selectSectionTab(section,key)}
-    items={SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}))}/>;
+  // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
+  //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
+  const renderSectionTabs = (section, scroll=false) => {
+    const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
+    const value=activeSectionTab(section);
+    if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
+    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5">
+      {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
+        className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
+    </div>;
+  };
   const soulRankRespecItem = marketItems.find(item=>item.id===SOUL_RANK_RESPEC_ITEM_ID) || null;
   const sectionMeta = {
     diamond:{label:'ダイヤショップ',emoji:'💎'},
@@ -33815,7 +33842,7 @@ function BreederMarketScreen({
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='icon'?<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
@@ -33891,9 +33918,6 @@ function BreederMarketScreen({
           :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
           :marketSection==='card'?[{currency:'cardPoint',value:cardShop?cardShop.point:0}]
           :[{currency:'beatPoint',value:safeEventPoints}]}/>
-        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
-        {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
-          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍{Number(campaign.loopBoost)>0?`。演奏でのクイック周回も${campaign.loopBoost}倍`:''}（{rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）</MarketNotice>:null;})()}
         {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
       </>}
 
@@ -33978,8 +34002,12 @@ function BreederMarketScreen({
       })()}
 
       {marketSection==='event'&&<>
-        {renderSectionTabs('event')}
+        {renderSectionTabs('event', true)}
         <div className={SCREEN_LIST_CLASS}>
+        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す。
+            品物の一覧の先頭に置く(上の固まった所に置くと、320×568 で品物が1段の半分しか見えなかった。2026-10-26 ダメダシくん) */}
+        {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
+          return campaign?<MarketNotice tone="info" data-event-point-campaign>{jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost)>0?`・演奏のクイック周回も${campaign.loopBoost}倍`:''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）`)}</MarketNotice>:null;})()}
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
           {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
@@ -41782,7 +41810,7 @@ function BattleScreen({
           ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
+          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン) */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
@@ -45170,13 +45198,13 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <p data-friend-code className="my-2 text-center text-3xl font-black tracking-widest text-pink-200">{myCode ? friendsFormatCode(myCode) : '— — — —'}</p>
               <button type="button" disabled={!myCode} onClick={copyCode} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>コードをコピー</button>
               <button type="button" data-friend-share-link disabled={!myCode} onClick={shareLink} className={`${btn} mt-2 w-full border-sky-400/60 bg-sky-500/20 text-sky-100`}>招待リンクを送る（LINEなど）</button>
-              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。</p>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを伝えると、相手からフレンド申請してもらえます。コードは変わりません。</p>
             </div>
             <div className={SCREEN_PANEL_CLASS}>
               <ScreenSectionLabel>コードで申請する</ScreenSectionLabel>
               <input type="text" value={codeInput} onChange={(event) => setCodeInput(event.target.value.slice(0, 16))}
                 inputMode="text" autoCapitalize="characters" autoComplete="off" autoCorrect="off" spellCheck={false}
-                placeholder="友だちのフレンドコード" aria-label="友だちのフレンドコード"
+                placeholder="相手のフレンドコード" aria-label="相手のフレンドコード"
                 className="mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"/>
               <button type="button" disabled={busy || !friendsNormalizeCode(codeInput)} onClick={sendByCode} className={`${btn} mt-2 w-full border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>フレンド申請を送る</button>
               <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">ランキングの名前をタップしても、その人に申請できます。</p>
@@ -53440,6 +53468,8 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   M3: 'これでどーだ！',
   D9: 'みゅあが攻めてきたぞ。相手の番でも、回避か防御のカードで守れるんだ',
   D10: '光ってる「ステップ」をタップか、狙われたピクシーまで運んでみな。守りのカードは、狙われた子のぶん(か、誰でも使えるもの)だけ使えるからな',
+  // D10b … ステップを選んだあと、「これで守る」で決める前(2026-10-26 巡回 → 社長が文をOK。84 が D10 のかわりに出す)
+  D10b: 'よし、それでいい。最後に光ってる「これで守る」を押して決めな',
   M4: 'えー！ よけられた！？ うまっ！ｗ',
   D11: 'ほらな、守りは大事なんだよ。おでの膝くらい大事だ。えへへ',
   D12: '今度はこっちの番。ガッツが2つあるから「パンチ」が出せる',
@@ -53785,7 +53815,8 @@ const cardPickWeighted = (items, weightOf, rand) => {
   return items[items.length - 1];
 };
 
-// 1パック開ける。返す: { cards:[{ no, slot:'tech'|'mon', rarity, dup, point }], collection, pity, point(だぶりのビートP), hit(キラ以上が出たか) }
+// 1パック開ける。返す: { cards:[{ no, slot:'tech'|'mon', rarity, dup, point, fresh }], collection, pity, point(だぶりのビートP), hit(キラ以上が出たか) }
+// fresh … その種類をはじめて手に入れた1枚(開ける前に持っていない・同じパックの前の札でもない)。まとめの「NEW」に使う(保存しない。2026-10-26 巡回)
 const cardOpenPack = (db, packId, { collection, pity }, rand) => {
   const pack = cardPackOf(packId);
   if (!pack) return null;
@@ -53797,8 +53828,9 @@ const cardOpenPack = (db, packId, { collection, pity }, rand) => {
   for (let i = 0; i < pack.tech && techPool.length; i++) {
     const no = techPool[Math.floor(rand() * techPool.length) % techPool.length];
     const dup = (col[no] || 0) >= CARD_TECH_KEEP_MAX;
+    const fresh = !((col[no] || 0) > 0);
     if (dup) point += CARD_DUP_POINT.tech; else col[no] = (col[no] || 0) + 1;
-    cards.push({ no, slot: 'tech', rarity: 'normal', dup, point: dup ? CARD_DUP_POINT.tech : 0 });
+    cards.push({ no, slot: 'tech', rarity: 'normal', dup, point: dup ? CARD_DUP_POINT.tech : 0, fresh });
   }
   let hit = false;
   for (let i = 0; i < pack.mon; i++) {
@@ -53809,9 +53841,10 @@ const cardOpenPack = (db, packId, { collection, pity }, rand) => {
     const no = pool[Math.floor(rand() * pool.length) % pool.length];
     const dup = (col[no] || 0) >= 1;
     const dupPoint = CARD_DUP_POINT[rarity];
+    const fresh = !dup;
     if (dup) point += dupPoint; else col[no] = 1;
     if (rarity !== 'normal') hit = true;
-    cards.push({ no, slot: 'mon', rarity, dup, point: dup ? dupPoint : 0 });
+    cards.push({ no, slot: 'mon', rarity, dup, point: dup ? dupPoint : 0, fresh });
   }
   if (pack.pity) nextPity[pack.id] = hit ? 0 : (nextPity[pack.id] || 0) + 1;
   return { cards, collection: col, pity: nextPity, point, hit };
@@ -55330,7 +55363,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             <div className={wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'}>
             <div data-card-tutor={tutStage.id} className={`${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`}>
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
-              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
+              <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay === 'D10' && st.pending && st.pending.evaded ? 'D10b' : tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
               {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
             </div>
             </div>
@@ -55469,7 +55502,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
       {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
       {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
-      {mode === 'guard' && !guardOpts.length && (
+      {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
+      {mode === 'guard' && tutorial && st.pending && st.pending.evaded && <div data-card-tutor-guard-done className="mx-auto mb-1 shrink-0 rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap('「これで守る」を押してください')}</div>}
+      {mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && (
         <div data-card-guard-why className={`mx-auto mb-1 max-w-[94%] shrink-0 text-center ${tiny ? 'truncate whitespace-nowrap text-[10px]' : 'text-[11px]'} font-bold leading-snug text-slate-300`} style={tiny ? undefined : JA_WRAP_STYLE}>{cardGuardBlockReasons(db, st).join(' / ')}</div>
       )}
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
@@ -56444,7 +56479,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           ) : null; })()}
           <div className={SCREEN_PANEL_CLASS}>
             {result.done && result.reward > 0 && <div className="text-[15px] font-black text-amber-200">ビートP {result.reward}</div>}
-            <div className="mt-1 text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(result.done ? 'これで5つ全部です。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')}</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(result.done ? '引く・ガッツ・守り・攻撃・山札切れの5つを覚えました。いろんな相手と戦ってみましょう' : 'トップの「練習試合」から、いつでもできます')}</div>
             <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {save.point}</div>
             {!result.saved && <div className="mt-1 text-[12px] font-bold text-rose-300">保存できませんでした</div>}
           </div>
@@ -57349,7 +57384,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
                     </div>
                     {on && rare && <div aria-hidden="true" className={`mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`}/>}
                     {on && c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
-                    {on && !c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                    {/* NEW は、その種類をはじめて手に入れた1枚だけ(前から持っている・同じパックの2枚目には付けない。89 の fresh。2026-10-26 巡回)。fresh が無い札(見本)は前のまま */}
+                    {on && !c.dup && (c.fresh === undefined || c.fresh) && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
                     {on && rare && <span className={`absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
                   </button>
                   <CardNameFit name={on ? name : '\u00a0'} className="mt-0.5 font-bold leading-tight text-slate-100"/>
@@ -57360,7 +57396,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
         )}
         {phase === 'open' && allOpen && (
           <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
-            {packPoint > 0 ? <>だぶったカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'だぶったカードはありません'}
+            {/* 「だぶった」だと、同じカードが2枚出たのに「ありません」と読めた(2026-10-26 巡回 → 社長が文をOK) */}
+            {packPoint > 0 ? <>持てる数をこえたカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'ビートPに変わったカードはありません'}
             {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
           </div>
         )}
@@ -57592,13 +57629,18 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
 // 送ってよいのは、本当に対戦して勝った記録だけ(cardRecordAfter の rankable。公開前・デバッグの入口からの対戦は数えない・送らない)。
 // デバッグの合言葉を入れた端末でも、HOME の入口から遊んだ分は送る(2026-10-26 社長「ふつうの入口の対戦はのせる」)
 const CARD_RANK_TABLE = 'card_battle_ranks';
+// 2026-10-26 社長「ブリーダーIDで数える形に直す」: これからは一人ひとりの ID(breeder_id)で上書きする新しい表へ書く。
+// 古い表(名前で1行)は消さず書き換えず、まだ新しい表に来ていない人の行として読むだけ。SQL: docs/sql/card-battle-ranks/CARD_BATTLE_RANKS_V2_APPLY.sql
+// 新しい表がまだ無い環境では、今までどおり古い表へ書く
+const CARD_RANK_TABLE_V2 = 'card_battle_ranks_v2';
 const CARD_RANK_SELECT = 'user_name,breeder_id,icon,profile_frame,week_key,'
   + CARD_LEVEL_ORDER.map((lv) => `wins_${lv},week_wins_${lv}`).join(',') + ',best_streak,current_streak,dex_count,dex_total,updated_at';
 const CARD_RANK_FETCH_LIMIT = 150;
 const CARD_RANK_SHOW_LIMIT = 50;
 const CARD_RANK_CACHE_MS = 60 * 1000;
-let _cardRanksUnavailable = false;
-const cardRanksUnavailable = () => _cardRanksUnavailable;
+let _cardRanksUnavailable = false;   // 古い表(card_battle_ranks)が無い
+let _cardRanksV2Unavailable = false; // 新しい表(card_battle_ranks_v2)が無い
+const cardRanksUnavailable = () => _cardRanksUnavailable && _cardRanksV2Unavailable;
 const cardRankCache = new Map();
 
 // カード図鑑の集めた種類(図鑑の「集めた種類」と同じ数え方: 全モンスター＋技・ブリーダー)
@@ -57626,16 +57668,18 @@ const cardRankEntryFromRow = (row) => {
     updatedAt: String(row.updated_at || ''),
   };
 };
-// 改名で同じ人が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)
+// 改名で同じ人が2行になっていたら、新しい方だけ見せる(ブリーダーIDがあればIDで、無ければ名前で同じ人とみなす)。
+// 新しい表の行(e.v2)は、古い表の同じ人の行より先に選ぶ。ID の無い古い行は、同じ名前の人が新しい表にいれば出さない(IDができる前の同じ人)
 const cardRankMerge = (entries) => {
   const byKey = new Map();
-  (Array.isArray(entries) ? entries : []).forEach((e) => {
-    if (!e) return;
+  const list = (Array.isArray(entries) ? entries : []).filter(Boolean);
+  list.forEach((e) => {
     const key = e.breederId || `name:${e.userName}`;
     const cur = byKey.get(key);
-    if (!cur || e.updatedAt > cur.updatedAt) byKey.set(key, e);
+    if (!cur || (e.v2 && !cur.v2) || (!!e.v2 === !!cur.v2 && e.updatedAt > cur.updatedAt)) byKey.set(key, e);
   });
-  return [...byKey.values()];
+  const v2Names = new Set(list.filter((e) => e.v2).map((e) => e.userName));
+  return [...byKey.values()].filter((e) => e.v2 || e.breederId || !v2Names.has(e.userName));
 };
 // 何で並べるか。kind: 'wins'(period: 'week' | 'total', level)/ 'streak' / 'dex'
 const cardRankColumn = ({ kind, period, level }) => (kind === 'streak' ? 'best_streak' : kind === 'dex' ? 'dex_count'
@@ -57643,12 +57687,11 @@ const cardRankColumn = ({ kind, period, level }) => (kind === 'streak' ? 'best_s
 const cardRankValue = (e, { kind, period, level }) => (kind === 'streak' ? e.bestStreak : kind === 'dex' ? e.dexCount
   : (period === 'week' ? e.weekWins : e.wins)[level] || 0);
 
-// 表から上位を取る。表が無ければ null
-const sbFetchCardRanks = async (q, now = Date.now()) => {
-  if (_cardRanksUnavailable) return null;
+// 1つの表から上位を取る。表が無ければ null(以後その表へはアクセスしない)
+const sbFetchCardRankRows = async (table, q, now) => {
   const column = cardRankColumn(q);
   const week = q.kind === 'wins' && q.period === 'week' ? `&week_key=eq.${cardWeekKeyJst(now)}` : '';
-  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}`
+  const url = `${SUPABASE_URL}/rest/v1/${table}?select=${CARD_RANK_SELECT}&${column}=gt.0${week}`
     + `&order=${column}.desc.nullslast,updated_at.asc&limit=${CARD_RANK_FETCH_LIMIT}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -57656,21 +57699,48 @@ const sbFetchCardRanks = async (q, now = Date.now()) => {
     const res = await fetch(url, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
     const body = await res.text();
     if (!res.ok) {
-      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return null; }
-      throw new Error(`${CARD_RANK_TABLE} ${res.status}: ${body || res.statusText}`);
+      if (_isMissingTableError(res.status, body)) return null;
+      throw new Error(`${table} ${res.status}: ${body || res.statusText}`);
     }
     const rows = JSON.parse(body || '[]');
-    const entries = cardRankMerge((Array.isArray(rows) ? rows : []).map(cardRankEntryFromRow));
-    entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
-    return entries;
+    return Array.isArray(rows) ? rows : [];
   } finally {
     clearTimeout(timer);
   }
 };
-// 上書き保存。同じ人(同じ名前)は何度書いても1行のまま、最新の値になる
+// 表から上位を取る(新しい表と古い表を合わせて、同じ人は1行に)。どちらの表も無ければ null
+const sbFetchCardRanks = async (q, now = Date.now()) => {
+  if (cardRanksUnavailable()) return null;
+  const [v2Rows, oldRows] = await Promise.all([
+    _cardRanksV2Unavailable ? Promise.resolve(null) : sbFetchCardRankRows(CARD_RANK_TABLE_V2, q, now),
+    _cardRanksUnavailable ? Promise.resolve(null) : sbFetchCardRankRows(CARD_RANK_TABLE, q, now),
+  ]);
+  if (v2Rows === null) _cardRanksV2Unavailable = true;
+  if (oldRows === null) _cardRanksUnavailable = true;
+  if (v2Rows === null && oldRows === null) return null;
+  const entries = cardRankMerge([
+    ...(v2Rows || []).map((r) => { const e = cardRankEntryFromRow(r); return e ? { ...e, v2: true } : null; }),
+    ...(oldRows || []).map(cardRankEntryFromRow),
+  ]);
+  entries.sort((a, b) => cardRankValue(b, q) - cardRankValue(a, q));
+  return entries;
+};
+// 上書き保存。ID があれば新しい表へ ID で(同じ人は何度書いても1行)。ID が無い・新しい表が無いときは、今までどおり古い表へ名前で
 const sbUpsertCardRank = async (row) => {
-  if (_cardRanksUnavailable || !row) return false;
-  const url = `${SUPABASE_URL}/rest/v1/${CARD_RANK_TABLE}?on_conflict=user_name`;
+  if (!row) return false;
+  if (typeof row.breeder_id === 'string' && row.breeder_id && !_cardRanksV2Unavailable) {
+    const r = await sbUpsertCardRankTo(CARD_RANK_TABLE_V2, 'breeder_id', row);
+    if (r !== null) return r;
+    _cardRanksV2Unavailable = true; // 新しい表がまだ無い(SQL を流す前)。古い表へ書く
+  }
+  if (_cardRanksUnavailable) return false;
+  const r = await sbUpsertCardRankTo(CARD_RANK_TABLE, 'user_name', row);
+  if (r === null) { _cardRanksUnavailable = true; return false; }
+  return r;
+};
+// 1つの表へ上書き。表が無ければ null
+const sbUpsertCardRankTo = async (table, conflict, row) => {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflict}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -57681,8 +57751,8 @@ const sbUpsertCardRank = async (row) => {
     });
     if (!res.ok) {
       const body = await res.text();
-      if (_isMissingTableError(res.status, body)) { _cardRanksUnavailable = true; return false; }
-      throw new Error(`${CARD_RANK_TABLE} upsert ${res.status}: ${body || res.statusText}`);
+      if (_isMissingTableError(res.status, body)) return null;
+      throw new Error(`${table} upsert ${res.status}: ${body || res.statusText}`);
     }
     return true;
   } finally {
@@ -57692,7 +57762,7 @@ const sbUpsertCardRank = async (row) => {
 // 記録から1行を作って送る(前に送った中身と同じなら送らない)。呼ぶのは「ランキングに数えてよい対戦」のあとだけ
 const cardRankSync = async (db, { record, collection, profile }) => {
   try {
-    if (_cardRanksUnavailable || !profile) return false;
+    if (cardRanksUnavailable() || !profile) return false;
     const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
     const dex = cardDexCounts(db, collection);
     const row = cardRankRow(record, { dexCount: dex.count, dexTotal: dex.total, userName: profile.name, icon: profile.icon, profileFrame: profile.frame, breederId, now: Date.now() });
@@ -57710,7 +57780,7 @@ const cardRankSync = async (db, { record, collection, profile }) => {
 // ---- プロフィール・フレンドの MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」) ----
 // 中身: 助手と対戦の強さごとの勝ち数・いちばん長い連勝・マルチ対戦の勝ち負けと強さの点数・カード図鑑で集めた数。
 // 自分: 端末の保存(mh_card_record_v1・mh_card_collection_v1)を読むだけ(書かない)。強さの点数は表から読む
-// フレンド: ランキングの表 card_battle_ranks・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
+// フレンド: ランキングの表 card_battle_ranks_v2(無ければ card_battle_ranks)・card_battle_pvp_ratings を、その人のブリーダーの番号で読むだけ(表は変えない)
 const cardStatsGet = async (path) => {
   if (typeof SUPABASE_URL === 'undefined') return null;
   const controller = new AbortController();
@@ -57752,7 +57822,9 @@ const cardStatsOfSelf = async () => {
 // フレンドの戦績(表から)。表に行が無ければ null
 const cardStatsOfFriend = async (breederId) => {
   if (!CARD_STATS_ID_RE.test(String(breederId || ''))) return null;
-  const rows = await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
+  // 新しい表(ID で1行)を先に見て、まだ移っていない人は古い表の行を読む(2026-10-26 ブリーダーIDで数える形)
+  const v2 = _cardRanksV2Unavailable ? null : await cardStatsGet(`${CARD_RANK_TABLE_V2}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&limit=1`);
+  const rows = v2 && v2.length ? v2 : await cardStatsGet(`${CARD_RANK_TABLE}?select=${CARD_RANK_SELECT}&breeder_id=eq.${breederId}&order=updated_at.desc&limit=1`);
   const e = rows && rows[0] ? cardRankEntryFromRow(rows[0]) : null;
   const pvp = await sbFetchCardPvpRatingOf(breederId);
   if (!e && !pvp) return null;
@@ -62035,14 +62107,16 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    // 48px の丸い枠なので小さい版を出す(見た目は同じ・展開する大きさが約1/25)。染めている子は元の絵のまま(2026-10-27 社長の決定)
+    const smallIconSrc = monsterSmallIconUrl(base);
     const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
           {masu
-            ? <DyedMonsterImage baseId={masu.baseId} src={iconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
+            ? <DyedMonsterImage baseId={masu.baseId} src={getMasuColors(masu).some(Boolean) ? iconSrc : smallIconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
             : (iconSrc
-              ? <img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
+              ? <img src={smallIconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
         {/* ロックの印。左上だけ空いている(左下=強化P・右下=超越P・右上=マスモンの札・下の中央=転生★)。
@@ -71727,6 +71801,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // distDamageは攻撃カードだけが距離別へ加算し、反射などは空配列のままにする。
   const resolveEnemyDefeat = async ({remainingHp, damage, distDamage=[0,0,0,0]}) => {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    // ★このランの世代。WAVE_RESULT へ進める前に、まだ同じランかを見る(battleWait と同じ考え方)。
+    //   途中の await(ミッションの保存)のあいだに HOME へ抜ける(returnToHome → abandonRunAnimations で世代+1)と、
+    //   抜けたあとに WAVE_RESULT へ進み、周回は終わっているので中身の無い真っ暗な画面のまま戻らなかった
+    //   (2026-10-26・rhythm-background-run-check で、モンビーから「ホームへ戻る」を押すと6回に1回ほど)
+    const defeatGeneration = runGenerationRef.current;
     // 不死(死者の再起)を持つ難易度の対象WAVEだけ、撃破を確定させずに起き上がらせる。
     // 撃破ロック(enemyDefeatResolvedRef)はまだ立てない。ここで立てると、起き上がった敵を
     // もう一度倒したときにWAVEクリアが確定しなくなる。
@@ -71807,7 +71886,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
+    setTimeout(()=>{setDefeatFx(null); if(runGenerationRef.current!==defeatGeneration)return; advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
     return true;
   };
 
