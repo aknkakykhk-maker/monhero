@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5fb2981e0e780e3c
+// source-sha256: 5093ff53bc3e1c4a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -77422,7 +77422,7 @@ function RhythmMultiAloneHint({
   return React.createElement("div", {
     "data-rhythm-multi-alone-hint": true,
     className: "mt-1.5 rounded-xl border border-amber-300/40 bg-amber-950/40 p-2 text-[11px] font-bold leading-snug text-amber-100"
-  }, "いまはメンバーが集まりにくいようです。このまま待つか、友だちとプライベートルームで遊ぶのもおすすめです。", onLeave && React.createElement("button", {
+  }, "いまはメンバーが集まりにくいようです。このまま待つか、フレンドとプライベートルームで遊ぶのもおすすめです。", onLeave && React.createElement("button", {
     type: "button",
     onClick: onLeave,
     className: "mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black"
@@ -78725,7 +78725,7 @@ function RhythmMultiScreen({
     className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
     info: quickRunInfo,
     onRestart: onRestartQuickRun,
     onResume: onResumeQuickRun,
@@ -78933,7 +78933,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-free": true,
       type: "button",
       onClick: () => searchRoom('free'),
-      className: "mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
+      className: "mhms-card free mhms-in flex min-h-[80px] min-w-0 flex-col items-start justify-center gap-1 max-[359px]:gap-0.5 bg-gradient-to-br from-pink-300 via-fuchsia-400 to-violet-500 px-3 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] landscape:flex-row landscape:items-center landscape:gap-2",
       style: {
         animationDelay: '.12s'
       }
@@ -78942,7 +78942,7 @@ function RhythmMultiScreen({
       className: "mhms-mark"
     }, "FREE MATCH"), React.createElement("span", {
       "aria-hidden": "true",
-      className: "mhms-ico relative text-3xl leading-none"
+      className: "mhms-ico relative text-3xl leading-none max-[359px]:text-2xl"
     }, "🎮"), React.createElement("span", {
       className: "relative min-w-0"
     }, React.createElement("b", {
@@ -78973,7 +78973,7 @@ function RhythmMultiScreen({
       className: "block text-[18px] font-black italic leading-tight"
     }, "プライベート"), React.createElement("small", {
       className: "block text-[10px] font-black leading-tight text-slate-900/80"
-    }, "合言葉で友だちと遊ぶ"))), ms.multi && React.createElement("button", {
+    }, "合言葉でフレンドと遊ぶ"))), ms.multi && React.createElement("button", {
       "data-rhythm-mode-ranking": true,
       type: "button",
       onClick: () => openRankHub('national'),
@@ -79153,7 +79153,7 @@ function RhythmMultiScreen({
       className: "block text-base font-black text-sky-100"
     }, "プライベートルーム"), React.createElement("small", {
       className: "block text-[11px] font-bold text-slate-400"
-    }, "合言葉で、友だちだけと遊べます")), React.createElement("button", {
+    }, "合言葉で、フレンドだけと遊べます")), React.createElement("button", {
       type: "button",
       "aria-label": "閉じる",
       onClick: () => setPrivateOpen(false),
@@ -79164,7 +79164,7 @@ function RhythmMultiScreen({
       className: "block text-[13px] font-black text-white"
     }, "部屋をつくる"), React.createElement("p", {
       className: "text-[11px] font-bold leading-snug text-slate-300"
-    }, "合言葉(ルームコード)ができます。友だちに伝えて入ってもらいましょう"), React.createElement("button", {
+    }, "合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう"), React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
       onClick: createPrivate,
@@ -79290,7 +79290,7 @@ function RhythmMultiScreen({
       type: "button",
       className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black",
       onClick: shareCode
-    }, copied ? 'コピーした!' : '友だちに送る')), view && room && React.createElement("div", {
+    }, copied ? 'コピーした!' : 'フレンドに送る')), view && room && React.createElement("div", {
       "data-rhythm-multi-select-time-row": true,
       className: "mt-1.5 flex flex-wrap items-center gap-1.5"
     }, React.createElement("small", {
@@ -125079,7 +125079,7 @@ function MonsterHeroGame() {
           disabled: soon || tutorialLocked,
           onClick: () => openBattleSystem(sys.id),
           "aria-label": soon ? `${sys.label}（準備中）` : sys.label,
-          className: `mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon ? 'opacity-60 grayscale' : ''}`,
+          className: `mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] portrait:[@media(max-height:600px)]:min-h-[70px] ${soon ? 'opacity-60 grayscale' : ''}`,
           style: {
             animationDelay: `${.05 + idx * .07}s`
           }

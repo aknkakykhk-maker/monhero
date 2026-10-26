@@ -18160,10 +18160,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     // ★札は「選ぶ」ボタンと、右の「？(詳しいルール)」ボタンの2つでできている。準備中でも中身は読める
                     return (
                     <div key={sys.id} data-battle-system-card={sys.id} className={`relative${sysSpot}`}>
+                    {/* 縦が低い端末(高さ600px以下・320×568)では札を70pxに詰め、上の助手の立ち絵の枠へ回す(#3703 の直し残し・2026-10-27 ダメダシ「バトルの入口は肩まで」) */}
                       <button data-battle-system={sys.id} data-battle-system-soon={soon?'1':undefined}
                         disabled={soon||tutorialLocked} onClick={()=>openBattleSystem(sys.id)}
                         aria-label={soon?`${sys.label}（準備中）`:sys.label}
-                        className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
+                        className={`mhms-card mhms-in flex min-h-[84px] w-full min-w-0 items-center gap-3 bg-gradient-to-br ${look.grad} px-3 pr-14 text-left text-slate-950 active:scale-[.97] landscape:min-h-[76px] portrait:[@media(max-height:600px)]:min-h-[70px] ${soon?'opacity-60 grayscale':''}`} style={{animationDelay:`${.05+idx*.07}s`}}>
                         <span aria-hidden="true" className="mhms-mark">{look.mark}</span>
                         <span aria-hidden="true" className="mhms-ico relative shrink-0 text-3xl leading-none">{sys.emoji}</span>
                         <span className="relative min-w-0 flex-1" style={{containerType:'inline-size'}}>
