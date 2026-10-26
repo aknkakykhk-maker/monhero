@@ -780,7 +780,10 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK,
+  // 2026-10-26 から、色相ルール・埋め込み部位マップで分けていた子も、境目を絵の線へ寄せ直した配信マスクで染める
+  // (tools/image/refine-dye-mask.js。分け方は前と同じ)。配信マスクは下の色相ルール・埋め込み部位マップより優先される
+  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -1352,13 +1355,26 @@ const monsterArtUrlNeedsContain = (url) => {
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
       const monster = all[baseId];
       if (!monster) continue;
-      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
+      const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[baseId] : null;
+      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon, thumb]) {
         if (each) urls.add(each);
       }
     }
     _monsterArtContainUrls = urls;
   }
   return _monsterArtContainUrls.has(url);
+};
+// 小さい枠(画面で 64px 以下)に出すモンスターの絵(2026-10-27 オート無限周回のメモリ対策・社長の決定)。
+// 30体ほどはアイコンが立ち絵そのもの(1024四方前後)で、48px の丸い枠にもその大きさのまま展開されていた。
+// ビルドで作った「短い辺 192px の小さい版」(MONSTER_THUMBS・tools/image/make-monster-thumbs.js)があれば、それを返す。
+// ・専用のアイコンを持つ子(アイコンが立ち絵と別の絵)は、絵が変わってしまうのでアイコンのまま
+// ・大きく出す所(図鑑・大きい立ち絵)と、染色する絵には使わない(呼ぶ側で決める)
+const monsterSmallIconUrl = (base) => {
+  if (!base) return '';
+  const icon = base.iconUrl || base.imgUrl || '';
+  if (base.iconUrl && base.iconUrl !== base.imgUrl) return icon;
+  const thumb = typeof MONSTER_THUMBS === 'object' && MONSTER_THUMBS ? MONSTER_THUMBS[base.id] : null;
+  return thumb || icon;
 };
 // 部位マスクは絵にぴったり重ねる必要がある。絵は object-fit(cover/contain)で枠へ収めるのに、
 // マスクだけ既定の mask-size:100% 100%(枠いっぱいへ引き伸ばす)にすると、絵とマスクで縮尺が

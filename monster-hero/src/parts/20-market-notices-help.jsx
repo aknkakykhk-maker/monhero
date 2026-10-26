@@ -13,12 +13,7 @@ const MARKET_FRAME_RING_BOX = 1.2;
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
   Tiger: { scale: 2.31, x: 3, y: 38 },
-  // アーク。元PNGは顔そのものが右へ寄っている(目の中心が画像の58.3%＝右へ8.3%)。
-  // 倍率だけを上げていたので「右に寄っている」と見えていた(2026-09-05・ユーザー指摘)。
-  // x でそのぶんを打ち消す。元PNGは左右端まで描画が続くため、寄せたぶんを覆えるだけの
-  // 倍率が要る(x=-8.3 なら s>=1.166。それ未満だと画像端の直線が枠内へ露出する)。
-  // y は冠と光輪が上で切れないところまで下げた。
-  ark_icon: { scale: 1.17, x: -8.3, y: 4 },
+  // アーク(ark_icon)はここで寄せない。顔アイコン(make-face-icons.js の ARK)を顔が真ん中に来るよう作り直したので、どの画面でも同じ絵のまま出す(2026-10-26)
   kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
   snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
@@ -384,10 +379,11 @@ const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.c
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
+// 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
 const MarketBalanceBar = ({ balances }) => (
   <div data-market-balances className={`mb-2 shrink-0 grid gap-2 ${balances.length>=3?'grid-cols-3':balances.length===2?'grid-cols-2':'grid-cols-1'}`}>
-    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];return(
-      <div key={currency} data-market-balance={currency} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`}>
+    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];const one=balances.length===1;return(
+      <div key={currency} data-market-balance={currency} className={`flex items-center justify-center rounded-2xl border ${one?'flex-row-reverse gap-2 py-1.5':'flex-col py-2'} ${meta.bar}`}>
         <div className="flex items-baseline gap-1">
           <span aria-hidden="true" className="text-[11px]">{meta.emoji}</span>
           <span className="font-mono text-base font-black">{Math.max(0, Math.floor(Number(value)||0)).toLocaleString()}</span>
