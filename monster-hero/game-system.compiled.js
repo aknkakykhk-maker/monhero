@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 149fd55c9ab9b580
+// source-sha256: 1c31a86b72a145cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:49";
+const BUILD_DATE = "2026-10-27 02:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -118842,7 +118842,19 @@ function MonsterHeroGame() {
   }, "バックアップ"), React.createElement("button", {
     className: backupTab === 'import' ? 'active' : '',
     onClick: () => setBackupTab('import')
-  }, "復元")), backupTab === 'export' ? React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "復元")), backupTab === 'export' ? React.createElement(React.Fragment, null, React.createElement("button", {
+    "data-mhsave-action": "export",
+    className: "mh-dialog-choice mh-button mh-button-primary justify-center text-center",
+    style: {
+      justifyContent: 'center'
+    },
+    onClick: saveBackupFile
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルを保存（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118860,7 +118872,7 @@ function MonsterHeroGame() {
       color: '#fff',
       marginBottom: 4
     }
-  }, "使い方"), React.createElement("div", null, "1. 下の「バックアップファイルを保存」を押す"), React.createElement("div", null, "2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ"), React.createElement("div", null, "3. Android / PCはダウンロードフォルダへ直接保存されます"), React.createElement("div", null, "4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く"), React.createElement("div", {
+  }, "使い方"), React.createElement("div", null, "1. 上の「バックアップファイルを保存」を押す"), React.createElement("div", null, "2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ"), React.createElement("div", null, "3. Android / PCはダウンロードフォルダへ直接保存されます"), React.createElement("div", null, "4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く"), React.createElement("div", {
     style: {
       marginTop: 8,
       fontWeight: 900,
@@ -118878,14 +118890,7 @@ function MonsterHeroGame() {
       marginTop: 6,
       color: '#94a3b8'
     }
-  }, "※ YYYYMMDD_HHMM は保存した日時に置き換わります。")), React.createElement("button", {
-    "data-mhsave-action": "export",
-    className: "mh-dialog-choice mh-button mh-button-primary justify-center text-center",
-    style: {
-      justifyContent: 'center'
-    },
-    onClick: saveBackupFile
-  }, "バックアップファイルを保存（.mhsave）"), backupCode && React.createElement("textarea", {
+  }, "※ YYYYMMDD_HHMM は保存した日時に置き換わります。")), backupCode && React.createElement("textarea", {
     readOnly: true,
     value: backupCode
   }), React.createElement("button", {
@@ -118894,7 +118899,24 @@ function MonsterHeroGame() {
       justifyContent: 'center'
     },
     onClick: generateBackupCode
-  }, "バックアップコードを作成")) : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップコードを作成')))) : React.createElement(React.Fragment, null, React.createElement("button", {
+    "data-mhsave-action": "import",
+    className: "mh-dialog-choice justify-center text-center",
+    style: {
+      justifyContent: 'center'
+    },
+    onClick: restoreFromBackupFile
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルから復元（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118912,7 +118934,7 @@ function MonsterHeroGame() {
       color: '#fff',
       marginBottom: 4
     }
-  }, "使い方"), React.createElement("div", null, "1. 下の「バックアップファイルから復元」を押す"), React.createElement("div", null, "2. 保存した ", React.createElement("code", {
+  }, "使い方"), React.createElement("div", null, "1. 上の「バックアップファイルから復元」を押す"), React.createElement("div", null, "2. 保存した ", React.createElement("code", {
     style: {
       color: '#c4b5fd'
     }
@@ -118921,14 +118943,7 @@ function MonsterHeroGame() {
       marginTop: 7,
       color: '#fbbf24'
     }
-  }, "※ 選んだバックアップ内のデータで現在のセーブが上書きされます。")), React.createElement("button", {
-    "data-mhsave-action": "import",
-    className: "mh-dialog-choice justify-center text-center",
-    style: {
-      justifyContent: 'center'
-    },
-    onClick: restoreFromBackupFile
-  }, "バックアップファイルから復元（.mhsave）"), React.createElement("textarea", {
+  }, "※ 選んだバックアップ内のデータで現在のセーブが上書きされます。")), React.createElement("textarea", {
     value: restoreInput,
     onChange: e => setRestoreInput(e.target.value),
     placeholder: "バックアップコードを貼り付け"
@@ -118938,7 +118953,12 @@ function MonsterHeroGame() {
       justifyContent: 'center'
     },
     onClick: restoreFromBackupCode
-  }, "このコードで復元する")), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('このコードで復元する')))), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return React.createElement(React.Fragment, null, React.createElement("main", {
     className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
   }, React.createElement("div", {
