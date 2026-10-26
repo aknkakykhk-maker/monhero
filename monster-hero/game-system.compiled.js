@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 131dfbcd821fe00b
+// source-sha256: 9ff6e12ff7f1653d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:58";
+const BUILD_DATE = "2026-10-27 03:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28335,6 +28335,98 @@ const sbUpsertBreederProfile = async ({
     clearTimeout(timer);
   }
 };
+const BREEDER_LEVELS_TABLE = 'breeder_levels';
+const BREEDER_LEVELS_SELECT = 'breeder_id,user_name,level,icon';
+const BREEDER_LEVELS_PAGE_SIZE = 1000;
+const BREEDER_LEVELS_MAX_PAGES = 30;
+let _breederLevelsUnavailable = false;
+const sbUpsertBreederLevel = async ({
+  breederId,
+  userName,
+  icon,
+  level
+}) => {
+  if (_breederLevelsUnavailable) return false;
+  const id = typeof breederId === 'string' ? breederId.trim() : '';
+  const lv = Math.floor(Number(level));
+  if (!id || !Number.isFinite(lv) || lv < 1) return false;
+  const row = {
+    breeder_id: id,
+    user_name: userName || '名無しのブリーダー',
+    icon: icon ?? null,
+    level: lv
+  };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?on_conflict=breeder_id`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify([row]),
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) {
+        _breederLevelsUnavailable = true;
+        return false;
+      }
+      throw new Error(`breeder_levels upsert ${res.status}: ${body || res.statusText}`);
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const sbFetchBreederLevelRows = async (requestId = 'untracked') => {
+  if (_breederLevelsUnavailable) return [];
+  const all = [];
+  let pageSize = BREEDER_LEVELS_PAGE_SIZE;
+  let offset = 0;
+  for (let page = 0; page < BREEDER_LEVELS_MAX_PAGES; page++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/${BREEDER_LEVELS_TABLE}?select=${BREEDER_LEVELS_SELECT}` + `&order=level.desc.nullslast,breeder_id.asc&limit=${pageSize}&offset=${offset}`;
+      const res = await fetch(url, {
+        headers: SB_HEADERS,
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        if (_isMissingTableError(res.status, body)) {
+          _breederLevelsUnavailable = true;
+          return [];
+        }
+        throw new Error(`breeder_levels ${res.status}: ${body || res.statusText}`);
+      }
+      const rows = JSON.parse(body || '[]');
+      const got = Array.isArray(rows) ? rows : [];
+      all.push(...got);
+      rankingLog(requestId, 'breeder-levels-page', {
+        page,
+        offset,
+        pageSize,
+        received: got.length,
+        total: all.length
+      });
+      if (got.length === 0) break;
+      if (page === 0 && got.length < pageSize) pageSize = got.length;
+      if (got.length < pageSize) break;
+      offset += got.length;
+    } catch (error) {
+      console.error('[ranking] breeder_levels fetch failed:', error && error.message ? error.message : error);
+      break;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return all.filter(r => r && typeof r === 'object' && Number(r.level) > 0);
+};
 let _recordLookById = new Map();
 let _recordLookByName = new Map();
 let _recordIdByName = new Map();
@@ -39835,7 +39927,7 @@ const RhythmTapTest = ({
     }, "Lv.", chart.level), Number(difficulty.maxScore) > 0 && React.createElement("span", {
       "data-rhythm-result-achievement": true,
       className: "whitespace-nowrap font-black tabular-nums text-amber-200"
-    }, "満点の", Math.min(100, Math.floor(view.score / Number(difficulty.maxScore) * 100)), "%")), (() => {
+    }, "満点の", Math.min(100, Math.floor(view.score / Number(difficulty.maxScore) * 100)), "%")), !tutorialProp && (() => {
       const max = Number(difficulty.maxScore) > 0 ? Number(difficulty.maxScore) : 1000000;
       const asc = RHYTHM_RANKS.filter(item => item.min > 0 && item.min <= max).slice().reverse();
       const marks = asc.slice(-5);
@@ -39875,7 +39967,7 @@ const RhythmTapTest = ({
           }
         }, item.id);
       })));
-    })()), React.createElement("div", {
+    })()), !tutorialProp && React.createElement("div", {
       "data-rhythm-result-rank": true,
       "data-rank-tier": String(rankTier),
       className: `relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border-4 border-current text-[38px] font-black italic ${RHYTHM_RANK_COLORS[rank]}`
@@ -39924,7 +40016,14 @@ const RhythmTapTest = ({
     }, view.score.toLocaleString()), result.isNewRecord && Number(result.previousBestScore) > 0 && React.createElement("small", {
       "data-rhythm-record-prev": true,
       className: "mt-0.5 block text-[10px] font-bold tabular-nums text-amber-200/90"
-    }, "前回のベスト ", Number(result.previousBestScore).toLocaleString()), (() => {
+    }, "前回のベスト ", Number(result.previousBestScore).toLocaleString()), tutorialProp && React.createElement("p", {
+      "data-rhythm-result-practice": true,
+      className: "mt-1.5 rounded-xl border-2 border-cyan-300/50 bg-cyan-950/40 px-2 py-1.5 text-[12px] font-black leading-snug text-cyan-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap('おつかれさま！本番の曲で遊んでみよう'), React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold text-cyan-200/80",
+      style: JA_WRAP_STYLE
+    }, jaWrap('練習のスコアは記録に残りません'))), !tutorialProp && (() => {
       const failed = result.cleared === false;
       return React.createElement("div", {
         "data-rhythm-result-clear": true,
@@ -39935,14 +40034,14 @@ const RhythmTapTest = ({
       }, failed ? 'FAILED' : 'CLEAR'), React.createElement("small", {
         className: "min-w-0 text-[9px] font-black leading-snug"
       }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
-    })())), React.createElement("div", {
+    })())), !tutorialProp && React.createElement("div", {
       className: "mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"
     }, React.createElement("span", {
       className: "tracking-wider text-slate-400"
     }, "BEST SCORE"), React.createElement("b", {
       "data-rhythm-result-best": true,
       className: "tabular-nums text-slate-100"
-    }, result.bestScore.toLocaleString())), (() => {
+    }, result.bestScore.toLocaleString())), !tutorialProp && (() => {
       const nextId = rhythmNextRankId(view.score, difficulty.maxScore);
       const next = nextId ? RHYTHM_RANKS.find(item => item.id === nextId) : null;
       if (!next) return null;
@@ -51168,6 +51267,10 @@ const jaWrapPieces = seg => {
   return out;
 };
 const jaWrap = text => {
+  if (text && typeof text === 'object') {
+    if (React.isValidElement(text) || Array.isArray(text)) return text;
+    text = typeof text.text === 'string' ? text.text : '';
+  }
   const s = jaWrapPoints(text);
   if (typeof s !== 'string' || !s.includes('\u200B')) return s;
   const keep = (t, k) => React.createElement("span", {
@@ -52859,6 +52962,17 @@ function SettingsScreen({
     className: "mh-button mh-button-danger w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-red-500/40 bg-red-950/50 px-4 py-3 font-black text-red-200 active:scale-[.98]"
   }, "タイトルへ戻る"))));
 }
+const settingsBackdropProps = onClose => ({
+  onPointerDown: e => {
+    e.stopPropagation();
+    e.currentTarget.dataset.downOnBackdrop = e.target === e.currentTarget ? '1' : '';
+  },
+  onClick: e => {
+    const ok = e.target === e.currentTarget && e.currentTarget.dataset.downOnBackdrop === '1';
+    e.currentTarget.dataset.downOnBackdrop = '';
+    if (ok) onClose();
+  }
+});
 function ArtPickerModal({
   pickerId,
   heading,
@@ -52870,10 +52984,9 @@ function ArtPickerModal({
   onClose
 }) {
   const auto = value === 'auto';
-  return React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  return React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(onClose)), React.createElement("div", {
     className: "mh-title-dialog",
     "data-art-picker": pickerId,
     style: {
@@ -52888,16 +53001,16 @@ function ArtPickerModal({
   }, React.createElement(X, {
     size: 18
   }))), React.createElement("p", {
-    className: "text-[11px] font-bold leading-relaxed text-slate-300"
+    className: "shrink-0 text-[11px] font-bold leading-relaxed text-slate-300"
   }, note), React.createElement("button", {
     type: "button",
     "aria-pressed": auto,
     onClick: () => onChange('auto'),
-    className: `w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto ? 'border-amber-300 bg-amber-500/15 text-amber-100' : 'border-white/15 bg-white/5 text-slate-200'}`
+    className: `shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto ? 'border-amber-300 bg-amber-500/15 text-amber-100' : 'border-white/15 bg-white/5 text-slate-200'}`
   }, "おまかせ(季節に合わせて切り替え)", auto && React.createElement("small", {
     className: "block text-[10px] font-bold text-amber-200/80"
   }, "いまは「", (options.find(o => o.id === resolved) || options[0]).label, "」を出しています")), React.createElement("div", {
-    className: "grid grid-cols-2 gap-3"
+    className: "shrink-0 grid grid-cols-2 gap-3"
   }, options.map(option => {
     const selected = value === option.id;
     return React.createElement("button", {
@@ -52922,7 +53035,7 @@ function ArtPickerModal({
     }, option.desc));
   })), React.createElement("button", {
     type: "button",
-    className: "mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]",
+    className: "shrink-0 mh-button mh-button-primary w-full min-h-[52px] rounded-xl font-black text-[14px] active:scale-[.98]",
     onClick: onClose
   }, "決定")));
 }
@@ -52958,10 +53071,9 @@ function ScreenThemeModal({
     onChange('*', choice);
   };
   const chip = selected => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
-  return React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  return React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(onClose)), React.createElement("div", {
     className: "mh-title-dialog",
     "data-screen-theme-picker": true,
     style: {
@@ -63926,7 +64038,7 @@ function PickTeachingScreen({
     }, "ASSIST CARD"), React.createElement("div", {
       className: "mh-ph-heading"
     }, React.createElement("h2", {
-      className: "mh-ph-title text-xl font-black italic",
+      className: "mh-ph-title text-xl max-[359px]:text-lg font-black italic",
       style: JA_WRAP_STYLE
     }, jaWrap('アシストカードの継承・強化'))), React.createElement("p", {
       className: "mh-phase-tall text-[10px] font-bold text-slate-400",
@@ -63999,7 +64111,7 @@ function PickTeachingScreen({
         className: "mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200",
         style: {
           display: '-webkit-box',
-          WebkitLineClamp: 3,
+          WebkitLineClamp: 5,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           ...JA_WRAP_STYLE
@@ -69621,7 +69733,7 @@ function BattleScreen({
     size: 11,
     className: "shrink-0"
   }), React.createElement("span", {
-    className: "max-w-[34vw] truncate"
+    className: "max-w-[34vw] truncate pr-[3px]"
   }, enemy.name), React.createElement("span", {
     className: `shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
   }, RANGE_LABELS[enemyDist]), Array.isArray(enemyDebuffs) && enemyDebuffs.length > 0 && React.createElement("button", {
@@ -71622,7 +71734,7 @@ function BattleScreen({
   }, React.createElement("span", {
     className: `flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`
   }, React.createElement("span", {
-    className: "whitespace-nowrap"
+    className: "whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight"
   }, "Action Cards"), " ", React.createElement("span", {
     className: "shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
   }, Array.isArray(tacticsUnits) ? actionUsed : selectedCards.length, "/", cardLimit), heroCardBonus > 0 && React.createElement("span", {
@@ -85266,7 +85378,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: 0.06,
     hard: 0.15,
     expert: 0,
-    master: 0.3
+    master: 0.1
   },
   dra: {
     easy: -0.075,
@@ -89231,11 +89343,11 @@ const cardResultCutWhy = (outcome, r) => {
   return byKo < cardLoseScaled(r.full, r.ownTurns) ? `投了は、倒した相手のモンスター1体につき${CARD_SURRENDER_POINT_PER_KO}(倒したのは${Number(r.kos) || 0}体)` : turns;
 };
 const CARD_FOE_BUILD_NOTE = Object.freeze({
-  easy: '残りの2体は気分でえらぶ(気まぐれな子が混ざることも)。カードは第1弾だけで、組み方は雑',
-  normal: '残りの2体は型に合う子が中心。カードは型に合うものを、ざっくり入れる',
-  hard: '残りの2体は、型に合う子をしっかりえらぶ。第1弾のカードで、型どおりに組む',
-  expert: '残りの2体は、型に合う子をしっかりえらぶ。全部の弾から、強いカードを優先して組む',
-  master: 'いちばん強い組み合わせで、全部の弾から本気で組む。あなたのデッキを見て、残りの2体をえらび直すことも'
+  easy: '好きな子を中心に、のんびり組んでくる。気まぐれな子が混ざることも(カードは第1弾から)',
+  normal: '好きな子と、戦い方に合う子で組んでくる。カードはざっくり選ぶ',
+  hard: '戦い方に合う子とカードで、しっかり組んでくる(カードは第1弾から)',
+  expert: '戦い方に合う子と、全部の弾の強いカードで、しっかり組んでくる',
+  master: '全部の弾から本気で組んでくる。あなたのデッキを見て、モンスターを選び直すことも'
 });
 const CardFoeStyle = ({
   db,
@@ -89681,13 +89793,17 @@ const CardBattleBoard = ({
   onProgress = null,
   quickRun = null,
   meProfile = null,
-  meIcon = null
+  meIcon = null,
+  onActLog = null
 }) => {
   const settings = normalizeCardSettings(game.settings);
   const pace = CARD_THINK_PACE[settings.think] || 1;
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   const confirmOn = key => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
-  const pvp = game.pvp || null;
+  const replay = game.replay || null;
+  const pvp = game.pvp || (replay && replay.kind === 'pvp' ? replay.foe : null);
+  const pvpLive = pvp && !replay;
+  const [replayAt, setReplayAt] = useState(0);
   const who = pvp ? {
     id: 'pvp',
     name: pvp.name,
@@ -89986,7 +90102,8 @@ const CardBattleBoard = ({
     }
     const next = forced || cardApplyAction(db, st, act);
     if (!next) return false;
-    if (pvp && !forced) CARD_PVP.local(st, act, next);
+    if (onActLog && !forced && !replay) onActLog(cardDeciderOf(st), act);
+    if (pvpLive && !forced) CARD_PVP.local(st, act, next);
     flyGuts(st, next, act);
     if (pvp && bigMs > 0) {
       const p0 = forced ? CARD_CPU : CARD_ME;
@@ -90118,7 +90235,7 @@ const CardBattleBoard = ({
     return true;
   };
   useEffect(() => {
-    if (st.winner !== null || paused || game.demo || pvp) return undefined;
+    if (st.winner !== null || paused || game.demo || pvp || replay) return undefined;
     if (tutorial && !cardTutorialCpu(db, tutStage.id, st)) return undefined;
     if (cardDeciderOf(st) !== CARD_CPU) return undefined;
     const wait = Math.round((st.pending ? 950 : st.phase === 'guts' ? 600 : 900) * pace);
@@ -90163,7 +90280,7 @@ const CardBattleBoard = ({
     const bannerMs = Math.max(500, Math.round(800 * pace));
     const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), bannerMs);
     let t2 = null;
-    if (meNow && !tutorial && !game.demo) {
+    if (meNow && !tutorial && !game.demo && !replay) {
       const lines = st.log.filter(l => l.turn === st.turn - 1 && l.kind !== 'turn').map(l => l.text).slice(-8);
       setTurnSummary(null);
       if (lines.length) t2 = setTimeout(() => setTurnSummary({
@@ -90190,7 +90307,7 @@ const CardBattleBoard = ({
   const stepRef = useRef(step);
   stepRef.current = step;
   useEffect(() => {
-    if (!pvp) return undefined;
+    if (!pvpLive) return undefined;
     return CARD_PVP.attach({
       onAct: msg => {
         const next = cardPvpApplyRemote(db, stRef.current, msg);
@@ -90219,8 +90336,8 @@ const CardBattleBoard = ({
       }
     });
   }, []);
-  useCardPvpAuto(db, pvp, st, step, paused);
-  const pvpClock = useCardPvpClock(pvp, st, step);
+  useCardPvpAuto(db, pvpLive, st, step, paused);
+  const pvpClock = useCardPvpClock(pvpLive, st, step);
   const demoAt = useRef(0);
   useEffect(() => {
     if (!game.demo || paused) return undefined;
@@ -90234,7 +90351,7 @@ const CardBattleBoard = ({
     return () => clearTimeout(t);
   }, [st, paused]);
   useEffect(() => {
-    if (st.winner === null || finished.current || tutorial) return undefined;
+    if (st.winner === null || finished.current || tutorial || replay) return undefined;
     finished.current = true;
     const t = setTimeout(() => onFinish({
       outcome: st.winner === CARD_ME ? 'win' : 'lose',
@@ -90246,7 +90363,7 @@ const CardBattleBoard = ({
   const me = st.players[CARD_ME];
   const opp = st.players[CARD_CPU];
   const decider = cardDeciderOf(st);
-  const myTurn = st.winner === null && decider === CARD_ME;
+  const myTurn = !replay && st.winner === null && decider === CARD_ME;
   const turnMe = st.active === CARD_ME;
   const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait' : st.pendingPray ? 'pray' : st.pendingReveal ? 'reveal' : st.pendingChoice ? 'choose' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
@@ -90599,7 +90716,7 @@ const CardBattleBoard = ({
     const pl = st.players[p];
     return React.createElement("div", {
       className: `flex items-center whitespace-nowrap font-bold ${tiny ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`
-    }, p === CARD_CPU && React.createElement("span", {
+    }, p === CARD_CPU && !replay && React.createElement("span", {
       "data-card-hand-of": p,
       className: "flex"
     }, pl.hand.map((_, i) => React.createElement("img", {
@@ -90671,6 +90788,17 @@ const CardBattleBoard = ({
   })();
   const tutBtn = key => tutorial ? tutFocus.button === key ? ' animate-pulse ring-4 ring-emerald-300' : '' : '';
   const tutOff = key => tutorial && tutFocus.button !== key;
+  const replaySeek = n => {
+    if (!replay) return;
+    const k = Math.max(0, Math.min(replay.states.length - 1, n));
+    setReplayAt(k);
+    setSel(null);
+    setPicks([]);
+    setBigCard(null);
+    setAction(null);
+    setTurnSummary(null);
+    setSt(replay.states[k]);
+  };
   const footer = (() => {
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (st.winner !== null && !tutorial) return React.createElement("div", {
@@ -90754,6 +90882,52 @@ const CardBattleBoard = ({
     }, "攻撃おわり → ガッツへ"));
   })();
   const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const tutorBox = tutorial && tutSay ? (() => {
+    const dra = ASSISTANTS.find(a => a.id === 'dra');
+    const head = tutQ[0];
+    const showNext = tutStage.next ? !head || head[0] === 'D' : head && head[0] === 'D' && tutQ.length > 1;
+    const onNext = () => {
+      Audio_.fgSe.tap();
+      setHint('');
+      if (tutQ.length > 1) {
+        setTutQ(q => q.slice(1));
+        return;
+      }
+      if (tutStage.onNext === 'finish') {
+        finished.current = true;
+        onFinish({
+          outcome: 'tutorialDone',
+          st
+        });
+        return;
+      }
+      if (tutStage.onNext) setSt(cur => cardTutorialMutate(db, cur, tutStage.onNext));
+      setTutI(i => i + 1);
+    };
+    return React.createElement("div", {
+      className: wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'
+    }, React.createElement("div", {
+      "data-card-tutor": tutStage.id,
+      className: `${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`
+    }, dra && React.createElement("img", {
+      src: assistantFaceImage(dra, 'happy'),
+      alt: "ドラ",
+      className: "h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50",
+      style: JA_WRAP_STYLE
+    }, React.createElement("b", {
+      className: "mr-1 text-[11px] text-emerald-300"
+    }, "ドラ"), jaWrap(CARD_TUTORIAL_LINES[tutSay]), hint && React.createElement("span", {
+      "data-card-tutor-hint": true,
+      className: "mt-0.5 block text-[11px] text-amber-200"
+    }, jaWrap(hint))), showNext && React.createElement("button", {
+      type: "button",
+      "data-card-tutor-next": true,
+      onClick: onNext,
+      className: "pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95"
+    }, "次へ")));
+  })() : null;
   return React.createElement("div", {
     ref: boardRef,
     "data-mh-screen": true,
@@ -90772,15 +90946,21 @@ const CardBattleBoard = ({
   }, React.createElement("button", {
     type: "button",
     "data-card-quit": true,
-    onClick: () => setQuit(true),
+    onClick: () => replay ? onFinish({
+      outcome: 'replayExit',
+      st
+    }) : setQuit(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
-  }, tutorial ? '飛ばす' : '投了'), pvp && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
+  }, replay ? 'とじる' : tutorial ? '飛ばす' : '投了'), pvpLive && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
     type: "button",
     "data-card-log-open": true,
     onClick: () => setLogSheet(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
     "aria-label": "ターンの記録を見る"
-  }, "記録")), pvp ? React.createElement(CardPvpStatus, {
+  }, "記録")), replay ? React.createElement("span", {
+    "data-card-replay-badge": true,
+    className: `shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`
+  }, "リプレイ") : pvp ? React.createElement(CardPvpStatus, {
     clock: pvpClock
   }) : React.createElement("span", {
     "data-card-level-badge": tutorial ? 'tutorial' : game.level,
@@ -90807,7 +90987,7 @@ const CardBattleBoard = ({
   }, React.createElement("div", {
     "data-card-field": true,
     className: wide ? 'flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'
-  }, pvp && React.createElement(CardPvpSignal, {
+  }, pvpLive && React.createElement(CardPvpSignal, {
     clock: pvpClock
   }), React.createElement("div", {
     className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
@@ -90831,7 +91011,24 @@ const CardBattleBoard = ({
     className: "block text-[10px] font-bold text-rose-200"
   }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level])), React.createElement("div", {
     className: "ml-auto"
-  }, strip(CARD_CPU))), React.createElement("div", {
+  }, strip(CARD_CPU))), replay && React.createElement("div", {
+    "data-card-replay-foe-hand": true,
+    className: "flex shrink-0 items-center justify-center gap-1 px-2 pb-0.5"
+  }, opp.hand.map((no, i) => {
+    const c = cardOf(db, no);
+    return React.createElement("button", {
+      key: `${no}-${i}`,
+      type: "button",
+      "data-card-replay-foe-card": i,
+      onClick: () => c && setDetail(no),
+      className: `${tiny ? 'w-[30px]' : 'w-[38px]'} shrink-0`
+    }, React.createElement("img", {
+      src: c ? CARD_IMG(c.img) : CARD_BACK_IMG(),
+      alt: c ? c.name : '',
+      draggable: false,
+      className: "w-full rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]"
+    }));
+  })), React.createElement("div", {
     "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
     className: `flex shrink-0 items-start justify-around rounded-2xl px-1 transition-shadow ${turnLive && !turnMe ? 'shadow-[inset_0_0_0_2px_rgba(251,113,133,.75),0_0_16px_rgba(251,113,133,.35)]' : ''}`
   }, opp.mons.map((_, m) => React.createElement(CardMonSlot, {
@@ -90966,7 +91163,7 @@ const CardBattleBoard = ({
   }, pendingText)), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
     className: i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'
-  }, l.text)))), React.createElement("div", {
+  }, l.text)))), !wide && tutorBox, React.createElement("div", {
     "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
     className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`
   }, me.mons.map((_, m) => React.createElement(CardMonSlot, {
@@ -91012,52 +91209,7 @@ const CardBattleBoard = ({
   }, meProfile && meProfile.name || 'あなた')), strip(CARD_ME))), React.createElement("div", {
     "data-card-side": true,
     className: wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'
-  }, tutorial && tutSay && (() => {
-    const dra = ASSISTANTS.find(a => a.id === 'dra');
-    const head = tutQ[0];
-    const showNext = tutStage.next ? !head || head[0] === 'D' : head && head[0] === 'D' && tutQ.length > 1;
-    const onNext = () => {
-      Audio_.fgSe.tap();
-      setHint('');
-      if (tutQ.length > 1) {
-        setTutQ(q => q.slice(1));
-        return;
-      }
-      if (tutStage.onNext === 'finish') {
-        finished.current = true;
-        onFinish({
-          outcome: 'tutorialDone',
-          st
-        });
-        return;
-      }
-      if (tutStage.onNext) setSt(cur => cardTutorialMutate(db, cur, tutStage.onNext));
-      setTutI(i => i + 1);
-    };
-    return React.createElement("div", {
-      className: wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'
-    }, React.createElement("div", {
-      "data-card-tutor": tutStage.id,
-      className: `${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`
-    }, dra && React.createElement("img", {
-      src: assistantFaceImage(dra, 'happy'),
-      alt: "ドラ",
-      className: "h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"
-    }), React.createElement("div", {
-      className: "min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50",
-      style: JA_WRAP_STYLE
-    }, React.createElement("b", {
-      className: "mr-1 text-[11px] text-emerald-300"
-    }, "ドラ"), jaWrap(CARD_TUTORIAL_LINES[tutSay]), hint && React.createElement("span", {
-      "data-card-tutor-hint": true,
-      className: "mt-0.5 block text-[11px] text-amber-200"
-    }, jaWrap(hint))), showNext && React.createElement("button", {
-      type: "button",
-      "data-card-tutor-next": true,
-      onClick: onNext,
-      className: "pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95"
-    }, "次へ")));
-  })(), tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
+  }, wide && tutorBox, tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
     "data-card-tutor-arrow": true,
     className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900",
     style: JA_LABEL_STYLE
@@ -91142,7 +91294,15 @@ const CardBattleBoard = ({
     style: {
       paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
     }
-  }, footer))), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
+  }, replay ? React.createElement(CardReplayBar, {
+    replay: replay,
+    at: replayAt,
+    onSeek: replaySeek,
+    onExit: () => onFinish({
+      outcome: 'replayExit',
+      st
+    })
+  }) : footer))), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
     "data-drag-card-layer": true,
     className: "pointer-events-none fixed inset-0",
     style: {
@@ -91220,7 +91380,7 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
-  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnBanner && !bigCard && React.createElement("div", {
+  }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")), turnBanner && !bigCard && !(tutorial && tutSay) && React.createElement("div", {
     key: turnBanner.key,
     "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
     "aria-live": "polite",
@@ -92111,6 +92271,14 @@ const CardBattleScreen = ({
     };
   };
   const openRef = useRef(null);
+  const cpuLogRef = useRef(null);
+  const cpuLogAct = (by, act) => {
+    const log = cpuLogRef.current;
+    if (log && log.acts.length < CARD_REPLAY_ACTS_MAX) log.acts.push({
+      by,
+      act: JSON.parse(JSON.stringify(act))
+    });
+  };
   const writeCpuOpen = async (open, first = false) => {
     if (!first && (!openRef.current || openRef.current.id !== open.id || openIdRef.current !== open.id)) return;
     openRef.current = open;
@@ -92158,6 +92326,23 @@ const CardBattleScreen = ({
     }, CARD_CPU_OPEN_STALE_MS);
     return () => clearInterval(t);
   }, [save ? 1 : 0, screen]);
+  const openReplay = async (id, back = 'top') => {
+    const rec = await cardReplayGet(id);
+    const g = rec && db ? cardReplayGameOf(db, rec) : null;
+    if (!g) {
+      setNotice('この対戦は見られません(記録が見つかりませんでした)');
+      return;
+    }
+    setGame({
+      ...g,
+      settings: save ? save.settings : undefined,
+      replay: {
+        ...g.replay,
+        back
+      }
+    });
+    onNavigate('CARD_BATTLE');
+  };
   if (!db) return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -92194,6 +92379,7 @@ const CardBattleScreen = ({
       db: db,
       game: game,
       onProgress: cpuOpenProgress,
+      onActLog: cpuLogRef.current && cpuLogRef.current.id === game.key ? cpuLogAct : null,
       meProfile: rank && rank.profile,
       meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       quickRun: quickRun ? {
@@ -92205,6 +92391,13 @@ const CardBattleScreen = ({
         st,
         comeback = false
       }) => {
+        if (game.replay) {
+          const back = game.replay.back || 'top';
+          setGame(null);
+          onNavigate('CARD_TOP');
+          setView(back);
+          return;
+        }
         if (game.pvp) {
           CARD_PVP.finish(outcome, st);
           onBgm && onBgm(save.bgm.top);
@@ -92310,6 +92503,28 @@ const CardBattleScreen = ({
           level: game.level,
           comeback
         }) : null;
+        let replayId = null;
+        const log = cpuLogRef.current;
+        if (log && log.id === game.key) {
+          cpuLogRef.current = null;
+          const rec = cardReplayFromCpu(db, {
+            id: `c${log.id}`,
+            at: Date.now(),
+            myDeck: log.decks[0],
+            cpuDeck: log.decks[1],
+            seed: log.seed,
+            first: log.first,
+            history: log.acts,
+            foe: {
+              name: log.foeName,
+              who: game.who,
+              deckName: log.deckName
+            },
+            outcome,
+            reason: ''
+          });
+          if (rec && (await cardReplaySave(rec))) replayId = rec.id;
+        }
         setResult({
           outcome,
           reward,
@@ -92320,7 +92535,8 @@ const CardBattleScreen = ({
           loops,
           quick,
           facts,
-          talk: talkFacts
+          talk: talkFacts,
+          replay: replayId
         });
         onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
@@ -92413,6 +92629,19 @@ const CardBattleScreen = ({
       intro,
       cpuSameBlood: !!cpuDeck.sameBlood
     });
+    const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
+    cpuLogRef.current = scene ? null : {
+      id: `${seed}`,
+      seed,
+      first,
+      decks: [{
+        monsters: activeDeck.monsters,
+        cards: activeDeck.cards
+      }, cpuDeck],
+      foeName: intro.foe.name,
+      deckName: intro.foe.deckName || null,
+      acts: []
+    };
     void writeCpuOpen({
       id: `${seed}`,
       who: pick.who,
@@ -92609,6 +92838,10 @@ const CardBattleScreen = ({
       };
     };
     return React.createElement(CardPvpLobby, {
+      onOpenReplay: id => {
+        void openReplay(id, 'pvp');
+      },
+      replayHas: cardReplayHas,
       meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       meFrame: rank && rank.profile && rank.profile.frame || null,
       deck: activeDeck,
@@ -92997,7 +93230,15 @@ const CardBattleScreen = ({
       className: "mt-1 text-[11px] font-bold text-slate-400"
     }, "(デバッグの見本です。何も保存していません)"))), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`
-    }, React.createElement("button", {
+    }, result.replay && React.createElement("button", {
+      type: "button",
+      "data-card-result-replay": true,
+      className: `${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        void openReplay(result.replay, 'result');
+      }
+    }, "この対戦を見る"), React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => {
@@ -93374,12 +93615,7 @@ const CardBattleScreen = ({
       sendOn: !!(rank && rank.send) && !debug
     });
   }
-  const topAssistantShown = topAssistant ? {
-    ...topAssistant,
-    text: React.createElement("span", {
-      style: JA_WRAP_STYLE
-    }, jaWrap(topAssistant.text))
-  } : null;
+  const topAssistantShown = topAssistant;
   const assistShown = !!topAssistant && (assist.modeSelectArt || assist.modeSelectComment);
   const go = v => () => {
     Audio_.fgSe.tap();
@@ -97065,6 +97301,33 @@ const CARD_PVP = (() => {
         why: v.why
       }
     });
+    if (v.ok && typeof cardReplayFromPvp === 'function') {
+      const match = s.match;
+      const rec = cardReplayFromPvp(CARD_BATTLE_DATA, {
+        match,
+        at: Date.now(),
+        myDeck: s.deck,
+        mySeed: s.seed,
+        foeDeck: o.deck,
+        foeSeed: o.seed,
+        first: s.first,
+        history: s.history,
+        foe: {
+          name: s.foe && s.foe.name,
+          icon: s.foe && s.foe.icon,
+          frame: s.foe && s.foe.fr,
+          deckName: s.foe && s.foe.dn
+        },
+        outcome: s.result.outcome,
+        reason: s.result.reason
+      });
+      if (rec && (await cardReplaySave(rec)) && s.result && s.match === match) set({
+        result: {
+          ...s.result,
+          replay: match
+        }
+      });
+    }
   };
   const onMessage = raw => {
     const msg = cardPvpCleanMessage(raw);
@@ -97600,7 +97863,8 @@ const CardPvpLobby = ({
   assistant = null,
   point = null,
   onAssistant = null,
-  rankSend = false
+  rankSend = false,
+  onOpenReplay = null
 }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
@@ -97852,7 +98116,15 @@ const CardPvpLobby = ({
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
-    }, React.createElement("button", {
+    }, r.replay && onOpenReplay && React.createElement("button", {
+      type: "button",
+      "data-card-pvp-replay": true,
+      className: `${btn} mh-button-secondary`,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        onOpenReplay(r.replay);
+      }
+    }, "この対戦を見る"), React.createElement("button", {
       type: "button",
       "data-card-pvp-leave": true,
       className: `${btn} mh-button-primary`,
@@ -98250,6 +98522,528 @@ const CardPvpRankingList = ({
   }, e.wins, "勝", e.loses, "敗"), React.createElement("b", {
     className: "w-12 text-right text-[15px] font-black text-sky-200"
   }, e.rating))));
+};
+const CARD_REPLAY_KEY = 'mh_card_replays_v1';
+const CARD_REPLAY_RULES = 1;
+const CARD_REPLAY_MAX = 10;
+const CARD_REPLAY_FAV_MAX = 3;
+const CARD_REPLAY_BYTES_MAX = 150000;
+const CARD_REPLAY_ACTS_MAX = 2000;
+const CARD_REPLAY_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const cardReplayPrint = st => {
+  if (!st || !Array.isArray(st.players)) return '';
+  const parts = [st.turn, st.active, st.phase, st.winner === null ? '-' : st.winner, st.pending ? 'g' : '', st.pendingDiscard ? 'd' : '', st.pendingChoice ? 'c' : ''];
+  st.players.forEach(p => {
+    parts.push(p.hand.join('.'), p.deck.length, p.discard.length, p.guts.length, p.mons.map(m => `${m.life}${m.ko ? 'x' : ''}`).join('.'));
+  });
+  let h = 0x811c9dc5;
+  const text = parts.join('|');
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return (h >>> 0).toString(36).padStart(4, '0').slice(-4);
+};
+const cardReplayDeckOf = raw => {
+  if (!raw || typeof raw !== 'object') return null;
+  const mons = Array.isArray(raw.monsters) ? raw.monsters.filter(v => typeof v === 'string' && /^[0-9A-Z-]{1,10}$/.test(v)) : [];
+  const cards = Array.isArray(raw.cards) ? raw.cards.filter(v => typeof v === 'string' && /^[0-9A-Z-]{1,10}$/.test(v)) : [];
+  if (mons.length !== 3 || mons.length !== raw.monsters.length || cards.length !== raw.cards.length || cards.length < 1 || cards.length > 60) return null;
+  return {
+    monsters: mons,
+    cards
+  };
+};
+const cardReplayText = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+const cardReplayNormalizeOne = raw => {
+  if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
+  if (typeof raw.id !== 'string' || !CARD_REPLAY_ID_RE.test(raw.id)) return null;
+  if (raw.kind !== 'pvp' && raw.kind !== 'cpu') return null;
+  const decks = Array.isArray(raw.decks) && raw.decks.length === 2 ? raw.decks.map(cardReplayDeckOf) : null;
+  if (!decks || decks.includes(null)) return null;
+  const seeds = Array.isArray(raw.seeds) && raw.seeds.length === 2 && raw.seeds.every(n => Number.isInteger(n) && n >= 0 && n <= 0xFFFFFFFF) ? raw.seeds.slice() : null;
+  if (!seeds) return null;
+  if (raw.first !== 0 && raw.first !== 1) return null;
+  if (!Array.isArray(raw.acts) || raw.acts.length > CARD_REPLAY_ACTS_MAX) return null;
+  const acts = [];
+  for (const a of raw.acts) {
+    if (!Array.isArray(a) || a[0] !== 0 && a[0] !== 1) return null;
+    const act = typeof cardPvpCleanAct === 'function' ? cardPvpCleanAct(a[1]) : a[1] && typeof a[1] === 'object' ? a[1] : null;
+    if (!act) return null;
+    acts.push([a[0], act]);
+  }
+  const foe = raw.foe && typeof raw.foe === 'object' ? raw.foe : {};
+  const outcomes = ['win', 'lose', 'surrender', 'foeSurrender', 'timeout', 'foeTimeout', 'foeLeft', 'left', 'draw'];
+  return {
+    v: 1,
+    id: raw.id,
+    kind: raw.kind,
+    at: Number.isFinite(raw.at) && raw.at > 0 ? raw.at : 0,
+    rules: Number.isInteger(raw.rules) && raw.rules > 0 ? raw.rules : 0,
+    first: raw.first,
+    names: [cardReplayText(Array.isArray(raw.names) ? raw.names[0] : '', 16) || 'あなた', cardReplayText(Array.isArray(raw.names) ? raw.names[1] : '', 16) || 'あいて'],
+    foe: {
+      name: cardReplayText(foe.name, 16) || 'あいて',
+      icon: cardReplayText(foe.icon, 64),
+      frame: typeof foe.frame === 'string' ? foe.frame.slice(0, 40) : null,
+      deckName: typeof foe.deckName === 'string' ? foe.deckName.slice(0, 30) || null : null,
+      who: typeof foe.who === 'string' ? foe.who.slice(0, 20) : null
+    },
+    outcome: outcomes.includes(raw.outcome) ? raw.outcome : null,
+    reason: cardReplayText(raw.reason, 40),
+    decks,
+    seeds,
+    acts,
+    prints: typeof raw.prints === 'string' && /^[0-9a-z]*$/.test(raw.prints) && raw.prints.length === acts.length * 4 ? raw.prints : '',
+    fav: raw.fav === true
+  };
+};
+const cardReplayNormalize = raw => {
+  const out = {
+    v: 1,
+    list: []
+  };
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.list)) return out;
+  const seen = new Set();
+  for (const r of raw.list) {
+    const one = cardReplayNormalizeOne(r);
+    if (!one || seen.has(one.id)) continue;
+    seen.add(one.id);
+    out.list.push(one);
+  }
+  out.list.sort((a, b) => b.at - a.at);
+  let favs = 0;
+  out.list.forEach(r => {
+    if (r.fav) {
+      favs += 1;
+      if (favs > CARD_REPLAY_FAV_MAX) r.fav = false;
+    }
+  });
+  return out;
+};
+const cardReplayAdd = (saved, rec) => {
+  const box = cardReplayNormalize(saved);
+  const one = cardReplayNormalizeOne(rec);
+  if (!one || box.list.some(r => r.id === one.id)) return box;
+  box.list.unshift({
+    ...one,
+    fav: false
+  });
+  box.list.sort((a, b) => b.at - a.at);
+  const size = () => JSON.stringify(box).length;
+  while (box.list.length > CARD_REPLAY_MAX || box.list.length > 1 && size() > CARD_REPLAY_BYTES_MAX) {
+    let drop = -1;
+    for (let i = box.list.length - 1; i >= 0; i--) {
+      if (!box.list[i].fav && box.list[i].id !== one.id) {
+        drop = i;
+        break;
+      }
+    }
+    if (drop < 0) break;
+    box.list.splice(drop, 1);
+  }
+  return box;
+};
+const cardReplaySetFav = (saved, id, on) => {
+  const box = cardReplayNormalize(saved);
+  const r = box.list.find(x => x.id === id);
+  if (!r) return {
+    box,
+    ok: false
+  };
+  if (on && !r.fav && box.list.filter(x => x.fav).length >= CARD_REPLAY_FAV_MAX) return {
+    box,
+    ok: false
+  };
+  r.fav = !!on;
+  return {
+    box,
+    ok: true
+  };
+};
+const cardReplayStart = (db, rec) => {
+  const names = [rec.names[0], rec.foe.name || rec.names[1]];
+  if (rec.kind === 'pvp') {
+    const st = cardCreateGame(db, {
+      decks: [rec.decks[0], rec.decks[1]],
+      names,
+      seed: rec.seeds[0] >>> 0,
+      first: rec.first
+    });
+    const theirs = cardCreateGame(db, {
+      decks: [rec.decks[1], rec.decks[0]],
+      seed: rec.seeds[1] >>> 0,
+      first: 1 - rec.first
+    });
+    st.players[1] = {
+      ...theirs.players[0],
+      name: st.players[1].name
+    };
+    return st;
+  }
+  return cardCreateGame(db, {
+    decks: [rec.decks[0], rec.decks[1]],
+    names,
+    seed: rec.seeds[0] >>> 0,
+    first: rec.first
+  });
+};
+const cardReplayBuild = (db, rec) => {
+  const states = [];
+  let st;
+  try {
+    st = cardReplayStart(db, rec);
+  } catch (_) {
+    return {
+      states,
+      stop: 0
+    };
+  }
+  states.push(st);
+  for (let n = 0; n < rec.acts.length; n++) {
+    const [by, act] = rec.acts[n];
+    let next = null;
+    try {
+      next = cardPvpDecider(st) === by ? cardApplyAction(db, st, act) : null;
+    } catch (_) {
+      next = null;
+    }
+    if (!next) return {
+      states,
+      stop: n
+    };
+    if (rec.prints && rec.prints.slice(n * 4, n * 4 + 4) !== cardReplayPrint(next)) return {
+      states,
+      stop: n
+    };
+    states.push(next);
+    st = next;
+  }
+  return {
+    states,
+    stop: null
+  };
+};
+const cardReplayTurnStarts = states => {
+  const out = [0];
+  for (let i = 1; i < states.length; i++) {
+    if (states[i].turn !== states[i - 1].turn || states[i].active !== states[i - 1].active) out.push(i);
+  }
+  return out;
+};
+const cardReplayCaption = (states, i) => {
+  const st = states[i];
+  if (!st || !st.log.length) return '';
+  const prev = states[i - 1];
+  let lines;
+  if (!prev) lines = st.log.slice(-1);else if (st.log.length > prev.log.length) lines = st.log.slice(prev.log.length);else {
+    const tail = prev.log[prev.log.length - 1];
+    let k = -1;
+    if (tail) for (let j = st.log.length - 1; j >= 0; j--) {
+      if (st.log[j].text === tail.text && st.log[j].turn === tail.turn) {
+        k = j;
+        break;
+      }
+    }
+    lines = k >= 0 ? st.log.slice(k + 1) : st.log.slice(-1);
+  }
+  return lines.filter(l => l.kind !== 'turn').map(l => l.text).filter(Boolean).slice(-2).join(' / ');
+};
+const cardReplayMake = (db, {
+  kind,
+  match,
+  at,
+  decks,
+  seeds,
+  first,
+  history,
+  foe,
+  outcome,
+  reason
+}) => {
+  const rec = {
+    v: 1,
+    id: String(match || ''),
+    kind,
+    at: at || Date.now(),
+    rules: CARD_REPLAY_RULES,
+    first,
+    names: ['あなた', foe && foe.name || 'あいて'],
+    foe: {
+      name: foe && foe.name || 'あいて',
+      icon: foe && foe.icon || '',
+      frame: foe && foe.frame || null,
+      deckName: foe && foe.deckName || null,
+      who: foe && foe.who || null
+    },
+    outcome,
+    reason: reason || '',
+    decks: decks.map(d => ({
+      monsters: d.monsters.slice(),
+      cards: d.cards.slice()
+    })),
+    seeds: seeds.map(n => n >>> 0),
+    acts: (history || []).map(e => [e.by, e.act]),
+    prints: '',
+    fav: false
+  };
+  const one = cardReplayNormalizeOne(rec);
+  if (!one) return null;
+  const built = cardReplayBuild(db, one);
+  if (built.stop !== null) return null;
+  one.prints = built.states.slice(1).map(cardReplayPrint).join('');
+  return one;
+};
+const cardReplayFromPvp = (db, {
+  match,
+  at,
+  myDeck,
+  mySeed,
+  foeDeck,
+  foeSeed,
+  first,
+  history,
+  foe,
+  outcome,
+  reason
+}) => cardReplayMake(db, {
+  kind: 'pvp',
+  match,
+  at,
+  decks: [myDeck, foeDeck],
+  seeds: [mySeed, foeSeed],
+  first,
+  history,
+  foe,
+  outcome,
+  reason
+});
+const cardReplayFromCpu = (db, {
+  id,
+  at,
+  myDeck,
+  cpuDeck,
+  seed,
+  first,
+  history,
+  foe,
+  outcome,
+  reason
+}) => cardReplayMake(db, {
+  kind: 'cpu',
+  match: id,
+  at,
+  decks: [myDeck, cpuDeck],
+  seeds: [seed, 0],
+  first,
+  history,
+  foe,
+  outcome,
+  reason
+});
+let _cardReplayIds = new Set();
+const cardReplayNoteIds = box => {
+  _cardReplayIds = new Set(box.list.map(r => r.id));
+  return box;
+};
+const cardReplayLoad = async () => cardReplayNoteIds(cardReplayNormalize(await storeGet(CARD_REPLAY_KEY, null)));
+const cardReplaySave = async rec => {
+  if (!rec) return false;
+  try {
+    const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
+    if (!box.list.some(r => r.id === rec.id)) return false;
+    const ok = await storeSet(CARD_REPLAY_KEY, box);
+    if (ok) cardReplayNoteIds(box);
+    return ok;
+  } catch (_) {
+    return false;
+  }
+};
+const cardReplayFav = async (id, on) => {
+  try {
+    const {
+      box,
+      ok
+    } = cardReplaySetFav(await storeGet(CARD_REPLAY_KEY, null), id, on);
+    if (ok) {
+      await storeSet(CARD_REPLAY_KEY, box);
+      cardReplayNoteIds(box);
+    }
+    return ok;
+  } catch (_) {
+    return false;
+  }
+};
+const cardReplayHas = id => typeof id === 'string' && _cardReplayIds.has(id);
+const cardReplayGet = async id => {
+  try {
+    return (await cardReplayLoad()).list.find(r => r.id === id) || null;
+  } catch (_) {
+    return null;
+  }
+};
+if (typeof window !== 'undefined') {
+  try {
+    void cardReplayLoad().catch(() => {});
+  } catch (_) {}
+}
+const cardReplayGameOf = (db, rec) => {
+  if (!rec) return null;
+  const built = cardReplayBuild(db, rec);
+  if (!built.states.length) return null;
+  return {
+    key: `replay-${rec.id}-${Date.now()}`,
+    st: built.states[0],
+    who: rec.kind === 'cpu' && rec.foe.who ? rec.foe.who : 'pvp',
+    level: 'normal',
+    replay: {
+      id: rec.id,
+      kind: rec.kind,
+      states: built.states,
+      stop: built.stop,
+      total: rec.acts.length,
+      turns: cardReplayTurnStarts(built.states),
+      foe: {
+        name: rec.foe.name,
+        icon: rec.foe.icon || '🙂',
+        frame: rec.foe.frame,
+        deckName: rec.foe.deckName
+      }
+    }
+  };
+};
+const CARD_REPLAY_SPEEDS = Object.freeze([{
+  id: 1,
+  label: '×1',
+  ms: 1400
+}, {
+  id: 2,
+  label: '×2',
+  ms: 650
+}]);
+const CardReplayBar = ({
+  replay,
+  at,
+  onSeek,
+  onExit
+}) => {
+  const [auto, setAuto] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const last = replay.states.length - 1;
+  const turns = replay.turns;
+  const turnIdx = (() => {
+    let k = 0;
+    turns.forEach((t, j) => {
+      if (t <= at) k = j;
+    });
+    return k;
+  })();
+  useEffect(() => {
+    if (!auto) return undefined;
+    if (at >= last) {
+      setAuto(false);
+      return undefined;
+    }
+    const sp = CARD_REPLAY_SPEEDS.find(x => x.id === speed) || CARD_REPLAY_SPEEDS[0];
+    const t = setTimeout(() => onSeek(at + 1), sp.ms);
+    return () => clearTimeout(t);
+  }, [auto, at, speed]);
+  const st = replay.states[at];
+  const caption = cardReplayCaption(replay.states, at);
+  const btn = 'mh-button mh-button-secondary min-h-[40px] flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40';
+  const go = n => {
+    Audio_.fgSe.tap();
+    onSeek(Math.max(0, Math.min(last, n)));
+  };
+  return React.createElement("div", {
+    "data-card-replay-bar": true,
+    className: "pointer-events-auto w-full rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 shadow-lg"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2 text-[11px] font-bold text-sky-100"
+  }, React.createElement("span", {
+    "data-card-replay-turn": true
+  }, st && st.turn >= 1 ? `${st.turn}番目の番・${st.active === 0 ? 'あなた' : replay.foe.name}` : 'はじまり'), React.createElement("span", {
+    "data-card-replay-step": true,
+    className: "text-slate-300"
+  }, at, "/", replay.total, "手")), React.createElement("div", {
+    "data-card-replay-caption": true,
+    className: "mt-0.5 min-h-[16px] break-words text-[11px] font-bold leading-snug text-white"
+  }, caption || ' '), replay.stop !== null && at >= last && React.createElement("div", {
+    "data-card-replay-stop": true,
+    className: "mt-0.5 text-[11px] font-black text-amber-300"
+  }, "ルールが変わる前の試合なので、ここまでしか見られません"), React.createElement("div", {
+    className: "mt-1 flex gap-1"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-replay-first": true,
+    className: btn,
+    disabled: at <= 0,
+    onClick: () => {
+      setAuto(false);
+      go(0);
+    }
+  }, "⏮"), React.createElement("button", {
+    type: "button",
+    "data-card-replay-prev-turn": true,
+    className: btn,
+    disabled: at <= 0,
+    onClick: () => {
+      setAuto(false);
+      go(turns[at > turns[turnIdx] ? turnIdx : Math.max(0, turnIdx - 1)]);
+    }
+  }, "番◀"), React.createElement("button", {
+    type: "button",
+    "data-card-replay-prev": true,
+    className: btn,
+    disabled: at <= 0,
+    onClick: () => {
+      setAuto(false);
+      go(at - 1);
+    }
+  }, "◀"), React.createElement("button", {
+    type: "button",
+    "data-card-replay-auto": true,
+    className: `${btn} ${auto ? '!bg-sky-600' : ''}`,
+    disabled: at >= last && !auto,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setAuto(v => !v);
+    }
+  }, auto ? '⏸' : '▶▶'), React.createElement("button", {
+    type: "button",
+    "data-card-replay-next": true,
+    className: btn,
+    disabled: at >= last,
+    onClick: () => {
+      setAuto(false);
+      go(at + 1);
+    }
+  }, "▶"), React.createElement("button", {
+    type: "button",
+    "data-card-replay-next-turn": true,
+    className: btn,
+    disabled: at >= last,
+    onClick: () => {
+      setAuto(false);
+      go(turnIdx + 1 < turns.length ? turns[turnIdx + 1] : last);
+    }
+  }, "▶番"), React.createElement("button", {
+    type: "button",
+    "data-card-replay-speed": true,
+    className: btn,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setSpeed(v => v === 1 ? 2 : 1);
+    }
+  }, (CARD_REPLAY_SPEEDS.find(x => x.id === speed) || CARD_REPLAY_SPEEDS[0]).label), React.createElement("button", {
+    type: "button",
+    "data-card-replay-exit": true,
+    className: btn,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onExit();
+    }
+  }, "とじる")));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_layers',
@@ -100295,6 +101089,29 @@ function MonsterHeroGame() {
     lastPublishedProfileRef.current = signature;
     publishBreederProfile();
   }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
+  const lastPublishedBreederLevelRef = useRef(0);
+  useEffect(() => {
+    if (!dataLoaded || !onboarded || onboardingPreview) return;
+    const level = Math.floor(Number(levelInfo(breederXp).level));
+    if (!Number.isFinite(level) || level < 1 || lastPublishedBreederLevelRef.current >= level) return;
+    lastPublishedBreederLevelRef.current = level;
+    (async () => {
+      try {
+        const breederId = await ensureBreederId();
+        if (!breederId) return;
+        const ok = await sbUpsertBreederLevel({
+          breederId,
+          userName: breederName,
+          icon: breederIcon,
+          level
+        });
+        if (!ok) lastPublishedBreederLevelRef.current = 0;
+      } catch (error) {
+        lastPublishedBreederLevelRef.current = 0;
+        console.error('[breeder-level] publish failed:', error && error.message ? error.message : error);
+      }
+    })();
+  }, [dataLoaded, onboarded, onboardingPreview, breederXp, breederName, breederIcon]);
   const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
@@ -102237,7 +103054,8 @@ function MonsterHeroGame() {
       rankingLatestRequestRef.current.set(cacheKey, requestId);
       const request = (async () => {
         let error = null,
-          rows = [];
+          rows = [],
+          breederLevelTableRows = [];
         try {
           if (levelKind === 'bond') {
             try {
@@ -102260,6 +103078,7 @@ function MonsterHeroGame() {
             if (orderError) throw orderError;
           } else {
             rows = await sbFetchAllBreederRows(requestId);
+            breederLevelTableRows = await sbFetchBreederLevelRows(requestId);
           }
         } catch (e) {
           const message = e?.message || String(e);
@@ -102268,7 +103087,8 @@ function MonsterHeroGame() {
         }
         if (rankingLatestRequestRef.current.get(cacheKey) !== requestId) return;
         const fetched = mergeRows([], Array.isArray(rows) ? rows : []).map(toEntry);
-        const entries = levelKind === 'bond' ? fetched : aggregateBreederLevels(fetched);
+        const levelTableEntries = levelKind === 'bond' ? [] : (Array.isArray(breederLevelTableRows) ? breederLevelTableRows : []).map(toEntry);
+        const entries = levelKind === 'bond' ? fetched : aggregateBreederLevels([...levelTableEntries, ...fetched]);
         if (entries.length) {
           if (levelKind === 'bond') setBondRankingData({
             all: entries
@@ -118357,10 +119177,9 @@ function MonsterHeroGame() {
   }, React.createElement(X, {
     size: 18
   }))), document.body) : null;
-  const titleModal = showChangelog ? React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  const titleModal = showChangelog ? React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(closeChangelog)), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
@@ -118571,14 +119390,15 @@ function MonsterHeroGame() {
         rel: "noopener noreferrer"
       }, c.link && c.link.label || '詳しく見る', " ↗"))))));
     })];
-  })()))) : showTitleSettings ? React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
+  })()))) : showTitleSettings ? React.createElement("div", _extends({
+    className: "mh-title-modal"
+  }, settingsBackdropProps(() => setShowTitleSettings(false))), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "設定"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: () => setShowTitleSettings(false)
   }, React.createElement(X, {
     size: 18
@@ -118656,9 +119476,9 @@ function MonsterHeroGame() {
     resolved: resolveHomeArt(homeArt),
     onChange: changeHomeArt,
     onClose: () => setShowHomeArt(false)
-  }) : showAudioSettings ? React.createElement("div", {
+  }) : showAudioSettings ? React.createElement("div", _extends({
     className: "mh-title-modal"
-  }, React.createElement("div", {
+  }, settingsBackdropProps(() => setShowAudioSettings(false))), React.createElement("div", {
     className: "mh-title-dialog",
     style: {
       maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
@@ -118667,6 +119487,8 @@ function MonsterHeroGame() {
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "音量設定"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: () => setShowAudioSettings(false)
   }, React.createElement(X, {
     size: 18
@@ -118698,9 +119520,9 @@ function MonsterHeroGame() {
     onTest: testAudioOutput,
     onRepair: repairAudioOutput,
     repairing: audioRepairing
-  }), React.createElement(ReloadLogPanel, null)))) : showBgmArrangement ? React.createElement("div", {
+  }), React.createElement(ReloadLogPanel, null)))) : showBgmArrangement ? React.createElement("div", _extends({
     className: "mh-title-modal"
-  }, React.createElement("div", {
+  }, settingsBackdropProps(closeBgmArrangement)), React.createElement("div", {
     className: "mh-title-dialog",
     style: {
       maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
@@ -118709,6 +119531,8 @@ function MonsterHeroGame() {
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "BGMアレンジ"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: closeBgmArrangement
   }, React.createElement(X, {
     size: 18
@@ -118806,13 +119630,15 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"))) : showBackup ? React.createElement("div", {
+  }, "デフォルトに戻す"))) : showBackup ? React.createElement("div", _extends({
     className: "mh-title-modal"
-  }, React.createElement("div", {
+  }, settingsBackdropProps(() => setShowBackup(false))), React.createElement("div", {
     className: "mh-title-dialog"
   }, React.createElement("div", {
     className: "mh-dialog-head"
   }, React.createElement("h3", null, "データ引き継ぎ"), React.createElement("button", {
+    type: "button",
+    "aria-label": "閉じる",
     onClick: () => setShowBackup(false)
   }, React.createElement(X, {
     size: 18
@@ -118824,7 +119650,19 @@ function MonsterHeroGame() {
   }, "バックアップ"), React.createElement("button", {
     className: backupTab === 'import' ? 'active' : '',
     onClick: () => setBackupTab('import')
-  }, "復元")), backupTab === 'export' ? React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "復元")), backupTab === 'export' ? React.createElement(React.Fragment, null, React.createElement("button", {
+    "data-mhsave-action": "export",
+    className: "mh-dialog-choice mh-button mh-button-primary justify-center text-center",
+    style: {
+      justifyContent: 'center'
+    },
+    onClick: saveBackupFile
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルを保存（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118842,7 +119680,7 @@ function MonsterHeroGame() {
       color: '#fff',
       marginBottom: 4
     }
-  }, "使い方"), React.createElement("div", null, "1. 下の「バックアップファイルを保存」を押す"), React.createElement("div", null, "2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ"), React.createElement("div", null, "3. Android / PCはダウンロードフォルダへ直接保存されます"), React.createElement("div", null, "4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く"), React.createElement("div", {
+  }, "使い方"), React.createElement("div", null, "1. 上の「バックアップファイルを保存」を押す"), React.createElement("div", null, "2. iPhone / iPadは共有メニューで「ファイルに保存」を選ぶ"), React.createElement("div", null, "3. Android / PCはダウンロードフォルダへ直接保存されます"), React.createElement("div", null, "4. 端末間で移すときはGoogle Driveなどへ同じファイルを置く"), React.createElement("div", {
     style: {
       marginTop: 8,
       fontWeight: 900,
@@ -118860,14 +119698,7 @@ function MonsterHeroGame() {
       marginTop: 6,
       color: '#94a3b8'
     }
-  }, "※ YYYYMMDD_HHMM は保存した日時に置き換わります。")), React.createElement("button", {
-    "data-mhsave-action": "export",
-    className: "mh-dialog-choice mh-button mh-button-primary justify-center text-center",
-    style: {
-      justifyContent: 'center'
-    },
-    onClick: saveBackupFile
-  }, "バックアップファイルを保存（.mhsave）"), backupCode && React.createElement("textarea", {
+  }, "※ YYYYMMDD_HHMM は保存した日時に置き換わります。")), backupCode && React.createElement("textarea", {
     readOnly: true,
     value: backupCode
   }), React.createElement("button", {
@@ -118876,7 +119707,24 @@ function MonsterHeroGame() {
       justifyContent: 'center'
     },
     onClick: generateBackupCode
-  }, "バックアップコードを作成")) : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップコードを作成')))) : React.createElement(React.Fragment, null, React.createElement("button", {
+    "data-mhsave-action": "import",
+    className: "mh-dialog-choice justify-center text-center",
+    style: {
+      justifyContent: 'center'
+    },
+    onClick: restoreFromBackupFile
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('バックアップファイルから復元（.mhsave）'))), React.createElement("div", {
     style: {
       background: 'rgba(15,23,42,.72)',
       border: '1px solid rgba(255,255,255,.12)',
@@ -118894,7 +119742,7 @@ function MonsterHeroGame() {
       color: '#fff',
       marginBottom: 4
     }
-  }, "使い方"), React.createElement("div", null, "1. 下の「バックアップファイルから復元」を押す"), React.createElement("div", null, "2. 保存した ", React.createElement("code", {
+  }, "使い方"), React.createElement("div", null, "1. 上の「バックアップファイルから復元」を押す"), React.createElement("div", null, "2. 保存した ", React.createElement("code", {
     style: {
       color: '#c4b5fd'
     }
@@ -118903,14 +119751,7 @@ function MonsterHeroGame() {
       marginTop: 7,
       color: '#fbbf24'
     }
-  }, "※ 選んだバックアップ内のデータで現在のセーブが上書きされます。")), React.createElement("button", {
-    "data-mhsave-action": "import",
-    className: "mh-dialog-choice justify-center text-center",
-    style: {
-      justifyContent: 'center'
-    },
-    onClick: restoreFromBackupFile
-  }, "バックアップファイルから復元（.mhsave）"), React.createElement("textarea", {
+  }, "※ 選んだバックアップ内のデータで現在のセーブが上書きされます。")), React.createElement("textarea", {
     value: restoreInput,
     onChange: e => setRestoreInput(e.target.value),
     placeholder: "バックアップコードを貼り付け"
@@ -118920,7 +119761,12 @@ function MonsterHeroGame() {
       justifyContent: 'center'
     },
     onClick: restoreFromBackupCode
-  }, "このコードで復元する")), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
+  }, React.createElement("span", {
+    style: {
+      ...JA_LABEL_STYLE,
+      textAlign: 'center'
+    }
+  }, jaWrap('このコードで復元する')))), restoreMsg && React.createElement("p", null, restoreMsg))) : null;
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return React.createElement(React.Fragment, null, React.createElement("main", {
     className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
   }, React.createElement("div", {
@@ -137139,7 +137985,7 @@ const createAnimationStyle = () => {
     @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
     @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
-    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{display:none}.mh-home-card-battle,.mh-home-card-battle.raised{bottom:12px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:9px;line-height:1.2;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:8px/1.1 monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:minmax(0,1fr) 43px;grid-template-rows:1fr 1fr;box-sizing:border-box;width:calc(152px + var(--wal-grow,0px));padding:4px;border-radius:14px;--wal-col:calc(99px + var(--wal-grow,0px));--wal-max:10px}.mh-home-wallet>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:2px;min-width:0;padding:1px 3px;color:#ffe08a;--wal-room:calc(var(--wal-col) - 50px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 71px)}.mh-home-wallet>div b{font-size:min(var(--wal-max),calc(var(--wal-room) / (var(--len,1) * .64)));text-align:right;white-space:nowrap;min-width:0}.mh-home-wallet>div small{font-size:8px;color:#f4e7c3;white-space:nowrap}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:9px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;padding:0;border:0;background:transparent;color:#fff;touch-action:manipulation}/* 押せる範囲は見えている札と、そのまわり8pxだけ(2026-10-11・社長の指摘)。以前は建物ぶんの透明な箱が押し場所で、札の外の何もない所でも施設が開き、ジャックの吹き出しを押せなかった。札の位置は、箱の位置と箱の中の札の位置を足し合わせた値にしてある(見た目の位置は前と同じ) */.mh-home-facility::after{content:'';position:absolute;inset:-8px}.mh-home-facility>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;font-weight:inherit}.mh-home-facility-label small{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:0;color:#ffe6a7;opacity:.9}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2.52%;top:max(26.58%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.management>span{border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:2.94%;top:max(25.9%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.temple>span{border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:1.95%;top:57%}.mh-home-facility.market>span{border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%)}.mh-home-facility.battle>span{min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}/* 背の低い画面(縦 700px 前後まで)では、イベントの札とMFバトルカードの札を、モンヒロビートの札(top:55.25%)の下まで下げる。重なっていた(2026-10-26) */.mh-home-event-banner{position:absolute;z-index:5;left:9px;bottom:min(calc(33% + 4px),calc(44.75% - 82px));display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 11px;border:1px solid #fdba74;border-radius:13px;background:linear-gradient(135deg,#7c2d12ee,#4c1d95ee);color:#ffedd5;font-size:11px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0008}.mh-home-event-banner small{font-size:9px;font-weight:800;color:#fed7aa}.mh-home-card-battle{position:absolute;z-index:5;left:9px;bottom:min(calc(33% - 40px),calc(44.75% - 126px));padding:0}.mh-home-card-battle.raised{bottom:min(calc(33% + 4px),calc(44.75% - 82px))}.mh-home-card-battle.soon>span{background:linear-gradient(135deg,#334155ee,#3b0764ee);border-color:#fcd34dcc}.mh-home-card-battle.soon small{margin-left:4px;padding:1px 6px;border-radius:999px;background:#fbbf24;color:#3d2305;font-size:10px;font-weight:900;line-height:1.4}.mh-home-card-battle>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #7dd3fcdd;border-radius:13px;background:linear-gradient(135deg,#1e3a8aee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 12px #0009,0 0 15px #38bdf866}@media(orientation:landscape) and (max-height:600px){.mh-home-event-banner{bottom:52px}/* 横向きでもイベントの札を出す。MFバトルカードの札(下から12px)のすぐ上(2026-10-26 ダメダシくん「横では見当たらない」) */.mh-home-card-battle,.mh-home-card-battle.raised{bottom:12px}}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -137375,7 +138221,7 @@ const createAnimationStyle = () => {
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
     @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
-    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:7px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:calc(140px + min(var(--wal-grow,0px),12px));--wal-col:calc(87px + min(var(--wal-grow,0px),12px));--wal-max:9px}.mh-home-wallet>div small{font-size:8px}.mh-home-wallet>div+div small{font-size:7.5px}.mh-home-wallet>div{--wal-room:calc(var(--wal-col) - 53px)}.mh-home-wallet>div+div{--wal-room:calc(var(--wal-col) - 72px)}/* 「ダイヤ」「ブリーダーP」が 7px で読めなかった(2026-10-26 ダメダシくん)。8px(字の多いブリーダーPは 7.5px)にし、そのぶん数字の取り分を減らす(枠を広げるとプロフィールの札が折れる。9桁の数字は 8px 以上を保つ) */.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}
     }@media(max-height:620px){/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management,.mh-home-facility.temple{top:max(27.4%,calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.market{top:55%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:68%}}
