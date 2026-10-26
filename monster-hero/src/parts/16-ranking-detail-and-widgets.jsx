@@ -331,6 +331,24 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
 // 自前のスペクトラムピッカー。端末のOS標準カラーピッカー(<input type="color">)はiOS/Android/PCで
 // 見た目も操作感もバラバラで、アプリのテーマにも合わせられず自動テストもできないため使わず、
 // 既存のVolumeSliderと同じくpointerdown/move/upでドラッグを自前実装している
+// 1ずつ動かす「−」「+」ボタン(2026-10-27 染色の数字を表のとおりに合わせるため)。押しっぱなしにすると、少し待ってから続けて動く。
+// 押した瞬間に1回動かし、そのあとの click は無視する(二重に動かさない)。キーボードの決定(click だけ)でも1回動く
+const RepeatStepButton = ({ onStep, disabled = false, className = '', children, ...rest }) => {
+  const stepRef = useRef(onStep);
+  stepRef.current = onStep;
+  const timers = useRef({ wait: null, loop: null, pressed: false });
+  const stop = () => { clearTimeout(timers.current.wait); clearInterval(timers.current.loop); timers.current.wait = null; timers.current.loop = null; };
+  useEffect(() => stop, []);
+  useEffect(() => { if (disabled) stop(); }, [disabled]);
+  return (
+    <button type="button" disabled={disabled} className={className} {...rest}
+      onPointerDown={(e) => { if (disabled) return; e.preventDefault(); timers.current.pressed = true; stepRef.current(); stop();
+        timers.current.wait = setTimeout(() => { timers.current.loop = setInterval(() => stepRef.current(), 70); }, 400); }}
+      onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}
+      onClick={() => { if (timers.current.pressed) { timers.current.pressed = false; return; } if (!disabled) stepRef.current(); }}
+      onContextMenu={(e) => e.preventDefault()}>{children}</button>
+  );
+};
 const CustomColorPicker = ({ h, s, v, onChange }) => {
   const squareRef = useRef(null);
   const hueRef = useRef(null);
@@ -375,8 +393,9 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
       <div
         ref={squareRef}
         onPointerDown={(e) => { setDragTarget('square'); updateFromSquare(e.clientX, e.clientY); }}
-        className="relative w-full aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10"
-        style={{ backgroundColor: pureHueColor, backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))' }}
+        className="relative mx-auto aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10"
+        // 背の低い画面(320×568・横向き)では、四角を画面の高さに合わせて小さくする(数字と「−」「+」が下に収まるように)
+        style={{ width: 'min(100%, calc(var(--mh-vh) * 0.34))', backgroundColor: pureHueColor, backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))' }}
       >
         <div
           className="absolute rounded-full border-2 border-white shadow-[0_0_6px_rgba(0,0,0,0.8)]"
@@ -393,6 +412,35 @@ const CustomColorPicker = ({ h, s, v, onChange }) => {
           className="absolute top-1/2 rounded-full bg-white border-2 border-slate-900 shadow-[0_0_6px_rgba(0,0,0,0.8)]"
           style={{ left: `${(h / 360) * 100}%`, width: '18px', height: '18px', transform: 'translate(-50%,-50%)' }}
         ></div>
+      </div>
+      {/* いま選んでいる色の数字(2026-10-27 社長「染色のやつはどの色と透明度とかわかるようにして」。前の「数字は出さない」を変えた)。
+          見せるだけで、保存する色の形(custom:… の色id)は変えない */}
+      <div data-custom-color-numbers className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-1.5">
+        <span className="h-6 w-6 shrink-0 rounded-full border border-white/30" style={{ backgroundColor: previewColor }} aria-hidden="true"></span>
+        <span className="min-w-0 flex-1">
+          {/* 呼び方と幅は、モンスター部の予告の色の表と同じ(色相 0〜360・彩度 0〜100・明るさ 0〜100)。数字は色id custom:色相:彩度:明度 と同じ丸め方 */}
+          <b className="block text-[12px] font-black leading-tight text-white [word-break:keep-all]">カスタム(色相{Math.round(h)}・<wbr/>彩度{Math.round(s * 100)}・<wbr/>明るさ{Math.round(v * 100)})</b>
+          <small className="block text-[9px] font-bold leading-tight text-slate-400 [word-break:keep-all]">色相 0〜360・<wbr/>彩度 0〜100・<wbr/>明るさ 0〜100</small>
+        </span>
+      </div>
+      {/* 表の数字にぴったり合わせるための「−」「+」(1ずつ動く)。指でなぞるだけでは、帯の1pxで色相が1以上動き、止めにくい(2026-10-27 モンスター部ズカンくん) */}
+      <div data-custom-color-steppers className="space-y-1">
+        {[['h', '色相', Math.round(h), 360], ['s', '彩度', Math.round(s * 100), 100], ['v', '明るさ', Math.round(v * 100), 100]].map(([key, label, value, max]) => {
+          const step = (d) => {
+            const next = Math.max(0, Math.min(max, value + d));
+            onChange(key === 'h' ? next : Math.round(h), (key === 's' ? next : Math.round(s * 100)) / 100, (key === 'v' ? next : Math.round(v * 100)) / 100);
+          };
+          return (
+            <div key={key} className="flex items-center gap-1.5">
+              <span className="w-12 shrink-0 text-[10px] font-black text-slate-300">{label}</span>
+              <RepeatStepButton data-custom-color-step={`${key}-down`} aria-label={`${label}を1下げる`} disabled={value <= 0} onStep={() => step(-1)}
+                className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">−</RepeatStepButton>
+              <span className="min-w-0 flex-1 text-center font-mono text-[13px] font-black tabular-nums text-white">{value}</span>
+              <RepeatStepButton data-custom-color-step={`${key}-up`} aria-label={`${label}を1上げる`} disabled={value >= max} onStep={() => step(1)}
+                className="min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30">+</RepeatStepButton>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -492,7 +540,8 @@ const AudioTroubleshootPanel = ({ info, peak, muted, onTest, onRepair, repairing
       {lowVolume && <p data-audio-low-volume className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200">音量がとても小さいままです（BGM {info.bgmVolumePct} ／ SE {info.seVolumePct}）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。</p>}
       {row('音の出口', stateView.label, stateView.tone)}
       {row('効果音エンジン', seView.label, seView.tone)}
-      {row('いま鳴っている曲', playing ? playing.src : 'なし', playing ? 'text-slate-200' : 'text-slate-400')}
+      {/* 曲の名前で出す(名前の分からない音だけファイル名)。2026-10-26 ダメダシの見回り s02 */}
+      {row('いま鳴っている曲', playing ? (playing.name || playing.src) : 'なし', playing ? 'text-slate-200' : 'text-slate-400')}
       <div className="mt-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] font-black text-slate-400">実際に出ている音</span>
