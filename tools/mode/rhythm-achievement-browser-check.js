@@ -53,6 +53,9 @@ const seed = (song) => {
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
+    // 助手のおしゃべりの中継(Edge Function)も本物へ届けない(2026-10-27)。差し替えが無いと、本物の中継が AI を呼ぶ。
+    // 「つながらない」として返し、ゲームは今までの吹き出しのまま進む
+    await page.route('**/functions/v1/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
     await page.addInitScript(seed, SONG);
     const clickText = (p) => page.evaluate((s) => { const rx = new RegExp(s); const x = [...document.querySelectorAll('button')].find((b) => rx.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!x) return false; x.click(); return true; }, p);
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
