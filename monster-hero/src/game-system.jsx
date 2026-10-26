@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6274f25a8c4f887
+// generated-sha256: e94492592a2b3308
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57020,22 +57020,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return (
       <div data-mh-screen data-card-record-view className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="記録" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
-        {/* 一覧の外に置いた物は、横画面では左の列に積まれる(index.html の骨組み)。左が見出しだけで空かないよう、入口と成績の要約を置く(2026-10-27 ツナグくんの見回り) */}
-        <div data-card-record-side className="mb-2 shrink-0 space-y-2">
-            <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); setView('replays'); }}
-              className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
-              <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
-              <span className="text-[18px] text-slate-400">›</span>
-            </button>
-          <div data-card-record-summary className={`${SCREEN_PANEL_CLASS} hidden landscape:block`}>
-            <div className="grid grid-cols-2 gap-1.5 text-center">
-              {[['助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`], ['マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`], ['いまの連勝', `${r.streak.now}`], ['最高の連勝', `${r.streak.best}`]].map(([label, v]) => (
-                <div key={label} className="rounded-xl bg-black/30 py-1.5"><small className="block text-[10px] font-bold text-slate-400">{label}</small><b className="text-[14px] font-black text-amber-200">{v}</b></div>
-              ))}
-            </div>
-          </div>
-        </div>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+          <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); setView('replays'); }}
+            className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
+            <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+            <span className="text-[18px] text-slate-400">›</span>
+          </button>
           {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
@@ -57151,11 +57141,24 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return (
       <div data-mh-screen data-card-options className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="オプション" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
-        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+        {/* 一覧の外は、横画面では左の列に積まれる(左が見出しだけで空いていた。2026-10-27 ツナグくんの見回り)。縦では今までどおり一覧の上 */}
+        <div data-card-options-side className="mb-2 shrink-0 space-y-2">
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
+          {/* 項目の目次(横画面だけ)。押すと右の一覧のその項目へ移る */}
+          <div data-card-options-toc className={`${SCREEN_PANEL_CLASS} hidden landscape:block`}>
+            <div className="text-[11px] font-bold text-slate-400">項目</div>
+            <div className="mt-1 grid grid-cols-3 gap-1">
+              {[...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map((g) => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => (
+                <button key={label} type="button" data-card-options-jump={label} onClick={() => { Audio_.fgSe.tap(); const el = document.querySelector(`[data-card-options] ${sel}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                  className="min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100">{jaWrap(label)}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {cardTalkOpen() && (
             <div data-card-ai-talk-panel className={SCREEN_PANEL_CLASS}>
               <div className="flex items-center gap-2">

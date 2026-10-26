@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f9d7d29b609558c9
+// source-sha256: 179ea2bbe29ef541
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93981,8 +93981,7 @@ const CardBattleScreen = ({
       onBack: () => setView('top'),
       note: "MFバトルカード"
     }), React.createElement("div", {
-      "data-card-record-side": true,
-      className: "mb-2 shrink-0 space-y-2"
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, React.createElement("button", {
       type: "button",
       "data-card-replays-open": true,
@@ -93998,20 +93997,6 @@ const CardBattleScreen = ({
     }, "遊んだ試合を、はじめから見返せます")), React.createElement("span", {
       className: "text-[18px] text-slate-400"
     }, "›")), React.createElement("div", {
-      "data-card-record-summary": true,
-      className: `${SCREEN_PANEL_CLASS} hidden landscape:block`
-    }, React.createElement("div", {
-      className: "grid grid-cols-2 gap-1.5 text-center"
-    }, [['助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`], ['マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`], ['いまの連勝', `${r.streak.now}`], ['最高の連勝', `${r.streak.best}`]].map(([label, v]) => React.createElement("div", {
-      key: label,
-      className: "rounded-xl bg-black/30 py-1.5"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-bold text-slate-400"
-    }, label), React.createElement("b", {
-      className: "text-[14px] font-black text-amber-200"
-    }, v)))))), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
       className: "text-[12px] font-bold text-slate-400"
@@ -94270,7 +94255,8 @@ const CardBattleScreen = ({
       onBack: () => setView('top'),
       note: "MFバトルカード"
     }), React.createElement("div", {
-      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+      "data-card-options-side": true,
+      className: "mb-2 shrink-0 space-y-2"
     }, React.createElement("div", {
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
@@ -94284,7 +94270,29 @@ const CardBattleScreen = ({
       onToggle: toggleAssist,
       cls: "",
       withLabel: true
-    }))), cardTalkOpen() && React.createElement("div", {
+    }))), React.createElement("div", {
+      "data-card-options-toc": true,
+      className: `${SCREEN_PANEL_CLASS} hidden landscape:block`
+    }, React.createElement("div", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "項目"), React.createElement("div", {
+      className: "mt-1 grid grid-cols-3 gap-1"
+    }, [...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map(g => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => React.createElement("button", {
+      key: label,
+      type: "button",
+      "data-card-options-jump": label,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        const el = document.querySelector(`[data-card-options] ${sel}`);
+        if (el) el.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      },
+      className: "min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100"
+    }, jaWrap(label)))))), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
+    }, cardTalkOpen() && React.createElement("div", {
       "data-card-ai-talk-panel": true,
       className: SCREEN_PANEL_CLASS
     }, React.createElement("div", {
