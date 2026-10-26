@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6173ffafb5df1711
+// source-sha256: 3d7011c20bc96517
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -85908,7 +85908,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       }
       if (e.t === 'draw') score += e.n * 0.9;
       if (e.t === 'peekHand') score += 0.4 * habit.disrupt;
-      if (e.t === 'discardOpp') score += 1.4 * habit.disrupt;
+      if (e.t === 'discardOpp' && st.players[cardOther(p)].hand.length > 0) score += 1.4 * habit.disrupt;
       if (e.t === 'gutsGuard') score += st.players[cardOther(p)].hand.length >= 3 ? 0.4 : 0.1;
       if (e.t === 'revive') score += 4;
       if (e.t === 'possess' && opt.target && opt.mon >= 0) {
@@ -85965,7 +85965,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       if (e.t === 'liftTarget') score += 0.3;
       if (e.t === 'taunt') score += 0.9 * habit.disrupt;
       if (e.t === 'stunAllEnemies') score += st.players[cardOther(p)].mons.filter(m => !m.ko).length * 1.0;
-      if (e.t === 'stunTarget' && tmon) score += 0.8 + tmon.life / Math.max(1, tmon.max) * 0.6;
+      if (e.t === 'stunTarget' && tmon) score += tmon.stunTurn > st.turn ? -3 : 0.8 + tmon.life / Math.max(1, tmon.max) * 0.6;
       if (e.t === 'skipTurn') score += 3;
       if (e.t === 'rage' && mine) score += Math.max(0, ...me.hand.map(n => cardOf(db, n)).filter(c => c && (c.kind === 'pow' || c.kind === 'int') && cardUsableBy(c, mine)).map(c => c.damage || 0)) * 0.35 - 0.6;
       if (e.t === 'freeSpeThisTurn') score += me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && c.kind === 'spe' && c.user !== 'breeder' && !cardHasEff(c, 'attach')).reduce((s2, c) => s2 + (c.guts || 0) * 0.4, 0);
@@ -85996,6 +85996,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       m: j
     } : null).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
     let drained = 0;
+    let kills = 0;
     const per = dmg / Math.max(1, main.damage || 1);
     targets.forEach(t => {
       const tm = st.players[t.p].mons[t.m];
@@ -86003,6 +86004,11 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       const mv = cardEff(main, 'multVs');
       if (mv && cardMonType(tm, st.turn) === mv.type) d *= mv.n;
       if (cardHasEff(main, 'nonLethal')) d = Math.min(d, tm.life - 1);
+      if (t.p !== p && d <= 0 && cardHasEff(main, 'nonLethal')) {
+        score -= 2;
+        return;
+      }
+      if (t.p !== p && d >= tm.life) kills += 1;
       const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags, mon) * (opt.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
       const exp = d * (1 - ev) + half * ev;
@@ -86020,12 +86026,13 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     });
     if (targets.length > 1) score *= 1 + 0.15 * (habit.area - 1);
     if (cost >= 5) score *= 1 + 0.12 * (habit.big - 1);
+    const winsNow = kills > 0 && kills >= st.players[cardOther(p)].mons.filter(m => !m.ko).length;
     const sh = cardEff(main, 'selfDamageIfHit');
-    if (sh && mon) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
+    if (sh && mon && !winsNow) score -= sh.n * (mon.life <= sh.n ? 3 : 0.6);
     const si = mods.flags.selfIfHit;
-    if (si && mon) score -= si * (mon.life <= si ? 3 : 0.6);
+    if (si && mon && !winsNow) score -= si * (mon.life <= si ? 3 : 0.6);
     const sa = cardEff(main, 'selfDamage');
-    if (sa && mon) score -= sa.n * (mon.life <= sa.n ? 3 : 0.6);
+    if (sa && mon && !winsNow) score -= sa.n * (mon.life <= sa.n ? 3 : 0.6);
   }
   const left = me.guts.length - cost;
   const cheapGuard = Math.min(9, ...me.hand.filter((_, i) => !opt.hand.includes(i)).map(n => cardOf(db, n)).filter(c => c && cardIsGuardKind(c.kind)).map(c => c.guts));
@@ -86503,7 +86510,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
-  dra: 0.3,
+  dra: 0.8,
   kyuko: 2.0,
   atsu: 1.5
 });
