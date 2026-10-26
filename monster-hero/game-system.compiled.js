@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b9d01196e7b3d98
+// source-sha256: 52563cccd0b1da07
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84968,7 +84968,10 @@ const cardResolveTarget = (db, st) => {
   if (dmg > 0) dmg = Math.max(0, dmg + cardFieldDmgAdd(st, main));
   let reflected = 0;
   if (pd.reflect) {
-    if (pd.reflect.keep) reflected = Math.floor(dmg * pd.reflect.frac);else {
+    if (pd.reflect.keep) {
+      reflected = Math.floor(dmg * pd.reflect.frac);
+      dmg -= reflected;
+    } else {
       reflected = dmg;
       dmg = 0;
     }
@@ -85630,6 +85633,9 @@ const cardApplyAction = (db, st0, act) => {
     if (st.skip === st.active) {
       st.skip = null;
       st.turn += 1;
+      st.players[st.active].mons.forEach(m => {
+        if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2;
+      });
       cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, {
         kind: 'turn'
       });
@@ -86049,7 +86055,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
     if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0;
     const rf = cardEff(c, 'reflect');
-    if (rf) after = rf.keep ? dmg : 0;
+    if (rf) after = rf.keep ? dmg - Math.floor(dmg * rf.frac) : 0;
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
       after = target.life <= dmg && cm.life > dmg ? 0 : dmg;
@@ -86394,6 +86400,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   dra: {
     easy: -1.5,
     normal: -1.5,
+    expert: 0.5,
     master: 0.5
   },
   atsu: {
@@ -100167,7 +100174,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 5;
+const CARD_REPLAY_RULES = 6;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
