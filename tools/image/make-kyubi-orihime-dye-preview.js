@@ -43,8 +43,8 @@ const DYE_CANDIDATES = {
     E: { style: '紅の織姫', colors: [c(350,60,55), c(350,25,100), c(40,60,100), c(350,80,40), c(350,80,40)], bg: ['#2a0510', '#8a1a35', '#ffc0cc'], accent: '#ffd0da', dots: ['rgba(255,190,200,.6)', 'rgba(255,240,200,.4)'] },
   },
 };
-// 予告に載せる配色(仮: 社長の見本に寄せた案A。社長が選んだら書き換える)
-const CHOSEN = { Kyubi: 'A', Orihime: 'A' };
+// 予告に載せる配色(2026-10-27 社長: キュービ C 月夜ぎつね。オリヒメはマスクが固まってから選ぶ。いまは仮の A)
+const CHOSEN = { Kyubi: 'C', Orihime: 'A' };
 const NAMES = { Kyubi: 'キュービ', Orihime: 'オリヒメ' };
 const PREVIEWS = [
   { baseId: 'Kyubi', out: 'kyubi-dye-preview.jpg', name: NAMES.Kyubi, ...DYE_CANDIDATES.Kyubi[CHOSEN.Kyubi] },
