@@ -105,8 +105,18 @@ function BreederMarketScreen({
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche','hero_proof_shard','transcend_fruit_rainbow','hero_proof'];
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
-  const renderSectionTabs = (section) => <ScreenTabs value={activeSectionTab(section)} onChange={(key)=>selectSectionTab(section,key)}
-    items={SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}))}/>;
+  // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
+  //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
+  const renderSectionTabs = (section, scroll=false) => {
+    const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
+    const value=activeSectionTab(section);
+    if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
+    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5">
+      {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
+        className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
+    </div>;
+  };
   const soulRankRespecItem = marketItems.find(item=>item.id===SOUL_RANK_RESPEC_ITEM_ID) || null;
   const sectionMeta = {
     diamond:{label:'ダイヤショップ',emoji:'💎'},
@@ -167,7 +177,7 @@ function BreederMarketScreen({
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
+          middle={item.groupMembers?<MarketDetailChip label={`${item.name}の中身を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='icon'?<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.giftOnly?<MarketDetailChip label={`${item.name}の手に入れ方を見る`} onClick={()=>onOpenItemDetail(item)}/>:item.type==='frame'&&frameCondition?<MarketDetailChip label={`${item.name}の買える条件を見る`} onClick={()=>onOpenItemDetail({...item,frameCondition})}/>:item.type==='item'?<><span className={`whitespace-nowrap text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>所持 {ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
@@ -243,9 +253,6 @@ function BreederMarketScreen({
           :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
           :marketSection==='card'?[{currency:'cardPoint',value:cardShop?cardShop.point:0}]
           :[{currency:'beatPoint',value:safeEventPoints}]}/>
-        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
-        {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
-          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍{Number(campaign.loopBoost)>0?`。演奏でのクイック周回も${campaign.loopBoost}倍`:''}（{rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）</MarketNotice>:null;})()}
         {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
       </>}
 
@@ -330,8 +337,12 @@ function BreederMarketScreen({
       })()}
 
       {marketSection==='event'&&<>
-        {renderSectionTabs('event')}
+        {renderSectionTabs('event', true)}
         <div className={SCREEN_LIST_CLASS}>
+        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す。
+            品物の一覧の先頭に置く(上の固まった所に置くと、320×568 で品物が1段の半分しか見えなかった。2026-10-26 ダメダシくん) */}
+        {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
+          return campaign?<MarketNotice tone="info" data-event-point-campaign>{jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost)>0?`・演奏のクイック周回も${campaign.loopBoost}倍`:''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt||campaign.endAt))}まで）`)}</MarketNotice>:null;})()}
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
           {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
