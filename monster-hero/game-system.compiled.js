@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 706273cf5df36f3e
+// source-sha256: c3dcad988431f544
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93274,8 +93274,17 @@ const CardBattleScreen = ({
       alt: x.name,
       className: "h-[52px] w-[52px] rounded-lg object-cover object-top landscape:h-[34px] landscape:w-[34px]"
     }), React.createElement("span", {
-      className: "text-[13px] font-black"
-    }, x.name), save.record.beaten[x.id] && React.createElement("span", {
+      className: "block w-full",
+      style: {
+        containerType: 'inline-size'
+      }
+    }, React.createElement("span", {
+      "data-card-foe-name": true,
+      className: "block whitespace-nowrap text-center font-black",
+      style: {
+        fontSize: `min(13px, calc(100cqw / ${[...x.name].length + 0.3}))`
+      }
+    }, x.name)), save.record.beaten[x.id] && React.createElement("span", {
       className: "absolute right-1 top-1 rounded bg-amber-400 px-1 text-[10px] font-black text-slate-900"
     }, "勝")))), React.createElement("div", {
       className: "flex items-baseline gap-2 px-0.5 pt-1"
@@ -93339,24 +93348,27 @@ const CardBattleScreen = ({
       db: db,
       who: a.id,
       level: foe.level
-    })), React.createElement("div", {
-      className: SCREEN_PANEL_FLAT_CLASS
-    }, React.createElement("div", {
-      className: "text-[12px] font-bold text-slate-300"
-    }, "あなたのデッキ: ", React.createElement("b", {
-      className: "text-white"
-    }, activeDeck ? activeDeck.name : 'なし')), deckIssues.length > 0 && React.createElement("div", {
-      className: "mt-1 text-[12px] font-bold text-rose-300",
-      style: JA_WRAP_STYLE
-    }, jaWrap(deckIssues.join('・'))), !save.daily.firstWin && React.createElement("div", {
-      className: "mt-1 text-[11px] font-bold text-slate-400",
-      style: JA_WRAP_STYLE
-    }, cardRuleLine('《今日はじめての勝ちで +50》'))), notice && React.createElement("p", {
+    })), notice && React.createElement("p", {
       className: "text-[12px] font-bold text-amber-200",
       style: JA_LABEL_STYLE
     }, jaWrap(notice))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
-    }, React.createElement("button", {
+    }, React.createElement("div", {
+      "data-card-foe-mydeck": true,
+      className: "mb-1.5 px-0.5"
+    }, React.createElement("div", {
+      className: "flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"
+    }, React.createElement("span", {
+      style: JA_LABEL_STYLE
+    }, "あなたのデッキ: ", React.createElement("b", {
+      className: "text-white"
+    }, activeDeck ? activeDeck.name : 'なし')), !save.daily.firstWin && React.createElement("span", {
+      className: "text-[11px] text-slate-400",
+      style: JA_LABEL_STYLE
+    }, cardRuleLine('《今日はじめての勝ちで +50》'))), deckIssues.length > 0 && React.createElement("div", {
+      className: "mt-0.5 text-[12px] font-bold text-rose-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap(deckIssues.join('・')))), React.createElement("button", {
       type: "button",
       "data-card-start": true,
       className: `${btn} mh-button-primary`,
