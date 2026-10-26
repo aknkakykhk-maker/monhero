@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aba5c55863a12f7a
+// source-sha256: 10fe962789217b26
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 02:36";
+const BUILD_DATE = "2026-10-27 02:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -35821,6 +35821,38 @@ const RhythmTapTest = ({
   const [judgeTextPos] = useState(() => RHYTHM_JUDGE_TEXT_POS.id);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
+  useEffect(() => {
+    if (!tutorialProp) return undefined;
+    const place = () => {
+      const banner = tutorialBannerRef.current,
+        area = banner && banner.offsetParent;
+      if (!area) return;
+      const hud = document.querySelector('[data-rhythm-hud]');
+      if (!hud) return;
+      const rectOf = el => typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.rectOf ? RHYTHM_VIEW_ROTATION.rectOf(el) : el.getBoundingClientRect();
+      const ar = rectOf(area);
+      let bottom = rectOf(hud).bottom;
+      for (const el of hud.children) {
+        const r = rectOf(el);
+        if (r.height > 0) bottom = Math.max(bottom, r.bottom);
+      }
+      const below = Math.ceil(bottom - ar.top + 6);
+      if (!Number.isFinite(below)) return;
+      const top = `max(14%, ${below}px)`;
+      if (banner.style.top !== top) banner.style.top = top;
+    };
+    place();
+    const timers = [setTimeout(place, 250), setTimeout(place, 1200)];
+    window.addEventListener('resize', place);
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+    const hud = document.querySelector('[data-rhythm-hud]');
+    if (ro && hud) ro.observe(hud);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('resize', place);
+      if (ro) ro.disconnect();
+    };
+  }, [tutorialProp]);
   const calibrationBannerRef = useRef(null),
     calibrationTapsRef = useRef(-1);
   const hasHold = chart.notes.some(note => note.type === 'HOLD');
