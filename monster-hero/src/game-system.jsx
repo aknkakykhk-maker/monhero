@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 537b08e06bb43599
+// generated-sha256: 625b6e71b783f8b5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 12:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 12:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -52589,18 +52589,40 @@ const cardDeckNameMiddle = (db, facts, { favorite = null, preferFavorite = false
   if (favName) return favName;
   return facts.mons[0] ? cardLineageName(db, cardLineageOf(facts.mons[0])) : '';
 };
+// まんなかとしめに同じ言葉が入っていないか(2字以上つづけて同じ所があれば重なりとみる。「まとめて」と「まとめてドーン組」など)
+const cardDeckWordsOverlap = (x, y) => {
+  const a = String(x || ''), b = String(y || '');
+  for (let i = 0; i + 2 <= a.length; i++) if (b.includes(a.slice(i, i + 2))) return true;
+  return false;
+};
+// まんなか・しめを、重ならないように選ぶ(2026-10-26 窓口「あつのまとめてまとめてドーン組」)。
+//   ① 重ならないしめがあれば、その中から選ぶ(前の試合と同じしめは避ける)
+//   ② どのしめとも重なるなら、まんなかを好きな子の名前(いなければ1体目の血統)にかえて選び直す
+const cardDeckNamePick = (db, facts, who, { favorite = null, preferFavorite = false, last = null, rnd = Math.random } = {}) => {
+  const tails = CARD_DECK_NAME_TAILS[who] || CARD_DECK_NAME_TAILS.kyuko;
+  const choose = (middle) => {
+    const ok = tails.filter((t) => !cardDeckWordsOverlap(middle, t));
+    const pool = ok.length > 1 ? ok.filter((t) => t !== last) : ok;
+    return pool.length ? pool[Math.floor(rnd() * pool.length) % pool.length] : null;
+  };
+  let middle = cardDeckNameMiddle(db, facts, { favorite, preferFavorite });
+  let tail = choose(middle);
+  if (!tail) {
+    const fav = favorite && facts.mons.some((m) => cardLineageOf(m) === favorite) ? cardLineageName(db, favorite) : '';
+    middle = fav || (facts.mons[0] ? cardLineageName(db, cardLineageOf(facts.mons[0])) : '');
+    tail = choose(middle) || tails[0];
+  }
+  return { middle, tail };
+};
 // 前の試合のしめ(助手ごと。同じ名前ばかりにならないように。保存はしない)
 const cardDeckNameLastTail = {};
 // 助手のデッキ名。例「みゅあのモッチーまっしぐら隊」「ドラの本気のカチコチカウンター要塞」
 const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
   const a = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === who) : null;
   const owner = a ? a.name : 'あいて';
-  const tails = CARD_DECK_NAME_TAILS[who] || CARD_DECK_NAME_TAILS.kyuko;
-  const pool = tails.length > 1 ? tails.filter((t) => t !== cardDeckNameLastTail[who]) : tails;
-  const tail = pool[Math.floor(rnd() * pool.length) % pool.length];
-  cardDeckNameLastTail[who] = tail;
   const favorite = typeof CARD_AI_FAVORITE !== 'undefined' ? CARD_AI_FAVORITE[who] : null;
-  const middle = cardDeckNameMiddle(db, cardDeckFacts(db, deck), { favorite, preferFavorite: rnd() < 0.5 });
+  const { middle, tail } = cardDeckNamePick(db, cardDeckFacts(db, deck), who, { favorite, preferFavorite: rnd() < 0.5, last: cardDeckNameLastTail[who], rnd });
+  cardDeckNameLastTail[who] = tail;
   const plain = `${owner}の${middle}${tail}`;
   if (level !== 'master') return plain;
   const strong = `${owner}の本気の${middle}${tail}`;

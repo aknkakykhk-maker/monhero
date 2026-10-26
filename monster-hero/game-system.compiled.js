@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d1b4d5b1e7fa5d1d
+// source-sha256: 79080eba5767b914
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 12:41";
+const BUILD_DATE = "2026-10-26 12:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -86764,19 +86764,54 @@ const cardDeckNameMiddle = (db, facts, {
   if (favName) return favName;
   return facts.mons[0] ? cardLineageName(db, cardLineageOf(facts.mons[0])) : '';
 };
+const cardDeckWordsOverlap = (x, y) => {
+  const a = String(x || ''),
+    b = String(y || '');
+  for (let i = 0; i + 2 <= a.length; i++) if (b.includes(a.slice(i, i + 2))) return true;
+  return false;
+};
+const cardDeckNamePick = (db, facts, who, {
+  favorite = null,
+  preferFavorite = false,
+  last = null,
+  rnd = Math.random
+} = {}) => {
+  const tails = CARD_DECK_NAME_TAILS[who] || CARD_DECK_NAME_TAILS.kyuko;
+  const choose = middle => {
+    const ok = tails.filter(t => !cardDeckWordsOverlap(middle, t));
+    const pool = ok.length > 1 ? ok.filter(t => t !== last) : ok;
+    return pool.length ? pool[Math.floor(rnd() * pool.length) % pool.length] : null;
+  };
+  let middle = cardDeckNameMiddle(db, facts, {
+    favorite,
+    preferFavorite
+  });
+  let tail = choose(middle);
+  if (!tail) {
+    const fav = favorite && facts.mons.some(m => cardLineageOf(m) === favorite) ? cardLineageName(db, favorite) : '';
+    middle = fav || (facts.mons[0] ? cardLineageName(db, cardLineageOf(facts.mons[0])) : '');
+    tail = choose(middle) || tails[0];
+  }
+  return {
+    middle,
+    tail
+  };
+};
 const cardDeckNameLastTail = {};
 const cardAssistantDeckName = (db, deck, who, level, rnd = Math.random) => {
   const a = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === who) : null;
   const owner = a ? a.name : 'あいて';
-  const tails = CARD_DECK_NAME_TAILS[who] || CARD_DECK_NAME_TAILS.kyuko;
-  const pool = tails.length > 1 ? tails.filter(t => t !== cardDeckNameLastTail[who]) : tails;
-  const tail = pool[Math.floor(rnd() * pool.length) % pool.length];
-  cardDeckNameLastTail[who] = tail;
   const favorite = typeof CARD_AI_FAVORITE !== 'undefined' ? CARD_AI_FAVORITE[who] : null;
-  const middle = cardDeckNameMiddle(db, cardDeckFacts(db, deck), {
+  const {
+    middle,
+    tail
+  } = cardDeckNamePick(db, cardDeckFacts(db, deck), who, {
     favorite,
-    preferFavorite: rnd() < 0.5
+    preferFavorite: rnd() < 0.5,
+    last: cardDeckNameLastTail[who],
+    rnd
   });
+  cardDeckNameLastTail[who] = tail;
   const plain = `${owner}の${middle}${tail}`;
   if (level !== 'master') return plain;
   const strong = `${owner}の本気の${middle}${tail}`;
