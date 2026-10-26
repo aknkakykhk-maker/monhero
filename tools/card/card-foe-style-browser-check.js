@@ -10,6 +10,7 @@
 //   ③ 強さで組み方の説明が変わる(EASY は気分屋・HARD は相性のいい3体 など。82 の CARD_AI_BUILD と同じ決め)
 //   ⑤ どの助手を選んでも、強さのボタンが送らずに全部見える(「対戦する」の帯に潜らない)
 //   ④ 字が切れていない(1行のままの字が箱からはみ出さない)・数字(重みや勝率)を出していない(「1体」〜「4体」「第1弾」だけは数として出す)
+//   ⑦ 鍵が付いているときは、どの強さで勝てば開くかが1行で出る。出ても強さのボタンが「対戦する」の帯に潜らない
 //   ⑥ 紹介欄の立ち絵が、透明な余白を除いて欄の高さに合う(2026-10-26 社長「みゅあの立ち絵だけ小さい」)。
 //      みゅあの標準の服は測ってある輪郭を使う(canvas の getImageData が失敗しても小さくならない)・きき→みゅあの切り替え・
 //      狭い縦画面・大きさの変更・横向き→縦向きに戻したあとも合う・着替えの服には標準の服の輪郭を当てない
@@ -77,6 +78,7 @@ const seed = (withAuto) => `(() => {
     const page = await context.newPage();
     page.on('pageerror', (e) => fatal.push(e.message));
     await page.addInitScript(seed(withAuto));
+    if (mode === 'locked') await page.addInitScript(() => { localStorage.setItem('mh_card_cpu_unlocked_v1', JSON.stringify({})); localStorage.removeItem('mh_debug_unlocked_v1'); });
     if (mode === 'canvasFail') await page.addInitScript(() => { CanvasRenderingContext2D.prototype.getImageData = function () { throw new Error('検査: 画素を読めない端末のまね'); }; });
     if (mode === 'costume') await page.addInitScript(() => {
       localStorage.setItem('mh_assistant_costume_owned_v1', JSON.stringify(['mua_halloween_2026']));
@@ -224,6 +226,25 @@ const seed = (withAuto) => `(() => {
         check(`⑥ ${name}: 横向き→縦向きに戻したあとも合う`, fits(back), show(back));
       }
       if (SHOT && !mode) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'foe-art-mua-390.png') }); }
+      await context.close();
+    }
+    // ⑦ 鍵が付いているときは「HARD は NORMAL で勝つと開きます」と出る。出ても強さのボタンが下の「対戦する」の帯に潜らない(2026-10-26)
+    for (const [w, h] of [[320, 568], [390, 664], [844, 390]]) {
+      VIEW = { width: w, height: h };
+      const { context, page } = await open(false, 'locked');
+      await enterCard(page);
+      await page.click('[data-card-cpu]');
+      await page.click('[data-card-mode-assistant]');
+      await page.waitForSelector('[data-card-top="foe"]', { timeout: 8000 });
+      const r = await page.evaluate(() => {
+        const hint = document.querySelector('[data-card-level-hint]');
+        const start = document.querySelector('[data-card-start]');
+        const f = start ? start.closest('div').getBoundingClientRect() : null;
+        const over = (b) => f && b.left < f.right && b.right > f.left && b.top < f.bottom && b.bottom > f.top + 0.5;
+        const hidden = [...document.querySelectorAll('[data-card-level]')].filter((b) => { const x = b.getBoundingClientRect(); return x.top < 0 || x.bottom > innerHeight + 0.5 || over(x); }).map((b) => b.getAttribute('data-card-level'));
+        return { hint: hint ? hint.textContent : '', lock: hint ? hint.getAttribute('data-card-level-hint') : '', hidden, cut: hint ? hint.scrollWidth > hint.clientWidth + 0.5 : false };
+      });
+      check(`⑦ ${w}×${h}: 鍵が付いているとき「HARD は NORMAL で勝つと開きます」と出て、強さのボタンは全部見える`, r.lock === 'hard' && /HARD は NORMAL で勝つと開きます/.test(r.hint) && !r.cut && r.hidden.length === 0, JSON.stringify(r));
       await context.close();
     }
     check('どこでも実行時エラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
