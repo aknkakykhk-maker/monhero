@@ -311,6 +311,8 @@ check('血統チップのアイコンが円の内側へ収まる',
 check('図鑑一覧のアイコンも円の内側へ収まる',
   list.includes('<DexMonsterIcon') && sharedDex.includes('data-dex-entry-icon') && /data-dex-entry-icon[\s\S]{0,220}padding:'10%'/.test(sharedDex));
 check('区分バッジの幅を固定している', detail.includes('data-dex-category') && detail.includes('min-w-[42px]'));
+check('説明文の改行は改行のまま出す(空白にしない)',
+  /data-dex-desc[\s\S]{0,400}whitespace-pre-line[^"]*">\{helpWrap\(dexEntryDescription\(mon\)\)\}/.test(detail));
 check('説明文は行数が変わってもタブより下を動かさない',
   detail.includes('data-dex-desc') && detail.includes("height:'calc(1.625em * 3)'"));
 // 立ち絵の大きさは枠で決める。元画像は160px四方と1024px四方が混ざっているので、
