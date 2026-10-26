@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf26a3cbc21d1dd0
+// source-sha256: 54b4836883a15117
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:22";
+const BUILD_DATE = "2026-10-27 03:24";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16466,10 +16466,11 @@ const MarketBalanceBar = ({
   value
 }) => {
   const meta = MARKET_CURRENCY_META[currency];
+  const one = balances.length === 1;
   return React.createElement("div", {
     key: currency,
     "data-market-balance": currency,
-    className: `flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`
+    className: `flex items-center justify-center rounded-2xl border ${one ? 'flex-row-reverse gap-2 py-1.5' : 'flex-col py-2'} ${meta.bar}`
   }, React.createElement("div", {
     className: "flex items-baseline gap-1"
   }, React.createElement("span", {
@@ -53602,15 +53603,37 @@ function BreederMarketScreen({
   const eventTab = activeSectionTab('event');
   const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
-  const renderSectionTabs = section => React.createElement(ScreenTabs, {
-    value: activeSectionTab(section),
-    onChange: key => selectSectionTab(section, key),
-    items: SECTION_TABS[section].tabs.map(tab => ({
+  const renderSectionTabs = (section, scroll = false) => {
+    const items = SECTION_TABS[section].tabs.map(tab => ({
       id: tab.key,
       label: tab.label,
       color: SECTION_TABS[section].color
-    }))
-  });
+    }));
+    const value = activeSectionTab(section);
+    if (!scroll || items.length < 6) return React.createElement(ScreenTabs, {
+      value: value,
+      onChange: key => selectSectionTab(section, key),
+      items: items
+    });
+    return React.createElement("div", {
+      role: "tablist",
+      "data-market-tabs-scroll": section,
+      className: "mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5"
+    }, items.map(tab => {
+      const on = tab.id === value;
+      return React.createElement("button", {
+        key: tab.id,
+        type: "button",
+        role: "tab",
+        "aria-selected": on,
+        onClick: () => selectSectionTab(section, tab.id),
+        className: `mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on ? 'text-white' : 'border border-white/10 bg-slate-900 text-slate-400'}`,
+        style: on ? {
+          background: tab.color
+        } : undefined
+      }, tab.label);
+    }));
+  };
   const soulRankRespecItem = marketItems.find(item => item.id === SOUL_RANK_RESPEC_ITEM_ID) || null;
   const sectionMeta = {
     diamond: {
@@ -53710,6 +53733,9 @@ function BreederMarketScreen({
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
       middle: item.groupMembers ? React.createElement(MarketDetailChip, {
         label: `${item.name}の中身を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : item.type === 'icon' ? React.createElement(MarketDetailChip, {
+        label: `${item.name}の詳細を見る`,
         onClick: () => onOpenItemDetail(item)
       }) : item.giftOnly ? React.createElement(MarketDetailChip, {
         label: `${item.name}の手に入れ方を見る`,
@@ -53899,13 +53925,7 @@ function BreederMarketScreen({
       currency: 'beatPoint',
       value: safeEventPoints
     }]
-  }), marketSection === 'event' && (() => {
-    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
-    return campaign ? React.createElement(MarketNotice, {
-      tone: "info",
-      "data-event-point-campaign": true
-    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍", Number(campaign.loopBoost) > 0 ? `。演奏でのクイック周回も${campaign.loopBoost}倍` : '', "（", rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt)), "まで）") : null;
-  })(), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
+  }), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     value: activeDiamondTab,
     onChange: onSelectTab,
     items: diamondTabs.map(tab => ({
@@ -54054,9 +54074,15 @@ function BreederMarketScreen({
         onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
       });
     }))));
-  })(), marketSection === 'event' && React.createElement(React.Fragment, null, renderSectionTabs('event'), React.createElement("div", {
+  })(), marketSection === 'event' && React.createElement(React.Fragment, null, renderSectionTabs('event', true), React.createElement("div", {
     className: SCREEN_LIST_CLASS
-  }, React.createElement("div", {
+  }, (() => {
+    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
+    return campaign ? React.createElement(MarketNotice, {
+      tone: "info",
+      "data-event-point-campaign": true
+    }, jaWrap(`🎟️ ${campaign.name}中：公開曲のビートPが${campaign.boost}倍${Number(campaign.loopBoost) > 0 ? `・演奏のクイック周回も${campaign.loopBoost}倍` : ''}（${rhythmEventJstText(Date.parse(campaign.displayEndAt || campaign.endAt))}まで）`)) : null;
+  })(), React.createElement("div", {
     "data-event-point-shop": true,
     "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
