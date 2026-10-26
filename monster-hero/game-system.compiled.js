@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 651036db82ac7f46
+// source-sha256: 0f4c396622f2e260
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 03:09";
+const BUILD_DATE = "2026-10-27 03:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17368,6 +17368,74 @@ const useAssistantBubbleState = () => {
   }, []);
   return state;
 };
+const ASSISTANT_BUBBLE_COLLAPSED_KEY = 'mh_bubble_collapsed_v1';
+const normalizeBubbleCollapsed = raw => {
+  const out = {};
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) Object.keys(raw).slice(0, 200).forEach(k => {
+    if (raw[k] === true) out[String(k).slice(0, 80)] = true;
+  });
+  return out;
+};
+const BUBBLE_COLLAPSE_STORE = (() => {
+  let state = {
+    map: {},
+    loaded: false
+  };
+  let loading = null;
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => {
+    try {
+      fn(state);
+    } catch (_) {}
+  });
+  return {
+    get: () => state,
+    load() {
+      if (loading) return loading;
+      loading = (async () => {
+        let map = {};
+        try {
+          map = normalizeBubbleCollapsed(await storeGet(ASSISTANT_BUBBLE_COLLAPSED_KEY, {}, false));
+        } catch (_) {}
+        state = {
+          map,
+          loaded: true
+        };
+        emit();
+      })();
+      return loading;
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    set(key, collapsed) {
+      if (!key) return;
+      const map = {
+        ...state.map
+      };
+      if (collapsed) map[key] = true;else delete map[key];
+      state = {
+        ...state,
+        map
+      };
+      emit();
+      void storeSet(ASSISTANT_BUBBLE_COLLAPSED_KEY, map).catch(() => {});
+    }
+  };
+})();
+const useBubbleCollapse = collapseKey => {
+  const [state, setState] = useState(() => BUBBLE_COLLAPSE_STORE.get());
+  useEffect(() => {
+    if (!collapseKey) return undefined;
+    const off = BUBBLE_COLLAPSE_STORE.subscribe(setState);
+    setState(BUBBLE_COLLAPSE_STORE.get());
+    void BUBBLE_COLLAPSE_STORE.load();
+    return off;
+  }, [collapseKey]);
+  const collapsed = !!collapseKey && state.map[collapseKey] === true;
+  return [collapsed, next => BUBBLE_COLLAPSE_STORE.set(collapseKey, !!next)];
+};
 const bubbleWrap = text => typeof jaWrap === 'function' ? jaWrap(text) : text;
 const bubbleWrapStyle = () => typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined;
 const AssistantBubble = ({
@@ -17383,9 +17451,11 @@ const AssistantBubble = ({
   compact = false,
   defaultOpen = false,
   footerSpace = 0,
-  maxLines = 0
+  maxLines = 0,
+  collapseKey = null
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const [collapsed, setCollapsed] = useBubbleCollapse(collapseKey);
   const bubbleSetting = useAssistantBubbleState();
   const bubbleExempt = !!line || defaultOpen || assistantBubbleAlwaysShown(scene);
   const bubbleDecisionRef = useRef(null);
@@ -17473,8 +17543,29 @@ const AssistantBubble = ({
   const Wrapper = hasDetail ? 'button' : 'div';
   const size = faceSize != null ? faceSize : compact ? 48 : 88;
   if (bubbleHidden) return null;
+  if (collapseKey && collapsed) {
+    return React.createElement("div", {
+      "data-bubble-collapsed": true,
+      className: "w-full flex items-center gap-2"
+    }, React.createElement(AssistantFace, {
+      who: who,
+      size: 32,
+      accent: color,
+      expression: face
+    }), React.createElement("button", {
+      type: "button",
+      onClick: () => setCollapsed(false),
+      "aria-label": `${who.name}のひとことをひらく`,
+      className: "mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95",
+      style: {
+        borderColor: color,
+        color,
+        backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
+      }
+    }, "💬 ", who.name, "のひとこと ▾"));
+  }
   return React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "w-full flex items-end gap-2"
+    className: `w-full flex items-end gap-2 ${collapseKey ? 'relative' : ''}`
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
@@ -17546,7 +17637,13 @@ const AssistantBubble = ({
     "data-bubble-more-text": true
   }, "タップで詳しく"), React.createElement(ChevronRight, {
     size: 11
-  }))))), open && React.createElement("div", {
+  })))), collapseKey && React.createElement("button", {
+    type: "button",
+    onClick: () => setCollapsed(true),
+    "aria-label": "ひとことをたたむ",
+    "data-bubble-collapse": true,
+    className: "mh-hit-expand absolute right-1 top-0 z-10 min-h-[24px] min-w-[24px] rounded-full text-[10px] font-black text-slate-300 bg-slate-900/80 border border-white/20 active:scale-90"
+  }, "▴")), open && React.createElement("div", {
     className: "fixed inset-0 flex items-end justify-center",
     style: {
       position: 'fixed',
@@ -36409,6 +36506,14 @@ const RhythmTapTest = ({
   const cutInRefs = useRef([]);
   const cutInOn = settings.monsterCutIn !== false && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
   const monLayersOn = useState(() => rhythmMonLayersOn())[0];
+  const monAbSet = useState(() => {
+    try {
+      const v = typeof localStorage !== 'undefined' ? localStorage.getItem('mh_rhythm_mon_ab_v1') : null;
+      return v === '1' ? ['hop', 'flash', 'ring', ''] : v === '2' ? ['spark', 'se', 'cutin', 'all'] : null;
+    } catch {
+      return null;
+    }
+  })[0];
   const cutInElements = useMemo(() => {
     if (!cutInOn) return null;
     return React.createElement("div", {
@@ -37196,8 +37301,10 @@ const RhythmTapTest = ({
       if (!settings.lightweightMode && !rhythmEffectAtMost(settings.effectAmount, 'LIGHT')) note._rhythmClearAt = run.audio?.songTimeMs?.() ?? 0;
     }
     const monsterHit = judgment !== 'MISS' && !!monsterForNote(note);
+    const monAb = monsterHit && monAbSet ? monAbSet[(run.monAbCount = (run.monAbCount || 0) + 1) - 1] || '' : '';
+    const monAbOff = name => monAb === name || monAb === 'all';
     if (judgment !== 'MISS') {
-      if (monsterHit) {
+      if (monsterHit && !monAbOff('se')) {
         RHYTHM_NOTE_SE_RUNTIME.playMonster();
         RHYTHM_FRAME_DIAG.cue('se');
       }
@@ -37208,7 +37315,7 @@ const RhythmTapTest = ({
         const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, lineY, run.audio?.songTimeMs?.() ?? note.timeMs);
         const restarts = [];
         const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
-        const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF');
+        const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF') && !monAbOff('spark');
         const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
         const hitEffect = rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
@@ -37222,11 +37329,11 @@ const RhythmTapTest = ({
           sky: rhythmNoteSkyHeight(note) > 0
         });
         if (hitEffect) restarts.push(hitEffect);
-        if (monsterHit && monsterEffect === 'NORMAL' && screenFlashRef.current) restarts.push({
+        if (monsterHit && monsterEffect === 'NORMAL' && !monAbOff('spark') && screenFlashRef.current) restarts.push({
           el: screenFlashRef.current,
           attr: 'rhythmFlash'
         });
-        if (monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'NONE')) {
+        if (monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'NONE') && !monAbOff('hop')) {
           const slot = rhythmNoteMonsterSlot(note),
             el = slot ? sideMonsterRefs.current[slot - 1] : null;
           if (el) {
@@ -37372,7 +37479,10 @@ const RhythmTapTest = ({
         ci: cutInOn ? 1 : 0,
         dec: img ? img.complete && img.naturalWidth > 0 ? 1 : 0 : -1,
         lw: settings.lightweightMode ? 1 : 0,
-        fx: String(settings.effectAmount || '').slice(0, 3)
+        fx: String(settings.effectAmount || '').slice(0, 3),
+        ...(monAbSet ? {
+          ab: monAb || '-'
+        } : {})
       });
     }
     if (monster && monster.ability && rhythmMonsterAbilityTriggers(judgment)) {
@@ -37393,13 +37503,17 @@ const RhythmTapTest = ({
         };
         const slot = rhythmNoteMonsterSlot(note);
         run.abilityOwners = run.abilityOwners || {};
-        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI' || monster.ability.id === 'ITAZURA') run.abilityOwners[monster.ability.id] = slot;
-        if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
-        run.abilityFlashSlot = slot;
-        run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        if (!monAbOff('ring')) {
+          if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI' || monster.ability.id === 'ITAZURA') run.abilityOwners[monster.ability.id] = slot;
+          if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
+        }
+        if (!monAbOff('ring')) {
+          run.abilityFlashSlot = slot;
+          run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        }
         run.abilityCounts = run.abilityCounts || [];
         if (slot >= 1) run.abilityCounts[slot - 1] = (Number(run.abilityCounts[slot - 1]) || 0) + 1;
-        if (cutInOn) {
+        if (cutInOn && !monAbOff('cutin')) {
           const cutIn = cutInRefs.current[slot - 1];
           if (cutIn) {
             RHYTHM_FRAME_DIAG.cue('cutin');
@@ -37446,7 +37560,7 @@ const RhythmTapTest = ({
       rhythmRestartAnimations(lifeRestarts);
     }
     if (run.life === 0 && lifeBefore > 0) setLifeDownCount(count => count + 1);
-    const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE');
+    const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE') && !monAbOff('flash');
     const score = run.lifeDepleted ? run.lockedScore : run.score,
       lastDeltaMs = judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
     hudRef.current.set(rhythmNoteIsSky(note) ? {
@@ -53656,11 +53770,13 @@ function BreederMarketScreen({
     assistantId: "mua",
     line: cardShopLine.t,
     expression: cardShopLine.e,
-    compact: true
+    compact: true,
+    collapseKey: "market:card"
   }) : React.createElement(AssistantBubble, {
     key: `market-${marketSection || 'top'}`,
     scene: "market",
     compact: true,
+    collapseKey: `market:${marketSection || 'top'}`,
     condition: {
       breeder: 'shopBreeder',
       exchange: 'shopExchange',
@@ -85277,7 +85393,7 @@ const CARD_AI_PLAY_TUNE = Object.freeze({
     normal: 0.06,
     hard: 0.15,
     expert: 0,
-    master: 0.3
+    master: 0.1
   },
   dra: {
     easy: -0.075,
@@ -98945,6 +99061,24 @@ const CardReplayBar = ({
   }, "とじる")));
 };
 const DEBUG_TRIALS = [{
+  id: 'rhythm_mon_ab1',
+  added: '2026-10-27',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_mon_ab_v1',
+  on: '1',
+  title: '🎵 モンスターノーツのかくつき調べ(1)',
+  note: 'モンスターノーツを取ったときの演出を、1回目は跳ね・2回目は能力名・3回目は光の輪だけ出さず、4回目はいつもどおりにします。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+  when: '次の演奏から'
+}, {
+  id: 'rhythm_mon_ab2',
+  added: '2026-10-27',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_mon_ab_v1',
+  on: '2',
+  title: '🎵 モンスターノーツのかくつき調べ(2)',
+  note: 'モンスターノーツを取ったときの演出を、1回目は金色の光・2回目は音・3回目はカットインだけ出さず、4回目は全部出しません。マスモン4体で遊ぶと、どの回にかくついたかが記録に残ります',
+  when: '次の演奏から'
+}, {
   id: 'rhythm_mon_layers',
   added: '2026-10-16',
   area: 'モンヒロビート',
