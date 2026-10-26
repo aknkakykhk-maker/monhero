@@ -104,6 +104,8 @@ const seed = () => {
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
+    // 助手のおしゃべりの中継(Edge Function)も本物へ届けない。差し替えが無いと本物の中継が AI を呼ぶ(2026-10-27)
+    await page.route('**/functions/v1/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
     await page.addInitScript(seed);
     // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
     await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
@@ -258,6 +260,8 @@ const seed = () => {
     await page2.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page2.evaluate(() => { window.__mhSupabaseStubbed = true; }).catch(() => {});
     await page2.route('**/rest/v1/**', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
+    // 助手のおしゃべりの中継(Edge Function)も本物へ届けない。差し替えが無いと本物の中継が AI を呼ぶ(2026-10-27)
+    await page2.route('**/functions/v1/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
     await page2.addInitScript(seed);
     // リザルトのボタンはタッチで遊ぶ端末(iPhone・Android)だけに出るので、Android として開く(中身は同じ Chromium)
     await page2.addInitScript(() => { Object.defineProperty(navigator, 'userAgent', { get: () => 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36' }); });
