@@ -848,7 +848,7 @@ function PickTeachingScreen({
           ? <PhaseSteps plan={phasePlan} current="teaching" nextWave={wave>0?wave+1:null}/>
           : <span className="mh-ph-plate">ASSIST CARD</span>}
         {/* 題名と説明は言葉の切れ目で折る(2026-10-20 改善部 M3「継/承」) */}
-        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl font-black italic" style={JA_WRAP_STYLE}>{jaWrap('アシストカードの継承・強化')}</h2></div>
+        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl max-[359px]:text-lg font-black italic" style={JA_WRAP_STYLE}>{jaWrap('アシストカードの継承・強化')}</h2></div>
         <p className="mh-phase-tall text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('1枚選んで、新しく覚えるか、持っているカードを強化します')}</p>
       </div>
       <div className="mh-phase-tall shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
@@ -884,7 +884,8 @@ function PickTeachingScreen({
             <span style={{fontSize:'44px'}} className="mh-ph-medal relative rounded-2xl p-1 leading-none">{cardIconNode(t.icon,52,t.id)}</span>
             <div className="relative text-[11px] font-black leading-tight flex flex-col items-center justify-center" style={{textShadow:'0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6)'}}>{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":"text-slate-100"}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
             {levelPips(owned?level+1:0, isMax?-1:shownLevel)}
-            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden',...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}</div>
+            {/* 5行まで出す(3行で切ると320で「ガッツ上…」と効き目が読めなかった。2026-10-27 ジン) */}
+            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:5,WebkitBoxOrient:'vertical',overflow:'hidden',...JA_WRAP_STYLE}}>{jaWrap(shownDesc)}</div>
             {/* 新規 / 強化 / MAX の札。文字はカード名の後ろに置く(名前で探す検査がある) */}
             <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white"
               style={{border:'1px solid #f3d27a',background:'linear-gradient(180deg, rgb(var(--mh-rc2)), rgb(var(--mh-rc)) 55%, rgba(var(--mh-rc),.7))',boxShadow:'0 0 0 1px rgba(30,18,4,.9), 0 0 10px rgba(var(--mh-rc),.7)',textShadow:'0 1px 2px rgba(0,0,0,.9)'}}>{owned?(isMax?"MAXレベル":`強化 Lv.${level}→${level+1}`):"新規習得"}</span>

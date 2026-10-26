@@ -265,10 +265,23 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
 
 // タイトル画像アレンジ・ホーム画面アレンジで使う「絵を選ぶ」窓。
 // options は { id, label, desc, src } の並び(TITLE_ART_OPTIONS / HOME_ART_OPTIONS)
+// 設定まわりの窓(更新履歴・設定・音量設定・BGMアレンジ・データ引き継ぎ・タイトル画像/ホーム画面アレンジ・画面テーマ)は、
+// 外側の暗いところを押すと閉じる(ほかの窓と同じ閉じ方。2026-10-26 ダメダシの見回り 6)。
+// 押し始めも外側だったときだけ閉じる … 音量のつまみを引いて窓の外で離したときや、窓の中の字を選んで外で離したときに閉じないように。
+// onPointerDown の stopPropagation … 下のタイトル画面へ「押した」を伝えない(前からの作り)
+const settingsBackdropProps = (onClose) => ({
+  onPointerDown: (e) => { e.stopPropagation(); e.currentTarget.dataset.downOnBackdrop = e.target === e.currentTarget ? '1' : ''; },
+  onClick: (e) => {
+    const ok = e.target === e.currentTarget && e.currentTarget.dataset.downOnBackdrop === '1';
+    e.currentTarget.dataset.downOnBackdrop = '';
+    if (ok) onClose();
+  },
+});
+
 function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onChange, onClose }) {
   const auto=value==='auto';
   return (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
+    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
       <div className="mh-title-dialog" data-art-picker={pickerId} style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
         <div className="mh-dialog-head"><h3>{heading}</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
         <p className="shrink-0 text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
@@ -302,7 +315,7 @@ function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, h
   const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
   const chip = (selected) => `min-h-[44px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
   return (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
+    <div className="mh-title-modal" {...settingsBackdropProps(onClose)}>
       <div className="mh-title-dialog" data-screen-theme-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
         <div className="mh-dialog-head"><h3>画面テーマ</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
         <p className="text-[11px] font-bold leading-relaxed text-slate-300">画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。</p>
