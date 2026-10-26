@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9391b7d60ced977f
+// source-sha256: c8d9c1e03a56e546
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56555,7 +56555,7 @@ function RhythmSongSelectScreen({
         "aria-checked": on,
         "data-rhythm-debug-song-filter-option": id,
         onClick: () => setDebugSongFilter(id),
-        className: `min-h-[40px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on ? 'border-amber-300 bg-amber-500/80 text-slate-950' : 'border-white/15 bg-slate-900/80 text-amber-100'}`
+        className: `min-h-[44px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on ? 'border-amber-300 bg-amber-500/80 text-slate-950' : 'border-white/15 bg-slate-900/80 text-amber-100'}`
       }, label);
     }));
   })(), raidChallenge && React.createElement("div", {
@@ -98544,6 +98544,10 @@ const CARD_PVP = (() => {
         seal: s.again.seal
       });
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
+      if (s.phase === 'over' && s.foe && alive && !s.foeGone && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) set({
+        foeGone: true,
+        foeAgain: null
+      });
     }, CARD_PVP_HEARTBEAT_MS);
   };
   if (typeof document !== 'undefined') {
@@ -98643,7 +98647,7 @@ const CARD_PVP = (() => {
       });
       forceEnd('timeout');
     },
-    foeStalled: () => forceEnd('foeTimeout'),
+    foeStalled: () => forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout'),
     auto: fn => {
       if (!s) return fn();
       s.autoActing = true;
@@ -99011,6 +99015,7 @@ const CardPvpLobby = ({
     meName: profile.name
   });
   if (room.phase === 'over' && r) {
+    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -99093,7 +99098,7 @@ const CardPvpLobby = ({
       style: JA_LABEL_STYLE
     }, jaWrap('保存できませんでした(ビートPは増えていません)'))))), React.createElement("div", {
       className: `${SCREEN_FOOTER_CLASS} flex flex-col gap-2`
-    }, !room.foeGone && r.reason !== '相手が抜けた' && React.createElement("button", {
+    }, !noAgain && React.createElement("button", {
       type: "button",
       "data-card-pvp-again": room.again ? 'waiting' : room.foeAgain ? 'foe' : 'ready',
       disabled: !!room.again,
@@ -99119,7 +99124,7 @@ const CardPvpLobby = ({
     }, jaWrap('相手は部屋を出ました')), React.createElement("button", {
       type: "button",
       "data-card-pvp-leave": true,
-      className: `${btn} ${room.foeGone || r.reason === '相手が抜けた' ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
+      className: `${btn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`,
       onClick: () => {
         Audio_.fgSe.tap();
         CARD_PVP.leave();
