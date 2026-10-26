@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fe4068338597deb9
+// generated-sha256: eabd18cf4964fb9f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11706,8 +11706,9 @@ const MarketBalanceBar = ({ balances }) => (
   </div>
 );
 // 売り場の中に出す知らせ(失敗したとき・キャンペーン中など)。どの売り場も同じ場所・同じ形
+// 文を言葉の切れ目で折る指定(JA_WRAP_STYLE)を付ける。jaWrap を通した文が「演奏のク/イック」と途中で折れていた(2026-10-27 横画面)
 const MarketNotice = ({ tone='error', children, ...rest }) => (
-  <div {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
+  <div style={typeof JA_WRAP_STYLE!=='undefined'?JA_WRAP_STYLE:undefined} {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
 );
 
 // マーケットで開く窓の枠と閉じるボタン。中身は画面共通の ModalFrame / ModalCloseButton(41-screen-ui.jsx)。
@@ -33587,7 +33588,8 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
         {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック)。
             shrink-0 … 窓は縦に並べる作りなので、中身が窓より高いと札が縮められ、2行目「いまは〜を出しています」が下の枠にかかっていた(320。2026-10-26 ダメダシの見回り s04) */}
         <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
-        <div className="shrink-0 grid grid-cols-2 gap-3">{options.map(option=>{
+        {/* 横向きの低い画面は、見本の幅を絞って真ん中へ寄せる。縦長の絵(9:16)が2列だと1枚が約530pxになり、絵の全体が見えなかった(2026-10-27) */}
+        <div className="shrink-0 grid grid-cols-2 gap-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[repeat(2,minmax(0,150px))] [@media(orientation:landscape)_and_(max-height:520px)]:justify-center">{options.map(option=>{
           const selected=value===option.id;
           return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>onChange(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}>
             <img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>
@@ -83783,7 +83785,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {titleModal}
 
       {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">やめる</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
-      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3">最新のゲームデータを読み込み直します。<br/>セーブデータは消えません。</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
+      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3" style={JA_WRAP_STYLE}>{jaWrap('最新のゲームデータを読み込み直します。')}<br/>{jaWrap('セーブデータは消えません。')}</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
 
       {/* ランキングの編成をくわしく見る。一覧は軽さ優先で素の絵のままにしてあるので、
           染色(実際にその人が染めた色)を見せるのはこの画面だけ。ここなら1件ぶん
