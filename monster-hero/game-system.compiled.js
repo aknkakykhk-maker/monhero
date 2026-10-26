@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 914d11eb8385fb84
+// source-sha256: 438522a628e0f584
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:25";
+const BUILD_DATE = "2026-10-27 00:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -2888,6 +2888,66 @@ const dexMainLineages = () => {
     seen.add(lineage.id);
     return true;
   });
+};
+const DEX_ENTRY_STATUSES = Object.freeze([Object.freeze({
+  id: 'owned',
+  label: '入手済み'
+}), Object.freeze({
+  id: 'locked',
+  label: '未入手'
+}), Object.freeze({
+  id: 'draft',
+  label: '未実装'
+})]);
+const dexDraftMonsterList = () => {
+  if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+};
+const dexEntryLineageOf = mon => {
+  if (!mon) return monsterLineageOf(null);
+  const draft = mon.draft && mon.draftLineage && !lineageEntryMap()[mon.id] ? mon.draftLineage : null;
+  if (!draft) return monsterLineageOf(mon.id);
+  return {
+    main: lineageById(draft.main),
+    sub: lineageById(draft.sub != null ? draft.sub : draft.main),
+    known: true
+  };
+};
+const dexEntryCategoryOf = mon => {
+  const {
+    main,
+    sub
+  } = dexEntryLineageOf(mon);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const dexEntryStatusOf = (mon, unlockedIds) => {
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  if (!mon || !playable[mon.id]) return 'draft';
+  return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+const dexEntryDescription = mon => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
+};
+const dexScreenEntries = unlockedIds => {
+  const base = dexMonsterList();
+  const all = [...base, ...dexDraftMonsterList()];
+  return DEX_ENTRY_STATUSES.flatMap(s => all.filter(mon => dexEntryStatusOf(mon, unlockedIds) === s.id));
+};
+const dexScreenMainLineages = () => {
+  const list = dexMainLineages().slice();
+  const seen = new Set(list.map(l => l.id));
+  for (const mon of dexDraftMonsterList()) {
+    const main = dexEntryLineageOf(mon).main;
+    if (main && main.id !== 'unknown' && !seen.has(main.id)) {
+      seen.add(main.id);
+      list.push(main);
+    }
+  }
+  return list;
 };
 const MONSTER_POWER_STAT_WEIGHT = {
   hp: 1,
@@ -25285,6 +25345,106 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     body: 'breathe',
     bodyMask: null,
     parts: []
+  },
+  Baron: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Aquarius: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Plumler: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  StrikeReaper: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  DarkHam: {
+    body: 'hop',
+    bodyMask: null,
+    parts: []
+  },
+  HellFat: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  UrokoGel: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  WakakusaKenzai: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  Garant: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  MimiNyaa: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  BenihimeSou: {
+    body: 'sway',
+    bodyMask: null,
+    parts: []
+  },
+  MurasakiChu: {
+    body: 'jelly',
+    bodyMask: null,
+    parts: []
+  },
+  ArmorDragon: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Kermadix: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Gigalon: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  BlueMountainHybrid: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  MagnaBeetle: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  GinGiLiger: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Ankylox: {
+    body: 'heavy',
+    bodyMask: null,
+    parts: []
+  },
+  Soborobent: {
+    body: 'drift',
+    bodyMask: null,
+    parts: []
   }
 });
 const MONSTER_IDLE_MASK_STYLE = url => ({
@@ -32596,11 +32756,11 @@ const RhythmSongSelect = ({
     className: "ml-1 tracking-normal text-rose-300"
   }, "未クリア")), React.createElement("b", {
     "data-rhythm-demo-best": true,
-    className: `block truncate font-black tabular-nums text-amber-100 ${best && best.played ? 'text-[22px] leading-tight' : 'text-[12px] leading-snug'}`,
-    style: best && best.played ? {
-      fontSize: `min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length * .72).toFixed(2)}))`
-    } : undefined
-  }, best && best.played ? best.bestScore.toLocaleString() : 'まだ遊んでいません'), React.createElement("span", {
+    className: `block font-black tabular-nums text-amber-100 ${best && best.played ? 'truncate text-[22px] leading-tight' : 'break-keep text-[12px] leading-tight'}`,
+    style: {
+      fontSize: best && best.played ? `min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length * .72).toFixed(2)}))` : 'min(12px, calc(100cqw / 7.4))'
+    }
+  }, best && best.played ? best.bestScore.toLocaleString() : React.createElement(React.Fragment, null, "まだ", React.createElement("wbr", null), "遊んでいません")), React.createElement("span", {
     "data-rhythm-demo-combo": true,
     className: "block whitespace-nowrap text-[9px] font-black text-slate-400"
   }, React.createElement("span", {
@@ -32669,11 +32829,18 @@ const RhythmSongSelect = ({
     }, open ? item.id : `🔒${item.id}`), (() => {
       const record = open ? rhythmBestRecord(bestRecords, song.songId, item.id) : null;
       const text = open ? record && record.played ? record.bestScore.toLocaleString() : '—' : `${need}で解放`;
+      if (!open) return React.createElement("span", {
+        "data-rhythm-difficulty-best": item.id,
+        className: "block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
+        style: {
+          fontSize: rhythmTitleFitSize(lockedFitText, 8, 6, 2)
+        }
+      }, need, React.createElement("wbr", null), "で解放");
       return React.createElement("span", {
         "data-rhythm-difficulty-best": item.id,
         className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80",
         style: {
-          fontSize: rhythmTitleFitSize(open ? text : lockedFitText, 8, 6, 2)
+          fontSize: rhythmTitleFitSize(text, 8, 6, 2)
         }
       }, text);
     })());
@@ -54957,6 +55124,21 @@ function MonsterTypeBadge({
     className: `inline-flex max-w-full flex-wrap items-center justify-center ${compact ? 'gap-0.5' : 'gap-1'}`
   }, chip(t.main, false), t.sub && chip(t.sub, true));
 }
+const DEX_STATUS_STYLE = {
+  owned: 'border-amber-300/60 bg-amber-500/15 text-amber-100',
+  locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
+  draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100'
+};
+const DexStatusTag = ({
+  status,
+  size = 'sm'
+}) => {
+  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  return React.createElement("span", {
+    "data-dex-status-tag": def.id,
+    className: `inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`
+  }, def.label);
+};
 function MonsterDexScreen({
   dexLineageFilter,
   unlockedMonsterIds,
@@ -54966,8 +55148,13 @@ function MonsterDexScreen({
 }) {
   const monsters = dexMonsterList();
   const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;
-  const filters = dexMainLineages();
-  const shown = dexLineageFilter === 'all' ? monsters : monsters.filter(mon => monsterLineageOf(mon.id).main.id === dexLineageFilter);
+  const entries = dexScreenEntries(unlockedMonsterIds);
+  const filters = dexScreenMainLineages();
+  const shown = dexLineageFilter === 'all' ? entries : entries.filter(mon => dexEntryLineageOf(mon).main.id === dexLineageFilter);
+  const sections = DEX_ENTRY_STATUSES.map(s => ({
+    ...s,
+    list: shown.filter(mon => dexEntryStatusOf(mon, unlockedMonsterIds) === s.id)
+  })).filter(s => s.list.length > 0);
   const chipClass = on => `shrink-0 min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-white/10 text-amber-200/80'}`;
   return React.createElement("div", {
     "data-mh-screen": true,
@@ -55008,31 +55195,50 @@ function MonsterDexScreen({
     className: chipClass(dexLineageFilter === lineage.id)
   }, lineage.name))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`
+  }, sections.map(section => React.createElement("section", {
+    key: section.id,
+    "data-dex-section": section.id,
+    className: "pb-3"
   }, React.createElement("div", {
-    className: "grid grid-cols-3 gap-2.5 pb-4"
-  }, shown.map(mon => {
-    const unlocked = unlockedMonsterIds.includes(mon.id);
+    className: "flex items-center gap-2 mb-1.5"
+  }, React.createElement(DexStatusTag, {
+    status: section.id,
+    size: "md"
+  }), React.createElement("span", {
+    "data-dex-section-count": true,
+    className: "text-[11px] font-mono font-black text-amber-100 tabular-nums"
+  }, section.list.length, React.createElement("span", {
+    className: "text-slate-400 text-[10px]"
+  }, " / ", shown.length)), React.createElement("span", {
+    className: "flex-1 h-px bg-amber-500/25",
+    "aria-hidden": "true"
+  })), React.createElement("div", {
+    className: "grid grid-cols-3 gap-2.5"
+  }, section.list.map(mon => {
+    const unlocked = section.id === 'owned';
     const iconSrc = mon.iconUrl || mon.imgUrl || '';
-    const category = monsterCategoryOf(mon.id);
+    const category = unlocked ? monsterCategoryOf(mon.id) : null;
     return React.createElement("button", {
       key: mon.id,
       type: "button",
       "data-dex-entry": true,
-      "aria-label": unlocked ? `${mon.name}の図鑑を見る` : 'まだ出会っていないモンスター',
+      "data-dex-entry-status": section.id,
+      "aria-label": `${mon.name}の図鑑を見る`,
       onClick: () => onOpenDetail(mon.id),
-      className: "w-full min-h-[124px] rounded-2xl border border-white/10 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none"
+      className: `w-full min-h-[124px] rounded-2xl border ${section.id === 'draft' ? 'border-dashed border-fuchsia-300/30' : 'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`
     }, React.createElement(DexMonsterIcon, {
-      src: iconSrc,
-      hidden: !unlocked
+      src: iconSrc
     }), React.createElement("div", {
       className: "text-[11px] font-black truncate w-full text-center leading-tight text-amber-100"
-    }, unlocked ? mon.name : '？？？'), React.createElement("div", {
+    }, mon.name), unlocked ? React.createElement("div", {
       className: "text-[10px] font-black text-amber-400/80 leading-tight"
-    }, unlocked ? monsterCategoryName(category) : '未発見'), unlocked && React.createElement(MonsterTypeBadge, {
+    }, monsterCategoryName(category)) : React.createElement(DexStatusTag, {
+      status: section.id
+    }), unlocked && React.createElement(MonsterTypeBadge, {
       monId: mon.id,
       compact: true
     }));
-  })), shown.length === 0 && React.createElement(ScreenEmpty, {
+  })))), shown.length === 0 && React.createElement(ScreenEmpty, {
     emoji: "📖",
     lines: ['この血統のモンスターはまだいません。']
   })));
@@ -55061,7 +55267,7 @@ function MonsterDexDetailScreen({
   onStopPreview
 }) {
   const [idleMotion, toggleIdleMotion] = useDexIdleMotion();
-  const monsters = dexMonsterList();
+  const monsters = dexScreenEntries(unlockedMonsterIds);
   const [colorSheetOpen, setColorSheetOpen] = useState(false);
   const index = monsters.findIndex(m => m.id === dexMonsterId);
   const mon = index >= 0 ? monsters[index] : null;
@@ -55069,12 +55275,13 @@ function MonsterDexDetailScreen({
     onMissing();
     return null;
   }
-  const unlocked = unlockedMonsterIds.includes(mon.id);
+  const status = dexEntryStatusOf(mon, unlockedMonsterIds);
+  const unlocked = status === 'owned';
   const {
     main,
     sub
-  } = monsterLineageOf(mon.id);
-  const category = monsterCategoryOf(mon.id);
+  } = dexEntryLineageOf(mon);
+  const category = dexEntryCategoryOf(mon);
   const categoryClass = category === 'rare' ? 'bg-amber-600 text-white' : category === 'pure' ? 'bg-emerald-700 text-white' : 'bg-indigo-700 text-white';
   const stopDexAttackPreview = onStopPreview;
   const go = delta => {
@@ -55159,7 +55366,7 @@ function MonsterDexDetailScreen({
   }, React.createElement("div", {
     "data-dex-side": "left",
     className: "flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1"
-  }, unlocked && monsterIdleRigOf(mon.id) ? React.createElement("button", {
+  }, mon.imgUrl && monsterIdleRigOf(mon.id) ? React.createElement("button", {
     type: "button",
     "data-dex-idle-toggle": true,
     "aria-pressed": idleMotion,
@@ -55200,9 +55407,13 @@ function MonsterDexDetailScreen({
     alt: mon.name,
     motion: idleMotion,
     colors: dexSelectedColors(masuMons, mon.id, dexColorKey)
+  }) : mon.imgUrl ? React.createElement(DexMonsterIdleArt, {
+    mon: mon,
+    alt: mon.name,
+    motion: idleMotion
   }) : React.createElement(DexMonsterArt, {
     mon: mon,
-    alt: "まだ出会っていないモンスター",
+    alt: "立ち絵のないモンスター",
     hidden: true
   })), React.createElement("div", {
     "data-dex-side": "right",
@@ -55271,13 +55482,19 @@ function MonsterDexDetailScreen({
     className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
   }, React.createElement("div", {
     className: "shrink-0 text-center text-[17px] font-black text-amber-100 truncate"
-  }, unlocked ? mon.name : '？？？'), unlocked && monsterTypeProtoOn() && React.createElement("div", {
+  }, mon.name), unlocked && monsterTypeProtoOn() && React.createElement("div", {
     "data-dex-type-row": true,
     className: "shrink-0 mt-1 flex justify-center"
   }, React.createElement(MonsterTypeBadge, {
     monId: mon.id,
     size: "md"
-  })), unlocked ? React.createElement(React.Fragment, null, React.createElement("div", {
+  })), !unlocked && React.createElement("div", {
+    "data-dex-status-row": true,
+    className: "shrink-0 mt-1 flex justify-center"
+  }, React.createElement(DexStatusTag, {
+    status: status,
+    size: "md"
+  })), React.createElement("div", {
     "data-dex-lineage-row": true,
     className: "shrink-0 mt-2 grid items-center gap-1.5",
     style: {
@@ -55298,7 +55515,7 @@ function MonsterDexDetailScreen({
     }
   }, React.createElement("p", {
     className: "font-bold leading-relaxed text-slate-200 break-words"
-  }, helpWrap(monsterDexDescription(mon.id)))), React.createElement(ScreenTabs, {
+  }, helpWrap(dexEntryDescription(mon)))), unlocked ? React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     className: "mt-2",
     value: tab,
     onChange: onSelectTab,
@@ -55381,8 +55598,8 @@ function MonsterDexDetailScreen({
   })()))) : React.createElement("div", {
     className: "flex-1 min-h-0 flex items-center justify-center"
   }, React.createElement(ScreenEmpty, {
-    emoji: "❓",
-    lines: ['まだ出会っていないモンスターです', 'マーケットで円盤石を手に入れて解放すると、血統・能力・技が図鑑に記録されます。']
+    emoji: status === 'draft' ? '🛠️' : '🔒',
+    lines: status === 'draft' ? ['まだ仲間にできないモンスターです', '能力・技・特性は、まだ記録されていません。'] : ['まだ入手していないモンスターです', 'マーケットで円盤石を手に入れて解放すると、能力・技・特性が図鑑に記録されます。']
   })))));
 }
 function RhythmInfoScreen({
@@ -55792,8 +56009,12 @@ function RhythmSongSelectScreen({
   }, React.createElement("span", {
     className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
   }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
+    className: "flex min-w-0"
+  }, React.createElement("span", {
     className: "min-w-0 truncate"
-  }, beatPointCampaign.name, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中'), React.createElement("span", {
+  }, beatPointCampaign.name), React.createElement("span", {
+    className: "shrink-0"
+  }, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中')), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
@@ -56640,7 +56861,9 @@ function RhythmRankingScreen({
       "aria-pressed": cur === id,
       onClick: () => loadRhythmRanking(song, id),
       className: `min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur === id ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900/70 text-slate-300'}`
-    }, id === 'ALL' ? '全難易度' : RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id)));
+    }, id === 'ALL' ? React.createElement("span", {
+      className: "break-keep"
+    }, "全", React.createElement("wbr", null), "難易度") : RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id)));
   })(), songTab && rhythmRanking.status === 'loading' && React.createElement("p", {
     "data-rhythm-ranking-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
@@ -76499,8 +76722,9 @@ function RhythmMultiRecordSheet({
   }, v)))), React.createElement("ul", {
     className: "mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto"
   }, rec.recent.length === 0 && React.createElement("li", {
-    className: "text-[12px] font-bold text-slate-400"
-  }, "まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります"), rec.recent.map(x => React.createElement("li", {
+    className: "text-[12px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだ記録はありません。みんなで対戦を遊ぶと、ここに残ります')), rec.recent.map(x => React.createElement("li", {
     key: x.round,
     "data-rhythm-multi-record-row": true,
     className: "rounded-xl bg-slate-800/70 px-2 py-1.5 text-[11px] font-bold leading-snug"
@@ -78205,7 +78429,7 @@ function RhythmMultiScreen({
       type: "button",
       "data-rhythm-mode-ranking-tab": id,
       onClick: () => setRankHubTab(id),
-      className: `min-h-[44px] min-w-0 flex-1 rounded-xl border px-2 text-[12px] font-black ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
+      className: `min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
     }, label)))));
   }
   if (!view && !searching) return React.createElement("main", {
@@ -90829,20 +91053,75 @@ const cardArtBox = src => new Promise(resolve => {
   img.src = src;
 });
 const CARD_ART_KNOWN_BOX = Object.freeze({
-  myua_wink: Object.freeze({
-    nw: 1536,
-    nh: 1024,
-    x: 379,
-    y: 28,
-    w: 760,
-    h: 996
-  })
+  atsu_angry: [768, 1024, 0, 2, 768, 1022],
+  atsu_crying: [768, 1024, 0, 4, 768, 1020],
+  atsu_excited: [768, 1024, 0, 4, 768, 1020],
+  atsu_happy: [768, 1024, 0, 0, 768, 1024],
+  atsu_normal: [768, 1024, 0, 5, 768, 1019],
+  atsu_surprise: [768, 1024, 0, 0, 768, 1024],
+  atsu_troubled: [768, 1024, 0, 3, 768, 1021],
+  atsu_wink: [768, 1024, 0, 14, 768, 1010],
+  dra_angry: [384, 384, 44, 39, 299, 278],
+  dra_crying: [384, 384, 47, 45, 291, 269],
+  dra_excited: [384, 384, 46, 46, 292, 269],
+  dra_happy: [384, 384, 28, 40, 312, 276],
+  dra_normal: [384, 384, 45, 42, 293, 273],
+  dra_surprise: [384, 384, 25, 39, 313, 278],
+  dra_troubled: [384, 384, 45, 43, 294, 272],
+  dra_wink: [384, 384, 49, 43, 286, 270],
+  kiki_angry: [1536, 1024, 481, 10, 573, 1014],
+  kiki_crying: [1536, 1024, 480, 15, 572, 1009],
+  kiki_excited: [1536, 1024, 495, 12, 556, 1012],
+  kiki_happy: [1536, 1024, 486, 14, 573, 1010],
+  kiki_normal: [1536, 1024, 476, 17, 603, 1007],
+  kiki_surprise: [1536, 1024, 478, 11, 583, 1013],
+  kiki_troubled: [1536, 1024, 480, 9, 577, 1015],
+  kiki_wink: [1536, 1024, 490, 7, 569, 1017],
+  kyuko_angry: [384, 512, 0, 0, 384, 508],
+  kyuko_crying: [384, 512, 4, 0, 380, 507],
+  kyuko_excited: [384, 512, 0, 0, 384, 508],
+  kyuko_happy: [384, 512, 3, 7, 381, 505],
+  kyuko_normal: [384, 512, 0, 6, 377, 506],
+  kyuko_surprise: [384, 512, 4, 6, 375, 506],
+  kyuko_troubled: [384, 512, 0, 2, 384, 506],
+  kyuko_wink: [384, 512, 0, 6, 375, 502],
+  momosuke_angry: [512, 512, 12, 3, 497, 509],
+  momosuke_crying: [512, 512, 25, 2, 468, 510],
+  momosuke_excited: [512, 512, 10, 6, 502, 506],
+  momosuke_happy: [512, 512, 28, 14, 475, 498],
+  momosuke_normal: [512, 512, 25, 9, 478, 503],
+  momosuke_surprise: [512, 512, 18, 7, 486, 505],
+  momosuke_troubled: [512, 512, 32, 9, 459, 503],
+  momosuke_wink: [512, 512, 0, 7, 512, 505],
+  myua_angry: [1536, 1024, 306, 27, 907, 997],
+  myua_crying: [1536, 1024, 332, 19, 839, 1005],
+  myua_excited: [1536, 1024, 245, 15, 948, 1009],
+  myua_happy: [1536, 1024, 360, 26, 783, 998],
+  myua_normal: [1536, 1024, 396, 26, 715, 998],
+  myua_surprise: [1536, 1024, 325, 27, 852, 997],
+  myua_troubled: [1536, 1024, 323, 15, 866, 1009],
+  myua_wink: [1536, 1024, 379, 28, 760, 996]
 });
+const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
+  nw: v[0],
+  nh: v[1],
+  x: v[2],
+  y: v[3],
+  w: v[4],
+  h: v[5]
+} : null;
 const cardArtKnownBox = (who, expression, src) => {
   if (!who || !who.imagePrefix || !who.imageDir || typeof assistantExpressionName !== 'function') return null;
   const ex = assistantExpressionName(who, expression);
-  const box = CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`];
-  return box && src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? box : null;
+  return src === `${who.imageDir}/${who.imagePrefix}_${ex}.PNG` ? cardArtBoxOf(CARD_ART_KNOWN_BOX[`${who.imagePrefix}_${ex}`]) : null;
+};
+const cardArtKnownBoxBySrc = src => {
+  if (typeof src !== 'string' || typeof ASSISTANTS === 'undefined' || !Array.isArray(ASSISTANTS)) return null;
+  for (const who of ASSISTANTS) {
+    const head = who && who.imageDir && who.imagePrefix ? `${who.imageDir}/${who.imagePrefix}_` : '';
+    if (head && src.startsWith(head) && src.endsWith('.PNG')) return cardArtKnownBox(who, src.slice(head.length, -4), src);
+  }
+  return null;
 };
 const cardArtKnownBoxFor = (src, known) => new Promise(resolve => {
   if (!known) {
@@ -90870,7 +91149,7 @@ const CardAssistantArt = ({
   useEffect(() => {
     let alive = true;
     setBox(null);
-    void cardArtKnownBoxFor(src, knownBox).then(known => known ? {
+    void cardArtKnownBoxFor(src, knownBox || cardArtKnownBoxBySrc(src)).then(known => known ? {
       ...known,
       known: true
     } : cardArtBox(src)).then(b => {
@@ -90879,7 +91158,7 @@ const CardAssistantArt = ({
     return () => {
       alive = false;
     };
-  }, [src, knownBox]);
+  }, [src]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
@@ -91757,7 +92036,6 @@ const CardBattleScreen = ({
       className: "flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2"
     }, React.createElement(CardAssistantArt, {
       src: assistantFullImage(a, 'wink'),
-      knownBox: cardArtKnownBox(a, 'wink', assistantFullImage(a, 'wink')),
       alt: a.name,
       className: "w-[42%] landscape:hidden",
       style: {

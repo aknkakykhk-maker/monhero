@@ -1161,9 +1161,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                 この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
             <div className="min-w-0 [container-type:inline-size]">
               <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{/* 旧の数え方(刻みを数える前)の記録を出しているときの印(2026-10-17) */}{best&&difficulty&&rhythmBestShowsLegacy(song.songId,difficulty.id)&&<span data-rhythm-demo-legacy-best className="ml-1 rounded bg-slate-500/30 px-1 tracking-normal text-slate-200">旧</span>}{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
-              <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[22px] leading-tight':'text-[12px] leading-snug'}`}
-                style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
-                {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
+              {/* 「まだ遊んでいません」は、細い札(横の小さい画面)では「…」にせず「まだ／遊んでいません」の2行にし、長いほうの7字が入る大きさにする(2026-10-26) */}
+              <b data-rhythm-demo-best className={`block font-black tabular-nums text-amber-100 ${best&&best.played?'truncate text-[22px] leading-tight':'break-keep text-[12px] leading-tight'}`}
+                style={{fontSize:best&&best.played?`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`:'min(12px, calc(100cqw / 7.4))'}}>
+                {best&&best.played?best.bestScore.toLocaleString():<>まだ<wbr/>遊んでいません</>}
               </b>
               <span data-rhythm-demo-combo className="block whitespace-nowrap text-[9px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
@@ -1207,8 +1208,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               {/* ボタンが細い端末でも「1,000,000」が切れないよう、幅に合わせて8px〜6pxで収める(2026-09-26) */}
               {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
                 const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
+                // 鍵の文字は、下限の6pxでも1行に入らない細い端末(320幅の HELL「MASTERで解放」)では「…」にせず「MASTERで／解放」の2行に折る(2026-10-26)
+                if(!open)return <span data-rhythm-difficulty-best={item.id} className="block max-w-full overflow-hidden break-keep text-center text-[8px] font-black leading-[1.05] opacity-80 [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
+                  style={{fontSize:rhythmTitleFitSize(lockedFitText,8,6,2)}}>{need}<wbr/>で解放</span>;
                 return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-                  style={{fontSize:rhythmTitleFitSize(open?text:lockedFitText,8,6,2)}}>{text}</span>;})()}
+                  style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
