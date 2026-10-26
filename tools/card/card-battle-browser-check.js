@@ -536,6 +536,27 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         const st0 = await page.locator('[data-card-replay-step]').innerText();
         const faces = await page.locator('[data-card-replay-foe-card] img').count();
         check('㉑ はじめから始まり、相手の手札が表で並ぶ', /^0\//.test(st0) && faces >= 5, `${st0} 表${faces}`);
+        // 1手ずつ進めて、下の帯の「その手を打った人」と説明の文の主語が、記録と同じか(2026-10-27 カゲあつくんの見直し: 動いたあとの番で書いていた)
+        const recd = await page.evaluate(() => { const v = JSON.parse(localStorage.getItem('mh_card_replays_v1')); return { by: v.list[0].acts.map((a) => a[0]), level: v.list[0].level, foe: v.list[0].foe.name }; });
+        const wrong = [];
+        for (let k = 1; k <= Math.min(16, recd.by.length); k++) {
+          await page.locator('[data-card-replay-next]').click();
+          const by = Number(await page.locator('[data-card-replay-turn]').getAttribute('data-card-replay-by'));
+          const cap = await page.locator('[data-card-replay-caption]').innerText();
+          const other = recd.by[k - 1] === 0 ? recd.foe : 'あなた';
+          if (by !== recd.by[k - 1] || cap.startsWith(`${other}は`)) wrong.push(`${k}手目 帯${by}/記録${recd.by[k - 1]} 「${cap}」`);
+        }
+        check('㉑ 見返しの1手ごとに、その手を打った人と説明の文が記録と同じ', wrong.length === 0, wrong.slice(0, 3).join(' / '));
+        const levelText = await page.locator('[data-card-battle] small').filter({ hasText: /EASY|NORMAL|HARD|EXPERT|MASTER|助手と対戦/ }).first().innerText().catch(() => '');
+        check('㉑ 見返しの相手の名前の下が、遊んだ難易度', !!recd.level && levelText.trim() === ({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' })[recd.level], `${recd.level} / ${levelText}`);
+        await page.locator('[data-card-replay-first]').click();
+        const startHead = await page.locator('[data-card-head-turn]').innerText();
+        await page.locator('[data-card-replay-next]').click();
+        const firstHead = await page.locator('[data-card-head-turn]').innerText();
+        const firstBar = await page.locator('[data-card-replay-turn]').innerText();
+        check('㉑ 見返しのはじまりと1手目(始める前のガッツ)は、上の帯も「はじまり」', /はじまり/.test(startHead) && /はじまり/.test(firstHead) && /はじまり/.test(firstBar), `${startHead} / ${firstHead} / ${firstBar}`);
+        await page.waitForTimeout(1500);
+        check('㉑ 見返しでは助手の吹き出しを出さない(記録の箱に重ならない)', (await page.locator('[data-card-bubble]').count()) === 0);
         for (let i = 0; i < 300; i++) { if (await page.locator('[data-card-replay-next-turn]').isDisabled()) break; await page.locator('[data-card-replay-next-turn]').click(); }
         const end = (await page.locator('[data-card-replay-step]').innerText()).replace('手', '').split('/').map(Number);
         check('㉑ 最後の手まで見られる・助手は勝手に動かない', end[0] === end[1] && end[1] >= 1, end.join('/'));

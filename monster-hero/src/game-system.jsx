@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b7a5706dc1b26a50
+// generated-sha256: 212da85b87519aa6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -2908,8 +2908,13 @@ const DEX_ENTRY_STATUSES = Object.freeze([
 const dexDraftMonsterList = () => {
   if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
   const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
-  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  const list = Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+  // 実装予告を出した子(draftAnnounced)は「未実装」の先頭に並べる(2026-10-27 社長室カゲあつ。
+  // 予告で「図鑑の未実装に並べました」と書いたのに、58体の最後にいて見つけにくかった)。ほかの子の順は変えない
+  return [...list.filter(dexDraftAnnounced), ...list.filter(mon => !dexDraftAnnounced(mon))];
 };
+// 実装予告を出した案の子か。図鑑の札を「未実装」ではなく「近日実装」にする
+const dexDraftAnnounced = (mon) => !!(mon && mon.draft && mon.draftAnnounced);
 // 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
 const dexEntryLineageOf = (mon) => {
   if (!mon) return monsterLineageOf(null);
@@ -4642,6 +4647,8 @@ const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']]);
 // 横向きの道の幅(2026-09-27)。値の倍率は RHYTHM_ROAD_WIDTHS(data/rhythm-mode.js)
 const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE','広い'],['STANDARD','ふつう'],['NARROW','細い']]);
+// 道の奥行き(2026-10-27 社長の選択「案A」: 案3のカメラを寝かせる形をオプションで選べるように)。「深い」は道が奥へ長く伸び、遠くのノーツほど小さく、手前で速く近づく
+const RHYTHM_ROAD_DEPTH_LABELS = Object.freeze([['NORMAL','いまの'],['DEEP','深い']]);
 // ★既定は LIGHT(標準)。重い順に 最大 / 多め / 標準 / 最小 の4段。
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
@@ -4837,6 +4844,7 @@ const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO','おすすめ'],['LE
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id])=>id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL','LOW','NONE']);
 const RHYTHM_ROAD_WIDTH_LEVELS = Object.freeze(['WIDE','STANDARD','NARROW']);
+const RHYTHM_ROAD_DEPTH_LEVELS = Object.freeze(['NORMAL','DEEP']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
 // ランク(G〜M)の表示色。
 // このゲームは間合い適性(DIST_APTITUDE_COLOR)でも同じ G〜M の記号を使っていて、
@@ -4924,6 +4932,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
   // 横向きの道の幅(2026-09-27)。既定は「広い」(=これまでの幅)。既存の保存値には無いので、読み込み時は既定で補われる
   roadWidth:'WIDE',
+  // 道の奥行き(2026-10-27)。既定は「いまの」(=これまでの遠近)。新しい項目なので、保存値に無い人は既定で補われる
+  roadDepth:'NORMAL',
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode:false, mirrorChart:false,
@@ -4965,6 +4975,7 @@ const normalizeRhythmSettings = value => {
     holdSlideOpacity:rhythmFiniteInRange(source.holdSlideOpacity,10,100,DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow:RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow)?source.laneGlow:DEFAULT_RHYTHM_SETTINGS.laneGlow,
     roadWidth:RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth)?source.roadWidth:DEFAULT_RHYTHM_SETTINGS.roadWidth,
+    roadDepth:RHYTHM_ROAD_DEPTH_LEVELS.includes(source.roadDepth)?source.roadDepth:DEFAULT_RHYTHM_SETTINGS.roadDepth,
     // タップ音量だけ上限を400へ広げた(2026-09-26)。広げただけなので、保存してある0〜200はそのまま読める
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_NOTE_SE_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType:rhythmNoteSeTypeOf(source.noteSeType),
@@ -6449,10 +6460,14 @@ const MASU_COLOR_REGION_HUES = {
   // 口の左右それぞれから色距離ベースのflood-fillで輪郭を実測し、行ごとに(瞳を挟んだ
   // 左右を橋渡ししないよう)セグメント単位で矩形を積み重ねている
   Suezo: [{ hue: 45, sMin: 0.3, vMin: 0.55 }, { hue: 45, sMin: 0.3, vMax: 0.55 }, { posBbox: [[0.2799,0.4901,0.2922,0.4935],[0.2773,0.4935,0.293,0.497],[0.7078,0.4935,0.7236,0.497],[0.2764,0.497,0.293,0.5004],[0.7061,0.497,0.7262,0.5004],[0.2773,0.5004,0.2939,0.5039],[0.7044,0.5004,0.727,0.5039],[0.2816,0.5039,0.2956,0.5073],[0.7035,0.5039,0.7244,0.5073],[0.2825,0.5073,0.2991,0.5108],[0.7009,0.5073,0.7201,0.5108],[0.2833,0.5108,0.3025,0.5142],[0.6983,0.5108,0.7184,0.5142],[0.2833,0.5142,0.306,0.5177],[0.6949,0.5142,0.7167,0.5177],[0.2842,0.5177,0.3094,0.5211],[0.6914,0.5177,0.715,0.5211],[0.2859,0.5211,0.3137,0.5246],[0.688,0.5211,0.7132,0.5246],[0.2885,0.5246,0.3181,0.528],[0.6837,0.5246,0.7106,0.528],[0.2937,0.528,0.3224,0.5315],[0.6802,0.528,0.7063,0.5315],[0.298,0.5315,0.3258,0.5349],[0.6759,0.5315,0.7003,0.5349],[0.3032,0.5349,0.331,0.5384],[0.6716,0.5349,0.6951,0.5384],[0.3049,0.5384,0.3362,0.5418],[0.6673,0.5384,0.6925,0.5418],[0.3066,0.5418,0.3431,0.5453],[0.6621,0.5418,0.6899,0.5453],[0.3092,0.5453,0.3465,0.5487],[0.6569,0.5453,0.6882,0.5487],[0.3109,0.5487,0.3517,0.5522],[0.6509,0.5487,0.6865,0.5522],[0.3135,0.5522,0.3578,0.5557],[0.6448,0.5522,0.6848,0.5557],[0.3161,0.5557,0.3647,0.5591],[0.6388,0.5557,0.6822,0.5591],[0.3187,0.5591,0.3716,0.5626],[0.6319,0.5591,0.6796,0.5626],[0.3213,0.5626,0.3793,0.566],[0.6233,0.5626,0.677,0.566],[0.3239,0.566,0.388,0.5695],[0.6146,0.566,0.6753,0.5695],[0.3265,0.5695,0.3974,0.5729],[0.6034,0.5695,0.6718,0.5729],[0.329,0.5729,0.4112,0.5764],[0.5922,0.5729,0.6692,0.5764],[0.3325,0.5764,0.4225,0.5798],[0.5827,0.5764,0.6666,0.5798],[0.3351,0.5798,0.438,0.5833],[0.5646,0.5798,0.6632,0.5833],[0.3385,0.5833,0.4673,0.5867],[0.5447,0.5833,0.6606,0.5867],[0.342,0.5867,0.5553,0.5902],[0.5102,0.5867,0.6571,0.5902],[0.3454,0.5902,0.6511,0.5936],[0.5232,0.5902,0.6537,0.5936],[0.3498,0.5936,0.6502,0.5971],[0.3506,0.5971,0.6459,0.6005],[0.6362,0.5971,0.6459,0.6005],[0.3541,0.6005,0.6442,0.604],[0.6328,0.6005,0.6425,0.604],[0.3584,0.604,0.639,0.6074],[0.6284,0.604,0.6382,0.6074],[0.3636,0.6074,0.6347,0.6109],[0.3679,0.6109,0.6304,0.6143],[0.3713,0.6143,0.6261,0.6178],[0.3782,0.6178,0.6209,0.6212],[0.3843,0.6212,0.6157,0.6247],[0.3894,0.6247,0.6097,0.6281],[0.3955,0.6281,0.6037,0.6316],[0.5663,0.6281,0.6054,0.6316],[0.4024,0.6316,0.57,0.635],[0.5594,0.6316,0.5968,0.635],[0.4093,0.635,0.5614,0.6385],[0.5508,0.635,0.5898,0.6385],[0.4145,0.6385,0.5519,0.6419],[0.5016,0.6385,0.5829,0.6419],[0.4222,0.6419,0.5105,0.6454],[0.5025,0.6419,0.5778,0.6454],[0.4326,0.6454,0.5597,0.6488],[0.5085,0.6454,0.5691,0.6488],[0.4412,0.6488,0.5571,0.6523],[0.543,0.6488,0.5597,0.6523],[0.4533,0.6523,0.545,0.6557],[0.5292,0.6523,0.5484,0.6557],[0.4636,0.6557,0.5286,0.6592],[0.4964,0.6557,0.5346,0.6592]], noAAGuard: true, noEdgeGuard: true }],
-  // ほぼ単色の岩肌のため色相だけでは部位を分けられないが、3部位に分けたいという要望を受け、
-  // 位置だけで区切るposBbox(色を問わない)を使って両腕・両脚を強制的に別部位にした
-  // (頭部・胴体は他のどのposBboxにも属さない残りとして自動的に染色①になる)
-  Golem: [{ hue: 30, sMin: 0.08 }, { posBbox: [[0.0, 0.20, 0.30, 0.82], [0.70, 0.20, 1.0, 0.82]] }, { posBbox: [[0.0, 0.82, 1.0, 1.0]] }],
+  // ほぼ単色の岩肌のため色相だけでは部位を分けられない。前は位置(posBbox)の縦横の直線で両腕・両脚を分けていたが、
+  // 2026-10-27 社長の決定で、石の切れ目で分け直した配信マスク(EXACT_DYE_MASKS・tools/image/refine-dye-mask.js)にした。
+  // ①=頭・胴・脚 / ②=両腕(肩の石も腕) / ③=足元の石。ここは「3レイヤーある」ことを知らせる控え
+  Golem: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。全身の紫がかった青毛(染色①)、白い胸元・腹(染色②)、
   // 頭上の角(染色③、地味な差し色なので未設定時は染色①の色を引き継ぐ。MASU_COLOR_FALLBACK_REGION参照)
   // の3部位。新イラストはICON/IMGとも同じ構図(process-new-art.jsで正方形に統一済み)で作成しているため、
@@ -7070,7 +7085,7 @@ const _getUndineExactRegion = (nx, ny) => {
 const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK,
   // 2026-10-26 から、色相ルール・埋め込み部位マップで分けていた子も、境目を絵の線へ寄せ直した配信マスクで染める
   // (tools/image/refine-dye-mask.js。分け方は前と同じ)。配信マスクは下の色相ルール・埋め込み部位マップより優先される
-  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK,
+  Undine:UNDINE_DYE_MASK, Tiger:TIGER_DYE_MASK, Suezo:SUEZO_DYE_MASK, Golem:GOLEM_DYE_MASK,
   // キュービ・オリヒメ(2026-10-27・案の段階・5部位)
   Kyubi:KYUBI_DYE_MASK, Orihime:ORIHIME_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
@@ -19061,9 +19076,14 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
         </div>
         <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter} onComplete={()=>markPresented('breeder')}/>
       </div>
-      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-        <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
-        <span className="text-white font-mono font-bold flex items-baseline gap-1"><span className="text-slate-500 text-[10px]">{summary.goldBefore.toLocaleString()} →</span><CountUpNumber from={summary.goldBefore} to={summary.goldAfter} onComplete={()=>markPresented('gold')}/>{summary.goldAfter>summary.goldBefore&&<span className="text-amber-300 text-[10px]">(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})</span>}</span>
+      {/* 数の出し方をブリーダー経験値の行とそろえる: 右に「+もらった数」、下の小さい行に持っている数の変化(2026-10-27 ダメダシくん。
+          前は「100,000 → 100,374 (+374)」で、経験値の「+38」と並び方が違い、前の数も薄くて読みにくかった) */}
+      <div data-reward-gold className="pt-2 border-t border-white/10 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
+          <span className="text-white font-mono font-bold">+<CountUpNumber from={0} to={Math.max(0, summary.goldAfter-summary.goldBefore)} onComplete={()=>markPresented('gold')}/></span>
+        </div>
+        <div className="mt-0.5 text-right text-[9px] font-mono font-bold text-slate-300">所持 {summary.goldBefore.toLocaleString()} → {summary.goldAfter.toLocaleString()}</div>
       </div>
       {/* クリアしたときだけ入る限界突破アイテム。1行だけ足して、リザルトの高さを崩さない */}
       {summary.psycheGain > 0 && (
@@ -20162,6 +20182,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 {/* 演奏中は曲名を薄くする(2026-09-27)。既定は ON */}
 {field('演奏中は曲名を薄くする',toggle('hudSongFade'),
               '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。')}
+{field('道の奥行き',segments('roadDepth',RHYTHM_ROAD_DEPTH_LABELS),
+              '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。',{full:true})}
 {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
 {hellReleased&&field('空中の道の見え方',hellSegments('lane',[['em','はっきり'],['el','控えめ'],['none','なし']]),
   'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。',{full:true})}
@@ -22516,7 +22538,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 判定ラインの高さは描くたびに測る(下の measure)。測った高さが変わったら、空中の面を描き直す(skyLineTick)
   RHYTHM_ROAD_WIDTH.set(orientationIsLandscape()?(RHYTHM_ROAD_WIDTHS[settings.roadWidth]||1):1);
   // 案3の2段目(試作・2026-10-16): カメラを寝かせる。道の幅と同じく、描き始めより前に入れる(判定・入力・見た目がそろって変わる)
-  const cameraDeep=useState(()=>rhythmCameraDeepActive())[0];
+  // 道の奥行き(オプション「深い」・2026-10-27)か、デバッグの試作 c3b のとき、カメラを寝かせる。演奏を始めるときに1回だけ決める(途中で変えると押す場所が変わるため)
+  const cameraDeep=useState(()=>settings.roadDepth==='DEEP'||rhythmCameraDeepActive())[0];
   RHYTHM_PROJECTION_CAMERA.set(cameraDeep);
   const [skyLineTick,setSkyLineTick]=useState(0);
   if(skyChart)RHYTHM_SKY_LIFT.set(orientationIsLandscape());
@@ -34979,8 +35002,10 @@ const DEX_STATUS_STYLE = {
   locked: 'border-sky-300/50 bg-sky-500/15 text-sky-100',
   draft: 'border-fuchsia-300/50 bg-fuchsia-500/15 text-fuchsia-100',
 };
-const DexStatusTag = ({ status, size = 'sm' }) => {
-  const def = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+// announced: 実装予告を出した案の子。「未実装」の代わりに「近日実装」と出す(色は未実装と同じ)
+const DexStatusTag = ({ status, size = 'sm', announced = false }) => {
+  const found = DEX_ENTRY_STATUSES.find(s => s.id === status) || DEX_ENTRY_STATUSES[0];
+  const def = announced && found.id === 'draft' ? { ...found, label:'近日実装' } : found;
   return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
 };
 
@@ -35038,7 +35063,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                       <div className="text-[11px] font-black truncate w-full text-center leading-tight text-amber-100">{mon.name}</div>
                       {unlocked
                         ? <div className="text-[10px] font-black text-amber-400/80 leading-tight">{monsterCategoryName(category)}</div>
-                        : <DexStatusTag status={section.id}/>}
+                        : <DexStatusTag status={section.id} announced={dexDraftAnnounced(mon)}/>}
                       {unlocked&&<MonsterTypeBadge monId={mon.id} compact/>}
                     </button>
                   );
@@ -35183,7 +35208,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{mon.name}</div>
             {unlocked&&monsterTypeProtoOn()&&<div data-dex-type-row className="shrink-0 mt-1 flex justify-center"><MonsterTypeBadge monId={mon.id} size="md"/></div>}
-            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md"/></div>}
+            {!unlocked&&<div data-dex-status-row className="shrink-0 mt-1 flex justify-center"><DexStatusTag status={status} size="md" announced={dexDraftAnnounced(mon)}/></div>}
             {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
                 左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
             <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
@@ -35508,7 +35533,7 @@ function RhythmSongSelectScreen({
           return <div data-rhythm-debug-song-filter role="radiogroup" aria-label="並べる曲" className="grid shrink-0 grid-cols-2 gap-1.5 border-b border-amber-400/30 bg-amber-950/30 px-2 py-1.5">
             {[['all',`すべての曲(${allCount})`],['proto',`🧪 試作だけ(${protoCount})`]].map(([id,label])=>{const on=debugSongFilter===id;
               return <button key={id} type="button" role="radio" aria-checked={on} data-rhythm-debug-song-filter-option={id} onClick={()=>setDebugSongFilter(id)}
-                className={`min-h-[40px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on?'border-amber-300 bg-amber-500/80 text-slate-950':'border-white/15 bg-slate-900/80 text-amber-100'}`}>{label}</button>;})}
+                className={`min-h-[44px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on?'border-amber-300 bg-amber-500/80 text-slate-950':'border-white/15 bg-slate-900/80 text-amber-100'}`}>{label}</button>;})}
           </div>;})()}
         {/* レイドバトルのモンヒロビート挑戦で開いたときの帯(2026-10-06・ユーザー指示)。遊んだ1曲のスコアが、ジャックへのダメージになる */}
         {raidChallenge&&<div data-raid-challenge-banner role="status" className="shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100">
@@ -36583,6 +36608,8 @@ function MasuDonationScreen({
       const sorted=sortDonationMasuMons(masuMons,donationSortKey,donationSortDir,monsterRosterIds);
       return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="寄付" accent="text-violet-300" onBack={onLeaveDonation} backLabel="神殿へ戻る" disabled={donationProcessing}/>
+        {/* 寄付の台詞(donation)は用意してあったのに、画面に吹き出しが無かった(2026-10-27) */}
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="donation" compact/></div>
         <p className="shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
         {/* 並べ替えは合体と同じ「並べ替え＋横に流れるボタン」の形にそろえる(2026-10-05。7つを4列に詰めて総合力だけ2列ぶんの幅だった)。
             右端のぼかしと末尾の余白は合体と同じ(2026-10-27・320で続きがあると気づけなかった) */}
@@ -36840,7 +36867,7 @@ function MasuSoulRankScreen({
           .filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
         return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
           <ScreenHead title="魂格進化" accent="text-sky-200" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="soulRank" compact/></div>
           <ScreenLead>超越後、現在のLv上限まで育ったマスモンを次の魂格へ進化できます。進化しても現在Lvは上がらず、Lv上限だけが100解放されます。</ScreenLead>
           <div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2"><span className="flex items-center gap-1 text-[10px] font-black text-amber-200"><span aria-hidden="true">🏅</span>勇者の証</span><span className="text-[11px] font-mono font-black text-white">所持 {heroProofHave.toLocaleString()}</span></div>
           {renderMonsterSortFilterBar({singleType:true})}
@@ -37093,7 +37120,7 @@ function MasuOfferingScreen({
     const entries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
     return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="お布施" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact/></div>
       {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3">
         <div className="text-[11px] font-black text-violet-200">お布施の使い方</div>
         <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"><li>お布施をするマスモンを選びます。</li><li>「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。</li><li>見積もりを見て「お布施する」を押します。</li></ol>
@@ -39714,8 +39741,10 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef, speciesChallengeBattleRunRef,
 }) {
   return (
-<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div><div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
-{speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
+<div data-champion-screen className="fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div>{/* もらった物の一覧。背の低い画面では見出しと「HOMEへ」を小さくして、ここを広く取る。横向きの背の低い画面では右の列にまとめる
+    (320 は2〜3行、844×390 は1行しか見えなかった。2026-10-27 ダメダシくん) */}
+<div data-champion-rewards className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}</div></div>{/* みゅあの吹き出しは一覧の外に置き、いつも見えるようにする(320 では一覧の下に隠れていた) */}<div data-champion-bubble className="relative z-10 w-full max-w-xs mx-auto mt-2 shrink-0 text-left [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
+{speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50 [@media(max-height:700px)]:py-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:700px)]:py-2.5 [@media(max-height:700px)]:text-base [@media(max-height:700px)]:rounded-2xl [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
   );
 }
 
@@ -40403,6 +40432,42 @@ return(
 
 // ---- part: 71-screen-battle.jsx ----
 // ==== 画面: バトル ====
+//
+// 【横向きで背の低い画面の並べ方】(2026-10-26 社長が案Aを選んだ。docs/progress/battle-landscape/)
+// 縦持ち用の1列(幅=画面の高さ)のままだと、844×390 では敵の絵が潰れ、手札が画面の下に隠れて
+// 「手札と敵を同時に見られない」。横で背の低いときだけ、左に 上の帯・敵の帯・敵の絵と予告・バフ・4枠
+// (タクティクスも横1列)、右に 手札とボタン の2列にする。条件は難易度えらびの2列(#3790)と同じ。
+// 縦画面には効かない(@media の外には何も書かない)。クラシックとタクティクスは同じ組み方。
+// 画面の真ん中に出す札(data-battle-float)は左の列の真ん中へ、列の右端に寄せる札
+// (data-battle-float-right="右からの余白")は左の列の右端へ寄せる(右の手札にかからないように)。
+// 右の列の幅は MFバトルカードの横向き(カード部ブレイブくん)にそろえて、画面の幅の42%・最大420px(844 で約354px)。
+const BATTLE_LANDSCAPE_HAND_W = 'min(42vw, 420px)';
+const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 520px) {
+#root > div[data-mh-portrait-layout="true"]:has([data-battle-speed]) { max-width: none !important; }
+[data-battle-speed] { display: grid !important; grid-template-columns: minmax(0,1fr) ${BATTLE_LANDSCAPE_HAND_W};
+  grid-template-rows: auto auto minmax(0,1fr) auto auto auto; }
+[data-battle-speed] > * { grid-column: 1; }
+[data-battle-speed] > [data-battle-stage-bg] { grid-column: 1 / -1; grid-row: 1 / -1; }
+[data-battle-speed] > [data-battle-header] { grid-row: 1; }
+[data-battle-speed] > [data-enemy-bar] { grid-row: 2; }
+[data-battle-speed] > [data-battle-stage] { grid-row: 3; min-height: 0 !important; overflow: hidden !important; }
+[data-battle-speed] > [data-battle-buffs] { grid-row: 4; }
+[data-battle-speed] > [data-tactics-board-band] { grid-row: 5; padding-top: 2px !important; padding-bottom: 2px !important; }
+[data-battle-speed] > [data-tactics-ex-intro] { grid-row: 6; }
+[data-tactics-board-band] .grid.grid-cols-4, [data-tactics-debug-layout] { height: 112px !important; }
+[data-tactics-debug-layout] { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-template-rows: minmax(0,1fr) !important; }
+[data-battle-speed] > [data-battle-hand] { grid-column: 2; grid-row: 1 / -1; height: auto !important; min-height: 0;
+  border-top: 0 !important; border-left: 1px solid rgba(255,255,255,.14); overflow-x: hidden; overflow-y: auto; }
+[data-battle-hand] > div:first-child { flex-wrap: wrap; row-gap: 4px; margin-bottom: 6px !important; }
+[data-battle-hand] > div:first-child > span:first-child { flex: 0 0 100% !important; }
+[data-battle-hand] > div:last-child { flex: 0 1 auto !important; flex-wrap: wrap !important; overflow: visible !important;
+  align-content: flex-start; justify-content: center; row-gap: 6px; }
+[data-battle-hand] > div:last-child > * { flex: 0 0 31% !important; max-width: 31% !important; height: 116px !important; }
+[data-battle-float] { left: calc((100vw - ${BATTLE_LANDSCAPE_HAND_W}) / 2) !important; }
+[data-battle-float-right] { left: auto !important; transform: none !important; }
+[data-battle-float-right="8"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 8px) !important; }
+[data-battle-float-right="76"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 76px) !important; }
+}`;
 //
 // 【誰が攻撃を食らったか】
 // 枠ごとに何が起きたか(tacticsSlotFx)を、浮かぶ数字だけでなく**枠そのもの**でも出す
@@ -41940,6 +42005,7 @@ function BattleScreen({
   return (
 
       <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-enemy-down={enemyDefeating?'true':undefined} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined} data-fx-auto={autoLoadOn?'watch':undefined}>
+        <style>{BATTLE_LANDSCAPE_CSS}</style>
         {/* 性能計測(デバッグ限定)。デバッグ設定で ON にしたときだけ出る。触っても戦闘の邪魔をしないよう、指は素通りさせる */}
         {perfOn&&tacticsNewLayout&&perfSnap&&(
           <div data-battle-perf-panel className="pointer-events-none fixed left-1 z-[65000] rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold leading-tight text-amber-100" style={{top:'calc(env(safe-area-inset-top) + 2px)'}}>
@@ -42087,7 +42153,7 @@ function BattleScreen({
         )}
         {/* レイドバトルの強化が入ったターンの帯(数秒で消える。操作の邪魔をしない) */}
         {raidGrowth&&raidGrowthBanner&&(
-          <div key={raidGrowthBanner.key} data-raid-growth-banner aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
+          <div key={raidGrowthBanner.key} data-raid-growth-banner data-battle-float aria-live="polite" className="pointer-events-none fixed left-1/2 top-[17%] w-[min(92vw,360px)] rounded-2xl border-2 border-emerald-300/70 bg-slate-950/90 px-3 py-2 text-center" style={{zIndex:60000,transform:'translateX(-50%)',animation:'raidGrowthBanner 3.2s ease-out forwards'}}>
             <div className="text-[13px] font-black text-emerald-300">⬆ {raidGrowth.turn}ターン目 強化！</div>
             <div className="mt-0.5 text-[11px] font-black text-white">味方の全ステータス +{raidGrowth.stepPct}%<span className="text-slate-300">(ここまで合計 +{raidGrowth.statPct}%)</span></div>
             <div className="text-[10px] font-black text-sky-200">自動回復 ライフ{raidGrowth.lifeRate}%・ガッツ{raidGrowth.gutsRate}%</div>
@@ -42112,7 +42178,7 @@ function BattleScreen({
             強化の札が増えて舞台が絵より低くなったときは、safe が上そろえへ戻してくれる
             (中央のままだと上へスクロールできず、頭の「!」や技名が読めなくなる)。
             safe を知らないブラウザは宣言ごと捨てるので、クラスの justify-start が残る */}
-        <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center',...(enemyImageOnlyAttack?{overflow:'visible',zIndex:70}:{})}}>
+        <main data-battle-stage className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center',...(enemyImageOnlyAttack?{overflow:'visible',zIndex:70}:{})}}>
           {/* 敵のまわりのボタンは左の1列にまとめる(2026-09-22 ユーザー指示
               「敵周りのボタンを整理したほうがいい。添付イメージ画像のように左にきれいに並べるなど」)。
               ★もとは左(ステータス・緊急)と右(解析・ログ・魂格効果)に分かれていて、敵の絵を両側から
@@ -42236,7 +42302,7 @@ function BattleScreen({
             {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.raidJackPumpkin?'Pumpkin':enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
               </div>,document.body
             )}
@@ -42244,7 +42310,7 @@ function BattleScreen({
                 「ランダム効果のものが何が発動したかわからない」)。技名の札(上の14%)と重ならないよう、その下へ縦に並べる。
                 押せる場所は塞がない。body へ出すのは技名の札と同じ理由(画面の揺れで位置がずれないように) */}
             {Array.isArray(luckBanners)&&luckBanners.length>0&&ReactDOM.createPortal(
-              <div data-battle-luck-banners className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
+              <div data-battle-luck-banners data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5" style={{top:'21%',zIndex:65001,width:'min(92vw, 360px)'}}>
                 {luckBanners.map(b=>(<div key={b.id} data-battle-luck-banner={b.tone}
                   className={`w-full rounded-2xl border-2 px-3 py-1.5 text-center shadow-[0_4px_20px_rgba(0,0,0,.85)] ${b.tone==='bad'?'bg-slate-800/95 border-slate-300 text-slate-100':b.tone==='enemy'?'bg-violet-800/95 border-violet-200 text-white':'bg-amber-600/95 border-amber-100 text-white'}`}
                   style={{animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
@@ -42254,13 +42320,13 @@ function BattleScreen({
               </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]">☠️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]">必 殺 技</div>
               </div>
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='CHARGE'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
               </div>
@@ -42272,7 +42338,7 @@ function BattleScreen({
                 貫通技準備とかがいいかな？」)。予告の帯には敵ごとの技名(「◯◯の構え」)が
                 出るので、そこへ種別の「構え」を重ねると同じ言葉が2つ並んで読みにくかった */}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='PIERCE_CHARGE'&&(
-              <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
+              <div data-battle-float className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                 <div className="text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]">⚔️</div>
                 <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]">貫 通 技 準 備</div>
               </div>
@@ -42290,7 +42356,7 @@ function BattleScreen({
               // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
               // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
               // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
-              <div className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
+              <div data-battle-float-right="8" className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
                 <div className="mh-enemy-move-hint">
                   <span aria-hidden="true">🏃</span>
                   <span>{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？</span>
@@ -42346,7 +42412,7 @@ function BattleScreen({
                 必殺技の警告・移動の予告と同じこの階層＝丸枠の外なら前面に出る。
                 寄せ先は画面の右端ではなく遊ぶ列(最大600px)の右端にして、広い画面でも列に収める */}
             {enemyNoticeShown&&isMooBoss(enemy?.id)&&(
-              <div data-enemy-notice-moo className="fixed left-1/2 pointer-events-none"
+              <div data-enemy-notice-moo data-battle-float-right="76" className="fixed left-1/2 pointer-events-none"
                 style={{top:'max(112px,16dvh)',transform:'translateX(calc(min(50vw, 300px) - 100% - 76px))',zIndex:focusedCard?5:40}}>
                 {enemyNoticeCard()}
               </div>
@@ -43321,7 +43387,7 @@ function BattleScreen({
         {/* 手札の帯(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
             まっ黒なべた塗りだったので、上から下へわずかに起こし、上端に細い光を引いて
             板が1枚手前にあるように見せる。塗りだけなので描き直しは起きない */}
-        <div className="shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm" style={{height:'clamp(172px,23dvh,196px)',
+        <div data-battle-hand className="shrink-0 p-1 flex flex-col relative border-t border-white/[.08] backdrop-blur-sm" style={{height:'clamp(172px,23dvh,196px)',
           backgroundImage:'linear-gradient(180deg, rgba(20,29,52,.94) 0%, rgba(12,18,34,.97) 52%, rgba(7,11,22,.99) 100%)',
           boxShadow:'inset 0 1px 0 rgba(255,255,255,.07), 0 -10px 28px rgba(0,0,0,.16)'}}>
           <div className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
@@ -51218,7 +51284,8 @@ const cardTauntsOn = (st, p) => (st.taunts || []).filter((t) => t.turn === st.tu
 const cardTauntOk = (st, p, targets, area) => cardTauntsOn(st, p).every((t) => {
   const hits = targets.filter((x) => x.p === t.by);
   if (t.mode === 'not') return !hits.some((x) => x.m === t.m);
-  if (area) return !t.noArea || !hits.some((x) => x.m !== t.m);
+  // 全員に当たる技も、縛った子に当たらないもの(空中だけ・地上だけで外れる)は出せない(2026-10-27 総点検D。文「このモンスターにダメージを与える技しか」)
+  if (area) return hits.some((x) => x.m === t.m) && (!t.noArea || !hits.some((x) => x.m !== t.m));
   return hits.every((x) => x.m === t.m);
 });
 // 合体: 生きている味方2体(a のメイン・b のサブ)で出せる混血の組。混血の子は、もとの種族が無いので材料にならない
@@ -51441,7 +51508,8 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     const re = cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll');
-    if (re) { if (re.kinds.includes(atkCard.kind)) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
+    // 防御でマイナスされない技(技そのもの・渾身を付けたちから技)には、−N・半分・0 の防御の札は出せない(効かないので。社長の答え 2026-10-27・案A。回避されない技の回避の札と同じ扱い)
+    if (re) { if (re.kinds.includes(atkCard.kind) && !cardHasEff(atkCard, 'noBlockReduce') && !fl.attachNoBlockReduce) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
     const rf = cardEff(c, 'reflect');
     if (rf) { if (rf.kinds.includes(atkCard.kind) && !pd.reflect) out.push({ type: 'guard', hand: hi, mon: tgt.m }); return; }
   });
@@ -51594,7 +51662,8 @@ const cardResolveTarget = (db, st) => {
   if (dmg > 0) dmg = Math.max(0, dmg + cardFieldDmgAdd(st, main));
   let reflected = 0;
   if (pd.reflect) {
-    if (pd.reflect.keep) reflected = Math.floor(dmg * pd.reflect.frac);
+    // カウンター(keep): 半分(切り捨て)を返し、残りだけ受ける(5ダメージなら2を返して3を受ける。2026-10-27 社長)
+    if (pd.reflect.keep) { reflected = Math.floor(dmg * pd.reflect.frac); dmg -= reflected; }
     else { reflected = dmg; dmg = 0; }
   }
   if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
@@ -51747,7 +51816,7 @@ const cardApplySpecial = (db, st, p, mi, card, target, act = {}) => {
     if (e.t === 'oppDraw') { const k = cardDrawN(st, cardOther(p), e.n); cardLog(st, `${opp.name}は${k}枚引いた`); }
     if (e.t === 'gutsToDeckShuffle') { const k = me.guts.length; me.deck.push(...me.guts.splice(0)); cardReshuffle(st, p); cardLog(st, `${me.name}はガッツ${k}枚を山札に戻して切った`); }
     if (e.t === 'selfHurt' && tm && tm.safeUntil >= st.turn) cardLog(st, `${tm.name}はダメージを受けない(ぬいぐるみ)`);
-    else if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
+    else if (e.t === 'selfHurt' && tm) { tm.life = Math.max(0, tm.life - e.n); tm.charge = null; /* 溜めはダメージで終わる(はね返し・反動と同じ。2026-10-27 総点検D) */ cardEvent(st, { t: 'hit', p: target.p, m: target.m, dmg: e.n, self: true }); cardLog(st, `${tm.name}のライフが${e.n}減った`); if (tm.life <= 0) { cardKo(st, target.p, target.m); cardCheckWin(st, p); } }
     if (e.t === 'oppGutsLoss') { const k = cardLoseGuts(st, cardOther(p), e.n); cardLog(st, `${opp.name}はガッツを${k}失った`); }
     if (e.t === 'refresh') { const k = me.hand.length; me.discard.push(...me.hand.splice(0)); cardDrawN(st, p, k); cardLog(st, `${me.name}は手札を${k}枚捨てて、引き直した`); }
     if (e.t === 'millOpp') { let k = 0; for (let i = 0; i < e.n && opp.deck.length; i++) { opp.discard.push(opp.deck.pop()); k += 1; } cardLog(st, `${opp.name}の山札を${k}枚捨て札にした`); }
@@ -51890,6 +51959,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.ko) return;
           const d = m.safeUntil >= st.turn ? 0 : burn.n; // ぬいぐるみの子は0
           m.life = Math.max(0, m.life - d);
+          if (d > 0) m.charge = null; // 力をためる・根を張る・静の構えは、ダメージを受けると終わる(2026-10-27 総点検D)
           cardEvent(st, { t: 'hit', p, m: mi, dmg: d, self: true });
           cardLog(st, `灼熱の地: ${m.name}に${d}ダメージ`, { kind: 'hit' });
           if (m.life <= 0) cardKo(st, p, mi);
@@ -51918,7 +51988,12 @@ const cardApplyAction = (db, st0, act) => {
     if (taken.length) cardLog(st, `${st.players[p].name}は${taken.length}枚をガッツにした`);
     st.active = cardOther(p);
     // 歌う: 相手の番を飛ばす(引く・攻撃・ガッツ置きが無い。その番の数だけ進めて、こちらの番へ)
-    if (st.skip === st.active) { st.skip = null; st.turn += 1; cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p; }
+    //   飛ばした番では「攻撃できない」(吠え・吹き飛ばしなど)を使い切らず、次の本当の番(2つ先)まで残す(2026-10-27 社長)
+    if (st.skip === st.active) {
+      st.skip = null; st.turn += 1;
+      st.players[st.active].mons.forEach((m) => { if (m.stunTurn === st.turn) m.stunTurn = st.turn + 2; });
+      cardLog(st, `ターン${st.turn}: ${st.players[st.active].name}の番は飛ばされた`, { kind: 'turn' }); st.active = p;
+    }
     cardBeginTurn(st);
     return st;
   }
@@ -52173,10 +52248,12 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const c = cardOf(db, me.hand[o.hand]);
     let after = dmg;
     if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-    const re = cardEff(c, 'reduce'); if (re && !cardHasEff(main, 'noBlockReduce')) after = Math.max(0, dmg - re.n);
-    if (cardHasEff(c, 'reduceHalf') && !cardHasEff(main, 'noBlockReduce')) after = dmg - Math.floor(dmg / 2);
-    if (cardHasEff(c, 'reduceAll') && !cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
-    const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg : 0;
+    // 防御でマイナスされない技(技そのもの・渾身を付けたちから技)には、−N・半分・0 のどの防御も効かない(2026-10-26 総点検A: −N と半分は渾身を見ていなかった)
+    const noReduce = cardHasEff(main, 'noBlockReduce') || !!(pd.flags || {}).attachNoBlockReduce;
+    const re = cardEff(c, 'reduce'); if (re && !noReduce) after = Math.max(0, dmg - re.n);
+    if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
+    if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0; // 帽子に隠れるなど(前は見ていなかった)
+    const rf = cardEff(c, 'reflect'); if (rf) after = rf.keep ? dmg - Math.floor(dmg * rf.frac) : 0; // カウンターは返した残りだけ受ける
     if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
       const cm = me.mons[o.mon];
       after = target.life <= dmg && cm.life > dmg ? 0 : dmg; // 倒れそうな味方を、硬い子がかばう
@@ -52393,7 +52470,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   momosuke: {  },
   kiki: { easy: -0.9 },
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: -0.05 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
-  dra: { easy: -1.5, normal: -1.5, master: 0.5 },   // MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
+  dra: { easy: -1.5, normal: -1.5, expert: 0.5, master: 0.5 },   // EXPERT はカウンターの直し(半分返して残りを受ける・2026-10-27)で 38% を下回ったので揺らぎを足した(57%)。MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
   atsu: { easy: -1.5, normal: -3, hard: -2.1 },
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
@@ -53644,6 +53721,29 @@ const CARD_VS_CSS = `
 .mh-vs-fade { animation: mhVsFade .3s ease-out both }
 @media (prefers-reduced-motion: reduce) { .mh-vs-foe, .mh-vs-mon-foe, .mh-vs-mon-me, .mh-vs-pop, .mh-vs-fade { animation-duration: .01s } }
 `;
+// 立ち絵を「中身の範囲」(ART_CONTENT_BOXES。tools/image/make-art-content-boxes.js が測る)で枠に収め、下と左右のまんなかをそろえる。
+//   絵の余白と縦横の比が子ごとに違っても、中身の見た目の大きさがそろう(2026-10-27 見回り #3886: みゅあ・ききの横長の絵が
+//   ももすけ・きゅうこの半分ほどに写っていた)。1体ずつ手で寄せる数字は足さない(台帳 #202)。
+//   aspect … 枠の 横÷縦 / spread … 横長の中身は、枠の幅のこの倍まで左右にはみ出してよい(高さが縮みすぎないように)
+//   表に無い絵は、前と同じ object-contain
+// 表のキーは images/ の下の道(images/ を付けると版を打つ道具が ?v= を付けてしまうため)
+const cardVsBoxOf = (src) => (typeof ART_CONTENT_BOXES !== 'undefined' && src ? ART_CONTENT_BOXES[String(src).split('?')[0].replace(/^images\//, '')] || null : null);
+const CardVsArt = ({ src, alt, aspect, spread = 1, className = '', style = {}, ...rest }) => {
+  const box = cardVsBoxOf(src);
+  if (!box) return <img src={src} alt={alt} draggable={false} className={`w-full object-contain object-bottom ${className}`} style={{ aspectRatio: `${aspect}`, ...style }} {...rest}/>;
+  const [x0, y0, x1, y1, a] = box;
+  const fw = Math.max(0.01, x1 - x0), fh = Math.max(0.01, y1 - y0);
+  const ca = (fw * a) / fh; // 中身の 横÷縦
+  // 絵の幅(枠の幅に対する%): 横長の中身は幅で、それ以外は高さで合わせる
+  const wP = ca >= aspect * spread ? (100 * spread) / fw : (100 * a) / (fh * aspect);
+  const hP = (wP * aspect) / a; // 絵の高さ(枠の高さに対する%)
+  return (
+    <div className="relative w-full" style={{ aspectRatio: `${aspect}`, ...style }} {...rest}>
+      <img src={src} alt={alt} draggable={false} className={`absolute max-w-none ${className}`}
+        style={{ width: `${wP}%`, height: `${hP}%`, left: `${50 - (x0 + fw / 2) * wP}%`, top: `${100 - y1 * hP}%` }}/>
+    </div>
+  );
+};
 const CardVsMonsters = ({ db, monsters, side, start, step }) => (
   <div className="flex w-full items-end justify-center gap-1.5">
     {(monsters || []).slice(0, 3).map((no, i) => {
@@ -53652,7 +53752,9 @@ const CardVsMonsters = ({ db, monsters, side, start, step }) => (
       const art = cardMonArt(m);
       return (
         <div key={`${no}-${i}`} data-card-vs-mon={no} className={`${side === 'foe' ? 'mh-vs-mon-foe' : 'mh-vs-mon-me'} flex min-w-0 flex-1 flex-col items-center`} style={{ animationDelay: `${start + i * step}ms`, maxWidth: 140 }}>
-          <img src={art || CARD_IMG(m.img)} alt={m.name} draggable={false} className={`${art ? 'object-contain drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]' : 'rounded-md object-cover'} w-full`} style={{ aspectRatio: art ? '1 / 1' : '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>
+          {art
+            ? <CardVsArt src={art} alt={m.name} aspect={1} spread={1.1} className="drop-shadow-[0_4px_6px_rgba(0,0,0,.7)]" style={{ width: 'min(100%, 19vh, 140px)' }}/>
+            : <img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="w-full rounded-md object-cover" style={{ aspectRatio: '63 / 88', maxHeight: 'min(19vh, 140px)' }}/>}
           <span className="mt-0.5 w-full truncate text-center text-[10px] font-black text-white" style={{ textShadow: '0 1px 2px #000' }}>{m.name}</span>
         </div>
       );
@@ -53685,7 +53787,7 @@ const CardVsIntro = ({ db, intro, onDone, meIcon = null }) => {
           <div className="flex w-full max-w-[420px] items-end gap-2">
             <div className="mh-vs-foe shrink-0" style={{ width: 'min(34vw, 30vh, 150px)' }}>
               {who
-                ? <img src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} draggable={false} className="w-full object-contain object-bottom" style={{ aspectRatio: '3 / 4' }}/>
+                ? <CardVsArt data-card-vs-foe-art src={assistantFullImage(who, (foe.line && foe.line.e) || 'happy')} alt={who.name} aspect={3 / 4}/>
                                 // マルチの相手: プロフィールと同じ部品(フレーム付き)。アイコンの id は絵に直す(字のまま出していた。91 の CardPvpAvatar)
                 : <span data-card-vs-foe-icon className="block aspect-square w-full"><CardPvpAvatar icon={foe.icon} frame={foe.frame} className="h-full w-full"/></span>}
             </div>
@@ -53953,7 +54055,8 @@ const CARD_RULE_PAGES = Object.freeze([
     '技はカードに書いてあるモンスターだけが使える。「全モンスター」のカードは誰でも使える',
     'ガッツが足りない技は使えない。ガッツ0の技はガッツが無くても使える',
     'ブリーダーのカードは、モンスターの攻撃とは別に1ターンに1枚まで',
-    '混血モンスターは、攻撃・特殊はメインの種族の技、防御・回避はサブの種族の技も使える',
+    '混血モンスターは、攻撃・特殊はメインの種族の技、防御・回避はサブの種族の技を使う(メインの種族の防御・回避は使えない)',
+    'サブが「？？？」の混血モンスターは、防御・回避もメインの種族の技を使う',
   ] },
   { id: 'guard', emoji: '🛡️', title: '守り', lines: [
     '攻撃された側は、回避・防御のカードを何枚でも出せる(ガッツが足りる限り)',
@@ -54508,6 +54611,8 @@ const cardGuardBlockReasons = (db, st) => {
     else if (ev && !ev.kinds.includes(atk.kind)) why = `「${c.name}」は${ev.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
     else if (ev && ev.minGuts && pd.cost < ev.minGuts) why = `「${c.name}」はガッツ${ev.minGuts}以上の技にしか使えません`;
     else if (re && !re.kinds.includes(atk.kind)) why = `「${c.name}」は${re.kinds.map((k) => kindName[k] || k).join('・')}にしか使えません`;
+    // 防御でマイナスされない技(技そのもの・渾身つき)には −N・半分・0 の防御は出せない(案A)。はね返す防御は別
+    else if (!cardEff(c, 'reflect') && (cardEff(c, 'reduce') || cardEff(c, 'reduceHalf') || cardEff(c, 'reduceAll')) && (cardHasEff(atk, 'noBlockReduce') || (pd.flags || {}).attachNoBlockReduce)) why = `この攻撃は防御でダメージを減らせません`;
     if (why && !out.includes(why)) out.push(why);
   });
   return out.slice(0, 2);
@@ -54517,18 +54622,51 @@ const CARD_DRAG_THRESHOLD = 10; // 指がこれだけ動いたら「運ぶ」(�
 const CARD_ME = 0;
 const cardDeciderOf = (st) => (st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? 1 - st.first : cardDecider(st));
 
-// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し
+// 長押しで詳しい画面(どのカードでも。5-3)。指を離すまでに 450ms たったら長押し。
+// 2回続けてタップ(CARD_DOUBLE_TAP_MS の内。モンヒロバトルの手札と同じ間・10-core)でも詳しい画面(2026-10-26 社長「ダブルタップでも見られるように」)。
+//   press(no, onTap, opt) の opt:
+//     double … false ならダブルタップを使わない(デッキ編成。1タップで入れる・続けて入れられるを残す。社長の決め)
+//     hold   … true なら1回目のタップを CARD_DOUBLE_TAP_MS 待ってから動かす(押すと技が決まってしまう所。2回目が来たら動かさずに詳しい画面)
+//     undo   … 1回目をすぐ動かす所で、2回目が来たときに1回目を取り消す関数
+//   iPhone の Safari がダブルタップで画面を拡大しないよう、押せるカードには data-card-press を付け、その印にだけ touch-action: manipulation を当てる
+if (typeof document !== 'undefined' && document.head && !document.getElementById('mh-card-press-css')) {
+  const el = document.createElement('style');
+  el.id = 'mh-card-press-css';
+  el.textContent = '[data-card-press]{touch-action:manipulation}';
+  document.head.appendChild(el);
+}
 const useCardLongPress = (onLong, ms = 450) => {
   const timer = useRef(null);
   const fired = useRef(false);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return (no, onTap) => ({
-    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms); },
+  const last = useRef(null);    // 前のタップ { no, at }
+  const pending = useRef(null); // hold で待っている1回目
+  useEffect(() => () => { clearTimeout(timer.current); clearTimeout(pending.current); }, []);
+  return (no, onTap, opt = {}) => ({
+    'data-card-press': true,
+    onPointerDown: () => { fired.current = false; clearTimeout(timer.current); timer.current = setTimeout(() => { fired.current = true; last.current = null; clearTimeout(pending.current); onLong(no); }, ms); },
     onPointerUp: () => clearTimeout(timer.current),
     onPointerLeave: () => clearTimeout(timer.current),
     onPointerCancel: () => clearTimeout(timer.current),
     onContextMenu: (e) => e.preventDefault(),
-    onClick: (e) => { if (fired.current) { fired.current = false; return; } if (onTap) onTap(e); },
+    onClick: (e) => {
+      if (fired.current) { fired.current = false; return; }
+      const now = Date.now();
+      if (opt.double !== false && last.current && last.current.no === no && now - last.current.at < CARD_DOUBLE_TAP_MS) {
+        last.current = null;
+        if (pending.current) { clearTimeout(pending.current); pending.current = null; }
+        else if (opt.undo) opt.undo();
+        onLong(no);
+        return;
+      }
+      last.current = { no, at: now };
+      if (!onTap) return;
+      if (opt.hold && opt.double !== false) {
+        clearTimeout(pending.current);
+        pending.current = setTimeout(() => { pending.current = null; onTap(); }, CARD_DOUBLE_TAP_MS);
+        return;
+      }
+      onTap(e);
+    },
   });
 };
 
@@ -54846,7 +54984,7 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
   );
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return (
-    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
+    <div data-card-mon={`${p}-${m}`} {...(press ? press(mon.no, onTap, { hold: mark === 'target' || mark === 'user' }) : { onClick: onTap })} className={`relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`} style={motion && motion.type === 'attack' ? { zIndex: 40 } : undefined}>
       {opp ? <>{info}{artEl}</> : <>{artEl}{info}</>}
     </div>
   );
@@ -55287,6 +55425,11 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const myTurn = !replay && st.winner === null && decider === CARD_ME;
   // どちらの番か(守りの場面でも、番の持ち主は st.active)。場のふち・上の帯の色に使う
   const turnMe = st.active === CARD_ME;
+  // 上の帯の番。見返しでは「いま見せている手を打ったときの場」で数える(下の帯と同じ。1手目は「はじまり」のまま。2026-10-27 カゲあつくんの見直し)
+  const headSt = replay && replayAt > 0 ? replay.states[replayAt - 1] : st;
+  const headMe = headSt.active === CARD_ME;
+  // 見返しでは助手の吹き出しを出さない(まんなかの記録の箱に重なって読めなかった。2026-10-27 カゲあつくんの見直し)
+  useEffect(() => { if (replay && bubble) setBubble(null); }, [bubble && bubble.key]);
   const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait'
     : st.pendingPray ? 'pray'
@@ -55481,6 +55624,31 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     const mon = el.closest('[data-card-mon]');
     return mon ? mon.getAttribute('data-card-mon') : null;
   };
+  // 手札を2回続けてタップ(CARD_DOUBLE_TAP_MS の内)したら、詳しい画面(社長 2026-10-26)。
+  //   1回目は、選ぶ・ガッツに選ぶ(2回目で元に戻せる)はすぐ動かし、2回目が来たら1回目の前の選び方へ戻す。
+  //   守りの番は、1回押すと守りが決まることがあるので、1回目を待ってから動かす(2回目が来たら動かさない)
+  const handTap = useRef({ last: null, pending: null });
+  useEffect(() => () => clearTimeout(handTap.current.pending), []);
+  const tapHandOrDouble = (i, no) => {
+    const h = handTap.current;
+    const now = Date.now();
+    if (h.last && h.last.i === i && h.last.no === no && now - h.last.at < CARD_DOUBLE_TAP_MS) {
+      const before = h.last.before;
+      h.last = null;
+      if (h.pending) { clearTimeout(h.pending); h.pending = null; }
+      else if (before) { setSel(before.sel); setPicks(before.picks); setHint(before.hint); }
+      setDetail(no);
+      return;
+    }
+    if (mode === 'guard') {
+      h.last = { i, no, at: now, before: null };
+      clearTimeout(h.pending);
+      h.pending = setTimeout(() => { h.pending = null; tapHand(i); }, CARD_DOUBLE_TAP_MS);
+      return;
+    }
+    h.last = { i, no, at: now, before: { sel, picks, hint } };
+    tapHand(i);
+  };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
     // 手札を運ぶ操作を使わない(オプション)ときは、置ける所を作らない(タップと長押しだけ)
@@ -55518,7 +55686,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHand(i);
+      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < CARD_DRAG_THRESHOLD) tapHandOrDouble(i, no);
     };
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
@@ -55669,7 +55837,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           {/* 裏のクイック∞周回(設計書 5-3)。対戦中は帯もポップアップも出さず、ここに小さく「⚔ ◯周目」だけ。止まったら赤くする */}
           {quickRun && <span data-card-battle-quick-run={quickRun.stopped ? 'stopped' : 'live'} aria-label={quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`} className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[10px] font-black ${quickRun.stopped ? 'border-rose-400/70 bg-rose-950/60 text-rose-200' : 'border-fuchsia-300/50 bg-slate-950/60 text-fuchsia-100'}`}>⚔ {quickRun.loops}周目</span>}
           {/* 自分の番は目立つ金色の札、相手の番は落ち着いた色(2026-10-26 ソラシドさん「どっちのターンか分かりにくい」) */}
-          <span data-card-head-turn data-card-head-turn-me={turnMe ? '1' : undefined} className={`min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`} style={JA_WRAP_STYLE}><span className="whitespace-nowrap">ターン {Math.max(1, st.turn)}</span> ・ <span className={`whitespace-nowrap ${turnMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`}>{turnMe ? 'あなたの番' : `${who.name}の番`}</span></span>
+          <span data-card-head-turn data-card-head-turn-me={headMe ? '1' : undefined} className={`min-w-0 text-right ${tiny ? 'text-[11px]' : 'text-[12px]'} font-bold leading-tight text-violet-200`} style={JA_WRAP_STYLE}>{headSt.phase === 'setup' && replay ? <span className="whitespace-nowrap">はじまり</span> : <><span className="whitespace-nowrap">ターン {Math.max(1, headSt.turn)}</span> ・ <span className={`whitespace-nowrap ${headMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`}>{headMe ? 'あなたの番' : `${who.name}の番`}</span></>}</span>
         </span>
       </div>
       {/* 横画面(④): 左に「相手の帯〜自分の帯」、右に「案内〜手札〜下のボタン」。縦のときは2つの箱を display:contents にして、今までと同じ縦の並び */}
@@ -55680,7 +55848,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
         {pvp ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
-        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level]}</small></div>
+        <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
       </div>
       {/* リプレイでは相手の手札も表で見せる(終わったあとなので。2026-10-27 社長)。押すと詳しい画面 */}
@@ -55707,7 +55875,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
             番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
-        {bubble && (
+        {bubble && !replay && (
           <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} className={`${bigCard || turnBanner || guarding ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
             {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
@@ -55814,7 +55982,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           const on = handUsable(i);
           const up = (sel && sel.hand === i) || picks.includes(i) || (setChosen && JSON.parse(setChosen).includes(i));
           return (
-            <div key={`${no}-${i}`} data-card-hand-card={i} onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
+            <div key={`${no}-${i}`} data-card-hand-card={i} data-card-press onPointerDown={(e) => handDown(e, i, no)} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }} className={`flex w-[19%] ${tiny ? (boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]') : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`} data-card-tutor-focus={tutorial && tutFocus.hand.includes(i) ? true : undefined}>
               <img src={CARD_IMG(c ? c.img : no)} alt={c ? c.name : no} draggable={false} style={{ WebkitUserDrag: 'none' }} className={`w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`}/>
               {/* 小さい段(tiny)は名前が2行になることがあるので、字の行間と上下の余白を詰めて、下のボタンを画面に残す(320×568 の守りの番) */}
               <div className={`mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`}>
@@ -56517,7 +56685,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       if (log && log.id === game.key) {
         cpuLogRef.current = null;
         const rec = cardReplayFromCpu(db, { id: `c${log.id}`, at: Date.now(), myDeck: log.decks[0], cpuDeck: log.decks[1], seed: log.seed, first: log.first, history: log.acts,
-          foe: { name: log.foeName, who: game.who, deckName: log.deckName }, outcome, reason: '' });
+          foe: { name: log.foeName, who: game.who, deckName: log.deckName }, outcome, reason: '', level: game.level });
         if (rec && await cardReplaySave(rec)) replayId = rec.id;
       }
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId });
@@ -56860,7 +57028,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
               <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
               <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{CARD_LEVEL_LABEL[lv]}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
             </table>
-            <p className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この記録ができてからのぶんです')}</p>
+            {/* 難易度別は 2026-10-24 から数えている。それより前から遊んでいて、合計と合わない人にだけ断る(はじめての人には出さない) */}
+            {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
@@ -56869,7 +57038,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <div key={label} className="rounded-xl bg-black/30 py-1.5"><small className="block text-[10px] font-bold text-slate-400">{label}</small><b className="text-[16px] font-black text-amber-200">{v}</b><small className="text-[10px] font-bold text-slate-400">{u}</small></div>
               ))}
             </div>
-            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、公開してからのふつうの対戦だけです')}</p>
+            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
           </div>
         </div>
       </div>
@@ -57164,7 +57333,7 @@ const CardDeckTile = ({ db, no, inDeck = 0, owned = 0, dim = false, press, onTap
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
   const name = c ? c.name : m ? m.name : no;
   return (
-    <button type="button" data-card-deck-tile={no} {...press(no, onTap)} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
+    <button type="button" data-card-deck-tile={no} {...press(no, onTap, { double: false })} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${dim ? 'opacity-40' : ''} ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
       {/* 「入/持」の札は絵の右下(カードの名前は絵の上にあるので、上に置くと名前が隠れた。2026-10-24 改善部の点検 V5) */}
       <span className="relative block w-full">
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
@@ -57182,6 +57351,7 @@ const CARD_DECK_VIEWS = Object.freeze([{ id: 'mon', label: 'モンスター' }, 
 const CARD_DECK_SORTS = Object.freeze([{ id: 'kind', label: '種類順' }, { id: 'guts', label: 'ガッツ順' }, { id: 'no', label: '番号順' }]);
 // 選ぶ場所の1枚: 絵(押すと1枚入れる・長押しで詳しく)と、下に「− 入れた/入れられる ＋」
 // onDetail … 名前の右の「i」を押したときに詳しい画面を開く(長押しに気づかない人のため。2026-10-26)
+// デッキ編成はダブルタップを使わない(続けて押すと続けて入れる。2026-10-26 社長「デッキ編成は詳細ボタンを作る」)
 // unusable … デッキの3体のだれも使えない技(混血のメイン・サブの直しで、前に組んだデッキに残ることがある)。保存の中身は変えず、帯で見せるだけ
 const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemove, onDetail = null, unusable = false }) => {
   const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no);
@@ -57189,7 +57359,7 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
   return (
     <div data-card-deck-pick={no} className={`relative flex min-w-0 flex-col rounded-lg p-0.5 ${inDeck > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-300/70' : 'bg-white/5'}`}>
       {unusable && <span data-card-deck-unusable-tag={no} className="pointer-events-none absolute inset-x-0.5 top-[38%] z-[1] rounded-sm bg-slate-950/85 py-0.5 text-center text-[10px] font-black leading-tight text-rose-200">このデッキの子は使えない</span>}
-      <button type="button" data-card-deck-tile={no} {...press(no, onAdd)} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
+      <button type="button" data-card-deck-tile={no} {...press(no, onAdd, { double: false })} className={`block w-full active:scale-95 ${(!canAdd && inDeck === 0) || unusable ? 'opacity-45' : ''}`} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} aria-label={`${name}を1枚入れる`}>
         <img src={CARD_IMG(c ? c.img : m ? m.img : no)} alt={name} draggable={false} onDragStart={(e) => e.preventDefault()} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
       </button>
       {/* 名前の行の右はしに「i」(カードの絵の上に置くと、右上の地上・空中の札に重なった) */}
@@ -57313,7 +57483,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
                 const m = no ? cardMonsterOf(db, no) : null;
                 const size = short ? { maxWidth: 'min(52px, 6vh)' } : undefined;
                 return m
-                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no))} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
+                  ? <button key={i} type="button" data-card-deck-mon={i} {...press(no, () => removeOne(no), { double: false })} aria-label={`${m.name}を外す`} className="relative w-[15%] max-w-[52px] active:scale-95 landscape:max-w-[40px]" style={size}><img src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="aspect-[5/7] w-full rounded-[5px] object-cover"/><span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-600 text-[13px] font-black leading-none text-white shadow">−</span></button>
                   : <button key={i} type="button" data-card-deck-mon={i} onClick={() => setView('mon')} style={size} className="flex aspect-[5/7] w-[15%] max-w-[52px] items-center justify-center rounded-[5px] border-2 border-dashed border-white/30 text-[18px] text-white/50 landscape:max-w-[40px]">＋</button>;
               })}
               <div className="min-w-0 flex-1 text-right">
@@ -58609,6 +58779,8 @@ const cardPvpCleanAct = (raw) => {
   if (raw.split !== undefined) { if (!Array.isArray(raw.split) || raw.split.length !== 3) return null; act.split = raw.split.map((x) => cardPvpInt(x, 30)); if (act.split.some((x) => x === null)) return null; }
   // 合体の組(メインを出す子・サブを出す子・出る混血)
   if (raw.fuse !== undefined) { const f = raw.fuse || {}; const a = cardPvpInt(f.a, 2), b = cardPvpInt(f.b, 2); if (a === null || b === null || typeof f.no !== 'string' || !/^C-[0-9A-Z-]{1,8}$/.test(f.no)) return null; act.fuse = { a, b, no: f.no }; }
+  // カード投げ(169): 捨てる手札の番号。落とすと、受ける側で手が合わずにはねて試合が止まった(2026-10-27 総点検D)。0枚([])も手の一部
+  if (raw.toss !== undefined) { if (!Array.isArray(raw.toss)) return null; act.toss = raw.toss.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.toss.some((i) => i === null)) return null; }
   if (raw.form !== undefined) { if (raw.form !== 'air' && raw.form !== 'ground') return null; act.form = raw.form; } // 変形・トランスフォーム
   if (raw.bind !== undefined && raw.bind !== null) { if (typeof raw.bind !== 'string' || !raw.bind || raw.bind.length > 16) return null; act.bind = raw.bind; }
   return act;
@@ -58628,7 +58800,9 @@ const cardPvpCleanMessage = (raw) => {
       // デッキ名(対戦開始の画面に出すだけ。2026-10-26 で足した項目。古い版は送らないので null)
       dn: typeof raw.dn === 'string' ? (rhythmMultiText(raw.dn, 30) || null) : null,
       // 何回目の試合か(「もう1戦」。2026-10-26 で足した項目。古い版は送らないので 0)
-      rd: cardPvpInt(raw.rd, 1000) || 0 };
+      rd: cardPvpInt(raw.rd, 1000) || 0,
+      // 観戦している人の数(ホストが数えて相手へ渡す。2026-10-27 で足した項目。古い版は送らないので 0)
+      w: cardPvpInt(raw.w, 999) || 0 };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -58941,6 +59115,9 @@ const CardPvpInviteNotice = ({ enabled = false, busy = false, onAccept }) => {
   );
 };
 
+// 観戦の受け持ち(94-card-spectate.jsx の CARD_WATCH_HOST)。無い環境では何もしない物
+const CARD_PVP_WATCH_NONE = Object.freeze({ start: () => {}, push: () => {}, discard: () => {}, tick: () => {}, end: () => {}, stop: () => {}, eyes: () => 0 });
+const cardPvpWatchHost = () => (typeof CARD_WATCH_HOST !== 'undefined' ? CARD_WATCH_HOST : CARD_PVP_WATCH_NONE);
 // 部屋の状態は React の外に置く(対戦の画面へ行って戻っても、部屋は切れない。モンヒロビートの RHYTHM_MULTI と同じ)
 const CARD_PVP = (() => {
   const listeners = new Set();
@@ -58960,7 +59137,9 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0 });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0 });
+  // 観戦(94-card-spectate.jsx)。ホストだけが観戦の通り道へ流す。部品が無い環境では何もしない
+  const watchPush = (by, act, reveal, st) => { if (isHost()) cardPvpWatchHost().push({ by, act, reveal, turn: st.turn, d: [st.players[0].discard, st.players[1].discard] }); };
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
   const sendOpen = () => send({ t: 'open', seed: s.seed, salt: s.salt, mons: s.deck.monsters, cards: s.deck.cards, match: s.match || '' });
   // ホストが、2人そろったら先攻・後攻のくじを引く(hb が届いたとき・もう1戦で回を進めたとき)
@@ -58989,6 +59168,7 @@ const CARD_PVP = (() => {
     alive = false;
     if (socket) { try { socket.close(); } catch (_) { /* 閉じている */ } } socket = null;
     closeLobby();
+    cardPvpWatchHost().stop();
   };
   // 抜けた人は、少しのあいだ部屋に入れない(試合の途中で部屋を出た・アプリを閉じたとき)
   const penalize = () => { try { void storeSet(CARD_PVP_PENALTY_KEY, Date.now() + CARD_PVP_PENALTY_MS, false); } catch (_) { /* 保存できなくても続ける */ } };
@@ -58999,6 +59179,11 @@ const CARD_PVP = (() => {
     const first = (iHost === msg.hostFirst) ? 0 : 1;
     const st = cardPvpNewGame(CARD_BATTLE_DATA, { myDeck: s.deck, mySeed: s.seed, foeMonsters: s.foe.mons, foeCount: s.foe.count || CARD_BATTLE_DECK_SIZE, first, names: ['あなた', s.foe.name || 'あいて'] });
     closeLobby();
+    // 観戦の通り道を開く(ホストだけ)。観戦の見え方 = ホストの見え方(ホスト=0)
+    if (iHost) {
+      const person = (x, mons, count) => ({ name: x.name, icon: x.icon, fr: x.fr || null, bid: x.bid || null, dn: x.dn || null, mons, count });
+      cardPvpWatchHost().start({ p: [person(s.me, s.deck.monsters, s.deck.cards.length), person(s.foe, s.foe.mons, s.foe.count || CARD_BATTLE_DECK_SIZE)], first, mode: s.mode === 'free' ? 'free' : 'private' }, msg.match);
+    }
     set({ phase: 'playing', match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂', frame: s.foe.fr || null, deckName: s.foe.dn || null } } });
   };
   const deliver = () => {
@@ -59009,6 +59194,7 @@ const CARD_PVP = (() => {
       const next = board.onAct(msg);
       if (!next) { set({ inbox, broken: '相手の手がルールに合いませんでした。この試合は続けられません' }); return; }
       s = { ...s, inbox, theirSeq: msg.seq, history: [...s.history, { by: 1, act: cardPvpFlip(msg.act), reveal: msg.reveal }] };
+      watchPush(1, cardPvpFlip(msg.act), msg.reveal, next);
       send({ t: 'ack', seq: msg.seq, discard: next.players[0].discard });
       emit();
     }
@@ -59043,7 +59229,7 @@ const CARD_PVP = (() => {
       // もう1戦: 相手がもう次の回へ進んでいる(こちらの「もう1戦」が届いて、相手が先に切りかえた)なら、その hb を相手の同意として追いつく
       if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); return; }
       const sameRound = (msg.rd || 0) === (s.round || 0); // 前の回の hb(届くのが遅れた分)の封は使わない
-      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: sameRound ? msg.seal : (s.foe && s.foe.seal) || null, bid: msg.bid, dn: msg.dn || null, seen: now };
+      const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: sameRound ? msg.seal : (s.foe && s.foe.seal) || null, bid: msg.bid, dn: msg.dn || null, w: msg.w || 0, seen: now };
       if (sameRound && s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
       s = { ...s, foe: { ...(s.foe || {}), ...foe } };
       maybeStart();
@@ -59063,6 +59249,7 @@ const CARD_PVP = (() => {
     if (msg.t === 'ack') {
       s = { ...s, outbox: s.outbox.filter((m) => m.seq > msg.seq) };
       if (msg.discard && board) board.onDiscard(msg.discard);
+      if (msg.discard && isHost()) cardPvpWatchHost().discard(1, msg.discard);
       emit();
       return;
     }
@@ -59148,9 +59335,12 @@ const CARD_PVP = (() => {
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
       s.outbox.forEach((m) => send(m)); // 「受け取った」が来ていない手は送り直す
       if (s.phase === 'over') sendOpen();
+      if (inGame() && isHost()) cardPvpWatchHost().tick();
       if (s.phase === 'over' && s.again) send({ t: 'again', rd: s.again.rd, seal: s.again.seal });
       // 相手から何も届かないまま CARD_PVP_ALIVE_MS が過ぎたら、抜けた扱い(こちらの電波が切れているあいだは数えない)
       if (s.phase === 'playing' && s.foe && alive && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) forceEnd('foeLeft');
+      // 結果のあとも同じ: bye が届かないまま相手が消えたら、部屋を出たとみる(「もう1戦」を待ち続けない。2026-10-27 部長)
+      if (s.phase === 'over' && s.foe && alive && !s.foeGone && Date.now() - s.foe.seen > CARD_PVP_ALIVE_MS) set({ foeGone: true, foeAgain: null });
     }, CARD_PVP_HEARTBEAT_MS);
   };
   // iPhone でアプリを切り替えて戻ってきたら、すぐにつなぎ直す / タブを閉じるときは「抜けます」を送る
@@ -59177,19 +59367,24 @@ const CARD_PVP = (() => {
       if (!s || s.phase !== 'playing') return;
       const msg = { t: 'act', match: s.match, seq: s.mySeq + 1, act, reveal: cardPvpRevealOf(prev, act), discard: next.players[0].discard };
       s = { ...s, mySeq: msg.seq, outbox: [...s.outbox, msg], history: [...s.history, { by: 0, act, reveal: {} }], timeouts: s.autoActing ? s.timeouts : 0 };
+      watchPush(0, act, msg.reveal, next);
       send(msg);
       emit();
     },
     // 持ち時間(useCardPvpClock から)。使い切った回を数え、3回続けたら負け
     timedOut: () => { if (!s || s.phase !== 'playing') return 0; s = { ...s, timeouts: s.timeouts + 1 }; emit(); return s.timeouts; },
     timeoutLose: () => { if (!s || s.phase !== 'playing') return; send({ t: 'timeout' }); forceEnd('timeout'); },
-    foeStalled: () => forceEnd('foeTimeout'),
+    // 相手の持ち時間が過ぎても手が来ない。相手からしばらく何も届いていなければ、画面を閉じて抜けたとみる(閉じたときの bye が届かないことがある。
+    //   2026-10-27 部長: 遊ぶ人から見ると「相手が抜けた」なのに「相手の時間切れ」と出ていた。報酬は同じ)
+    foeStalled: () => forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout'),
     auto: (fn) => { if (!s) return fn(); s.autoActing = true; try { return fn(); } finally { s.autoActing = false; } },
     chat: (i) => {
       if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
       s = { ...s, chatAt: Date.now() }; send({ t: 'chat', i }); return true;
     },
     alive: () => alive,
+    // 観戦している人の数(ホストは自分で数え、相手はホストの hb の w を読む)
+    eyes: () => (!s || !inGame() ? 0 : isHost() ? cardPvpWatchHost().eyes() : (s.foe && s.foe.w) || 0),
     surrender: () => { if (s && s.phase === 'playing') send({ t: 'surrender' }); },
     // 決着したとき(対戦の画面から)。封を開けて、相手の封を待つ。相手が抜けたときは確かめない(相手の封は届かない)
     finish: (outcome, st) => {
@@ -59197,6 +59392,7 @@ const CARD_PVP = (() => {
       const label = { win: '勝ち', lose: '負け', surrender: '投了', foeSurrender: '相手の投了', foeLeft: '相手が抜けた', timeout: '時間切れ', foeTimeout: '相手の時間切れ' }[outcome] || '';
       const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
       const forced = !['win', 'lose'].includes(outcome); // 投了・抜けた・時間切れで終わった(なぞり直しで勝ち負けまでは比べない)
+      if (isHost()) cardPvpWatchHost().end(reward === 'win' ? 0 : 1, label);
       set({ phase: 'over', result: { outcome: reward === 'win' ? 'win' : 'lose', reward, forced, reason: label, facts: cardResultFacts(st, CARD_ME), verify: outcome === 'foeLeft' ? 'skip' : 'wait', why: '', rewarded: false } });
       sendOpen();
       void tryVerify();
@@ -59293,6 +59489,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const [invited, setInvited] = useState({});
   const [inviteNext, setInviteNext] = useState('');   // 入口で選んだ相手。部屋ができて合言葉が出たら送る
   const [sentRows, setSentRows] = useState({});       // 送った招待の、表の今のようす(断られたかを見る)
+  // 観戦(94-card-spectate.jsx): 「観戦する」で対戦中のフレンドの一覧を開き、「見る」で観戦の画面へ
+  const [watchOpen, setWatchOpen] = useState(false);
+  const [watch, setWatch] = useState(() => CARD_WATCH.get());
+  useEffect(() => CARD_WATCH.subscribe(setWatch), []);
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -59376,12 +59576,15 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); if (typeof cardPvpHistoryBegin === 'function' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true))) cardPvpHistoryBegin(room.match, room.me && room.me.bid); } }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
-  const back = () => { CARD_PVP.leave(); onBack(); };
+  const back = () => { CARD_PVP.leave(); CARD_WATCH.leave(); onBack(); };
   const r = room.result;
+  if (watch.phase !== 'idle' && room.phase === 'idle') return <CardPvpWatchScreen/>;
   // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったビートP・クイック周回・いまのビートP) ----
   // ★立ち絵の横は、助手の台詞ではなく結果の文(マルチ対戦の結果の台詞は、まだ作っていない。台詞は社長が先に読む決まり)
   if (historyOpen && room.phase === 'idle' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setHistoryOpen(false)} onOpenReplay={onOpenReplay} replayHas={replayHas} meIcon={meIcon} meName={profile.name}/>;
   if (room.phase === 'over' && r) {
+    // 「もう1戦」を出さない試合: 相手が部屋を出た・抜けた・時間切れ(相手がもういない・離れているので、待ち続けてしまう)
+    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -59432,10 +59635,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             </>)}
           </div>
         </div>
-        {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けたときは出さない */}
+        {/* もう1戦(同じ相手と同じ部屋で。2026-10-26 社長「全部入れる」)。2人とも押したら始まる。相手が部屋を出た・抜けた・時間切れのときは出さない(2026-10-27 部長) */}
         {/* 上の段に「もう1戦」、下の段に「この対戦を見る」「部屋を出る」を並べる(320px でも3つが詰まらないように) */}
         <div className={`${SCREEN_FOOTER_CLASS} flex flex-col gap-2`}>
-          {!room.foeGone && r.reason !== '相手が抜けた' && (
+          {!noAgain && (
             <button type="button" data-card-pvp-again={room.again ? 'waiting' : room.foeAgain ? 'foe' : 'ready'} disabled={!!room.again} className={`${btn} mh-button-primary`}
               onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.again(); }}>
               {room.again ? '相手を待っています…' : room.foeAgain ? 'もう1戦(相手が待っています)' : 'もう1戦'}
@@ -59444,7 +59647,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className="flex gap-2">
           {r.replay && onOpenReplay && <button type="button" data-card-pvp-replay className={`${btn} mh-button-secondary`} onClick={() => { Audio_.fgSe.tap(); onOpenReplay(r.replay); }}>この対戦を見る</button>}
           {room.foeGone && <p data-card-pvp-foe-gone className="flex-1 self-center text-center text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('相手は部屋を出ました')}</p>}
-          <button type="button" data-card-pvp-leave className={`${btn} ${room.foeGone || r.reason === '相手が抜けた' ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
+          <button type="button" data-card-pvp-leave className={`${btn} ${noAgain ? 'mh-button-primary' : 'border border-white/15 bg-slate-900 text-slate-100'}`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); }}>部屋を出る</button>
           </div>
         </div>
       </div>
@@ -59492,6 +59695,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               ))}
             </div>
           )}
+          {/* 観戦(2026-10-27 社長「マルチの観戦機能」→「だれの対戦でも見られる」)。フレンドの対戦を先に並べる。デッキが無くても見られる */}
+          <button type="button" data-card-watch-open className={`${btn} border border-violet-300/40 bg-slate-900 text-violet-100`}
+            onClick={() => { Audio_.fgSe.tap(); setWatchOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{watchOpen ? '観戦を閉じる' : 'マルチ対戦を観戦する'}</button>
+          {watchOpen && <CardPvpWatchList roster={roster || []}/>}
           <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
             <p className="mb-2 text-[13px] font-bold text-slate-300">フレンドの合言葉で入る</p>
             <div className="flex gap-2">
@@ -59610,7 +59817,7 @@ const useCardPvpClock = (pvp, st, step) => {
   const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   // 時計を数え直した瞬間は now が少し古く、61秒と出ていた。持ち時間を超えて出さない
   return { left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)), mine: decider === 0, timeouts: room.timeouts, offline: room.offline,
-    foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0 };
+    foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0, eyes: pvp ? CARD_PVP.eyes() : 0 };
 };
 // 上の帯のまんなか: 持ち時間
 const CardPvpStatus = ({ clock }) => (
@@ -59618,6 +59825,8 @@ const CardPvpStatus = ({ clock }) => (
     <span data-card-pvp-clock={clock.mine ? 'mine' : 'foe'} className={`rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? (clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100') : 'bg-white/10 text-slate-200'}`}>
       {clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`}{clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''}
     </span>
+    {/* 観戦している人の数(94-card-spectate.jsx)。いないときは出さない */}
+    {clock.eyes > 0 && <span data-card-pvp-eyes={clock.eyes} className="ml-1 rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums" aria-label={`${clock.eyes}人が観戦しています`}>👀 {clock.eyes}</span>}
   </>
 );
 // 電波が途切れたときの知らせ。上の帯のすぐ下に1行で出し、場を少し下げる(重ねると、相手の帯や記録の文字を隠す。カゲあつくん)
@@ -59977,7 +60186,10 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 // ルールの版。82 のルール(cardApplyAction の結果)を変えたら上げる。上げ忘れても、指紋が合わなくなった所で止まる
 //   2 → 3: 必殺技の応酬・封印でカード投げとボンバなどの出せる手・ガッツにする手札の番号の確かめ(#3821)
 //   3 → 4: ドレインは実際に減ったライフだけ回復(2026-10-27)
-const CARD_REPLAY_RULES = 4; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン
+//   4 → 5: 防御でマイナスされない技には −N・半分・0 の防御の札を出せない(社長の答え 案A・2026-10-27)
+//   5 → 6: カウンターは半分を返して残りを受ける・歌うで飛ばした番では「攻撃できない」を使い切らない(2026-10-27 社長)
+//   6 → 7: 挑発・レロレロのあと、挑発した子に当たらない全員攻撃は出せない・冬虫散と灼熱の地のダメージでも溜めが終わる(総点検D・2026-10-27)
+const CARD_REPLAY_RULES = 7; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -60046,6 +60258,8 @@ const cardReplayNormalizeOne = (raw) => {
     fav: raw.fav === true,
     // 最後の番(一覧の「◯番まで」。2026-10-27 に足した項目。前の記録には無いので null)
     turn: Number.isInteger(raw.turn) && raw.turn >= 0 && raw.turn < 10000 ? raw.turn : null,
+    // 助手と対戦の難易度(2026-10-27 に足した項目。前の記録には無いので null。見返しでは「助手と対戦」とだけ出す)
+    level: typeof raw.level === 'string' && /^[a-z]{3,12}$/.test(raw.level) ? raw.level : null,
   };
 };
 // 保存の全体 { v:1, list:[記録…](新しい順) }。壊れていたら空・壊れた1件は捨てる・同じ id は前の1件だけ
@@ -60145,9 +60359,19 @@ const cardReplayCaption = (states, i) => {
   return lines.filter((l) => l.kind !== 'turn').map((l) => l.text).filter(Boolean).slice(-2).join(' / ');
 };
 
+// ログに一言が無い手(攻撃おわり・ガッツにしない・守らない など)の文
+const cardReplayActText = (type, name) => {
+  if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'pass') return `${name}は守らなかった`;
+  if (type === 'reveal') return `${name}は手札を見せた`;
+  if (type === 'pray') return `${name}はおいのりをした`;
+  // ガッツにした手はログに一言が出るので、ここへ来るのはガッツにしなかったとき
+  if (type === 'guts' || type === 'setupGuts') return `${name}は${type === 'setupGuts' ? '始める前に' : ''}ガッツにしなかった`;
+  return '';
+};
 // 記録を作る。指紋は、いまのルールでなぞり直して作る(途中で当たらなければ、記録しない)
 // history … [{ by, act(自分の見え方) }]。seeds … マルチは [自分, 相手]、助手と対戦は [種, 0]
-const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe, outcome, reason }) => {
+const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe, outcome, reason, level = null }) => {
   const rec = {
     v: 1, id: String(match || ''), kind, at: at || Date.now(), rules: CARD_REPLAY_RULES, first,
     names: ['あなた', (foe && foe.name) || 'あいて'],
@@ -60156,7 +60380,7 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
     decks: decks.map((d) => ({ monsters: d.monsters.slice(), cards: d.cards.slice() })),
     seeds: seeds.map((n) => n >>> 0),
     acts: (history || []).map((e) => [e.by, e.act]),
-    prints: '', fav: false,
+    prints: '', fav: false, level,
   };
   const one = cardReplayNormalizeOne(rec);
   if (!one) return null;
@@ -60170,8 +60394,8 @@ const cardReplayMake = (db, { kind, match, at, decks, seeds, first, history, foe
 const cardReplayFromPvp = (db, { match, at, myDeck, mySeed, foeDeck, foeSeed, first, history, foe, outcome, reason }) => cardReplayMake(db, {
   kind: 'pvp', match, at, decks: [myDeck, foeDeck], seeds: [mySeed, foeSeed], first, history, foe, outcome, reason });
 // 助手と対戦から(84 の CardBattleScreen で、結果を書いたあと)。foe.who … 助手の id
-const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, foe, outcome, reason }) => cardReplayMake(db, {
-  kind: 'cpu', match: id, at, decks: [myDeck, cpuDeck], seeds: [seed, 0], first, history, foe, outcome, reason });
+const cardReplayFromCpu = (db, { id, at, myDeck, cpuDeck, seed, first, history, foe, outcome, reason, level = null }) => cardReplayMake(db, {
+  kind: 'cpu', match: id, at, decks: [myDeck, cpuDeck], seeds: [seed, 0], first, history, foe, outcome, reason, level });
 
 // ---- 保存(端末の中だけ) ----
 // 取ってある試合の番号の控え(履歴の画面の行ごとに、すぐ答えるため)。読み込み・書き込みのたびに作り直す
@@ -60243,8 +60467,10 @@ const cardReplayGameOf = (db, rec) => {
   const built = cardReplayBuild(db, rec);
   if (!built.states.length) return null;
   return {
-    key: `replay-${rec.id}-${Date.now()}`, st: built.states[0], who: rec.kind === 'cpu' && rec.foe.who ? rec.foe.who : 'pvp', level: 'normal',
+    key: `replay-${rec.id}-${Date.now()}`, st: built.states[0], who: rec.kind === 'cpu' && rec.foe.who ? rec.foe.who : 'pvp', level: rec.level,
+    // by … 1手ごとの、その手を打った人(0 = あなた)。下の帯は「その手を打った人・打ったときの番」で書く(動いたあとの場の番では書かない)
     replay: { id: rec.id, kind: rec.kind, states: built.states, stop: built.stop, total: rec.acts.length, turns: cardReplayTurnStarts(built.states),
+      by: rec.acts.map((a) => a[0]), types: rec.acts.map((a) => a[1].type),
       foe: { name: rec.foe.name, icon: rec.foe.icon || '🙂', frame: rec.foe.frame, deckName: rec.foe.deckName } },
   };
 };
@@ -60267,13 +60493,18 @@ const CardReplayBar = ({ replay, at, onSeek }) => {
     return () => clearTimeout(t);
   }, [auto, at, speed]);
   const st = replay.states[at];
-  const caption = cardReplayCaption(replay.states, at);
+  const prev = at > 0 ? replay.states[at - 1] : null;
+  const by = at > 0 && replay.by ? replay.by[at - 1] : null;
+  const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
+  // その手を打ったときの番(動いたあとの場ではなく、手を打つ前の場で数える)
+  const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `${prev.turn}番目の番` : 'はじまり'}・${byName}`;
+  const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
   const btn = 'mh-button mh-button-secondary min-h-[40px] flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40';
   const go = (n) => { Audio_.fgSe.tap(); onSeek(Math.max(0, Math.min(last, n))); };
   return (
     <div data-card-replay-bar className="pointer-events-auto w-full rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 shadow-lg">
       <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-sky-100">
-        <span data-card-replay-turn>{st && st.turn >= 1 ? `${st.turn}番目の番・${st.active === 0 ? 'あなた' : replay.foe.name}` : 'はじまり'}</span>
+        <span data-card-replay-turn data-card-replay-by={by === null ? undefined : by}>{label}</span>
         <span data-card-replay-step className="text-slate-300">{at}/{replay.total}手</span>
       </div>
       <div data-card-replay-caption className="mt-0.5 min-h-[16px] break-words text-[11px] font-bold leading-snug text-white">{caption || ' '}</div>
@@ -60353,6 +60584,464 @@ const CardReplayList = ({ onOpen, onBack }) => {
   );
 };
 
+// ---- part: 94-card-spectate.jsx ----
+// ===== MFバトルカード: マルチ対戦の観戦 =====
+// 2026-10-27 社長「ほかにはマルチの観戦機能とか」→ 観戦は「全部だれでも見られる」・見る人に手札は届かない(台帳)。担当はカード部ナガメくん。
+// 案: docs/progress/card-multi-plus/README.md の「3. 観戦」(ツナグくん)
+//
+// 作り
+//   ・対戦の部屋(realtime:mhc-room-<合言葉>)とは別の通り道 realtime:mhc-watch-<試合の番号> を使う。見る人は合言葉を知らないので、対戦の部屋へ手を送り込めない
+//   ・流すのは対戦の「ホスト」(91 の isHost)だけ。ホストの見え方は、そのまま観戦の見え方(ホスト=0・相手=1)。相手は何も増えない(古い版でもよい)
+//   ・流す物は「みんなに見えている物」だけ: 手(使った札の番号=reveal)・捨て札の並び。手札・山札・ガッツの中身・封(山札の切り方)は流さない
+//     ホストの端末の場(st)そのものは送らない(場の記録の文に、引いた札の名前などが入ることがあるため)
+//   ・見る人の端末では、両方の手札と山札を「仮の札」(CARD_PVP_HIDDEN)にした場を作り、届いた手を最初から当ててなぞる。だから手札は仕組みの上で届かない
+//   ・途中から見る人は、はじめからの手をまとめてもらってなぞり、いまの場面から見始める
+//   ・いま対戦している試合の一覧は、ホストが10秒おきに realtime:mhc-live へ知らせる(表は要らない)
+//   ・見る人は4秒おきに「見ています」を送る。ホストは数えて、2人の画面に「👀 3」と出す(相手へは部屋の hb の w で渡す)。見る人からは、ほかに何も送れない
+//   ・保存は何もしない
+
+const CARD_WATCH_TOPIC = 'realtime:mhc-watch-';
+const CARD_WATCH_LIVE_TOPIC = 'realtime:mhc-live';
+const CARD_WATCH_MAX = 30;                // 1試合を見られる人数の上限(対戦の2人を重くしない)
+const CARD_WATCH_EYE_MS = 4000;           // 見る人が「見ています」を送る間
+const CARD_WATCH_EYE_FRESH_MS = 12000;    // これより古い「見ています」は数えない
+const CARD_WATCH_LIVE_MS = 10000;         // ホストが「対戦中」を知らせる間
+const CARD_WATCH_LIVE_FRESH_MS = 25000;   // これより古い「対戦中」は一覧から消す
+const CARD_WATCH_LOG_MAX = 1500;          // 1試合の手の数の上限(これを超えたら流さない)
+const CARD_WATCH_LOG_CHUNK = 150;         // 途中から見る人へ、1回に渡す手の数
+const CARD_WATCH_QUIET_MS = 20000;        // ホストからこれだけ何も届かなければ「届かなくなりました」
+
+// ---- 純粋な計算(ここから下の UI と通信を使わない。tools/card/card-pvp-watch-check.js が node で確かめる) ----
+
+// 見る人の場の始まり。両方とも、モンスターだけが表で、技カードは全部「仮の札」
+// meta … { p:[{ name, mons, count }, …], first }(観戦の見え方)
+const cardWatchNewGame = (db, meta) => cardCreateGame(db, {
+  decks: meta.p.map((x) => ({ monsters: x.mons, cards: Array.from({ length: x.count || CARD_BATTLE_DECK_SIZE }, () => CARD_PVP_HIDDEN) })),
+  names: meta.p.map((x, i) => x.name || (i === 0 ? 'ホスト' : 'あいて')), seed: 1, first: meta.first,
+});
+// どちら側から見るか(side = 1 なら、ホストの相手を下にする)。手と捨て札と meta を入れ替える
+const cardWatchSideEntry = (e, side) => (side === 1 ? { ...e, by: 1 - e.by, act: cardPvpFlip(e.act), d: Array.isArray(e.d) ? [e.d[1], e.d[0]] : e.d } : e);
+const cardWatchSideMeta = (meta, side) => (side === 1 ? { ...meta, p: [meta.p[1], meta.p[0]], first: 1 - meta.first } : meta);
+const cardWatchSideWinner = (w, side) => (w === 0 || w === 1 ? (side === 1 ? 1 - w : w) : null);
+// 捨て札の仮の札を、届いた並びで本物にする(数が合わない・食い違うときは、その人のぶんはそのまま)
+const cardWatchPatchOne = (db, pl, list) => {
+  if (!Array.isArray(list) || list.length !== pl.discard.length) return false;
+  if (list.some((no, i) => (no !== CARD_PVP_HIDDEN && !cardOf(db, no)) || (pl.discard[i] !== CARD_PVP_HIDDEN && no !== CARD_PVP_HIDDEN && pl.discard[i] !== no))) return false;
+  pl.discard = pl.discard.map((no, i) => (no === CARD_PVP_HIDDEN ? list[i] : no));
+  return true;
+};
+const cardWatchPatchDiscards = (db, st, d) => {
+  if (!st || !Array.isArray(d)) return st;
+  const s = cardClone(st);
+  [0, 1].forEach((p) => cardWatchPatchOne(db, s.players[p], d[p]));
+  return s;
+};
+// 1手を当てる(どちらの人の手でも。91 の cardPvpApplyRemote を、両方とも見えない場にしたもの)。
+// e … { by(観戦の見え方の番号), act(観戦の見え方), reveal:{ 手札の番号: カードの番号 }, d:[0の捨て札, 1の捨て札](ホストに分かっている並び。仮の札が混じることがある) }
+// 当てられなければ null
+const cardWatchApply = (db, st, e) => {
+  if (!st || !e || !e.act || (e.by !== 0 && e.by !== 1) || st.winner !== null || cardPvpDecider(st) !== e.by) return null;
+  const s = cardClone(st);
+  const pl = s.players[e.by];
+  // 手を打つ人の手札は、いつも仮の札に戻してから当てる(相手の手札から選ぶ段は、見せてもらった札を残す。91 と同じ)
+  if (!(s.pendingChoice && s.pendingChoice.src === 'oppHand')) pl.hand = pl.hand.map(() => CARD_PVP_HIDDEN);
+  // 捨て札の仮の札は、届いた並びで先に本物へ(捨て札の中身で効き目が変わる札があるため)
+  if (Array.isArray(e.d)) [0, 1].forEach((p) => { const list = e.d[p]; if (Array.isArray(list)) s.players[p].discard.forEach((no, i) => { if (no === CARD_PVP_HIDDEN && cardOf(db, list[i])) s.players[p].discard[i] = list[i]; }); });
+  const reveal = e.reveal && typeof e.reveal === 'object' ? e.reveal : {};
+  for (const [k, no] of Object.entries(reveal)) {
+    const i = Number(k);
+    if (!Number.isInteger(i) || i < 0 || i >= pl.hand.length || pl.hand[i] !== CARD_PVP_HIDDEN || !cardOf(db, no)) return null;
+    pl.hand[i] = no;
+  }
+  const next = cardApplyAction(db, s, e.act);
+  if (!next) return null;
+  if (Array.isArray(e.d)) {
+    // 手を打った人の捨て札は、ホストに全部分かっている(数が合わなければだめ)。もう1人のぶんは、分かっている所だけ
+    if (Array.isArray(e.d[e.by]) && !e.d[e.by].includes(CARD_PVP_HIDDEN) && e.d[e.by].length !== next.players[e.by].discard.length) return null;
+    [0, 1].forEach((p) => cardWatchPatchOne(db, next.players[p], e.d[p]));
+  }
+  // 捨て札から選ぶ段(回避プログラム・悪夢など)の候補は、本物にした捨て札で作り直す(91 の cardPvpApplyRemote と同じ。#3862)。
+  //   払ったガッツは仮の札のまま捨て札に入るので、絞り込みのある札だと候補が少なくなり、次の「選ぶ」手が当てられなかった。いま使った札は選べない
+  const ch = next.pendingChoice;
+  if (ch && ch.p === e.by && ch.src === 'discard' && !st.pendingChoice) {
+    const ce = cardEff(cardOf(db, ch.card), 'choose');
+    const used = Array.isArray(e.act.hand) ? e.act.hand.length : 0;
+    if (ce) ch.cands = cardChoiceCands(db, next, e.by, e.act.mon !== undefined ? e.act.mon : -1, ce, next.players[e.by].discard.length - used);
+  }
+  // 山札は両方とも仮の札のまま(山札へ戻した札も)
+  next.players.forEach((x) => { x.deck = x.deck.map(() => CARD_PVP_HIDDEN); });
+  return next;
+};
+
+// 受け取った知らせを作り直す(知らない形は捨てる・数は上限で切る)
+const cardWatchCleanEntry = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  const by = cardPvpInt(raw.by, 1);
+  const act = cardPvpCleanAct(raw.act);
+  if (by === null || !act) return null;
+  const reveal = {};
+  if (raw.reveal && typeof raw.reveal === 'object') for (const [k, v] of Object.entries(raw.reveal).slice(0, 20)) { const i = Number(k); if (Number.isInteger(i) && i >= 0 && i < 20 && cardPvpCardId(v)) reveal[i] = v; }
+  return { by, act, reveal, d: cardWatchCleanDiscards(raw.d) };
+};
+// 捨て札の並び(仮の札は -1 のまま通す)
+const cardWatchCleanDiscards = (raw) => {
+  if (!Array.isArray(raw) || raw.length !== 2) return null;
+  const one = (list) => (Array.isArray(list) ? list.slice(0, 60).map((v) => (v === CARD_PVP_HIDDEN ? CARD_PVP_HIDDEN : cardPvpCardId(v))) : null);
+  const out = raw.map(one);
+  return out.some((l) => !l || l.includes(null)) ? null : out;
+};
+const cardWatchCleanPerson = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  const mons = cardPvpCleanCards(raw.mons, 3);
+  return { name: rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || 'ブリーダー', icon: rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX), fr: typeof raw.fr === 'string' ? raw.fr.slice(0, 40) : null,
+    bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null, dn: typeof raw.dn === 'string' ? (rhythmMultiText(raw.dn, 30) || null) : null,
+    mons: mons && mons.length === 3 && !mons.includes(null) ? mons : null, count: cardPvpInt(raw.count, 60) };
+};
+const cardWatchCleanMeta = (raw) => {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.p) || raw.p.length !== 2) return null;
+  const p = raw.p.map(cardWatchCleanPerson);
+  const first = cardPvpInt(raw.first, 1);
+  if (p.some((x) => !x || !x.mons) || first === null) return null;
+  return { p, first, mode: raw.mode === 'free' ? 'free' : 'private' };
+};
+const cardWatchCleanMessage = (raw) => {
+  if (!raw || typeof raw !== 'object' || typeof raw.t !== 'string' || typeof raw.from !== 'string') return null;
+  const from = raw.from.slice(0, 40);
+  const match = typeof raw.match === 'string' ? raw.match.slice(0, 40) : '';
+  if (raw.t === 'w-eye') return { t: 'w-eye', from, match, need: cardPvpInt(raw.need, CARD_WATCH_LOG_MAX) };
+  if (raw.t === 'w-act') { const n = cardPvpInt(raw.n, CARD_WATCH_LOG_MAX); const e = cardWatchCleanEntry(raw.e); return n && e ? { t: 'w-act', from, match, n, e } : null; }
+  if (raw.t === 'w-log') {
+    const start = cardPvpInt(raw.start, CARD_WATCH_LOG_MAX);
+    if (start === null || !Array.isArray(raw.list)) return null;
+    const list = raw.list.slice(0, CARD_WATCH_LOG_CHUNK).map(cardWatchCleanEntry);
+    return list.includes(null) ? null : { t: 'w-log', from, match, start, list };
+  }
+  if (raw.t === 'w-hb') {
+    const end = raw.end && typeof raw.end === 'object' ? { winner: cardPvpInt(raw.end.winner, 1), reason: rhythmMultiText(raw.end.reason, 20) } : null;
+    return { t: 'w-hb', from, match, n: cardPvpInt(raw.n, CARD_WATCH_LOG_MAX) || 0, eyes: cardPvpInt(raw.eyes, 999) || 0, meta: cardWatchCleanMeta(raw.meta), d: cardWatchCleanDiscards(raw.d), end };
+  }
+  if (raw.t === 'live') {
+    const p = Array.isArray(raw.p) && raw.p.length === 2 ? raw.p.map(cardWatchCleanPerson) : null;
+    if (!match || !p || p.includes(null)) return null;
+    return { t: 'live', from, match, p, at: Number.isFinite(raw.at) ? raw.at : 0, turn: cardPvpInt(raw.turn, 999) || 0, eyes: cardPvpInt(raw.eyes, 999) || 0, mode: raw.mode === 'free' ? 'free' : 'private' };
+  }
+  return null;
+};
+// 「対戦中」の一覧(新しい知らせだけ・フレンドの試合を先に・見ている人の多い順)。friends … フレンドのブリーダーid の集まり
+const cardWatchLiveList = (seen, now, friends = new Set()) => Object.values(seen || {})
+  .filter((x) => x && now - x.seen <= CARD_WATCH_LIVE_FRESH_MS)
+  .map((x) => ({ ...x, friend: x.p.findIndex((y) => y.bid && friends.has(y.bid)) }))
+  .sort((a, b) => (b.friend >= 0) - (a.friend >= 0) || b.eyes - a.eyes || b.at - a.at);
+
+// ---- 対戦する側(ホスト)の受け持ち。91 の CARD_PVP から呼ぶ ----
+// start(meta) … 試合が始まったとき(ホストだけ)/ push(e) … 手を1つ当てたとき(自分の手も相手の手も。観戦の見え方)/ discard(p, list) … 捨て札の並びが分かったとき
+// tick() … 2秒おき / end(winner, reason) … 決着 / stop() … 部屋を出たとき / eyes() … いま見ている人の数
+const CARD_WATCH_HOST = (() => {
+  let h = null;
+  const send = (sock, alive, payload) => { if (sock && alive()) sock.send({ ...payload, from: h.id, match: h.match }); };
+  const sendWatch = (payload) => { if (h) send(h.ws, () => h.wsAlive, payload); };
+  const sendLive = (payload) => { if (h) send(h.live, () => h.liveAlive, payload); };
+  const eyes = () => { if (!h) return 0; const now = Date.now(); let n = 0; h.eyes.forEach((at, id) => { if (now - at > CARD_WATCH_EYE_FRESH_MS) h.eyes.delete(id); else n++; }); return n; };
+  const hbMsg = () => ({ t: 'w-hb', n: h.log.length, eyes: eyes(), meta: h.meta, d: h.d, end: h.end });
+  // 途中から見る人へ: いちばん遅れている人の場所から、まとめて渡す(1秒に1回まで。足りなければ、見る人がまた頼む)
+  const reply = () => {
+    if (!h || h.need === null) return;
+    const start = h.need; h.need = null; h.replyAt = Date.now();
+    sendWatch({ t: 'w-log', start, list: h.log.slice(start, start + CARD_WATCH_LOG_CHUNK) });
+  };
+  const onWatch = (raw) => {
+    const msg = cardWatchCleanMessage(raw);
+    if (!h || !msg || msg.t !== 'w-eye' || msg.match !== h.match || msg.from === h.id) return;
+    // 上限を超えた人は数えない(その人には「満員」と出る)
+    if (h.eyes.has(msg.from) || eyes() < CARD_WATCH_MAX) h.eyes.set(msg.from, Date.now()); else return;
+    if (msg.need !== null && msg.need < h.log.length) {
+      h.need = h.need === null ? msg.need : Math.min(h.need, msg.need);
+      if (Date.now() - h.replyAt >= 1000) reply(); else if (!h.replyTimer) h.replyTimer = setTimeout(() => { if (h) { h.replyTimer = null; reply(); } }, 1000);
+    }
+  };
+  const openWs = (topic, onMsg, key) => {
+    const me = rhythmMultiOpenSocket({
+      topic,
+      onOpen: () => { if (h && h[key] === me) { h[`${key}Alive`] = true; if (key === 'ws') sendWatch(hbMsg()); } },
+      onMessage: (raw) => { if (h && h[key] === me && onMsg) onMsg(raw); },
+      onClose: () => { if (!h || h[key] !== me) return; h[`${key}Alive`] = false; h[`${key}Retry`] = setTimeout(() => { if (h && h[key] === me) h[key] = openWs(topic, onMsg, key); }, CARD_PVP_RECONNECT_MS); },
+    });
+    return me;
+  };
+  const closeAll = () => {
+    if (!h) return;
+    ['ws', 'live'].forEach((k) => { if (h[`${k}Retry`]) clearTimeout(h[`${k}Retry`]); const x = h[k]; h[k] = null; if (x) { try { x.close(); } catch (_) { /* 閉じている */ } } });
+    if (h.replyTimer) clearTimeout(h.replyTimer);
+  };
+  return {
+    start: (meta, match) => {
+      if (h) closeAll();
+      if (typeof rhythmMultiOpenSocket !== 'function' || !meta || !match) { h = null; return; }
+      h = { id: rhythmMultiMakeId('w'), match, meta, log: [], d: [[], []], end: null, eyes: new Map(), need: null, replyAt: 0, replyTimer: null, liveAt: 0, ws: null, live: null, wsAlive: false, liveAlive: false };
+      h.ws = openWs(`${CARD_WATCH_TOPIC}${match}`, onWatch, 'ws');
+      h.live = openWs(CARD_WATCH_LIVE_TOPIC, null, 'live');
+    },
+    push: (e) => {
+      if (!h || h.end || h.log.length >= CARD_WATCH_LOG_MAX) return;
+      if (Number.isInteger(e.turn)) h.turn = e.turn;
+      const entry = { by: e.by, act: e.act, reveal: e.reveal || {}, d: e.d || h.d };
+      if (Array.isArray(e.d)) h.d = e.d.map((l) => l.slice());
+      h.log.push(entry);
+      sendWatch({ t: 'w-act', n: h.log.length, e: entry });
+    },
+    discard: (p, list) => { if (h && Array.isArray(list)) { h.d = h.d.map((l, i) => (i === p ? list.slice() : l)); } },
+    tick: () => {
+      if (!h) return;
+      sendWatch(hbMsg());
+      // 決着したら「対戦中」の知らせはやめる
+      if (!h.end && Date.now() - h.liveAt >= CARD_WATCH_LIVE_MS) {
+        h.liveAt = Date.now();
+        sendLive({ t: 'live', p: h.meta.p.map(({ name, icon, fr, bid }) => ({ name, icon, fr, bid })), at: Date.now(), turn: h.turn || 0, eyes: eyes(), mode: h.meta.mode });
+      }
+    },
+    end: (winner, reason) => { if (h && !h.end) { h.end = { winner: winner === 0 || winner === 1 ? winner : null, reason: String(reason || '').slice(0, 20) }; sendWatch(hbMsg()); } },
+    stop: () => { closeAll(); h = null; },
+    eyes,
+  };
+})();
+
+// ---- 見る側。部屋の状態は React の外に置く(91 の CARD_PVP と同じ) ----
+const CARD_WATCH = (() => {
+  const listeners = new Set();
+  let s = null;
+  let socket = null;
+  let alive = false;
+  let tick = null;
+  let retry = null;
+  const blank = () => ({ phase: 'idle', match: '', side: 0, id: '', meta: null, st: null, n: 0, buf: {}, hostN: 0, eyes: 0, end: null, d: null, last: null, lastAt: 0, needAt: 0, error: '', seenAt: 0, counted: false });
+  const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても続ける */ } });
+  const set = (patch) => { s = { ...s, ...patch }; emit(); };
+  const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.id, match: s.match }); };
+  const stop = () => {
+    if (tick) clearInterval(tick); tick = null;
+    if (retry) clearTimeout(retry); retry = null;
+    alive = false;
+    if (socket) { try { socket.close(); } catch (_) { /* 閉じている */ } } socket = null;
+  };
+  // 届いている手を、順に当てる(抜けがあれば待つ)。当てられない手が来たら、そこで止める
+  const drain = () => {
+    if (!s.st) return;
+    let { st, n, buf } = s;
+    let last = s.last;
+    buf = { ...buf };
+    while (buf[n + 1]) {
+      const e = cardWatchSideEntry(buf[n + 1], s.side);
+      delete buf[n + 1];
+      const next = cardWatchApply(CARD_BATTLE_DATA, st, e);
+      if (!next) { set({ buf, st, n, phase: 'broken', error: 'この試合は、ここから先を見られませんでした' }); return; }
+      st = next; n += 1;
+      // まんなかに出す「いま使った札」(使った・守ったカード)
+      const used = (next.events || []).filter((x) => x.t === 'use' || x.t === 'guard').map((x) => ({ p: x.p, cards: x.t === 'use' ? x.cards : [x.card] })).filter((x) => x.cards.every((no) => cardOf(CARD_BATTLE_DATA, no)));
+      if (used.length) last = { key: `${n}`, p: used[used.length - 1].p, cards: used[used.length - 1].cards };
+    }
+    if (s.d) st = cardWatchPatchDiscards(CARD_BATTLE_DATA, st, s.side === 1 ? [s.d[1], s.d[0]] : s.d);
+    s = { ...s, st, n, buf, last, lastAt: last !== s.last ? Date.now() : s.lastAt };
+    if (s.end && n >= s.hostN && s.phase === 'watching') s = { ...s, phase: 'over' };
+    emit();
+  };
+  const onMessage = (raw) => {
+    const msg = cardWatchCleanMessage(raw);
+    if (!s || !msg || msg.match !== s.match || msg.from === s.id || msg.t === 'w-eye' || msg.t === 'live') return;
+    s = { ...s, seenAt: Date.now() };
+    if (msg.t === 'w-hb') {
+      // 上限: はじめての知らせで、もう上限まで見ていて、自分がまだ数えられていなければ「満員」
+      if (!s.counted && s.phase === 'connecting' && msg.eyes >= CARD_WATCH_MAX) { stop(); set({ phase: 'full' }); return; }
+      const meta = s.meta || msg.meta;
+      const patch = { hostN: msg.n, eyes: msg.eyes, end: msg.end, d: msg.d || s.d, meta, counted: true };
+      if (!s.st && meta) { patch.st = cardWatchNewGame(CARD_BATTLE_DATA, cardWatchSideMeta(meta, s.side)); patch.phase = 'watching'; }
+      s = { ...s, ...patch };
+      if (s.n < s.hostN && !s.buf[s.n + 1] && Date.now() - s.needAt > 2500) { s = { ...s, needAt: Date.now() }; send({ t: 'w-eye', need: s.n }); }
+      drain();
+      return;
+    }
+    if (msg.t === 'w-act') { if (msg.n > s.n) { s = { ...s, buf: { ...s.buf, [msg.n]: msg.e }, hostN: Math.max(s.hostN, msg.n) }; drain(); } return; }
+    if (msg.t === 'w-log') {
+      const buf = { ...s.buf };
+      msg.list.forEach((e, i) => { const k = msg.start + i + 1; if (k > s.n) buf[k] = e; });
+      s = { ...s, buf, needAt: 0 };
+      drain();
+    }
+  };
+  const connect = () => {
+    if (retry) clearTimeout(retry); retry = null;
+    if (socket) { try { socket.close(); } catch (_) { /* 閉じている */ } }
+    alive = false;
+    const me = socket = rhythmMultiOpenSocket({
+      topic: `${CARD_WATCH_TOPIC}${s.match}`,
+      onOpen: () => { if (socket !== me) return; alive = true; send({ t: 'w-eye', need: s.n }); },
+      onMessage: (raw) => { if (socket === me) onMessage(raw); },
+      onClose: () => {
+        if (socket !== me || !s) return;
+        alive = false;
+        if (s.phase === 'idle' || s.phase === 'full') return;
+        retry = setTimeout(connect, CARD_PVP_RECONNECT_MS);
+      },
+    });
+  };
+  return {
+    get: () => s || blank(),
+    subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
+    // 見始める。live … 一覧の1行(cardWatchLiveList)/ side … 下に出す人(フレンドを下にする)
+    watch: (live, side = 0) => {
+      stop();
+      if (!live || !live.match) return;
+      s = { ...blank(), phase: 'connecting', match: live.match, side: side === 1 ? 1 : 0, id: rhythmMultiMakeId('v'), seenAt: Date.now() };
+      emit();
+      connect();
+      tick = setInterval(() => {
+        if (!s || !socket) return;
+        const behind = s.n < s.hostN && !s.buf[s.n + 1];
+        send({ t: 'w-eye', need: behind ? s.n : null });
+        if (s.phase !== 'over' && s.phase !== 'broken' && Date.now() - s.seenAt > CARD_WATCH_QUIET_MS && !s.end) set({ error: '対戦の知らせが届かなくなりました(対戦が終わったか、電波が途切れています)' });
+        else if (s.error && s.phase === 'watching') set({ error: '' });
+      }, CARD_WATCH_EYE_MS);
+    },
+    leave: () => { stop(); s = blank(); emit(); },
+  };
+})();
+
+// 「対戦中」の一覧を聞く(開いているあいだだけ realtime:mhc-live につなぐ)
+const useCardWatchLive = (enabled) => {
+  const [seen, setSeen] = useState({});
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!enabled || typeof rhythmMultiOpenSocket !== 'function') return undefined;
+    let sock = null; let closed = false; let retry = null;
+    const open = () => {
+      const me = sock = rhythmMultiOpenSocket({
+        topic: CARD_WATCH_LIVE_TOPIC,
+        onOpen: () => {},
+        onMessage: (raw) => { if (sock !== me) return; const msg = cardWatchCleanMessage(raw); if (msg && msg.t === 'live') setSeen((cur) => ({ ...cur, [msg.match]: { ...msg, seen: Date.now() } })); },
+        onClose: () => { if (!closed && sock === me) retry = setTimeout(open, CARD_PVP_RECONNECT_MS); },
+      });
+    };
+    open();
+    const t = setInterval(() => setNow(Date.now()), 2000);
+    return () => { closed = true; clearInterval(t); if (retry) clearTimeout(retry); if (sock) { try { sock.close(); } catch (_) { /* 閉じている */ } } };
+  }, [enabled]);
+  return { seen, now };
+};
+
+// ---- 画面: 観戦する試合を選ぶ(マルチ対戦の入口から) ----
+// roster … 承認済みのフレンド [{ otherId, userName }](91 の入口が読んだもの)。だれの対戦でも出す(2026-10-27 社長「だれの対戦でも見られる」)。
+// フレンドの対戦を先に並べて「フレンド」の札を付ける。出すのは名前・アイコン・番の数・見ている人数だけ(ほかの情報は出さない・社長)
+const CardPvpWatchList = ({ roster = [] }) => {
+  const { seen, now } = useCardWatchLive(true);
+  const friends = useMemo(() => new Set((roster || []).map((f) => f.otherId)), [roster]);
+  const list = cardWatchLiveList(seen, now, friends);
+  return (
+    <div data-card-watch-list className="rounded-2xl border border-violet-300/40 bg-violet-500/5 p-2">
+      {list.length === 0
+        ? <p data-card-watch-none className="p-2 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('いまマルチ対戦をしている人はいません。少し待つと出てきます')}</p>
+        : <ul className="max-h-[44vh] space-y-1 overflow-y-auto">
+          {list.slice(0, 20).map((x) => (
+            <li key={x.match} data-card-watch-row={x.match} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+              <div className="flex shrink-0 items-center gap-1">
+                <CardPvpAvatar icon={x.p[0].icon} frame={x.p[0].fr} className="h-7 w-7"/>
+                <span className="text-[11px] font-black text-slate-400">vs</span>
+                <CardPvpAvatar icon={x.p[1].icon} frame={x.p[1].fr} className="h-7 w-7"/>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-1">
+                  {x.friend >= 0 && <span data-card-watch-friend className="shrink-0 rounded bg-emerald-500/25 px-1 text-[10px] font-black text-emerald-100">フレンド</span>}
+                  <span className="truncate text-[13px] font-bold text-white">{x.p[0].name} vs {x.p[1].name}</span>
+                </div>
+                <div className="text-[11px] font-bold text-slate-400 tabular-nums">{x.turn > 0 ? `ターン${x.turn}` : 'はじまったところ'}{x.eyes > 0 ? `・👀 ${x.eyes}` : ''}</div>
+              </div>
+              <button type="button" data-card-watch-go={x.match} disabled={x.eyes >= CARD_WATCH_MAX} className="mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                onClick={() => { Audio_.fgSe.tap(); CARD_WATCH.watch(x, x.friend === 1 ? 1 : 0); }}>{x.eyes >= CARD_WATCH_MAX ? '満員' : '見る'}</button>
+            </li>
+          ))}
+        </ul>}
+      <p className="mt-1 px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('見るだけで、操作やスタンプはできません。手札は見えません')}</p>
+    </div>
+  );
+};
+
+// ---- 画面: 観戦(両方の場を横から見る。手札は両方とも裏の札で、枚数だけ) ----
+const CardWatchSide = ({ db, st, p, person, top = false }) => {
+  const pl = st.players[p];
+  const active = st.winner === null && cardPvpDecider(st) === p;
+  const row = (
+    <div className="flex items-center gap-2 px-1">
+      <span className="block h-[34px] w-[34px] shrink-0"><CardPvpAvatar icon={person && person.icon} frame={person && person.fr} className="h-full w-full"/></span>
+      <div className="min-w-0 flex-1">
+        <div className={`truncate text-[13px] font-black ${active ? 'text-amber-200' : 'text-white'}`}>{(person && person.name) || pl.name}{active ? ' の番' : ''}</div>
+        <div data-card-watch-counts={p} className="flex flex-wrap gap-x-2 text-[11px] font-bold text-slate-300 tabular-nums">
+          <span>手札 {pl.hand.length}</span><span>ガッツ {pl.guts.length}</span><span>山札 {pl.deck.length}</span><span>捨て札 {pl.discard.length}</span>
+        </div>
+      </div>
+      <div data-card-watch-hand={p} className="flex shrink-0 -space-x-3" aria-label={`手札${pl.hand.length}枚`}>
+        {pl.hand.slice(0, 7).map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className="h-[30px] w-[21px] rounded-[2px] shadow"/>)}
+      </div>
+    </div>
+  );
+  const mons = <div className="flex justify-between">{pl.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact/>)}</div>;
+  return <div data-card-watch-side={p} className={`rounded-2xl border p-1.5 ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`}>{top ? <>{row}{mons}</> : <>{mons}{row}</>}</div>;
+};
+const CardPvpWatchScreen = ({ onBack }) => {
+  const [w, setW] = useState(() => CARD_WATCH.get());
+  useEffect(() => CARD_WATCH.subscribe(setW), []);
+  const [logOpen, setLogOpen] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const db = CARD_BATTLE_DATA;
+  const meta = w.meta ? cardWatchSideMeta(w.meta, w.side) : null;
+  const back = () => { CARD_WATCH.leave(); if (onBack) onBack(); };
+  const st = w.st;
+  const winner = w.end ? cardWatchSideWinner(w.end.winner, w.side) : st && st.winner !== null ? st.winner : null;
+  const nameOf = (p) => (meta && meta.p[p] ? meta.p[p].name : p === 0 ? 'ブリーダー' : 'あいて');
+  const lines = st ? st.log.slice(-3).map((l) => l.text) : [];
+  return (
+    <div data-mh-screen data-card-watch={w.phase} className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="観戦" accent="text-violet-200" onBack={back} note={meta ? `${nameOf(0)} vs ${nameOf(1)}` : 'つないでいます…'}/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}>
+        {w.phase === 'full' && <p data-card-watch-full className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`この対戦は、見ている人が${CARD_WATCH_MAX}人に達しています。少しあとでお試しください`)}</p>}
+        {w.phase === 'connecting' && <p className="rounded-xl bg-white/5 p-3 text-center text-[13px] font-bold text-slate-200">対戦につないでいます…</p>}
+        {w.error && <p data-card-watch-error className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[12px] font-bold text-rose-100" style={JA_WRAP_STYLE}>{jaWrap(w.error)}</p>}
+        {st && meta && (<>
+          <div className="flex items-center justify-between px-1 text-[12px] font-bold text-slate-300">
+            <span data-card-watch-turn={st.turn} className="tabular-nums">{st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'}</span>
+            <span data-card-watch-eyes={w.eyes} className="tabular-nums">👀 {w.eyes}人が見ています</span>
+          </div>
+          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top/>
+          {/* まんなか: いま使われた札と、場の記録の新しい3行 */}
+          <div data-card-watch-center className="flex min-h-[100px] items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-2">
+            {w.last
+              ? <div key={w.last.key} data-card-watch-last={w.last.cards.join(',')} className="flex shrink-0 gap-1">
+                {w.last.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <button key={i} type="button" onClick={() => setDetail(no)} className="block"><img src={CARD_IMG(c.img)} alt={c.name} className="h-[88px] w-[63px] rounded-md object-cover shadow-lg"/></button> : null; })}
+              </div>
+              : <div className="h-[88px] w-[63px] shrink-0 rounded-md border border-dashed border-white/15"/>}
+            <div className="min-w-0 flex-1 space-y-0.5">
+              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
+              {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
+            </div>
+          </div>
+          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]}/>
+          {(w.phase === 'over' || winner !== null) && (
+            <div data-card-watch-over={winner === null ? 'none' : winner} className="rounded-2xl border border-amber-300/50 bg-amber-500/10 p-3 text-center">
+              <div className="text-[16px] font-black text-amber-100">{winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`}</div>
+              {w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && <div className="mt-0.5 text-[12px] font-bold text-slate-300">({w.end.reason})</div>}
+            </div>
+          )}
+        </>)}
+      </div>
+      <div className={SCREEN_FOOTER_CLASS}>
+        <div className="flex gap-2">
+          {st && <button type="button" data-card-watch-log className="mh-button min-h-[48px] flex-1 rounded-2xl border border-white/15 bg-slate-900 font-black text-slate-100" onClick={() => { Audio_.fgSe.tap(); setLogOpen(true); }}>ターンの記録</button>}
+          <button type="button" data-card-watch-leave className="mh-button mh-button-primary min-h-[48px] flex-1 rounded-2xl font-black" onClick={() => { Audio_.fgSe.tap(); back(); }}>観戦をやめる</button>
+        </div>
+      </div>
+      {logOpen && st && <CardTurnLogSheet st={st} meName={nameOf(0)} foeName={nameOf(1)} onClose={() => setLogOpen(false)}/>}
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+    </div>
+  );
+};
+
 // ---- part: 81-debug-trials.jsx ----
 // ===== 確認待ちの試作(デバッグ設定のいちばん上・2026-10-16 社長「新しいのを確認するのも分かりやすくしないと探すのが大変すぎる」) =====
 // 社長に iPhone で確かめてほしい試作だけを、デバッグ設定を開いてすぐの所に並べる。
@@ -60397,16 +61086,8 @@ const DEBUG_TRIALS = [
     title: '🎵 床と空中の見た目(試作3・立体)',
     note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
     when: '次の演奏から' },
-  // 案3の2段目(2026-10-16)。同じキーの値 c3b。道の遠近と押す場所の計算を一緒に替える
-  { id: 'rhythm_floor3d_c3b', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'c3b',
-    title: '🎵 空中の見た目(案3+カメラを寝かせる)',
-    note: '案3の見た目に加えて、カメラを寝かせて道を奥へ深くします(遠くのノーツは小さく、手前で速く近づきます)。押す場所も同じ計算でそろって変わるので、見た目と押す場所はずれません。判定の時刻・色は変わりません',
-    when: '次の演奏から' },
-  // 案3の1段目(2026-10-16 社長「案3までやる」)。同じキーの値 c3。2段目(カメラを寝かせる)はこのあと
-  { id: 'rhythm_floor3d_c3', added: '2026-10-16', area: 'モンヒロビート', key: 'mh_rhythm_floor3d_proto_v1', on: 'c3',
-    title: '🎵 空中の見た目(案3・明るい板と光の帯)',
-    note: '空中のタップを明るく薄い板と光る縁に、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。地上と道は今のまま。色・判定は変わりません',
-    when: '次の演奏から' },
+  // 案3(値 c3・c3b)は 2026-10-27 社長の選択「案A」で、c3 の見た目を既定に、c3b のカメラを普通の設定「道の奥行き」(roadDepth)へ移したので、ここから外した。
+  // キーの値 c3b は今も読む(rhythmCameraDeepActive)。c3 は既定と同じ
   // 段階A(値 a3d)は 2026-10-17 に普通の設定「空中のノーツの見た目」へ移した(RHYTHM_SKY_NOTE_LOOK)ので、ここから外した
 ];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
@@ -62948,7 +63629,9 @@ function MonsterHeroGame() {
   //   1つの画面の中では出す行がそろっているので、空の行を捨てても高さは食い違わない。
   const MONSTER_CARD_STYLE = { minHeight: '112px' };
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
-  const monsterCardName = (node, className='text-white', band=false) => <div className={`mh-monster-card-name text-[11px] font-black w-full text-center ${band?'min-h-[28px] px-1 py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center':'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div>;
+  // 名前帯(band)は名前を切らずに折り返す。名前は12字まで付けられるので、9字以上は字を1段小さくし、左右の余白も詰めて
+  // 320幅でも2行(1行6字)に収める(2026-10-27・部長「切らずに全部出す・2行まで」。11pxだと12字で3行になっていた)
+  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div> };
   // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた。
   // ★ただし**入りきらなければ折り返す**(2026-09-18)。字を読める大きさへ上げたら、
   //   「絆 397/400」と「+456P」がカード幅(約96px)を超え、ハートが枠の外へはみ出した。
@@ -69873,10 +70556,11 @@ function MonsterHeroGame() {
           <span className="text-[8px] font-black text-white px-1.5 py-0.5 rounded-full" style={{ backgroundColor:'#ec4899', animation:'masuBadge 1.6s ease-in-out infinite' }}>登録できます</span>
           <span className="text-[10px] font-black text-pink-200">{mainHero?.name||'このモンスター'}をマスモンに！</span>
         </div>
-        <div className="text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center">今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます</div>
+        {/* 背の低い画面では説明の1行を省いて、もらった物の一覧を広く取る(2026-10-27 ダメダシくん) */}
+        <div className="text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center [@media(max-height:700px)]:hidden">今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます</div>
         <button
           onClick={()=>{setMasuNameInput(mainHero?.name||''); setShowMasuRegisterModal(true);}}
-          className="w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95"
+          className="w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95 [@media(max-height:700px)]:py-2"
           style={{ backgroundColor:'#db2777' }}
         ><Heart size={14}/>マスモンとして登録する</button>
       </div>
@@ -80718,7 +81402,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   return <div key={id} className="relative"><button disabled={disabled} onClick={()=>toggleDraftPasture(id)} aria-pressed={selected} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30':'border-slate-800 bg-slate-900'} disabled:opacity-40`}>
                     {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                     {renderMonsterCardBody({
-                      masu, base,
+                      masu, base, nameBand:true,
                       status: selected?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white leading-none">放牧中</span>:null,
                     })}
                   </button><button onClick={(ev)=>{ev.stopPropagation();setMasuMonDetail(masu);}} aria-label={`${masu.name}の詳細`} className="mh-hit-expand absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={13} className="text-white"/></button></div>;
