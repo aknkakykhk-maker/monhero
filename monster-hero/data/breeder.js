@@ -378,7 +378,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'mua',     name:"みゅあのアイコン",      type:'icon', icon:MUA_FACE_ICON,     cost:1 },
   { id:'atsu',    name:"あつのアイコン",        type:'icon', icon:ATSU_FACE_ICON,    cost:1 },
   { id:'myaru',   name:"みゃるのアイコン",      type:'icon', icon:MYARU_FACE_ICON,   cost:1 },
-  { id:'mocchi_pet', name:"モッチー_2のアイコン",  type:'icon', icon:MOCCHI_PET_ICON,   cost:1 },
+  { id:'mocchi_pet', name:"ごきげんモッチーのアイコン",  type:'icon', icon:MOCCHI_PET_ICON,   cost:1 },
   { id:'gezudero', name:"ゲズデロのアイコン",    type:'icon', icon:GEZUDERO_ICON,     cost:1 },
   { id:'melopanman', name:"メロぱんまんのアイコン", type:'icon', icon:MELOPANMAN_ICON,   cost:1 },
   // ポルツのアイコン。カードと同じ絵を使うので、id を分けて両方を並べられるようにしている
