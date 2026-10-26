@@ -73,7 +73,7 @@ const BATTLE_CARD_ART_DEBUG = (() => {
 // 行動カードの見た目の選択(2026-10-16 社長「前のカードも選べる」)。設定 → バトル設定で「新しいカードの絵」(既定)と「前のカード」を選ぶ。
 //   保存は新しいキー mh_battle_card_look_v1('art' / 'classic')だけ。無い・壊れているときは既定の 'art'。前のカードを選んだ人には、公開の印やデバッグの切り替えより優先して前のカードを出す
 const BATTLE_CARD_LOOKS = Object.freeze([
-  { id: 'art', label: '新しいカードの絵', note: '種類ごとの色の枠' },
+  { id: 'art', label: '新しいカードの絵', note: '種類で色分けした枠' },
   { id: 'classic', label: '前のカード', note: '字が大きいシンプルな形' },
 ]);
 const normalizeBattleCardLook = (v) => (v === 'classic' ? 'classic' : 'art');
@@ -3261,7 +3261,7 @@ function SoulBattleEffects({
           <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">回避 / 反射 / 吸収</span><b className="text-slate-100">{(Math.round(unifiedSpecialDefense.evasion*10)/10)} / {(Math.round(unifiedSpecialDefense.reflect*10)/10)} / {(Math.round(unifiedSpecialDefense.absorb*10)/10)}%</b></div>
           <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">威圧</span><b className="text-violet-300">{(Math.round(battleIntimidate*10)/10)}%</b></div>
           <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">自動ガッツ回復</span><b className="text-amber-300">×{soulBattleParty.autoGutsMultiplier.toFixed(2)}</b></div>
-          <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">使用可能カード</span><b className="text-sky-300">{soulCoordinationCardBonus>0?'+1':'変化なし'}</b></div>
+          <div className="rounded-xl bg-black/30 p-2"><span className="block text-slate-400">使えるカード</span><b className="text-sky-300">{soulCoordinationCardBonus>0?'+1':'変化なし'}</b></div>
         </div>
         {unifiedSpecialDefense.rate>0&&<div className="mt-2 text-[10px] leading-relaxed text-slate-400">特殊防御が発動した場合、回避・反射・吸収の比率から1つだけ発動します。</div>}
       </section>
