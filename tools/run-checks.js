@@ -12,6 +12,7 @@
 //   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
 //   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
+//   オプション: --no-room(自分だけのネットワークの部屋に入らない。下の「部屋」)
 //   node tools/run-checks.js --area all --parallel 5 … 全部を5組に分けて同時に回す(1時間弱)(2026-10-23。1本ずつだと2時間を超える)
 //     組は前回かかった時間(run-checks-times.json)で平らに分ける。同じポートを使う検査は同じ組へ、
 //     自分で :8899 を立てる検査と時間を測る検査(perf・fps など)は、最後に1本ずつ回す。結果は1つにまとめて出す
@@ -29,6 +30,12 @@
 // ・ふつうは並列にしない。実ブラウザ検査が固定ポート(8899 / 8977 など)を使うため、ぶつかる。
 //   --parallel N のときだけ、ぶつからない組に分けて同時に回す(共有の配信 :8899 は親が1つ立てて、全部の組で使う)。
 // ・playwright が入っていない環境では、それを要る検査を SKIP として数える(NG にはしない)。react・canvas も同じ。
+// ・【部屋】(2026-10-27 速さ部)Linux では、回すたびに「自分だけのネットワークの部屋」(network namespace)に入ってから検査を回す。
+//   部屋の中の localhost は外と別物なので、作業ツリーを2つ並べて同時に回しても、8899 や 8977 など決め打ちの番号を
+//   取り合わない(以前は同時に回すと、時間切れや「ページが開けない」で誤って NG になり、1本ずつ順番待ちしていた)。
+//   検査の中身は変えない。部屋の外への通信は無くなる(検査はもともと外への通信を止めているので変わらない)。
+//   部屋が作れない環境(unshare が無い・許されていない)は今までどおり外で回す。--no-room で入らない。
+//   部屋の中の印は環境変数 MH_CHECK_ROOM。--parallel の子にも引き継がれるので、親と同じ部屋で共有の配信を使う
 // ・既存の GitHub Actions は触らない。CI に何を足すかは、この結果(所要時間)を見て別途決める。
 const fs = require('fs');
 const path = require('path');
@@ -36,6 +43,25 @@ const net = require('net');
 const { spawn, spawnSync } = require('child_process');
 
 const TOOLS_DIR = __dirname;
+
+// ---- 部屋(network namespace)に入ってから自分を回し直す ----
+// unshare -rn: 自分だけのユーザーとネットワークの部屋を作る(root でなくてよい)。部屋の中の lo は下がっているので、
+// Python で上げてから(ip の道具が無い入れ物もあるため ioctl で直接)、同じ引数で run-checks.js を回し直す
+const ROOM_LO_UP = "import socket,fcntl,struct\ns=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)\nf=struct.unpack('16sH14s',fcntl.ioctl(s,0x8913,struct.pack('16sH14s',b'lo',0,b'\\0'*14)))[1]\nfcntl.ioctl(s,0x8914,struct.pack('16sH14s',b'lo',f|1,b'\\0'*14))";
+function enterRoomIfPossible(argv) {
+  if (process.env.MH_CHECK_ROOM || process.platform !== 'linux') return;
+  if (argv.includes('--no-room') || argv.includes('--list') || argv.includes('--plan') || argv.includes('--help')) return;
+  // 部屋を作れるか、先に小さく試す(作れなければ黙って今までどおり外で回す)
+  const probe = spawnSync('unshare', ['-rn', 'python3', '-c', ROOM_LO_UP], { stdio: 'ignore' });
+  if (probe.error || probe.status !== 0) {
+    console.log('(部屋を作れないので、ネットワークの部屋に入らずに回します。同時に2つ回すと番号を取り合うことがあります)');
+    return;
+  }
+  const r = spawnSync('unshare', ['-rn', 'sh', '-c', 'python3 -c "$0" && exec "$@"', ROOM_LO_UP, process.execPath, __filename, ...argv],
+    { stdio: 'inherit', env: { ...process.env, MH_CHECK_ROOM: '1' } });
+  process.exit(r.status === null ? 1 : r.status);
+}
+enterRoomIfPossible(process.argv.slice(2));
 const REPO_ROOT = path.resolve(TOOLS_DIR, '..');
 const SERVER_PORT = 8899;
 
