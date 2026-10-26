@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef21b763a6e707be
+// source-sha256: 3480b85866710da2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-27 00:55";
+const BUILD_DATE = "2026-10-27 01:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -120775,8 +120775,10 @@ function MonsterHeroGame() {
         className: `mhbs-tab text-[9px] leading-tight active:scale-95 disabled:opacity-40 ${modeSelectTab === key ? 'on' : ''}`
       }, key !== 'mode' && React.createElement("span", {
         "aria-hidden": "true",
-        className: "mr-0.5"
-      }, "🏆"), label))), modeSelectTab === 'mode' && React.createElement("div", {
+        className: "block leading-none"
+      }, "🏆"), React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, label)))), modeSelectTab === 'mode' && React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         className: "mhbs-hint mt-auto mb-1 shrink-0"
