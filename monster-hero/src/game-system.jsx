@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 529b7a242561509e
+// generated-sha256: 9273f2701bdfd302
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57167,12 +57167,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
-          {/* 項目の目次(横画面だけ)。押すと右の一覧のその項目へ移る */}
+          {/* 項目の目次(横画面だけ)。押すと右の一覧の箱だけをその項目へ動かす(scrollIntoView は画面ごと動かすことがあるので使わない。viewport-height-check) */}
           <div data-card-options-toc className={`${SCREEN_PANEL_CLASS} hidden landscape:block`}>
             <div className="text-[11px] font-bold text-slate-400">項目</div>
             <div className="mt-1 grid grid-cols-3 gap-1">
               {[...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map((g) => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => (
-                <button key={label} type="button" data-card-options-jump={label} onClick={() => { Audio_.fgSe.tap(); const el = document.querySelector(`[data-card-options] ${sel}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                <button key={label} type="button" data-card-options-jump={label} onClick={() => { Audio_.fgSe.tap(); const box = document.querySelector('[data-card-options] .mh-scroll'); const el = box && box.querySelector(sel); if (el) box.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 4), behavior: 'smooth' }); }}
                   className="min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100">{jaWrap(label)}</button>
               ))}
             </div>
