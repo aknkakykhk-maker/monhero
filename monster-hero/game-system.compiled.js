@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad40c773985d8320
+// source-sha256: 784589c79803c804
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -89935,10 +89935,14 @@ const CardMonSlot = ({
     "data-card-stunned": true,
     className: `inline-block whitespace-nowrap rounded bg-rose-900 font-bold ${tiny ? 'px-0.5 text-[9px] leading-tight' : 'ml-0.5 px-1 text-[10px]'}`
   }, "攻撃できない")));
-  const artSize = wide ? 'max-h-[40px] max-w-[56px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
+  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
   const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
+    style: wide ? {
+      maxHeight: wideArtH
+    } : undefined,
     className: `${artSize} object-contain drop-shadow-[0_6px_6px_rgba(0,0,0,.6)] ${opp ? '-scale-x-100' : ''}`
   }) : React.createElement("img", {
     src: CARD_IMG(cardMonsterOf(db, mon.no).img),
@@ -89949,12 +89953,17 @@ const CardMonSlot = ({
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
-    className: `relative flex ${wide ? 'h-[40px]' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
-    style: mv && mv.type === 'attack' ? {
-      '--atk-dx': `${mv.dx}px`,
-      '--atk-dy': `${mv.dy}px`,
-      zIndex: 40
-    } : undefined
+    className: `relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
+    style: {
+      ...(wide ? {
+        height: wideArtH
+      } : null),
+      ...(mv && mv.type === 'attack' ? {
+        '--atk-dx': `${mv.dx}px`,
+        '--atk-dy': `${mv.dy}px`,
+        zIndex: 40
+      } : null)
+    }
   }, mv && mv.type === 'attack' && mv.kind ? React.createElement(SkillFxMotion, {
     key: mv.key,
     kind: mv.kind,
@@ -90768,6 +90777,7 @@ const CardBattleBoard = ({
     return idx.sort((a, b) => rank(a) - rank(b) || a - b);
   })();
   const handLarge = settings.handText === 'LARGE' && !tiny;
+  const handTiny = tiny && !wide;
   const tapHand = i => {
     Audio_.fgSe.tap();
     if (tutorial && myTurn && (!cardTutorialHandOk(tutStage.id, st, i) || tutStage.next || tutQ.length > 1)) {
@@ -90983,7 +90993,7 @@ const CardBattleBoard = ({
   });
   React.useLayoutEffect(() => {
     setBoardFit(0);
-  }, [mode, boardFitKey]);
+  }, [mode, boardFitKey, wide]);
   React.useLayoutEffect(() => {
     const b = boardRef.current;
     const f = b && b.querySelector('[data-card-footer]');
@@ -91551,7 +91561,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${tiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -91562,13 +91572,13 @@ const CardBattleBoard = ({
       },
       className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
     }), React.createElement("div", {
-      className: `mt-0.5 w-full rounded-md bg-black/60 ${tiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
+      className: `mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
       size: handLarge ? compact ? 12 : 13 : compact ? 10 : 11,
       className: "font-bold leading-tight",
       twoLine: true
-    }), tiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
+    }), handTiny ? React.createElement(React.Fragment, null, React.createElement(CardNameFit, {
       name: `ガッツ${c ? c.guts : '-'}`,
       size: 10,
       className: "font-extrabold leading-[1.1] text-amber-200"
