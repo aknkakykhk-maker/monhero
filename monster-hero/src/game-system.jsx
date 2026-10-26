@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39b35618cebecef7
+// generated-sha256: 372ff07479e5aee7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55645,7 +55645,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           </button>
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
-        <div data-card-log className={`relative ${guardAtk ? 'z-[41]' : 'z-[1]'} max-w-full rounded-xl border border-white/15 bg-black/45 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
+        <div data-card-log className={`relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
             ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
@@ -55686,7 +55686,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {wide && tutorBox}
       {/* 練習試合で、いまタップ(か運ぶ)カードの上に出す案内 */}
       {tutorial && tutFocus.hand.length > 0 && <div data-card-tutor-arrow className="mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>👇 {jaWrap(mode === 'guts' ? 'タップでガッツに(ガッツへ運んでもOK)' : mode === 'guard' ? 'タップで守る(狙われた子へ運んでもOK)' : 'タップ → 相手をタップ(相手へ運んでもOK)')}</div>}
-      {guide && !tutorial && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
+      {/* 守れるカードが無いときは、下の理由の1行だけにする(「使える回避・防御はありません」と2回言っていた。2026-10-27 カゲあつくん) */}
+      {guide && !tutorial && !(mode === 'guard' && !guardOpts.length && !hint) && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint || guide)}</div>}
       {/* 練習試合で回避を選んだあと(あとは「これで守る」で決めるだけ)。前は「手札に回避・防御のカードがありません」と出て、次に押す所が分かりにくかった(2026-10-26 巡回 → 社長が文をOK) */}
       {mode === 'guard' && tutorial && st.pending && st.pending.evaded && <div data-card-tutor-guard-done className="mx-auto mb-1 shrink-0 rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap('「これで守る」を押してください')}</div>}
       {mode === 'guard' && !guardOpts.length && !(tutorial && st.pending && st.pending.evaded) && (
