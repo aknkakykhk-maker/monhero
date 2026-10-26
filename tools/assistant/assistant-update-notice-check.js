@@ -65,7 +65,7 @@ assert.strictEqual(new Set(notices.map(n => n.id)).size, notices.length, '通知
       assert(Array.isArray(lines) && lines.length > 0, `${noticeId}: ${who} のセリフがありません`);
       assert(lines.every(line => line && typeof line.t === 'string' && line.t.trim()), `${noticeId}: ${who} に中身の無いセリフがあります`);
     }
-    // 呼び方の決めごと(2026-09-11): みゅあ・ももすけは「モンビー」、ききは「モンヒロビート」
+    // 呼び方の決めごと(2026-09-11 → 2026-10-18 社長指示で更新): みゅあ・ドラは「モンビー」、ももすけは「モンビート」、ききは「モンヒロビート」
     const text = who => (byAssistant[who] || []).map(l => l.t).join('');
     if (/モンビー|モンヒロビート/.test(text('kiki'))) {
       assert(!text('kiki').includes('モンビー'), `${noticeId}: ききは正式名称「モンヒロビート」で呼びます`);

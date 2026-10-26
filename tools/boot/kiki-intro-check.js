@@ -127,7 +127,9 @@ if (jsx.length > 0) {
     + jsx + '\n};\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'kiki-intro-check.jsx' });
   const moduleScope = { exports: {} };
-  new Function('module', 'exports', 'React', transformed.code)(moduleScope, moduleScope.exports, React);
+  // お話・お知らせの文は言葉の区切りの部品(21-assistant.jsx の bubbleWrap)を通して描く(2026-10-24)。ここでは文の中身だけを見るので、そのまま返す
+  const BUBBLE_WRAP_STUB = 'const bubbleWrap = (t) => t, bubbleWrapStyle = () => undefined;\n';
+  new Function('module', 'exports', 'React', BUBBLE_WRAP_STUB + transformed.code)(moduleScope, moduleScope.exports, React);
   const seen = [];
   const render = (stepAt) => ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.Screen, {
     kikiIntroStep: stepAt, setKikiIntroStep: (v) => seen.push(v),

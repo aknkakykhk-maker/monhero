@@ -29,7 +29,7 @@ function SettingsMenuLink({ icon, label, desc, onClick, disabled = false, accent
       <span aria-hidden="true" data-icon={icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
       <span className="min-w-0 flex-1">
         <span className={`block text-[14px] font-black leading-tight ${accent}`}>{label}</span>
-        <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{desc}</span>
+        <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(desc)}</span>
       </span>
       <ChevronRight size={18} className="shrink-0 opacity-60"/>
     </button>
@@ -57,7 +57,7 @@ function AssetDownloadPage({ onBack }) {
         {!asset.supported && (
           <p data-asset-unsupported className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-amber-100">この端末・ブラウザでは前もって入れておくことができません。ふだんどおり、開いたときに読み込みます。</p>
         )}
-        {ASSET_PACKS.map(pack => {
+        {assetPacksShown().map(pack => {
           const st = packs[pack.id] || { count: 0, bytes: 0, haveCount: 0, haveBytes: 0 };
           const complete = st.count > 0 && st.haveCount >= st.count;
           const running = job && job.packId === pack.id;
@@ -70,7 +70,7 @@ function AssetDownloadPage({ onBack }) {
                 <span aria-hidden="true" data-icon={pack.icon} className="mh-emoji-icon w-8 shrink-0 text-center text-[22px] leading-none"/>
                 <span className="min-w-0 flex-1">
                   <b className="block text-[14px] font-black leading-tight text-slate-100">{pack.label}<small className="ml-2 text-[11px] font-bold text-slate-400">約{formatAssetMB(st.bytes)}</small></b>
-                  <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{pack.desc}</span>
+                  <span className="mt-0.5 block text-[10px] font-bold leading-snug text-slate-400">{helpWrap(pack.desc)}</span>
                 </span>
               </div>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
@@ -113,7 +113,7 @@ function AssetDownloadPage({ onBack }) {
   );
 }
 
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenDebug = null, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
@@ -168,7 +168,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
               return (
                 <div key={item.key} data-battle-fx-setting={item.key} className="border-t border-white/10 pt-3">
                   <b className="block text-[13px] font-black text-slate-200">{item.title}</b>
-                  <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">{item.desc}</p>
+                  <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">{helpWrap(item.desc)}</p>
                   {/* 「重いときは自動で軽く」で、いま自動で下げている軽さ(保存はしていない)。選び直すと消える */}
                   {item.key === 'load' && battleFxAutoLoad && battleFxAutoLoad !== current && (
                     <p data-battle-fx-auto-note className="mt-1 rounded-lg border border-amber-400/40 bg-amber-950/30 px-2 py-1 text-[10px] font-bold leading-relaxed text-amber-100">
@@ -201,12 +201,14 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
       <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
         {/* 1行ずつ「絵＋名前＋何の設定か」を出す(2026-10-05)。名前だけのボタンが9つ同じ見た目で並び、
             どれが何の設定か押すまで分からなかった。M/B管理・神殿のメニューと同じ形 */}
+        {/* デバッグ設定の入口(2026-10-16)。一度でもヘルプの奥からデバッグ設定を開いた端末だけに出る。いちばん上に置いてスクロールせずに押せるようにする(60-app.jsx の debugEntryKnown) */}
+        {onOpenDebug && <SettingsMenuLink icon="🧪" label="デバッグ設定" desc="確認待ちの試作・検証用(この端末だけ)" onClick={onOpenDebug}/>}
         <SettingsMenuLink icon="⚔️" label="バトル設定" desc="タクティクスの画面・画面の軽さ・待機中の動き" onClick={() => setBattleSettingsOpen(true)} data-open-battle-settings/>
         <SettingsMenuLink icon="🎚️" label="音量設定" desc="効果音とBGMの大きさ・音が出ないとき" onClick={onOpenAudioSettings}/>
-        <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面ごとに流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
+        <SettingsMenuLink icon="🎵" label="BGMアレンジ" desc="場面に合わせて流す曲を選ぶ" onClick={onOpenBgmArrangement}/>
         <SettingsMenuLink icon="🖼️" label="タイトル画像アレンジ" desc="タイトル画面の絵を選ぶ" onClick={onOpenTitleArt} data-open-title-art/>
         <SettingsMenuLink icon="🏡" label="ホーム画面アレンジ" desc="ホーム画面の背景を選ぶ" onClick={onOpenHomeArt} data-open-home-art/>
-        <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面ごとにハロウィン／クラシックを選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
+        <SettingsMenuLink icon="🎨" label="画面テーマ" desc="画面の見た目(ハロウィン／クラシック)を選ぶ" onClick={onOpenScreenTheme} data-open-screen-theme/>
         {/* 入/切に関係なく出す(切のままだと、プレイヤーに戻す手段が無い)。対応していない端末はページの中で知らせる */}
         <SettingsMenuLink icon="📥" label="ダウンロード" desc="曲や画像を前もって端末に入れておく" onClick={() => setAssetDownloadOpen(true)} data-open-asset-download/>
         <SettingsMenuLink icon="💾" label="データ引き継ぎ" desc="バックアップの保存と、別の端末での復元" onClick={onOpenBackup}/>

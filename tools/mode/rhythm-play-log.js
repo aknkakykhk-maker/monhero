@@ -236,7 +236,8 @@ const learn=measures=>{
   const lagTotal=[...lagSongs.values()].reduce((a,o)=>a+o.w,0);
   if(lagSongs.size>=LOW_LAG_MIN_SONGS&&lagTotal>=LOW_LAG_MIN_SAMPLES){
     const target=[...lagSongs.values()].reduce((a,o)=>a+(o.sum/o.w)/o.detected*o.w,0)/lagTotal;
-    const moved=Math.round((now.lowLagFactor+(target-now.lowLagFactor)*LOW_LAG_RATE)/LOW_LAG_STEP)*LOW_LAG_STEP;
+    // 刻み(0.05)の整数倍に丸めたあと、2進数の端数(0.30000000000000004 など)が書かれないよう小数3桁へ丸める
+    const moved=Math.round(Math.round((now.lowLagFactor+(target-now.lowLagFactor)*LOW_LAG_RATE)/LOW_LAG_STEP)*LOW_LAG_STEP*1000)/1000;
     next.lowLagFactor=moved;
     reasons.push(`低音の遅れ: ${lagSongs.size}曲・${lagTotal}件から、プレイヤーが聞いているのは解析の遅れの ${target.toFixed(2)}倍 → ${now.lowLagFactor} を ${clampTuning({...now,lowLagFactor:moved}).lowLagFactor} へ`);
   }else reasons.push(`低音の遅れ: 証拠が足りない(${lagSongs.size}曲・${lagTotal}件。${LOW_LAG_MIN_SONGS}曲・${LOW_LAG_MIN_SAMPLES}件から)。動かさない`);

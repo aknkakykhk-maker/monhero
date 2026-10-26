@@ -43,6 +43,8 @@ function RhythmInfoScreen({
   );
 }
 
+// 曲えらびのアシスト・ミラー譜面の切り替え(キー・絵・名前・ONの色)。縦は上の題名の行、横はジャケットの右に同じものを置く
+const RHYTHM_SELECT_PLAY_MODES=[['assistMode','🛟','アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔','ミラー譜面','border-sky-300 bg-sky-600/80 text-white']];
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
@@ -56,8 +58,8 @@ function RhythmSongSelectScreen({
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
       // 5難易度 + HELL(HELL は譜面がある曲だけボタンに出る。rhythmDemoDifficulties が空の譜面を外す)
-      // レイドバトルへ挑んでいるあいだは5難易度だけ(HELL はレイドのダメージの表に無い)
-      const difficulties=rhythmDemoDifficultyList(raidChallenge?RHYTHM_DIFFICULTIES:RHYTHM_PLAY_DIFFICULTIES);
+      // レイドバトルへ挑んでいるあいだも同じ(2026-10-21 社長「選べるようにして重みも上げる」。HELL の重みは RAID_JACK_RHYTHM_DIFFICULTY_FACTORS)
+      const difficulties=rhythmDemoDifficultyList(RHYTHM_PLAY_DIFFICULTIES);
       // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
       // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
       const eventSongTitles=rhythmEventNotice
@@ -182,8 +184,9 @@ function RhythmSongSelectScreen({
           <div className="min-w-0 flex-1">
             {/* 「体験版」の札は、右のボタンの幅を空けるためこの小さな行へ入れた(2026-10-01)。
                 題名はヘルプや案内と同じ呼び名「曲えらび」にそろえた(以前は「楽曲選択」) */}
-            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT<span data-rhythm-demo-badge className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">体験版</span></small>
-            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 曲えらび</h2>
+            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"><span className="max-[359px]:hidden">MONBEAT</span><span data-rhythm-demo-badge className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">体験版</span></small>
+            {/* 幅の狭い端末(320px など)は縦の題名の行にアシスト・ミラーが入るので、♪と字の間隔を詰めて「曲えらび」を収める(2026-10-19) */}
+            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"><span className="max-[359px]:hidden">🎵 </span>曲えらび</h2>
             {beatPointReleased&&Number.isFinite(beatPointBalance)&&<small data-rhythm-beat-point-balance aria-label={`所持ビートP ${beatPointBalance.toLocaleString()}`}
               className="block truncate text-[9px] font-black leading-tight text-violet-200/90">🎟️ {beatPointBalance.toLocaleString()} <span className="text-violet-300/80">ビートP</span></small>}
           </div>
@@ -193,6 +196,21 @@ function RhythmSongSelectScreen({
           {quickRunStartNode&&<div data-quick-run-start-header className="min-w-0 max-w-[260px] flex-1">{quickRunStartNode}</div>}
           {/* 縦⇄横の切り替え。端末の回転ロックを解除しに行かなくても横画面で遊べるようにする
               (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
+          {/* 縦画面だけ、アシスト・ミラー譜面をここ(横・設定の左)へ置く(2026-10-19 社長「縦画面だと曲選択が見づらい。
+              アシスト、ミラーとかを上部の空いてるとこに移動して」)。下の詳細の箱が1段低くなり、そのぶん曲の一覧が多く見える。
+              形は横・設定と同じ「絵＋下に小さく名前」で、ONのときは色が付く。入/切の意味と保存は今までどおり(オプションの「演奏」タブと同じ値) */}
+          <div data-rhythm-header-play-modes className="flex shrink-0 gap-1 landscape:hidden">
+            {RHYTHM_SELECT_PLAY_MODES.map(([key,icon,name,on])=>{
+              const active=!!(rhythmSettings&&rhythmSettings[key]);
+              return <button key={key} type="button" data-rhythm-play-mode-toggle={key} data-rhythm-play-mode-place="header" aria-pressed={active}
+                aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
+                onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
+                className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 leading-none ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>
+                <span className="flex items-center gap-0.5 text-[12px] font-black leading-none"><span aria-hidden="true">{icon}</span><span className="text-[8px]">{active?'ON':'OFF'}</span></span>
+                <span className="text-[9px] font-black leading-none">{name==='ミラー譜面'?'ミラー':name}</span>
+              </button>;
+            })}
+          </div>
           <RhythmOrientationButton/>
           {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
               分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
@@ -310,7 +328,8 @@ function RhythmSongSelectScreen({
         {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
           {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
             <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
-            <span className="min-w-0 truncate">{beatPointCampaign.name}{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span>
+            {/* 細い端末(320幅)で「周回 5倍」のほうが「…」に消えていた。縮めるのはイベント名だけにし、倍率は必ず見せる(2026-10-26) */}
+            <span className="flex min-w-0"><span className="min-w-0 truncate">{beatPointCampaign.name}</span><span className="shrink-0">{Number(beatPointCampaign.loopBoost)>0?`・周回 ${beatPointCampaign.loopBoost}倍`:'中'}</span></span>
             <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt||beatPointCampaign.endAt))}</span>
           </div>}
           {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
@@ -390,6 +409,8 @@ function RhythmSongSelectScreen({
           onView={saveRhythmSelectView}
           listScrollTop={rhythmSongListScrollRef.current}
           onListScrollTop={top=>{rhythmSongListScrollRef.current=top;}}
+          actionExtra={song=><button type="button" data-rhythm-demo-ranking data-rhythm-ranking-place="action" onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
+            className="flex min-h-[46px] w-[46px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-300/60 bg-amber-500/10 leading-none text-amber-100"><span aria-hidden="true" className="text-base leading-none">🏆</span><span className="text-[8px] font-black leading-none">順位</span></button>}
           footer={song=><>
             {/* アシストモードとミラー譜面は、アワーノーツと同じく「遊ぶ前にその場で」切り替えられるようにする
                 (2026-09-24)。オプションの「演奏」タブにも同じ設定があり、どちらで変えても同じ値が保存される */}
@@ -401,8 +422,9 @@ function RhythmSongSelectScreen({
                 (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。 */}
             {/* 2026-09-26 に見本の形へ(ユーザー指示「見本の形がかなり理想」)。縦は1行の横長ボタン、
                 横はジャケットの右(自己ベストの下)へ入るので、絵文字とON/OFFだけの小さなボタンにする */}
-            <div data-rhythm-play-modes className="grid grid-cols-3 gap-1.5">
-              {[['assistMode','🛟','アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔','ミラー譜面','border-sky-300 bg-sky-600/80 text-white']].map(([key,icon,name,on])=>{
+            {/* 縦画面ではこの段を出さない(2026-10-19)。アシスト・ミラーは上の題名の行へ、ランキングは「決定」の右へ移した */}
+            <div data-rhythm-play-modes className="hidden grid-cols-3 gap-1.5 landscape:grid">
+              {RHYTHM_SELECT_PLAY_MODES.map(([key,icon,name,on])=>{
                 const active=!!(rhythmSettings&&rhythmSettings[key]);
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
                   aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
@@ -418,8 +440,52 @@ function RhythmSongSelectScreen({
       );
 }
 
+// ノーツ図鑑(2026-10-21)の説明。ヘルプの表(topic の kv)から、見出しが entry.help[1] で始まる行を引く(書き写さない)。
+//   label … 表の見出し(色や形の手がかりが入っている)・text … 説明。見つからなければ空
+const rhythmNoteDexHelpRow=(entry)=>{
+  const category=typeof helpCategoryById==='function'?helpCategoryById('rhythm'):null;
+  const topic=((category&&category.topics)||[]).find(x=>x.id===(entry&&entry.help&&entry.help[0]));
+  for(const block of (topic&&topic.blocks)||[]){if(block.t!=='kv')continue;
+    for(const row of block.rows||[])if(Array.isArray(row)&&String(row[0]).startsWith(entry.help[1]))return {label:String(row[0]),text:String(row[1]||'')};}
+  return {label:entry?entry.name:'',text:''};
+};
+const rhythmNoteDexHelpText=(entry)=>rhythmNoteDexHelpRow(entry).text;
+
+// ノーツ図鑑の画面。ノーツを選ぶと、本物の演奏画面でそのノーツだけが流れてきて試し打ちできる(記録には残らない)
+function RhythmNoteDexScreen({onBack,onPlay}){
+  return (
+    <main data-rhythm-note-dex className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
+      <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + var(--mh-sa-top))'}}>
+        <button aria-label="戻る" data-rhythm-note-dex-back onClick={onBack} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+        <div className="min-w-0 flex-1">
+          <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
+          <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">📒 ノーツ図鑑</h2>
+        </div>
+      </header>
+      <div data-rhythm-note-dex-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
+        <p className="text-[11px] leading-relaxed text-slate-300">ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。</p>
+        <div data-rhythm-note-dex-list className="mt-3 grid gap-2" style={{gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,300px),1fr))'}}>
+          {RHYTHM_NOTE_DEX.map(entry=>{const row=rhythmNoteDexHelpRow(entry);return (
+            <div key={entry.id} data-rhythm-note-dex-item={entry.id} className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
+              <div className="flex min-w-0 items-start gap-3">
+              {/* 一覧の絵は、演奏画面と同じ描き方の部品(開発部の RhythmNoteSwatch)。部品がまだ無い版では出さない */}
+              {typeof RhythmNoteSwatch==='function'&&entry.swatch&&<span data-rhythm-note-dex-swatch={entry.swatch} className="shrink-0"><RhythmNoteSwatch kind={entry.swatch} width={64} height={48}/></span>}
+              <div className="min-w-0 flex-1">
+                <b data-rhythm-note-dex-name className="block text-[13px] font-black text-amber-100">{row.label||entry.name}</b>
+                {row.text&&<span data-rhythm-note-dex-text className="mt-1 block text-[11px] leading-relaxed text-slate-300">{helpWrap(row.text)}</span>}
+              </div>
+              </div>
+              <button data-rhythm-note-dex-play={entry.id} onClick={()=>onPlay(entry.id)}
+                className="mt-auto min-h-[44px] w-full rounded-xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-[12px] font-black text-slate-950">▶ 流して試す</button>
+            </div>);})}
+        </div>
+      </div>
+    </main>
+  );
+}
+
 function RhythmHelpScreen({
-  onBackToSongSelect, rhythmHelpTopicId, setRhythmHelpTopicId, startRhythmPractice, startRhythmTutorial,
+  onBackToSongSelect, rhythmHelpTopicId, setRhythmHelpTopicId, startRhythmPractice, startRhythmTutorial, onOpenNoteDex,
 }) {
       // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
       // ふるい分け済みの HELP_GUIDE から引く
@@ -446,10 +512,15 @@ function RhythmHelpScreen({
                 読むだけの案内と、叩いて覚える練習の2つを並べる。練習は記録に残らない */}
             <button data-rhythm-demo-practice onClick={startRhythmPractice}
               className="mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950">🥁 叩いて練習する</button>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-400">実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。')}</p>
+            {onOpenNoteDex&&<>
+              <button data-rhythm-demo-note-dex onClick={onOpenNoteDex}
+                className="mt-3 min-h-[52px] w-full rounded-2xl border border-amber-300/50 bg-slate-900 text-sm font-black text-amber-100">📒 ノーツ図鑑</button>
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。')}</p>
+            </>}
             <button data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
               className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">🎓 もう一度チュートリアルを見る</button>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-400">曲えらびへ戻って、助手が最初から説明します。何度でも見られます。</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('曲えらびへ戻って、助手が最初から説明します。何度でも見られます。')}</p>
             <div data-rhythm-demo-help-list className="mt-4 space-y-2">
               {topics.length===0
                 ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">説明がまだありません。</p>
@@ -461,7 +532,7 @@ function RhythmHelpScreen({
                     <button data-rhythm-demo-help-open={x.id} onClick={()=>setRhythmHelpTopicId(x.id)}
                       className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left active:scale-95" style={{borderColor:`${accent}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
                       <span className="shrink-0 text-base leading-none">{x.emoji}</span>
-                      <span className="min-w-0 flex-1 text-[12px] font-black leading-tight text-white">{x.title}</span>
+                      <span className="min-w-0 flex-1 text-[12px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{jaWrap(x.title)}</span>
                       <ChevronRight size={16} className="shrink-0 text-slate-500"/>
                     </button>
                   </React.Fragment>
@@ -470,7 +541,7 @@ function RhythmHelpScreen({
           </>)}
           {topic&&(
             <div data-rhythm-demo-help-topic={topic.id} className="space-y-3.5 pb-2">
-              <p className="text-[10px] font-bold leading-relaxed text-cyan-200">{topic.assistant}</p>
+              <p className="text-[10px] font-bold leading-relaxed text-cyan-200" style={JA_WRAP_STYLE}>{jaWrap(topic.assistant)}</p>
               {/* 本文の描き方は本ゲームのヘルプと共通(renderHelpBlocks) */}
               {renderHelpBlocks(topic.blocks,accent)}
               <div className="flex gap-2 pt-1">
@@ -535,14 +606,14 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
                 </span>
                 <b className="shrink-0 text-sm text-amber-100">{entry.rank}位</b>
               </p>
-              <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventRewardText(entry.reward)}</p>
+              <p className="mt-1 text-[10px] leading-tight text-white">{helpWrap(rhythmEventRewardText(entry.reward))}</p>
             </li>
           ))}
         </ul>
         {participation&&(
           <div data-rhythm-event-reward-participation className="mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2">
             <p className="text-[10px] font-black text-cyan-200">参加報酬（{weekly?`その週に${participation.plays}回遊びました`:`対象曲を${participation.songs}曲すべて`}）</p>
-            <p className="mt-1 text-[10px] leading-tight text-white">{rhythmEventParticipationText(participation)}</p>
+            <p className="mt-1 text-[10px] leading-tight text-white">{helpWrap(rhythmEventParticipationText(participation))}</p>
           </div>
         )}
         <button type="button" data-rhythm-event-reward-claim disabled={claiming} onClick={onClaim}
@@ -822,7 +893,7 @@ function RhythmRankingScreen({
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
-            {total.status==='error'&&<p data-rhythm-total-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+            {total.status==='error'&&<p data-rhythm-total-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200" style={JA_WRAP_STYLE}>{jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')}</p>}
             {total.status==='ready'&&(<>
               {/* ★自分の行を上に固定しない(2026-09-11・ユーザー指示
                   「自分の名前の固定はなしでおけ。今後人が増えたらまた考える」)。
@@ -875,7 +946,7 @@ function RhythmRankingScreen({
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
             {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
             {event.status==='closed'&&<p data-rhythm-event-closed className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">いま開催しているイベントはありません。次の開催をお待ちください。</p>}
-            {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+            {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200" style={JA_WRAP_STYLE}>{jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')}</p>}
             {event.status==='ready'&&eventDefinition&&(<>
               {/* 期間はサーバーが決める。残り時間の見た目だけ端末の時計で数える */}
               <div data-rhythm-event-window className="mb-3 flex items-center gap-2 rounded-2xl border border-fuchsia-300/40 bg-slate-900/70 p-2">
@@ -885,7 +956,7 @@ function RhythmRankingScreen({
                   <p data-rhythm-event-period className="text-[9px] text-slate-400">{rhythmEventPeriodText(eventDefinition,eventRange)}</p>
                 </div>
                 <p data-rhythm-event-remaining className="shrink-0 text-[10px] font-black text-fuchsia-200">
-                  {eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—'}
+                  {helpWrap(eventRange?rhythmEventRemainingText(eventRange.endMs-eventNowMs):'—')}
                 </p>
               </div>
               {/* ★告知画像と報酬の表は詳細へ移した(2026-09-11・ユーザー指摘
@@ -911,7 +982,7 @@ function RhythmRankingScreen({
                 ))}
               </div>}
               {eventBoard.status==='loading'&&<p data-rhythm-event-board-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
-              {eventBoard.status==='error'&&<p data-rhythm-event-board-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">この部門を読み込めませんでした。「更新」をお試しください。</p>}
+              {eventBoard.status==='error'&&<p data-rhythm-event-board-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200" style={JA_WRAP_STYLE}>{jaWrap('この部門を読み込めませんでした。「更新」をお試しください。')}</p>}
               {eventBoard.status==='ready'&&(<>
                 {/* ★自分の行は上に固定しない(2026-09-11・ユーザー指示)。一覧の中で色を変えて示す。
                     まだ1曲も遊んでいない人にだけ、対象曲への入口を出す */}
@@ -942,9 +1013,10 @@ function RhythmRankingScreen({
             return <div data-rhythm-ranking-diffs className="mb-2 flex gap-1">{ids.map(id=>(
               <button key={id} type="button" data-rhythm-ranking-diff={id} aria-pressed={cur===id} onClick={()=>loadRhythmRanking(song,id)}
                 className={`min-h-[44px] min-w-0 flex-1 basis-0 rounded-lg border px-0.5 text-[9px] font-black leading-tight tracking-tight ${cur===id?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
-                {id==='ALL'?'全難易度':(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
+                {/* 細い端末で「全難／易度」と折れていた。折れるなら「全／難易度」にする(2026-10-26) */}
+                {id==='ALL'?<span className="break-keep">全<wbr/>難易度</span>:(RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name||id)}</button>))}</div>;})()}
           {songTab&&rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
-          {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+          {songTab&&rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200" style={JA_WRAP_STYLE}>{jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')}</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
           {songTab&&rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
             {rhythmRanking.entries.map((entry,index)=>(
@@ -1062,7 +1134,7 @@ function RhythmRankingScreen({
             </p>}
             {/* 部門ごとの報酬。どの部門で何位を狙うと何がもらえるかを、切り替えずに見渡せるようにする */}
             {eventRewardsByDivision.length>0&&<div data-rhythm-event-rewards className="space-y-2">
-              <p className="text-[10px] font-black text-amber-200">部門ごとの報酬（終了後に受け取れます）</p>
+              <p className="text-[10px] font-black text-amber-200">部門別の報酬（終わったあとに受け取れます）</p>
               {eventRewardsByDivision.map(({division,ranks})=>(
                 <div key={division.id} data-rhythm-event-reward-division={division.id}
                   className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">

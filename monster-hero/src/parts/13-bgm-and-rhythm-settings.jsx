@@ -72,6 +72,16 @@ const BGM_TRACKS = [
   { id:'melo_sheriruth', name:'Sheriruth', creator:'Team Grimoire', src:'audio/bgm-sheriruth.mp3', gain:1, loop:true },
   { id:'melo_grievous_lady', name:'Grievous Lady', creator:'Team Grimoire vs Laur', src:'audio/bgm-grievous-lady.mp3', gain:1, loop:true },
   { id:'melo_against_my_own_shadow', name:'Against My Own Shadow', creator:'オリジナル', src:'audio/bgm-against-my-own-shadow.mp3', gain:1, loop:true },
+  { id:'melo_rose', name:'ROSE', creator:'HANA', src:'audio/bgm-rose.mp3', gain:1, loop:true },
+  { id:'melo_rose_short', name:'ROSE short ver.', creator:'HANA', src:'audio/bgm-rose-short.mp3', gain:1, loop:true },
+  { id:'melo_sad_song', name:'SAD SONG', creator:'オリジナル', src:'audio/bgm-sad-song.mp3', gain:1, loop:true },
+  { id:'melo_sad_song_short', name:'SAD SONG short ver.', creator:'オリジナル', src:'audio/bgm-sad-song-short.mp3', gain:1, loop:true },
+  { id:'melo_toward_the_stars_short', name:'Toward the Stars, Paradise or Truth short ver.', creator:'hitoyakyuko', src:'audio/bgm-toward-the-stars-short.mp3', gain:1, loop:true },
+  { id:'melo_black_shout', name:'BLACK SHOUT', creator:'Roselia', src:'audio/bgm-black-shout.mp3', gain:1, loop:true },
+  { id:'melo_light_player', name:'light player', creator:'school food punishment', src:'audio/bgm-light-player.mp3', gain:1, loop:true },
+  { id:'melo_light_player_short', name:'light player short ver.', creator:'school food punishment', src:'audio/bgm-light-player-short.mp3', gain:1, loop:true },
+  { id:'melo_tsuki_ga_michiru_mae_ni', name:'月が満ちる前に', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni.mp3', gain:1, loop:true },
+  { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -208,6 +218,26 @@ const RHYTHM_NOTE_SPEED_MIN=1;
 const RHYTHM_NOTE_SPEED_MAX=12;
 const RHYTHM_NOTE_SPEED_STEP=.1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+// 刻みの数え方(2026-10-17・社長の決定)の自己ベスト。物差しが変わるので、今の mh_rhythm_best_v1 は消さず書き換えず、新しいキーに分ける(CLAUDE.md ⑦)。
+// 形は v1 と同じ(normalizeRhythmBestRecords)。切り替えの時刻(RHYTHM_TICK_SWITCH_AT)を過ぎて始めた演奏の記録だけがここへ入る
+const RHYTHM_BEST_RECORDS_V2_KEY = 'mh_rhythm_best_v2';
+// 新しい数え方の記録と旧の記録を合わせて見せる(2026-10-17)。
+//   ・新しい数え方でまだ遊んでいない曲・難易度(v2 の点が0)は、旧の記録(点・判定の内訳・最大コンボ・印)をそのまま出す
+//     (★当初は印だけを重ねていたため、新しい数え方で遊ぶまで自己ベストが0に見えた。社長「自分のスコアの記録がリセットされてるんだけど」で直した)
+//   ・両方あるときは新しい数え方の記録を出し、旧の記録の印(played・clear・称号)を重ねる(HELL の開放などが閉じない・取った称号は下げない)
+//   旧の記録を出している曲・難易度は RHYTHM_BEST_LEGACY_SHOWN に `曲|難易度` で覚える(曲えらびの「旧」の印)。保存値はどちらも書き換えない
+const RHYTHM_BEST_LEGACY_SHOWN = new Set();
+const rhythmBestRecordsWithLegacyMarks = (current,legacy) => {
+  const now=normalizeRhythmBestRecords(current),old=normalizeRhythmBestRecords(legacy);
+  RHYTHM_BEST_LEGACY_SHOWN.clear();
+  Object.keys(now).forEach(songId=>{Object.keys(now[songId]||{}).forEach(diff=>{const a=now[songId][diff],b=old?.[songId]?.[diff];if(!a||!b||typeof a!=='object'||typeof b!=='object')return;
+    // 旧の記録のほうが点が高い(新しい数え方でまだ遊んでいないときを含む)なら、旧の記録を出す(社長「1つにつなげる。高いほう」)
+    if(Number(b.bestScore)>Number(a.bestScore)||(!(Number(a.bestScore)>0)&&b.played===true)){now[songId][diff]={...b,played:b.played||a.played===true,clear:b.clear||a.clear===true,fullCombo:b.fullCombo||a.fullCombo===true,allExcellent:b.allExcellent||a.allExcellent===true,allMarvelous:b.allMarvelous||a.allMarvelous===true};if(Number(b.bestScore)>0)RHYTHM_BEST_LEGACY_SHOWN.add(`${songId}|${diff}`);return;}
+    now[songId][diff]={...a,played:a.played||b.played===true,clear:a.clear||b.clear===true,fullCombo:a.fullCombo||b.fullCombo===true,allExcellent:a.allExcellent||b.allExcellent===true,allMarvelous:a.allMarvelous||b.allMarvelous===true};});});
+  return now;
+};
+// 曲えらびで、その曲・難易度の自己ベストが旧の数え方の記録かどうか
+const rhythmBestShowsLegacy = (songId,difficultyId) => RHYTHM_BEST_LEGACY_SHOWN.has(`${songId}|${difficultyId}`);
 // 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
 // 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
 // (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。
@@ -581,6 +611,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteSeJudgeVary:true, noteSeFlickVolume:100, noteSeEndVolume:100, noteSeEmptyEnabled:true,
   // ホールド・スライドを押さえている間の音(はじめは「ウィーン」、同じ日に鈴の「シャラララ」を経て、見本の録画をまねた高い「シャラシャラ」になった。きらめく音へ作り替えた)の大きさ。タップ音量に対する%。0で鳴らさない(2026-09-28)
   noteSeHoldVolume:100,
+  // ホールド・スライドの刻みを通るたびの音(「チリッ」)の大きさ(2026-10-17)。タップ音量に対する%。既定は0(鳴らさない。社長「ださいからなくしていいよ」→「設定でいじれるように」)。
+  // 新しい項目なので、保存値に無い人は既定(0)で補う
+  noteSeTickVolume:0,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -675,6 +708,7 @@ const normalizeRhythmSettings = value => {
     noteSeFlickVolume:rhythmFiniteStep(source.noteSeFlickVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
     noteSeEndVolume:rhythmFiniteStep(source.noteSeEndVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
     noteSeHoldVolume:rhythmFiniteStep(source.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
+    noteSeTickVolume:rhythmFiniteStep(source.noteSeTickVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.noteSeTickVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
@@ -759,12 +793,27 @@ const rhythmCalculateScore = ({judgments,maxCombo,totalNotes,maxScore}) => {
   const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0);
   return Math.min(maxScore,Math.round((judged/totalNotes*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/totalNotes*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
 };
-const rhythmResultAchievements = (judgments,totalNotes) => {
+// 刻みの数え方(2026-10-17・docs/playbot/reports/2026-10-17/combo-tick-v2/PLAN.md)のスコア。今の rhythmCalculateScore は変えない(旧の物差し)。
+//   判定の点 = (ノーツの点の合計 + 刻みの重み × 取った刻みの数) ÷ (ノーツ数 + 刻みの重み × 刻みの数)。刻みは取れば JUST MARVELOUS(1点)・落とせば MISS(0点)
+//   コンボの点 = 最大コンボ ÷ (ノーツ数 + 刻みの数)(刻みも1コンボ)
+//   ノーツも刻みも全部つなげば、どちらも満点(満点は今のまま)
+const RHYTHM_TICK_SCORE_WEIGHT=.5;
+const rhythmCalculateScoreTicks = ({judgments,maxCombo,totalNotes,maxScore,tickJust=0,tickTotal=0}) => {
+  if(!totalNotes) return 0;
+  const ticks=Math.max(0,Number(tickTotal)||0),got=Math.max(0,Math.min(ticks,Number(tickJust)||0));
+  const rates=Object.fromEntries(RHYTHM_JUDGMENTS.map(item=>[item.id,item.scoreRate]));
+  const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0)+RHYTHM_TICK_SCORE_WEIGHT*got;
+  return Math.min(maxScore,Math.round((judged/(totalNotes+RHYTHM_TICK_SCORE_WEIGHT*ticks)*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/(totalNotes+ticks)*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
+};
+// tickMiss … 落とした刻みの数(刻みの数え方のとき)。1つでも落とすと FC・AE・AM は付かない(社長の決定「刻みも落とさないことがフルコンボの条件」)。
+//   渡さない呼び出しは0(今までと同じ)。取った称号は記録の側で下げない(mergeRhythmBestRecord は「前に取った or 今回取った」)
+const rhythmResultAchievements = (judgments,totalNotes,tickMiss=0) => {
   const counts=Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,Math.max(0,Number(judgments?.[id])||0)]));
+  const kept=!(Number(tickMiss)>0);
   return {
-    fullCombo:counts.BAD===0&&counts.MISS===0,
-    allExcellent:counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
-    allMarvelous:totalNotes>0&&counts.MARVELOUS===totalNotes,
+    fullCombo:kept&&counts.BAD===0&&counts.MISS===0,
+    allExcellent:kept&&counts.GREAT===0&&counts.GOOD===0&&counts.BAD===0&&counts.MISS===0,
+    allMarvelous:kept&&totalNotes>0&&counts.MARVELOUS===totalNotes,
   };
 };
 // 今回の完走結果を既存BESTへ統合する純粋関数。判定内訳は、そのBESTスコアを
@@ -924,7 +973,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ cardBattleIntroEvent:'atsu_cup_theme', kyukoJoinStoryEvent:'original_event_01', atsuJoinStoryEvent:'melo_against_my_own_shadow', tacticsTypesEvent:'original_event_01', rhythmHellStoryEvent:'melo_sheriruth', assistantChatStoryEvent:'close_to_your_heart_alt', title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka', masuCallEvent:'six_eternel',halloweenNightEvent:'melo_crazy_party_night_full', rhythmModeSelect:'pandora_boss_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -958,7 +1007,22 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
 // rhythm_hell_story … 難易度 HELL のお話(2026-10-11)。既定は Sheriruth(社長の指定)。BGMアレンジの画面に枠を並べるのは HELL の公開のとき
 // assistant_chat_story … 助手とおしゃべりのお話(2026-10-14)。既定はタクティクスの導入と同じ曲
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
+// atsu_join_2026_10_22 … あつの加入のお話(2026-10-22)。既定は Against My Own Shadow(社長の指定)。BGMアレンジの画面に枠を並べるのはあつの公開のとき
+// card_battle_intro_2026 … MFバトルカードのはじまりのお話(2026-10-26 公開)。既定は MF × ICHIKA MIX(社長「イベントBGM、MFいちかにして」)
+// 会話イベントの台本で、その行までに書かれた最後の bgm:'<曲id>'。無ければ null(=会話イベントの曲のまま)。
+// 曲の表(BGM_TRACKS)に無い id は使わない(2026-10-17 社長「途中で変わるのいいね」)
+const eventScriptBgmAt = (script, step) => {
+  if (!Array.isArray(script) || !script.length) return null;
+  const last = Math.max(0, Math.min(Number.isInteger(step) ? step : 0, script.length - 1));
+  let found = null;
+  for (let i = 0; i <= last; i += 1) {
+    const id = script[i] && script[i].bgm;
+    if (typeof id === 'string' && BGM_TRACKS.some(t => t.id === id)) found = id;
+  }
+  return found;
+};
+const EVENT_BGM_FADE_MS = 800; // 会話イベントの途中で曲を替えるとき、今の曲を下げる長さ
+const EVENT_BGM_SCENES = Object.freeze({ card_battle_intro_2026:'cardBattleIntroEvent', kyuko_join_2026_10_22:'kyukoJoinStoryEvent', atsu_join_2026_10_22:'atsuJoinStoryEvent', tactics_types:'tacticsTypesEvent', kiki_intro:'kikiIntro', rhythm_hell_story:'rhythmHellStoryEvent', assistant_chat_story:'assistantChatStoryEvent', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent', rhythm_masu_call_2026_10_07:'masuCallEvent', halloween_night_2026_part1:'halloweenNightEvent', raid_jack_howto_2026_10_04:'halloweenNightEvent', raid_jack_rhythm_story_2026_10_06:'halloweenNightEvent', raid_jack_story_1b:'halloweenNightEvent', raid_jack_story_2:'halloweenNightEvent', raid_jack_story_3:'halloweenNightEvent', raid_jack_story_4:'halloweenNightEvent', raid_jack_story_5:'halloweenNightEvent', raid_jack_story_6:'halloweenNightEvent', raid_jack_ending_cleared:'halloweenNightEvent', raid_jack_ending_notcleared:'halloweenNightEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、

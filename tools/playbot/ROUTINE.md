@@ -118,7 +118,7 @@
    - ボットで再現できるなら、直したあとに同じ種(`--seed`)と担当(`--only`)で回して消えたことを確かめる
    - PRを作る日は、直したあとに班で回し直して `--team <班id> --save-baseline` で基準を書き、そのPRに含める
      (基準は担当ごとのファイル `tools/playbot/baseline/<担当id>.json`。班は自分の担当のファイルしか触らないので、ほかの班とぶつからない)
-   - コミット → プッシュ → PR → **マージまで進める**(CLAUDE.md ③。PR を作る直前に `git fetch origin main` して取り込む)。
+   - コミット → プッシュ → PR → **マージまで進める**(CLAUDE.md ③。PR を作る直前に `node tools/merge-main.js` で取り込む)。
      PRの本文に、ボットの報告のどれを直したかを書く
    - 「明らか」でないもの(上の「決めごと」)は、直さずに報告と提案へ回す
 5. **報告する**(このセッションの返答として出す。日本語。ユーザーが朝に読む)
@@ -142,7 +142,7 @@
 8. **記録を残す**: 班の記録 `docs/playbot/history/<班id>.md` のいちばん上へ、その日のぶんを5〜10行で足す
    (結果のひとこと・不具合と PR の番号・出した提案・作り手へ回したいこと)。このファイルだけを変えたブランチ
    (`claude/playbot-history-<班id>-<日付>`)で PR を作り、**マージまで進める**(ゲームには何も起きない記録なので、聞かずに進めてよい)。
-   PR を作る直前に `git fetch origin main` して取り込む
+   PR を作る直前に `node tools/merge-main.js` で取り込む
 9. **ユーザーの答えが来たら**(朝や昼、このセッションで):
    - 「戻して」と言われた修正: 取り消しの PR を作ってマージする
    - 選ばれた提案: ふつうの改修として実装する(CLAUDE.md ⑤⑥を通し、③のとおり公開まで進める)
@@ -171,9 +171,12 @@
   点検の時間(60分まで)で回る分だけ、「すべて解放してバトル」で勇者モンを**試した回数の少ない子から**入れ替えて足す。表と案は `tactics-tier.js` が覚え書きから作る(**案だけ。ゲームの数字は変えない**)
   ```
   PLAYBOT_TACTICS_ALL=1 PLAYBOT_TACTICS_EXPLORE=1 PLAYBOT_TACTICS_DIFF=Expert PLAYBOT_TACTICS_RUNS=2 node tools/playbot/playbot.js --only tactics
-  node tools/playbot/tactics-tier.js --md docs/playbot/reports/tier/monster-tier.md
+  node tools/playbot/player-battle-stats.js && node tools/playbot/tactics-tier.js --player-weight 0.5 --md
   ```
   更新したら統括部長へ「何体ぶん増えた・Tier が動いた子・新しい提案」を2〜3行で送る
+  - **決め方**(2026-10-21 社長「全体の決め方＋実戦を混ぜて全部更新」): 正式は overall(供モンの働きを主に、勇者モンの回は重み 0.3、実戦を 0.5 で混ぜる。供モンの回が10回未満は暫定)。
+    公開の表を作り直すとき: `node tools/playbot/player-battle-stats.js`(全国ランキングを読むだけ。ネットに出られないときは `--from-cache`) → `node tools/playbot/tactics-tier.js --player-weight 0.5 --md`。
+    前の決め方と比べるなら `--method current --md`(monster-tier-current.md へ。公開の表は書かない)。見張りは `node tools/playbot/tier-method-check.js`。バトルの1回ごとの記録の下準備は `docs/spec/BATTLE_LOG.md`
 - 止まった・負けたときは、記録の `why`(理由)と `waves[].threats`(その WAVE の予告)を見て、ゲームの不具合か、ボットの判断の足りなさかを分けて書く。
   ボットの判断の足りなさは、研究所:部長ハカセくんへ回す(その場で済む待ち方・押し方の直しは部で直してよい)
 

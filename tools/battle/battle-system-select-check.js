@@ -219,7 +219,7 @@ check('準備中の仕組みでも詳しいルールは読める', (() => {
 // 2026-10-08: モンヒロビートのモードえらびと同じ作り(舞台+大きな札)に変えた。札には名前とひとこと(tagline)だけを出し、
 // 細かい説明は「？」の詳しいルールへ回す
 check('札に名前とひとことを出している',
-  has('{sys.tagline}</small>') && has('className={`mhms-card mhms-in flex min-h-[84px]'));
+  (has('{sys.tagline}</small>') || has('{jaWrap(sys.tagline)}</small>')) && has('className={`mhms-card mhms-in flex min-h-[84px]'));
 // ★1画面に収まる高さは tools/battle/battle-system-fit-check.js が実際に測る。
 //   ここでは「収まる作りを崩していないか」の目印だけを見る
 check('1画面に収める作りが残っている',
@@ -267,10 +267,11 @@ check('本公開が立てばβ版の印は消え、3つとも遊べる',
       .every(id => afterRelease.battleModePlayable(id) === true
         && afterRelease.battleModeComingSoon(id) === false));
 // 画面側の結線。押せないだけでなく、目印と文言もそろっていること
-check('β版の印を画面へ出している',
+check('β版の印を画面へ出している・札に中の言葉を書かない',
   has('const beta=battleSystemBeta(sys.id,{debugBattle:systemDebug});')
     && has('<span data-battle-system-beta')
-    && has('いまはタクティクスプロだけ遊べます。ほかのモードは準備中です'));
+    // β版の札に中の言葉(「ほかのモードは準備中です」)を書かない(2026-10-26 カゲあつくんの見回り)
+    && !has('ほかのモードは準備中です'));
 check('準備中のモードは押せない',
   has('modeSoon=battleModeComingSoon(m.id,{debugBattle}),')
     && has("data-battle-mode-soon={modeSoon?'1':undefined}")

@@ -6,6 +6,8 @@
 //                                                             2026-10-14「クイックでオート無限やってたら気付いたらホームに戻ってた」の調べ。HOMEへ戻っていないかも記録する)
 //   node tools/memory-soak.js --mode rhythm --songs 6         モンヒロビートを6曲続けて演奏する
 //   node tools/memory-soak.js --mode idle   --minutes 10      HOMEで放っておく(ゲームが勝手に増やしていないか)
+//   … --infra-every <回> で Chromium の中の内訳(memory-infra・プロセスごとの部品の大きさ)を取る間隔(既定 20 回ごと・はじめと終わりは必ず)
+//   … --snapshot-at 10,40 --snapshot-dir <フォルダ> で、その分を過ぎたときのページのメモリの写しを書き出す(比べるのは tools/heap-snapshot-diff.js)
 //   … --bgm-light を足すと、場面のBGMを軽く持つ(デバッグ設定 mh_bgm_light_v1)を入れて測る(2026-10-16)
 //
 // 合格・不合格の検査ではなく、数字を出す道具。1回ごとに強制的にガベージコレクションをしてから測るので、
@@ -60,6 +62,13 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
       const si = window.setInterval.bind(window), ci = window.clearInterval.bind(window);
       window.setInterval = (fn, ms, ...a) => { const id = si(fn, ms, ...a); window.__leak.timers.add(id); return id; };
       window.clearInterval = (id) => { window.__leak.timers.delete(id); return ci(id); };
+      // 描画の面の見張り(2026-10-16 社長「1時間で増える +580MB の正体」): WebGL の文脈・ImageBitmap(作った数と閉じた数)・OffscreenCanvas
+      window.__leak.webgl = 0; window.__leak.ctx2d = 0; window.__leak.bitmaps = 0; window.__leak.bitmapsClosed = 0; window.__leak.offscreen = 0;
+      const gc = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...a) { const had = this.__mhCtx; const c = gc.call(this, type, ...a); if (c && !had) { this.__mhCtx = true; if (/webgl/i.test(type)) window.__leak.webgl += 1; else if (type === '2d') window.__leak.ctx2d += 1; } return c; };
+      if (window.createImageBitmap) { const cib = window.createImageBitmap.bind(window); window.createImageBitmap = (...a) => cib(...a).then((b) => { window.__leak.bitmaps += 1; return b; }); }
+      if (window.ImageBitmap && ImageBitmap.prototype.close) { const cl = ImageBitmap.prototype.close; ImageBitmap.prototype.close = function () { window.__leak.bitmapsClosed += 1; return cl.call(this); }; }
+      if (window.OffscreenCanvas) { const OC = window.OffscreenCanvas; window.OffscreenCanvas = function (...a) { window.__leak.offscreen += 1; return new OC(...a); }; window.OffscreenCanvas.prototype = OC.prototype; }
       const OrigImage = window.Image;
       window.Image = function (...a) { window.__leak.images += 1; return new OrigImage(...a); };
       window.Image.prototype = OrigImage.prototype;
@@ -99,17 +108,107 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
       return Math.round(lines.reduce((sum, l) => sum + (Number(l.trim().split(/\s+/)[0]) || 0), 0) / 1024);
     } catch { return -1; }
   };
+  // プロセスの種類ごとの使用メモリ(MB)。browser / renderer(ページ) / gpu-process(描画) / utility(音・通信など)
+  const rssByType = () => {
+    const out = {};
+    try {
+      execSync('ps -eo rss,args', { encoding: 'utf8' }).split('\n').filter((l) => /\/opt\/pw-browsers\/.*chrom/i.test(l)).forEach((l) => {
+        const kb = Number(l.trim().split(/\s+/)[0]) || 0;
+        const type = (l.match(/--type=([a-z-]+)/) || [, 'browser'])[1];
+        const sub = (l.match(/--utility-sub-type=([a-zA-Z.]+)/) || [, ''])[1].split('.').pop();
+        const key = type === 'utility' && sub ? `utility:${sub}` : type;
+        out[key] = (out[key] || 0) + kb / 1024;
+      });
+    } catch (e) {}
+    return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, Math.round(v)]));
+  };
+  // Chromium の中の内訳(memory-infra)。プロセスごとに、どの部品(v8・blink の部品・画像の展開・描画の面・GPU など)がいくら使っているか
+  const INFRA_EVERY = Math.max(1, Number(argOf('--infra-every', '20')) || 20);   // 何回測るごとに内訳を取るか(既定 20 回 = AUTO は 10分ごと)
+  const infraRows = [];
+  let browserCdp = null;
+  const infraDump = async (label) => {
+    try {
+      if (!browserCdp) browserCdp = await s.context.browser().newBrowserCDPSession();
+      const events = [];
+      const onData = (e) => { for (const ev of e.value || []) events.push(ev); };
+      browserCdp.on('Tracing.dataCollected', onData);
+      const done = new Promise((r) => browserCdp.once('Tracing.tracingComplete', r));
+      await browserCdp.send('Tracing.start', { transferMode: 'ReportEvents', traceConfig: { includedCategories: ['disabled-by-default-memory-infra'], excludedCategories: ['*'], memoryDumpConfig: { triggers: [] } } });
+      await browserCdp.send('Tracing.requestMemoryDump', { deterministic: true, levelOfDetail: 'detailed' }).catch(() => browserCdp.send('Tracing.requestMemoryDump'));
+      await browserCdp.send('Tracing.end');
+      await done;
+      browserCdp.off('Tracing.dataCollected', onData);
+      const names = {};
+      for (const ev of events) if (ev.ph === 'M' && (ev.name === 'process_name' || ev.name === 'process_labels') && ev.args) names[ev.pid] = names[ev.pid] || ev.args.name || ev.args.labels;
+      const per = {};
+      const hex = (v) => (typeof v === 'string' ? parseInt(v, 16) : Number(v)) || 0;
+      for (const ev of events) {
+        const al = ev.ph === 'v' && ev.args && ev.args.dumps && ev.args.dumps.allocators;
+        if (!al) continue;
+        const pname = String(names[ev.pid] || ev.pid).replace(/\s+/g, '');
+        const bucket = per[pname] = per[pname] || {};
+        // blink_gc(画面の部品の置き場)は、使っている分(allocated_objects_size)と確保している分(committed_size)、
+        // 置き場所(Space)ごとの使っている分も出す。差は「捨てた跡地を返していない分」
+        for (const [name, a] of Object.entries(al)) {
+          const m = name.match(/^blink_gc\/main\/heap(?:\/([A-Za-z0-9]+))?$/);
+          if (!m || !a || !a.attrs) continue;
+          const used = a.attrs.allocated_objects_size ? hex(a.attrs.allocated_objects_size.value) : 0;
+          const committed = a.attrs.committed_size ? hex(a.attrs.committed_size.value) : 0;
+          if (!m[1]) { if (used) bucket['blink_gc 使用中'] = (bucket['blink_gc 使用中'] || 0) + used; if (committed) bucket['blink_gc 確保'] = (bucket['blink_gc 確保'] || 0) + committed; }
+          else if (used) bucket[`blink_gc:${m[1]}`] = (bucket[`blink_gc:${m[1]}`] || 0) + used;
+        }
+        for (const [name, a] of Object.entries(al)) {
+          if (name.includes('/')) continue;   // いちばん上の部品だけ(下の内訳は二重に数えない)
+          const size = a && a.attrs && a.attrs.size ? hex(a.attrs.size.value) : 0;
+          if (size > 0) bucket[name] = (bucket[name] || 0) + size;
+
+        }
+        const totals = ev.args.dumps.process_totals;
+        if (totals && totals.resident_set_bytes) bucket['(rss)'] = hex(totals.resident_set_bytes);
+      }
+      const row = { label, sec: Math.round((Date.now() - t0) / 1000), per: Object.fromEntries(Object.entries(per).map(([p, b]) => [p, Object.fromEntries(Object.entries(b).map(([k, v]) => [k, Math.round(v / 1048576)]))])) };
+      infraRows.push(row);
+      const first = infraRows[0];
+      const lines = [];
+      for (const [p, b] of Object.entries(row.per)) {
+        const base = first.per[p] || {};
+        const parts = Object.entries(b).filter(([k, v]) => v >= 5 || Math.abs(v - (base[k] || 0)) >= 5).sort((x, y) => y[1] - x[1])
+          .map(([k, v]) => `${k} ${v}MB${first !== row ? `(${v - (base[k] || 0) >= 0 ? '+' : ''}${v - (base[k] || 0)})` : ''}`);
+        if (parts.length) lines.push(`    [${p}] ${parts.join(' / ')}`);
+      }
+      console.log(`  内訳(memory-infra・${label}・${row.sec}秒):\n${lines.join('\n')}`);
+    } catch (e) { console.log(`  内訳を取れませんでした: ${String(e && e.message || e).slice(0, 120)}`); }
+  };
+  // --snapshot-at 10,40 --snapshot-dir <フォルダ>: その分を過ぎた最初の測りで、ページのメモリの写し(heap snapshot)を書き出す。
+  // 比べるのは tools/heap-snapshot-diff.js(増えた部品の種類と、それをつかんでいるもの)
+  const SNAP_AT = String(argOf('--snapshot-at', '')).split(',').map(Number).filter((n) => n > 0).sort((a, b) => a - b);
+  const SNAP_DIR = argOf('--snapshot-dir', out);
+  const takeSnapshot = async (name) => {
+    const file = path.join(SNAP_DIR, `${name}.heapsnapshot`);
+    fs.mkdirSync(SNAP_DIR, { recursive: true });
+    const fd = fs.openSync(file, 'w');
+    const onChunk = (e) => fs.writeSync(fd, e.chunk);
+    cdp.on('HeapProfiler.addHeapSnapshotChunk', onChunk);
+    try { await cdp.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false, captureNumericValue: false }); }
+    finally { cdp.off('HeapProfiler.addHeapSnapshotChunk', onChunk); fs.closeSync(fd); }
+    console.log(`  写し: ${file}(${Math.round(fs.statSync(file).size / 1048576)}MB)`);
+  };
+  let sampleNo = 0;
   const sample = async (label) => {
     // 強制的にごみを片付けてから測る(持ち続けているものだけが数字に出る)
     await cdp.send('HeapProfiler.enable').catch(() => {});
     await cdp.send('HeapProfiler.collectGarbage').catch(() => {});
     const { metrics } = await cdp.send('Performance.getMetrics');
     const m = Object.fromEntries(metrics.map((x) => [x.name, x.value]));
-    const extra = await s.page.evaluate(() => { let diag = null; try { diag = Audio_.diagnose(); } catch (e) {} const d = window.__decoded || { count: 0, bytes: 0 }; const l = window.__leak || {}; return { canvases: document.querySelectorAll('canvas').length, imgs: document.querySelectorAll('img').length, kept: diag ? diag.bufferCount : -1, songKept: diag ? diag.songBufferCount : -1, songNames: diag && diag.songBufferNames ? diag.songBufferNames.join(',') : '', rebuilds: diag ? diag.rebuilds : -1, rate: diag ? diag.sampleRate : 0, decoded: d.count, decodedMB: Math.round(d.bytes / 1048576), made: l.canvases || 0, blobs: (l.blobsMade || 0) - (l.blobsRevoked || 0), timers: l.timers ? l.timers.size : -1, sources: l.sources || 0, newImages: l.images || 0 }; }).catch(() => ({ canvases: -1, imgs: -1, kept: -1, rate: 0, decoded: 0, decodedMB: 0 }));
-    const row = { label, sec: Math.round((Date.now() - t0) / 1000), heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(1), rss: rssMB(), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, canvases: extra.canvases, imgs: extra.imgs, kept: extra.kept, rate: extra.rate, songKept: extra.songKept, songNames: extra.songNames, rebuilds: extra.rebuilds, decoded: extra.decoded, decodedMB: extra.decodedMB, made: extra.made, blobs: extra.blobs, timers: extra.timers, sources: extra.sources, newImages: extra.newImages };
+    const extra = await s.page.evaluate(() => { let diag = null; try { diag = Audio_.diagnose(); } catch (e) {} const d = window.__decoded || { count: 0, bytes: 0 }; const l = window.__leak || {}; return { canvases: document.querySelectorAll('canvas').length, imgs: document.querySelectorAll('img').length, kept: diag ? diag.bufferCount : -1, songKept: diag ? diag.songBufferCount : -1, songNames: diag && diag.songBufferNames ? diag.songBufferNames.join(',') : '', rebuilds: diag ? diag.rebuilds : -1, rate: diag ? diag.sampleRate : 0, decoded: d.count, decodedMB: Math.round(d.bytes / 1048576), made: l.canvases || 0, blobs: (l.blobsMade || 0) - (l.blobsRevoked || 0), timers: l.timers ? l.timers.size : -1, sources: l.sources || 0, newImages: l.images || 0, webgl: l.webgl || 0, ctx2d: l.ctx2d || 0, bitmapsAlive: (l.bitmaps || 0) - (l.bitmapsClosed || 0), offscreen: l.offscreen || 0, canvasMB: Math.round([...document.querySelectorAll('canvas')].reduce((sum, c) => sum + (c.width * c.height * 4), 0) / 1048576), imgMB: Math.round([...document.querySelectorAll('img')].reduce((sum, im) => sum + ((im.naturalWidth || 0) * (im.naturalHeight || 0) * 4), 0) / 1048576), imgSrcs: new Set([...document.querySelectorAll('img')].map((im) => im.currentSrc || im.src)).size, cssBg: [...document.querySelectorAll('[style*="background-image"]')].length }; }).catch(() => ({ canvases: -1, imgs: -1, kept: -1, rate: 0, decoded: 0, decodedMB: 0 }));
+    const row = { label, sec: Math.round((Date.now() - t0) / 1000), heapMB: +(m.JSHeapUsedSize / 1048576).toFixed(1), rss: rssMB(), nodes: m.Nodes, listeners: m.JSEventListeners, docs: m.Documents, canvases: extra.canvases, imgs: extra.imgs, kept: extra.kept, rate: extra.rate, songKept: extra.songKept, songNames: extra.songNames, rebuilds: extra.rebuilds, decoded: extra.decoded, decodedMB: extra.decodedMB, made: extra.made, blobs: extra.blobs, timers: extra.timers, sources: extra.sources, newImages: extra.newImages, webgl: extra.webgl, ctx2d: extra.ctx2d, bitmapsAlive: extra.bitmapsAlive, offscreen: extra.offscreen, canvasMB: extra.canvasMB, imgMB: extra.imgMB, imgSrcs: extra.imgSrcs, cssBg: extra.cssBg, procs: rssByType() };
     rows.push(row);
     const first = rows[0];
+    sampleNo += 1;
     console.log(`${String(row.label).padEnd(16)} ${String(row.sec).padStart(5)}秒  heap ${String(row.heapMB).padStart(6)}MB (${row.heapMB - first.heapMB >= 0 ? '+' : ''}${(row.heapMB - first.heapMB).toFixed(1)})  全体 ${String(row.rss).padStart(5)}MB (${row.rss - first.rss >= 0 ? '+' : ''}${row.rss - first.rss})  nodes ${String(row.nodes).padStart(6)} (${row.nodes - first.nodes >= 0 ? '+' : ''}${row.nodes - first.nodes})  listeners ${String(row.listeners).padStart(5)} (${row.listeners - first.listeners >= 0 ? '+' : ''}${row.listeners - first.listeners})  docs ${row.docs}  canvas ${row.canvases} img ${row.imgs}  音: 解いた${row.decoded}本(${row.decodedMB}MB)・持っている${row.kept}本(うち曲 ${row.songKept}本・作り直し ${row.rebuilds}回: ${row.songNames})  作ったcanvas ${row.made} blob残り ${row.blobs} Image ${row.newImages} タイマー ${row.timers} 音の部品 ${row.sources}`);
+    console.log(`    描画の面: canvas ${row.canvasMB}MB(2d ${row.ctx2d}・WebGL ${row.webgl}・Offscreen ${row.offscreen})・ImageBitmap 残り ${row.bitmapsAlive} / 画像: img ${row.imgMB}MB(${row.imgSrcs}種類)・背景画像の要素 ${row.cssBg} / プロセス: ${Object.entries(row.procs || {}).map(([k, v]) => `${k} ${v}MB(${v - ((first.procs || {})[k] || 0) >= 0 ? '+' : ''}${v - ((first.procs || {})[k] || 0)})`).join('・')}`);
+    if (sampleNo === 1 || sampleNo % INFRA_EVERY === 0) await infraDump(label);
+    while (SNAP_AT.length && row.sec >= SNAP_AT[0] * 60) { const m = SNAP_AT.shift(); await takeSnapshot(`soak-${m}min`); }
   };
   try {
     // 遊び慣れた人の保存(はじめての設定・案内を済ませてある)で始める。バトル係・音ゲー係と同じ下準備
@@ -173,6 +272,7 @@ const makeRand = (seed) => { let t = seed >>> 0; return () => { t += 0x6D2B79F5;
       const lines = Object.entries(af).sort((a, b) => b[1] - a[1]).map(([u, n]) => `${n}回 ${u.split('/').pop()}`);
       console.log(`\n音の取りに行った回数(多い順。2回以上は取り直し): ${lines.join(' / ')}`);
     } catch (e) {}
+    await infraDump('終わり');
     const first = rows[0], last = rows[rows.length - 1];
     console.log(`\nまとめ: ${last.sec}秒で heap ${first.heapMB}→${last.heapMB}MB / ブラウザ全体 ${first.rss}→${last.rss}MB / nodes ${first.nodes}→${last.nodes} / listeners ${first.listeners}→${last.listeners} / docs ${first.docs}→${last.docs}`);
     const errs = report.issues.filter((x) => x.level === '不具合候補');

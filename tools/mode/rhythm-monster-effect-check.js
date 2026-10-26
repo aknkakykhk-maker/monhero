@@ -39,7 +39,8 @@ ok('canvas 版の顔は DOM の要素を重ねない(毎フレーム拡大して
   !game.includes('data-rhythm-canvas-face aria-hidden')&&game.includes('RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.glow'));
 ok('いちばん軽い段では能力名の大きな表示も出さない',
   game.includes("const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monsterNoteEffect,'NONE');")
-  &&game.includes('if(showAbilityFlash)setAbilityFlash(`${abilityFlash.ability}！`);')
+  // 出した印をフレームの記録へ残す(RHYTHM_FRAME_DIAG.cue)。出す条件は同じ showAbilityFlash
+  &&/if\(showAbilityFlash\)\{?(?:RHYTHM_FRAME_DIAG\.cue\('flash'\);)?setAbilityFlash\(`\$\{abilityFlash\.ability\}！`\);/.test(game)
   &&game.includes('if(showAbilityFlash)scheduleAbilityClear();'));
 // ---- 踏んだ瞬間の処理(2026-09-13・ユーザー指摘「マスモンの表示より踏んだときの挙動
 //      だと思うんだけどその辺は何もいじらない？」) ----
@@ -57,7 +58,7 @@ ok('振動は1か所だけで、モンスターノーツのときだけ強くす
 ok('モンスターノーツかどうかは演出量のブロックの外で1回だけ出す',
   game.includes("const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);"));
 // どの段でも残すもの。ここが消えると「取れたことが分からない」になる
-ok('どの段でも音は鳴る',game.includes('if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();'));
+ok('どの段でも音は鳴る',/if\(monsterHit\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
 ok('どの段でも能力そのものは効く(見た目だけの分岐にする)',
   !/monsterNoteEffect[^\n]{0,80}rhythmActivateMonsterAbility/.test(game)
   &&game.includes('const activated=rhythmActivateMonsterAbility({ability:monster.ability,state:run.abilities,life:run.life,songTimeMs});'));

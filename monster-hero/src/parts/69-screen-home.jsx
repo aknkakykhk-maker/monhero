@@ -85,56 +85,61 @@ const HOME_RAID_JACK_BUTTON_STYLE = Object.freeze({
 //   iPhone縦では「M/B管理」「神殿」のボタンの下へ吹き出しがもぐって文の頭が隠れ、横では上の帯の裏へ隠れていた。
 //   HOMEのボタンの位置は端末ごとに違うので、決め打ちの位置ではどこかで必ず重なる。
 //   そこで「ボタン・みゅあの吹き出し・画面の端」を障害物として測り、重ならない場所と幅を順に試す:
-//     ① 頭の上(幅184→120まで絞る) ② 頭の右 ③ 頭の左 ④ 少しずつ下げて頭の4分の3まで重ねる(それでもだめなときの控え)
-//   どれも重なるときは、重なりがいちばん小さいものを選ぶ。ボタン側は動かさない(押せる場所を変えない)。
-//   head … ジャック本体の絵の箱(跳ねる前の位置) / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
-const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 136, 120]);
-const HOME_RAID_SAY_GAP = 6;
+//     頭の上で、広い幅から順に、左右へずらし、少しずつ下げて頭の4分の3まで重ねる。帯(〜があらわれた！・共有HP)には乗せない。
+//     以前は頭の右・左にも置いたが、狭い画面で帯を隠した(2026-10-24 窓口「iPhone 13 と同じように、かぼちゃの上に」)
+//   札・帯にかかる所、かぼちゃの顔を隠す所には置かない。置ける所が無いときは出さない。
+//   ボタン側は動かさない(押せる場所を変えない)。
+//   head … ジャック本体の絵の箱(跳ねる前の位置) / band … 帯の箱 / obstacles … 避ける箱 / measure(width) … その幅での吹き出しの高さ
+// 広い順に試すので、入るならこれまでどおり広いほうになる。いちばん狭くて 144px(2026-10-24 窓口・カゲあつくん「言葉の途中で折れないように」。
+// 以前は狭い画面(幅320)でジャックの横へ置くとき用に 104・96 まであったが、1行に8字ほどしか入らず「いってらっ／しゃい」と折れた。
+// 144px なら本文が約120pxで、太字の11pxが10字入る(jaWrap は言葉のかたまりを10字までに分ける。41-screen-ui.jsx の JA_WRAP_LINE)。
+// 台詞を全部描いて確かめる検査は tools/boot/ja-wrap-lines-check.js
+const HOME_RAID_SAY_WIDTHS = Object.freeze([184, 168, 152, 144]);
+// 上の幅がどれも置けないときだけ、字を10pxにした 136px、字9pxにした 120px(本文は約96px。10字の言葉のかたまりが1行に入る)も使う。
+// 幅320や 360×640 では、みゅあの吹き出しと M/B管理・神殿の札のすき間が狭く、それより広いとかぼちゃの上に置けなかった(2026-10-24)
+const HOME_RAID_SAY_SMALL_WIDTHS = Object.freeze([136, 120]);
+const HOME_RAID_SAY_INLINE_NEXT = 130; // これより狭い吹き出しは字9pxにし、「▶ つぎ」を下の枠線の上に乗せて1行減らす
+const homeRaidSayFont = (width) => (width < HOME_RAID_SAY_INLINE_NEXT ? 9 : width < 144 ? 10 : 11);
+// 幅360未満の画面では、帯の「ジャック大王があらわれた！」を字9pxにして1行に収める
+const HOME_RAID_SAY_NARROW_VW = 360;
 const HOME_RAID_SAY_HOP = 18; // 跳ねる高さ(mhRaidJackHop の16px)+ゆとり。頭の上に置くときは、跳ねても頭がしっぽにかからない
-const homeRaidSayPlace = ({ head, obstacles, vw, vh, measure, top = 0 }) => {
-  const pad = 4, edge = 6;
-  const overlap = (r) => {
-    let area = 0;
-    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) area += 1e6;
-    for (const o of obstacles) {
-      const w = Math.min(r.right, o.right + pad) - Math.max(r.left, o.left - pad);
-      const h = Math.min(r.bottom, o.bottom + pad) - Math.max(r.top, o.top - pad);
-      if (w > 0 && h > 0) area += w * h;
-    }
-    return area;
+// かぼちゃの目の高さ(絵の箱の上から45%)。吹き出しは、しっぽの先まで、目より HOME_RAID_SAY_FACE_GAP だけ上に置く
+// (2026-10-24 窓口「320 で大王の吹き出しがかぼちゃの顔を隠している」。跳ねる16pxの半分のゆとり)
+const HOME_RAID_SAY_FACE = 0.45;
+const HOME_RAID_SAY_FACE_GAP = 8;
+const homeRaidSayPlace = ({ head, band = null, obstacles, vw, vh, measure, top = 0 }) => {
+  const widths = [...HOME_RAID_SAY_WIDTHS, ...HOME_RAID_SAY_SMALL_WIDTHS];
+  const pad = 4, edge = 6, tail = 9;
+  const hit = (r, o, p = 0) => { const w = Math.min(r.right, o.right + p) - Math.max(r.left, o.left - p), h = Math.min(r.bottom, o.bottom + p) - Math.max(r.top, o.top - p); return w > 0 && h > 0 ? w * h : 0; };
+  const faceTop = head.top + (head.bottom - head.top) * HOME_RAID_SAY_FACE - HOME_RAID_SAY_FACE_GAP;
+  // 置いてよいのは、画面の中で、札(ボタン)・みゅあの吹き出し・帯(〜があらわれた！・共有HP)のどれにもかからず、かぼちゃの顔を隠さない所だけ。
+  // 札にかけて置くのはやめた(2026-10-24 窓口「M/B管理の札にかぶり『モンスター・編』で切れている。置ける場所がなければ出さない扱いで構わない」)
+  const fits = (r) => {
+    if (r.left < edge || r.top < top + edge || r.right > vw - edge || r.bottom > vh - edge) return false;
+    if (r.bottom + tail > faceTop) return false;
+    if (band && hit({ ...r, bottom: r.bottom + tail }, band, 2)) return false;
+    return obstacles.every((o) => !hit(r, o, pad));
   };
   const clampX = (x, w) => Math.max(edge, Math.min(vw - edge - w, x));
   const cx = (head.left + head.right) / 2;
+  // いつも頭の上に置く。横へ置くのはやめた(2026-10-24 窓口「狭い画面でも iPhone 13 と同じように、かぼちゃの上に」)。
+  // 広い幅から順に、真上(跳ねても頭がしっぽにかからない高さ)から6pxずつ下げ(顔の上まで)、それぞれで左右へ6pxずつ(48pxまで)ずらして、札とのすき間を探す
   const tries = [];
-  for (const w of HOME_RAID_SAY_WIDTHS) {
+  for (const w of widths) {
     const h = measure(w);
-    const left = clampX(cx - w / 2, w);
-    tries.push({ side: 'top', left, top: head.top - HOME_RAID_SAY_HOP - h, width: w, height: h });
-  }
-  for (const side of ['right', 'left']) {
-    for (const w of HOME_RAID_SAY_WIDTHS) {
-      const h = measure(w);
-      const left = side === 'right' ? head.right + HOME_RAID_SAY_GAP + 6 : head.left - HOME_RAID_SAY_GAP - 6 - w;
-      const midY = head.top + Math.min(head.bottom - head.top, 80) * 0.35;
-      tries.push({ side, left, top: Math.max(top + edge, midY - h / 2), width: w, height: h });
+    const from = head.top - HOME_RAID_SAY_HOP - h, to = faceTop - tail - h;
+    for (let y = from; y <= Math.max(from, to); y += 6) {
+      tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
+      for (let dx = 6; dx <= 48; dx += 6) for (const sign of [1, -1]) tries.push({ side: 'top', left: clampX(cx - w / 2 + sign * dx, w), top: y, width: w, height: h });
+      // 札の端にそろえた位置も試す(幅320は M/B管理と神殿のすき間がちょうど吹き出しの幅ほどで、6pxずつでは当たらない)
+      for (const o of obstacles) for (const left of [o.right + pad, o.left - pad - w]) if (Math.abs(left + w / 2 - cx) <= 60) tries.push({ side: 'top', left: clampX(left, w), top: y, width: w, height: h });
     }
   }
-  // ④ 頭の上の位置から6pxずつ下げ、頭の4分の3に重なるところまで探す(ジャックの絵に少し重なっても、文が読めるほうを選ぶ)
-  for (const w of HOME_RAID_SAY_WIDTHS) {
-    const h = measure(w);
-    const from = head.top - HOME_RAID_SAY_HOP - h, to = head.top + (head.bottom - head.top) * 0.75 - h;
-    for (let y = from + 6; y <= to; y += 6) tries.push({ side: 'top', left: clampX(cx - w / 2, w), top: y, width: w, height: h });
-  }
-  let best = null;
-  for (const t of tries) {
-    const area = overlap({ left: t.left, top: t.top, right: t.left + t.width, bottom: t.top + t.height });
-    if (area === 0) return { ...t, clear: true };
-    if (!best || area < best.area) best = { ...t, area };
-  }
-  return best ? { side: best.side, left: best.left, top: best.top, width: best.width, height: best.height, clear: false } : null;
+  for (const t of tries) if (fits({ left: t.left, top: t.top, right: t.left + t.width, bottom: t.top + t.height })) return { ...t, clear: true };
+  // 置ける所が無いときは、吹き出しを出さない(幅320で、みゅあ・ジャックの台詞が長いとき)。ジャックを押せばレイド画面へ行けるのは同じ。
+  // みゅあの台詞・ジャックの台詞が変われば、測り直して出す
+  return tries.length ? { ...tries[0], clear: false, hidden: true } : null;
 };
-// HOMEで吹き出しが避ける相手を集める。ボタン・リンク・みゅあの吹き出し(施設は見える札)。
-// ジャック自身・画面いっぱいの背景のような大きな押し場所・見えていないものは数えない
 const homeRaidSayObstacles = (wrap) => {
   if (typeof document === 'undefined') return [];
   const vw = window.innerWidth, vh = window.innerHeight, out = [];
@@ -176,6 +181,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const wrapRef = React.useRef(null);
   const sayRef = React.useRef(null);
   const [sayPlace, setSayPlace] = React.useState(null);
+  const sayInline = !!(sayPlace && sayPlace.width < HOME_RAID_SAY_INLINE_NEXT);
   React.useLayoutEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const place = () => {
@@ -188,14 +194,24 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       const head = { left: ar.left + img.offsetLeft, top: ar.top + img.offsetTop, right: ar.left + img.offsetLeft + img.offsetWidth, bottom: ar.top + img.offsetTop + img.offsetHeight };
       if (head.right - head.left < 2) return;
       const keep = say.style.width;
-      const measure = (w) => { say.style.width = `${w}px`; return say.offsetHeight; };
-      const next = homeRaidSayPlace({ head, obstacles: homeRaidSayObstacles(wrap), vw: window.innerWidth, vh: window.innerHeight, measure });
-      say.style.width = keep;
+      const keepFont = say.style.fontSize;
+      const nextInline = say.querySelector('[data-say-next-inline]'), nextRow = say.querySelector('[data-say-next-row]');
+      const keepNext = [nextInline && nextInline.style.display, nextRow && nextRow.style.display];
+      const measure = (w) => {
+        say.style.width = `${w}px`; say.style.fontSize = `${homeRaidSayFont(w)}px`;
+        if (nextInline && nextRow) { const inl = w < HOME_RAID_SAY_INLINE_NEXT; nextInline.style.display = inl ? 'block' : 'none'; nextRow.style.display = inl ? 'none' : 'block'; }
+        return say.offsetHeight;
+      };
+      const bandEl = wrap.querySelector('[data-home-raid-jack] [data-home-raid-jack-title]');
+      const br = bandEl && bandEl.parentElement.getBoundingClientRect();
+      const next = homeRaidSayPlace({ head, band: br ? { left: br.left, top: br.top, right: br.right, bottom: br.bottom } : null, obstacles: homeRaidSayObstacles(wrap), vw: window.innerWidth, vh: window.innerHeight, measure });
+      say.style.width = keep; say.style.fontSize = keepFont;
+      if (nextInline && nextRow) { nextInline.style.display = keepNext[0]; nextRow.style.display = keepNext[1]; }
       if (!next) return;
       const wr = wrap.getBoundingClientRect();
-      const rel = { side: next.side, left: Math.round(next.left - wr.left), top: Math.round(next.top - wr.top), width: next.width,
-        tail: Math.round(Math.max(14, Math.min(next.width - 14, (head.left + head.right) / 2 - next.left))), tailY: Math.round(Math.max(14, Math.min(next.height - 14, head.top + 24 - next.top))) };
-      setSayPlace((prev) => (prev && prev.side === rel.side && prev.left === rel.left && prev.top === rel.top && prev.width === rel.width && prev.tail === rel.tail && prev.tailY === rel.tailY ? prev : rel));
+      const rel = { side: next.side, hidden: !!next.hidden, left: Math.round(next.left - wr.left), top: Math.round(next.top - wr.top), width: next.width,
+        tail: Math.round(Math.max(14, Math.min(next.width - 14, (head.left + head.right) / 2 - next.left))) };
+      setSayPlace((prev) => (prev && prev.side === rel.side && prev.hidden === rel.hidden && prev.left === rel.left && prev.top === rel.top && prev.width === rel.width && prev.tail === rel.tail ? prev : rel));
     };
     place();
     // ボタンの並び・みゅあの吹き出しの長さは、読み込みやセリフで後から変わる。軽い測り直しをときどき回す
@@ -203,7 +219,11 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     const id = setInterval(place, 1500);
     window.addEventListener('resize', place);
     window.addEventListener('orientationchange', place);
-    return () => { timers.forEach(clearTimeout); clearInterval(id); window.removeEventListener('resize', place); window.removeEventListener('orientationchange', place); };
+    // みゅあの吹き出しが伸び縮みすると、札(M/B管理・神殿)も動く(--mh-home-assistant-bottom)。札が動き終わってから測り直す
+    const mua = document.querySelector('.mh-home-assistant');
+    const ro = (mua && typeof ResizeObserver !== 'undefined') ? new ResizeObserver(() => timers.push(setTimeout(place, 60))) : null;
+    if (ro) ro.observe(mua);
+    return () => { if (ro) ro.disconnect(); timers.forEach(clearTimeout); clearInterval(id); window.removeEventListener('resize', place); window.removeEventListener('orientationchange', place); };
   }, [lineNo, totals]);
   // ときどき両腕ポーズ(約7秒に1回、1.4秒だけ)
   React.useEffect(() => {
@@ -232,8 +252,11 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
   const shadowEl = <span className="mh-home-raid-jack-shadow" aria-hidden="true" style={{ display:'block', width:'70%', height:'8px', marginTop:'-6px', borderRadius:'50%', background:'#0008', filter:'blur(3px)' }} />;
   const labelEl = (
       <span style={{ display:'block', width:'100%', marginTop:'6px', padding:'3px 6px', borderRadius:'10px', border:'1px solid #fdba74aa', background:'#1c0a02d9', color:'#ffedd5', fontSize:'10px', fontWeight:900, textAlign:'center', lineHeight:1.3 }}>
-        <span style={{ display:'block' }}>{allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！` : `${tier.name}があらわれた！`}</span>
-        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9 }}>ジャックを倒した！あそんでダメージを競おう</span> : <>
+        {/* 「〜が」のあとだけで折る(2026-10-20 窓口「ジャック大王があらわれ／た！」と言葉の途中で折れていた)。
+            keep-all で字の間では折らず、<wbr/> の所だけで折る。それでも入らないときだけ anywhere で折る。
+            幅360未満の画面は字を9pxにして1行に収める(2026-10-24 窓口「幅320で『ジャック大王／あらわれた』と折れている」) */}
+        <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{tier.name}が<wbr/>あらわれた！</>}</span>
+        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！あそんでダメージを競おう')}</span> : <>
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
@@ -260,17 +283,19 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
     </div>}
     <div ref={wrapRef} data-home-raid-jack-wrap style={HOME_RAID_JACK_WRAP_STYLE}>
     {/* ひとこと。ジャックの上に出る吹き出し。押すと次のセリフへ(ジャック本体を押すとレイド画面) */}
-    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
+    <button type="button" ref={sayRef} key={`say${lineNo}`} data-home-raid-say data-story-pop="1" data-say-side={sayPlace ? sayPlace.side : 'top'} data-say-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} aria-hidden={sayPlace && sayPlace.hidden ? 'true' : undefined} onClick={() => setLineNo((n) => n + 1)} aria-label="ジャックのひとこと(押すと次のセリフ)"
       style={{ position:'absolute', ...(sayPlace ? { left:sayPlace.left, top:sayPlace.top, width:sayPlace.width } : { left:'50%', bottom:'100%', marginLeft:-92, marginBottom:'4px', width:184 }),
         padding:'6px 10px', borderRadius:'14px', boxSizing:'border-box',
-        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:'11px', fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
-        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:'auto' }}>
-      <span style={{ display:'block' }}>{speech}</span>
-      <span aria-hidden="true" style={{ display:'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
+        border:`2px solid ${speechAccent}`, background:'#1c0a02ee', color:'#ffedd5', fontSize:`${homeRaidSayFont(sayPlace ? sayPlace.width : 184)}px`, fontWeight:900, lineHeight:1.45, textAlign:'left', cursor:'pointer',
+        boxShadow:`0 0 12px ${speechAccent}66`, animation:'storyPop .25s ease-out both', zIndex:2, pointerEvents:(sayPlace && sayPlace.hidden) ? 'none' : 'auto',
+        ...(sayPlace && sayPlace.hidden ? { visibility:'hidden' } : {}) }}>
+      {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
+      {/* いちばん狭い120pxのときは「▶ つぎ」を下の枠線の上に乗せ、行を使わない(幅320で、かぼちゃの顔を隠さないため。2026-10-24) */}
+      <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>
+      <span aria-hidden="true" data-say-next-inline style={{ display:sayInline ? 'block' : 'none', position:'absolute', right:'10px', bottom:'-6px', padding:'0 4px', borderRadius:'4px', background:'#1c0a02', color:'#ffedd5', fontSize:'8px', lineHeight:'10px', whiteSpace:'nowrap' }}>▶ つぎ</span>
+      <span aria-hidden="true" data-say-next-row style={{ display:sayInline ? 'none' : 'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
-      {sayPlace && sayPlace.side === 'right' && <span aria-hidden="true" style={{ position:'absolute', left:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderRight:`9px solid ${speechAccent}` }} />}
-      {sayPlace && sayPlace.side === 'left' && <span aria-hidden="true" style={{ position:'absolute', right:-9, top:sayPlace.tailY, marginTop:-8, width:0, height:0, borderTop:'8px solid transparent', borderBottom:'8px solid transparent', borderLeft:`9px solid ${speechAccent}` }} />}
     </button>
     <button type="button" data-home-raid-jack onClick={onOpen} aria-label={allDone ? `${RAID_JACK_PUMPKIN.name}が遊びに来た！タップでレイド画面を開く` : `${tier.name}があらわれた！タップでレイド画面を開く`} style={HOME_RAID_JACK_BUTTON_STYLE}>
       {/* 通常絵とポーズ絵を重ねて、切り替えは透明度だけで行う(先に両方読み込める・切り替えで枠の高さが変わらない)。
@@ -298,7 +323,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
 // 数の字は 10px で1文字およそ 6.4px。枠の中で数に使える幅はダイヤが 50px・ブリーダーP が 29px(幅152pxのとき)なので、
 // 足りないぶんだけ最大 24px 広げ、それでも入らないぶんは字を小さくする(70-bootstrap.jsx の --wal-room)。
 // tools/home-layout-check.js がこの1行を取り出して同じ計算で測る
-const homeWalletGrowPx=(goldText,bpText)=>Math.min(24,Math.max(0,Math.ceil(String(goldText).length*6.4-50),Math.ceil(String(bpText).length*6.4-29)));
+// 「億」「兆」のような全角の字は数字より広いので、2.5字ぶんとして数える(N5・2026-10-21)。数字とカンマだけのときは今までと同じ
+const homeWalletGrowPx=(goldText,bpText)=>{const w=t=>[...String(t)].reduce((n,c)=>n+(c.charCodeAt(0)>0x7f?2.5:1),0);return Math.min(24,Math.max(0,Math.ceil(w(goldText)*6.4-50),Math.ceil(w(bpText)*6.4-29)));};
 function HomeScreen({
   assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
@@ -307,6 +333,8 @@ function HomeScreen({
   raidJackVisible = false, raidJackEventId, onOpenRaidJack,
   // 助手とおしゃべり(2026-10-14)。公開の印 assistantChat が立つまでは null(ボタンを出さない)
   onOpenAssistantChat = null,
+  // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
+  cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
@@ -320,6 +348,17 @@ function HomeScreen({
     measure();
     if(typeof ResizeObserver==='undefined'){window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);}
     const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();
+  },[]);
+  // みゅあの吹き出しの下端(場面の上から何px)を CSS の --mh-home-assistant-bottom へ渡す。台詞は切らずに全部出すので、
+  // 長い台詞で伸びたぶんだけ M/B管理・神殿の札を下げる(2026-10-24 窓口「幅320で『ついてるから大丈夫！…』と切れている」)。
+  // 回して描いているときも狂わないよう、画面上の位置ではなく offset で測る
+  React.useEffect(()=>{
+    const scene=homeSceneRef.current;const box=scene&&scene.querySelector('.mh-home-assistant');
+    if(!scene||!box)return undefined;
+    const measure=()=>{const b=box.offsetTop+box.offsetHeight;if(b>0)scene.style.setProperty('--mh-home-assistant-bottom',`${Math.ceil(b)}px`);};
+    measure();
+    if(typeof ResizeObserver==='undefined'){const id=setInterval(measure,1000);return()=>clearInterval(id);}
+    const ro=new ResizeObserver(measure);ro.observe(box);ro.observe(scene);return()=>ro.disconnect();
   },[]);
   const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
   const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);
@@ -363,8 +402,9 @@ function HomeScreen({
           </button>
           {/* ダイヤ・ブリーダーP は桁が増えても折り返さず1行のまま(2026-10-13 社長「8桁で『ダイヤ』が縦に折れて枠が伸びた」)。
               桁が多いときだけ枠を少し広げ(homeWalletGrowPx)、それでも入らないぶんは文字数(--len)に合わせて字を小さくする(70-bootstrap.jsx の --wal-room) */}
-          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(gold.toLocaleString(),breederPoints.toLocaleString())}px`}}>
-            <div><Gem size={14}/><b style={{'--len':String(gold.toLocaleString()).length}}>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b style={{'--len':String(breederPoints.toLocaleString()).length}}>{breederPoints.toLocaleString()}</b><small>ブリーダーP</small></div>
+          {/* 9桁(1億)からは「67.3億」のように縮めて出す(N5)。押すと細かい数が出る(CompactCount) */}
+          <section className="mh-home-wallet" style={{'--wal-grow':`${homeWalletGrowPx(compactCount(gold),compactCount(breederPoints))}px`}}>
+            <div><Gem size={14}/><CompactCount value={gold} style={{'--len':String(compactCount(gold)).length}}/><small>ダイヤ</small></div><div><Coins size={14}/><CompactCount value={breederPoints} style={{'--len':String(compactCount(breederPoints)).length}}/><small>ブリーダーP</small></div>
             <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
           </section>
         </header>
@@ -400,6 +440,11 @@ function HomeScreen({
         {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
           <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
+        {/* MFバトルカード(社長が決めた案A: 左の列のいちばん下・ハロウィン・ナイトの札の下。札が無いときは1段上がる) */}
+        {cardBattleVisible&&typeof onOpenCardBattle==='function'&&<button type="button" data-home-card-battle className={`mh-home-card-battle${homeEventCampaign?'':' raised'}`} onClick={onOpenCardBattle} aria-label="MFバトルカード"><span>🃏 MFバトルカード</span></button>}
+        {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
+            公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
+        {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
         <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
@@ -422,7 +467,6 @@ function KikiIntroOverlay({
     const line=script[step];
     const speaker=assistantById(line.who);
     const last=step===script.length-1;
-    const calls=(typeof ASSISTANT_KIKI_INTRO_CALLS!=='undefined'&&ASSISTANT_KIKI_INTRO_CALLS)||{};
     // 顔を並べるのは、この台本に出てくる助手だけ。
     // 全員を並べると、まだ登場していない助手までここに映ってしまう
     const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
@@ -447,10 +491,10 @@ function KikiIntroOverlay({
         </div>
         <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">
-          {step+1} / {script.length}　／　みゅあは「{calls.mua||''}」、ききは「{calls.kiki||''}」と呼び合います
+          {step+1} / {script.length}
         </p>
         {/* スキップ(2026-10-10・改善部の提案K2「あたらしい助手の紹介が10ページでスキップが無い」とユーザー指示)。
             飛ばしても、最後まで見たときと同じ markKikiIntroSeen を通る(見たことになり、次の起動で出ない。回想からいつでも見直せる) */}
@@ -494,7 +538,7 @@ function MomosukeIntroOverlay({
         </div>
         <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
-          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+          <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">{step+1} / {script.length}</p>
         {/* スキップ(2026-10-07・モンヒロくんの報告とユーザー指示)。39場面あり、イベントのお話のように飛ばせなかった。
@@ -515,6 +559,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   kiki: (who) => `${who}からフレンド申請が届いてまつよ。見にいきまつか？`,
   momosuke: (who) => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
+  atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
+  kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
@@ -528,7 +574,7 @@ function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLate
         <h2 className="mb-2 text-center text-base font-black text-rose-200">フレンド申請が届いています</h2>
         <div className="flex items-end gap-2">
           {who&&<AssistantFace who={who} size={76} accent={who.accent} expression="happy"/>}
-          <div className="flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white">{line}</div>
+          <div className="flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(line)}</div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button type="button" data-friend-notice-later onClick={onLater} className="min-h-[50px] rounded-2xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 active:scale-95">あとで</button>
@@ -586,7 +632,7 @@ return(
           onError={e=>{e.currentTarget.style.display='none';}} decoding="async"
           className="mb-3 w-full max-h-[42vh] rounded-2xl border border-pink-400/50 object-contain"/>}
         <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+        <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={pageExpression}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(pageText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId))}</div></div>
         {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
       </div>
     </div>);

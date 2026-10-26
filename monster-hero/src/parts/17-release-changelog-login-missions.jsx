@@ -79,13 +79,35 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 //   HOMEの「おしゃべり」・仲良し度の行動 chat のヘルプ表示・更新履歴・お話「話せるようになった日」がこの印で一緒に出る
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   rhythmHell: true,
+  // レイド・タクティクスプロ(ベースモンだけの回)の1回ごとの記録(raid_battle_logs・tactics_pro_logs)を送る(2026-10-21 社長「仕組みは作って」)。
+  //   2026-10-22 窓口が表を2つとも作って確かめた(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)ので真にした。設計は docs/spec/BATTLE_LOG.md
+  //   偽にすると何も送らず、タクティクスプロは入れ物も作らない(26-supabase.jsx)
+  battleLog: true,
   // 行動カードの絵(枠4色・技のマーク・段階の札)。社長が今のカードと見比べて決めるまで偽(2026-10-15)。
   //   見比べはデバッグ設定の「行動カードの絵」の切り替えで(BATTLE_CARD_ART_DEBUG・71-screen-battle.jsx)
   battleCardArt: true,
   assistantChat: true,
+  // おしゃべりでランキングの上位と自分の順位を答える(2026-10-21 社長の決定)。中継役を出し直したあと、2026-10-21 社長「実装していいよ」で真にした。
+  //   ヘルプの説明と更新履歴はこの印で出る
+  assistantChatRanking: true,
   // ふだんの吹き出しを1日1回まとめて作る(2026-10-14)。2026-10-14 社長「もう公開していいよ」→真にした(56-assistant-chat.jsx)
   assistantDailyLines: true,
+  // 5人目の助手あつ(2026-10-22 社長の決定)。社長がお話の全文を読んで「公開ok」→真にした(2026-10-22)。
+  //   偽のあいだは、助手の一覧・加入のお話・回想・ヘルプの項目に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantAtsu: true,
+  // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
+  //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
+  assistantKyuko: true,
+  // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
+  //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
+  cardBattle: true, // 2026-10-26 社長「公開する」
+  // MFバトルカードの助手のおしゃべり(AI)(2026-10-25 社長が3つとも選んだ)。中継役 card-assistant-talk を窓口が出して、社長が「公開」と言ったら真にする。
+  //   偽のあいだは、デバッグ端末だけが呼べる(83-card-battle-talk-ai.jsx の cardTalkOpen)。オプションの入/切もデバッグ端末だけに出る
+  cardAssistantTalk: true, // 2026-10-26 社長「公開する」
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+  // タクティクスのヘイト(🔥)とモンスターのタイプ表記。2026-10-18 社長「ヘイトシステムは実装していいよ」で公開。
+  //   数字は 32-tactics-units.jsx の TACTICS_HATE / MONSTER_TYPES。お話「タクティクスバトル ～4人のタイプ～」(tactics_types)もこの印で出る
+  tacticsHate: true,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, raidJackRhythm: RAID_JACK_RHYTHM_PUBLIC_RELEASE, get raidJack() { try { return RAID_JACK_PUBLIC_RELEASE === true && Date.now() >= Date.parse(RAID_JACK_START_AT); } catch (e) { return false; } }, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
@@ -184,6 +206,9 @@ const CHANGELOG_GROUPS = Object.freeze([
   // 値段の見直しや絵の調整まで引っ張られる)。確実に入れたい項目は group:'monster' と書く。
   // 一番上に置くのは、見当が上から順に決まるため(「新しい仲間…ビートP」をモンヒロビートより先に拾う)
   { id:'monster',   label:'新モンスター',   emoji:'🐣', match:/新モンスター|新しいモンスター|新しい仲間|新血統/ },
+  // MFバトルカードのお知らせ(2026-10-25 社長「お知らせで新コンテンツとバトルのとかはMFバトルカードにして」)。
+  // 「カード」「バトル」の言葉で ⚔ バトル へ入っていた。バトルより上に置き、名前そのもので拾う(これから先のお知らせも入る)
+  { id:'cardBattle', label:'MFバトルカード', emoji:'🃏', match:/MFバトルカード/ },
   { id:'rhythm',    label:'モンヒロビート', emoji:'🎵', match:/モンヒロビート|モンビー|音ゲー|譜面|ノーツ|レーン|コンボ|判定|新曲|曲えらび|演奏|リズム/ },
   { id:'masu',      label:'マスモンの育成', emoji:'💜', match:/マスモン|強化|転生|限界突破|超越|魂格|合体|絆|トレーニング|育成|再生|染色|ブリーダー|オート強化/ },
   { id:'battle',    label:'バトル',         emoji:'⚔', match:/バトル|WAVE|難易度|勇者モン|供モン|カード|AUTO|クイック|極限|種族チャレンジ|スキップ|敵/ },
@@ -326,9 +351,11 @@ const CHANGELOG_STATUS = {
   investigating: { label: '調査中',   cls: 'bg-amber-900/70 text-amber-300 border-amber-500/50' },
   known:         { label: '判明済み', cls: 'bg-slate-800 text-slate-300 border-slate-500/50' },
 };
-// 音量の既定値。初期状態は「音がオン」で、いきなり大きな音が鳴らないよう最小の1から始める
-// (ミュートを解除したときの音量もこの値に合わせている)
-const DEFAULT_VOLUME = 1;
+// 音量の既定値(まだ音量を保存していない端末だけに効く。保存した値はそのまま読む)。初期状態は「音がオン」。
+// 2026-10-18 社長の判断「控えめの値に上げる」で 1 → 30。1 だとほとんど聞こえなかった(効果音 約-40dB・BGM 約-54dB)。
+// 30 は効果音 約-28dB・BGM 約-38dB(14-audio.jsx の _gainFromPct / _bgmGain)で、いきなり大きな音にはならない。
+// ミュートの解除(toggleQuickMute)は音量の値を変えず、保存している音量のまま鳴らし直す
+const DEFAULT_VOLUME = 30;
 // ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る。
 // 4日目の「100」はもともとブリーダー経験値のつもりだったが、
 // 報酬の種類をブリーダーポイント(pt)にしていたため、使い道のないptが大量に配られていた。
@@ -390,6 +417,18 @@ const RHYTHM_HELL_STORY_TRIGGER = 'release';
 // 公開(RELEASE_FLAGS.assistantChat)のあとの最初の HOME で1回だけ流す。デバッグから見たぶんは立てない
 const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
+// あつの加入のお話(2026-10-22)。id は data/assistants.js の ASSISTANT_UNLOCK_STORIES.atsu と同じ
+const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
+// きゅうこの加入のお話(2026-10-22)。id は data/assistants.js の EVENT_REPLAYS と data/breeder.js の KYUKO_JOIN_STORY_ID_FOR_SHOP と同じ
+const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
+// 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
+// ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
+const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
+const TACTICS_TYPES_STORY_ID = 'tactics_types';
+// MFバトルカードのはじまり(2026-10-24・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
+// 公開(RELEASE_FLAGS.cardBattle)のあとの最初の HOME で1回だけ流す。見た(飛ばしても)ら HOME の入口が出る。デバッグ・回想から見たぶんは立てない
+const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
+const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
@@ -419,6 +458,9 @@ const assistantBondKeyFor = (assistantId) => {
 const assistantIdOfAssistCard = (cardId) => {
   const id = String(cardId == null ? '' : cardId);
   const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
+  // ★公開の印が立つまでの助手(あつ・2026-10-22)には結び付けない。カード「あつの挑発」は前からあるので、
+  //   結び付けると公開前に「あつ」の仲良し度が貯まり、ごほうびのギフトまで届いてしまう(assistantReleased・data/assistants.js)
+  if (typeof assistantReleased === 'function' && !assistantReleased(id)) return null;
   return list.some(a => a && a.id === id) ? id : null;
 };
 // 呼び方の上書きも助手ごとに分ける。みゅあのぶんは今までのキーのまま
@@ -469,6 +511,80 @@ const gainAssistantBond = (state, actionKey, now = Date.now()) => {
   return { changed: true, state: { points: cur.points + gain, day, daily, dailyTotal: dailyTotal + gain }, gained: gain };
 };
 const assistantBondLevelOf = (points) => (typeof assistantBondLevel === 'function') ? assistantBondLevel(points) : 1;
+
+// ---------- 仲良し度のLvごとのごほうび(2026-10-21) ----------
+// Lvを越えたら、助手ごとに各Lv1回ずつギフトで届ける(量は ASSISTANT_BOND_LEVEL_REWARDS)。
+// 届けた印は2つ(どちらも { 助手のid: [Lv, ...] }・CLAUDE.md ⑦)
+//   mh_assistant_bond_rewards_v1 … 最初の量(ASSISTANT_BOND_LEVEL_REWARDS_V1・Lv22/25/28/30だけ)を届けた印。★意味は変えない・もう書かない
+//   mh_assistant_bond_rewards_v2 … 今の量を届けた印。v1 の印がある節目は、今の量との差のぶんだけを「追加ぶん」で届けて、この印を付ける
+// ★ギフトは受け取ったあと一覧から消えることがあるので、ギフトのidだけでなく印で二重を防ぐ
+const ASSISTANT_BOND_REWARDS_KEY = 'mh_assistant_bond_rewards_v1';
+const ASSISTANT_BOND_REWARDS_V2_KEY = 'mh_assistant_bond_rewards_v2';
+const normalizeAssistantBondRewardsDelivered = (value) => {
+  const raw = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+  const out = {};
+  for (const [id, levels] of Object.entries(raw)) {
+    if (!Array.isArray(levels)) continue;
+    const list = [...new Set(levels.map(n => Math.floor(Number(n))).filter(n => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+    if (list.length) out[id] = list;
+  }
+  return out;
+};
+// 最初の量のギフトのid(#3241)。今の量は _v2、差のぶんは _topup
+const assistantBondRewardGiftId = (assistantId, level) => `gift_assistant_bond_${assistantId}_lv${level}`;
+const assistantBondRewardV2GiftId = (assistantId, level, topup = false) => `gift_assistant_bond_v2_${assistantId}_lv${level}${topup ? '_topup' : ''}`;
+// 今の量から、もう渡した量を引いた残り(品ごと)。もう渡した量のほうが多い品は0にする(取り上げない)
+const assistantBondRewardRemainder = (next, given) => {
+  const keyOf = (r) => `${r && r.type}:${(r && r.itemId) || ''}`;
+  const had = {};
+  for (const r of (Array.isArray(given) ? given : [])) had[keyOf(r)] = (had[keyOf(r)] || 0) + Math.max(0, Math.floor(Number(r && r.amount) || 0));
+  return (Array.isArray(next) ? next : [])
+    .map(r => ({ ...r, amount: Math.max(0, Math.floor(Number(r.amount) || 0) - (had[keyOf(r)] || 0)) }))
+    .filter(r => r.amount > 0);
+};
+// まだ届けていないLvのぶんをギフトへ足した結果を返す(渡された値は変えない)。
+//   delivered: v1 の印(読むだけ) / deliveredV2: v2 の印 / levels: { 助手のid: いまのLv }
+// 戻り値の changed が true のときだけ、gifts と deliveredV2 を一緒に保存する
+const buildAssistantBondRewardGrant = ({ gifts, delivered, deliveredV2, levels, now = Date.now() } = {}) => {
+  const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const tableV1 = (typeof ASSISTANT_BOND_LEVEL_REWARDS_V1 !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS_V1) || {};
+  const milestones = Object.keys(table).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
+  let nextGifts = Array.isArray(gifts) ? gifts : [];
+  const v1 = normalizeAssistantBondRewardsDelivered(delivered);
+  const nextDelivered = normalizeAssistantBondRewardsDelivered(deliveredV2);
+  const granted = [];
+  let changed = false;
+  for (const who of list) {
+    const id = who && who.id;
+    if (!id) continue;
+    const level = Math.floor(Number(levels && levels[id]) || 0);
+    for (const lv of milestones) {
+      if (lv > level || (nextDelivered[id] || []).includes(lv)) continue;
+      // 最初の量をもう受け取っている(印がある・ギフトが残っている)なら、差のぶんだけ
+      const topup = !!tableV1[lv] && ((v1[id] || []).includes(lv) || nextGifts.some(g => g && g.id === assistantBondRewardGiftId(id, lv)));
+      const rewards = topup ? assistantBondRewardRemainder(table[lv], tableV1[lv]) : table[lv].map(r => ({ ...r }));
+      const mark = () => { nextDelivered[id] = [...(nextDelivered[id] || []), lv].sort((a, b) => a - b); changed = true; };
+      if (!rewards.length) { mark(); continue; }
+      const gift = {
+        id: assistantBondRewardV2GiftId(id, lv, topup),
+        source: 'assistantBond',
+        title: topup ? `${who.name}との仲良し度 Lv${lv} のごほうび(追加ぶん)` : `${who.name}との仲良し度 Lv${lv} のごほうび`,
+        description: topup
+          ? `ごほうびの量が増えたので、前に受け取ったぶんとの差をお届けします。`
+          : `${who.name}との仲良し度が Lv${lv} になりました。いつもありがとう！`,
+        rewards,
+      };
+      const already = nextGifts.some(g => g && g.id === gift.id);
+      const grant = grantGiftOnce(nextGifts, gift, now);
+      // 中身が読めない(古い版で品物が無いなど)ときは印を付けず、次に読めたときに届ける
+      if (!grant.granted && !already) continue;
+      if (grant.granted) { nextGifts = grant.gifts; granted.push({ assistantId:id, level:lv, topup }); }
+      mark();
+    }
+  }
+  return { changed, gifts:nextGifts, deliveredV2:nextDelivered, granted };
+};
 
 const normalizeLoginBonus = (value) => ({
   currentDay: Number.isInteger(value?.currentDay) && value.currentDay >= 1 && value.currentDay <= 7 ? value.currentDay : 1,
@@ -723,6 +839,14 @@ const grantNewPlayerCampaignGift = (gifts, now=Date.now(), extraRewards=[]) => {
 // ★既存のギフト(diamond / rainbowPsyche など)の形は何も変えていない。
 //   古い保存(mh_gifts)はそのまま読めるし、書き方も今までどおりでよい(CLAUDE.md ⑦)。
 const GIFT_ITEM_REWARD_TYPE = 'gameItem';
+// プロフィールフレームを届ける報酬(2026-10-20・ハロウィン・妖)。{ type:'profileFrame', frameId } で、数は1枚に決まっている。
+// 受け取ると mh_profile_frame_owned_v1 へ足す(ほかの手に入れ方と同じ入れ物)。知らない・未公開の枠のときはギフトごと無効にする。
+// ★この種類を知らない古い版では「受け取れないギフト」として残るだけで、ほかのギフトや保存は壊れない
+const GIFT_FRAME_REWARD_TYPE = 'profileFrame';
+const giftFrameRewardInfo = (frameId) => {
+  const frame = typeof profileFrameById === 'function' ? profileFrameById(frameId) : null;
+  return frame && frame.released === true ? frame : null;
+};
 // そのidのアイテムの名前と絵文字。知らないidでは null を返し、ギフトごと無効にする
 // (知らないものを黙って配らない)
 const giftItemRewardInfo = (itemId) => {
@@ -755,8 +879,11 @@ const normalizeGiftRewards = (gift) => {
   const supported = Object.keys(GIFT_REWARD_LABELS);
   const rewards = gift.rewards.map(r => (r?.type === GIFT_ITEM_REWARD_TYPE
     ? { type:GIFT_ITEM_REWARD_TYPE, itemId:(typeof r?.itemId === 'string' ? r.itemId : ''), amount:Math.floor(Number(r?.amount)) }
-    : { type:r?.type, amount:Math.floor(Number(r?.amount)) }));
-  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId) : supported.includes(r.type))
+    : r?.type === GIFT_FRAME_REWARD_TYPE
+      ? { type:GIFT_FRAME_REWARD_TYPE, frameId:(typeof r?.frameId === 'string' ? r.frameId : ''), amount:1 }
+      : { type:r?.type, amount:Math.floor(Number(r?.amount)) }));
+  return rewards.every(r => (r.type === GIFT_ITEM_REWARD_TYPE ? !!giftItemRewardInfo(r.itemId)
+    : r.type === GIFT_FRAME_REWARD_TYPE ? !!giftFrameRewardInfo(r.frameId) : supported.includes(r.type))
     && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
 // 受取期限。expiresAt を書いていないギフトは「期限なし(ずっと受け取れる)」として扱う。
@@ -779,7 +906,7 @@ const summarizeClaimedGiftRewards = (gifts) => {
   const totals = new Map();
   (Array.isArray(gifts) ? gifts : []).forEach(gift => {
     (normalizeGiftRewards(gift) || []).forEach(reward => {
-      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type;
+      const key = reward.type === GIFT_ITEM_REWARD_TYPE ? `${reward.type}:${reward.itemId}` : reward.type === GIFT_FRAME_REWARD_TYPE ? `${reward.type}:${reward.frameId}` : reward.type;
       const prev = totals.get(key);
       totals.set(key, prev ? { ...prev, amount:prev.amount + reward.amount } : { ...reward });
     });
@@ -790,13 +917,19 @@ const buildGiftClaim = (gift, balances, now=Date.now()) => {
   if (!gift || gift.claimedAt || giftIsExpired(gift, now)) return { ok:false, reason:gift?.claimedAt?'claimed':'expired' };
   const rewards = normalizeGiftRewards(gift);
   if (!rewards) return { ok:false, reason:'invalidReward' };
-  const next = { gold:Math.max(0,Number(balances?.gold)||0), breederPoints:Math.max(0,Number(balances?.breederPoints)||0), breederXp:Math.max(0,Number(balances?.breederXp)||0), ownedItems:{...(balances?.ownedItems||{})} };
+  const next = { gold:Math.max(0,Number(balances?.gold)||0), breederPoints:Math.max(0,Number(balances?.breederPoints)||0), breederXp:Math.max(0,Number(balances?.breederXp)||0), ownedItems:{...(balances?.ownedItems||{})},
+    // フレームの報酬があるときだけ使う(持っていなければ足す。持っていれば何もしない)
+    ownedProfileFrames:Array.isArray(balances?.ownedProfileFrames)?[...balances.ownedProfileFrames]:[] };
   // 虹の超越の実は既存の RAINBOW_TRANSCEND_FRUIT_ITEM_ID と同じ保存ID。
   const itemIds = { dyeMock:'dye_mock', bondPointReset:'bond_reset_scroll', uniqueSkillResetTicket:'unique_skill_reset_ticket', rainbowPsyche:'rainbow_psyche', rainbowTranscendFruit:'transcend_fruit_rainbow', trainingTicket:'training_ticket', trainingTicketLarge:'training_ticket_l', skipTicketJo:'skip_ticket_jo', skipTicketHa:'skip_ticket_ha', skipTicketKyu:'skip_ticket_kyu' };
-  rewards.forEach(({type,itemId,amount})=>{ if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else { const id=type===GIFT_ITEM_REWARD_TYPE?itemId:itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
+  rewards.forEach(({type,itemId,frameId,amount})=>{ if(type===GIFT_FRAME_REWARD_TYPE){ if(!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId); return; } if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else { const id=type===GIFT_ITEM_REWARD_TYPE?itemId:itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
   return { ok:true, balances:next, gift:{...gift,claimedAt:new Date(now).toISOString()} };
 };
 const giftRewardText = (reward) => {
+  if (reward && reward.type === GIFT_FRAME_REWARD_TYPE) {
+    const frame = giftFrameRewardInfo(reward.frameId);
+    return `🖼️ プロフィールフレーム「${frame ? frame.name : reward.frameId}」`;
+  }
   if (reward && reward.type === GIFT_ITEM_REWARD_TYPE) {
     const info = giftItemRewardInfo(reward.itemId);
     const name = info ? `${info.emoji ? `${info.emoji} ` : ''}${info.name}` : reward.itemId;
@@ -813,6 +946,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'rhythmEvent') return { label:'ランキング報酬', title };
   // イベント・レイドボス「ジャック」の報酬(2026-10-04)
   if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
+  // 助手の仲良し度の節目のごほうび(2026-10-21)
+  if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
@@ -956,10 +1091,10 @@ const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらで
 const missionItemReward = (itemId, amount) => ({ type:'gameItem', itemId, amount });
 const DAILY_ROTATION_MISSIONS = Object.freeze({
   1:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'diamond',amount:300}]},
-  2:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'trainingTicket',amount:3}]},
+  2:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使う',key:'itemUses',target:1,rewards:[{type:'trainingTicket',amount:3}]},
   3:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
   4:{id:'daily_rotation',name:'本日のミッション',condition:`種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
-  5:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'dyeMock',amount:1}]},
+  5:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使う',key:'itemUses',target:1,rewards:[{type:'dyeMock',amount:1}]},
   6:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[missionItemReward('hero_proof_shard',1)]},
   0:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
 });
@@ -967,11 +1102,11 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([
   {id:'weekly_rotation',name:'今週のミッション',condition:`プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:3,rewards:[missionItemReward('hero_proof_shard',3)]},
   {id:'weekly_rotation',name:'今週のミッション',condition:'極限チャレンジを1回クリアする（未解放ならクイックモードを10回クリア）',key:'extremeOrQuick',target:1,rewards:[{type:'rainbowPsyche',amount:30}]},
   {id:'weekly_rotation',name:'今週のミッション',condition:`種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:3,rewards:[{type:'trainingTicketLarge',amount:2}]},
-  {id:'weekly_rotation',name:'今週のミッション',condition:'アイテムを10個使用する',key:'itemUses',target:10,rewards:[{type:'bondPointReset',amount:1}]},
+  {id:'weekly_rotation',name:'今週のミッション',condition:'アイテムを10個使う',key:'itemUses',target:10,rewards:[{type:'bondPointReset',amount:1}]},
 ]);
 const missionDailyDefinitions = (now=Date.now()) => [
   {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:200}]},
-  {id:'daily_battles',name:'バトルに挑戦',condition:'バトルを3回行う',key:'battles',target:3,rewards:[{type:'trainingTicket',amount:3}]},
+  {id:'daily_battles',name:'バトルに挑戦',condition:'バトルを3回遊ぶ',key:'battles',target:3,rewards:[{type:'trainingTicket',amount:3}]},
   // 旧 daily_wins のIDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
   {id:'daily_wins',name:'デイリーチャレンジ',condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
   {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:300}]},
@@ -979,31 +1114,31 @@ const missionDailyDefinitions = (now=Date.now()) => [
   {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1},{type:'gameItem',itemId:'session_ticket',amount:1}],complete:true},
 ];
 const missionWeeklyDefinitions = (now=Date.now()) => [
-  {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
-  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回行う',key:'battles',target:20,rewards:[{type:'diamond',amount:1000}]},
+  {id:'weekly_logins',name:'継続は力なり',condition:'5日ログインする(同じ日は1回)',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
+  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回遊ぶ',key:'battles',target:20,rewards:[{type:'diamond',amount:1000}]},
   {id:'weekly_enhance',name:'育成週間',condition:'モンスターを10回強化する',key:'enhances',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
   // 旧 weekly_wins のIDをクイック枠へ再利用し、同期間の二重受取を防ぐ。
   {id:'weekly_wins',name:'クイック育成',condition:'クイックモードを5回クリアする',key:'quickClears',target:5,rewards:[{type:'rainbowPsyche',amount:20}]},
   // 旧IDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
   {id:'weekly_donations',name:'チャレンジャー',condition:`チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:3,rewards:[{type:'breederXp',amount:300}]},
-  {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回購入する',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:2}]},
+  {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回買う',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:2}]},
   // 旧 weekly_daily_claims のIDをアイテム使用枠へ再利用する。
-  {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使用する',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
+  {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使う',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
   {...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]},
   {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5),{type:'gameItem',itemId:'session_ticket',amount:3}],complete:true},
 ];
 const missionMonthlyDefinitions = () => [
-  {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
-  {id:'monthly_battles',name:'月間バトル',condition:'バトルを100回行う',key:'battles',target:100,rewards:[{type:'rainbowPsyche',amount:50}]},
-  {id:'monthly_wins',name:'月間勝利',condition:'バトルで200回勝利する',key:'wins',target:200,rewards:[{type:'trainingTicketLarge',amount:5}]},
+  {id:'monthly_logins',name:'月間ログイン',condition:'20日ログインする(同じ日は1回)',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
+  {id:'monthly_battles',name:'月間バトル',condition:'バトルを100回遊ぶ',key:'battles',target:100,rewards:[{type:'rainbowPsyche',amount:50}]},
+  {id:'monthly_wins',name:'月間勝利',condition:'バトルで200回勝つ',key:'wins',target:200,rewards:[{type:'trainingTicketLarge',amount:5}]},
   {id:'monthly_daily_completes',name:'デイリーマスター',condition:'デイリーコンプリートを20回達成する',key:'dailyCompletes',target:20,rewards:[{type:'diamond',amount:5000}]},
   {id:'monthly_weekly_completes',name:'ウィークリーマスター',condition:'ウィークリーコンプリートを3回達成する',key:'weeklyCompletes',target:3,rewards:[{type:'rainbowPsyche',amount:100}]},
-  {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回プレイする',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
+  {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回遊ぶ',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
   {id:'monthly_challenge_runs',name:'チャレンジ月間',condition:`チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,key:'challengeRuns',target:10,rewards:[{type:'rainbowPsyche',amount:50}]},
   {id:'monthly_pro_clears',name:'プロ月間',condition:`プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:10,rewards:[missionItemReward('hero_proof_shard',10)]},
   {id:'monthly_enhances',name:'育成月間',condition:'モンスターを30回強化する',key:'enhances',target:30,rewards:[{type:'uniqueSkillResetTicket',amount:2}]},
-  {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回取引する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
-  {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'各種モードを合計30回プレイする',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
+  {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回買い物する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
+  {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'どのモードでも合わせて30回遊ぶ',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
   {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1),{type:'gameItem',itemId:'session_ticket',amount:10}],complete:true},
 ];
 // 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。

@@ -68,13 +68,13 @@ section{display:flex;flex-direction:column;gap:10px}
 <div class="wrap">
   <header>
     <h1>モンヒロ社 社長室</h1>
-    <p class="lead">10/16 13:36 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
+    <p class="lead">10/26 03:24 更新 / まとめ: 統括部長:モンヒロくん。決めたいことは、チャットでそのまま伝えてください。<br>モンスター Tier 表: <a href="https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8">https://claude.ai/artifact/3sUNc2pQgN5f4QdYYW5tW8</a>(サイドバーにも固定)</p>
   </header>
 
   <nav class="counts" aria-label="件数">
     <a class="count warn" href="#decide"><b>0</b><span>社長の判断待ち</span></a>
-    <a class="count" href="#work"><b>5</b><span>進行中</span></a>
-    <a class="count" href="#shipped"><b>38</b><span>公開したもの</span></a>
+    <a class="count" href="#work"><b>10</b><span>進行中</span></a>
+    <a class="count" href="#shipped"><b>0</b><span>公開したもの</span></a>
   </nav>
 
   <section id="decide">
@@ -88,10 +88,35 @@ section{display:flex;flex-direction:column;gap:10px}
     <section id="work">
       <h2>進行中の作業</h2>
       <ul class="list">
-      <li id="r2610161335femme">
-        <div class="row-title">モンヒロビートのマスモンの個体差: ウンディーネ種とピクシー種は必ず女の子にする</div>
+      <li id="r2610260322anomaly">
+        <div class="row-title">判定の異変の報告(10/25分): toriko MASTER android の MISS 率が 0.36%→2.59%(曲の10〜20%と55〜60%に集中・何も押していない MISS は0件・前日8回だけ)。iOS の遅れたタッチが 7.91→18.98(前日6回だけ、MISS率はむしろ下がった)。前日は版を12回公開</div>
         
-        <div class="meta"><span>部長テンポくん</span><span>見込み 今の個体差の決まり方を確かめてから。持っている子のセーブデータは書き換えない形を優先。ほかの種は変えない</span></div>
+        <div class="meta"><span>部長テンポくん</span><span>見込み 遊ばれた回数が少なく、偶然の見込みが高い。ビート部に軽く見立てを頼む(今週は使用量を抑えているので、重い解析はしない)</span></div>
+      </li>
+      <li id="r2610212345maint">
+        <div class="row-title">必要そうなメンテ(落ちている検査2本・手順書の書き足し)</div>
+        
+        <div class="meta"><span>部長クラフトくん・部長テンポくん</span><span>見込み gpu-band・background-run の2本／山場なし・音源の聞き比べの手順</span></div>
+      </li>
+      <li id="r2610162040monlag">
+        <div class="row-title">モンヒロビート: モンスターノーツでかくつくのが直っていない(社長の実機)</div>
+        
+        <div class="meta"><span>部長テンポくん</span><span>見込み JS以外(塗り・画像のデコード・能力の帯の挿し込み・音・演出の層)を疑って調べる。実機で1回遊べば前後の1コマの時間が残る仕組みも検討。見た目の見本の絵より先に対応</span></div>
+      </li>
+      <li id="r2610161725debugui">
+        <div class="row-title">デバッグモードが分かりにくい: モンヒロビートのデバッグの曲えらびを本物と同じ画面に・確認待ちの試作をデバッグ設定の一番上に一覧で</div>
+        
+        <div class="meta"><span>テンポくん・ドライバーくん</span><span>見込み ビート部: 本物の曲えらび画面に置き換え、試作の切り替えを目立つ形で。修理部: 開いてすぐの「確認待ちの試作」一覧(NEW付き)と入口を浅く。ふつうのプレイヤーには出さない</span></div>
+      </li>
+      <li id="r2610161630leak">
+        <div class="row-title">オート∞で長く遊ぶと画面の部品の置き場が1時間で約95MB増え続ける件の正体を突き止めて直す(案A)</div>
+        
+        <div class="meta"><span>部長ドライバーくん</span><span>見込み +580MBの内訳: 絵の置き場+240MB(頭打ち)・音+170MB(頭打ち)・画面の部品+95MB(増え続ける)。増え続ける分をheap snapshotで特定して直す。絵を縮める案Bは今は見送り</span><span>PR #3111</span></div>
+      </li>
+      <li id="r2610161600note3d">
+        <div class="row-title">モンヒロビートのノーツの見た目: 地上は床にべったり、スカイは立体感(試作)</div>
+        
+        <div class="meta"><span>部長テンポくん</span><span>見込み 段階A(#3136)は社長「逆に見にくい」。参考動画を調べた見本の絵(#3137)から、社長が案3(明るく薄い板＋光る縁・半透明で光る管・カメラを寝かせる)を選んだ。かくつきの件のあと、案1＋2→カメラの順に確認待ちの試作へ。判定の式もそろえる。既定は今の見た目</span><span>PR #3114・#3127・#3132・#3134・#3136・#3137</span></div>
       </li>
       <li id="r2610161220resume">
         <div class="row-title">止めていた仕事の再開: 修理部の落ちた検査・音楽の代わりの仕組み案、研究所の4人、改善部の毎日の点検</div>
@@ -223,197 +248,7 @@ section{display:flex;flex-direction:column;gap:10px}
     </section>
     <section id="shipped">
       <h2>公開したもの</h2>
-      <ul class="list">
-      <li id="r2610161305bgmmem">
-        <div class="row-title">AUTO∞で1時間たってホームに戻ると音が止まる件(BGMのメモリ): 案1(場面のBGMを軽く)＋案2(持つ曲を減らす)</div>
-        
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #3083</span></div>
-      </li>
-      <li id="r2610161240anomaly">
-        <div class="row-title">APIクレジットの使い道: モンヒロビートの判定の異変を毎晩3:10に自動で見つけて報告する仕組み</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3076</span></div>
-      </li>
-      <li id="r2610160722cardname">
-        <div class="row-title">新しいカードの絵: 技名をもっと太く・技変更の下の種類の札が左寄せに見える</div>
-        
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #3070</span></div>
-      </li>
-      <li id="r2610160800oldcard">
-        <div class="row-title">タクティクスの行動カードを、設定で前のカードの見た目にも戻せるようにする(改善部K2・社長の決定)</div>
-        
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #3062</span></div>
-      </li>
-      <li id="r2610160800beat">
-        <div class="row-title">モンヒロビート: 曲の版切り替えボタンを大きく/Sheriruth HELL 77.6秒のカクつきを詰める(夜の点検の提案・社長の決定)</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3064</span></div>
-      </li>
-      <li id="r2610160158night">
-        <div class="row-title">夜の点検: モンビー周り・タクティクス周り・ダメ出しくんの確認</div>
-        
-        <div class="meta"><span>ブレイブくん・テンポくん・ダメダシくん</span><span>PR #3052・#3054・#3055・#3056・#3059</span></div>
-      </li>
-      <li id="r2610152230flickmark">
-        <div class="row-title">空中スライドの終わりの「払う」印を大きく目立たせる(決まりはそのまま)</div>
-        
-        <div class="meta"><span>部員</span><span>PR #3039</span></div>
-      </li>
-      <li id="r2610152245card">
-        <div class="row-title">行動カードが前より小さい・運ぶとき潰れる・クラシックの枠の札が帯と重なる(Android)</div>
-        
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #3048・#3050</span></div>
-      </li>
-      <li id="r2610152240recjudge">
-        <div class="row-title">入力の記録に判定の出来事(付いた・MISS・控え・浮き・持ち替え・外れによる切れ)を入れる</div>
-        <div class="row-body">記録をコピーすると判定の出来事も入る</div>
-        <div class="meta"><span>部長テンポくん</span><span>PR #3037</span></div>
-      </li>
-      <li id="r2610152010jm">
-        <div class="row-title">モンヒロビートのランキング: 同じスコアなら JUST MARVELOUS が多い人を上に(この曲・全難易度・総合・週間・イベント)</div>
-        <div class="row-body">アプリと Supabase の関数4つ(窓口が当てた・件数は前後で同じ)</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #3030・#3035</span></div>
-      </li>
-      <li id="r2610152050rec">
-        <div class="row-title">iPhone の入力をそのまま記録して、パソコンで再生できる仕組み</div>
-        <div class="row-body">デバッグ設定「入力の記録(検証用)」→1曲→「最後の演奏の記録をコピー」。判定の出来事を入れる分はビート部が作業中</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #3032・#3034</span></div>
-      </li>
-      <li id="r2610152100flash">
-        <div class="row-title">演出量を最小にしても、押したときの光だけは出す設定</div>
-        <div class="row-body">「軽さ・演出」タブの「押したときの光」</div>
-        <div class="meta"><span>部員</span><span>PR #3033</span></div>
-      </li>
-      <li id="r2610131505pillar">
-        <div class="row-title">HELL の柱の光の重さを本番の記録で見直す</div>
-        <div class="row-body">本番の記録で HELL(17.1ms)と MASTER(17.1ms)が同じ。柱の光は入のままでよい</div>
-        <div class="meta"><span>統括部長モンヒロくん</span></div>
-      </li>
-      <li id="r2610152207judge">
-        <div class="row-title">モンヒロビート: 押さえている指と別の指の判定が混ざる(空中スライド中の地上タップ・フリックで外れる/Sheriruth・AMOS HELL/ホールド→フリック/上下クロス/半レーンずれの両手押し)</div>
-        
-        <div class="meta"><span>部長テンポくん</span><span>PR #3036・#3042・#3045・#3051・#3053・#3054・#3049</span></div>
-      </li>
-      <li id="r2610151950raid">
-        <div class="row-title">ジャックのランキング: 合計もいつでも累計を出す</div>
-        
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #3028</span></div>
-      </li>
-      <li id="r2610151940hell">
-        <div class="row-title">はじめての人には HELL のお話と遊び方を、HELL が開いたときに出す</div>
-        
-        <div class="meta"><span>部長マップくん</span><span>PR #3025</span></div>
-      </li>
-      <li id="r2610151900bgm">
-        <div class="row-title">いろんな画面で音が鳴らない(朝の BGM の流し方の変更が原因)を元に戻す</div>
-        <div class="row-body">BGM の鳴らし方を朝より前へ戻した</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #3017</span></div>
-      </li>
-      <li id="r2610151718card">
-        <div class="row-title">行動カードの新しい絵(作戦バトルの手札)</div>
-        <div class="row-body">5色の枠・技名5.75pxでそろえる・クラシックの手札は前のまま</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #3009</span></div>
-      </li>
-      <li id="r2610151500chat">
-        <div class="row-title">助手とおしゃべり: キャラごとの話し方・一般の知識をそろえる</div>
-        <div class="row-body">中継役を第6版で公開し直し、4人の本番テストで確認</div>
-        <div class="meta"><span>クラフトくん</span><span>PR #3004・#3006</span></div>
-      </li>
-      <li id="r2610121449mark">
-        <div class="row-title">バトルの枠のマーク×数</div>
-        <div class="row-body">マーク×数を常に出し、薄くした。モンスターを押すと能力とかかっている効果が見られる。数が0のものは出さない・予測ダメージと重ならない</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #2851・#2895・#2918・#2919・#2933・#2936</span></div>
-      </li>
-      <li id="r2610131505switch">
-        <div class="row-title">会話を交代する目安を80万に</div>
-        <div class="row-body">目安80万(候補は60万)。毎晩の見張りの文も直した</div>
-        <div class="meta"><span>統括部長モンヒロくん</span><span>PR #2934</span></div>
-      </li>
-      <li id="r2610121800kaze">
-        <div class="row-title">入口の HELL「風がそよぐ場所」</div>
-        <div class="row-body">HELL と一緒に公開(Lv.23)。公開直後に出ていなかったのを直した(#2932)</div>
-        <div class="meta"><span>オンプくん</span><span>PR #2876・#2932</span></div>
-      </li>
-      <li id="r2610102320sky">
-        <div class="row-title">Sheriruth: 空中ノーツの新しい難易度(MASTER の上の6段目)を足す</div>
-        <div class="row-body">MASTER の譜面を土台に一部を空中ノーツへ。空中ノーツの描画・判定(試作で数字を確かめ済み)を本番の譜面で使う。6段目の一覧・解放・名前・レベル表・検査・見た目・更新履歴</div>
-        <div class="meta"><span>部長テンポくん</span><span>PR #2931</span></div>
-      </li>
-      <li id="r2610111915hellstory">
-        <div class="row-title">難易度【HELL】の実装のときにストーリーと説明をいれたいから作っといて。BGMはSheriruth</div>
-        <div class="row-body">HELL の公開(#2931)と同時に、お話「空まで届くビート」を公開した日に全員へ1回流す。説明は動画つき(#2929)</div>
-        <div class="meta"><span>マクアケくん</span><span>PR #2749・#2929・#2931</span></div>
-      </li>
-      <li id="r2610112355hell">
-        <div class="row-title">難易度 HELL の公開に向けて進める(Sheriruth・Grievous Lady)</div>
-        <div class="row-body">公開は社長の OK のあと(いまはデバッグ専用)。マクアケくん: MASTER クリアで HELL が開く仕組みと、お話→説明の流れを公開の印の後ろに組み込む(デバッグで試せる切り替え・bot)/オンプくん: HELL 2曲の重さを同じ曲の MASTER と bot で比べる・レベルの案を用意/リバースくん: Grievous Lady HELL を新しい検査と交差の bot で通し直す・速さの演出の区間の空中の見え方と判定/テンポくん: 押しても取れないノーツは HELL 2曲も0(確認済み)・2:00 からタップ位置の確認/ドライバーくん: 発熱の手当てのうち HELL の分を先に</div>
-        <div class="meta"><span>マクアケくん・オンプくん・リバースくん・テンポくん・ドライバーくん</span><span>PR #2794・#2795・#2799・#2801・#2806・#2808・#2809・#2811・#2931</span></div>
-      </li>
-      <li id="r2610120730hellview">
-        <div class="row-title">HELL の見やすさ・操作のしやすさ</div>
-        <div class="row-body">見やすさは「案2 はっきり」、空中の受け付けを構えに合わせる(案A)と空中を叩いた柱の光(奥まで)を既定に、空中のタップは深い赤・白い縁を細く。HELL の公開(#2931)で出た</div>
-        <div class="meta"><span>マクアケくん・部長テンポくん</span><span>PR #2824・#2826・#2828・#2831・#2833・#2887・#2889・#2890・#2891・#2917</span></div>
-      </li>
-      <li id="r2610130100score105">
-        <div class="row-title">HELL の満点105万・ランク MF・ランキング</div>
-        <div class="row-body">HELL の公開(#2931)と同時にランキングへ入った</div>
-        <div class="meta"><span>マクアケくん</span><span>PR #2905</span></div>
-      </li>
-      <li id="r2610131150opt">
-        <div class="row-title">オプションを4つのタブに</div>
-        <div class="row-body">4つのタブに分け、各タブの上に「よく触る設定」。オプションが空中のノーツでも同じように効く。HELL の設定3つもオプションへ</div>
-        <div class="meta"><span>マクアケくん</span><span>PR #2920・#2922・#2926・#2930</span></div>
-      </li>
-      <li id="r2610131322video">
-        <div class="row-title">HELL の説明を動画つきに</div>
-        <div class="row-body">説明4枚に場面の動画、5枚目にプレイ映像。ヘルプからも見返せる</div>
-        <div class="meta"><span>リバースくん</span><span>PR #2929</span></div>
-      </li>
-      <li id="r2610131209kosei">
-        <div class="row-title">マスモンの個体差</div>
-        <div class="row-body">案と見本の静止画(#2923)のあと、個体差を公開した</div>
-        <div class="meta"><span>カゲくん</span><span>PR #2923・#2928</span></div>
-      </li>
-      <li id="r2610131237dye">
-        <div class="row-title">染めたマスモンのアイコン</div>
-        <div class="row-body">部位の型を1枚の絵に焼いて出すようにした</div>
-        <div class="meta"><span>部長テンポくん</span><span>PR #2927</span></div>
-      </li>
-      <li id="r2610131200wallet">
-        <div class="row-title">HOME のダイヤの枠</div>
-        <div class="row-body">桁が増えても崩れないようにした</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #2924</span></div>
-      </li>
-      <li id="r2610130100cross">
-        <div class="row-title">HELL の上下クロス</div>
-        <div class="row-body">Grievous Lady は案3(すれ違う X)、Sheriruth 見せ場1に上下の交差を2回。水平クロスは作らない(上下に分ける)</div>
-        <div class="meta"><span>オンプくん</span><span>PR #2897・#2898・#2899・#2900・#2901・#2904・#2906・#2910・#2916</span></div>
-      </li>
-      <li id="r2610131050asika">
-        <div class="row-title">アシカの札の i から効果を見る</div>
-        <div class="row-body">イベントの編成画面で、アシカの札の i から効果を見られる</div>
-        <div class="meta"><span>部長ブレイブくん</span><span>PR #2915</span></div>
-      </li>
-      <li id="r2610100750b">
-        <div class="row-title">改善部をもっと積極的に動かす</div>
-        <div class="row-body">週1回だった改善部を毎晩に。その日の公開・社長室・研究所の Tier と調整の案を批判の目で見て、1回3件まで指摘する。調整の案は社長に届く前に改善部が確かめる。いますぐ Tier 表の点検を頼んだ</div>
-        <div class="meta"><span>部長ダメダシくん</span><span>PR #2913</span></div>
-      </li>
-      <li id="r2610130900score">
-        <div class="row-title">満点とランクの境目を5万刻みに</div>
-        <div class="row-body">満点 EASY 80万・NORMAL 85万・HARD 90万・EXPERT 95万・MASTER 100万・HELL 105万。古い記録は換算しない(社長の決定)</div>
-        <div class="meta"><span>マクアケくん</span><span>PR #2912</span></div>
-      </li>
-      <li id="r2610130800rankdiff">
-        <div class="row-title">曲別ランキングを難易度別にも</div>
-        <div class="row-body">「この曲」のランキングを難易度別にも見られる。縦390の幅でもボタンが切れない</div>
-        <div class="meta"><span>マクアケくん</span><span>PR #2908・#2909</span></div>
-      </li>
-      <li id="r2610130100fade">
-        <div class="row-title">取り損ねた HOLD・SLIDE の残りを消す</div>
-        <div class="row-body">判定・スコア・ライフ・コンボは変えずに、見た目だけ消えるようにした</div>
-        <div class="meta"><span>部長ドライバーくん</span><span>PR #2902</span></div>
-      </li></ul>
+      <p class="empty">ありません。</p>
       <p class="note">本番: https://aknkakykhk-maker.github.io/monhero/</p>
     </section>
   </div>

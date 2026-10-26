@@ -1,3 +1,4 @@
+const { pickProParty } = require('./lib/pro-party-pick');
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // バトル画面で「文字が文字の上に乗っていないか」を、実際のブラウザで測る。
 //
@@ -26,6 +27,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // 【わざと重ねているもの】
 // ・使えないカードの赤い札(枚数上限など)は、カードの絵の上に出す。絵は絵なので読めなくてよい。
 //   文字の上には出ないことだけを見たいので、絵(data-decoration)との組は数えない。
+//   カードの絵の段階の札(I・II・III。data-card-art-roman)も絵の一部として数えない(2026-10-22。引いたカードに段階の札があると
+//   「I」と「枚数上限」が重なるとして落ち、引いたカードしだいで落ちたり通ったりしていた)
 // ・固有技セットのオーラの⚡も飾り。重ね順は文字より下にしてあり、同じく数えない。
 const http = require('http');
 const path = require('path');
@@ -69,7 +72,9 @@ const OVERLAP_FN = () => {
     const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join('');
     return own.length > 0;
   }).map((el) => ({ el, r: el.getBoundingClientRect(), t: el.textContent.trim().slice(0, 16),
-    icon: !!el.closest('[data-decoration]') }));
+    // 行動カードの絵の段階の札(I・II・III・2026-10-15 のカードの絵)もカードの絵の一部。印は data-card-art-roman
+    // (data-decoration を付けると、タクティクスの見た目の CSS が絵の部品へ金の枠を付けてしまうので、別の印のまま見る)
+    icon: !!el.closest('[data-decoration],[data-card-art-roman]') }));
   const out = [];
   for (let i = 0; i < leaves.length; i += 1) {
     for (let j = i + 1; j < leaves.length; j += 1) {
@@ -141,6 +146,12 @@ const OVERLAP_FN = () => {
     // 勇者モン → 配置 → 供モン候補5体 → アシストカード、とたどってバトルまで進める。
     // ★押すものは「その画面にしか無いもの」で選ぶ。とりあえず押せるものを押すと、
     //   戻るボタンを踏んで難易度選択まで戻ってしまう
+    // 2026-10-19 から、プロモードの編成は「枠へ入れる → 勇者モンを選ぶ」(ProPartyPicker)。一覧の先頭の子を勇者モンにして抜ける
+    if (await page.locator('[data-pro-party]').count()) {
+      const first = await page.evaluate(() => { const b = document.querySelector('[data-pro-pick-scroll] button[aria-label$="を見る"]'); return b ? b.getAttribute('aria-label').replace(/を見る$/, '') : null; });
+      const proPickError = first ? await pickProParty(page, first) : 'プロモードの一覧が空';
+      if (proPickError) console.log(`INFO ${proPickError}`);
+    }
     await page.evaluate(() => { window.__pick = 0; window.__change = 1; });
     for (let i = 0; i < 40; i += 1) {
       const state = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));

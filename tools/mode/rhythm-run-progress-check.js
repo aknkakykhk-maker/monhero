@@ -37,6 +37,8 @@ const seed = () => {
   const fatal = [];
   page.on('pageerror', (e) => fatal.push(e.message));
   await page.addInitScript(seed);
+  // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
+  await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
 
   const pointerDown = (find) => page.evaluate((f) => {
     const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)

@@ -39,6 +39,84 @@ function RhythmAchievementPanel({ rows, who = 'self' }) {
     </section>
   );
 }
+// 仲良し度のごほうび一覧(2026-10-21 社長の決定「助手の欄から一覧を開く」)。
+// 選んでいる助手の Lv2〜30 を1行ずつ並べ、そのLvでもらえるもの(ギフトのごほうび・飾り枠・呼び方を選べる)をまとめて見せる。
+// ★表は実データから作る: ごほうびは ASSISTANT_BOND_LEVEL_REWARDS、飾り枠は PROFILE_FRAMES の unlock、呼び方は ASSISTANT_CALL_STYLE_UNLOCK_LEVEL。
+//   どれかを足したり変えたりしても、ここは書き換えなくてよい
+const assistantBondRewardRows = (assistantId) => {
+  const table = (typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {};
+  const levels = ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || []).map(s => s.level).filter(lv => lv >= 2);
+  const callLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
+  const frames = (typeof releasedProfileFrames === 'function' ? releasedProfileFrames() : [])
+    .filter(frame => { const u = typeof profileFrameUnlock === 'function' ? profileFrameUnlock(frame) : null; return u && u.assistantId === assistantId; });
+  return levels.map(lv => ({
+    level: lv,
+    title: (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, assistantId) : null)?.title || '',
+    rewards: (table[lv] || []).map(r => (typeof giftRewardText === 'function' ? giftRewardText(r) : '')).filter(Boolean),
+    frames: frames.filter(frame => profileFrameUnlock(frame).bondLevel === lv),
+    callStyle: lv === callLv,
+  }));
+};
+const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onClose }) => {
+  const rows = assistantBondRewardRows(who.id);
+  const accent = who.accent || '#f472b6';
+  const nextLv = rows.find(r => r.level > level)?.level || null;
+  // 節目(ASSISTANT_BOND_REWARD_MILESTONES)。札と説明の文はここから作る
+  const milestones = (typeof ASSISTANT_BOND_REWARD_MILESTONES !== 'undefined' && ASSISTANT_BOND_REWARD_MILESTONES) || [];
+  const nowRef = React.useRef(null);
+  const listRef = React.useRef(null);
+  // 開いたら、いまのLvの近くを見せる。動かすのは一覧の箱の中だけ(scrollIntoView は画面ごと動くので使わない・viewport-height-check)
+  React.useEffect(() => {
+    const box = listRef.current, row = nowRef.current;
+    if (box && row) box.scrollTop = Math.max(0, row.offsetTop - (box.clientHeight - row.offsetHeight) / 2);
+  }, []);
+  return (
+    <ModalFrame label={`${who.name}との仲良し度のごほうび一覧`} border="border-pink-400/70" onClose={onClose}>
+      <div data-assistant-bond-reward-list={who.id}>
+        <div className="flex items-center gap-2">
+          <AssistantFace who={who} size={36} accent={accent} expression="happy"/>
+          <div className="min-w-0 flex-1">
+            {/* 「仲良し度」の途中で折れないよう、2つのかたまりに分けて並べる(折れるのはかたまりの間だけ) */}
+            <h2 className="text-[15px] font-black leading-tight text-white"><span className="inline-block">{who.name}との仲良し度</span> <span className="inline-block">ごほうび一覧</span></h2>
+            <div className="text-[11px] font-black" style={{color:accent}}>いまは Lv.{level}{nextLv?`・次は Lv.${nextLv}`:'・全部もらいました'}</div>
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`Lvが上がると、そのLvのごほうびがギフトボックスへ届きます。助手ごとに1回ずつです。${milestones.length?`節目の Lv${milestones.join('・')} はほかのLvより豪華です。`:''}`)}</p>
+        <ol ref={listRef} className="relative mt-2 max-h-[58vh] space-y-1.5 overflow-y-auto pr-0.5">
+          {rows.map(r => {
+            const got = r.level <= level;
+            const isNext = r.level === nextLv;
+            return (
+              <li key={r.level} ref={r.level === Math.max(2, level) ? nowRef : undefined} data-bond-reward-level={r.level} data-bond-reward-state={got?'got':isNext?'next':'later'}
+                className={`rounded-xl border px-2.5 py-2 ${got?'border-white/10 bg-slate-900/60':isNext?'bg-pink-950/50':'border-white/10 bg-slate-950'}`}
+                style={isNext?{borderColor:accent}:undefined}>
+                <div className="flex items-center gap-2">
+                  <b className="shrink-0 text-[13px] font-black" style={{color:got?'#94a3b8':accent}}>Lv.{r.level}</b>
+                  {milestones.includes(r.level)&&<span data-bond-reward-milestone className="shrink-0 rounded-md bg-amber-500/90 px-1.5 py-px text-[9px] font-black text-slate-950">節目</span>}
+                  <span className="min-w-0 flex-1 text-[11px] font-black text-slate-300" style={JA_LABEL_STYLE}>{jaWrap(r.title)}</span>
+                  <em className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black not-italic ${got?'bg-slate-700 text-slate-300':isNext?'text-white':'bg-slate-800 text-slate-400'}`} style={isNext?{backgroundColor:accent}:undefined}>
+                    {got?'✓ もらった':isNext?'次はここ':'まだ'}
+                  </em>
+                </div>
+                <div className={`mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-black leading-tight ${got?'text-slate-400':'text-amber-200'}`}>
+                  {r.rewards.map((t, i) => <span key={i} style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
+                </div>
+                {r.frames.map(frame => (
+                  <div key={frame.id} data-bond-reward-frame={frame.id} className="mt-1.5 flex items-center gap-2">
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} fit small className="h-9 w-9 shrink-0" fallback={null}/>
+                    <span className={`min-w-0 text-[11px] font-black ${got?'text-slate-400':'text-pink-200'}`} style={JA_WRAP_STYLE}>{jaWrap(`飾り枠「${frame.name}」`)}</span>
+                  </div>
+                ))}
+                {r.callStyle && <div className={`mt-1 text-[11px] font-black ${got?'text-slate-400':'text-cyan-200'}`} style={JA_WRAP_STYLE}>{jaWrap('呼び方を自由に決められるようになる')}</div>}
+              </li>
+            );
+          })}
+        </ol>
+        <div className="mt-3"><ModalCloseButton onClick={onClose}/></div>
+      </div>
+    </ModalFrame>
+  );
+};
 function ProfileScreen({
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
@@ -48,7 +126,7 @@ function ProfileScreen({
   // タクティクスバトルの記録(モードidごとに {hs,clears,waves})と、その種族チャレンジの進み具合
   tacticsRecordsOf, speciesChallengeProgressOf,
   costumeEnabled=false, wornCostume=null, onOpenCostumePicker=null,
-  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
+  onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenDex, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
@@ -63,11 +141,13 @@ function ProfileScreen({
 }) {
   // モンヒロビートの実績。曲の記録はモンヒロビートを開くまで読み込まれないので、ここで保存から直接読む
   const [rhythmAchRows, setRhythmAchRows] = React.useState([]);
+  // 仲良し度のごほうび一覧を開いているか(画面の中だけの状態。保存しない)
+  const [bondRewardListOpen, setBondRewardListOpen] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const best = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+        const best = await loadRhythmBestRecordsNow();
         if (alive) setRhythmAchRows(friendsRhythmAchievements(best));
       } catch (error) { /* 読めなければ実績の表を出さないだけ */ }
     })();
@@ -132,33 +212,43 @@ function ProfileScreen({
             const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
             const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
             const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
-            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95';
+            // 幅360未満は、余白と絵を詰めて値の字を1段小さくし、「書いていません」「えらびなおす」が言葉の途中で折れずに入るようにする(2026-10-21)
+            const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
             return (
             <div className="mt-3 grid grid-cols-2 gap-2" data-profile-settings>
+              {/* 札の折り目は手で決める(<wbr/>)。言葉の切れ目の道具は「書い|て|い|ませ|ん」と細かく切るので、jaWrap だと「まだ書い／ていません」と折れた。
+                  「えらびなおす」は truncate だと幅320で「えらびな…」と切れて読めなかったので、2行にする(2026-10-21 窓口) */}
               <button type="button" data-profile-tile="icon" onClick={onOpenIconPicker} className={tile}>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">🖼️</span>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block truncate text-[11px] font-black text-white">えらびなおす</b></span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">🖼️</span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>えらび<wbr/>なおす</b></span>
               </button>
               <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
-                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300"/>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] font-black leading-tight text-white">{frameName}</b></span>
+                <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"/>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-amber-300">フレーム</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{frameName}</b></span>
               </button>
+              {/* アイコン・フレーム図鑑(2026-10-25)。集めたもの・まだのものを一覧で見る */}
+              {onboarded&&!onboardingPreview&&onOpenDex&&(
+                <button type="button" data-profile-tile="dex" onClick={onOpenDex} className={tile}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">📖</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-emerald-300">図鑑</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>アイコン・<wbr/>フレーム</b></span>
+                </button>
+              )}
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">👗</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">👗</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{profileMessage||'まだ書いていません'}</b></span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💬</span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||<>まだ<wbr/>書いていません</>}</b></span>
                 </button>
               )}
               {showFriendTiles&&(
                 <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
-                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">好きなモンスター</small><b className="block break-words text-[11px] font-black leading-tight text-white [text-wrap:balance]">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b></span>
+                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💗</span>}
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:<>まだ<wbr/>選んでいません</>}</b></span>
                 </button>
               )}
             </div>);
@@ -169,11 +259,11 @@ function ProfileScreen({
         <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Gem size={11}/>ダイヤ</span>
-            <span className="text-[13px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
+            <CompactCount value={gold} className="text-[13px] font-black text-amber-300 font-mono"/>
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-amber-500/30 bg-amber-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-amber-400"><Coins size={11}/>ブリーダーP</span>
-            <span className="text-[13px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
+            <CompactCount value={breederPoints} className="text-[13px] font-black text-amber-200 font-mono"/>
           </div>
           <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-1 py-1.5 text-center">
             <span className="flex items-center gap-1 text-[9px] font-bold text-indigo-300"><Timer size={11}/>プレイ時間</span>
@@ -243,6 +333,12 @@ function ProfileScreen({
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
               <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              {/* ごほうび一覧(2026-10-21)。Lvごとにもらえるもの(ギフト・飾り枠・呼び方)を見る */}
+              <button type="button" data-assistant-bond-reward-open onClick={()=>setBondRewardListOpen(true)}
+                className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]">
+                <Package size={15}/>ごほうび一覧<ChevronRight size={15} className="text-pink-300"/>
+              </button>
+              {bondRewardListOpen&&<AssistantBondRewardList who={activeAssistant} level={assistantBondLevelNow} breederIcon={breederIcon} resolveIconUrl={resolveIconUrl} onClose={()=>setBondRewardListOpen(false)}/>}
               {/* 次にもらえる飾り枠(2026-09-16)。貯める理由がその場で見えるように、
                   仲良し度の下へ1行だけ出す。全部もらっていれば出さない */}
               {(()=>{
@@ -253,7 +349,7 @@ function ProfileScreen({
                 return (
                   <button type="button" data-assistant-next-frame={nextFrame.id} onClick={onOpenFramePicker}
                     className="mt-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-950/40 px-3 py-2 active:scale-[.98]">
-                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} className="w-8 h-8 shrink-0" fallback={null}/>
+                    <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={nextFrame.id} alt={nextFrame.name} fit small className="w-8 h-8 shrink-0" fallback={null}/>
                     <span className="flex-1 min-w-0 text-left">
                       <span className="block text-[10px] font-black text-amber-400 leading-tight">Lv.{unlock.bondLevel}でもらえる飾り枠</span>
                       <span className="block text-[12px] font-black text-white leading-tight truncate">{nextFrame.name}</span>
@@ -346,6 +442,8 @@ function ProfileScreen({
         {/* モンヒロビートの実績: 難易度ごとのクリア・フルコンボ・オールエクセレント・オールマーベラスの数。
             フレンドのプロフィールにも同じ表が出る。1曲も遊んでいなければ出さない */}
         {onboarded&&!onboardingPreview&&rhythmAchRows.some(r=>r.clear>0)&&<RhythmAchievementPanel rows={rhythmAchRows} who="self"/>}
+        {/* MFバトルカードの戦績(2026-10-26 社長「プロフィールやフレンドでバトルカードの戦績も追加」)。一度も遊んでいなければ出さない。保存は読むだけ(90-card-rank.jsx) */}
+        {onboarded&&!onboardingPreview&&<CardBattleStatsSelf/>}
         {/* モンヒロビートの履歴: 終わった週間ランキング・イベントの順位をあとから見る。
             2026-09-13・ユーザー依頼「モンビーのイベントや週間ランキングの終わったものを
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。

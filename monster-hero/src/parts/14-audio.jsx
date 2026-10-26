@@ -56,7 +56,12 @@ const Audio_ = (() => {
   // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
   let bgmSource = null, bgmSourceKey = null, bgmRequest = 0, previewSource = null, previewKey = null, previewRequest = 0;
   let jingleSource = null, jingleTimer = null;
+  // 1回だけ流す曲(MFバトルカードの助手と対戦の曲の並び。2026-10-26)。{ key, onEnd, onFail }
+  //   この曲だけ繰り返さずに流し、最後まで流れ終わったときだけ onEnd を呼ぶ(止めた・別の曲にした・裏へ回ったときは呼ばない)。
+  //   読み込めなかったときは onFail。ほかの曲を鳴らしたら外れる(ほかの画面の曲には効かない)
+  let bgmOnce = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
+  let backgroundSeQuiet = false; // 裏の周回の効果音を止める印(下の setBackgroundSeQuiet)
   let enabled = false;
   // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
   // ただし全体ミュート(タイトルの「音がオフです」)だけは共通で効かせる。
@@ -118,6 +123,7 @@ const Audio_ = (() => {
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
     "audio/bgm-big-bridge-no-shitou.mp3": "a36d408f3389",
+    "audio/bgm-black-shout.mp3": "03a627c682de",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
     "audio/bgm-boss.mp3": "a11bc8056d79",
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
@@ -147,6 +153,8 @@ const Audio_ = (() => {
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
     "audio/bgm-kiki-issen-short.mp3": "1dc188dbb7a7",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-light-player-short.mp3": "785e78c69005",
+    "audio/bgm-light-player.mp3": "6656f3a71344",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
@@ -165,6 +173,10 @@ const Audio_ = (() => {
     "audio/bgm-profile.mp3": "523789845ff1",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
+    "audio/bgm-rose-short.mp3": "57888379506b",
+    "audio/bgm-rose.mp3": "acc0ceccc810",
+    "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
+    "audio/bgm-sad-song.mp3": "47d16979bb90",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "ab30c8b641fb",
@@ -177,6 +189,9 @@ const Audio_ = (() => {
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
+    "audio/bgm-toward-the-stars-short.mp3": "25c386c48439",
+    "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "f2e9585907f2",
+    "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "2ee86e1947fd",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
     "audio/jingle-victory.mp3": "689c9715a824",
     "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
@@ -332,7 +347,8 @@ const Audio_ = (() => {
   const stopOthers = () => { stopSource(bgmSource); bgmSource = null; bgmSourceKey = null; };
   const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
   const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
-  const applyTrackGain = track => { if (bgmGain) bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track)); };
+  // ★fadeToBGM で下げている途中でも、次の曲を鳴らすときは予定を消してから音量を戻す(0のまま止まらないように)
+  const applyTrackGain = track => { if (bgmGain) { try { bgmGain.gain.cancelScheduledValues(0); } catch (e) {} bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track)); } };
 
   const startBgmBuffer = (key, track, buffer, request) => {
     const ctx = getAudioCtx();
@@ -341,16 +357,25 @@ const Audio_ = (() => {
     stopOthers();
     const source = ctx.createBufferSource();
     applyTrackGain(track);
-    source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain);
+    const once = !!(bgmOnce && bgmOnce.key === key);
+    source.buffer = buffer; source.loop = once ? false : track.loop !== false; source.connect(bgmGain);
     bgmSource = source; bgmSourceKey = key;
-    source.onended = () => { if (bgmSource === source) { bgmSource = null; bgmSourceKey = null; } };
+    // 止めるとき(stopSource)は onended を外してから止めるので、ここへ来るのは最後まで流れたときだけ
+    source.onended = () => {
+      if (bgmSource !== source) return;
+      bgmSource = null; bgmSourceKey = null;
+      const o = bgmOnce;
+      if (once && o && o.key === key && currentKey === key) { bgmOnce = null; try { o.onEnd && o.onEnd(); } catch (e) {} }
+    };
     try { source.start(0); } catch (e) { stopOthers(); return; }
     // 止まったままのAudioContextで鳴らしても無音のままになる。すぐに復帰を試す
     // (失敗しても、次のタップで bindResumeOnGesture が鳴らし直す)
     if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
   const playBGM = (key) => {
-    const track = resolveTrack(key); if (!track) return Promise.resolve();
+    const track = resolveTrack(key);
+    if (!track) { const o = bgmOnce; if (o && o.key === key) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} } return Promise.resolve(); }
+    if (bgmOnce && bgmOnce.key !== track.id) bgmOnce = null;
     currentKey = track.id;
     const request = ++bgmRequest;
     if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
@@ -363,7 +388,37 @@ const Audio_ = (() => {
       rememberSongBuffer(bufKey);
       return Promise.resolve();
     }
-    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {});
+    return loadBuffer(bufKey).then((buffer) => { rememberSongBuffer(bufKey); startBgmBuffer(track.id, track, buffer, request); }).catch(() => {
+      // 1回だけ流す曲が読み込めなかったら、並びの次へ進めてもらう(この呼び出しが今も最新のときだけ。止めた後には呼ばない)
+      const o = bgmOnce;
+      if (o && o.key === track.id && request === bgmRequest && currentKey === track.id) { bgmOnce = null; try { o.onFail && o.onFail(); } catch (e) {} }
+    });
+  };
+  // key を1回だけ流す曲にする(鳴らすのは playBGM)。null で外す。handlers … { onEnd(), onFail() }
+  const setBgmOnce = (key, handlers = {}) => {
+    const track = key ? resolveTrack(key) : null;
+    bgmOnce = key ? { key: track ? track.id : key, onEnd: handlers.onEnd || null, onFail: handlers.onFail || null } : null;
+  };
+  // 今の曲を ms かけて小さくしてから、次の曲へ移す(2026-10-17 会話イベントの途中で曲を替える。社長「途中で変わるのいいね」)。
+  // 鳴っていない・同じ曲のときは playBGM と同じ。下げているあいだに別の曲が決まったら、そちらを優先する
+  let fadeRequest = 0;
+  const fadeToBGM = (key, ms = 800) => {
+    const track = resolveTrack(key); if (!track) return Promise.resolve();
+    const ctx = getAudioCtx();
+    if (!ctx || !bgmGain || !bgmSource || bgmSourceKey === track.id || !enabled || pageHidden) return playBGM(key);
+    const req = ++fadeRequest;
+    const seconds = Math.max(0.05, (Number(ms) || 0) / 1000);
+    try {
+      const at = ctx.currentTime;
+      bgmGain.gain.cancelScheduledValues(at);
+      bgmGain.gain.setValueAtTime(bgmGain.gain.value, at);
+      bgmGain.gain.linearRampToValueAtTime(0, at + seconds);
+    } catch (e) { return playBGM(key); }
+    currentKey = track.id;
+    return new Promise((resolve) => setTimeout(() => {
+      if (req !== fadeRequest || currentKey !== track.id) { resolve(); return; }
+      resolve(playBGM(key));
+    }, seconds * 1000));
   };
   // 番号を進めることで、読み込み待ちの古い試聴を無効にする(あとから鳴り出さない)
   const stopPreview = (resume = true) => { ++previewRequest; stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
@@ -596,7 +651,8 @@ const Audio_ = (() => {
   //   止められるように { stop(秒) } を返す。鳴らせなかったら null
   const preloadSE = (src) => { if (enabled && src) loadBuffer(src).catch(() => {}); };
   const playSeFile = async (src) => {
-    if (!enabled || !src) return null;
+    // ボスの登場の音(バトルだけが使う)。MFバトルカードにいるあいだは裏の周回のものなので鳴らさない(下の setBackgroundSeQuiet)
+    if (!enabled || !src || backgroundSeQuiet) return null;
     await ensure(); if (!Tone || !seBus) return null;
     let buffer = null;
     try { buffer = await loadBuffer(src); } catch (e) { return null; }
@@ -714,7 +770,12 @@ const Audio_ = (() => {
   const ensurePlaying = (key) => { if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key); };
   const isContextRunning = () => !!audioCtx && audioCtx.state === 'running';
 
-  const se = {
+  // 裏の周回の効果音を止める印(MFバトルカードの画面にいるあいだ。docs/spec/CARD_BATTLE.md 5-3「音」)。
+  // カードもバトルも同じ se を使うので、音量(seBus)を0にするとカードの音まで消える。
+  // そこで、se.* は印が立っているあいだ何もしない口にし、カードの画面は印を見ない fgSe.* から鳴らす。
+  // 音量の保存値・seBus には触らない(手で変えた音量は上書きしない)。
+  const setBackgroundSeQuiet = (on) => { backgroundSeQuiet = !!on; };
+  const fgSe = {
     trainingDice: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t=Tone.now(); const n=new Tone.NoiseSynth({noise:{type:'brown'},envelope:{attack:.001,decay:.22,sustain:0},volume:-15}).connect(seBus); n.triggerAttackRelease('8n',t); setTimeout(()=>{try{n.dispose();}catch(e){}},500); },
     trainingDecide: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const s=new Tone.Synth({volume:-14}).connect(seBus); s.triggerAttackRelease('C6','16n'); setTimeout(()=>{try{s.dispose();}catch(e){}},300); },
     trainingGood: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const s=new Tone.Synth({volume:-14}).connect(reverb); s.triggerAttackRelease('E6','8n'); setTimeout(()=>{try{s.dispose();}catch(e){}},400); },
@@ -765,6 +826,7 @@ const Audio_ = (() => {
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
+  const se = Object.fromEntries(Object.entries(fgSe).map(([name, play]) => [name, (...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))]));
 
-  return { playSeFile, preloadSE, playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
+  return { playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();

@@ -66,10 +66,12 @@ check('助手のセリフが全員ぶんある',
 const guide = grab('const RhythmMonsterNoteGuide=', 'const RhythmMonsterSlotsPanel=');
 check('能力の一覧を実データから作っている',
   guide.includes('rhythmAbilityRows()') && game.includes('Object.values(RHYTHM_MONSTER_ABILITIES).map'));
+// 2026-10-22 子ごとの上書き(ドリーミィ)と、公開前の血統を隠すために、名前の一覧は rhythmAbilityHolderNames へまとめた
 check('血統の割り当ても実データから引いている',
-  game.includes('Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)'));
-check('血統名は lineageById から出している(手書きしていない)',
-  game.includes('.map(([lineageId])=>lineageById(lineageId).name)'));
+  rhythm.includes('Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)') && rhythm.includes('Object.entries(RHYTHM_MONSTER_ABILITY_BY_MONSTER)')
+  && game.includes('rhythmAbilityHolderNames(ability.id)'));
+check('血統名は血統の表から出している(手書きしていない)',
+  rhythm.includes('MONSTER_LINEAGES[id]?.name'));
 // 効果の数値を画面へ書き写していないこと。ここが崩れると、値を変えたとき画面だけ古くなる
 // 効果の一文はヘルプの表(helpDataRows)より前に置いてある。
 // あとに置くと、ヘルプを開いた瞬間に「初期化前の変数を参照した」で真っ白になる

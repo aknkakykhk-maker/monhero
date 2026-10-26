@@ -43,6 +43,9 @@ const {CHART_REVISION_LATEST,chartRevisionLabel,laneCountForRevision,handModelFl
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
+// 手の流れを狙う配置(2026-10-21 社長「新しい譜面から流れを狙う」)。既定は切。曲の一覧に flowPlacement:true を書いた曲(新曲)か、
+//   --flow を付けたときだけ効く(--no-flow で切る)。切のときは今までと1バイトも同じ譜面になる(公開中の曲は作り直さない・⑩-2)
+let FLOW_ON=process.argv.includes('--flow')&&!process.argv.includes('--no-flow');
 const write=process.argv.includes('--write');
 const only=arg('--difficulty');
 const explain=arg('--explain');
@@ -59,6 +62,10 @@ const inputDir=arg('--input-dir',null);
 // ★variant 0 は**今までと1音も変わらない**(種の文字列に何も足さない)。
 //   既存曲の譜面を変えないため、既定は必ず0(運用ルール ⑩-2)。
 const variant=Math.max(0,Math.floor(Number(arg('--variant',0))||0));
+// 引き出し(2026-10-16・rhythm-chart-drawers.js)。曲の解析を見て合う曲だけに使う。--no-drawers で使わない
+//   (作った後に足した引き出しなので、前からある HELL を作り直すとき rhythm-hell-mix.js が --no-drawers を付ける)
+const drawersOn=!process.argv.includes('--no-drawers');
+const drawers=require('./rhythm-chart-drawers.js');
 const variantSeed=variant>0?`:v${variant}`:'';
 // 種を変えるだけだと、形の選ばれ方が入れ替わるだけで**点数がほとんど動かなかった**
 // (候補4本で6軸の合計が572.0〜572.2、差0.2点)。品質の軸をまたぐ差を作るには、
@@ -496,7 +503,14 @@ let registryEntry=null;
     // 難易度ごとの激しさの上書き(上の songIntensity)。書いた曲だけ
     const byDifficulty=entry&&entry.chartIntensityByDifficulty;
     if(byDifficulty&&typeof byDifficulty==='object'&&!Array.isArray(byDifficulty))audio.chartIntensityByDifficulty=byDifficulty;
+    // HELL だけ音を多く拾う倍率(下の hellBoost)。書いた曲の HELL だけ
+    const hellDensity=Number(entry&&entry.hellDensity);
+    if(Number.isFinite(hellDensity)&&hellDensity>1)audio.hellDensity=hellDensity;
+    // --hell-density で HELL の量の倍率を渡せる(rhythm-hell-mix.js の SONGS の hellDensity・2026-10-21 社長「ざしてぃを60ぐらいまで下げる」「すてぃうぃずみーだけ上げる」)。
+    //   0.5〜2。1より小さいと量を減らす(拾う音の範囲は広げない)。曲の一覧の値より優先。HELL のときだけ効く
+    {const cli=Number(arg('--hell-density',NaN));if(Number.isFinite(cli)&&cli>=.5&&cli<=2&&cli!==1)audio.hellDensity=cli;}
     registryEntry=entry||null;
+    if(entry&&entry.flowPlacement===true&&!process.argv.includes('--no-flow'))FLOW_ON=true;
   }
 }
 // 譜面の作り方のリビジョン(rhythm-chart-v3-revision.js)。2026-10-12 から最新リビジョンだけを作る
@@ -686,6 +700,40 @@ function motionRepeatsFor(placed,trial){
     }
   }
   return repeats;
+}
+// 手の流れ(FLOW_ON のときだけ)。速い続き(半拍以内)の1歩ずつを見て、手が一続きに動く並びほど安く・跳ぶ並びほど高くする。
+//   ・隣のレーンへ(0.25〜1.6レーン)動く … 同じ向きに続けば「階段・なで」、向きが返れば「往復」。どちらも安く
+//   ・左右の手に分かれる(真ん中をまたぐ・3.5レーン以内) … 左右交互の打ち分け。少し安く
+//   ・同じ側で1.6レーンより大きく跳ぶ … 高く(山場・アクセントの跳びは、ほかの費用が勝てば残る)
+//   ・同じ所の速い連打 … 少し高く(同じ指の叩き直し)
+// 同時押し(同じ格子)は真ん中の1点にまとめて数える。数え方は rhythm-chart-flow-report.js と同じ
+let FLOW_FAST_GRIDS=BEAT/2,FLOW_STAIR=-.6,FLOW_SWING=-.4,FLOW_ALTERNATE=-.2,FLOW_JUMP=.8,FLOW_JACK=.3,FLOW_WEIGHT=1,FLOW_EXTRA_ATTEMPTS=3;
+// 重みを比べるときだけ(--flow-tune '{"FLOW_WEIGHT":1.5}')。書かなければ上の値
+{const tune=arg('--flow-tune',null);if(tune){const t=JSON.parse(tune);
+  if('FLOW_STAIR'in t)FLOW_STAIR=t.FLOW_STAIR;if('FLOW_SWING'in t)FLOW_SWING=t.FLOW_SWING;if('FLOW_ALTERNATE'in t)FLOW_ALTERNATE=t.FLOW_ALTERNATE;
+  if('FLOW_JUMP'in t)FLOW_JUMP=t.FLOW_JUMP;if('FLOW_JACK'in t)FLOW_JACK=t.FLOW_JACK;if('FLOW_WEIGHT'in t)FLOW_WEIGHT=t.FLOW_WEIGHT;if('FLOW_EXTRA_ATTEMPTS'in t)FLOW_EXTRA_ATTEMPTS=t.FLOW_EXTRA_ATTEMPTS;}}
+function flowCostFor(placed,trial){
+  if(!trial.length)return 0;
+  const from=trial[0].grid-BEAT*2,flow=[];
+  for(const note of placed.filter(n=>n.grid>=from).concat(trial)){
+    const center=laneCenterOfNote(note),last=flow[flow.length-1];
+    if(last&&last.grid===note.grid){last.sum+=center;last.count++;continue;}
+    flow.push({grid:note.grid,sum:center,count:1,trial:trial.includes(note)});
+  }
+  let cost=0,lastDir=0;
+  for(let i=1;i<flow.length;i++){
+    const a=flow[i-1],b=flow[i],gap=b.grid-a.grid;
+    const ca=a.sum/a.count,cb=b.sum/b.count,d=cb-ca,dir=Math.sign(d);
+    if(gap>FLOW_FAST_GRIDS){lastDir=0;continue;}
+    let step=0;
+    if(Math.abs(d)<.25)step=FLOW_JACK;
+    else if(Math.abs(d)<=1.6)step=lastDir!==0&&dir===lastDir?FLOW_STAIR:FLOW_SWING;
+    else if((ca<CENTER_LANE+.5)!==(cb<CENTER_LANE+.5)&&Math.abs(d)<=3.5)step=FLOW_ALTERNATE;
+    else step=FLOW_JUMP;
+    if(b.trial)cost+=step;
+    lastDir=Math.abs(d)<.25?lastDir:dir;
+  }
+  return cost;
 }
 const focusData=(()=>{
   const layersFile=authoring(`${dashed}-v3-layers.json`);
@@ -1170,7 +1218,11 @@ const buildChart=(difficulty,options={})=>{
   // 拍の頭の平均を使うと、拍が立っていない曲ほどその値も低くなるので絞れない
   // （MF × ICHIKA MIX は拍の頭0.480に対して16分裏0.489で、ほとんど落ちなかった）。
   // 「16分裏のうち強いほうから OFF_BEAT_KEEP だけ残す」なら、曲によらず確実に効く。
-  const offBeatFloor=(()=>{
+  // HELL だけ音を多く拾う(hellDensity を書いた曲の HELL だけ・2026-10-18)。量の倍率(下の hellBoost)だけでは、拾える音の数が天井になって増えない
+  //   (Toward the Stars の HELL: 目標950に対して拾える音566・打点881)。拾う範囲を広げる: 弱い裏の音も落とさず、
+  //   格子からのずれの許容をどの音も大きい一発と同じ 43ms にする(格子へ寄せても最良の判定 ±55ms の中)。書いていない曲は今までと同じ
+  const hellWide=difficulty==='HELL'&&Number(audio&&audio.hellDensity)>1;
+  const offBeatFloor=hellWide?0:(()=>{
     const clarity=audio.summary?.beatClarity;
     if(!clarity||!(clarity.ratio>0)||clarity.ratio>=BEAT_CLARITY_MIN)return 0;
     // 曲ごとの「激しさ」で残す割合を上書きできる（書いていない曲は OFF_BEAT_KEEP のまま）。
@@ -1189,7 +1241,7 @@ const buildChart=(difficulty,options={})=>{
   //   落としてしまうと「曲の山なのにノーツが来ない」になる。いちばん良い判定(MARVELOUS)の窓は
   //   ±55msなので、43msずれた音を格子へ寄せて置いても**まだ最良の判定の中**に入る。
   //   43msという線は、耳で確かめるときの許容(earReviewMaxOffsetMs)と同じものを使う。
-  const peakOffsetAllowance=onset=>onset.character==='FULL'
+  const peakOffsetAllowance=onset=>onset.character==='FULL'||hellWide
     ?COMMON.earReviewMaxOffsetMs:COMMON.maxAbsPeakOffsetMs;
   const pool=allOnsets.filter(onset=>
     onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=peakOffsetAllowance(onset)
@@ -1208,7 +1260,12 @@ const buildChart=(difficulty,options={})=>{
   const challenge=songChallengeFactor(audio);
   // 曲ごとの「激しさ」。書いていない曲では density が1・ceiling が0なので、
   // 下の式は今までとまったく同じ値を返す。
-  const densityBoost=Number(I.density)>0?Number(I.density):1;
+  // HELL だけ音を多く拾う(2026-10-18 社長「マスター以上をもっとむずく」→ Toward the Stars の HELL を Lv.45 以上に)。
+  // 曲の一覧に hellDensity(1より大きく2まで)を書いた曲の HELL だけ、量に掛ける。書いていない曲・HELL 以外の難易度は今までと1音も変わらない
+  // (公開中の曲の HELL は書いていないうえ、譜面は rhythm-mode.js に書き出し済みで、公開中の譜面の控え rhythm-released-chart-lock-check.js が見張る)。
+  // 天井(hardMaxPerSecond・実際に鳴っている音の数)はそのまま。押せるかどうかは両手のシミュレートと rhythm-hell-mix.js の手の決まりが見張る
+  const hellBoost=hellWide?Math.min(2,Number(audio.hellDensity)):(difficulty==='HELL'&&Number(audio&&audio.hellDensity)>=.5&&Number(audio.hellDensity)<1?Number(audio.hellDensity):1);
+  const densityBoost=(Number(I.density)>0?Number(I.density):1)*hellBoost;
   // 激しさを書いた曲では、上限を1段上げる（既定の maxPerSecond ではなく hardMaxPerSecond を使う）。
   const softMax=densityBoost>1?target.hardMaxPerSecond:target.maxPerSecond;
   // いちばん外側の天井。既定は hardMaxPerSecond（ここは全曲共通の安全弁）。
@@ -1227,10 +1284,18 @@ const buildChart=(difficulty,options={})=>{
   // 小節ごとの取り分は「その小節にある音の数 × 盛り上がりの持ち上げ」の比で配る。
   // どれだけ盛り上がっても、その小節に無い音は叩かせない。
   const weights=new Map();
-  let weightSum=0;
   for(let bar=minBar;bar<=maxBar;bar++){
     const position=budgetPosition(bar);
-    const weight=musicalOnsetsInBar(bar)*(liftMin+(liftMax-liftMin)*position);
+    weights.set(bar,musicalOnsetsInBar(bar)*(liftMin+(liftMax-liftMin)*position));
+  }
+  // 引き出し R2(入りを軽く・後半を重く)。入りが静かで山が後半にあり、このままだと入りが重い・後半が軽い曲の MASTER・HELL だけ。
+  //   曲全体の数は変えない(配り方だけ)。今の取り分の形(1秒あたりの重み)を見て、要るぶんだけ掛ける
+  const weightRate=(fromMs,toMs)=>{let sum=0;for(let bar=minBar;bar<=maxBar;bar++){const at=gridTimeMs(bar*BAR);if(at>=fromMs&&at<toMs)sum+=weights.get(bar);}return sum/Math.max(.001,(toMs-fromMs)/1000);};
+  const r2=drawersOn?drawers.chooseR2(audio,difficulty,{weightRate}):{id:'R2',use:false,reason:'--no-drawers で使わない'};
+  if(difficulty==='MASTER'||difficulty==='HELL')notice.push(`引き出し ${drawers.drawerLine(r2)}`);
+  let weightSum=0;
+  for(let bar=minBar;bar<=maxBar;bar++){
+    const weight=weights.get(bar)*drawers.r2BarScale(r2,bar,gridTimeMs(bar*BAR));
     weights.set(bar,weight);
     weightSum+=weight;
   }
@@ -1860,15 +1925,19 @@ const buildChart=(difficulty,options={})=>{
         if(sim.issues.some(issue=>issue.severity==='impossible'&&issue.noteIndex>=recentPlaced.length)){continue;}
         // Rev.10: 動きの使い回し(写しと形の記憶はわざと同じにしているので数えない)
         const mono=!attempt.fromMemory&&!attempt.fromCopy?motionRepeatsFor(placed,trial):0;
-        const total=scored.cost+mono*MOTION_REPEAT_COST;
-        if(!best||total<best.total)best={...scored,total,mono,base,trial};
+        // 手の流れ(FLOW_ON のときだけ。写しと形の記憶はわざと同じにしているので数えない)
+        const flow=FLOW_ON&&!attempt.fromMemory&&!attempt.fromCopy?flowCostFor(placed,trial):0;
+        const total=scored.cost+mono*MOTION_REPEAT_COST+flow*FLOW_WEIGHT;
+        if(!best||total<best.total)best={...scored,total,mono,flow,base,trial};
       }
       if(best){
         // Rev.10: どの起点でも動きを使い回す形なら、次の候補の形も MOTION_EXTRA_ATTEMPTS 個まで試し、
         //   使い回しのいちばん少ないもの(同じなら元の順位が上のもの)を採る
-        if(best.mono>0&&!attempt.fromMemory&&!attempt.fromCopy){
-          if(!held||best.mono<held.best.mono)held={best,attempt,offsets,patternId,mirrored};
-          if(heldTries<MOTION_EXTRA_ATTEMPTS){heldTries++;best=null;continue;}
+        // 手の流れ(FLOW_ON): 流れの費用が残る(跳び・連打を含む)ときも、次の候補の形を FLOW_EXTRA_ATTEMPTS 個まで試し、合計の費用がいちばん低いものを採る
+        const flowLeft=FLOW_ON&&best.flow>0;
+        if((best.mono>0||flowLeft)&&!attempt.fromMemory&&!attempt.fromCopy){
+          if(!held||(FLOW_ON?best.total<held.best.total:best.mono<held.best.mono))held={best,attempt,offsets,patternId,mirrored};
+          if(heldTries<(FLOW_ON?Math.max(MOTION_EXTRA_ATTEMPTS,FLOW_EXTRA_ATTEMPTS):MOTION_EXTRA_ATTEMPTS)){heldTries++;best=null;continue;}
           ({best,offsets,patternId,mirrored}=held);
           acceptAttempt(held.attempt);
           break;
@@ -3459,7 +3528,7 @@ const buildChart=(difficulty,options={})=>{
     }
     notice.push(`音ゲーの作法: ${Object.entries(knowledgeCounts).map(([id,count])=>`${id} ${count}`).join(' / ')||'効いた所なし'}`);
   }
-  return {notes,log,notice,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,mirrorFlickCount,
+  return {notes,log,notice,r2,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,mirrorFlickCount,
     targetCount,notesPerSecondTarget:round3(notesPerSecond),
     counts:{holdMax,slideMax,flickMax,endFlickMax,chordMax,accentMax,
       playableMinutes:round3(playableMinutes)}};
@@ -4071,6 +4140,8 @@ if(write){
       ...(focusOn?{focus:{source:`${dashed}-v3-layers.json`,bars:[...focusData.focus.byBar.entries()].map(([bar,state])=>`${bar}:${state[0]==='d'?'d':state==='melody'?'v':'m'}`).join(' ')}}:{}),
       // Rev.7: 使った作法の重みと、効いた回数
       knowledge:{weights:knowledgeWeights,fired:results[difficulty].knowledgeCounts||{}},
+      // 引き出し(2026-10-16): 使った/使わないと理由(rhythm-chart-drawers.js)
+      ...(results[difficulty].r2&&(difficulty==='MASTER'||difficulty==='HELL')?{drawers:[results[difficulty].r2]}:{}),
       status:'draft',
       reviewRequired:true,
       runtimeConnected:false,

@@ -1,7 +1,7 @@
 // 条件つきのプロフィールフレーム(モッチー・ムー・スエゾービート)を、実際の画面で買えるか確かめる(2026-10-03)。
 //
 //   ユーザー指示「各フレームを条件達成で買えるようにしたい」「ブリーダーポイント 1、ビートポイント 100」。
-//   ① 条件を1つも満たしていない人 … ブリーダーP交換所にもビートP交換所にも、3枚とも「条件を達成すると買えます」の札が出て、買えない
+//   ① 条件を1つも満たしていない人 … ブリーダーP交換所にもビートP交換所にも、3枚とも条件を短く書いた鍵つきの札(2026-10-20 から)が出て、買えない
 //   ② 条件を満たした人 … 買えて、残高が引かれ、mh_profile_frame_owned_v1 に入る
 //        スエゾービート(モンヒロビート10回クリア)をブリーダーPで / ムー(マスタークリア)をビートPで
 //      条件を満たしていない枠(モッチー)は、ポイントが足りていても買えないまま
@@ -96,7 +96,8 @@ const seed = ({ conditions }) => {
       const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').replace(/\u200b/g, '').includes(`${n}のフレーム`) && !names.some(m => m !== n && m !== 'ムー' && (d.innerText || '').replace(/\u200b/g, '').includes(`${m}のフレーム`)));
       const text = card ? card.innerText.replace(/\s+/g, ' ').replace(/\u200b/g, '') : '';
       const buy = card ? [...card.querySelectorAll('button')].find(b => /購入|交換/.test(b.getAttribute('aria-label') || b.innerText || '')) : null;
-      return { name: n, found: !!card, text, locked: text.includes('条件を達成すると買えます'), buyEnabled: !!buy && !buy.disabled, buyLabel: buy ? (buy.getAttribute('aria-label') || buy.innerText) : '' };
+      return { name: n, found: !!card, text, // 鍵つきは札(data-market-coming-soon-label)で見分ける。札の文は条件の短い文(2026-10-20・profileFrameConditionShort)
+      locked: !!(card && card.querySelector('[data-market-coming-soon-label]')), label: card && card.querySelector('[data-market-coming-soon-label]') ? card.querySelector('[data-market-coming-soon-label]').textContent : '', buyEnabled: !!buy && !buy.disabled, buyLabel: buy ? (buy.getAttribute('aria-label') || buy.innerText) : '' };
     });
   }, names);
   const store = (page, key) => page.evaluate((k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, key);
@@ -108,7 +109,9 @@ const seed = ({ conditions }) => {
       await openShop(page, entry);
       const cards = await frameCards(page);
       check(`① ${label}に3枚とも並ぶ`, cards.every(c => c.found), cards.map(c => `${c.name}:${c.found}`).join(' '));
-      check(`① ${label}: 条件が未達成の3枚は「条件を達成すると買えます」の札で、買えない`,
+      check(`① ${label}: 札に条件が短く書いてある(モッチー種を限界突破・Masterをクリア・モンヒロビートを10回クリア)`,
+        cards.map(c => c.label).join('|') === 'モッチー種を限界突破|Masterをクリア|モンヒロビートを10回クリア', cards.map(c => c.label).join(' | '));
+      check(`① ${label}: 条件が未達成の3枚は鍵つきの札で、買えない`,
         cards.every(c => c.locked && !c.buyEnabled), cards.map(c => `${c.name}:${c.locked}/${c.buyEnabled}`).join(' '));
     }
     // 新しい7枚(2026-10-03): 条件はブリーダーP交換所だけ。ビートP交換所は条件なし(スエゾー〜ミーア(ゴーレム含む)は100P・ラグナロクは10000P)

@@ -77,6 +77,8 @@ const storyCastOf=(script)=>[...ASSISTANTS,...STORY_GUESTS].filter(who=>script.s
 const normalizeAssistantBond=()=>({points:0});
 const assistantBonds={},assistantCallStyles={};
 const assistantSpeakText=(t)=>t; const assistantBondLevelOf=()=>1; const breederName='ブリーダー';
+// あつの解放で台本の行を選ぶ(2026-10-23・eventScriptForPlayer は assistants.js にある)。ここでは見たお話なし
+const rhythmEventStorySeen=[];
 const RHYTHM_EVENT_STORY_IDS=[${JSON.stringify(target.id)}];
 window.__seen=[]; const markRhythmEventStorySeen=(id)=>{window.__seen.push(id);};
 const markMomosukeIntroSeen=()=>{};
@@ -85,7 +87,14 @@ const markMomosukeIntroSeen=()=>{};
 const RHYTHM_HELL_STORY_ID='rhythm_hell_story';
 const markRhythmHellStorySeen=()=>{}; const markTacticsIntroSeen=()=>{};
 const ASSISTANT_CHAT_STORY_ID='assistant_chat_story'; const markAssistantChatStorySeen=()=>{};
+const TACTICS_TYPES_STORY_ID='tactics_types'; const markTacticsTypesStorySeen=()=>{};
 const setRhythmHellGuide=()=>{}; const setShowDebugStoryList=()=>{}; const setShowEventReplayList=()=>{};
+// ★MFバトルカードのはじまり(2026-10-24 #3452)。スキップ・最後まで見たときに event.id と比べて「見た」にするので、
+//   定義していないと ReferenceError でスキップが効かなくなる(会話が閉じない)。ここでは比べられれば足りる
+const CARD_BATTLE_INTRO_STORY_ID='card_battle_intro'; const markCardBattleIntroSeen=()=>{};
+// ★お話の文は言葉の区切りの部品(21-assistant.jsx の bubbleWrap)を通して描く(2026-10-24)。定義していないと ReferenceError で描画ごと落ちる。
+//   ここでは押せる場所を見るので、文はそのまま返せば足りる
+const bubbleWrap=(t)=>t; const bubbleWrapStyle=()=>undefined;
 function Screen(){
   const [eventReplay,setEventReplay]=useState({id:${JSON.stringify(target.id)},step:0,live:true});
   window.__state=eventReplay;

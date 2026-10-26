@@ -42,12 +42,15 @@ const PLAYS = ['bot', 'best'];
 const ev = require('./evidence');
 // 回すシミュレーターの版(sim/battle.js)。キャッシュに残し、版が違うマスは回し直す。
 // 3 = アシカまで(トレーニング・間合いボーナス・固有技の強化・緊急回復は無し) / 7 = 全部入り(緊急回復は AUTO と同じ条件) / 8 = 緊急回復はボットと同じ・上手な EX はボス戦のぶんを残す
-const SIM_VER = 11;
-const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)', 8: '8 版目(7 版目+緊急回復はボットと同じ「AUTO の条件 → 全滅の手前」・上手な EX はボス戦のぶんを残す)', 10: '10 版目(8 版目+上手な遊び方のトレーニングはドミノ倒し+走り込み)', 11: '11 版目(10 版目+上手な遊び方の緊急回復はガッツの平均 40% 未満で押す・剣士モッチーは強い難易度でずっと片手盾)' };
+const SIM_VER = 14; // 14 = 13 版目+上手な遊び方の緊急回復(ガッツの平均 40% 未満で押す)・剣士モッチーの初期スタイル(2026-10-27 ダイスくん) / 13 = WAVE の始めのヘイトをタイプで決める・ガードを下げた(2026-10-22) / 11 = 10 版目+ヘイト(2026-10-22。ゲームと同じヘイトで敵が狙う) / 12 = ヘイトで狙われる確率を強めた(2026-10-22 社長「最大40%じゃ…」)
+const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)', 8: '8 版目(7 版目+緊急回復はボットと同じ「AUTO の条件 → 全滅の手前」・上手な EX はボス戦のぶんを残す)', 10: '10 版目(8 版目+上手な遊び方のトレーニングはドミノ倒し+走り込み)', 11: '11 版目(10 版目+ヘイト。敵はゲームと同じく目立った子を狙いやすい)', 12: '12 版目(11 版目のヘイトを強めた。タンクがガードすると約65%・上限で約90%狙われる)', 13: '13 版目(WAVE の始めのヘイトをタイプで決める・勇者の下地なし・ガードのヘイトを下げた)', 14: '14 版目(13 版目+上手な遊び方の緊急回復はガッツの平均 40% 未満で押す・剣士モッチーは強い難易度でずっと片手盾)' };
 // 緊急回復をどの条件で測ったか(md の頭に1行。2026-10-10 ハカセくん)
 const EMERGENCY_TEXT = { 3: '緊急回復は入れていない(使わない)', 7: '緊急回復は AUTO と同じ条件(出せるカードが無く、ガッツさえあれば出せるとき)で測った。ガッツの少ない子は押す回数が多く、伸びやすい', 8: '緊急回復は直したボットと同じ条件(AUTO の条件 → だめなら全滅の手前。EX を使ったターンは押さない)で測った。ガッツの少ない子は押す回数が多く、伸びやすい' };
 EMERGENCY_TEXT[10] = EMERGENCY_TEXT[8];
-EMERGENCY_TEXT[11] = '緊急回復は上手な使い方(ボットと同じ2つに加え、立っている子のガッツの平均が 40% 未満ならカードの前に押す。倒し切れそう・残り3ターン以内は押さない)で測った';
+EMERGENCY_TEXT[11] = EMERGENCY_TEXT[8];
+EMERGENCY_TEXT[12] = EMERGENCY_TEXT[8];
+EMERGENCY_TEXT[13] = EMERGENCY_TEXT[8];
+EMERGENCY_TEXT[14] = '緊急回復は上手な使い方(ボットと同じ2つに加え、立っている子のガッツの平均が 40% 未満ならカードの前に押す。倒し切れそう・残り3ターン以内は押さない)で測った';
 const emergencyText = (sec) => EMERGENCY_TEXT[(sec && sec.simVer) || 3] || '';
 const simVerText = (sec) => SIM_VER_TEXT[(sec && sec.simVer) || 3] || `${sec.simVer} 版目`;
 
@@ -70,7 +73,7 @@ if (args[0] === '--worker') {
       const ally = t.ally === '*' ? (() => { const pool = sim.MONS.map((m) => m.id).filter((id) => id !== t.hero); return pool[Math.floor(sim.mulberry32(sim.hashSeed(t.seed, 'first', t.hero, t.diff, i))() * pool.length)]; })() : t.ally;
       if (ally) allies = [ally, ...others(t.hero, ally, sim.mulberry32(sim.hashSeed(t.seed, 'combo', t.hero, t.diff, i)))];
       else allies = sim.pickAllies(t.hero, sim.mulberry32(sim.hashSeed(t.seed, 'allies', t.hero, t.diff, i)));
-      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play, ...((t.simVer || 3) >= 11 ? { training: t.exMode === 'best' ? 'atkhp' : 'bot', emergency: t.exMode === 'best' ? 'best' : 'bot' } : (t.simVer || 3) >= 10 ? { training: t.exMode === 'best' ? 'atkhp' : 'bot', emergency: 'bot' } : (t.simVer || 3) >= 8 ? { training: 'bot', emergency: 'bot' } : (t.simVer || 3) >= 7 ? { training: 'bot', emergency: 'auto' } : { training: 'none', distBonus: false, uniqueUp: false, emergency: 'none' }) });
+      const r = sim.simulateRun({ heroId: t.hero, allies, difficulty: t.diff, seed: sim.hashSeed(t.seed, i), exMode: t.exMode, assist: t.assist, assistPlay: t.play, ...((t.simVer || 3) >= 14 ? { training: t.exMode === 'best' ? 'atkhp' : 'bot', emergency: t.exMode === 'best' ? 'best' : 'bot' } : (t.simVer || 3) >= 10 ? { training: t.exMode === 'best' ? 'atkhp' : 'bot', emergency: 'bot' } : (t.simVer || 3) >= 8 ? { training: 'bot', emergency: 'bot' } : (t.simVer || 3) >= 7 ? { training: 'bot', emergency: 'auto' } : { training: 'none', distBonus: false, uniqueUp: false, emergency: 'none' }) });
       const reach = r.wave + (r.result === 'clear' ? 1 : 0);
       acc.n++; acc.sum += reach; acc.sq += reach * reach; if (r.result === 'clear') acc.clear++;
       if (t.card) { const u = (r.assistUses || {})[t.card] || 0; acc.uses += u; if (u > 0) acc.usedRuns++; }

@@ -9,6 +9,7 @@
 //   ③ ランの進行を回す3つのループが gameState ではなく runStage を見ていること
 //   ④ モンビーの非演奏画面ではクイック∞周回が続き、演奏中は止まること
 //   ⑤ モンビーを開いている間は、ランが進んでも画面が勝手に切り替わらないこと
+//   ⑥ MFバトルカード(CARD_*・カードから開いたマーケット)でも④⑤と同じになること(docs/spec/CARD_BATTLE.md 5-3)
 //
 // docs/spec/QUICK_RHYTHM_LINK.md の PR2〜PR4。ここが崩れると
 // 「別画面へ移ってもチャレンジが進む」「バトル画面なのに進まない」
@@ -29,7 +30,7 @@ const slice = (from, to) => {
 };
 
 // ---- ① 定義がある / 表を二重に持っていない ----
-const DEFINITION_END = 'const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);';
+const DEFINITION_END = 'const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun);';
 const definition = slice('const RUN_PHASE_STATES =', DEFINITION_END);
 // 画面を切り替える入口(setGameState)は本体の冒頭にある。advanceRunStage の判断材料を
 // ここで同時に更新しているかが、モンビーとの行き来で進行不能になるかどうかを分ける
@@ -55,7 +56,7 @@ check('advanceRunStage は呼ばれた時点の値(ref)で画面を切り替え�
 //   gameState と runStage がずれて runProgressAllowed が false のまま戻らなくなる
 //   (2026-09-14・ユーザー報告「モンビークイックからバトルに戻るとフリーズする」)。
 check('画面を切り替える入口は1つで、そこで判断材料も同時に更新する',
-  screenEntry.includes("const setGameState = (next) => { runBackgroundAllowedRef.current = isRhythmScreen(next); setGameStateRaw(next); };")
+  screenEntry.includes("const setGameState = (next) => { runBackgroundAllowedRef.current = isBackgroundRunScreen(next); setGameStateRaw(next); };")
   && source.includes("const [gameState, setGameStateRaw] = useState('HOME');"));
 check('useStateのsetterを直接呼んでいない(必ず入口を通す)',
   (source.match(/setGameStateRaw\(/g) || []).length === 1
@@ -72,18 +73,20 @@ check('演奏中(RHYTHM_PLAY)は裏回しの対象に入れていない',
 // 本体は1回の描画ぶんの式なので、「その画面・その段階のときにどうなるか」を見るには
 // 画面と段階を与えて評価し直す(Reactが再描画で計算し直すのと同じ)。
 // 数式を検査へ書き写さないため、read() は本体が作った値をそのまま返す。
-const evaluateWith = (initialGameState, { runStage: initialRunStage = null, autoRepeat = true, quick = true } = {}) => {
+const evaluateWith = (initialGameState, { runStage: initialRunStage = null, autoRepeat = true, quick = true, cardMarketEntry = false } = {}) => {
   // useRef は「初期値を持つただの入れ物」。runStageRef には段階を、
   // runBackgroundAllowedRef には本体が描画のたびに入れ直す値がそのまま入る
   const sandbox = { console, useRef: (init) => ({ current: init === undefined ? initialRunStage : init }) };
   vm.createContext(sandbox);
   vm.runInContext(`let gameState=${JSON.stringify(initialGameState)}; const setGameStateRaw=(v)=>{gameState=v;};
 ${screenEntry}
+cardMarketEntryRef.current=${cardMarketEntry};
 const autoRepeat=${autoRepeat}; const runMode=${JSON.stringify(quick ? 'quick' : 'challenge')}; const isQuickMode=(m)=>m==='quick';
 ${definition.replace('const [runStage, setRunStage] = useState(null);', `let runStage=${JSON.stringify(initialRunStage)}; const setRunStage=(v)=>{runStage=v;};`)}
 this.api={ advanceRunStage, clearRunStage, isRunStage, setGameState, screens:RUN_STAGE_SCREENS, rhythmScreens:RHYTHM_BACKGROUND_RUN_SCREENS,
+  setCardMarketEntry:(v)=>{ cardMarketEntryRef.current=v; },
   read:()=>({ runStage, gameState, allowed: runProgressAllowed,
-              backgroundAllowed: runBackgroundAllowed, backgroundRun: rhythmBackgroundRun }) };`, sandbox);
+              backgroundAllowed: runBackgroundAllowed, backgroundRun: rhythmBackgroundRun, cardBackgroundRun }) };`, sandbox);
   return sandbox.api;
 };
 const base = evaluateWith('HOME');
@@ -142,6 +145,47 @@ check('モンビーにいるかどうかは一覧ではなく gameState の頭�
 check('オプション(RHYTHM_OPTIONS)でも裏の周回が続く',
   rhythmScreens.includes('RHYTHM_OPTIONS')
   && withRunOn('RHYTHM_OPTIONS').read().allowed === true);
+
+// ---- ⑥ MFバトルカードでも、裏の周回が続き、画面が勝手に切り替わらない ----
+// ★期待する画面はここに書き下す(実装の一覧から作らない。上の⑤と同じ理由)。
+//   CARD_DECK_EDIT はまだ無い画面。カードへ画面を足しても漏れないこと(名前の頭で見ていること)を確かめるために入れる
+const EXPECTED_CARD_SCREENS = ['CARD_TOP', 'CARD_BATTLE', 'CARD_PACK_OPEN', 'CARD_DECK_EDIT'];
+check('MFバトルカードかどうかは一覧ではなく gameState の頭で見る（画面を足しても漏れない）',
+  screenEntry.includes("const isCardScreen = state => typeof state === 'string' && state.startsWith('CARD_');")
+  && definition.includes('const cardScreenOpen = isCardRunScreen(gameState);'));
+check('MFバトルカードの画面(対戦中も)ではクイック∞周回が続く',
+  EXPECTED_CARD_SCREENS.every(screen => { const r = withRunOn(screen).read(); return r.allowed === true && r.cardBackgroundRun === true; }),
+  EXPECTED_CARD_SCREENS.join(','));
+check('MFバトルカードを開いている間は、ランが進んでも画面が切り替わらない',
+  EXPECTED_CARD_SCREENS.every(screen => {
+    const e = withRunOn(screen);
+    e.advanceRunStage('WAVE_RESULT');
+    const r = e.read();
+    return r.runStage === 'WAVE_RESULT' && r.gameState === screen;
+  }));
+check('MFバトルカードでも、∞周回でなければ・クイックでなければ裏では回さない',
+  withRunOn('CARD_TOP', { autoRepeat: false }).read().allowed === false && withRunOn('CARD_BATTLE', { quick: false }).read().allowed === false);
+// カードのトップの「マーケット」から開いたマーケットはカードの中と同じ。ふつうに開いたマーケットは今までどおり外
+check('カードから開いたマーケットでは周回が続き、画面も切り替わらない',
+  (() => { const e = withRunOn('BREEDER_MARKET', { cardMarketEntry: true }); const ok = e.read().allowed === true; e.advanceRunStage('WAVE_RESULT'); return ok && e.read().gameState === 'BREEDER_MARKET'; })());
+check('ふつうに開いたマーケットは、これまでどおりカードの外',
+  withRunOn('BREEDER_MARKET').read().allowed === false);
+// カードのトップからマーケットへ移るその瞬間(印を立ててすぐ setGameState)に、もう正しい判断になっている(2026-09-14 と同じ型)
+check('カードのトップからマーケットへ移った瞬間から、画面を切り替えない判断になる',
+  (() => { const e = withRunOn('CARD_TOP'); e.setCardMarketEntry(true); e.setGameState('BREEDER_MARKET'); e.advanceRunStage('WAVE_RESULT'); return e.read().gameState === 'BREEDER_MARKET'; })());
+// カードからバトルへ戻った瞬間からは、ふつうに画面も一緒に進む(モンビーから戻ったときの 2026-09-14 の事故の逆向き)
+check('カードからバトルへ戻った瞬間から、段階と一緒に画面も進む',
+  (() => { const e = withRunOn('CARD_TOP'); e.setGameState('BATTLE'); e.advanceRunStage('WAVE_RESULT'); const r = e.read(); return r.gameState === 'WAVE_RESULT' && r.runStage === 'WAVE_RESULT'; })());
+// カードの画面の部品が自分で移る先は、全部 CARD_ で始まる(始まらない名前へ移ると「カードを離れた」と数えられ、周回がバトルへ飛ぶ)
+{
+  const partsDir = path.join(root, 'monster-hero/src/parts');
+  const cardParts = fs.readdirSync(partsDir).filter(name => /^(8[2-9]|9[0-9])-card/.test(name) || name === '84-screen-card-battle.jsx');
+  const moves = cardParts.flatMap(name => [...fs.readFileSync(path.join(partsDir, name), 'utf8').matchAll(/onNavigate\(\s*([^)]*?)\s*\)/g)].map(m => m[1]));
+  const bad = moves.filter(arg => !/^'CARD_[A-Z_]+'$/.test(arg));
+  check('MFバトルカードの部品が移る先は、全部 CARD_ で始まる名前', moves.length > 0 && bad.length === 0, bad.length ? `始まらない: ${bad.join(', ')}` : `${moves.length}か所`);
+}
+check('カードの外(HOME など)では止まる',
+  ['HOME', 'BATTLE_MENU', 'DEBUG_SETTINGS', 'CARD', 'card_top'].every(screen => withRunOn(screen).read().allowed === false));
 
 // ---- ③ 進行を回す3つのループが runStage を見ている ----
 const hasBareGameState = (text) => /[^a-zA-Z]gameState[^a-zA-Z]/.test(text);
@@ -210,7 +254,24 @@ check('モンビーからクイックのバトルへ戻れる',
 check('ランを片付けるときに「実行中の印」も下ろす',
   /const abandonRunAnimations = \(\) => \{[\s\S]{0,400}?runGenerationRef\.current \+= 1;[\s\S]{0,400}?autoTurnRunningRef\.current = false;[\s\S]{0,400}?autoPostWaveRunningRef\.current = false;/.test(source));
 check('モンビーを開いている間はバトルのSEを鳴らさない',
-  source.includes('Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume);'));
+  source.includes('Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume);'));
+// MFバトルカードは同じ効果音を使うので、音量ではなく「裏の周回の効果音だけ止める印」で止める。カードの画面は印を受けない fgSe で鳴らす
+check('MFバトルカードにいる間は、裏の周回の効果音だけを止める',
+  source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen);')
+  && source.includes('(...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))')
+  && source.includes('if (!enabled || !src || backgroundSeQuiet) return null;'));
+check('MFバトルカードの画面の効果音は、印を受けない Audio_.fgSe から鳴らす',
+  fs.readdirSync(path.join(root, 'monster-hero/src/parts')).filter(name => /^(8[2-9]|9[0-9])-card/.test(name) || name === '84-screen-card-battle.jsx')
+    .every(name => !/Audio_\.se[.\[]/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts', name), 'utf8'))));
+check('∞周回中のバトルから MFバトルカードへ移れる（returnToHomeを通さない）',
+  source.includes('data-quick-to-card') && source.includes("const openCardBattleKeepRun = () => { setCardOrigin('home'); setGameState('CARD_TOP'); };"));
+check('MFバトルカードからクイックのバトルへ戻れる・戻るときは周回を締めてから出る',
+  source.includes('data-card-quick-run-back') && source.includes('returnToBackgroundRun(); }}')
+  && /const exitCardBattle = async \(\) => \{[\s\S]{0,600}?await handleGiveUp\(\{ silent: true \}\)[\s\S]{0,200}?returnToHome\(\);/.test(source));
+// 負けた・リタイアの暗幕や大きな演出を、カードの画面の上に出さない(モンビーと同じ)
+check('MFバトルカードの上に、裏の周回の負け・演出の幕を出さない',
+  ['{hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(', '{gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&(', '{effect&&!rhythmScreenOpen&&!cardScreenOpen&&(']
+    .every(t => source.includes(t)));
 
 if (failed) { console.error(`\n${failed}件のNGがあります`); process.exit(1); }
 console.log('\nrun stage check passed.');

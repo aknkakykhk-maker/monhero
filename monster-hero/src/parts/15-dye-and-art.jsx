@@ -150,6 +150,9 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 // 頭から顎までをまとめてピンクの判定から外す。ピンクの毛はここより下にしか無い。
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
+// オボロゲソウの花の範囲(上・左・右。縦横とも絵の幅を1とした割合)と、白い本体の範囲(2026-10-26 高画質の絵に合わせて実測)
+const OBORO_FLOWER_BOXES = [[0.31, 0.06, 0.71, 0.455], [0.04, 0.24, 0.40, 0.575], [0.60, 0.24, 0.96, 0.575]];
+const OBORO_BODY_BOX = [0.28, 0.6, 0.72, 0.9];
 const MASU_COLOR_REGION_HUES = {
   // ミーアは正解見本から埋め込んだ部位マップで境界を固定する。以下は3レイヤーを既存経路へ知らせる控え。
   Mia: [
@@ -200,7 +203,15 @@ const MASU_COLOR_REGION_HUES = {
   // 花の中心(淡い黄色、hue50前後)は彩度が0.18前後あり白バケツ(sMax0.18)に入りきらず、
   // どの部位にも属さないまま常に無染色で残っていた(花びらだけ染まって中心だけ元の黄色が浮く)ため、
   // 花びらと同じ染色①にまとめて含めた
-  Oboro: [[{ hue: 239 }, { hue: 50, sMax: 0.3, vMin: 0.8 }], { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
+  // 2026-10-26 高画質の絵へ差し替え。新しい絵は色が濃く、花びらのふち(水色)と茎・葉が同じ色相になり、
+  // 本体も淡い水色(彩度0.2前後)で白の判定から外れたので、花は位置(待機アニメの花の切り抜きと同じ範囲)で、本体は淡さで分ける。
+  // 部位の数は3のまま(花／茎・葉・足／本体)
+  Oboro: [
+    // 花びら(濃い青)と中(クリーム色)、茎(水色)と本体のあいだは色相が大きく違うので、既定の「境目は塗らない」を切る(内側に元の色の筋が残った)
+    [{ hue: [232, 200], sMin: 0.02, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { hue: [50, 100, 150], sMin: 0.02, vMin: 0.5, bbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, { white: true, sMax: 0.4, vMin: 0.75, bbox: OBORO_FLOWER_BOXES }],
+    { hue: 200, sMin: 0.02, notBbox: OBORO_FLOWER_BOXES, noEdgeGuard: true }, // 葉・足の白い光の点も同じ部位に入れる(新しい絵は光がはっきりしている)
+    { white: true, sMax: 0.55, vMin: 0.9, bbox: OBORO_BODY_BOX },
+  ],
   // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。
   // 花の内側(淡いピンク)と体(ほぼ白)はどちらも低彩度で、色相・彩度の閾値だけでは
   // どうしても互いに混ざってごま塩状に汚れる。そのため2026年8月に正式マスク
@@ -297,6 +308,27 @@ const MASU_COLOR_REGION_HUES = {
   // 持ち手のリボン・ケープの玉 / ②=傘のフリル / ③=黒い帽子(頭巾・耳・ケープ・しっぽ) / ④=乗っている子の白い所 /
   // ⑤=下の生き物の濃い紫。目・鼻・ほっぺ・傘の柄とつまみ・生き物のおなかと耳の内側・白目は対象外
   Kuromy: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
+  // イルミネ(2026-10-22・案の段階・5部位。社長「染色マスク イルミネ 5色 ドリーミィ 5色 イメージ見て作ってみて」で開発部が部位を決めた)。
+  // ①=黒い体(顔・体・ドレス・脚) / ②=頭の後ろの黒い髪 / ③=光る髪とスカートの裏(桃・青紫・橙・黄のグラデーション) /
+  // ④=耳と頭の金の飾り / ⑤=目と体の模様(ピンクの楕円)。マスクの原本は tools/art-sources/dye-masks/illumine-dye-mask-made.png
+  Illumine: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
+  ],
+  // ドリーミィ(2026-10-22・案の段階・5部位。同じく開発部が部位を決めた)。
+  // ①=体の毛(顔・耳・腕・脚・左右の大きな毛) / ②=雲(頭のもこもこ・服・スカート・足元) / ③=頭の後ろの縞の帽子 /
+  // ④=玉の飾り(左右に垂れた玉・頭の玉・ピン) / ⑤=ピンクと水色の飾り(ボタンの目・胸のハート・服の花・耳のふち)。
+  // 目の×・口・縫い目の線は染めない。マスクの原本は tools/art-sources/dye-masks/dreamy-dye-mask-made.png
+  Dreamy: [
     { hue: 0, noAAGuard: true, noEdgeGuard: true },
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
@@ -605,7 +637,8 @@ const MASK_EXACT_ANALYSIS_MAX_SIZE = 768;
 // (96px表示)で口まわりに階段が残っていた。
 // 判定と平滑化は解析サイズのまま(多数決の半径が画像幅に比例するため、解像度を上げると
 // 実測で7秒級まで重くなる)、書き出しだけを高解像度で行うことで見た目だけを直す。
-const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true };
+// モノリスは 2026-10-26 に元絵を160pxから1024pxへ差し替えたので足した(白で染めると帯の境目に線が出ていた)
+const MASK_HIRES_BASE_IDS = { Mocchi: true, Ark: true, Ham: true, Zan: true, Undine: true, Yaobikuni: true, Monol: true };
 // 高解像度で書き出すときのマスクの最大サイズ(px)。表示は最大でも250px程度なので、
 // 元絵の原寸まで上げる必要はなく、階段が見えなくなる範囲で抑える
 const MASK_HIRES_MAX_SIZE = 768;
@@ -679,6 +712,14 @@ const _buildHiResMaskUrls = (smoothed, regionDefs, src, w, h, natW, natH) => {
         if (hit < 0) continue;
         const o = (y*outW + x)*4 + 3;
         for (let idx = 0; idx < outDatas.length; idx++) outDatas[idx].data[o] = (idx === hit) ? 255 : 0;
+        // 帯(band)どうしの境目は、となりの帯のマスクも2画素ぶん重ねる。境目でぴったり切ると、表示の大きさへ
+        // 引き伸ばしたときに境目の1行が両方とも半分の濃さになり、元の色が細い線として透けた
+        // (2026-10-26 モノリスを1024pxの絵にしたら、白で染めたときに帯の境目へ線が出た)
+        for (const [idx, def] of posRegions) {
+          if (idx === hit || !def.band) continue;
+          const [y0, y1] = def.band; const e = 2 / outH;
+          if (ny >= y0 - e && ny < y1 + e) outDatas[idx].data[o] = 255;
+        }
       }
     }
   }
@@ -739,7 +780,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK, Ghost:GHOST_DYE_MASK, Spooky:SPOOKY_DYE_MASK, Melody:MELODY_DYE_MASK, Kuromy:KUROMY_DYE_MASK, Illumine:ILLUMINE_DYE_MASK, Dreamy:DREAMY_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -1059,6 +1100,15 @@ const MASU_COLOR_REGION_DYE = {
   // ②フリルは白いひだとクリーム色の影が混ざっていて、gloss を付けると白いひだに色が乗らず白い筋が残ったので付けない。
   // ③黒い帽子(0.15)と④白い所(0.04)も元の彩度がほぼ無いので付けない
   Kuromy: [{ gloss: 0.56 }, {}, {}, {}, { gloss: 0.4 }],
+  // イルミネ(2026-10-22・案の段階): 5部位とも元の彩度が高い(上のほう ①0.73 ②0.74 ③0.71 ④0.59 ⑤0.56)ので、上のほうに合わせて
+  // 光る髪のつやと体の陰影を残す
+  Illumine: [{ gloss: 0.73 }, { gloss: 0.74 }, { gloss: 0.71 }, { gloss: 0.59 }, { gloss: 0.56 }],
+  // ドリーミィ(2026-10-22・案の段階): ①体の毛(0.17/0.31)はクリーム色の陰影を残すため上のほうに合わせる。
+  // ②雲(0.15/0.22)は上のほうに合わせる。付けないと雲の縞(桃・水色・黄)が消えて1色ののっぺりした塗りになった
+  // (配色の見本で確かめた。白い所は淡く残るが、雲のもこもこの形が見えるほうを選んだ)。
+  // ③帽子は付けない。付けると白いてっぺんが灰色に濁って、染めると帽子が透けて見えた(2026-10-22 社長「直す」。元の絵は不透明)
+  // ④玉(0.58/0.71)と⑤ピンクの飾り(0.48/0.55)は上のほうに合わせて玉のつやを残す
+  Dreamy: [{ gloss: 0.15 }, { gloss: 0.22 }, {}, { gloss: 0.71 }, { gloss: 0.55 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -1284,7 +1334,8 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // 立ち絵が縦長(2:3〜5:6)のモンスター(ユグドラシル以降の新しい子も含む。2026-10-07に追加。メロディー・クロミーは本体登録後に効く)。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy']);
+// イルミネ・ドリーミィ(2026-10-22 公開)は足し忘れていて、マスモンの詳細の丸で上下が切られ「大きく・中心がずれて」見えていた(2026-10-26 社長の指摘)
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -1467,7 +1518,12 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   if (!debugMaskPlacement) {
     const bakedUrl = bakeKey && baked.key === bakeKey ? baked.url : undefined;
     if (bakedUrl) return <img src={bakedUrl} alt={alt} draggable={draggable} className={className} style={style}/>;
-    if (bakedUrl === undefined) return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
+    if (bakedUrl === undefined) {
+      // ★新しい色を焼いているあいだは、同じ絵のひとつ前に焼いた絵を出し続ける(2026-10-23 社長「染色するときに色の変化の動きがかくつく」)。
+      //   元の絵(src)へ戻していたため、色を変えるたびに「染めた絵 → 元の色 → 新しい色」と一瞬もどってチラついていた
+      if (baked.url && baked.key && baked.key.startsWith(`${baseId}|${src}|`)) return <img src={baked.url} alt={alt} draggable={draggable} className={className} style={style}/>;
+      return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
+    }
   }
   return (
     <div className={className} style={{...style, position:'relative', overflow:'hidden'}}>

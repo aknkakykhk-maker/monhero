@@ -174,6 +174,12 @@ const statusOf = (a, b) => {
   await api.sbSendRoomInvite('userA', 'userD', 'CD45');
   const again = await api.sbFetchRoomInvites('userD', Date.now());
   check('同じ2人の招待は1行に上書きされ、新しい部屋コードになる', db.friend_invites.length === 1 && again.length === 1 && again[0].roomCode === 'CD45');
+  // 3分たってから同じ相手へもう一度送っても届く(送るたびに時刻を書く。表に時刻を新しくする仕掛けが無いので、書かないと古いまま届かなかった)
+  db.friend_invites[0].created_at = new Date(Date.now() - api.FRIEND_INVITE_TTL_MS - 60 * 1000).toISOString();
+  check('3分たった招待は届かない', (await api.sbFetchRoomInvites('userD', Date.now())).length === 0);
+  await api.sbSendRoomInvite('userA', 'userD', 'EF67');
+  const later = await api.sbFetchRoomInvites('userD', Date.now());
+  check('3分たってから同じ相手へもう一度送ると、また届く(送るたびに時刻を書く)', db.friend_invites.length === 1 && later.length === 1 && later[0].roomCode === 'EF67');
   check('3分より古い招待は届かない', (await api.sbFetchRoomInvites('userD', Date.now() + api.FRIEND_INVITE_TTL_MS + 10 * 60 * 1000)).length === 0);
 
   // ---- フレンドに見せる情報 ----
@@ -340,7 +346,7 @@ const statusOf = (a, b) => {
     && api.friendsLastSeenText(now - 30 * 60 * 1000, now) === '30分前に開きました'
     && api.friendsLastSeenText(now - 5 * 3600 * 1000, now) === '5時間前に開きました'
     && api.friendsLastSeenText(now - 3 * 24 * 3600 * 1000, now) === '3日前に開きました'
-    && api.friendsLastSeenText(0, now).includes('不明'));
+    && api.friendsLastSeenText(0, now).includes('わかりません'));
 
   console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');
   process.exit(failed ? 1 : 0);

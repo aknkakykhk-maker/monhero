@@ -129,7 +129,7 @@ const verdictOf=rows=>diagnose(aggregate(rows)).filter(line=>line.level==='found
   ok('報告: 名前・ブリーダーIDは送らない・公開中の曲だけ',reportBlock.length>0&&!/user_name|breeder|userName|breederId/i.test(reportBlock)&&/RHYTHM_DEMO_SONG_IDS\.includes\(report\.song_id\)/.test(reportBlock));
   ok('報告: 診断の行に、結ぶための playId と、効いていた直し方を入れる',/playId:rhythmTouchDiagPlayId\(\),fixes:rhythmTouchFixesActive\(\)/.test(diagBlock));
   ok('報告: ボタンはタッチで遊ぶ端末の公開プレイだけ(練習・タイミング合わせ・デバッグは診断そのものを作らない)',
-    /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?rhythmTouchDiagOf\(/.test(play)&&/touchDiag&&touchDiag\.platform!=='other'\?/.test(play)&&/\{result\.touchReport&&<div data-rhythm-touch-report/.test(play));
+    /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?(rhythmTouchDiagWithMon\()?rhythmTouchDiagOf\(/.test(play)&&/touchDiag&&touchDiag\.platform!=='other'\?/.test(play)&&/\{result\.touchReport&&<div data-rhythm-touch-report/.test(play));
   ok('報告: 同じ曲では1回だけ送る',/touchReportSent===result\.touchReport\.playId/.test(play));
   // 報告の行は数に入れず、playId で結ぶ
   const ios=make('ios',30),android=make('android',30);
@@ -148,7 +148,7 @@ const verdictOf=rows=>diagnose(aggregate(rows)).filter(line=>line.level==='found
   const mode=read('monster-hero/data/rhythm-mode.js');
   const fixes=(mode.match(/const RHYTHM_TOUCH_FIXES=\{[\s\S]*?\n\};/)||[''])[0];
   // 2026-10-07 21時: inputAgeCap は標準で切った(ユーザー報告「タップ抜けがひどくなった」。補正の効きすぎを疑い、原因が分かるまで戻す)
-  ok('直し方: 公開で入れてあるのは lateInputEffectDown・autoPauseOnHidden だけ(wideEdge・inputAgeCap・smoothSongClock・allPlatforms は切ってある。smoothSongClock は端末の記録からゲームが自分で入れる)',/lateInputEffectDown:true/.test(fixes)&&/wideEdge:false/.test(fixes)&&/allPlatforms:false/.test(fixes)&&/inputAgeCap:false/.test(fixes)&&/smoothSongClock:false/.test(fixes)&&/autoPauseOnHidden:true/.test(fixes)&&(fixes.match(/:true/g)||[]).length===2,fixes.replace(/\s+/g,' ').slice(0,200));
+  ok('直し方: 公開で入れてあるのは lateInputEffectDown・wideEdge・autoPauseOnHidden だけ(inputAgeCap・smoothSongClock・allPlatforms は切ってある。smoothSongClock は端末の記録からゲームが自分で入れる)',/lateInputEffectDown:true/.test(fixes)&&/wideEdge:true/.test(fixes)&&/allPlatforms:false/.test(fixes)&&/inputAgeCap:false/.test(fixes)&&/smoothSongClock:false/.test(fixes)&&/autoPauseOnHidden:true/.test(fixes)&&(fixes.match(/:true/g)||[]).length===3,fixes.replace(/\s+/g,' ').slice(0,200));
   ok('直し方: 効くのは iPhone だけ',/return rhythmTouchPlatformCache==='ios';/.test(mode));
   ok('直し方: 道の外の受け付けは、切り替えを通して決める',/const margin=laneWidth\/2\*rhythmInputEdgeMarginSubLanes\(\);/.test(mode));
   ok('直し方: タッチの遅れで演出を下げるのは「重いときは演出を自動で控えめに」の中だけ(設定を切った人には効かない)',

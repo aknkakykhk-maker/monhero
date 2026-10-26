@@ -47,6 +47,8 @@ const run = async (monId, isUnique, opts) => {
     addPopup: ()=>{}, triggerShake: ()=>{}, battleWait: async()=>{},
     setTacticsPandoraForms: ()=>{},   // パンドラの箱(タクティクスEX)の姿の切り替え。この検査では見ない(2026-10)
     pushBattleLog: ()=>{}, battleActorName: ()=>'テスト',
+    // タクティクスプロの記録(2026-10-21・印が偽のあいだは何もしない)。この検査では見ない
+    tacticsProLogRef: { current: null }, tacticsProLogDamage: ()=>{}, tacticsProLogSkill: ()=>{}, turnCount: 1,
     Audio_: { se: new Proxy({}, { get: () => () => {} }) },
     RANGE_LABELS: ['零','近','中','遠'],
     WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760,

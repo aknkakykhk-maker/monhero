@@ -96,7 +96,7 @@ function MasuSoulTraitsScreen({
             const effect=soulTraitEffectValue(masu,trait.id);
             const maxed=Number.isFinite(trait.maxLevel)&&traitLevel>=trait.maxLevel;
             return <button type="button" key={trait.id} data-soul-trait-card={trait.id} onClick={()=>openTrait(trait)} className="w-full min-h-[72px] mh-panel rounded-2xl border border-white/10 bg-slate-900 p-3 text-left active:scale-[.99]">
-              <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="text-[12px] font-black text-white">{trait.name}</div><div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{trait.desc}</div></div><div className="shrink-0 text-right"><div className="text-[10px] font-black text-sky-300">{traitLevel>0?`Lv.${traitLevel}`:'未習得'}</div>{traitLevel>0&&<div className="text-[10px] font-mono font-black text-emerald-300">{formatSoulTraitEffect(trait,effect)}</div>}</div></div>
+              <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="text-[12px] font-black text-white">{trait.name}</div><div className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-400">{helpWrap(trait.desc)}</div></div><div className="shrink-0 text-right"><div className="text-[10px] font-black text-sky-300">{traitLevel>0?`Lv.${traitLevel}`:'未習得'}</div>{traitLevel>0&&<div className="text-[10px] font-mono font-black text-emerald-300">{formatSoulTraitEffect(trait,effect)}</div>}</div></div>
               <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-black"><span className="text-slate-400">{trait.id==='coordination'?'習得':'1段階'} {trait.costPerLevel}P</span><span className={maxed?'text-amber-300':unlocked&&maxSoulTraitUpgradeLevels(masu,trait.id)>0?'text-sky-300':'text-slate-400'}>{maxed?'MAX':unlocked?'タップして強化':'閲覧のみ'}</span></div>
             </button>;
           })}
@@ -109,7 +109,7 @@ function MasuSoulTraitsScreen({
           </div>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"><div className="text-[10px] font-black text-slate-400">魂格再編の書</div><div className={`text-[11px] font-black ${scrollHave>0?'text-cyan-300':'text-slate-400'}`}>所持 {scrollHave}冊</div></div>
-            <button type="button" data-soul-trait-respec-open disabled={spent<=0||scrollHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulTraitRespecOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-cyan-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">全リセット</button>
+            <button type="button" data-soul-trait-respec-open disabled={(spent<=0&&bonusPoints<=0)||scrollHave<=0||soulTraitProcessingRef.current} onClick={()=>{setSoulTraitError('');setSoulTraitRespecOpen(true);}} className="min-h-[48px] shrink-0 rounded-xl bg-cyan-700 px-4 text-[11px] font-black text-white active:scale-95 disabled:opacity-30">全リセット</button>
           </div>
         </div>
         {soulTraitError&&<div className="shrink-0 mt-1 text-center text-[11px] font-black text-red-400">{soulTraitError}</div>}
@@ -159,8 +159,12 @@ function MasuSoulTraitsScreen({
         {soulTraitRespecOpen&&<div className="fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="魂格特性の全リセット確認">
           <div data-soul-trait-respec-sheet className="w-full max-w-sm rounded-2xl border-2 border-cyan-500/60 bg-slate-950 p-5">
             <div className="text-center text-xl mb-1">🌀</div><h3 className="text-center text-base font-black text-cyan-200">魂格特性を全リセット</h3>
-            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">「{masu.name}」が使用した魂格P <b className="text-amber-300">{spent}P</b> をすべて未使用へ戻します。魂格段階・Lv・最高初到達Lvは変わりません。</p>
+            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">{spent>0?<>「{masu.name}」が使用した魂格P <b className="text-amber-300">{spent}P</b> をすべて未使用へ戻します。</>:<>「{masu.name}」は、魂格特性にはまだ振っていません。</>}魂格段階・Lv・最高初到達Lvは変わりません。</p>
+            {/* 結晶で増やしたぶんは結晶として持ち物へ戻る(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)。0個のときは出さない */}
+            {bonusPoints>0&&<p data-soul-trait-respec-crystal={bonusPoints} className="mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100">🔮 魂格の結晶 <b className="text-fuchsia-200">{bonusPoints}個</b> が持ち物に戻ります。結晶で増やした魂格P {bonusPoints}P はこの子から無くなり、戻った結晶はほかのマスモンにも使えます。</p>}
             <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格再編の書</span><span className="text-cyan-300">{scrollHave} → {Math.max(0,scrollHave-1)}冊</span></div>
+            {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格の結晶</span><span className="text-fuchsia-300">{crystalHave} → {crystalHave+bonusPoints}個</span></div>}
+            {bonusPoints>0&&<div className="mt-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">この子の魂格P(獲得済み)</span><span className="text-amber-300">{earned} → {Math.max(0,earned-bonusPoints)}P</span></div>}
             <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulTraitRespecOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button><button type="button" data-soul-trait-respec-confirm disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulTraitRespec(masu.id)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1冊使って再編</button></div>
           </div>
         </div>}

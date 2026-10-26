@@ -21,6 +21,8 @@ const lineagesData = fs.readFileSync(path.join(root, 'monster-hero/data/lineages
 const allyMonstersData = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
 const rhythmModeData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-mode.js'), 'utf8');
 const rhythmEventData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-event.js'), 'utf8');
+const cardCore = fs.readFileSync(path.join(root, 'monster-hero/src/parts/82-card-battle-core.jsx'), 'utf8');
+const cardPack = fs.readFileSync(path.join(root, 'monster-hero/src/parts/89-card-pack.jsx'), 'utf8');
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
@@ -42,7 +44,7 @@ const dataTablePrelude = [
   (source.match(/^const DIST_APTITUDE_GRADES = \[.*$/m) || [''])[0],
   grab(source, 'const STAT_POINT_GAIN = {', 'const STAT_POINT_KEYS'),
   // 血統一覧の表は data/lineages.js・data/ally-monsters.js と血統の引き方から作るので、材料ごと持ち込む
-  allyMonstersData.replace(/\b[A-Z_]+_(?:IMG|ICON|FACE_ICON)\b/g, "''"),
+  allyMonstersData.replace(/\b[A-Z][A-Z0-9_]*_(?:IMG|ICON|FACE_ICON)\b/g, "''"),
   lineagesData,
   grab(source, 'const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
   // 種族チャレンジの表は主血統の一覧から作る(定義は本体のずっと前にあるので1行だけ持ち込む)
@@ -57,6 +59,8 @@ const dataTablePrelude = [
   // 難易度定義・ランクしきい値・曲と譜面の実データから作る。切り出すと材料が足りなくなるので
   // data/rhythm-mode.js をまるごと持ち込む（このファイルは単体で読める作りになっている）
   rhythmModeData,
+  // 表の行のノーツの見本の絵(2026-10-21)。描く部品は本体のものをそのまま持ち込む(サーバー描画では絵の中身は描かれず、canvas の枠だけ出る)
+  grab(source, 'const RhythmNoteSwatch = ', '// 数を直接打ち込む欄'),
   // イベントの回数ボーナスの表は data/rhythm-event.js の割合から作るので、そちらも持ち込む
   // (このファイルは単体で読める作りになっている。曲の一覧が要る所は typeof で守ってある)
   rhythmEventData,
@@ -73,7 +77,20 @@ const dataTablePrelude = [
   grab(source, 'const TACTICS_SWEEP_MULT', 'const TACTICS_ENEMY_ACTION_IDS'),
   // タクティクスのEXスキルの表(2026-09-23)。定義と、定義をそろえる関数を持ち込む
   grab(source, 'const tacticsSafeInt', 'const tacticsClamp'),
+  // タクティクスの狙われやすさ(🔥)の表(2026-10-22)。ヘイトの定義・タイプの表・狙いの重みの倍率を持ち込む
+  grab(source, 'const tacticsClamp', '// モンスター1体から、ラン中の現在値を作る。'),
+  grab(source, 'const TACTICS_TARGET_LOW_HP_BIAS', '// hate … ヘイト(試作)の配列。'),
+  grab(source, '// ===== ヘイト(確認待ちの試作', '// ===== ヘイトの数字ここまで'),
   grab(source, '// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
+  // MFバトルカードのカードポイント・パックの表(2026-10-26)。強さごとの数・マルチの数・弾の表を持ち込む
+  // (カードのデータ本体 CARD_BATTLE_DATA は持ち込まない。種族名は表の id で並ぶ)
+  grab(cardCore, 'const CARD_AI_LEVELS = Object.freeze({', '// くせの重み'),
+  (cardCore.match(/^const CARD_LEVEL_ORDER = .*$/m) || [''])[0],
+  (cardCore.match(/^const CARD_LOSE_SHARE = .*$/m) || [''])[0],
+  (cardCore.match(/^const cardLosePoint = .*$/m) || [''])[0],
+  (cardCore.match(/^const cardLoseLoops = .*$/m) || [''])[0],
+  (cardCore.match(/^const CARD_PVP_REWARD = .*$/m) || [''])[0],
+  grab(cardPack, 'const CARD_PACKS = Object.freeze([', '// 全モンスター(any)'),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
@@ -112,8 +129,10 @@ const transformed = babel.transformSync(
   "const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';\n" +
   'const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n' +
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
+  // ヘルプの🆕(2026-10-18)。判定は本体と同じもの(保存の読み書きは上の実データ表の塊に入っている)
+  grab(source, 'const HELP_NEW_DAYS = ', 'const DIFFICULTY_SETTINGS = {') +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
-  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState,\n' +
+  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState, openDebugSettings, requestDebugSettings,\n' +
   // ヘルプの見出しに出す助手。本体では「いま選んでいる助手」がそのまま入る
   '  activeAssistant }) => (<>\n' +
   helpJsx + '\n</>);\nmodule.exports = { HelpScreen, HELP_GUIDE, dataRows: helpDataRows, helpTopicById, AssistantBubble };',
@@ -132,7 +151,7 @@ const render = (state) => ReactDOMServer.renderToStaticMarkup(React.createElemen
   setShowHelp: noop, setHelpCatId: noop, setHelpTopicId: noop, setHelpAssistantOpen: noop,
   ArrowLeft: stubIcon, ChevronRight: stubIcon,
   getDebugEnemyOptions: () => [], difficulty: 'Normal',
-  setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop,
+  setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop, openDebugSettings: noop, requestDebugSettings: noop,
   activeAssistant: (typeof moduleScope.exports.assistantById === 'function' ? moduleScope.exports.assistantById() : null) || defaultAssistant,
   ...state,
 }));
@@ -240,7 +259,7 @@ const emptyTransformed = babel.transformSync(
   'const HELP_GUIDE = [];\nconst HELP_GUIDE_INTRO = "";\n' +
   'const helpCategoryById = () => null;\nconst helpTopicById = () => null;\n' +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
-  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState,\n' +
+  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState, openDebugSettings, requestDebugSettings,\n' +
   // ヘルプの見出しに出す助手。本体では「いま選んでいる助手」がそのまま入る
   '  activeAssistant }) => (<>\n' +
   helpJsx + '\n</>);\nmodule.exports = { HelpScreen };',
@@ -253,7 +272,7 @@ const emptyHtml = ReactDOMServer.renderToStaticMarkup(React.createElement(emptyS
   setShowHelp: noop, setHelpCatId: noop, setHelpTopicId: noop, setHelpAssistantOpen: noop,
   ArrowLeft: stubIcon, ChevronRight: stubIcon,
   getDebugEnemyOptions: () => [], difficulty: 'Normal',
-  setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop,
+  setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop, openDebugSettings: noop, requestDebugSettings: noop,
   activeAssistant: (typeof moduleScope.exports.assistantById === 'function' ? moduleScope.exports.assistantById() : null) || defaultAssistant,
 }));
 check('ヘルプの中身が読めなくても落ちず、案内を出す', text(emptyHtml).includes('ヘルプの内容を読み込めませんでした'));

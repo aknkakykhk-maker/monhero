@@ -23,8 +23,9 @@ ok('新しいキーを足しただけで、既存のキーは触っていない(
   /DEFAULT_RHYTHM_SETTINGS = Object\.freeze\(\{[\s\S]{0,900}judgmentLineHeight:20/.test(game));
 ok('保存値が無い・壊れているときは既定(12＝これまでの位置)へ倒れる',
   /judgmentLineHeight:rhythmFiniteStep\(source\.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS\.judgmentLineHeight\)/.test(game));
-ok('上限は32%。これを超えると「まだ形が決まっていない」の見張りとぶつかる',
-  /RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 32/.test(game)
+// 2026-10-14 社長「調整範囲もっと広げないと意味ない」で 32→50 へ広げた(#2983)。50でも線の中心は見張りの区切り(高さの45%)より下に残る
+ok('上限は50%。これを超えると「まだ形が決まっていない」の見張りとぶつかる',
+  /RHYTHM_JUDGMENT_LINE_HEIGHT_MAX = 50/.test(game)
   &&/lineCenter>areaRect\.top\+areaRect\.height\*0\.45/.test(game));
 
 // ---- 置き場所だけを動かす ----
@@ -92,7 +93,7 @@ body{background:#020617}
           text:pick('[data-rhythm-judgment-display]')};
       };
       const out={};
-      [12,20,32].forEach(v=>{area.style.setProperty('--mh-judgment-line-bottom',`${v}%`);out[v]=read();});
+      [12,20,50].forEach(v=>{area.style.setProperty('--mh-judgment-line-bottom',`${v}%`);out[v]=read();});
       area.style.removeProperty('--mh-judgment-line-bottom');
       out.default=read();
       return out;
@@ -103,14 +104,14 @@ body{background:#020617}
   }
   ok('位置を測れた',!!measured);
   if(measured){
-    [12,20,32].forEach(v=>console.log(`      ${v}%: ライン=上から${measured[v].line}% / 光=${measured[v].hit}% / 判定文字=${measured[v].text}%`));
+    [12,20,50].forEach(v=>console.log(`      ${v}%: ライン=上から${measured[v].line}% / 光=${measured[v].hit}% / 判定文字=${measured[v].text}%`));
     ok('既定(変数なし)はこれまでどおり下から12%',Math.abs(measured.default.line-88)<0.6,`上から${measured.default.line}%`);
-    ok('大きくするほどラインが上がる',measured[12].line>measured[20].line&&measured[20].line>measured[32].line);
-    ok('弾ける光はラインと同じ高さ',[12,20,32].every(v=>Math.abs(measured[v].hit-measured[v].line)<0.6));
+    ok('大きくするほどラインが上がる',measured[12].line>measured[20].line&&measured[20].line>measured[50].line);
+    ok('弾ける光はラインと同じ高さ',[12,20,50].every(v=>Math.abs(measured[v].hit-measured[v].line)<0.6));
     ok('判定文字はラインの少し上に付いてくる',
-      [12,20,32].every(v=>measured[v].text<measured[v].line&&measured[v].line-measured[v].text<12));
+      [12,20,50].every(v=>measured[v].text<measured[v].line&&measured[v].line-measured[v].text<12));
     // 上限でもエリアの上半分へは入らない(rhythmTravelLooksReady と両立する)
-    ok('上限(32%)でもラインはエリアの下半分に残る',measured[32].line>50,`上から${measured[32].line}%`);
+    ok('上限(50%)でもラインは見張りの区切り(上から45%)より下に残る',measured[50].line>45,`上から${measured[50].line}%`);
   }
   console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
   process.exit(failed?1:0);

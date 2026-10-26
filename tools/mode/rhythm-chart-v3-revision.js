@@ -120,6 +120,12 @@
 //   29 … モンスターノーツを必ず4個(2026-10-11・社長「どの曲も基本4個入るルールだよ」)。曲の20/40/60/80%に近い単打を
 //        「拍の頭で前後1拍空く → 前後半拍 → 拍の頭 → 同時押しでない単打 → 単打」の順にゆるめて、狙いの前後10%(無ければ曲全体)から必ず選ぶ。
 //        Rev.28 までは条件に合う単打が無いとその枠を空けていた(公開曲で19譜面が3個以下だった・手で4個に直した)
+//   31 … 譜面づくりの引き出し(2026-10-16 社長の決定・参考動画から。rhythm-chart-drawers.js・tools/mode/CHART_DRAWERS.md)。
+//        決まりとして全曲に当てはめず、曲の解析(区切り・盛り上がり・テンポ・長さ)を見て合う曲・合う区間にだけ使い、使う/使わないと理由を書き出しに残す。
+//        生成器は R2(入りを軽く・後半を重く): 入りが静かで山が後半にあり、今の取り分だと入りが重いか後半が軽い曲の MASTER・HELL だけ、
+//        小節の取り分の配り方を曲の盛り上がりの差から決めた分だけ変える(曲全体のノーツ数の決め方は変えない)。当たらない曲・EASY〜EXPERT は Rev.30 と同じ譜面。
+//        rhythm-hell-mix.js の R3(空中スライドの見せ場)・R4(片手地上・片手空中の流れを長めに)・R5(終わりを空中スライド2本で締める)は HELL の空中の付け方
+//        (引き出しより前に作った HELL は drawers:false で今の形のまま)
 //   30〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
@@ -131,7 +137,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=29;
+const CHART_REVISION_CODE_LATEST=31;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');

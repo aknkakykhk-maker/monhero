@@ -92,6 +92,8 @@ const makeMasus = (n) => Array.from({ length: n }, (_, i) => ({ id: 'm' + i, bas
         put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
         window.__lt = []; try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__lt.push([e.startTime, e.duration]); }).observe({ type: 'longtask', buffered: true }); } catch (_) { /* 測れないなら空 */ }
       }, makeMasus(n));
+      // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
+      await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => document.body && document.body.innerText.includes('TAP TO START'), null, { timeout: 90000 });
       await page.getByText('TAP TO START').click();

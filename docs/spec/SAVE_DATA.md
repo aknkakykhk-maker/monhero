@@ -52,6 +52,9 @@
 | `mh_assistant_chat_memo_v2` | object | 助手とおしゃべりの思い出メモ(2026-10-14〜)。`{ [助手id]: { likes, goals, events, topics, summary } }`(各100字・summary 160字まで)。次の会話で中継役へ渡す |
 | `mh_assistant_daily_lines_v1` | object | ふだんの吹き出しを1日1回まとめて作ったひとこと(2026-10-14)。`{ day, assistantId, lines: { [場面]: [{ e, t, n }] } }`。日付が変われば使わず、次に作ったら入れ替える。n はその日に出した回数 |
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
+| `mh_story_tactics_types_seen_v1` | boolean | 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」を本編で見たか(飛ばしても立つ・2026-10-18)。ヘイトとタイプの公開のあと、タクティクスバトルの導入のお話を見た人の最初の HOME で1回流す。回想・デバッグから見たぶんは立てない |
+| `mh_story_card_battle_seen_v1` | boolean | お話「MFバトルカード ～物置の古い箱～」を本編で見たか(飛ばしても立つ・2026-10-24)。MFバトルカードの公開(`RELEASE_FLAGS.cardBattle`)のあとの最初の HOME で1回流す。立っていると HOME に MFバトルカードの入口が出る。true 以外(無い・壊れた値)は「まだ」。回想・デバッグから見たぶんは立てない |
+| `mh_help_new_seen_v1` | string[] | ヘルプの🆕(2026-10-18)。開いたことのあるトピックの id(`added` を持つ項目だけ・新しい200件まで)。無い・壊れている = まだ何も開いていない(載せてから14日の項目に🆕が出る) |
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID。ブリーダーP交換所だけでなく、**ビートP交換所のハロウィンのアイコン(1000P)の交換でも**、まとまりの中身が全部ここへ足される(2026-10-04)。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
@@ -68,6 +71,30 @@
 | `mh_friend_recent_v1` | object[] / `[]` | 最近いっしょに遊んだ人(`{id,name,at}`。新しい順・同じ人は1件・最大30人。端末だけに覚え、サーバーへは送らない。`friendsNormalizeRecent` を通す) |
 | `mh_friend_notes_v1` | object / `{}` | フレンドごとのメモ(フレンドのID→メモ。メモは12文字まで・最大200人ぶん。端末だけに覚え、サーバーへは送らない。`friendsNormalizeNotes` を通す) |
 | `mh_raid_jack_v1` | object / `raidJackDefaultState()` | イベント・レイドボス「ジャック」の端末側の記録(A/Bそれぞれの今日の使用回数・買い足した回数・倒した段階、Bの累計ダメージの自分用の控え、受け取り済みの報酬ID、送れなかった与ダメージの再送待ち)。`raidJackNormalizeState` を通す。既存のキーには触らない。設計: `docs/spec/RAID_BOSS_JACK.md` |
+| `mh_card_collection_v1` | object / `cardNormalizeCollection` | MFバトルカードの持っているカード `{ カード番号: 枚数 }`(モンスターカードも同じ表)。枚数は 1〜99。知らない番号は消さずに残す。設計: `docs/spec/CARD_BATTLE.md` 6-1 |
+| `mh_card_pvp_penalty_v1` | number(時刻ms) | MFバトルカードのマルチ対戦で、試合の途中で部屋を出た・アプリを閉じたとき、この時刻(3分後)まで部屋に入れない(2026-10-24・91-card-battle-multi.jsx)。無い・壊れた値・過ぎた時刻は「入れる」 |
+| `mh_card_decks_v1` | object / `cardNormalizeDecks` | MFバトルカードのデッキ `{ active, decks:[{ id, name, monsters:[3], cards:[50] }] }`(5つまで)。持っていないカードが入っていても消さない |
+| `mh_card_point_v1` | number / `cardNormalizePoint` | MFバトルカードのカードポイント(**2026-10-26 から読まない**。カードポイントをやめてビートPにした・社長。キーは消さずに残す。カードの支払い・受け取りはビートPの `mh_rhythm_event_points_v1`。`CARD_POINT_STORE_KEY`) |
+| `mh_card_points_to_beatp_migrated_v1` | `true` のみ | 前のカードポイント(`mh_card_point_v1`)の残りをビートPへ1回だけ移した印(2026-10-26 社長)。印とビートPを1つの取引で書く(`cardMigratePointsOnce`)。`CARD_SAVE_KEYS` には入れない(デバッグの記録の消去で消えて二重に足されないように)。`tools/card/card-point-migration-check.js` |
+| `mh_card_starter_v1` | object / `cardNormalizeStarter` | スターターを受け取った一度きりの印 `{ kit, at }`。ある人には二度と配らない(`cardGrantStarter`) |
+| `mh_card_daily_v1` | object / `cardNormalizeDaily` | MFバトルカードの今日の記録 `{ day(JST), cpuPoint, pvpPoint, firstWin, foes }`。日が変われば 0 に戻る |
+| `mh_card_record_v1` | object / `cardNormalizeRecord` | MFバトルカードの戦績 `{ cpu:{win,lose,surrender}, pvp:{win,lose}, beaten:{助手id:true}, recent:[30件], byLevel:{win:{難易度:数},lose:{…}}, rank:{ total:{難易度:勝ち}, week:{key:月曜の日付, wins:{…}}, streak:{now,best} } }`。byLevel・rank は 2026-10-24 に足した項目(無い人は 0 で補う)。rank はランキングに数えてよい対戦(公開後・デバッグでない人)だけを数える(`cardRecordAfter`) |
+| `mh_card_cpu_unlocked_v1` | object / `cardNormalizeCpuUnlocked` | コンピューター戦の難易度を開いた印 `{ hard, expert, master }`(EASY・NORMAL は最初から) |
+| `mh_card_tutorial_v1` | object / `cardNormalizeTutorial` | MFバトルカードの練習試合(チュートリアル)の印 `{ done, skipped, rewarded, at }`。`rewarded` があれば 100 ビートPを二度と渡さない(`cardTutorialFinish`) |
+| `mh_card_pack_pity_v1` | object / `cardNormalizePity` | MFバトルカードのパックの天井 `{ パックid: キラなしで開けた数 }`。2026-10-25 に8弾(p1〜p8)へ作り直した。以前の w1〜w4・hybrid の数も消さずに残す(知らないパックid・数でない値は捨てる。89-card-pack.jsx) |
+| `mh_card_pack_pity_split_v1` | boolean | 以前の4弾(w1〜w4)の天井の数を、新しい8弾へ1回だけ写した印(w1→p1〜p3 / w2→p4・p5 / w3→p6 / w4→p7・p8。新しい弾に数があれば上書きしない。89 の `cardSplitPity`・60 の buyCardPacks) |
+| `mh_card_shop_v1` | object / `cardNormalizeShop` | マーケットで買った選ばなかったスターターキットの印 `{ starters:{ キットid: 時刻 } }`。印があるキットは二度と買えない(`cardBuyStarter`) |
+| `mh_card_top_assist_v1` | object | MFバトルカードのトップの助手の出し入れ `{ modeSelectArt, modeSelectComment }`。無い・壊れていたら両方ON |
+| `mh_card_rank_sync_v1` | string | MFバトルカードのランキング(表 `card_battle_ranks`)へ最後に送った行の中身。同じなら送り直さない(90-card-rank.jsx) |
+| `mh_card_bgm_v1` | object / `normalizeCardBgm` | MFバトルカードのBGM `{ top: 曲id(トップ画面・2026-10-26 に足した項目), cpu: 'auto'(相手の助手に合わせる)か曲id, pvp: 曲id }`。オプションで曲を選んだときだけ書く。無い項目・知らない曲idは既定(top `atsu_cup_theme` = MF × ICHIKA MIX・cpu `auto`・pvp `ichika_battle`)へ。選んだ人の値は書き換えない |
+| `mh_card_cpu_playlist_v1` | object / `cardNormalizeCpuPlaylist` | MFバトルカードの助手と対戦の曲の並び `{ v:1, assistants:{ 助手id: [曲id 1〜5] } }`(2026-10-26)。オプションで直したときだけ書く。無い・壊れていたら助手ごとの曲1つ。知らない助手・知らない曲・同じ曲の2つ目・6曲目からは落とし、0曲になった助手は既定の1曲。これがあれば助手と対戦では `mh_card_bgm_v1` の `cpu` を使わない(そちらは消さない・書き換えない) |
+| `mh_card_cpu_open_v1` | object / `cardNormalizeCpuOpen` か `null` | MFバトルカードの助手と対戦の、いま遊んでいる試合の印 `{ id, who, level, rankable, at, beat, facts:{ ownTurns, kos } }`。始めたときに書き、ふつうに終わったら結果と同じ取引で `null` にする。残っていて `beat` が15秒より古ければ、次に開いたときに投了として数えて `null` にする(2026-10-26 社長「負け扱いにする」。84-screen-card-battle.jsx)。壊れていたら数えずに `null` |
+| `mh_card_settings_v1` | object / `normalizeCardSettings` | MFバトルカードの演出 `{ speed: 'normal'|'fast', autoPass: 真偽 }`。無い人は ふつう・自動パスON |
+| `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
+| `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
+| `mh_assistant_bond_rewards_v1` | object / `null` | 助手の仲良し度の節目(Lv22・25・28・30)のごほうびを、**最初の量**(`ASSISTANT_BOND_LEVEL_REWARDS_V1`)で届けた印(`{ 助手のid: [22, 25, ...] }`・2026-10-21 #3241)。量を上げたあと(下の v2)は書かず、読むだけ。この印がある節目には、今の量との差のぶんだけを追加で届ける |
+| `mh_assistant_bond_rewards_v2` | object / `null` | 助手の仲良し度のLvごとのごほうび(Lv2〜30・`ASSISTANT_BOND_LEVEL_REWARDS`)を**今の量**で届けた(または最初の量との差を届けた)印(`{ 助手のid: [2, 3, ...] }`・2026-10-21)。助手ごとに各Lv1回。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する。起動時に、もう越えているLvのぶんをまとめて届ける |
+| `mh_raid_jack_boss_down_v1` | object / `null` | レイドの大王ジャックが(みんなで)倒されたのを見た印(`{ at }`・2026-10-20)。フレーム「ハロウィン・恐」をマーケットで買えるようにする条件。倒されたことは取り消されないので、一度見たら持っておき、サーバーへ届かないときも使う |
 | `mh_raid_jack_guide_seen_v1` | boolean / `false` | レイド画面を開いた最初の1度だけ出す、画面のなかの案内(助手の吹き出し)を見たか。新しく足したキー。既存のキーには触らない |
 | `mh_raid_jack_unused_hs_<難易度>` など | number / `0` | **実際には書かれない**保険のキー(`modeKeyPrefix`)。ジャック戦は記録を書かないが、万一書いても通常のタクティクスの自己ベスト(`mh_tactics_*`)と同じキーを指さないように、別の接頭辞へ逃がしてある |
 | `mh_masu_lock_rebirth_v1` | string[] / `[]` | マスモンの転生ロックのIDの並び(2026-10-01)。転生ロックの子は転生できない。お気に入り(`mh_masu_locked_v1`)とは別々に付け外しできる。壊れた値は「ロックなし」。`mh_masu_mons` には書かない |
@@ -162,6 +189,8 @@
 | `mh_rhythm_select_v1` | object / `DEFAULT_RHYTHM_SELECT_VIEW` | 曲えらび画面の見え方(並び順など) |
 | `mh_rhythm_last_difficulty_v1` | string / `''` | 曲えらびで最後に選んだ難易度(2026-10-11)。`EASY`〜`MASTER` だけを入れる。無い・壊れている・公開していない難易度(HELL など)は `''` に正規化して EASY から(`normalizeRhythmLastDifficulty`)。デバッグの全解放の曲えらびの選択は入れない |
 | `mh_rhythm_best_v1` | object | 曲×難易度ごとの BEST(`normalizeRhythmBestRecords`) |
+| `mh_rhythm_best_v2` | object | 刻みの数え方(2026-10-17・ホールド・スライドの刻みもノーツとして数える)の BEST。形は `mh_rhythm_best_v1` と同じ(`normalizeRhythmBestRecords`)。切り替えの時刻(`RHYTHM_TICK_SWITCH_AT`)を過ぎて始めた演奏の記録だけが入る。`mh_rhythm_best_v1` は消さず書き換えない(旧記録)。読むときは v2 に v1 のクリア・称号の印だけを重ねる(`loadRhythmBestRecordsNow`) |
+| `mh_rhythm_tick_preview_proto` | `'1'` / 未設定 | 確認用(デバッグ・自動演奏)。`'1'` なら切り替えの時刻より前でも刻みの数え方で遊ぶ(そのあいだはランキングへ送らない) |
 | `mh_rhythm_achievements_v1` | object / 空の台帳 | モンヒロビートの実績の台帳(2026-10-05・`docs/spec/RHYTHM_ACHIEVEMENTS.md`)。`{v:1, items:{'曲:難易度:称号':{at:取った時刻ms(0=不明)}}, claimed:{'実績のid#報酬ルールのid':受け取った時刻ms}}`。称号は fullCombo・allExcellent・allMarvelous(上の称号は下の称号も含む)。**取れたかの正本は BEST のまま**(BESTには何も足さない)。受け取り済みの印は消さない。壊れた項目は読まずに捨てる。台帳が無い人は、モンヒロビートを開いたときに BEST から取り込む(1度きり・時刻は不明の0) |
 | `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
@@ -182,10 +211,13 @@
 | `mh_rhythm_event_notice_v1` | string / `''` | 曲えらびで「今週の対象曲」の案内を見たイベントのID(週が変わると新しいIDになり、その週の初回にもう一度だけ出る。`docs/spec/RHYTHM_RANKING.md` §10.2) |
 | `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |
-| `mh_rhythm_event_points_v1` | number / `0` | モンヒロビートの共通ビートP残高。プレイヤー向け名称のみ旧「イベントP」から変更し、互換性のため保存キーは維持する。0以上の整数へ正規化し、イベント終了時もリセットせず次回へ持ち越す。`docs/spec/RHYTHM_EVENT_POINTS.md` |
+| `mh_rhythm_event_points_v1` | number / `0` | モンヒロビートの共通ビートP残高。プレイヤー向け名称のみ旧「イベントP」から変更し、互換性のため保存キーは維持する。0以上の整数へ正規化し、イベント終了時もリセットせず次回へ持ち越す。2026-10-26 から MFバトルカードの支払い・受け取りもこの残高(書く直前に読み直して差だけ足す)。`docs/spec/RHYTHM_EVENT_POINTS.md` |
 | `mh_rhythm_event_reward_v1` | string[] / `[]` | イベント報酬を受け取り済みのイベントID。二重受取を防ぐためのフラグ(入賞しなかった場合もここへ入れて、問い合わせ直さないようにする。`docs/spec/RHYTHM_RANKING.md` §9.1) |
 | `mh_rhythm_canvas_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「ノーツの描き方」の上書き(未設定なら公開フラグに従う) |
 | `mh_rhythm_gpu_band_v1` | `'gpu'` / `'off'` / 未設定 | デバッグ画面の「スライドの帯の描き方(検証用)」。未設定 = 既定(2026-10-11 から、ノーツを WebGL で描いているときは帯・区切りの線・ノーツの板を GPU で描く)。`'gpu'` = 描画方式に関係なく WebGL+GPU。`'off'` = 使わない |
+| `mh_rhythm_floor3d_proto_v1` | `'on'` / `'on2'` / `'on3'` / `'a3d'` / `'c3'` / `'c3b'` / 未設定 | デバッグ画面の「床と空中の見た目(試作)」(2026-10-16)。`'on'` = 地上のノーツを床に寝た台形・空中のノーツを側面と厚みのある箱にする(色は今のまま・見た目だけ)。`'on2'` = 試作2(空中の真下の濃い影と導線・宙に立った箱・空中スライドの床の影と幕。GPU の帯は使わない)。`'c3b'` = 案3の2段目(1段目+カメラを寝かせる。道の遠近と押す場所を同じ計算で替える)。`'c3'` = 案3(空中のタップを明るく薄い板と光る縁・空中スライドを光の帯。GPU の帯は使わない)。`'a3d'` = 段階A(空中のタップ・スライドを WebGL の本物の3D で。地上は今のまま)。`'on3'` = 試作3(空中の層のガラスの床と道の端の柱・空中の立方体・空中スライドの管。GPU の帯は使わない)。未設定 = 今の見た目。演奏を始めるときに1回読む。判定・入力には使わない |
+| `mh_rhythm_sky_note_look_v1` | `'3d'` / `'normal'` / 未設定 | モンヒロビートの設定「空中のノーツの見た目」(2026-10-17)。`'3d'` = 立体(段階A: 空中のタップを光の当たる箱・空中スライドを丸い管。ノーツを WebGL で描くときだけ)。未設定・`'normal'`・壊れた値 = いつもの。既定の「いつもの」を選ぶとキーを消す。未設定で `mh_rhythm_floor3d_proto_v1` が `'a3d'` の端末は立体として読む。選び直すと `mh_rhythm_floor3d_proto_v1` の `'a3d'` だけを消す(ほかの試作の値は残す) |
+| `mh_rhythm_mon_layers_v1` | `'on'` / 未設定 | デバッグの「🧪 確認待ちの試作」の「モンスターノーツのかくつきの手当て」(2026-10-16)。`'on'` = 両サイドのマスモンの絵と光の輪を曲の前から GPU の層にしておく(見た目は同じ)。未設定 = 今まで |
 | `mh_rhythm_prepare_v1` | `'on'` / `'off'` / 未設定 | デバッグ画面の「演奏前の準備(検証用)」(未設定なら既定。2026-10-11 から する) |
 | `mh_rhythm_canvas_hits_v1` | `'canvas'` / `'dom'` / 未設定 | デバッグ画面の「叩いたときの光の描き方(検証用)」。未設定 = 既定(2026-10-11 から canvas)。`'dom'` = 今までどおり画面の要素で光らせる |
 | `mh_rhythm_hit_spark_v1` | `'on'` / `'off'` / 未設定 | デバッグ画面の「叩いたときの光の粒(検証用)」。`'on'` = 焼いた丸を貼る(軽い)・`'off'` = 今の形・未設定 = 既定(今の形)。2026-10-12 |
@@ -215,6 +247,11 @@
 | `mh_rhythm_judgment_snap_v1` | `'on'`・`'off'` / 未設定 | デバッグ専用。判定の文字の大きさを、なめらかに変えず一度で変える(2026-10-12・ドライバーくん #2842・発熱の手当て)。未設定なら一度で(2026-10-12 社長の決定で既定に。`'off'` を保存した人は今までの形のまま)。ふつうのプレイは書かない |
 | `mh_rhythm_input_rec_v1` | `'on'` / 未設定 | デバッグ専用。モンヒロビートの演奏中の入力(指の時刻・位置・接触の幅)と判定の出来事を記録する(2026-10-15・ドライバーくん)。記録そのものは保存せずメモリに最後の1曲分だけ持ち、デバッグ設定の「最後の演奏の記録をコピー」で取り出す。判定・スコア・ランキングには使わない。ふつうのプレイは書かない |
 | `mh_bgm_light_v1` | `'on'` / 未設定 | デバッグ専用。場面のBGM(タイトル・ホーム・バトルなど)を軽く持つ(24kHz に落とし、持つのは2本まで)(2026-10-16・ドライバーくん・社長の決定「案1＋案2」)。未設定なら今までどおり。モンヒロビートの曲・効果音には効かない。ふつうのプレイは書かない |
+| `mh_debug_entry_v1` | `'1'` / 未設定 | デバッグ専用。デバッグ設定を一度でも開いた端末だけ、設定の画面に「🧪 デバッグ設定」の入口を出す(2026-10-16・ドライバーくん)。ふつうのプレイは書かない |
+| `mh_debug_unlocked_v1` | `'1'` / 未設定 | デバッグ専用(2026-10-20)。デバッグ設定の入口で合言葉が合った端末だけ `'1'`。次から合言葉を聞かない。合言葉そのものは保存しない |
+| `mh_debug_trials_seen_v1` | 文字の配列 / `[]` | デバッグ専用。デバッグ設定の「確認待ちの試作」で、入/切を一度でも押した試作の id(NEW の印を外すため)(2026-10-16)。配列でない・文字でない要素は捨てて読む。最大100件 |
+| `mh_tactics_hate_proto_v1` | `'on'` / 未設定 | デバッグの「🧪 確認待ちの試作」の「タクティクスのヘイト(試作)」(2026-10-17)。`'on'` = タクティクスバトルで、目立った子ほど狙われやすくなり、名前の横に🔥が出る(数字は `TACTICS_HATE`)。未設定 = 今までの狙い方。ヘイトの値そのものはバトル中だけで保存しない。**2026-10-18 に公開してからは読まない**(公開の印 `RELEASE_FLAGS.tacticsHate` で全員に効く)。キーは消さず残す |
+| `mh_monster_type_proto_v1` | `'on'` / 未設定 | デバッグの「🧪 確認待ちの試作」の「モンスターのタイプ表記(試作)」(2026-10-17)。`'on'` = 図鑑・図鑑の詳細・パーティ選びにタイプの印を出す(表は `MONSTER_TYPES` / `MONSTER_TYPE_OF`)。未設定 = 出さない。タイプはタクティクスのヘイトの増え方にだけ効き、印の入/切とは関係なくヘイトの試作が入なら使われる。**2026-10-18 に公開してからは読まない**(公開の印 `RELEASE_FLAGS.tacticsHate` で全員に出る)。キーは消さず残す |
 | `mh_sky_reach_adapt_proto` | `'1'` / `'0'` / 未設定 | HELL の空中の受け付けの下の境目を、その人の構えに合わせて下げる(案A・2026-10-12・テンポくん)。**未設定なら入**(2026-10-12 社長の決定で既定を入に)。`'0'` は切(固定の境目)を選んだ人。デバッグの切り替えで書く。前は切を選ぶとキーを消していたので、その人も未設定=入になる |
 | `mh_tactics_ex_intro_seen_v1` | `true` / 未設定 | タクティクスで「距離枠をタップするとEXが開く」を一度だけ伝える案内を見たか(公開フラグ `tacticsExSkills` と同じで出し入れ) |
 | `mh_profile_frame_v1` | string / `'none'` | 選んでいるプロフィールフレームのid(`data/breeder.js` の `PROFILE_FRAMES`)。ブリーダーアイコン(`mh_breeder_icon`)とは**独立した設定**で、アイコン側のキーは触らない。読み込みは必ず `normalizeProfileFrameId` を通し、値が無い・壊れている・知らないid・未公開(`released:false`)のidはすべて `'none'`(フレームなし)へ倒す |

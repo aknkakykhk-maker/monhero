@@ -814,6 +814,148 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "rose": {
+   "audio": "monster-hero/audio/bgm-rose.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 31,
+   "audioSha256": "acc0ceccc810854e8c4517778aad6b31a52758fe9b13c9204f74a89ccf27d434",
+   "durationMs": 165204,
+   "analyzedTiming": {
+    "bpm": 125,
+    "beatZeroMs": 2116,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "rose_short": {
+   "audio": "monster-hero/audio/bgm-rose-short.mp3",
+   "chartIntensity": "strong",
+   "chartRevision": 31,
+   "audioSha256": "57888379506b2a6ba9efe9c0eb120465aab702a13dfbcad2acfe12f85d67fb28",
+   "durationMs": 115452,
+   "analyzedTiming": {
+    "bpm": 125,
+    "beatZeroMs": 2116,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "toward_the_stars_short": {
+   "audio": "monster-hero/audio/bgm-toward-the-stars-short.mp3",
+   "chartRevision": 31,
+   "audioSha256": "25c386c484398d06ef9e8846b7eb38b3362bf0d985f663f76c06803a46e7363a",
+   "durationMs": 136800,
+   "analyzedTiming": {
+    "bpm": 143.268,
+    "beatZeroMs": 1390.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "chartIntensityByDifficulty": {
+    "MASTER": "extreme",
+    "HELL": "extreme"
+   },
+   "hellDensity": 1.3
+  },
+  "sad_song": {
+   "audio": "monster-hero/audio/bgm-sad-song.mp3",
+   "chartRevision": 31,
+   "audioSha256": "47d16979bb906bf2f047377e9a4cc871f9c152e0623ef91f8b5a3f1c817a3021",
+   "durationMs": 218556,
+   "analyzedTiming": {
+    "bpm": 172.009,
+    "beatZeroMs": 99.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "sad_song_short": {
+   "audio": "monster-hero/audio/bgm-sad-song-short.mp3",
+   "chartRevision": 31,
+   "audioSha256": "2ff39f50eddd7d2ec20a1aaca188d0d34b3b9c211ee182f68d01a1e4d488216c",
+   "durationMs": 82440,
+   "analyzedTiming": {
+    "bpm": 172.009,
+    "beatZeroMs": 99.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "black_shout": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-black-shout.mp3",
+   "chartRevision": 32,
+   "audioSha256": "03a627c682deaebcb6e23dc196b3882fc0f89190abdfc36de50295b420b7a5aa",
+   "durationMs": 109188,
+   "analyzedTiming": {
+    "bpm": 185.07,
+    "beatZeroMs": 2285.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "light_player": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-light-player.mp3",
+   "chartRevision": 32,
+   "audioSha256": "6656f3a71344757fef4950696b5b9f5a43e83004520520d5c4229a9c9906de98",
+   "durationMs": 268776,
+   "analyzedTiming": {
+    "bpm": 187.995,
+    "beatZeroMs": 1116.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "tsuki_ga_michiru_mae_ni": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni.mp3",
+   "chartRevision": 32,
+   "audioSha256": "2ee86e1947fd04cbe837c2824c2a87aaad96b4fc0e1804d807f122a5ed26b151",
+   "durationMs": 276660,
+   "analyzedTiming": {
+    "bpm": 188,
+    "beatZeroMs": 799.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "light_player_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-light-player-short.mp3",
+   "chartRevision": 32,
+   "audioSha256": "785e78c69005b82ca9e0c87004b0a3b31c27644ba1319db56ec93fd87dd02c4c",
+   "durationMs": 150552,
+   "analyzedTiming": {
+    "bpm": 187.995,
+    "beatZeroMs": 1116.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "tsuki_ga_michiru_mae_ni_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3",
+   "chartRevision": 32,
+   "audioSha256": "f2e9585907f20e833d7b50ce2cd8b3453f8d772c0376eabae31fb9e8bfe8aa7e",
+   "durationMs": 111960,
+   "analyzedTiming": {
+    "bpm": 188,
+    "beatZeroMs": 849.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

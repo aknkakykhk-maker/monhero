@@ -11,6 +11,7 @@
 //   ・好き・苦手な曲は記録を読むだけで、渡したものを書き換えない
 //   ・口ぐせは40文字を超えるときは付けない。誕生日は日本時間の暦の日付で判定する
 //   ・個体差は保存キーを足さない(このファイルに mh_ の文字や localStorage が無い)
+//   ・ウンディーネ種・ピクシー種(派生・レアを含む主血統)は女の子。一人称は女の子の言い方だけ。ほかの種・種を渡さないときは今までと1文字も変わらない(2026-10-16)
 // 仕様の正本: docs/spec/RHYTHM_BUDDY.md「個体差」
 const fs = require('fs');
 const path = require('path');
@@ -20,12 +21,14 @@ const read = (f) => fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts', f)
 const personaSrc = read('33-rhythm-buddy-persona.jsx');
 const sb = { Math, Number, String, Array, Object, Set, Date, console };
 vm.createContext(sb);
-vm.runInContext(`${read('33-rhythm-buddy-talk.jsx')}\n${personaSrc}\n;globalThis.__p={
+vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/data/lineages.js'), 'utf8')}\n;globalThis.MONSTER_LINEAGE_MAP=MONSTER_LINEAGE_MAP;\n${read('33-rhythm-buddy-talk.jsx')}\n${personaSrc}\n;globalThis.__p={
   persona:rhythmBuddyPersona, songs:rhythmBuddyPersonaSongs, quirk:rhythmBuddyApplyQuirk, bday:rhythmBuddyIsBirthday,
   talk:RHYTHM_BUDDY_PERSONA_TALK, kinds:RHYTHM_BUDDY_PERSONA_KINDS, pick:rhythmBuddyTalkPick, hon:RHYTHM_BUDDY_HONORIFICS,
   self:RHYTHM_BUDDY_SELF_WORDS, calls:RHYTHM_BUDDY_CALLS, styles:RHYTHM_BUDDY_CALL_STYLES, quirks:RHYTHM_BUDDY_QUIRKS,
+  selfF:RHYTHM_BUDDY_SELF_WORDS_FEMALE, gender:rhythmBuddyGenderOf, selfLine:rhythmBuddyPersonaSelf, map:MONSTER_LINEAGE_MAP,
   habits:RHYTHM_BUDDY_HABITS, foods:RHYTHM_BUDDY_FOODS, hobbies:RHYTHM_BUDDY_HOBBIES, base:RHYTHM_BUDDY_TALK };`, sb);
 const P = sb.__p;
+const screen0 = read('80-screen-rhythm-buddy.jsx');
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const TRAITS = ['jester', 'brave', 'clingy', 'smart', 'serious', 'proud', 'worrier', 'stubborn', 'easygoing'];
@@ -141,6 +144,84 @@ check('口ぐせ: 40文字を超えるとき・「…」で始まる文には付
 const pb = { birthday: { month: 3, day: 1 } };
 check('誕生日は日本時間の暦の日付(3/1 0:30 JST は当日・2/28 23:30 JST は前日)', P.bday(pb, Date.UTC(2026, 1, 28, 15, 30)) && !P.bday(pb, Date.UTC(2026, 1, 28, 14, 30)));
 check('誕生日にうるう日(2/29)は出ない', ids.every((id) => { const b = P.persona(id, '').birthday; return !(b.month === 2 && b.day === 29) && b.month >= 1 && b.month <= 12 && b.day >= 1 && b.day <= 31; }));
+
+// ---- 女の子の種(2026-10-16 社長「ウンディーネとピクシー種は明確に女個体」) ----
+const FEMALE_BASES = Object.keys(P.map).filter((b) => ['pixie', 'undine'].includes(P.map[b].main));
+const OTHER_BASES = Object.keys(P.map).filter((b) => !FEMALE_BASES.includes(b));
+check('ピクシー種・ウンディーネ種(派生・レアを含む)が女の子になる', ['Pixie', 'Mia', 'Pandora', 'Undine', 'Yaobikuni', 'Snegurochka'].every((b) => FEMALE_BASES.includes(b) && P.gender(b) === 'female'),
+  FEMALE_BASES.join(','));
+check('ほかの種・知らない種・種なしは性別を決めない', OTHER_BASES.every((b) => P.gender(b) === '') && P.gender('NoSuchMon') === '' && P.gender(null) === '' && P.gender(undefined) === '');
+const MASC = ['おれ', 'オイラ', 'ぼく', 'わし', '拙者', '自分'];
+check('女の子の一人称の表に、男の子の言い方が無い・どの性格にも候補がある', ALL_T.every((t) => Array.isArray(P.selfF[t]) && P.selfF[t].length > 0 && P.selfF[t].every((w) => !MASC.includes(w))));
+const femaleNg = [];
+ALL_T.forEach((t) => FEMALE_BASES.forEach((b) => ids.slice(0, 60).forEach((id) => {
+  const p = P.persona(id, t, b);
+  if (p.gender !== 'female' || !P.selfF[t].includes(p.self)) femaleNg.push(`${b}/${t || '性格なし'}/${id}:${p.self}`);
+})));
+check('女の子の種の子は、どの性格でも一人称が女の子の言い方', femaleNg.length === 0, femaleNg.slice(0, 3).join(' / '));
+check('女の子の種でも、一人称は性格ごとの候補がばらけて出る', ALL_T.every((t) => new Set(ids.map((id) => P.persona(id, t, 'Undine').self)).size === P.selfF[t].length));
+const sameNg = [];
+ALL_T.forEach((t) => OTHER_BASES.concat([null, 'NoSuchMon']).forEach((b) => ids.slice(0, 40).forEach((id) => {
+  const a = P.persona(id, t), c = P.persona(id, t, b);
+  if (JSON.stringify(a) !== JSON.stringify(c) || c.gender !== '') sameNg.push(`${b}/${t}`);
+})));
+check('ほかの種・種なしは、個体差が今までと1文字も変わらない', sameNg.length === 0, sameNg.slice(0, 3).join(' / '));
+check('女の子の種でも、一人称以外(呼び方・口ぐせ・好物・趣味・誕生日・くせ)は今までと同じ', ALL_T.every((t) => ids.slice(0, 40).every((id) => {
+  const a = P.persona(id, t), c = P.persona(id, t, 'Pixie');
+  return a.call.id === c.call.id && JSON.stringify(a.quirk) === JSON.stringify(c.quirk) && a.food === c.food && a.hobby === c.hobby
+    && JSON.stringify(a.birthday) === JSON.stringify(c.birthday) && a.habit.id === c.habit.id;
+})));
+check('セリフに直に書かれた「俺」なども、女の子の個体だけその子の一人称にする',
+  P.selfLine('これが俺のやり方だ!', 'あたし', true) === 'これがあたしのやり方だ!' && P.selfLine('オイラも僕も拙者も私も', 'うち', true) === 'うちもうちもうちもうちも'
+  && P.selfLine('これが俺のやり方だ!', 'おれ') === 'これが俺のやり方だ!' && P.selfLine('私とぼく', 'おれ') === 'おれとおれ');
+{
+  const vars = { who: 'たろう', self: 'あたし', female: true };
+  const all = [];
+  Object.keys(P.base).forEach((kind) => { for (let i = 0; i < 40; i++) all.push(P.pick({ kind, trait: 'stubborn', vars, rand: () => i / 40 })); });
+  check('女の子の個体(頑固)のセリフに「俺」「オイラ」「僕」「拙者」が出ない', all.every((t) => !/俺|オイラ|僕|拙者/.test(t)));
+}
+check('詳細画面: 女の子の種だけ「性別 女の子」を出し、セリフにも種を渡す',
+  /\.\.\.\(persona\.gender === 'female' \? \[\['gender', '性別', '女の子'\]\] : \[\]\)/.test(screen0)
+  && /rhythmBuddyPersona\(masu\.id, m\.trait, masu\.baseId\)/.test(screen0) && /rhythmBuddyPersona\(masuId, norm\.trait, baseId\)/.test(screen0)
+  && /female: persona\.gender === 'female'/.test(screen0)
+  && /cpuBrain\.talk\(\{ masuId: x\.masuId, baseId: c\.mb \|\| null,/.test(read('77-screen-rhythm-multi.jsx')));
+
+// ---- 女の子用のセリフ(2026-10-16 社長「女の子用のセリフを足す」) ----
+{
+  const parts = ['33-rhythm-buddy-talk.jsx', '33-rhythm-buddy-convo.jsx', '33-rhythm-buddy-persona.jsx'].map(read).join('\n');
+  const mk = (src) => { const c = { Math, Number, String, Array, Object, Set, Date, console }; vm.createContext(c);
+    vm.runInContext(`${src}\n;globalThis.__q={ pick:rhythmBuddyTalkPick, T:RHYTHM_BUDDY_TALK, C:RHYTHM_BUDDY_CONVO, P:RHYTHM_BUDDY_PERSONA_TALK, F:RHYTHM_BUDDY_FEMALE_LINES };`, c); return c.__q; };
+  const Q = mk(parts);
+  // 表を空にした写し(女の子用のセリフを足す前と同じ動き)
+  const Q0 = mk(parts.replace(/const RHYTHM_BUDDY_FEMALE_LINES = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'const RHYTHM_BUDDY_FEMALE_LINES = Object.freeze({});'));
+  const F = Q.F, keys = Object.keys(F);
+  const traitLines = new Set();
+  [Q.T, Q.C, Q.P].forEach((set) => Object.values(set).forEach((sc) => Object.values((sc && sc.trait) || {}).forEach((ls) => (ls || []).forEach((l) => traitLines.add(l)))));
+  check(`女の子用の言い換えが100組以上あり、左はどれも実際にある性格のセリフ`, keys.length >= 100 && keys.every((k) => traitLines.has(k)), `${keys.length}組 / 無い: ${keys.filter((k) => !traitLines.has(k)).slice(0, 3).join(' / ')}`);
+  const holes = (t) => (String(t).match(/\{[a-zA-Z]+\}/g) || []).sort().join(',');
+  check('言い換えの左右で、差し込み口({song} など)が同じ・右が空でない・40文字以内', keys.every((k) => holes(k) === holes(F[k]) && F[k].length > 0 && F[k] !== k && F[k].length <= 40),
+    keys.filter((k) => holes(k) !== holes(F[k]) || !F[k] || F[k] === k || F[k].length > 40).slice(0, 3).join(' / '));
+  check('言い換えの右に、男の子っぽい言い回し(ぞ・ぜ・俺・〜ん!・〜しろ)が無い', keys.every((k) => !/ぞ|ぜ|俺|オイラ|僕|拙者|[^な]ん[!。…]*$|しろ$|しとらん|せん[!ぞ]?$/.test(F[k])),
+    keys.filter((k) => /ぞ|ぜ|俺|オイラ|僕|拙者|[^な]ん[!。…]*$|しろ$|しとらん|せん[!ぞ]?$/.test(F[k])).slice(0, 3).map((k) => F[k]).join(' / '));
+  const kinds = [...new Set([...Object.keys(Q.T), ...Object.keys(Q.C), ...Object.keys(Q.P)])];
+  const base = { who: 'たろう', me: 'ピク', mate: 'モノ', song: 'Monster', fav: 'Monster', lv: '12', score: '90万点', plays: '8', days: '3', trait: '勇敢', topic: 'Monster',
+    like: 'Monster', dislike: 'Sheriruth', food: 'プリン', hobby: '歌', hg: '早めに入れた', hb: '急ぎすぎた', ht: 'つい早めに叩いちゃう', mood: '最高' };
+  let femaleBad = [], otherDiff = [];
+  TRAITS.forEach((t) => kinds.forEach((kind) => { for (let i = 0; i < 24; i++) {
+    const r = () => i / 24;
+    const fv = { ...base, self: 'あたし', female: true }, mv = { ...base, self: 'おれ' };
+    const f = Q.pick({ kind, trait: t, moodId: 'normal', vars: fv, rand: r });
+    if (keys.some((k) => k && f && f === k.replace(/\{who\}さん/g, 'たろう').replace(/\{([a-zA-Z]+)\}/g, (a, x) => (x === 'self' ? 'あたし' : base[x] || a)))) femaleBad.push(`${t}/${kind}:${f}`);
+    const m1 = Q.pick({ kind, trait: t, moodId: 'normal', vars: mv, rand: r }), m0 = Q0.pick({ kind, trait: t, moodId: 'normal', vars: mv, rand: r });
+    if (m1 !== m0) otherDiff.push(`${t}/${kind}:${m0}→${m1}`);
+  } }));
+  check('女の子の子は、言い換えの左(もとの男の子っぽいセリフ)を話さない', femaleBad.length === 0, femaleBad.slice(0, 3).join(' / '));
+  check('ほかの子のセリフは、女の子用のセリフを足す前と1文字も変わらない(全場面・9性格)', otherDiff.length === 0, otherDiff.slice(0, 3).join(' / '));
+  check('女の子の子(勇敢)は「勝負よ!」のような言い換えで話す', Q.pick({ kind: 'song', trait: 'brave', vars: { ...base, self: 'あたし', female: true }, rand: () => 0 }) !== ''
+    && Object.values(F).includes('{song}で勝負よ!'));
+  check('セリフを選ぶところで、女の子の子のときだけ言い換える', /if \(female && typeof RHYTHM_BUDDY_FEMALE_LINES !== 'undefined' && Object\.prototype\.hasOwnProperty\.call\(RHYTHM_BUDDY_FEMALE_LINES, raw\)\) raw = RHYTHM_BUDDY_FEMALE_LINES\[raw\];/.test(read('33-rhythm-buddy-talk.jsx'))
+    && /const female = vars\.female === true;/.test(read('33-rhythm-buddy-talk.jsx')));
+}
 
 // ---- 保存しない ----
 check('個体差は保存キーを足さない(mh_ の文字・localStorage が無い)', !/mh_[a-z]/.test(personaSrc.replace(/^\/\/.*$/gm, '')) && !/localStorage/.test(personaSrc));

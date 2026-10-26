@@ -40,8 +40,11 @@ const fateSrc = slice('// ==== 固有技「運命のコイン」', '// ★タク
 const fate = Function(`${fateSrc}\nreturn { withFateCombo };`)();
 // 2026-10-08 からの黒音符(クロミー)の連撃など、あとから攻撃の式へ足された決めごと。足す関数は本体の本物を取り出し、
 // 効果の段階は「誰も貯めていない」中立の値で、予測・実処理・あつの挑発の3つへ同じものを入れる(比べる中身は変わらない)
-const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo\) => \{[\s\S]*?\n\};/) || [''])[0]
+const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo(, extra = null)?\) => \{[\s\S]*?\n\};/) || [''])[0]
   + '\nconst blackNoteEffectAt = () => ({ combo: null });'
+  // 2026-10-22 イルミネ・ドリーミィの楔の連撃(楔0・イルミネの固有技でなければ何も足さない)
+  + '\nconst kusabiCombosAt = () => [];'
+  + '\nconst gainKusabi = () => {};'
   // タクティクス専用(ほかのモードでは何もしない)
   + '\nconst aquaStackFromCard = () => null;'
   + '\nconst fireTacticsExCross = () => null;';
@@ -65,6 +68,11 @@ const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHer
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult)");
 if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つからない');
 const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
+// 2026-10-21(#3309)からハムのカウンターの演出(await で演出を待つ1行)がこの区間に入った。ダメージには関わらず、
+// 同期の Function では await を書けないので、取り出した写しからだけ外す(本体は変えない)
+const HAM_COUNTER_FX_LINE = /\{ const crossFx=fireTacticsExCross\(slotIdx\); if\(crossFx\) await playHamCounterFx\(crossFx,slotIdx,activeMon\); \}/;
+check('ハムのカウンターの演出の1行を写しから外せる(書き方が変わったらここを直す)', !act.text.includes('await ') || HAM_COUNTER_FX_LINE.test(act.text));
+act.text = act.text.replace(HAM_COUNTER_FX_LINE, '');
 const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
   const halved = false; // 「同じ子の2枚目」ではない(パンドラの箱の悪魔側が見る値)

@@ -4,6 +4,11 @@ const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
 const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9', frame: 'w-10 h-10' };
+// フレームの商品の絵(2026-10-20)。枠の外側まで MARKET_FRAME_BOX_PX 四方に収める。アイコンは最大 MARKET_FRAME_AVATAR_PX(前の w-10 と同じ)。
+// 色の輪の枠(CSS)は外側に少しだけ出るので、その分を見込む
+const MARKET_FRAME_BOX_PX = 56;
+const MARKET_FRAME_AVATAR_PX = 40;
+const MARKET_FRAME_RING_BOX = 1.2;
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
@@ -93,6 +98,11 @@ const MARKET_PROFILE_ICON_STYLES = {
   Melody: { scale: 0.95, x: 0, y: 0 },
   kuromy_disc_icon: { scale: 0.95, x: 0, y: 0 },
   Kuromy: { scale: 0.95, x: 0, y: 0 },
+  // イルミネ・ドリーミィ(2026-10-22・近日追加)。円盤石はほかの子と同じ作り方なので同じ収まり
+  illumine_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Illumine: { scale: 0.95, x: 0, y: 0 },
+  dreamy_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Dreamy: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
@@ -126,13 +136,14 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
 //   32pxでも80pxでも枠の太さが比例して変わり、小さいアイコンでもズレない。
 // ★出してよいフレームかどうかは normalizeProfileFrameId だけが決める
 //   (未公開の豪華フレームはここで 'none' に倒れるので、通常プレイヤーには出ない)。
-const ProfileFrameLayer = ({ frameId }) => {
+const ProfileFrameLayer = ({ frameId, small = false }) => {
   const frame = profileFrameById(normalizeProfileFrameId(frameId));
   if (!frame || frame.kind === 'none') return null;
   // 画像フレームは透過PNGをそのまま重ねる。object-contain なので縦横比は変わらない。
   // 重ねる大きさと位置は絵ごとに違う(穴の大きさが違う)ので、profileFrameImageStyle が出す
+  // small … 28〜32px で出す所。大きい絵をその場で縮めると細かい飾りが点のように潰れるので、前もって縮めた srcSmall を使う(2026-10-19)
   if (frame.kind === 'image') return (
-    <img src={frame.src} alt="" aria-hidden="true" draggable={false}
+    <img src={(small && frame.srcSmall) || frame.src} alt="" aria-hidden="true" draggable={false}
       style={profileFrameImageStyle(frame)} className="mh-profile-frame mh-profile-frame-image"/>
   );
   return <span aria-hidden="true" className={`mh-profile-frame mh-profile-frame-ring ${frame.className||''}`}/>;
@@ -141,17 +152,35 @@ const ProfileFrameLayer = ({ frameId }) => {
 // frameId を渡さない(または 'none')ときは、これまでの BreederIcon と見た目が変わらない。
 // badge は「アイコンと同じ円の中へ収めたい飾り」(プロフィールの鉛筆マークなど)。
 // 内側の円でクリップされ、フレームだけがその外へ出る。
-const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null }) => (
-  <span className={`mh-profile-avatar ${className}`}>
+// 枠の外形が、アイコンの何倍に広がるか(1 以上)。画像の枠は profileFrameImageStyle の幅(穴の小さい絵ほど大きい)、色の輪は MARKET_FRAME_RING_BOX
+const profileFrameBoxRatio = (frameId) => {
+  const frame = profileFrameById(normalizeProfileFrameId(frameId));
+  if (!frame || frame.kind === 'none') return 1;
+  return frame.kind === 'image' ? Math.max(1, (parseFloat(profileFrameImageStyle(frame).width) || 100) / 100) : MARKET_FRAME_RING_BOX;
+};
+// fit … 一覧に並べる所(フレンド・ランキング・マルチなど)で使う。外側の大きさ(className の w-8 h-8 など)を**枠ごとの四角**とみなし、
+//   枠のある人はそのぶん中のアイコンを縮めて真ん中に置く(2026-10-21 社長「フレームのサイズ感微妙？」→ 枠ごと同じ四角に収める)。
+//   枠の無い人と同じ大きさの四角に並び、右の名前や時刻に枠がかぶらない。マーケットの MARKET_FRAME_BOX_PX と同じ考え方
+const ProfileAvatar = ({ src, id, frameId=null, alt='', className='', roundedClass='rounded-full', adjustment, fallback=null, badge=null, small=false, fit=false, style=null }) => {
+  const ratio = fit ? profileFrameBoxRatio(frameId) : 1;
+  if (fit && ratio > 1) return (
+    <span data-profile-avatar-box className={`relative flex items-center justify-center ${className}`}>
+      <ProfileAvatar src={src} id={id} frameId={frameId} alt={alt} roundedClass={roundedClass} adjustment={adjustment} fallback={fallback} badge={badge} small={small}
+        style={{width:`${100/ratio}%`,height:`${100/ratio}%`,flexShrink:0}}/>
+    </span>
+  );
+  return (
+  <span className={`mh-profile-avatar ${className}`} style={style||undefined}>
     <span className={`relative flex h-full w-full items-center justify-center overflow-hidden ${roundedClass}`}>
       {src
         ? <BreederIcon src={src} id={id} adjustment={adjustment} alt={alt} roundedClass={roundedClass} className="w-full h-full"/>
         : fallback}
       {badge}
     </span>
-    <ProfileFrameLayer frameId={frameId}/>
+    <ProfileFrameLayer frameId={frameId} small={small}/>
   </span>
-);
+  );
+};
 // フレームを選んでいるか(もとから付いている縁を消すかどうかの判定に使う)
 const hasProfileFrame = (frameId) => normalizeProfileFrameId(frameId) !== PROFILE_FRAME_NONE_ID;
 
@@ -173,10 +202,13 @@ const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
     {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
   </span>
 );
+// 血統名は「…」で切らず、2行まで折り返す(2026-10-26。幅320pxでは28体中13種が「モッ…」「ライ…」と切れ、
+// 360pxでもウンディーネ・ユグドラシルが切れていた)。札の高さは顔アイコン(28px)で決まり、2行の字はその中に収まるので
+// 札の大きさは変わらない。5文字以上は少し小さい字にして、なるべく1行で読めるようにする
 const DexLineageChip = ({ lineage, iconUrl }) => (
-  <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
+  <span data-dex-lineage className="flex w-full items-center justify-center gap-1 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2 py-1">
     {iconUrl?<DexMonsterIcon src={iconUrl} lineage/>:<span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
-    <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
+    <span data-dex-lineage-name className={`${String(lineage.name||'').length>=5?'text-[10px]':'text-[11px]'} min-w-0 font-black text-amber-100 leading-[1.2] line-clamp-2 [overflow-wrap:anywhere]`}>{lineage.name}</span>
   </span>
 );
 // 立ち絵の <img> そのもの。待機アニメ(withMonsterIdleArt)は絵の要素を複製して重ねるので、
@@ -198,11 +230,17 @@ const MarketProductIcon = ({ item, onZoom, disabled=false, previewIcon=null }) =
   // プロフィールフレームの商品(2026-10-03)。枠は円の外へはみ出すので、overflow-hidden の円には入れず、
   // 中が空の円(薄い下地)に枠を重ねて見せる。枠の描き方は ProfileFrameLayer(全画面で同じ)
   if(item.type==='frame'){
-    const frameCls=`${MARKET_ICON_SIZE.frame} shrink-0 ${disabled?'':'active:scale-90'}`;
+    // 枠の絵はアイコンの外へはみ出す(穴の小さい絵ほど大きい。ハロウィン・恐はアイコンの約1.9倍)。そのままだと下の商品名に重なるので、
+    // 置き場所を MARKET_FRAME_BOX_PX 四方に取り、枠の外側までその中へ収まる大きさでアイコンを描く(2026-10-20 窓口「名前に重なる」)
+    const frame=typeof profileFrameById==='function'?profileFrameById(item.id):null;
+    const box=frame&&frame.kind==='image'?(parseFloat(profileFrameImageStyle(frame).width)||100)/100:MARKET_FRAME_RING_BOX;
+    const avatarPx=Math.min(MARKET_FRAME_AVATAR_PX,Math.floor(MARKET_FRAME_BOX_PX/Math.max(1,box)));
+    const frameCls=`flex shrink-0 items-center justify-center ${disabled?'':'active:scale-90'}`;
+    const frameStyle={width:MARKET_FRAME_BOX_PX,height:MARKET_FRAME_BOX_PX};
     // 商品の小さな絵は、自分のアイコンに付けた姿(買う前に自分に付けるとどう見えるか分かる)。
     // previewIcon={src,id} は商品カード(MarketProductCard)の呼び出し側から渡す。無いときは下地の円
-    const inner=<ProfileAvatar src={previewIcon&&previewIcon.src} id={previewIcon&&previewIcon.id} frameId={item.id} className="w-full h-full" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>;
-    return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={frameCls}>{inner}</button>:<div className={frameCls}>{inner}</div>;
+    const inner=<span data-market-frame-avatar className="block shrink-0" style={{width:avatarPx,height:avatarPx}}><ProfileAvatar src={previewIcon&&previewIcon.src} id={previewIcon&&previewIcon.id} frameId={item.id} className="w-full h-full" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/></span>;
+    return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={frameCls} style={frameStyle} data-market-frame-icon>{inner}</button>:<div className={frameCls} style={frameStyle} data-market-frame-icon>{inner}</div>;
   }
   const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;
   const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;
@@ -225,19 +263,54 @@ const MarketDetailChip = ({ label, onClick }) => (
 // ★入れるのは画面へ出す文字だけ。item.name そのものは変えないので、読み上げラベル・詳細・
 //   検索・保存はこれまでどおり(U+200B は幅0で、コピーしても見た目に出ない)。
 // ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
-const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
+// 2026-10-20 窓口「モッチーのフ／レーム」「ウンディーネ／3姉妹のフレ／ーム」: 'フレーム'・'ビート'(スエゾー|ビート)を足し、「・」の後ろ(ハロウィン・|恐)と、
+// カタカナのあとに数字が続く所(ウンディーネ|3姉妹)でも折ってよいことにした
+// 2026-10-24: 'フード'(うさ耳|フード)。着替え「ハロウィンのうさ耳フ／ード」(390)と落ちていた
+const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン', 'フレーム', 'ビート', 'フード']);
 // 全角のかっこ「（…）」は、かっこの中を途中で割らない(2026-10-04・ユーザー指摘「文字列が悪い」。
 // 「みゅあ（ハロウィン／）のアイコン」と、閉じかっこだけが次の行へ落ちていた)。
 // 「（」の前と「）」の後ろにも印を入れ、「みゅあ／（ハロウィン）」のようにかっこのかたまりで折る。
 const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
   (text, word) => text.split(word).join(`​${word}`), String(name || ''))
-  .split('（').join('​（').split('）').join('）​');
+  .split('（').join('​（').split('）').join('）​')
+  .split('・').join('・​').replace(/([ァ-ヶー])([0-9０-９])/g, '$1​$2')
+  // 2026-10-20 改善部 M3「スネグーラチ／カの円盤石」(320): 7字以上続く長いカタカナの名前だけ、あとの「の」の前でも折ってよい
+  // (短い名前「モッチーの|フレーム」の折り方は今のまま)
+  .replace(/([ァ-ヶー]{7,})の/g, '$1​の')
+  // 2026-10-21: カタカナのあとの「の＋漢字2字以上」は「の」の前でも折る(「ハロウィンの小悪／魔」→「ハロウィン／の小悪魔」)。
+  // 「の書」のように漢字1字なら折らない(「リセット／の書」と2字だけ落ちるため)
+  .replace(/([ァ-ヶー])の([一-龯]{2,})/g, '$1​の$2')
+  // 2026-10-24: 「の」のあとがひらがなで始まり、3字以上続くときも「の」の前で折る(「ハロウィンのう／さ耳フード」(320)→「ハロウィン／のうさ耳フード」)
+  .replace(/([ァ-ヶー])の(?=[ぁ-ゖ][^​]{2,})/g, '$1​の')
+  // 名前の終わりの「・序」のような1〜2字は、手前の「・」で切り離さない(「スキップチケット・／序」→「スキップ／チケット・序」)
+  .replace(/・​([^​]{1,2})$/, '・$1');
 // ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
 //   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
 //   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
 //   実際に落ちた。商品はちゃんと並んでいるのに「無い」と言われた)。
 //   <wbr> は「ここで折り返してよい」だけを表し、innerText には現れない。
-const marketNameNodes = (name) => marketNameForWrap(name).split('​')
+// 名前の終わりの「・序」のような短い尾は、「・序」だけをひとかたまり(nowrap)で描く。「・」のあとはブラウザがもともと折ってよい所なので、
+// 印を外すだけでは「スキップチケット・／序」と落ちる。「チケット・序」まで包むと前の「スキップ」が「スキッ／プ」と割れた。
+// 「・」の前は行頭に来られない字なので、「ト・序」の間でも折れない(2026-10-21)
+// ★全体を1つの <span> で包む。名前の枠は flex なので、包まないと字と「・序」の札が別々の並びになり、
+//   「スキップ　・序／チケット」と順番が崩れる(2026-10-21)
+const marketNameNodes = (name) => <span data-market-name-text>{marketNameForWrap(name).split('\u200b')
+  .map((seg, index, all) => {
+    // 最後の「・1〜2字」と、受け取る数「チケット ×3」は、前の言葉と離さない(2026-10-24 ja-wrap-check「トレーニングチケット／×3」)
+    const tail = index === all.length - 1 ? (seg.match(/^(.*)(・[^・]{1,2})$/) || seg.match(/^(.*?)([^\s]*\s+×[\d,]+)$/)) : null;
+    return <React.Fragment key={index}>{index>0&&<wbr/>}{tail ? <>{tail[1]}<span style={{whiteSpace:'nowrap'}}>{tail[2]}</span></> : seg}</React.Fragment>;
+  })}</span>;
+// 予告の札の折り位置(2026-10-20 窓口「条件を達成 / すると買え / ます」)。語の切れ目(「すると」の後ろ)だけで折る
+const MARKET_LABEL_WRAP_AFTER = Object.freeze(['すると']);
+// 札の字の大きさ: いちばん長い語(「条件を達成すると」8文字)が、カードの幅(札を包む枠の幅・cqi)から左右の余白12pxを引いた幅に1行で入る大きさ。最大10px・最小7px
+// 札は文字(「すると」の後ろで区切る)か、区切りの配列(フレームの条件の短い文・profileFrameConditionShort)
+const marketLabelSegments = (label) => (Array.isArray(label) ? label.map(String).filter(Boolean)
+  : MARKET_LABEL_WRAP_AFTER.reduce((text, word) => text.split(word).join(`${word}​`), String(label || '')).split('​'));
+const marketLabelFitSize = (label) => {
+  const longest = Math.max(1, ...marketLabelSegments(label).map(seg => seg.length));
+  return `clamp(7px, calc((100cqi - 10px) / ${longest}), 10px)`;
+};
+const marketLabelNodes = (label) => marketLabelSegments(label)
   .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
 // comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
 // ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
@@ -248,7 +321,8 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
   const usesHeroProof=item.currency==='heroProof';
   const usesHeroProofShard=item.currency==='heroProofShard';
   const usesBeatPoint=item.currency==='beatPoint';
-  const priceLabel=usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
+  const usesCardPoint=item.currency==='cardPoint'; // MFバトルカードのビートP
+  const priceLabel=usesCardPoint?`${item.cost}ビートP`:usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
   return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
@@ -260,11 +334,11 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex flex-col items-center gap-1"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span><div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">{comingSoonLabel}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex w-full min-w-0 flex-col items-center gap-1 [container-type:inline-size]"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{item.giftOnly?'プレゼント':marketPriceText(item)}</span>{/* 札はカードの幅で折り返す(2026-10-20 窓口「条件を達成すると買えます」がカードの外へはみ出していた・幅の狭い3列のカード) */}<div data-market-coming-soon-label className="max-w-full text-center font-black leading-tight text-slate-400 bg-slate-800/60 px-1 py-1 rounded-xl" style={{wordBreak:'keep-all',overflowWrap:'anywhere',fontSize:marketLabelFitSize(comingSoonLabel)}}>{marketLabelNodes(comingSoonLabel)}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint||usesCardPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesCardPoint?'bg-orange-500 text-white active:scale-95':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesCardPoint?<><span aria-hidden="true">🃏</span><span>{item.cost.toLocaleString()}</span></>:usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -286,6 +360,9 @@ const MARKET_CURRENCY_META = Object.freeze({
   heroProofShard: Object.freeze({ have:'勇者の証片', label:'勇者の証片',   emoji:'🎖️', verb:'交換', format:n=>`勇者の証片${n}個`,   text:'text-amber-100',   bar:'text-amber-100 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
   heroProof:      Object.freeze({ have:'勇者の証', label:'勇者の証',     emoji:'🏅', verb:'交換', format:n=>`勇者の証${n}個`,     text:'text-amber-200',   bar:'text-amber-200 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
   beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換', format:n=>`${n}ビートP`,        text:'text-violet-200',  bar:'text-violet-100 border-violet-500/30 bg-violet-950/30',    border:'border-violet-400/70',  button:'bg-violet-500 text-white',  max:'bg-violet-800' }),
+  // MFバトルカードのビートP(マーケットの「MFバトルカード」の売り場。いまはMFバトルカードのトップから入ったときだけ出す)
+  // ★2026-10-26 にカードポイントをやめてビートPにした(社長)。中身はビートPと同じ財布なので、名前・印・色もビートPにそろえる
+  cardPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換', format:n=>`${n}ビートP`,        text:'text-violet-200',  bar:'text-violet-100 border-violet-500/30 bg-violet-950/30',    border:'border-violet-400/70',  button:'bg-violet-500 text-white',  max:'bg-violet-800' }),
 });
 // 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
 const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
@@ -330,7 +407,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
   const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
   return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
     <MarketModalHead item={item} accent={meta.text}/>
-    {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+    {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{helpWrap(item.desc)}</p>}
     {item.groupMembers&&<div data-market-icon-group={item.groupId} className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
       <p className="text-[12px] font-black text-slate-200 leading-snug">{item.groupMembers.length}種類まとめて手に入ります。どれか1つでも持っていれば、全部持っていることになります。</p>
       <p className="mt-1 text-[10px] text-slate-400 leading-snug">プロフィールで、1つずつ選んで設定できます。</p>
@@ -341,6 +418,10 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
         </div>)}
       </div>
     </div>}
+      {item.giftHow&&<div data-market-frame-gift className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
+        <div className="text-amber-300 leading-snug" style={JA_WRAP_STYLE}>{jaWrap(`手に入れ方：${item.giftHow}`)}</div>
+        <div className="mt-1 text-[11px] text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('マーケットでは買えません。プレゼントで届きます')}</div>
+      </div>}
       {item.frameCondition&&<div data-market-frame-condition className="mt-3 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-3 text-[12px] font-black">
         <div className="text-amber-300 leading-snug">買える条件：{item.frameCondition.text}</div>
         <div className="mt-1 text-[11px] text-slate-300">{item.frameCondition.met?'条件を達成しています！':item.frameCondition.progress}</div>
@@ -348,7 +429,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
       {!item.groupMembers&&<div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>}
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
-      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
+      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{item.giftOnly?'プレゼント':marketPriceText(item)}</span></div>
     </div>
     <div className="mt-3"><MarketModalClose onClick={onClose}/></div>
   </MarketModal>;
@@ -415,7 +496,7 @@ const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', 
     {error&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{error}</p>}
     <div className="mt-3 grid grid-cols-1 gap-2">
       <button type="button" disabled={!canConfirm} onClick={()=>onConfirm&&onConfirm(count)} className={`mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`}>{meta.verb}する</button>
-      <MarketModalClose onClick={onCancel} label="キャンセル" disabled={pending}/>
+      <MarketModalClose onClick={onCancel} label="やめる" disabled={pending}/>
     </div>
   </MarketModal>;
 };
@@ -591,6 +672,13 @@ const helpDataRows = (id) => {
         return [`${monName}「${def.name}」`,
           `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
+    // タクティクスの狙われやすさ(🔥・ヘイト)の仕組みの数字(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」→「ヘルプに目安の表を足す」)。
+    // ★数字は TACTICS_HATE・MONSTER_TYPES・TACTICS_TARGET_LOW_HP_BIAS から作り、目安の確率はゲームの狙いの関数(tacticsTargetWeights)で計算する。
+    //   書き写さないので、ヘイトを調整してもヘルプが古いままにならない。敵の数字は出さない。2列目は短く(help-render-check)
+    case 'tacticsHateGains':
+    case 'tacticsHateTypes':
+    case 'tacticsHateOdds':
+      return typeof tacticsHateHelpRows === 'function' ? tacticsHateHelpRows(id) : [];
     // イベント・レイドボス「ジャック」の段階(2026-10-04)。名前・ライフ・技の本数は 35-raid-jack.jsx の定義から作る。
     // ★ライフや倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
     case 'raidJackTiersA':
@@ -603,6 +691,26 @@ const helpDataRows = (id) => {
     case 'proQuickLoops':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
         `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
+    // MFバトルカードの1戦でもらえるビートP(2026-10-26 にカードポイントをやめてビートPにした)。強さごとの勝ち・負けとマルチ対戦を 82-card-battle-core.jsx の数から作る
+    // (数を調整したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く・help-render-check)
+    case 'cardBeatPointRewards': {
+      if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
+      const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
+      // 負けは勝ちの 3/4(82 の cardLosePoint。2026-10-26)
+      const lose = (lv) => (typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0);
+      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
+      if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
+      return rows;
+    }
+    // MFバトルカードのパック。弾ごとの種族とキラの割合を 89-card-pack.jsx の CARD_PACKS から作る(弾を足しても自動で並ぶ)
+    case 'cardPacks':
+      if (typeof CARD_PACKS === 'undefined') return [];
+      return CARD_PACKS.map(pack => {
+        const species = typeof cardPackSpeciesLabel === 'function' && typeof CARD_BATTLE_DATA !== 'undefined' && CARD_BATTLE_DATA
+          ? cardPackSpeciesLabel(CARD_BATTLE_DATA, pack) : pack.species.join('・');
+        const kira = `キラ${pack.rarity.kira}%${pack.rarity.alt ? `・別絵キラ${pack.rarity.alt}%` : ''}`;
+        return [pack.name, `${species} ／ ${kira}`];
+      });
     // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
     case 'monsterLineages':
       return dexMonsterList().map(mon => {
@@ -711,14 +819,21 @@ const helpDataRows = (id) => {
           const label = sale => `${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`;
           const gated = sales.filter(sale => cond && typeof profileFrameConditionFor === 'function' && profileFrameConditionFor(frame, sale.shop));
           const free = sales.filter(sale => !gated.includes(sale));
-          const how = unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。`
+          // 贈り物で届く枠(2026-10-20)。決まった出来事のあとにギフトボックスへ届く
+          const gift = (typeof profileFrameGift === 'function') ? profileFrameGift(frame) : null;
+          const giftHow = gift === 'raidJackEnding' ? 'レイド「カボチャの大王ジャック」に参加した人へ、イベントの終わりのお話のあとにプレゼントで届くことがあります。' : '';
+          const how = giftHow ? giftHow : unlock ? `${(who && who.name) || ''}との仲良し度 Lv${unlock.bondLevel}でもらえます。`
+            // 大王が倒されたら買える枠(ハロウィン・恐)は、条件の文がそのまま文になっている
+            : sales.length && cond && cond.kind === 'raidJackBossDown' ? `${cond.text}（マーケットの${sales.map(label).join(' か ')}）。`
             : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}`
             : 'はじめから選べます。';
           return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
         });
     // 助手の一覧。名前と性格の違いを実データから出す
     case 'assistants':
+      // 公開の印が立つまでの助手(あつ)は並べない(assistantReleased・data/assistants.js)
       return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
+        .filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id))
         .map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
@@ -731,6 +846,10 @@ const helpDataRows = (id) => {
         ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`],
         ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`],
       ];
+    // 仲良し度のLvごとのごほうび(2026-10-21)。表(ASSISTANT_BOND_LEVEL_REWARDS)から作るので、中身を変えてもヘルプが古くならない
+    case 'assistantBondRewards':
+      return Object.entries((typeof ASSISTANT_BOND_LEVEL_REWARDS !== 'undefined' && ASSISTANT_BOND_LEVEL_REWARDS) || {})
+        .map(([lv, rewards]) => [`Lv.${lv}`, rewards.map(r => (typeof giftRewardText === 'function' ? giftRewardText(r) : '')).join(' ／ ')]);
     case 'assistantBondActions':
       return Object.values((typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {})
         .filter(x => typeof releasedForPlayers !== 'function' || releasedForPlayers(x))
@@ -747,6 +866,22 @@ const helpDataRows = (id) => {
         [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     // 体験版で遊べる難易度と、そのレベル・ノーツ数。ヘルプへ手で書き写すと、
     // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
+    // HELL がある曲(2026-10-21)。曲を足すたびに手で書き写すと古くなるので、HELL の譜面の一覧(RHYTHM_HELL_CHARTS)から作る。
+    // 曲名は公開曲の一覧の名前。並びは曲えらびと同じ順
+    // はじめての HELL の目安(2026-10-21 改善部 N6)。Lv. がいちばん低い HELL を実データから選ぶ(rhythmHellEntrySong)
+    case 'rhythmHellEntry': {
+      const entry = typeof rhythmHellEntrySong === 'function' ? rhythmHellEntrySong() : null;
+      return entry ? [['はじめての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中でいちばんやさしい曲)`]] : [];
+    }
+    case 'rhythmHellSongs': {
+      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' ? RHYTHM_HELL_CHARTS : {};
+      return songs.map(song => {
+        const chart = song && hell[song.songId];
+        if (!chart || !Number.isFinite(chart.level)) return null;
+        return [song.displayName || song.songId, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ`];
+      }).filter(Boolean);
+    }
     case 'rhythmDemoSongLevels': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
       const song = typeof rhythmDemoSong !== 'undefined' ? rhythmDemoSong(songs) : null;
@@ -818,11 +953,10 @@ const helpDataRows = (id) => {
     // 値を変えたときにヘルプだけ古いまま残るため、実データから表にする
     case 'rhythmMonsterAbilities': {
       const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
-      const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
+      // 公開前の子しかいない血統と、公開前の子の上書きは出さない(rhythmAbilityHolderNames)
       return Object.values(abilities).map(ability => {
-        const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id)
-          .map(([lineageId]) => lineageById(lineageId).name);
-        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+        const { lineages, monsters } = rhythmAbilityHolderNames(ability.id);
+        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}${monsters.length ? `／${monsters.join('・')}だけはこの能力` : ''}）`];
       });
     }
     case 'missionsDaily':
@@ -839,10 +973,15 @@ const helpDataRows = (id) => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  cardBeatPointRewards: 'MFバトルカードの1戦でもらえるビートP',
+  cardPacks: 'パックの弾と入っている種族',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
-  raidJackTiersA: 'レイドバトルのジャック(段階ごとの共有ライフ)',
-  raidJackTiersB: 'グランドスラムのジャック(段階ごとのライフ)',
+  raidJackTiersA: 'レイドバトルのジャック(段階別の共有ライフ)',
+  raidJackTiersB: 'グランドスラムのジャック(段階別のライフ)',
   tacticsExSkills: 'タクティクスバトルのEXスキル',
+  tacticsHateGains: '🔥(ヘイト)の増え方',
+  tacticsHateTypes: 'タイプ別の🔥',
+  tacticsHateOdds: '狙われやすさの目安',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
@@ -862,13 +1001,24 @@ const HELP_DATA_TITLES = {
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
+  assistantBondRewards: '仲良し度Lvのごほうび(助手ひとりにつき1回)',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
-  psycheRewards: '難易度ごとにもらえる虹のプシュケー',
-  rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  psycheRewards: '難易度別にもらえる虹のプシュケー',
+  rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
+  rhythmHellEntry: 'はじめての HELL の目安',
+  rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力',
+};
+
+// ヘルプの🆕で、開いたトピックを覚える(2026-10-18・新しいキー。いつ🆕にするかの判定は 19-difficulties-and-rules.jsx の helpTopicIsNew)
+const HELP_NEW_SEEN_KEY = 'mh_help_new_seen_v1';
+const helpNewSeenIds = () => { try { const v = JSON.parse(localStorage.getItem(HELP_NEW_SEEN_KEY) || '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; } catch (e) { return []; } };
+const helpMarkTopicSeen = (topic) => {
+  if (helpTopicAddedMs(topic) == null) return;
+  try { const seen = helpNewSeenIds(); if (!seen.includes(topic.id)) localStorage.setItem(HELP_NEW_SEEN_KEY, JSON.stringify([...seen, topic.id].slice(-200))); } catch (e) {}
 };

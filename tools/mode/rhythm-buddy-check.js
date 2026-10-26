@@ -783,7 +783,12 @@ const MATE = { masuId: 'masu_1', name: 'モッチー', level: 12, baseId: 'mocch
   const evil = c.clean({ t: 'hb', id: 'c1', cpu: 1, mb: '../x<script>', mc: ['<b>', 'a'.repeat(99), 1, null] });
   const why = c.clean({ t: 'hb', id: 'c2', cpu: 1, pw: 'hard<b>' });
   check('選んだ理由のコードは小文字の英字だけ通る(相棒の知らせのみ)', why.pw === 'hardb' && c.clean({ t: 'hb', id: 'p2', pw: 'hard' }).pw === undefined);
-  check('相棒の種類と色は、決まった文字だけを通す', evil && evil.mb === 'xscript' && evil.mc.every((x) => /^[A-Za-z0-9_#:-]*$/.test(x) && x.length <= 24));
+  check('相棒の種類と色は、決まった文字だけを通す', evil && evil.mb === 'xscript' && evil.mc.every((x) => /^[A-Za-z0-9_#:@.-]*$/.test(x) && x.length <= 24));
+  // 2026-10-19 剣士モッチーの相棒が赤一色に見えた。濃さ(@NN)を消していたのと、染めていない部位を詰めて色が前の部位へずれていた
+  const dyed = c.clean({ t: 'hb', id: 'c3', cpu: 1, mb: 'KenshiMocchi', mc: [null, 'red@60', '', 'custom:200:70:55@40', 'blue'] });
+  check('相棒の色は、濃さ(@NN)を残し、染めていない部位も同じ位置に空で残す', dyed && JSON.stringify(dyed.mc) === JSON.stringify(['', 'red@60', '', 'custom:200:70:55@40', 'blue']), JSON.stringify(dyed && dyed.mc));
+  const multiSrc = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/77-screen-rhythm-multi.jsx'), 'utf8');
+  check('相棒の絵は、色を詰めずに部位の順のまま渡す', /masuColors=\{Array\.isArray\(m\.mc\) \? m\.mc\.map\(\(c\) => c \|\| null\)/.test(multiSrc) && !/m\.mc\.filter\(Boolean\)/.test(multiSrc));
 }
 
 console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');

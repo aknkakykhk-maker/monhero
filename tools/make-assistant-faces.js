@@ -71,6 +71,14 @@ const PER_ASSISTANT_BASE = {
   // 口が入らなかった(占有96%)。頭の高さより広く切り出して、みゅあ・きき・ももすけと
   // 同じくらいの「引き」にそろえる。skip を負にしているのは枠を上へ広げるため。
   dra: { headRatio: 1.02, headTopSkip: -0.05 },
+  // あつ(2026-10-22)は 768x1024 の腰から上の絵で、頭の上に王冠がある。既定(0.46・0.09)だと寄りすぎて王冠が切れた(占有79〜91%)。
+  // 2026-10-22 社長「顔アイコンをもっと近くにしたい」→ 0.40・0.05 へ寄せたら「寄せ過ぎ」→ 3案から社長が選んだ A(前の 0.62 と 0.40 の中間)の 0.51・0.0。
+  //   王冠は全部見える
+  //   髪が左へ広がるぶん、頭の形の真ん中より顔が右に出るので、枠を右へずらして顔を真ん中へ
+  atsu: { headRatio: 0.51, headTopSkip: 0.0, headShiftX: 0.06 },
+  // きゅうこ(2026-10-22)は 384x512 の胸から上の絵。社長が4案から選んだ B「頭ぜんぶ」(元絵の (45,20)〜(345,320) の正方形)に合わせた
+  //   輪郭の高さ 505px(上端7)に対して一辺300 → ratio 0.594、上端20 → skip 0.026
+  kyuko: { headRatio: 0.594, headTopSkip: 0.026 },
 };
 
 // 着替えの絵(2026-10-04 ハロウィン衣装)は構図が元の服と違う(みゅあは縦長の全身、ききとももすけは正方形のバストアップ)ので、別の切り出し方を使う
@@ -140,6 +148,8 @@ const run = async () => {
     const tune = PER_ASSISTANT[prefix] || {};
     const headRatio = Number.isFinite(tune.headRatio) ? tune.headRatio : HEAD_RATIO;
     const headTopSkip = Number.isFinite(tune.headTopSkip) ? tune.headTopSkip : HEAD_TOP_SKIP;
+    // headShiftX … 切り出す枠を横へずらす割合(枠の一辺に対して。正は右)。髪が片側へ大きく広がる絵で、頭の形の真ん中と顔の真ん中がずれるときに使う
+    const headShiftX = Number.isFinite(tune.headShiftX) ? tune.headShiftX : 0;
     const img = await loadImage(path.join(srcDir, file));
     const src = createCanvas(img.width, img.height);
     const sctx = src.getContext('2d');
@@ -150,7 +160,7 @@ const run = async () => {
     const side = Math.round(height * headRatio);
     let sy = Math.round(bounds.top + height * headTopSkip);
     const cx = headCenterX(sctx, img.width, sy, side);
-    let sx = Math.round(cx - side / 2);
+    let sx = Math.round(cx - side / 2 + side * headShiftX);
     sx = Math.max(0, Math.min(img.width - side, sx));
     sy = Math.max(0, Math.min(img.height - side, sy));
     const out = createCanvas(OUT_SIZE, OUT_SIZE);

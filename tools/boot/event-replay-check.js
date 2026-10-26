@@ -32,7 +32,7 @@ const has = (needle) => source.includes(needle);
 // --- データ構造 ---
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS,ASSISTANT_KIKI_INTRO,ASSISTANT_KIKI_INTRO_CALLS,ASSISTANTS,ASSISTANT_EXPRESSIONS,assistantFaceImage};`, ctx);
+vm.runInContext(`${assistantsSrc}\nglobalThis.__e={EVENT_REPLAYS,ASSISTANT_KIKI_INTRO,ASSISTANT_KIKI_INTRO_CALLS,ASSISTANTS,ASSISTANT_EXPRESSIONS,assistantFaceImage,eventScriptForPlayer};`, ctx);
 const { EVENT_REPLAYS: list, ASSISTANT_KIKI_INTRO: kikiScript, ASSISTANT_KIKI_INTRO_CALLS: kikiCalls, ASSISTANTS, ASSISTANT_EXPRESSIONS, assistantFaceImage } = ctx.__e;
 
 check('共通のイベント回想一覧がデータで持たれている', Array.isArray(list) && list.length >= 1, `${list ? list.length : 0}件`);
@@ -78,6 +78,11 @@ check('一覧の各行に日付を出す', (source.match(/data-event-replay-date
   check('ハロウィン・ナイトは第1部から終章までお話の順に並ぶ',
     part('halloween_night_2026_part1') === 0 && part('raid_jack_story_2') < part('raid_jack_story_3') && part('raid_jack_story_5') < part('raid_jack_story_6')
       && part('raid_jack_story_6') < part('raid_jack_ending_cleared'), hw.join(' > '));
+  // 2026-10-23 社長「あつときゅうこは助手のお話のほうがいいんじゃない？」。助手の加入のお話は「助手のお話」に、日付の順で並ぶ
+  const aw = (groups.find(g => g.id === 'assistant') || { events: [] }).events.map(ev => ev.id);
+  const uw = (groups.find(g => g.id === 'update') || { events: [] }).events.map(ev => ev.id);
+  check('「助手のお話」は きき → ももすけ → あつ → きゅうこ の加入のお話(新しい遊びのお話には入らない)',
+    aw.join() === 'kiki_intro,momosuke_intro,atsu_join_2026_10_22,kyuko_join_2026_10_22' && !uw.includes('atsu_join_2026_10_22') && !uw.includes('kyuko_join_2026_10_22'), aw.join(' > '));
   // 知らない・書き忘れの group は FALLBACK へ入り、一覧から消えない
   const c4 = { EVENT_REPLAYS: [{ id: 'x', date: '2026-01-01 00:00', group: 'nazo' }, { id: 'y', date: '2026-01-02 00:00' }] };
   vm.createContext(c4);
@@ -182,11 +187,13 @@ if (from >= 0 && to > from) {
   const transformed = babel.transformSync(
     'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, storyCastOf, AssistantFace,\n'
     + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
-    + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID }) => (<>\n'
+    + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID, eventScriptForPlayer, rhythmEventStorySeen }) => (<>\n'
     + replayBlock + '\n</>);\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'event-replay-check.jsx' });
   const moduleScope = { exports: {} };
-  new Function('module', 'exports', 'React', transformed.code)(moduleScope, moduleScope.exports, React);
+  // お話・お知らせの文は言葉の区切りの部品(21-assistant.jsx の bubbleWrap)を通して描く(2026-10-24)。ここでは文の中身だけを見るので、そのまま返す
+  const BUBBLE_WRAP_STUB = 'const bubbleWrap = (t) => t, bubbleWrapStyle = () => undefined;\n';
+  new Function('module', 'exports', 'React', BUBBLE_WRAP_STUB + transformed.code)(moduleScope, moduleScope.exports, React);
   const render = (step) => ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.Screen, {
     eventReplay: { id: 'kiki_intro', step },
     setEventReplay: () => {},
@@ -209,6 +216,8 @@ if (from >= 0 && to > from) {
     breederName: 'テストブリーダー',
     markRhythmEventStorySeen: () => {},
     MONBEAT_CUP_STORY_ID: 'monbeat_cup_2026_09',
+    // あつの解放で行を選ぶ(2026-10-23)。きき加入の会話は印が無いので、台本はそのまま
+    eventScriptForPlayer: ctx.__e.eventScriptForPlayer, rhythmEventStorySeen: [],
   }));
   const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   const first = render(0);

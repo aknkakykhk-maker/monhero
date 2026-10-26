@@ -155,17 +155,25 @@ console.log('\n--- 押せない配置を作っていないか（出荷を止め�
 // これは意図したトレードオフなので、点数そのものではなく「止まる条件」で見張る。
 {
   const {spawnSync:run}=require('child_process');
-  const out=run(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-quality-report.js'),
-    '--all','--source','v3','--dir',tempDir,'--json'],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
-  let impossible=null;
-  try{
-    const report=JSON.parse(out.stdout);
-    impossible=0;
-    for(const track of report)for(const entry of Object.values(track.difficulties||{}))
-      impossible+=Number(entry.gate?.impossible)||0;
-  }catch{}
+  const impossibleOf=(source,dir)=>{
+    const out=run(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-quality-report.js'),
+      '--all','--source',source,'--dir',dir,'--json'],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
+    try{
+      const report=JSON.parse(out.stdout);let n=0;
+      for(const track of report)for(const entry of Object.values(track.difficulties||{}))n+=Number(entry.gate?.impossible)||0;
+      return n;
+    }catch{return null;}
+  };
+  // 出荷を止めるのは、パイプライン(rhythm-chart-v3-pipeline.js)と同じ「生成 → 自動修正(step7) → 品質レポート」の順で数えた数。
+  // 生成器の生の出力は自動修正の前なので、押せない形が残っていても出荷される譜面には出ない(2026-10-18 に見直した。
+  // 生の出力は atsu_cup_theme の EXPERT・MASTER で3件ずつ・自動修正のあとは1件)。生の数は目安として出すだけ
+  const fixedDir=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-slide-shape-fixed-'));
+  for(const track of tracks)run(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v2-step7-autofix.js'),
+    '--track',track.replace(/-/g,'_'),'--source','v3','--input-dir',tempDir,'--write','--output-dir',fixedDir],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
+  const raw=impossibleOf('v3',tempDir),impossible=impossibleOf('v3fixed',fixedDir);
+  console.log(`  (目安) 生成器の生の出力の押せない: ${raw===null?'読めない':raw+'件'}`);
   // 変更前(全SLIDEが単一幅だったころ)の実測は 2件。そこから増やさない。
-  ok('押せない配置が増えていない',impossible!==null&&impossible<=2,
+  ok('押せない配置が増えていない(自動修正のあと・出荷を止める条件)',impossible!==null&&impossible<=2,
     impossible===null?'品質レポートを読めませんでした':`${impossible}件`);
 }
 

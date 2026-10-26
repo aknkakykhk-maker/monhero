@@ -95,8 +95,9 @@ check('控えの判断と浮いた帯の拾いで、指の高さと帯の高さ�
   /const heightMismatch=note=>\{/.test(src)
   && /if\(note\.activePointerId===key\)continue;[^\n]*\n\s*if\(heightMismatch\(note\)\)continue;/.test(src)
   && /if\(tapOnly\)continue;[^\n]*\n\s*if\(heightMismatch\(note\)\)continue;/.test(src));
-check('空中スライドも、終わりの100msでは指の外れで切らない',
-  /if\(session\.kind==='SLIDE'&&chartNow>=Number\(session\.note\?\.endTimeMs\)-RHYTHM_HOLD_END_TRACKING_SKIP_MS\)return;/.test(src));
+// 2026-10-16: 空中スライドも地上と同じく、外れても途中で切らない(チェックポイントで判定を下げる)。終わりの100msに限らず、SLIDE は切る処理へ進まない
+check('空中スライドも、指の外れで切らない(地上と同じくチェックポイントで判定する)',
+  /if\(session\.kind==='SLIDE'(\|\|session\.note\?\._rhythmTickRules===true)?\)return;/.test(src)&&!/RHYTHM_SKY_SLIDE_CUT_GRACE_MS:/.test(src));
 check('上下クロス(地上の帯と空中の帯)では、指の高さが相手の帯の高さと合わない結び直しをしない',
   /const slideSwapLayerMismatch=\(note,pos,chartNow\)=>\{/.test(src)
   && /if\(slideSwapLayerMismatch\(other\.note,myPos,otherNow\)\|\|slideSwapLayerMismatch\(session\.note,otherPos,myNow\)\)continue;/.test(src));

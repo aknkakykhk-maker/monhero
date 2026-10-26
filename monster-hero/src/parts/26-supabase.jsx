@@ -1416,7 +1416,7 @@ const RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT = 50;
 const rhythmTotalRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_total_rankings/i.test(text)) return false;
+  if (!/rhythm2?_total_rankings/i.test(text)) return false;
   return /PGRST205|PGRST200|42P01|does not exist|Could not find the/i.test(text);
 };
 const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLAY_LIMIT, identityKeys=null, requestId='untracked' } = {}) => {
@@ -1426,7 +1426,7 @@ const sbFetchRhythmTotalRankingsRaw = async ({ limit=RHYTHM_TOTAL_RANKING_DISPLA
     ? `&identity_key=in.(${identityKeys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const select = rankingSelectWithProfileFrame(RHYTHM_TOTAL_RANKING_SELECT);
-  const url = `${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`
+  const url = rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rhythm_total_rankings?select=${select}`)
     + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`;
   rankingLog(requestId, 'rhythm-total-request-start', { limit, identityKeys, url, view: 'rhythm_total_rankings' });
   const controller = new AbortController();
@@ -1526,7 +1526,7 @@ const RHYTHM_EVENT_TOTAL_BONUS_SELECT = `${RHYTHM_EVENT_TOTAL_BONUS_SELECT_BASE}
 const rhythmEventRankingMissing = (status, body) => {
   if (status !== 404 && status !== 400) return false;
   const text = String(body || '');
-  if (!/rhythm_week_window|rhythm_week_score_totals|rhythm_event_song_bests|rhythm_event_totals/i.test(text)) return false;
+  if (!/rhythm_week_window|rhythm2?_week_score_totals|rhythm2?_event_song_bests|rhythm2?_event_totals/i.test(text)) return false;
   return /PGRST202|PGRST205|PGRST200|42P01|42883|does not exist|Could not find the/i.test(text);
 };
 // 「party という列は無い」という応答かどうか(SQL未適用の環境)。
@@ -1628,13 +1628,13 @@ const sbFetchRhythmWeekWindow = async ({ requestId = 'untracked' } = {}) => {
   return { startMs, endMs };
 };
 // 期間×対象曲の「曲ごとベスト」。部門1つぶん(=曲1つぶん)を取りにいく
-const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   const body = { song_ids: [songId], from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() };
   const askRaw = (select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-song', requestId,
   });
@@ -1643,7 +1643,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   // 関数がまだ無い環境では加点なしへ戻す(順位は出る。加点と内訳だけ出ない)
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_song_bests_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
         + `&order=score.desc,scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-song-bonus', requestId,
     });
@@ -1674,7 +1674,7 @@ const sbFetchRhythmEventSongBestsRaw = async ({ songId, fromMs, toMs, bonusRates
   }
 };
 // 期間×対象曲の「総合」。対象曲それぞれのその週のベストを単純合算したもの(§6.3)
-const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates = null, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
@@ -1682,7 +1682,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
   // 曲の部門と同じく、加点込みの関数を先に試して、無ければ加点なしへ戻す
   if (bonusRates) {
     const askBonusRaw = (select) => sbFetchRhythmEventRows({
-      url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`
+      url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals_bonus?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
         + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
       body: { ...body, bonus_rates: bonusRates }, label: 'rhythm-event-total-bonus', requestId,
     });
@@ -1699,7 +1699,7 @@ const sbFetchRhythmEventTotalsRaw = async ({ songIds, fromMs, toMs, bonusRates =
     }
   }
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_event_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body, label: 'rhythm-event-total', requestId,
   }), RHYTHM_EVENT_TOTAL_SELECT);
@@ -1731,12 +1731,12 @@ const rhythmEventPlayCountsFromRow = (value) => {
   return out;
 };
 // 週間ランキング(累計スコア)。対象曲を持たないので、渡すのは期間だけ
-const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' }) => {
+const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' , legacyView = false}) => {
   const filter = Array.isArray(identityKeys) && identityKeys.length
     ? `&identity_key=in.(${identityKeys.map(k => encodeURIComponent(`"${k}"`)).join(',')})`
     : '';
   return askWithProfileFrame((select) => sbFetchRhythmEventRows({
-    url: `${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`
+    url: rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/rhythm_week_score_totals?select=${select}`, rhythmRankingPeriodVersion(fromMs, toMs, legacyView))
       + `&order=total_score.desc,last_scored_at.asc&limit=${limit}${filter}`,
     body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() },
     label: 'rhythm-week-total', requestId,
@@ -1751,12 +1751,12 @@ const sbFetchRhythmWeekTotalsRaw = async ({ fromMs, toMs, limit = RHYTHM_EVENT_R
 const RHYTHM_TIE_PAD = 20;
 let _rhythmPreciseUnavailable = false;
 const rhythmPreciseMissing = (status, text) => status === 404 || /PGRST202|42883|rhythm_(total|week|event)_precise/i.test(String(text || ''));
-const sbFetchRhythmPreciseMap = async ({ fn, body, identityKeys, requestId }) => {
+const sbFetchRhythmPreciseMap = async ({ fn, body, identityKeys, requestId, version }) => {
   if (_rhythmPreciseUnavailable || !identityKeys.length) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, {
+    const res = await fetch(rhythmRankingUrl(`${SUPABASE_URL}/rest/v1/rpc/${fn}?select=identity_key,total_precise`, version), {
       method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ ...(body || {}), identity_keys: identityKeys }), signal: controller.signal,
     });
     const text = await res.text();
@@ -1785,7 +1785,7 @@ const rhythmTieSortRows = (rows, { scoreKey, timeKey, preciseOf }) => rows
   .sort((a, b) => (b.score - a.score) || (b.precise - a.precise)
     || ((Number.isFinite(a.time) && Number.isFinite(b.time)) ? a.time - b.time : 0) || (a.index - b.index))
   .map(item => item.row);
-const rhythmTieFix = async ({ rows, limit, scoreKey, timeKey, fn = null, body = null, requestId }) => {
+const rhythmTieFix = async ({ rows, limit, scoreKey, timeKey, fn = null, body = null, requestId, version = undefined }) => {
   const list = Array.isArray(rows) ? rows : [];
   if (list.length < 2) return list.slice(0, limit);
   // 同じ点の人がいなければ、聞きに行かずにそのまま返す
@@ -1795,7 +1795,7 @@ const rhythmTieFix = async ({ rows, limit, scoreKey, timeKey, fn = null, body = 
   if (fn) {
     const tied = new Set(scores.filter((score, i) => scores.indexOf(score) !== i));
     const keys = [...new Set(list.filter(row => tied.has(Number(row?.[scoreKey]) || 0)).map(row => row?.identity_key).filter(k => typeof k === 'string' && k))];
-    const map = await sbFetchRhythmPreciseMap({ fn, body, identityKeys: keys, requestId });
+    const map = await sbFetchRhythmPreciseMap({ fn, body, identityKeys: keys, requestId, version });
     if (!map) return list.slice(0, limit);
     preciseOf = row => map.get(row?.identity_key) || 0;
   } else {
@@ -1815,14 +1815,14 @@ const sbFetchRhythmWeekTotals = async (options = {}) => {
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmWeekTotalsRaw(options);
   const rows = await sbFetchRhythmWeekTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_week_precise',
-    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId });
+    body: { from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
 };
 const sbFetchRhythmEventTotals = async (options = {}) => {
   const { songIds, fromMs, toMs, limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
   if (!rhythmTieWanted(identityKeys)) return sbFetchRhythmEventTotalsRaw(options);
   const rows = await sbFetchRhythmEventTotalsRaw({ ...options, limit: limit + RHYTHM_TIE_PAD });
   return rhythmTieFix({ rows, limit, scoreKey: 'total_score', timeKey: 'last_scored_at', fn: 'rhythm_event_precise',
-    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId });
+    body: { song_ids: songIds, from_at: new Date(fromMs).toISOString(), to_at: new Date(toMs).toISOString() }, requestId, version: rhythmRankingPeriodVersion(fromMs, toMs, options.legacyView === true) });
 };
 const sbFetchRhythmEventSongBests = async (options = {}) => {
   const { limit = RHYTHM_EVENT_RANKING_DISPLAY_LIMIT, identityKeys = null, requestId = 'untracked' } = options;
@@ -1926,6 +1926,186 @@ const sbSendRhythmTouchDiag = async (row) => {
       ...(controller ? { signal: controller.signal } : {})
     });
     if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+// ===== レイドの1回ごとの記録(2026-10-21・下準備) =====
+// 社長「ティア表がそのモンスターの勇者モンの評価に寄りすぎ」→ 実戦の中身を集める仕組み。
+// 記録するのはレイド(レイドバトル・グランドスラム・モンヒロビート挑戦)と、下のタクティクスプロ(ベースモンだけの回)の2つだけ
+// (2026-10-21 社長「レイド、タクティクスプロのベースモンを使ったもののデータでいい。育てたモンスターははかれない」)。通常のバトルは送らない。
+// ★RELEASE_FLAGS.battleLog が真になるまで何も送らない(いまは偽)。表 raid_battle_logs もまだ作っていない(docs/sql/battle-log/BATTLE_LOGS_APPLY.sql)。
+// ★送るのは数字と monsterId と段階だけ。名前・ブリーダーID・アイコン・マスモンの個体名や育て方は送らない。
+// ★raid_jack_hits(与ダメージ・討伐の正本)・ランキング・討伐報酬とは別。送れなくてもゲームは何も変わらない(黙って捨てる。やり直さない)。
+//   表が無い(404)・権限が無い(401/403)と分かったら、ページを閉じるまで送らない。手元のサーバーからは送らない(sbTelemetryLocal)。設計: docs/spec/BATTLE_LOG.md
+const RAID_BATTLE_LOG_TABLE = 'raid_battle_logs';
+const BATTLE_LOG_SCHEMA_VERSION = 1;
+let raidBattleLogDisabled = false;
+const battleLogInt = (v, lo, hi) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : null; };
+const battleLogId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(v) ? v : null);
+// 1行の形を作る(純粋な関数。送るかどうかは決めない)。
+//   input: { party:[{ role, monsterId }], score, units:{ [monsterId]: { dmg, ex, unique, taken } },
+//            raid:{ event, kind:'a'|'b', tier, source:'battle'|'rhythm', damage, defeated, turns } }
+//   a=レイドバトル・b=グランドスラム・source rhythm=モンヒロビート挑戦(編成が無いので勇者モンが無くても作る)。
+//   units は「次の段」で数え始める(いまは渡さないので空)。決めた4つの数だけ通し、ほかの項目は捨てる
+const buildRaidBattleLogRow = (input) => {
+  const src = input && typeof input === 'object' ? input : {};
+  const rr = src.raid && typeof src.raid === 'object' ? src.raid : null;
+  if (!rr || (rr.kind !== 'a' && rr.kind !== 'b')) return null;
+  const eventId = typeof rr.event === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(rr.event) ? rr.event : null;
+  const tier = battleLogInt(rr.tier, 1, 10);
+  const source = rr.source === 'rhythm' ? 'rhythm' : 'battle';
+  const party = Array.isArray(src.party) ? src.party : [];
+  const heroSlot = party.find(p => p && p.role === 'hero') || party[0] || null;
+  const hero = heroSlot ? battleLogId(heroSlot.monsterId) : null;
+  if (!eventId || !tier || (!hero && source !== 'rhythm')) return null;
+  const allies = party.filter(p => p && p !== heroSlot).map(p => battleLogId(p.monsterId)).filter(Boolean).slice(0, 3);
+  const turns = battleLogInt(rr.turns, 0, 1000);
+  const units = {};
+  for (const [id, u] of Object.entries(src.units && typeof src.units === 'object' ? src.units : {})) {
+    if (!battleLogId(id) || !u || typeof u !== 'object') continue;
+    units[id] = { dmg: battleLogInt(u.dmg, 0, 1e12) || 0, ex: battleLogInt(u.ex, 0, 1000) || 0, unique: battleLogInt(u.unique, 0, 1000) || 0, taken: battleLogInt(u.taken, 0, 1e12) || 0 };
+  }
+  return {
+    event_id: eventId,
+    kind: rr.kind,
+    tier,
+    source,
+    result: rr.defeated === true ? 'defeated' : 'end',
+    damage: battleLogInt(rr.damage, 0, 1e12),
+    turns: turns && turns > 0 ? turns : null,
+    score: battleLogInt(src.score, 0, 1e15),
+    hero,
+    allies,
+    units,
+    app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32),
+    schema_version: BATTLE_LOG_SCHEMA_VERSION,
+  };
+};
+// ===== タクティクスプロの1回ぶんの記録(2026-10-21 社長「タクティクスバトルのプロモード仕様は全部取ってほしい」・下準備) =====
+// 勝ち・負け・途中でやめた回のどれも、プロモードの仕様で決まるものを漏れなく1回1行にする(表 tactics_pro_logs・docs/spec/BATTLE_LOG.md)。
+// ★ベースモン(育てていない基本の強さ)で戦う回だけ。入れ物を作るかは 60-app.jsx の confirmProParty が決める(マスモンが混ざれば作らない)
+// ★RELEASE_FLAGS.battleLog が偽のあいだは、入れ物も作らない(tacticsProLogStart が null を返す)ので、何も貯めず何も送らない。
+// ★入れるのは monsterId・アシカの id・数・難易度だけ。名前・ブリーダーID・マスモンの中身は入れない。
+// ★大きさの上限: 1回 TACTICS_PRO_LOG_MAX_BYTES。超えそうなら古い出来事(events)から捨てる(WAVE ごとのまとめは残す)
+const TACTICS_PRO_LOG_TABLE = 'tactics_pro_logs';
+const TACTICS_PRO_LOG_MAX_BYTES = 24000;
+const TACTICS_PRO_LOG_MAX_EVENTS = 400;
+const tpId = (v) => battleLogId(typeof v === 'string' ? v : (v && (v.monsterId || v.id)));
+const tpIds = (list, max = 10) => (Array.isArray(list) ? list : []).map(tpId).filter(Boolean).slice(0, max);
+// 1回ぶんの入れ物を作る。印が偽なら null(呼ぶ側は null なら何もしない)
+const tacticsProLogStart = ({ difficulty, hero, heroDistance, candidates, extreme } = {}) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return null;
+  return {
+    v: 1, startedAt: Date.now(),
+    difficulty: typeof difficulty === 'string' ? difficulty.slice(0, 32) : '',
+    extreme: typeof extreme === 'string' ? extreme.slice(0, 32) : null,
+    hero: tpId(hero), heroDistance: battleLogInt(heroDistance, 0, 3),
+    candidates: tpIds(candidates, 5),       // 始める前に選んだ供モンの候補5体
+    assists: [],                            // 選んだアシカ [{ wave, id }]
+    waves: [],                              // WAVE ごとのまとめ(下の tacticsProLogWaveStart / WaveEnd)
+    events: [],                             // そのほかの出来事 [type, wave, turn, ...]
+    units: {},                              // { monsterId: { dmg, taken, ex, unique, downs } }(次の段で数える)
+    end: null,
+  };
+};
+const tpWave = (log) => (log && log.waves.length ? log.waves[log.waves.length - 1] : null);
+const tpUnit = (log, id) => { const k = tpId(id); if (!log || !k) return null; return (log.units[k] = log.units[k] || { dmg: 0, taken: 0, ex: 0, unique: 0, downs: 0 }); };
+const tpPush = (log, ev) => { if (!log) return; log.events.push(ev); if (log.events.length > TACTICS_PRO_LOG_MAX_EVENTS) log.events.splice(0, log.events.length - TACTICS_PRO_LOG_MAX_EVENTS); };
+// WAVE の始まり: 並び(勇者モン・供モンと立っている間合い)と敵
+const tacticsProLogWaveStart = (log, { wave, party, enemy } = {}) => {
+  if (!log) return;
+  log.waves.push({ wave: battleLogInt(wave, 1, 99), party: (Array.isArray(party) ? party : []).map(p => p && { id: tpId(p), dist: battleLogInt(p.dist, 0, 3) }).filter(p => p && p.id).slice(0, 4),
+    enemy: typeof enemy === 'string' ? enemy.slice(0, 40) : null, offered: null, picked: null, training: null, turns: null, lifeLeft: null });
+};
+// 供モンの候補として見せた3体と、選んだ1体
+const tacticsProLogOffer = (log, offered) => { const w = tpWave(log); if (w) w.offered = tpIds(offered, 4); };
+const tacticsProLogPick = (log, picked) => { const w = tpWave(log); if (w) w.picked = tpId(picked); };
+// アシカ(アシストカード)の選択
+const tacticsProLogAssist = (log, assistId) => { if (log && typeof assistId === 'string') log.assists.push({ wave: (tpWave(log) || {}).wave || 0, id: assistId.slice(0, 40) }); };
+// トレーニングの選び方(選んだ枠と中身。起こした枠も)
+const tacticsProLogTraining = (log, picks) => {
+  const w = tpWave(log); if (!w) return;
+  w.training = (Array.isArray(picks) ? picks : []).slice(0, 8).map(p => p && typeof p === 'object'
+    ? (p.revive != null ? { revive: battleLogInt(p.revive, 0, 3) } : { slot: battleLogInt(p.slot, 0, 3), id: typeof p.id === 'string' ? p.id.slice(0, 40) : null })
+    : (typeof p === 'string' ? { id: p.slice(0, 40) } : null)).filter(Boolean);
+};
+// EX・固有技を使った(誰が・何ターン目)
+const tacticsProLogSkill = (log, kind, monsterId, turn) => {
+  const u = tpUnit(log, monsterId); if (!u) return;
+  if (kind === 'ex') u.ex++; else if (kind === 'unique') u.unique++;
+  tpPush(log, [kind, (tpWave(log) || {}).wave || 0, battleLogInt(turn, 0, 999), tpId(monsterId)]);
+};
+// ダメージ(与えた・受けた)。from/to は monsterId(味方)か敵のキー
+const tacticsProLogDamage = (log, { by, to, amount, taken } = {}) => {
+  const n = battleLogInt(amount, 0, 1e12) || 0; if (!log || !n) return;
+  const u = tpUnit(log, taken ? to : by); if (!u) return;
+  if (taken) u.taken += n; else u.dmg += n;
+};
+// 味方が倒れた(倒した敵のキーも)
+const tacticsProLogDown = (log, monsterId, enemyKey, turn) => {
+  const u = tpUnit(log, monsterId); if (!u) return; u.downs++;
+  tpPush(log, ['down', (tpWave(log) || {}).wave || 0, battleLogInt(turn, 0, 999), tpId(monsterId), typeof enemyKey === 'string' ? enemyKey.slice(0, 40) : null]);
+};
+// WAVE の終わり: かかったターンと、1体ずつの残りライフ
+const tacticsProLogWaveEnd = (log, { turns, units } = {}) => {
+  const w = tpWave(log); if (!w) return;
+  w.turns = battleLogInt(turns, 0, 999);
+  w.lifeLeft = (Array.isArray(units) ? units : []).map(u => u && { id: tpId(u), hp: battleLogInt(u.hp, 0, 1e9), max: battleLogInt(u.maxHp, 0, 1e9) }).filter(u => u && u.id).slice(0, 4);
+};
+// 終わり: 結果('clear'・'lose'・'retire')、届いた WAVE、累計ターン、スコア、負けた原因の敵
+const tacticsProLogFinish = (log, { result, reachedWave, turns, score, cause } = {}) => {
+  if (!log) return null;
+  log.end = { result: ['clear', 'lose', 'retire'].includes(result) ? result : 'lose', reachedWave: battleLogInt(reachedWave, 0, 99), turns: battleLogInt(turns, 0, 100000), score: battleLogInt(score, 0, 1e15),
+    cause: typeof cause === 'string' ? cause.slice(0, 40) : null };
+  return log;
+};
+// 送る1行の形。大きすぎるときは出来事(events)の古いほうから捨てる
+const buildTacticsProLogRow = (log) => {
+  if (!log || !log.end || !log.hero || !log.difficulty) return null;
+  const detail = { v: log.v, extreme: log.extreme, heroDistance: log.heroDistance, candidates: log.candidates, assists: log.assists.slice(0, 20), waves: log.waves.slice(0, 20), units: log.units, events: log.events.slice() };
+  while (detail.events.length && JSON.stringify(detail).length > TACTICS_PRO_LOG_MAX_BYTES) detail.events.splice(0, Math.ceil(detail.events.length / 4));
+  if (JSON.stringify(detail).length > TACTICS_PRO_LOG_MAX_BYTES) return null;
+  return {
+    difficulty: log.difficulty, result: log.end.result, reached_wave: log.end.reachedWave, turns: log.end.turns, score: log.end.score,
+    hero: log.hero, candidates: log.candidates, cause: log.end.cause,
+    seconds: battleLogInt((Date.now() - log.startedAt) / 1000, 0, 86400),
+    detail, app_build: (typeof BUILD_DATE === 'string' ? BUILD_DATE : '').slice(0, 32), schema_version: 1,
+  };
+};
+let tacticsProLogDisabled = false;
+const sbSendTacticsProLog = async (row) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (tacticsProLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${TACTICS_PRO_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) tacticsProLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+const sbSendRaidBattleLog = async (row) => {
+  if (!(typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.battleLog === true)) return false;
+  if (raidBattleLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RAID_BATTLE_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) raidBattleLogDisabled = true;
     return res.ok;
   } catch {
     return false;

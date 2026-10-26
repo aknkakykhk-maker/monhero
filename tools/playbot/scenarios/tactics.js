@@ -95,7 +95,8 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     }
   }
   // 難易度を名前で指定したとき(Master など)は、いちばん前へ戻してから、その札まで送る(すべて解放だと極限まで開いているため)
-  if (difficulty && !['max', 'keep'].includes(difficulty)) {
+  // 札を目当ての難易度まで送る(押す直前に札が戻っていたときに、もう1回送り直すため関数にした。2026-10-16)
+  const navTo = async () => {
     for (let k = 0; k < 25; k++) {
       const before = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || '');
       const moved = await page.evaluate(() => { const b = document.querySelector('button[aria-label="前の難易度"]'); if (!b || b.disabled) return false; b.click(); return true; });
@@ -118,7 +119,10 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
       if (!moved) break;
       for (let w = 0; w < 30 && (await onKey()) === key; w++) await s.wait(150);
     }
-    if ((await onKey()) !== difficulty) return `no-difficulty:${difficulty}`;
+    return (await onKey()) === difficulty;
+  };
+  if (difficulty && !['max', 'keep'].includes(difficulty)) {
+    if (!(await navTo())) return `no-difficulty:${difficulty}`;
   }
   // ★難易度の札(article[data-difficulty-card])は全部の難易度ぶん並んでいて、どの札にも「この難易度で挑戦」がある。
   //   文字で探して押すと、いつも先頭の Beginner を押してしまう(2026-10-09 まで、ずっと Beginner で戦っていた)。
@@ -126,23 +130,29 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
   // ★難易度を名前で指定したときは、選んでいる札(.on)がその難易度のときだけ押す。.on が見つからないときに先頭の札(Beginner)を押したり、
   //   押せないときに1つ前へ戻したりしない(2026-10-15 レフェリーくん: Expert のつもりの回が Beginner で戦っていた。3本並べで重いとき)
   const named = difficulty && !['max', 'keep'].includes(difficulty);
+  let navRetried = false;
   for (let i = 0; i < 20; i++) {
     if (named) {
       let key = '';
       for (let w = 0; w < 20 && key !== difficulty; w++) { key = await page.evaluate(() => (document.querySelector('article[data-difficulty-card].on') || {}).getAttribute?.('data-difficulty-card') || ''); if (key !== difficulty) await s.wait(250); }
       if (key !== difficulty) return `no-difficulty:${difficulty}(押す前に ${key || '札なし'})`;
     }
-    const r = await page.evaluate((strict) => {
+    const r = await page.evaluate(([strict, want]) => {
       const card = document.querySelector('article[data-difficulty-card].on') || (strict ? null : document.querySelector('article[data-difficulty-card]'));
       if (!card && strict) return { lost: true };
+      // ★名前で指定したときは、押す前に札を確かめる。違えば押さない(押してしまうと、その難易度で始まってしまう)
+      if (strict && card.getAttribute('data-difficulty-card') !== want) return { key: card.getAttribute('data-difficulty-card'), wrong: true };
       if (!card) return { none: true };
       const go = [...card.querySelectorAll('button')].find((x) => /この難易度で挑戦/.test(x.innerText || ''));
       if (!go || go.disabled) return { key: card.getAttribute('data-difficulty-card'), locked: true };
       go.scrollIntoView({ block: 'center' });
       go.click();
       return { key: card.getAttribute('data-difficulty-card') };
-    }, named);
+    }, [named, difficulty]);
     if (r.lost) continue;
+    // ★押す直前に札が戻っていたときは、押さずに1回だけ送り直してやり直す(2026-10-16 セコンドくん: ゴースト Expert で Beginner の札)
+    if (r.wrong && !navRetried) { navRetried = true; await navTo(); continue; }
+    if (r.wrong) return `no-difficulty:${difficulty}(押す前に ${r.key}。送り直しても合わない)`;
     if (named && r.key && r.key !== difficulty) return `no-difficulty:${difficulty}(押したのは ${r.key})`;
     if (named && r.locked) return `no-difficulty:${difficulty}(押せない)`;
     if (r.none && !named) { if (await s.tapLabel(/この難易度で挑戦/, 1500)) break; }
@@ -199,6 +209,26 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     const step = await page.evaluate(() => {
       const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
       const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
+      // 2026-10-19 から、プロモードの編成は「上の枠へ入れる → 勇者モンを選ぶ」(ProPartyPicker)。選びたい子(__pbWant)を先に入れ、先頭の子を勇者モンにする
+      if (document.querySelector('[data-pro-party]')) {
+        const want = window.__pbWant || [];
+        const done = document.querySelector('[data-pro-party-done]');
+        if (done) {
+          if (!done.disabled) { done.click(); return 'pro-done'; }
+          const slots = [...document.querySelectorAll('[data-pro-party-slot][aria-label$="を勇者モンにする"]')];
+          const h = slots.find((x) => want[0] && x.getAttribute('aria-label').startsWith(want[0])) || slots[0];
+          if (h) { h.click(); return `pro-hero:${h.getAttribute('aria-label').replace(/を勇者モンにする$/, '')}`; }
+        }
+        const next = document.querySelector('[data-pro-party-next]');
+        if (next && !next.disabled) { next.click(); return 'pro-next'; }
+        const chosen = new Set([...document.querySelectorAll('[data-pro-party-slot][aria-label$="を枠から外す"]')].map((x) => x.getAttribute('aria-label').replace(/を枠から外す$/, '')));
+        const put = live.find((x) => /を枠に入れる$/.test(x.getAttribute('aria-label') || '') && !chosen.has(x.getAttribute('aria-label').replace(/を枠に入れる$/, '')));
+        const tiles = [...document.querySelectorAll('[data-pro-pick-scroll] button[aria-label$="を見る"]')].filter((x) => !x.disabled && !chosen.has(x.getAttribute('aria-label').replace(/を見る$/, '')));
+        const wantTile = tiles.find((x) => want.includes(x.getAttribute('aria-label').replace(/を見る$/, '')));
+        if (put && (!wantTile || put.getAttribute('aria-label').replace(/を枠に入れる$/, '') === wantTile.getAttribute('aria-label').replace(/を見る$/, ''))) { put.click(); return `pro-put:${put.getAttribute('aria-label').replace(/を枠に入れる$/, '')}`; }
+        const t = wantTile || tiles[0];
+        if (t) { t.click(); return 'pro-focus'; }
+      }
       // ★勇者モン・供モンの画面は、はじめから誰かが選ばれていて「この子で挑む」「供モンNにする」が押せる。
       //   先に決定を押すと、選びたい子ではなく前回の子・一覧の先頭の子になる。選びたい子が画面にいれば、先にその子を押す
       const monsEarly = live.filter((x) => /ライフ\s*\d+ちから|総合力|^この子で挑む$|^供モン\d+にする$/.test(x.textContent.trim()) && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
@@ -223,6 +253,10 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
     });
     if (!step) break;
     // 編成を記録する(勇者モン・供モンの候補5体)
+    // ★2026-10-19 からのプロモードの編成(上の枠へ入れる → 勇者モンを選ぶ)でも記録する。入れた子は候補、勇者モンにした子は勇者モン
+    //   (2026-10-22 まで記録していなかったので、その間のボットの回は勇者モン・候補が空だった。tactics-tier.js はその回を数えない)
+    if (ctx && step.startsWith('pro-put:')) { const nm = step.slice(8); if (nm && !ctx.log.data.build.pool.includes(nm)) ctx.log.data.build.pool.push(nm); }
+    if (ctx && step.startsWith('pro-hero:')) { const nm = step.slice(9); if (nm) { ctx.log.data.build.hero = nm; ctx.log.data.build.pool = ctx.log.data.build.pool.filter((x) => x !== nm); ctx.mem.lastPicked = nm; } }
     if (ctx && step.startsWith('mon:')) {
       const nm = step.slice(4);
       if (/勇者モン/.test(scrName)) ctx.log.data.build.hero = nm;
@@ -286,7 +320,7 @@ const closeExPanel = (s) => s.page.evaluate(() => { const b = document.querySele
 
 // WAVE の合間・報酬えらびなど。人と同じく「次へ進む」を押し、選ぶ画面では1つ選ぶ
 // 取り消し・やり直しも押さない(押すと同じ画面を行ったり来たりする)
-const BACKWARD = /^(キャンセル|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる|降参|取り消す|下げる|選び直す|やり直す|変更せず戻る/;
+const BACKWARD = /^(キャンセル|やめる|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる|降参|取り消す|下げる|選び直す|やり直す|変更せず戻る/;
 // 進むボタン。上にあるものほど先に押す(選ぶ画面で1つ選んだあと、確定 → 次の画面へ)
 const FORWARD = [/^(この供モンを選ぶ|勇者モンに選ぶ|この子で挑む|供モン\d*にする)/, /^(習得する|強化する|決定する|決定|確定)$/, /^(次へ進む|次のWAVEへ|次へ|進む|バトルへ|出撃|出発|OK|受け取る)/, /^アシストカードへ$/];
 async function betweenWaves(s, ctx) {
@@ -537,6 +571,9 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       if (!before.actionEnabled) {
         // 置いた直後の演出のあいだは押せない(最大6秒待つ)
         for (let k = 0; k < 12 && !(await readTactics(s)).actionEnabled; k++) await s.wait(500);
+        // ★「WAVE n リザルト」へ移っていたら、打ち切らずに合間へ進む(2026-10-16 セコンドくん: モノリス Expert W4 で倒した直後、
+        //   リザルトの見出しが h1〜h3 でなく戦いの最中と見て、手札の空のまま実行を待って打ち切りになった)
+        if (!(await readTactics(s)).actionEnabled && await s.page.evaluate(() => /WAVE\s*\d+\s*リザルト/.test((document.body.innerText || '').replace(/\s+/g, ' ')))) { ctx && ctx.log.waveEnd('clear'); continue; }
         if (!(await readTactics(s)).actionEnabled) { await s.addIssue('反応なし', `タクティクスで実行が押せない(手札 ${before.hand.map((c) => `${c.type}${c.usable ? '' : '×'}`).join(' ')})`); break; }
       }
       await tapEl(s, '[data-battle-action]', 'ACTION');
@@ -552,8 +589,19 @@ async function fightTactics(s, stats, { maxMs = 360000, waves = true, speedUp = 
       // ★ヤオビクニの「悠久の刻」(時間停止)を使ったターンは、ターンの数字が進まない(EX の説明どおり)。
       //   手札が配り直されたことでも「動いた」と見る(2026-10-09 はこれを進行停止と見誤っていた)
       const handSig = (t) => (t.hand || []).map((c) => c.label || c.type).join('|');
+      // ★時間停止のターンは、手札が同じ並びに見えることがある(2026-10-16 レフェリーくん: Master W1 で時間停止+ハイガードのあと 60 秒で進行停止)。
+      //   そのターンに時間停止を使っていたら、置いた枚数が 0 に戻り、手札が押せて実行ボタンがあれば「動いた」と見る
+      const timeStopNow = ctx.log.data.ex.slice(exBefore).some((e) => /悠久/.test(e.ex || ''));
       moved = !now.inBattle || now.over || now.turn !== before.turn || now.wave !== before.wave
-        || (k >= 4 && handSig(now) !== handSig(before) && (now.picked || 0) === 0 && now.hand.some((c) => c.usable));
+        || (k >= 4 && handSig(now) !== handSig(before) && (now.picked || 0) === 0 && now.hand.some((c) => c.usable))
+        || (timeStopNow && k >= 4 && (before.picked || 0) > 0 && (now.picked || 0) === 0 && now.hand.some((c) => c.usable) && now.actionPresent);
+      // 時間停止のターンで動かないときは、何が欠けているかを残す(2026-10-16 レフェリーくん: arena-4 でも Master で3回中1回止まる)
+      // 時間停止のターンで 20 秒進まなければ、実行か「ターンを進める」を1回だけ押し直す(押したのが効いていないことがある)
+      if (timeStopNow && !moved && k === 40) {
+        const again = await s.page.evaluate(() => { const p = document.querySelector('[data-tactics-ex-pass]'); if (p && !p.disabled) { p.click(); return 'ターンを進める'; } const a = document.querySelector('[data-battle-action]'); if (a && !a.disabled) { a.click(); return 'ACTION'; } return ''; });
+        console.log(`    [時間停止の待ち] 20秒進まないので押し直した: ${again || '押せるボタンなし'}`);
+      }
+      if (timeStopNow && !moved && k % 10 === 9) console.log(`    [時間停止の待ち] ${k * 0.5}秒 ターン ${before.turn}→${now.turn} 置いた ${before.picked}→${now.picked} 手札 ${(now.hand || []).map((c) => `${c.type}${c.usable ? '' : '×'}`).join(' ')} 実行 ${now.actionPresent ? (now.actionEnabled ? '押せる' : '押せない') : 'なし'} 戦い中 ${now.inBattle}`);
     }
     const after = await brain.readBoard(s);
     // 記録: このターンに出たダメージを、置いたカードの見込みの割合で子ごとに分ける

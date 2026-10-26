@@ -120,12 +120,17 @@ check('1〜3体でも成立する(4体を必須にしない)',
 // ── 同じ能力は2体まで(2026-10-04・ユーザー指示「モンビーのマスモンで状態変化の被りを2つまでに」) ──
 // 本物の能力の表と血統の表をそのまま使う(手で写した値を使うと、値を変えたときにここだけ古いまま残る)
 {
-  const abilities=data.match(/const RHYTHM_MONSTER_ABILITIES=[\s\S]*?const rhythmMonsterAbilityForLineage=[\s\S]*?\|\|null;/)?.[0];
+  // 2026-10-22 子ごとの上書き(rhythmMonsterAbilityForMonster)まで含めて抜き出す
+  const abilities=data.match(/const RHYTHM_MONSTER_ABILITIES=[\s\S]*?const rhythmMonsterAbilityForMonster=[\s\S]*?\n\};/)?.[0];
   const lineageSrc=read('monster-hero/data/lineages.js').match(/const MONSTER_LINEAGE_MAP = \{[\s\S]*?\n\};/)?.[0];
   check('能力の表と血統の表を抽出できる',!!abilities&&!!lineageSrc);
   const real={};vm.createContext(real);
-  vm.runInContext(`${abilities}\n${lineageSrc}\nthis.out={rhythmMonsterAbilityForLineage,MONSTER_LINEAGE_MAP};`,real);
+  vm.runInContext(`${lineageSrc}\nconst monsterLineageOf=baseId=>({main:{id:MONSTER_LINEAGE_MAP[baseId]?.main}});\n${abilities}\nthis.out={rhythmMonsterAbilityForLineage,rhythmMonsterAbilityForMonster,MONSTER_LINEAGE_MAP};`,real);
   context.rhythmMonsterAbilityForLineage=real.out.rhythmMonsterAbilityForLineage;
+  context.rhythmMonsterAbilityForMonster=real.out.rhythmMonsterAbilityForMonster;
+  check('子ごとの上書きが血統より先に効く(ドリーミィ=必死 / 同じイルミネ血統でも上書きの無い子は血統どおり)',
+    real.out.rhythmMonsterAbilityForMonster('Dreamy')?.id==='HISSHI'&&real.out.rhythmMonsterAbilityForLineage('illumine')?.id==='GAMAN'
+    &&real.out.rhythmMonsterAbilityForMonster('Mia')?.id==='GENKI');
   context.monsterLineageOf=baseId=>({main:{id:real.out.MONSTER_LINEAGE_MAP[baseId]?.main}});
   const mk=(id,baseId)=>({id,baseId,name:id});
   // 元気: ミーア・パンドラ・オボロ(主血統がピクシー) / 無敵: イヴリース / 根性: エイキ / 我慢: みたらし

@@ -43,6 +43,10 @@ const seed = () => {
   const fatal = [];
   page.on('pageerror', (e) => fatal.push(e.message));
   await page.addInitScript(seed);
+  // 起動直後に流れるお話(きゅうこの加入など)は見たことにする(2026-10-23 きゅうこの公開で、お話が画面を覆って止まった)
+  await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
+  // 更新履歴の助手の告知も見たことにする(起動直後の「マーケットを見る」を押して、マーケットへ行ってしまった)
+  await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed());
 
   const pointerDown = (find) => page.evaluate((f) => {
     const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)
@@ -68,7 +72,9 @@ const seed = () => {
   const dismissOverlays = async () => {
     for (let i = 0; i < 12; i++) {
       const closed = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
+        // 「スキップ」… HOME やバトルの上に自動で始まる助手たちの会話(ハロウィン・ナイトなど)。回ごとに既読の印が違い増えていくので、
+        //   既読を仕込まずに飛ばす(2026-10-21 会話が HOME をふさぎ、2回目の周回を始められずに落ちていた)
+        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK|スキップ)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         const dialog = document.querySelector('[role="dialog"]');
         if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }
@@ -77,6 +83,23 @@ const seed = () => {
       if (!closed) break;
       await page.waitForTimeout(450);
     }
+  };
+  // AUTO・省エネのように押すたびに切り替わるボタンを、表示が target になるまで押す。
+  // 押したら決め打ちで待たず、表示が変わるまで待つ(2026-10-21: 重いときに書き換えが待ち時間に間に合わず、もう一度押して行き過ぎていた)。
+  // AUTO ボタンは WAVE を倒した直後の「ステータスアップ！」の画面のあいだ消えるので、出るのを待ってから読む・押す
+  const cycleLabelTo = async (prefix, target, tries) => {
+    const sel = `button[aria-label^="${prefix}"]`;
+    const label = () => page.evaluate((q) => document.querySelector(q)?.getAttribute('aria-label') || null, sel);
+    const present = () => page.waitForFunction((q) => !!document.querySelector(q), sel, { timeout: 10000 }).catch(() => {});
+    for (let i = 0; i < tries; i++) {
+      await present();
+      const before = await label();
+      if (before === target) return true;
+      await page.evaluate((q) => document.querySelector(q)?.click(), sel);
+      await page.waitForFunction(([q, b]) => { const x = document.querySelector(q); return !x || x.getAttribute('aria-label') !== b; }, [sel, before], { timeout: 5000 }).catch(() => {});
+    }
+    await present();
+    return (await label()) === target;
   };
   // WAVE と TURN は「ランがどこまで進んだか」の唯一の手がかり。
   // バトル画面を描いていないあいだは読めないので、いったんバトルへ戻してから読む
@@ -105,6 +128,7 @@ const seed = () => {
     //   1回だけ回す検査では、実行中の印の持ち越しを絶対に拾えない。
     const autoLabel = async () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
     const startQuickInfinityRun = async () => {
+    await dismissOverlays();
     await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
     await page.waitForTimeout(600);
     await page.evaluate(() => document.querySelector('[data-battle-system="systemQuick"]')?.click());
@@ -129,12 +153,7 @@ const seed = () => {
       // バトル画面(AUTOボタン)が出るまで待ってから先へ進む
       await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
       // AUTO を ∞ まで回す(OFF → ON → ∞)
-      // AUTO を ∞ まで回す(OFF → ON → ∞)
-      for (let i = 0; i < 3 && (await autoLabel()) !== 'AUTO ∞'; i++) {
-        await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
-        await page.waitForTimeout(900);
-      }
-      return (await autoLabel()) === 'AUTO ∞';
+      return cycleLabelTo('AUTO', 'AUTO ∞', 3);
     };
     check('クイックで∞周回を始められる', await startQuickInfinityRun(), await autoLabel());
 
@@ -177,7 +196,9 @@ const seed = () => {
     const advancedInRhythm = afterRhythm.wave > before.wave || afterRhythm.turn > before.turn || afterRhythm.wave < before.wave;
     check('モンビーを開いているあいだも周回が進む', advancedInRhythm,
       `W${before.wave}/T${before.turn} → W${afterRhythm.wave}/T${afterRhythm.turn}`);
-    check('モンビーからクイックのバトルへ戻れる', await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));
+    // AUTO ボタンは、WAVE を倒した直後の「ステータスアップ！」の画面が出ているあいだだけ消える(2026-10-21 戻った直後に重なって落ちていた)。
+    // 戻れているかは、AUTO が出るまで少し待ってから見る
+    check('モンビーからクイックのバトルへ戻れる', await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 10000 }).then(() => true, () => false));
     // ★戻れるだけでは足りない。戻ったあとも動き続けるかを必ず見る
     //   (2026-09-14・ユーザー報告「モンビークイックからバトルに戻ると
     //    バトルが進行しなくなる / アプリ閉じ直さないと、モンビーに戻っても
@@ -222,12 +243,9 @@ const seed = () => {
     await clickSelector('[data-quick-run-progress-back]');
     await page.waitForTimeout(2000);
     check('超省エネを試す前に、バトル画面へ戻れている',
-      await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));
+      await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 10000 }).then(() => true, () => false));
     const ecoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.getAttribute('aria-label'));
-    for (let i = 0; i < 4 && (await ecoLabel()) !== '省エネ 超'; i++) {
-      await page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.click());
-      await page.waitForTimeout(700);
-    }
+    await cycleLabelTo('省エネ', '省エネ 超', 4);
     check('超省エネに切り替えられる', (await ecoLabel()) === '省エネ 超', await ecoLabel());
     check('超省エネの画面にもモンビーへの入口が出る',
       await page.evaluate(() => !!document.querySelector('[data-ultra-battle-view] [data-quick-to-rhythm]')));

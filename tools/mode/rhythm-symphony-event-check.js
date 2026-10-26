@@ -135,10 +135,11 @@ check('会話の表情はすべて既定の8種のどれか',
 check('ドラの一人称が「おで」でそろっている',
   !!replay && !replay.script.some(l => l.who === 'dra' && /(?:^|[^ぁ-ん])(わたし|私|僕|ぼく|俺|おれ)/.test(l.t)));
 
-// ---- ⑤ ドラの解放(ストーリーを最後まで見たときだけ・冪等) ----
-check('ドラの解放条件がイベント会話に結び付いている', A.ASSISTANT_UNLOCK_STORIES.dra === STORY_ID);
-check('ストーリー未完了ではドラを選べない',
-  A.assistantUnlockedBy('dra', []) === false && !A.assistantsUnlockedFrom([]).some(a => a.id === 'dra'));
+// ---- ⑤ ドラの解放(2026-10-23 から最初から。見た人もそのまま選べる) ----
+// 2026-10-23 からドラは最初から選べる(社長「最初から使えるようにする」)。イベント会話には結び付けない
+check('ドラは最初から選べる(イベント会話で解放しない)', !A.ASSISTANT_UNLOCK_STORIES.dra);
+check('ストーリーを見ていなくてもドラを選べる',
+  A.assistantUnlockedBy('dra', []) === true && A.assistantsUnlockedFrom([]).some(a => a.id === 'dra'));
 check('ストーリー完了後はドラを選べる',
   A.assistantUnlockedBy('dra', [STORY_ID]) === true && A.assistantsUnlockedFrom([STORY_ID]).some(a => a.id === 'dra'));
 check('回想で見直しても二重に解放されない(冪等)',
@@ -157,7 +158,7 @@ check('アシストカード「ドラの緑膝」がある(使うとドラの仲
   /\{ id:'dra',\s+baseName:"ドラの緑膝"/.test(breederSrc));
 check('カードidと助手idが同じ綴りなので本人へ結び付く',
   A.ASSISTANTS.some(a => a.id === 'dra')
-  && /const assistantIdOfAssistCard = \(cardId\) => \{[\s\S]{0,300}list\.some\(a => a && a\.id === id\) \? id : null/
+  && /const assistantIdOfAssistCard = \(cardId\) => \{[\s\S]{0,800}list\.some\(a => a && a\.id === id\) \? id : null/
     .test(read('monster-hero/src/parts/17-release-changelog-login-missions.jsx')));
 check('カードを切ったときに本人の仲良し度を足している',
   /assistantIdOfAssistCard\(card\.id\); if\(cardAssistant\) addAssistantBondFor\(cardAssistant,'assistantCardUse'\)/

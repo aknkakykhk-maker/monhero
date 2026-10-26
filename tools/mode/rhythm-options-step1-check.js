@@ -187,7 +187,8 @@ ok('仕様書へSTEP1と正式HOME未接続を記録',docs.includes('オプシ�
   // チュートリアルの流用にしない(2026-09-13・ユーザー指摘「チュートリアルの流用？」)
   ok('チュートリアルの説明ではなく専用の案内を出す',
     game.includes('data-rhythm-calibration-banner')&&game.includes('data-rhythm-calibration-title')
-    &&game.includes("tutorial={rhythmPlay.from==='tutorial'}")
+    // ノーツ図鑑(from:'notedex'・2026-10-21)は練習と同じ扱いにしたので、その書き方も受け入れる(タイミング合わせは練習扱いにしない)
+    &&(game.includes("tutorial={rhythmPlay.from==='tutorial'}")||game.includes("tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='notedex'}"))
     &&!game.includes("tutorial={rhythmPlay.from==='tutorial'||rhythmPlay.from==='calibration'}"));
   ok('タイミング合わせでもライフは減らない(途中で落ちて測れなくならない)',
     game.includes('run.life=(tutorial||calibrating)?RHYTHM_LIFE_MAX:')

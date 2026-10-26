@@ -36,13 +36,17 @@ const EXPLAIN_WORDS = /難易度|編成|ボタン|画面|設定|タブ|一覧|�
 // 答えの中身ではなく「その項目を選ぶための言葉」なので、ここに説明は書かない
 const TOPIC_ALIASES = {
   'rhythm/rhythm-multi': 'マルチ マルチプレイ 協力 部屋 フリーマッチ プライベート',
+  // 2026-10-22 社長「タンクが90のときほかの子は何%？」(ゲームの中の名前は🔥・狙われやすさ。プレイヤーは「ヘイト」とも呼ぶ)
+  'basics/tactics-hate': 'ヘイト 狙われ 狙われる 狙われやすさ タゲ',
+  'basics/tactics-hate-numbers': 'ヘイト 狙われ 確率 何% 何パーセント 増え方 タンク 数字 目安',
 };
 // 用語の小さな表(2026-10-14 窓口の指摘「みゅあが自分の愛称『モンビー』を知らないと答えた」)。
 // ここに書くのは「同じものの言い方の組」と「説明を取るヘルプの項目」だけ。
 //   説明 … そのヘルプ項目(無ければ全項目)で、その言葉を最初に含む1文を機械で取る
 //   呼び方 … 助手ごとに、実際のセリフでどの言い方を何回使っているかを数え、いちばん多いものを書く
 const TERM_GROUPS = [
-  { variants: ['モンヒロビート', 'モンビー'], topic: 'rhythm/rhythm-mode' },
+  // prefer … 助手の設定にある「いまの呼び方」(ASSISTANTS の rhythmCall)。公開済みのお話は昔の呼び方のままなので、数だけで並べると古い呼び方が先に来る
+  { variants: ['モンヒロビート', 'モンビー', 'モンビート'], topic: 'rhythm/rhythm-mode', prefer: 'rhythmCall' },
   { variants: ['モンヒロバトル', 'モンバト'], topic: 'basics/battle-modes' },
   { variants: ['マスモン'], topic: 'masu/masumon' },
   { variants: ['ベースモン'], topic: 'home/roster' },
@@ -52,6 +56,28 @@ const TERM_GROUPS = [
   { variants: ['仲良し度'], topic: 'tips/bond' },
   { variants: ['M/B管理'], topic: 'home/roster' },
 ];
+
+// 味方モンスターの材料を、ゲームと同じデータから読む(画像の定数 → モンスター → 血統と図鑑の順に、1つの入れ物で読む)。
+// タイプの表は本体の parts(32-tactics-units.jsx)にあるので、その2つの表だけを切り出して読む
+const loadMonsters = () => {
+  const ctx = vm.createContext({ console, Math, Date, JSON, Object, Array, String, Number });
+  for (const f of ['images/images-ally.js', 'ally-monsters.js', 'lineages.js']) vm.runInContext(fs.readFileSync(path.join(DATA, f), 'utf8'), ctx, { filename: f });
+  const tactics = fs.readFileSync(path.join(PARTS, '32-tactics-units.jsx'), 'utf8');
+  const tableOf = (name) => { const i = tactics.indexOf(`const ${name} = {`); return i < 0 ? '{}' : tactics.slice(i + `const ${name} = `.length, tactics.indexOf('\n};', i) + 2); };
+  const out = vm.runInContext(`({ mons: ALL_PLAYER_MONSTERS, map: MONSTER_LINEAGE_MAP, lineages: MONSTER_LINEAGES, cats: MONSTER_CATEGORIES, dex: MONSTER_DEX_DESCRIPTIONS,
+    types: ${tableOf('MONSTER_TYPES')}, typeOf: ${tableOf('MONSTER_TYPE_OF')} })`, ctx);
+  return Object.values(out.mons || {}).filter(m => m && !m.debugOnly && m.name).map(m => {
+    const e = out.map[m.id] || {};
+    const main = out.lineages[e.main], sub = out.lineages[e.sub != null ? e.sub : e.main];
+    const category = !main || !sub ? '' : (main.rare || sub.rare) ? out.cats.rare.name : main.id === sub.id ? out.cats.pure.name : out.cats.derived.name;
+    const t = out.typeOf[m.id], tm = t && out.types[t.main], ts = t && t.sub && t.sub !== t.main && out.types[t.sub];
+    return { id: m.id, name: clean(m.name), lineage: main && sub ? `${main.name}×${sub.name}` : '(図鑑に書いていない)', category,
+      type: tm ? `${tm.label}${ts ? `(サブは${ts.label})` : ''}` : '', unique: clean(m.unique && m.unique.name), dex: clean(out.dex[m.id] || '') };
+  });
+};
+
+// ノーツの見た目の表を写すヘルプの項目(カテゴリid/項目id)。表(kv)の行をそのまま毎回渡す部分へ入れる
+const LOOK_TOPICS = ['rhythm/rhythm-note-types', 'rhythm/rhythm-hell'];
 
 const loadScript = (file, names) => {
   const src = fs.readFileSync(path.join(DATA, file), 'utf8');
@@ -81,6 +107,16 @@ const loadReleaseFlags = () => {
   return out;
 };
 
+// 実データから作る表(t:'data')のうち、ブラウザなしで作れるものは行を本文に入れる(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」)。
+// 行を作るのはゲームと同じ関数(32-tactics-units.jsx の tacticsHateHelpRows)。ほかの表は今までどおり入れない
+let game = null;
+const dataBlockText = (id) => {
+  if (!/^tacticsHate/.test(String(id))) return '';
+  if (!game) game = require('./playbot/sim/load-game').loadGame();
+  const rows = typeof game.tacticsHateHelpRows === 'function' ? game.tacticsHateHelpRows(id) : [];
+  return rows.map(r => `${r[0]}: ${r[1]}`).join('\n');
+};
+
 const buildDigest = () => {
   const flags = loadReleaseFlags();
   const released = (x) => !x || ((!x.releaseFlag || flags[x.releaseFlag] === true) && (!x.unreleasedFlag || flags[x.unreleasedFlag] === false));
@@ -91,7 +127,7 @@ const buildDigest = () => {
   (help.HELP_CATEGORIES || []).filter(released).forEach((cat, ci) => {
     const titles = [];
     for (const topic of (cat.topics || []).filter(released)) {
-      const body = (topic.blocks || []).filter(released).map(b => clean(help.helpBlockPlainText(b))).filter(Boolean).join(' ');
+      const body = (topic.blocks || []).filter(released).map(b => clean(b && b.t === 'data' ? dataBlockText(b.id) : help.helpBlockPlainText(b))).filter(Boolean).join(' ');
       if (!body) continue;
       const title = clean(topic.title);
       titles.push(title);
@@ -104,7 +140,13 @@ const buildDigest = () => {
     if (titles.length) index.push(`【${clean(cat.title)}】${titles.join('／')}`);
   });
 
-  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'ASSISTANT_PEER_CALLS', 'ASSISTANT_CHAT_EXAMPLES', 'EVENT_REPLAYS', 'DEFAULT_ASSISTANT_ID']);
+  const a = loadScript('assistants.js', ['ASSISTANTS', 'assistantSceneLines', 'ASSISTANT_SCENES', 'ASSISTANT_LINE_PACKS', 'ASSISTANT_UPDATE_NOTICE_SCRIPTS', 'ASSISTANT_PEER_CALLS', 'ASSISTANT_CHAT_EXAMPLES', 'EVENT_REPLAYS', 'DEFAULT_ASSISTANT_ID', 'ASSISTANT_RELEASE_FLAGS']);
+  // 公開の印がまだ偽の助手(2026-10-22 あつ)は、材料に入れない(人柄・ほかの助手の呼び方・お話のセリフ・用語の呼び方)。
+  // 入れると、ほかの助手がおしゃべりで「まだ会えない助手」の名前を出してしまう。公開の印を真にしたら作り直す
+  const hiddenFlags = Object.entries(a.ASSISTANT_RELEASE_FLAGS || {}).filter(([, f]) => flags[f] !== true);
+  const hiddenIds = new Set(hiddenFlags.map(([id]) => id));
+  const hiddenFlagNames = new Set(hiddenFlags.map(([, f]) => f));
+  const shownAssistants = (a.ASSISTANTS || []).filter(x => x && !hiddenIds.has(x.id));
 
   // ---- 用語の表 ----
   // 助手ごとのセリフを全部集める(場面の通常・条件つき・あとから足した束)
@@ -126,7 +168,10 @@ const buildDigest = () => {
     for (const [who, list] of Object.entries(byAssistant || {})) for (const line of Array.isArray(list) ? list : []) addLine(line, who);
   }
   // イベントのお話(回想)の台詞。掛け合いのくせがいちばんよく出る
-  for (const ev of a.EVENT_REPLAYS || []) for (const line of (ev && Array.isArray(ev.script)) ? ev.script : []) if (line && line.who) addLine(line, line.who);
+  for (const ev of a.EVENT_REPLAYS || []) {
+    if (ev && hiddenFlagNames.has(ev.releaseFlag)) continue;
+    for (const line of (ev && Array.isArray(ev.script)) ? ev.script : []) if (line && line.who) addLine(line, line.who);
+  }
   const countIn = (texts, word) => texts.reduce((n, t) => n + (t.split(word).length - 1), 0);
   const firstSentence = (word, preferId) => {
     const pool = [topics.find(t => t.id === preferId), ...topics].filter(Boolean);
@@ -140,18 +185,49 @@ const buildDigest = () => {
   for (const g of TERM_GROUPS) {
     const meaning = firstSentence(g.variants[0], g.topic);
     const calls = [];
-    for (const x of a.ASSISTANTS || []) {
+    for (const x of shownAssistants) {
       if (!x || x.role !== '助手') continue;
       const texts = linesBy[x.id] || [];
       // その助手が実際に使う言い方を、多い順に全部並べる(いちばん多いものだけにすると、愛称を「知らない」ことになる)
-      const used = g.variants.map(v => [v, countIn(texts, v)]).filter(([, n]) => n > 0).sort((p, q) => q[1] - p[1]).map(([v]) => `「${v}」`);
+      // 「モンビー」は「モンビート」の中にも入っているので、長い言い方のぶんを引いて数える
+      const countOf = (v) => countIn(texts, v) - g.variants.filter(w => w !== v && w.startsWith(v)).reduce((n, w) => n + countIn(texts, w), 0);
+      const preferred = g.prefer && g.variants.includes(x[g.prefer]) ? x[g.prefer] : null;
+      const used = g.variants.map(v => [v, countOf(v)]).filter(([v, n]) => n > 0 || v === preferred)
+        .sort((p, q) => (q[0] === preferred) - (p[0] === preferred) || q[1] - p[1]).map(([v]) => `「${v}」${v === preferred ? '(いまの呼び方)' : ''}`);
       if (used.length) calls.push(`${x.name}は${used.join('とも')}`);
     }
     const head = g.variants.length > 1 ? `${g.variants[0]}(＝${g.variants.slice(1).join('・')}。どれも同じもの)` : g.variants[0];
     glossary.push(`・${head}: ${meaning || '(ヘルプに説明なし)'}${g.variants.length > 1 && calls.length ? ` 助手の呼び方: ${calls.join('、')}` : ''}`);
   }
+  // ---- ノーツの見た目の表(2026-10-21 社長「みゅあがノーツの色を作って答えた」TAP を白っぽい丸・HELL の空のノーツを紫の線と言った) ----
+  // ヘルプの「ノーツの種類と取り方」「難易度 HELL と空のノーツ」の表(kv)を、ヘルプから機械で写す(手で書き写さない。ヘルプを直せば次のビルドで追従する)。
+  // 項目の本文は TOPIC_MAX_CHARS で切られ、しかも質問の言葉で選ばれたときしか渡らないので、毎回渡す部分(用語の後ろ)へ入れる。
+  // 決まりも一緒に入れる(中継役の決まり RULES_TEXT を変えるには出し直しが要るため、ここに書いて公開だけで効くようにした)
+  const looks = [];
+  for (const id of LOOK_TOPICS) {
+    const [catId, topicId] = id.split('/');
+    const cat = (help.HELP_CATEGORIES || []).find(c => c.id === catId);
+    const topic = cat && (cat.topics || []).find(t => t.id === topicId);
+    if (!topic || !released(cat) || !released(topic)) continue;
+    const rows = (topic.blocks || []).filter(b => b && b.t === 'kv' && released(b)).flatMap(b => b.rows || []);
+    if (rows.length) looks.push(`■ヘルプ「${clean(topic.title)}」の表\n${rows.map(r => `・${clean(r[0])}: ${clean(r[1])}`).join('\n')}`);
+  }
+  if (looks.length) {
+    glossary.push('', 'ノーツの見た目(色・形)。本当なのはここに書いてあることだけ:', ...looks,
+      '決まり: ノーツや画面の色・形・数字を聞かれたら、この表と渡されたヘルプの項目に書いてあることだけで答える。書いていない色・形・数字や、「難易度やテーマで色が変わる」のような書いていない仕組みは作らない。分からないところは「ヘルプの「ノーツの種類と取り方」(空のノーツは「難易度 HELL と空のノーツ」)を見てね」と案内する。');
+  }
+  // ---- 味方モンスターの表(2026-10-21 社長「モッチーってどんなモンスター？と聞かれたら、答えと一緒に公式の絵を見せる」) ----
+  // ゲームのデータ(ALL_PLAYER_MONSTERS・MONSTER_LINEAGE_MAP・MONSTER_DEX_DESCRIPTIONS・タイプの表)から機械で作る(書き写さない)。
+  // 入れるのは図鑑に並ぶモンスター(debugOnly でないもの)だけ。案の段階のモンスターは ALL_PLAYER_MONSTERS に入っていないので出ない。
+  // 能力の数字(ライフ・ちからなど)と敵のことは入れない。タイプは公開の印(tacticsHate)が立っているときだけ
+  const mons = loadMonsters();
+  if (mons.length) {
+    glossary.push('', '味方モンスター(図鑑に並んでいるもの)。名前・血統・タイプ・固有技・図鑑の説明は、ここに書いてあることだけが本当:',
+      ...mons.map(m => `・${m.name}: 血統は${m.lineage}(${m.category})${flags.tacticsHate === true && m.type ? `／タイプは${m.type}` : ''}／固有技は「${m.unique}」${m.dex ? `／図鑑: ${m.dex}` : ''}`),
+      '決まり: モンスターの見た目・色・性格・強さ・覚える技などを聞かれたら、この表と渡されたヘルプの項目に書いてあることだけで答える。書いていないことや、この表に無いモンスターは作らない。分からないところは「M/B管理のモンスター図鑑を見てね」と案内する。能力の数字や、出てくる敵の強さは話さない。');
+  }
   const assistants = {};
-  for (const x of a.ASSISTANTS || []) {
+  for (const x of shownAssistants) {
     if (!x || x.role !== '助手') continue;
     // 見本は、その助手の全セリフ(場面・あとから足した束・告知の読み上げ・お話)から、くせの目印(speechMarkers)が多く、
     // ゲームの説明っぽい言葉が少ないものを選ぶ。点が同じなら台本に出てくる順。毎回同じ並びになる(乱数は使わない)
@@ -169,7 +245,7 @@ const buildDigest = () => {
     scored.sort((p, q) => q.score - p.score || p.i - q.i);
     const picked = scored.slice(0, SAMPLE_LINES).sort((p, q) => p.i - q.i).map(x => x.t);
     // ほかの助手の呼び方(ASSISTANT_PEER_CALLS)。「きき → ひめちん」のように名前つきで並べる
-    const peers = (a.ASSISTANT_PEER_CALLS && a.ASSISTANT_PEER_CALLS[x.id]) || {};
+    const peers = Object.fromEntries(Object.entries((a.ASSISTANT_PEER_CALLS && a.ASSISTANT_PEER_CALLS[x.id]) || {}).filter(([id]) => !hiddenIds.has(id)));
     const nameOf = (id) => ((a.ASSISTANTS || []).find(y => y && y.id === id) || {}).name || id;
     assistants[x.id] = {
       name: x.name, tagline: clean(x.tagline), intro: clean(x.intro), greeting: clean(x.greeting),

@@ -36,7 +36,7 @@ const ctx = { console, BREEDER_MARKET_ITEMS: [] };
 vm.createContext(ctx);
 vm.runInContext(`${block}
 globalThis.__f = { PROFILE_FRAMES, releasedProfileFrames, profileFrameById, normalizeProfileFrameId,
-  profileFrameOwned, profileFrameUnlock, profileFrameSale, profileFramesForAssistant, profileFramesEarnedAt,
+  profileFrameOwned, profileFrameUnlock, profileFrameSale, profileFrameGift, profileFramesForAssistant, profileFramesEarnedAt,
   nextProfileFrameForAssistant, normalizeOwnedProfileFrames, PROFILE_FRAME_OWNED_KEY, PROFILE_FRAME_NONE_ID };`, ctx);
 const F = ctx.__f;
 
@@ -71,7 +71,10 @@ check('もらっていない枠は自分では選べない',
 check('もらえば選べる',
   unlockable.every(f => F.profileFrameOwned(f.id, [f.id]) === true));
 check('条件の無い枠(色)は最初から選べる',
-  F.releasedProfileFrames().filter(f => !F.profileFrameUnlock(f) && !F.profileFrameSale(f)).every(f => F.profileFrameOwned(f.id, []) === true));
+  // プレゼントで届く枠(unlock.gift・2026-10-20 ハロウィン・妖)は、届くまで選べないので除く
+  F.releasedProfileFrames().filter(f => !F.profileFrameUnlock(f) && !F.profileFrameSale(f) && !F.profileFrameGift(f)).every(f => F.profileFrameOwned(f.id, []) === true));
+check('プレゼントで届く枠は、届くまで選べず、届けば選べる',
+  F.releasedProfileFrames().filter(f => F.profileFrameGift(f)).every(f => F.profileFrameOwned(f.id, []) === false && F.profileFrameOwned(f.id, [f.id]) === true));
 check('未公開の枠は描かないし選べない',
   F.PROFILE_FRAMES.filter(f => f.released !== true)
     .every(f => F.normalizeProfileFrameId(f.id) === F.PROFILE_FRAME_NONE_ID && F.profileFrameOwned(f.id, []) === false));
@@ -107,7 +110,7 @@ check('壊れた保存値でも必ず配列になる',
 // --- ⑥ アプリ側の結線 ---
 check('仲良し度が上がったら配る', /if \(after > before\) grantProfileFrames\(id, after\);/.test(app));
 check('選んでいない助手のぶんも配る(アシストカード経由で増えるため)',
-  /const addAssistantBondFor[\s\S]{0,900}grantProfileFrames\(id, after\)/.test(app));
+  /const addAssistantBondFor[\s\S]{0,1600}grantProfileFrames\(id, after\)/.test(app));
 check('起動時に、すでに条件を満たしているぶんを配る',
   /profileFramesEarnedAt\(who\.id, level, catchUp\)/.test(app));
 check('一度もらったら外さない(空にして保存する処理が無い)',

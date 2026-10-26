@@ -93,7 +93,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([
   // 補助
   Object.freeze({ id:'gutsCostReduction', category:'support', name:'省気', desc:'本人のカード消費ガッツ -1%', costPerLevel:10, effectPerLevel:1, unit:'%', maxLevel:100 }),
   Object.freeze({ id:'autoGutsRecovery', category:'support', name:'活気', desc:'パーティの実際の自動ガッツ回復量 +1%', costPerLevel:10, effectPerLevel:1, unit:'%' }),
-  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使用可能カード枚数 +1', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
+  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使えるカード +1枚', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
 ]);
 const SOUL_TRAIT_BY_ID = Object.freeze(Object.fromEntries(SOUL_TRAIT_DEFINITIONS.map(trait => [trait.id, trait])));
 const SOUL_TRAIT_CATEGORIES = Object.freeze([
@@ -1126,6 +1126,28 @@ const buildSoulCrystalUse = (masu, ownedItems, quantity = 1) => {
     ownedItems:{ ...before, [SOUL_CRYSTAL_ITEM_ID]:have - count },
   };
 };
+// 魂格再編の書を1冊使う(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)。
+//   ・振り分け(soulTraitLevels)を全部未使用へ戻す(buildMasuSoulTraitReset と同じ)
+//   ・結晶で足したボーナス魂格P(soulBonusPoints)の数だけ、魂格の結晶を持ち物へ戻し、ボーナスは0にする(0は保存しない)
+//     → この子の獲得済み魂格Pは初到達の分だけになり、戻った結晶はほかの子にも使える
+//   ・壊れた値(数でない・負)は normalizeSoulBonusPoints で0になるので、そのぶんは戻さない(キーは消す)
+//   ・振り分けが0でも、結晶のぶんがあれば使える(結晶を取り戻すため)
+// ★書の消費・結晶の戻り・個体の書き換えは、呼び出し側が mh_masu_mons と mh_owned_items を1つの取引で保存する。
+//   ボーナスを0にした個体と、結晶を足した持ち物を同時に書くので、もう一度使っても二重には戻らない
+const buildSoulTraitRespec = (masu, ownedItems) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  if (!masu || typeof masu !== 'object') return { ok:false, reason:'noMasu' };
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = soulTraitSpentPoints(normalized);
+  const refundedCrystals = normalizeSoulBonusPoints(masu.soulBonusPoints);
+  if (refundedPoints <= 0 && refundedCrystals <= 0) return { ok:false, reason:'nothing' };
+  const scrollHave = ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID);
+  if (scrollHave <= 0) return { ok:false, reason:'noScroll' };
+  const { soulBonusPoints: _dropBonus, ...rest } = normalized;
+  const nextItems = { ...before, [SOUL_RANK_RESPEC_ITEM_ID]:scrollHave - 1 };
+  if (refundedCrystals > 0) nextItems[SOUL_CRYSTAL_ITEM_ID] = ownedItemCount(before, SOUL_CRYSTAL_ITEM_ID) + refundedCrystals;
+  return { ok:true, refundedPoints, refundedCrystals, nextMasu:{ ...rest, soulTraitLevels:{} }, ownedItems:nextItems };
+};
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
   speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
@@ -1791,7 +1813,14 @@ const monsterCategoryName = (categoryId) =>
 // ドラゴン・ジョーカーのようにモンスターがいない血統は、絵を作らず名前だけで見せる
 const lineageIconUrl = (lineage) => {
   const base = lineage?.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[lineage.monId] : null;
-  return base?.faceIconUrl || base?.iconUrl || null;
+  if (base) return base.faceIconUrl || base.iconUrl || null;
+  // 味方モンスターがまだいない血統(ジョーカーなど)は、案の子の顔アイコン → 血統別のアイコンの順に使う
+  const draft = lineage?.id && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined'
+    ? Object.values(UPCOMING_MONSTER_DRAFTS).find((d) => d?.draftLineage?.main === lineage.id && d.draftLineage.sub === lineage.id)
+    : null;
+  if (draft) return draft.faceIconUrl || draft.iconUrl || null;
+  const icons = typeof MONSTER_LINEAGE_ICONS !== 'undefined' ? MONSTER_LINEAGE_ICONS : null;
+  return (lineage?.id && lineage.id !== 'unknown' && icons && icons[lineage.id]) || null;
 };
 // 図鑑の説明。まだ書いていないモンスターは、空欄にせず調査中と伝える
 const monsterDexDescription = (monsterId) =>
@@ -1842,6 +1871,62 @@ const dexMainLineages = () => {
     if (!lineage || seen.has(lineage.id)) return false;
     seen.add(lineage.id); return true;
   });
+};
+// 図鑑の画面に並べる全員(2026-10-26 社長「モンスターのデータめちゃくちゃ入れたから全部図鑑に入れて。
+// ただ、入手済みと未入手と未実装と分ける。未入手と未実装は、グラフィックと図鑑説明とメイン・サブしか見えない」)。
+//   入手済み(owned) … 解放済み(mh_unlocked_monsters)。今までどおり全部見える
+//   未入手(locked)  … 遊べるがまだ解放していない子
+//   未実装(draft)   … 案の段階の子(UPCOMING_MONSTER_DRAFTS)。まだ遊べない
+// 案の子は dexMonsterList へは混ぜない。あちらは種族チャレンジ・絆ランキング・ヘルプの血統一覧なども見ていて、
+// 遊べない子がそこへ出てしまうため。図鑑の一覧と詳細だけがこちらを使う。保存は読むだけ
+const DEX_ENTRY_STATUSES = Object.freeze([
+  Object.freeze({ id:'owned', label:'入手済み' }),
+  Object.freeze({ id:'locked', label:'未入手' }),
+  Object.freeze({ id:'draft', label:'未実装' }),
+]);
+const dexDraftMonsterList = () => {
+  if (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS) return [];
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  return Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !mon.debugOnly && !playable[mon.id]);
+};
+// 案の子の血統は MONSTER_LINEAGE_MAP ではなく draftLineage に書いてある(正式実装のときに移す決まり)
+const dexEntryLineageOf = (mon) => {
+  if (!mon) return monsterLineageOf(null);
+  const draft = mon.draft && mon.draftLineage && !lineageEntryMap()[mon.id] ? mon.draftLineage : null;
+  if (!draft) return monsterLineageOf(mon.id);
+  return { main: lineageById(draft.main), sub: lineageById(draft.sub != null ? draft.sub : draft.main), known: true };
+};
+const dexEntryCategoryOf = (mon) => {
+  const { main, sub } = dexEntryLineageOf(mon);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const dexEntryStatusOf = (mon, unlockedIds) => {
+  const playable = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+  if (!mon || !playable[mon.id]) return 'draft';
+  return Array.isArray(unlockedIds) && unlockedIds.includes(mon.id) ? 'owned' : 'locked';
+};
+// 図鑑の説明。案の子でまだ文が無い子は、文を作らず「？？？」で空けておく(2026-10-26 社長が文を決めるまで)
+const dexEntryDescription = (mon) => {
+  const own = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS ? MONSTER_DEX_DESCRIPTIONS[mon?.id] : null;
+  if (!own && dexEntryStatusOf(mon, []) === 'draft') return '？？？';
+  return monsterDexDescription(mon?.id);
+};
+// 並びは 入手済み → 未入手 → 未実装。それぞれの中は今までの図鑑の並び(種族順)のまま
+const dexScreenEntries = (unlockedIds) => {
+  const base = dexMonsterList();
+  const all = [...base, ...dexDraftMonsterList()];
+  return DEX_ENTRY_STATUSES.flatMap(s => all.filter(mon => dexEntryStatusOf(mon, unlockedIds) === s.id));
+};
+// 図鑑の画面の絞り込みチップ。今までの主血統の並びはそのままにして、案の子にしかいない種族を後ろへ足す
+const dexScreenMainLineages = () => {
+  const list = dexMainLineages().slice();
+  const seen = new Set(list.map(l => l.id));
+  for (const mon of dexDraftMonsterList()) {
+    const main = dexEntryLineageOf(mon).main;
+    if (main && main.id !== 'unknown' && !seen.has(main.id)) { seen.add(main.id); list.push(main); }
+  }
+  return list;
 };
 
 // ==================== 総合力 ====================
@@ -2946,6 +3031,50 @@ const buildMasuReincarnationBatch = ({ masu, skillKey, gold, lockedIds = [], cou
   }
   if (!last) return { ok:false, reason:reason || '転生できません。', count:0, cost:0 };
   return { ...last, ok:true, count:done, cost:spent, fromLevel:first.fromLevel, stopReason:done < wanted ? reason : '' };
+};
+// 複数のマスモンをまとめて転生する(2026-10-17 社長依頼「まとめて転生みたいなことができれば便利」、
+// 2026-10-18 追加依頼「2回以上できる場合でも回数を増やしたり、最大数転生みたいな感じのがあれば助かる」)。
+// 1回ずつ転生したときと同じ結果にするため、中身は buildMasuReincarnation を選んだ順に、子ごとに times 回まで順に呼ぶだけ。
+//   times … 1人あたりの回数(1〜REINCARNATE_BATCH_MAX)。'max' なら、子ごとに続けられるいちばん多い回数(上限 REINCARNATE_BATCH_MAX)
+// 固有技は上げない(「あとで決める」と同じで、固有技ポイント+1として残す)。ダイヤは前の転生の残りから引く。
+// ・2回目からLvが足りなくなった子は、そこまでの回数で次の子へ進む(子ごとに回数がちがうことがある)
+// ・ダイヤが足りなくなったら、そこで全体を止める(それまでの転生だけを返す)
+// ・1回も転生できない子(ロック・Lv不足)が出たら、そこで止める
+// 同じidが2回選ばれていても1人ぶんだけ数える(二重に転生しない)
+const buildMasuReincarnationMulti = ({ masuMons = [], ids = [], gold = 0, lockedIds = [], times = 1 } = {}) => {
+  const list = Array.isArray(masuMons) ? masuMons : [];
+  const wanted = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id)))];
+  const perMon = times === 'max' ? REINCARNATE_BATCH_MAX : Math.min(REINCARNATE_BATCH_MAX, Math.max(1, Math.floor(Number(times) || 1)));
+  let goldLeft = donationDiamondValue(gold), spent = 0, total = 0, reason = '', stoppedId = null, outOfGold = false;
+  const done = [];
+  const byId = new Map(list.map(m => [String(m?.id), m]));
+  for (const id of wanted) {
+    let cur = byId.get(id) || null, count = 0, cost = 0, first = null, last = null;
+    for (let i = 0; i < perMon; i++) {
+      const r = buildMasuReincarnation({ masu:cur, skillKey:'', gold:goldLeft, lockedIds });
+      if (!r.ok) {
+        // 1回もできない子、またはダイヤ切れなら全体を止める。2回目からのLv不足だけは、この子をここまでにして次の子へ
+        outOfGold = r.reason === 'ダイヤが不足しています。';
+        if (!count || outOfGold) { reason = r.reason; stoppedId = id; }
+        break;
+      }
+      if (!first) first = r;
+      last = r; cur = r.nextMasu; goldLeft = r.nextGold; cost += r.cost; count++;
+    }
+    if (count) {
+      done.push({ id, count, cost, fromLevel:first.fromLevel, nextLevel:last.nextLevel, nextPoints:last.nextPoints, result:last });
+      byId.set(id, cur); spent += cost; total += count;
+    }
+    if (stoppedId) break;
+  }
+  if (!done.length) return { ok:false, reason:reason || '転生できるマスモンがいません。', done:[], count:0, total:0, cost:0, nextGold:donationDiamondValue(gold), nextMasuMons:list, stoppedId };
+  const changed = new Map(done.map(d => [d.id, d.result.nextMasu]));
+  return {
+    ok:true, done, count:done.length, total, cost:spent, nextGold:goldLeft,
+    nextMasuMons:list.map(m => changed.get(String(m?.id)) || m),
+    gainedPoints:total * REINCARNATE_POINTS, keptSkillPointsGain:total,
+    stopReason:stoppedId ? reason : '', stoppedId, outOfGold,
+  };
 };
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
 const donationDiamondValue = (bondXp) => {

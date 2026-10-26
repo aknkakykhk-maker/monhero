@@ -53,8 +53,9 @@ ok('自己ベストの保存形式へは足していない',
   !/normalizeRhythmBestRecord\(\{[\s\S]{0,400}precise/.test(game));
 
 // ---- 結果に応じた演出 ----
+// HELL の満点のランク MF(8ed39c252)も M と同じいちばん上の段
 ok('ランクから段を作っている(失敗は段0)',
-  game.includes("const rankTier=result.cleared===false?0:({M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);"));
+  game.includes("const rankTier=result.cleared===false?0:({MF:5,M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);"));
 ok('段を器とランクの丸へ渡している',
   game.includes('data-rank-tier={String(rankTier)}')
   &&game.includes('<main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}'));

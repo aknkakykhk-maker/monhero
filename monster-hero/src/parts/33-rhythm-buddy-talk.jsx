@@ -434,10 +434,13 @@ const rhythmBuddyTalkPick = ({ kind, trait = '', moodId = 'normal', vars = {}, r
   const hon = typeof vars.hon === 'string' ? vars.hon : rhythmBuddyHonorific(trait);
   const callWord = typeof vars.call === 'string' && vars.call ? vars.call : '';
   const self = typeof vars.self === 'string' ? vars.self : '';
+  const female = vars.female === true;
   const make = (raw) => {
     let ok = true;
+    // 女の子の子は、言い換え表(33-rhythm-buddy-persona.jsx の RHYTHM_BUDDY_FEMALE_LINES)にあるセリフをその言い方で話す(2026-10-16)
+    if (female && typeof RHYTHM_BUDDY_FEMALE_LINES !== 'undefined' && Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_FEMALE_LINES, raw)) raw = RHYTHM_BUDDY_FEMALE_LINES[raw];
     let line = raw.split('{who}さん').join(callWord || `{who}${hon}`);
-    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self);
+    if (self && typeof rhythmBuddyPersonaSelf === 'function') line = rhythmBuddyPersonaSelf(line, self, female);
     const text = line.replace(/\{([A-Za-z]+)\}/g, (all, key) => {
       const v = vars[key];
       if (v == null || v === '') { ok = false; return ''; }

@@ -213,6 +213,16 @@ const RELEASED_MARKERS=Object.freeze({
   sheriruth:'sheriruth-v3',
   against_my_own_shadow:'against-my-own-shadow-v3',
   grievous_lady:'grievous-lady-v3',
+  rose:'rose-v3',
+  rose_short:'rose-short-v3',
+  sad_song:'sad-song-v3',
+  sad_song_short:'sad-song-short-v3',
+  toward_the_stars_short:'toward-the-stars-short-v3',
+  black_shout:'black-shout-v3',
+  light_player:'light-player-v3',
+  light_player_short:'light-player-short-v3',
+  tsuki_ga_michiru_mae_ni:'tsuki-ga-michiru-mae-ni-v3',
+  tsuki_ga_michiru_mae_ni_short:'tsuki-ga-michiru-mae-ni-short-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -259,6 +269,16 @@ const RELEASED_TRACKS=Object.freeze({
   sheriruth:'sheriruth',
   grievous_lady:'grievous_lady',
   against_my_own_shadow:'against_my_own_shadow',
+  rose:'rose',
+  rose_short:'rose_short',
+  sad_song:'sad_song',
+  sad_song_short:'sad_song_short',
+  toward_the_stars_short:'toward_the_stars_short',
+  black_shout:'black_shout',
+  light_player:'light_player',
+  light_player_short:'light_player_short',
+  tsuki_ga_michiru_mae_ni:'tsuki_ga_michiru_mae_ni',
+  tsuki_ga_michiru_mae_ni_short:'tsuki_ga_michiru_mae_ni_short',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

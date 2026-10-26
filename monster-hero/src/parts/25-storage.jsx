@@ -143,13 +143,27 @@ const saveRhythmSettings = async value => {
 const saveRhythmMonsterSlots = async value => {
   const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
 };
-const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
+// version … 記録の物差しの版(2 = 刻みの数え方・mh_rhythm_best_v2 / それ以外 = 今の数え方・mh_rhythm_best_v1)。
+// 書く前にそのキーの保存値を読み直し、そこへ1件だけ入れる(画面が持っている records は別の版のことがあるので、書くもとにしない)。
+// 返すのは「いまの数え方で見る記録」(loadRhythmBestRecordsNow と同じ形)
+const saveRhythmBestRecord = async (records,songId,difficultyId,value,version=1) => {
   const song=RHYTHM_SONGS.find(item=>item.songId===songId);
   // HELL など5難易度の外の難易度は、その曲に譜面があるときだけ残す
   if(!song||!rhythmSongDifficultyDefs(song).some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
-  const normalized=normalizeRhythmBestRecords(records);
+  const key=version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY;
+  const normalized=normalizeRhythmBestRecords(await storeGet(key,{},false));
   normalized[songId][difficultyId]=normalizeRhythmBestRecord(value);
-  await storeSet(RHYTHM_BEST_RECORDS_KEY,normalized,false); return normalized;
+  await storeSet(key,normalized,false);
+  return loadRhythmBestRecordsNow();
+};
+// その版の自己ベスト(保存値そのまま・正規化だけ)
+const loadRhythmBestRecordsOf = async version => normalizeRhythmBestRecords(await storeGet(version===2?RHYTHM_BEST_RECORDS_V2_KEY:RHYTHM_BEST_RECORDS_KEY,{},false));
+// いまの数え方で見る自己ベスト。切り替えの時刻(と確認待ちの試作)を見て、新しい数え方なら v2 に旧の印(クリア・称号)を重ねて返す。
+// 切り替え前は今までどおり v1 をそのまま返す
+const loadRhythmBestRecordsNow = async () => {
+  const legacy=await loadRhythmBestRecordsOf(1);
+  if(!(typeof rhythmTickRulesActive==='function'&&rhythmTickRulesActive()))return legacy;
+  return rhythmBestRecordsWithLegacyMarks(await loadRhythmBestRecordsOf(2),legacy);
 };
 // <rhythm-achievement-io>
 // ===== モンヒロビートの実績の台帳(2026-10-05)。定義と計算は 13-bgm-and-rhythm-settings.jsx。仕様: docs/spec/RHYTHM_ACHIEVEMENTS.md =====
@@ -278,4 +292,27 @@ const storeList = async (prefix, shared=false) => {
     }
   } catch {}
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
+};
+
+// ===== デバッグ設定の合言葉(2026-10-20 社長決定・改善部の見直し M1) =====
+// 合っていた端末だけ mh_debug_unlocked_v1 = '1' を持ち、次から聞かない(新しいキー。既存のキーは触らない)。
+// リポジトリは公開なので、合言葉そのものは書かない。合言葉は短い(数字)ので、ただのハッシュだと総当たりで割れる。
+// 塩(ランダムな固定値)+ PBKDF2(SHA-256・600,000回)で照らす(端末で1回0.3〜0.5秒ほど)。
+// 合言葉を変えるときは node tools/debug-passphrase-hash.js <合言葉> で塩・回数・ハッシュを作り直す
+const DEBUG_UNLOCK_KEY = 'mh_debug_unlocked_v1';
+const DEBUG_PASSPHRASE_SALT = 'ba3fc07d01681734a3e290689e0d5f32';
+const DEBUG_PASSPHRASE_ITERATIONS = 600000;
+const DEBUG_PASSPHRASE_HASH = '1378175ce209b7dd290f1c4f5f5a92f8d4ca8127dbd46a845e99ada95a7166e6';
+const debugPassphraseMatches = async (text) => {
+  const phrase = String(text || '').trim();
+  if (!phrase) return false;
+  try {
+    const subtle = typeof crypto !== 'undefined' && crypto.subtle;
+    if (!subtle || typeof TextEncoder === 'undefined') return false;
+    const salt = new Uint8Array(DEBUG_PASSPHRASE_SALT.match(/../g).map(h => parseInt(h, 16)));
+    const key = await subtle.importKey('raw', new TextEncoder().encode(phrase), 'PBKDF2', false, ['deriveBits']);
+    const bits = await subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt, iterations:DEBUG_PASSPHRASE_ITERATIONS }, key, 256);
+    const hex = [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
+    return hex === DEBUG_PASSPHRASE_HASH;
+  } catch { return false; }
 };

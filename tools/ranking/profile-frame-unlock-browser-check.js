@@ -29,6 +29,8 @@ const seed = ({ points, seenNoticeIds }) => {
   // 助手が加わる会話は、解放の案内より先に出る決まりになっている。
   // ここで見たいのは飾り枠の案内なので、会話は見た扱いにしておく
   put('mh_kiki_intro_seen_v1', true); put('mh_momosuke_intro_seen_v1', true);
+  // MFバトルカードの公開のお話(2026-10-26 公開)も、飾り枠の案内より先に出る。見た扱いにしておく
+  put('mh_story_card_battle_seen_v1', true);
   // 更新の案内・日次アドバイスも、飾り枠の案内より先に出る決まり。ここでは見た扱いにしておく
   // (実際の遊び方でも、それらを閉じたあとに飾り枠の案内が出る)
   put('mh_seen_update_notices_v1', seenNoticeIds);
@@ -87,8 +89,9 @@ async function run() {
   const lowFrames = await readFrames(low);
   check('選択画面に枠が並ぶ', lowFrames.length >= 20, `${lowFrames.length}件`);
   const lockedLow = lowFrames.filter(f => f.locked);
-  // 助手の枠9枚 + マーケットで買うモンスターの枠10枚(2026-10-03)
-  check('Lv1では助手の枠9枚とマーケットで買う枠10枚が鍵つきで並ぶ', lockedLow.length === 19, `${lockedLow.length}枚`);
+  // 助手の枠9枚 + マーケットで買うモンスターの枠10枚(2026-10-03) + 2026-10-20 に公開した3枚(ハロウィン・恐・ザン・エイキ・ウンディーネ3姉妹)。
+  // プレゼントで届く ハロウィン・妖 は届くまで並ばないので数に入らない
+  check('Lv1では助手の枠9枚とマーケットで買う枠13枚が鍵つきで並ぶ', lockedLow.length === 22, `${lockedLow.length}枚`);
   check('鍵つきの枠にも、もらえる条件が出ている',
     lockedLow.every(f => /Lv\d|マーケットで購入/.test(f.text)), lockedLow.slice(0, 2).map(f => f.text).join(' / '));
   check('色の枠は鍵が付かない', lowFrames.filter(f => !f.locked).length >= 13, `${lowFrames.filter(f => !f.locked).length}枚`);

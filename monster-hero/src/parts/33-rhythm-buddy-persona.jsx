@@ -20,6 +20,28 @@ const RHYTHM_BUDDY_SELF_WORDS = Object.freeze({
   stubborn: Object.freeze(['おれ', 'わし', '拙者', '自分']),
   easygoing: Object.freeze(['ぼく', 'うち', 'わし', 'あたし']),
 });
+// 性別(2026-10-16 社長「ウンディーネとピクシー種は明確に女個体だから、そういう設定を足して」)。
+// 種(主血統)で決まる。ピクシー種(ピクシー・ミア・パンドラ)とウンディーネ種(ウンディーネ・ヤオビクニ・スネグーラチカ)は女の子。
+// ほかの種は決めない('')。保存はしない(個体のデータは書き換えない・種から毎回決める)
+const RHYTHM_BUDDY_FEMALE_LINEAGES = Object.freeze(['pixie', 'undine']);
+const rhythmBuddyGenderOf = (baseId) => {
+  const map = typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : null;
+  const entry = map && baseId != null && Object.prototype.hasOwnProperty.call(map, baseId) ? map[baseId] : null;
+  return entry && RHYTHM_BUDDY_FEMALE_LINEAGES.includes(entry.main) ? 'female' : '';
+};
+// 女の子の一人称。性格ごとに、上の表から女の子の言い方だけを残したもの(頑固のように1つも無い性格は、近い言い方を足した)。先頭がいちばん多い形
+const RHYTHM_BUDDY_SELF_WORDS_FEMALE = Object.freeze({
+  '': Object.freeze(['わたし', 'あたし', 'うち']),
+  jester: Object.freeze(['あたし', 'うち', 'わたし']),
+  brave: Object.freeze(['あたし', 'わたし', 'うち']),
+  clingy: Object.freeze(['あたし', 'うち', 'わたし']),
+  smart: Object.freeze(['わたし', 'わたくし']),
+  serious: Object.freeze(['わたし', 'わたくし']),
+  proud: Object.freeze(['わたし', 'わたくし', 'あたし']),
+  worrier: Object.freeze(['わたし', 'あたし', 'うち']),
+  stubborn: Object.freeze(['あたし', 'わたし', 'うち']),
+  easygoing: Object.freeze(['うち', 'あたし', 'わたし']),
+});
 // B 人の呼び方。suf は名前のあとに付ける形('' は呼び捨て)、call は名前の代わりに呼ぶ形。
 // 先頭は、性格ごとの呼び方(33-rhythm-buddy-talk.jsx の RHYTHM_BUDDY_HONORIFICS)と同じにしておく
 const RHYTHM_BUDDY_CALL_STYLES = Object.freeze({
@@ -101,12 +123,15 @@ const rhythmBuddyPersonaBirthday = (id) => {
   return { month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 };
 // その子の個体差(D の好き・苦手な曲は rhythmBuddyPersonaSongs で別に読む)
-const rhythmBuddyPersona = (masuId, trait = '') => {
+// baseId(種)を渡すと性別も決まる。渡さないとき・ほかの種は、これまでと1文字も変わらない
+const rhythmBuddyPersona = (masuId, trait = '', baseId = null) => {
   const t = Object.prototype.hasOwnProperty.call(RHYTHM_BUDDY_SELF_WORDS, trait) ? trait : '';
+  const gender = rhythmBuddyGenderOf(baseId);
   const callId = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_CALLS[t], masuId, `call:${t}`, true);
   const quirk = rhythmBuddyPersonaChoose(RHYTHM_BUDDY_QUIRKS[t], masuId, `quirk:${t}`, false);
   return {
-    self: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_SELF_WORDS[t], masuId, `self:${t}`, true),
+    gender,
+    self: rhythmBuddyPersonaChoose((gender === 'female' ? RHYTHM_BUDDY_SELF_WORDS_FEMALE : RHYTHM_BUDDY_SELF_WORDS)[t], masuId, `self:${t}`, true),
     call: RHYTHM_BUDDY_CALL_STYLES[callId],
     quirk: Object.freeze({ ...quirk, label: quirk.pre ? `「${quirk.pre.replace(/、$/, '')}」` : `文の終わりに「${quirk.end.replace(/^!/, '')}」` }),
     habit: rhythmBuddyPersonaChoose(RHYTHM_BUDDY_HABITS, masuId, 'habit', false),
@@ -262,5 +287,151 @@ const RHYTHM_BUDDY_PERSONA_TALK_RAW = ({
 const RHYTHM_BUDDY_PERSONA_TALK = Object.freeze(Object.fromEntries(Object.keys(RHYTHM_BUDDY_PERSONA_TALK_RAW)
   .map((k) => [k, Object.freeze({ ...RHYTHM_BUDDY_PERSONA_TALK_RAW[k], traitOnly: true })])));
 const RHYTHM_BUDDY_PERSONA_KINDS = Object.freeze(Object.keys(RHYTHM_BUDDY_PERSONA_TALK));
-// 一人称を、既存のセリフの「私」「ぼく」にも当てる(その子の一人称で話す)
-const rhythmBuddyPersonaSelf = (line, self) => (self ? String(line).replace(/私|ぼく/g, self) : String(line));
+// 女の子の子の言い換え(2026-10-16 社長「女の子用のセリフを足す」)。勇敢・頑固・お調子者の、男の子っぽい言い回しのセリフだけ。
+// 左がもとのセリフ(33-rhythm-buddy-talk / convo / persona の性格の束にあるもの)、右が女の子の子が話すときの言い方。性格の個性は残す
+// (勇敢=元気で強気・頑固=きりっとして譲らない・お調子者=明るく)。女の子の子のときだけ rhythmBuddyTalkPick が差し替える。ほかの子は使わない
+const RHYTHM_BUDDY_FEMALE_LINES = Object.freeze({
+  "突撃だー!": "突撃よー!",
+  "一番乗りで来たぞ!": "一番乗りで来たよ!",
+  "呼ばれたからには手は抜かん!": "呼ばれたからには手は抜かないわ!",
+  "自分のやり方でいくぞ": "自分のやり方でいくわ",
+  "文句は言わせんぞ": "文句は言わせないわよ",
+  "手を抜かんから覚悟しろ": "手は抜かないから覚悟しなさい",
+  "{song}で勝負だ!": "{song}で勝負よ!",
+  "むずかしくてもいくぞ!": "むずかしくてもいくよ!",
+  "強気でいける曲だ!": "強気でいける曲ね!",
+  "{song}以外は認めん!": "{song}以外は認めないわ!",
+  "{song}がいい。譲れん": "{song}がいい。譲れないわ",
+  "曲は{song}だ": "曲は{song}よ",
+  "{song}でひと笑いとるぞ!": "{song}でひと笑いとるよ!",
+  "勝ちにいくぞ!": "勝ちにいくよ!",
+  "妥協はせん!": "妥協はしないわ!",
+  "一音も逃さん!": "一音も逃さないわ!",
+  "絶対に外さんぞ": "絶対に外さないわ",
+  "盛り上げるぞー!おー!": "盛り上げるよー!おー!",
+  "笑顔で叩くぞ!": "笑顔で叩くよ!",
+  "勝ったぞー!!": "勝ったよー!!",
+  "当然の結果だ!": "当然の結果よ!",
+  "勝利の味だ!": "勝利の味ね!",
+  "当然の結果だ": "当然の結果ね",
+  "努力は裏切らん!": "努力は裏切らないわ!",
+  "これが俺のやり方だ!": "これがあたしのやり方よ!",
+  "努力の成果だ": "努力の成果ね",
+  "MVPだぞ〜!拍手!": "MVPだよ〜!拍手!",
+  "強敵にも勝てそうだ!": "強敵にも勝てそう!",
+  "狙いどおりだ": "狙いどおりね",
+  "まだ満足せんぞ": "まだ満足しないわよ",
+  "これが実力だ!": "これが実力よ!",
+  "納得のいく演奏だ": "納得のいく演奏ね",
+  "悔しいが、次だ!": "悔しいけど、次よ!",
+  "次はもっと攻めるぞ!": "次はもっと攻めるよ!",
+  "妥協はせんぞ": "妥協はしないわよ",
+  "次は譲らんぞ": "次は譲らないわよ",
+  "次は笑わせるぞ!": "次は笑わせるよ!",
+  "もう一回だ!!": "もう一回よ!!",
+  "認めん!もう一回だ!": "認めないわ!もう一回よ!",
+  "あきらめんぞ!": "あきらめないわよ!",
+  "こんな結果は認めん": "こんな結果は認めないわ",
+  "次は名誉挽回だ!": "次は名誉挽回よ!",
+  "席は任せたぞ!": "席は任せたよ!",
+  "次は最後までやるぞ!": "次は最後までやるわ!",
+  "席をゆずるのは今回だけだぞ": "席をゆずるのは今回だけよ",
+  "よろしく!全力でいくぞ!": "よろしく!全力でいくよ!",
+  "負けないぞ!": "負けないよ!",
+  "よろしくだ!": "よろしくね!",
+  "よろしく。手は抜かん": "よろしく。手は抜かないわ",
+  "当然のことだ!": "当然のことよ!",
+  "礼などいらん": "お礼なんていらないわ",
+  "いや、当然だ": "いいえ、当然よ",
+  "次ももっとやるぞ!": "次ももっとやるよ!",
+  "褒めても何も出んぞ": "褒めても何も出ないわよ",
+  "望むところだ!": "望むところよ!",
+  "もう一戦だ!": "もう一戦よ!",
+  "おう!次こそ決める!": "ええ!次こそ決めるわ!",
+  "望むところだ": "望むところよ",
+  "次は絶対だ!": "次は絶対よ!",
+  "ここにいるぞ!": "ここにいるよ!",
+  "いるぞ": "いるわよ",
+  "見ればわかるだろう": "見ればわかるでしょう",
+  "待つのも戦いだ!": "待つのも戦いよ!",
+  "いつでも準備OKだ!": "いつでも準備OKよ!",
+  "待つのも訓練だ!": "待つのも訓練よ!",
+  "こちらは構わん": "こちらは構わないわ",
+  "待つが、長くは待たんぞ": "待つけど、長くは待たないわよ",
+  "待つのは性に合わん": "待つのは性に合わないわ",
+  "いつでも全力だ!": "いつでも全力よ!",
+  "{who}さんはどうだ": "{who}さんはどう?",
+  "うむ、その調子だ": "ええ、その調子よ",
+  "気合で乗りきるぞ!ついてこい!": "気合で乗りきるよ!ついてきて!",
+  "休むのも勝負のうちだ": "休むのも勝負のうちよ",
+  "Lv.{lv}。満足はしとらん": "Lv.{lv}。満足はしてないわ",
+  "{fav}以外は認めん": "{fav}以外は認めないわ",
+  "{song}は譲れん曲だ": "{song}は譲れない曲よ",
+  "{trait}だ!": "{trait}よ!",
+  "{score}!次はもっと上だ!": "{score}!次はもっと上よ!",
+  "{score}。納得はしとらん": "{score}。納得はしてないわ",
+  "{plays}回。まだ足りん": "{plays}回。まだ足りないわ",
+  "{me}だ。二度は言わん": "{me}よ。二度は言わないわ",
+  "ふっ、当然だ!": "ふふっ、当然よ!",
+  "おだてても何も出んぞ…": "おだてても何も出ないわよ…",
+  "休むのも勝負だ": "休むのも勝負よ",
+  "肉だ!肉を食うぞ!": "お肉!お肉を食べるよ!",
+  "腹がへっては戦はできん": "おなかがすいては戦はできないわ",
+  "乗りこえられる。俺が保証する": "乗りこえられる。あたしが保証するわ",
+  "うおー!突撃だ!": "やあー!突撃よ!",
+  "次は俺も取る!": "次はあたしも取る!",
+  "次は俺が取る": "次はあたしが取るわ",
+  "ならばもう一段上へだ": "なら、もう一段上へよ",
+  "また勝負だ": "また勝負よ",
+  "引く気はない。やるぞ": "引く気はないわ。やるわよ",
+  "なんだ": "なに?",
+  "{mate}、負けんぞ": "{mate}、負けないわよ",
+  "お、{who}さん登場!盛り上がるぞ!": "お、{who}さん登場!盛り上がるよ!",
+  "{who}さん、{song}か。いい度胸だ": "{who}さん、{song}ね。いい度胸だわ",
+  "{who}さん、見事だ。次は負けん": "{who}さん、見事ね。次は負けないわ",
+  "{who}さん、いい腕だ!": "{who}さん、いい腕ね!",
+  "{who}さん、立ちあがれ!次だ!": "{who}さん、立ちあがって!次よ!",
+  "{who}さん、あきらめるな。次だ": "{who}さん、あきらめないで。次よ",
+  "{who}さん、見事だ。脱帽だ": "{who}さん、見事ね。脱帽よ",
+  "{who}さん、今日は勝負だ!": "{who}さん、今日は勝負よ!",
+  "{topic}の話だ!忘れてないぞ!": "{topic}の話ね!忘れてないよ!",
+  "{plays}回、戦ってきた戦友だな!": "{plays}回、戦ってきた戦友ね!",
+  "{plays}回目か。今日もやるぞ": "{plays}回目ね。今日もやるわよ",
+  "おはよう!朝から全力だ!": "おはよう!朝から全力よ!",
+  "こんにちは!昼間も全開だ!": "こんにちは!昼間も全開よ!",
+  "こんにちは!昼から笑いをとるぞ!": "こんにちは!昼から笑いをとるよ!",
+  "こんばんは!夜の部も全力だ!": "こんばんは!夜の部も全力よ!",
+  "こんばんは。夜こそ本番だ": "こんばんは。夜こそ本番よ",
+  "夜ふかしか!つき合うぞ!": "夜ふかし?つき合うよ!",
+  "Lv.{lv}!強くなったぞ!": "Lv.{lv}!強くなったよ!",
+  "Lv.{lv}か。まだまだこれからだ": "Lv.{lv}ね。まだまだこれからよ",
+  "{mate}、勝つのはこっちだ": "{mate}、勝つのはこっちよ",
+  "{mate}、いい仲間だな!": "{mate}、いい仲間ね!",
+  "{mate}か。頼りにしてるぞ": "{mate}ね。頼りにしてるわよ",
+  "{who}さん、{self}が来たぞ": "{who}さん、{self}が来たわよ",
+  "{self}は手を抜かんぞ": "{self}は手を抜かないわよ",
+  "{like}は{self}の得意曲だ!": "{like}は{self}の得意曲よ!",
+  "{self}の{like}、見せてやる!": "{self}の{like}、見せてあげる!",
+  "{like}は{self}の曲だ": "{like}は{self}の曲よ",
+  "{dislike}か。苦手だが逃げないぞ!": "{dislike}ね。苦手だけど逃げないよ!",
+  "苦手な{dislike}にも挑むぞ!": "苦手な{dislike}にも挑むよ!",
+  "{dislike}か。今日こそ勝つぞ": "{dislike}ね。今日こそ勝つわよ",
+  "苦手な{dislike}でも引かん": "苦手な{dislike}でも引かないわ",
+  "{hg}!この調子だ!": "{hg}!この調子よ!",
+  "{hg}のが効いたぞ": "{hg}のが効いたわ",
+  "{hb}。次は外さん": "{hb}。次は外さないわ",
+  "勝ったら{food}だ!": "勝ったら{food}よ!",
+  "{food}を食べれば百人力だ!": "{food}を食べれば百人力よ!",
+  "{food}は譲らんぞ": "{food}は譲らないわよ",
+  "{self}の好物は{food}だ": "{self}の好物は{food}よ",
+  "{hobby}でも負けないぞ!": "{hobby}でも負けないよ!",
+  "{self}の趣味は{hobby}だ!": "{self}の趣味は{hobby}よ!",
+  "{hobby}はゆずれん": "{hobby}はゆずれないわ",
+  "{self}は{ht}んだ!": "{self}は{ht}の!",
+  "{self}は{ht}のだ": "{self}は{ht}のよ",
+  "今日は誕生日だ!最高の日にするぞ!": "今日は誕生日よ!最高の日にするよ!",
+  "今日は誕生日だ。祝ってもいいぞ": "今日は誕生日よ。祝ってもいいわよ",
+});
+// 一人称を、既存のセリフの「私」「ぼく」にも当てる(その子の一人称で話す)。
+// 女の子の個体は、セリフに直に書かれた「俺」「オイラ」「僕」「拙者」も、その子の一人称にする(2026-10-16)。ほかの子のセリフは変えない
+const rhythmBuddyPersonaSelf = (line, self, female = false) => (self ? String(line).replace(female ? /私|ぼく|俺|オイラ|僕|拙者/g : /私|ぼく/g, self) : String(line));
