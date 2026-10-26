@@ -1134,7 +1134,7 @@ function RhythmRankingScreen({
             </p>}
             {/* 部門ごとの報酬。どの部門で何位を狙うと何がもらえるかを、切り替えずに見渡せるようにする */}
             {eventRewardsByDivision.length>0&&<div data-rhythm-event-rewards className="space-y-2">
-              <p className="text-[10px] font-black text-amber-200">部門ごとの報酬（終了後に受け取れます）</p>
+              <p className="text-[10px] font-black text-amber-200">部門別の報酬（終わったあとに受け取れます）</p>
               {eventRewardsByDivision.map(({division,ranks})=>(
                 <div key={division.id} data-rhythm-event-reward-division={division.id}
                   className="rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2">

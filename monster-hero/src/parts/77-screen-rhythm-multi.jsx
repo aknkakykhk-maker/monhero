@@ -2480,7 +2480,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 )}
               {friendsOn && view && view.mode === 'private' && (
                 <section data-rhythm-multi-friend-invite className={card}>
-                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'}</button>
+                  <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待を閉じる' : 'フレンドを招待する'}</button>
                   {invitePanel && (
                     <div className="mt-2 space-y-1">
                       {roster === null && <p className="text-[11px] font-bold text-slate-400">フレンドを読み込んでいます…</p>}

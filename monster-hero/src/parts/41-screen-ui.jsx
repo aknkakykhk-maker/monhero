@@ -510,7 +510,7 @@ const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, bo
       className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
     <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
       <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
     </div>
   </ModalFrame>
@@ -523,7 +523,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
     {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
     <div className="mt-4 grid grid-cols-1 gap-2">
       <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
     </div>
   </ModalFrame>
 );
