@@ -32,7 +32,7 @@ const rateCases = [
 const checks = [
   ['対象3体の楔状態・距離条件', conditionCasesPass],
   ['自動ガッツ回復率の加算・上限・勇者限定', rateCases.every(([current, hero, active, heroDist, enemyDist, expected]) => iceRulerRate(current, hero, active, heroDist, enemyDist) === expected)],
-  ['対象3体のtraitDesc', (ally.match(/traitDesc:"勇者モン選択時：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率\+50%（上限100%）"/g) || []).length === 3],
+  ['対象3体のtraitDesc', (ally.match(/traitDesc:"勇者モンにすると：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率\+50%（上限100%）"/g) || []).length === 3],
   ['基礎能力・適性・合流値', /Snegurochka:[\s\S]*?baseHp:400, baseGuts:150, baseAtk:135, baseDef:80[\s\S]*?plusStats:\{hp:150,atk:40,def:10,guts:40\}[\s\S]*?distAptitude:\['D','E','B','A'\]/.test(ally)],
   ['通常技9段階', /Snegurochka: \["アイスブレード"[\s\S]*?"ジングルベル"\]/.test(ally)],
   ['固有技9段階・倍率・消費', /name:"アイスアロー"[\s\S]*?baseMult:2\.2,baseGuts:44[\s\S]*?"メリークリスマス"/.test(ally)],

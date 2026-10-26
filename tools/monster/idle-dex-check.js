@@ -73,7 +73,7 @@ check('図鑑の詳細の立ち絵は待機アニメ版を使い、ページの�
 check('詳細のページに動かす・止めるのボタンが1つある', (dex.match(/data-dex-idle-toggle/g) || []).length === 1 && dex.includes("<DexSideLabel text={idleMotion?'⏸ 動きを止める':'▶ 動かす'}/>") && dex.includes('onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}'));
 check('最初は動く・新しい保存キーに true/false で残す', dex.includes("const DEX_IDLE_MOTION_KEY = 'mh_dex_idle_motion_v1';") && dex.includes('useState(true)') && dex.includes('storeGet(DEX_IDLE_MOTION_KEY, true).then(v => { if (alive) setMotion(v !== false); });') && dex.includes('storeSet(DEX_IDLE_MOTION_KEY, next)'));
 check('保存キーを保存データの資料に載せた', fs.readFileSync(path.join(root, 'docs/spec/SAVE_DATA.md'), 'utf8').includes('`mh_dex_idle_motion_v1`'));
-check('詳細も攻撃アクションもフックは早い return より前で呼ぶ', (dex.match(/const \[idleMotion(,toggleIdleMotion)?\]=useDexIdleMotion\(\);\n      const monsters=dexMonsterList\(\);/g) || []).length === 2);
+check('詳細も攻撃アクションもフックは早い return より前で呼ぶ', (dex.match(/const \[idleMotion(,toggleIdleMotion)?\]=useDexIdleMotion\(\);\n      const monsters=(?:dexMonsterList\(\)|dexScreenEntries\(unlockedMonsterIds\));/g) || []).length === 2);
 check('図鑑の攻撃アクションも待機アニメを重ねる',
   dex.includes('withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true})'));
 check('図鑑は絵の要素そのものを渡す(部品を複製しない)',
