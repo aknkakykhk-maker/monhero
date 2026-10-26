@@ -345,7 +345,8 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
 //   ダイヤショップに並んでいる実装済みの円盤石12体を、ここにも並べた(全部1,500P)。並びはダイヤショップと同じ。
 //   アシストカードは下の RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS。
 const RHYTHM_EVENT_POINT_DISC_COST = 1500;
-const rhythmEventDiscOffer = (monsterId, name) => Object.freeze({ id:`disc_${monsterId.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()}`, name:`${name}の円盤石`, kind:'disc', monsterId, grantAmount:1, unit:'個', cost:RHYTHM_EVENT_POINT_DISC_COST });
+// opts.available:false … 予告中(まだ仲間にできない)の子。札は「近日追加」で出し、交換できない(2026-10-27 キュービ・オリヒメ)
+const rhythmEventDiscOffer = (monsterId, name, opts = {}) => Object.freeze({ id:`disc_${monsterId.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()}`, name:`${name}の円盤石`, kind:'disc', monsterId, grantAmount:1, unit:'個', cost:RHYTHM_EVENT_POINT_DISC_COST, ...(opts.available === false ? { available:false } : {}) });
 // ★2026-10-05 ゴースト・スプーキーを正式実装し、ユグドラシル種と同じくここで先行公開した(1,500P。いちばん新しいので先頭)
 // ★2026-10-08 メロディー・クロミーをここで先行公開し、同じ日にいったん取り下げたあと、ユーザー指示「公開して」で再公開した(1,500P。いちばん新しいので先頭)
 // ★2026-10-23 イルミネ・ドリーミィを正式実装し、ゴースト・スプーキーと同じくここで先行公開した(社長「ダイヤでは近日で、まずはビートポイントでしか買えない」。1,500P。いちばん新しいので先頭)

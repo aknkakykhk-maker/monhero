@@ -304,10 +304,11 @@ function BreederMarketScreen({
                 const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
                 const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
                 const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'cardPoint', cost:offer.cost };
+                const soon=offer.available===false; // まだ仲間にできない子(予告中)は近日追加。ダイヤショップとは別に、この札の available で開く(メロディー等はダイヤは近日・ここは販売中)
                 const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
                 return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-disc':offer.id}}
-                  item={item} owned={owned} comingSoon={false}
-                  canBuy={!owned&&cp>=offer.cost&&!busy}
+                  item={item} owned={owned} comingSoon={soon}
+                  canBuy={!soon&&!owned&&cp>=offer.cost&&!busy}
                   disabled={purchaseProcessing}
                   onZoom={()=>onZoomIcon(disc||item)}
                   onBuy={()=>openSheet({ item, confirm:()=>cardShop.onExchange(offer),
@@ -368,10 +369,11 @@ function BreederMarketScreen({
             const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
             const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
             const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
+                const soon=offer.available===false; // まだ仲間にできない子(予告中)は近日追加。ダイヤショップとは別に、この札の available で開く(メロディー等はダイヤは近日・ここは販売中)
             const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-disc':offer.id}}
-              item={item} owned={owned} comingSoon={false}
-              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              item={item} owned={owned} comingSoon={soon}
+              canBuy={!soon&&!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(disc||item)}
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false,
