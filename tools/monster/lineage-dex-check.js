@@ -43,6 +43,9 @@ vm.runInContext([
   slice('const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
   `globalThis.api = { monsterLineageOf, monsterCategoryOf, monsterCategoryName, lineageIconUrl,
     monsterDexDescription, dexMonsterList, dexMainLineages, MONSTER_LINEAGES, MONSTER_LINEAGE_MAP,
+    dexScreenEntries, dexDraftMonsterList, dexEntryLineageOf, dexEntryStatusOf, dexScreenMainLineages, dexEntryDescription,
+    MONSTER_DEX_DESCRIPTIONS,
+    UPCOMING_MONSTER_DRAFTS: typeof UPCOMING_MONSTER_DRAFTS === 'undefined' ? {} : UPCOMING_MONSTER_DRAFTS,
     ALL_PLAYER_MONSTERS };`,
 ].join('\n'), ctx);
 const A = ctx.api;
@@ -175,6 +178,55 @@ check('主血統プラントの対象はPlantとOboro',
   JSON.stringify(monsters.filter(mon => A.monsterLineageOf(mon.id).main.id === 'plant').map(mon => mon.id).sort())
     === JSON.stringify(['Oboro', 'Plant']));
 
+// ---------- ⑤-2 入手済み・未入手・未実装(2026-10-26 社長「全部図鑑に入れて」) ----------
+{
+  const drafts = A.dexDraftMonsterList();
+  const unlocked = ['Mocchi', 'Pixie'];
+  const entries = A.dexScreenEntries(unlocked);
+  const statusOf = (mon) => A.dexEntryStatusOf(mon, unlocked);
+  check('図鑑の画面には遊べる子と案の子が全員並ぶ',
+    drafts.length > 0 && entries.length === monsters.length + drafts.length && new Set(entries.map(m => m.id)).size === entries.length,
+    `遊べる子${monsters.length}・案の子${drafts.length}`);
+  check('案の子は dexMonsterList(種族チャレンジなども見る)へ混ざらない',
+    drafts.every(d => !monsters.some(m => m.id === d.id)) && drafts.every(d => !A.ALL_PLAYER_MONSTERS[d.id]));
+  check('並びは 入手済み → 未入手 → 未実装',
+    entries.map(statusOf).join(',') === [...entries.map(statusOf)].sort((a, b) => ['owned', 'locked', 'draft'].indexOf(a) - ['owned', 'locked', 'draft'].indexOf(b)).join(',')
+    && entries.filter(m => statusOf(m) === 'owned').map(m => m.id).sort().join() === unlocked.slice().sort().join()
+    && entries.filter(m => statusOf(m) === 'draft').length === drafts.length);
+  check('解放を読めなくても落ちず、遊べる子は全員 未入手 になる',
+    A.dexScreenEntries(undefined).filter(m => A.dexEntryStatusOf(m, undefined) === 'locked').length === monsters.length);
+  check('案の子は draftLineage から血統を引く(？？？ にならない)',
+    drafts.every(d => A.dexEntryLineageOf(d).main.id === d.draftLineage.main && A.dexEntryLineageOf(d).main.name !== '？？？'),
+    drafts.filter(d => A.dexEntryLineageOf(d).main.name === '？？？').map(d => d.id).join(' '));
+  // 立ち絵が無いのは「影で並べる」と決まった2体だけ。図鑑の文が無いのは、社長がまだ文を決めていない子だけ(文は作らず ？？？)。
+  // ここに名前が無い子で欠けたら、入れ忘れとして止める
+  const NO_ART = [];
+  // 2026-10-26 混血15体の文も社長から届いていたので入れた。いまは文の無い子はいない
+  const NO_TEXT = [];
+  check('案の子の立ち絵が無いのは、影で並べる子だけ',
+    drafts.filter(d => !d.imgUrl).map(d => d.id).sort().join() === NO_ART.slice().sort().join(),
+    drafts.filter(d => !d.imgUrl).map(d => d.id).join(' '));
+  check('案の子の図鑑の文が無いのは、文が決まっていない子だけ',
+    drafts.filter(d => !A.MONSTER_DEX_DESCRIPTIONS[d.id]).map(d => d.id).sort().join() === NO_TEXT.slice().sort().join(),
+    drafts.filter(d => !A.MONSTER_DEX_DESCRIPTIONS[d.id]).map(d => d.id).join(' '));
+  check('図鑑の文が ？？？ になる子はいない', A.dexScreenEntries([]).every(m => A.dexEntryDescription(m) !== '？？？'),
+    A.dexScreenEntries([]).filter(m => A.dexEntryDescription(m) === '？？？').map(m => m.id).join(' '));
+  check('文の無い案の子は、文を作らず ？？？ で出す',
+    A.dexEntryDescription({ id: '文の無い案の子', draft: true }) === '？？？'
+    && monsters.every(m => A.dexEntryDescription(m) === A.monsterDexDescription(m.id)));
+  check('アンキロックスの図鑑の文は社長の文のまま',
+    A.dexEntryDescription(A.UPCOMING_MONSTER_DRAFTS.Ankylox) === '体の表面に岩が張りついた、重い体を持つ\n動きはのんびりしているが、その怪力はあなどれない\n見た目につられて岩だと思うと、痛い目にあう');
+  check('ギンギライガーの図鑑の文は社長の文のまま',
+    A.dexEntryDescription(A.UPCOMING_MONSTER_DRAFTS.GinGiLiger) === '銀色に輝く毛並みと青い瞳を持つライガー\n夜になると野生の血が騒ぐのか\n静かな闇に向かって遠吠えを響かせるという');
+  check('遊べる子の血統の引き方は今までと同じ',
+    monsters.every(m => A.dexEntryLineageOf(m).main.id === A.monsterLineageOf(m.id).main.id && A.dexEntryLineageOf(m).sub.id === A.monsterLineageOf(m.id).sub.id));
+  const screenLineages = A.dexScreenMainLineages();
+  check('絞り込みチップは今までの並びのまま、案の子だけの種族を後ろへ足す',
+    JSON.stringify(screenLineages.slice(0, filters.length).map(l => l.id)) === JSON.stringify(filters.map(l => l.id))
+    && new Set(screenLineages.map(l => l.id)).size === screenLineages.length
+    && screenLineages.some(l => l.id === 'dino') && !screenLineages.some(l => l.id === 'unknown'));
+}
+
 // ---------- ⑥ 図鑑の画面 ----------
 const list = screenSource('MONSTER_DEX', 'MonsterDexScreen');
 const detail = screenSource('MONSTER_DEX_DETAIL', 'MonsterDexDetailScreen');
@@ -187,15 +239,41 @@ check('M/B管理のモンスターから図鑑へ入れる',
   source.includes("setGameState('MONSTER_DEX');") && /managementLink\([^)]*'モンスター図鑑'/.test(source));
 check('HOMEへ施設を増やしていない', !/mh-home-facility [a-z]*dex/.test(source));
 check('図鑑登録数と全体数を出している', list.includes('data-dex-count') && list.includes('図鑑登録数'));
+// 2026-10-26 社長「全部図鑑に入れて。入手済みと未入手と未実装と分ける」。分け方は dexEntryStatusOf の1か所で決め、
+// その中の解放判定は mh_unlocked_monsters(unlockedMonsterIds)をそのまま使う
 check('解放判定は既存の mh_unlocked_monsters を使う',
-  list.includes('unlockedMonsterIds.includes(mon.id)') && detail.includes('unlockedMonsterIds.includes(mon.id)'));
+  /const dexEntryStatusOf = [\s\S]{0,400}unlockedIds\.includes\(mon\.id\) \? 'owned' : 'locked'/.test(source)
+  && list.includes('unlockedMonsterIds.includes(mon.id)')
+  && list.includes('dexEntryStatusOf(mon,unlockedMonsterIds)') && detail.includes('dexEntryStatusOf(mon,unlockedMonsterIds)'));
 // 解放・登録の状態を図鑑専用に持たない(mh_unlocked_monsters が正本)。例外は見た目の設定1つだけ:
 // 立ち絵を動かすか(mh_dex_idle_motion_v1。2026-09-24 ユーザー指示「ワンタッチで決めれれば」「デフォは動く」)
 check('図鑑のための保存キーを増やしていない(立ち絵の動きの設定だけは別)',
   !/['"]mh_[^'"]*(?:dex|zukan)/i.test(source.split("'mh_dex_idle_motion_v1'").join('')));
-check('未解放はシルエットと ？？？ で出す',
-  list.includes("'？？？'") && sharedDex.includes('brightness(0)') && list.includes('hidden={!unlocked}')
-  && detail.includes('<DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>'));
+// 未入手・未実装で見せるのは「立ち絵・図鑑の説明・メイン/サブの血統」だけ(2026-10-26 社長)。
+// 能力・技・特性・タイプ・動き・染色の入口は入手済みのときだけ出す
+check('未入手・未実装は立ち絵と名前を出し、札で分ける',
+  detail.includes('<DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>') && !detail.includes("'？？？'") && !list.includes("'？？？'")
+  // 立ち絵がまだ無い子だけは影
+  && /mon\.imgUrl\s*\?\s*<DexMonsterIdleArt mon=\{mon\} alt=\{mon\.name\} motion=\{idleMotion\}\/>\s*:\s*<DexMonsterArt mon=\{mon\} alt="立ち絵のないモンスター" hidden\/>/.test(detail)
+  && list.includes('data-dex-section={section.id}') && list.includes('data-dex-section-count')
+  && list.includes('<DexStatusTag status={section.id}/>') && detail.includes('<DexStatusTag status={status} size="md"/>'));
+{
+  // 情報カードのうち、入手済みのときだけ出す部分(タブ以下)と、いつも出す部分(血統・説明)を分けて見る
+  const card = detail.slice(detail.indexOf('下半分: 情報カード'));
+  const always = card.slice(0, card.indexOf('{unlocked?(<>'));
+  const ownedOnly = card.slice(card.indexOf('{unlocked?(<>'), card.indexOf('):('));
+  check('未入手・未実装でも血統と説明は出る',
+    always.includes('data-dex-lineage-row') && always.includes('data-dex-desc') && !always.includes('data-dex-tab-'));
+  check('能力・技・特性・タイプは入手済みのときだけ出る',
+    ['data-dex-tab-basic', 'data-dex-tab-stats', 'data-dex-tab-skills', 'mon.trait', 'mon.baseHp', 'mon.distAptitude', 'getUniqueSkillLevels(mon)'].every(k => ownedOnly.includes(k))
+    && /\{unlocked&&monsterTypeProtoOn\(\)&&<div data-dex-type-row/.test(always)
+    && /\{unlocked&&<MonsterTypeBadge/.test(list));
+  // 待っているあいだの動きは、絵が見える子はみんな(2026-10-26 社長)。止める・動かすのボタンも絵がある子に出す
+  check('待機アニメの動かす・止めるは、絵がある子みんなに出る', /\{mon\.imgUrl&&monsterIdleRigOf\(mon\.id\)/.test(detail));
+  check('攻撃アクション・色・染めてみるは入手済みのときだけ出る',
+    /\{unlocked\s*\?\s*<button type="button" data-dex-attack-preview/.test(detail)
+    && /\{unlocked\s*\?\s*<DexColorPickButton/.test(detail) && /\{unlocked\s*\?\s*<button type="button" data-dex-color-try/.test(detail));
+}
 check('主血統で絞り込める', list.includes('dexLineageFilter') && list.includes('主血統で絞り込む'));
 check('詳細に前後移動のボタンとスワイプがある',
   detail.includes('data-dex-prev') && detail.includes('data-dex-next')
@@ -223,6 +301,9 @@ check('血統の行は文字数で位置が動かない（左右のチップが�
   && !/血統の行[\s\S]{0,200}justify-center/.test(detail));
 check('血統チップは枠いっぱいに広がる（中身の長さで幅が変わらない）',
   detail.includes('<DexLineageChip') && sharedDex.includes('data-dex-lineage className="flex w-full items-center justify-center'));
+// 血統名は「…」で切らず2行まで折り返す(2026-10-26。320pxで13種が「モッ…」と切れていた)。実際の幅での測り方は lineage-chip-fit の写真で確かめた
+check('血統名は切らずに2行まで折り返す',
+  /data-dex-lineage-name className=\{`[^`]*line-clamp-2[^`]*`\}/.test(sharedDex) && !/data-dex-lineage-name[^>]*truncate/.test(sharedDex));
 // 丸アイコンは円の内側へ収める。枠いっぱいに絵を入れると、円の外側へかかる部分が
 // どのモンスターでも切れる(アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)
 check('血統チップのアイコンが円の内側へ収まる',
@@ -253,9 +334,11 @@ check('攻撃アクションのボタンは立ち絵の枠の外(右の列)に�
   && !detail.includes('attackMotionPreviewSequence('));
 check('立ち絵の下にボタンの行を足さない(下の情報カードの縦幅を削らない)',
   detail.includes('<div data-dex-stage') && !detail.includes('<DexColorRow') && !detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">'));
-check('未解放モンスターには攻撃アクションなどのボタンを出さない(矢印だけ)',
+// 2026-10-26 社長「未入手・未実装も待機アニメで動かす」。動かす・止めるのボタンだけは絵がある子みんなに出し、
+// 攻撃アクション・色・染めてみるは入手済みだけのまま
+check('未入手・未実装には攻撃アクションなどのボタンを出さない(矢印と動かす・止めるだけ)',
   (detail.match(/\{unlocked\n?\s*\? <button type="button" data-dex-(attack-preview|color-try)/g) || []).length === 2
-  && detail.includes('{unlocked&&monsterIdleRigOf(mon.id)')
+  && detail.includes('{mon.imgUrl&&monsterIdleRigOf(mon.id)')
   && attackPreview.includes('if(!mon||!unlockedMonsterIds.includes(mon.id)){ onMissing(); return null; }')
   && source.includes("onMissing={()=>setGameState('MONSTER_DEX')}"));
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
