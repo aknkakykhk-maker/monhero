@@ -638,7 +638,7 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // ---- 画面: マルチ対戦の部屋(合言葉) ----
 // onStart(game) … 試合が始まったら対戦の画面へ。onBack … 対戦の選び方へ戻る(部屋も出る)
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
-// assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのカードポイント
+// assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
 // onAssistant … 「助手と対戦へ」(だれとでもで、だれも来なかったとき)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
 const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
@@ -704,7 +704,7 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
   const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
   const back = () => { CARD_PVP.leave(); onBack(); };
   const r = room.result;
-  // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったカードポイント・クイック周回・いまのカードポイント) ----
+  // ---- 結果(助手と対戦の結果の画面と同じ形: 立ち絵・もらったビートP・クイック周回・いまのビートP) ----
   // ★立ち絵の横は、助手の台詞ではなく結果の文(マルチ対戦の結果の台詞は、まだ作っていない。台詞は社長が先に読む決まり)
   if (room.phase === 'over' && r) {
     const win = r.outcome === 'win';
@@ -735,10 +735,10 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
           </div>
           <div className={SCREEN_PANEL_CLASS}>
             {!got && r.verify !== 'ng' && <div className="text-[12px] font-bold text-slate-300">ごほうびを確かめています…</div>}
-            {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、カードポイントとクイック周回は入りません</div>}
+            {r.verify === 'ng' && <div className="text-[12px] font-bold text-slate-300">無効の試合なので、ビートPとクイック周回は入りません</div>}
             {got && (<>
-              <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったカードポイント: {got.point}</div>
-              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、カードポイントとクイック周回は入りません')}</div>}
+              <div data-card-pvp-reward className="text-[13px] font-black text-amber-200">もらったビートP: {got.point}</div>
+              {got.short && <div className="mt-1 text-[12px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('自分の番を3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
               {!got.short && got.loops > 0 && (
                 <div data-card-quick-loops={got.quick ? got.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
                   {got.quick
@@ -749,8 +749,8 @@ const CardPvpLobby = ({ deck, deckIssues = [], onStart, onBack, onReward, assist
                     : <div className="text-[12px] font-bold text-slate-300" style={JA_LABEL_STYLE}>{jaWrap('クイック周回をしていないときは入りません')}</div>}
                 </div>
               )}
-              {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのカードポイント: {point}</div>}
-              {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(カードポイントは増えていません)')}</div>}
+              {point !== null && <div className="mt-1 text-[12px] font-bold text-slate-300">いまのビートP: {point}</div>}
+              {got.saved === false && <div className="mt-1 text-[12px] font-bold text-rose-300" style={JA_LABEL_STYLE}>{jaWrap('保存できませんでした(ビートPは増えていません)')}</div>}
             </>)}
           </div>
         </div>
