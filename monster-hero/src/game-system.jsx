@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 312fa158d27d9e54
+// generated-sha256: 9a9df2fbd6baf25f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65965,9 +65965,10 @@ function MonsterHeroGame() {
     if (!rhythmEventStoryPending) return;
     // ★バトルのれんしゅうの案内の判定が終わり、れんしゅうの最中でないことも見る。
     //   はじめての人は「れんしゅうの案内 →(見る/見ない)→ れんしゅう → HOME → お話」の順になり、重ならない(2026-10-10・G8)
+    // ★ログインボーナスの窓が出ているあいだも待つ(2026-10-27 カゲあつ「お話がログインボーナスの窓の上に重なる」)。窓を閉じてから流す
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay
-      && battleGuideChecked && battleTutorialStep == null)) return;
+      && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
     // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
@@ -65978,7 +65979,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
   // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
   useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
@@ -66050,10 +66051,10 @@ function MonsterHeroGame() {
     if (!tacticsIntroPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null
-      && !rhythmEventStoryPending && !eventReplay)) return;
+      && !rhythmEventStoryPending && !eventReplay && !loginBonusPopup)) return;
     setTacticsIntroPending(false);
     setEventReplay({ id: 'tactics_intro', step: 0, live: true });
-  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay]);
+  }, [tacticsIntroPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, rhythmEventStoryPending, eventReplay, loginBonusPopup]);
   // ★開催の時刻になった瞬間に遊んでいた人にも届ける。
   //   「開催中か」を見ていたのは起動したときの1回だけだったので、15:00より前から
   //   ゲームを開いたままだった人には、会話も助手の告知も出なかった
@@ -67609,6 +67610,17 @@ function MonsterHeroGame() {
       else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
       // タクティクスバトルの導入。**公開しているときだけ**見に行く。
       // 公開前に読むと、まだ見せていないモードの会話を「未読」として抱えることになる
+      // 2026-10-27 社長「開催中のイベントだけ出す」: はじめての人が HOME に来た直後、昔のお知らせのお話(ことのはの鈴・タイプ・MFバトルカードのはじまり)が
+      // 続けて流れていた。はじめての人には見た扱いにする(プロフィールのイベント回想からいつでも見られる。前から遊んでいる人は今までどおり)。
+      // 印は既存のキーに true を書くだけ(新しいキーは足さない)。下で印を読む前に書くので、読み込みの途中で一度だけ流れることもない
+      if (!wasOnboarded) {
+        for (const [on, key] of [[EVENT_REPLAY_RELEASE_FLAGS.assistantChat, ASSISTANT_CHAT_STORY_SEEN_KEY],
+          [EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes, TACTICS_TYPES_STORY_SEEN_KEY],
+          [EVENT_REPLAY_RELEASE_FLAGS.cardBattle, CARD_BATTLE_INTRO_STORY_SEEN_KEY]]) {
+          if (!on) continue;
+          try { if ((await storeGet(key, false, false)) !== true) await storeSet(key, true, false); } catch {}
+        }
+      }
       // 難易度 HELL のお話を見たか。HELL の公開(rhythmHell)のあとだけ読む(公開前は回想にも出さないので要らない)
       if (EVENT_REPLAY_RELEASE_FLAGS.rhythmHell) {
         try { setRhythmHellStorySeenFlag((await storeGet(rhythmHellStorySeenKey(), false, false)) === true); setRhythmHellStorySeenLoaded(true); } catch {}
@@ -67663,7 +67675,8 @@ function MonsterHeroGame() {
       if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID,
+        // きゅうこの加入(2026-10-27 社長「開催中のイベントだけ出す」)。見た扱いにすると、マーケットのカード「きゅうこ」もふつうに並ぶ
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -83190,7 +83203,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
