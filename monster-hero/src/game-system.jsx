@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 97ace49e564b8c33
+// generated-sha256: 5c3da04c533deb62
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -16777,27 +16777,33 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 // Supabase へ届くようになった 2026-10-06 から、検査を回すたびに本物の総合力ランキングへ
 // 「検査」「テスト」の行が増えていった(ユーザー報告「ランキングひどいことになってる」)。
 // 自動操作のブラウザは navigator.webdriver が true になる(ふつうに遊ぶ人のブラウザでは必ず false)。
-// そのときは書き込み(GET/HEAD 以外)を送らずに「保存できた」と返す。読み込みとランキングの集計(rpc)は通す。
+// そのときは(2026-10-27 から)書き込みも読み込みも助手の中継も本物へ出さず、空の返事を返す(下の ★ を参照)。
 // ★送信そのものを確かめる検査は、page.route で Supabase を差し替えたうえで
 //   window.__mhSupabaseStubbed = true を入れる(差し替え先へは今までどおり届く)。
 //   一部の表だけ差し替える検査は ['rankings', 'bond_levels'] のように表の名前(の頭)を並べ、
-//   並べた表だけを通す(差し替えていない表への書き込みは、引き続き止める)
-const sbAutomationWriteBlocked = (url, method) => {
+//   並べた表だけを通す(差し替えていない表は、読み込みも書き込みも止める)
+// ★2026-10-27: 「書き込みだけ」から「読み込みも・助手の中継も」へ広げた。差し替えの無い自動操作のブラウザは
+//   本物の Supabase へ何も出さず、空の返事(読み込み・書き込み=200/201の空の配列・中継=503)を返す。
+//   検査が本番のデータで変わる・通信量がかさむ・本番が落ちると検査も落ちる、をまとめて防ぐ(docs/rules/BUILD_CHECKS.md)。
+//   ふつうに遊ぶ人のブラウザ(navigator.webdriver が false)は何も変わらない。
+// 返すもの: 止めるときは { status, body }、通すときは null
+const sbAutomationBlocked = (url, method) => {
   try {
-    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
+    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return null;
     const stubbed = typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
-    if (stubbed === true) return false;
-    const m = String(method || 'GET').toUpperCase();
-    if (m === 'GET' || m === 'HEAD') return false;
+    if (stubbed === true) return null;
     const u = String(url || '');
-    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (!u.startsWith(SUPABASE_URL)) return null;
+    const path = u.slice(SUPABASE_URL.length).split('?')[0];
     if (Array.isArray(stubbed)) {
-      const path = u.slice(SUPABASE_URL.length).split('?')[0];
       // 中継役(Edge Function)も同じ書き方で通せる(例: ['assistant-chat'] … 助手とおしゃべりの検査)
-      if (stubbed.some((t) => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
+      if (stubbed.some((t) => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return null;
     }
-    return true;
-  } catch { return false; }
+    const m = String(method || 'GET').toUpperCase();
+    if (path.startsWith('/functions/v1/')) return { status: 503, body: '{}' };   // 助手の中継は「つながらない」
+    if (m === 'GET' || m === 'HEAD' || path.startsWith('/rest/v1/rpc/')) return { status: 200, body: '[]' };
+    return { status: 201, body: '[]' };
+  } catch { return null; }
 };
 try {
   if (typeof window !== 'undefined' && typeof window.fetch === 'function' && !window.__mhSupabaseWriteGuard) {
@@ -16806,10 +16812,12 @@ try {
     window.fetch = (input, init) => {
       const url = typeof input === 'string' ? input : (input && input.url) || '';
       const method = (init && init.method) || (input && typeof input === 'object' && input.method) || 'GET';
-      if (sbAutomationWriteBlocked(url, method)) {
-        try { console.info('[supabase] 自動操作のブラウザなので本物へは書き込まない:', String(method).toUpperCase(), String(url).split('?')[0].replace(SUPABASE_URL, '')); } catch {}
-        return Promise.resolve(new Response('[]', { status: 201, headers: { 'Content-Type': 'application/json' } }));
+      const blocked = sbAutomationBlocked(url, method);
+      if (blocked) {
+        try { console.info('[supabase] 自動操作のブラウザなので本物へは出さない:', String(method).toUpperCase(), String(url).split('?')[0].replace(SUPABASE_URL, '')); } catch {}
+        return Promise.resolve(new Response(blocked.body, { status: blocked.status, headers: { 'Content-Type': 'application/json' } }));
       }
+
       return realFetch(input, init);
     };
   }

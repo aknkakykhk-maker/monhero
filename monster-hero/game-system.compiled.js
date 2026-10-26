@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5736c69ad9c9ef1f
+// source-sha256: afd30ab64d1efe78
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -27574,22 +27574,32 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
-const sbAutomationWriteBlocked = (url, method) => {
+const sbAutomationBlocked = (url, method) => {
   try {
-    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
+    if (typeof navigator === 'undefined' || navigator.webdriver !== true) return null;
     const stubbed = typeof window !== 'undefined' ? window.__mhSupabaseStubbed : undefined;
-    if (stubbed === true) return false;
-    const m = String(method || 'GET').toUpperCase();
-    if (m === 'GET' || m === 'HEAD') return false;
+    if (stubbed === true) return null;
     const u = String(url || '');
-    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (!u.startsWith(SUPABASE_URL)) return null;
+    const path = u.slice(SUPABASE_URL.length).split('?')[0];
     if (Array.isArray(stubbed)) {
-      const path = u.slice(SUPABASE_URL.length).split('?')[0];
-      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
+      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return null;
     }
-    return true;
+    const m = String(method || 'GET').toUpperCase();
+    if (path.startsWith('/functions/v1/')) return {
+      status: 503,
+      body: '{}'
+    };
+    if (m === 'GET' || m === 'HEAD' || path.startsWith('/rest/v1/rpc/')) return {
+      status: 200,
+      body: '[]'
+    };
+    return {
+      status: 201,
+      body: '[]'
+    };
   } catch {
-    return false;
+    return null;
   }
 };
 try {
@@ -27599,12 +27609,13 @@ try {
     window.fetch = (input, init) => {
       const url = typeof input === 'string' ? input : input && input.url || '';
       const method = init && init.method || input && typeof input === 'object' && input.method || 'GET';
-      if (sbAutomationWriteBlocked(url, method)) {
+      const blocked = sbAutomationBlocked(url, method);
+      if (blocked) {
         try {
-          console.info('[supabase] 自動操作のブラウザなので本物へは書き込まない:', String(method).toUpperCase(), String(url).split('?')[0].replace(SUPABASE_URL, ''));
+          console.info('[supabase] 自動操作のブラウザなので本物へは出さない:', String(method).toUpperCase(), String(url).split('?')[0].replace(SUPABASE_URL, ''));
         } catch {}
-        return Promise.resolve(new Response('[]', {
-          status: 201,
+        return Promise.resolve(new Response(blocked.body, {
+          status: blocked.status,
           headers: {
             'Content-Type': 'application/json'
           }
