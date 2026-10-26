@@ -47,15 +47,20 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   let browser;
   // 対戦の画面で、相手の場・まんなか・自分の場・手札・下のボタンが上から順に並び、重なっていないか
 const layoutIssues = async (page) => page.evaluate(() => {
-  const box = (sel) => { const els = [...document.querySelectorAll(sel)]; if (!els.length) return null; const r = els.map((e) => e.getBoundingClientRect()); return { top: Math.min(...r.map((x) => x.top)), bottom: Math.max(...r.map((x) => x.bottom)) }; };
+  const box = (sel) => { const els = [...document.querySelectorAll(sel)]; if (!els.length) return null; const r = els.map((e) => e.getBoundingClientRect()); return { top: Math.min(...r.map((x) => x.top)), bottom: Math.max(...r.map((x) => x.bottom)), left: Math.min(...r.map((x) => x.left)), right: Math.max(...r.map((x) => x.right)) }; };
+  // 横の画面は、盤(左)と手札(右)が横に並ぶ。上下の重なりは、左右も重なるときだけ数える(横並びを「かぶる」と数えていた。QA 2)
+  const sideBySide = (a, b) => a.right <= b.left + 1 || b.right <= a.left + 1;
   const opp = box('[data-card-mon^="1-"]'), stage = box('[data-card-stage]'), me = box('[data-card-mon^="0-"]'), hand = box('[data-card-hand]'), foot = box('[data-card-footer]');
   const out = [];
   if (!opp || !stage || !me || !hand || !foot) return ['部品が見つからない'];
   if (opp.bottom > stage.top + 1) out.push('相手の場がまんなかにかかる');
   if (stage.bottom > me.top + 1) out.push('まんなかが自分の場にかかる');
-  if (me.bottom > hand.top + 1) out.push(`自分の場が手札にかかる(${Math.round(me.bottom - hand.top)}px)`);
+  if (me.bottom > hand.top + 1 && !sideBySide(me, hand)) out.push(`自分の場が手札にかかる(${Math.round(me.bottom - hand.top)}px)`);
   if (hand.bottom > foot.top + 1) out.push('手札がボタンにかかる');
   if (foot.bottom > window.innerHeight + 1) out.push('ボタンが画面の外');
+  // 自分の番の始めのまとめは、手札にかからない(横の画面は左の盤のまんなかへ出す)
+  const sum = box('[data-card-turn-summary]');
+  if (sum && sum.bottom > hand.top + 1 && !sideBySide(sum, hand)) out.push('始まりのまとめが手札にかかる');
   if (stage.bottom - stage.top < 60) out.push(`まんなかが狭い(${Math.round(stage.bottom - stage.top)}px)`);
   return out;
 });
