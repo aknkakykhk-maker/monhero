@@ -168,7 +168,7 @@ const KUROMY_DYE_MASK = "images/monsters/kuromy-dye-mask.PNG?v=7e06f8e564b2";
 // 元絵は tools/art-sources/new-monsters-2026-10-22/。透明な余白を切って高さ916pxへ縮め、256色へ減色(グラデーションの段が出ないよう誤差拡散)
 const ILLUMINE_IMG = "images/monsters/illumine.png?v=856c3192a848";
 const ILLUMINE_DYE_MASK = "images/monsters/illumine-dye-mask.PNG?v=ecdc51013525";
-const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=0a38c9def40d";
+const DREAMY_DYE_MASK = "images/monsters/dreamy-dye-mask.PNG?v=c6419eaba43c";
 const DREAMY_IMG = "images/monsters/dreamy.png?v=14e1f738cec9";
 // 新しい16種(2026-10-24・まだ味方には入れていない)。ファイル名はカードの種族名(data/card-battle-cards.js の species)。
 // 元絵は tools/art-sources/new-monsters-2026-10-24/。透明な余白を切って高さ916pxへ縮め、256色へ減色。
