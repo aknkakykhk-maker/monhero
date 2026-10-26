@@ -4,3 +4,6 @@
 
 ## 2026-10-26 今日公開した物
 → [damedashi-2026-10-26/README.md](damedashi-2026-10-26/README.md)(6件)
+
+## 2026-10-26 モンヒロビート
+→ [damedashi-2026-10-26/beat/README.md](damedashi-2026-10-26/beat/README.md)(10件)
