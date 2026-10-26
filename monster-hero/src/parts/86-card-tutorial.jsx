@@ -37,6 +37,8 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D21: 'まずは光ってる所だよ',
   D22: 'あわてなくていい。光ってる所からな',
 });
+// みゅあの台詞の表情(吹き出しの顔。2026-10-26 社長「表情別にして」)。書いていない台詞は happy
+const CARD_TUTORIAL_FACE = Object.freeze({ M1: 'wink', M2: 'happy', M3: 'excited', M4: 'surprise', M5: 'troubled', M6: 'surprise', M7: 'crying', M8: 'happy' });
 const CARD_TUTORIAL_WRONG = Object.freeze(['D21', 'D22']);
 const CARD_TUTORIAL_POINT = 100;
 // 使うカード: ステップ(ピクシーの回避)・パンチ(ディノの技)・ソバット(みゅあのハムの技)

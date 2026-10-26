@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 40d17a07c3f4bb47
+// generated-sha256: 191ac80a773de4cd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-26 09:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-26 10:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -51848,11 +51848,15 @@ const cardNormalizeDaily = (v, today) => {
   return { day: today, cpuPoint: cardNormalizePoint(v.cpuPoint), pvpPoint: cardNormalizePoint(v.pvpPoint), firstWin: v.firstWin === true, foes: cardIsPlainObject(v.foes) ? { ...v.foes } : {} };
 };
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
-// 対戦の BGM。cpu は 'auto'(相手の助手に合わせる)か曲id、pvp は曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
-const CARD_BGM_DEFAULT = Object.freeze({ cpu: 'auto', pvp: 'ichika_battle' });
+// MFバトルカードの BGM。top … トップ画面(練習試合の外)/ cpu … 'auto'(相手の助手に合わせる)か曲id / pvp … 曲id。無い・知らない曲idは既定へ戻す(isTrack: 曲idか確かめる関数)
+// 既定: トップ画面は「MF × ICHIKA MIX」(atsu_cup_theme。2026-10-26 社長「入ったときのBGMをMFいちかみっくすに」)。対戦は前のとおり
+//   助手と対戦は 'auto'(助手ごとの曲)・マルチは ichika_battle(#3634 で一度対戦まで ICHIKA にしたのを戻した)
+//   ★mh_card_bgm_v1 は、オプションで曲を選んだときにだけ書く。選んだ人の値はそのまま読む(書き換えない)。top は足した項目なので、前からの人も既定で補う
+const CARD_BGM_DEFAULT = Object.freeze({ top: 'atsu_cup_theme', cpu: 'auto', pvp: 'ichika_battle' });
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
   return {
+    top: typeof r.top === 'string' && isTrack(r.top) ? r.top : CARD_BGM_DEFAULT.top,
     cpu: r.cpu === 'auto' || (typeof r.cpu === 'string' && isTrack(r.cpu)) ? r.cpu : CARD_BGM_DEFAULT.cpu,
     pvp: typeof r.pvp === 'string' && isTrack(r.pvp) ? r.pvp : CARD_BGM_DEFAULT.pvp,
   };
@@ -52438,6 +52442,8 @@ const CARD_TUTORIAL_LINES = Object.freeze({
   D21: 'まずは光ってる所だよ',
   D22: 'あわてなくていい。光ってる所からな',
 });
+// みゅあの台詞の表情(吹き出しの顔。2026-10-26 社長「表情別にして」)。書いていない台詞は happy
+const CARD_TUTORIAL_FACE = Object.freeze({ M1: 'wink', M2: 'happy', M3: 'excited', M4: 'surprise', M5: 'troubled', M6: 'surprise', M7: 'crying', M8: 'happy' });
 const CARD_TUTORIAL_WRONG = Object.freeze(['D21', 'D22']);
 const CARD_TUTORIAL_POINT = 100;
 // 使うカード: ステップ(ピクシーの回避)・パンチ(ディノの技)・ソバット(みゅあのハムの技)
@@ -53108,6 +53114,8 @@ const CARD_AI_BGM = Object.freeze({
   kyuko: 'melo_toward_the_stars_short', dra: 'melo_mou_hitotsu_no_sekai_e', atsu: 'melo_against_my_own_shadow',
 });
 const CARD_PVP_BGM = 'ichika_battle';
+// 助手と対戦の曲: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手の曲(CARD_AI_BGM)
+const cardCpuBgm = (bgm, who) => (bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : (CARD_AI_BGM[who] || null));
 const cardIsBgmTrack = (id) => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some((t) => t.id === id);
 // モンスターの絵(5-3)。モンヒロにいる種族はいまのゲームの絵、いない16種族は社長から届いた立ち絵(#3437 でクラフトくんが取り込んだ)。
 // 混血の15体は、立ち絵が届いた子から立ち絵にする(HYBRID_MONSTER_IMGS)。まだの子はカードの絵で代える(社長)
@@ -53554,14 +53562,14 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     lastLine.current = { ...lastLine.current, [scene]: line.index };
     setFace(line.face);
     const key = `${Date.now()}-${scene}`;
-    setBubble({ text: line.text, key });
+    setBubble({ text: line.text, key, face: line.face });
     clearTimeout(bubbleTimer.current);
     bubbleTimer.current = setTimeout(() => setBubble(null), 4500);
     if (ai && !game.demo && !tutorial && CARD_TALK_MOMENTS.includes(ai.scene) && talk.current.n < CARD_TALK_MOMENT_PER_GAME && cardAiTalkOn()) {
       talk.current.n += 1;
       void cardTalkFetch('moment', { who: game.who, facts: cardTalkMomentFacts(db, ai.next, CARD_CPU, ai.scene), samples: cardTalkSamples(game.who, scene) }).then((r) => {
         if (!r) return;
-        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text } : cur));
+        setBubble((cur) => (cur && cur.key === key ? { ...cur, text: r.text, face: r.face } : cur));
         setFace(r.face);
       });
     }
@@ -53573,8 +53581,9 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
     if (!tutorial || !tutQ.length) return undefined;
     const head = tutQ[0];
     if (head[0] === 'M') {
-      setFace('happy');
-      setBubble({ text: CARD_TUTORIAL_LINES[head], key: `t-${head}-${Date.now()}` });
+      const tf = CARD_TUTORIAL_FACE[head] || 'happy';
+      setFace(tf);
+      setBubble({ text: CARD_TUTORIAL_LINES[head], key: `t-${head}-${Date.now()}`, face: tf });
       const t = setTimeout(() => { setBubble(null); setTutQ((q) => q.slice(1)); }, 2100);
       return () => clearTimeout(t);
     }
@@ -54124,10 +54133,12 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             {turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`}
           </div>
         )}
-        {/* 相手の助手の吹き出し(まんなかのいちばん上。相手のモンスターにはかけない。指の操作は下へ通す) */}
+        {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。指の操作は下へ通す。
+            顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && (
-          <div key={bubble.key} data-card-bubble className={`pointer-events-none relative z-[2] max-w-full rounded-2xl border-[3px] bg-white px-2.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
-            <span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span>
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} className={`pointer-events-none absolute inset-x-2 top-0.5 z-[8] mx-auto flex w-fit max-w-[calc(100%-16px)] items-center gap-1.5 rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+            <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>
+            <span className="min-w-0"><span className="mr-1 text-[11px]" style={{ color: who.accent }}>{who.name}</span><span style={JA_WRAP_STYLE}>{jaWrap(bubble.text)}</span></span>
           </div>
         )}
         <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
@@ -54182,11 +54193,16 @@ const CardBattleBoard = ({ db, game, onFinish, quickRun = null, meProfile = null
             if (tutStage.onNext) setSt((cur) => cardTutorialMutate(db, cur, tutStage.onNext));
             setTutI((i) => i + 1);
           };
+          // 縦の画面: 手札のすぐ上に重ねて出す(場所を取らない。下のボタンが画面の外へ押し出されていた・2026-10-26 社長の実機)。
+          //   窓の文字の上は指の操作を下(自分のモンスター)へ通し、「次へ」だけ押せる。横の画面は右の列に今までどおり並べる
+          //   重なりは 45(技を出す子の動き 40 より上・ダメージの数字 50 と大きいカード 55 より下)
           return (
-            <div data-card-tutor={tutStage.id} className="relative z-[30] mx-2 mb-1 flex shrink-0 items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950 px-2 py-1.5 shadow-lg">
+            <div className={wide ? 'contents' : 'pointer-events-none relative z-[45] h-0 shrink-0'}>
+            <div data-card-tutor={tutStage.id} className={`${wide ? 'relative mb-1 shrink-0' : 'absolute inset-x-0 bottom-1'} z-[45] mx-2 flex items-start gap-2 rounded-2xl border-2 border-emerald-300/80 bg-slate-950/95 px-2 py-1.5 shadow-lg`}>
               {dra && <img src={assistantFaceImage(dra, 'happy')} alt="ドラ" className="h-[36px] w-[36px] shrink-0 rounded-lg object-cover object-top"/>}
               <div className="min-w-0 flex-1 text-[12px] font-bold leading-snug text-emerald-50" style={JA_WRAP_STYLE}><b className="mr-1 text-[11px] text-emerald-300">ドラ</b>{jaWrap(CARD_TUTORIAL_LINES[tutSay])}{hint && <span data-card-tutor-hint className="mt-0.5 block text-[11px] text-amber-200">{jaWrap(hint)}</span>}</div>
-              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
+              {showNext && <button type="button" data-card-tutor-next onClick={onNext} className="pointer-events-auto shrink-0 self-center animate-pulse rounded-xl bg-emerald-400 px-3 py-2 text-[13px] font-black text-slate-950 ring-4 ring-emerald-300/70 active:scale-95">次へ</button>}
+            </div>
             </div>
           );
       })()}
@@ -54460,6 +54476,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return next;
   };
   useEffect(() => { void load(); }, []);
+  // トップ画面(結果・デッキ編成なども)の曲。対戦の画面へ入るときは、それぞれの曲に替える
+  const topBgm = save && save.bgm ? save.bgm.top : null;
+  useEffect(() => { if (screen === 'CARD_TOP' && topBgm && onBgm) onBgm(topBgm); }, [screen, topBgm]);
   // 対戦の画面から外へ出たら(戻るなど)、トップに戻す
   useEffect(() => { if (screen === 'CARD_TOP' && game && !result) setGame(null); }, [screen]);
 
@@ -54490,7 +54509,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // マルチ対戦: 封を開けて確かめるのは 91 の CARD_PVP。結果は部屋の画面に出す(報酬は区切り2)
       if (game.pvp) {
         CARD_PVP.finish(outcome, st);
-        onBgm && onBgm(null);
+        onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
         setView('pvp');
         return;
@@ -54500,7 +54519,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         const fin = cardTutorialFinish(save.tutorial, outcome === 'tutorialDone' ? 'done' : 'skip', Date.now());
         const ok = await persist({ tutorial: fin.tutorial, point: save.point + fin.reward });
         setResult({ tutorial: true, done: outcome === 'tutorialDone', reward: ok ? fin.reward : 0, saved: ok });
-        onBgm && onBgm(null);
+        onBgm && onBgm(save.bgm.top);
         onNavigate('CARD_TOP');
         setView('result');
         return;
@@ -54522,7 +54541,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
       const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts });
-      onBgm && onBgm(null);
+      onBgm && onBgm(save.bgm.top);
       onNavigate('CARD_TOP');
       setView('result');
     }}/>;
@@ -54538,7 +54557,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const startTutorial = () => {
     setResult(null);
     setGame({ key: `tutorial-${Date.now()}`, st: cardTutorialGame(db), who: 'mua', level: 'easy', tutorial: true });
-    onBgm && onBgm(CARD_AI_BGM.mua);
+    onBgm && onBgm(CARD_AI_BGM.mua); // 練習試合は、みゅあの曲(#3634 の前と同じ)
     onNavigate('CARD_BATTLE');
   };
   const startBattle = (pick = foe) => {
@@ -54554,7 +54573,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     setResult(null);
     setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings });
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
-    onBgm && onBgm(save.bgm.cpu !== 'auto' ? save.bgm.cpu : (CARD_AI_BGM[pick.who] || null));
+    onBgm && onBgm(cardCpuBgm(save.bgm, pick.who));
     onNavigate('CARD_BATTLE');
   };
 
@@ -54832,14 +54851,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div data-card-options-bgm className={SCREEN_PANEL_CLASS}>
             <div className="text-[13px] font-black text-white">音</div>
             <b className="mt-2 block text-[12px] font-black text-slate-200">対戦のBGM</b>
-            {[['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
+            {[['top', 'トップ画面'], ['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => (
               <label key={k} className="mt-2 block text-left">
                 <span className="text-[11px] font-black text-slate-300">{label}{k === 'pvp' && !(typeof cardPvpOpen === 'function' && cardPvpOpen()) ? '(準備中)' : ''}</span>
                 <div className="mt-1 flex gap-2">
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
                     {k === 'cpu' && <option value="auto">おまかせ(相手の助手に合わせる)</option>}
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{k === 'pvp' && t.id === CARD_BGM_DEFAULT.pvp ? '(デフォルト)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === CARD_BGM_DEFAULT[k] ? '(デフォルト)' : ''}</option>)}
                   </select>
                   {bgmPreview && (save.bgm[k] !== 'auto') && <button type="button" data-card-bgm-preview={k} onClick={() => bgmPreview.toggle(save.bgm[k])} className="min-h-[44px] min-w-[58px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing === save.bgm[k] ? '停止' : '試聴'}</button>}
                 </div>
@@ -55419,11 +55438,12 @@ const CardRules = ({ onBack, onTutorial }) => (
 );
 
 // ==================== パックの絵(社長「パックの絵に出る奴らをいい感じにのせて」台帳 #3503) ====================
-// 新しい画像ファイルは作らない。弾の色の袋に、その弾で出るモンスターの立ち絵(84 の cardMonArt。無ければカードの絵)を5体まで並べて描く
+// 新しい画像ファイルは作らない。弾の色の袋に、その弾で出るモンスターの立ち絵(84 の cardMonArt)を5体まで並べて描く。
+// 立ち絵の無い子は並べない(カードの絵を貼ると浮く。2026-10-26 社長「立ち絵ないやつはパケ画像にいれなくていいよ」)。1〜4体のときは、その数で左右がそろう形に並べる
 // torn … 上のふち(ちぎれる所)を描かない(パックを開ける画面で、ちぎれた帯を別に飛ばすとき)
 const cardPackMonsters = (db, pack, n = 5) => {
   const seen = new Set();
-  const list = Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id && !m.variant && m.ready !== false && !seen.has(m.species) && seen.add(m.species));
+  const list = Object.values(db.monsters).filter((m) => cardPackIdOf(db, m.no) === pack.id && !m.variant && m.ready !== false && !!cardMonArt(m) && !seen.has(m.species) && seen.add(m.species));
   if (list.length <= n) return list;
   const step = list.length / n;
   return Array.from({ length: n }, (_, k) => list[Math.floor(k * step)]);
@@ -55434,11 +55454,18 @@ const CARD_PACK_SLOTS = Object.freeze([
   { left: '-6%', w: '46%', h: '48%', b: '10%', z: 2, o: 1 }, { right: '-6%', w: '46%', h: '48%', b: '10%', z: 2, o: 1 },
   { left: '50%', w: '62%', h: '58%', b: '2%', z: 3, o: 1, center: true },
 ]);
+// 立ち絵が5体に足りない弾の並べ方(数ごと。左右がそろうように)
+const CARD_PACK_FEW_SLOTS = Object.freeze({
+  1: [{ left: '50%', w: '84%', h: '66%', b: '6%', z: 3, o: 1, center: true }],
+  2: [{ left: '-4%', w: '62%', h: '60%', b: '8%', z: 2, o: 1 }, { right: '-4%', w: '62%', h: '60%', b: '8%', z: 3, o: 1 }],
+  3: CARD_PACK_SLOTS.slice(2),
+  4: [CARD_PACK_SLOTS[0], CARD_PACK_SLOTS[1], { left: '-2%', w: '54%', h: '54%', b: '8%', z: 2, o: 1 }, { right: '-2%', w: '54%', h: '54%', b: '8%', z: 3, o: 1 }],
+});
 const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) => {
   const mons = cardPackMonsters(db, pack);
   // 真ん中を最後に(いちばん手前)。並べる順: 奥の左右 → 中の左右 → 真ん中
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
-  const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_SLOTS.slice(5 - mons.length);
+  const slots = mons.length >= 5 ? CARD_PACK_SLOTS : (CARD_PACK_FEW_SLOTS[mons.length] || []);
   const h = Math.round(width * 1.48);
   const label = `第${pack.no}弾`;
   return (
@@ -55447,7 +55474,7 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
       <div aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,.28) 45%, transparent 60%)' }}/>
       {!torn && <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[7%]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)' }}/>}
       {order.map((m, k) => {
-        const sl = slots[k]; const src = cardMonArt(m) || CARD_IMG(m.img);
+        const sl = slots[k]; const src = cardMonArt(m);
         return <img key={m.no} src={src} alt="" aria-hidden="true" draggable={false} className="absolute object-contain object-bottom drop-shadow-[0_4px_6px_rgba(0,0,0,.6)]"
           style={{ width: sl.w, height: sl.h, bottom: sl.b, zIndex: sl.z, opacity: sl.o, ...(sl.center ? { left: sl.left, transform: 'translateX(-50%)' } : sl.left ? { left: sl.left } : { right: sl.right }) }}/>;
       })}
@@ -78289,9 +78316,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const list=isFrame?frames.map(frame=>({id:frame.id,name:frame.name,desc:frame.desc,frame,owned:frameOwned(frame)})):icons;
           const ownedCount=list.filter(x=>x.owned).length;
           const myIconSrc=resolveIconUrl(breederIcon);
-          const avatarOf=(x,view,className,fit)=>isFrame
-            ? <ProfileAvatar src={view==='frame'?null:myIconSrc} id={breederIcon} frameId={view==='icon'?null:x.id} alt={x.name} className={className} fit={fit} fallback={view==='frame'?null:<User size={22} className="text-indigo-400"/>}/>
-            : <ProfileAvatar src={view==='frame'?null:x.src} id={x.id} frameId={view==='icon'?null:profileFrameId} alt={x.name} className={className} fit={fit}/>;
+          // 顔(アイコンの丸)の大きさを、どのフレームでもそろえる(2026-10-26 社長「フレームごとに表示サイズかわるのおかしくない？」)。
+          // ProfileAvatar の fit はフレームごとに縮め方が違う(profileFrameBoxRatio)ので使わず、いちばん飾りの大きい枠に合わせた1つの比で縮める。
+          // 枠は顔の外へはみ出して描かれる(プロフィール画面と同じ顔と枠の比)
+          // アイコンのタブは、どれもいま使っている枠を重ねるので、その枠の比でよい(小さくしすぎない)
+          const dexBoxRatio=isFrame?Math.max(1, ...frames.map(frame=>profileFrameBoxRatio(frame.id))):profileFrameBoxRatio(profileFrameId);
+          const avatarOf=(x,view,size)=>{
+            const face=Math.round(size/dexBoxRatio);
+            const st={width:face,height:face,flexShrink:0};
+            return (
+              <span data-dex-avatar style={{width:size,height:size,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {isFrame
+                  ? <ProfileAvatar src={view==='frame'?null:myIconSrc} id={breederIcon} frameId={view==='icon'?null:x.id} alt={x.name} style={st} fallback={view==='frame'?null:<User size={22} className="text-indigo-400"/>}/>
+                  : <ProfileAvatar src={view==='frame'?null:x.src} id={x.id} frameId={view==='icon'?null:profileFrameId} alt={x.name} style={st}/>}
+              </span>
+            );
+          };
           const howTo=(x)=>{
             if(!isFrame) return x.source==='starter'?'はじめから使える':x.source==='market'?'マーケットで買える':'プレゼントで届いた';
             const unlock=profileFrameUnlock(x.frame);
@@ -78311,8 +78351,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const n=list.length;
             const go=(d)=>setLookDexZoom((lookDexZoom+d+n)%n);
             const vw=typeof window!=='undefined'?window.innerWidth:390, vh=typeof window!=='undefined'?window.innerHeight:664;
-            // 飾りの大きいフレームも収まる大きさ(飾りは絵の約1.4倍に広がる)。横向きでは高さにも合わせる
-            const box=Math.max(120, Math.min(vw-96, 340, Math.round(vh*0.42))); // 左右の矢印の幅をあける
+            // 絵の大きさ。飾りの大きいフレームも fit で枠の中に収まる。縦長の端末では大きく、横向き・小さい端末では高さに合わせる
+            // (2026-10-26 社長「うわよせでつかいづらい」。上に寄って下半分が空いていたので、真ん中へ寄せ、下に同じ並びの帯を出す)
+            const box=Math.max(120, Math.min(vw-48, 360, Math.round(vh*0.40)));
+            // 上の余白は端末ごとに1つに決める(中身の高さで決めると、説明の長さで絵の位置が前後ごとに動く)。下の文・切り替え・ボタンのぶんはおよそ260
+            const topPad=Math.max(4, Math.round((vh-150-box-260)/2));
             const selected=isFrame?normalizeProfileFrameId(profileFrameId)===x.id:breederIcon===x.id;
             const choose=()=>{
               if(!x.owned) return;
@@ -78320,37 +78363,51 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               else { setBreederIcon(x.id); setOnboardingIcon(x.id); if(!onboardingPreview) storeSet('mh_breeder_icon', x.id, false); }
             };
             let touchX=null;
+            const navButton='mh-button mh-button-secondary flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[26px] font-black leading-none text-white active:scale-90';
             return (
-              <div data-dex-zoom={x.id} style={{...shell,background:'#020617',overflowY:'auto'}}
-                onTouchStart={(e)=>{ touchX=e.touches&&e.touches[0]?e.touches[0].clientX:null; }}
-                onTouchEnd={(e)=>{ const t=e.changedTouches&&e.changedTouches[0]; if(touchX==null||!t) return; const dx=t.clientX-touchX; touchX=null; if(Math.abs(dx)>40) go(dx<0?1:-1); }}>
-                <div style={{width:'100%',maxWidth:420,display:'flex',flexDirection:'column',alignItems:'center',padding:'0 16px 20px'}}>
-                  <div style={{alignSelf:'stretch',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0 4px'}}>
-                    <button type="button" data-dex-zoom-close aria-label="一覧へ戻る" onClick={()=>setLookDexZoom(null)}
-                      className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-                    <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
-                  </div>
-                  <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center',alignSelf:'stretch',height:box}}>
-                    <button type="button" data-dex-prev aria-label="前へ" onClick={()=>go(-1)} className="absolute left-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90">‹</button>
+              <div data-dex-zoom={x.id} style={{...shell,background:'#020617'}}>
+                <div style={{width:'100%',maxWidth:480,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px 4px',flexShrink:0}}>
+                  <button type="button" data-dex-zoom-close aria-label="一覧へ戻る" onClick={()=>setLookDexZoom(null)}
+                    className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <span className="text-[12px] font-bold text-slate-400">{lookDexZoom+1} / {n}</span>
+                </div>
+                {/* 真ん中の欄。絵が縦のおよそ真ん中に来るよう上をあける。長いとき(横向き)はこの欄だけスクロールする。横になぞると前後へ */}
+                <div data-dex-zoom-body style={{flex:1,minHeight:0,width:'100%',overflowY:'auto',display:'flex',flexDirection:'column'}}
+                  onTouchStart={(e)=>{ touchX=e.touches&&e.touches[0]?e.touches[0].clientX:null; }}
+                  onTouchEnd={(e)=>{ const t=e.changedTouches&&e.changedTouches[0]; if(touchX==null||!t) return; const dx=t.clientX-touchX; touchX=null; if(Math.abs(dx)>40) go(dx<0?1:-1); }}>
+                  <div style={{margin:'0 auto',width:'100%',maxWidth:420,display:'flex',flexDirection:'column',alignItems:'center',padding:`${topPad}px 16px 12px`}}>
                     <div style={{width:box,height:box,position:'relative',opacity:x.owned?1:0.55}}>
-                      {avatarOf(x,lookDexView,'w-full h-full',true)}
+                      {avatarOf(x,lookDexView,box)}
                       {!x.owned&&<Lock size={34} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]"/>}
                     </div>
-                    <button type="button" data-dex-next aria-label="次へ" onClick={()=>go(1)} className="absolute right-0 z-10 px-2 py-4 text-[30px] leading-none text-slate-300 active:scale-90">›</button>
+                    <div className="mt-3 flex w-full items-center gap-2">
+                      <button type="button" data-dex-prev aria-label="前へ" onClick={()=>go(-1)} className={navButton}>‹</button>
+                      <b className="min-w-0 flex-1 text-center text-[18px] font-black leading-tight">{jaWrap(x.name)}</b>
+                      <button type="button" data-dex-next aria-label="次へ" onClick={()=>go(1)} className={navButton}>›</button>
+                    </div>
+                    {x.desc&&<p className="mt-1.5 text-center text-[12px] leading-relaxed text-slate-300">{helpWrap(x.desc)}</p>}
+                    <p data-dex-howto className="mt-2 text-center text-[12px] font-black leading-snug text-amber-400">{x.owned?'':'🔒 '}{helpWrap(`手に入れ方：${howTo(x)}`)}</p>
+                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {[['both','重ねて'],['frame','フレームだけ'],['icon','アイコンだけ']].map(([id,label])=>(
+                        <button key={id} type="button" data-dex-view={id} aria-pressed={lookDexView===id} onClick={()=>setLookDexView(id)}
+                          className={`rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView===id?'bg-amber-500 text-slate-900':'bg-slate-800 text-slate-200'}`}>{label}</button>
+                      ))}
+                    </div>
+                    {x.owned
+                      ? <button type="button" data-dex-choose onClick={choose} disabled={selected}
+                          className={`mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected?'bg-slate-700 text-slate-300':'bg-amber-500 text-slate-900'}`}>{selected?'いま使っています':'これにする'}</button>
+                      : <div className="mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400">まだ持っていません</div>}
                   </div>
-                  <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                    {[['both','重ねて'],['frame','フレームだけ'],['icon','アイコンだけ']].map(([id,label])=>(
-                      <button key={id} type="button" data-dex-view={id} aria-pressed={lookDexView===id} onClick={()=>setLookDexView(id)}
-                        className={`rounded-full px-3 py-1.5 text-[12px] font-black active:scale-95 ${lookDexView===id?'bg-amber-500 text-slate-900':'bg-slate-800 text-slate-200'}`}>{label}</button>
-                    ))}
-                  </div>
-                  <b className="mt-3 text-center text-[18px] font-black leading-tight">{jaWrap(x.name)}</b>
-                  {x.desc&&<p className="mt-1.5 text-center text-[12px] leading-relaxed text-slate-300">{helpWrap(x.desc)}</p>}
-                  <p data-dex-howto className="mt-2 text-center text-[12px] font-black leading-snug text-amber-400">{x.owned?'':'🔒 '}{helpWrap(`手に入れ方：${howTo(x)}`)}</p>
-                  {x.owned
-                    ? <button type="button" data-dex-choose onClick={choose} disabled={selected}
-                        className={`mt-3 rounded-2xl px-10 py-3 text-[14px] font-black active:scale-95 ${selected?'bg-slate-700 text-slate-300':'bg-amber-500 text-slate-900'}`}>{selected?'いま使っています':'これにする'}</button>
-                    : <div className="mt-3 rounded-2xl bg-slate-700 px-10 py-3 text-[14px] font-black text-slate-400">まだ持っていません</div>}
+                </div>
+                {/* 下の帯: 同じ並びを小さく並べ、押すとそこへ飛ぶ。いま見ているものを帯の真ん中へ寄せる */}
+                <div data-dex-strip style={{flexShrink:0,width:'100%',maxWidth:520,overflowX:'auto',overflowY:'hidden',display:'flex',gap:8,padding:'8px 16px 10px',borderTop:'1px solid rgba(255,255,255,.1)',WebkitOverflowScrolling:'touch'}}>
+                  {list.map((y,i)=>(
+                    <button key={y.id} type="button" data-dex-strip-item={y.id} aria-label={y.name} aria-current={i===lookDexZoom?'true':undefined} onClick={()=>setLookDexZoom(i)}
+                      ref={i===lookDexZoom?(el)=>{ if(el&&el.parentElement){ const p=el.parentElement; p.scrollLeft=el.offsetLeft-p.clientWidth/2+el.offsetWidth/2; } }:undefined}
+                      className={`relative shrink-0 rounded-xl border-2 p-1 active:scale-95 ${i===lookDexZoom?'border-amber-400 bg-amber-950/40':'border-slate-700 bg-slate-900'}`}>
+                      <span className={`block ${y.owned?'':'opacity-40'}`}>{avatarOf(y,'both',40)}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             );
@@ -78371,7 +78428,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button key={x.id} type="button" data-dex-item={x.id} data-dex-owned={x.owned?'yes':'no'} onClick={()=>setLookDexZoom(i)}
                       className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-900 px-1 pb-2 pt-4 active:scale-95">
                       <span className={`relative block ${x.owned?'':'opacity-45'}`}>
-                        {avatarOf(x,'both','w-12 h-12',true)}
+                        {avatarOf(x,'both',56)}
                         {!x.owned&&<Lock size={16} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
                       </span>
                       <span className={`w-full text-center text-[9px] font-black leading-tight ${x.owned?'text-slate-200':'text-slate-500'}`}>{jaWrap(x.name)}</span>
