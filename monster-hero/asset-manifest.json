@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "65d7c557888b",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":122092706,"count":667},"card":{"bytes":31268880,"count":906},"all":{"bytes":260749032,"count":1666}},
+  "id": "55df0a0cb050",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121968556,"count":664},"card":{"bytes":31268880,"count":906},"all":{"bytes":260624882,"count":1663}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1345,13 +1345,10 @@
     "images/monster-icons/face/mia.png": {"v":"7277873a55ca","size":62018,"pack":"battle"},
     "images/monster-icons/face/mitarashi.png": {"v":"36f1cf509e8e","size":71737,"pack":"battle"},
     "images/monster-icons/face/mocchi.png": {"v":"96be4cbc1468","size":24345,"pack":"battle"},
-    "images/monster-icons/face/monol.png": {"v":"3d9427d9c445","size":24728,"pack":"battle"},
     "images/monster-icons/face/naga.png": {"v":"3e34d760941f","size":74442,"pack":"battle"},
-    "images/monster-icons/face/oboro.png": {"v":"24f9d1bd91ca","size":58259,"pack":"battle"},
     "images/monster-icons/face/pandora.png": {"v":"8b1ece7f0014","size":89825,"pack":"battle"},
     "images/monster-icons/face/phoenix.png": {"v":"7e70faa2de7a","size":58305,"pack":"battle"},
     "images/monster-icons/face/pixie.png": {"v":"d33b92e39fa0","size":20945,"pack":"battle"},
-    "images/monster-icons/face/plant.png": {"v":"d45232f94119","size":41163,"pack":"battle"},
     "images/monster-icons/face/snegurochka.png": {"v":"b30d920ec35a","size":22403,"pack":"battle"},
     "images/monster-icons/face/spooky.png": {"v":"2c047a771ffe","size":20163,"pack":"battle"},
     "images/monster-icons/face/suezo.png": {"v":"696938ca7d63","size":17608,"pack":"battle"},
