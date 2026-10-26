@@ -3,14 +3,14 @@
  "monster": [
   {
    "no": "C-049",
-   "name": "ケンタロウス",
+   "name": "ケンタウロス",
    "type": "地上",
    "life": 7,
    "img": "C-049.jpg"
   },
   {
    "no": "C-049S",
-   "name": "ケンタロウス",
+   "name": "ケンタウロス",
    "type": "地上",
    "life": 7,
    "img": "C-049S.jpg",

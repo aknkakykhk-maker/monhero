@@ -209,6 +209,16 @@ const statusOf = (a, b) => {
   check('フレンドの情報を読める(無い人は含まれない)', sums.userA && sums.userA.bestBond === 15 && sums.userA.favorite.monsterId === 'Pixie' && !sums.userB && sums.userA.updatedAt > 0
     && sums.userA.startedOn === '2026-09-01' && sums.userA.playSeconds === 7200);
   check('知らない場所の値は送っても弾かれ、落ちない', await api.sbUpsertFriendProfile('userA', { ...summary, place: 'nowhere' }) === false && db.friend_profiles[0].place === 'home');
+  // MFバトルカード(2026-10-27 社長「対戦中だけ分ける」): 表の place の決まりには無いので、表へは other・本当の場所は records.pl
+  check('MFバトルカードの画面は「遊び中」、対戦の画面は「対戦中」の大分類', api.friendsPlaceOfScreen('CARD_TOP') === 'card' && api.friendsPlaceOfScreen('CARD_BATTLE') === 'cardBattle'
+    && api.friendsPresenceText('card', Date.now(), Date.now()).text === 'MFバトルカードで遊び中' && api.friendsPresenceText('cardBattle', Date.now(), Date.now()).text === 'MFバトルカードで対戦中');
+  const cardSum = api.friendsBuildSummary({ place: 'cardBattle', masuMons: [], favoriteMasuId: null, playtime: {}, records: { v: 1, battle: [] } });
+  check('MFバトルカードの対戦中を送ると、表の place は other・records.pl に cardBattle(表の決まりに弾かれない)', cardSum.place === 'cardBattle'
+    && await api.sbUpsertFriendProfile('userA', cardSum) === true && db.friend_profiles[0].place === 'other' && db.friend_profiles[0].records && db.friend_profiles[0].records.pl === 'cardBattle');
+  const cardRead = await api.sbFetchFriendSummaries(['userA']);
+  check('読む側は records.pl から「MFバトルカードで対戦中」を出す', cardRead.userA && cardRead.userA.place === 'cardBattle', JSON.stringify(cardRead.userA && cardRead.userA.place));
+  check('records の pl は知っている値だけ読む', api.friendsNormalizeRecords({ pl: 'zzz' }).pl === null && api.friendsNormalizeRecords({ pl: 'card' }).pl === 'card');
+  await api.sbUpsertFriendProfile('userA', { ...summary, place: 'home' });
   // 届いている申請の件数
   await api.sbSendFriendRequest('userE', 'userA');
   const inc = await api.sbCountIncomingFriendRequests('userA');
