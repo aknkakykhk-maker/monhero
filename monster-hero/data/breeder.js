@@ -414,7 +414,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1 },
   { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000 },
   // ミーア。正式な本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
-  { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_IMG, cost:1 },
+  { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_FACE_ICON, cost:1 },
   { id:'mia_disc_icon', name:"ミーアの円盤石アイコン", type:'icon', icon:MIA_DISC_ICON, cost:1 },
   { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:150000 },
   // パンドラ。保存済みの本体・円盤石画像を各商品で共用する。

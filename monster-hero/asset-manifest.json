@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "c9650e903e1b",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120995059,"count":654},"card":{"bytes":31268880,"count":906},"all":{"bytes":259651385,"count":1653}},
+  "id": "ff1da8dc739b",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":121016638,"count":655},"card":{"bytes":31268880,"count":906},"all":{"bytes":259672964,"count":1654}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1337,6 +1337,7 @@
     "images/monster-icons/face/melody.png": {"v":"95bbe06158e4","size":71109,"pack":"battle"},
     "images/monster-icons/face/metalner.png": {"v":"ac30798baf9a","size":60001,"pack":"battle"},
     "images/monster-icons/face/mew.png": {"v":"8c5f6a06b720","size":60279,"pack":"battle"},
+    "images/monster-icons/face/mia.png": {"v":"35b65c9e07c6","size":21579,"pack":"battle"},
     "images/monster-icons/face/mitarashi.png": {"v":"36f1cf509e8e","size":71737,"pack":"battle"},
     "images/monster-icons/face/mocchi.png": {"v":"96be4cbc1468","size":24345,"pack":"battle"},
     "images/monster-icons/face/naga.png": {"v":"3e34d760941f","size":74442,"pack":"battle"},
