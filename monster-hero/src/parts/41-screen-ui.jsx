@@ -75,7 +75,8 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = n
       </button>
     )}
     <div className="min-w-0 flex-1">
-      <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
+      {/* 折り返す見出しは言葉の切れ目で折る(「マスモン一覧(モンヒロ／ビート)」と名前の途中で折れていた・2026-10-26) */}
+      <h2 className={`flex items-center gap-1.5 ${wrapTitle ? 'break-words' : 'truncate'} text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{wrapTitle && typeof title === 'string' ? <span className="min-w-0" style={JA_WRAP_STYLE}>{jaWrap(title)}</span> : title}</h2>
       {/* 注記は文字のときだけ言葉の切れ目で折る(2026-10-24。M/B管理「アシストカードは／ここ」と2字だけ落ちていた) */}
       {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={typeof note === 'string' ? JA_LABEL_STYLE : undefined}>{typeof note === 'string' ? jaWrap(note) : note}</p>}
     </div>
@@ -218,6 +219,9 @@ const JA_WRAP_LINE = 10;
 // 文節の終わりになる言葉(このあとでは折ってよい)。助詞・句読点・閉じかっこ
 // (「な」「か」「って」は「強くな|ければ」「いって|らっしゃい」のように言葉の途中にも来るので入れない)
 const JA_PARTICLE_END = /(?:は|が|を|に|で|と|も|へ|や|から|まで|より|けど|ので|のに|ても|でも|には|では|とは|ね|よ|ぞ|の)$|[、。！？!?」』…‥〜～・)）》〉】〕%％\s]$/; // 記号は、ブラウザがそのあとを印が無くても折るので入れる
+// 道具(Intl.Segmenter)が読み違えて途中で切る、よく使う言葉(この中では折らない。2026-10-26 社長「ストーリーやバトルカードとかでも変なとこで切れる」
+//   「や/さしく」「ひと/とおり」「はね/返す」「しと/け」。検査 tools/boot/ja-wrap-word-check.js)
+const JA_WORDS_KEEP = ['ひととおり', 'やさし', 'はね返', 'しとけ', 'しとく', 'ちょっと', 'いっしょ', 'やっぱ', 'おねがい', 'ありがと', 'ひとつ', 'ふたつ', 'みんな', 'ぜったい', 'いっぱい', 'もっと', 'ずっと', 'きっと', 'たくさん'];
 const jaWrapPoints = (text) => {
   const s = String(text ?? '');
   if (!s) return s;
@@ -243,6 +247,9 @@ const jaWrapPoints = (text) => {
       if (/[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）]/.test(m[0])) kao.push([m.index, m.index + m[0].length]);
     }
     const inKao = (pos) => kao.some(([a, b]) => pos > a && pos < b);
+    const keepWords = [];
+    for (const w of JA_WORDS_KEEP) for (let i = s.indexOf(w); i >= 0; i = s.indexOf(w, i + 1)) keepWords.push([i, i + w.length]);
+    const inKeepWord = (pos) => keepWords.some(([a, b]) => pos > a && pos < b);
     // 道具が空白と「(」を1つの区切りにすることがあるので、空白のすぐあとから顔文字が始まる所も「始まり」とみなす
     const kaoStart = (pos) => kao.some(([a]) => pos === a || (a > pos && /^\s+$/.test(s.slice(pos, a))));
     const segs = [];
@@ -259,10 +266,27 @@ const jaWrapPoints = (text) => {
       const seg = segs[i];
       if (i === 0) { groups.push({ parts: [seg], hard: [] }); pos += seg.length; continue; }
       const prev = segs[i - 1], g = groups[groups.length - 1], cur = g.parts.join('');
-      const hard = inKao(pos) || (!kaoStart(pos) && (
+      const hard = inKao(pos) || inKeepWord(pos) || (!kaoStart(pos) && (
         /^[\s、。，．,.！？!?」』）)】〕〉》…‥ー〜～・：:；;ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(seg) || /[\s「『（(【〔〈《]$/.test(prev)
-        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))
-        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ]/.test(seg))));
+        // 「お」「ご」のあとは、ひらがなでも漢字でも離さない(「〜のご／ほうび」「お／相手」2026-10-26)
+        || (/^[ごお]$/.test(prev) && /^[ぁ-ゖ一-龯]/.test(seg))
+        // 笑いの「笑」「w」だけを次の行の頭に落とさない(「楽しもうぜ／笑」「〜だって！／w」)
+        //   (「笑っちゃう」の「笑」は言葉なので、あとが文の終わり・空白・記号・w のときだけ)
+        || (/^(?:笑+|[ｗwW]+)$/.test(seg) && /^(?:$|[\s！？!?。、♪✨ｗwW〜～…)）])/.test(s.slice(pos + seg.length)))
+        // くっついた言葉(「読み|合い」「組み|直した」「起き|上がる」「吹っ|飛ばす」)。漢字+送り仮名のすぐあとの漢字は離さない(「少し」は1語なので除く)。
+        //   長い文節を分ける②でもここでは分けない(柔らかくつなぐと「噛み／合わない」と分けられた)
+        //   道具は「噛|み|合わ」と細かく分けるので、すぐ前の区切りではなく、それまでにまとめた文節(cur)の終わりで見る
+        || (/[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg))
+        || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg))
+        // 数とそのあとの助数詞・単位は離さない(「1／曲ずつ」「5／倍」「30／%」「3回／目」。2026-10-26 クラフト)。
+        //   手前の「Lv.」「×」「約」「第」と数も離さない(「Lv.／12」「約／20秒」)
+        || (/[0-9０-９]$/.test(prev) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連万千百年月時%％]|時間|ms|px|P|Lv|コンボ|ノーツ|ビートP)/.test(seg))
+        || (/[0-9０-９][回人体個枚曲周倍つ番件位本段連]$/.test(cur) && /^目/.test(seg))
+        || (/(?:Lv\.?|LV\.?|×|x|約|第|全|各|計|最大|最高)$/.test(cur) && /^[0-9０-９]/.test(seg))
+        // カタカナどうしの間は離さない。道具は造語を「マス|モン」「モン|ヒロ|ビート」と分ける(2026-10-26 ダメダシ「(モンヒロ／ビート)」)。
+        //   合わせて7字まで(「ファームバトルカード」のように長いものまでつなぐと1行に入らず、字の途中で折れる)。
+        //   かぎかっこの中は名前ごと包む決まり(jaWrapPieces)に任せる(つなぐと「「フリーマッチ」／と……」と最後の行に字が残った)
+        || (/[ァ-ヶー]$/.test(prev) && /^[ァ-ヶ]/.test(seg) && !/[「『][^」』]*$/.test(cur) && (cur.match(/[ァ-ヶー]+$/) || [''])[0].length + (seg.match(/^[ァ-ヶー]+/) || [''])[0].length <= 7)));
       const soft = !hard && !kaoStart(pos) && (
         (/^[ぁ-ゖ]$/.test(seg) && /[一-龯ァ-ヶー]$/.test(prev) && letters(cur) + 1 <= 6)
         || (/^[はがをにでとものへ]$/.test(seg) && /[ぁ-ゖ]$/.test(prev))
@@ -274,6 +298,8 @@ const jaWrapPoints = (text) => {
         || (/(?:カード|ビート|ブリーダー)$/.test(prev) && /^ポイント/.test(seg))
         // 「ビートP」「ブリーダーP」も1語(2026-10-26 見回り「ビート/P」と折れた。カードの売り場の吹き出し)
         || (/(?:ビート|ブリーダー)$/.test(prev) && /^P/.test(seg))
+        // カタカナのすぐあとの英字も1語(「ビート|Lv」2026-10-26)
+        || (/[ァ-ヶー]$/.test(prev) && /^[A-Za-zＡ-Ｚ]/.test(seg))
         // 1字の漢字のすぐあとの1字のひらがなは、助詞ではなく送り仮名(「強|が|らなくても」「強|く|なければ」)
         || (/^[ぁ-ゖ]/.test(seg) && /^[ぁ-ゖ]$/.test(prev) && /^[一-龯]$/.test(segs[i - 2] || ''))
         // 「です・でつ・でしょ」の「で」は助詞ではない(「なんで|すか」「しないで|つよ」と折れた)
@@ -341,13 +367,13 @@ const jaWrapPoints = (text) => {
 };
 // 丸ごと包むのは、吹き出しのいちばん狭い1行(本文104〜112pxで約10字)に入るものだけ(長いと字が吹き出しの外へ出る)。字の無い顔文字だけは14字まで
 const jaKeepWhole = (seg) => ([...seg].length <= JA_WRAP_LINE || (!/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) && seg.length <= 14))
-  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
+  && (/[…‥～〜♡]/u.test(seg) || /\p{Extended_Pictographic}/u.test(seg) || /[」』？！?!][ぁ-ゖ笑ｗwW]/.test(seg) || /[。、][ぁぃぅぇぉっゃゅょ]/.test(seg)
   || !/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9]/.test(seg) || /[(（][^()（）]*[^ぁ-ゖァ-ヶ一-龯ーA-Za-z0-9０-９\s、。・！？!?()（）][^()（）]*[)）]/.test(seg));
 // かたまり1つを、折らない枠で包む所([字, true])とそのままの所([字, false])に分ける(jaWrap と検査 ja-wrap-lines-check.js が使う)。
 // 空白で分けてから部分ごとに決める(空白をまたいで包むと、「大丈夫！ いってらっしゃい〜」が1行のまま吹き出しからはみ出した。2026-10-24)。
 // 長い部分(「『MONSTERS』で」)は、かぎかっこの名前や、閉じかっこ・？・！とその前後の字だけを包む。「。って」「、っぽい」も(ブラウザは句点のあとを折る)。
 // 「でつ……。」の三点リーダー、「……？💦」の終わりの絵文字も、手前の数字といっしょに包む(ブラウザはその手前を折る)
-const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
+const JA_WRAP_TIGHT = /([「『][^「」『』\s]{1,8}[」』][ぁ-ゖ]{0,6}[！？!?、。…‥]*|(?:[ァ-ヶー]+|.)[」』？！?!][ぁ-ゖ笑ｗwW]{1,6}[！？!?、。…‥]*|.[。、][ぁぃぅぇぉっゃゅょ][ぁ-ゖ]{0,5}[！？!?、。…‥]*|[^\s…‥]{1,6}[…‥]+[。、！？!?]*(?:\p{Extended_Pictographic}|[♪♡✨])*\uFE0F?|[^\s]{1,3}[！？!?…]*(?:\p{Extended_Pictographic}|[♪♡✨])+\uFE0F?)/u;
 const jaWrapPieces = (seg) => {
   const out = [];
   // 顔文字のかっこの中の空白((｡ ˘ω˘))では分けない
@@ -356,7 +382,7 @@ const jaWrapPieces = (seg) => {
     if (/^\s+$/.test(part)) out.push([part, false]);
     else if (jaKeepWhole(part)) out.push([part, true]);
     // かぎかっこの名前は「「」からまとめて包む(「「ドラシ／ル」だって」と名前の中で折れた)。1行(10字)に入らないものは包まず、閉じかっこのあとで折れるのに任せる
-    else if (/[」』？！?!][ぁ-ゖ]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
+    else if (/[」』？！?!][ぁ-ゖ笑ｗwW]|[。、][ぁぃぅぇぉっゃゅょ]|[…‥]|\p{Extended_Pictographic}|[♪♡✨]/u.test(part)) part.split(JA_WRAP_TIGHT).forEach((t, k) => {
       if (!t) return;
       if (k % 2 === 0 || [...t].length <= JA_WRAP_LINE) { out.push([t, k % 2 === 1]); return; }
       // 10字を超える「かぎかっこの名前+あとの字」は、名前だけを包む(「「チュートリア／ル」から」と名前の中で折れた)
@@ -377,6 +403,8 @@ const jaWrap = (text) => {
   // Chromium が落ちた(行の長さをそろえる text-wrap: balance・pretty のとき。2026-10-24 台詞「本当に極限…！ (>人<;)」で見つけた)
   return s.split('\u200B').map((seg, i) => <React.Fragment key={i}>{i > 0 && !/^\s/.test(seg) && <wbr/>}{jaWrapPieces(seg).map(([t, kp], k) => (kp ? keep(t, k) : t))}</React.Fragment>);
 };
+// 太字(<b>)などが混ざった文用。文字の部分だけを jaWrap に通す(2026-10-26 マスモン設定「金色のノー／ツに」)。JA_WRAP_STYLE と一緒に使う
+const jaWrapParts = (...parts) => parts.map((p, i) => <React.Fragment key={i}>{typeof p === 'string' ? jaWrap(p) : p}</React.Fragment>);
 // textWrap:'wrap' … 画面全体の text-wrap:pretty(index.html)と anywhere が組み合わさると、語の中へ1字だけ動かすことがある(「スキッ／プ」)ので外す
 const JA_WRAP_STYLE = Object.freeze({ wordBreak: 'keep-all', overflowWrap: 'anywhere', textWrap: 'wrap' });
 // 短い説明・札向け(2026-10-21 社長決定・改善部の見直しの洗い出し)。言葉の切れ目で折り、行の長さもそろえる
@@ -482,7 +510,7 @@ const NameEditModal = ({ title, value, onChange, maxLength, onCancel, onSave, bo
       className="mt-3 w-full min-h-[48px] rounded-xl border border-slate-600 bg-black/50 p-3 text-center font-bold text-white outline-none focus:border-amber-300"/>
     <p className="mt-1 text-right text-[10px] font-bold text-slate-500">{String(value || '').length} / {maxLength}文字</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
       <button type="button" onClick={onSave} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">保存</button>
     </div>
   </ModalFrame>
@@ -495,7 +523,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
     {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
     <div className="mt-4 grid grid-cols-1 gap-2">
       <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
-      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+      <ModalCloseButton onClick={onCancel} label="やめる"/>
     </div>
   </ModalFrame>
 );

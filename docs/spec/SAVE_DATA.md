@@ -88,6 +88,7 @@
 | `mh_card_rank_sync_v1` | string | MFバトルカードのランキング(表 `card_battle_ranks`)へ最後に送った行の中身。同じなら送り直さない(90-card-rank.jsx) |
 | `mh_card_bgm_v1` | object / `normalizeCardBgm` | MFバトルカードのBGM `{ top: 曲id(トップ画面・2026-10-26 に足した項目), cpu: 'auto'(相手の助手に合わせる)か曲id, pvp: 曲id }`。オプションで曲を選んだときだけ書く。無い項目・知らない曲idは既定(top `atsu_cup_theme` = MF × ICHIKA MIX・cpu `auto`・pvp `ichika_battle`)へ。選んだ人の値は書き換えない |
 | `mh_card_cpu_playlist_v1` | object / `cardNormalizeCpuPlaylist` | MFバトルカードの助手と対戦の曲の並び `{ v:1, assistants:{ 助手id: [曲id 1〜5] } }`(2026-10-26)。オプションで直したときだけ書く。無い・壊れていたら助手ごとの曲1つ。知らない助手・知らない曲・同じ曲の2つ目・6曲目からは落とし、0曲になった助手は既定の1曲。これがあれば助手と対戦では `mh_card_bgm_v1` の `cpu` を使わない(そちらは消さない・書き換えない) |
+| `mh_card_cpu_open_v1` | object / `cardNormalizeCpuOpen` か `null` | MFバトルカードの助手と対戦の、いま遊んでいる試合の印 `{ id, who, level, rankable, at, beat, facts:{ ownTurns, kos } }`。始めたときに書き、ふつうに終わったら結果と同じ取引で `null` にする。残っていて `beat` が15秒より古ければ、次に開いたときに投了として数えて `null` にする(2026-10-26 社長「負け扱いにする」。84-screen-card-battle.jsx)。壊れていたら数えずに `null` |
 | `mh_card_settings_v1` | object / `normalizeCardSettings` | MFバトルカードの演出 `{ speed: 'normal'|'fast', autoPass: 真偽 }`。無い人は ふつう・自動パスON |
 | `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |

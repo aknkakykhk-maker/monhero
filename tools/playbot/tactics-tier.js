@@ -539,7 +539,7 @@ for (const s of stats) {
   const m = s.m;
   const u = m.unique || {};
   const ex = m.ex || {};
-  out(`| ${m.name} | ${m.hp} / ${m.atk} / ${m.def} / ${m.guts} | ${s.dist ? s.dist.map((g, i) => `${DIST_JA[i]}${g}`).join(' ') : '—'} | ${m.trait || '—'}: ${(m.traitDesc || '').replace(/^勇者モン選択時：/, '')} | ${u.name || '—'}(×${u.mult ?? '—'}・${u.guts ?? '—'}) | ${ex.name || '—'}: ${ex.note || ''}(${ex.uses ?? '—'}回${ex.perWave ? '/WAVE' : ''}) |`);
+  out(`| ${m.name} | ${m.hp} / ${m.atk} / ${m.def} / ${m.guts} | ${s.dist ? s.dist.map((g, i) => `${DIST_JA[i]}${g}`).join(' ') : '—'} | ${m.trait || '—'}: ${(m.traitDesc || '').replace(/^勇者モン(?:選択時|にすると)：/, '')} | ${u.name || '—'}(×${u.mult ?? '—'}・${u.guts ?? '—'}) | ${ex.name || '—'}: ${ex.note || ''}(${ex.uses ?? '—'}回${ex.perWave ? '/WAVE' : ''}) |`);
 }
 out();
 out('## アシストカードとの相性(その子が入った回で、カードごとの届いた WAVE の伸び。2回以上あるものだけ)');

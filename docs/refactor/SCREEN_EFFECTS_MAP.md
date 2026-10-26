@@ -19,7 +19,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `progress` | 進行。フラグ戻し・次の画面へ進む・保存・掃除・`await` の resolve | **止めない**(登録簿から手を離すだけ) |
 | 対象外 | 画面(`gameState`)に紐づかない。起動経路・アプリ常駐 | 登録簿に載せない |
 
-内訳は **画面専用 39 / 進行 41 / 対象外 30**(2026-10-24 に MFバトルカード(84-screen-card-battle.jsx)の10か所を足した: 画面専用 9・進行 1。対戦の演出・長押し・相手の1手は画面の中だけで進むので画面専用、結果へ進めて保存する1つだけが進行。2026-10-22 に、表から漏れていた16か所を足して今に合わせた。下の節の見出しの数は作成時のまま。2026-09-27 は 22 / 30 / 16。作成時は 16 / 31 / 15。
+内訳は **画面専用 60 / 進行 43 / 対象外 30**(2026-10-27 に MFバトルカード(84)の表を今の20か所に合わせ、カードのクイック周回の始め直しを足した。2026-10-24 に MFバトルカード(84-screen-card-battle.jsx)の10か所を足した: 画面専用 9・進行 1。対戦の演出・長押し・相手の1手は画面の中だけで進むので画面専用、結果へ進めて保存する1つだけが進行。2026-10-22 に、表から漏れていた16か所を足して今に合わせた。下の節の見出しの数は作成時のまま。2026-09-27 は 22 / 30 / 16。作成時は 16 / 31 / 15。
 タップの波紋は 24-battle-fx.jsx へ、画像デバッグのモーション再生3つは 23-rpg-debug.jsx の `attackMotionPreviewSequence` へ移ったので表から外した)。`interval` `raf` `listen` は種別を取らず常に画面専用
 (放っておくと永久に走る・参照を掴んだままになるため)。
 
@@ -58,15 +58,26 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => setCanSkip(true), 900)` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーのスキップを出す |
 | `if (!started) finish(false); }, BOSS_MOVIE_START_TIMEOUT_MS` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーが始まらないときに打ち切る。部品が閉じるときは後片付けが待っている側を起こす |
 | `fxRestTimerRef.current = setTimeout(` | screen | 止める(71-screen-battle.jsx) | タクティクスで操作が無いあいだ演出を休ませる。止めても休まないだけ |
-| `timer.current = setTimeout(() => { fired.current = true; onLong(no); }, 450)` | screen | 止める | MFバトルカード(84)のカードの長押し。指を離すと止める |
-| `motionTimers.current.push(setTimeout(` | screen | 止める | MFバトルカードの技の動きを、見せ終わったら外す。対戦の画面を離れたら止めてよい |
-| `bubbleTimer.current = setTimeout(() => setBubble(null), 4500)` | screen | 止める | MFバトルカードの対戦中の助手の吹き出しを消す |
+| `timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms)` | screen | 止める | MFバトルカード(84)のカードの長押し。指を離すと止める・画面を離れたら止める |
+| `motionTimers.current.push(setTimeout(() => setMotions(` | screen | 止める | MFバトルカードの技の動きを、見せ終わったら外す。対戦の画面を離れたら止めてよい(motionTimers はまとめて止める) |
+| `bubbleTimer.current = setTimeout(() => setBubble(null), 4500)` | screen | 止める | MFバトルカードの対戦中の助手の吹き出し(マルチのひとことも)を消す。hideBubbleLater の1か所 |
 | `setTimeout(() => { setBubble(null); setTutQ((q) => q.slice(1)); }, 2100)` | screen | 止める | MFバトルカードの練習試合の台詞を順に出す。画面の中だけの進み |
-| `setTimeout(() => setFx((cur) => cur.filter((f) => !hits.some(` | screen | 投げっぱなし | MFバトルカードのダメージの数字を消す |
-| `setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 2200)` | screen | 投げっぱなし | MFバトルカードの「◯◯の技」の帯を消す |
+| `bigTimer.current = setTimeout(` | screen | 止める | MFバトルカードの相手の出したカードを大きく見せて、消えたら当てる。画面を離れたら止め、当てる1手も打たない |
+| `motionTimers.current.push(setTimeout(() => setGutsFly(` | screen | 止める | MFバトルカードのガッツへ飛ぶカードの絵を消す |
+| `motionTimers.current.push(setTimeout(() => setFx(` | screen | 止める | MFバトルカードのダメージの数字を消す |
+| `motionTimers.current.push(setTimeout(() => setBreederFx(` | screen | 止める | MFバトルカードのブリーダーのカードの顔を消す |
+| `motionTimers.current.push(setTimeout(() => setBeams((cur) => [...cur, beam])` | screen | 止める | MFバトルカードのはね返しの光線を、盾のあとに出す |
+| `motionTimers.current.push(setTimeout(() => setBeams((cur) => cur.filter(` | screen | 止める | MFバトルカードのはね返しの光線を消す |
+| `motionTimers.current.push(setTimeout(() => setAction(` | screen | 止める | MFバトルカードの「◯◯の技」の帯を消す |
 | `const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);` | screen | 止める | MFバトルカードの相手(助手)の1手。対戦の画面の中だけで進む。離れたら止めてよい(対戦はそこで終わる) |
+| `setTimeout(() => setTurnBanner(` | screen | 止める | MFバトルカードの「◯◯のターン」の帯を消す |
+| `t2 = setTimeout(() => setTurnSummary(` | screen | 止める | MFバトルカードの相手の番のまとめを、番の帯が消えてから出す |
+| `setTimeout(() => setTurnSummary((cur) => (cur && cur.key === turnSummary.key` | screen | 止める | MFバトルカードの相手の番のまとめを、しばらくしたら閉じる |
 | `}, demoAt.current === 0 ? 1400 : 1700)` | screen | 止める | MFバトルカードの技の動きの見本(デバッグ)を1手ずつ進める |
-| `d.timer = setTimeout(() => { if (!d.active) { d.long = true; setDetail(no); } }, 450)` | screen | 止める | MFバトルカードの手札の長押し(指で運ぶ操作の中)。指を離すと止める |
+| `setTimeout(() => step({ type: 'pray' })` | screen | 止める | MFバトルカードのおいのりを持っていないとき、少しおいて「使わない」で進める |
+| `setTimeout(() => step({ type: 'reveal' })` | screen | 止める | MFバトルカードの相手の死神の力で見せる段を、少しおいて進める |
+| `setTimeout(() => step({ type: 'pass' })` | screen | 止める | MFバトルカードの守れるカードが無いとき、少しおいて「守らない」で進める(オプションの自動) |
+| `d.timer = setTimeout(() => { if (!d.active) { d.long = true; setDetail(no); } }, pressMs)` | screen | 止める | MFバトルカードの手札の長押し(指で運ぶ操作の中)。指を離すと止める・画面を離れたら止める |
 
 ## 進行(`progress`)— 30 箇所
 
@@ -167,6 +178,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.36))` | screen | 投げっぱなし | ハムのカウンター(リベンジ)の3つめの効果音 |
 | `hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms)` | progress | 止める | ハムのカウンターの演出を見せ終えて、待っている攻撃を進める(`await` の resolve)。止めると攻撃が止まったままになる |
 | `}, QUICK_RUN_AUTO_RETRY_MS);` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
+| `setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | MFバトルカードの中で、クイックの自動周回(カードのオプション)が負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
 | `const t = setTimeout(() => setOpen(false), 2500)` | screen | 止める | 小さな説明の吹き出しを2.5秒で閉じる(41-screen-ui.jsx)。後始末で `clearTimeout` |
 | `setTimeout(place, 120)` | screen | 止める | HOMEの置き場所を測り直す(1回目・69-screen-home.jsx) |
 | `setTimeout(place, 700)` | screen | 止める | HOMEの置き場所を測り直す(2回目。絵が読み込まれたあと) |

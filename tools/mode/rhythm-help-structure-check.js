@@ -153,6 +153,8 @@ ok('プレイヤー向けの説明に開発用の言葉が混ざっていない'
       +" :b.t==='data'?`[表:${b.id}]`"
       +" :String(b.title? b.title+': ':'')+String(b.text||'')));\n"
       +"const RhythmLandscapeHint = () => null;\n"
+      // 言葉の切れ目で折る道具(41-screen-ui.jsx)は、ここでは字をそのまま返す差し替え
+      +"const JA_WRAP_STYLE = {}; const jaWrap = (t) => t;\n"
       +"const AssistantBubble = ({scene}) => React.createElement('div',null,`[助手:${scene}]`);\n"
       +'let ArrowLeft, ChevronRight;\n'
       +'const __setIcons=(a,c)=>{ArrowLeft=a;ChevronRight=c;};\n'
