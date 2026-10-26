@@ -1121,7 +1121,7 @@ const CARD_AI_HABIT_BLEND = Object.freeze({ expert: { mua: 0.6 }, master: { mua:
 // ★きゅうこは足さない(プレイヤー役の考え方にも使うので。きゅうこはデッキ側の CARD_AI_DECK_TUNE だけで合わせる)
 const CARD_AI_PLAY_TUNE = Object.freeze({
   // EASY・NORMAL で同じ血統(モッチーの仲間)でも組むようになって強くなった(2026-10-26)ぶん、みゅあの雑さを戻した(前は easy -0.035・normal -0.105)
-  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.075, master: 0.12 },
+  mua: { easy: 0.1, normal: -0.04, hard: -0.11, expert: 0.03, master: 0.12 },
   momosuke: { easy: 0.12, normal: 0.06, hard: 0, expert: 0.1, master: 0.05 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.165 → 0.14。混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 0.05
   kiki: { easy: -0.045, normal: 0.06, hard: 0.15, expert: 0, master: 0.1 },   // MASTER は3体目を揺らした(2026-10-26)ぶん 0.345 → 0.3。意味不明(277)・混血の直し(2026-10-27)のあと 0.1
   dra: { easy: -0.075, normal: -0.075, hard: 0.03, expert: -0.06, master: 0 },
@@ -1510,13 +1510,13 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   momosuke: {  },
   kiki: { easy: -0.9 },
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: -0.05 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
-  dra: { easy: -1.5, normal: -1.5 },
+  dra: { easy: -1.5, normal: -1.5, master: 0.5 },   // MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
   atsu: { easy: -1.5, normal: -3, hard: -2.1 },
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
-const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.3, kyuko: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5
+const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.3, kyuko: 2.0, atsu: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
 const CARD_AI_ATTACH_MAX = 6;
 
