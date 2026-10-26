@@ -61,3 +61,6 @@
 
 ## 2026-10-27 直ったかの見直し・ミッションとギフトの受け取り後
 → [damedashi-2026-10-26/recheck-0427/README.md](damedashi-2026-10-26/recheck-0427/README.md)(4つとも直った・新しく1件)
+
+## 2026-10-27 モンヒロビートのプライベートの部屋
+→ [damedashi-2026-10-26/private/README.md](damedashi-2026-10-26/private/README.md)(1件)
