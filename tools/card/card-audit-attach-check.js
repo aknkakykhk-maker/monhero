@@ -140,7 +140,7 @@ const lost = (st0, st, p, m) => life(st0, p, m) - life(st, p, m);
   const mons = [['C-049', 'C-006', 'C-007'], ['C-001', 'C-006', 'C-003']];
   const st = scene({ mons, hands: [['322', '330'], ['011']], guts: [4, 2] });
   const o = optOf(st, 0, [0, 1], 0);
-  check('捨て身: ケンタロウスのスマッシュに付けられる', !!o);
+  check('捨て身: ケンタウロスのスマッシュに付けられる', !!o);
   if (o) {
     const hit = passAll(play(st, o));
     check('捨て身: 当たると2倍(2→4)・自分に2', lost(st, hit, 1, 0) === 4 && lost(st, hit, 0, 0) === 2, `${lost(st, hit, 1, 0)} / ${lost(st, hit, 0, 0)}`);

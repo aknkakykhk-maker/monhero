@@ -25,7 +25,7 @@ const SPECIES = [
   ['mocchi', 'mocchi', 'モッチー'], ['phoenix', 'phoenix', 'ヒノトリ'], ['jell', 'jell', 'ゲル'], ['monol', 'monol', 'モノリス'],
   ['henger', 'henger', 'ヘンガー'], ['mew', 'mew', 'ニャー'], ['plant', 'plant', 'プラント'], ['worm', 'worm', 'ワーム'],
   ['dragon', 'dragon', 'ドラゴン'], ['zilla', 'zilla', 'グジラ'], ['metalner', 'metalner', 'メタルナー'], ['joker', 'joker', 'ジョーカー'],
-  ['arrowhead', 'arrowhead', 'アローヘッド'], ['centaur', 'centaur', 'ケンタロウス'], ['colorpandora', 'colorpandora', 'コロペンドラ'],
+  ['arrowhead', 'arrowhead', 'アローヘッド'], ['centaur', 'centaur', 'ケンタウロス'], ['colorpandora', 'colorpandora', 'コロペンドラ'],
   ['durahan', 'durahan', 'デュラハン'],
   // ゴースト(2026-10-27 社長「ゴーストのカードが盛れてたから実装よろしく」。第4弾にヘンガーと並べる・台帳 #204)
   ['ghost', 'ghost', 'ゴースト'],
