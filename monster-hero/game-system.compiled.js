@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c4e722dd6d84686b
+// source-sha256: 9fcc387e864b8b4e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -66710,10 +66710,10 @@ function HomeUpdateGuideOverlay({
     className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white"
   }, notice.destination ? 'あとで' : '閉じる'))));
 }
-const BATTLE_LANDSCAPE_HAND_W = 360;
+const BATTLE_LANDSCAPE_HAND_W = 'min(42vw, 420px)';
 const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 520px) {
 #root > div[data-mh-portrait-layout="true"]:has([data-battle-speed]) { max-width: none !important; }
-[data-battle-speed] { display: grid !important; grid-template-columns: minmax(0,1fr) ${BATTLE_LANDSCAPE_HAND_W}px;
+[data-battle-speed] { display: grid !important; grid-template-columns: minmax(0,1fr) ${BATTLE_LANDSCAPE_HAND_W};
   grid-template-rows: auto auto minmax(0,1fr) auto auto auto; }
 [data-battle-speed] > * { grid-column: 1; }
 [data-battle-speed] > [data-battle-stage-bg] { grid-column: 1 / -1; grid-row: 1 / -1; }
@@ -66726,16 +66726,16 @@ const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 5
 [data-tactics-board-band] .grid.grid-cols-4, [data-tactics-debug-layout] { height: 112px !important; }
 [data-tactics-debug-layout] { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-template-rows: minmax(0,1fr) !important; }
 [data-battle-speed] > [data-battle-hand] { grid-column: 2; grid-row: 1 / -1; height: auto !important; min-height: 0;
-  border-top: 0 !important; border-left: 1px solid rgba(255,255,255,.14); overflow: hidden; }
+  border-top: 0 !important; border-left: 1px solid rgba(255,255,255,.14); overflow-x: hidden; overflow-y: auto; }
 [data-battle-hand] > div:first-child { flex-wrap: wrap; row-gap: 4px; margin-bottom: 6px !important; }
 [data-battle-hand] > div:first-child > span:first-child { flex: 0 0 100% !important; }
 [data-battle-hand] > div:last-child { flex: 0 1 auto !important; flex-wrap: wrap !important; overflow: visible !important;
   align-content: flex-start; justify-content: center; row-gap: 6px; }
 [data-battle-hand] > div:last-child > * { flex: 0 0 31% !important; max-width: 31% !important; height: 116px !important; }
-[data-battle-float] { left: calc((100vw - ${BATTLE_LANDSCAPE_HAND_W}px) / 2) !important; }
+[data-battle-float] { left: calc((100vw - ${BATTLE_LANDSCAPE_HAND_W}) / 2) !important; }
 [data-battle-float-right] { left: auto !important; transform: none !important; }
-[data-battle-float-right="8"] { right: ${BATTLE_LANDSCAPE_HAND_W + 8}px !important; }
-[data-battle-float-right="76"] { right: ${BATTLE_LANDSCAPE_HAND_W + 76}px !important; }
+[data-battle-float-right="8"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 8px) !important; }
+[data-battle-float-right="76"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 76px) !important; }
 }`;
 const TACTICS_SLOT_FX_STYLE = Object.freeze({
   hit: {

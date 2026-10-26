@@ -7,10 +7,11 @@
 // 縦画面には効かない(@media の外には何も書かない)。クラシックとタクティクスは同じ組み方。
 // 画面の真ん中に出す札(data-battle-float)は左の列の真ん中へ、列の右端に寄せる札
 // (data-battle-float-right="右からの余白")は左の列の右端へ寄せる(右の手札にかからないように)。
-const BATTLE_LANDSCAPE_HAND_W = 360;
+// 右の列の幅は MFバトルカードの横向き(カード部ブレイブくん)にそろえて、画面の幅の42%・最大420px(844 で約354px)。
+const BATTLE_LANDSCAPE_HAND_W = 'min(42vw, 420px)';
 const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 520px) {
 #root > div[data-mh-portrait-layout="true"]:has([data-battle-speed]) { max-width: none !important; }
-[data-battle-speed] { display: grid !important; grid-template-columns: minmax(0,1fr) ${BATTLE_LANDSCAPE_HAND_W}px;
+[data-battle-speed] { display: grid !important; grid-template-columns: minmax(0,1fr) ${BATTLE_LANDSCAPE_HAND_W};
   grid-template-rows: auto auto minmax(0,1fr) auto auto auto; }
 [data-battle-speed] > * { grid-column: 1; }
 [data-battle-speed] > [data-battle-stage-bg] { grid-column: 1 / -1; grid-row: 1 / -1; }
@@ -23,16 +24,16 @@ const BATTLE_LANDSCAPE_CSS = `@media (orientation: landscape) and (max-height: 5
 [data-tactics-board-band] .grid.grid-cols-4, [data-tactics-debug-layout] { height: 112px !important; }
 [data-tactics-debug-layout] { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-template-rows: minmax(0,1fr) !important; }
 [data-battle-speed] > [data-battle-hand] { grid-column: 2; grid-row: 1 / -1; height: auto !important; min-height: 0;
-  border-top: 0 !important; border-left: 1px solid rgba(255,255,255,.14); overflow: hidden; }
+  border-top: 0 !important; border-left: 1px solid rgba(255,255,255,.14); overflow-x: hidden; overflow-y: auto; }
 [data-battle-hand] > div:first-child { flex-wrap: wrap; row-gap: 4px; margin-bottom: 6px !important; }
 [data-battle-hand] > div:first-child > span:first-child { flex: 0 0 100% !important; }
 [data-battle-hand] > div:last-child { flex: 0 1 auto !important; flex-wrap: wrap !important; overflow: visible !important;
   align-content: flex-start; justify-content: center; row-gap: 6px; }
 [data-battle-hand] > div:last-child > * { flex: 0 0 31% !important; max-width: 31% !important; height: 116px !important; }
-[data-battle-float] { left: calc((100vw - ${BATTLE_LANDSCAPE_HAND_W}px) / 2) !important; }
+[data-battle-float] { left: calc((100vw - ${BATTLE_LANDSCAPE_HAND_W}) / 2) !important; }
 [data-battle-float-right] { left: auto !important; transform: none !important; }
-[data-battle-float-right="8"] { right: ${BATTLE_LANDSCAPE_HAND_W + 8}px !important; }
-[data-battle-float-right="76"] { right: ${BATTLE_LANDSCAPE_HAND_W + 76}px !important; }
+[data-battle-float-right="8"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 8px) !important; }
+[data-battle-float-right="76"] { right: calc(${BATTLE_LANDSCAPE_HAND_W} + 76px) !important; }
 }`;
 //
 // 【誰が攻撃を食らったか】
