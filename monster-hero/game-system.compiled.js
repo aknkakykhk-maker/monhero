@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4c53cfa1f7556361
+// source-sha256: d4dc1aa11ac2d0da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-26 09:33";
+const BUILD_DATE = "2026-10-26 09:47";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -85491,8 +85491,8 @@ const cardNormalizeDaily = (v, today) => {
 const CARD_LEVEL_ORDER = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
 const CARD_BGM_DEFAULT = Object.freeze({
   top: 'atsu_cup_theme',
-  cpu: 'atsu_cup_theme',
-  pvp: 'atsu_cup_theme'
+  cpu: 'auto',
+  pvp: 'ichika_battle'
 });
 const normalizeCardBgm = (v, isTrack = () => true) => {
   const r = cardIsPlainObject(v) ? v : {};
@@ -87523,7 +87523,7 @@ const CARD_AI_BGM = Object.freeze({
   atsu: 'melo_against_my_own_shadow'
 });
 const CARD_PVP_BGM = 'ichika_battle';
-const cardCpuBgm = (bgm, who) => bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : CARD_AI_BGM[who] || CARD_BGM_DEFAULT.cpu;
+const cardCpuBgm = (bgm, who) => bgm && bgm.cpu && bgm.cpu !== 'auto' ? bgm.cpu : CARD_AI_BGM[who] || null;
 const cardIsBgmTrack = id => typeof BGM_TRACKS !== 'undefined' && BGM_TRACKS.some(t => t.id === id);
 const CARD_SPECIES_ART = Object.freeze({
   tiger: 'Tiger',
@@ -89999,7 +89999,7 @@ const CardBattleScreen = ({
       level: 'easy',
       tutorial: true
     });
-    onBgm && onBgm(cardCpuBgm(save && save.bgm, 'mua'));
+    onBgm && onBgm(CARD_AI_BGM.mua);
     onNavigate('CARD_BATTLE');
   };
   const startBattle = (pick = foe) => {
@@ -90215,7 +90215,7 @@ const CardBattleScreen = ({
           ...g,
           settings: save.settings
         });
-        onBgm && onBgm(save.bgm.pvp || CARD_BGM_DEFAULT.pvp);
+        onBgm && onBgm(save.bgm.pvp || null);
         onNavigate('CARD_BATTLE');
       }
     });
@@ -90641,7 +90641,7 @@ const CardBattleScreen = ({
       className: "text-[13px] font-black text-white"
     }, "音"), React.createElement("b", {
       className: "mt-2 block text-[12px] font-black text-slate-200"
-    }, "対戦のBGM"), [['top', 'トップ画面'], ['cpu', '助手と対戦・練習試合'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
+    }, "対戦のBGM"), [['top', 'トップ画面'], ['cpu', '助手と対戦'], ['pvp', 'マルチ対戦']].map(([k, label]) => React.createElement("label", {
       key: k,
       className: "mt-2 block text-left"
     }, React.createElement("span", {
@@ -91129,7 +91129,7 @@ const CardBattleScreen = ({
           steps: demo.steps
         }
       });
-      onBgm && onBgm(cardCpuBgm(save.bgm, 'mua'));
+      onBgm && onBgm(CARD_AI_BGM.mua);
       onNavigate('CARD_BATTLE');
     }
   }, "技の動きの見本を流す(保存しない)"), React.createElement("button", {
