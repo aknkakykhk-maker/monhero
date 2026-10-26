@@ -111,7 +111,8 @@ ok('体験版であることと譜面が調整中であることをチュート�
 // 断っている中身(譜面はこれから変わることがある)は変えていない
 ok('ヘルプでも譜面の調整が続くことを断っている',/調整が入ることがあります/.test(read('monster-hero/data/help.js')));
 ok('曲えらびの上に固定で出すのは助手のひとことだけ(読み物で場所を取らない)',
-  /notice=\{<AssistantBubble scene="rhythmHome" compact\/>\}/.test(game)
+  // デバッグの全解放の曲えらび(debugAll・2026-10-26 #3927)では出さないので、notice={debugAll?null:<AssistantBubble …/>} の形も受け付ける
+  /notice=\{(?:debugAll\?null:)?<AssistantBubble scene="rhythmHome" compact\/>\}/.test(game)
   &&!game.includes('data-rhythm-demo-notice'));
 // 曲そのものの表示は、一覧の行と選んでいる曲の見出しで見る
 // 目印は data-rhythm-song-row='…' と直書きしていたが、輪(ループ)のために
@@ -229,7 +230,9 @@ ok('準備中のヘルプ項目は、モンビーが公開されていないあ�
   return head.includes("unreleasedFlag:'rhythmMode'")&&!/[^n]releaseFlag/.test(head);
 })());
 ok('体験版ホームに譜面制作UIを出していない',(()=>{
-  const block=screenSource('RHYTHM_DEMO_HOME','RhythmSongSelectScreen');
+  // 同じ部品をデバッグの全解放の曲えらび(debugAll・2026-10-26 #3927)でも使うので、その目印(data-rhythm-debug-select・-song-filter)は除いて見る。
+  // 見張るのは譜面制作の道具(data-rhythm-debug のパネル・rhythmChartToolsOpened・全曲を並べる RHYTHM_SONGS.map)
+  const block=screenSource('RHYTHM_DEMO_HOME','RhythmSongSelectScreen').replace(/data-rhythm-debug-(select|song-filter)[a-z-]*/g,'');
   return !block.includes('data-rhythm-debug')&&!block.includes('rhythmChartToolsOpened')&&!block.includes('RHYTHM_SONGS.map');
 })());
 
