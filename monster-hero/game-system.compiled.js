@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5410de121d6b92c2
+// source-sha256: acf1cf41bace8c66
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105253,6 +105253,17 @@ function MonsterHeroGame() {
       } catch (e) {}
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
+      {
+        const best = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+        const beatPlayed = !!best && typeof best === 'object' && Object.values(best).some(bySong => bySong && typeof bySong === 'object' && Object.values(bySong).some(rec => rec && typeof rec === 'object' && (rec.played === true || rec.clear === true || Number(rec.bestScore) > 0)));
+        if (!beatPlayed) {
+          for (const key of [RHYTHM_SIX_LANE_INTRO_KEY, RHYTHM_LOOK_INTRO_KEY]) {
+            try {
+              await storeSet(key, true, false);
+            } catch {}
+          }
+        }
+      }
       setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
       setRhythmLookIntroSeen((await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
