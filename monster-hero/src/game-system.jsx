@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c1bf526831b0e450
+// generated-sha256: dbe3153c90f21b4d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -32344,13 +32344,15 @@ const jaWrapPoints = (text) => {
     //   ブラウザに好きな所で折られる(「冷めてしまいます／ぞ」)。柔らかい区切りのうち、「て・で」のあと(冷めて|しまいますぞ)、
     //   漢字・カタカナの前、の順に選ぶ。どちらの側も3字以上残し、なるべく真ん中で。空白は元から折れるので、空白で分けた部分ごとに数える
     const runLetters = (parts) => Math.max(...parts.join('').split(/\s+/).map(visible));
+    // 小さい「っ」のあとにひらがなが続く所(「終わっちゃっ|たら」「なっ|た」)は言葉の途中なので、ここでは分けない(2026-10-26 カゲあつくんの点検)
+    const midSokuon = (parts, k) => /っ$/.test(parts[k - 1]) && /^[ぁ-ゖ]/.test(parts[k]);
     const chunks = [];
     const split = (g) => {
       if (runLetters(g.parts) <= JA_WRAP_LINE || g.parts.length < 2) { chunks.push(g.parts.join('')); return; }
       const total = visible(g.parts.join(''));
       let best = -1, bestScore = -1;
       for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')), right = total - left;
         // どちらの側にも字(かな・漢字)を3字以上残す。決まった言い方(「いって|らっしゃい」)の中では分けない
         if (letters(g.parts.slice(0, k).join('')) < 3 || letters(g.parts.slice(k).join('')) < 3 || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -32359,7 +32361,7 @@ const jaWrapPoints = (text) => {
       }
       // 3字ずつ残せる所が無ければ、前だけ2字まで許す(「二度|おいしいってやつ。」)。後ろ(語尾)は3字を守る
       if (best < 0) for (let k = 1; k < g.parts.length; k++) {
-        if (g.hard[k - 1]) continue;
+        if (g.hard[k - 1] || midSokuon(g.parts, k)) continue;
         const left = visible(g.parts.slice(0, k).join('')), right = total - left;
         // 後ろは字が3字以上か、句読点も入れて4字以上(「せいいっぱい|でつ……。」)
         if (letters(g.parts.slice(0, k).join('')) < 2 || (letters(g.parts.slice(k).join('')) < 3 && right < 4) || /^らっしゃ/.test(g.parts.slice(k).join(''))) continue;
@@ -65667,6 +65669,16 @@ function MonsterHeroGame() {
       //   「一度も出ない」ほうがはるかに困る
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      // 6レーン・見た目の案内は「前と変わったよ」のお知らせ。モンヒロビートをまだ1曲も遊んでいない人には出さない
+      // (2026-10-26 カゲあつ「はじめての人に、みゅあが更新の話をして、曲が3つ半しか見えない」)。見たことにして閉じておく
+      {
+        const best = await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false);
+        const beatPlayed = !!best && typeof best === 'object' && Object.values(best).some((bySong) => bySong && typeof bySong === 'object'
+          && Object.values(bySong).some((rec) => rec && typeof rec === 'object' && (rec.played === true || rec.clear === true || Number(rec.bestScore) > 0)));
+        if (!beatPlayed) {
+          for (const key of [RHYTHM_SIX_LANE_INTRO_KEY, RHYTHM_LOOK_INTRO_KEY]) { try { await storeSet(key, true, false); } catch {} }
+        }
+      }
       setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
       setRhythmLookIntroSeen(await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
