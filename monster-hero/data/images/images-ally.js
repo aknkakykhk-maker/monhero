@@ -225,10 +225,12 @@ const HYBRID_C042_IMG = "images/monsters/c042.png?v=e5a483c55e02";
 const HYBRID_C020_IMG = "images/monsters/c020.png?v=81b9fd3f3ec0";
 const HYBRID_C043_IMG = "images/monsters/c043.png?v=71b585e27dc5";
 const HYBRID_C045_IMG = "images/monsters/c045.png?v=86b2b98d136d";
-// 2026-10-26 社長から届いた3体(案の子・図鑑の「未実装」に並ぶ)。元絵は tools/art-sources/<名前>-2026-10-26/。
+// 2026-10-26 社長から届いた5体(案の子・図鑑の「未実装」に並ぶ)。元絵は tools/art-sources/<名前>-2026-10-26/。
 // MFバトルカードの画面にはまだつながない(社長に聞いてから HYBRID_MONSTER_IMGS へ足す)
 const HYBRID_C011_IMG = "images/monsters/c011.png?v=44e731f843ea";
 const HYBRID_C032_IMG = "images/monsters/c032.png?v=5b63d78632ff";
+const HYBRID_C014_IMG = "images/monsters/c014.png?v=dde0b6c82d78";
+const HYBRID_C037_IMG = "images/monsters/c037.png?v=8479c3319aac";
 const HYBRID_C044_IMG = "images/monsters/c044.png?v=997468609578";
 const HYBRID_MONSTER_IMGS = Object.freeze({
   'C-010': HYBRID_C010_IMG,

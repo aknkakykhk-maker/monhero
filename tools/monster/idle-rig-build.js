@@ -240,7 +240,7 @@ const RIGS = [
   { id:'Gentle', img:'images/monsters/c020.png', body:'breathe', parts:[] },
   { id:'Vesuvios', img:'images/monsters/c043.png', body:'breathe', parts:[] },
   { id:'MooHybrid', img:'images/monsters/c045.png', body:'breathe', parts:[] },
-  // MFバトルカードの混血15体と、2026-10-26 に立ち絵が届いた3体(案の子)。体の動きだけ
+  // MFバトルカードの混血15体と、2026-10-26 に立ち絵が届いた5体(案の子)。体の動きだけ
   { id:'Baron', img:'images/monsters/c051.png', body:'breathe', parts:[] },
   { id:'Aquarius', img:'images/monsters/c052.png', body:'sway', parts:[] },
   { id:'Plumler', img:'images/monsters/c053.png', body:'hop', parts:[] },
@@ -259,6 +259,8 @@ const RIGS = [
   { id:'BlueMountainHybrid', img:'images/monsters/c011.png', body:'heavy', parts:[] },
   { id:'MagnaBeetle', img:'images/monsters/c032.png', body:'heavy', parts:[] },
   { id:'GinGiLiger', img:'images/monsters/c044.png', body:'breathe', parts:[] },
+  { id:'Ankylox', img:'images/monsters/c014.png', body:'heavy', parts:[] },
+  { id:'Soborobent', img:'images/monsters/c037.png', body:'drift', parts:[] },
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

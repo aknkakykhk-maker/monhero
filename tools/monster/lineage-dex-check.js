@@ -200,9 +200,9 @@ check('主血統プラントの対象はPlantとOboro',
     drafts.filter(d => A.dexEntryLineageOf(d).main.name === '？？？').map(d => d.id).join(' '));
   // 立ち絵が無いのは「影で並べる」と決まった2体だけ。図鑑の文が無いのは、社長がまだ文を決めていない子だけ(文は作らず ？？？)。
   // ここに名前が無い子で欠けたら、入れ忘れとして止める
-  const NO_ART = ['Ankylox', 'Soborobent'];
+  const NO_ART = [];
   const NO_TEXT = ['Baron', 'Aquarius', 'Plumler', 'StrikeReaper', 'DarkHam', 'HellFat', 'UrokoGel', 'WakakusaKenzai', 'Garant',
-    'MimiNyaa', 'BenihimeSou', 'MurasakiChu', 'ArmorDragon', 'Kermadix', 'Gigalon', 'Ankylox', 'Soborobent'];
+    'MimiNyaa', 'BenihimeSou', 'MurasakiChu', 'ArmorDragon', 'Kermadix', 'Gigalon'];
   check('案の子の立ち絵が無いのは、影で並べる子だけ',
     drafts.filter(d => !d.imgUrl).map(d => d.id).sort().join() === NO_ART.slice().sort().join(),
     drafts.filter(d => !d.imgUrl).map(d => d.id).join(' '));
@@ -212,6 +212,8 @@ check('主血統プラントの対象はPlantとOboro',
   check('文の無い案の子は、文を作らず ？？？ で出す',
     NO_TEXT.every(id => A.dexEntryDescription(A.UPCOMING_MONSTER_DRAFTS[id]) === '？？？')
     && monsters.every(m => A.dexEntryDescription(m) === A.monsterDexDescription(m.id)));
+  check('アンキロックスの図鑑の文は社長の文のまま',
+    A.dexEntryDescription(A.UPCOMING_MONSTER_DRAFTS.Ankylox) === '体の表面に岩が張りついた、重い体を持つ\n動きはのんびりしているが、その怪力はあなどれない\n見た目につられて岩だと思うと、痛い目にあう');
   check('ギンギライガーの図鑑の文は社長の文のまま',
     A.dexEntryDescription(A.UPCOMING_MONSTER_DRAFTS.GinGiLiger) === '銀色に輝く毛並みと青い瞳を持つライガー\n夜になると野生の血が騒ぐのか\n静かな闇に向かって遠吠えを響かせるという');
   check('遊べる子の血統の引き方は今までと同じ',

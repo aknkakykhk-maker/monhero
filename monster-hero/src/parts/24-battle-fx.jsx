@@ -1364,6 +1364,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   BlueMountainHybrid: { body:'heavy', bodyMask:null, parts:[] },
   MagnaBeetle: { body:'heavy', bodyMask:null, parts:[] },
   GinGiLiger: { body:'breathe', bodyMask:null, parts:[] },
+  Ankylox: { body:'heavy', bodyMask:null, parts:[] },
+  Soborobent: { body:'drift', bodyMask:null, parts:[] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
