@@ -6,6 +6,7 @@
 //
 //   ① 待っています の知らせ(seek)に、名前・アイコン・フレーム・強さが入る。古い版(名前なし)の知らせも、今までどおり受け取れる
 //   ② 知らせの掃除: 長すぎる名前は切る・強さは0〜10000の整数だけ・知らない項目は捨てる・合言葉の形でない物は捨てる
+//   ④ ルールの版: 知らせに版が載る・版がちがう人と、版を送らない古い版の人は一覧に出さない(2026-10-27 社長 ①)
 //   ③ 一覧: 古い知らせ(6秒より前)は出さない・先に待っている人が上・名前の無い人は「ブリーダー」・待っている秒数は0〜999に収める
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
@@ -13,9 +14,10 @@ const read = (p) => fs.readFileSync(path.join(GAME, p), 'utf8');
 const multi = read('src/parts/91-card-battle-multi.jsx').split('// ---- 部屋と通信')[0];
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-card-battle-core.jsx')}\n;\n`
+  + 'const CARD_REPLAY_RULES = 8;\n'
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + 'const rhythmMultiNormalizeCode = (v) => { const c = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return /^[A-Z0-9]{4}$/.test(c) ? c : ""; };\n'
-  + `${multi}\n;\nthis.E = { cardPvpCleanMessage, cardPvpSeekerList, CARD_PVP_NAME_MAX };`, ctx);
+  + `${multi}\n;\nthis.E = { cardPvpCleanMessage, cardPvpSeekerList, cardPvpRulesVersion, CARD_PVP_NAME_MAX };`, ctx);
 const E = ctx.E;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -33,12 +35,13 @@ check('② 合言葉の形でない・時刻が無い知らせは捨てる', E.c
 // ③
 const now = 100000;
 const seekers = {
-  b: { code: 'BBBB', at: now - 41000, seen: now - 1000, name: 'ひよこ', icon: '🐣', rt: 1500 },
-  a: { code: 'AAAA', at: now - 12000, seen: now - 500, name: 'ドラゴン使い', rt: 1564 },
-  old: { code: 'OOOO', at: now - 90000, seen: now - 7000, name: 'いなくなった人' },
-  noname: { code: 'NNNN', at: now - 3000, seen: now - 200, icon: '🙂' },
+  b: { code: 'BBBB', at: now - 41000, seen: now - 1000, name: 'ひよこ', icon: '🐣', rt: 1500, rv: 8 },
+  a: { code: 'AAAA', at: now - 12000, seen: now - 500, name: 'ドラゴン使い', rt: 1564, rv: 8 },
+  old: { code: 'OOOO', at: now - 90000, seen: now - 7000, name: 'いなくなった人', rv: 8 },
+  noname: { code: 'NNNN', at: now - 3000, seen: now - 200, icon: '🙂', rv: 8 },
   oldver: { code: 'VVVV', at: now - 2000, seen: now - 200 },
-  skew: { code: 'SSSS', at: now + 50000, seen: now - 100, name: '時計のずれ' },
+  otherver: { code: 'WWWW', at: now - 2500, seen: now - 200, name: '別の版の人', icon: '🙂', rv: 7 },
+  skew: { code: 'SSSS', at: now + 50000, seen: now - 100, name: '時計のずれ', rv: 8 },
 };
 const list = E.cardPvpSeekerList(seekers, now);
 check('③ 古い知らせ(6秒より前)は出さない', !list.some((x) => x.name === 'いなくなった人') && list.length === 4, list.map((x) => x.name).join(','));
@@ -48,5 +51,9 @@ check('③ 名前の無い人は「ブリーダー」・強さは出さない', 
 check('③ 待っている秒数は0〜999に収める(相手の時計がずれていても)', list.every((x) => x.waitSec >= 0 && x.waitSec <= 999) && list.find((x) => x.code === 'SSSS').waitSec === 0 && list[0].waitSec === 41, list.map((x) => x.waitSec).join(','));
 check('③ 壊れた一覧でも落ちない', E.cardPvpSeekerList(null, now).length === 0 && E.cardPvpSeekerList({ x: null, y: { code: 1 } }, now).length === 0);
 
+// ④
+check('④ 自分のルールの版は、見返しの版(CARD_REPLAY_RULES)', E.cardPvpRulesVersion() === 8);
+check('④ 知らせに載った版を受け取る・壊れた版は null', E.cardPvpCleanMessage({ t: 'seek', from: 'c9', code: 'RV12', at: 1, rv: 8 }).rv === 8 && E.cardPvpCleanMessage({ t: 'seek', from: 'c9', code: 'RV12', at: 1, rv: '8' }).rv === null && E.cardPvpCleanMessage({ t: 'hb', from: 'c9', rv: 8 }).rv === 8 && E.cardPvpCleanMessage({ t: 'hb', from: 'c9' }).rv === null);
+check('④ 版がちがう人は一覧に出さない', !list.some((x) => x.code === 'WWWW'));
 if (failed) { console.log(`\nNG: ${failed} 件`); process.exit(1); }
 console.log('\nすべて OK');
