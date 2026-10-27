@@ -37,6 +37,8 @@ const seed = ({ bonds, storyIds, noticeIds, flagOn }) => {
   put('mh_rhythm_hell_story_seen_v1', true); put('mh_story_assistant_chat_seen_v1', true); put('mh_story_tactics_types_seen_v1', true);
   // MFバトルカードの公開のお話(2026-10-26 公開)は、あつのお話と同じ HOME で順番待ちになる。ここでは見た扱いにしておく
   put('mh_story_card_battle_seen_v1', true);
+  // 起動したときのお詫び・補償の窓は配り済みにしておく(お話の後ろに残り、同じ名前の「閉じる」を取り違える)
+  put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
   put('mh_assistant_selected_v1', 'mua');
   put('mh_rhythm_event_story_v1', storyIds);
   put('mh_seen_update_notices_v1', noticeIds);
@@ -156,7 +158,8 @@ const pickerText = (page) => page.evaluate(() => {
       for (let i = 0; i < 160; i++) {
         if (want[i]) await shot(page, want[i]);
         const t = await bodyText(page);
-        if (!/次へ|スキップ/.test(t) || !(await storyOn(page) || /パーティ|あつ/.test(t))) break;
+        // 最後のページは「次へ」が無く「閉じる」だけになる。そこで抜けると「見た」が付かないので、閉じるまで押す
+        if (!/次へ|スキップ|閉じる|とじる/.test(t) || !(await storyOn(page) || /パーティ|あつ/.test(t))) break;
         last = t;
         if (/気が向いたら呼んで/.test(t)) reachedEnd = true;
         const ok = await page.evaluate(() => {
