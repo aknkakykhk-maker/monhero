@@ -69,6 +69,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `motionTimers.current.push(setTimeout(() => setBeams((cur) => [...cur, beam])` | screen | 止める | MFバトルカードのはね返しの光線を、盾のあとに出す |
 | `motionTimers.current.push(setTimeout(() => setBeams((cur) => cur.filter(` | screen | 止める | MFバトルカードのはね返しの光線を消す |
 | `motionTimers.current.push(setTimeout(() => setAction(` | screen | 止める | MFバトルカードの「◯◯の技」の帯を消す |
+| `const again = setTimeout(() => setAction(` | screen | 止める | MFバトルカードの、吹き出しで隠れていた「◯◯の技」の帯を、吹き出しのあと1.2秒だけ出し直して消す(motionTimers に入れて、画面を離れたら止める) |
 | `motionTimers.current.push(setTimeout(() => setDownBand(` | screen | 止める | MFバトルカードのまんなかの「◯◯ ダウン！」の帯を消す |
 | `const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);` | screen | 止める | MFバトルカードの相手(助手)の1手。対戦の画面の中だけで進む。離れたら止めてよい(対戦はそこで終わる) |
 | `setTimeout(() => setTurnBanner(` | screen | 止める | MFバトルカードの「◯◯のターン」の帯を消す |

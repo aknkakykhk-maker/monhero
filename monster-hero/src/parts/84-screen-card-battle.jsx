@@ -670,6 +670,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const tutStage = tutorial ? CARD_TUTORIAL_STAGES[Math.min(tutI, CARD_TUTORIAL_STAGES.length - 1)] : null;
   const [motions, setMotions] = useState({});   // 場の子の動き { 'p-m': { type, kind, dx, dy, key } }
   const motionTimers = useRef([]);
+  const actionMissed = useRef(null); // 吹き出しで隠れたまま消えた技の札(下の bubbleOverAction のところで出し直す)
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
     setMotions((cur) => ({ ...cur, [id]: mv }));
@@ -969,6 +970,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     setTurnBanner({ key, me: meNow, name: meNow ? 'あなた' : who.name });
     if (meNow && !replay && !game.demo && Audio_.fgSe.card) Audio_.fgSe.card(); // 自分の番が来た音(今ある「カード」の短い音。改良の案 A)
     setAction(null); // 前の番の技の帯が、番の帯のうしろに残って重なっていた
+    actionMissed.current = null; // 吹き出しで隠れた技の札も、次の番へは持ち越さない
     // 番の知らせは0.8秒ほど(「はやい」ほど短い。タップでも消える)。2026-10-26 ソラシドさん「どっちのターンか分かりにくい」
     const bannerMs = Math.max(500, Math.round(800 * pace));
     const t = setTimeout(() => setTurnBanner((cur) => (cur && cur.key === key ? null : cur)), bannerMs);
@@ -1349,6 +1351,19 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 小さい縦の画面と横の画面では、上に重ねたふつうの吹き出しが技の札を隠す(320×568 は上半分・844×390 は丸ごと。2026-10-27 フキダシくん)。
   //   吹き出しが出ているあいだは技の札を出さない(何の技かは記録の1行に出ている。台詞が消えれば札が出る)
   const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
+  // 吹き出しで隠れたまま消えた技の札は、吹き出しが消えたあと1.2秒だけ出し直す(横の画面では台詞の間がほとんど無く、
+  //   相手の技の1行が一度も見えなかった。2026-10-27 フキダシくんの測り直し・ソランドくん「相手が何をしたか分かるのは大事」)。
+  //   番の帯・ダウンの帯・守りを選ぶ間・決着のときは出し直さない。次の技が来たら、そちらに替わる
+  useEffect(() => { if (action && bubbleOverAction) actionMissed.current = action; else if (action) actionMissed.current = null; }, [action && action.key, bubbleOverAction]);
+  useEffect(() => {
+    if (bubbleOverAction || action || !actionMissed.current) return;
+    const miss = actionMissed.current; actionMissed.current = null;
+    if (turnBanner || downBand || guarding || endFx || bigCard) return;
+    const key = `${miss.key}-again`;
+    setAction({ ...miss, key });
+    const again = setTimeout(() => setAction((cur) => (cur && cur.key === key ? null : cur)), 1200);
+    motionTimers.current.push(again);
+  }, [bubbleOverAction]);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
   React.useLayoutEffect(() => {

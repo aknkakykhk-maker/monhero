@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4e427343d3481fc
+// source-sha256: 61addfb7d0e3f616
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92165,6 +92165,7 @@ const CardBattleBoard = ({
   const tutStage = tutorial ? CARD_TUTORIAL_STAGES[Math.min(tutI, CARD_TUTORIAL_STAGES.length - 1)] : null;
   const [motions, setMotions] = useState({});
   const motionTimers = useRef([]);
+  const actionMissed = useRef(null);
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
     setMotions(cur => ({
@@ -92610,6 +92611,7 @@ const CardBattleBoard = ({
     });
     if (meNow && !replay && !game.demo && Audio_.fgSe.card) Audio_.fgSe.card();
     setAction(null);
+    actionMissed.current = null;
     const bannerMs = Math.max(500, Math.round(800 * pace));
     const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), bannerMs);
     let t2 = null;
@@ -93124,6 +93126,22 @@ const CardBattleBoard = ({
   const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
   const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
   const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
+  useEffect(() => {
+    if (action && bubbleOverAction) actionMissed.current = action;else if (action) actionMissed.current = null;
+  }, [action && action.key, bubbleOverAction]);
+  useEffect(() => {
+    if (bubbleOverAction || action || !actionMissed.current) return;
+    const miss = actionMissed.current;
+    actionMissed.current = null;
+    if (turnBanner || downBand || guarding || endFx || bigCard) return;
+    const key = `${miss.key}-again`;
+    setAction({
+      ...miss,
+      key
+    });
+    const again = setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 1200);
+    motionTimers.current.push(again);
+  }, [bubbleOverAction]);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => {
     setStageFit(0);
