@@ -14633,6 +14633,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   更新関数は「同じ入力なら同じ結果」でなければならないので、純関数を通す
     if(isTacticsMode(runMode)) setTurnBuffs(p=>(p.bySlot?{...p,bySlot:clearTacticsSlotFlag(p.bySlot,'zeroGuts')}:p));
     writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
+    // ★AIコピー(5つの遊び)の固有技の写しの出し入れは、ここ1か所だけ(案1「山札に1枚足す」への切りかえは 33-ai-copy-classic.jsx の定数)
+    if(!isTacticsMode(runMode)){ const z=classicAiCopyZones({ deck:nextDeck, hand:nextHand, discard:nextGraveyard },aiCopyRef.current); nextDeck=z.deck; nextHand=z.hand; nextGraveyard=z.discard; }
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];

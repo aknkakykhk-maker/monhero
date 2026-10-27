@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5e1b2f672e83ba10
+// generated-sha256: e13892c344c28986
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28393,6 +28393,20 @@ const classicAiCopyRegenGuts = (aiCopy, rate) => {
   const max = Math.max(0, aiCopySafeNum(aiCopy.maxGuts));
   const add = Math.floor(max * Math.max(0, aiCopySafeNum(rate)));
   return { ...aiCopy, guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add) };
+};
+
+// ★固有技の写しを「みんなの山札に1枚足す」(案1)か「コピーが持つ」(案2・いま)かの切りかえ(2026-10-27 ジン部長。社長の答え待ち)。
+//   true にすると、下の classicAiCopyZones が processTurn の最後(手札・山札・捨て札を確定する1か所)で写しを1枚足し、
+//   コピーが消えたら抜く。false のあいだは、もし写しが紛れていても抜くだけ(いまは入らない)
+const CLASSIC_AI_COPY_UNIQUE_IN_DECK = false;
+// zones … { deck, hand, discard } / copy … いまの aiCopy(いなければ null)。写しは印 sorashidoCopyOf で見分ける
+const classicAiCopyZones = (zones, copy, inDeck = CLASSIC_AI_COPY_UNIQUE_IN_DECK) => {
+  const z = zones || {};
+  const keepUid = inDeck && copy && copy.uniqueCard ? copy.uniqueCard.uid : null;
+  const clean = (list) => (Array.isArray(list) ? list : []).filter((c) => !(c && c.sorashidoCopyOf != null && (keepUid == null || c.uid !== keepUid)));
+  const out = { deck: clean(z.deck), hand: clean(z.hand), discard: clean(z.discard) };
+  if (keepUid != null && ![...out.deck, ...out.hand, ...out.discard].some((c) => c && c.uid === keepUid)) out.deck = [...out.deck, copy.uniqueCard];
+  return out;
 };
 
 // ---- part: 33-rhythm-buddy.jsx ----
@@ -77450,6 +77464,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   更新関数は「同じ入力なら同じ結果」でなければならないので、純関数を通す
     if(isTacticsMode(runMode)) setTurnBuffs(p=>(p.bySlot?{...p,bySlot:clearTacticsSlotFlag(p.bySlot,'zeroGuts')}:p));
     writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
+    // ★AIコピー(5つの遊び)の固有技の写しの出し入れは、ここ1か所だけ(案1「山札に1枚足す」への切りかえは 33-ai-copy-classic.jsx の定数)
+    if(!isTacticsMode(runMode)){ const z=classicAiCopyZones({ deck:nextDeck, hand:nextHand, discard:nextGraveyard },aiCopyRef.current); nextDeck=z.deck; nextHand=z.hand; nextGraveyard=z.discard; }
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];

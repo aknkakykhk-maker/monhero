@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c1c34d5eee18e1b
+// source-sha256: 5c902f852b05ce0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45935,6 +45935,19 @@ const classicAiCopyRegenGuts = (aiCopy, rate) => {
     ...aiCopy,
     guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add)
   };
+};
+const CLASSIC_AI_COPY_UNIQUE_IN_DECK = false;
+const classicAiCopyZones = (zones, copy, inDeck = CLASSIC_AI_COPY_UNIQUE_IN_DECK) => {
+  const z = zones || {};
+  const keepUid = inDeck && copy && copy.uniqueCard ? copy.uniqueCard.uid : null;
+  const clean = list => (Array.isArray(list) ? list : []).filter(c => !(c && c.sorashidoCopyOf != null && (keepUid == null || c.uid !== keepUid)));
+  const out = {
+    deck: clean(z.deck),
+    hand: clean(z.hand),
+    discard: clean(z.discard)
+  };
+  if (keepUid != null && ![...out.deck, ...out.hand, ...out.discard].some(c => c && c.uid === keepUid)) out.deck = [...out.deck, copy.uniqueCard];
+  return out;
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -121582,6 +121595,16 @@ function MonsterHeroGame() {
       ...p,
       kikiCardBonusTurns: Math.max(0, p.kikiCardBonusTurns - 1)
     } : p);
+    if (!isTacticsMode(runMode)) {
+      const z = classicAiCopyZones({
+        deck: nextDeck,
+        hand: nextHand,
+        discard: nextGraveyard
+      }, aiCopyRef.current);
+      nextDeck = z.deck;
+      nextHand = z.hand;
+      nextGraveyard = z.discard;
+    }
     setHand(nextHand);
     setDeck(nextDeck);
     setGraveyard(nextGraveyard);
