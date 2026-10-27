@@ -24,7 +24,8 @@
 
 ## 公開までに残っていること
 - [ ] 社長の絵(表情8つ)→ `images/assistant/sorashido_*.PNG`・顔アイコン `face/`(tools/make-assistant-faces.js)。届いたら `tempImageDir`・`tempImageExt` の2行と仮の顔を消す
-- [ ] 残りの場面のセリフ(いまはみゅあのセリフへ落ちる。きゅうこは71場面・550本前後)・マーケットの売り場・お布施の束
+- [x] 残りの場面のセリフ(2026-10-27・全71場面。印を真にした形で assistant-check が通ることを確かめた)。アシカ「ソラシドの自動化」は教ええらび(pickTeaching)で名前と効果を出す
+- [ ] マーケットの売り場ごとのひとこと(marketShops・いまはふつうのセリフへ落ちる)
 - [ ] お話の台本(ツギハギくん)
 - [ ] MFバトルカードの相手にするなら `CARD_AI_HABITS` など(カード部)
 - [ ] 公開の日に更新履歴・ヘルプ・告知(changelog-help-update スキル)と、おしゃべりの材料の作り直し
