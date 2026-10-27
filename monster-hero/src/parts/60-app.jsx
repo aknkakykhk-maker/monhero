@@ -8692,9 +8692,10 @@ function MonsterHeroGame() {
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
     try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 前のカードポイントの移しかえ(1回だけ)。次に開いたときにやり直す */ }
-    const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    const [point, starter, shop, collection, gacha, catalogs] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null), storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]);
     // collection … パックの中身・提供割合に「未取得」と、いまの持ち物で決まる出やすさを出すため(読むだけ)
-    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection) };
+    // gacha・catalogs … ガチャポイントと持っているカタログの冊数(パックの札の上の帯に出す。2026-10-27 社長 案A)
+    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection), gacha: cardNormalizeGacha(gacha), catalogs: cardNormalizeCatalogs(catalogs) };
     setCardShopState(next);
     setRhythmEventPoints(next.point);
     return next;
@@ -8719,30 +8720,75 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]), ([rawCol, rawPity, rawPoint, rawSplit]) => {
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null), storeGet(K.gacha, 0, false)]), ([rawCol, rawPity, rawPoint, rawSplit, rawGacha]) => {
         const point = cardNormalizePoint(rawPoint);
         // 以前の4弾の天井の数は、新しい8弾へ1回だけ写す(印 mh_card_pack_pity_split_v1。以前の数は消さない)
         const split = rawSplit !== true;
         const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
         const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
         if (!r) return { fail: 'points' };
-        return { r, entries: [
+        // ガチャポイントは、買うのと同じ保存のまとまりで1回だけ足す(1パック10。開ける画面を開き直しても増えない)
+        const gacha = cardNormalizeGacha(rawGacha) + r.packs.length * CARD_GACHA_PER_PACK;
+        return { r, gacha, entries: [
           { key: K.collection, before: rawCol, next: r.collection },
           { key: K.pity, before: rawPity, next: r.pity },
           { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
+          { key: K.gacha, before: rawGacha, next: gacha },
           ...(split ? [{ key: K.pitySplit, before: rawSplit, next: true }] : []),
         ] };
       });
       if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; } // 別のタブで使ったあとなど、表示が古いことがあるので読み直す
       if (res.fail) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
       const r = res.r;
-      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection }));
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection, gacha: res.gacha }));
       setRhythmEventPoints(r.point); // ビートPと同じ財布なので、ビートP交換所の残高もそろえる
-      setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost });
+      setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost, gacha: { add: r.packs.length * CARD_GACHA_PER_PACK, now: res.gacha } });
       setGameState('CARD_PACK_OPEN');
       return { ok:true };
     } catch {
       setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // ガチャポイント500でバトルカードカタログ1冊(2026-10-27 社長)。パックと同じく、読み直して確かめてから保存する(押しっぱなし・ほかのタブでも二重にならない)
+  const exchangeCardCatalog = async () => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]), ([rawGacha, rawCat]) => {
+        const r = cardExchangeCatalog({ gacha: rawGacha, catalogs: rawCat });
+        if (!r) return { fail: 'points' };
+        return { r, entries: [{ key: K.gacha, before: rawGacha, next: r.gacha }, { key: K.catalogs, before: rawCat, next: r.catalogs }] };
+      });
+      if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ガチャポイントが足りません。'); return { ok:false, reason:'points' }; }
+      if (res.fail) { setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), gacha: res.r.gacha, catalogs: res.r.catalogs }));
+      return { ok:true };
+    } catch {
+      setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // カタログを1冊使って、選んだカードを1枚もらう(二重にもらえないよう、読み直して確かめてから保存する)
+  const spendCardCatalog = async (no) => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.catalogs, 0, false), storeGet(K.collection, null)]), ([rawCat, rawCol]) => {
+        const r = cardUseCatalog(CARD_BATTLE_DATA, no, { catalogs: rawCat, collection: cardNormalizeCollection(rawCol) });
+        if (!r) return { fail: 'catalog' };
+        return { r, entries: [{ key: K.catalogs, before: rawCat, next: r.catalogs }, { key: K.collection, before: rawCol, next: r.collection }] };
+      });
+      if (res.fail === 'catalog') { void loadCardShop(); setMarketExchangeError('カタログが無いか、そのカードはもう持てる数いっぱいです。'); return { ok:false, reason:'catalog' }; }
+      if (res.fail) { setMarketExchangeError('保存できませんでした。カタログは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), catalogs: res.r.catalogs, collection: res.r.collection }));
+      return { ok:true };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カタログは変わっていません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
@@ -20716,7 +20762,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
-            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints }:null}
+            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog }:null}
             initialSection={cardMarketEntry?'card':null}
           />
         )}
