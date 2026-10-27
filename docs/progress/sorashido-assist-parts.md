@@ -88,10 +88,7 @@
 - 決まった割合(`uniqueRate`)は持ちません。
 - 説明文とヘルプは「コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く」の言い方です。
 
-★古い形として次のものを残しています。33-ai-copy.jsx とその検査が新しい部品へ移ったら消します。
-
-- `aiCopyHand`・`aiCopyUniqueCard`・`aiCopyRemoveUnique`・`SORASHIDO_COPY_UNIQUE_COUNT`
-- `aiCopySummonPlan` と `aiCopyTurnEnd` の `addUniqueOf`・`removeUniqueOf`
+古い形(`aiCopyHand`・`aiCopyUniqueCard`・`aiCopyRemoveUnique`・`SORASHIDO_COPY_UNIQUE_COUNT`、`aiCopySummonPlan`・`aiCopyTurnEnd` の `addUniqueOf`・`removeUniqueOf`)は、バトル部が新しい部品へ移ったので外しました(#4129・#4133 のあと)。
 
 ## まだ決めていないこと
 
