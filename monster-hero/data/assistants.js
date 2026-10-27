@@ -9226,6 +9226,9 @@ const STORY_GUEST_SPEAKERS = [
   //   枠いっぱいに切り抜くと、細長いドリーミィは耳・帽子・頭の玉と足元の雲が切れていた)
   { id: 'illumine', name: 'イルミネ', role: 'ゲスト', emoji: '🌌', accent: '#a78bfa', image: (typeof ILLUMINE_IMG !== 'undefined' ? ILLUMINE_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
   { id: 'dreamy', name: 'ドリーミィ', role: 'ゲスト', emoji: '🐱', accent: '#fde68a', image: (typeof DREAMY_IMG !== 'undefined' ? DREAMY_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  // ソラシドの加入のお話(2026-10-27)に出る新モンスター2体。絵は data/images/images-ally.js の全身の絵。人の言葉は話さず、鳴き声としぐさだけ
+  { id: 'kyubi', name: 'キュービ', role: 'ゲスト', emoji: '🦊', accent: '#f59e0b', image: (typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  { id: 'orihime', name: 'オリヒメ', role: 'ゲスト', emoji: '🎐', accent: '#93c5fd', image: (typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====
@@ -9823,6 +9826,98 @@ const ASSISTANT_KYUKO_JOIN_STORY = [
 ];
 const ASSISTANT_KYUKO_JOIN_STORY_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん／あつニキ' };
 
+// ---------- ソラシドの加入のお話「推しに会える夜 ～ソラシド登場～」(2026-10-27・社長が案1を選んだ) ----------
+// 【流れ】(社長の決定) ①HOME に知らない人(ソラシド)が駆け込み、AIで作った「オリヒメが現れそうな夜」の予測を見せて推しを熱く語る
+//   → ②予測の夜、星の見える浜へ。来ない。ソラシドはデータを洗い直して没頭し、みんなはあきれつつ付き合う
+//   → ③風鈴の音でオリヒメが現れる。人だかりに驚いて逃げそうになり、キュービが提灯をかかげて立ちふさがる
+//   → ④ソラシドは語るのをやめて、2体が好きな音(風鈴に合わせた三線)を鳴らす。オリヒメが袖を引き、キュービも提灯を下ろす(山場)
+//   → ⑤2体は仲間に。ソラシドは「推しのそばにいたいから」助手になる。打ち上げは泡盛でも平気な顔(お酒はこの場面だけ・軽く)
+// ★山場④の「攻略より好きで通じる」と、⑤の「推しのそばにいたいから」をつなげる。④はシリアスなので「笑」や顔文字を入れない(台帳 2026-10-23)
+// ★キュービとオリヒメはモンスター。人の言葉は話さず、鳴き声としぐさだけ(きゅうこのお話のイルミネ・ドリーミィと同じ形)
+// ★元のテスターさんご本人の暮らし(仕事・住まい・年齢・家族・性別など)は書かない
+// 公開の印 assistantSorashido が立つまでは流れず、回想にも出ない。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
+// atsu:'with' はあつを解放している人だけ、atsu:'without' はその代わりに解放していない人へ出す行(きゅうこのお話と同じ)
+const ASSISTANT_SORASHIDO_JOIN_STORY = [
+  // ---- ① HOME に、知らない人が駆け込んでくる ----
+  { who:'mua',       e:'surprise', t:'ねえ、だれか走ってくる！ めっちゃ息切れてるんだけど〜' },
+  { who:'sorashido', e:'excited',  t:'はぁ、はぁ……すみません！ 自分、ソラシドっていいます！ ここの助手さんたちですよね！？' },
+  { who:'kiki',      e:'surprise', t:'あれま、ずいぶん急いでまつね。だいじょうぶでつか？' },
+  { who:'sorashido', e:'excited',  t:'これ見てください！ AIに星の動きと、いままでの目撃の記録を全部読ませて、「オリヒメが現れそうな夜」を出したんです！' },
+  { who:'dra',       e:'surprise', t:'ふむ。オリヒメって、風鈴の音といっしょに出るっていう、あの……？' },
+  { who:'sorashido', e:'excited',  t:'そう！ 羽衣がふわってして、風鈴がりんって鳴って……いつもそばにキュービがいるんだよ！ 提灯もった狐の子！ うぉぉぉ、語りだしたら止まらん笑' },
+  { who:'momosuke',  e:'wink',     t:'もうため口になってるw' },
+  { who:'sorashido', e:'happy',    t:'あ、ほんとだ笑 なんくるないさ〜。俺のことはソラシドでいいよ！' },
+  { who:'atsu',      e:'excited',  atsu:'with',    t:'で、その夜っていつ？ 俺も見たいんだけど笑' },
+  { who:'mua',       e:'surprise', atsu:'without', t:'で、その夜っていつなの〜？' },
+  { who:'sorashido', e:'excited',  t:'今夜！！ 星の見える浜で、9割の確率で会える……はずだぜ・・・！' },
+  { who:'mua',       e:'happy',    t:'ソラちん、おもしろ〜！ もうあだ名つけちゃったｗ みんなで行ってみよ！' },
+  { who:'kiki',      e:'happy',    t:'オリヒメは、私もまだ見たことがないんでつ。ご一緒しまつね♪♪' },
+  // ---- ② 予測の夜、星の見える浜。来ない ----
+  { who:'mua',       e:'troubled', t:'……来ないね〜。もう波の音しか聞こえないんだけど' },
+  { who:'dra',       e:'troubled', t:'9割って言ってなかったか。くさ' },
+  { who:'sorashido', e:'surprise', t:'なに！？ ちょっと待って、データ見直す！' },
+  { who:'sorashido', e:'troubled', t:'月の出……潮の満ち引き……風の向き……あ、風の向き入れ忘れてる笑 いちばん大事なとこ抜けてた笑' },
+  { who:'momosuke',  e:'troubled', t:'ソラ、画面に顔くっつきそうだよ〜' },
+  { who:'sorashido', e:'normal',   t:'風鈴は、風がないと鳴らない。鳴らないと、オリヒメは来ない……そういうことか……' },
+  { who:'kiki',      e:'happy',    t:'ふふ、すっかり夢中でつね。ソラシドさん、お茶ここに置いときまつよ (´ー`*)' },
+  { who:'kyuko',     e:'wink',     t:'わかるぅ、データの洗い直しって止まんないよねぇ。俺も譜面でよくやるw ソラ、がんばれ〜' },
+  { who:'atsu',      e:'happy',    atsu:'with',    t:'ソラシド、完全に徹夜する顔になってる笑' },
+  { who:'dra',       e:'happy',    atsu:'without', t:'ソラさん、完全に自分の世界に入ってるな' },
+  { who:'mua',       e:'wink',     t:'みんな、あきれてるのに誰も帰らないの、ウケるｗ' },
+  { who:'sorashido', e:'excited',  t:'……出た！ 風が変わるの、あと少し！ 今度こそ来るぜ・・・！' },
+  { who:'dra',       e:'normal',   t:'ふむ。じゃあ、もう少しだけ付き合ってやるか' },
+  // ---- ③ 風鈴の音で、オリヒメが現れる ----
+  { who:'orihime',   e:'normal',   t:'……りん……(風鈴の音)' },
+  { who:'mua',       e:'surprise', t:'今の音……！' },
+  { who:'kyubi',     e:'normal',   t:'コン……(提灯の明かりが、波の上でゆれる)' },
+  { who:'kiki',      e:'surprise', t:'あれま……海の上に、羽衣がふわっと……！' },
+  { who:'orihime',   e:'normal',   t:'…………(羽衣がひるがえる)' },
+  { who:'sorashido', e:'surprise', t:'うそ……ほんとに来た……オリヒメと、キュービ……' },
+  { who:'momosuke',  e:'excited',  t:'きれい〜！！ みんな見て見て！ もっと近くで見よ！♡' },
+  { who:'mua',       e:'excited',  t:'わ〜っ、ほんとにいた！ まぢできれい〜！' },
+  { who:'orihime',   e:'normal',   t:'りっ……！(羽衣で顔をかくして、後ろへ下がる)' },
+  { who:'dra',       e:'surprise', t:'まずい、人が多すぎて驚いてる。逃げるぞ' },
+  { who:'kyubi',     e:'normal',   t:'コンッ！(提灯をかかげて、オリヒメの前に立ちふさがる)' },
+  { who:'atsu',      e:'surprise', atsu:'with',    t:'うわ、狐の子が前に出た！ 本気で守ってる！' },
+  { who:'kiki',      e:'surprise', atsu:'without', t:'キュービが、オリヒメを守って前に出てきたでつ……！' },
+  { who:'kyubi',     e:'normal',   t:'ウゥ……(提灯の火が、ぼうっと大きくなる)' },
+  { who:'mua',       e:'troubled', t:'どうしよ……近づいたら、逃げちゃいそう……' },
+  // ---- ④ 山場。語るのをやめて、好きな音を鳴らす(シリアス。「笑」や顔文字を入れない) ----
+  { who:'sorashido', e:'normal',   t:'……みんな、ちょっとだけ下がってて' },
+  { who:'momosuke',  e:'surprise', t:'ソラ……？' },
+  { who:'sorashido', e:'normal',   t:'語りたいことは、いっぱいある。でも今は、言葉じゃないと思う' },
+  { who:'sorashido', e:'normal',   t:'(三線を取り出して、風鈴の音に合わせて、そっと弦をはじく)' },
+  { who:'orihime',   e:'normal',   t:'……りん……りん……' },
+  { who:'kiki',      e:'surprise', t:'風鈴と三線の音が……重なってまつ……' },
+  { who:'kyubi',     e:'normal',   t:'コン……(提灯の火が、少しずつ小さくなる)' },
+  { who:'dra',       e:'normal',   t:'……データじゃなくて、あの子たちの好きな音で呼んだのか' },
+  { who:'orihime',   e:'normal',   t:'…………(そっと近づいて、ソラシドの袖を引く)' },
+  { who:'kyubi',     e:'normal',   t:'……コン(提灯を下ろして、となりに座る)' },
+  { who:'mua',       e:'surprise', t:'今……袖、ひっぱった……！' },
+  { who:'sorashido', e:'crying',   t:'う……うぉぉぉ……！' },
+  { who:'sorashido', e:'crying',   t:'ずっと好きだった。会える日を調べてたのも、ただ会いたかったからなんだ……' },
+  { who:'atsu',      e:'normal',   atsu:'with',    t:'……よかったな、ソラシド' },
+  { who:'dra',       e:'normal',   atsu:'without', t:'……よかったな、ソラさん' },
+  { who:'kiki',      e:'happy',    t:'好きって気持ちが、ちゃんと届いたんでつね' },
+  // ---- ⑤ 2体は仲間に。ソラシドは助手になる。打ち上げ ----
+  { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、ソラちんから離れないんだけど〜' },
+  { who:'kyubi',     e:'normal',   t:'コン♪(ぴょんと跳ねて、しっぽをふる)' },
+  { who:'orihime',   e:'normal',   t:'りん♪(ふわりと寄って、羽衣をソラシドの肩にかける)' },
+  { who:'dra',       e:'happy',    t:'いっしょにいたいってことだな。えへへ' },
+  { who:'momosuke',  e:'wink',     t:'ねえソラ、2体といっしょに、ここで助手やればいいじゃん♡' },
+  { who:'sorashido', e:'excited',  t:'なに！？ ……やる！ 推しのそばにいたいから！ 理由はそれだけだぜ・・・！' },
+  { who:'mua',       e:'wink',     t:'理由が正直すぎｗ でも、そういうの好きぢゃん' },
+  { who:'sorashido', e:'happy',    atsu:'with',    t:'改めて、よろしく！ みゅあ、きき、もも、ドラちゃん、あっくん、きゅうこ！' },
+  { who:'sorashido', e:'happy',    atsu:'without', t:'改めて、よろしく！ みゅあ、きき、もも、ドラちゃん、きゅうこ！' },
+  // ★アシカの名前は決まっていない(2026-10-27)。決まったら、この行に「」で名前を差し込む
+  { who:'sorashido', e:'wink',     t:'あと、アシカも持ってきたよ。俺のとっておき、マーケットに置いとくね笑' },
+  { who:'kyuko',     e:'happy',    t:'じゃ、浜で打ち上げしよぉ。ソラ、なに飲むの？' },
+  { who:'sorashido', e:'happy',    t:'泡盛！ ……これくらい、なんくるないさ〜笑' },
+  { who:'kiki',      e:'surprise', t:'あれま……顔色ひとつ変わりませんね……！' },
+  { who:'sorashido', e:'happy',    t:'{name}、これからよろしく！ 推しの話なら、いつでも聞くぜ・・・！笑' },
+];
+const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラ', dra: 'ソラさん', atsu: 'ソラシド', kyuko: 'ソラ', sorashido: 'みゅあ／きき／もも／ドラちゃん／あっくん／きゅうこ' };
+
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -9894,6 +9989,9 @@ const EVENT_REPLAYS = [
   { id: 'atsu_join_2026_10_22', date: '2026-10-22 08:00', title: 'おかえり、勇者 ～W.o.F の旗～', script: ASSISTANT_ATSU_JOIN_STORY, calls: ASSISTANT_ATSU_JOIN_STORY_CALLS, unlockedKey: 'atsuJoinSeen', releaseFlag: 'assistantAtsu', hideUntilFirstLine: ['atsu'], group: 'assistant' },
   // きゅうこの加入のお話(2026-10-22)。公開の印 assistantKyuko が立つまで出ない。きゅうこは登場の行まで顔を伏せる
   { id: 'kyuko_join_2026_10_22', date: '2026-10-22 22:00', title: '月影とニャーニャー人形 ～きゅうこ登場～', script: ASSISTANT_KYUKO_JOIN_STORY, calls: ASSISTANT_KYUKO_JOIN_STORY_CALLS, unlockedKey: 'kyukoJoinSeen', releaseFlag: 'assistantKyuko', hideUntilFirstLine: ['kyuko'], group: 'assistant' },
+  // ソラシドの加入のお話(2026-10-27)。公開の印 assistantSorashido が立つまで流れず、回想にも出ない。ソラシドは駆け込んでくる行まで顔を伏せる
+  //   date は公開の日に合わせて直す(いまは台本を書いた日)
+  { id: 'sorashido_join_2026_10_27', date: '2026-10-27 12:00', title: '推しに会える夜 ～ソラシド登場～', script: ASSISTANT_SORASHIDO_JOIN_STORY, calls: ASSISTANT_SORASHIDO_JOIN_STORY_CALLS, unlockedKey: 'sorashidoJoinSeen', releaseFlag: 'assistantSorashido', hideUntilFirstLine: ['sorashido'], group: 'assistant' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 

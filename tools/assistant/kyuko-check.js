@@ -114,7 +114,7 @@ const on = load('var RELEASE_FLAGS = { assistantKyuko: true };');
 check('印が真なら、お話を見ていなくても選べる', on.assistantUnlockedBy('kyuko', []) === true);
 check('ゲーム側のお話の id がデータと同じ', rel.includes("const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';"));
 check('見たかどうかは既存の「見終えたお話の id」の並びで持つ(新しい保存キーを作らない)',
-  /RHYTHM_EVENT_STORY_IDS = \[[^\]]*KYUKO_JOIN_STORY_ID\]/.test(app) && /kyukoJoinSeen: Array\.isArray\(rhythmEventStorySeen\) && rhythmEventStorySeen\.includes\(KYUKO_JOIN_STORY_ID\)/.test(app)
+  /RHYTHM_EVENT_STORY_IDS = \[[^\]]*KYUKO_JOIN_STORY_ID[,\]]/.test(app) && /kyukoJoinSeen: Array\.isArray\(rhythmEventStorySeen\) && rhythmEventStorySeen\.includes\(KYUKO_JOIN_STORY_ID\)/.test(app)
   && !/mh_[a-z_]*kyuko/.test(app + rel + read('monster-hero/data/breeder.js')));
 check('お話を流すのは公開の印が立ったときだけ(だれにでも1回)',
   /setKyukoJoinSeenForShop\([\s\S]{0,200}EVENT_REPLAY_RELEASE_FLAGS\.assistantKyuko\) return;[\s\S]{0,200}rhythmEventStorySeen\.includes\(KYUKO_JOIN_STORY_ID\)\) return;/.test(app));
