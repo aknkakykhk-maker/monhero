@@ -1047,8 +1047,8 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
   ]),
 });
 // みゅあの新しい衣装(2026-10-27 社長「みゅあの新衣装解放。バトルカードでみゅあのマスターに勝つと解放。他の衣装の同じように売られる。新衣装は準備中」)。
-//   名前・説明・値段(ダイヤショップ 100,000)は仮置き(社長に確かめ中)。絵は社長が用意中なので、届くまでは
-//   公開の印を偽にして出さない(絵が届いたら imageDir と icon を差し替え、社長に見せてから印を真にする)。
+//   名前・説明は仮置き(社長に確かめ中)。売り場はダイヤショップ 100,000 だけ(社長)。絵は入れた(10/27)が、
+//   公開の印は偽のまま。社長に見せてから印を真にする。
 // ★解放の条件は unlock に書く: MFバトルカードの助手と対戦で、相手 cardFoe の難易度 cardLevel に1回でも勝つ。
 //   勝つ前はマーケットに出さない(「近日追加」の札も出さない)。解放の覚え方は下の ASSISTANT_COSTUME_UNLOCKED_KEY
 const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = false;
@@ -1056,9 +1056,10 @@ const muaCardMasterCostume = Object.freeze({
   id: 'mua_card_master_v1', assistantId: 'mua',
   name: 'マスターの衣装(仮)', desc: 'MFバトルカードで、みゅあの MASTER に勝つと買えるようになる衣装です。(仮)',
   get released() { return ASSISTANT_COSTUME_MUA_MASTER_RELEASE === true; },
-  // 絵が届くまでは、商品の絵は今のみゅあの顔。着ても元の服のまま(imageDir が無いと元の服へ落ちる)
-  icon: 'images/assistant/face/myua_happy.PNG?v=89e85b1b64d2',
-  imageDir: null,
+  // 絵は社長が用意(10/27)。元の絵は tools/art-sources/assistants/mua-card-master/。立ち絵は 768×1024、顔は make-assistant-faces.js で作った
+  // (当て方: 1ほほえむ=normal/2手を差し出して笑う=happy/3ウインク=wink/4驚く=surprise/5照れ=troubled/6怒る=angry/7もじもじ=crying/8指さして笑う=excited)
+  icon: 'images/assistant/card-master/face/myua_happy.PNG?v=e08db4e730ee',
+  imageDir: 'images/assistant/card-master',
   price: Object.freeze({ diamond: 100000 }),
   unlock: Object.freeze({ cardFoe: 'mua', cardLevel: 'master' }),
 });
