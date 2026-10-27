@@ -151,6 +151,9 @@ const run = async () => {
       const assistantBondRewardRunningRef = { current:false };
       const assistantBondRewardAgainRef = { current:false };
       const assistantBondsRef = { current:{} };
+      // ギフトの書き足しの順番待ち(60-app の runGiftWrite と同じ形。2026-10-27 #4154)
+      const giftWriteChainRef = { current: Promise.resolve() };
+      const runGiftWrite = (task) => { const r = giftWriteChainRef.current.then(task, task); giftWriteChainRef.current = r.catch(() => {}); return r; };
       const clone = (v) => v == null ? v : JSON.parse(JSON.stringify(v));
       const storeGet = async (k, d) => (k in store ? clone(store[k]) : d);
       const storeSet = async (k, v) => { if (${failSave} && k === ASSISTANT_BOND_REWARDS_V2_KEY && v !== null && Object.keys(v).length) { store[k] = { broken:true }; return; } store[k] = clone(v); };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e170638e253d57e1
+// source-sha256: c200a5fd981136b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93131,7 +93131,7 @@ const CardBattleBoard = ({
   }, [bubble && bubble.key]);
   const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait' : st.pendingPray ? 'pray' : st.pendingReveal ? 'reveal' : st.pendingChoice ? 'choose' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
-  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
+  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(o => tutAllow(o) && !cardAttachUseless(db, st, o)) : [];
   const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find(o => o.hand) || null : null;
   const prayKey = mode === 'pray' && !prayUse ? `${st.turn}-${st.log.length}` : '';
   useEffect(() => {
@@ -93184,7 +93184,8 @@ const CardBattleBoard = ({
   const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
   const byMon = monChosen === undefined ? [] : selOpts.filter(o => (o.mon === undefined ? -1 : o.mon) === monChosen);
   const sets = [...new Set(byMon.map(o => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length);
-  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets[0] : null;
+  const setAlone = sel ? JSON.stringify([sel.hand]) : null;
+  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets[0] : null;
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
