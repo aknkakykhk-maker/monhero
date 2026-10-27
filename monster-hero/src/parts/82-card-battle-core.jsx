@@ -1537,6 +1537,18 @@ const cardAiFillBind = (db, st, o, policy) => {
 };
 
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
+// 付けても何も変わらない札を付けた手か(払うガッツを減らすだけの札で、外しても払うガッツが同じ)。
+//   2026-10-27 社長の報告: カララギマンゴー(ガッツ0)にジョイのサポートが付いて、札が1枚むだになった
+const cardAiWastedAttach = (db, st, o) => {
+  if (!o || !Array.isArray(o.hand) || o.hand.length < 2) return false;
+  const p = st.active, hand = st.players[p].hand;
+  const cost = cardActionCost(db, st, p, hand, o.hand);
+  return o.hand.slice(1).some((i) => {
+    const c = cardOf(db, hand[i]);
+    if (!c || !(c.effects || []).length || !(c.effects || []).every((e) => ['attach', 'attachFree', 'attachCost', 'attachCostHalf'].includes(e.t))) return false;
+    return cardActionCost(db, st, p, hand, o.hand.filter((j) => j !== i)) === cost;
+  });
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   // おいのり: 相手が出した全体カードは、相手に都合のよいものとみて、持っていれば無くす(雑な手のときは出し忘れる)
   if (st.pendingPray) { const use = cardPrayOptions(db, st).find((o) => o.hand); return use && rand() >= (policy.level.sloppy || 0) ? use : { type: 'pray' }; }
@@ -1571,7 +1583,8 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     const gm = cardFieldEff(st, 'fieldGutsMax');
     return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
   }
-  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
+  // 自分で負けにいく手と、付けても何も変わらない札を付けた手(ガッツ0の札にジョイのサポートなど)は、どの強さでも選ばない
+  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy) && !cardAiWastedAttach(db, st, o));
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);

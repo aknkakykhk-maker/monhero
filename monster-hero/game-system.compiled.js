@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a12efc2f2735f1ba
+// source-sha256: febf5941eac3fcc4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88162,6 +88162,17 @@ const cardAiFillBind = (db, st, o, policy) => {
     bind: name
   };
 };
+const cardAiWastedAttach = (db, st, o) => {
+  if (!o || !Array.isArray(o.hand) || o.hand.length < 2) return false;
+  const p = st.active,
+    hand = st.players[p].hand;
+  const cost = cardActionCost(db, st, p, hand, o.hand);
+  return o.hand.slice(1).some(i => {
+    const c = cardOf(db, hand[i]);
+    if (!c || !(c.effects || []).length || !(c.effects || []).every(e => ['attach', 'attachFree', 'attachCost', 'attachCostHalf'].includes(e.t))) return false;
+    return cardActionCost(db, st, p, hand, o.hand.filter(j => j !== i)) === cost;
+  });
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingPray) {
     const use = cardPrayOptions(db, st).find(o => o.hand);
@@ -88225,7 +88236,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
       hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active])))
     };
   }
-  const opts = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
+  const opts = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy) && !cardAiWastedAttach(db, st, o));
   if (!opts.length) return {
     type: 'endAttacks'
   };
@@ -93155,7 +93166,8 @@ const CardBattleBoard = ({
   const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
   const byMon = monChosen === undefined ? [] : selOpts.filter(o => (o.mon === undefined ? -1 : o.mon) === monChosen);
   const sets = [...new Set(byMon.map(o => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length);
-  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets[0] : null;
+  const setAlone = sel ? JSON.stringify([sel.hand]) : null;
+  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets[0] : null;
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
