@@ -1217,10 +1217,16 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const dropTargetsOf = (i) => {
     const out = {};
     if (mode === 'attack') {
-      const os = attackOpts.filter((o) => o.hand[0] === i).concat(attackOpts.filter((o) => o.hand[0] !== i && o.hand.includes(i)));
+      // 選んでいる組み合わせ(画面の札で選んだパターン)にこの札が入っていれば、運んだときもその組み合わせだけで出す。
+      //   前は、置き先ごとにいちばん枚数の多い組み合わせを選んでいて、パターンを選んでも運ぶと全部付いて出ていた(2026-10-27 ソラシドさんの報告)
+      const chosen = sel && setChosen && JSON.parse(setChosen).includes(i) ? finalOpts : null;
+      const os = chosen || attackOpts.filter((o) => o.hand[0] === i).concat(attackOpts.filter((o) => o.hand[0] !== i && o.hand.includes(i)));
       os.forEach((o) => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => (x.ko ? null : `${CARD_CPU}-${m}`)).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
-        keys.forEach((k) => { if (!out[k] || o.hand.length > out[k].hand.length) out[k] = o; });
+        // 選んでいないときは、運んだ札1枚だけで出せればそれ(組み合わせの札は見えていないので、付けたつもりが無いのに付かないように)。
+        //   1枚では出せない札(付ける札・組で出す札)は、いちばん枚数の多い組み合わせ(前からの既定)。2026-10-27 部長と決めた
+        const alone = (x) => !chosen && x.hand.length === 1 && x.hand[0] === i;
+        keys.forEach((k) => { if (!out[k] || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
       });
     }
     if (mode === 'guard') guardOpts.filter((o) => o.hand === i).forEach((o) => { out[`${CARD_ME}-${o.mon}`] = o; });
@@ -1584,7 +1590,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
       {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
-          {sets.map((s) => <button key={s} type="button" onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
+          {sets.map((s) => <button key={s} type="button" data-card-set={s} onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
         </div>
       )}
       {/* 選んだ手札は上へ少し持ち上がる。その分の高さ(pt-2)を手札の箱の中に取っておき、上の案内の帯に重ならないようにする(2026-10-24 改善部の点検 V3) */}

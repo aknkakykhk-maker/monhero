@@ -102,8 +102,30 @@ const cardPvpHistoryWhen = (at) => {
 const cardPvpHistoryLoad = async () => {
   try { return cardPvpNormalizeHistory(await storeGet(CARD_PVP_HISTORY_KEY, [], false)); } catch (_) { return []; }
 };
+// 書く。localStorage へは直に書き、いっぱいでも、ゲーム全体の「保存できない」の数に入れない(知らせやクイック周回の停止を巻き込まない)。
+//   過去の対戦(93 の cardReplayWrite・cardReplayRoomLeft・cardReplayStore)と同じ作り。2026-10-27 保存の見回り(ミカエシくん・部長)
+const CARD_PVP_HISTORY_PROBE_KEY = '__mh_card_pvp_history_probe__'; // mh_ で始めない(バックアップに混ぜない)
+const CARD_PVP_HISTORY_ROOM = 131072;                                // 書いたあとに残す空き(ほかのセーブが書けるように)
+const cardPvpHistoryPut = async (list) => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true; // はじめてのプレビュー中は書かない(storeSet と同じ)
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_PVP_HISTORY_KEY, list, false);
+  try { window.localStorage.setItem(CARD_PVP_HISTORY_KEY, JSON.stringify(list)); return true; } catch (_) { return false; }
+};
+const cardPvpHistoryRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try { window.localStorage.setItem(CARD_PVP_HISTORY_PROBE_KEY, 'x'.repeat(CARD_PVP_HISTORY_ROOM)); return true; } catch (_) { return false; } finally { try { window.localStorage.removeItem(CARD_PVP_HISTORY_PROBE_KEY); } catch (_) { /* 消せなくても続ける */ } }
+};
+// 書けない・書いたあと空きが無いときは、古い試合から減らして書き直す(いちばん新しい試合は残す)。それでも入らなければあきらめる(ゲームは止めない)
 const cardPvpHistoryWrite = async (fn) => {
-  try { const next = fn(await cardPvpHistoryLoad()); await storeSet(CARD_PVP_HISTORY_KEY, next, false); return next; } catch (_) { return null; }
+  try {
+    const list = fn(await cardPvpHistoryLoad()).slice();
+    for (;;) {
+      const ok = await cardPvpHistoryPut(list);
+      if (ok && cardPvpHistoryRoomLeft()) return list;
+      if (list.length <= 1) return ok ? list : null;
+      list.pop();
+    }
+  } catch (_) { return null; }
 };
 
 // ---- 強さの点数の増減(自分の行だけ読む。表が無い・読めないときは null) ----
@@ -218,6 +240,17 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
   return (
     <div data-mh-screen data-card-pvp-history="list" className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="マルチの履歴" accent="text-sky-200" onBack={onBack} note={`新しい${CARD_PVP_HISTORY_MAX}試合まで・押すと相手のデッキ`}/>
+      {/* 勝ち負けの合計(一覧の外。横画面では左の列に積まれ、縦画面では一覧の上に出る。2026-10-27 横画面の左の列の空き・部長) */}
+      {list && list.length > 0 && (() => {
+        const w = list.filter((x) => x.outcome === 'win').length;
+        const latest = list.find((x) => x.rating);
+        return (
+          <div data-card-pvp-history-total className="mb-2 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2 text-[13px] font-black text-white tabular-nums landscape:flex-col landscape:gap-1">
+            <span>{list.length}試合 <span className="text-amber-300">{w}勝</span> <span className="text-slate-300">{list.length - w}敗</span></span>
+            {latest && <span className="text-sky-200">強さ {latest.rating.after}</span>}
+          </div>
+        );
+      })()}
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
         {list && list.length === 0 && <p className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだマルチ対戦の記録はありません')}</p>}
         {(list || []).map((x) => {
