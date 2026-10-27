@@ -47526,11 +47526,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 段階A: 空中の区切りは丸い管で描く(地上に近い区切りは下の今の帯のまま)
     const tube3d=sky3dApi()!=null;
     // 案2(案3の1段目): 空中の区切りは、白い芯から手の色がにじむ半透明の光の帯(地上に近い区切りは今の帯のまま)
-    if(case3){quads.forEach(q=>{if((Number(q.sky)||0)>.05)return;const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);ctx.fillStyle=`rgba(${handRgb},${A.alpha})`;
-        ctx.beginPath();ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();ctx.fill();});
-      const air=quads.filter(q=>(Number(q.sky)||0)>.05).map(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
-      const band=(k,rgb,a)=>{ctx.fillStyle=`rgba(${rgb},${a})`;ctx.beginPath();air.forEach(q=>{const c0=(q.l0+q.r0)/2,c1=(q.l1+q.r1)/2,h0=(q.r0-q.l0)/2*k,h1=(q.r1-q.l1)/2*k;ctx.moveTo(c0-h0,q.y0);ctx.lineTo(c0+h0,q.y0);ctx.lineTo(c1+h1,q.y1);ctx.lineTo(c1-h1,q.y1);ctx.closePath();});ctx.fill();};
-      if(air.length){ctx.globalAlpha=alpha*(opts.slideOff?.45:1);band(1,handRgb,.22);ctx.globalCompositeOperation='lighter';band(1.6,handRgb,.12);band(.55,handRgb,.4);band(.22,'255,255,255',.55);ctx.globalCompositeOperation='source-over';}
+    // ★2026-10-27: GPU の帯(drawSlideGpu の case3)と画素までそろえる。iPhone はふだん GPU の帯で描き、社長が見て決めたのはそちらの見た目。
+    //   以前は帯の幅に比例した太さ(1.6倍・0.55倍・0.22倍)で重ねていて、GPU の帯(決まった画素の太さ)と見た目が違った(rhythm-gpu-band-check)。
+    //   GPU の4つの段と同じ: ①帯全体(地上の区切りも)を手の色 .22(最小の半幅つき) ②外周をなぞる太さ10の線 .16 ③空中の所だけ中心線の左右5の芯(足し算) .4 ④左右2の白い芯(足し算) .55
+    if(case3){const a=alpha*(opts.slideOff?.45:1);ctx.globalAlpha=a;
+      ctx.fillStyle=`rgba(${handRgb},.22)`;ctx.beginPath();quads.forEach(q=>{const [l0,r0]=widen(q.l0,q.r0),[l1,r1]=widen(q.l1,q.r1);ctx.moveTo(l0,q.y0);ctx.lineTo(r0,q.y0);ctx.lineTo(r1,q.y1);ctx.lineTo(l1,q.y1);ctx.closePath();});ctx.fill();
+      if(quads.length){ctx.beginPath();ctx.moveTo(quads[0].r0,quads[0].y0);quads.forEach(q=>ctx.lineTo(q.r1,q.y1));for(let k=quads.length-1;k>=0;k--)ctx.lineTo(quads[k].l1,quads[k].y1);ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
+        ctx.lineWidth=10;ctx.lineJoin='round';ctx.strokeStyle=`rgba(${handRgb},.16)`;ctx.stroke();}
+      if(air.length){const core=(half,rgb,k)=>{ctx.globalAlpha=a*k;ctx.fillStyle=`rgb(${rgb})`;ctx.beginPath();air.forEach(q=>{const x0=(q.l0+q.r0)/2,x1=(q.l1+q.r1)/2;ctx.moveTo(x0-half,q.y0);ctx.lineTo(x0+half,q.y0);ctx.lineTo(x1+half,q.y1);ctx.lineTo(x1-half,q.y1);ctx.closePath();});ctx.fill();};
+        // 芯は 2D でも足し算で重ねる(GPU の帯の additive と同じ。glowBegin は WebGL のときだけ足し算にするので、ここでは使わない)
+        ctx.globalCompositeOperation='lighter';core(5,handRgb,.4);core(2,'255,255,255',.55);ctx.globalCompositeOperation='source-over';}
       ctx.globalAlpha=1;return;}
     quads.forEach(q=>{
       if((Number(q.sky)||0)>.05)return;
