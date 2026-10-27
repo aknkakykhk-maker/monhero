@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0521d20291a9ed4a
+// source-sha256: 1f70449f121f5f79
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -52471,6 +52471,36 @@ function WaitForOverlayClose({
   }, []);
   return blocked ? null : children;
 }
+function ScrollMoreList({
+  className = '',
+  moreText,
+  children,
+  ...rest
+}) {
+  const ref = useRef(null);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setMore(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
+    measure();
+    el.addEventListener('scroll', measure, {
+      passive: true
+    });
+    window.addEventListener('resize', measure);
+    return () => {
+      el.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+  return React.createElement(React.Fragment, null, React.createElement("div", _extends({
+    ref: ref,
+    className: className
+  }, rest), children), more && React.createElement("div", {
+    "data-scroll-more": true,
+    className: "mt-1.5 text-center text-[10px] font-black text-amber-200"
+  }, moreText));
+}
 const PickerSheet = ({
   title,
   note = '',
@@ -55217,8 +55247,12 @@ function ProfileScreen({
       }, React.createElement("b", {
         className: "block text-[12px] font-black leading-tight text-white break-words [text-wrap:balance]"
       }, who.name, active && '（選択中）'), React.createElement("small", {
-        className: "block text-[10px] text-slate-400 truncate"
-      }, "Lv.", lv, " ", t ? t.title : '')));
+        className: "flex flex-wrap gap-x-1 text-[10px] leading-snug text-slate-400"
+      }, React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "Lv.", lv), t && t.title ? React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, t.title) : null)));
     })), React.createElement("div", {
       className: "mt-1 text-[10px] text-slate-400"
     }, "仲良し度は助手ごとに別々に貯まります。切り替えても消えません。")));
@@ -133073,12 +133107,14 @@ function MonsterHeroGame() {
       className: "text-[11px] font-black text-amber-300"
     }, rewardReceipt.title), React.createElement("h3", {
       className: "mt-0.5 text-lg font-black text-white"
-    }, "手に入れたもの")), React.createElement("div", {
-      className: "mt-3 max-h-[46vh] space-y-1.5 overflow-y-auto"
+    }, "手に入れたもの")), React.createElement(ScrollMoreList, {
+      "data-reward-receipt-list": true,
+      moreText: `全${rewardReceipt.rewards.length}件・窓の中を下へ送ると続きが見られます`,
+      className: "mt-3 max-h-[46vh] grid grid-cols-1 gap-1.5 overflow-y-auto landscape:grid-cols-2"
     }, rewardReceipt.rewards.map((reward, idx) => React.createElement("div", {
       key: idx,
       "data-reward-receipt-row": true,
-      className: "rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white"
+      className: "rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white landscape:px-2 landscape:py-1.5 landscape:text-[11px] landscape:leading-tight"
     }, giftRewardText(reward)))), rewardReceipt.count > 1 && React.createElement("div", {
       className: "mt-2 text-center text-[10px] font-bold text-slate-400"
     }, rewardReceipt.count, "件をまとめて受け取りました"), React.createElement("div", {
