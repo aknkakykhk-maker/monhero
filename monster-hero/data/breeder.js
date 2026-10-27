@@ -280,6 +280,17 @@ const KYUKO_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true ? undefined : false; } catch { return false; } },
 }));
 
+// 助手ソラシドの顔アイコンも同じ仕様(8表情・各1pt)。画像は吹き出しの face/sorashido_*.PNG をそのまま使う(2026-10-27)。
+// きゅうこと同じく、公開の印 assistantSorashido が立つまでは交換所に並べない(見るたびに読む)
+const SORASHIDO_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `sorashido_${key}`,
+  name: `ソラシド（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/sorashido_${key}.PNG`,
+  cost: 1,
+  get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true ? undefined : false; } catch { return false; } },
+}));
+
 // あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
 // 顔アイコン(256px)は images/breeder-icons/atsu_<表情>.png に直接置いている。
 // 2026-10-22 あつが助手になり、絵を助手あつの大きい絵から作った顔(images/assistant/face/atsu_*.PNG と同じ絵)へ差し替えた
@@ -532,6 +543,7 @@ const BREEDER_MARKET_ITEMS = [
   ...DRA_MARKET_ICONS,
   ...ATSU_MARKET_ICONS,
   ...KYUKO_MARKET_ICONS,
+  ...SORASHIDO_MARKET_ICONS,
   ...HALLOWEEN_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================
