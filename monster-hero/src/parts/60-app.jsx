@@ -2664,7 +2664,11 @@ function MonsterHeroGame() {
   // HELP_ASSISTANT(data/help.js)に絵や音声を足すだけでここはそのまま使える
   // ヘルプの上の助手の吹き出し。開閉は「小さくたたむ」と同じ記憶(mh_bubble_collapsed_v1 の 'help')。顔を押すと開閉する(2026-10-26 開発部 e01・e02)
   const [helpBubbleFolded, setHelpBubbleFolded] = useBubbleCollapse('help');
-  const helpAssistantOpen = !helpBubbleFolded;
+  // 横向きの低い画面(高さ520px以下)では、吹き出しをはじめからたたむ(一覧を広く見せる。2026-10-27 社長の答え)。押せば開く。
+  //   この向きでは保存した「たたむ/ひらく」は使わず(縦向きの選びを変えない)、開いたかどうかはその場の状態だけで持つ
+  const [helpBubbleOpenShort, setHelpBubbleOpenShort] = useState(false);
+  const helpShort = typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight;
+  const helpAssistantOpen = helpShort ? helpBubbleOpenShort : !helpBubbleFolded;
   const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setShowHelp(true); };
   // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
   // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
@@ -4706,6 +4710,10 @@ function MonsterHeroGame() {
   const [cardPackOpen, setCardPackOpen] = useState(null);   // パックを開ける画面に渡す結果 { packId, packs, dupPoint, cost }
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  // はじめて遊ぶ人は、HOME に着くたびにお話を1本だけ(STORY_ONE_AT_A_TIME_KEY)。この HOME でもう流したかを覚え、HOME を離れたら戻す
+  const [storyOneAtATime, setStoryOneAtATime] = useState(false);
+  const storyShownThisHomeRef = useRef(false);
+  useEffect(() => { if (gameState !== 'HOME') storyShownThisHomeRef.current = false; }, [gameState]);
   // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
   // ほかの案内が出ていないHOMEへ来たところで、フレンド画面を開いて申請の確認を出す。公開前・はじめての設定の前は何もしない
   const [pendingFriendCode, setPendingFriendCode] = useState('');
@@ -4814,8 +4822,11 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay
       && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
+    // ★はじめて遊ぶ人は、続けて流すのを1本まで(2026-10-27 社長)。並んだお話は消さずに待たせ、HOME を離れて戻ったときに流す
+    if (storyOneAtATime && storyShownThisHomeRef.current) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
+    storyShownThisHomeRef.current = true;
     // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
     //   「見た」の記録が付くのは**会話を最後まで見たとき**なので、読んでいる最中は
     //   まだ未読のまま。下の1分おきの見回りがそのあいだに回ると「まだ見ていない」と判断して
@@ -4824,7 +4835,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime]);
   // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
   useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
@@ -6433,6 +6444,12 @@ function MonsterHeroGame() {
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       setNewPlayerCampaignEligible(!everOnboarded);
+      // はじめて遊ぶ人の印(新しいキー。前から遊んでいる人には書かない)。一度付いたら消さない
+      try {
+        let oneAtATime = (await storeGet(STORY_ONE_AT_A_TIME_KEY, false, false)) === true;
+        if (!everOnboarded && !oneAtATime) { await storeSet(STORY_ONE_AT_A_TIME_KEY, true, false); oneAtATime = true; }
+        setStoryOneAtATime(oneAtATime);
+      } catch {}
       // 助手選択は、はじめて遊ぶ人にだけ出す。
       // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
       setAssistantChosen(!!savedAssistant || wasOnboarded);
@@ -8101,6 +8118,8 @@ function MonsterHeroGame() {
 
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
+    if (offer?.available === false) return { ok:false, reason:'soon' };
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -8282,6 +8301,8 @@ function MonsterHeroGame() {
   };
   // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはビートP
   const exchangeCardPoints = async (offer) => {
+    // 予告中(まだ仲間にできない)の子の円盤石は交換しない(ビートP交換所と同じ)
+    if (offer?.available === false) return { ok:false, reason:'soon' };
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -13845,7 +13866,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
-          // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+20%(楔1つごとに+20%)。数は使ったときの楔(増える前)で決める
+          // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+40%(楔1つごとに+40%)。数は使ったときの楔(増える前)で決める
           if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
@@ -20850,27 +20871,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const regionLabels = ['①','②','③'];
           const noChange = Array.from({length:regionCount},(_,i)=>(dyePreviewColors[i]||null)===(curColors[i]||null)).every(Boolean);
           const hasAnyColor = dyePreviewColors.some(Boolean);
+          // 部位ごとのタブで切り替える形(DyeTabbedSheet。2026-10-27 社長が案Cを選んだ)。保存の形はこれまでと同じ
           return (
-            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label={`${masu.name}の染色`}>
-              <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-3 shadow-2xl max-h-full overflow-hidden">
-                <div className="flex items-center justify-between shrink-0">
-                  <h3 className="text-sm font-black text-white">🎨 {masu.name}の色をプレビュー</h3>
-                  <button type="button" aria-label="染色を閉じる" onClick={closeDyePicker} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
-                </div>
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={dyePreviewColors} className="w-full h-full object-cover"/></div>
-                <div className="text-[9px] text-fuchsia-300 font-black text-center -mt-1 shrink-0">{hasAnyColor?'プレビュー中(合成後の見た目です)':'現在の色のまま'}</div>
-                {regionCount===1&&(
-                  <div className="text-[8px] text-slate-500 font-bold text-center px-2 -mt-1 shrink-0">このモンスターは全身一括の染色のみ対応しています</div>
-                )}
-                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-                  <DyeRegionColorControls baseId={masu.baseId} colors={dyePreviewColors} onChange={(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/>
-                </div>
-                <div className="flex gap-2 mt-1 shrink-0">
-                  <button onClick={closeDyePicker} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">やめる</button>
-                  <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColors); closeDyePicker(); }} disabled={noChange} className={`flex-1 py-3 rounded-xl font-black text-xs uppercase ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white active:scale-95'}`}>この色に染める</button>
-                </div>
-              </div>
-            </div>
+            <DyeTabbedSheet aria-label={`${masu.name}の染色`} baseId={masu.baseId} src={base.imgUrl||base.iconUrl} name={masu.name} colors={dyePreviewColors}
+              title={`${masu.name}を染める`} onClose={closeDyePicker}
+              onChange={(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;})}
+              onCustom={(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}
+              note={<div className="shrink-0 -mt-1 text-center">
+                <div className="text-[10px] text-fuchsia-300 font-black">{hasAnyColor?'プレビュー中(合成後の見た目です)':'現在の色のまま'}</div>
+                {regionCount===1&&<div className="text-[9px] text-slate-400 font-bold px-2">このモンスターは全身一括の染色のみ対応しています</div>}
+              </div>}
+              footer={<div className="flex gap-2 shrink-0">
+                <button onClick={closeDyePicker} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">やめる</button>
+                <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColors); closeDyePicker(); }} disabled={noChange} className={`flex-1 min-h-[44px] rounded-xl font-black text-xs ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white active:scale-95'}`}>この色に染める</button>
+              </div>}/>
           );
         })()}
 
@@ -22113,7 +22127,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{line.fxText}</div>}
             </div>
           )}
-          <div onClick={next} data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+          {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
+              窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
+          <div onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+            <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
@@ -22143,7 +22160,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {step+1} / {script.length}
               {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
-            <div className={`relative mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
+            </div>
+            <div data-story-buttons className={`relative mt-3 grid shrink-0 ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
               <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'閉じる':'次へ'}</button>
             </div>
@@ -22545,12 +22563,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} className="shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
+            <button onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
-              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey="help" collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
+              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={helpShort?null:"help"} collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
