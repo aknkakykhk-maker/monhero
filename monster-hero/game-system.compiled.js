@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8e3092ac57d4c8e
+// source-sha256: 07c036acb88b246a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86732,9 +86732,7 @@ const CARD_AI_DECKS = Object.freeze({
     monsters: ['C-003', 'C-001', 'C-002'],
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
   },
-  sorashido: {
-    kit: 'speed'
-  }
+  sorashido: {}
 });
 const CARD_AI_FAVORITE = Object.freeze({
   mua: 'mocchi',
