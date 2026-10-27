@@ -3210,6 +3210,16 @@ const createAnimationStyle = () => {
       [data-story-sheet] [data-story-buttons] { margin-top: .5rem; }
       [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
     }
+    /* お話の上のステージ(ゲストの顔と吹き出し)は、横の低い画面では窓と重なって読めなかった(2026-10-27 クラフトくん)。
+       ステージを画面の上の端へ寄せて顔を小さくし、ステージが出ているあいだは窓の高さを「ステージの下端から下」までに縮める
+       (台詞の部分は窓の中で流れ、ボタンはいつも見える。ステージの下端は 60-app.jsx の storyMeasureRef が測る) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 6px) !important; }
+      [data-story-stage] [data-story-guest] { zoom: .6; }
+      [data-story-stage] [data-story-guest-bubble] { margin-top: 2px !important; padding: 4px 10px; }
+      [data-story-stage] [data-story-guest-bubble] > span.block { font-size: 12px; line-height: 1.45; margin-top: 2px; }
+      [data-event-story][data-story-has-stage] [data-story-sheet] { max-height: calc(var(--mh-vh) - var(--story-stage-bottom, 120px) - 6px) !important; }
+    }
     /* お話の真ん中に出すモンスター(2026-10-27「推しに会える夜」)。縦の画面は上のステージ(top は 60-app.jsx で決める)と下の窓のあいだ。
        大きさは置き場の高さと画面の幅の小さいほうに合わせた正方形(待機アニメは正方形の箱で軸を合わせる) */
     [data-story-monsters] { position: absolute; left: 0; right: 0; bottom: calc(var(--story-sheet-h, 50vh) + 18px); z-index: 2; display: flex; align-items: flex-end; justify-content: center; gap: 4%; padding: 0 4%; }

@@ -95,6 +95,8 @@ const CARD_BATTLE_INTRO_STORY_ID='card_battle_intro'; const markCardBattleIntroS
 // ★お話の文は言葉の区切りの部品(21-assistant.jsx の bubbleWrap)を通して描く(2026-10-24)。定義していないと ReferenceError で描画ごと落ちる。
 //   ここでは押せる場所を見るので、文はそのまま返せば足りる
 const bubbleWrap=(t)=>t; const bubbleWrapStyle=()=>undefined;
+// お話の真ん中のモンスター(2026-10-27・21-assistant.jsx)。ここでは位置を測らず、絵の対応も空にしておく(定義していないと描画ごと落ちる)
+const storyMeasureRef=()=>undefined; const STORY_MONSTER_ART={}; const withMonsterIdleArt=(id,art)=>art;
 function Screen(){
   const [eventReplay,setEventReplay]=useState({id:${JSON.stringify(target.id)},step:0,live:true});
   window.__state=eventReplay;
