@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c11d7b7843332fe3
+// source-sha256: dba1c7fb16695c6d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93802,12 +93802,43 @@ const CardBattleBoard = ({
   React.useLayoutEffect(() => {
     setBoardFit(0);
   }, [mode, boardFitKey, wide]);
+  const [, setBoardFitTick] = useState(0);
+  useEffect(() => {
+    const b = boardRef.current;
+    if (!replay || !b) return undefined;
+    const on = e => {
+      if (e.target && e.target.tagName === 'IMG') setBoardFitTick(t => t + 1);
+    };
+    b.addEventListener('load', on, true);
+    return () => b.removeEventListener('load', on, true);
+  }, [!!replay]);
   React.useLayoutEffect(() => {
     const b = boardRef.current;
     const f = b && b.querySelector('[data-card-footer]');
-    if (!f || boardFit >= 2) return;
-    if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit(x => Math.min(2, x + 1));
+    const fitMax = replay ? 4 : 2;
+    if (!f || boardFit >= fitMax) return;
+    if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit(x => Math.min(fitMax, x + 1));
   });
+  const replayFoeHand = replay ? React.createElement("div", {
+    "data-card-replay-foe-hand": true,
+    className: `flex shrink-0 items-center justify-center gap-1 px-2 ${wide ? 'mb-auto pt-2' : 'pb-0.5'}`
+  }, wide && React.createElement("span", {
+    className: "shrink-0 text-[11px] font-bold text-slate-300"
+  }, "相手の手札"), st.players[CARD_CPU].hand.map((no, i) => {
+    const c = cardOf(db, no);
+    return React.createElement("button", {
+      key: `${no}-${i}`,
+      type: "button",
+      "data-card-replay-foe-card": i,
+      onClick: () => c && setDetail(no),
+      className: `${wide ? 'w-[34px]' : tiny || boardFit >= 2 ? 'w-[26px]' : 'w-[38px]'} shrink-0`
+    }, React.createElement("img", {
+      src: c ? CARD_IMG(c.img) : CARD_BACK_IMG(),
+      alt: c ? c.name : '',
+      draggable: false,
+      className: "w-full rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]"
+    }));
+  })) : null;
   const strip = p => {
     const pl = st.players[p];
     return React.createElement("div", {
@@ -94124,24 +94155,7 @@ const CardBattleBoard = ({
     className: "block text-[10px] font-bold text-rose-200"
   }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦')), React.createElement("div", {
     className: "ml-auto"
-  }, strip(CARD_CPU))), replay && React.createElement("div", {
-    "data-card-replay-foe-hand": true,
-    className: "flex shrink-0 items-center justify-center gap-1 px-2 pb-0.5"
-  }, opp.hand.map((no, i) => {
-    const c = cardOf(db, no);
-    return React.createElement("button", {
-      key: `${no}-${i}`,
-      type: "button",
-      "data-card-replay-foe-card": i,
-      onClick: () => c && setDetail(no),
-      className: `${tiny ? 'w-[30px]' : 'w-[38px]'} shrink-0`
-    }, React.createElement("img", {
-      src: c ? CARD_IMG(c.img) : CARD_BACK_IMG(),
-      alt: c ? c.name : '',
-      draggable: false,
-      className: "w-full rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]"
-    }));
-  })), React.createElement("div", {
+  }, strip(CARD_CPU))), replay && !wide && replayFoeHand, React.createElement("div", {
     "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
     "data-card-floor": "foe",
     className: `flex shrink-0 items-start justify-around rounded-2xl px-1 transition-shadow ${turnLive && !turnMe ? 'shadow-[inset_0_0_0_2px_rgba(251,113,133,.75),0_0_16px_rgba(251,113,133,.35)]' : ''}`,
@@ -94358,7 +94372,7 @@ const CardBattleBoard = ({
   }, meProfile && meProfile.name || 'あなた')), strip(CARD_ME))), React.createElement("div", {
     "data-card-side": true,
     className: wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'
-  }, wide && tutorBox, tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
+  }, wide && tutorBox, wide && replayFoeHand, tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
     "data-card-tutor-arrow": true,
     className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900",
     style: JA_LABEL_STYLE
@@ -94410,7 +94424,7 @@ const CardBattleBoard = ({
         WebkitUserSelect: 'none',
         userSelect: 'none'
       },
-      className: `flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
+      className: `flex w-[19%] ${wide ? 'max-w-[72px]' : handTiny ? boardFit >= 2 ? 'max-w-[42px]' : 'max-w-[50px]' : compact ? 'max-w-[58px]' : 'max-w-[76px]'} flex-col items-center transition-transform ${replay && boardFit >= 4 ? '!max-w-[38px]' : ''} ${up ? '-translate-y-2' : ''} ${myTurn && !on && !tutorial ? 'opacity-45' : ''} ${tutorial && myTurn && !tutFocus.hand.includes(i) && !picks.includes(i) && !(sel && sel.hand === i) ? 'opacity-40' : ''} ${tutorial && tutFocus.hand.includes(i) ? 'animate-pulse rounded-[7px] ring-4 ring-emerald-300' : ''} ${drag && drag.i === i ? 'opacity-30' : ''}`,
       "data-card-tutor-focus": tutorial && tutFocus.hand.includes(i) ? true : undefined
     }, React.createElement("img", {
       src: CARD_IMG(c ? c.img : no),
@@ -94420,7 +94434,7 @@ const CardBattleBoard = ({
         WebkitUserDrag: 'none'
       },
       className: `w-full rounded-[5px] shadow-[0_3px_6px_#000] ${up ? 'outline outline-[3px] outline-amber-300' : ''}`
-    }), React.createElement("div", {
+    }), !(replay && boardFit >= 3) && React.createElement("div", {
       className: `mt-0.5 w-full rounded-md bg-black/60 ${handTiny ? 'py-px' : 'py-0.5'} text-center leading-tight`
     }, React.createElement(CardNameFit, {
       name: c ? c.name : no,
@@ -94450,7 +94464,8 @@ const CardBattleBoard = ({
   }, replay ? React.createElement(CardReplayBar, {
     replay: replay,
     at: replayAt,
-    onSeek: replaySeek
+    onSeek: replaySeek,
+    tight: boardFit >= 1
   }) : footer))), drag && drag.active && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal(React.createElement("div", {
     "data-drag-card-layer": true,
     className: "pointer-events-none fixed inset-0",
@@ -104345,7 +104360,8 @@ const CARD_REPLAY_SPEEDS = Object.freeze([{
 const CardReplayBar = ({
   replay,
   at,
-  onSeek
+  onSeek,
+  tight
 }) => {
   const [auto, setAuto] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -104374,7 +104390,7 @@ const CardReplayBar = ({
   const byName = by === 0 ? 'あなた' : by === 1 ? replay.foe.name : '';
   const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `${prev.turn}番目の番` : 'はじまり'}・${byName}`;
   const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
-  const btn = 'mh-button mh-button-secondary min-h-[40px] flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40';
+  const btn = `mh-button mh-button-secondary ${tight ? 'min-h-[34px]' : 'min-h-[40px]'} flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40`;
   const go = n => {
     Audio_.fgSe.tap();
     onSeek(Math.max(0, Math.min(last, n)));
@@ -104392,7 +104408,7 @@ const CardReplayBar = ({
     className: "text-slate-300"
   }, at, "/", replay.total, "手")), React.createElement("div", {
     "data-card-replay-caption": true,
-    className: "mt-0.5 min-h-[16px] break-words text-[11px] font-bold leading-snug text-white"
+    className: `mt-0.5 min-h-[16px] ${tight ? 'line-clamp-1' : ''} break-words text-[11px] font-bold leading-snug text-white`
   }, caption || ' '), replay.stop !== null && at >= last && React.createElement("div", {
     "data-card-replay-stop": true,
     className: "mt-0.5 text-[11px] font-black text-amber-300"
