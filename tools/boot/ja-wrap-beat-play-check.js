@@ -7,7 +7,7 @@
 //   SHOT=/tmp/p node tools/boot/ja-wrap-beat-play-check.js  # 数えた画面を撮る(/tmp/p-曲名の帯-320x568.png など)
 //
 // 見る所(大きさごとに):
-//   ・曲名の帯(演奏の始めに出る data-rhythm-song-intro)
+//   ・曲名の帯(演奏の始めに出る data-rhythm-song-intro)。いま選ばれている曲と、曲名のいちばん長い曲(LONG_TITLE_SONG)で
 //   ・演奏中の上の帯(data-rhythm-hud。横画面では上に1本で並ぶ)
 //   ・一時停止の窓(data-rhythm-pause-menu)。見たら「やめる」で抜ける
 //   ・練習の吹き出し(data-rhythm-tutorial-banner)。ノーツ図鑑の練習を TUTORIAL_IDS の分だけ流す。
@@ -22,6 +22,9 @@ const PLAY_WRAP_LIMIT = 0;
 const PLAY_CLIP_LIMIT = 0;
 const SIZES = [[320, 568], [375, 667], [390, 844], [844, 390]];
 // ノーツ図鑑の練習のうち、吹き出しを見るもの(全部流すと長いので、文の長いもの・空中のもの)
+// 曲名のいちばん長い曲(2026-10-27 部長「版のある曲なら short が付いた名前で」)。曲が増えて長い曲名が出たら差し替える
+const LONG_TITLE_SONG = 'toward_the_stars_short';
+const PLAY_SONGS = [['', ''], [LONG_TITLE_SONG, '(長い曲名)']];
 const TUTORIAL_IDS = ['tap', 'hold', 'slide', 'sideFlick', 'monster', 'skyTap', 'skySlide'];
 let failed = 0;
 const check = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!cond) failed++; };
@@ -74,22 +77,34 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
         await clickText('モンヒロビート');
         await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(800); await closeAll();
       };
-      // 1) ソロライブ: 曲名の帯 → 演奏中の上の帯 → 一時停止の窓
-      try {
-        await toModeSelect();
-        await clickText('ソロライブ');
-        await page.waitForSelector('[data-rhythm-demo-start]', { timeout: 30000 }); await page.waitForTimeout(600); await closeAll();
-        await page.evaluate(() => document.querySelector('[data-rhythm-demo-start]').click());
-        await page.waitForSelector('[data-rhythm-song-intro]', { timeout: 30000 }); await page.waitForTimeout(700);
-        await scan('曲名の帯');
-        await page.waitForSelector('[data-rhythm-song-intro]', { state: 'detached', timeout: 30000 });
-        if (!(await pauseNow())) throw new Error('一時停止の窓が出ない');
-        await scan('一時停止の窓');
-        // 上の帯は一時停止の窓に隠れるので、再開して 3・2・1 が終わってから数える
-        await page.evaluate(() => document.querySelector('[data-rhythm-pause-resume]').click());
-        await page.waitForTimeout(4500);
-        await scan('演奏中の上の帯');
-      } catch (e) { check(`ソロライブの演奏中 ${W}×${H} を開けた`, false, e.message.split('\n')[0].slice(0, 140)); }
+      // 1) ソロライブ: 曲名の帯 → 一時停止の窓 → 演奏中の上の帯。いま選ばれている曲と、曲名のいちばん長い曲(LONG_TITLE_SONG)の2回
+      for (const [songId, tag] of PLAY_SONGS) {
+        try {
+          await toModeSelect();
+          await clickText('ソロライブ');
+          await page.waitForSelector('[data-rhythm-demo-start]', { timeout: 30000 }); await page.waitForTimeout(600); await closeAll();
+          if (songId) {
+            // 版をまとめた行を押してから、版の切り替えで選ぶ(行の目印は代表の版の id のことがある)
+            const base = songId.replace(/_(short|full)$/, '');
+            const row = page.locator(`[data-rhythm-song-row^="${base}"]`).first();
+            await row.scrollIntoViewIfNeeded(); await row.click(); await page.waitForTimeout(500);
+            const ver = page.locator(`[data-rhythm-song-version="${songId}"]`).first();
+            if (await ver.count()) { await ver.click(); await page.waitForTimeout(500); }
+            const picked = await page.evaluate((id) => !!document.querySelector(`[data-rhythm-song-row="${id}"][aria-pressed="true"],[data-rhythm-song-version="${id}"][aria-pressed="true"]`), songId);
+            if (!picked) throw new Error(`${songId} を選べない`);
+          }
+          await page.evaluate(() => document.querySelector('[data-rhythm-demo-start]').click());
+          await page.waitForSelector('[data-rhythm-song-intro]', { timeout: 30000 }); await page.waitForTimeout(700);
+          await scan(`曲名の帯${tag}`);
+          await page.waitForSelector('[data-rhythm-song-intro]', { state: 'detached', timeout: 30000 });
+          if (!(await pauseNow())) throw new Error('一時停止の窓が出ない');
+          await scan(`一時停止の窓${tag}`);
+          // 上の帯は一時停止の窓に隠れるので、再開して 3・2・1 が終わってから数える
+          await page.evaluate(() => document.querySelector('[data-rhythm-pause-resume]').click());
+          await page.waitForTimeout(4500);
+          await scan(`演奏中の上の帯${tag}`);
+        } catch (e) { check(`ソロライブの演奏中${tag} ${W}×${H} を開けた`, false, e.message.split('\n')[0].slice(0, 140)); }
+      }
       // 2) ノーツ図鑑の練習の吹き出し
       try {
         await toModeSelect();
@@ -111,7 +126,7 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
       await page.close();
     }
   } finally { await browser.close(); server.close(); }
-  const want = ['曲名の帯', '演奏中の上の帯', '一時停止の窓', ...TUTORIAL_IDS.map((id) => `練習の吹き出し(${id})`)];
+  const want = [...PLAY_SONGS.flatMap(([, tag]) => [`曲名の帯${tag}`, `演奏中の上の帯${tag}`, `一時停止の窓${tag}`]), ...TUTORIAL_IDS.map((id) => `練習の吹き出し(${id})`)];
   const missing = want.filter((n) => seen[n] !== SIZES.length);
   check('演奏中の画面を、どの大きさでも全部数えた', !missing.length, missing.length ? `足りない: ${missing.join('・')}` : `${want.length}画面 × ${SIZES.length}大きさ`);
   const uniq = [...new Set(found)], clipUniq = [...new Set(clipped)];
