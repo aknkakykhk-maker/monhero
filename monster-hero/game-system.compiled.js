@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c373ea99a6cf8495
+// source-sha256: e7b4dd3535c8eef6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55485,7 +55485,11 @@ function BreederMarketScreen({
       point: cp,
       busy: busy || cardShop.busy,
       collection: cardShop.collection,
-      onBuyPack: cardShop.onBuyPack
+      onBuyPack: cardShop.onBuyPack,
+      gacha: cardShop.gacha,
+      catalogs: cardShop.catalogs,
+      onExchangeCatalog: cardShop.onExchangeCatalog,
+      onUseCatalog: cardShop.onUseCatalog
     }), tab === 'starter' && React.createElement(CardShopStarters, {
       db: CARD_BATTLE_DATA,
       point: cp,
@@ -88828,6 +88832,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   bgm: 'mh_card_bgm_v1',
   cpuPlaylist: 'mh_card_cpu_playlist_v1',
   settings: 'mh_card_settings_v1',
+  gacha: 'mh_card_gacha_points_v1',
+  catalogs: 'mh_card_catalogs_v1',
   aiTalk: 'mh_card_ai_talk_v1'
 });
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
@@ -91090,6 +91096,64 @@ const cardBuyPacks = (db, packId, count, {
     point: point - cost + dupPoint,
     cost,
     dupPoint
+  };
+};
+const CARD_GACHA_PER_PACK = 10;
+const CARD_CATALOG_COST = 500;
+const cardNormalizeCount = v => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+};
+const cardNormalizeGacha = cardNormalizeCount;
+const cardNormalizeCatalogs = cardNormalizeCount;
+const cardGachaProgress = gacha => cardNormalizeGacha(gacha) % CARD_CATALOG_COST;
+const cardExchangeCatalog = ({
+  gacha,
+  catalogs
+}) => {
+  const g = cardNormalizeGacha(gacha);
+  if (g < CARD_CATALOG_COST) return null;
+  return {
+    gacha: g - CARD_CATALOG_COST,
+    catalogs: cardNormalizeCatalogs(catalogs) + 1
+  };
+};
+const cardCatalogPool = db => {
+  const out = [];
+  CARD_PACKS.forEach(pack => {
+    ['alt', 'kira', 'normal'].forEach(rar => cardPackMonPool(db, pack, rar).forEach(no => out.push({
+      no,
+      packId: pack.id,
+      slot: 'mon',
+      rarity: rar,
+      max: 1
+    })));
+    cardPackTechPool(db, pack).forEach(no => out.push({
+      no,
+      packId: pack.id,
+      slot: 'tech',
+      rarity: 'normal',
+      max: CARD_TECH_KEEP_MAX
+    }));
+  });
+  return out;
+};
+const cardUseCatalog = (db, no, {
+  catalogs,
+  collection
+}) => {
+  const c = cardNormalizeCatalogs(catalogs);
+  if (c < 1) return null;
+  const item = cardCatalogPool(db).find(x => x.no === no);
+  if (!item) return null;
+  const col = {
+    ...(collection || {})
+  };
+  if ((col[no] || 0) >= item.max) return null;
+  col[no] = (col[no] || 0) + 1;
+  return {
+    catalogs: c - 1,
+    collection: col
   };
 };
 const cardPackRates = (db, packId) => {
@@ -98336,7 +98400,10 @@ const CardPackOpen = ({
     className: "text-amber-200"
   }, "ビートP +", packPoint), " になりました") : 'ビートPに変わったカードはありません', last && result.packs.length > 1 && !kit && React.createElement("div", {
     className: "mt-0.5"
-  }, "(", result.packs.length, "パックで +", result.dupPoint, ")"), last && kit && result.dupPoint > 0 && React.createElement("div", {
+  }, "(", result.packs.length, "パックで +", result.dupPoint, ")"), last && result.gacha && React.createElement("div", {
+    "data-card-pack-gacha": true,
+    className: "mt-1 font-black text-amber-200"
+  }, "🎫 ガチャポイント +", result.gacha.add, "(いま ", result.gacha.now, "・次の1冊まで あと ", CARD_CATALOG_COST - cardGachaProgress(result.gacha.now), ")"), last && kit && result.dupPoint > 0 && React.createElement("div", {
     className: "mt-0.5"
   }, "(キット全部で +", result.dupPoint, ")"), last && kit && result.deckAdded !== false && React.createElement("div", {
     "data-card-pack-starter-deck": true,
@@ -98673,19 +98740,224 @@ const CardStarterContents = ({
   }));
 };
 const cardPackSpeciesLabel = (db, pack) => pack.species.map(sp => (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp).join('・');
+const CardGachaPanel = ({
+  gacha = 0,
+  catalogs = 0,
+  busy,
+  onExchange,
+  onOpenCatalog
+}) => {
+  const g = cardNormalizeGacha(gacha);
+  const prog = cardGachaProgress(g);
+  return React.createElement("div", {
+    "data-card-gacha": true,
+    className: "rounded-2xl border-2 border-amber-300/70 p-3 text-white",
+    style: {
+      background: 'linear-gradient(135deg,#3b2a05ee,#1e1b4bee)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-1 text-[13px] font-black text-amber-200"
+  }, React.createElement("span", null, "🎫 ガチャポイント"), React.createElement("span", {
+    "data-card-gacha-point": g,
+    className: "ml-auto text-[16px] text-white"
+  }, g.toLocaleString())), React.createElement("div", {
+    className: "mt-1.5 h-2 overflow-hidden rounded-full bg-slate-950",
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    className: "block h-full rounded-full",
+    style: {
+      width: `${prog / CARD_CATALOG_COST * 100}%`,
+      background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
+    }
+  })), React.createElement("div", {
+    className: "mt-1 flex text-[10.5px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}で「バトルカードカタログ」1冊と交換できます`)), React.createElement("span", {
+    className: "shrink-0 pl-1 tabular-nums text-amber-100"
+  }, "次の1冊まで ", prog, " / ", CARD_CATALOG_COST)), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-gacha-exchange": true,
+    disabled: busy || g < CARD_CATALOG_COST,
+    onClick: onExchange,
+    className: "mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
+  }, "カタログと交換(", CARD_CATALOG_COST, ")"), React.createElement("button", {
+    type: "button",
+    "data-card-gacha-catalog": true,
+    disabled: busy || catalogs < 1,
+    onClick: onOpenCatalog,
+    className: "mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
+  }, "📖 カタログを使う(", catalogs, "冊)")));
+};
+const CardCatalogSheet = ({
+  db,
+  catalogs,
+  collection,
+  busy,
+  onUse,
+  onClose
+}) => {
+  const pool = cardCatalogPool(db);
+  const [packId, setPackId] = useState(CARD_PACKS[0].id);
+  const [pick, setPick] = useState(null);
+  const [confirm, setConfirm] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [done, setDone] = useState('');
+  const press = useCardLongPress(no => setDetail(no));
+  const col = collection || {};
+  const rows = pool.filter(x => x.packId === packId);
+  const full = x => (col[x.no] || 0) >= x.max;
+  const tile = x => {
+    const on = pick === x.no;
+    const isFull = full(x);
+    return React.createElement("button", _extends({
+      key: x.no,
+      type: "button",
+      "data-card-catalog-item": x.no,
+      "data-card-catalog-full": isFull ? '1' : undefined,
+      disabled: isFull
+    }, press(x.no, () => {
+      Audio_.fgSe.tap();
+      setPick(x.no);
+      setDone('');
+    }), {
+      style: {
+        WebkitUserSelect: 'none',
+        userSelect: 'none'
+      },
+      className: `relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on ? 'bg-amber-300/30 ring-2 ring-amber-300' : 'bg-white/5'} disabled:opacity-40`
+    }), React.createElement("span", {
+      className: "relative block w-full"
+    }, React.createElement("img", {
+      src: cardShopImg(db, x.no),
+      alt: cardShopName(db, x.no),
+      loading: "lazy",
+      className: "aspect-[5/7] w-full rounded-[5px] object-cover"
+    }), x.rarity !== 'normal' && React.createElement("span", {
+      className: "absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
+    }, CARD_RARITY_LABEL[x.rarity]), isFull && React.createElement("span", {
+      className: "absolute inset-x-0 top-1/3 mx-0.5 rounded-md bg-slate-950/90 px-0.5 text-[9px] font-black text-slate-200"
+    }, "持てる数いっぱい"), !isFull && !(col[x.no] > 0) && React.createElement("span", {
+      className: "absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow"
+    }, "未取得")), React.createElement(CardNameFit, {
+      name: cardShopName(db, x.no),
+      className: "mt-0.5 font-bold leading-tight text-slate-100"
+    }));
+  };
+  const mons = rows.filter(x => x.slot === 'mon');
+  const techs = rows.filter(x => x.slot === 'tech');
+  const nameOf = no => {
+    const x = pool.find(y => y.no === no);
+    return `${cardShopName(db, no)}${x && x.rarity !== 'normal' ? `(${CARD_RARITY_LABEL[x.rarity]})` : ''}`;
+  };
+  const pickName = pick ? nameOf(pick) : '';
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-catalog": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "バトルカードカタログ",
+    onClick: onClose,
+    className: "fixed inset-0 flex items-center justify-center p-3",
+    style: {
+      zIndex: MODAL_Z.dialog,
+      backgroundColor: 'rgba(2,6,23,0.88)'
+    }
+  }, React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    className: "flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-sky-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]"
+  }, React.createElement("div", {
+    className: "shrink-0 rounded-t-[22px] bg-sky-300/15 px-3 py-2 text-center text-[15px] font-black text-sky-100"
+  }, "📖 バトルカードカタログ"), React.createElement("div", {
+    className: "shrink-0 px-3 pt-2"
+  }, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`好きなカードを1枚えらんで「もらう」を押すと、カタログが1冊なくなります(のこり ${catalogs}冊)。長押しでくわしく見られます。`)), done && React.createElement("div", {
+    "data-card-catalog-done": true,
+    className: "mt-1 rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-2 py-1 text-[12px] font-black text-emerald-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(done)), React.createElement("div", {
+    className: "mt-1.5 flex gap-1 overflow-x-auto pb-1",
+    role: "tablist"
+  }, CARD_PACKS.map(p => React.createElement("button", {
+    key: p.id,
+    type: "button",
+    role: "tab",
+    "aria-selected": p.id === packId,
+    "data-card-catalog-pack": p.id,
+    onClick: () => {
+      setPackId(p.id);
+      setPick(null);
+    },
+    className: `shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${p.id === packId ? 'bg-amber-300 text-stone-900' : 'bg-slate-800 text-slate-300'}`
+  }, "第", p.no, "弾")))), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto px-3 py-1"
+  }, React.createElement(CardShopHead, null, "モンスター"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5 landscape:grid-cols-7"
+  }, mons.map(tile)), React.createElement(CardShopHead, null, "技など"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5 landscape:grid-cols-7"
+  }, techs.map(tile))), React.createElement("div", {
+    className: "shrink-0 space-y-1.5 p-2 landscape:grid landscape:grid-cols-2 landscape:gap-1.5 landscape:space-y-0"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-catalog-take": true,
+    disabled: !pick || busy || catalogs < 1,
+    onClick: () => setConfirm(true),
+    className: "mh-button mh-button-primary min-h-[46px] w-full rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40 landscape:min-h-[40px]",
+    style: JA_WRAP_STYLE
+  }, pick ? jaWrap(`「${pickName}」をもらう`) : 'カードをえらんでください'), React.createElement("button", {
+    type: "button",
+    "data-card-catalog-close": true,
+    onClick: onClose,
+    className: "mh-button min-h-[40px] w-full rounded-2xl border border-white/20 text-[13px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる")))), detail && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }), confirm && React.createElement(ConfirmSheet, {
+    title: `「${pickName}」をもらいますか？`,
+    message: `バトルカードカタログを1冊使います(いま ${catalogs}冊)`,
+    confirmLabel: "もらう",
+    onCancel: () => setConfirm(false),
+    onConfirm: async () => {
+      setConfirm(false);
+      const no = pick;
+      const r = await onUse(no);
+      if (r && r.ok) {
+        setDone(`「${nameOf(no)}」を手に入れました`);
+        setPick(null);
+      }
+    }
+  }));
+};
 const CardShopPacks = ({
   db,
   point,
   busy,
   collection = null,
-  onBuyPack
+  onBuyPack,
+  gacha = 0,
+  catalogs = 0,
+  onExchangeCatalog,
+  onUseCatalog
 }) => {
   const [sheet, setSheet] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [gachaConfirm, setGachaConfirm] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   return React.createElement("div", {
     "data-card-shop-packs": true,
     className: "space-y-2 pb-2"
-  }, CARD_PACKS.map(pack => React.createElement("div", {
+  }, onExchangeCatalog && React.createElement(CardGachaPanel, {
+    gacha: gacha,
+    catalogs: catalogs,
+    busy: busy,
+    onExchange: () => setGachaConfirm(true),
+    onOpenCatalog: () => setCatalogOpen(true)
+  }), CARD_PACKS.map(pack => React.createElement("div", {
     key: pack.id,
     "data-card-shop-pack": pack.id,
     className: SCREEN_PANEL_CLASS,
@@ -98759,6 +99031,22 @@ const CardShopPacks = ({
     pack: sheet.pack,
     collection: collection,
     onClose: () => setSheet(null)
+  }), gachaConfirm && React.createElement(ConfirmSheet, {
+    title: "バトルカードカタログと交換しますか？",
+    message: `ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`,
+    confirmLabel: "交換する",
+    onCancel: () => setGachaConfirm(false),
+    onConfirm: () => {
+      setGachaConfirm(false);
+      void onExchangeCatalog();
+    }
+  }), catalogOpen && React.createElement(CardCatalogSheet, {
+    db: db,
+    catalogs: catalogs,
+    collection: collection,
+    busy: busy,
+    onUse: onUseCatalog,
+    onClose: () => setCatalogOpen(false)
   }), confirm && React.createElement(ConfirmSheet, {
     title: `${confirm.pack.name}を${confirm.count}パック買いますか？`,
     message: `ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
@@ -114114,12 +114402,14 @@ function MonsterHeroGame() {
     try {
       await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
     } catch (_) {}
-    const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    const [point, starter, shop, collection, gacha, catalogs] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null), storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]);
     const next = {
       point: cardNormalizePoint(point),
       starter: cardNormalizeStarter(starter),
       shop: cardNormalizeShop(shop),
-      collection: cardNormalizeCollection(collection)
+      collection: cardNormalizeCollection(collection),
+      gacha: cardNormalizeGacha(gacha),
+      catalogs: cardNormalizeCatalogs(catalogs)
     };
     setCardShopState(next);
     setRhythmEventPoints(next.point);
@@ -114149,7 +114439,7 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]), ([rawCol, rawPity, rawPoint, rawSplit]) => {
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null), storeGet(K.gacha, 0, false)]), ([rawCol, rawPity, rawPoint, rawSplit, rawGacha]) => {
         const point = cardNormalizePoint(rawPoint);
         const split = rawSplit !== true;
         const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
@@ -114161,8 +114451,10 @@ function MonsterHeroGame() {
         if (!r) return {
           fail: 'points'
         };
+        const gacha = cardNormalizeGacha(rawGacha) + r.packs.length * CARD_GACHA_PER_PACK;
         return {
           r,
+          gacha,
           entries: [{
             key: K.collection,
             before: rawCol,
@@ -114175,6 +114467,10 @@ function MonsterHeroGame() {
             key: CARD_POINT_STORE_KEY,
             before: rawPoint,
             next: r.point
+          }, {
+            key: K.gacha,
+            before: rawGacha,
+            next: gacha
           }, ...(split ? [{
             key: K.pitySplit,
             before: rawSplit,
@@ -114201,14 +114497,19 @@ function MonsterHeroGame() {
       setCardShopState(cur => ({
         ...(cur || {}),
         point: r.point,
-        collection: r.collection
+        collection: r.collection,
+        gacha: res.gacha
       }));
       setRhythmEventPoints(r.point);
       setCardPackOpen({
         packId,
         packs: r.packs,
         dupPoint: r.dupPoint,
-        cost: r.cost
+        cost: r.cost,
+        gacha: {
+          add: r.packs.length * CARD_GACHA_PER_PACK,
+          now: res.gacha
+        }
       });
       setGameState('CARD_PACK_OPEN');
       return {
@@ -114216,6 +114517,132 @@ function MonsterHeroGame() {
       };
     } catch {
       setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const exchangeCardCatalog = async () => {
+    if (marketPurchaseProcessingRef.current) return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]), ([rawGacha, rawCat]) => {
+        const r = cardExchangeCatalog({
+          gacha: rawGacha,
+          catalogs: rawCat
+        });
+        if (!r) return {
+          fail: 'points'
+        };
+        return {
+          r,
+          entries: [{
+            key: K.gacha,
+            before: rawGacha,
+            next: r.gacha
+          }, {
+            key: K.catalogs,
+            before: rawCat,
+            next: r.catalogs
+          }]
+        };
+      });
+      if (res.fail === 'points') {
+        void loadCardShop();
+        setMarketExchangeError('ガチャポイントが足りません。');
+        return {
+          ok: false,
+          reason: 'points'
+        };
+      }
+      if (res.fail) {
+        setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setCardShopState(cur => ({
+        ...(cur || {}),
+        gacha: res.r.gacha,
+        catalogs: res.r.catalogs
+      }));
+      return {
+        ok: true
+      };
+    } catch {
+      setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const spendCardCatalog = async no => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.catalogs, 0, false), storeGet(K.collection, null)]), ([rawCat, rawCol]) => {
+        const r = cardUseCatalog(CARD_BATTLE_DATA, no, {
+          catalogs: rawCat,
+          collection: cardNormalizeCollection(rawCol)
+        });
+        if (!r) return {
+          fail: 'catalog'
+        };
+        return {
+          r,
+          entries: [{
+            key: K.catalogs,
+            before: rawCat,
+            next: r.catalogs
+          }, {
+            key: K.collection,
+            before: rawCol,
+            next: r.collection
+          }]
+        };
+      });
+      if (res.fail === 'catalog') {
+        void loadCardShop();
+        setMarketExchangeError('カタログが無いか、そのカードはもう持てる数いっぱいです。');
+        return {
+          ok: false,
+          reason: 'catalog'
+        };
+      }
+      if (res.fail) {
+        setMarketExchangeError('保存できませんでした。カタログは変わっていません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setCardShopState(cur => ({
+        ...(cur || {}),
+        catalogs: res.r.catalogs,
+        collection: res.r.collection
+      }));
+      return {
+        ok: true
+      };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カタログは変わっていません。');
       return {
         ok: false,
         reason: 'save'
@@ -134012,7 +134439,9 @@ function MonsterHeroGame() {
         busy: false,
         onBuyPack: buyCardPacks,
         onBuyStarter: buyCardStarter,
-        onExchange: exchangeCardPoints
+        onExchange: exchangeCardPoints,
+        onExchangeCatalog: exchangeCardCatalog,
+        onUseCatalog: spendCardCatalog
       } : null,
       initialSection: cardMarketEntry ? 'card' : null
     }), gameState === 'CARD_PACK_OPEN' && cardPackOpen && React.createElement(CardPackOpen, {

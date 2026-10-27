@@ -88,6 +88,8 @@
 | `mh_card_pack_pity_v1` | object / `cardNormalizePity` | MFバトルカードのパックの天井 `{ パックid: キラなしで開けた数 }`。2026-10-25 に8弾(p1〜p8)へ作り直した。以前の w1〜w4・hybrid の数も消さずに残す(知らないパックid・数でない値は捨てる。89-card-pack.jsx) |
 | `mh_card_pack_pity_split_v1` | boolean | 以前の4弾(w1〜w4)の天井の数を、新しい8弾へ1回だけ写した印(w1→p1〜p3 / w2→p4・p5 / w3→p6 / w4→p7・p8。新しい弾に数があれば上書きしない。89 の `cardSplitPity`・60 の buyCardPacks) |
 | `mh_card_shop_v1` | object / `cardNormalizeShop` | マーケットで買った選ばなかったスターターキットの印 `{ starters:{ キットid: 時刻 } }`。印があるキットは二度と買えない(`cardBuyStarter`) |
+| `mh_card_gacha_points_v1` | number / `cardNormalizeGacha` | MFバトルカードのガチャポイント(2026-10-27)。ブースターパック1つで +10(パックを買う保存と同じまとまりで1回だけ足す)。上限なし。500で `cardExchangeCatalog` がカタログ1冊にかえる(500減る・あまりは残る)。無い・壊れていたら 0。公開前に買ったパックの分は入れない |
+| `mh_card_catalogs_v1` | number / `cardNormalizeCatalogs` | 持っているバトルカードカタログの冊数。`cardUseCatalog` が1冊減らして、選んだカードを `mh_card_collection_v1` に1枚足す(持てる数いっぱいのカードは選べない)。無い・壊れていたら 0 |
 | `mh_card_top_assist_v1` | object | MFバトルカードのトップの助手の出し入れ `{ modeSelectArt, modeSelectComment }`。無い・壊れていたら両方ON |
 | `mh_card_rank_sync_v1` | string | MFバトルカードのランキング(表 `card_battle_ranks_v2`。無い環境では旧表 `card_battle_ranks`)へ最後に送った行の中身。同じなら送り直さない(90-card-rank.jsx) |
 | `mh_card_bgm_v1` | object / `normalizeCardBgm` | MFバトルカードのBGM `{ top: 曲id(トップ画面・2026-10-26 に足した項目), cpu: 'auto'(相手の助手に合わせる)か曲id, pvp: 曲id }`。オプションで曲を選んだときだけ書く。無い項目・知らない曲idは既定(top `atsu_cup_theme` = MF × ICHIKA MIX・cpu `auto`・pvp `ichika_battle`)へ。選んだ人の値は書き換えない |
