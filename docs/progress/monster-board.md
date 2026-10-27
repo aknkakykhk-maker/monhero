@@ -15,4 +15,5 @@
   社長が決めた区分けは変えない(変えたいときは部長に聞く)。道具: キュービ・オリヒメの `docs/progress/kyubi-orihime/mask-tools/`
 - 新モンスターの染色イメージには、部位ごとの色と濃さの表を載せる(monster-add スキル §8)
 - **PR は、作った結果に出た番号でだけマージする。** 番号を推測で書かない(2026-10-27。部長が #3806、ソメくんが #3837 を、ほかの部署のPRと取り違えてマージした)
+- **染色マスクを足したり変えたりしたら、立ち絵の中身の範囲の表(ART_CONTENT_BOXES)も `node tools/image/make-art-content-boxes.js` で作り直す。** カード部の表だが、染色マスクの PNG も測っている(2026-10-27。ソメくんがゴーレムで作り直し忘れ、main の art-content-box-check を落とした)
 - 残っている仕事は [`zukan-backlog.md`](zukan-backlog.md)
