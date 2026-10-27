@@ -108,7 +108,9 @@ assert(help.includes('次のWAVEへ持ち越されません'));
 // 2026-10-05: ゴースト・スプーキーの勇者特性「トリックスタート」で積んだ丈夫さを最後に掛けるようになった。
 //   積んでいなければ1倍(勇者モンがゴースト・スプーキーでなければ常に1倍)なので、ここで見るメロソの場面の式は同じ
 const defValIsEffectiveDef = game.includes('resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff(\'defPct\')) : effectiveDef;')
-  || game.includes("resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)\n      * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));");
+  || game.includes("resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)\n      * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));")
+  // 2026-10-27: ソラシドのAIコピー(5人目)が受けるときだけ、コピー自身の丈夫さ(targetDef)を渡せるようになった。渡さなければ式は同じ
+  || game.includes("resolveEffectiveMaxStat(Number.isFinite(targetDef) ? targetDef : normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)\n      * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));");
 assert(game.includes(`const defenseRate = Math.min(0.5,effectiveDef*0.00015);`)
   || (defValIsEffectiveDef && game.includes(`const defenseRate = Math.min(0.5,defVal*0.00015);`)),
   '丈夫さの割合軽減の式が変わっている。モデル側も新しい式へ直すこと');

@@ -37,7 +37,8 @@ assert(source.includes("if (swordSkill && isUniqueOf('KenshiMocchi')) for (const
 // ★exCombos はタクティクスのEX「スイーツパラダイス」と、運命のコイン・運命の輪で積んだ「この子の連撃+10%」が渡す。
 //   予測と実処理(3か所)の両方へ同じ値を渡す(2026-10-05 運命の連撃を withFateCombo で並べるようになった)
 //   2026-10-12: クロミーの黒音符の連撃(withBlackNoteCombo)も3か所そろえて渡す。あつの挑発だけ抜けていたので、黒音符まで含めて数える
-assert((source.match(/exCombos:withBlackNoteCombo\(withFateCombo\(tacticsExCombosAt\(slotIdx(,halved,card|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\),blackNoteEffectAt\(slotIdx,(mon|activeMon|stunMon)\?\.id\)\.combo(,kusabiCombosAt\(slotIdx,(mon|activeMon|stunMon)\?\.id,card\))?\)/g) || []).length === 3, 'スイーツパラダイス・運命・黒音符の連撃を予測と実処理(あつの挑発も)の両方へ渡す');
+// 2026-10-27 からキュービ・オリヒメの連撃(九尾四相・狐火・星合)が楔の連撃と同じ並び [...kusabiCombosAt(...), ...] に入る(3か所とも)
+assert((source.match(/exCombos:withBlackNoteCombo\(withFateCombo\(tacticsExCombosAt\(slotIdx(,halved,card|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\),blackNoteEffectAt\(slotIdx,(mon|activeMon|stunMon)\?\.id\)\.combo(,kusabiCombosAt\(slotIdx,(mon|activeMon|stunMon)\?\.id,card\)|,\[\.\.\.kusabiCombosAt\(slotIdx,(mon|activeMon|stunMon)\?\.id,card\)(,[^\]\n]*)?\])?\)/g) || []).length === 3, 'スイーツパラダイス・運命・黒音符の連撃を予測と実処理(あつの挑発も)の両方へ渡す');
 // 永久追加連撃の本数は永続バフから読む。予測(getAttackPredictedDmg)にも同じ本数を渡していないと
 // 「予測より実際が多い」になるので、buildAttackHits を呼ぶ3か所すべてで渡していることを見る
 assert((source.match(/kenshiExtraCombos:getPermaBuff\('kenshiExtraCombo'\)/g) || []).length === 3,

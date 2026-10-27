@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6fed7284eb7dcc51
+// source-sha256: 0b31411ab0bf5370
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16518,6 +16518,7 @@ const marketLabelNodes = label => marketLabelSegments(label).map((seg, index) =>
 }, index > 0 && React.createElement("wbr", null), seg));
 const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  if (costume && costume.unlock && typeof assistantCostumeUnlockedNow === 'function' && !assistantCostumeUnlockedNow(costume) && Array.isArray(costume.lockLabel)) return [...costume.lockLabel];
   const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
   const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
   const fromMs = diamond ? Date.parse(diamond.from) : NaN;
@@ -16557,7 +16558,7 @@ const MarketProductCard = ({
     disabled: disabled,
     previewIcon: previewIcon
   }), React.createElement("div", {
-    className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
+    className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px] max-[359px]:tracking-[-0.05em]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
       minHeight: '36px',
       textWrap: 'wrap',
@@ -45563,8 +45564,7 @@ const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const SORASHIDO_CARD_ID = 'sorashido';
 const SORASHIDO_COPY_SLOT = 4;
-const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-const SORASHIDO_COPY_HAND_DRAW = 2;
+const SORASHIDO_COPY_HAND_DRAW = 3;
 const aiCopySafeNum = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -45627,6 +45627,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'new',
     turnsLeft,
     removeCopy: false,
+    rebuildDeck: true,
     removeUniqueOf: null,
     addUniqueOf: srcMonsterId
   };
@@ -45634,6 +45635,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'refresh',
     turnsLeft,
     removeCopy: false,
+    rebuildDeck: false,
     removeUniqueOf: null,
     addUniqueOf: null
   };
@@ -45641,6 +45643,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'switch',
     turnsLeft,
     removeCopy: true,
+    rebuildDeck: true,
     removeUniqueOf: aiCopy.srcMonsterId,
     addUniqueOf: srcMonsterId
   };
@@ -45658,6 +45661,46 @@ const aiCopyTurnEnd = aiCopy => {
     removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null
   };
 };
+const aiCopyUniqueIsOwn = (card, {
+  srcSlot = null,
+  srcMonsterId = null
+} = {}) => {
+  if (Number.isInteger(card.ownerSlotIdx) && Number.isInteger(srcSlot)) return card.ownerSlotIdx === srcSlot;
+  return card.monId != null && card.monId === srcMonsterId;
+};
+const aiCopyCanPick = (card, src = null) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID && (card.type !== 'unique' || !src || aiCopyUniqueIsOwn(card, src));
+const aiCopyBuildDeck = (zones, src) => {
+  const all = ['deck', 'hand', 'discard'].flatMap(k => zones && Array.isArray(zones[k]) ? zones[k] : []);
+  return {
+    deck: all.filter(c => aiCopyCanPick(c, src || {})),
+    discard: []
+  };
+};
+const aiCopyDraw = (state, count, rng) => {
+  let deck = state && Array.isArray(state.deck) ? state.deck.slice() : [];
+  let discard = state && Array.isArray(state.discard) ? state.discard.slice() : [];
+  const n = Math.max(0, Math.floor(aiCopySafeNum(count, SORASHIDO_COPY_HAND_DRAW)));
+  const hand = [];
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) {
+      if (discard.length === 0) break;
+      deck = discard;
+      discard = [];
+    }
+    const at = Math.min(deck.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * deck.length));
+    hand.push(deck.splice(at, 1)[0]);
+  }
+  return {
+    hand,
+    deck,
+    discard
+  };
+};
+const aiCopyDiscardHand = (state, hand) => ({
+  deck: state && Array.isArray(state.deck) ? state.deck.slice() : [],
+  discard: [...(state && Array.isArray(state.discard) ? state.discard : []), ...(Array.isArray(hand) ? hand : [])]
+});
+const SORASHIDO_COPY_UNIQUE_COUNT = 1;
 const aiCopyUniqueCard = (card, srcMonsterId) => card ? {
   ...card,
   sorashidoCopyOf: srcMonsterId,
@@ -45676,9 +45719,8 @@ const aiCopyRemoveUnique = (zones, match) => {
     discard: strip(zones && zones.discard)
   };
 };
-const aiCopyCanPick = card => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+const aiCopyHand = (deck, uniqueCard, rng, draw = 2) => {
+  const rest = (Array.isArray(deck) ? deck : []).filter(c => aiCopyCanPick(c));
   const picked = [];
   for (let i = 0; i < draw && rest.length > 0; i++) {
     const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
@@ -45723,7 +45765,7 @@ const aiCopyPickCards = (hand, {
 const sorashidoCopyDesc = level => {
   const t = aiCopyRules(level),
     p = v => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
 const summonAiCopy = (state, {
@@ -45732,7 +45774,6 @@ const summonAiCopy = (state, {
   name = '',
   level = 0,
   src = null,
-  uniqueCard = null,
   turn = 0,
   mode = 'tactics',
   effMul = 1,
@@ -45740,7 +45781,7 @@ const summonAiCopy = (state, {
   extra = null
 } = {}) => {
   const now = state && state.aiCopy || null;
-  let zones = state && state.zones || {
+  const zones = state && state.zones || {
     deck: [],
     hand: [],
     discard: []
@@ -45762,14 +45803,10 @@ const summonAiCopy = (state, {
       plan
     };
   }
-  if (plan.removeUniqueOf != null) zones = aiCopyRemoveUnique(zones, {
-    srcMonsterId: plan.removeUniqueOf
+  const pile = aiCopyBuildDeck(zones, {
+    srcSlot,
+    srcMonsterId
   });
-  const uniq = plan.addUniqueOf != null ? aiCopyUniqueCard(uniqueCard, plan.addUniqueOf) : null;
-  if (uniq) zones = {
-    ...zones,
-    deck: [...(Array.isArray(zones.deck) ? zones.deck : []), uniq]
-  };
   const stats = aiCopyStats(src, level, {
     mode,
     effMul,
@@ -45783,10 +45820,11 @@ const summonAiCopy = (state, {
     spawnTurn: aiCopySafeNum(turn) + 1,
     turnsLeft: plan.turnsLeft,
     ...stats,
+    deck: pile.deck,
+    discard: pile.discard,
     hand: [],
     nextCard: null,
     picks: [],
-    uniqueCardUid: uniq ? uniq.uid : null,
     ...(extra || {})
   };
   return {
@@ -45795,27 +45833,14 @@ const summonAiCopy = (state, {
     plan
   };
 };
-const dismissAiCopy = state => {
-  const now = state && state.aiCopy || null;
-  const zones = state && state.zones || {
+const dismissAiCopy = state => ({
+  aiCopy: null,
+  zones: state && state.zones || {
     deck: [],
     hand: [],
     discard: []
-  };
-  if (!now) return {
-    aiCopy: null,
-    zones
-  };
-  const match = now.uniqueCardUid ? {
-    uid: now.uniqueCardUid
-  } : {
-    srcMonsterId: now.srcMonsterId
-  };
-  return {
-    aiCopy: null,
-    zones: aiCopyRemoveUnique(zones, match)
-  };
-};
+  }
+});
 const tickAiCopy = (state, turn) => {
   const now = state && state.aiCopy || null;
   if (!isAiCopyOut(now, turn)) return state;
@@ -45833,28 +45858,49 @@ const tickAiCopy = (state, turn) => {
   };
 };
 const planAiCopyTurn = (aiCopy, {
-  deck = [],
+  count = SORASHIDO_COPY_HAND_DRAW,
   score = null,
   costOf = null,
+  usable = null,
   rng = Math.random
 } = {}) => {
   if (!aiCopy) return aiCopy;
-  const uniq = (Array.isArray(deck) ? deck : []).find(c => c && aiCopy.uniqueCardUid && c.uid === aiCopy.uniqueCardUid) || null;
-  const rest = (Array.isArray(deck) ? deck : []).filter(c => c !== uniq);
-  const hand = aiCopyHand(rest, uniq, rng);
-  const picks = aiCopyPickCards(hand, {
+  const cleared = Array.isArray(aiCopy.hand) && aiCopy.hand.length ? endAiCopyTurn(aiCopy) : aiCopy;
+  const drawn = aiCopyDraw({
+    deck: cleared.deck,
+    discard: cleared.discard
+  }, count, rng);
+  const choosable = drawn.hand.filter(c => typeof usable !== 'function' || usable(c));
+  const picks = aiCopyPickCards(choosable, {
     score,
     costOf,
-    guts: aiCopy.guts,
-    maxGuts: aiCopy.maxGuts,
+    guts: cleared.guts,
+    maxGuts: cleared.maxGuts,
     rng,
-    level: aiCopy.level
+    level: cleared.level
   });
   return {
-    ...aiCopy,
-    hand,
+    ...cleared,
+    deck: drawn.deck,
+    discard: drawn.discard,
+    hand: drawn.hand,
     picks,
     nextCard: picks[0] || null
+  };
+};
+const endAiCopyTurn = aiCopy => {
+  if (!aiCopy) return aiCopy;
+  const pile = aiCopyDiscardHand({
+    deck: aiCopy.deck,
+    discard: aiCopy.discard
+  }, aiCopy.hand);
+  return {
+    ...aiCopy,
+    deck: pile.deck,
+    discard: pile.discard,
+    hand: [],
+    picks: [],
+    nextCard: null
   };
 };
 const aiCopyAutoScore = (card, {
@@ -106632,7 +106678,6 @@ function MonsterHeroGame() {
     if (!unit) return;
     const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
     const piles = handPileRef.current;
-    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])].find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
     const {
       pos,
       stacked
@@ -106642,9 +106687,9 @@ function MonsterHeroGame() {
     const res = summonAiCopy({
       aiCopy: before,
       zones: {
-        deck: [],
-        hand: [],
-        discard: []
+        deck: piles.deck || [],
+        hand: piles.hand || [],
+        discard: piles.graveyard || []
       }
     }, {
       srcSlot: slotIdx,
@@ -106652,7 +106697,6 @@ function MonsterHeroGame() {
       name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '',
       level,
       src,
-      uniqueCard,
       turn: turnCount,
       mode: 'tactics',
       effMul
@@ -106661,8 +106705,7 @@ function MonsterHeroGame() {
       ...res.aiCopy,
       pos,
       stacked,
-      hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart),
-      uniqueCard: res.zones.deck[0] || null
+      hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart)
     };
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
@@ -106746,16 +106789,12 @@ function MonsterHeroGame() {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
     const tools = tacticsAiCopyTools(copy, enemyDist);
     if (!tools) return null;
-    const piles = handPileRef.current;
-    const pool = [...(piles.deck || []), ...(piles.graveyard || []), ...(piles.hand || [])].filter(c => c && c.type !== 'unique' && tools.usableC(c));
-    const uniq = copy.uniqueCard && tools.usableC(copy.uniqueCard) ? copy.uniqueCard : null;
-    const planned = planAiCopyTurn({
-      ...copy,
-      uniqueCardUid: uniq ? uniq.uid : null
-    }, {
-      deck: uniq ? [...pool, uniq] : pool,
+    const count = (handPileRef.current.hand || []).length || 5;
+    const planned = planAiCopyTurn(copy, {
+      count,
       score: tools.scoreC,
-      costOf: tools.costC
+      costOf: tools.costC,
+      usable: tools.usableC
     });
     return commitAiCopy({
       ...planned,
@@ -112811,6 +112850,11 @@ function MonsterHeroGame() {
     distAptitude: ['M', 'M', 'M', 'M'],
     debugOnly: true
   });
+  const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS)).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult)).map(mon => ({
+    atkMotion: 'default',
+    ...mon,
+    debugOnly: true
+  }));
   const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon => mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = list => {
@@ -112818,7 +112862,7 @@ function MonsterHeroGame() {
     if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon = makeDebugStrongestMonster();
-    const preview = debugOnlyMonsterList();
+    const preview = [...debugOnlyMonsterList(), ...draftPreviewMonsterList()];
     const previewIds = new Set(preview.map(mon => mon.id));
     return [debugMon, ...preview, ...list.filter(mon => mon?.id !== debugMon.id && !previewIds.has(mon?.id))];
   };
@@ -120114,7 +120158,7 @@ function MonsterHeroGame() {
         }
       }, turnCount);
       if (ticked.expired) clearAiCopy('消えた(時間切れ)');else {
-        commitAiCopy(ticked.aiCopy);
+        commitAiCopy(endAiCopyTurn(ticked.aiCopy));
         planTacticsAiCopy(turnCount + 1);
       }
     }
@@ -120943,7 +120987,7 @@ function MonsterHeroGame() {
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
-            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, kusabiCombosAt(slotIdx, stunMon?.id, card)),
+            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, [...kusabiCombosAt(slotIdx, stunMon?.id, card), kyubiAttackAt(slotIdx, stunMon?.id, card).combo, kyubiAttackAt(slotIdx, stunMon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, true)]),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
           totalDmg += d;
@@ -123875,7 +123919,7 @@ function MonsterHeroGame() {
       ...m
     };
     applySlots(nextSlots);
-    if (!isHero && orihimePartnerPick && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName || m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }
@@ -136251,7 +136295,7 @@ function MonsterHeroGame() {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
       }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ '))) : React.createElement(React.Fragment, null, React.createElement("p", {
         className: "text-[10px] font-black text-amber-300 leading-tight text-center"
-      }, lockedCostume.name, "はまだマーケットに並んでいません"), React.createElement("p", {
+      }, lockedCostume.name, "はマーケットに並んでいます"), React.createElement("p", {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1",
         style: JA_WRAP_STYLE
       }, jaWrap(lockedCostume.unlockHow || ''))), React.createElement("p", {
