@@ -129,7 +129,7 @@ const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=c4c739ed5b
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
 const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
-const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=72185954c1f9";
+const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=ac9437c67580";
 // 2026年9月に追加準備中のレア「剣士モッチー」(モッチー×？？？)。正式実装まではデバッグ専用。
 // 染色は5部位で、承認済みマスクの色分けがそのままリポジトリ仕様に合っている
 // (赤=①肌 / 緑=②コート・ブーツ / 青=③髪 / 黄=④左手の剣 / マゼンタ=⑤右手の剣)。
@@ -788,6 +788,14 @@ const ART_CONTENT_BOXES = {
   "assistant/atsu_surprise.PNG": [0, 0, 1, 1, 0.75],
   "assistant/atsu_troubled.PNG": [0, 0, 1, 1, 0.75],
   "assistant/atsu_wink.PNG": [0, 0.014, 1, 1, 0.75],
+  "assistant/card-master/myua_angry.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/card-master/myua_crying.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/card-master/myua_excited.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/card-master/myua_happy.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/card-master/myua_normal.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/card-master/myua_surprise.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/card-master/myua_troubled.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/card-master/myua_wink.PNG": [0, 0, 1, 1, 0.75],
   "assistant/dra_angry.PNG": [0.115, 0.102, 0.893, 0.826, 1],
   "assistant/dra_crying.PNG": [0.122, 0.115, 0.88, 0.818, 1],
   "assistant/dra_excited.PNG": [0.12, 0.12, 0.88, 0.82, 1],
@@ -852,5 +860,13 @@ const ART_CONTENT_BOXES = {
   "assistant/myua_surprise.PNG": [0.211, 0.026, 0.766, 1, 1.5],
   "assistant/myua_troubled.PNG": [0.21, 0.015, 0.774, 1, 1.5],
   "assistant/myua_wink.PNG": [0.247, 0.026, 0.742, 1, 1.5],
+  "assistant/sorashido_angry.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/sorashido_crying.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/sorashido_excited.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/sorashido_happy.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/sorashido_normal.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/sorashido_surprise.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/sorashido_troubled.PNG": [0, 0, 1, 1, 0.75],
+  "assistant/sorashido_wink.PNG": [0, 0, 1, 1, 0.75],
 };
 // </art-content-boxes>
