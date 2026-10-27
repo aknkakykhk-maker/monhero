@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fddea759540c13fb
+// generated-sha256: 367160f6862cf56e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28380,16 +28380,6 @@ const classicAiCopySrc = ({ slots = [], srcSlot = 0, heroId = null, party = {} }
 
 // コピーが撃てるカードか(このあとの段で、ガード・強化・回復・ほかのアシカも効くようにする)
 const classicAiCopyIsAttack = (card) => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
-
-// コピーの1枚を選ぶ点(AUTO の「攻撃重視」と同じ並び。固有技 > 攻撃 > 強める > 守り・回復)。
-//   ★いまの段は攻撃だけが効くので、攻撃のほうを高くしてある(ジン部長の答え③・仮)
-const classicAiCopyScore = (card) => {
-  if (!card) return 0;
-  if (card.type === 'unique') return 3;
-  if (classicAiCopyIsAttack(card)) return 2;
-  if (card.type === 'guard' || card.type === 'heal') return 0;
-  return 1;
-};
 
 // パーティのちからで出したダメージを、コピーのちからへ縮める
 const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
@@ -64648,7 +64638,13 @@ function MonsterHeroGame() {
   const planClassicAiCopy = (copy) => {
     if (!copy) return copy;
     const deckNow = Array.isArray(handPileRef.current.deck) ? handPileRef.current.deck : [];
-    return planAiCopyTurn(copy, { deck: copy.uniqueCard ? [...deckNow, copy.uniqueCard] : deckNow, score: classicAiCopyScore });
+    // ★選び方は AUTO と同じ見方(作戦の優先 → 同じ優先なら与ダメの大きい順。タクティクスと同じ aiCopyAutoScore)。
+    //   与ダメは元の子の間合いから、コピーのちからへ縮めた値
+    const mon = slots[copy.srcSlot] || mainHero;
+    const dmgOf = (c) => classicAiCopyDamage(getDmg(c, copy.srcSlot, mon, 0, 0, false, enemyDist), copy.atk, atk);
+    const isGuardC = (c) => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const score = (c) => aiCopyAutoScore(c, { strategy: autoSettings.strategy, isAttack: isAttackCard, isGuard: isGuardC, dmgOf });
+    return planAiCopyTurn(copy, { deck: copy.uniqueCard ? [...deckNow, copy.uniqueCard] : deckNow, score });
   };
   // コピーの札の見方。dist は敵の間合い(コピーの立つマス pos との差で距離補正を数える)。元の子がいなければ null
   // ★選び方は AUTO と同じ見方(作戦 autoSettings.strategy の優先 → 同じ優先なら与ダメの大きい順)。
@@ -76911,6 +76907,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   使う子は元の子の枠(srcSlot)。ガッツの支払い・2枚目の半減・🔥はここでは数えない(下の「AIコピーの1手」でコピー自身のぶんとして数える)
     const aiCopyEntries=(()=>{
       const c=aiCopyRef.current;
+      // 5つの遊びも同じ: 回復・強化・アシカは味方のカードと同じ流れで効かせる(攻撃とガードは下の「AIコピー(5つの遊び)」)
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&!isTacticsMode(runMode)&&isAiCopyOut(c,turnCount)){
+        let left=Math.max(0,Number(c.guts)||0);
+        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return !classicAiCopyIsAttack(card)&&card.type!=='guard'&&card.type!=='weak_guard'; })
+          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true}));
+      }
       if(!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido||!isTacticsMode(runMode)||!isAiCopyOut(c,turnCount)||!isTacticsAiCopyStanding(c)) return [];
       const cp=c.plannedTurn===turnCount?c:(planTacticsAiCopy(turnCount)||c);
       const tools=tacticsAiCopyTools(cp,enemyDist);
@@ -77339,7 +77341,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
     // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前に、ターンの始めに決めておいたカードを使う。
     //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。ダメージは元の子の間合いから、コピーのちからへ縮める。
-    //   ★いまの段は攻撃だけが効く(ガード・強化・回復・ほかのアシカはこのあとの段。ジン部長の答え③)
+    //   ガードはコピーの丈夫さで構え、パーティを守る(コピーはライフを持たないため)。回復・強化・アシカは上の aiCopyEntries で効かせ済み(ここではガッツだけ払う)
     if(!isTacticsMode(runMode)&&aiCopyRef.current&&isAiCopyOut(aiCopyRef.current,turnCount)){
       let copy=aiCopyRef.current;
       const copyMon=slots[copy.srcSlot]||mainHero;
@@ -77351,7 +77353,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(classicAiCopyIsAttack(pick)){
           const d=classicAiCopyDamage(getDmg(pick,copy.srcSlot,copyMon,0,0,false,attackDistance),copy.atk,atk);
           if(d>0){ totalDmg+=d; attackHits.push({dmg:d, isCrit:false, slotIdx:copy.srcSlot, isSpecial:true, skillName:`🤖コピーの${skill}`, noAnim:true}); }
-        }
+        } else if(pick.type==='guard'||pick.type==='weak_guard'){
+          const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
+          currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
+          if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
+        } else continue; // 回復・強化・アシカ(ログは上の流れで出している)
         pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`,'ally');
       }
       commitAiCopy({...copy, picks:[], nextCard:null});

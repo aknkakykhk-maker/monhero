@@ -43,16 +43,6 @@ const classicAiCopySrc = ({ slots = [], srcSlot = 0, heroId = null, party = {} }
 // コピーが撃てるカードか(このあとの段で、ガード・強化・回復・ほかのアシカも効くようにする)
 const classicAiCopyIsAttack = (card) => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
 
-// コピーの1枚を選ぶ点(AUTO の「攻撃重視」と同じ並び。固有技 > 攻撃 > 強める > 守り・回復)。
-//   ★いまの段は攻撃だけが効くので、攻撃のほうを高くしてある(ジン部長の答え③・仮)
-const classicAiCopyScore = (card) => {
-  if (!card) return 0;
-  if (card.type === 'unique') return 3;
-  if (classicAiCopyIsAttack(card)) return 2;
-  if (card.type === 'guard' || card.type === 'heal') return 0;
-  return 1;
-};
-
 // パーティのちからで出したダメージを、コピーのちからへ縮める
 const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
   const d = Math.max(0, aiCopySafeNum(partyDmg));

@@ -5,7 +5,7 @@
 // 見ること:
 //   ・強さの元は「元の子1体の基礎の値」(勇者モンも供モンも)。育成ぶんは、その子がパーティへ足したぶんの割合で分けて足す
 //   ・共通の summonAiCopy(mode:'classic')へ渡すと、ライフを持たないコピーになる(パーティのライフを使う)
-//   ・コピーの攻撃はちからの比で縮む / 選ぶ点は 固有技 > 攻撃 > 強める > 守り・回復
+//   ・コピーの攻撃はちからの比で縮む(選ぶ点は共通の aiCopyAutoScore。ai-copy-check.js が見る)
 //   ・ガッツは使えば減り、ターンの終わりに上限まで戻る(上限を超えない)
 'use strict';
 const fs = require('fs');
@@ -25,7 +25,7 @@ vm.runInContext(`${grabArray('SORASHIDO_TIERS')}
 ${read('monster-hero/src/parts/32-sorashido-copy.jsx')}
 ${read('monster-hero/src/parts/33-ai-copy.jsx')}
 ${read('monster-hero/src/parts/33-ai-copy-classic.jsx')}
-globalThis.__s = { classicAiCopyZones, CLASSIC_AI_COPY_UNIQUE_IN_DECK, summonAiCopy, classicAiCopySrc, classicAiCopyScore, classicAiCopyIsAttack, classicAiCopyDamage, classicAiCopySpendGuts, classicAiCopyRegenGuts };`, ctx);
+globalThis.__s = { classicAiCopyZones, CLASSIC_AI_COPY_UNIQUE_IN_DECK, summonAiCopy, classicAiCopySrc, classicAiCopyIsAttack, classicAiCopyDamage, classicAiCopySpendGuts, classicAiCopyRegenGuts };`, ctx);
 const s = ctx.__s;
 
 const hero = { id: 'Golem', baseAtk: 200, baseDef: 100, baseGuts: 100, plusStats: { atk: 50, def: 50, guts: 10 } };
@@ -54,8 +54,6 @@ check('Lv1 のちから・ガッツは元の 60%', sum.aiCopy.atk === 120 && sum
 // ---- 攻撃・点 ----
 check('ダメージはちからの比で縮む', s.classicAiCopyDamage(1000, 120, 250) === 480);
 check('パーティのちからが 0 でも落ちない', s.classicAiCopyDamage(1000, 120, 0) === 0);
-const sc = (type) => s.classicAiCopyScore({ type });
-check('選ぶ点: 固有技 > 攻撃 > 強める > 守り・回復', sc('unique') > sc('atk') && sc('atk') > sc('buff') && sc('buff') > sc('guard') && sc('guard') === sc('heal'));
 check('撃てるのは攻撃(守り・回復・強めるは撃たない)', s.classicAiCopyIsAttack({ type: 'atk' }) && s.classicAiCopyIsAttack({ type: 'unique' }) && !s.classicAiCopyIsAttack({ type: 'guard' }) && !s.classicAiCopyIsAttack({ type: 'heal' }));
 
 // ---- ガッツ ----

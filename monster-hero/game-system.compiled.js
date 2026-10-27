@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a42154cf6bb0c64c
+// source-sha256: 067c204698fc4745
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45926,13 +45926,6 @@ const classicAiCopySrc = ({
   };
 };
 const classicAiCopyIsAttack = card => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
-const classicAiCopyScore = card => {
-  if (!card) return 0;
-  if (card.type === 'unique') return 3;
-  if (classicAiCopyIsAttack(card)) return 2;
-  if (card.type === 'guard' || card.type === 'heal') return 0;
-  return 1;
-};
 const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
   const d = Math.max(0, aiCopySafeNum(partyDmg));
   const p = Math.max(0, aiCopySafeNum(partyAtk));
@@ -106653,9 +106646,18 @@ function MonsterHeroGame() {
   const planClassicAiCopy = copy => {
     if (!copy) return copy;
     const deckNow = Array.isArray(handPileRef.current.deck) ? handPileRef.current.deck : [];
+    const mon = slots[copy.srcSlot] || mainHero;
+    const dmgOf = c => classicAiCopyDamage(getDmg(c, copy.srcSlot, mon, 0, 0, false, enemyDist), copy.atk, atk);
+    const isGuardC = c => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const score = c => aiCopyAutoScore(c, {
+      strategy: autoSettings.strategy,
+      isAttack: isAttackCard,
+      isGuard: isGuardC,
+      dmgOf
+    });
     return planAiCopyTurn(copy, {
       deck: copy.uniqueCard ? [...deckNow, copy.uniqueCard] : deckNow,
-      score: classicAiCopyScore
+      score
     });
   };
   const tacticsAiCopyTools = (copy, dist) => {
@@ -120764,6 +120766,19 @@ function MonsterHeroGame() {
     };
     const aiCopyEntries = (() => {
       const c = aiCopyRef.current;
+      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && !isTacticsMode(runMode) && isAiCopyOut(c, turnCount)) {
+        let left = Math.max(0, Number(c.guts) || 0);
+        return (c.picks || []).filter(card => {
+          const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
+          if (!card || cost > left) return false;
+          left -= cost;
+          return !classicAiCopyIsAttack(card) && card.type !== 'guard' && card.type !== 'weak_guard';
+        }).map(card => ({
+          card,
+          slotIdx: c.srcSlot,
+          aiCopy: true
+        }));
+      }
       if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
       const cp = c.plannedTurn === turnCount ? c : planTacticsAiCopy(turnCount) || c;
       const tools = tacticsAiCopyTools(cp, enemyDist);
@@ -121455,7 +121470,11 @@ function MonsterHeroGame() {
               noAnim: true
             });
           }
-        }
+        } else if (pick.type === 'guard' || pick.type === 'weak_guard') {
+          const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
+          currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
+          if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
+        } else continue;
         pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`, 'ally');
       }
       commitAiCopy({
