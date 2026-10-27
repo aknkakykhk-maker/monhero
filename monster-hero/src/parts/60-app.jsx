@@ -21707,9 +21707,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="text-[11px] font-black text-amber-300">{rewardReceipt.title}</div>
             <h3 className="mt-0.5 text-lg font-black text-white">手に入れたもの</h3>
           </div>
-          <div className="mt-3 max-h-[46vh] space-y-1.5 overflow-y-auto">
-            {rewardReceipt.rewards.map((reward,idx)=><div key={idx} data-reward-receipt-row className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white">{giftRewardText(reward)}</div>)}
-          </div>
+          {/* 横持ち(高さ 390 など)では1件の行が高く、5件目が窓の外に隠れて「送れること」も分からなかった
+              (2026-10-27 ダメダシくんの指摘 f02)。横持ちは2列・低めの行にして、それでもあふれるときだけ続きがあると書く(ScrollMoreList) */}
+          <ScrollMoreList data-reward-receipt-list moreText={`全${rewardReceipt.rewards.length}件・窓の中を下へ送ると続きが見られます`} className="mt-3 max-h-[46vh] grid grid-cols-1 gap-1.5 overflow-y-auto landscape:grid-cols-2">
+            {rewardReceipt.rewards.map((reward,idx)=><div key={idx} data-reward-receipt-row className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white landscape:px-2 landscape:py-1.5 landscape:text-[11px] landscape:leading-tight">{giftRewardText(reward)}</div>)}
+          </ScrollMoreList>
           {rewardReceipt.count>1&&<div className="mt-2 text-center text-[10px] font-bold text-slate-400">{rewardReceipt.count}件をまとめて受け取りました</div>}
           <div className="mt-3"><ModalCloseButton onClick={()=>setRewardReceipt(null)}/></div>
         </ModalFrame>
