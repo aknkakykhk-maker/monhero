@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab85facc48c4d948
+// generated-sha256: f3df0c9e1b760ed9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58932,11 +58932,28 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             className={`min-h-[40px] rounded-xl border text-[12px] font-black ${tab === t.id ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>{t.label}</button>
         ))}
       </div>
+      {/* 横画面だけ: 一覧の外(タブの下)は左の列に積まれる。左が見出しとタブだけで空かないよう、過去の対戦の入口と成績の要約を置く
+          (2026-10-27 ツナグくんの見回り・部長ソランドくん OK)。縦では出さない(一覧の高さを減らさない。入口は一覧の先頭にある) */}
+      <div data-card-record-side className="mb-2 hidden shrink-0 space-y-2 landscape:block">
+        {onOpenReplays && (
+          <button type="button" data-card-replays-open-side onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
+            className="mh-button mh-button-secondary flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
+            <span><b className="block text-[13px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[10px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+            <span className="text-[18px] text-slate-400">›</span>
+          </button>
+        )}
+        <div className={`${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`}>
+          {cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu')}
+          {cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp')}
+          {cell('いまの連勝', r.streak.now, '連勝', 'side-now')}
+          {cell('最高の連勝', r.streak.best, '連勝', 'side-best')}
+        </div>
+      </div>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
         {tab === 'all' && (<>
           {onOpenReplays && (
             <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
-              className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
+              className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left landscape:hidden">
               <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
               <span className="text-[18px] text-slate-400">›</span>
             </button>
