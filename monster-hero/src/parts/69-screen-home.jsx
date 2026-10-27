@@ -561,6 +561,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;

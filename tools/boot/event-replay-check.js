@@ -81,8 +81,10 @@ check('一覧の各行に日付を出す', (source.match(/data-event-replay-date
   // 2026-10-23 社長「あつときゅうこは助手のお話のほうがいいんじゃない？」。助手の加入のお話は「助手のお話」に、日付の順で並ぶ
   const aw = (groups.find(g => g.id === 'assistant') || { events: [] }).events.map(ev => ev.id);
   const uw = (groups.find(g => g.id === 'update') || { events: [] }).events.map(ev => ev.id);
-  check('「助手のお話」は きき → ももすけ → あつ → きゅうこ の加入のお話(新しい遊びのお話には入らない)',
-    aw.join() === 'kiki_intro,momosuke_intro,atsu_join_2026_10_22,kyuko_join_2026_10_22' && !uw.includes('atsu_join_2026_10_22') && !uw.includes('kyuko_join_2026_10_22'), aw.join(' > '));
+  // 2026-10-27 ソラシドの加入のお話も「助手のお話」のいちばん後ろに並ぶ
+  check('「助手のお話」は きき → ももすけ → あつ → きゅうこ → ソラシド の加入のお話(新しい遊びのお話には入らない)',
+    aw.join() === 'kiki_intro,momosuke_intro,atsu_join_2026_10_22,kyuko_join_2026_10_22,sorashido_join_2026_10_27'
+      && !uw.includes('atsu_join_2026_10_22') && !uw.includes('kyuko_join_2026_10_22') && !uw.includes('sorashido_join_2026_10_27'), aw.join(' > '));
   // 知らない・書き忘れの group は FALLBACK へ入り、一覧から消えない
   const c4 = { EVENT_REPLAYS: [{ id: 'x', date: '2026-01-01 00:00', group: 'nazo' }, { id: 'y', date: '2026-01-02 00:00' }] };
   vm.createContext(c4);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6154d4dbeb20317
+// generated-sha256: e3e904ec9d0a8282
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -313,6 +313,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantAtsu() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true; },
   // きゅうこの加入のお話(kyuko_join_2026_10_22・2026-10-22)。きゅうこの公開と一緒に出る
   get assistantKyuko() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true; },
+  // ソラシドのお話(2026-10-27〜台本を書いている途中)。ソラシドの公開と一緒に出る
+  get assistantSorashido() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true; },
   // MFバトルカードのはじまり(card_battle_intro_2026・2026-10-24)。MFバトルカードの公開と一緒に出る
   get cardBattle() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true; },
 });
@@ -8910,6 +8912,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
   //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
   assistantKyuko: true,
+  // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
+  //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantSorashido: false,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -9235,6 +9240,8 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 // きゅうこの加入のお話(2026-10-22)。id は data/assistants.js の EVENT_REPLAYS と data/breeder.js の KYUKO_JOIN_STORY_ID_FOR_SHOP と同じ
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
+// ソラシドの加入のお話(2026-10-27)。id は data/assistants.js の EVENT_REPLAYS と同じ
+const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
 // 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
 // ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
@@ -12173,7 +12180,8 @@ const helpDataRows = (id) => {
     // 必要な仲良し度(need)はどの助手も同じなので、Lvを1行にまとめられる
     case 'assistantBond': {
       const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
-      const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length) ? ASSISTANT_LIST : [];
+      // 公開の印が立つまでの助手(ソラシドなど)は並べない(assistantReleased・data/assistants.js)
+      const list = ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
       const base = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [];
       return base.map(s => {
         const per = list.map(who => {
@@ -13387,18 +13395,19 @@ const KYUBI_PHASES = Object.freeze([
 ]);
 const KYUBI_SAKURETSU_COMBO = 0.4;                 // 遠: 与ダメ40%の連撃×1
 const KYUBI_KAGERO_WAIT = 3;                       // 中: 完全回避を使ったら3ターン待ち
-const KYUBI_TENSHO = Object.freeze({ combo:0.2, dmg:0.15, hit:10, crit:0.1 }); // 近: 連撃20%×1・与ダメ+15%・命中+10%・会心率+10%
+// 近: 連撃20%×1・与ダメ+15%・会心率+20%(バトルに命中の判定が無いので、命中+10%は会心率へ回した。2026-10-27 社長)
+const KYUBI_TENSHO = Object.freeze({ combo:0.2, dmg:0.15, crit:0.2 });
 const KYUBI_RENGOKU_MAX = 10, KYUBI_RENGOKU_PER = 0.05;           // 零: 煉獄(上限10)1つにつき連撃5%
 const KYUBI_RENGOKU_GUTS_PER = 0.003, KYUBI_RENGOKU_GUTS_CAP = 0.2; // 零: 消費ガッツ1につき与ダメ+0.3%(上限+20%)
 const kyubiPhaseOfSlot = (slot) => KYUBI_PHASES.find((p) => p.slot === Math.floor(Number(slot))) || null;
 const kyubiRengokuOf = (n) => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(Number(n) || 0)));
-// 相の効き目。{ dmgMult, hitAdd(命中%), critAdd(会心率・小数), combo(exCombos の形 / null), evadeAfterAttack }
+// 相の効き目。{ dmgMult, critAdd(会心率・小数), combo(exCombos の形 / null), evadeAfterAttack }
 //   opts.rengoku … いまの煉獄の数 / opts.skillGuts … その技の消費ガッツ
 const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
-  const none = { dmgMult: 1, hitAdd: 0, critAdd: 0, combo: null, evadeAfterAttack: false };
+  const none = { dmgMult: 1, critAdd: 0, combo: null, evadeAfterAttack: false };
   if (phaseId === 'sakuretsu') return { ...none, combo: { count: 1, rate: KYUBI_SAKURETSU_COMBO, label: '炸裂ノ相' } };
   if (phaseId === 'kagero') return { ...none, evadeAfterAttack: true };
-  if (phaseId === 'tensho') return { ...none, dmgMult: 1 + KYUBI_TENSHO.dmg, hitAdd: KYUBI_TENSHO.hit, critAdd: KYUBI_TENSHO.crit,
+  if (phaseId === 'tensho') return { ...none, dmgMult: 1 + KYUBI_TENSHO.dmg, critAdd: KYUBI_TENSHO.crit,
     combo: { count: 1, rate: KYUBI_TENSHO.combo, label: '天翔ノ相' } };
   if (phaseId === 'rengoku') {
     const r = kyubiRengokuOf(opts.rengoku), guts = Math.max(0, Number(opts.skillGuts) || 0);
@@ -13463,10 +13472,11 @@ const rollKogare = (rollsLeft, rand) => { const left = Math.max(0, Math.floor(Nu
   return { confused: r < KOGARE_CHANCE, rollsLeft: left - 1 }; };
 // 固有技の効果「霊魂」(キュービ・オリヒメ共通。2026-10-27 社長が「推奨」の段を選んだ)
 //   使った次のターンから3ターン、カードの消費ガッツ−30%(5つの遊びは味方のカード全部・タクティクスは使った子のカードだけ)。
-//   さらに敵に幻惑: 同じ3ターン、敵の命中−10%。使い直したらかけ直し(重ならない)。幻惑は敵1体ぶんなのでWAVEが変わると消える。
+//   さらに幻惑: 同じ3ターン、味方全員の回避率+10%(バトルに命中の判定が無いので「敵の命中−10%」を読み替えた。2026-10-27 社長。
+//   5つの遊びもタクティクスも、どの敵の攻撃にも効く。俊足・影潜と同じ回避の表に足す)。使い直したらかけ直し(重ならない)。
 //   煉獄ノ相のダメージは、軽くなる前の消費で数える(kyubiPhaseEffectOf へは元の消費ガッツを渡す)
 const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
-const REIKON_TURNS = 3, REIKON_GUTS_MULT = 0.7, REIKON_HIT_DOWN = 10;
+const REIKON_TURNS = 3, REIKON_GUTS_MULT = 0.7, REIKON_EVASION_UP = 10;
 const hasReikon = (id) => !!id && REIKON_MONSTER_IDS.includes(id);
 // { wait: 効きはじめるまでのターン, turns: 効く残りターン }。ドリームペインと同じ数え方
 const reikonOf = (v) => ({ wait: Math.max(0, Math.floor(Number(v?.wait) || 0)), turns: Math.max(0, Math.floor(Number(v?.turns) || 0)) });
@@ -13476,8 +13486,8 @@ const tickReikon = (v) => { const r = reikonOf(v); if (r.wait > 0) return { ...r
 const reikonActive = (v) => { const r = reikonOf(v); return r.wait === 0 && r.turns > 0; };
 // 消費ガッツに掛ける倍率(既存の gutsCostMult と同じく、掛けたあと切り捨てる)
 const reikonGutsMult = (v) => (reikonActive(v) ? REIKON_GUTS_MULT : 1);
-// 敵の命中から引く量(%)
-const reikonHitDown = (v) => (reikonActive(v) ? REIKON_HIT_DOWN : 0);
+// 味方全員の回避率に足す量(%。回避の表は%で持つ)
+const reikonEvasionUp = (v) => (reikonActive(v) ? REIKON_EVASION_UP : 0);
 // いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
@@ -23216,6 +23226,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 自前で画面を回しているあいだも「横向き」として扱う(端末は縦のままなので
   // matchMedia だけでは縦と答える)。orientationIsLandscape がその両方を見ている。
   const [isLandscape,setIsLandscape]=useState(()=>orientationIsLandscape());
+  // 縦持ちで曲名(版の名前を含む)が長い曲は、上の帯の曲名を字を小さくして5行まで出す(3行では「short ver.」が「short…」で切れていた。320幅は4行でも足りない・2026-10-27)
+  const hudSongLong=!isLandscape&&rhythmSongFullName(song).length>30;
   useEffect(()=>{
     if(typeof window==='undefined'||typeof window.matchMedia!=='function')return;
     const mql=window.matchMedia('(orientation: landscape)');
@@ -24820,6 +24832,8 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {songIntro&&(()=>{const introTitle=rhythmSongFullName(song),
   // 横持ちの曲名の字の大きさ。文字の幅(英数字はおよそ0.6字ぶん・かな漢字は1字ぶん)と、置ける幅から決める(20px〜13px)
   introTitleFont=(()=>{const avail=Math.min((typeof window!=='undefined'?window.innerWidth:844)*.72,560)-16,em=[...String(introTitle)].reduce((n,ch)=>n+(/[\x20-\x7e]/.test(ch)?.6:1),0);return Math.max(13,Math.min(20,Math.floor(avail/Math.max(1,em))));})(),
+  // 縦持ちの曲名は2行まで。2行に入らない長い曲名だけ、字を小さくする(24px〜16px)。折り返しで行の終わりが空くぶん、2行の9割で見積もる(320幅で「short ver.」が「sh…」で切れていた・2026-10-27)
+  introTitlePortraitFont=(()=>{const avail=Math.min((typeof window!=='undefined'?window.innerWidth:390)-40,400),em=[...String(introTitle)].reduce((n,ch)=>n+(/[\x20-\x7e]/.test(ch)?.6:1),0);return Math.max(16,Math.min(24,Math.floor(avail*2*.9/Math.max(1,em))));})(),
   introHint=songIntro.skipped?'まもなく はじまります':songIntro.skippable&&!songIntro.short?'タップでとばす':'',introCredit=rhythmSongIntroCredit(song),introLevel=Number(chart?.level),introColor=RHYTHM_SONG_INTRO_DIFFICULTY_COLORS[difficulty.id]||'#64748b';return <div key={songIntro.key} data-rhythm-song-intro data-intro-short={songIntro.short?'1':undefined} data-intro-closing={songIntro.closing?'1':undefined} data-intro-layout={isLandscape?'landscape':'portrait'} role="status" aria-live="polite" onPointerDown={songIntro.skippable?event=>{event.stopPropagation();skipSongIntro();}:undefined} style={{position:'absolute',inset:0,zIndex:45,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:isLandscape?'10px':'16px',padding:'12px calc(16px + var(--mh-sa-right,0px)) 12px calc(16px + var(--mh-sa-left,0px))',pointerEvents:'auto','--intro-close-ms':`${RHYTHM_SONG_INTRO_CLOSE_MS}ms`}}>
   {/* ジャケットの大きさ(2026-10-11 社長「ジャケット画像が小さかった」)。縦持ちは画面の幅の68%、横持ちは高さの54%を目安に、上限320px。
       ★高さで決めて幅は aspect-ratio で合わせ、縮んでよい(flexShrink:1)ことにする。曲名が長い・紹介文があるなどで下の文字が増えて
@@ -24834,7 +24848,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <div data-rhythm-song-intro-text style={{flex:'0 0 auto',minWidth:0,maxWidth:isLandscape?'min(72vw,560px)':'88vw',textAlign:'center'}}>
     <small style={{display:'block',fontSize:'11px',fontWeight:900,letterSpacing:'.32em',color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>♪ LIVE START</small>
     {/* 曲名は2行まで。切り詰める箱の内側に余白を取り、文字の影が四角く切れないようにする */}
-    <b data-rhythm-song-intro-title style={{...(isLandscape?{display:'block',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontSize:`${introTitleFont}px`}:{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere',fontSize:'24px'}),padding:'0 8px 3px',margin:isLandscape?'1px -8px 0':'4px -8px 0',fontWeight:900,lineHeight:1.25,color:'#fff',textShadow:'0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'}}>{introTitle}</b>
+    <b data-rhythm-song-intro-title style={{...(isLandscape?{display:'block',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontSize:`${introTitleFont}px`}:{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',overflowWrap:'anywhere',fontSize:`${introTitlePortraitFont}px`}),padding:'0 8px 3px',margin:isLandscape?'1px -8px 0':'4px -8px 0',fontWeight:900,lineHeight:1.25,color:'#fff',textShadow:'0 0 8px rgba(103,232,249,.5),0 2px 4px rgba(2,6,23,.95)'}}>{introTitle}</b>
     {introCredit&&<p data-rhythm-song-intro-credit style={{display:'-webkit-box',WebkitLineClamp:isLandscape?1:2,WebkitBoxOrient:'vertical',overflow:'hidden',margin:isLandscape?'1px 0 0':'3px 0 0',fontSize:'12px',fontWeight:700,lineHeight:1.4,color:'#cbd5e1'}}>{introCredit}</p>}
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginTop:isLandscape?'5px':'10px'}}><span data-rhythm-song-intro-difficulty style={{borderRadius:'999px',padding:'3px 12px',fontSize:'13px',fontWeight:900,letterSpacing:'.08em',color:'#fff',background:introColor,boxShadow:`0 0 12px ${introColor}`}}>{difficulty.id}</span>{Number.isFinite(introLevel)&&introLevel>0&&<b data-rhythm-song-intro-level style={{fontSize:'16px',fontWeight:900,color:'#fff',fontVariantNumeric:'tabular-nums'}}>Lv.{introLevel}</b>}
       {/* 横持ちは縦の場所が少ないので、案内を難易度と同じ行へ置く */}
@@ -24844,7 +24858,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   </div>
 </div>;})()}<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore} rankFx={!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 text-[9px] font-black leading-none`}>{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
-<div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
+<div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':(hudSongLong?'5':'3'),WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)',fontSize:hudSongLong?'9px':undefined}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
     ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{lineAdjust&&<RhythmLineAdjustPanel adjust={lineAdjust} onBump={()=>setSkyLineTick(n=>n+1)} isLandscape={isLandscape}/>}{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
     ★レーン(台形)の右のふちに寄せて置く。音ゲーは目線がレーンに集まるので、レーンから遠いほど読みにくい
       (ユーザー指摘「残り時間がちょっと目に入りづらい / レーンより遠くなればなるほど目線的にきつくなる」)。
@@ -36849,7 +36863,9 @@ function MasuDonationScreen({
         <p className="shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
         {/* 並べ替えは合体と同じ「並べ替え＋横に流れるボタン」の形にそろえる(2026-10-05。7つを4列に詰めて総合力だけ2列ぶんの幅だった)。
             右端のぼかしと末尾の余白は合体と同じ(2026-10-27・320で続きがあると気づけなかった) */}
-        <div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="寄付一覧の並べ替え" style={{WebkitMaskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)',maskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)'}}><span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>{options.map(o=>{const active=donationSortKey===o.key;const direction=donationSortDir==='asc'?'低い順':'高い順';const activeLabel=o.key==='power'?`${o.label}：${direction}`:`${o.label}${donationSortDir==='asc'?' ▲':' ▼'}`;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} aria-pressed={active} aria-label={o.key==='power'?(active?`総合力を${direction}で表示中。押すと${donationSortDir==='asc'?'高い順':'低い順'}に変更`:'総合力を高い順に並べ替え'):undefined} className={`shrink-0 min-h-[44px] px-3 max-[359px]:px-2 rounded-xl text-[11px] leading-tight font-black border whitespace-nowrap active:scale-95 ${active?'border-amber-300/70 bg-amber-500/25 text-amber-100':'bg-slate-900 border-white/10 text-slate-300'}`}>{active?activeLabel:o.label}</button>})}<span aria-hidden="true" className="shrink-0 w-3"/></div>
+        {/* 横に送る札の列にも mh-scroll が付くので、画面の直下に置くと横持ちの2列の仕組み(index.html の [data-mh-screen]:has(> .mh-scroll))が
+            一覧と取り違えて右の列の全高へ置き、一覧のカードと重なっていた(2026-10-27 ジン部長の見回り)。ひと包みして直下から外す */}
+        <div className="shrink-0"><div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="寄付一覧の並べ替え" style={{WebkitMaskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)',maskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)'}}><span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>{options.map(o=>{const active=donationSortKey===o.key;const direction=donationSortDir==='asc'?'低い順':'高い順';const activeLabel=o.key==='power'?`${o.label}：${direction}`:`${o.label}${donationSortDir==='asc'?' ▲':' ▼'}`;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} aria-pressed={active} aria-label={o.key==='power'?(active?`総合力を${direction}で表示中。押すと${donationSortDir==='asc'?'高い順':'低い順'}に変更`:'総合力を高い順に並べ替え'):undefined} className={`shrink-0 min-h-[44px] px-3 max-[359px]:px-2 rounded-xl text-[11px] leading-tight font-black border whitespace-nowrap active:scale-95 ${active?'border-amber-300/70 bg-amber-500/25 text-amber-100':'bg-slate-900 border-white/10 text-slate-300'}`}>{active?activeLabel:o.label}</button>})}<span aria-hidden="true" className="shrink-0 w-3"/></div></div>
         {donationError&&<div className="shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"><AlertCircle size={12} className="inline mr-1"/>{donationError}</div>}
         <div className={SCREEN_LIST_CLASS}>
           {masuMons.length===0?<ScreenEmpty emoji="💎" lines={['まだマスモンがいません。','勇者モンでランを終えると登録できます。']}/>:<div className="grid grid-cols-3 gap-1.5 pb-3">{sorted.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=masuBondLevelInfo(masu);const active=monsterRosterIds.includes(`masu:${masu.id}`);const selected=selectedSet.has(String(masu.id));const trial=selected?{ok:true}:buildMasuDonations({...donationArgs,targetIds:[...donationSelectedIds,masu.id]});const canSelect=trial.ok;return <button key={masu.id} disabled={donationProcessing||(!selected&&!canSelect)} aria-pressed={selected} onClick={()=>{setDonationError('');setDonationSelectedIds(ids=>selected?ids.filter(id=>String(id)!==String(masu.id)):[...ids,masu.id]);}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 disabled:opacity-35 ${selected?'border-amber-300 bg-violet-950/80':'border-violet-500/30'}`}>
@@ -38239,7 +38255,10 @@ function MasuFusionScreen({
       };
       // 320幅で右の札が切れて、続きがあると気づけなかった(2026-10-27)。札の余白を詰め、右端をぼかして続きを知らせる。
       // 最後の札がぼけないよう、末尾に小さい余白を置く
+      // 横に送る札の列にも mh-scroll が付くので、画面の直下に置くと横持ちの2列の仕組み(index.html の [data-mh-screen]:has(> .mh-scroll))が
+      // 一覧と取り違えて右の列の全高へ置き、一覧のカードと重なっていた(2026-10-27 ジン部長の見回り)。ひと包みして直下から外す
       const fusionSortBar = (
+        <div className="shrink-0">
         <div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="合体一覧の並べ替え" style={{WebkitMaskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)',maskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)'}}>
           <span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>
           {FUSION_SORT_OPTIONS.map(o=>{
@@ -38252,6 +38271,7 @@ function MasuFusionScreen({
             );
           })}
           <span aria-hidden="true" className="shrink-0 w-3"/>
+        </div>
         </div>
       );
       // ルールは5行あって画面の3分の1を占めていた。主役はモンスターの一覧なので、
@@ -39644,14 +39664,16 @@ function WaveResultScreen({
        内側をスクロールさせる。ボタンは shrink-0 なので必ず画面内に残り、
        収まっているときは今までどおり全体が中央に寄る */
     // mh-phase / mh-ph-* … 強化フェーズの画面と同じ飾り(濃紺の地・金の縁)。--ph はこの画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden">
-      <div className="w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll">
-      <div className="mb-2 shrink-0 flex flex-col items-center gap-1">
+    // 横持ちの背の低い画面(844×390 など)では、バトルの枠(幅 390px)の中だと内訳の下半分が送らないと見えなかった(2026-10-27 ジン部長の見回り)。
+    // その画面だけ画面いっぱいに広げて2列にする: 左に見出しと「次へ進む」、右に内訳(内訳だけを送る)。クイックのリザルト(#3954)と同じ考え方
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} data-wave-result className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:!fixed [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:px-6">
+      <div className="w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:contents">
+      <div className="mb-2 shrink-0 flex flex-col items-center gap-1 [@media(max-height:700px)]:mb-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-end [@media(orientation:landscape)_and_(max-height:520px)]:mb-3">
         <span className="mh-ph-plate mh-train-sub">WAVE {waveResult.wave} CLEAR</span>
-        <Trophy className="mh-train-title text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.8)]" size={34}/>
+        <Trophy className="mh-train-title text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.8)] [@media(max-height:700px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:block" size={34}/>
         <div className="mh-ph-heading"><h2 className="mh-ph-title mh-train-title text-xl font-black italic uppercase tracking-tighter">WAVE {waveResult.wave} リザルト</h2></div>
       </div>
-      <div className="mh-wave-rows mh-ph-panel w-full max-w-sm p-3 space-y-1.5 mb-3 shrink-0">
+      <div data-wave-result-rows className="mh-wave-rows mh-ph-panel w-full max-w-sm p-3 space-y-1.5 mb-3 shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:max-h-full [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto [@media(orientation:landscape)_and_(max-height:520px)]:mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:self-stretch">
         <div className="grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1">
           <span className="text-[10px] font-black text-indigo-200">今回：<b className="font-mono text-sm text-white">{waveResult.turn}</b>ターン</span>
           <span className="text-[10px] font-black text-amber-200">累計：<b className="font-mono text-sm text-white">{waveResult.totalTurnCount}</b>ターン</span>
@@ -39688,7 +39710,7 @@ function WaveResultScreen({
         </>)}
       </div>
       </div>
-      <button onClick={handleNextWave} disabled={runFinalizing} aria-busy={runFinalizing} className={`w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0${battleTutorialSpotClass('waveNext')} ${runFinalizing?'bg-slate-500 text-slate-300 cursor-not-allowed':'bg-white text-indigo-900 active:scale-95'}`}>{runFinalizing?'処理中…':<>次へ進む <ChevronRight className="inline" size={20}/></>}</button>
+      <button onClick={handleNextWave} disabled={runFinalizing} aria-busy={runFinalizing} className={`w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:self-start${battleTutorialSpotClass('waveNext')} ${runFinalizing?'bg-slate-500 text-slate-300 cursor-not-allowed':'bg-white text-indigo-900 active:scale-95'}`}>{runFinalizing?'処理中…':<>次へ進む <ChevronRight className="inline" size={20}/></>}</button>
     </div>
   
   );
@@ -39981,7 +40003,7 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef, speciesChallengeBattleRunRef,
 }) {
   return (
-<div data-champion-screen className="fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div>{/* もらった物の一覧。背の低い画面では見出しと「HOMEへ」を小さくして、ここを広く取る。横向きの背の低い画面では右の列にまとめる
+<div data-champion-screen className="fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"><div className="text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div>{/* もらった物の一覧。背の低い画面では見出しと「HOMEへ」を小さくして、ここを広く取る。横向きの背の低い画面では右の列にまとめる
     (320 は2〜3行、844×390 は1行しか見えなかった。2026-10-27 ダメダシくん) */}
 <div data-champion-rewards className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}</div></div>{/* みゅあの吹き出しは一覧の外に置き、いつも見えるようにする(320 では一覧の下に隠れていた) */}<div data-champion-bubble className="relative z-10 w-full max-w-xs mx-auto mt-2 shrink-0 text-left [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
 {speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50 [@media(max-height:700px)]:py-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:700px)]:py-2.5 [@media(max-height:700px)]:text-base [@media(max-height:700px)]:rounded-2xl [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
@@ -40593,6 +40615,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
@@ -44720,7 +44743,7 @@ const MonsterCheckLabLines = ({ lines }) => (
 // 固有技の効果「霊魂」(2体共通)の今の状態を1行にする
 const monsterCheckReikonLine = (v) => { const r = reikonOf(v);
   return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r)
-    ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし'; };
+    ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・味方の回避率+${reikonEvasionUp(r)}%` : '霊魂: なし'; };
 function KyubiTraitLab() {
   const [phaseId, setPhaseId] = useState('sakuretsu');
   const [guts, setGuts] = useState(56);
@@ -44746,7 +44769,7 @@ function KyubiTraitLab() {
     setLog(`攻撃を受けた: 被ダメ×${(r.takenMult * (1 - f.buffTaken)).toFixed(3)}${r.takenMult < 1 ? '(狐火が1つ盾になって消えた)' : ''}`);
   };
   const next = () => { setTurn((t) => t + 1); setKagero((k) => tickKagero(k)); setFox((k) => tickKitsunebi(k)); setReikon((r) => tickReikon(r)); setLog('ターンを進めた'); };
-  const unique = () => { card('attack'); setReikon(startReikon()); setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`); };
+  const unique = () => { card('attack'); setReikon(startReikon()); setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`); };
   const ex = () => { setFox((k) => useKitsunebi(k)); setLog(fox.active ? '九尾幻灯(2回目): 狐火満タン・強化かけ直し' : '九尾幻灯: 狐火5個・幻灯強化3ターン'); };
   const f = kitsunebiEffectOf(fox);
   return (
@@ -44767,7 +44790,7 @@ function KyubiTraitLab() {
       </div>
       <MonsterCheckLabLines lines={[
         `${turn}ターン目 / ${KYUBI_PHASES.find((p) => p.id === phaseId)?.name}`,
-        `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`,
+        `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`,
         phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`,
         phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`,
         monsterCheckReikonLine(reikon),
@@ -44794,7 +44817,7 @@ function OrihimeTraitLab() {
   const next = () => { setTurn((t) => t + 1);
     setHoshiai((h) => (h && h.turns > 1 ? { ...h, turns: h.turns - 1 } : null));
     setKogare((k) => (k.turns > 1 ? { turns: k.turns - 1, rollsLeft: KOGARE_ROLLS_PER_TURN } : { turns: 0, rollsLeft: 0 })); setReikon((r) => tickReikon(r)); setLog('ターンを進めた'); };
-  const unique = () => { setReikon(startReikon()); setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`); };
+  const unique = () => { setReikon(startReikon()); setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`); };
   const star = () => { const h = startHoshiai(ouse, diff); setHoshiai(h); setOuse(0);
     setLog(`星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(h.rate)}・1ターン${h.perTurn}回まで(逢瀬は0へ)`); };
   const longing = () => { setKogare({ turns: KOGARE_TURNS, rollsLeft: KOGARE_ROLLS_PER_TURN }); setLog(`焦がれ待つ天ノ河: ${KOGARE_TURNS}ターン`); };
@@ -48784,7 +48807,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         hideRandom
         notice={(
           <div className="flex items-center gap-1.5">
-            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300">全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。{!room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'}</p>
+            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。')}{!room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')}</p>
             {/* 狭い画面では、制限時間の切り替えを注意書きの右に置く(行を増やさない。広い画面はヘッダーに出る) */}
             {isHost && selectTimeButton('min-[481px]:hidden', true)}
           </div>
@@ -63146,6 +63169,7 @@ function MonsterHeroGame() {
     setTacticsHeroStyle(null);
     resetSweetStack(); // メロディー・クロミーのスタックもランごと(WAVEでは消さない)
   resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
+  resetKyubi(); // 九尾四相(相・煉獄・陽炎)はランのあいだ持つ
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -63367,6 +63391,59 @@ function MonsterHeroGame() {
   const [dreamPainView, setDreamPainView] = useState(dreamPainOf(null));
   const writeDreamPain = (v) => { const d = dreamPainOf(v); dreamPainRef.current = d; setDreamPainView(d); return d; };
   const resetDreamPain = () => writeDreamPain(null);
+  // ★キュービの勇者特性「九尾四相」(2026-10-27 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の KYUBI_*・kagero*。
+  //   相はバトルが始まったときに立っていた距離で決まり、ランのあいだ続く(5つの遊びは勇者モンを置いた距離、タクティクスはその子の枠)。
+  //   煉獄(カード1枚で+1・上限10)と陽炎の完全回避(持っているか・待ち)もランのあいだ持つ。キーはトリックスタートと同じ。
+  //   片付けは resetTacticsJoinCatchUp。ダメージ計算はターンの途中でも読むので ref が正本、画面のために state にも置く
+  const kyubiRef = useRef({ phase: {}, rengoku: {}, kagero: {} });
+  const [kyubiView, setKyubiView] = useState(kyubiRef.current);
+  const writeKyubi = (part, key, value) => {
+    if (!key) return;
+    const next = { ...kyubiRef.current, [part]: { ...kyubiRef.current[part], [key]: value } };
+    kyubiRef.current = next; setKyubiView(next);
+  };
+  const resetKyubi = () => { kyubiRef.current = { phase: {}, rengoku: {}, kagero: {} }; setKyubiView(kyubiRef.current); };
+  // その枠の相の id(持ち主がキュービでなければ null)。初めて読んだときに始まりの距離で決めて ref に覚える
+  //   (描画の途中でも呼ばれるので、ここでは state を書かない)
+  const kyubiPhaseAt = (slotIdx) => {
+    const key = trickStartKeyOf(slotIdx);
+    if (sweetOwnerAt(slotIdx) !== KYUBI_MONSTER_ID || !key) return null;
+    if (!kyubiRef.current.phase[key]) {
+      const p = kyubiPhaseOfSlot(isTacticsMode(runMode) ? slotIdx : initialBattleDistanceRef.current);
+      if (!p) return null;
+      kyubiRef.current = { ...kyubiRef.current, phase: { ...kyubiRef.current.phase, [key]: p.id } };
+    }
+    return kyubiRef.current.phase[key];
+  };
+  // キュービ本人の攻撃にだけ効く相の効き目。煉獄ノ相のダメージは、軽くなる前の消費(getCardBaseGuts)で数える
+  const kyubiAttackAt = (slotIdx, actorId, card) => {
+    const phase = actorId === KYUBI_MONSTER_ID ? kyubiPhaseAt(slotIdx) : null;
+    if (!phase) return kyubiPhaseEffectOf(null);
+    return kyubiPhaseEffectOf(phase, { rengoku: kyubiRef.current.rengoku[trickStartKeyOf(slotIdx)], skillGuts: card ? getCardBaseGuts(card) : 0 });
+  };
+  // キュービ本人がカードを使ったとき: 煉獄ノ相は煉獄+1、陽炎ノ相は攻撃なら完全回避を持つ(待ちのあいだは持てない)
+  const gainKyubiCard = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID || !card) return;
+    const phase = kyubiPhaseAt(slotIdx), key = trickStartKeyOf(slotIdx);
+    if (phase === 'rengoku') {
+      const before = kyubiRengokuOf(kyubiRef.current.rengoku[key]), after = kyubiRengokuOf(before + 1);
+      if (after === before) return;
+      writeKyubi('rengoku', key, after);
+      addPopup(`🔥 煉獄 ${after}/${KYUBI_RENGOKU_MAX}`, 'hero', 'text-orange-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    } else if (phase === 'kagero' && ['atk','range_atk','unique'].includes(card.type)) {
+      const before = kageroOf(kyubiRef.current.kagero[key]), after = kageroAfterAttack(before);
+      if (after.ready === before.ready) return;
+      writeKyubi('kagero', key, after);
+      addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
+    }
+  };
+  // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
+  const tickKyubiKagero = () => {
+    const entries = Object.entries(kyubiRef.current.kagero);
+    if (!entries.some(([, v]) => kageroOf(v).wait > 0)) return;
+    const next = { ...kyubiRef.current, kagero: Object.fromEntries(entries.map(([k, v]) => [k, tickKagero(v)])) };
+    kyubiRef.current = next; setKyubiView(next);
+  };
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
@@ -64629,7 +64706,9 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   // 名前帯(band)は名前を切らずに折り返す。名前は12字まで付けられるので、9字以上は字を1段小さくし、左右の余白も詰めて
   // 320幅でも2行(1行6字)に収める(2026-10-27・部長「切らずに全部出す・2行まで」。11pxだと12字で3行になっていた)
-  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div> };
+  // 帯の無い形は1行。名前(字)は「…」で切らず、カードの幅に合わせて字を縮めて全部出す(320 の神殿で「オボロゲソ…」と切れていた。
+  // 2026-10-27 ジン部長の見回り。編成の枠の名前 #3857 と同じ形)。字でないもの(部品)は今までどおり
+  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; const fit=!band&&typeof node==='string'; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:fit?'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]':'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{fit?<span className="block" style={{fontSize:`min(11px, calc(100cqw / ${[...node].length+0.3}))`}}>{node}</span>:node}</div> };
   // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた。
   // ★ただし**入りきらなければ折り返す**(2026-09-18)。字を読める大きさへ上げたら、
   //   「絆 397/400」と「+456P」がカード幅(約96px)を超え、ハートが枠の外へはみ出した。
@@ -66803,7 +66882,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -67025,6 +67104,15 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // ソラシドの加入のお話(2026-10-27)。きゅうこと同じく、公開のあとの最初の HOME でだれにでも1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
+  // 公開の印 assistantSorashido が偽なら何もしない
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
@@ -68682,6 +68770,8 @@ function MonsterHeroGame() {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
         // きゅうこの加入(2026-10-27 社長「開催中のイベントだけ出す」)。見た扱いにすると、マーケットのカード「きゅうこ」もふつうに並ぶ
         const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
+          // ソラシドのお話は公開してからだけ(公開前に始めた人を見た扱いにすると、公開の日に流れなくなる)
+          ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []),
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -69980,6 +70070,7 @@ function MonsterHeroGame() {
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
+    sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -72279,7 +72370,9 @@ function MonsterHeroGame() {
     return Math.min(cardLimit,base+(coordinationHolder?soulCoordinationCardBonus:0));
   };
 
-  const getCardGuts = (card, slotIdx=null) => {
+  // 技ごとの基本の消費ガッツ(進化の倍率・中二病・運命のコインまで)。ターンの割引(消費0・半分・霊魂など)はかける前。
+  //   煉獄ノ相(キュービ)の「消費ガッツが大きいほどダメージ↑」はこの値で数える(2026-10-27 社長「軽くなる前の消費で」)
+  const getCardBaseGuts = (card) => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : (['buff','debuff','heal','draw'].includes(card.type) ? (card.guts || 20) : 20);
     if (cost>0 && ['atk','range_atk','unique'].includes(card.type)) {
@@ -72292,6 +72385,11 @@ function MonsterHeroGame() {
       // 運命のコイン(ゴースト): 裏が出るたびに、ゴーストの固有技の消費ガッツ+20%(重複可・ランが終わるまで)
       if (card.type === 'unique' && card.monId===FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks',null)));
     }
+    return cost;
+  };
+  const getCardGuts = (card, slotIdx=null) => {
+    if (!card) return 0;
+    let cost = getCardBaseGuts(card);
     // ★タクティクスは「その子だけ」のぶんも見る(2026-09-22 ユーザー選択)。
     //   ピクシー/ミーアの消費0・アーク/イブリースの消費+15%・パンドラの共鳴は、
     //   どれも使った子だけに効く。既存5モードは bySlot が空なので今までどおり
@@ -74380,7 +74478,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     // ★クッキー10個(メロディー)の与ダメアップは味方全体、黒音符(クロミー)は本人の攻撃だけ
-    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*kyubiAttackAt(slotIdx,mon?.id,card).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「ちから+20%」を、攻撃した子のちからへ掛ける
     //   (既存5モードはパーティ共通のちから。積んでいなければ1倍)
@@ -74417,7 +74515,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,kusabiCombosAt(slotIdx,mon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,[...kusabiCombosAt(slotIdx,mon?.id,card),kyubiAttackAt(slotIdx,mon?.id,card).combo]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
@@ -74733,8 +74831,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   確定反射(モノリスの固有技)＝**味方全体**。発動したターンは誰も受けない。
         //   確率で出る反射・回避・吸収＝**狙われた子だけ**。抽選で出るものは個別にそろえる
         const forcedReflect = getTurnBuff('reflect',false);
+        // ★陽炎ノ相(キュービ): 受ける子がキュービで完全回避を持っていれば、抽選なしで回避して使い切る(使ったら3ターン待ち)
+        const kageroEvade = !forcedReflect && defenseHeroId===KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
+        if (kageroEvade) {
+          writeKyubi('kagero', kusabiDefenseKey, kageroUseEvade(kyubiRef.current.kagero[kusabiDefenseKey]));
+          addPopup('🔥 陽炎ノ相 完全回避！','hero','text-orange-200 text-sm font-bold drop-shadow-md');
+        }
         const soulDefenseResult = forcedReflect
           ? 'reflect'
+          : kageroEvade ? 'evasion'
           : rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random());
         const isReflect = soulDefenseResult==='reflect';
         const isAbsorb = soulDefenseResult==='absorb';
@@ -75126,6 +75231,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (timeStopSlot==null&&(fateWheelRef.current.atkDown>0||fateWheelRef.current.takenUp>0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     // ドリームペイン(ドリーミィ)は使ったターンは効かず、次のターンから3ターン。次のターンへ進むここで1つ進める
     if (timeStopSlot==null&&(dreamPainRef.current.wait>0||dreamPainRef.current.turns>0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
+    if (timeStopSlot==null) tickKyubiKagero(); // ★陽炎ノ相(キュービ)の完全回避の待ちも1つ進める
     // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
     // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
     {
@@ -75795,6 +75901,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       else setGuts(p=>Math.max(0,p-cardCost));
       // メロディの手作りクッキー: メロディー本人がカードを1枚使うたびに+1(枠を決めて使ったカードだけ。アシストカードは数えない)
       if(!isBreeder&&entry.slotIdx!=null) gainSweetStack(slotIdx,slots[slotIdx]?.id,card);
+      if(!isBreeder&&entry.slotIdx!=null) gainKyubiCard(slotIdx,slots[slotIdx]?.id,card); // ★九尾四相: 煉獄+1・陽炎の完全回避
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type==='draw') continue;
@@ -75972,10 +76079,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd+kyubiAttackAt(slotIdx,activeMon?.id,card).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,kusabiCombosAt(slotIdx,activeMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,[...kusabiCombosAt(slotIdx,activeMon?.id,card),kyubiAttackAt(slotIdx,activeMon?.id,card).combo]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         if(aquaStackFromCard(slotIdx,card)==='finale'){ immediateStun=true; setImmediateTurnBuff('stunEnemy',true); } // ★アクアフィールドの水牢・氷結(ウンディーネ種の攻撃カード)
         // ★ハムのカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)。クロスは文字と揺れ、フル・リベンジはカットインを待つ(タップで飛ばせる)
