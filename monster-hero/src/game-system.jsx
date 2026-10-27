@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d6123c293183c1d8
+// generated-sha256: e3a55a3bc411abc1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57273,6 +57273,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
+      // 助手の服の解放(data/breeder.js。2026-10-27 社長「バトルカードでみゅあのマスターに勝つと解放」)。どの相手・難易度で解放するかは breeder.js が決める。
+      // 勝ちの記録を保存できたあとに、別に保存する(こちらが書けなくても勝ちの記録は落とさない。次に開いたとき、
+      // 記録の MASTER の勝ちから解放し直せる)。デバッグの対戦は呼ばない(見本・練習試合は上で抜けている)
+      if (ok && outcome === 'win' && !debug) {
+        try {
+          const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), { who: game.who, level: game.level, outcome });
+          if (unlockEntry && await storeSet(unlockEntry.key, unlockEntry.next)) addAssistantCostumeUnlockedNow(unlockEntry.next);
+        } catch (_) { /* 解放の保存に失敗しても、対戦の結果はそのまま出す */ }
+      }
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
@@ -68502,6 +68511,8 @@ function MonsterHeroGame() {
       ownedAssistantCostumesRef.current = loadedCostumes;
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
+      // 解放が要る服(みゅあの MASTER に勝つと並ぶ服など)。新しいキーと、カードの記録(読むだけ)の両方から起こす(2026-10-27)
+      setAssistantCostumeUnlockedNow(resolveUnlockedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, [], false), await storeGet(CARD_RECORD_DETAIL_KEY, null, false)));
       setRhythmClearTotal(await loadRhythmClearTotal());
       // 大王が倒された印があれば、マーケットを開く前から鍵を外しておく(無ければマーケットに入ったときに確かめる)
       if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
