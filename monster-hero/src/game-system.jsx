@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 819b894ee3ff81f7
+// generated-sha256: 6d2766224f850269
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70374,7 +70374,13 @@ function MonsterHeroGame() {
   // 正式実装前(debugOnly)のモンスターを、デバッグ戦の勇者モン選択にだけ並べる。
   // 通常のロースター(unlockedMonsterIds で絞る)・図鑑・マーケットには出ないので、
   // 「実際に選んで戦って確かめる」ことだけがここでできるようになる
-  const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
+  // ★下書きの子(UPCOMING_MONSTER_DRAFTS)のうち、能力値と固有技の倍率がそろった子も「試す用の写し」として混ぜる
+  //   (2026-10-27 キュービ・オリヒメの公開前の確かめ。統括部長の段取り⑥)。写しには debugOnly:true を付けるので、
+  //   記録・全国ランキングには残らない(runHasDebugOnlyMonster)。デバッグのバトルモードの勇者モンの一覧にだけ出る
+  const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS))
+    .filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult))
+    .map(mon => ({ atkMotion:'default', ...mon, debugOnly:true }));
+  const debugOnlyMonsterList = () => [...Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly), ...draftPreviewMonsterList()];
   // いま戦っている編成に、正式実装前のモンスター(debugOnly)が1体でも入っているか。
   // debugBattleRef が false のまま(難易度の「この難易度で挑戦」が必ず false へ戻すため)でも
   // 記録・全国ランキングへ残さないための保険。ここが唯一の判定元になる

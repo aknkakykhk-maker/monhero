@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0244566698a16a1c
+// source-sha256: 11601ea39e400b8c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112301,7 +112301,12 @@ function MonsterHeroGame() {
     distAptitude: ['M', 'M', 'M', 'M'],
     debugOnly: true
   });
-  const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
+  const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS)).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult)).map(mon => ({
+    atkMotion: 'default',
+    ...mon,
+    debugOnly: true
+  }));
+  const debugOnlyMonsterList = () => [...Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly), ...draftPreviewMonsterList()];
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon => mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = list => {
     if (battleScenarioRef.current) return list;
