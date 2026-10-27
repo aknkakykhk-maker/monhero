@@ -202,7 +202,14 @@ const CARD_WATCH_HOST = (() => {
       h.log.push(entry);
       sendWatch({ t: 'w-act', n: h.log.length, e: entry });
     },
-    discard: (p, list) => { if (h && Array.isArray(list)) { h.d = h.d.map((l, i) => (i === p ? list.slice() : l)); } },
+    // 相手の捨て札の本物の並びが分かったら、直前の手に付けた並びも書き換える(途中から見る人は手ごとの並びでなぞるので、
+    //   あとで分かった本物が届かないと「後は頼んだ」など捨て札の新しいほうを動かす手でずれた。2026-10-27 card-pvp-watch-check ④)
+    discard: (p, list) => {
+      if (!h || !Array.isArray(list)) return;
+      h.d = h.d.map((l, i) => (i === p ? list.slice() : l));
+      const last = h.log[h.log.length - 1];
+      if (last) last.d = h.d.map((l) => l.slice());
+    },
     tick: () => {
       if (!h) return;
       sendWatch(hbMsg());
@@ -247,7 +254,8 @@ const CARD_WATCH = (() => {
       delete buf[n + 1];
       const next = cardWatchApply(CARD_BATTLE_DATA, st, e);
       if (!next) { set({ buf, st, n, phase: 'broken', error: 'この試合は、ここから先を見られませんでした' }); return; }
-      st = next; n += 1;
+      // 手ごとに付いている捨て札の並びで、その手のあとの捨て札を本物にする(次の手が捨て札の新しいほうを動かしても、本物で動かせる)
+      st = Array.isArray(e.d) ? cardWatchPatchDiscards(CARD_BATTLE_DATA, next, e.d) : next; n += 1;
       // まんなかに出す「いま使った札」(使った・守ったカード)
       const used = (next.events || []).filter((x) => x.t === 'use' || x.t === 'guard').map((x) => ({ p: x.p, cards: x.t === 'use' ? x.cards : [x.card] })).filter((x) => x.cards.every((no) => cardOf(CARD_BATTLE_DATA, no)));
       if (used.length) last = { key: `${n}`, p: used[used.length - 1].p, cards: used[used.length - 1].cards };

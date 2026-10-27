@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f85d8ab6c7ba709
+// source-sha256: fb964356cb67a0a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -104435,9 +104435,10 @@ const CARD_WATCH_HOST = (() => {
       });
     },
     discard: (p, list) => {
-      if (h && Array.isArray(list)) {
-        h.d = h.d.map((l, i) => i === p ? list.slice() : l);
-      }
+      if (!h || !Array.isArray(list)) return;
+      h.d = h.d.map((l, i) => i === p ? list.slice() : l);
+      const last = h.log[h.log.length - 1];
+      if (last) last.d = h.d.map(l => l.slice());
     },
     tick: () => {
       if (!h) return;
@@ -104564,7 +104565,7 @@ const CARD_WATCH = (() => {
         });
         return;
       }
-      st = next;
+      st = Array.isArray(e.d) ? cardWatchPatchDiscards(CARD_BATTLE_DATA, next, e.d) : next;
       n += 1;
       const used = (next.events || []).filter(x => x.t === 'use' || x.t === 'guard').map(x => ({
         p: x.p,

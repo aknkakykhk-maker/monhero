@@ -94,6 +94,8 @@ for (let n = 0; n < 200; n++) {
     else { entry = { by: 1, act: E.cardPvpFlip(act), reveal: msg.reveal, d: [other.players[0].discard, other.players[1].discard] }; B = back; A = other; }
     log.push(entry);
     hostD = [A.players[0].discard.slice(), A.players[1].discard.slice()]; // 受け取ったの知らせで分かった相手の捨て札(hb の d)
+    // ホストは、相手の捨て札の本物が分かったら直前の手の並びも書き換える(94 の CARD_WATCH_HOST.discard と同じ)
+    log[log.length - 1] = { ...log[log.length - 1], d: hostD.map((l) => l.slice()) };
     const got = wire({ t: 'w-act', n: log.length, e: entry });
     if (!got) { err = `${steps}手目: 流した手が掃除で捨てられた`; break; }
     const next0 = E.cardWatchApply(db, W0, E.cardWatchSideEntry(got.e, 0));
@@ -122,7 +124,8 @@ for (let n = 0; n < 200; n++) {
     for (let k = 0; k < log.length && ok; k += 150) {
       const chunk = wire({ t: 'w-log', start: k, list: log.slice(k, k + 150) });
       if (!chunk) { ok = false; break; }
-      for (const e of chunk.list) { const nx = E.cardWatchApply(db, L, e); if (!nx) { ok = false; break; } L = nx; }
+      // 手ごとに付いている捨て札の並びで、そのたびに本物にする(94 の CARD_WATCH の drain と同じ)
+      for (const e of chunk.list) { const nx = E.cardWatchApply(db, L, e); if (!nx) { ok = false; break; } L = Array.isArray(e.d) ? E.cardWatchPatchDiscards(db, nx, e.d) : nx; }
     }
     if (ok) L = E.cardWatchPatchDiscards(db, L, hostD);
     if (ok && same(A, L, 0)) okLate++; else if (!firstErr) firstErr = `${n}戦目: 途中から見る人の場が合わない`;
