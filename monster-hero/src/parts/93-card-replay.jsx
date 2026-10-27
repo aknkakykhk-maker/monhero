@@ -195,6 +195,7 @@ const cardReplayCaption = (states, i) => {
 // ログに一言が無い手(攻撃おわり・ガッツにしない・守らない など)の文
 const cardReplayActText = (type, name) => {
   if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'backToAttack') return `${name}は攻撃に戻った`;
   if (type === 'pass') return `${name}は守らなかった`;
   if (type === 'reveal') return `${name}は手札を見せた`;
   if (type === 'pray') return `${name}はおいのりをした`;
