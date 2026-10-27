@@ -218,6 +218,17 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
   check('残りは次のターンへ進むところで減らし、ランの片付けで消す', /tickReikonAll\(\); \/\/ ★霊魂/.test(app) && /resetReikon\(\); \/\/ 霊魂/.test(app));
 }
 
+// ---------- ④-3 札(マーク×数) ----------
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const screen = read('monster-hero/src/parts/71-screen-battle.jsx');
+  check('マーク×数に煉獄・陽炎・狐火・逢瀬・星合・霊魂の種類がある',
+    ['rengoku', 'kagero', 'kitsunebi', 'ouse', 'hoshiai', 'reikon'].every((k) => new RegExp(`\\n  ${k}: +Object\\.freeze\\(\\{ mark:`).test(bond)));
+  check('60-app が枠ごとの数を作って画面へ渡し、画面は味方の札に足す',
+    /const kyubiOrihimeStackMarks = \(\(\) => \{/.test(app) && /kyubiOrihimeStackMarks=\{kyubiOrihimeStackMarks\}/.test(app)
+    && /Object\.entries\(kyubiOrihimeStackMarks \|\| \{\}\)\.forEach/.test(screen));
+}
+
 // ---------- 下書きのあいだは本体に出さない ----------
 const ally = read('monster-hero/data/ally-monsters.js');
 check('基礎能力は社長が決めた値(キュービ 420/150/160/70・オリヒメ 440/140/145/85)',

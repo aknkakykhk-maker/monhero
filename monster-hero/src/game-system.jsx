@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7cd0f60a870a45b5
+// generated-sha256: c00c39fbf3f2de05
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13255,6 +13255,13 @@ const BATTLE_STACK_MARKS = Object.freeze({
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
   kusabi:     Object.freeze({ mark:'🔻', img:'', label:'楔' }),                // 敵: イルミネ・ドリーミィ(影潜)が付けた楔
   dreamPain:  Object.freeze({ mark:'💤', img:'', label:'ドリームペイン', unit:'T' }), // 敵: ドリーミィの固有技(被ダメージ上昇の残りターン)
+  // キュービ・オリヒメ(2026-10-27・公開前)。数は 60-app の kyubiOrihimeStackMarks が枠ごとに作る
+  rengoku:    Object.freeze({ mark:'♨️', img:'', label:'煉獄' }),              // キュービ(九尾四相・煉獄ノ相)
+  kagero:     Object.freeze({ mark:'🌫️', img:'', label:'陽炎の完全回避' }),    // キュービ(九尾四相・陽炎ノ相)。持っていれば1
+  kitsunebi:  Object.freeze({ mark:'🦊', img:'', label:'狐火' }),              // キュービ(九尾幻灯・タクティクス)
+  ouse:       Object.freeze({ mark:'🎐', img:'', label:'逢瀬' }),              // オリヒメ(天河の契り)
+  hoshiai:    Object.freeze({ mark:'🌌', img:'', label:'星合の刻', unit:'T' }), // オリヒメ(星合の刻・タクティクス)の残りターン
+  reikon:     Object.freeze({ mark:'🕯️', img:'', label:'霊魂', unit:'T' }),     // キュービ・オリヒメの固有技の効果の残りターン
 });
 // ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
 //   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。
@@ -42354,19 +42361,26 @@ const CLASSIC_AI_COPY_CSS = `
   [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
   [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
 }`;
+// 演出の段階。60 から aiCopy.fx('appear'|'thinking'|'vanish')が来ればそれを使い、無ければ fallback(出る前 appear・出たら idle)
+const aiCopyViewPhase = (copy, fallback) => (copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback);
 const classicAiCopyLandscape = () => {
   try { return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches; }
   catch (e) { return false; }
 };
-function ClassicAiCopyCell({ copy, turnCount }) {
+function ClassicAiCopyCell({ copy, turnCount, onOpen }) {
   if (!copy) return null;
-  const out = isAiCopyOut(copy, turnCount);
+  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
+  // 消えていく0.7秒(phase==='vanish')は、ターン切れで数え上は「出ていない」になっても出ていたときの札のまま描く
+  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
+  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
   const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)), maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
   return (
-    <div data-ai-copy-cell={out ? 'out' : 'waiting'} aria-label={`${tacticsAiCopyName(copy)}(5人目の味方)`}>
+    <div data-ai-copy-cell={out ? 'out' : 'waiting'} data-ai-copy-phase={phase} aria-label={`${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`}
+      role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
+      onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
       <style>{CLASSIC_AI_COPY_CSS}</style>
-      <SorashidoCopyFx phase={out ? 'idle' : 'appear'}><span className="text-2xl leading-none">{SORASHIDO_FACE_ICON}</span></SorashidoCopyFx>
+      <SorashidoCopyFx phase={phase}><span className="text-2xl leading-none">{SORASHIDO_FACE_ICON}</span></SorashidoCopyFx>
       <span className="w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200">{copy.name || '仲間'}<br/>のコピー</span>
       {out
         ? <><span className="whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200">G {guts}/{maxGuts}</span>
@@ -42399,7 +42413,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, kyubiOrihimeStackMarks, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -42526,6 +42540,8 @@ function BattleScreen({
     if (getPermaBuff('kenshiComboPower') > 0) { const k = slots.findIndex((m) => m?.id === 'KenshiMocchi'); put(k >= 0 ? k : heroDist, 'kenshi', getPermaBuff('kenshiComboPower')); }
     // タクティクスのEXの残りターン・完全回避・根性の残り(2026-10-12 社長の追加依頼)
     if (typeof tacticsSlotCountersAt === 'function') slots.forEach((m, i) => { if (!m) return; const c = tacticsSlotCountersAt(i) || {}; put(i, 'exTurns', c.exTurns); put(i, 'avoid', c.avoid); put(i, 'konjo', c.konjo); });
+    // キュービ・オリヒメ(煉獄・陽炎・狐火・逢瀬・星合・霊魂。2026-10-27)。数は 60-app の kyubiOrihimeStackMarks
+    Object.entries(kyubiOrihimeStackMarks || {}).forEach(([i, c]) => Object.entries(c || {}).forEach(([kind, n]) => put(Number(i), kind, n)));
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => { out[Number(i)] = { ...(c || {}) }; });
     return out;
   })();
@@ -42572,7 +42588,24 @@ function BattleScreen({
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   // AIコピー(5つの遊び)の札。aiCopy は公開の印が偽なら null。タクティクスの札は盤の側(data-tactics-ai-copy)
-  const classicAiCopy = !Array.isArray(tacticsUnits) ? (aiCopy || null) : null;
+  //   コピーの手札の窓は5つの遊びの札・タクティクスの札(data-tactics-ai-copy)の両方から開くので、ここに1つだけ置く。
+  //   消えるとき(ターン切れ・WAVE の始めで aiCopy が null になったとき)は、直前の形を0.7秒だけ fx='vanish' で描いてから消す(60 は触らない)。
+  //   公開の印が偽なら aiCopy はずっと null なので、どちらも何も出さない
+  const [copyHandOpen, setCopyHandOpen] = useState(false);
+  const [copyGhost, setCopyGhost] = useState(null);
+  const copyPrevRef = useRef(null);
+  useEffect(() => {
+    if (aiCopy) { copyPrevRef.current = aiCopy; setCopyGhost(null); return undefined; }
+    const prev = copyPrevRef.current;
+    copyPrevRef.current = null;
+    setCopyHandOpen(false);
+    if (!prev) return undefined;
+    setCopyGhost({ ...prev, fx: 'vanish' });
+    const timer = setTimeout(() => setCopyGhost(null), 700);
+    return () => clearTimeout(timer);
+  }, [aiCopy]);
+  const shownAiCopy = aiCopy || copyGhost;
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? (shownAiCopy || null) : null;
   // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
@@ -43911,19 +43944,25 @@ function BattleScreen({
               // コピーは、コピーが立つマス(pos)の枠に出す(2026-10-27 部長: 見せ方は開発部の部品 24-sorashido-copy-view.jsx)。
               //   空いたマスなら元の子の絵を SorashidoCopyFx で包んで置く(出る前は appear・出たら idle)。重なるときは絵を出さず札だけ
               //   上に次に使う札(SorashidoNextCardBadge)、下にライフ・狙われる%の小さな札
-              const copySrc=aiCopy&&aiCopy.pos===i?slots[aiCopy.srcSlot]:null;
-              const copyChip=tacticsNewLayout&&aiCopy&&aiCopy.pos===i?(<>
-                {copySrc&&!s&&!aiCopy.stacked&&<div data-tactics-ai-copy-art={i} className="absolute inset-0 z-[24] flex items-center justify-center pointer-events-none">
-                  <SorashidoCopyFx phase={copyStanding?'idle':'appear'}>
+              //   消える0.7秒は shownAiCopy(直前の形・fx='vanish')で描く。狙われる%などの数えは aiCopy のまま
+              const tCopy=shownAiCopy;
+              const tCopyPhase=aiCopyViewPhase(tCopy,copyStanding?'idle':'appear');
+              const tCopyOut=copyStanding||tCopyPhase==='vanish';
+              const copySrc=tCopy&&tCopy.pos===i?slots[tCopy.srcSlot]:null;
+              const copyChip=tacticsNewLayout&&tCopy&&tCopy.pos===i?(<>
+                {copySrc&&!s&&!tCopy.stacked&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute inset-0 z-[24] flex items-center justify-center pointer-events-none">
+                  <SorashidoCopyFx phase={tCopyPhase}>
                     <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
                   </SorashidoCopyFx>
                 </div>}
                 <div data-tactics-ai-copy-next={i} className="absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none">
-                  <SorashidoNextCardBadge card={copyStanding?aiCopy.nextCard:null} turnsLeft={aiCopy.turnsLeft}/>
+                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft}/>
                 </div>
-                <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={copyStanding?'1':'0'}
-                  className="absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap">
-                  <span className="min-w-0 truncate">🤖{aiCopy.stacked?'重なる ':''}{copyStanding?`ライフ${aiCopy.hp}`:'次のターンから'}</span>
+                {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
+                <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={tCopyOut?'1':'0'} role={aiCopy?'button':undefined} aria-label={aiCopy?'コピーの手札を見る':undefined}
+                  onClick={aiCopy?(e)=>{e.stopPropagation();setCopyHandOpen(true);}:undefined}
+                  className={`absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
+                  <span className="min-w-0 truncate">🤖{tCopy.stacked?'重なる ':''}{tCopyOut?`ライフ${tCopy.hp}`:'次のターンから'}</span>
                   {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
                 </div>
               </>):null;
@@ -44279,7 +44318,10 @@ function BattleScreen({
               </button>);
             })}
           </div>
-          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount}/>}
+          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount} onOpen={()=>setCopyHandOpen(true)}/>}
+          {/* 手札の窓は body へ出す(横向きでは敵の段の札が枠の並びより上の重なりにあり、窓の上へ出てしまったため) */}
+          {aiCopy&&copyHandOpen&&typeof document!=='undefined'&&ReactDOM.createPortal(<SorashidoCopyHandSheet open copyName={aiCopy.name||'仲間'} turnsLeft={aiCopy.turnsLeft}
+            cards={Array.isArray(aiCopy.hand)?aiCopy.hand:[]} nextCard={aiCopy.nextCard||null} guts={aiCopy.guts} maxGuts={aiCopy.maxGuts} onClose={()=>setCopyHandOpen(false)}/>,document.body)}
           </div>
         </div>
         {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える
@@ -64362,6 +64404,19 @@ function MonsterHeroGame() {
     const next = Object.fromEntries(entries.map(([k, v]) => [k, tickReikon(v)]).filter(([, v]) => v.wait > 0 || v.turns > 0));
     reikonRef.current = next; setReikonView(next);
   };
+  // ★キュービ・オリヒメの「マーク×数」(2026-10-27・④-3)。{ 枠: { kind: 数 } } を作り、バトル画面の allyStackCounts へ足す。
+  //   キー 'party'(5つの遊び)は勇者モンを置いた距離の枠へ。描いている時点の state(kyubiView・orihimeView・reikonView)から読む
+  const kyubiOrihimeStackMarks = (() => {
+    const out = {}, slotOf = (key) => (key === 'party' ? initialBattleDistanceRef.current : Number(key));
+    const put = (key, kind, n) => { const i = slotOf(key), c = Math.max(0, Math.floor(Number(n) || 0)); if (!Number.isInteger(i) || c <= 0) return; out[i] = { ...(out[i] || {}), [kind]: c }; };
+    Object.entries(kyubiView.rengoku || {}).forEach(([k, n]) => put(k, 'rengoku', n));
+    Object.entries(kyubiView.kagero || {}).forEach(([k, v]) => put(k, 'kagero', kageroOf(v).ready ? 1 : 0));
+    Object.entries(kyubiView.kitsunebi || {}).forEach(([k, v]) => { const f = kitsunebiOf(v); if (f.active) put(k, 'kitsunebi', f.fires); });
+    Object.entries(orihimeView.ouse || {}).forEach(([k, n]) => put(k, 'ouse', n));
+    Object.entries(orihimeView.hoshiai || {}).forEach(([k, v]) => put(k, 'hoshiai', v && v.turns));
+    Object.entries(reikonView || {}).forEach(([k, v]) => { const r = reikonOf(v); put(k, 'reikon', r.wait > 0 ? 0 : r.turns); });
+    return out;
+  })();
   // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
   const tickKyubiKagero = () => {
     const cur = kyubiRef.current;
@@ -85082,7 +85137,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} kyubiOrihimeStackMarks={kyubiOrihimeStackMarks} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
