@@ -23,10 +23,17 @@
 //   node tools/boot/ja-wrap-beat-screen-check.js --list   # 切れた所も全部出す
 'use strict';
 const http = require('http'), path = require('path'), fs = require('fs');
-const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8971;
+const ROOT = path.resolve(__dirname, '..', '..');
+// 配る口は空いている番号を使う(分けた検査を並べて回してもぶつからないように)
+let PORT = 0;
 const LIST = process.argv.includes('--list');
 // マルチの画面だけを巡る(直すときに早く回すため)
-const MULTI_ONLY = process.argv.includes('--multi-only');
+// ★1本で巡ると30分を超え、run-checks の上限(600秒)に収まらないので、巡る画面のまとまりで分けて回す(2026-10-27)。
+//   --part base(既定・もとの11画面) / extra(ランキングの窓・HELL の鍵・ノーツ図鑑・これまでの記録) / multi(マルチ) / tutorial(練習の案内) / --all(全部)
+//   extra・multi・tutorial は、それぞれ ja-wrap-beat-extra-check.js・ja-wrap-beat-multi-check.js・ja-wrap-beat-tutorial-check.js から呼ぶ
+const PART = process.argv.includes('--all') ? 'all' : process.argv.includes('--multi-only') ? 'multi'
+  : (process.argv[process.argv.indexOf('--part') + 1] && process.argv.includes('--part') ? process.argv[process.argv.indexOf('--part') + 1] : 'base');
+const MULTI_ONLY = PART === 'multi';
 // 巡る画面を名前で絞る(直すときに早く回すため)。例: ONLY='ランキング|図鑑|練習' node tools/boot/ja-wrap-beat-screen-check.js --list
 const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY) : null;
 // 言葉の途中で折れてよい数。2026-10-26 に0まで直した
@@ -43,7 +50,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 const serve = () => new Promise((r) => { const s = http.createServer((req, res) => {
   const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
+  res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(0, () => { PORT = s.address().port; r(s); }); });
 
 // モードえらびから押していく道筋(「!」で始まる字は、見えているボタンの字)
 const SCREENS = [
@@ -58,7 +65,9 @@ const SCREENS = [
   ['オプション・軽さ', ['!オプション', '!軽さ']],
   ['ランキング', ['!ランキング']],
   ['記録', ['!記録']],
-  // 2026-10-27 足した(ビート部 リバースくん・部長テンポくんの依頼「まだ回っていない画面を足す」)
+];
+// extra の画面(2026-10-27 足した・ビート部 リバースくん・部長テンポくんの依頼「まだ回っていない画面を足す」)
+const SCREENS_EXTRA = [
   ['ランキング・マスモン', ['!ランキング', '!マスモンランキング'], { emptyDb: true }],
   ['曲えらび・全国ランキング(この曲)', ['!ソロライブ', '#[data-rhythm-demo-ranking]'], { emptyDb: true }],
   ['曲えらび・全国ランキング(総合)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!総合'], { emptyDb: true }],
@@ -338,7 +347,9 @@ if (require.main === module) (async () => {
         await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
         await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(1000); await closeAll();
       };
-      for (const [name, steps, opts = {}] of (MULTI_ONLY ? [] : SCREENS.filter(([nm]) => !ONLY || ONLY.test(nm)))) {
+      const pick = ONLY ? [...SCREENS, ...SCREENS_EXTRA].filter(([nm]) => ONLY.test(nm))
+        : PART === 'all' ? [...SCREENS, ...SCREENS_EXTRA] : PART === 'extra' ? SCREENS_EXTRA : PART === 'base' ? SCREENS : [];
+      for (const [name, steps, opts = {}] of pick) {
         emptyDb = !!opts.emptyDb;
         try {
           await toModeSelect(steps[0] === '@HOME');
@@ -360,7 +371,7 @@ if (require.main === module) (async () => {
       }
       await page.close();
       // 練習の案内とマルチの画面
-      for (const [name, wraps, clips] of [...(MULTI_ONLY || (ONLY && !ONLY.test('練習の案内')) ? [] : await runTutorial(browser, W, H)), ...(ONLY && !ONLY.test('マルチ') ? [] : await runMulti(browser, W, H))]) {
+      for (const [name, wraps, clips] of [...((ONLY ? ONLY.test('練習の案内') : (PART === 'tutorial' || PART === 'all')) ? await runTutorial(browser, W, H) : []), ...((ONLY ? ONLY.test('マルチ') : (PART === 'multi' || PART === 'all')) ? await runMulti(browser, W, H) : [])]) {
         if (name.endsWith('(途中で止まった)') || (wraps[0] || '').startsWith('(')) { check(`${name} ${W}×${H} を開けた`, false, wraps[0] || ''); continue; }
         for (const x of wraps) found.push(`${name} ${W}×${H}: ${x}`);
         for (const [kind, t] of clips) clipped.push(`${name} ${W}×${H}: ${kind}「${t}」`);
