@@ -47,6 +47,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
       const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
       // ランキングの送信は本番へ行かせない(空の返事で受ける)。ゲーム側の「自動操作では書き込まない」止めも外す(26-supabase.jsx)
       await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
+      // 助手の中継(Edge Function)は本物の AI を呼ぶので止める(breeder-level-table-check が見張る・2026-10-27)
+      await page.route('**/functions/v1/**', (r) => r.abort());
       await page.addInitScript((speed) => {
         window.__mhSupabaseStubbed = true;
         const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
