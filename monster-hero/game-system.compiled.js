@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 641d3cc5a56c5079
+// source-sha256: d206c951f39af8b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96237,6 +96237,21 @@ const CardPackOpen = ({
     setSeLog(l => [...l.slice(-40), name]);
   };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const listRef = useRef(null);
+  const [listH, setListH] = useState(0);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return undefined;
+    const on = () => setListH(el.clientHeight);
+    on();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(on) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', on);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', on);
+    };
+  }, []);
   const later = (fn, ms) => {
     timers.current.push(setTimeout(fn, ms));
   };
@@ -96302,6 +96317,10 @@ const CardPackOpen = ({
     setSpot(null);
   };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
+  const cols = cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
+  const rows = Math.ceil(cards.length / cols);
+  const gridMaxW = listH > 0 ? Math.max(200, Math.floor(((listH - 52) / rows - 24) * 5 / 7 * cols + 8 * (cols - 1) + 8)) : null;
+  const spotW = `min(62vw, 260px, ${Math.max(140, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 844) - 120) * 5 / 7))}px)`;
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-pack-open": true,
@@ -96313,6 +96332,7 @@ const CardPackOpen = ({
     accent: "text-amber-200",
     note: result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''
   }), React.createElement("div", {
+    ref: listRef,
     className: `${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`
   }, phase !== 'open' ? React.createElement("button", {
     type: "button",
@@ -96342,7 +96362,11 @@ const CardPackOpen = ({
   }), phase === 'closed' && React.createElement("span", {
     className: "absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white"
   }, "タップで開ける")) : React.createElement("div", {
-    className: `grid w-full gap-2 ${cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 'grid-cols-4' : 'grid-cols-3'} px-1`
+    "data-card-pack-grid": true,
+    className: `grid w-full gap-2 ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`,
+    style: gridMaxW ? {
+      maxWidth: gridMaxW
+    } : undefined
   }, cards.map((c, i) => {
     const on = flipped.includes(i);
     const card = cardOf(db, c.no);
@@ -96436,7 +96460,10 @@ const CardPackOpen = ({
       "aria-hidden": "true",
       className: `mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`
     }), React.createElement("div", {
-      className: `relative w-[62vw] max-w-[260px] ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`
+      className: `relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`,
+      style: {
+        width: spotW
+      }
     }, React.createElement("div", {
       className: `relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`
     }, React.createElement("img", {
