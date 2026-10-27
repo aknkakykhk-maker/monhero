@@ -69,6 +69,22 @@ check('ソラシドの「〜ぜ・・・！」は1行に1回まで', sora.every(
 check('ソラシドは沖縄の言葉を少し使う(なんくるないさ〜)', sora.some((r) => /なんくるないさ/.test(r.t)));
 check('最後はソラシドから {name} へのあいさつ', rows[rows.length - 1].who === 'sorashido' && rows[rows.length - 1].t.includes('{name}'));
 
+// ---- 真ん中に出すモンスター(monsters:[{ id, pose }]・2026-10-27 社長「この形で作る」) ----
+const POSES = ['in', 'idle', 'back', 'front', 'approach', 'hop', 'hide'];
+const monRows = rows.filter((r) => Array.isArray(r.monsters));
+check('monsters の id はキュービ・オリヒメだけ、pose は7つのどれか', monRows.length > 0 && monRows.every((r) => r.monsters.every((m) => ['Kyubi', 'Orihime'].includes(m.id) && POSES.includes(m.pose))));
+const posesIn = (i) => (scenes[i] || []).filter((r) => /monsters:\[/.test(r)).map((r) => [...r.matchAll(/id:'(\w+)', pose:'(\w+)'/g)].map((m) => `${m[1]}:${m[2]}`).join(','));
+const flat = (i) => posesIn(i).join(' / ');
+check('①② には出さない', posesIn(0).length === 0 && posesIn(1).length === 0);
+check('③ オリヒメは現れて後ずさる・キュービは現れて前に出る', /Orihime:in/.test(flat(2)) && /Orihime:back/.test(flat(2)) && /Kyubi:in/.test(flat(2)) && /Kyubi:front/.test(flat(2)), flat(2));
+check('④ 2体とも待機 → オリヒメは寄る・キュービは後ずさって待機へ', /Orihime:idle,Kyubi:idle/.test(posesIn(3)[0] || '') && /Orihime:approach/.test(flat(3)) && /Kyubi:back/.test(flat(3)) && /Kyubi:idle$/.test(posesIn(3).slice(-1)[0] || ''), flat(3));
+check('⑤ 2体とも跳ねる → 待機(打ち上げも待機)', /Orihime:hop,Kyubi:hop/.test(flat(4)) && /Orihime:idle,Kyubi:idle$/.test(posesIn(4).slice(-1)[0] || ''), flat(4));
+const otherMon = EVENT_REPLAYS.filter((ev) => ev.id !== 'sorashido_join_2026_10_27' && (ev.script || []).some((l) => l && l.monsters));
+check('ほかのお話(ジャック・きゅうこなど)には monsters を付けていない', otherMon.length === 0, otherMon.map((ev) => ev.id).join(','));
+const art = read('monster-hero/src/parts/21-assistant.jsx');
+check('絵は全身の絵(KYUBI_IMG・ORIHIME_IMG)、待機アニメは withMonsterIdleArt', /Kyubi: typeof KYUBI_IMG/.test(art) && /Orihime: typeof ORIHIME_IMG/.test(art)
+  && app.includes("m.pose==='idle'?withMonsterIdleArt(m.id,art,{fill:true,own:true}):art"));
+
 // ---- 呼び方(社長の決定・ASSISTANT_PEER_CALLS と同じ) ----
 const callOf = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラ', dra: 'ソラさん', atsu: 'ソラシド', kyuko: 'ソラ' };
 check('ほかの助手からの呼び方が ASSISTANT_PEER_CALLS と同じ', Object.entries(callOf).every(([id, c]) => PEER[id] && PEER[id].sorashido === c && CALLS[id] === c));

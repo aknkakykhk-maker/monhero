@@ -9809,6 +9809,7 @@ const ASSISTANT_KYUKO_JOIN_STORY_CALLS = { mua: 'きゅきゅ', kiki: 'きゅう
 // ★山場④の「攻略より好きで通じる」と、⑤の「推しのそばにいたいから」をつなげる。④はシリアスなので「笑」や顔文字を入れない(台帳 2026-10-23)
 // ★キュービとオリヒメはモンスター。人の言葉は話さず、鳴き声としぐさだけ(きゅうこのお話のイルミネ・ドリーミィと同じ形)
 // ★元のテスターさんご本人の暮らし(仕事・住まい・年齢・家族・性別など)は書かない
+// monsters:[{ id, pose }] … 真ん中に出すキュービ・オリヒメの全身の絵と動き(社長の決定)。書いた行から、次に書いた行まで続く。①②は出さない
 // 公開の印 assistantSorashido が立つまでは流れず、回想にも出ない。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
 // atsu:'with' はあつを解放している人だけ、atsu:'without' はその代わりに解放していない人へ出す行(きゅうこのお話と同じ)
 const ASSISTANT_SORASHIDO_JOIN_STORY = [
@@ -9841,17 +9842,17 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'sorashido', e:'excited',  t:'……出た！ 風が変わるの、あと少し！ 今度こそ来るぜ・・・！' },
   { who:'dra',       e:'normal',   t:'ふむ。じゃあ、もう少しだけ付き合ってやるか' },
   // ---- ③ 風鈴の音で、オリヒメが現れる ----
-  { who:'orihime',   e:'normal',   t:'……りん……(風鈴の音)' },
+  { who:'orihime',   e:'normal',   monsters:[{ id:'Orihime', pose:'in' }], t:'……りん……(風鈴の音)' },
   { who:'mua',       e:'surprise', t:'今の音……！' },
-  { who:'kyubi',     e:'normal',   t:'コン……(提灯の明かりが、波の上でゆれる)' },
+  { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'in' }, { id:'Kyubi', pose:'in' }], t:'コン……(提灯の明かりが、波の上でゆれる)' },
   { who:'kiki',      e:'surprise', t:'あれま……海の上に、羽衣がふわっと……！' },
   { who:'orihime',   e:'normal',   t:'…………(羽衣がひるがえる)' },
   { who:'sorashido', e:'surprise', t:'うそ……ほんとに来た……オリヒメと、キュービ……' },
   { who:'momosuke',  e:'excited',  t:'きれい〜！！ みんな見て見て！ もっと近くで見よ！♡' },
   { who:'mua',       e:'excited',  t:'わ〜っ、ほんとにいた！ まぢできれい〜！' },
-  { who:'orihime',   e:'normal',   t:'りっ……！(羽衣で顔をかくして、後ろへ下がる)' },
+  { who:'orihime',   e:'normal',   monsters:[{ id:'Orihime', pose:'back' }, { id:'Kyubi', pose:'in' }], t:'りっ……！(羽衣で顔をかくして、後ろへ下がる)' },
   { who:'dra',       e:'surprise', t:'まずい、人が多すぎて驚いてる。逃げるぞ' },
-  { who:'kyubi',     e:'normal',   t:'コンッ！(提灯をかかげて、オリヒメの前に立ちふさがる)' },
+  { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'back' }, { id:'Kyubi', pose:'front' }], t:'コンッ！(提灯をかかげて、オリヒメの前に立ちふさがる)' },
   { who:'atsu',      e:'surprise', atsu:'with',    t:'うわ、狐の子が前に出た！ 本気で守ってる！' },
   { who:'kiki',      e:'surprise', atsu:'without', t:'キュービが、オリヒメを守って前に出てきたでつ……！' },
   { who:'kyubi',     e:'normal',   t:'ウゥ……(提灯の火が、ぼうっと大きくなる)' },
@@ -9860,13 +9861,13 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'sorashido', e:'normal',   t:'……みんな、ちょっとだけ下がってて' },
   { who:'momosuke',  e:'surprise', t:'ソラ……？' },
   { who:'sorashido', e:'normal',   t:'語りたいことは、いっぱいある。でも今は、言葉じゃないと思う' },
-  { who:'sorashido', e:'normal',   t:'(三線を取り出して、風鈴の音に合わせて、そっと弦をはじく)' },
+  { who:'sorashido', e:'normal',   monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'idle' }], t:'(三線を取り出して、風鈴の音に合わせて、そっと弦をはじく)' },
   { who:'orihime',   e:'normal',   t:'……りん……りん……' },
   { who:'kiki',      e:'surprise', t:'風鈴と三線の音が……重なってまつ……' },
-  { who:'kyubi',     e:'normal',   t:'コン……(提灯の火が、少しずつ小さくなる)' },
+  { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'back' }], t:'コン……(提灯の火が、少しずつ小さくなる)' },
   { who:'dra',       e:'normal',   t:'……データじゃなくて、あの子たちの好きな音で呼んだのか' },
-  { who:'orihime',   e:'normal',   t:'…………(そっと近づいて、ソラシドの袖を引く)' },
-  { who:'kyubi',     e:'normal',   t:'……コン(提灯を下ろして、となりに座る)' },
+  { who:'orihime',   e:'normal',   monsters:[{ id:'Orihime', pose:'approach' }, { id:'Kyubi', pose:'back' }], t:'…………(そっと近づいて、ソラシドの袖を引く)' },
+  { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'approach' }, { id:'Kyubi', pose:'idle' }], t:'……コン(提灯を下ろして、となりに座る)' },
   { who:'mua',       e:'surprise', t:'今……袖、ひっぱった……！' },
   { who:'sorashido', e:'crying',   t:'う……うぉぉぉ……！' },
   { who:'sorashido', e:'crying',   t:'ずっと好きだった。会える日を調べてたのも、ただ会いたかったからなんだ……' },
@@ -9875,9 +9876,9 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'kiki',      e:'happy',    t:'好きって気持ちが、ちゃんと届いたんでつね' },
   // ---- ⑤ 2体は仲間に。ソラシドは助手になる。打ち上げ ----
   { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、ソラちんから離れないんだけど〜' },
-  { who:'kyubi',     e:'normal',   t:'コン♪(ぴょんと跳ねて、しっぽをふる)' },
+  { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'hop' }, { id:'Kyubi', pose:'hop' }], t:'コン♪(ぴょんと跳ねて、しっぽをふる)' },
   { who:'orihime',   e:'normal',   t:'りん♪(ふわりと寄って、羽衣をソラシドの肩にかける)' },
-  { who:'dra',       e:'happy',    t:'いっしょにいたいってことだな。えへへ' },
+  { who:'dra',       e:'happy',    monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'idle' }], t:'いっしょにいたいってことだな。えへへ' },
   { who:'momosuke',  e:'wink',     t:'ねえソラ、2体といっしょに、ここで助手やればいいじゃん♡' },
   { who:'sorashido', e:'excited',  t:'なに！？ ……やる！ 推しのそばにいたいから！ 理由はそれだけだぜ・・・！' },
   { who:'mua',       e:'wink',     t:'理由が正直すぎｗ でも、そういうの好きぢゃん' },
