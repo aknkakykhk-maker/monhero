@@ -37,7 +37,7 @@ const slice = (from, to) => {
 
 // (1) 被ダメージ
 const incomingBody = slice(
-  'const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {',
+  'const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null, targetDef=null) => {',
   '  }, [effectiveDef,');
 // 勇者特性「生命の源」(1〜5ターン目の被ダメ軽減)の決めごとも本体から持ち込む。ターン数は既定で0(効かない)
 const lifeSourceSrc = `const LIFE_SOURCE_MONSTER_IDS${slice('const LIFE_SOURCE_MONSTER_IDS', '// 固有技「大樹の加護」')}`;
@@ -57,7 +57,7 @@ const makeIncoming = (deps) => new Function('d', `
   const fateWheelRef = d.fateWheelRef || { current: null };
   // 新モードの1体ぶんは tacticsBattleUnit で読む(EXスキルの上乗せはここでは無いものとして盤面の値を返す)
   const tacticsBattleUnit = d.tacticsBattleUnit || ((slot) => (tacticsUnitsRef.current || [])[slot]);
-  return (intent, targetSlot=null) => {${incomingBody}};
+  return (intent, targetSlot=null, targetDef=null) => {${incomingBody}};
 `)(deps);
 
 // (2) 与ダメージの勇者特性ぶん

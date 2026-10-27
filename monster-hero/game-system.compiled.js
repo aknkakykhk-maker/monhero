@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4e427343d3481fc
+// source-sha256: 869df0b3a2e30d80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -24393,7 +24393,10 @@ const TacticsExCutin = ({
     }
   }, cutin.exName), React.createElement("div", {
     className: "ex-cutin__sub"
-  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''), cutin.note ? React.createElement("div", {
+  }, (() => {
+    const t = `${cutin.monName}${cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}`;
+    return typeof jaWrap === 'function' ? jaWrap(t) : t;
+  })()), cutin.note ? React.createElement("div", {
     "data-ex-cutin-note": true,
     className: "ex-cutin__note"
   }, cutin.note) : null)), React.createElement("div", {
@@ -42575,9 +42578,10 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
   });
   if (isTacticsAiCopyStanding(copy)) {
     const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
+    const mult = Array.isArray(hate) ? tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) : 1;
     list.push({
       index: TACTICS_AI_COPY_TARGET,
-      weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0)
+      weight: (1 + safeBias * (1 - remain)) * mult
     });
   }
   return list;
@@ -43065,6 +43069,7 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
   if (intent.targetsAll) return alive;
+  if (intent.targetCopy) return [];
   if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot)) {
     const dist = Number.isInteger(intent.sweepDist) ? intent.sweepDist : enemyDist;
     const onSpot = alive.filter(index => index === dist);
@@ -70434,6 +70439,7 @@ function BattleScreen({
   tacticsCoverSlot,
   tacticsHate,
   tacticsHateOn,
+  aiCopy,
   tacticsExIntroVisible,
   dismissTacticsExIntro,
   tacticsPandoraForms,
@@ -72622,7 +72628,20 @@ function BattleScreen({
     const slotAimed = aimedSlots.includes(i);
     const slotAimHit = slotAimed ? plannedHitWithCover(i) : null;
     const slotExInfo = tacticsExInfo ? tacticsExInfo(i) : null;
-    const hatePct = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChances(tacticsUnits, tacticsHate)[i] : null;
+    const copyStanding = !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount;
+    const chancesNow = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, copyStanding ? aiCopy : null) : null;
+    const hatePct = chancesNow ? chancesNow.slots[i] : null;
+    const copyChip = tacticsNewLayout && aiCopy && aiCopy.pos === i ? React.createElement("div", {
+      "data-tactics-ai-copy": i,
+      "data-tactics-ai-copy-out": copyStanding ? '1' : '0',
+      className: "absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap"
+    }, React.createElement("span", {
+      className: "min-w-0 truncate"
+    }, "🤖", aiCopy.stacked ? '重なる ' : '', copyStanding ? `ライフ${aiCopy.hp}` : '次のターンから'), copyStanding && React.createElement("span", {
+      className: "shrink-0 tabular-nums text-sky-200/90"
+    }, "あと", aiCopy.turnsLeft), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+      className: "shrink-0 tabular-nums text-rose-200"
+    }, "狙", chancesNow.copy, "%")) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -72817,7 +72836,7 @@ function BattleScreen({
       className: "shrink-0"
     }, "🎯", slotAimHit.taken > 0 ? `-${tacticsAimNum(slotAimHit.taken)}` : ''), slotAimHit.parts.length > 1 ? React.createElement("span", {
       className: "min-w-0 truncate text-[7px] font-bold text-red-200/85"
-    }, tacticsAimParts(slotAimHit.parts, tacticsAimNum(slotAimHit.taken))) : null))), tacticsNewLayout && (() => {
+    }, tacticsAimParts(slotAimHit.parts, tacticsAimNum(slotAimHit.taken))) : null))), copyChip, tacticsNewLayout && (() => {
       const last = popups.filter(p => p.slot === i && p.side !== 'enemy').slice(-1)[0];
       const f = tacticsSlotFx && tacticsSlotFx[i];
       let kind = last ? tacticsAuraKindOf(last.text, last.side) : null,
@@ -94299,7 +94318,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_normal: [1536, 1024, 396, 26, 715, 998],
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
-  myua_wink: [1536, 1024, 379, 28, 760, 996]
+  myua_wink: [1536, 1024, 379, 28, 760, 996],
+  sorashido_angry: [384, 512, 0, 0, 384, 512],
+  sorashido_crying: [384, 512, 0, 0, 384, 512],
+  sorashido_excited: [384, 512, 0, 3, 384, 509],
+  sorashido_happy: [384, 512, 0, 0, 384, 512],
+  sorashido_normal: [384, 512, 0, 0, 384, 512],
+  sorashido_surprise: [384, 512, 0, 2, 384, 510],
+  sorashido_troubled: [384, 512, 0, 0, 384, 512],
+  sorashido_wink: [384, 512, 0, 2, 384, 510]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -106267,7 +106294,8 @@ function MonsterHeroGame() {
     };
   };
   const tacticsHateOnFor = mode => isTacticsMode(mode) && tacticsHateProtoOn();
-  const aimTacticsIntent = (intent, mode) => isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null) : intent;
+  const aimTacticsIntent = (intent, mode) => isTacticsMode(mode) ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null, tacticsAiCopyAimable()) : intent;
+  const tacticsAiCopyAimable = () => EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsAiCopyStanding(aiCopyRef.current) ? aiCopyRef.current : null;
   const commitTacticsHate = next => {
     tacticsHateRef.current = next;
     setTacticsHate(next);
@@ -106295,13 +106323,18 @@ function MonsterHeroGame() {
     }, units, units.map(u => u && u.id)));
     const copy = aiCopyRef.current;
     if (copy && isTacticsAiCopyStanding(copy)) {
+      const dealt = Math.max(0, Number(copy.dealtNow) || 0);
+      const teamDealt = tacticsHateDealtRef.current.reduce((a, v) => a + (Number(v) || 0), 0) + dealt;
       const hate = tacticsAiCopyHateStep(copy, {
-        gain: copy.hateGainNow || 0
+        gain: copy.hateGainNow || 0,
+        dealt,
+        teamDealt
       }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
       commitAiCopy({
         ...copy,
         hate,
-        hateGainNow: 0
+        hateGainNow: 0,
+        dealtNow: 0
       });
     }
     clearTacticsHateTurn();
@@ -117835,13 +117868,13 @@ function MonsterHeroGame() {
     };
   }).filter(row => row.traits.length > 0);
   const soulBattleSummaryParts = soulBattleHasEffects ? [soulBattleParty.damageReduction > 0 ? `被ダメ -${soulBattleParty.damageReduction.toFixed(1).replace(/\\.0$/, '')}%` : null, unifiedSpecialDefense.rate > 0 ? `特殊防御 ${unifiedSpecialDefense.rate.toFixed(1).replace(/\\.0$/, '')}%` : null, battleIntimidate > 0 ? `威圧 ${battleIntimidate.toFixed(1).replace(/\\.0$/, '')}%` : null, soulBattleParty.autoGutsMultiplier > 1 ? `自動G ×${soulBattleParty.autoGutsMultiplier.toFixed(3)}` : null, soulBattleParty.coordinationCardBonus > 0 ? `カード +${soulBattleParty.coordinationCardBonus}` : null].filter(Boolean) : [];
-  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot = null) => {
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot = null, targetDef = null) => {
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')) * fateWheelEnemyAtkMult(fateWheelRef.current));
     const traitHeroId = !isTacticsMode(runMode) ? mainHero?.id : Number.isInteger(targetSlot) ? tacticsUnitsRef.current[targetSlot]?.id || null : mainHero?.id;
     const chuuniCutActive = (traitHeroId === 'Ark' || traitHeroId === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2;
     const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot) ? tacticsBattleUnit(targetSlot) : null;
-    const defVal = (targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef) * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));
+    const defVal = (targetUnit ? resolveEffectiveMaxStat(Number.isFinite(targetDef) ? targetDef : normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef) * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));
     const defenseRate = Math.min(0.5, defVal * 0.00015);
     const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0) * lifeSourceDamageMult(traitHeroId, turnCount);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
@@ -119254,13 +119287,25 @@ function MonsterHeroGame() {
         } else if (isTacticsMode(runMode)) {
           tookEnemyAttack = true;
           const targets = tacticsTargetsNow(intent, actingEnemyDist);
+          const copyNow = aiCopyRef.current;
+          const copyHit = EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isAiCopyOut(copyNow, turnCount) && tacticsIntentHitsAiCopy(intent, copyNow);
+          if (copyHit) {
+            const rushN = intent.variant === 'rush' ? Math.max(1, Math.floor(Number(intent.hits) || 1)) : 1;
+            const hitC = resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent, copyNow.srcSlot, copyNow.def), rushN, 0, 0);
+            const fdC = applyImmediateTakenReduction(hitC.taken);
+            const afterC = damageTacticsAiCopy(copyNow, fdC);
+            addPopup(`🤖 ${tacticsAiCopyName(copyNow)} −${fdC}`, 'hero', 'text-sky-200 font-black text-lg drop-shadow-md');
+            pushBattleLog(`${tacticsAiCopyName(copyNow)}に${fdC}ダメージ`, 'enemy');
+            if (afterC) commitAiCopy(afterC);else clearAiCopy('倒されて消えた');
+            if (!targets.length) await battleWait(600);
+          }
           const coverSlot = tacticsCoverSlotNow();
           if (coverSlot != null && targets.length) {
             addPopup(`かばう！ ${tacticsTargetName(tacticsUnitsRef.current, coverSlot)}`, 'hero', 'text-sky-300 font-black text-xl drop-shadow-md');
             pushBattleLog(`${battleActorName(coverSlot)}が攻撃をすべて引き受けた`);
             await battleWait(600);
           }
-          if (!targets.length) {
+          if (!targets.length && copyHit) {} else if (!targets.length) {
             addPopup('当たらなかった！', 'hero', 'text-cyan-300 font-black text-xl drop-shadow-md');
             await battleWait(700);
           } else {
@@ -120981,6 +121026,55 @@ function MonsterHeroGame() {
       await battleWait(250);
     }
     popupSlotRef.current = null;
+    {
+      const copy = aiCopyRef.current;
+      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) && isAiCopyOut(copy, turnCount) && isTacticsAiCopyStanding(copy)) {
+        const srcMon = slots[copy.srcSlot];
+        const srcUnit = tacticsBattleUnit(copy.srcSlot);
+        if (srcMon && srcUnit && srcUnit.atk > 0) {
+          const distFrom = copy.srcSlot + (attackDistance - copy.pos);
+          const atkRate = copy.atk / srcUnit.atk;
+          const dmgOf = c => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
+          const piles = handPileRef.current;
+          const pool = [...(piles.deck || []), ...(piles.graveyard || [])].filter(c => c && c.type !== 'unique' && dmgOf(c) > 0);
+          const uniq = copy.uniqueCard && dmgOf(copy.uniqueCard) > 0 ? copy.uniqueCard : null;
+          const planned = planAiCopyTurn({
+            ...copy,
+            guts: copy.maxGuts,
+            uniqueCardUid: uniq ? uniq.uid : null
+          }, {
+            deck: uniq ? [...pool, uniq] : pool,
+            score: dmgOf,
+            costOf: c => getCardGuts(c, copy.srcSlot)
+          });
+          let dealtC = 0,
+            gainC = 0;
+          (planned.picks || []).forEach((card, k) => {
+            const d = dmgOf(card);
+            if (!(d > 0)) return;
+            totalDmg += d;
+            dealtC += d;
+            gainC += tacticsHateOnFor(runMode) ? tacticsHateCardGain(card, copy.srcMonsterId, k > 0 ? 0.5 : 1) : 0;
+            attackHits.push({
+              dmg: d,
+              isCrit: false,
+              slotIdx: copy.srcSlot,
+              aiCopy: true,
+              isSpecial: card.type === 'unique',
+              skillName: `${tacticsAiCopyName(copy)}の${card.name || card.baseName || '攻撃'}`,
+              isUnique: card.type === 'unique',
+              monId: card.type === 'unique' ? card.monId : undefined
+            });
+          });
+          commitAiCopy({
+            ...planned,
+            hateGainNow: (Number(copy.hateGainNow) || 0) + gainC,
+            dealtNow: (Number(copy.dealtNow) || 0) + dealtC
+          });
+          if (!(planned.picks || []).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`, 'ally');
+        }
+      }
+    }
     pdTag();
     if (totalDmg > 0) {
       if (totalDmg > 0) {
@@ -121175,6 +121269,7 @@ function MonsterHeroGame() {
         raidJackDamageRef.current += Number(totalDmg) || 0;
         const turnDistDmg = [0, 0, 0, 0];
         for (const h of attackHits) {
+          if (h.aiCopy) continue;
           const si = h.slotIdx != null ? h.slotIdx : fallbackSlot;
           if (si >= 0 && si < 4) turnDistDmg[si] += h.dmg;
         }
@@ -121287,6 +121382,7 @@ function MonsterHeroGame() {
     {
       const fbSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
       for (const h of attackHits) {
+        if (h.aiCopy) continue;
         const si = h.slotIdx != null ? h.slotIdx : fbSlot;
         if (si >= 0 && si < 4) attackDistDamage[si] += h.dmg;
       }
@@ -135931,6 +136027,7 @@ function MonsterHeroGame() {
       passTacticsTurn: passTacticsTurn,
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
+      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) ? aiCopy : null,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,
@@ -138102,8 +138199,18 @@ function MonsterHeroGame() {
       }, cardIconNode(c.icon, 32, c.id)), React.createElement("div", {
         className: "w-full text-center flex flex-col justify-end gap-0.5"
       }, React.createElement("div", {
-        className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5"
-      }, c.name), React.createElement("div", {
+        className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 [container-type:inline-size]",
+        style: JA_LABEL_STYLE
+      }, (() => {
+        const pts = jaWrapPoints(c.name);
+        const longest = Math.max(1, ...String(typeof pts === 'string' ? pts : c.name).split('\u200B').map(t => [...t].length));
+        return React.createElement("span", {
+          className: "block w-full",
+          style: {
+            fontSize: `min(9px, calc(100cqw / ${longest + 0.3}))`
+          }
+        }, jaWrap(c.name));
+      })()), React.createElement("div", {
         className: "text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
       }, React.createElement(Zap, {
         size: 9
@@ -138113,26 +138220,17 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2"
       }, "手札 (", hand.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, hand.map(c => renderCard(c, false)))), deck.length > 0 && React.createElement("div", {
         className: "mb-4"
       }, React.createElement("div", {
         className: "text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2"
       }, "山札 (", deck.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, deck.map(c => renderCard(c, false)))), graveyard.length > 0 && React.createElement("div", null, React.createElement("div", {
         className: "text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"
       }, "捨て札 (", graveyard.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, graveyard.map(c => renderCard(c, true)))));
     })())), skillPicker && (() => {
       const card = hand[skillPicker.handIndex];
@@ -138468,9 +138566,9 @@ function MonsterHeroGame() {
       }, "戻る")), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8"
+        className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[200px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:pt-2"
       }, scanEnemy.imgUrl ? React.createElement("div", {
-        className: `${isMooBoss(scanEnemy.id) ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`
+        className: `${isMooBoss(scanEnemy.id) ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center [@media(orientation:landscape)_and_(max-height:520px)]:h-[150px] [@media(orientation:landscape)_and_(max-height:520px)]:w-[180px] flex shrink-0 items-center justify-center overflow-hidden`
       }, React.createElement("img", {
         src: scanEnemy.imgUrl,
         alt: scanEnemy.name,
@@ -138482,9 +138580,9 @@ function MonsterHeroGame() {
         },
         className: "my-4"
       }, scanEnemy.emoji), React.createElement("h4", {
-        className: "text-2xl font-black italic mb-4 uppercase shrink-0"
+        className: "text-2xl font-black italic mb-4 uppercase shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:text-center [@media(orientation:landscape)_and_(max-height:520px)]:text-xl"
       }, scanEnemy.name), React.createElement("section", {
-        className: "w-full space-y-3"
+        className: "w-full space-y-3 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3"
       }, React.createElement("div", {
         className: "grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"
       }, React.createElement("div", null, React.createElement("div", {
@@ -138553,7 +138651,7 @@ function MonsterHeroGame() {
       onClick: () => setShowHeroInfo(false),
       className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
     }, "戻る")), React.createElement("div", {
-      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll",
+      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[180px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:content-start",
       style: {
         justifyContent: 'safe center'
       }
@@ -138566,16 +138664,16 @@ function MonsterHeroGame() {
         width: '140px',
         height: '140px'
       },
-      className: "mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
+      className: "mx-auto mb-6 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:mb-2 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
     }) : React.createElement("div", {
       style: {
         fontSize: '112px'
       },
       className: "mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
     }, mainHero.emoji), React.createElement("h4", {
-      className: "text-2xl font-black italic mb-6 uppercase"
+      className: "text-2xl font-black italic mb-6 uppercase [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-xl"
     }, mainHero.name), React.createElement("div", {
-      className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"
+      className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:max-w-none [@media(orientation:landscape)_and_(max-height:520px)]:p-4"
     }, isTacticsMode(runMode) && React.createElement("div", {
       "data-tactics-status": true,
       className: "space-y-1.5 text-left"
@@ -141728,6 +141826,8 @@ const createAnimationStyle = () => {
     .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
     .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
     .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    /* 緊急回復の文「味方のライフとガッツを30%ずつ回復」は 320 で「味方のライフとガッツ…」と切れた。2行まで折る(2026-10-27 バトル中の窓の見回り) */
+    .ex-cutin--emergency .ex-cutin__sub { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; text-wrap:wrap; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
     .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
     .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }

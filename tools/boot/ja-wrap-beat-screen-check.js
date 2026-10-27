@@ -268,7 +268,9 @@ const runMulti = async (browser, W, H) => {
     await A.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'result', null, { timeout: 30000 });
     await scan('マルチの結果', A);
   } catch (e) {
-    out.push([`マルチ(途中で止まった)`, [`(${e.message.split('\n')[0].slice(0, 100)})`], []]);
+    // 時間切れのときは、押そうとしていたボタン(Call log の locator(…))も残す。まれに落ちるので、どこで止まったかを次に絞れるように(2026-10-27)
+    const where = (e.message.match(/(?:waiting for|locator resolved to) [^\n]*/) || [''])[0].slice(0, 120);
+    out.push([`マルチ(途中で止まった)`, [`(${e.message.split('\n')[0].slice(0, 100)}${where ? ' / ' + where : ''})`], []]);
     if (process.env.MULTI_SHOT) for (const [i, p] of context.pages().entries()) await p.screenshot({ path: `${process.env.MULTI_SHOT}/multi-${W}x${H}-${i}.png` }).catch(() => {});
   }
   await context.close();
