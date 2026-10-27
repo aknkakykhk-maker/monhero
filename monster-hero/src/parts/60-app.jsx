@@ -8653,7 +8653,8 @@ function MonsterHeroGame() {
       const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]), ([rawCol, rawDecks, rawPoint, rawStarter, rawShop]) => {
         const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, { collection: cardNormalizeCollection(rawCol), decks: cardNormalizeDecks(rawDecks), point: cardNormalizePoint(rawPoint), starter: cardNormalizeStarter(rawStarter), shop: cardNormalizeShop(rawShop) }, Date.now());
         if (!r) return { fail: 'points' };
-        return { r, entries: [
+        const before = cardNormalizeCollection(rawCol);
+        return { r, before, deckAdded: r.decks.decks.length > cardNormalizeDecks(rawDecks).decks.length, entries: [
           { key: K.collection, before: rawCol, next: r.collection },
           { key: K.decks, before: rawDecks, next: r.decks },
           { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
@@ -8665,6 +8666,10 @@ function MonsterHeroGame() {
       const r = res.r;
       setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop, collection: r.collection }));
       setRhythmEventPoints(r.point);
+      // 買ったら、ブースターパックと同じ画面で開ける(2026-10-27 社長「スターターパック買ったときもブースターパック買ったときみたいな演出入れて」)。
+      //   見せ方だけで、中身とビートPは上の cardBuyStarter で決まったもの(まとめの数は r.dupPoint をそのまま出す)
+      const open = cardStarterOpenResult(CARD_BATTLE_DATA, kitId, res.before, true);
+      if (open) { setCardPackOpen({ ...open, dupPoint: r.dupPoint, deckAdded: res.deckAdded }); setGameState('CARD_PACK_OPEN'); }
       return { ok:true, dupPoint: r.dupPoint };
     } catch {
       setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
