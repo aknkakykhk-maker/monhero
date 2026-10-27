@@ -26,6 +26,9 @@ const seed = (lookIntroSeen) => {
   put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_rhythm_play_defaults_restored_v1', true); put('mh_rhythm_six_lane_seen_v1', true);
   put('mh_inherited_unique_level_compensation_v1', true);
+  // 6レーン・見た目の案内は、モンヒロビートをまだ1曲も遊んでいない人には出ない(2026-10-26 #44560a4e)。
+  // 案内が出る人(前から遊んでいる人)の画面を見るので、1曲遊んだ記録を入れておく
+  put('mh_rhythm_best_v1', { mf_ichika_mix: { EASY: { bestScore: 1, maxCombo: 1, played: true, clear: true } } });
   if (lookIntroSeen) put('mh_rhythm_look_intro_seen_v1', true);
 };
 
