@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 07b5a342f76715b5
+// source-sha256: e170638e253d57e1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93685,7 +93685,14 @@ const CardBattleBoard = ({
         type: 'pass'
       })
     }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない');
-    if (mode === 'guts') return React.createElement("button", {
+    if (mode === 'guts') return React.createElement(React.Fragment, null, myTurn && !tutorial && !replay && cardCanBackToAttack(st) && React.createElement("button", {
+      type: "button",
+      "data-card-back-attack": true,
+      className: `${btn} border border-violet-300/60 bg-violet-900`,
+      onClick: () => step({
+        type: 'backToAttack'
+      })
+    }, "← 攻撃に戻る"), React.createElement("button", {
       type: "button",
       disabled: tutOff('turn'),
       className: `${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`,
@@ -93693,7 +93700,7 @@ const CardBattleBoard = ({
         type: 'guts',
         hand: picks
       })
-    }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了');
+    }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'));
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
       type: "button",
