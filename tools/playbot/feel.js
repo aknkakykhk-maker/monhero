@@ -5,6 +5,7 @@
 //   node tools/playbot/feel.js                        いまの版で3曲(HARD。ハルカ・Stay With Me・FREEDOM DiVE↓)を点検
 //   node tools/playbot/feel.js --compare origin/main~5   前の版(git の参照)と今の版を、同じ曲・同じ指(同じ種)で比べる
 //   node tools/playbot/feel.js --songs haruka,anima --difficulty HARD --mode ios|touch|mouse --seed 7 --cpu 4
+//   --flick-step 17   FLICK のはじく合図を17msずつずらして送る(既定0は同じ瞬間にまとめて送る。取りこぼしの切り分け用)
 //
 // 本物の Supabase へは送らない(lib/session.js のにせの Supabase が受け止める)。結果は tools/out/playbot/feel-<日時>/
 const http = require('http');
@@ -36,6 +37,7 @@ const OPTS = {
   edgeOutLanes: 0.18,                  // 端のレーンは外へはみ出し気味に押す(レーン)。つられる向きも外側(10/7 のホールドの切れは端のレーンの外側寄りで起きた)
   dropPointer: args.includes('--legacy-ios') ? 0.15 : 0.01,   // 実機(iPhone)の記録は1000タッチあたり7.9(タッチだけ)。--legacy-ios は10/7 の初版の強すぎる設定                   // ios: ポインタの合図が抜けるタッチの割合(10/7 の実機では千ノーツあたり18ほど)
   lateRate: Number(argOf('late-rate', args.includes('--legacy-ios') ? 0.1 : 0.0204)),   // --late-rate 0.06 で、遅れて届くタッチを増やして数を稼ぐ(実機の約3倍)
+  flickStepMs: Number(argOf('flick-step', 0)) || 0,   // FLICK の「動く・動く・離す」をずらす間隔(ms)。0 は同じ瞬間にまとめて送る(今までどおり)
   lateMs: [30, 120], lateDist: args.includes('--legacy-ios') ? 'uniform' : 'real',   // 実機(iPhone)は50ms以上遅れたタッチが1000タッチあたり20.4(最大1671ms)    // 遅れて届くタッチの割合と遅れ
 };
 const stamp = (() => { const d = new Date(Date.now() + 9 * 3600 * 1000); return d.toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-'); })();
