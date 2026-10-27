@@ -13,6 +13,7 @@
 //   node tools/playbot/rhythm-frame-perf.js --song freedom_dive --diff MASTER --entry debug         音ゲーデバッグの曲の一覧から
 //   --root <フォルダ>  別の作業場所(git worktree など)のゲームを測る。前後の比べは、前の版を worktree に置いて交互に測る
 //   --landscape 0     縦画面(390x844)で測る。既定は横(844x390)
+//   --ls '{"k":"v"}' 測る前に localStorage へ入れる(設定の前後を比べる)
 //   --funcs a,b,c     「含む時間」を出す関数名を足す
 //   --draw webgl      ノーツを WebGL の描き込み先で描く(既定はゲームの自動。手元のブラウザは GPU が無いので canvas 2D になる)
 //   --band gpu        スライドの帯を GPU に一度だけ置いて描く(作り替え B。ノーツは WebGL で描く)。比べるときは --draw webgl と交互に
@@ -32,6 +33,8 @@ const SONG = arg('song', 'sheriruth'), DIFF = arg('diff', 'MASTER'), ENTRY = arg
 const FROM = Number(arg('from', 104000)), TO = Number(arg('to', 112000)), CPU = Number(arg('cpu', 1));
 const LAND = arg('landscape', '1') !== '0';
 const DRAW = arg('draw', ''), BAND = arg('band', '');
+// --ls '{"キー":"値"}' … 測る前に localStorage へ入れる(2026-10-27・設定を変えた前後を比べる。例: 演奏の設定の道の奥行き)。値は文字のまま入れる
+const LS = (() => { try { const v = JSON.parse(arg('ls', '{}')); return v && typeof v === 'object' ? v : {}; } catch { return {}; } })();
 const W = LAND ? 844 : 390, H = LAND ? 390 : 844;
 const FUNCS = ['paintCanvasNote', 'drawNote', 'drawSlide', 'drawHead', 'rhythmNoteCanvasGeometry', 'rhythmSlideSegmentQuads', 'rhythmSlideCheckpointLines', 'drawSlideGpu', 'pushSlideGround', 'rhythmRestartAnimations', 'visitNote', 'tick',
   ...String(arg('funcs', '')).split(',').filter(Boolean)];
@@ -46,6 +49,7 @@ const seed = (songId) => `(() => {
   put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
   ${DRAW ? `localStorage.setItem('mh_rhythm_canvas_v1', ${JSON.stringify(DRAW)});` : ''}
   ${BAND ? `localStorage.setItem('mh_rhythm_gpu_band_v1', ${JSON.stringify(BAND)});` : DRAW === 'webgl' ? `localStorage.setItem('mh_rhythm_gpu_band_v1', 'off');` : ''}
+  ${Object.entries(LS).map(([k, v]) => `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(String(v))});`).join(' ')}
   put('mh_rhythm_tutorial_seen_v1', true); put('mh_quick_rhythm_intro_seen_v1', true); put('mh_quick_rhythm_bg_seen_v1', true);
   put('mh_monster_roster', ['Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol', 'Oboro', 'Mocchi']);
   // 上の難易度を開けておく(曲えらびから MASTER などを選べるように)
