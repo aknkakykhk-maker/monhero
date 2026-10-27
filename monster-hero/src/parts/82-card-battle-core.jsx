@@ -1539,7 +1539,7 @@ const cardAiFillBind = (db, st, o, policy) => {
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
 // 付けても何も変わらない札を付けた手か(払うガッツを減らすだけの札で、外しても払うガッツが同じ)。
 //   2026-10-27 社長の報告: カララギマンゴー(ガッツ0)にジョイのサポートが付いて、札が1枚むだになった
-const cardAiAttachUseless = (db, st, o) => {
+const cardAttachUseless = (db, st, o) => {
   if (!o || !Array.isArray(o.hand) || o.hand.length < 2) return false;
   const p = st.active, hand = st.players[p].hand;
   const cost = cardActionCost(db, st, p, hand, o.hand);

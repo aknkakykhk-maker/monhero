@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 970a2ab9dba36ad9
+// generated-sha256: 4f53f0752382218b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53511,7 +53511,7 @@ const cardAiFillBind = (db, st, o, policy) => {
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
 // 付けても何も変わらない札を付けた手か(払うガッツを減らすだけの札で、外しても払うガッツが同じ)。
 //   2026-10-27 社長の報告: カララギマンゴー(ガッツ0)にジョイのサポートが付いて、札が1枚むだになった
-const cardAiAttachUseless = (db, st, o) => {
+const cardAttachUseless = (db, st, o) => {
   if (!o || !Array.isArray(o.hand) || o.hand.length < 2) return false;
   const p = st.active, hand = st.players[p].hand;
   const cost = cardActionCost(db, st, p, hand, o.hand);
@@ -56728,8 +56728,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     : st.phase === 'main' ? 'attack'
     : st.phase === 'guts' ? 'guts' : 'wait';
   // 付けても何も変わらない札を付けた手(ガッツ0の札にジョイのサポートなど)は、組み合わせのボタンにも運ぶ先にも出さない
-  //   (社長の答え 案A＋B・2026-10-27。決め方は助手と同じ cardAiAttachUseless。ルールでは出せる手のまま)
-  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter((o) => tutAllow(o) && !cardAiAttachUseless(db, st, o)) : [];
+  //   (社長の答え 案A＋B・2026-10-27。決め方は助手と同じ cardAttachUseless。ルールでは出せる手のまま)
+  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter((o) => tutAllow(o) && !cardAttachUseless(db, st, o)) : [];
   // おいのりの窓(相手が全体カードを出した瞬間): おいのりを持っていなければ、少しおいて自動で「使わない」
   const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find((o) => o.hand) || null : null;
   const prayKey = mode === 'pray' && !prayUse ? `${st.turn}-${st.log.length}` : '';

@@ -53,6 +53,7 @@ const sceneScript = (spec) => `(() => {
     me.hand = spec.hand.slice(); me.guts = Array(9).fill('100');
     opp.hand = ['100', '100', '100', '100', '100']; opp.guts = Array(9).fill('100');
     [me, opp].forEach((pl) => pl.mons.forEach((x) => { x.max = 20; x.life = 20; x.attacks = 0; }));
+    if (spec.hurt) me.mons[0].life = 5; // 回復の札(カララギマンゴー)は、ライフの減った子にだけ使える
     st.phase = 'main'; st.pending = null; st.pendingDiscard = null; st.turn = 2; st.first = 0;
     me.breederUsed = false; opp.breederUsed = false;
     if (spec.attackMe !== undefined) {
@@ -260,7 +261,7 @@ const sceneScript = (spec) => `(() => {
     // ---- F カララギマンゴー(ガッツ0)とジョイのサポート(社長の報告・社長の答え 案A＋B) ----
     //   前は、いちばん枚数の多い組み合わせ(マンゴー＋ジョイのサポート)が先に選ばれていて、そのまま味方を押すとジョイのサポートも出た。
     //   いまは、付けても何も変わらない組み合わせはボタンにも出さず、押した札1枚だけで出す
-    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['113', '276', '100', '100', '100'] });
+    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['113', '276', '100', '100', '100'], hurt: true });
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(400);
     const fSets = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
@@ -273,7 +274,7 @@ const sceneScript = (spec) => `(() => {
     check('F タップ: そのまま味方を押すと、マンゴーだけが出る(ジョイのサポートは手札に残る)', (await handCount(page)) === n0 - 1 && fHand.includes('ジョイのサポート'), `${n0}→${await handCount(page)}枚・${log.slice(-100)}`);
     await page.close();
     // 運んでも同じ(マンゴーを味方へ運ぶ)
-    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['113', '276', '100', '100', '100'] });
+    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['113', '276', '100', '100', '100'], hurt: true });
     n0 = await handCount(page);
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="0-0"]');
     await settle(page, n0);
