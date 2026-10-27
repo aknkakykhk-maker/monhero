@@ -108,7 +108,7 @@ const playStep = async (page, stats) => {
   if (mode === 'setup') { await clickText(page, /始める/); return 'acted'; }
   if (mode === 'discard') { const t = await footerText(page); const n = Number((t.match(/(\d+)枚えらんで捨てる/) || [])[1] || 1); for (let i = 0; i < n; i++) await tapHand(page, i); await clickText(page, /えらんで捨てる/); return 'acted'; }
   if (mode === 'guard') {
-    if (Math.random() < 0.5) { const hc = await handCount(page); for (let i = 0; i < hc; i++) { await tapHand(page, i); const u = await ringed(page, 'ring-amber-300', 0); if (u.length) { await tapMon(page, u[0]); stats.guards++; return 'acted'; } } }
+    if (Math.random() < 0.5) { const hc = await handCount(page); for (let i = 0; i < hc; i++) { await tapHand(page, i); const u = await ringed(page, 'ring-4 ring-amber-300', 0); if (u.length) { await tapMon(page, u[0]); stats.guards++; return 'acted'; } } }
     await clickText(page, /守らない|これで守る/); return 'acted';
   }
   if (mode === 'guts') {
@@ -122,8 +122,8 @@ const playStep = async (page, stats) => {
     for (const i of order) {
       await tapHand(page, i); await page.waitForTimeout(80);
       let g = await footerText(page);
-      if (/使う子をタップ/.test(g)) { const u = await ringed(page, 'ring-amber-300', 0); if (u.length) await tapMon(page, u[R(u.length)]); g = await footerText(page); }
-      if (/狙う相手をタップ/.test(g)) { const t = await ringed(page, 'ring-rose-400', null); if (t.length) { await tapMon(page, t[R(t.length)]); stats.used++; stats.turnActs++; return 'acted'; } }
+      if (/使う子をタップ/.test(g)) { const u = await ringed(page, 'ring-4 ring-amber-300', 0); if (u.length) await tapMon(page, u[R(u.length)]); g = await footerText(page); }
+      if (/狙う相手をタップ/.test(g)) { const t = await ringed(page, 'ring-4 ring-rose-400', null); if (t.length) { await tapMon(page, t[R(t.length)]); stats.used++; stats.turnActs++; return 'acted'; } }
       if (await page.locator('[data-card-split-open]').count()) { await page.locator('[data-card-split-open]').click().catch(() => {}); stats.used++; stats.turnActs++; return 'acted'; }
       if (await page.locator('[data-card-form]').count()) { await page.locator('[data-card-form]').first().click().catch(() => {}); stats.used++; stats.turnActs++; return 'acted'; }
       if (await clickText(page, /^使う$/)) { stats.used++; stats.turnActs++; return 'acted'; }
@@ -154,15 +154,17 @@ const playMatch = async (page, label, errors) => {
 
 // 練習試合: ドラの「次へ」と、光っている所(案内の手札・ボタン)を順に押す
 const playTutorial = async (page, label, errors) => {
+  // 1回の繰り返しで1つだけ押し、700ms あける(同じ所を続けて押すと2回タップの詳しい画面になる)
   const t0 = Date.now(); let n = 0;
   while (Date.now() - t0 < 6 * 60 * 1000) {
     if (await page.locator('[data-card-top="result"]').count()) return { ok: true, n };
-    if (await page.locator('[data-card-tutor-next]').count()) { await page.locator('[data-card-tutor-next]').first().click().catch(() => {}); n++; await page.waitForTimeout(200); continue; }
-    const focus = page.locator('[data-card-tutor-focus], .animate-pulse');
-    if (await focus.count()) { await focus.first().click({ timeout: 2000 }).catch(() => {}); n++; await page.waitForTimeout(250); }
-    const u = await ringed(page, 'ring-amber-300', 0); if (u.length) await tapMon(page, u[0]);
-    const t = await ringed(page, 'ring-rose-400', 1); if (t.length) await tapMon(page, t[0]);
-    if (!(await focus.count())) await page.waitForTimeout(400);
+    let did = await clickText(page, /^閉じる$/);
+    if (!did && await page.locator('[data-card-tutor-next]').count()) did = await page.locator('[data-card-tutor-next]').first().click({ timeout: 2000 }).then(() => true).catch(() => false);
+    if (!did) { const t = await ringed(page, 'ring-4 ring-rose-400', 1); if (t.length) { await tapMon(page, t[0]); did = true; } }
+    if (!did) { const u = await ringed(page, 'ring-4 ring-amber-300', 0); if (u.length) { await tapMon(page, u[0]); did = true; } }
+    if (!did) { const focus = page.locator('[data-card-tutor-focus], .animate-pulse'); if (await focus.count()) did = await focus.first().click({ timeout: 2000 }).then(() => true).catch(() => false); }
+    if (did) n++;
+    await page.waitForTimeout(700);
     if (errors.length > 20) break;
   }
   return { ok: false, n };
@@ -183,7 +185,7 @@ const playTutorial = async (page, label, errors) => {
         const tu = await playTutorial(page, `${tag}-tutorial`, errors);
         await shot(page, `${tag}-tutorial-end`);
         note(`${tu.ok ? 'OK' : 'NG'}: ${tag} 練習試合を最後まで(押した ${tu.n} 回)`); if (!tu.ok) bad++;
-        if (!tu.ok) { await page.locator('[data-card-quit]').click().catch(() => {}); await page.getByRole('button', { name: '飛ばす' }).click().catch(() => {}); }
+        if (!tu.ok) { await clickText(page, /^閉じる$/); await page.locator('[data-card-quit]').click().catch(() => {}); await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click().catch(() => {}); }
       } else {
         await page.locator('[data-card-quit]').click(); await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
       }
