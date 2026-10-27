@@ -59,15 +59,16 @@ const SCREENS = [
   ['ランキング', ['!ランキング']],
   ['記録', ['!記録']],
   // 2026-10-27 足した(ビート部 リバースくん・部長テンポくんの依頼「まだ回っていない画面を足す」)
-  ['ランキング・マスモン', ['!ランキング', '!マスモンランキング']],
-  ['曲えらび・全国ランキング(この曲)', ['!ソロライブ', '#[data-rhythm-demo-ranking]']],
-  ['曲えらび・全国ランキング(総合)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!総合']],
-  ['曲えらび・全国ランキング(週間)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!週間']],
-  ['曲えらび・全国ランキング(イベント)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!イベント']],
+  ['ランキング・マスモン', ['!ランキング', '!マスモンランキング'], { emptyDb: true }],
+  ['曲えらび・全国ランキング(この曲)', ['!ソロライブ', '#[data-rhythm-demo-ranking]'], { emptyDb: true }],
+  ['曲えらび・全国ランキング(総合)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!総合'], { emptyDb: true }],
+  ['曲えらび・全国ランキング(週間)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!週間'], { emptyDb: true }],
+  ['曲えらび・全国ランキング(イベント)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!イベント'], { emptyDb: true }],
   ['曲えらび・HELL の鍵', ['!ソロライブ', '#[data-rhythm-song-row]|Grievous Lady', '#[data-rhythm-difficulty="HELL"]']],
   ['ノーツ図鑑', ['!遊びかた', '!ノーツ図鑑']],
   ['これまでの記録(プロフィールから)', ['@HOME', '%プロフィールを開く', '#[data-profile-rhythm-history]']],
 ];
+// 3つ目の { emptyDb: true } は、Supabase への読み込みに空の一覧を返す(イベントの期間・報酬・部門まで出た形を数える)。書き込みは止めたまま
 // 道筋の1手の書き方: '!字'(字を含むボタン)・'=字'(字がそれだけのボタン)・'#セレクタ'(と '|字' でその字を含むもの)・'%名前'(aria-label)。
 // 先頭の '@HOME' は、モンヒロビートへ入らずに HOME から始める
 const SIZES = [[320, 568], [375, 667], [390, 844], [844, 390]];
@@ -315,8 +316,10 @@ if (require.main === module) (async () => {
   try {
     for (const [W, H] of SIZES) {
       const page = await browser.newPage({ viewport: { width: W, height: H } });
-      // ランキングは本番へ読みに行かない(読み込めないときの文を見る)
-      await page.route(/supabase\.co/, (r) => r.abort());
+      // ランキングは本番へ読みに行かない(読み込めないときの文を見る)。emptyDb の画面だけ、読み込みに空の一覧を返す
+      let emptyDb = false;
+      await page.route(/supabase\.co/, (r) => (emptyDb && r.request().method() === 'GET') || (emptyDb && /\/rpc\//.test(r.request().url()) && !/submit|insert|upsert|claim/.test(r.request().url()))
+        ? r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }) : r.abort());
       await page.addInitScript(() => {
         const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
         put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true);
@@ -335,7 +338,8 @@ if (require.main === module) (async () => {
         await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
         await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(1000); await closeAll();
       };
-      for (const [name, steps] of (MULTI_ONLY ? [] : SCREENS.filter(([nm]) => !ONLY || ONLY.test(nm)))) {
+      for (const [name, steps, opts = {}] of (MULTI_ONLY ? [] : SCREENS.filter(([nm]) => !ONLY || ONLY.test(nm)))) {
+        emptyDb = !!opts.emptyDb;
         try {
           await toModeSelect(steps[0] === '@HOME');
           for (const s of steps.filter((x) => x !== '@HOME')) {
