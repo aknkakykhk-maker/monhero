@@ -25,6 +25,7 @@
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
 //   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
 //   ⑯ 入口の「いま相手を待っている人」: 合言葉の部屋は出ない・だれとでもで待っている人が名前つきで出る・[対戦する]で始まる
+//   ⑱ ルールの版: 版がちがう人は一覧に出ない・合言葉の部屋に版を送らない古い版の人が来たら「ゲームを更新してください」・だれとでもでは組まずに待ち続ける
 //   ⑰ 片方の端末が100秒止まって戻ったら、続きから遊べる(相手は120秒まで待つ・相手の持ち時間の時計は止まる)。最後まで戦える
 //   ⑮ 片方の端末が130秒止まったら、相手は120秒で「相手が抜けた」の勝ち・止まっていた側は「通信が切れた」の負け(2台とも勝ちにならない)
 //   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
@@ -469,6 +470,35 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       const r16 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
       check('⑯ 一覧から始めた対戦も最後まで戦えて、片方が勝ち・片方が負け', !!r16[0] && !!r16[1] && r16[0] !== r16[1], r16.join(' / '));
       for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    }
+    // ⑱ ルールの版(2026-10-27 社長 ①): 版がちがう人どうしは組まない。古い版・別の版の相手は手元で作れないので、偽の中継から知らせを流し込む
+    {
+      const rv = await A.evaluate(() => cardPvpRulesVersion());
+      const otherRows = await B.evaluate(async (v) => {
+        window.__fakeWsRecv('realtime:mhc-lobby-free', { t: 'seek', from: 'cOTHERV1', code: 'WV9X', at: Date.now() - 3000, name: '別の版の人', icon: '🙂', rv: v + 1 }, -1, 'other-version');
+        await new Promise((r) => setTimeout(r, 1200));
+        return document.querySelectorAll('[data-card-pvp-seeker]').length;
+      }, rv);
+      check('⑱ 版がちがう人は、入口の「いま相手を待っている人」に出ない', otherRows === 0, String(otherRows));
+      await A.locator('[data-card-pvp-create]').click();
+      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+      const code18 = (await A.locator('[data-card-pvp-room]').innerText()).trim();
+      await A.evaluate((c) => window.__fakeWsRecv(`realtime:mhc-room-${c}`, { t: 'hb', from: 'cOLDHB1', name: '古い版の人', icon: '🙂', at: Date.now() - 1000 }, -1, 'old-version'), code18);
+      const updSeen = await A.locator('[data-card-pvp="error"]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+      const updText = updSeen ? await A.locator('[data-mh-screen]').first().innerText().catch(() => '') : '';
+      await shot(A, 'pvp-18-update');
+      check('⑱ 合言葉の部屋に、版を送らない古い版の人が来たら組まずに「ゲームを更新してください」', updSeen && /ゲームを更新してください/.test(updText) && !(await A.locator('[data-card-battle]').count()));
+      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+      await A.locator('[data-card-pvp-free]').click();
+      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+      const freeState = await A.evaluate(async () => {
+        const c = CARD_PVP.get().code;
+        for (let i = 0; i < 3; i++) { window.__fakeWsRecv(`realtime:mhc-room-${c}`, { t: 'hb', from: 'cOLDHB2', name: '古い版の人', icon: '🙂', at: Date.now() - 1000 }, -1, 'old-version'); await new Promise((r) => setTimeout(r, 700)); }
+        const r = CARD_PVP.get(); return { phase: r.phase, foe: !!r.foe };
+      });
+      check('⑱ だれとでもで古い版の人が部屋に来ても組まず、そのまま待ち続ける', freeState.phase === 'waiting' && !freeState.foe, JSON.stringify(freeState));
+      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+      await B.waitForTimeout(6500); // 別の版の「待っています」が古くなってから
     }
     // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
     await A.locator('[data-card-pvp-invite-open]').click();
