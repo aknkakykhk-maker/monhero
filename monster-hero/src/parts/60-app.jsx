@@ -12820,14 +12820,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : (defenseSlot!=null ? (tacticsUnitsRef.current[defenseSlot]?.id || null) : null);
         // ★影潜(イルミネ・ドリーミィ): 受ける子が持ち主なら、楔1つごとに回避率+15%。キーは既存5モード 'party'・タクティクスは受ける子の枠
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : (defenseSlot!=null ? String(defenseSlot) : null);
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
-        // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ、味方全員の回避率+10%
-        const reikonEvasion = reikonEvasionNow();
-        const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion+reikonEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
+        // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ、味方全員の回避率+10%。楔の回避と同じ値に足して、同じ表へ入れる
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
+        const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion:soulBattleParty.evasion,
           soulReflect:soulBattleParty.reflect,
           soulAbsorb:soulBattleParty.absorb,
-          existingEvasion:(defenseHeroId==='Tiger'?50:0)+kusabiEvasion+reikonEvasion,
+          existingEvasion:(defenseHeroId==='Tiger'?50:0)+kusabiEvasion,
           existingReflect:defenseHeroId==='Monol'?30:0,
           existingAbsorb:(defenseHeroId==='Oboro'||defenseHeroId==='Plant')?30:0,
         });

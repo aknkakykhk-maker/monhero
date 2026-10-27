@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 44b82378f599ef00
+// generated-sha256: 819b894ee3ff81f7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -75487,14 +75487,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : (defenseSlot!=null ? (tacticsUnitsRef.current[defenseSlot]?.id || null) : null);
         // ★影潜(イルミネ・ドリーミィ): 受ける子が持ち主なら、楔1つごとに回避率+15%。キーは既存5モード 'party'・タクティクスは受ける子の枠
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : (defenseSlot!=null ? String(defenseSlot) : null);
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
-        // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ、味方全員の回避率+10%
-        const reikonEvasion = reikonEvasionNow();
-        const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion+reikonEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
+        // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ、味方全員の回避率+10%。楔の回避と同じ値に足して、同じ表へ入れる
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
+        const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion:soulBattleParty.evasion,
           soulReflect:soulBattleParty.reflect,
           soulAbsorb:soulBattleParty.absorb,
-          existingEvasion:(defenseHeroId==='Tiger'?50:0)+kusabiEvasion+reikonEvasion,
+          existingEvasion:(defenseHeroId==='Tiger'?50:0)+kusabiEvasion,
           existingReflect:defenseHeroId==='Monol'?30:0,
           existingAbsorb:(defenseHeroId==='Oboro'||defenseHeroId==='Plant')?30:0,
         });

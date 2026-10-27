@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed105d0c55cec52f
+// source-sha256: 0244566698a16a1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119027,13 +119027,12 @@ function MonsterHeroGame() {
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : defenseSlot != null ? String(defenseSlot) : null;
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
-        const reikonEvasion = reikonEvasionNow();
-        const defenseTable = !isTacticsMode(runMode) && kusabiEvasion + reikonEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
+        const defenseTable = !isTacticsMode(runMode) && kusabiEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion: soulBattleParty.evasion,
           soulReflect: soulBattleParty.reflect,
           soulAbsorb: soulBattleParty.absorb,
-          existingEvasion: (defenseHeroId === 'Tiger' ? 50 : 0) + kusabiEvasion + reikonEvasion,
+          existingEvasion: (defenseHeroId === 'Tiger' ? 50 : 0) + kusabiEvasion,
           existingReflect: defenseHeroId === 'Monol' ? 30 : 0,
           existingAbsorb: defenseHeroId === 'Oboro' || defenseHeroId === 'Plant' ? 30 : 0
         });

@@ -213,8 +213,8 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
   const app = read('monster-hero/src/parts/60-app.jsx');
   check('固有技を使うと霊魂(技の出自で判定・かけ直し)', /if\(hasReikon\(card\.monId\)\)\{writeReikonKey\(trickStartKeyOf\(slotIdx\),startReikon\(\)\);/.test(app));
   check('消費ガッツ×0.7(5つの遊びはパーティ・タクティクスは使った子の枠)', /cost = Math\.floor\(cost \* reikonGutsMultAt\(slotIdx\)\);/.test(app));
-  check('味方全員の回避率+10%(回避の表に足す。5つの遊びでも表を作り直す)',
-    /kusabiEvasion\+reikonEvasion<=0\) \? unifiedSpecialDefense/.test(app) && /existingEvasion:\(defenseHeroId==='Tiger'\?50:0\)\+kusabiEvasion\+reikonEvasion,/.test(app));
+  check('味方全員の回避率+10%(楔の回避と同じ値に足して同じ表へ。5つの遊びでも表を作り直す)',
+    /const kusabiEvasion = \(hasKusabiTrait\(defenseHeroId\) && kusabiDefenseKey \? kusabiEvasionOf\(kusabiAt\(defenseSlot\)\) : 0\) \+ reikonEvasionNow\(\);/.test(app));
   check('残りは次のターンへ進むところで減らし、ランの片付けで消す', /tickReikonAll\(\); \/\/ ★霊魂/.test(app) && /resetReikon\(\); \/\/ 霊魂/.test(app));
 }
 
