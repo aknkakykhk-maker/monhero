@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8ad6016698b70f56
+// generated-sha256: 641e385873a9ca04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53509,6 +53509,29 @@ const cardAiFillBind = (db, st, o, policy) => {
 };
 
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
+// 付ける札が何も変えない手か(2026-10-27 観戦の記録: ドラがカララギマンゴーにジョイのサポートを付けて2枚出していた。社長が案A＋Bを選んだ)
+//   助手(cardAiChooseAction)は選ばない・画面(84)は組み合わせのボタンに出さない。どちらもこの関数で決める(ルールでは出してよい手のまま)
+//   o … cardAttackOptions の手1つ(st.active の手札で見る)。むだと見るのは次の2つ
+//   ・払うガッツを減らすだけの札(ジョイのサポート・光合成・団結・急襲)で、外しても払うガッツが同じか少ない
+//   ・純血のスピードを、狙う相手に純血でない子がいない技に付ける
+const CARD_COST_ONLY_EFFS = ['attach', 'attachFree', 'attachCost', 'attachCostHalf'];
+const cardAttachUseless = (db, st, o) => {
+  const p = st.active;
+  const me = st.players[p];
+  if (!o || (o.type !== 'attack' && o.type !== 'breeder') || !Array.isArray(o.hand) || o.hand.length < 2) return false;
+  const main = cardOf(db, me.hand[o.hand[0]]);
+  if (!main) return false;
+  const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter((t) => t.p !== p);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand);
+  return o.hand.slice(1).some((i) => {
+    const c = cardOf(db, me.hand[i]);
+    if (!c) return false;
+    const effs = (c.effects || []).map((e) => e.t);
+    if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i)) <= cost;
+    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some((t) => cardIsHybridMon(st.players[t.p].mons[t.m]))) return true;
+    return false;
+  });
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   // おいのり: 相手が出した全体カードは、相手に都合のよいものとみて、持っていれば無くす(雑な手のときは出し忘れる)
   if (st.pendingPray) { const use = cardPrayOptions(db, st).find((o) => o.hand); return use && rand() >= (policy.level.sloppy || 0) ? use : { type: 'pray' }; }
@@ -53543,7 +53566,10 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     const gm = cardFieldEff(st, 'fieldGutsMax');
     return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
   }
-  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
+  const opts0 = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
+  // 付けても何も変わらない札は付けない(カードを1枚むだにするだけ。外すと手が無くなるときは元のまま)
+  const useful = opts0.filter((o) => !cardAttachUseless(db, st, o));
+  const opts = useful.length ? useful : opts0;
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
@@ -60558,7 +60584,9 @@ const cardPvpCleanMessage = (raw) => {
       // 観戦している人の数(ホストが数えて相手へ渡す。2026-10-27 で足した項目。古い版は送らないので 0)
       w: cardPvpInt(raw.w, 999) || 0,
       // この試合は終わった、の印(終わった試合の番号。2026-10-27 で足した項目。古い版は送らないので null)
-      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null };
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null,
+      // ルールの版(2026-10-27 で足した項目。古い版は送らないので null)
+      rv: cardPvpRv(raw.rv) };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -60590,7 +60618,7 @@ const cardPvpCleanMessage = (raw) => {
       name: typeof raw.name === 'string' ? (rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null) : null,
       icon: typeof raw.icon === 'string' ? (rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null) : null,
       fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
-      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null };
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null, rv: cardPvpRv(raw.rv) };
   }
   if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
   // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
@@ -60648,8 +60676,13 @@ const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => (
 // いま「だれとでも」で待っている人の一覧(入口に出す)。新しく届いた知らせだけ・先に待っている人が上。合言葉(code)は画面に出さない(入るときにだけ使う)
 //   古い版の人(18:08 の公開より前)は名前もアイコンも送らず、だれか分からないので、一覧に出さない(2026-10-27 社長 案ア)。
 //   新しい版は、プロフィールが無い人でも名前とアイコンを必ず送る。古い版の人とも、「だれとでも(自分も待つ)」なら、これまでどおり自動で組む(s.seekers には残す)
+// ルールの版(見返しの CARD_REPLAY_RULES と同じ値・93)。ルールを変えたら、そちらを1つ上げる。版がちがう人どうしは組まない
+//   (同じ手でも結果が変わり、封のなぞり直しが合わなくなる。2026-10-27 社長: 文は「ゲームを更新してください」)。古い版は送らないので null
+const cardPvpRulesVersion = () => (typeof CARD_REPLAY_RULES === 'number' ? CARD_REPLAY_RULES : 0);
+const CARD_PVP_UPDATE_TEXT = 'ゲームを更新してください';
+const cardPvpRv = (v) => (Number.isInteger(v) && v >= 0 && v <= 100000 ? v : null);
 const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {})
-  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon))
+  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon) && x.rv === cardPvpRulesVersion())
   .sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1))
   .map(([id, x]) => ({ id, code: x.code, name: x.name || 'ブリーダー', icon: x.icon || null, fr: x.fr || null, rt: Number.isInteger(x.rt) ? x.rt : null, waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000))) })); // 待っている秒数は相手の端末の時計なので、ずれても0〜999に収める
 
@@ -60917,7 +60950,7 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null, rv: cardPvpRulesVersion() });
   // 観戦(94-card-spectate.jsx)。ホストだけが観戦の通り道へ流す。部品が無い環境では何もしない
   const watchPush = (by, act, reveal, st) => { if (isHost()) cardPvpWatchHost().push({ by, act, reveal, turn: st.turn, d: [st.players[0].discard, st.players[1].discard] }); };
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
@@ -61015,6 +61048,11 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
+      // 相手が決まる前に、ルールの版を比べる。だれとでもは知らん顔で待ち続け(相手は自分の部屋へ戻ってさがし直す)、合言葉・フレンドの部屋は案内を出して閉じる
+      if (!s.foe && msg.rv !== cardPvpRulesVersion()) {
+        if (s.mode === 'free') return;
+        stop(); set({ phase: 'error', error: CARD_PVP_UPDATE_TEXT }); return;
+      }
       // もう1戦: 相手がもう次の回へ進んでいる(こちらの「もう1戦」が届いて、相手が先に切りかえた)なら、その hb を相手の同意として追いつく
       if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); return; }
       const sameRound = (msg.rd || 0) === (s.round || 0); // 前の回の hb(届くのが遅れた分)の封は使わない
@@ -61078,7 +61116,7 @@ const CARD_PVP = (() => {
   const onLobby = (raw) => {
     const msg = cardPvpCleanMessage(raw);
     if (!s || !msg || msg.t !== 'seek' || (s.me && msg.from === s.me.id)) return;
-    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now(), name: msg.name, icon: msg.icon, fr: msg.fr, rt: msg.rt } } };
+    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now(), name: msg.name, icon: msg.icon, fr: msg.fr, rt: msg.rt, rv: msg.rv } } };
     if (s.phase === 'idle') emit(); // 入口の「いま相手を待っている人」の一覧(聞くだけ)
   };
   const openLobby = () => {
@@ -61106,9 +61144,9 @@ const CARD_PVP = (() => {
       emit();
       return;
     }
-    const older = fresh.filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
+    const older = fresh.filter(([, x]) => x.rv === cardPvpRulesVersion()).filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
     if (older) { s = { ...s, joining: older[1].code, joinAt: now, code: older[1].code }; connect(); emit(); return; }
-    lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null });
+    lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null, rv: cardPvpRulesVersion() });
     emit();
   };
   const open = async (code, profile, deck, mode = 'private', pick = false) => {

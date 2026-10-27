@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 59337201655390da
+// source-sha256: 75e56a1dc85f1200
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88162,6 +88162,24 @@ const cardAiFillBind = (db, st, o, policy) => {
     bind: name
   };
 };
+const CARD_COST_ONLY_EFFS = ['attach', 'attachFree', 'attachCost', 'attachCostHalf'];
+const cardAttachUseless = (db, st, o) => {
+  const p = st.active;
+  const me = st.players[p];
+  if (!o || o.type !== 'attack' && o.type !== 'breeder' || !Array.isArray(o.hand) || o.hand.length < 2) return false;
+  const main = cardOf(db, me.hand[o.hand[0]]);
+  if (!main) return false;
+  const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter(t => t.p !== p);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand);
+  return o.hand.slice(1).some(i => {
+    const c = cardOf(db, me.hand[i]);
+    if (!c) return false;
+    const effs = (c.effects || []).map(e => e.t);
+    if (effs.length && effs.every(t => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter(x => x !== i)) <= cost;
+    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some(t => cardIsHybridMon(st.players[t.p].mons[t.m]))) return true;
+    return false;
+  });
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingPray) {
     const use = cardPrayOptions(db, st).find(o => o.hand);
@@ -88225,7 +88243,9 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
       hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active])))
     };
   }
-  const opts = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
+  const opts0 = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
+  const useful = opts0.filter(o => !cardAttachUseless(db, st, o));
+  const opts = useful.length ? useful : opts0;
   if (!opts.length) return {
     type: 'endAttacks'
   };
@@ -100451,7 +100471,8 @@ const cardPvpCleanMessage = raw => {
       dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null,
       rd: cardPvpInt(raw.rd, 1000) || 0,
       w: cardPvpInt(raw.w, 999) || 0,
-      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null,
+      rv: cardPvpRv(raw.rv)
     };
   }
   if (raw.t === 'start') return {
@@ -100517,7 +100538,8 @@ const cardPvpCleanMessage = raw => {
       name: typeof raw.name === 'string' ? rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null : null,
       icon: typeof raw.icon === 'string' ? rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null : null,
       fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
-      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null,
+      rv: cardPvpRv(raw.rv)
     };
   }
   if (raw.t === 'chat') {
@@ -100591,7 +100613,10 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
-const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon)).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
+const cardPvpRulesVersion = () => typeof CARD_REPLAY_RULES === 'number' ? CARD_REPLAY_RULES : 0;
+const CARD_PVP_UPDATE_TEXT = 'ゲームを更新してください';
+const cardPvpRv = v => Number.isInteger(v) && v >= 0 && v <= 100000 ? v : null;
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon) && x.rv === cardPvpRulesVersion()).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
   id,
   code: x.code,
   name: x.name || 'ブリーダー',
@@ -101108,7 +101133,8 @@ const CARD_PVP = (() => {
     dn: s.me.dn || null,
     rd: s.round || 0,
     w: isHost() ? cardPvpWatchHost().eyes() : 0,
-    ov: s.phase === 'over' && s.match ? s.match : null
+    ov: s.phase === 'over' && s.match ? s.match : null,
+    rv: cardPvpRulesVersion()
   });
   const watchPush = (by, act, reveal, st) => {
     if (isHost()) cardPvpWatchHost().push({
@@ -101385,6 +101411,15 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
+      if (!s.foe && msg.rv !== cardPvpRulesVersion()) {
+        if (s.mode === 'free') return;
+        stop();
+        set({
+          phase: 'error',
+          error: CARD_PVP_UPDATE_TEXT
+        });
+        return;
+      }
       if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) {
         s = {
           ...s,
@@ -101575,7 +101610,8 @@ const CARD_PVP = (() => {
           name: msg.name,
           icon: msg.icon,
           fr: msg.fr,
-          rt: msg.rt
+          rt: msg.rt,
+          rv: msg.rv
         }
       }
     };
@@ -101636,7 +101672,7 @@ const CARD_PVP = (() => {
       emit();
       return;
     }
-    const older = fresh.filter(([id, x]) => x.at < s.seekAt || x.at === s.seekAt && id < s.me.id).sort((a, b) => a[1].at - b[1].at)[0];
+    const older = fresh.filter(([, x]) => x.rv === cardPvpRulesVersion()).filter(([id, x]) => x.at < s.seekAt || x.at === s.seekAt && id < s.me.id).sort((a, b) => a[1].at - b[1].at)[0];
     if (older) {
       s = {
         ...s,
@@ -101655,7 +101691,8 @@ const CARD_PVP = (() => {
       name: s.me.name,
       icon: s.me.icon,
       fr: s.me.fr || null,
-      rt: Number.isInteger(s.me.rt) ? s.me.rt : null
+      rt: Number.isInteger(s.me.rt) ? s.me.rt : null,
+      rv: cardPvpRulesVersion()
     });
     emit();
   };
