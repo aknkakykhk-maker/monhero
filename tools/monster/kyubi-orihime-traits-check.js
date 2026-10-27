@@ -183,7 +183,7 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
     /Kyubi: Object\.freeze\(\{\n    id: 'kyubi_kyubi_gento',\n    name: '九尾幻灯',[\s\S]*?maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,\n    effect: 'kitsunebi',/.test(units)
     && /'millefeuille', 'kitsunebi'[,\]]/.test(units));
   check('使うと狐火を満タンに・幻灯強化をかけ直す', /if\(def\.effect==='kitsunebi'\)\{\n      writeKyubi\('kitsunebi',String\(slotIdx\),useKitsunebi\(/.test(app));
-  check('攻撃に狐火の追加の一撃(ヒット列2か所)・与ダメ、被ダメに強化とガード', app.includes('kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,')
+  check('攻撃に狐火の追加の一撃(ヒット列3か所・あつの挑発も)・与ダメ、被ダメに強化とガード', app.includes('kyubiAttackAt(slotIdx,stunMon?.id,card).foxCombo,') && app.includes('kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,')
     && app.includes('kyubiAttackAt(slotIdx,activeMon?.id,card).foxCombo,') && app.includes('*tacticsExPartyBuffNow().taken*kyubiTakenMultAt(slotIdx):1)'));
   check('受けたときは狐火1つが盾(当てる直前)・ターンで戻る・ランの片付けまで残る',
     /kitsunebiShieldParts\(orihimeShareTargets/.test(app) && /const next = tickKitsunebi\(v\);/.test(app) && /kitsunebi: \{\}, guard: \{\} \}; setKyubiView/.test(app));
