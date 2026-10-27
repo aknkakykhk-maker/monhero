@@ -1084,6 +1084,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         if (quiet) { stRef.current = next; setSt(next); setAction(null); setBigCard(null); setFx([]); return; }
         stepRef.current(null, next);
       },
+      onPatch: (next) => { if (next) { stRef.current = next; setSt(next); } }, // 捨て札の並びが本物になっただけ(動きは出さない)
       onEnd: (end) => setWatchEnd(end || null),
       onEyes: (n) => setWatchEyes(Number.isInteger(n) ? n : 0),
     });

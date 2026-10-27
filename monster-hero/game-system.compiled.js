@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 32ec3c3f1157d3db
+// source-sha256: 1f036733ef824ee0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93322,6 +93322,12 @@ const CardBattleBoard = ({
         }
         stepRef.current(null, next);
       },
+      onPatch: next => {
+        if (next) {
+          stRef.current = next;
+          setSt(next);
+        }
+      },
       onEnd: end => setWatchEnd(end || null),
       onEyes: n => setWatchEyes(Number.isInteger(n) ? n : 0)
     });
@@ -104726,6 +104732,34 @@ const cardWatchSideMeta = (meta, side) => side === 1 ? {
   first: 1 - meta.first
 } : meta;
 const cardWatchSideWinner = (w, side) => w === 0 || w === 1 ? side === 1 ? 1 - w : w : null;
+const CARD_WATCH_END_HOW = Object.freeze({
+  '投了': 'surrender',
+  '相手の投了': 'surrender',
+  '時間切れ': 'timeout',
+  '相手の時間切れ': 'timeout',
+  '相手が抜けた': 'left',
+  '通信が切れた': 'left',
+  '抜けた': 'left'
+});
+const cardWatchEndText = (end, side, nameOf, turn = 0) => {
+  const winner = end ? cardWatchSideWinner(end.winner, side) : null;
+  const how = end && CARD_WATCH_END_HOW[end.reason] || '';
+  if (winner === null) return {
+    winner,
+    how,
+    head: '対戦が終わりました',
+    sub: ''
+  };
+  const loser = nameOf(1 - winner);
+  const when = Number.isInteger(turn) && turn > 0 ? `ターン${turn}で ` : '';
+  const sub = how === 'surrender' ? `${when}${loser}さんが投了しました` : how === 'timeout' ? `${when}${loser}さんの時間切れ(${CARD_PVP_TIMEOUT_LOSE}回)` : how === 'left' ? `${when}${loser}さんが対戦から抜けました` : '決着がつきました';
+  return {
+    winner,
+    how,
+    head: `${nameOf(winner)}さんの勝ち！`,
+    sub
+  };
+};
 const cardWatchPatchOne = (db, pl, list) => {
   if (!Array.isArray(list) || list.length !== pl.discard.length) return false;
   if (list.some(no => no !== CARD_PVP_HIDDEN && !cardOf(db, no))) return false;
@@ -105065,6 +105099,13 @@ const CARD_WATCH_HOST = (() => {
       }
     },
     stop: () => {
+      if (h && h.log.length) {
+        if (!h.end) h.end = {
+          winner: 1,
+          reason: '抜けた'
+        };
+        sendWatch(hbMsg());
+      }
       closeAll();
       h = null;
     },
@@ -105110,6 +105151,16 @@ const CARD_WATCH = (() => {
       ...patch
     };
     emit();
+  };
+  let boardH = null;
+  let boardEnd = null;
+  const toBoard = () => {
+    if (!boardH || !s) return;
+    boardH.onEyes(s.eyes);
+    if (s.end && s.st && s.n >= s.hostN && boardEnd !== s.end) {
+      boardEnd = s.end;
+      boardH.onEnd(s.end, s.st.turn);
+    }
   };
   const send = payload => {
     if (socket && alive) socket.send({
@@ -105159,6 +105210,7 @@ const CARD_WATCH = (() => {
       }
       st = next;
       n += 1;
+      if (boardH) boardH.onState(next, !!buf[n + 1] || n < s.hostN - 1);
       const used = (next.events || []).filter(x => x.t === 'use' || x.t === 'guard').map(x => ({
         p: x.p,
         cards: x.t === 'use' ? x.cards : [x.card]
@@ -105174,7 +105226,11 @@ const CARD_WATCH = (() => {
       }));
       if (hitNow.length) hits = hitNow;
     }
-    if (s.d) st = cardWatchPatchDiscards(CARD_BATTLE_DATA, st, s.side === 1 ? [s.d[1], s.d[0]] : s.d);
+    if (s.d) {
+      const pd = cardWatchPatchDiscards(CARD_BATTLE_DATA, st, s.side === 1 ? [s.d[1], s.d[0]] : s.d);
+      if (boardH && pd !== st) boardH.onPatch(pd);
+      st = pd;
+    }
     s = {
       ...s,
       st,
@@ -105188,6 +105244,7 @@ const CARD_WATCH = (() => {
       ...s,
       phase: 'over'
     };
+    toBoard();
     emit();
   };
   const onMessage = raw => {
@@ -105332,6 +105389,15 @@ const CARD_WATCH = (() => {
       stop();
       s = blank();
       emit();
+    },
+    attachBoard: h => {
+      boardH = h;
+      boardEnd = null;
+      if (s && s.st) h.onState(s.st, true);
+      toBoard();
+      return () => {
+        if (boardH === h) boardH = null;
+      };
     }
   };
 })();
@@ -105559,6 +105625,46 @@ const CardPvpWatchScreen = ({
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
+  const boardGame = useMemo(() => {
+    if (!meta || !w.match) return null;
+    const top = meta.p[1] || {};
+    const bottom = meta.p[0] || {};
+    return {
+      key: `watch-${w.match}-${w.side}`,
+      st: w.st || cardWatchNewGame(CARD_BATTLE_DATA, meta),
+      watch: {
+        top: {
+          name: top.name || 'あいて',
+          icon: top.icon,
+          frame: top.fr
+        },
+        bottom: {
+          name: bottom.name || 'ブリーダー'
+        },
+        attach: h => CARD_WATCH.attachBoard({
+          ...h,
+          onEnd: (end, turn) => h.onEnd(cardWatchEndText(end, w.side, nameOf, turn))
+        })
+      }
+    };
+  }, [w.match, w.side, !!meta]);
+  if (boardGame && st && (w.phase === 'watching' || w.phase === 'over') && typeof CardBattleBoard === 'function') {
+    const bottom = meta.p[0] || {};
+    return React.createElement(CardBattleBoard, {
+      key: boardGame.key,
+      db: db,
+      game: boardGame,
+      onFinish: () => back(),
+      meProfile: {
+        name: bottom.name || 'ブリーダー'
+      },
+      meIcon: React.createElement(CardPvpAvatar, {
+        icon: bottom.icon,
+        frame: bottom.fr,
+        className: "h-8 w-8"
+      })
+    });
+  }
   const lines = st ? st.log.slice(low ? -2 : -3).map(l => cardLogText(l)) : [];
   const overBox = st && meta && (w.phase === 'over' || winner !== null) && React.createElement("div", {
     "data-card-watch-over": winner === null ? 'none' : winner,
