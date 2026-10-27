@@ -135,7 +135,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await sleep(400);
     }
     check('自分の攻撃の番(使える技がある)まで進む', (await mode()) === 'attack');
-    const usable = page.locator('[data-card-hand-card]:not(.opacity-45)').first();
+    // 相手1体を狙う技(ダメージのある札・全体でない)を使う。先頭が自分にかける特殊(カララギマンゴーなど)だと、赤い輪が相手に出ない(2026-10-27 5回に1回ほど NG)
+    const usableAll = page.locator('[data-card-hand-card]:not(.opacity-45)');
+    const aimed = usableAll.filter({ hasText: /ダメージ\d/ }).filter({ hasNotText: /全体/ });
+    const usable = (await aimed.count()) ? aimed.first() : usableAll.first();
     const raised = () => page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card] img')].some((im) => /outline-amber-300/.test(im.className)));
     await doubleTap(usable);
     check('① 手札を2回続けてタップすると、詳しい画面が出る', await detailOpen());
@@ -157,8 +160,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await target.click(); await sleep(1500);
       check('③④ 狙える相手を1回タップすると、待たずに技が出る(手札が減る)', (await page.locator('[data-card-hand-card]').count()) < hand0 || (await page.locator('[data-card-battle]').innerText()) !== discard0, `${hand0} → ${await page.locator('[data-card-hand-card]').count()}`);
     } else check('③ 狙える相手が出る', false, '赤い輪の相手が見つからない');
+    // 技を出したあとの動き(大写しのカード・番の帯・ダウンの帯)が消えてから押す。かぶっているあいだはタップが届かない(2026-10-27 まれに NG)
+    for (let i = 0; i < 40 && (await page.locator('[data-card-big], [data-card-turn-banner], [data-card-down-band]').count()); i++) await sleep(150);
     const opp = page.locator('[data-card-mon^="1-"]').first();
     await doubleTap(opp);
+    if (!(await detailOpen())) console.log('しらべ', JSON.stringify(await page.evaluate(() => ({ mode: document.querySelector('[data-card-battle]')?.getAttribute('data-card-mode'), over: [...document.querySelectorAll('[data-card-big], [data-card-turn-banner], [data-card-down-band], [data-card-bubble]')].map((x) => [...x.attributes].map((a) => a.name).filter((n) => n.startsWith('data-card')).join(',')) }))));
     check('③ 相手のモンスターを2回続けてタップすると、詳しい画面が出る', await detailOpen());
     await closeDetail();
     check('⑥ 実行時エラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));
