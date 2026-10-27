@@ -66,7 +66,8 @@ check('譜面の中身の表記はデバッグのときだけ使う',
 const pause = grab('data-rhythm-pause-menu', '</div>}</div></main>;');
 check('ポーズの戻り先がプレイヤー向けの言い方になる',
   // 前にタイミング合わせ(calibrating)の「やめてオプションへ戻る」が付いてもよい
-  /\{(?:calibrating\?'やめてオプションへ戻る':)?tutorial\?'練習をやめて曲えらびへ戻る':debugPlay\?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'\}/.test(pause));
+  // 文を言葉の切れ目で折る部品(rhythmJaWrapOnce・jaWrap)で包んだ形も、文と条件が同じなら通す(2026-10-27)
+  /\{(?:calibrating\?(?:(?:rhythmJaWrapOnce|jaWrap)\()?'やめてオプションへ戻る'\)?:)?tutorial\?(?:(?:rhythmJaWrapOnce|jaWrap)\()?'練習をやめて曲えらびへ戻る'\)?:debugPlay\?(?:(?:rhythmJaWrapOnce|jaWrap)\()?'中断して音ゲーデバッグへ戻る'\)?:(?:(?:rhythmJaWrapOnce|jaWrap)\()?'中断して曲えらびへ戻る'\)?\}/.test(pause));
 // 「中断して」が付く形だけを見ていたため、結果画面の「音ゲーデバッグへ戻る」
 // (前置きなし)を素通りさせていた。あそびかた練習を終えた画面にそのまま出ていた
 // (2026-09-05・実機の指摘「ここもデバッグに戻るみたいな表記になってる」)。
