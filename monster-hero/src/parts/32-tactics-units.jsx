@@ -520,33 +520,45 @@ const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_EN
 //   weightBias を0にすると一様ランダムになる(検査で確かめる)。
 const TACTICS_TARGET_LOW_HP_BIAS = 2;
 // hate … ヘイト(試作)の配列。渡したときだけ重みに ×(1 + ヘイト ÷ k) を掛ける(渡さなければ今までどおり)
-const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+// copy … AIコピー(ソラシドのアシカ・5人目)。渡したときだけ、狙いの候補にもう1人足す(index は TACTICS_AI_COPY_TARGET)。
+//   ★コピーは盤面の4枠(=間合い)に入れない。ライフの合計・全滅・倒れた数に混ざらないよう、狙いの抽選とヘイトにだけ足す
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
-  return tacticsAliveSlots(units).map(index => {
+  const list = tacticsAliveSlots(units).map(index => {
     const unit = normalizeTacticsUnit(units[index]);
     const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
     return { index, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index) };
   });
+  if (isTacticsAiCopyStanding(copy)) {
+    const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
+    list.push({ index: TACTICS_AI_COPY_TARGET, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) });
+  }
+  return list;
 };
 // 枠ごとの「狙われる確率(%)」(2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいいかもね。ひとりなら常に100%で
 // 2人とか3人とかでも今の計算で狙われる率がそのまま出るようにして」)。
 // ★敵が狙いを決めるのと同じ重み(tacticsTargetWeights: ライフの減り具合 × ヘイトの倍率)を、生きている子だけで割る。
 //   表示と実際の抽選が食い違わないよう、ここで重みを作り直さない。
 // ★合計がちょうど100になるように、切り捨てたあと端数の大きい順に1ずつ足す。倒れた子・空き枠は null
-const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
-  const out = [null, null, null, null];
-  const weights = tacticsTargetWeights(units, bias, hate);
+// copy を渡すと { slots: [4枠の%], copy: コピーの% } を返す(tacticsTargetChancesWithCopy)。渡さなければ今までどおり4枠の配列
+const tacticsTargetChancesWithCopy = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS, copy = null) => {
+  const out = { slots: [null, null, null, null], copy: null };
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!weights.length || !(total > 0)) return out;
+  // 並べ替えの同点は枠の番号順、コピーはいちばん後ろ
+  const order = (index) => (index === TACTICS_AI_COPY_TARGET ? 99 : index);
   const parts = weights.map(entry => { const v = entry.weight / total * 100; return { index: entry.index, pct: Math.floor(v), rest: v - Math.floor(v) }; });
   let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
-  [...parts].sort((a, b) => (b.rest - a.rest) || (a.index - b.index)).forEach(p => { if (left > 0) { p.pct += 1; left -= 1; } });
-  parts.forEach(p => { out[p.index] = p.pct; });
+  [...parts].sort((a, b) => (b.rest - a.rest) || (order(a.index) - order(b.index))).forEach(p => { if (left > 0) { p.pct += 1; left -= 1; } });
+  parts.forEach(p => { if (p.index === TACTICS_AI_COPY_TARGET) out.copy = p.pct; else out.slots[p.index] = p.pct; });
   return out;
 };
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => tacticsTargetChancesWithCopy(units, hate, bias, null).slots;
 // 狙うスロットを1つ選ぶ。生きている子がいなければ null
-const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
-  const weights = tacticsTargetWeights(units, bias, hate);
+// copy を渡したときは、コピーが当たると TACTICS_AI_COPY_TARGET を返す
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   if (!weights.length) return null;
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!(total > 0)) return weights[0].index;
@@ -572,7 +584,8 @@ const tacticsTargetName = (units, slotIndex) => {
 //   実行時に「その間合いにいる子」を見る(予告には間合いが出ている)。
 // ★ダメージの無い行動(ためる・移動・咆哮・再生)にも狙いは要らない。
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
-const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+// copy を渡すと、コピーも単体攻撃の狙いの候補になる。当たったら targetCopy: true(targetSlot は付けない。枠の番号と混ぜない)
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return { ...intent, targetName: TACTICS_ALL_TARGET_LABEL };
   // ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
@@ -582,7 +595,8 @@ const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_T
   //   誰も立っていない間合いだと攻撃そのものが起きなかった
   const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist)
     && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
-  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate);
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate, copy);
+  if (targetSlot === TACTICS_AI_COPY_TARGET) return { ...intent, targetCopy: true, targetName: tacticsAiCopyName(copy) };
   return targetSlot == null ? intent : { ...intent, targetSlot, targetName: tacticsTargetName(units, targetSlot) };
 };
 
@@ -801,6 +815,55 @@ const tacticsHateHelpRows = (id) => {
   }
   return [];
 };
+// ===== AIコピー(ソラシドのアシカ「自動化 → 全自動 → 無人運転」の5人目)・タクティクスの分 =====
+// 2026-10-27 社長の決め。使った子の「AIコピー」が次のターンから5人目の味方として戦う。タクティクスでは
+// コピーが自分のライフを持ち・敵に狙われ・倒されたら消える(負けの判定・倒れた数・4人までの決まりには入れない)。
+// 共通の出し方・消し方は 33-ai-copy.jsx。ここはタクティクスだけの「置き場所・狙い・ヘイト・ダメージ」。
+// ★コピーは盤面の4枠(=間合い)には入れない(docs/progress/battle-ai-copy/tactics.md)。
+const TACTICS_AI_COPY_TARGET = 'copy';
+// 立っているか(ライフが残っているか)
+const isTacticsAiCopyStanding = (copy) => !!copy && tacticsHateNum(copy.hp) > 0 && tacticsHateNum(copy.maxHp) > 0;
+const tacticsAiCopyName = (copy) => `${(copy && String(copy.name || '').trim()) || '仲間'}のコピー`;
+// 置き場所: 元の子のとなりの空いたマス(右を先に見る)。空きが無ければ元の子と同じマスに重ねる
+//   (2026-10-27 ジン部長: 空きが無いときは仮に「重ねる」。距離の倍率も元の子と同じ)
+const tacticsAiCopyPos = (units, srcSlot) => {
+  const list = Array.isArray(units) ? units : [];
+  const src = Number.isInteger(srcSlot) ? tacticsClamp(srcSlot, 0, 3) : 0;
+  for (const p of [src + 1, src - 1]) if (p >= 0 && p <= 3 && !list[p]) return { pos: p, stacked: false };
+  return { pos: src, stacked: true };
+};
+// 出たときのヘイト: 元の子のヘイト × rate(切り捨て)。rate は Lv で決まる(2026-10-27 社長: Lv1 50%・Lv2 75%・Lv3 100%)。
+//   Lv → 割合は開発部の部品が返す。ここは割合を受け取るだけ(既定は Lv1 の 0.5)
+const tacticsAiCopyStartHate = (hate, srcSlot, rate = 0.5) => {
+  const r = tacticsClamp(tacticsHateNum(rate), 0, 1);
+  return Math.min(TACTICS_HATE.cap, Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] * r));
+};
+// 1ターンぶん進める(枠の子と同じ式: 前のヘイト × decay + 倍率 ×(行動のぶん + 与ダメージの割合ぶん))。
+//   gain … そのターンのコピーの行動のぶん / dealt … コピーの与ダメージ / teamDealt … 味方全員(コピーも入れる)の与ダメージ / monId … 元の子の id
+//   gainMult … たまり方の倍率(2026-10-27 社長: Lv1 ×1.0・Lv2 ×1.25・Lv3 ×1.5)。元の子の倍率に掛ける
+const tacticsAiCopyHateStep = (copy, { gain = 0, dealt = 0, teamDealt = 0 } = {}, monId = null, gainMult = 1) => {
+  if (!isTacticsAiCopyStanding(copy)) return 0;
+  const base = tacticsHateProfile(monId);
+  const p = { ...base, mult: base.mult * Math.max(0, tacticsHateNum(gainMult) || 1) };
+  const team = Math.max(0, tacticsHateNum(teamDealt));
+  const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt)) / team : 0;
+  return Math.min(TACTICS_HATE.cap, tacticsHateNum(copy.hate) * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gain)) + share));
+};
+// 敵の行動がコピーに当たるか。全体攻撃は当たる/間合い攻撃はコピーの立つマス(pos)が予告の間合いなら当たる/単体は targetCopy
+const tacticsIntentHitsAiCopy = (intent, copy) => {
+  if (!intent || !isTacticsAiCopyStanding(copy)) return false;
+  if (intent.targetsAll) return true;
+  if (intent.targetCopy) return true;
+  if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot) && Number.isInteger(intent.sweepDist)) return copy.pos === intent.sweepDist;
+  return false;
+};
+// ダメージを受ける。ライフが0になったら null(その場で消える。倒れた数には入れない)
+const damageTacticsAiCopy = (copy, amount) => {
+  if (!copy) return null;
+  const hp = Math.max(0, tacticsHateNum(copy.hp) - Math.max(0, Math.floor(tacticsHateNum(amount))));
+  return hp > 0 ? { ...copy, hp } : null;
+};
+
 // ===== ヘイトの数字ここまで(枠には炎の段ではなく狙われる確率を出す・tacticsTargetChances。2026-10-22 社長) =====
 // その行動が実際に当たるスロット。予告と実行で同じ関数を通すので食い違わない
 // 間合い攻撃が「当たり」(×TACTICS_SWEEP_MULT)になる条件。
