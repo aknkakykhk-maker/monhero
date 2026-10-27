@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f53f0752382218b
+// generated-sha256: 85f32fad50f727a6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53509,16 +53509,27 @@ const cardAiFillBind = (db, st, o, policy) => {
 };
 
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
-// 付けても何も変わらない札を付けた手か(払うガッツを減らすだけの札で、外しても払うガッツが同じ)。
-//   2026-10-27 社長の報告: カララギマンゴー(ガッツ0)にジョイのサポートが付いて、札が1枚むだになった
+// 付ける札が何も変えない手か(2026-10-27 観戦の記録: ドラがカララギマンゴーにジョイのサポートを付けて2枚出していた。社長が案A＋Bを選んだ)
+//   助手(cardAiChooseAction)は選ばない・画面(84)は組み合わせのボタンに出さない。どちらもこの関数で決める(ルールでは出してよい手のまま)
+//   o … cardAttackOptions の手1つ(st.active の手札で見る)。むだと見るのは次の2つ
+//   ・払うガッツを減らすだけの札(ジョイのサポート・光合成・団結・急襲)で、外しても払うガッツが同じか少ない
+//   ・純血のスピードを、狙う相手に純血でない子がいない技に付ける
+const CARD_COST_ONLY_EFFS = ['attach', 'attachFree', 'attachCost', 'attachCostHalf'];
 const cardAttachUseless = (db, st, o) => {
-  if (!o || !Array.isArray(o.hand) || o.hand.length < 2) return false;
-  const p = st.active, hand = st.players[p].hand;
-  const cost = cardActionCost(db, st, p, hand, o.hand);
+  const p = st.active;
+  const me = st.players[p];
+  if (!o || (o.type !== 'attack' && o.type !== 'breeder') || !Array.isArray(o.hand) || o.hand.length < 2) return false;
+  const main = cardOf(db, me.hand[o.hand[0]]);
+  if (!main) return false;
+  const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter((t) => t.p !== p);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand);
   return o.hand.slice(1).some((i) => {
-    const c = cardOf(db, hand[i]);
-    if (!c || !(c.effects || []).length || !(c.effects || []).every((e) => ['attach', 'attachFree', 'attachCost', 'attachCostHalf'].includes(e.t))) return false;
-    return cardActionCost(db, st, p, hand, o.hand.filter((j) => j !== i)) === cost;
+    const c = cardOf(db, me.hand[i]);
+    if (!c) return false;
+    const effs = (c.effects || []).map((e) => e.t);
+    if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i)) <= cost;
+    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some((t) => cardIsHybridMon(st.players[t.p].mons[t.m]))) return true;
+    return false;
   });
 };
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
@@ -53555,7 +53566,10 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     const gm = cardFieldEff(st, 'fieldGutsMax');
     return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
   }
-  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
+  const opts0 = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
+  // 付けても何も変わらない札は付けない(カードを1枚むだにするだけ。外すと手が無くなるときは元のまま)
+  const useful = opts0.filter((o) => !cardAttachUseless(db, st, o));
+  const opts = useful.length ? useful : opts0;
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
