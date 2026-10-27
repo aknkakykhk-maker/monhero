@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 86c4b937dc99032c
+// generated-sha256: 3313733ce5f60902
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60031,6 +60031,14 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   // フレンドから招待: 自分のブリーダーid・名簿(承認済みのフレンド)・届いている招待
   const [selfBid, setSelfBid] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false); // マルチの履歴(92-card-pvp-history.jsx)
+  // 自分の強さの点数(横画面の左の列に出す。表が無い・読めないときは出さない)
+  const [myRating, setMyRating] = useState(null);
+  useEffect(() => {
+    if (!selfBid || typeof sbFetchMyCardPvpRating !== 'function') return undefined;
+    let alive = true;
+    void sbFetchMyCardPvpRating(selfBid).then((x) => { if (alive && x) setMyRating(x); });
+    return () => { alive = false; };
+  }, [selfBid]);
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -60204,6 +60212,17 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   return (
     <div data-mh-screen data-card-pvp={room.phase} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note={cardPvpOpen() ? 'ほかのブリーダーと1対1で戦えます' : 'ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)'}/>
+      {/* 横画面だけ: 自分のデッキと強さの点数(一覧の外に置くと左の列に積まれる。縦画面では入口のボタンが下がらないよう出さない。2026-10-27 部長) */}
+      {room.phase === 'idle' && deck && (
+        <div data-card-pvp-me-summary className="hidden landscape:block rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-white">
+          <p className="text-[12px] font-bold text-slate-300">使うデッキ</p>
+          <p className="truncate text-[14px] font-black">{deck.name || 'デッキ'}</p>
+          <div className="mt-1 grid grid-cols-3 gap-1.5">
+            {(deck.monsters || []).map((no, i) => { const m = cardMonsterOf(CARD_BATTLE_DATA, no); return <img key={`${no}-${i}`} src={CARD_IMG(m ? m.img : no)} alt={m ? m.name : no} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>; })}
+          </div>
+          {myRating && <p data-card-pvp-me-rating className="mt-2 text-[13px] font-black text-sky-200 tabular-nums">強さ {myRating.rating}{myRating.games > 0 ? `(${myRating.games}試合)` : ''}</p>}
+        </div>
+      )}
       <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {room.phase === 'idle' && (<>
           {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
@@ -60694,6 +60713,17 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
   return (
     <div data-mh-screen data-card-pvp-history="list" className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="マルチの履歴" accent="text-sky-200" onBack={onBack} note={`新しい${CARD_PVP_HISTORY_MAX}試合まで・押すと相手のデッキ`}/>
+      {/* 勝ち負けの合計(一覧の外。横画面では左の列に積まれ、縦画面では一覧の上に出る。2026-10-27 横画面の左の列の空き・部長) */}
+      {list && list.length > 0 && (() => {
+        const w = list.filter((x) => x.outcome === 'win').length;
+        const latest = list.find((x) => x.rating);
+        return (
+          <div data-card-pvp-history-total className="mb-2 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2 text-[13px] font-black text-white tabular-nums landscape:flex-col landscape:gap-1">
+            <span>{list.length}試合 <span className="text-amber-300">{w}勝</span> <span className="text-slate-300">{list.length - w}敗</span></span>
+            {latest && <span className="text-sky-200">強さ {latest.rating.after}</span>}
+          </div>
+        );
+      })()}
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
         {list && list.length === 0 && <p className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだマルチ対戦の記録はありません')}</p>}
         {(list || []).map((x) => {
