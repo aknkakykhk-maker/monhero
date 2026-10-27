@@ -138,7 +138,8 @@ for (const f of fs.readdirSync(PARTS).filter((x) => x.endsWith('.jsx'))) {
 // ⑤ 吹き出しの字を出す所が、文字の台詞だけを出している
 {
   const p84 = read('84-screen-card-battle.jsx'), p87 = read('87-card-deck-edit.jsx');
-  ok(/data-card-bubble\b[\s\S]{0,1500}jaWrap\(bubble\.text\)/.test(p84), '対戦中の吹き出しが bubble.text を jaWrap で出していない');
+  // 言葉の切れ目で折る部品は、ほかのカードの吹き出しと同じ cardJaWrap(#4008 で jaWrap から替えた)
+  ok(/data-card-bubble\b[\s\S]{0,4000}?cardJaWrap\(bubble\.text\)/.test(p84), '対戦中の吹き出し(カットインも)が bubble.text を cardJaWrap で出していない');
   ok(/const text = ai \? ai\.text : line \? line\.text : '';/.test(p84), '結果の台詞が「AIの文 → 決まった台詞 → 空」の順で文字を選んでいない');
   ok(/typeof res\.text !== 'string'/.test(read('83-card-battle-talk-ai.jsx')), '外のAIの返事が文字かどうかを確かめていない(文字でない返事が吹き出しに出る)');
   ok(/data-card-deck-ask-text[^\n]*ask\.text/.test(p87), 'デッキ相談の吹き出しが ask.text を出していない(形が変わったらこの検査も直す)');

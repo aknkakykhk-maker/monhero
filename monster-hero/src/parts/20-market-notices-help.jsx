@@ -761,7 +761,8 @@ const helpDataRows = (id) => {
       ];
     }
     case 'teachings':
-      return ((typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS) || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
+      // 公開の印が立つまでのアシカ(ソラシド)は出さない(teachingCardReleased・data/breeder.js)
+      return ((typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS) || []).filter(card => typeof teachingCardReleased !== 'function' || teachingCardReleased(card)).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
     case 'skipTickets':
       return marketItems.filter(item => skipIds.has(item.id))
         .map(item => [item.name, `${DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty} で使える ／ マーケット ${item.cost.toLocaleString()}ダイヤ`]);
