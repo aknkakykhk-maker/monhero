@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a05b3a1db7d05c0a
+// generated-sha256: 1b751d55010bbfa2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11690,6 +11690,8 @@ const marketLabelNodes = (label) => marketLabelSegments(label)
 // いまビートP交換所で買える窓が開いていれば、その一言も添える。窓が読めないときは undefined(ふつうの「近日追加」)
 const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  // 解放が要る服(みゅあの「デュエルマスター」など)は、解放するまで入手条件を札に出す(2026-10-27 社長)
+  if (costume && costume.unlock && typeof assistantCostumeUnlockedNow === 'function' && !assistantCostumeUnlockedNow(costume) && Array.isArray(costume.lockLabel)) return [...costume.lockLabel];
   const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
   const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
   const fromMs = diamond ? Date.parse(diamond.from) : NaN;
@@ -11721,7 +11723,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px] max-[359px]:tracking-[-0.05em]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -13253,6 +13255,13 @@ const BATTLE_STACK_MARKS = Object.freeze({
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
   kusabi:     Object.freeze({ mark:'🔻', img:'', label:'楔' }),                // 敵: イルミネ・ドリーミィ(影潜)が付けた楔
   dreamPain:  Object.freeze({ mark:'💤', img:'', label:'ドリームペイン', unit:'T' }), // 敵: ドリーミィの固有技(被ダメージ上昇の残りターン)
+  // キュービ・オリヒメ(2026-10-27・公開前)。数は 60-app の kyubiOrihimeStackMarks が枠ごとに作る
+  rengoku:    Object.freeze({ mark:'♨️', img:'', label:'煉獄' }),              // キュービ(九尾四相・煉獄ノ相)
+  kagero:     Object.freeze({ mark:'🌫️', img:'', label:'陽炎の完全回避' }),    // キュービ(九尾四相・陽炎ノ相)。持っていれば1
+  kitsunebi:  Object.freeze({ mark:'🦊', img:'', label:'狐火' }),              // キュービ(九尾幻灯・タクティクス)
+  ouse:       Object.freeze({ mark:'🎐', img:'', label:'逢瀬' }),              // オリヒメ(天河の契り)
+  hoshiai:    Object.freeze({ mark:'🌌', img:'', label:'星合の刻', unit:'T' }), // オリヒメ(星合の刻・タクティクス)の残りターン
+  reikon:     Object.freeze({ mark:'🕯️', img:'', label:'霊魂', unit:'T' }),     // キュービ・オリヒメの固有技の効果の残りターン
 });
 // ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
 //   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。
@@ -28140,10 +28149,8 @@ const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot)
 const SORASHIDO_CARD_ID = 'sorashido';
 // 5人目の枠の番号(タクティクスの4枠 0〜3 の次)
 const SORASHIDO_COPY_SLOT = 4;
-// 山札に足すコピーの子の固有技は、どの Lv でもいつも1枚
-const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-// コピーが毎ターン山札の写しから見るカードの枚数(これに足した固有技を加える)
-const SORASHIDO_COPY_HAND_DRAW = 2;
+// コピーが毎ターン引く枚数の既定(呼ぶ側はプレイヤーの手札と同じ枚数を渡す)
+const SORASHIDO_COPY_HAND_DRAW = 3;
 
 const aiCopySafeNum = (value, fallback = 0) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
 
@@ -28175,49 +28182,62 @@ const aiCopyStartHate = (srcHate, level) => Math.max(0, Math.min(100, Math.floor
 const aiCopyHateGainMult = (level) => aiCopyRules(level).hateGain;
 
 // アシカを使ったときの判定。aiCopy はいまのコピー(無ければ null)。返す kind ごとにバトル側がやること:
-//   'new'     … コピーを作る(次のターンの始まりに出す)。addUniqueOf の固有技を1枚足す
-//   'refresh' … 同じ子でもう一度。turnsLeft を最初へ戻すだけ(固有技は足さない・1枚のまま)
-//   'switch'  … 別の子へ切りかえ。いまのコピーを外し(removeCopy)、removeUniqueOf の固有技を抜き、addUniqueOf を1枚足す
+//   'new'     … コピーを作る(次のターンの始まりに出す)。山札を作る(aiCopyBuildDeck)
+//   'refresh' … 同じ子でもう一度。turnsLeft を最初へ戻すだけ(山札もそのまま)
+//   'switch'  … 別の子へ切りかえ。いまのコピーを外し(removeCopy)、新しい子で山札を作り直す
+//   rebuildDeck が true のとき山札を作る。プレイヤーの山札には何も足さない・抜かない(2026-10-27 社長)
 const aiCopySummonPlan = (aiCopy, { srcSlot, srcMonsterId, level }) => {
   const turnsLeft = aiCopyTurns(level);
-  if (!aiCopy) return { kind: 'new', turnsLeft, removeCopy: false, removeUniqueOf: null, addUniqueOf: srcMonsterId };
-  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return { kind: 'refresh', turnsLeft, removeCopy: false, removeUniqueOf: null, addUniqueOf: null };
-  return { kind: 'switch', turnsLeft, removeCopy: true, removeUniqueOf: aiCopy.srcMonsterId, addUniqueOf: srcMonsterId };
+  if (!aiCopy) return { kind: 'new', turnsLeft, removeCopy: false, rebuildDeck: true };
+  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return { kind: 'refresh', turnsLeft, removeCopy: false, rebuildDeck: false };
+  return { kind: 'switch', turnsLeft, removeCopy: true, rebuildDeck: true };
 };
 
-// ターンの終わり(コピーが出ているときだけ呼ぶ)。0 になったら消える(expired=true のとき、コピーと固有技を抜く)
+// ターンの終わり(コピーが出ているときだけ呼ぶ)。0 になったら消える(expired=true のとき、コピーを外す。山札も一緒に捨てる)
 const aiCopyTurnEnd = (aiCopy) => {
-  if (!aiCopy) return { turnsLeft: 0, expired: false, removeUniqueOf: null };
+  if (!aiCopy) return { turnsLeft: 0, expired: false };
   const turnsLeft = Math.max(0, Math.floor(aiCopySafeNum(aiCopy.turnsLeft)) - 1);
-  return { turnsLeft, expired: turnsLeft <= 0, removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null };
+  return { turnsLeft, expired: turnsLeft <= 0 };
 };
 
-// ---- 固有技の出し入れ ----
-// 足す1枚。元の固有技のカードに印(sorashidoCopyOf・uid)を付けた写し。抜くときは uid か印で探す
-const aiCopyUniqueCard = (card, srcMonsterId) => (card ? { ...card, sorashidoCopyOf: srcMonsterId, uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}` } : null);
-const aiCopyIsUnique = (card, { uid = null, srcMonsterId = null } = {}) => !!card && card.sorashidoCopyOf != null
-  && (uid == null || card.uid === uid) && (srcMonsterId == null || card.sorashidoCopyOf === srcMonsterId);
-// 山札・手札・墓地のどこからでも、コピーの分の固有技を抜く。zones は { deck, hand, discard }(どれも配列)。元の配列は変えない
-const aiCopyRemoveUnique = (zones, match) => {
-  const strip = (list) => (Array.isArray(list) ? list.filter((c) => !aiCopyIsUnique(c, match)) : []);
-  return { ...zones, deck: strip(zones && zones.deck), hand: strip(zones && zones.hand), discard: strip(zones && zones.discard) };
+// ---- コピーの山札と手札(2026-10-27 社長「山札自体を別物として扱う」「プレイヤーと同じように引く」) ----
+// コピーの山札に入れない(=選ばない)カード: 距離撃(青い枠 range_atk)・ソラシドのアシカそのもの・コピーした子以外の味方の固有技。
+//   コピーした子の固有技は、もとからプレイヤーの山札にあるのでそのまま残る(足しもしない)。ほかのアシカは残す。
+// 固有技の持ち主は、カードの ownerSlotIdx(枠の番号)で見分け、無ければ monId(モンスターの種類)で見分ける(60-app.jsx の固有技のカード)
+const aiCopyUniqueIsOwn = (card, { srcSlot = null, srcMonsterId = null } = {}) => {
+  if (Number.isInteger(card.ownerSlotIdx) && Number.isInteger(srcSlot)) return card.ownerSlotIdx === srcSlot;
+  return card.monId != null && card.monId === srcMonsterId;
+};
+const aiCopyCanPick = (card, src = null) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID
+  && (card.type !== 'unique' || !src || aiCopyUniqueIsOwn(card, src));
+
+// コピーが出たとき(と切りかえたとき)に作る山札。zones はプレイヤーの { deck, hand, discard }(手札・捨て札も含めた全体の写しを取る)。
+// src は { srcSlot, srcMonsterId }。返すのは { deck, discard }(捨て札は空から)。プレイヤーの配列は変えない
+const aiCopyBuildDeck = (zones, src) => {
+  const all = ['deck', 'hand', 'discard'].flatMap((k) => (zones && Array.isArray(zones[k]) ? zones[k] : []));
+  return { deck: all.filter((c) => aiCopyCanPick(c, src || {})), discard: [] };
 };
 
-// ---- コピーの手札と使うカード ----
-// コピーは選ばない: 距離技(青い枠 range_atk)と、ソラシドのアシカそのもの。固有技とほかのアシカは選べる
-const aiCopyCanPick = (card) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
-
-// 毎ターンの手札: みんなの山札は減らさず、山札の写しから2枚(選べるものから)+コピーの子の固有技1枚
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
-  const picked = [];
-  for (let i = 0; i < draw && rest.length > 0; i++) {
-    const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
-    picked.push(rest.splice(at, 1)[0]);
+// 引く(プレイヤーと同じ引き方): 山札から無作為・重ならずに count 枚。山札が尽きたら、捨て札を山札へ戻して続ける。
+// state は { deck, discard }。返すのは { hand, deck, discard }(新しい配列。渡した配列は変えない)
+const aiCopyDraw = (state, count, rng) => {
+  let deck = (state && Array.isArray(state.deck)) ? state.deck.slice() : [];
+  let discard = (state && Array.isArray(state.discard)) ? state.discard.slice() : [];
+  const n = Math.max(0, Math.floor(aiCopySafeNum(count, SORASHIDO_COPY_HAND_DRAW)));
+  const hand = [];
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) { if (discard.length === 0) break; deck = discard; discard = []; }
+    const at = Math.min(deck.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * deck.length));
+    hand.push(deck.splice(at, 1)[0]);
   }
-  if (uniqueCard && aiCopyCanPick(uniqueCard)) picked.push(uniqueCard);
-  return picked;
+  return { hand, deck, discard };
 };
+
+// ターンの終わり: 手札(使ったカードも、使わなかったカードも)を捨て札へ。返すのは { deck, discard }
+const aiCopyDiscardHand = (state, hand) => ({
+  deck: (state && Array.isArray(state.deck)) ? state.deck.slice() : [],
+  discard: [...((state && Array.isArray(state.discard)) ? state.discard : []), ...(Array.isArray(hand) ? hand : [])],
+});
 
 // 1枚を選ぶ。いちばん点の高いものを pick の見込みで、外れたら2番目以降から同じ重さで。使えるものが無ければ null
 const aiCopyPickOne = (cards, score, rng, pick) => {
@@ -28251,54 +28271,50 @@ const aiCopyPickCards = (hand, { score, costOf, guts, maxGuts, rng, level }) => 
 // ---- 説明文(ブリーダーの教え・マーケット・カードの詳しい画面) ----
 const sorashidoCopyDesc = (level) => {
   const t = aiCopyRules(level), p = (v) => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 
 // ---- part: 33-ai-copy.jsx ----
 // ==== AIコピー(ソラシドのアシカ「自動化 → 全自動 → 無人運転」)の出し方・消し方・数え方(共通) ====
 // 2026-10-27 社長の決め。使った子の「AIコピー」が次のターンから5人目の味方として戦う。
 // ここはタクティクスと5つの遊びの**共通**の部品(バトル部セコンドくん・ダイスくんで分担を決めた)。
-//   ・数字と判定(強さ・続くターン・もう一度/切りかえ・手札・1枚の選び方・固有技の写し)は開発部の 32-sorashido-copy.jsx を呼ぶ
+//   ・数字と判定(強さ・続くターン・もう一度/切りかえ・コピーの山札と引き方・1枚の選び方)は開発部の 32-sorashido-copy.jsx を呼ぶ
 //   ・タクティクスだけの「置き場所・狙い・ヘイト・ライフ・倒れたら消す」は 32-tactics-units.jsx(tacticsAiCopy*)
 // どれも「いまの状態を受けて、新しい状態を返す」だけの関数(画面にも保存にも触らない)。aiCopy は保存しない。
-//   state … { aiCopy, zones: { deck, hand, discard } }(zones はみんなの山札・手札・捨て札。コピーの固有技の写しを出し入れする)
+//   state … { aiCopy, zones: { deck, hand, discard } }(zones はプレイヤーの山札・手札・捨て札。写しを取るだけで変えない)
 //   aiCopy … { srcSlot, srcMonsterId, name, level, spawnTurn, turnsLeft, atk, def, guts, maxGuts, permaAtkPct,
-//              hp?, maxHp?(タクティクスだけ), hand, nextCard, picks, uniqueCardUid, pos?, hate?(タクティクスだけ) }
+//              hp?, maxHp?(タクティクスだけ), deck, discard, hand, nextCard, picks, pos?, hate?(タクティクスだけ) }
+// ★コピーは自分の山札を持つ(2026-10-27 社長「山札自体を別物として扱う」「プレイヤーと同じように引く」)。
+//   出たとき(と切りかえたとき)にプレイヤーの山札・手札・捨て札の写しから作り(距離撃・このアシカ・ほかの味方の固有技は抜く)、
+//   毎ターン引いて、ターンの終わりに手札を捨て札へ。尽きたら捨て札を混ぜ直す。プレイヤーの山札には何も足さない・抜かない
 // ★5つの遊びのコピーはパーティのライフを使う(hp を持たない・狙われない・倒されない。ターン切れで消える)。
 //   ここでは hp を「あれば使う」形にして、両方を同じ関数で扱う
 
 // コピーが盤に出ているか(使ったターンの次のターンから)
 const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
 
-// アシカを使った。src … 元の子のいまの値(タクティクスの1体と同じ形)/ uniqueCard … 元の子の固有技のカード /
+// アシカを使った。src … 元の子のいまの値(タクティクスの1体と同じ形)/
 //   turn … 使ったターン(コピーは turn + 1 から出る)/ mode … 'tactics' | 'classic' / extra … 置き場所・ヘイトなど遊びごとに足すもの
-const summonAiCopy = (state, { srcSlot, srcMonsterId, name = '', level = 0, src = null, uniqueCard = null, turn = 0,
+const summonAiCopy = (state, { srcSlot, srcMonsterId, name = '', level = 0, src = null, turn = 0,
   mode = 'tactics', effMul = 1, permaAtkPct = 0, extra = null } = {}) => {
   const now = (state && state.aiCopy) || null;
-  let zones = (state && state.zones) || { deck: [], hand: [], discard: [] };
+  const zones = (state && state.zones) || { deck: [], hand: [], discard: [] };
   const plan = aiCopySummonPlan(now, { srcSlot, srcMonsterId, level });
   if (plan.kind === 'refresh') {
     return { aiCopy: { ...now, level, turnsLeft: plan.turnsLeft, ...(extra || {}) }, zones, plan };
   }
-  if (plan.removeUniqueOf != null) zones = aiCopyRemoveUnique(zones, { srcMonsterId: plan.removeUniqueOf });
-  const uniq = plan.addUniqueOf != null ? aiCopyUniqueCard(uniqueCard, plan.addUniqueOf) : null;
-  if (uniq) zones = { ...zones, deck: [...(Array.isArray(zones.deck) ? zones.deck : []), uniq] };
+  // new・switch(plan.rebuildDeck)は山札を作り直す
+  const pile = aiCopyBuildDeck(zones, { srcSlot, srcMonsterId });
   const stats = aiCopyStats(src, level, { mode, effMul, permaAtkPct });
   const aiCopy = {
     srcSlot, srcMonsterId, name: String(name || ''), level, spawnTurn: aiCopySafeNum(turn) + 1, turnsLeft: plan.turnsLeft,
-    ...stats, hand: [], nextCard: null, picks: [], uniqueCardUid: uniq ? uniq.uid : null, ...(extra || {}),
+    ...stats, deck: pile.deck, discard: pile.discard, hand: [], nextCard: null, picks: [], ...(extra || {}),
   };
   return { aiCopy, zones, plan };
 };
 
-// コピーを外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。固有技の写しを山札・手札・捨て札から抜く
-const dismissAiCopy = (state) => {
-  const now = (state && state.aiCopy) || null;
-  const zones = (state && state.zones) || { deck: [], hand: [], discard: [] };
-  if (!now) return { aiCopy: null, zones };
-  const match = now.uniqueCardUid ? { uid: now.uniqueCardUid } : { srcMonsterId: now.srcMonsterId };
-  return { aiCopy: null, zones: aiCopyRemoveUnique(zones, match) };
-};
+// コピーを外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。プレイヤーの山札は触らない(コピーの山札ごと消える)
+const dismissAiCopy = (state) => ({ aiCopy: null, zones: (state && state.zones) || { deck: [], hand: [], discard: [] } });
 
 // ターンの終わりに1つ数える(出ているときだけ)。0 になったら外す
 const tickAiCopy = (state, turn) => {
@@ -28309,15 +28325,103 @@ const tickAiCopy = (state, turn) => {
   return { ...state, aiCopy: { ...now, turnsLeft: end.turnsLeft } };
 };
 
-// ターンの始め: コピーの手札を作り、使うカード(0〜2枚)を決める。deck … みんなの山札(減らさない)/
-//   score(card) … AUTO の点 / costOf(card) … 消費ガッツ / rng … 乱数(検査では決まった値を渡す)
-const planAiCopyTurn = (aiCopy, { deck = [], score = null, costOf = null, rng = Math.random } = {}) => {
+// ターンの始め: コピー自身の山札から count 枚引いて(プレイヤーの手札と同じ枚数)、使うカード(0〜2枚)を決める。
+//   前のターンの手札が残っていれば、先に捨て札へ回す(endAiCopyTurn を呼び忘れても二重に持たない)
+//   score(card) … AUTO の点 / costOf(card) … 消費ガッツ / usable(card) … 選んでよいか(タクティクスは与ダメの出ない攻撃を外す)/
+//   rng … 乱数(検査では決まった値を渡す)
+const planAiCopyTurn = (aiCopy, { count = SORASHIDO_COPY_HAND_DRAW, score = null, costOf = null, usable = null, rng = Math.random } = {}) => {
   if (!aiCopy) return aiCopy;
-  const uniq = (Array.isArray(deck) ? deck : []).find((c) => c && aiCopy.uniqueCardUid && c.uid === aiCopy.uniqueCardUid) || null;
-  const rest = (Array.isArray(deck) ? deck : []).filter((c) => c !== uniq);
-  const hand = aiCopyHand(rest, uniq, rng);
-  const picks = aiCopyPickCards(hand, { score, costOf, guts: aiCopy.guts, maxGuts: aiCopy.maxGuts, rng, level: aiCopy.level });
-  return { ...aiCopy, hand, picks, nextCard: picks[0] || null };
+  const cleared = (Array.isArray(aiCopy.hand) && aiCopy.hand.length) ? endAiCopyTurn(aiCopy) : aiCopy;
+  const drawn = aiCopyDraw({ deck: cleared.deck, discard: cleared.discard }, count, rng);
+  const choosable = drawn.hand.filter((c) => typeof usable !== 'function' || usable(c));
+  const picks = aiCopyPickCards(choosable, { score, costOf, guts: cleared.guts, maxGuts: cleared.maxGuts, rng, level: cleared.level });
+  return { ...cleared, deck: drawn.deck, discard: drawn.discard, hand: drawn.hand, picks, nextCard: picks[0] || null };
+};
+
+// ターンの終わり: 手札(使ったカードも使わなかったカードも)を捨て札へ
+const endAiCopyTurn = (aiCopy) => {
+  if (!aiCopy) return aiCopy;
+  const pile = aiCopyDiscardHand({ deck: aiCopy.deck, discard: aiCopy.discard }, aiCopy.hand);
+  return { ...aiCopy, deck: pile.deck, discard: pile.discard, hand: [], picks: [], nextCard: null };
+};
+
+// コピーが札を選ぶときの点(高いほど良い・2026-10-27 部長「AUTO の見方で選ぶ」)。タクティクスも5つの遊びもこれを通す。
+//   並びは AUTO(18-points-and-auto.jsx の chooseAutoTurn の priorityOf)と同じ:
+//     offense … 固有技0・攻撃1・ほか2・ガード/回復3 / defense … 回復0・ガード1・ほか2・攻撃3 / それ以外(random) … みな0
+//   同じ優先なら dmgOf(card) の大きい順(攻撃でない札は0)。isAttack・isGuard・dmgOf は呼ぶ側の見方を渡す
+const aiCopyAutoScore = (card, { strategy = 'random', isAttack = null, isGuard = null, dmgOf = null } = {}) => {
+  if (!card) return -Infinity;
+  const attack = typeof isAttack === 'function' ? !!isAttack(card) : (card.type === 'atk' || card.type === 'unique');
+  const guard = typeof isGuard === 'function' ? !!isGuard(card) : (card.type === 'guard' || card.type === 'weak_guard');
+  const prio = strategy === 'offense' ? (card.type === 'unique' ? 0 : attack ? 1 : (guard || card.type === 'heal') ? 3 : 2)
+    : strategy === 'defense' ? (card.type === 'heal' ? 0 : card.type === 'guard' ? 1 : attack ? 3 : 2)
+    : 0;
+  const dmg = attack && typeof dmgOf === 'function' ? Math.max(0, aiCopySafeNum(dmgOf(card))) : 0;
+  return -prio * 1e7 + dmg;
+};
+
+// ---- part: 33-ai-copy-classic.jsx ----
+// ==== AIコピー(ソラシドのアシカ)の5つの遊び(クラシック・チャレンジ・プロ・クイック・極限)だけの計算 ====
+// 2026-10-27 バトル部ダイスくん。出し方・消し方・数え方は共通の 33-ai-copy.jsx、数字は 32-sorashido-copy.jsx。
+// ここは「5つの遊びはパーティで1組の値を持つ」ことに合わせる所だけ(画面・保存・乱数の元に触らない)。
+//   ・コピーはライフを持たない(パーティのライフを使う。狙われない・倒されない。社長の答え・案2)
+//   ・強さの元は「元の子1体の基礎の値」(勇者モンも供モンも同じ物差し。2026-10-27 社長の答え)。
+//     そのあとの育成・強化はパーティの値にまとめて入っているので、増えたぶん(いまのパーティ − 4枠がパーティへ足したぶん)を
+//     「その子がパーティへ足したぶんの割合」で分けて足す(育成していなければ基礎の値がそのまま出る)
+//   ・攻撃は元の子の間合い(srcSlot)から、コピーのちからで撃つ(パーティのちからで出したダメージを、ちからの比で縮める)
+
+// 供モンのコピーの物差し。'base' … その子の基礎の値(勇者モンと同じ) / 'plus' … 合流で足したぶん
+const CLASSIC_AI_COPY_ALLY_BASE = 'base';
+
+// その子がパーティへ足しているぶん(勇者モンは基礎、供モンは合流ボーナス)。育成ぶんを分ける割合に使う
+const classicAiCopyShareOf = (mon, isHero) => {
+  if (!mon) return { atk: 0, def: 0, maxGuts: 0 };
+  const plus = (mon.plusStats && typeof mon.plusStats === 'object') ? mon.plusStats : {};
+  const pick = (heroKey, plusKey) => Math.max(0, aiCopySafeNum(isHero ? mon[heroKey] : plus[plusKey]));
+  return { atk: pick('baseAtk', 'atk'), def: pick('baseDef', 'def'), maxGuts: pick('baseGuts', 'guts') };
+};
+// コピーの物差しになる「その子の値」(育成ぶんを足す前)
+const classicAiCopyBaseOf = (mon, isHero) => {
+  if (!mon) return { atk: 0, def: 0, maxGuts: 0 };
+  if (isHero || CLASSIC_AI_COPY_ALLY_BASE !== 'base') return classicAiCopyShareOf(mon, isHero);
+  return { atk: Math.max(0, aiCopySafeNum(mon.baseAtk)), def: Math.max(0, aiCopySafeNum(mon.baseDef)), maxGuts: Math.max(0, aiCopySafeNum(mon.baseGuts)) };
+};
+
+// コピーの元の値(aiCopyStats へ渡す src)。slots … いまの4枠 / heroId … 勇者モンの id / party … パーティの atk・def・maxGuts
+const classicAiCopySrc = ({ slots = [], srcSlot = 0, heroId = null, party = {} } = {}) => {
+  const list = Array.isArray(slots) ? slots : [];
+  const isHeroAt = (m) => !!(m && heroId != null && m.id === heroId);
+  const shares = list.map((m) => classicAiCopyShareOf(m, isHeroAt(m)));
+  const mine = shares[srcSlot] || { atk: 0, def: 0, maxGuts: 0 };
+  const base = classicAiCopyBaseOf(list[srcSlot], isHeroAt(list[srcSlot]));
+  const part = (key) => {
+    const total = shares.reduce((n, s) => n + s[key], 0);
+    const grown = Math.max(0, aiCopySafeNum(party && party[key]) - total);
+    const extra = total > 0 ? grown * (mine[key] / total) : 0;
+    return Math.floor(base[key] + extra);
+  };
+  return { atk: part('atk'), def: part('def'), maxGuts: part('maxGuts') };
+};
+
+// コピーが撃てるカードか(このあとの段で、ガード・強化・回復・ほかのアシカも効くようにする)
+const classicAiCopyIsAttack = (card) => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
+
+// パーティのちからで出したダメージを、コピーのちからへ縮める
+const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
+  const d = Math.max(0, aiCopySafeNum(partyDmg));
+  const p = Math.max(0, aiCopySafeNum(partyAtk));
+  if (!(p > 0) || !(d > 0)) return 0;
+  return Math.floor(d * Math.max(0, aiCopySafeNum(copyAtk)) / p);
+};
+
+// コピーのガッツを使う / ターンの終わりにパーティと同じ率で戻す(ジン部長の答え②・仮)
+const classicAiCopySpendGuts = (aiCopy, cost) => (aiCopy
+  ? { ...aiCopy, guts: Math.max(0, aiCopySafeNum(aiCopy.guts) - Math.max(0, aiCopySafeNum(cost))) } : aiCopy);
+const classicAiCopyRegenGuts = (aiCopy, rate) => {
+  if (!aiCopy) return aiCopy;
+  const max = Math.max(0, aiCopySafeNum(aiCopy.maxGuts));
+  const add = Math.floor(max * Math.max(0, aiCopySafeNum(rate)));
+  return { ...aiCopy, guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add) };
 };
 
 // ---- part: 33-rhythm-buddy.jsx ----
@@ -35128,7 +35232,7 @@ function ProfileScreen({
     return () => { alive = false; };
   }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length
-    ? unlockedAssistants : ASSISTANT_LIST;
+    ? unlockedAssistants : ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id));
   // 根で safe-area を足さない(index.html の body が env(safe-area-inset-*) を持っており、
   // ここで足すとノッチぶんを二重に取る)。デバッグのプレビュー中だけ、画面の上に重なる
   // 固定の帯(60-app.jsx の data-onboarding-preview-bar)ぶんだけ下げる。
@@ -42192,6 +42296,50 @@ const kindOfTacticsSlotFx = (fx) => {
 // ・省エネ切替ボタンだけ、バトル画面の中でもういちど gameState==='BATTLE' を見ていた。
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
+// ★AIコピー(ソラシドのアシカ)の5つの遊びの札。縦は4人の列の右はし、横向き(背の低い画面)は列の下に置く(ジン部長の決め)。
+//   4列(=間合い)の外に置いて、5つ目の間合いに見えないようにする。コピーがいないときは列の組み方を変えない(display:contents)
+const CLASSIC_AI_COPY_CSS = `
+[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
+[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
+[data-ai-copy-cell]{width:58px;flex:0 0 58px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55)}
+@media (orientation: landscape) and (max-height: 520px){
+  [data-ai-copy-row]{flex-direction:column;gap:3px}
+  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
+  [data-ai-copy-cell]{width:100%;flex:0 0 21px;height:21px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:hidden}
+  [data-ai-copy-cell] [data-sorashido-fx] .text-2xl{font-size:14px}
+  [data-ai-copy-cell] br{display:none}
+  [data-ai-copy-cell] > span{width:auto;flex:0 0 auto}
+  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+}`;
+// 演出の段階。60 から aiCopy.fx('appear'|'thinking'|'vanish')が来ればそれを使い、無ければ fallback(出る前 appear・出たら idle)
+const aiCopyViewPhase = (copy, fallback) => (copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback);
+const classicAiCopyLandscape = () => {
+  try { return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches; }
+  catch (e) { return false; }
+};
+function ClassicAiCopyCell({ copy, turnCount, onOpen }) {
+  if (!copy) return null;
+  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
+  // 消えていく0.7秒(phase==='vanish')は、ターン切れで数え上は「出ていない」になっても出ていたときの札のまま描く
+  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
+  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
+  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
+  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)), maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
+  return (
+    <div data-ai-copy-cell={out ? 'out' : 'waiting'} data-ai-copy-phase={phase} aria-label={`${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`}
+      role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
+      onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
+      <style>{CLASSIC_AI_COPY_CSS}</style>
+      <SorashidoCopyFx phase={phase}><span className="text-2xl leading-none">{SORASHIDO_FACE_ICON}</span></SorashidoCopyFx>
+      <span className="w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200">{copy.name || '仲間'}<br/>のコピー</span>
+      {out
+        ? <><span className="whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200">G {guts}/{maxGuts}</span>
+            <SorashidoNextCardBadge card={copy.nextCard || null} layout={layout} turnsLeft={copy.turnsLeft}/></>
+        : <span className="text-center text-[9px] font-black leading-tight text-emerald-300">次のターン<br/>から</span>}
+    </div>
+  );
+}
 function BattleScreen({
   battleOverlayOpen = false, applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
@@ -42216,7 +42364,7 @@ function BattleScreen({
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy,
-  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
+  tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, kyubiOrihimeStackMarks, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -42343,6 +42491,8 @@ function BattleScreen({
     if (getPermaBuff('kenshiComboPower') > 0) { const k = slots.findIndex((m) => m?.id === 'KenshiMocchi'); put(k >= 0 ? k : heroDist, 'kenshi', getPermaBuff('kenshiComboPower')); }
     // タクティクスのEXの残りターン・完全回避・根性の残り(2026-10-12 社長の追加依頼)
     if (typeof tacticsSlotCountersAt === 'function') slots.forEach((m, i) => { if (!m) return; const c = tacticsSlotCountersAt(i) || {}; put(i, 'exTurns', c.exTurns); put(i, 'avoid', c.avoid); put(i, 'konjo', c.konjo); });
+    // キュービ・オリヒメ(煉獄・陽炎・狐火・逢瀬・星合・霊魂。2026-10-27)。数は 60-app の kyubiOrihimeStackMarks
+    Object.entries(kyubiOrihimeStackMarks || {}).forEach(([i, c]) => Object.entries(c || {}).forEach(([kind, n]) => put(Number(i), kind, n)));
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => { out[Number(i)] = { ...(c || {}) }; });
     return out;
   })();
@@ -42388,6 +42538,25 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // AIコピー(5つの遊び)の札。aiCopy は公開の印が偽なら null。タクティクスの札は盤の側(data-tactics-ai-copy)
+  //   コピーの手札の窓は5つの遊びの札・タクティクスの札(data-tactics-ai-copy)の両方から開くので、ここに1つだけ置く。
+  //   消えるとき(ターン切れ・WAVE の始めで aiCopy が null になったとき)は、直前の形を0.7秒だけ fx='vanish' で描いてから消す(60 は触らない)。
+  //   公開の印が偽なら aiCopy はずっと null なので、どちらも何も出さない
+  const [copyHandOpen, setCopyHandOpen] = useState(false);
+  const [copyGhost, setCopyGhost] = useState(null);
+  const copyPrevRef = useRef(null);
+  useEffect(() => {
+    if (aiCopy) { copyPrevRef.current = aiCopy; setCopyGhost(null); return undefined; }
+    const prev = copyPrevRef.current;
+    copyPrevRef.current = null;
+    setCopyHandOpen(false);
+    if (!prev) return undefined;
+    setCopyGhost({ ...prev, fx: 'vanish' });
+    const timer = setTimeout(() => setCopyGhost(null), 700);
+    return () => clearTimeout(timer);
+  }, [aiCopy]);
+  const shownAiCopy = aiCopy || copyGhost;
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? (shownAiCopy || null) : null;
   // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
@@ -43573,6 +43742,7 @@ function BattleScreen({
           {/* 味方の枠。高さは中身の合計で決まる(名前18 + 絵64 + ライフ/ガッツ + 距離ラベル20)。
               ★枠は overflow-visible なので、足りないと下へはみ出して手札の帯に食い込む。
                 ライフ・ガッツをラベル付きで整列させたとき(2026-09-22)に実際はみ出した */}
+          <div data-ai-copy-row={classicAiCopy&&!tacticsNewLayout?'':undefined} className={classicAiCopy&&!tacticsNewLayout?'':'contents'}>
           <div data-tactics-debug-layout={tacticsNewLayout?'2x2':undefined} className={`grid ${tacticsNewLayout?'grid-cols-2 grid-rows-2 gap-1.5':'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:tacticsNewLayout?'clamp(196px,23dvh,214px)':'clamp(152px,18dvh,168px)'}}>
             {slots.map((s,i)=>{
               // Count how many cards already assigned to this slot
@@ -43722,13 +43892,39 @@ function BattleScreen({
               const copyStanding=!!aiCopy&&isTacticsAiCopyStanding(aiCopy)&&aiCopy.spawnTurn<=turnCount;
               const chancesNow=s&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,copyStanding?aiCopy:null):null;
               const hatePct=chancesNow?chancesNow.slots[i]:null;
-              // コピーの札は、コピーが立つマス(pos)の枠に出す。名前・ライフ・残りターン・狙われる%
-              const copyChip=tacticsNewLayout&&aiCopy&&aiCopy.pos===i?(<div data-tactics-ai-copy={i} data-tactics-ai-copy-out={copyStanding?'1':'0'}
-                className="absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap">
-                <span className="min-w-0 truncate">🤖{aiCopy.stacked?'重なる ':''}{copyStanding?`ライフ${aiCopy.hp}`:'次のターンから'}</span>
-                {copyStanding&&<span className="shrink-0 tabular-nums text-sky-200/90">あと{aiCopy.turnsLeft}</span>}
-                {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
-              </div>):null;
+              // コピーは、コピーが立つマス(pos)の枠に出す(2026-10-27 部長: 見せ方は開発部の部品 24-sorashido-copy-view.jsx)。
+              //   空いたマスなら元の子の絵を SorashidoCopyFx で包んで置く(出る前は appear・出たら idle)。重なるときは絵を出さず札だけ
+              //   上に次に使う札(SorashidoNextCardBadge)、下にライフ・狙われる%の小さな札
+              //   消える0.7秒は shownAiCopy(直前の形・fx='vanish')で描く。狙われる%などの数えは aiCopy のまま
+              const tCopy=shownAiCopy;
+              const tCopyPhase=aiCopyViewPhase(tCopy,copyStanding?'idle':'appear');
+              const tCopyOut=copyStanding||tCopyPhase==='vanish';
+              const copySrc=tCopy&&tCopy.pos===i?slots[tCopy.srcSlot]:null;
+              const tCopyOnMon=!!s||!!(tCopy&&tCopy.stacked);
+              const copyChip=tacticsNewLayout&&tCopy&&tCopy.pos===i?(<>
+                {/* 枠は横に広い(縦の画面で約176×95)。空いたマスは「左に絵・右に次に使う札・下にライフ」と横に分けて、札で絵を隠さない。
+                    子がいるマスに重なるときは、その子の絵・名前・ライフの行を隠さないよう、左下の絵の所に2行の小さな札だけを出す
+                    (1行目 ♥ライフ・狙われる%、2行目 次に使うカード。ライフの行の字にかからない幅 40% に収める。くわしくは押して手札の窓で見る)。
+                    横向きの背の低い画面は枠が縦長(約88×112)なので、空いたマスは「上に絵・下に次の札」、重なるときの札は右上(名前の段の下)へ移す。2026-10-27 セコンドくんの実画面の見回り */}
+                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]">
+                  <SorashidoCopyFx phase={tCopyPhase}>
+                    <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
+                  </SorashidoCopyFx>
+                </div>}
+                {!tCopyOnMon&&<div data-tactics-ai-copy-next={i} className={`absolute ${copySrc?'left-[62px]':'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`}>
+                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft} layout={classicAiCopyLandscape()?'landscape':'portrait'}/>
+                </div>}
+                {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
+                <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={tCopyOut?'1':'0'} role={aiCopy?'button':undefined} aria-label={aiCopy?'コピーの手札を見る':undefined}
+                  onClick={aiCopy?(e)=>{e.stopPropagation();setCopyHandOpen(true);}:undefined}
+                  className={`absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon?'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]':'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
+                  <span className="flex max-w-full min-w-0 items-center gap-0.5">
+                    <span className="min-w-0 truncate"><span className={tCopyOnMon?'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}>🤖</span>{tCopyOut?(tCopyOnMon?<><span className="text-rose-300">♥</span><span className="tabular-nums">{tCopy.hp}</span></>:`ライフ${tCopy.hp}`):'次のターンから'}</span>
+                    {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums tracking-tighter text-rose-200"><span className={tCopyOnMon?'text-[6px] opacity-80':''}>狙</span>{chancesNow.copy}%</span>}
+                  </span>
+                  {tCopyOnMon&&tCopyOut&&<span data-tactics-ai-copy-next={i} className="block max-w-full min-w-0 truncate text-emerald-200">{tCopy.nextCard?(tCopy.nextCard.name||tCopy.nextCard.baseName||'考え中'):'考え中'}<span className="tabular-nums text-sky-200/90"> あと{tCopy.turnsLeft}</span></span>}
+                </div>
+              </>):null;
               const hateFlame=Number.isInteger(hatePct)?<span data-tactics-hate={i} data-tactics-hate-pct={hatePct} title="狙われる確率" className={`ml-0.5 shrink-0 rounded px-[2px] py-px text-[8px] font-black leading-none tracking-tighter tabular-nums ${hatePct>=50?'bg-red-950/80 text-red-200':hatePct>=30?'bg-orange-950/70 text-orange-200':'bg-black/50 text-slate-300'}`}><span className="text-[6px] opacity-80">狙</span>{hatePct}%</span>:null;
               // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
               // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
@@ -44080,6 +44276,11 @@ function BattleScreen({
                 {!tacticsNewLayout&&<div className="h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20"><span className="text-[10px] font-black uppercase tracking-tighter leading-none">{RANGE_LABELS[i]}距離</span></div>}
               </button>);
             })}
+          </div>
+          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount} onOpen={()=>setCopyHandOpen(true)}/>}
+          {/* 手札の窓は body へ出す(横向きでは敵の段の札が枠の並びより上の重なりにあり、窓の上へ出てしまったため) */}
+          {aiCopy&&copyHandOpen&&typeof document!=='undefined'&&ReactDOM.createPortal(<SorashidoCopyHandSheet open copyName={aiCopy.name||'仲間'} turnsLeft={aiCopy.turnsLeft}
+            cards={Array.isArray(aiCopy.hand)?aiCopy.hand:[]} nextCard={aiCopy.nextCard||null} guts={aiCopy.guts} maxGuts={aiCopy.maxGuts} onClose={()=>setCopyHandOpen(false)}/>,document.body)}
           </div>
         </div>
         {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える
@@ -60052,7 +60253,8 @@ const CARD_PVP_HIDDEN = -1;               // 相手の見えない札
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
 const CARD_PVP_RESEND_MS = 1500;          // 「受け取った」が来ない手を送り直す間
-const CARD_PVP_ALIVE_MS = 60000;          // これだけ何も届かなければ抜けた扱い(社長: iPhone でアプリを切り替えて戻る分)
+const CARD_PVP_ALIVE_MS = 120000;         // これだけ何も届かなければ抜けた扱い(社長: iPhone でアプリを切り替えて戻る分。2026-10-27 社長が60秒→120秒。
+//   相手の電波が途切れている間は、相手の持ち時間の時計を止め、この120秒だけで決める。帯の「あと◯秒で相手の負け」と本当に終わる時間をそろえるため)
 const CARD_PVP_NAME_MAX = 16;
 // 区切り2: 持ち時間(ルールの本文 CARD_BATTLE.md 1-3)。自分の番60秒・守り15秒。3回続けて使い切ったら負け
 const CARD_PVP_TURN_MS = 60000;
@@ -60061,7 +60263,10 @@ const CARD_PVP_TIMEOUT_LOSE = 3;
 const CARD_PVP_STALL_GRACE_MS = 20000;    // 相手の持ち時間が過ぎても手が来ないとき、これだけ待ってから相手の負けにする(電波の遅れの分)
 const CARD_PVP_QUIET_MS = 6000;           // これだけ相手から何も届かなければ「電波が途切れています」を出す
 const CARD_PVP_RECONNECT_MS = 3000;       // こちらの電波が切れたら、これおきにつなぎ直す
-const CARD_PVP_VERIFY_WAIT_MS = 15000;    // 相手の封がこれだけ届かなければ、確かめずに終える(相手が抜けたなど)
+const CARD_PVP_VERIFY_WAIT_MS = 15000;
+// 見回り(2秒おき)の間がこれだけあいたら、自分の端末が止まっていた(重い・アプリを裏にした)とみる。
+//   止まっていた側が戻った瞬間に「相手から60秒届いていない」と見て相手を負けにし、2台とも勝ちになっていた(2026-10-27 テンケンくんの通し遊び・部長)
+const CARD_PVP_SLEEP_MS = 10000;    // 相手の封がこれだけ届かなければ、確かめずに終える(相手が抜けたなど)
 // 抜けた人は、少しのあいだ部屋に入れない(新しい保存キー。モンヒロビートの mh_rhythm_multi_penalty_v1 と同じ考え方)
 const CARD_PVP_PENALTY_KEY = 'mh_card_pvp_penalty_v1';
 const CARD_PVP_PENALTY_MS = 3 * 60 * 1000;
@@ -60073,7 +60278,6 @@ const CARD_PVP_CHAT_GAP_MS = 1500;
 const CARD_PVP_LOBBY_TOPIC = 'realtime:mhc-lobby-free';
 const CARD_PVP_LOBBY_FRESH_MS = 6000;     // これより古い知らせの人は、もう待っていない
 const CARD_PVP_LOBBY_JOIN_MS = 8000;      // 入った部屋で、これだけ始まらなければ、自分の部屋へ戻ってさがし直す
-const CARD_PVP_LOBBY_LIMIT_MS = 90000;    // これだけだれも来なければ「助手と対戦へ」の案内(カゲあつくん)
 // 強さの点数(勝つと上がる・はじめ1500)。表と関数は docs/sql/card-battle-pvp/CARD_BATTLE_PVP_APPLY.sql(窓口が流す)
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
@@ -60262,7 +60466,9 @@ const cardPvpCleanMessage = (raw) => {
       // 何回目の試合か(「もう1戦」。2026-10-26 で足した項目。古い版は送らないので 0)
       rd: cardPvpInt(raw.rd, 1000) || 0,
       // 観戦している人の数(ホストが数えて相手へ渡す。2026-10-27 で足した項目。古い版は送らないので 0)
-      w: cardPvpInt(raw.w, 999) || 0 };
+      w: cardPvpInt(raw.w, 999) || 0,
+      // この試合は終わった、の印(終わった試合の番号。2026-10-27 で足した項目。古い版は送らないので null)
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -60285,7 +60491,17 @@ const cardPvpCleanMessage = (raw) => {
     return { t: 'open', from, seed: Number.isInteger(raw.seed) ? raw.seed >>> 0 : 0, salt: typeof raw.salt === 'string' ? raw.salt.slice(0, 40) : '', deck: { monsters: mons, cards },
       match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '' };
   }
-  if (raw.t === 'seek') { const code = rhythmMultiNormalizeCode(raw.code); return code && Number.isFinite(raw.at) ? { t: 'seek', from, code, at: raw.at } : null; }
+  if (raw.t === 'seek') {
+    const code = rhythmMultiNormalizeCode(raw.code);
+    if (!code || !Number.isFinite(raw.at)) return null;
+    // 待っている人の名前・アイコン・フレーム・強さ(入口の「いま相手を待っている人」の一覧に出す。2026-10-27 で足した項目。古い版は送らないので null)
+    //   名前はランキングと同じプロフィールの名前。合言葉の部屋・フレンドの部屋はこの通り道に流れないので、一覧に出ない
+    return { t: 'seek', from, code, at: raw.at,
+      name: typeof raw.name === 'string' ? (rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null) : null,
+      icon: typeof raw.icon === 'string' ? (rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null) : null,
+      fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null };
+  }
   if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
   // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
   if (raw.t === 'again') { const rd = cardPvpInt(raw.rd, 1000); const seal = typeof raw.seal === 'string' && /^[0-9a-f]{64}$/.test(raw.seal) ? raw.seal : null; return rd && seal ? { t: 'again', from, rd, seal } : null; }
@@ -60339,6 +60555,13 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   return { text, face };
 };
 const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => ((a * 31) + ch.charCodeAt(0)) >>> 0, 7);
+// いま「だれとでも」で待っている人の一覧(入口に出す)。新しく届いた知らせだけ・先に待っている人が上。合言葉(code)は画面に出さない(入るときにだけ使う)
+//   古い版の人(18:08 の公開より前)は名前もアイコンも送らず、だれか分からないので、一覧に出さない(2026-10-27 社長 案ア)。
+//   新しい版は、プロフィールが無い人でも名前とアイコンを必ず送る。古い版の人とも、「だれとでも(自分も待つ)」なら、これまでどおり自動で組む(s.seekers には残す)
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {})
+  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon))
+  .sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1))
+  .map(([id, x]) => ({ id, code: x.code, name: x.name || 'ブリーダー', icon: x.icon || null, fr: x.fr || null, rt: Number.isInteger(x.rt) ? x.rt : null, waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000))) })); // 待っている秒数は相手の端末の時計なので、ずれても0〜999に収める
 
 // ---- 部屋と通信(ここから下は画面と通信。区切り1)
 // ---- 相手のアイコン(2026-10-26 社長といちかさんの対戦で「sneguroc」と字が出た) ----
@@ -60589,20 +60812,22 @@ const CARD_PVP = (() => {
   let s = null;
   let socket = null;
   let alive = false;                // いまつながっているか
+  let lastTickAt = 0;
+  let lobbyWatch = false;            // 入口で、待っている人を聞いているか               // 見回りを最後に回した時刻(間があいたら、こちらの端末が止まっていた)
   let tick = null;
   let retry = null;                 // つなぎ直しの予約
   let lobby = null;                 // だれとでもの受付(部屋とは別のつながり)
   let lobbyAlive = false;
   let board = null;                 // 対戦の画面の受け口 { onAct(msg) → 次の場|null, onDiscard(list), onForceEnd(outcome), onChat(text) }
-  const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0,
+  const blank = () => ({ phase: 'idle', code: '', me: null, foe: null, deck: null, seed: 0, salt: '', seal: '', match: '', hostFirst: false, first: 0, lostAt: 0, // lostAt … この試合で、自分が止まっていた・電波が切れていた時刻
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
-    offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '',
+    offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
     round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
   const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0 });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null });
   // 観戦(94-card-spectate.jsx)。ホストだけが観戦の通り道へ流す。部品が無い環境では何もしない
   const watchPush = (by, act, reveal, st) => { if (isHost()) cardPvpWatchHost().push({ by, act, reveal, turn: st.turn, d: [st.players[0].discard, st.players[1].discard] }); };
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
@@ -60649,7 +60874,7 @@ const CARD_PVP = (() => {
       const person = (x, mons, count) => ({ name: x.name, icon: x.icon, fr: x.fr || null, bid: x.bid || null, dn: x.dn || null, mons, count });
       cardPvpWatchHost().start({ p: [person(s.me, s.deck.monsters, s.deck.cards.length), person(s.foe, s.foe.mons, s.foe.count || CARD_BATTLE_DECK_SIZE)], first, mode: s.mode === 'free' ? 'free' : 'private' }, msg.match);
     }
-    set({ phase: 'playing', match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂', frame: s.foe.fr || null, deckName: s.foe.dn || null } } });
+    set({ phase: 'playing', lostAt: 0, match: msg.match, hostFirst: msg.hostFirst, first, game: { key: `pvp-${msg.match}`, st, who: 'pvp', level: 'normal', pvp: { name: s.foe.name || 'あいて', icon: s.foe.icon || '🙂', frame: s.foe.fr || null, deckName: s.foe.dn || null } } });
   };
   const deliver = () => {
     // 届いた順にそろえて、つぎの番号のものから当てる(抜けがあれば待つ)
@@ -60663,6 +60888,15 @@ const CARD_PVP = (() => {
       send({ t: 'ack', seq: msg.seq, discard: next.players[0].discard });
       emit();
     }
+  };
+  // 自分の端末が止まっていた(見回りの間があいた)・電波が切れていたら、この試合に印(lostAt)を付ける。止まっていたなら、相手から届いた時刻を「いま」に戻して待ち直す。
+  //   見回り(2秒おき)からも、画面の時計(相手の持ち時間切れ・0.5秒おき)からも呼ぶ(止まったあと、先に動いたほうで気づくため)。tick … 見回りから呼んだ
+  const noteLost = (tick) => {
+    const nowT = Date.now();
+    const slept = lastTickAt > 0 && nowT - lastTickAt > CARD_PVP_SLEEP_MS;
+    if (tick || slept) lastTickAt = nowT;
+    if (s && s.phase === 'playing' && (slept || (tick && !alive))) s = { ...s, lostAt: nowT, ...(slept && s.foe ? { foe: { ...s.foe, seen: nowT } } : {}) };
+    return slept;
   };
   const forceEnd = (outcome) => { if (s && s.phase === 'playing' && board) board.onForceEnd(outcome); };
   // 終わったあと: 両方の封がそろったら、なぞり直す
@@ -60697,6 +60931,9 @@ const CARD_PVP = (() => {
       const foe = { id: msg.from, name: msg.name || 'あいて', icon: msg.icon || '🙂', fr: msg.fr || null, at: msg.at, mons: msg.mons, count: msg.count, seal: sameRound ? msg.seal : (s.foe && s.foe.seal) || null, bid: msg.bid, dn: msg.dn || null, w: msg.w || 0, seen: now };
       if (sameRound && s.foe && s.foe.seal && msg.seal && s.foe.seal !== msg.seal && s.phase !== 'waiting') return; // 始まったあとに封を変えさせない
       s = { ...s, foe: { ...(s.foe || {}), ...foe } };
+      // 相手はもうこの試合を終えている(こちらが止まっていた・電波が切れていたあいだに、こちらが抜けた扱いになった)。古い版の相手は印を送らないので、前と同じ動き。
+      //   ふつうの決着でも、こちらの画面が最後の手を見せ終わる前に印が届くことがあるので、止まっていた・切れていた試合のときだけ負けにする
+      if (s.phase === 'playing' && msg.ov && msg.ov === s.match && s.lostAt) { forceEnd('dropped'); return; }
       maybeStart();
       if (s.match && msg.match === s.match) s = { ...s, foeInMatch: true };
       emit();
@@ -60734,7 +60971,7 @@ const CARD_PVP = (() => {
     alive = false;
     const me = socket = rhythmMultiOpenSocket({
       topic: `${CARD_PVP_ROOM_TOPIC}${s.code}`,
-      onOpen: () => { if (socket !== me) return; alive = true; set({ offline: false, phase: s.phase === 'connecting' ? 'waiting' : s.phase }); hb(); },
+      onOpen: () => { if (socket !== me) return; alive = true; set({ offline: false, phase: s.phase === 'connecting' ? 'waiting' : s.phase, ...(s.phase === 'playing' && s.foe ? { foe: { ...s.foe, seen: Date.now() } } : {}) }); hb(); }, // つなぎ直した直後に、相手を「抜けた」と見ない(切れていたのはこちら)
       onMessage: (raw) => { if (socket === me) onMessage(raw); },
       onClose: () => {
         if (socket !== me || !s) return;
@@ -60750,8 +60987,9 @@ const CARD_PVP = (() => {
   const lobbySend = (payload) => { if (lobby && lobbyAlive) lobby.send({ ...payload, from: s.me.id }); };
   const onLobby = (raw) => {
     const msg = cardPvpCleanMessage(raw);
-    if (!s || !msg || msg.t !== 'seek' || msg.from === s.me.id) return;
-    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now() } } };
+    if (!s || !msg || msg.t !== 'seek' || (s.me && msg.from === s.me.id)) return;
+    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now(), name: msg.name, icon: msg.icon, fr: msg.fr, rt: msg.rt } } };
+    if (s.phase === 'idle') emit(); // 入口の「いま相手を待っている人」の一覧(聞くだけ)
   };
   const openLobby = () => {
     closeLobby();
@@ -60759,7 +60997,7 @@ const CARD_PVP = (() => {
       topic: CARD_PVP_LOBBY_TOPIC,
       onOpen: () => { if (lobby === me) lobbyAlive = true; },
       onMessage: (raw) => { if (lobby === me) onLobby(raw); },
-      onClose: () => { if (lobby !== me) return; lobbyAlive = false; if (s && s.mode === 'free' && s.phase === 'waiting') setTimeout(() => { if (lobby === me && s && s.phase === 'waiting') openLobby(); }, CARD_PVP_RECONNECT_MS); },
+      onClose: () => { if (lobby !== me) return; lobbyAlive = false; if ((s && s.mode === 'free' && s.phase === 'waiting') || lobbyWatch) setTimeout(() => { if (lobby === me && ((s && s.phase === 'waiting') || lobbyWatch)) openLobby(); }, CARD_PVP_RECONNECT_MS); },
     });
   };
   // 2秒ごと: 自分の部屋を知らせ、先に待っている人がいれば、その部屋へ移る(同じ時刻なら id の小さい人が待つ側)
@@ -60770,31 +61008,40 @@ const CARD_PVP = (() => {
     if (s.foe) { emit(); return; }
     if (s.joining) {
       // 入った部屋で始まらない(もう相手が決まっていた など)ときは、自分の部屋へ戻ってさがし直す
-      if (now - s.joinAt > CARD_PVP_LOBBY_JOIN_MS) { const code = rhythmMultiMakeCode(); s = { ...s, joining: '', code, ownCode: code, seekAt: now }; connect(); }
+      if (now - s.joinAt > CARD_PVP_LOBBY_JOIN_MS) {
+        // 一覧から選んで入ったのに始まらない(同じ人をほかの人が先に選んだ など): 入口へ戻して知らせる(自分では待たない。社長の案A・2026-10-27)
+        if (s.pick) { stop(); s = { ...blank(), notice: 'ほかの人と始まりました。ほかの人をえらぶか、自分も待ってください' }; emit(); return; }
+        const code = rhythmMultiMakeCode(); s = { ...s, joining: '', code, ownCode: code, seekAt: now }; connect();
+      }
       emit();
       return;
     }
     const older = fresh.filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
     if (older) { s = { ...s, joining: older[1].code, joinAt: now, code: older[1].code }; connect(); emit(); return; }
-    lobbySend({ t: 'seek', code: s.code, at: s.seekAt });
+    lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null });
     emit();
   };
-  const open = async (code, profile, deck, mode = 'private') => {
+  const open = async (code, profile, deck, mode = 'private', pick = false) => {
     stop();
     const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
     const salt = rhythmMultiMakeId('k');
     const seal = await cardPvpSha256(cardPvpSealText({ seed, salt, deck }));
-    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
+    s = { ...blank(), phase: 'connecting', code, ownCode: code, mode, seekAt: Date.now(), pick, joining: pick ? code : '', joinAt: pick ? Date.now() : 0, deck: { monsters: deck.monsters.slice(), cards: deck.cards.slice() }, seed, salt, seal,
       me: { id: rhythmMultiMakeId('c'), name: rhythmMultiText(profile.name || 'ブリーダー', CARD_PVP_NAME_MAX), icon: rhythmMultiText(profile.icon || '🙂', CARD_PVP_ICON_MAX), fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null, at: Date.now(), bid: typeof bid === 'string' ? bid : null,
+        rt: Number.isFinite(profile.rt) ? Math.max(0, Math.min(10000, Math.round(profile.rt))) : null, // 強さの点数(待っています の知らせに入れる。読めないときは出さない)
         // 相手の対戦開始の画面に出す、こちらのデッキ名(デッキ編成で付けた名前。試合の中身には入れない)
         dn: rhythmMultiText(typeof deck.name === 'string' ? deck.name : '', 30) || null } };
     emit();
     if (!seal) { set({ phase: 'error', error: 'この端末では、マルチ対戦の封を作れませんでした' }); return; }
     connect();
-    if (mode === 'free') openLobby();
+    if (mode === 'free' && !pick) openLobby(); else if (pick) closeLobby();
     tick = setInterval(() => {
-      if (!s || !socket) return;
+      if (!s) return;
+      // 自分の端末が止まっていた(見回りの間があいた)・電波が切れていたら、この試合に印を付ける。止まっていたなら、相手から届いた時刻を「いま」に戻して待ち直す
+      //   (止まっていたのはこちらなので、相手を「抜けた」と見ない。相手がもう決着していれば、相手の hb の「終わった」の印で、こちらの負けで終える)
+      noteLost(true);
+      if (!socket) return;
       hb();
       if (s.mode === 'free' && s.phase === 'waiting') seekTick();
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
@@ -60821,8 +61068,16 @@ const CARD_PVP = (() => {
     create: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck),
     // だれとでも: 自分の部屋を作って受付で待つ。先に待っている人がいれば、その部屋へ入る
     free: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck, 'free'),
+    // 入口の一覧から、待っている人を選んで入る(その人の部屋へ。始まらなければ入口へ戻る)
+    pick: (code, profile, deck) => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck, 'free', true); return true; },
+    // 入口で、いま待っている人を聞くだけ(自分は知らせを出さない)。入口を開いているあいだだけ
+    watch: (on) => {
+      lobbyWatch = !!on;
+      if (on) { if (!s) s = blank(); if (s.phase === 'idle' && !lobby) openLobby(); }
+      else if (!s || s.phase === 'idle') closeLobby();
+    },
+    clearNotice: () => { if (s && s.notice) { s = { ...s, notice: '' }; emit(); } },
     // さがし直す(90秒だれも来なかったあと)
-    seekAgain: () => { if (s && s.mode === 'free' && s.phase === 'waiting') { s = { ...s, seekAt: Date.now(), joining: '' }; emit(); } },
     join: (code, profile, deck) => { const c = rhythmMultiNormalizeCode(code); if (!c) return false; void open(c, profile, deck); return true; },
     leave: () => { if (s && s.phase === 'playing') penalize(); if (s && socket) send({ t: 'bye' }); stop(); board = null; s = blank(); emit(); },
     // 対戦の画面がつなぐ。届いていた手があれば、ここで当てる
@@ -60841,7 +61096,11 @@ const CARD_PVP = (() => {
     timeoutLose: () => { if (!s || s.phase !== 'playing') return; send({ t: 'timeout' }); forceEnd('timeout'); },
     // 相手の持ち時間が過ぎても手が来ない。相手からしばらく何も届いていなければ、画面を閉じて抜けたとみる(閉じたときの bye が届かないことがある。
     //   2026-10-27 部長: 遊ぶ人から見ると「相手が抜けた」なのに「相手の時間切れ」と出ていた。報酬は同じ)
-    foeStalled: () => forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout'),
+    foeStalled: () => {
+      noteLost(false);
+      if (s && s.lostAt && Date.now() - s.lostAt < CARD_PVP_ALIVE_MS) return; // こちらが止まっていたあと: 相手の持ち時間の遅れはこちらのせい。相手が本当にいなければ120秒の見回りで決まる
+      forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout');
+    },
     auto: (fn) => { if (!s) return fn(); s.autoActing = true; try { return fn(); } finally { s.autoActing = false; } },
     chat: (i) => {
       if (!s || s.phase !== 'playing' || !CARD_PVP_STAMPS[i] || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
@@ -60854,8 +61113,9 @@ const CARD_PVP = (() => {
     // 決着したとき(対戦の画面から)。封を開けて、相手の封を待つ。相手が抜けたときは確かめない(相手の封は届かない)
     finish: (outcome, st) => {
       if (!s || s.phase !== 'playing') return;
-      const label = { win: '勝ち', lose: '負け', surrender: '投了', foeSurrender: '相手の投了', foeLeft: '相手が抜けた', timeout: '時間切れ', foeTimeout: '相手の時間切れ' }[outcome] || '';
-      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
+      // dropped … こちらが止まっていた・電波が切れていたあいだに、相手の端末でこちらが抜けた扱いになった(負け・ビートPなし。2026-10-27)
+      const label = { win: '勝ち', lose: '負け', surrender: '投了', foeSurrender: '相手の投了', foeLeft: '相手が抜けた', timeout: '時間切れ', foeTimeout: '相手の時間切れ', dropped: '通信が切れた' }[outcome] || '';
+      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : outcome === 'dropped' ? 'left' : 'lose';
       const forced = !['win', 'lose'].includes(outcome); // 投了・抜けた・時間切れで終わった(なぞり直しで勝ち負けまでは比べない)
       if (isHost()) cardPvpWatchHost().end(reward === 'win' ? 0 : 1, label);
       set({ phase: 'over', result: { outcome: reward === 'win' ? 'win' : 'lose', reward, forced, reason: label, facts: cardResultFacts(st, CARD_ME), verify: outcome === 'foeLeft' ? 'skip' : 'wait', why: '', rewarded: false } });
@@ -60931,7 +61191,7 @@ const cardPvpPhrases = (text) => String(text).split(/(?<=、)/).map((x, i) => <s
 // onStart(game) … 試合が始まったら対戦の画面へ。onBack … 対戦の選び方へ戻る(部屋も出る)
 // onReward(result) … 確かめが済んだら1回だけ呼ぶ(84 が保存して { point, loops, quick, saved } を返す)。確かめで無効になった試合は呼ばない
 // assistant … 結果の画面に立ち絵を出す自分の助手(84 の topAssistant)/ point … いまのビートP
-// onAssistant … 「助手と対戦へ」(だれとでもで、だれも来なかったとき)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
+// onAssistant … いまは使わない(だれとでもは待ち続ける。呼ぶ側との形を変えないために受けておく)/ rankSend … 強さの点数へ届けてよいか(公開後のふつうの入口だけ。84→60-app の rank.send)
 const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], onStart, onBack, onReward, assistant = null, point = null, onAssistant = null, rankSend = false, onOpenReplay = null, replayHas = null }) => {
   const [room, setRoom] = useState(() => CARD_PVP.get());
   const [code, setCode] = useState('');
@@ -60945,9 +61205,12 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   useEffect(() => { storeGet(CARD_PVP_PENALTY_KEY, 0, false).then((v) => setPenaltyUntil(cardPvpNormalizePenalty(v))).catch(() => {}); }, [room.phase]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  const seekerList = room.phase === 'idle' ? cardPvpSeekerList(room.seekers, now) : []; // いま「だれとでも」で待っている人(入口の一覧)
   // フレンドから招待: 自分のブリーダーid・名簿(承認済みのフレンド)・届いている招待
   const [selfBid, setSelfBid] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false); // マルチの履歴(92-card-pvp-history.jsx)
+  // 入口を開いているあいだ、いま「だれとでも」で待っている人を聞く(自分は知らせを出さない)
+  useEffect(() => { if (room.phase !== 'idle') return undefined; CARD_PVP.watch(true); return () => CARD_PVP.watch(false); }, [room.phase]);
   // 自分の強さの点数(横画面の左の列に出す。表が無い・読めないときは出さない)
   const [myRating, setMyRating] = useState(null);
   useEffect(() => {
@@ -61048,7 +61311,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const started = useRef('');
   useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); if (typeof cardPvpHistoryBegin === 'function' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true))) cardPvpHistoryBegin(room.match, room.me && room.me.bid); } }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
-  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
+  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0; // 部屋に入るボタンは、プロフィール(名前・アイコン)を読み終えてから押せる(読む前だと「ブリーダー」と人型のアイコンで相手に届く。2026-10-27)
   const back = () => { CARD_PVP.leave(); CARD_WATCH.leave(); onBack(); };
   const r = room.result;
   if (watch.phase !== 'idle' && room.phase === 'idle') return <CardPvpWatchScreen/>;
@@ -61057,7 +61320,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   if (historyOpen && room.phase === 'idle' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setHistoryOpen(false)} onOpenReplay={onOpenReplay} replayHas={replayHas} meIcon={meIcon} meName={profile.name}/>;
   if (room.phase === 'over' && r) {
     // 「もう1戦」を出さない試合: 相手が部屋を出た・抜けた・時間切れ(相手がもういない・離れているので、待ち続けてしまう)
-    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
+    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find((x) => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -61085,6 +61348,8 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
           <div className={SCREEN_PANEL_CLASS}>
             <div className="text-[14px] font-black text-white" style={JA_WRAP_STYLE}>{jaWrap(`${foeName}さんとのマルチ対戦`)}</div>
             <div className="text-[12px] font-bold text-slate-300">{win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け'}{r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''}</div>
+            {/* こちらが止まっていた・電波が切れていたあいだに、相手の端末でこちらが抜けた扱いになった(2026-10-27。文は窓口に通す案) */}
+            {r.reason === '通信が切れた' && <p data-card-pvp-dropped className="mt-1 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('通信が切れていたため、この試合は負けになりました')}</p>}
             <p data-card-pvp-verify={r.verify} className={`mt-1 rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`} style={JA_WRAP_STYLE}>{cardPvpPhrases(verifyText)}</p>
           </div>
           <div className={SCREEN_PANEL_CLASS}>
@@ -61144,10 +61409,32 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
         {room.phase === 'idle' && (<>
           {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
           {penaltyMin === 0 && !ready && <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100">{deckIssues.join('・') || 'デッキがありません'}</p>}
-          <button type="button" data-card-pvp-free disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.free(profile, deck); }}>だれとでも</button>
-          <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
+          {room.notice && <p data-card-pvp-notice-text className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(room.notice)}</p>}
+          {/* いま「だれとでも」で相手を待っている人(2026-10-27 社長「マルチで誰かが募集してたりしたらここで見れるようにして」案A)。
+              合言葉の部屋・フレンドの部屋はこの一覧に流れない。押すと、その人の部屋に入って始まる(始まらなければ入口へ戻る) */}
+          <div data-card-pvp-seekers={seekerList.length} className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-2">
+            <p className="mb-1 px-1 text-[13px] font-black text-sky-100">{seekerList.length ? `いま相手を待っている人 ${seekerList.length}人` : 'いまは、待っている人はいません'}</p>
+            {seekerList.length > 0 && (<>
+              <ul className="space-y-1">
+                {seekerList.slice(0, 8).map((x) => (
+                  <li key={x.id} data-card-pvp-seeker={x.id} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
+                    <CardPvpAvatar icon={x.icon} frame={x.fr} className="h-9 w-9"/>
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate text-[14px] font-black text-white">{x.name}</b>
+                      <small className="block text-[11px] font-bold text-slate-400 tabular-nums">{x.rt !== null ? `強さ ${x.rt}・` : ''}待って {x.waitSec}秒</small>
+                    </span>
+                    <button type="button" data-card-pvp-seeker-pick={x.id} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                      onClick={() => { Audio_.fgSe.tap(); CARD_PVP.clearNotice(); CARD_PVP.pick(x.code, { ...profile, rt: myRating ? myRating.rating : null }, deck); }}>対戦する</button>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('押すと、その人の部屋に入って対戦が始まります')}</p>
+            </>)}
+          </div>
+          <button type="button" data-card-pvp-free disabled={!ready || !profileReady} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.clearNotice(); void CARD_PVP.free({ ...profile, rt: myRating ? myRating.rating : null }, deck); }}>だれとでも(自分も待つ)</button>
+          <button type="button" data-card-pvp-create disabled={!ready || !profileReady} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
           {/* フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 相手を選ぶと部屋を作り、合言葉が出たところで招待を送る。相手が来たら始まる */}
-          <button type="button" data-card-pvp-invite-open disabled={!ready || !roster} className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`}
+          <button type="button" data-card-pvp-invite-open disabled={!ready || !profileReady || !roster} className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`}
             onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{inviteOpen ? 'フレンドの招待を閉じる' : 'フレンドを招待'}</button>
           {inviteOpen && roster && (
             <div data-card-pvp-invite-pick className="rounded-2xl border border-emerald-300/40 bg-emerald-500/5 p-2">
@@ -61157,7 +61444,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                   {roster.slice(0, 30).map((f) => (
                     <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
                       <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
-                      <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                      <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
                         onClick={() => { Audio_.fgSe.tap(); setInviteNext(f.otherId); void CARD_PVP.create(profile, deck); }}>招待する</button>
                     </li>
                   ))}
@@ -61173,7 +61460,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                     <small className="block text-[11px] text-emerald-200/80 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</small></p>
                   <button type="button" data-card-pvp-decline={x.roomCode} className="mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200"
                     onClick={() => { Audio_.fgSe.tap(); declineInvite(x); }}>断る</button>
-                  <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
+                  <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
                     onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(x.roomCode, profile, deck); }}>参加する</button>
                 </div>
               ))}
@@ -61188,7 +61475,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             <div className="flex gap-2">
               <input data-card-pvp-code value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))} maxLength={4} inputMode="text" autoCapitalize="characters" placeholder="K7Q3"
                 className="min-h-[48px] w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-3 text-center text-[22px] font-black tracking-[.3em] text-white"/>
-              <button type="button" data-card-pvp-join disabled={!ready || !rhythmMultiNormalizeCode(code)} className="mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40"
+              <button type="button" data-card-pvp-join disabled={!ready || !profileReady || !rhythmMultiNormalizeCode(code)} className="mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40"
                 onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(code, profile, deck); }}>入る</button>
             </div>
           </div>
@@ -61200,15 +61487,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'}</p>
             {/* 自分は数えない(「1人」が自分のことか分からない。カゲあつくん) */}
             <p data-card-pvp-waiting={Math.max(0, room.lobbyCount - 1)} className="mt-1 text-[13px] font-bold text-sky-100">{room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'}</p>
-            {/* now は1秒ごとの時計なので、さがし始めた直後は seekAt より古い(経過が負になり「あと91秒」と出ていた。2026-10-27) */}
-            {!room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && <p className="mt-1 text-[12px] font-bold text-slate-300 tabular-nums">あと{Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000))}秒</p>}
-            {!room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && (
-              <div data-card-pvp-nobody className="mt-3 space-y-2">
-                <p className="text-[13px] font-bold text-amber-100">いまは、だれも来ませんでした</p>
-                <button type="button" data-card-pvp-seek-again className={`${btn} border border-white/15 bg-slate-900 text-slate-100`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.seekAgain(); }}>もう一度さがす</button>
-                {onAssistant && <button type="button" data-card-pvp-to-assistant className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.leave(); onAssistant(); }}>助手と対戦へ</button>}
-              </div>
-            )}
+            {/* だれかが来るか、自分でやめるまで待ち続ける(残り秒数・「だれも来ませんでした」は出さない。2026-10-27 社長) */}
           </div>
         )}
         {(room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && (
@@ -61273,18 +61552,29 @@ const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
 // ---- 持ち時間(区切り2) ----
 // 自分の番60秒・守り15秒。使い切ったら、その番を終える(攻撃の番は、ガッツへ回さずにターン終了)・守らない。3回続けて使い切ったら負け。
 // 相手の持ち時間が過ぎても手が来ない(電波はつながっている)ときは、CARD_PVP_STALL_GRACE_MS 待って相手の負け。
-// 時計は、決める人・番・守りの回が変わったところから、それぞれの端末で数える
+// 相手の電波が途切れている間は相手の時計を止めるので、そのときは CARD_PVP_ALIVE_MS(120秒)の見回りだけで決まる。
+// 時計は、決める人・番・守りの回が変わったところから、それぞれの端末で数える。
+// 次の間は時計を止める(2026-10-27 社長: 相手が落ちたら120秒だけで決める・戻れば続きから): 相手の番で、相手の電波が途切れている間 /
+//   自分の番で、自分の電波が切れている間 / 端末が止まっていた間(画面の時計の間が CARD_PVP_SLEEP_MS よりあいた)
 const useCardPvpClock = (pvp, st, step) => {
   const [now, setNow] = useState(() => Date.now());
   const keyRef = useRef('');
   const startRef = useRef(Date.now());
+  const pauseRef = useRef({ ms: 0, at: Date.now() }); // ms … この区切りで止めていた長さ / at … 最後に数えた時刻
   const firedRef = useRef('');
   const gutsRef = useRef(-1);
   const key = pvp ? cardPvpClockKey(st) : '';
-  if (key !== keyRef.current) { keyRef.current = key; startRef.current = Date.now(); }
+  if (key !== keyRef.current) { keyRef.current = key; startRef.current = Date.now(); pauseRef.current = { ms: 0, at: Date.now() }; }
   useEffect(() => { if (!pvp) return undefined; const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
   const decider = pvp ? cardPvpDecider(st) : -1;
-  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  if (pvp && now > pauseRef.current.at) {
+    const gap = now - pauseRef.current.at;
+    if (gap > CARD_PVP_SLEEP_MS || (decider === 1 && quiet > CARD_PVP_QUIET_MS) || (decider === 0 && room.offline)) pauseRef.current.ms += gap;
+    pauseRef.current.at = now;
+  }
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
     if (!pvp || st.winner !== null) return;
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) { gutsRef.current = -1; CARD_PVP.auto(() => step({ type: 'guts', hand: [] })); return; }
@@ -61297,8 +61587,6 @@ const useCardPvpClock = (pvp, st, step) => {
     }
     if (decider === 1 && left <= -CARD_PVP_STALL_GRACE_MS && CARD_PVP.alive() && firedRef.current !== key) { firedRef.current = key; CARD_PVP.foeStalled(); }
   }, [now, key]);
-  const room = CARD_PVP.get();
-  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   // 時計を数え直した瞬間は now が少し古く、61秒と出ていた。持ち時間を超えて出さない
   return { left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)), mine: decider === 0, timeouts: room.timeouts, offline: room.offline,
     foeQuietSec: quiet > CARD_PVP_QUIET_MS ? Math.max(0, Math.ceil((CARD_PVP_ALIVE_MS - quiet) / 1000)) : 0, eyes: pvp ? CARD_PVP.eyes() : 0 };
@@ -64133,6 +64421,19 @@ function MonsterHeroGame() {
     const next = Object.fromEntries(entries.map(([k, v]) => [k, tickReikon(v)]).filter(([, v]) => v.wait > 0 || v.turns > 0));
     reikonRef.current = next; setReikonView(next);
   };
+  // ★キュービ・オリヒメの「マーク×数」(2026-10-27・④-3)。{ 枠: { kind: 数 } } を作り、バトル画面の allyStackCounts へ足す。
+  //   キー 'party'(5つの遊び)は勇者モンを置いた距離の枠へ。描いている時点の state(kyubiView・orihimeView・reikonView)から読む
+  const kyubiOrihimeStackMarks = (() => {
+    const out = {}, slotOf = (key) => (key === 'party' ? initialBattleDistanceRef.current : Number(key));
+    const put = (key, kind, n) => { const i = slotOf(key), c = Math.max(0, Math.floor(Number(n) || 0)); if (!Number.isInteger(i) || c <= 0) return; out[i] = { ...(out[i] || {}), [kind]: c }; };
+    Object.entries(kyubiView.rengoku || {}).forEach(([k, n]) => put(k, 'rengoku', n));
+    Object.entries(kyubiView.kagero || {}).forEach(([k, v]) => put(k, 'kagero', kageroOf(v).ready ? 1 : 0));
+    Object.entries(kyubiView.kitsunebi || {}).forEach(([k, v]) => { const f = kitsunebiOf(v); if (f.active) put(k, 'kitsunebi', f.fires); });
+    Object.entries(orihimeView.ouse || {}).forEach(([k, n]) => put(k, 'ouse', n));
+    Object.entries(orihimeView.hoshiai || {}).forEach(([k, v]) => put(k, 'hoshiai', v && v.turns));
+    Object.entries(reikonView || {}).forEach(([k, v]) => { const r = reikonOf(v); put(k, 'reikon', r.wait > 0 ? 0 : r.turns); });
+    return out;
+  })();
   // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
   const tickKyubiKagero = () => {
     const cur = kyubiRef.current;
@@ -64409,40 +64710,95 @@ function MonsterHeroGame() {
       const dealt = Math.max(0, Number(copy.dealtNow) || 0);
       const teamDealt = tacticsHateDealtRef.current.reduce((a, v) => a + (Number(v) || 0), 0) + dealt;
       const hate = tacticsAiCopyHateStep(copy, { gain: copy.hateGainNow || 0, dealt, teamDealt }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
-      commitAiCopy({ ...copy, hate, hateGainNow: 0, dealtNow: 0 });
+      commitAiCopy({ ...copy, hate, hateGainNow: 0, dealtNow: 0, guardNow: 0, guardCardsNow: 0 });
     }
     clearTacticsHateTurn();
   };
   // ===== AIコピー(ソラシドのアシカ) =====
   // タクティクス: 使った子のとなりの空いたマス(無ければ同じマス)に、次のターンから出す。🔥は元の子の🔥 × Lv の割合から。
-  //   ★固有技の写しは、みんなの山札へは入れずコピー自身が持つ(uniqueCard)。カードを使う途中で山札を書き換えると、
-  //   ターンの終わりの山札の作り直しで消えるため。コピーの手札を作るときだけ足す(planAiCopyTurn)
+  //   ★コピーは自分の山札を持つ(出たとき・切りかえたときにプレイヤーの山札・手札・捨て札の写しから作る。33-ai-copy.jsx)。
+  //   プレイヤーの山札には何も足さない・抜かない(2026-10-27 社長)
   const summonTacticsAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
     const unit = tacticsUnitsRef.current[slotIdx];
     if (!unit) return;
     const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
     const piles = handPileRef.current;
-    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])]
-      .find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
     const { pos, stacked } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
     const rules = aiCopyRules(level);
     const before = aiCopyRef.current;
-    const res = summonAiCopy({ aiCopy: before, zones: { deck: [], hand: [], discard: [] } },
-      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, uniqueCard, turn: turnCount, mode: 'tactics', effMul });
+    const res = summonAiCopy({ aiCopy: before, zones: { deck: piles.deck || [], hand: piles.hand || [], discard: piles.graveyard || [] } },
+      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, turn: turnCount, mode: 'tactics', effMul });
     const next = res.plan.kind === 'refresh'
       ? res.aiCopy
-      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart), uniqueCard: res.zones.deck[0] || null };
+      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart) };
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh'
       ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った`
       : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
   };
-  // 5つの遊びの分はダイスくんが書く(パーティのライフを使う・狙われない・倒されない)。それまでは何もしない
+  // 5つの遊び(クラシック・チャレンジ・プロ・クイック・極限)。パーティのライフを使う・狙われない・倒されない(社長の答え・案2)。
+  //   強さの元は元の子1体の値(33-ai-copy-classic.jsx の classicAiCopySrc)。立つ間合いは元の子と同じ(5つ目の間合いは作らない)。
+  //   ★コピーは自分の山札を持つ(2026-10-27 社長: プレイヤーの山札の写しから距離撃・このアシカ・ほかの味方の固有技を抜いたもの。
+  //     コピーした子の固有技はもとから入っている)。出たとき・切りかえたときに作り直し、もう一度(同じ子)はそのまま。プレイヤーの山札は変えない
   const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    const mon = slots[slotIdx];
+    if (!mon) return;
+    const src = classicAiCopySrc({ slots, srcSlot: slotIdx, heroId: mainHero?.id, party: { atk, def, maxGuts } });
+    const piles = handPileRef.current;
+    // コピーの山札は共通の summonAiCopy が作る(出たとき・切りかえたとき。プレイヤーの山札・手札・捨て札をそのまま渡す)
+    const res = summonAiCopy({ aiCopy: aiCopyRef.current, zones: { deck: piles.deck || [], hand: piles.hand || [], discard: piles.graveyard || [] } },
+      { srcSlot: slotIdx, srcMonsterId: mon.id, name: mon.masuName || mon.name || '', level, src, turn: turnCount, mode: 'classic', effMul });
+    const next = res.aiCopy;
+    commitAiCopy(next);
+    pushBattleLog(res.plan.kind === 'refresh'
+      ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った`
+      : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
   };
-  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。タクティクスは写しを山札に入れていないので、山札は触らない
+  // 5つの遊び: ターンの始めに、コピー自身の山札からプレイヤーの手札と同じ枚数を引き(尽きたら捨て札を混ぜ直す)、使うカードを決めておく
+  //   (枠の札に「次に使うカード」を出す)。手札はターンの終わりの共通の endAiCopyTurn が捨て札へ
+  const planClassicAiCopy = (copy) => {
+    if (!copy) return copy;
+    const handSize = Math.max(1, Array.isArray(handPileRef.current.hand) && handPileRef.current.hand.length > 0 ? handPileRef.current.hand.length : 5);
+    // ★選び方は AUTO と同じ見方(作戦の優先 → 同じ優先なら与ダメの大きい順。タクティクスと同じ aiCopyAutoScore)。
+    //   与ダメは元の子の間合いから、コピーのちからへ縮めた値。ターンの始めに選ぶので、そのターンに積む追加(応援など)はまだ無い(0)
+    const mon = slots[copy.srcSlot] || mainHero;
+    const dmgOf = (c) => classicAiCopyDamage(getDmg(c, copy.srcSlot, mon, 0, 0, false, enemyDist), copy.atk, atk);
+    const isGuardC = (c) => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const score = (c) => aiCopyAutoScore(c, { strategy: autoSettings.strategy, isAttack: isAttackCard, isGuard: isGuardC, dmgOf });
+    return planAiCopyTurn(copy, { count: handSize, score });
+  };
+  // コピーの札の見方。dist は敵の間合い(コピーの立つマス pos との差で距離補正を数える)。元の子がいなければ null
+  // ★選び方は AUTO と同じ見方(作戦 autoSettings.strategy の優先 → 同じ優先なら与ダメの大きい順)。
+  //   攻撃とガードはコピー自身のぶん(下の「AIコピーの1手」)、回復・強化・アシカは味方のカードと同じ流れの最後に通す(aiCopyEntries)。
+  //   強さは「元の子の今の攻撃 × (コピーの攻撃 ÷ 元の子の攻撃)」。ガードはコピー自身を守る(丈夫さはコピーの値)
+  const tacticsAiCopyTools = (copy, dist) => {
+    if (!copy) return null;
+    const srcMon = slots[copy.srcSlot]; const srcUnit = tacticsBattleUnit(copy.srcSlot);
+    if (!srcMon || !srcUnit || !(srcUnit.atk > 0)) return null;
+    const distFrom = copy.srcSlot + ((Number.isInteger(dist) ? dist : enemyDist) - copy.pos);
+    const atkRate = copy.atk / srcUnit.atk;
+    const dmgOf = (c) => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
+    const isGuardC = (c) => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    // 攻撃は与ダメが出る札だけ。ガード・回復・強化・アシカはそのまま使える(段2)。距離撃とこのアシカは aiCopyCanPick が外す
+    const usableC = (c) => !!c && (!isAttackCard(c) || dmgOf(c) > 0);
+    const scoreC = (c) => aiCopyAutoScore(c, { strategy: autoSettings.strategy, isAttack: isAttackCard, isGuard: isGuardC, dmgOf });
+    const costC = (c) => getCardGuts(c, copy.srcSlot);
+    return { dmgOf, isGuardC, usableC, scoreC, costC };
+  };
+  // そのターンに使う札を決めて持たせる(手札・次に使う札)。コピー自身の山札から引く
+  const planTacticsAiCopy = (turn) => {
+    const copy = aiCopyRef.current;
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
+    const tools = tacticsAiCopyTools(copy, enemyDist);
+    if (!tools) return null;
+    // 引く枚数はプレイヤーの手札と同じ(社長「普通に山札の枚数で自分たちと同じような確率」)
+    const count = (handPileRef.current.hand || []).length || 5;
+    const planned = planAiCopyTurn(copy, { count, score: tools.scoreC, costOf: tools.costC, usable: tools.usableC });
+    return commitAiCopy({ ...planned, plannedTurn: turn });
+  };
+  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。プレイヤーの山札は触らない(コピーの山札ごと消える)
   const clearAiCopy = (why = '') => {
     const copy = aiCopyRef.current;
     if (!copy) return;
@@ -70467,6 +70823,12 @@ function MonsterHeroGame() {
   // 正式実装前(debugOnly)のモンスターを、デバッグ戦の勇者モン選択にだけ並べる。
   // 通常のロースター(unlockedMonsterIds で絞る)・図鑑・マーケットには出ないので、
   // 「実際に選んで戦って確かめる」ことだけがここでできるようになる
+  // ★下書きの子(UPCOMING_MONSTER_DRAFTS)のうち、能力値と固有技の倍率がそろった子も「試す用の写し」として混ぜる
+  //   (2026-10-27 キュービ・オリヒメの公開前の確かめ。統括部長の段取り⑥)。写しには debugOnly:true を付けるので、
+  //   記録・全国ランキングには残らない(runHasDebugOnlyMonster)。デバッグのバトルモードの勇者モンの一覧にだけ出る
+  const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS))
+    .filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult))
+    .map(mon => ({ atkMotion:'default', ...mon, debugOnly:true }));
   const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   // いま戦っている編成に、正式実装前のモンスター(debugOnly)が1体でも入っているか。
   // debugBattleRef が false のまま(難易度の「この難易度で挑戦」が必ず false へ戻すため)でも
@@ -70486,7 +70848,7 @@ function MonsterHeroGame() {
     if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
-    const preview=debugOnlyMonsterList();
+    const preview=[...debugOnlyMonsterList(),...draftPreviewMonsterList()];
     const previewIds=new Set(preview.map(mon=>mon.id));
     return [debugMon,...preview,...list.filter(mon=>mon?.id!==debugMon.id&&!previewIds.has(mon?.id))];
   };
@@ -75735,12 +76097,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
           tookEnemyAttack=true;
           const targets=tacticsTargetsNow(intent,actingEnemyDist);
-          // ★AIコピー(5人目)が当たるか。当たればコピー自身の丈夫さで受ける(ガード・回避は無し)。0 になったら消える(倒れた数・全滅には入らない)
+          // ★AIコピー(5人目)が当たるか。当たればコピー自身の丈夫さとコピーが構えたガードで受ける(回避は無し・余ったガードは戻らない)。0 になったら消える(倒れた数・全滅には入らない)
           const copyNow=aiCopyRef.current;
           const copyHit=EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isAiCopyOut(copyNow,turnCount)&&tacticsIntentHitsAiCopy(intent,copyNow);
           if(copyHit){
             const rushN=intent.variant==='rush'?Math.max(1,Math.floor(Number(intent.hits)||1)):1;
-            const hitC=resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent,copyNow.srcSlot,copyNow.def),rushN,0,0);
+            const guardNowC=intent.variant==='pierce'?0:Math.max(0,Number(copyNow.guardNow)||0);
+            const hitC=resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent,copyNow.srcSlot,copyNow.def),rushN,guardNowC,tacticsGuardHits(copyNow.guardCardsNow||0,rushN));
             const fdC=applyImmediateTakenReduction(hitC.taken);
             const afterC=damageTacticsAiCopy(copyNow,fdC);
             addPopup(`🤖 ${tacticsAiCopyName(copyNow)} −${fdC}`,'hero','text-sky-200 font-black text-lg drop-shadow-md');
@@ -75987,6 +76350,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ミーアのボルテージで、ターン終わりのライフ・ガッツ自動回復の率が上がる(2026-10-03。ボルテージ1段階ごとに足す。ライフ分は同日に追加)
     const regen=tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate);
     let gutsRegen=0, autoHealVal=0;
+    // AIコピーのガッツも、ふつうの子と同じ率で戻す(出たときは上限まで・2026-10-27 部長。5つの遊びの分とそろえる)
+    if(isTacticsMode(runMode)&&EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isAiCopyOut(aiCopyRef.current,turnCount)){
+      const copyGutsRate=Math.max(0,baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd);
+      commitAiCopy(c=>c?{...c,guts:Math.min(c.maxGuts,(Number(c.guts)||0)+Math.floor((Number(c.maxGuts)||0)*copyGutsRate))}:c);
+    }
     if (regen) {
       currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts;
       // ★倒れている子が毎ターン戻るぶんは、その枠へ出す。合計の「自動再生 +◯」に混ぜると、
@@ -76138,12 +76506,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    // AIコピー(5つの遊び): コピーのガッツもターンの終わりにパーティと同じ率で戻す(ジン部長の答え②・仮)
+    if(timeStopSlot==null&&aiCopyRef.current&&!isTacticsMode(runMode)&&isAiCopyOut(aiCopyRef.current,turnCount)) commitAiCopy(c=>classicAiCopyRegenGuts(c,soulAdjustedGutsRecoveryRate));
     // AIコピー: 出ているときだけ、ターンの終わりに1つ数える。0 で消える(時間停止のターンは数えない)
     if(timeStopSlot==null&&aiCopyRef.current){
       const ticked=tickAiCopy({ aiCopy:aiCopyRef.current, zones:{ deck:[], hand:[], discard:[] } },turnCount);
-      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else commitAiCopy(ticked.aiCopy);
+      // 残ったら手札を捨て札へ回してから(endAiCopyTurn)、次のターンの札を決める
+      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else { commitAiCopy(endAiCopyTurn(ticked.aiCopy)); planTacticsAiCopy(turnCount+1); }
     }
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
+    // AIコピー(5つの遊び): 次のターンに出ているなら、使うカードを決めておく
+    if(!isTacticsMode(runMode)&&aiCopyRef.current&&isAiCopyOut(aiCopyRef.current,nextTurn)) commitAiCopy(c=>planClassicAiCopy(c));
     // ★ジャック戦は RAID_JACK_TURNS(20)ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスも20ターン
     if(raidJackRunRef.current){
       raidJackRunRef.current.turns=Math.min(nextTurn,RAID_JACK_TURNS);
@@ -76659,8 +77032,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 攻撃の演出はカードを全部処理したあとに順番に流れる。どのヒットがどの姿(悪魔/天使)のカードのものかを、ヒットへ印として付けておく
     let pdTagFrom=0, pdTagForm=null;
     const pdTag=()=>{ if(pdTagForm) for(let k=pdTagFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].pandoraForm==null) attackHits[k].pandoraForm=pdTagForm; pdTagFrom=attackHits.length; };
-    for (const entry of usedCardEntries) {
+    // ★AIコピー(ソラシドのアシカ)の札のうち、攻撃とガード以外(回復・強化・アシカ)は、味方のカードと同じ流れの最後に通す(段2・2026-10-27 部長)。
+    //   使う子は元の子の枠(srcSlot)。ガッツの支払い・2枚目の半減・🔥はここでは数えない(下の「AIコピーの1手」でコピー自身のぶんとして数える)
+    const aiCopyEntries=(()=>{
+      const c=aiCopyRef.current;
+      // 5つの遊び: ガード以外(攻撃・固有技・回復・強化・アシカ)は味方のカードと同じ流れで効かせる。固有技の特別な効き目もそのまま乗る。
+      //   ダメージは dmgScale(コピーのちから ÷ パーティのちから)で縮める。ガードは下の「AIコピー(5つの遊び)」でコピーの丈夫さで構える
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&!isTacticsMode(runMode)&&isAiCopyOut(c,turnCount)){
+        let left=Math.max(0,Number(c.guts)||0);
+        // 0 は getDmg が「倍率なし(1倍)」と読むので、ごく小さい値にしておく
+        const dmgScale=atk>0?Math.max(1e-6,Math.max(0,Number(c.atk)||0)/atk):1e-6;
+        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return card.type!=='guard'&&card.type!=='weak_guard'; })
+          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true,dmgScale}));
+      }
+      if(!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido||!isTacticsMode(runMode)||!isAiCopyOut(c,turnCount)||!isTacticsAiCopyStanding(c)) return [];
+      const cp=c.plannedTurn===turnCount?c:(planTacticsAiCopy(turnCount)||c);
+      const tools=tacticsAiCopyTools(cp,enemyDist);
+      if(!tools) return [];
+      let left=Math.max(0,Number(cp.guts)||0);
+      return (cp.picks||[]).filter(card=>{ const cost=Math.max(0,Number(tools.costC(card))||0); if(cost>left) return false; left-=cost; return !isAttackCard(card)&&!tools.isGuardC(card); })
+        .map(card=>({card,slotIdx:cp.srcSlot,aiCopy:true}));
+    })();
+    let copyHitFrom=null; // AIコピーの札が積んだヒットの始まり(数字の吹き出しの名前に使う)
+    for (const entry of [...usedCardEntries,...aiCopyEntries]) {
       const card=entry.card;
+      // AIコピー(5つの遊び)の札は、ダメージをコピーのちからへ縮める(それ以外は1倍)
+      const copyDmgScale=entry.aiCopy&&Number.isFinite(entry.dmgScale)?entry.dmgScale:1;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       const totalHealBeforeCard=totalHeal, totalHealRateBeforeCard=totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
@@ -76671,7 +77068,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       //   (2026-09-17・ドラを助手にしたとき、ドラの緑膝がそのまま対象になった)。
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
-      if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
+      // AIコピーが使ったアシカは仲良し度に数えない(プレイヤーが切った札ではない)
+      if(!entry.aiCopy){ if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); } }
+      // ★AIコピーの札は、帯・ログ・ダメージの数字に出す名前を「〜のコピー」にする(元の子が動いたと取り違えないように。2026-10-27 部長)
+      const actorName=(si)=>entry.aiCopy?tacticsAiCopyName(aiCopyRef.current):battleActorName(si);
+      if(entry.aiCopy&&copyHitFrom==null) copyHitFrom=attackHits.length;
       // どの子がどの札を切ったかは、ここ1か所でログへ残す。
       // ★効果ごとの分岐(攻撃UP・回復・固有技…)は40か所以上あり、そこへ書くと同じ文が散らばる
       // ★攻撃の札は書かない。このあと「◯◯の しっぽアタック → 敵に177ダメージ」が出るので、
@@ -76679,9 +77080,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ★助手のアシストカードはモンスターが使うものではないので、名前を付けない
       if(!isAttackCard(card)){
         const usedBy=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
-        pushBattleLog(isBreeder?`${card.name} を使った`:`${battleActorName(usedBy)}の ${card.name}`, 'card');
+        pushBattleLog(entry.aiCopy?`🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}`:isBreeder?`${card.name} を使った`:`${battleActorName(usedBy)}の ${card.name}`, 'card');
       }
-      const halved=halveCounter.take(card,entry.slotIdx);
+      const halved=entry.aiCopy?false:halveCounter.take(card,entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);
@@ -76699,7 +77100,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const angel=tacticsRateHeal(boxNow.angelRate,boxNow.angelRate,false);
             if(angel) hpBeforeEnemyAttack=angel.total;
             addPopup('👼 天使の力 全員回復','hero','text-sky-200 font-black text-xl drop-shadow-md');
-            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`,'ally');
+            pushBattleLog(`😈👼 ${actorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`,'ally');
           }
         }
       }
@@ -76707,7 +77108,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul,guardCardWeight(card)); }
       // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
       const cardCost=getCardGuts(card,slotIdx);
-      if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);
+      if(entry.aiCopy){ /* コピーのガッツから払う(下の「AIコピーの1手」) */ }
+      else if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);
       else setGuts(p=>Math.max(0,p-cardCost));
       // メロディの手作りクッキー: メロディー本人がカードを1枚使うたびに+1(枠を決めて使ったカードだけ。アシストカードは数えない)
       if(!isBreeder&&entry.slotIdx!=null) gainSweetStack(slotIdx,slots[slotIdx]?.id,card);
@@ -76725,7 +77127,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul);
+          const d=Math.floor(Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)*copyDmgScale);
           const soulAttack=soulTraitAttackProfile(stunMon?.masuId?getMasuMon(stunMon.masuId):null,card,slotIdx);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
@@ -76733,7 +77135,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo,kusabiCombosAt(slotIdx,stunMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo,[...kusabiCombosAt(slotIdx,stunMon?.id,card),kyubiAttackAt(slotIdx,stunMon?.id,card).combo,kyubiAttackAt(slotIdx,stunMon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,true)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           if(d>0) gainKusabi(slotIdx,stunMon?.id); // ★楔(影潜): あつの挑発も本人の攻撃なので数える
           fireTacticsExCross(slotIdx);
@@ -76782,7 +77184,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(tactics) kyukoRedirectRef.current=slotIdx;
           writePermaBuffs(p=>({...p, kyukoCutRate:cut, kyukoCutTurns:conf.turns, kyukoCutSlot:tactics?slotIdx:-1}));
           addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut*100)}%減(${conf.turns}T)`,'hero','text-pink-300 font-black text-xl drop-shadow-md');
-          if(tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`,'ally');
+          if(tactics) pushBattleLog(`🎼 ${actorName(slotIdx)}が、このターンの単体攻撃を引き受ける`,'ally');
         }
         else if (card.subType==='buff_kiki') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2); const comboAdd=localBoostFromCard(card).combo*effMul; localGlobalComboAdd+=comboAdd; addPermaBuff('globalComboDmgPct',comboAdd); writePermaBuffs(p=>({...p,kikiCardBonusTurns:Math.max(1,(level+1)*effMul)+2})); addPopup(`全体連撃+${((3+level*2)*effMul).toFixed(effMul===1?0:1)}%!`,'hero','text-sky-300 text-lg font-bold'); }
       }
@@ -76875,10 +77277,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             fateDmgMult=fateCoinDmgMult(side);
             if(side==='heads'){
               writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
-              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`, tone:'good' });
+              showLuckBanner({ icon:'🪙', title:`${actorName(slotIdx)}の運命のコイン`, result:`表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`, tone:'good' });
             }else{
               writePermaBuffs(p=>({...p,fateStacks:withFateCoinGuts(p.fateStacks)}));
-              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`, tone:'bad' });
+              showLuckBanner({ icon:'🪙', title:`${actorName(slotIdx)}の運命のコイン`, result:`裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`, tone:'bad' });
             }
           }
           // 運命の輪(スプーキー): 6つから1つ。ダメージ3倍・2倍はこの技に、ほかは当たったあとに効かせる(下の固有技の効果)
@@ -76888,7 +77290,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
         }
         const attackStartDist=attackDistance;
-        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult); attackCount++;
+        // コピーの縮めは「この技のダメージ」の倍率(skillDmgMult)に掛けて渡す(ふつうの札は1倍なので今までと同じ)
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult*copyDmgScale); attackCount++;
         const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
         const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
@@ -76915,7 +77318,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
           const trickOwnerId=isTacticsMode(runMode)?tacticsUnitsRef.current[slotIdx]?.id:mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD>0) {
+          // AIコピーの札はコピー自身のガッツで払うので、パーティへは返さない
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD>0) {
             const refund=trickStartGutsRefund(cardCost);
             if (refund>0) { gainGutsAt(slotIdx,refund); addPopup(`🎩 ガッツ +${refund}`,'guts','text-violet-200 text-base font-bold drop-shadow-md'); }
           }
@@ -76927,12 +77331,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★焦がれ待つ天ノ河(オリヒメ・共モン): 効いているあいだに本人の攻撃が当たったら25%を振る(1ターン2回まで)。当たりなら敵の次の行動が意味不明
         { const kg=isTacticsMode(runMode)&&finalD>0?orihimeRef.current.kogare[String(slotIdx)]:null;
           if(kg&&kg.turns>0&&kg.rolls>0){ const r=rollKogare(kg.rolls); writeOrihime('kogare',String(slotIdx),{ ...kg, rolls:r.rollsLeft });
-            if(r.confused){ orihimeForceConfuseRef.current=true; showLuckBanner({ icon:'❓', title:`${battleActorName(slotIdx)}の焦がれ待つ天ノ河`, result:'敵の次の行動が「意味不明」に！', tone:'enemy' }); } } }
+            if(r.confused){ orihimeForceConfuseRef.current=true; showLuckBanner({ icon:'❓', title:`${actorName(slotIdx)}の焦がれ待つ天ノ河`, result:'敵の次の行動が「意味不明」に！', tone:'enemy' }); } } }
         // ★トリックコンフューズ(スプーキー): 効いているあいだに本人の攻撃が当たったら、敵を3ターン乱心にする(当て直すと3へ数え直す)
         if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
           && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
-          showLuckBanner({ icon:'🌀', title:`${battleActorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`, tone:'enemy' });
+          showLuckBanner({ icon:'🌀', title:`${actorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`, tone:'enemy' });
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -77002,7 +77406,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               else if(id==='enemyTakenUp') writeFateWheel({...fateWheelRef.current,takenUp:FATE_WHEEL_DEBUFF_TURNS});
               else if(id==='combo') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
               else if(id==='atk') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'atk')}));
-              showLuckBanner({ icon:'🎡', title:`${battleActorName(slotIdx)}の運命の輪`, result:fateWheelPick.label, tone:(id==='enemyAtkDown'||id==='enemyTakenUp')?'enemy':'good' });
+              showLuckBanner({ icon:'🎡', title:`${actorName(slotIdx)}の運命の輪`, result:fateWheelPick.label, tone:(id==='enemyAtkDown'||id==='enemyTakenUp')?'enemy':'good' });
             }
           }
           else if(card.monId==='Pandora'){
@@ -77044,36 +77448,56 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     popupSlotRef.current=null;
     // ===== AIコピーの1手(ソラシドのアシカ)。味方のカードのあと、敵へのダメージをまとめて当てる前 =====
-    // ★攻撃のカードだけを使う(ガード・回復などは使わない・暫定)。ガッツは毎ターン満タンから。
-    //   強さは「元の子の今の攻撃 × (コピーの攻撃 ÷ 元の子の攻撃)」、間合いはコピーの立つマス(pos)で数える。
+    // 使う札はターンの始めに決めてある(planTacticsAiCopy・枠の札に先に出す)。決まっていなければここで決める
     //   与ダメは attackHits に aiCopy の印で足す(敵のライフには入る・枠ごとの与ダメと元の子の🔥には入れない)
     {
-      const copy=aiCopyRef.current;
-      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy,turnCount)&&isTacticsAiCopyStanding(copy)){
-        const srcMon=slots[copy.srcSlot]; const srcUnit=tacticsBattleUnit(copy.srcSlot);
-        if(srcMon&&srcUnit&&srcUnit.atk>0){
-          const distFrom=copy.srcSlot+(attackDistance-copy.pos);
-          const atkRate=copy.atk/srcUnit.atk;
-          const dmgOf=(c)=>Math.floor(getDmg(c,copy.srcSlot,srcMon,0,0,false,distFrom)*atkRate);
-          const piles=handPileRef.current;
-          const pool=[...(piles.deck||[]),...(piles.graveyard||[])].filter(c=>c&&c.type!=='unique'&&dmgOf(c)>0);
-          const uniq=copy.uniqueCard&&dmgOf(copy.uniqueCard)>0?copy.uniqueCard:null;
-          const planned=planAiCopyTurn({...copy,guts:copy.maxGuts,uniqueCardUid:uniq?uniq.uid:null},
-            { deck:uniq?[...pool,uniq]:pool, score:dmgOf, costOf:(c)=>getCardGuts(c,copy.srcSlot) });
-          let dealtC=0, gainC=0;
-          (planned.picks||[]).forEach((card,k)=>{
-            const d=dmgOf(card); if(!(d>0)) return;
-            totalDmg+=d; dealtC+=d;
+      const copy0=aiCopyRef.current;
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy0,turnCount)&&isTacticsAiCopyStanding(copy0)){
+        const copy=copy0.plannedTurn===turnCount?copy0:(planTacticsAiCopy(turnCount)||copy0);
+        const tools=tacticsAiCopyTools(copy,attackDistance);
+        if(tools){
+          let dealtC=0, gainC=0, gutsC=Math.max(0,Number(copy.guts)||0), guardC=0, guardCards=0;
+          (copy.picks||[]).forEach((card,k)=>{
+            const cost=Math.max(0,Number(tools.costC(card))||0);
+            if(cost>gutsC) return; // 決めたあとにガッツが減っていれば使わない
+            gutsC-=cost;
             gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
+            if(tools.isGuardC(card)){
+              const m=card.type==='weak_guard'?0.5:1, g=GUARD_EVOLUTION[guardLevel];
+              guardC+=Math.floor(g.flat*m+Math.max(0,Number(copy.def)||0)*g.mult*m); guardCards++;
+              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name||card.baseName||'ガード'}(ガード${guardC})`,'ally');
+              return;
+            }
+            const d=tools.dmgOf(card); if(!(d>0)) return;
+            totalDmg+=d; dealtC+=d;
             attackHits.push({dmg:d,isCrit:false,slotIdx:copy.srcSlot,aiCopy:true,isSpecial:card.type==='unique',skillName:`${tacticsAiCopyName(copy)}の${card.name||card.baseName||'攻撃'}`,isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
           });
-          commitAiCopy({...planned,hateGainNow:(Number(copy.hateGainNow)||0)+gainC,dealtNow:(Number(copy.dealtNow)||0)+dealtC});
-          if(!(planned.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
+          commitAiCopy(c=>c&&({...c,picks:[],nextCard:null,guts:gutsC,guardNow:guardC,guardCardsNow:guardCards,hateGainNow:(Number(c.hateGainNow)||0)+gainC,dealtNow:(Number(c.dealtNow)||0)+dealtC}));
+          if(!(copy.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
         }
       }
     }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
+    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].actorName==null) attackHits[k].actorName=copyName; }
+    // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前。使う札はターンの始めに決めてある(planClassicAiCopy)。
+    //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。攻撃・固有技・回復・強化・アシカは上の aiCopyEntries で
+    //   味方のカードと同じ流れに通し済み(ダメージはコピーのちからへ縮める)。ここではガッツを払い、ガードだけを構える
+    //   (コピーはライフを持たないので、ガードはコピーの丈夫さでパーティを守る)
+    if(!isTacticsMode(runMode)&&aiCopyRef.current&&isAiCopyOut(aiCopyRef.current,turnCount)){
+      let copy=aiCopyRef.current;
+      for(const pick of (Array.isArray(copy.picks)?copy.picks:[])){
+        const cost=Math.max(0,Number(pick?.guts??pick?.cost)||0);
+        if(!pick||cost>copy.guts) break;
+        copy=classicAiCopySpendGuts(copy,cost);
+        if(pick.type!=='guard'&&pick.type!=='weak_guard') continue; // ログは上の流れで出している
+        const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
+        currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
+        if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name||pick.baseName||'ガード'}を使った`,'ally');
+      }
+      commitAiCopy({...copy, picks:[], nextCard:null});
+    }
     if (totalDmg>0) {
       if(totalDmg>0){
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
@@ -77156,7 +77580,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // ★ログには「誰の何の技で何点入ったか」を書く(吹き出しは数字だけなので、
               //   あとから読むと誰の攻撃か分からない)
               addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,
-                `${battleActorName(h.slotIdx)}${h.skillName?`の ${h.skillName}`:'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit?'（会心）':''}`);
+                `${h.actorName||battleActorName(h.slotIdx)}${h.skillName?`の ${h.skillName}`:'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit?'（会心）':''}`);
               setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-h.dmg)}:prev);
               tacticsProLogDamage(tacticsProLogRef.current, { by: slots[h.slotIdx]?.id, amount: h.dmg });
               await battleWait(comboStepMs);
@@ -77214,7 +77638,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hitColor=hit.isCrit?`text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique?'scale-125':'scale-110'}`:hit.isUnique?'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,
-            `${battleActorName(hit.slotIdx)}${hit.skillName?`の ${hit.skillName}`:'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit?'（会心）':''}`);
+            `${hit.actorName||battleActorName(hit.slotIdx)}${hit.skillName?`の ${hit.skillName}`:'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit?'（会心）':''}`);
           setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-hit.dmg)}:prev);
           tacticsProLogDamage(tacticsProLogRef.current, { by: slots[hit.slotIdx]?.id, amount: hit.dmg });
           if (hit.isUnique) tacticsProLogSkill(tacticsProLogRef.current, 'unique', slots[hit.slotIdx]?.id, turnCount);
@@ -78980,8 +79404,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
     const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
-    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない
-    if (!isHero && orihimePartnerPick && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない。
+    //   オートで合流したときは配置の画面を通らないので、相方がまだいなければ、その子を自動で相方にする(2026-10-27 社長: 案ア)
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName||m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }
@@ -84606,7 +85031,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 押したその場で反映して保存する(閉じるまで見比べられる)。並ぶのは公開済み(released:true)の服だけ
           const closeCostume=()=>{ setShowCostumePicker(false); setCostumeLockedInfo(null); };
           const who=assistantById(costumeAssistantId)||assistantById(selectedAssistantId);
-          const chipList=ASSISTANT_LIST.map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
+          const chipList=ASSISTANT_LIST.filter(a=>assistantReleased(a.id)).map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
           const costumes=assistantCostumesFor(who.id);
           const worn=assistantCostumeById(wornAssistantCostumes[who.id]);
           const faceOf=(costume)=>costume&&costume.icon?costume.icon:null;
@@ -84632,12 +85057,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
           const lockedInfo=lockedCostume&&(
             <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-              {/* 解放の条件がある服(みゅあの MASTER に勝つと並ぶ服など)は、解放するまで条件を出す(まだマーケットに並んでいないため。2026-10-27) */}
+              {/* 解放の条件がある服(みゅあの MASTER に勝つと買える服など)は、解放するまで買える条件を出す(マーケットには鍵つきで並んでいる。2026-10-27) */}
               {assistantCostumeUnlockedNow(lockedCostume)?<>
               <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
               </>:<>
-              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はまだマーケットに並んでいません</p>
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットに並んでいます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1" style={JA_WRAP_STYLE}>{jaWrap(lockedCostume.unlockHow||'')}</p>
               </>}
               <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(lockedCostume.desc||'')}</p>
@@ -84751,8 +85176,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} kyubiOrihimeStackMarks={kyubiOrihimeStackMarks} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

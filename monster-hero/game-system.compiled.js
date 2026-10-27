@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 869df0b3a2e30d80
+// source-sha256: 4ec7bd8df7dbbd9d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16518,6 +16518,7 @@ const marketLabelNodes = label => marketLabelSegments(label).map((seg, index) =>
 }, index > 0 && React.createElement("wbr", null), seg));
 const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  if (costume && costume.unlock && typeof assistantCostumeUnlockedNow === 'function' && !assistantCostumeUnlockedNow(costume) && Array.isArray(costume.lockLabel)) return [...costume.lockLabel];
   const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
   const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
   const fromMs = diamond ? Date.parse(diamond.from) : NaN;
@@ -16557,7 +16558,7 @@ const MarketProductCard = ({
     disabled: disabled,
     previewIcon: previewIcon
   }), React.createElement("div", {
-    className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
+    className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px] max-[359px]:tracking-[-0.05em]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
       minHeight: '36px',
       textWrap: 'wrap',
@@ -18720,6 +18721,38 @@ const BATTLE_STACK_MARKS = Object.freeze({
     mark: '💤',
     img: '',
     label: 'ドリームペイン',
+    unit: 'T'
+  }),
+  rengoku: Object.freeze({
+    mark: '♨️',
+    img: '',
+    label: '煉獄'
+  }),
+  kagero: Object.freeze({
+    mark: '🌫️',
+    img: '',
+    label: '陽炎の完全回避'
+  }),
+  kitsunebi: Object.freeze({
+    mark: '🦊',
+    img: '',
+    label: '狐火'
+  }),
+  ouse: Object.freeze({
+    mark: '🎐',
+    img: '',
+    label: '逢瀬'
+  }),
+  hoshiai: Object.freeze({
+    mark: '🌌',
+    img: '',
+    label: '星合の刻',
+    unit: 'T'
+  }),
+  reikon: Object.freeze({
+    mark: '🕯️',
+    img: '',
+    label: '霊魂',
     unit: 'T'
   })
 });
@@ -45563,8 +45596,7 @@ const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const SORASHIDO_CARD_ID = 'sorashido';
 const SORASHIDO_COPY_SLOT = 4;
-const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-const SORASHIDO_COPY_HAND_DRAW = 2;
+const SORASHIDO_COPY_HAND_DRAW = 3;
 const aiCopySafeNum = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -45627,66 +45659,71 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'new',
     turnsLeft,
     removeCopy: false,
-    removeUniqueOf: null,
-    addUniqueOf: srcMonsterId
+    rebuildDeck: true
   };
   if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return {
     kind: 'refresh',
     turnsLeft,
     removeCopy: false,
-    removeUniqueOf: null,
-    addUniqueOf: null
+    rebuildDeck: false
   };
   return {
     kind: 'switch',
     turnsLeft,
     removeCopy: true,
-    removeUniqueOf: aiCopy.srcMonsterId,
-    addUniqueOf: srcMonsterId
+    rebuildDeck: true
   };
 };
 const aiCopyTurnEnd = aiCopy => {
   if (!aiCopy) return {
     turnsLeft: 0,
-    expired: false,
-    removeUniqueOf: null
+    expired: false
   };
   const turnsLeft = Math.max(0, Math.floor(aiCopySafeNum(aiCopy.turnsLeft)) - 1);
   return {
     turnsLeft,
-    expired: turnsLeft <= 0,
-    removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null
+    expired: turnsLeft <= 0
   };
 };
-const aiCopyUniqueCard = (card, srcMonsterId) => card ? {
-  ...card,
-  sorashidoCopyOf: srcMonsterId,
-  uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}`
-} : null;
-const aiCopyIsUnique = (card, {
-  uid = null,
+const aiCopyUniqueIsOwn = (card, {
+  srcSlot = null,
   srcMonsterId = null
-} = {}) => !!card && card.sorashidoCopyOf != null && (uid == null || card.uid === uid) && (srcMonsterId == null || card.sorashidoCopyOf === srcMonsterId);
-const aiCopyRemoveUnique = (zones, match) => {
-  const strip = list => Array.isArray(list) ? list.filter(c => !aiCopyIsUnique(c, match)) : [];
+} = {}) => {
+  if (Number.isInteger(card.ownerSlotIdx) && Number.isInteger(srcSlot)) return card.ownerSlotIdx === srcSlot;
+  return card.monId != null && card.monId === srcMonsterId;
+};
+const aiCopyCanPick = (card, src = null) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID && (card.type !== 'unique' || !src || aiCopyUniqueIsOwn(card, src));
+const aiCopyBuildDeck = (zones, src) => {
+  const all = ['deck', 'hand', 'discard'].flatMap(k => zones && Array.isArray(zones[k]) ? zones[k] : []);
   return {
-    ...zones,
-    deck: strip(zones && zones.deck),
-    hand: strip(zones && zones.hand),
-    discard: strip(zones && zones.discard)
+    deck: all.filter(c => aiCopyCanPick(c, src || {})),
+    discard: []
   };
 };
-const aiCopyCanPick = card => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
-  const picked = [];
-  for (let i = 0; i < draw && rest.length > 0; i++) {
-    const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
-    picked.push(rest.splice(at, 1)[0]);
+const aiCopyDraw = (state, count, rng) => {
+  let deck = state && Array.isArray(state.deck) ? state.deck.slice() : [];
+  let discard = state && Array.isArray(state.discard) ? state.discard.slice() : [];
+  const n = Math.max(0, Math.floor(aiCopySafeNum(count, SORASHIDO_COPY_HAND_DRAW)));
+  const hand = [];
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) {
+      if (discard.length === 0) break;
+      deck = discard;
+      discard = [];
+    }
+    const at = Math.min(deck.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * deck.length));
+    hand.push(deck.splice(at, 1)[0]);
   }
-  if (uniqueCard && aiCopyCanPick(uniqueCard)) picked.push(uniqueCard);
-  return picked;
+  return {
+    hand,
+    deck,
+    discard
+  };
 };
+const aiCopyDiscardHand = (state, hand) => ({
+  deck: state && Array.isArray(state.deck) ? state.deck.slice() : [],
+  discard: [...(state && Array.isArray(state.discard) ? state.discard : []), ...(Array.isArray(hand) ? hand : [])]
+});
 const aiCopyPickOne = (cards, score, rng, pick) => {
   if (cards.length === 0) return null;
   const ranked = cards.map((c, i) => ({
@@ -45723,7 +45760,7 @@ const aiCopyPickCards = (hand, {
 const sorashidoCopyDesc = level => {
   const t = aiCopyRules(level),
     p = v => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
 const summonAiCopy = (state, {
@@ -45732,7 +45769,6 @@ const summonAiCopy = (state, {
   name = '',
   level = 0,
   src = null,
-  uniqueCard = null,
   turn = 0,
   mode = 'tactics',
   effMul = 1,
@@ -45740,7 +45776,7 @@ const summonAiCopy = (state, {
   extra = null
 } = {}) => {
   const now = state && state.aiCopy || null;
-  let zones = state && state.zones || {
+  const zones = state && state.zones || {
     deck: [],
     hand: [],
     discard: []
@@ -45762,14 +45798,10 @@ const summonAiCopy = (state, {
       plan
     };
   }
-  if (plan.removeUniqueOf != null) zones = aiCopyRemoveUnique(zones, {
-    srcMonsterId: plan.removeUniqueOf
+  const pile = aiCopyBuildDeck(zones, {
+    srcSlot,
+    srcMonsterId
   });
-  const uniq = plan.addUniqueOf != null ? aiCopyUniqueCard(uniqueCard, plan.addUniqueOf) : null;
-  if (uniq) zones = {
-    ...zones,
-    deck: [...(Array.isArray(zones.deck) ? zones.deck : []), uniq]
-  };
   const stats = aiCopyStats(src, level, {
     mode,
     effMul,
@@ -45783,10 +45815,11 @@ const summonAiCopy = (state, {
     spawnTurn: aiCopySafeNum(turn) + 1,
     turnsLeft: plan.turnsLeft,
     ...stats,
+    deck: pile.deck,
+    discard: pile.discard,
     hand: [],
     nextCard: null,
     picks: [],
-    uniqueCardUid: uniq ? uniq.uid : null,
     ...(extra || {})
   };
   return {
@@ -45795,27 +45828,14 @@ const summonAiCopy = (state, {
     plan
   };
 };
-const dismissAiCopy = state => {
-  const now = state && state.aiCopy || null;
-  const zones = state && state.zones || {
+const dismissAiCopy = state => ({
+  aiCopy: null,
+  zones: state && state.zones || {
     deck: [],
     hand: [],
     discard: []
-  };
-  if (!now) return {
-    aiCopy: null,
-    zones
-  };
-  const match = now.uniqueCardUid ? {
-    uid: now.uniqueCardUid
-  } : {
-    srcMonsterId: now.srcMonsterId
-  };
-  return {
-    aiCopy: null,
-    zones: aiCopyRemoveUnique(zones, match)
-  };
-};
+  }
+});
 const tickAiCopy = (state, turn) => {
   const now = state && state.aiCopy || null;
   if (!isAiCopyOut(now, turn)) return state;
@@ -45833,28 +45853,137 @@ const tickAiCopy = (state, turn) => {
   };
 };
 const planAiCopyTurn = (aiCopy, {
-  deck = [],
+  count = SORASHIDO_COPY_HAND_DRAW,
   score = null,
   costOf = null,
+  usable = null,
   rng = Math.random
 } = {}) => {
   if (!aiCopy) return aiCopy;
-  const uniq = (Array.isArray(deck) ? deck : []).find(c => c && aiCopy.uniqueCardUid && c.uid === aiCopy.uniqueCardUid) || null;
-  const rest = (Array.isArray(deck) ? deck : []).filter(c => c !== uniq);
-  const hand = aiCopyHand(rest, uniq, rng);
-  const picks = aiCopyPickCards(hand, {
+  const cleared = Array.isArray(aiCopy.hand) && aiCopy.hand.length ? endAiCopyTurn(aiCopy) : aiCopy;
+  const drawn = aiCopyDraw({
+    deck: cleared.deck,
+    discard: cleared.discard
+  }, count, rng);
+  const choosable = drawn.hand.filter(c => typeof usable !== 'function' || usable(c));
+  const picks = aiCopyPickCards(choosable, {
     score,
     costOf,
-    guts: aiCopy.guts,
-    maxGuts: aiCopy.maxGuts,
+    guts: cleared.guts,
+    maxGuts: cleared.maxGuts,
     rng,
-    level: aiCopy.level
+    level: cleared.level
   });
   return {
-    ...aiCopy,
-    hand,
+    ...cleared,
+    deck: drawn.deck,
+    discard: drawn.discard,
+    hand: drawn.hand,
     picks,
     nextCard: picks[0] || null
+  };
+};
+const endAiCopyTurn = aiCopy => {
+  if (!aiCopy) return aiCopy;
+  const pile = aiCopyDiscardHand({
+    deck: aiCopy.deck,
+    discard: aiCopy.discard
+  }, aiCopy.hand);
+  return {
+    ...aiCopy,
+    deck: pile.deck,
+    discard: pile.discard,
+    hand: [],
+    picks: [],
+    nextCard: null
+  };
+};
+const aiCopyAutoScore = (card, {
+  strategy = 'random',
+  isAttack = null,
+  isGuard = null,
+  dmgOf = null
+} = {}) => {
+  if (!card) return -Infinity;
+  const attack = typeof isAttack === 'function' ? !!isAttack(card) : card.type === 'atk' || card.type === 'unique';
+  const guard = typeof isGuard === 'function' ? !!isGuard(card) : card.type === 'guard' || card.type === 'weak_guard';
+  const prio = strategy === 'offense' ? card.type === 'unique' ? 0 : attack ? 1 : guard || card.type === 'heal' ? 3 : 2 : strategy === 'defense' ? card.type === 'heal' ? 0 : card.type === 'guard' ? 1 : attack ? 3 : 2 : 0;
+  const dmg = attack && typeof dmgOf === 'function' ? Math.max(0, aiCopySafeNum(dmgOf(card))) : 0;
+  return -prio * 1e7 + dmg;
+};
+const CLASSIC_AI_COPY_ALLY_BASE = 'base';
+const classicAiCopyShareOf = (mon, isHero) => {
+  if (!mon) return {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const plus = mon.plusStats && typeof mon.plusStats === 'object' ? mon.plusStats : {};
+  const pick = (heroKey, plusKey) => Math.max(0, aiCopySafeNum(isHero ? mon[heroKey] : plus[plusKey]));
+  return {
+    atk: pick('baseAtk', 'atk'),
+    def: pick('baseDef', 'def'),
+    maxGuts: pick('baseGuts', 'guts')
+  };
+};
+const classicAiCopyBaseOf = (mon, isHero) => {
+  if (!mon) return {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  if (isHero || CLASSIC_AI_COPY_ALLY_BASE !== 'base') return classicAiCopyShareOf(mon, isHero);
+  return {
+    atk: Math.max(0, aiCopySafeNum(mon.baseAtk)),
+    def: Math.max(0, aiCopySafeNum(mon.baseDef)),
+    maxGuts: Math.max(0, aiCopySafeNum(mon.baseGuts))
+  };
+};
+const classicAiCopySrc = ({
+  slots = [],
+  srcSlot = 0,
+  heroId = null,
+  party = {}
+} = {}) => {
+  const list = Array.isArray(slots) ? slots : [];
+  const isHeroAt = m => !!(m && heroId != null && m.id === heroId);
+  const shares = list.map(m => classicAiCopyShareOf(m, isHeroAt(m)));
+  const mine = shares[srcSlot] || {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const base = classicAiCopyBaseOf(list[srcSlot], isHeroAt(list[srcSlot]));
+  const part = key => {
+    const total = shares.reduce((n, s) => n + s[key], 0);
+    const grown = Math.max(0, aiCopySafeNum(party && party[key]) - total);
+    const extra = total > 0 ? grown * (mine[key] / total) : 0;
+    return Math.floor(base[key] + extra);
+  };
+  return {
+    atk: part('atk'),
+    def: part('def'),
+    maxGuts: part('maxGuts')
+  };
+};
+const classicAiCopyIsAttack = card => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
+const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
+  const d = Math.max(0, aiCopySafeNum(partyDmg));
+  const p = Math.max(0, aiCopySafeNum(partyAtk));
+  if (!(p > 0) || !(d > 0)) return 0;
+  return Math.floor(d * Math.max(0, aiCopySafeNum(copyAtk)) / p);
+};
+const classicAiCopySpendGuts = (aiCopy, cost) => aiCopy ? {
+  ...aiCopy,
+  guts: Math.max(0, aiCopySafeNum(aiCopy.guts) - Math.max(0, aiCopySafeNum(cost)))
+} : aiCopy;
+const classicAiCopyRegenGuts = (aiCopy, rate) => {
+  if (!aiCopy) return aiCopy;
+  const max = Math.max(0, aiCopySafeNum(aiCopy.maxGuts));
+  const add = Math.floor(max * Math.max(0, aiCopySafeNum(rate)));
+  return {
+    ...aiCopy,
+    guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add)
   };
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
@@ -55937,7 +56066,7 @@ function ProfileScreen({
       alive = false;
     };
   }, []);
-  const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST;
+  const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id));
   return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS,
@@ -70291,6 +70420,72 @@ const kindOfTacticsSlotFx = fx => {
   if (fx.guard) return 'guard';
   return null;
 };
+const CLASSIC_AI_COPY_CSS = `
+[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
+[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
+[data-ai-copy-cell]{width:58px;flex:0 0 58px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55)}
+@media (orientation: landscape) and (max-height: 520px){
+  [data-ai-copy-row]{flex-direction:column;gap:3px}
+  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
+  [data-ai-copy-cell]{width:100%;flex:0 0 21px;height:21px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:hidden}
+  [data-ai-copy-cell] [data-sorashido-fx] .text-2xl{font-size:14px}
+  [data-ai-copy-cell] br{display:none}
+  [data-ai-copy-cell] > span{width:auto;flex:0 0 auto}
+  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+}`;
+const aiCopyViewPhase = (copy, fallback) => copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback;
+const classicAiCopyLandscape = () => {
+  try {
+    return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
+  } catch (e) {
+    return false;
+  }
+};
+function ClassicAiCopyCell({
+  copy,
+  turnCount,
+  onOpen
+}) {
+  if (!copy) return null;
+  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
+  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
+  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
+  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
+  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)),
+    maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
+  return React.createElement("div", {
+    "data-ai-copy-cell": out ? 'out' : 'waiting',
+    "data-ai-copy-phase": phase,
+    "aria-label": `${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`,
+    role: canOpen ? 'button' : undefined,
+    tabIndex: canOpen ? 0 : undefined,
+    style: canOpen ? {
+      cursor: 'pointer'
+    } : undefined,
+    onClick: canOpen ? onOpen : undefined,
+    onKeyDown: canOpen ? e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onOpen();
+      }
+    } : undefined
+  }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement(SorashidoCopyFx, {
+    phase: phase
+  }, React.createElement("span", {
+    className: "text-2xl leading-none"
+  }, SORASHIDO_FACE_ICON)), React.createElement("span", {
+    className: "w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200"
+  }, copy.name || '仲間', React.createElement("br", null), "のコピー"), out ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200"
+  }, "G ", guts, "/", maxGuts), React.createElement(SorashidoNextCardBadge, {
+    card: copy.nextCard || null,
+    layout: layout,
+    turnsLeft: copy.turnsLeft
+  })) : React.createElement("span", {
+    className: "text-center text-[9px] font-black leading-tight text-emerald-300"
+  }, "次のターン", React.createElement("br", null), "から"));
+}
 function BattleScreen({
   battleOverlayOpen = false,
   applyTurnDamageReduction,
@@ -70444,6 +70639,7 @@ function BattleScreen({
   dismissTacticsExIntro,
   tacticsPandoraForms,
   trickStartView,
+  kyubiOrihimeStackMarks,
   sweetStackView,
   bowStackView,
   fateWheelView,
@@ -70693,6 +70889,7 @@ function BattleScreen({
       put(i, 'avoid', c.avoid);
       put(i, 'konjo', c.konjo);
     });
+    Object.entries(kyubiOrihimeStackMarks || {}).forEach(([i, c]) => Object.entries(c || {}).forEach(([kind, n]) => put(Number(i), kind, n)));
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => {
       out[Number(i)] = {
         ...(c || {})
@@ -70735,6 +70932,28 @@ function BattleScreen({
   const [unitDetail, setUnitDetail] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  const [copyHandOpen, setCopyHandOpen] = useState(false);
+  const [copyGhost, setCopyGhost] = useState(null);
+  const copyPrevRef = useRef(null);
+  useEffect(() => {
+    if (aiCopy) {
+      copyPrevRef.current = aiCopy;
+      setCopyGhost(null);
+      return undefined;
+    }
+    const prev = copyPrevRef.current;
+    copyPrevRef.current = null;
+    setCopyHandOpen(false);
+    if (!prev) return undefined;
+    setCopyGhost({
+      ...prev,
+      fx: 'vanish'
+    });
+    const timer = setTimeout(() => setCopyGhost(null), 700);
+    return () => clearTimeout(timer);
+  }, [aiCopy]);
+  const shownAiCopy = aiCopy || copyGhost;
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? shownAiCopy || null : null;
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
   const fxRestEnabled = battleFx.restPause === 'ON';
@@ -72481,6 +72700,9 @@ function BattleScreen({
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
   }, p.text))))), React.createElement("div", {
+    "data-ai-copy-row": classicAiCopy && !tacticsNewLayout ? '' : undefined,
+    className: classicAiCopy && !tacticsNewLayout ? '' : 'contents'
+  }, React.createElement("div", {
     "data-tactics-debug-layout": tacticsNewLayout ? '2x2' : undefined,
     className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
@@ -72631,17 +72853,64 @@ function BattleScreen({
     const copyStanding = !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount;
     const chancesNow = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, copyStanding ? aiCopy : null) : null;
     const hatePct = chancesNow ? chancesNow.slots[i] : null;
-    const copyChip = tacticsNewLayout && aiCopy && aiCopy.pos === i ? React.createElement("div", {
+    const tCopy = shownAiCopy;
+    const tCopyPhase = aiCopyViewPhase(tCopy, copyStanding ? 'idle' : 'appear');
+    const tCopyOut = copyStanding || tCopyPhase === 'vanish';
+    const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
+    const tCopyOnMon = !!s || !!(tCopy && tCopy.stacked);
+    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !tCopyOnMon && React.createElement("div", {
+      "data-tactics-ai-copy-art": i,
+      "data-ai-copy-phase": tCopyPhase,
+      className: "absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]"
+    }, React.createElement(SorashidoCopyFx, {
+      phase: tCopyPhase
+    }, React.createElement(DyedMonsterImage, {
+      baseId: copySrc.id,
+      src: copySrc.imgUrl,
+      alt: `${copySrc.name}のコピー`,
+      masuColors: copySrc.colors,
+      style: {
+        width: '52px',
+        height: '52px'
+      },
+      className: "object-contain drop-shadow-md"
+    }))), !tCopyOnMon && React.createElement("div", {
+      "data-tactics-ai-copy-next": i,
+      className: `absolute ${copySrc ? 'left-[62px]' : 'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`
+    }, React.createElement(SorashidoNextCardBadge, {
+      card: tCopyOut ? tCopy.nextCard : null,
+      turnsLeft: tCopy.turnsLeft,
+      layout: classicAiCopyLandscape() ? 'landscape' : 'portrait'
+    })), React.createElement("div", {
       "data-tactics-ai-copy": i,
-      "data-tactics-ai-copy-out": copyStanding ? '1' : '0',
-      className: "absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap"
+      "data-tactics-ai-copy-out": tCopyOut ? '1' : '0',
+      role: aiCopy ? 'button' : undefined,
+      "aria-label": aiCopy ? 'コピーの手札を見る' : undefined,
+      onClick: aiCopy ? e => {
+        e.stopPropagation();
+        setCopyHandOpen(true);
+      } : undefined,
+      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+    }, React.createElement("span", {
+      className: "flex max-w-full min-w-0 items-center gap-0.5"
     }, React.createElement("span", {
       className: "min-w-0 truncate"
-    }, "🤖", aiCopy.stacked ? '重なる ' : '', copyStanding ? `ライフ${aiCopy.hp}` : '次のターンから'), copyStanding && React.createElement("span", {
-      className: "shrink-0 tabular-nums text-sky-200/90"
-    }, "あと", aiCopy.turnsLeft), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
-      className: "shrink-0 tabular-nums text-rose-200"
-    }, "狙", chancesNow.copy, "%")) : null;
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''
+    }, "🤖"), tCopyOut ? tCopyOnMon ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "text-rose-300"
+    }, "♥"), React.createElement("span", {
+      className: "tabular-nums"
+    }, tCopy.hp)) : `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+      className: "shrink-0 tabular-nums tracking-tighter text-rose-200"
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'text-[6px] opacity-80' : ''
+    }, "狙"), chancesNow.copy, "%")), tCopyOnMon && tCopyOut && React.createElement("span", {
+      "data-tactics-ai-copy-next": i,
+      className: "block max-w-full min-w-0 truncate text-emerald-200"
+    }, tCopy.nextCard ? tCopy.nextCard.name || tCopy.nextCard.baseName || '考え中' : '考え中', React.createElement("span", {
+      className: "tabular-nums text-sky-200/90"
+    }, " あと", tCopy.turnsLeft)))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -73316,7 +73585,20 @@ function BattleScreen({
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "距離")));
-  }))), tacticsExIntroVisible && React.createElement("div", {
+  })), classicAiCopy && !tacticsNewLayout && React.createElement(ClassicAiCopyCell, {
+    copy: classicAiCopy,
+    turnCount: turnCount,
+    onOpen: () => setCopyHandOpen(true)
+  }), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
+    open: true,
+    copyName: aiCopy.name || '仲間',
+    turnsLeft: aiCopy.turnsLeft,
+    cards: Array.isArray(aiCopy.hand) ? aiCopy.hand : [],
+    nextCard: aiCopy.nextCard || null,
+    guts: aiCopy.guts,
+    maxGuts: aiCopy.maxGuts,
+    onClose: () => setCopyHandOpen(false)
+  }), document.body))), tacticsExIntroVisible && React.createElement("div", {
     "data-tactics-ex-intro": true,
     className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
   }, React.createElement("div", {
@@ -99660,7 +99942,7 @@ const CARD_PVP_HIDDEN = -1;
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
 const CARD_PVP_RESEND_MS = 1500;
-const CARD_PVP_ALIVE_MS = 60000;
+const CARD_PVP_ALIVE_MS = 120000;
 const CARD_PVP_NAME_MAX = 16;
 const CARD_PVP_TURN_MS = 60000;
 const CARD_PVP_GUARD_MS = 15000;
@@ -99669,6 +99951,7 @@ const CARD_PVP_STALL_GRACE_MS = 20000;
 const CARD_PVP_QUIET_MS = 6000;
 const CARD_PVP_RECONNECT_MS = 3000;
 const CARD_PVP_VERIFY_WAIT_MS = 15000;
+const CARD_PVP_SLEEP_MS = 10000;
 const CARD_PVP_PENALTY_KEY = 'mh_card_pvp_penalty_v1';
 const CARD_PVP_PENALTY_MS = 3 * 60 * 1000;
 const cardPvpNormalizePenalty = v => Number.isFinite(v) && v > 0 ? v : 0;
@@ -99677,7 +99960,6 @@ const CARD_PVP_CHAT_GAP_MS = 1500;
 const CARD_PVP_LOBBY_TOPIC = 'realtime:mhc-lobby-free';
 const CARD_PVP_LOBBY_FRESH_MS = 6000;
 const CARD_PVP_LOBBY_JOIN_MS = 8000;
-const CARD_PVP_LOBBY_LIMIT_MS = 90000;
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
 const cardPvpFlip = act => {
@@ -100005,7 +100287,8 @@ const cardPvpCleanMessage = raw => {
       bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
       dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null,
       rd: cardPvpInt(raw.rd, 1000) || 0,
-      w: cardPvpInt(raw.w, 999) || 0
+      w: cardPvpInt(raw.w, 999) || 0,
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null
     };
   }
   if (raw.t === 'start') return {
@@ -100062,12 +100345,17 @@ const cardPvpCleanMessage = raw => {
   }
   if (raw.t === 'seek') {
     const code = rhythmMultiNormalizeCode(raw.code);
-    return code && Number.isFinite(raw.at) ? {
+    if (!code || !Number.isFinite(raw.at)) return null;
+    return {
       t: 'seek',
       from,
       code,
-      at: raw.at
-    } : null;
+      at: raw.at,
+      name: typeof raw.name === 'string' ? rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null : null,
+      icon: typeof raw.icon === 'string' ? rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null : null,
+      fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null
+    };
   }
   if (raw.t === 'chat') {
     const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1);
@@ -100140,6 +100428,15 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon)).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
+  id,
+  code: x.code,
+  name: x.name || 'ブリーダー',
+  icon: x.icon || null,
+  fr: x.fr || null,
+  rt: Number.isInteger(x.rt) ? x.rt : null,
+  waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000)))
+}));
 const cardPvpIconIds = () => {
   const out = [];
   try {
@@ -100564,6 +100861,8 @@ const CARD_PVP = (() => {
   let s = null;
   let socket = null;
   let alive = false;
+  let lastTickAt = 0;
+  let lobbyWatch = false;
   let tick = null;
   let retry = null;
   let lobby = null;
@@ -100581,6 +100880,7 @@ const CARD_PVP = (() => {
     match: '',
     hostFirst: false,
     first: 0,
+    lostAt: 0,
     game: null,
     startMsg: null,
     foeInMatch: false,
@@ -100605,6 +100905,8 @@ const CARD_PVP = (() => {
     joinAt: 0,
     ownCode: '',
     reported: '',
+    pick: false,
+    notice: '',
     round: 0,
     again: null,
     foeAgain: null,
@@ -100642,7 +100944,8 @@ const CARD_PVP = (() => {
     bid: s.me.bid || null,
     dn: s.me.dn || null,
     rd: s.round || 0,
-    w: isHost() ? cardPvpWatchHost().eyes() : 0
+    w: isHost() ? cardPvpWatchHost().eyes() : 0,
+    ov: s.phase === 'over' && s.match ? s.match : null
   });
   const watchPush = (by, act, reveal, st) => {
     if (isHost()) cardPvpWatchHost().push({
@@ -100772,6 +101075,7 @@ const CARD_PVP = (() => {
     }
     set({
       phase: 'playing',
+      lostAt: 0,
       match: msg.match,
       hostFirst: msg.hostFirst,
       first,
@@ -100822,6 +101126,22 @@ const CARD_PVP = (() => {
       });
       emit();
     }
+  };
+  const noteLost = tick => {
+    const nowT = Date.now();
+    const slept = lastTickAt > 0 && nowT - lastTickAt > CARD_PVP_SLEEP_MS;
+    if (tick || slept) lastTickAt = nowT;
+    if (s && s.phase === 'playing' && (slept || tick && !alive)) s = {
+      ...s,
+      lostAt: nowT,
+      ...(slept && s.foe ? {
+        foe: {
+          ...s.foe,
+          seen: nowT
+        }
+      } : {})
+    };
+    return slept;
   };
   const forceEnd = outcome => {
     if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
@@ -100936,6 +101256,10 @@ const CARD_PVP = (() => {
           ...foe
         }
       };
+      if (s.phase === 'playing' && msg.ov && msg.ov === s.match && s.lostAt) {
+        forceEnd('dropped');
+        return;
+      }
       maybeStart();
       if (s.match && msg.match === s.match) s = {
         ...s,
@@ -101037,7 +101361,13 @@ const CARD_PVP = (() => {
         alive = true;
         set({
           offline: false,
-          phase: s.phase === 'connecting' ? 'waiting' : s.phase
+          phase: s.phase === 'connecting' ? 'waiting' : s.phase,
+          ...(s.phase === 'playing' && s.foe ? {
+            foe: {
+              ...s.foe,
+              seen: Date.now()
+            }
+          } : {})
         });
         hb();
       },
@@ -101070,7 +101400,7 @@ const CARD_PVP = (() => {
   };
   const onLobby = raw => {
     const msg = cardPvpCleanMessage(raw);
-    if (!s || !msg || msg.t !== 'seek' || msg.from === s.me.id) return;
+    if (!s || !msg || msg.t !== 'seek' || s.me && msg.from === s.me.id) return;
     s = {
       ...s,
       seekers: {
@@ -101078,10 +101408,15 @@ const CARD_PVP = (() => {
         [msg.from]: {
           code: msg.code,
           at: msg.at,
-          seen: Date.now()
+          seen: Date.now(),
+          name: msg.name,
+          icon: msg.icon,
+          fr: msg.fr,
+          rt: msg.rt
         }
       }
     };
+    if (s.phase === 'idle') emit();
   };
   const openLobby = () => {
     closeLobby();
@@ -101096,8 +101431,8 @@ const CARD_PVP = (() => {
       onClose: () => {
         if (lobby !== me) return;
         lobbyAlive = false;
-        if (s && s.mode === 'free' && s.phase === 'waiting') setTimeout(() => {
-          if (lobby === me && s && s.phase === 'waiting') openLobby();
+        if (s && s.mode === 'free' && s.phase === 'waiting' || lobbyWatch) setTimeout(() => {
+          if (lobby === me && (s && s.phase === 'waiting' || lobbyWatch)) openLobby();
         }, CARD_PVP_RECONNECT_MS);
       }
     });
@@ -101116,6 +101451,15 @@ const CARD_PVP = (() => {
     }
     if (s.joining) {
       if (now - s.joinAt > CARD_PVP_LOBBY_JOIN_MS) {
+        if (s.pick) {
+          stop();
+          s = {
+            ...blank(),
+            notice: 'ほかの人と始まりました。ほかの人をえらぶか、自分も待ってください'
+          };
+          emit();
+          return;
+        }
         const code = rhythmMultiMakeCode();
         s = {
           ...s,
@@ -101144,11 +101488,15 @@ const CARD_PVP = (() => {
     lobbySend({
       t: 'seek',
       code: s.code,
-      at: s.seekAt
+      at: s.seekAt,
+      name: s.me.name,
+      icon: s.me.icon,
+      fr: s.me.fr || null,
+      rt: Number.isInteger(s.me.rt) ? s.me.rt : null
     });
     emit();
   };
-  const open = async (code, profile, deck, mode = 'private') => {
+  const open = async (code, profile, deck, mode = 'private', pick = false) => {
     stop();
     const bid = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
@@ -101165,6 +101513,9 @@ const CARD_PVP = (() => {
       ownCode: code,
       mode,
       seekAt: Date.now(),
+      pick,
+      joining: pick ? code : '',
+      joinAt: pick ? Date.now() : 0,
       deck: {
         monsters: deck.monsters.slice(),
         cards: deck.cards.slice()
@@ -101179,6 +101530,7 @@ const CARD_PVP = (() => {
         fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null,
         at: Date.now(),
         bid: typeof bid === 'string' ? bid : null,
+        rt: Number.isFinite(profile.rt) ? Math.max(0, Math.min(10000, Math.round(profile.rt))) : null,
         dn: rhythmMultiText(typeof deck.name === 'string' ? deck.name : '', 30) || null
       }
     };
@@ -101191,9 +101543,11 @@ const CARD_PVP = (() => {
       return;
     }
     connect();
-    if (mode === 'free') openLobby();
+    if (mode === 'free' && !pick) openLobby();else if (pick) closeLobby();
     tick = setInterval(() => {
-      if (!s || !socket) return;
+      if (!s) return;
+      noteLost(true);
+      if (!socket) return;
       hb();
       if (s.mode === 'free' && s.phase === 'waiting') seekTick();
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
@@ -101235,12 +101589,24 @@ const CARD_PVP = (() => {
     },
     create: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck),
     free: (profile, deck) => open(rhythmMultiMakeCode(), profile, deck, 'free'),
-    seekAgain: () => {
-      if (s && s.mode === 'free' && s.phase === 'waiting') {
+    pick: (code, profile, deck) => {
+      const c = rhythmMultiNormalizeCode(code);
+      if (!c) return false;
+      void open(c, profile, deck, 'free', true);
+      return true;
+    },
+    watch: on => {
+      lobbyWatch = !!on;
+      if (on) {
+        if (!s) s = blank();
+        if (s.phase === 'idle' && !lobby) openLobby();
+      } else if (!s || s.phase === 'idle') closeLobby();
+    },
+    clearNotice: () => {
+      if (s && s.notice) {
         s = {
           ...s,
-          seekAt: Date.now(),
-          joining: ''
+          notice: ''
         };
         emit();
       }
@@ -101309,7 +101675,11 @@ const CARD_PVP = (() => {
       });
       forceEnd('timeout');
     },
-    foeStalled: () => forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout'),
+    foeStalled: () => {
+      noteLost(false);
+      if (s && s.lostAt && Date.now() - s.lostAt < CARD_PVP_ALIVE_MS) return;
+      forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout');
+    },
     auto: fn => {
       if (!s) return fn();
       s.autoActing = true;
@@ -101347,9 +101717,10 @@ const CARD_PVP = (() => {
         foeSurrender: '相手の投了',
         foeLeft: '相手が抜けた',
         timeout: '時間切れ',
-        foeTimeout: '相手の時間切れ'
+        foeTimeout: '相手の時間切れ',
+        dropped: '通信が切れた'
       }[outcome] || '';
-      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
+      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : outcome === 'dropped' ? 'left' : 'lose';
       const forced = !['win', 'lose'].includes(outcome);
       if (isHost()) cardPvpWatchHost().end(reward === 'win' ? 0 : 1, label);
       set({
@@ -101516,8 +101887,14 @@ const CardPvpLobby = ({
     return () => clearInterval(t);
   }, []);
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
+  const seekerList = room.phase === 'idle' ? cardPvpSeekerList(room.seekers, now) : [];
   const [selfBid, setSelfBid] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  useEffect(() => {
+    if (room.phase !== 'idle') return undefined;
+    CARD_PVP.watch(true);
+    return () => CARD_PVP.watch(false);
+  }, [room.phase]);
   const [myRating, setMyRating] = useState(null);
   useEffect(() => {
     if (!selfBid || typeof sbFetchMyCardPvpRating !== 'function') return undefined;
@@ -101688,7 +102065,7 @@ const CardPvpLobby = ({
     meName: profile.name
   });
   if (room.phase === 'over' && r) {
-    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
+    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -101737,7 +102114,11 @@ const CardPvpLobby = ({
       style: JA_WRAP_STYLE
     }, jaWrap(`${foeName}さんとのマルチ対戦`)), React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
-    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), React.createElement("p", {
+    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), r.reason === '通信が切れた' && React.createElement("p", {
+      "data-card-pvp-dropped": true,
+      className: "mt-1 text-[12px] font-bold text-amber-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap('通信が切れていたため、この試合は負けになりました')), React.createElement("p", {
       "data-card-pvp-verify": r.verify,
       className: `mt-1 rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
       style: JA_WRAP_STYLE
@@ -101840,19 +102221,64 @@ const CardPvpLobby = ({
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100"
   }, "試合の途中で抜けたので、あと", penaltyMin, "分は部屋に入れません"), penaltyMin === 0 && !ready && React.createElement("p", {
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100"
-  }, deckIssues.join('・') || 'デッキがありません'), React.createElement("button", {
+  }, deckIssues.join('・') || 'デッキがありません'), room.notice && React.createElement("p", {
+    "data-card-pvp-notice-text": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(room.notice)), React.createElement("div", {
+    "data-card-pvp-seekers": seekerList.length,
+    className: "rounded-2xl border border-sky-300/40 bg-sky-500/10 p-2"
+  }, React.createElement("p", {
+    className: "mb-1 px-1 text-[13px] font-black text-sky-100"
+  }, seekerList.length ? `いま相手を待っている人 ${seekerList.length}人` : 'いまは、待っている人はいません'), seekerList.length > 0 && React.createElement(React.Fragment, null, React.createElement("ul", {
+    className: "space-y-1"
+  }, seekerList.slice(0, 8).map(x => React.createElement("li", {
+    key: x.id,
+    "data-card-pvp-seeker": x.id,
+    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5"
+  }, React.createElement(CardPvpAvatar, {
+    icon: x.icon,
+    frame: x.fr,
+    className: "h-9 w-9"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[14px] font-black text-white"
+  }, x.name), React.createElement("small", {
+    className: "block text-[11px] font-bold text-slate-400 tabular-nums"
+  }, x.rt !== null ? `強さ ${x.rt}・` : '', "待って ", x.waitSec, "秒")), React.createElement("button", {
+    type: "button",
+    "data-card-pvp-seeker-pick": x.id,
+    disabled: !ready || !profileReady,
+    className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      CARD_PVP.clearNotice();
+      CARD_PVP.pick(x.code, {
+        ...profile,
+        rt: myRating ? myRating.rating : null
+      }, deck);
+    }
+  }, "対戦する")))), React.createElement("p", {
+    className: "mt-1 px-1 text-[11px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('押すと、その人の部屋に入って対戦が始まります')))), React.createElement("button", {
     type: "button",
     "data-card-pvp-free": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} mh-button-primary`,
     onClick: () => {
       Audio_.fgSe.tap();
-      void CARD_PVP.free(profile, deck);
+      CARD_PVP.clearNotice();
+      void CARD_PVP.free({
+        ...profile,
+        rt: myRating ? myRating.rating : null
+      }, deck);
     }
-  }, "だれとでも"), React.createElement("button", {
+  }, "だれとでも(自分も待つ)"), React.createElement("button", {
     type: "button",
     "data-card-pvp-create": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} border border-sky-300/40 bg-slate-900 text-sky-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -101861,7 +102287,7 @@ const CardPvpLobby = ({
   }, "合言葉で部屋を作る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-open": true,
-    disabled: !ready || !roster,
+    disabled: !ready || !profileReady || !roster,
     className: `${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -101885,7 +102311,7 @@ const CardPvpLobby = ({
   }, f.userName), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-to": f.otherId,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -101917,7 +102343,7 @@ const CardPvpLobby = ({
   }, "断る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-accept": x.roomCode,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -101952,7 +102378,7 @@ const CardPvpLobby = ({
   }), React.createElement("button", {
     type: "button",
     "data-card-pvp-join": true,
-    disabled: !ready || !rhythmMultiNormalizeCode(code),
+    disabled: !ready || !profileReady || !rhythmMultiNormalizeCode(code),
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -101974,31 +102400,7 @@ const CardPvpLobby = ({
   }, room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'), React.createElement("p", {
     "data-card-pvp-waiting": Math.max(0, room.lobbyCount - 1),
     className: "mt-1 text-[13px] font-bold text-sky-100"
-  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
-    className: "mt-1 text-[12px] font-bold text-slate-300 tabular-nums"
-  }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
-    "data-card-pvp-nobody": true,
-    className: "mt-3 space-y-2"
-  }, React.createElement("p", {
-    className: "text-[13px] font-bold text-amber-100"
-  }, "いまは、だれも来ませんでした"), React.createElement("button", {
-    type: "button",
-    "data-card-pvp-seek-again": true,
-    className: `${btn} border border-white/15 bg-slate-900 text-slate-100`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.seekAgain();
-    }
-  }, "もう一度さがす"), onAssistant && React.createElement("button", {
-    type: "button",
-    "data-card-pvp-to-assistant": true,
-    className: `${btn} mh-button-primary`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.leave();
-      onAssistant();
-    }
-  }, "助手と対戦へ"))), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
+  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません')), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
     className: "rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center"
   }, React.createElement("p", {
     className: "text-[13px] font-bold text-sky-100"
@@ -102070,12 +102472,20 @@ const useCardPvpClock = (pvp, st, step) => {
   const [now, setNow] = useState(() => Date.now());
   const keyRef = useRef('');
   const startRef = useRef(Date.now());
+  const pauseRef = useRef({
+    ms: 0,
+    at: Date.now()
+  });
   const firedRef = useRef('');
   const gutsRef = useRef(-1);
   const key = pvp ? cardPvpClockKey(st) : '';
   if (key !== keyRef.current) {
     keyRef.current = key;
     startRef.current = Date.now();
+    pauseRef.current = {
+      ms: 0,
+      at: Date.now()
+    };
   }
   useEffect(() => {
     if (!pvp) return undefined;
@@ -102083,7 +102493,14 @@ const useCardPvpClock = (pvp, st, step) => {
     return () => clearInterval(t);
   }, []);
   const decider = pvp ? cardPvpDecider(st) : -1;
-  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  if (pvp && now > pauseRef.current.at) {
+    const gap = now - pauseRef.current.at;
+    if (gap > CARD_PVP_SLEEP_MS || decider === 1 && quiet > CARD_PVP_QUIET_MS || decider === 0 && room.offline) pauseRef.current.ms += gap;
+    pauseRef.current.at = now;
+  }
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
     if (!pvp || st.winner !== null) return;
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
@@ -102109,8 +102526,6 @@ const useCardPvpClock = (pvp, st, step) => {
       CARD_PVP.foeStalled();
     }
   }, [now, key]);
-  const room = CARD_PVP.get();
-  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   return {
     left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)),
     mine: decider === 0,
@@ -106099,6 +106514,32 @@ function MonsterHeroGame() {
     reikonRef.current = next;
     setReikonView(next);
   };
+  const kyubiOrihimeStackMarks = (() => {
+    const out = {},
+      slotOf = key => key === 'party' ? initialBattleDistanceRef.current : Number(key);
+    const put = (key, kind, n) => {
+      const i = slotOf(key),
+        c = Math.max(0, Math.floor(Number(n) || 0));
+      if (!Number.isInteger(i) || c <= 0) return;
+      out[i] = {
+        ...(out[i] || {}),
+        [kind]: c
+      };
+    };
+    Object.entries(kyubiView.rengoku || {}).forEach(([k, n]) => put(k, 'rengoku', n));
+    Object.entries(kyubiView.kagero || {}).forEach(([k, v]) => put(k, 'kagero', kageroOf(v).ready ? 1 : 0));
+    Object.entries(kyubiView.kitsunebi || {}).forEach(([k, v]) => {
+      const f = kitsunebiOf(v);
+      if (f.active) put(k, 'kitsunebi', f.fires);
+    });
+    Object.entries(orihimeView.ouse || {}).forEach(([k, n]) => put(k, 'ouse', n));
+    Object.entries(orihimeView.hoshiai || {}).forEach(([k, v]) => put(k, 'hoshiai', v && v.turns));
+    Object.entries(reikonView || {}).forEach(([k, v]) => {
+      const r = reikonOf(v);
+      put(k, 'reikon', r.wait > 0 ? 0 : r.turns);
+    });
+    return out;
+  })();
   const tickKyubiKagero = () => {
     const cur = kyubiRef.current;
     const kagero = Object.fromEntries(Object.entries(cur.kagero).map(([k, v]) => [k, tickKagero(v)]));
@@ -106334,7 +106775,9 @@ function MonsterHeroGame() {
         ...copy,
         hate,
         hateGainNow: 0,
-        dealtNow: 0
+        dealtNow: 0,
+        guardNow: 0,
+        guardCardsNow: 0
       });
     }
     clearTacticsHateTurn();
@@ -106345,7 +106788,6 @@ function MonsterHeroGame() {
     if (!unit) return;
     const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
     const piles = handPileRef.current;
-    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])].find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
     const {
       pos,
       stacked
@@ -106355,9 +106797,9 @@ function MonsterHeroGame() {
     const res = summonAiCopy({
       aiCopy: before,
       zones: {
-        deck: [],
-        hand: [],
-        discard: []
+        deck: piles.deck || [],
+        hand: piles.hand || [],
+        discard: piles.graveyard || []
       }
     }, {
       srcSlot: slotIdx,
@@ -106365,7 +106807,6 @@ function MonsterHeroGame() {
       name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '',
       level,
       src,
-      uniqueCard,
       turn: turnCount,
       mode: 'tactics',
       effMul
@@ -106374,14 +106815,105 @@ function MonsterHeroGame() {
       ...res.aiCopy,
       pos,
       stacked,
-      hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart),
-      uniqueCard: res.zones.deck[0] || null
+      hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart)
     };
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
   };
   const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    const mon = slots[slotIdx];
+    if (!mon) return;
+    const src = classicAiCopySrc({
+      slots,
+      srcSlot: slotIdx,
+      heroId: mainHero?.id,
+      party: {
+        atk,
+        def,
+        maxGuts
+      }
+    });
+    const piles = handPileRef.current;
+    const res = summonAiCopy({
+      aiCopy: aiCopyRef.current,
+      zones: {
+        deck: piles.deck || [],
+        hand: piles.hand || [],
+        discard: piles.graveyard || []
+      }
+    }, {
+      srcSlot: slotIdx,
+      srcMonsterId: mon.id,
+      name: mon.masuName || mon.name || '',
+      level,
+      src,
+      turn: turnCount,
+      mode: 'classic',
+      effMul
+    });
+    const next = res.aiCopy;
+    commitAiCopy(next);
+    pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
+  };
+  const planClassicAiCopy = copy => {
+    if (!copy) return copy;
+    const handSize = Math.max(1, Array.isArray(handPileRef.current.hand) && handPileRef.current.hand.length > 0 ? handPileRef.current.hand.length : 5);
+    const mon = slots[copy.srcSlot] || mainHero;
+    const dmgOf = c => classicAiCopyDamage(getDmg(c, copy.srcSlot, mon, 0, 0, false, enemyDist), copy.atk, atk);
+    const isGuardC = c => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const score = c => aiCopyAutoScore(c, {
+      strategy: autoSettings.strategy,
+      isAttack: isAttackCard,
+      isGuard: isGuardC,
+      dmgOf
+    });
+    return planAiCopyTurn(copy, {
+      count: handSize,
+      score
+    });
+  };
+  const tacticsAiCopyTools = (copy, dist) => {
+    if (!copy) return null;
+    const srcMon = slots[copy.srcSlot];
+    const srcUnit = tacticsBattleUnit(copy.srcSlot);
+    if (!srcMon || !srcUnit || !(srcUnit.atk > 0)) return null;
+    const distFrom = copy.srcSlot + ((Number.isInteger(dist) ? dist : enemyDist) - copy.pos);
+    const atkRate = copy.atk / srcUnit.atk;
+    const dmgOf = c => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
+    const isGuardC = c => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const usableC = c => !!c && (!isAttackCard(c) || dmgOf(c) > 0);
+    const scoreC = c => aiCopyAutoScore(c, {
+      strategy: autoSettings.strategy,
+      isAttack: isAttackCard,
+      isGuard: isGuardC,
+      dmgOf
+    });
+    const costC = c => getCardGuts(c, copy.srcSlot);
+    return {
+      dmgOf,
+      isGuardC,
+      usableC,
+      scoreC,
+      costC
+    };
+  };
+  const planTacticsAiCopy = turn => {
+    const copy = aiCopyRef.current;
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
+    const tools = tacticsAiCopyTools(copy, enemyDist);
+    if (!tools) return null;
+    const count = (handPileRef.current.hand || []).length || 5;
+    const planned = planAiCopyTurn(copy, {
+      count,
+      score: tools.scoreC,
+      costOf: tools.costC,
+      usable: tools.usableC
+    });
+    return commitAiCopy({
+      ...planned,
+      plannedTurn: turn
+    });
   };
   const clearAiCopy = (why = '') => {
     const copy = aiCopyRef.current;
@@ -112432,6 +112964,11 @@ function MonsterHeroGame() {
     distAptitude: ['M', 'M', 'M', 'M'],
     debugOnly: true
   });
+  const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS)).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult)).map(mon => ({
+    atkMotion: 'default',
+    ...mon,
+    debugOnly: true
+  }));
   const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon => mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = list => {
@@ -112439,7 +112976,7 @@ function MonsterHeroGame() {
     if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon = makeDebugStrongestMonster();
-    const preview = debugOnlyMonsterList();
+    const preview = [...debugOnlyMonsterList(), ...draftPreviewMonsterList()];
     const previewIds = new Set(preview.map(mon => mon.id));
     return [debugMon, ...preview, ...list.filter(mon => mon?.id !== debugMon.id && !previewIds.has(mon?.id))];
   };
@@ -119291,7 +119828,8 @@ function MonsterHeroGame() {
           const copyHit = EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isAiCopyOut(copyNow, turnCount) && tacticsIntentHitsAiCopy(intent, copyNow);
           if (copyHit) {
             const rushN = intent.variant === 'rush' ? Math.max(1, Math.floor(Number(intent.hits) || 1)) : 1;
-            const hitC = resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent, copyNow.srcSlot, copyNow.def), rushN, 0, 0);
+            const guardNowC = intent.variant === 'pierce' ? 0 : Math.max(0, Number(copyNow.guardNow) || 0);
+            const hitC = resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent, copyNow.srcSlot, copyNow.def), rushN, guardNowC, tacticsGuardHits(copyNow.guardCardsNow || 0, rushN));
             const fdC = applyImmediateTakenReduction(hitC.taken);
             const afterC = damageTacticsAiCopy(copyNow, fdC);
             addPopup(`🤖 ${tacticsAiCopyName(copyNow)} −${fdC}`, 'hero', 'text-sky-200 font-black text-lg drop-shadow-md');
@@ -119556,6 +120094,13 @@ function MonsterHeroGame() {
     const regen = tacticsRegen(autoHpRecoveryRate + (isTacticsMode(runMode) ? tacticsExPartyBuffNow().hpAdd : 0), isTacticsMode(runMode) ? baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd : soulAdjustedGutsRecoveryRate);
     let gutsRegen = 0,
       autoHealVal = 0;
+    if (isTacticsMode(runMode) && EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isAiCopyOut(aiCopyRef.current, turnCount)) {
+      const copyGutsRate = Math.max(0, baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd);
+      commitAiCopy(c => c ? {
+        ...c,
+        guts: Math.min(c.maxGuts, (Number(c.guts) || 0) + Math.floor((Number(c.maxGuts) || 0) * copyGutsRate))
+      } : c);
+    }
     if (regen) {
       currentHp = regen.total;
       autoHealVal = regen.hp;
@@ -119716,6 +120261,7 @@ function MonsterHeroGame() {
       if (boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if (timeStopSlot != null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    if (timeStopSlot == null && aiCopyRef.current && !isTacticsMode(runMode) && isAiCopyOut(aiCopyRef.current, turnCount)) commitAiCopy(c => classicAiCopyRegenGuts(c, soulAdjustedGutsRecoveryRate));
     if (timeStopSlot == null && aiCopyRef.current) {
       const ticked = tickAiCopy({
         aiCopy: aiCopyRef.current,
@@ -119725,10 +120271,14 @@ function MonsterHeroGame() {
           discard: []
         }
       }, turnCount);
-      if (ticked.expired) clearAiCopy('消えた(時間切れ)');else commitAiCopy(ticked.aiCopy);
+      if (ticked.expired) clearAiCopy('消えた(時間切れ)');else {
+        commitAiCopy(endAiCopyTurn(ticked.aiCopy));
+        planTacticsAiCopy(turnCount + 1);
+      }
     }
     const nextTurn = timeStopSlot != null ? turnCount : turnCount + 1;
     setTurnCount(nextTurn);
+    if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, nextTurn)) commitAiCopy(c => planClassicAiCopy(c));
     if (raidJackRunRef.current) {
       raidJackRunRef.current.turns = Math.min(nextTurn, RAID_JACK_TURNS);
       if (nextTurn > RAID_JACK_TURNS) {
@@ -120428,21 +120978,60 @@ function MonsterHeroGame() {
       if (pdTagForm) for (let k = pdTagFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].pandoraForm == null) attackHits[k].pandoraForm = pdTagForm;
       pdTagFrom = attackHits.length;
     };
-    for (const entry of usedCardEntries) {
+    const aiCopyEntries = (() => {
+      const c = aiCopyRef.current;
+      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && !isTacticsMode(runMode) && isAiCopyOut(c, turnCount)) {
+        let left = Math.max(0, Number(c.guts) || 0);
+        const dmgScale = atk > 0 ? Math.max(1e-6, Math.max(0, Number(c.atk) || 0) / atk) : 1e-6;
+        return (c.picks || []).filter(card => {
+          const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
+          if (!card || cost > left) return false;
+          left -= cost;
+          return card.type !== 'guard' && card.type !== 'weak_guard';
+        }).map(card => ({
+          card,
+          slotIdx: c.srcSlot,
+          aiCopy: true,
+          dmgScale
+        }));
+      }
+      if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
+      const cp = c.plannedTurn === turnCount ? c : planTacticsAiCopy(turnCount) || c;
+      const tools = tacticsAiCopyTools(cp, enemyDist);
+      if (!tools) return [];
+      let left = Math.max(0, Number(cp.guts) || 0);
+      return (cp.picks || []).filter(card => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > left) return false;
+        left -= cost;
+        return !isAttackCard(card) && !tools.isGuardC(card);
+      }).map(card => ({
+        card,
+        slotIdx: cp.srcSlot,
+        aiCopy: true
+      }));
+    })();
+    let copyHitFrom = null;
+    for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
+      const copyDmgScale = entry.aiCopy && Number.isFinite(entry.dmgScale) ? entry.dmgScale : 1;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
       const isBreeder = isAssistCard(card);
-      if (isBreeder && !debugBattleRef.current) {
-        const cardAssistant = assistantIdOfAssistCard(card.id);
-        if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
+      if (!entry.aiCopy) {
+        if (isBreeder && !debugBattleRef.current) {
+          const cardAssistant = assistantIdOfAssistCard(card.id);
+          if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
+        }
       }
+      const actorName = si => entry.aiCopy ? tacticsAiCopyName(aiCopyRef.current) : battleActorName(si);
+      if (entry.aiCopy && copyHitFrom == null) copyHitFrom = attackHits.length;
       if (!isAttackCard(card)) {
         const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
-        pushBattleLog(isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
+        pushBattleLog(entry.aiCopy ? `🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}` : isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
       }
-      const halved = halveCounter.take(card, entry.slotIdx);
+      const halved = entry.aiCopy ? false : halveCounter.take(card, entry.slotIdx);
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
       if (halved) addPopup(isTacticsMode(runMode) ? '同じ子の2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
@@ -120461,7 +121050,7 @@ function MonsterHeroGame() {
             const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
             if (angel) hpBeforeEnemyAttack = angel.total;
             addPopup('👼 天使の力 全員回復', 'hero', 'text-sky-200 font-black text-xl drop-shadow-md');
-            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
+            pushBattleLog(`😈👼 ${actorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
           }
         }
       }
@@ -120478,7 +121067,7 @@ function MonsterHeroGame() {
         addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul, guardCardWeight(card));
       }
       const cardCost = getCardGuts(card, slotIdx);
-      if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
+      if (entry.aiCopy) {} else if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) noteOrihimeCard(slotIdx, card);
@@ -120515,7 +121104,7 @@ function MonsterHeroGame() {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul);
+          const d = Math.floor(Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul) * copyDmgScale);
           const soulAttack = soulTraitAttackProfile(stunMon?.masuId ? getMasuMon(stunMon.masuId) : null, card, slotIdx);
           const stunHits = buildAttackHits({
             d,
@@ -120531,7 +121120,7 @@ function MonsterHeroGame() {
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
-            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, kusabiCombosAt(slotIdx, stunMon?.id, card)),
+            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, [...kusabiCombosAt(slotIdx, stunMon?.id, card), kyubiAttackAt(slotIdx, stunMon?.id, card).combo, kyubiAttackAt(slotIdx, stunMon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, true)]),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
           totalDmg += d;
@@ -120598,7 +121187,7 @@ function MonsterHeroGame() {
             kyukoCutSlot: tactics ? slotIdx : -1
           }));
           addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut * 100)}%減(${conf.turns}T)`, 'hero', 'text-pink-300 font-black text-xl drop-shadow-md');
-          if (tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
+          if (tactics) pushBattleLog(`🎼 ${actorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -120726,7 +121315,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE * 100)}%`,
                 tone: 'good'
               });
@@ -120737,7 +121326,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE * 100)}%`,
                 tone: 'bad'
               });
@@ -120748,7 +121337,7 @@ function MonsterHeroGame() {
           }
         }
         const attackStartDist = attackDistance;
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult);
+        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult * copyDmgScale);
         attackCount++;
         const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
@@ -120821,7 +121410,7 @@ function MonsterHeroGame() {
         }
         {
           const trickOwnerId = isTacticsMode(runMode) ? tacticsUnitsRef.current[slotIdx]?.id : mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD > 0) {
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD > 0) {
             const refund = trickStartGutsRefund(cardCost);
             if (refund > 0) {
               gainGutsAt(slotIdx, refund);
@@ -120843,7 +121432,7 @@ function MonsterHeroGame() {
               orihimeForceConfuseRef.current = true;
               showLuckBanner({
                 icon: '❓',
-                title: `${battleActorName(slotIdx)}の焦がれ待つ天ノ河`,
+                title: `${actorName(slotIdx)}の焦がれ待つ天ノ河`,
                 result: '敵の次の行動が「意味不明」に！',
                 tone: 'enemy'
               });
@@ -120854,7 +121443,7 @@ function MonsterHeroGame() {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
             icon: '🌀',
-            title: `${battleActorName(slotIdx)}のトリックコンフューズ`,
+            title: `${actorName(slotIdx)}のトリックコンフューズ`,
             result: `敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`,
             tone: 'enemy'
           });
@@ -120990,7 +121579,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🎡',
-                title: `${battleActorName(slotIdx)}の運命の輪`,
+                title: `${actorName(slotIdx)}の運命の輪`,
                 result: fateWheelPick.label,
                 tone: id === 'enemyAtkDown' || id === 'enemyTakenUp' ? 'enemy' : 'good'
               });
@@ -121027,34 +121616,33 @@ function MonsterHeroGame() {
     }
     popupSlotRef.current = null;
     {
-      const copy = aiCopyRef.current;
-      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) && isAiCopyOut(copy, turnCount) && isTacticsAiCopyStanding(copy)) {
-        const srcMon = slots[copy.srcSlot];
-        const srcUnit = tacticsBattleUnit(copy.srcSlot);
-        if (srcMon && srcUnit && srcUnit.atk > 0) {
-          const distFrom = copy.srcSlot + (attackDistance - copy.pos);
-          const atkRate = copy.atk / srcUnit.atk;
-          const dmgOf = c => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
-          const piles = handPileRef.current;
-          const pool = [...(piles.deck || []), ...(piles.graveyard || [])].filter(c => c && c.type !== 'unique' && dmgOf(c) > 0);
-          const uniq = copy.uniqueCard && dmgOf(copy.uniqueCard) > 0 ? copy.uniqueCard : null;
-          const planned = planAiCopyTurn({
-            ...copy,
-            guts: copy.maxGuts,
-            uniqueCardUid: uniq ? uniq.uid : null
-          }, {
-            deck: uniq ? [...pool, uniq] : pool,
-            score: dmgOf,
-            costOf: c => getCardGuts(c, copy.srcSlot)
-          });
+      const copy0 = aiCopyRef.current;
+      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) && isAiCopyOut(copy0, turnCount) && isTacticsAiCopyStanding(copy0)) {
+        const copy = copy0.plannedTurn === turnCount ? copy0 : planTacticsAiCopy(turnCount) || copy0;
+        const tools = tacticsAiCopyTools(copy, attackDistance);
+        if (tools) {
           let dealtC = 0,
-            gainC = 0;
-          (planned.picks || []).forEach((card, k) => {
-            const d = dmgOf(card);
+            gainC = 0,
+            gutsC = Math.max(0, Number(copy.guts) || 0),
+            guardC = 0,
+            guardCards = 0;
+          (copy.picks || []).forEach((card, k) => {
+            const cost = Math.max(0, Number(tools.costC(card)) || 0);
+            if (cost > gutsC) return;
+            gutsC -= cost;
+            gainC += tacticsHateOnFor(runMode) ? tacticsHateCardGain(card, copy.srcMonsterId, k > 0 ? 0.5 : 1) : 0;
+            if (tools.isGuardC(card)) {
+              const m = card.type === 'weak_guard' ? 0.5 : 1,
+                g = GUARD_EVOLUTION[guardLevel];
+              guardC += Math.floor(g.flat * m + Math.max(0, Number(copy.def) || 0) * g.mult * m);
+              guardCards++;
+              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name || card.baseName || 'ガード'}(ガード${guardC})`, 'ally');
+              return;
+            }
+            const d = tools.dmgOf(card);
             if (!(d > 0)) return;
             totalDmg += d;
             dealtC += d;
-            gainC += tacticsHateOnFor(runMode) ? tacticsHateCardGain(card, copy.srcMonsterId, k > 0 ? 0.5 : 1) : 0;
             attackHits.push({
               dmg: d,
               isCrit: false,
@@ -121066,16 +121654,43 @@ function MonsterHeroGame() {
               monId: card.type === 'unique' ? card.monId : undefined
             });
           });
-          commitAiCopy({
-            ...planned,
-            hateGainNow: (Number(copy.hateGainNow) || 0) + gainC,
-            dealtNow: (Number(copy.dealtNow) || 0) + dealtC
+          commitAiCopy(c => c && {
+            ...c,
+            picks: [],
+            nextCard: null,
+            guts: gutsC,
+            guardNow: guardC,
+            guardCardsNow: guardCards,
+            hateGainNow: (Number(c.hateGainNow) || 0) + gainC,
+            dealtNow: (Number(c.dealtNow) || 0) + dealtC
           });
-          if (!(planned.picks || []).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`, 'ally');
+          if (!(copy.picks || []).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`, 'ally');
         }
       }
     }
     pdTag();
+    if (copyHitFrom != null) {
+      const copyName = tacticsAiCopyName(aiCopyRef.current);
+      for (let k = copyHitFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].actorName == null) attackHits[k].actorName = copyName;
+    }
+    if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
+      let copy = aiCopyRef.current;
+      for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
+        const cost = Math.max(0, Number(pick?.guts ?? pick?.cost) || 0);
+        if (!pick || cost > copy.guts) break;
+        copy = classicAiCopySpendGuts(copy, cost);
+        if (pick.type !== 'guard' && pick.type !== 'weak_guard') continue;
+        const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
+        currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
+        if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name || pick.baseName || 'ガード'}を使った`, 'ally');
+      }
+      commitAiCopy({
+        ...copy,
+        picks: [],
+        nextCard: null
+      });
+    }
     if (totalDmg > 0) {
       if (totalDmg > 0) {
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
@@ -121159,7 +121774,7 @@ function MonsterHeroGame() {
             for (const h of group) {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
-              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
+              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${h.actorName || battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
               setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
@@ -121246,7 +121861,7 @@ function MonsterHeroGame() {
           }
           const hitColor = hit.isCrit ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique ? 'scale-125' : 'scale-110'}` : hit.isUnique ? 'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
-          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
+          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${hit.actorName || battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
           setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)
@@ -123419,7 +124034,7 @@ function MonsterHeroGame() {
       ...m
     };
     applySlots(nextSlots);
-    if (!isHero && orihimePartnerPick && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName || m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }
@@ -135741,7 +136356,7 @@ function MonsterHeroGame() {
         setCostumeLockedInfo(null);
       };
       const who = assistantById(costumeAssistantId) || assistantById(selectedAssistantId);
-      const chipList = ASSISTANT_LIST.map(a => ({
+      const chipList = ASSISTANT_LIST.filter(a => assistantReleased(a.id)).map(a => ({
         id: a.id,
         label: a.name,
         count: assistantCostumesFor(a.id).filter(c => ownedAssistantCostumes.includes(c.id)).length
@@ -135795,7 +136410,7 @@ function MonsterHeroGame() {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
       }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ '))) : React.createElement(React.Fragment, null, React.createElement("p", {
         className: "text-[10px] font-black text-amber-300 leading-tight text-center"
-      }, lockedCostume.name, "はまだマーケットに並んでいません"), React.createElement("p", {
+      }, lockedCostume.name, "はマーケットに並んでいます"), React.createElement("p", {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1",
         style: JA_WRAP_STYLE
       }, jaWrap(lockedCostume.unlockHow || ''))), React.createElement("p", {
@@ -136017,6 +136632,7 @@ function MonsterHeroGame() {
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
+      kyubiOrihimeStackMarks: kyubiOrihimeStackMarks,
       tacticsShields: isTacticsMode(runMode) && tacticsExEnabled ? [0, 1, 2, 3].map(i => tacticsExShieldAt(tacticsExState, i, tacticsExNow)) : null,
       sweetStackView: sweetStackView,
       bowStackView: bowStackView,
@@ -136027,7 +136643,7 @@ function MonsterHeroGame() {
       passTacticsTurn: passTacticsTurn,
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
-      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) ? aiCopy : null,
+      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,

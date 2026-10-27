@@ -636,7 +636,8 @@ check('編成中のカードから本人を引いて加算する',
 check('カード使用分は、実際にカードを使った時だけ数える',
   has("if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }"));
 check('カード使用の加算は、実際に使ったカードを回すループの中にある', (() => {
-  const at = source.indexOf('for (const entry of usedCardEntries) {');
+  // AIコピー(ソラシドのアシカ)の札も同じループの最後に通す(2026-10-27)。どちらの書き方でもループの頭を探す
+  const at = Math.max(source.indexOf('for (const entry of usedCardEntries) {'), source.indexOf('for (const entry of [...usedCardEntries,...aiCopyEntries]) {'));
   if (at < 0) return false;
   const use = source.indexOf("addAssistantBondFor(cardAssistant,'assistantCardUse')");
   return use > at && use - at < 1200;

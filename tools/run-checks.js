@@ -347,6 +347,8 @@ function scriptMeta(command) {
     // react で画面を組み立てて確かめる検査。CI は依存を --omit=optional で入れるので react が無い(2026-10-12)
     needsReact: /require\(['"]react['"]\)/.test(src),
     needsCanvas: /require\(['"]canvas['"]\)|loadDyeModule\(/.test(src),
+    // 本当の時間を待つ長い検査は、ファイルの中に「run-checks-timeout: <秒>」と書いて上限を延ばせる(短くはしない。2026-10-27 card-pvp-browser-check)
+    timeoutSec: Number((src.match(/run-checks-timeout:\s*(\d+)/) || [])[1]) || 0,
   };
 }
 
@@ -375,6 +377,7 @@ async function startServer() {
 
 function runOne(command, timeoutSec) {
   const [file, ...args] = command.split(' ');
+  timeoutSec = Math.max(timeoutSec, scriptMeta(command).timeoutSec || 0);
   const t0 = Date.now();
   const r = spawnSync('node', [path.join(TOOLS_DIR, file), ...args], {
     cwd: REPO_ROOT, encoding: 'utf8', timeout: timeoutSec * 1000, maxBuffer: 64 * 1024 * 1024,
