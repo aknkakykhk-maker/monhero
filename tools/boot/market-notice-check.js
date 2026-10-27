@@ -51,8 +51,21 @@ const latest = CHANGELOG[0];
 const latestItems = Array.isArray(latest?.items) ? latest.items : [];
 const addsToMarket = latest?.type === 'update'
   && [latest.title || '', ...latestItems].some(text => text.includes('マーケット') && text.includes('追加'));
+// 例外は1つだけ: 勝ち条件で解放される服(data/breeder.js で unlock を持つ服)のお知らせ。解放するまでマーケットに並ばないので、
+// 告知の「マーケットを見る」を押しても服が無い(2026-10-27 部長の判断・案A。みゅあの「デュエルマスター」)。
+// 印 noMarketNotice:{ costumeId } の服が、本当に unlock を持つ服であるときだけ通す
+const breederSource = fs.readFileSync(path.join(WEB_ROOT, 'data/breeder.js'), 'utf8');
+const noNoticeCostume = latest && latest.noMarketNotice && typeof latest.noMarketNotice.costumeId === 'string' ? latest.noMarketNotice.costumeId : '';
+const noNoticeOk = (() => {
+  if (!noNoticeCostume) return false;
+  const at = breederSource.indexOf(`id: '${noNoticeCostume}'`);
+  if (at < 0) return false;
+  const body = breederSource.slice(at, breederSource.indexOf('\n});', at));
+  return /unlock: Object\.freeze\(\{ cardFoe: '[a-z]+', cardLevel: '[a-z]+' \}\)/.test(body);
+})();
+if (noNoticeCostume) check('告知を付けない印は、勝ち条件で解放される服を指している', noNoticeOk, noNoticeCostume);
 check('最新リリースがマーケットへの追加なら助手の告知が付いている',
-  !addsToMarket || (latest.assistantNotice && latest.assistantNotice.type === 'market'),
+  !addsToMarket || noNoticeOk || (latest.assistantNotice && latest.assistantNotice.type === 'market'),
   addsToMarket
     ? `「${latest.title}」${latest.assistantNotice ? `→ ${latest.assistantNotice.id}` : ' に assistantNotice がない（data/changelog.js へ assistantNotice: { id:\'update_notice_◯◯_v1\', type:\'market\' } を足す）'}`
     : 'マーケットへの追加を含まないリリース');

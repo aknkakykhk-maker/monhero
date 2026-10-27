@@ -1006,6 +1006,9 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   counter:      { c1:'#fed7aa', c2:'#ea580c', motif:'fist' },    // ハムボクシング: 拳の衝撃
   avoidCharge:  { c1:'#e9d5ff', c2:'#6d28d9', motif:'blade' },   // オフリィアボイド: 紫の残像(すり抜ける)
   trickConfuse: { c1:'#fed7aa', c2:'#9333ea', motif:'rise' },   // トリックコンフューズ: かぼちゃ色と紫の光
+  kitsunebi: { c1:'#93c5fd', c2:'#1d4ed8', motif:'rise' },      // 九尾幻灯(キュービ): 青い狐火
+  hoshiai: { c1:'#e0f2fe', c2:'#6366f1', motif:'rise' },        // 星合の刻(オリヒメ): 天の川の光
+  kogare: { c1:'#fbcfe8', c2:'#7c3aed', motif:'rise' },         // 焦がれ待つ天ノ河(オリヒメ): 星と桜色
   cookieBox:    { c1:'#fce7f3', c2:'#ec4899', motif:'rise' },    // おねがい♪メロディボックス: ピンクのクッキーが舞う
   nightmareKey: { c1:'#f5d0fe', c2:'#3b0764', motif:'blade' },   // 悪夢全開！メロディ・キー: 黒紫の悪夢
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
@@ -1038,7 +1041,7 @@ const TacticsExCutin = ({ cutin }) => {
           <div className="ex-cutin__tag">{cutin.tag || 'EX SKILL'}</div>
           {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
           <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
-          <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
+          <div className="ex-cutin__sub">{(() => { const t = `${cutin.monName}${cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}`; return typeof jaWrap === 'function' ? jaWrap(t) : t; })()}</div>
           {cutin.note ? <div data-ex-cutin-note className="ex-cutin__note">{cutin.note}</div> : null}
         </div>
       </div>

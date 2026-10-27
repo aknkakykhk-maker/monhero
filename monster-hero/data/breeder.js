@@ -18,6 +18,9 @@ const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
+// ソラシド(2026-10-27)。顔の絵は社長があとで送る。届くまでは字のアイコン(公開の印 assistantSorashido が偽のあいだは出ない)。
+//   届いたら images/assistant/face/sorashido_happy.PNG にする
+const SORASHIDO_FACE_ICON = "🤖";
 // スネグーラチカの高解像度の立ち絵。顔アイコン(make-face-icons.js)の元絵で、覚醒のほうはマーケットのアイコン商品で使う。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
@@ -66,7 +69,8 @@ const BREEDER_EVO_NAMES = {
   meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"],
   poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
   momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"],
-  kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"]
+  kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"],
+  sorashido: ["ソラシドの自動化", "ソラシドの全自動", "ソラシドの無人運転"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -103,6 +107,19 @@ const KYUKO_TIERS = [
   { cut:0.30, turns:2 },
   { cut:0.45, turns:3 },
   { cut:0.60, turns:4 },
+];
+
+// ソラシドの自動化(copy_sorashido・2026-10-27 社長の決定)。効果の計算も説明文もこの表だけを見る(計算の部品は 32-sorashido-copy.jsx)。
+//   使った子の「AIコピー」が、使った次のターンの始まりに5人目の味方として現れ、turns ターンのあいだ戦う。
+//   rates     : 元の子に対する強さ(ライフ・ちから・丈夫さ・ガッツ)。ライフはタクティクスだけ(5つの遊びはパーティのライフを使う)
+//   turns     : コピーが戦うターン数。出ているあいだにもう一度使うと、ここへ戻る
+//   pick      : コピーが「いちばん点の高いカード」を選ぶ見込み。外れたら2番目以降から選ぶ
+//   maxCards  : 1ターンに使う枚数の上限。2枚は、コピーのガッツの上限が gutsFor2 以上で、今のガッツが2枚ぶん足りるときだけ
+//   hateStart : タクティクスで、出たときの🔥(元の子の🔥に対する割合)。hateGain : 🔥のたまり方の倍率
+const SORASHIDO_TIERS = [
+  { rates:{ hp:0.5, atk:0.6, def:0.5, guts:0.6 }, turns:2, pick:0.5,  maxCards:1, hateStart:0.5,  hateGain:1.0 },
+  { rates:{ hp:0.7, atk:0.8, def:0.7, guts:0.8 }, turns:3, pick:0.65, maxCards:1, hateStart:0.75, hateGain:1.25 },
+  { rates:{ hp:0.8, atk:0.9, def:0.8, guts:0.9 }, turns:4, pick:0.8,  maxCards:2, hateStart:1.0,  hateGain:1.5, gutsFor2:120 },
 ];
 
 // 行動カードの絵(2026-10-15 社長「バトルカードの変更も進めて」。原本は tools/art-sources/card-frames・skill-icons)。
@@ -157,7 +174,10 @@ const TEACHING_CARDS = [
   // getDynamicDescの2か所に同じ表がある。攻撃アップの代わりに丈夫さ(defPct)を上げる
   { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 },
   // きゅうこ(2026-10-22)。加入のお話を見たあとマーケットで買える(BREEDER_MARKET_ITEMS の shop)。効果量は KYUKO_TIERS
-  { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 }
+  { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 },
+  // ソラシド(2026-10-27)。公開の印 assistantSorashido が立つまでは、マーケット・ヘルプに出ない(releaseFlag)。効果量は SORASHIDO_TIERS。
+  //   baseValue は Lv0 のライフの割合(表示・検査用)。増え方は表が持つので step は 0
+  { id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido', baseValue:0.5, step:0, desc:"使った子のAIコピーが、次のターンから5人目の味方として戦う", evoLevel:0, guts:20, releaseFlag:'assistantSorashido' }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -375,6 +395,17 @@ const setKyukoJoinSeenForShop = (seen) => { kyukoJoinSeenForShop = seen === true
 const kyukoCardOnSale = () => {
   try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true && kyukoJoinSeenForShop; } catch { return false; }
 };
+// ソラシドのカードが交換所に並ぶか(きゅうこと同じ形)。加入のお話(sorashido_join_2026_10_27)を見たかは、ゲーム側が setSorashidoJoinSeenForShop で知らせる
+let sorashidoJoinSeenForShop = false;
+const setSorashidoJoinSeenForShop = (seen) => { sorashidoJoinSeenForShop = seen === true; };
+const sorashidoCardOnSale = () => {
+  try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true && sorashidoJoinSeenForShop; } catch { return false; }
+};
+// 公開の印(releaseFlag)が付いたアシカは、印が立つまでヘルプの表などに出さない
+const teachingCardReleased = (card) => {
+  if (!card || !card.releaseFlag) return true;
+  try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS[card.releaseFlag] === true; } catch { return false; }
+};
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -385,6 +416,9 @@ const BREEDER_MARKET_ITEMS = [
   // きゅうこ(2026-10-22 社長の決定)。公開の印 assistantKyuko が立ち、加入のお話(kyuko_join_2026_10_22)を見たら並ぶ(kyukoCardOnSale)。150000(ももすけ・ポルツと同じ)
   { id:'kyuko', name:"アシストカード「きゅうこ」", type:'assist', icon:KYUKO_FACE_ICON, cost:150000, desc:"このターン敵の単体攻撃を引き受け、数ターン受けるダメージダウン",
     get shop() { return kyukoCardOnSale() ? undefined : false; } },
+  // ソラシド(2026-10-27)。きゅうこと同じく、公開の印が立ち、加入のお話を見たら並ぶ。150000
+  { id:'sorashido', name:"アシストカード「ソラシド」", type:'assist', icon:SORASHIDO_FACE_ICON, cost:150000, desc:"使った子のAIコピーが、次のターンから5人目の味方として数ターン戦う",
+    get shop() { return sorashidoCardOnSale() ? undefined : false; } },
 
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
@@ -1058,11 +1092,89 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
     Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_HALLOWEEN_END_AT }),
   ]),
 });
+// みゅあの新しい衣装(2026-10-27 社長「みゅあの新衣装解放。バトルカードでみゅあのマスターに勝つと解放。他の衣装の同じように売られる。新衣装は準備中」)。
+//   名前「デュエルマスター」・売り場はダイヤショップ 100,000 だけ(社長)。絵を入れて公開(10/27 社長「公開まで進めてかまわない」)。
+// ★解放の条件は unlock に書く: MFバトルカードの助手と対戦で、相手 cardFoe の難易度 cardLevel に1回でも勝つ。
+//   勝つ前はマーケットに出さない(「近日追加」の札も出さない)。解放の覚え方は下の ASSISTANT_COSTUME_UNLOCKED_KEY
+const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;
+// 商品の絵(顔アイコン)。画像のパスはデータの中に直接書かず、定数にして指す(image/data-image-source-check.js)
+const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=e08db4e730ee";
+const muaCardMasterCostume = Object.freeze({
+  id: 'mua_card_master_v1', assistantId: 'mua',
+  name: 'デュエルマスター', desc: 'MFバトルカードの決闘者ふうの衣装。黒い服に白と青のマント、赤い指なし手袋と金の三角のペンダントです。',
+  get released() { return ASSISTANT_COSTUME_MUA_MASTER_RELEASE === true; },
+  // 絵は社長が用意(10/27)。元の絵は tools/art-sources/assistants/mua-card-master/。立ち絵は 768×1024、顔は make-assistant-faces.js で作った
+  // (当て方: 1ほほえむ=normal/2手を差し出して笑う=happy/3ウインク=wink/4驚く=surprise/5照れ=troubled/6怒る=angry/7もじもじ=crying/8指さして笑う=excited)
+  icon: MUA_CARD_MASTER_COSTUME_ART,
+  imageDir: 'images/assistant/card-master',
+  price: Object.freeze({ diamond: 100000 }),
+  unlock: Object.freeze({ cardFoe: 'mua', cardLevel: 'master' }),
+  // 解放する前に、プロフィールの着替えで押したとき出す案内(遊ぶ人向けの文)
+  unlockHow: 'MFバトルカードの「助手と対戦」で、みゅあの MASTER に勝つと、マーケットのダイヤショップに並びます',
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
   halloweenCostume('momosuke', 'momosuke', 'ハロウィンの小悪魔', 'ハロウィン・ナイトの衣装。ふわふわの耳と小さな翼の小悪魔コスプレです。'),
+  muaCardMasterCostume,
 ]);
+// ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
+// 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。
+// 解放しているとみなすのは、次のどちらか:
+//   ① 新しいキーに id が入っている
+//   ② MFバトルカードの記録 mh_card_record_detail_v1 の foes[相手].levels[難易度] が1以上(前から勝っている人のため。このキーは読むだけ)
+//   ③ もとの記録 mh_card_record_v1 の最近の30戦(recent)に { who:相手, level:難易度, outcome:'win' } がある
+//      (②は 10/27 の #4034 からのキーで、それより前の勝ちは最近の30戦から起こした分しか無い。カード部リプレイくんの指摘。読むだけ)
+// 勝った瞬間に覚えるのはカード部の精算(84 の助手と対戦の記録を足す所)。そこで assistantCostumeUnlockEntry を呼んで
+// 保存の1件({ key, before, next })を足し、保存できたら setAssistantCostumeUnlockedNow で今の画面へも伝える。
+const ASSISTANT_COSTUME_UNLOCKED_KEY = 'mh_assistant_costume_unlocked_v1';
+// 壊れた値でも必ず文字列の配列へ落とす(持っている服と同じ直し方)
+const normalizeUnlockedAssistantCostumes = (value) => normalizeOwnedAssistantCostumes(value);
+// その服をカードの記録(mh_card_record_detail_v1 の生の値)だけで解放しているか
+const assistantCostumeUnlockedByCardRecord = (costume, cardRecordDetail) => {
+  const rule = costume && costume.unlock;
+  if (!rule || typeof rule.cardFoe !== 'string' || typeof rule.cardLevel !== 'string') return false;
+  const detail = (cardRecordDetail && typeof cardRecordDetail === 'object' && !Array.isArray(cardRecordDetail)) ? cardRecordDetail : {};
+  const foes = (detail.foes && typeof detail.foes === 'object' && !Array.isArray(detail.foes)) ? detail.foes : {};
+  const foe = foes[rule.cardFoe];
+  const levels = (foe && typeof foe === 'object' && foe.levels && typeof foe.levels === 'object') ? foe.levels : {};
+  const wins = Number(levels[rule.cardLevel]);
+  return Number.isFinite(wins) && wins >= 1;
+};
+// その服を、もとの記録(mh_card_record_v1 の生の値)の最近の30戦だけで解放しているか
+const assistantCostumeUnlockedByCardRecent = (costume, cardRecord) => {
+  const rule = costume && costume.unlock;
+  if (!rule || typeof rule.cardFoe !== 'string' || typeof rule.cardLevel !== 'string') return false;
+  const recent = (cardRecord && typeof cardRecord === 'object' && Array.isArray(cardRecord.recent)) ? cardRecord.recent : [];
+  return recent.some(x => x && typeof x === 'object' && x.who === rule.cardFoe && x.level === rule.cardLevel && x.outcome === 'win');
+};
+// 解放されている服のidの一覧(新しいキーの値と、カードの記録2つから起こしたものを合わせる)
+const resolveUnlockedAssistantCostumes = (storedUnlocked, cardRecordDetail, cardRecord) => {
+  const list = normalizeUnlockedAssistantCostumes(storedUnlocked);
+  ASSISTANT_COSTUMES.forEach(costume => {
+    if (costume && costume.unlock && !list.includes(costume.id)
+      && (assistantCostumeUnlockedByCardRecord(costume, cardRecordDetail) || assistantCostumeUnlockedByCardRecent(costume, cardRecord))) list.push(costume.id);
+  });
+  return list;
+};
+// 助手と対戦で1試合が終わったとき、新しく解放される服のid(勝ち以外・当てはまらない相手や難易度は空)
+const assistantCostumesUnlockedByCardWin = ({ who, level, outcome } = {}) => (outcome === 'win'
+  ? ASSISTANT_COSTUMES.filter(costume => costume && costume.unlock && costume.unlock.cardFoe === who && costume.unlock.cardLevel === level).map(costume => costume.id)
+  : []);
+// カード部が呼ぶ口: 保存の1件 { key, before, next }。足すものが無ければ null(保存しない)。
+//   storedRaw … 新しいキーの今の値(storeGet で読んだまま)。next は足すだけ(前の id は消さない)
+const assistantCostumeUnlockEntry = (storedRaw, { who, level, outcome } = {}) => {
+  const add = assistantCostumesUnlockedByCardWin({ who, level, outcome });
+  const before = normalizeUnlockedAssistantCostumes(storedRaw);
+  const next = normalizeUnlockedAssistantCostumes([...before, ...add]);
+  return next.length === before.length ? null : { key: ASSISTANT_COSTUME_UNLOCKED_KEY, before: storedRaw, next };
+};
+// 画面が描く瞬間に見る「解放した服」。アプリが読み込みで入れ、カードの精算が勝ったあとに入れ直す
+let ASSISTANT_COSTUME_UNLOCKED_NOW = [];
+const setAssistantCostumeUnlockedNow = (list) => { ASSISTANT_COSTUME_UNLOCKED_NOW = normalizeUnlockedAssistantCostumes(list); };
+const addAssistantCostumeUnlockedNow = (ids) => setAssistantCostumeUnlockedNow([...ASSISTANT_COSTUME_UNLOCKED_NOW, ...(Array.isArray(ids) ? ids : [])]);
+// その服を売ってよいか(解放の条件が無い服はいつでも。条件がある服は解放してから)
+const assistantCostumeUnlockedNow = (costume) => !!costume && (!costume.unlock || ASSISTANT_COSTUME_UNLOCKED_NOW.includes(costume.id));
 const ASSISTANT_COSTUME_SHOPS = Object.freeze({
   diamond:   Object.freeze({ label:'ダイヤショップ', currency:'diamond' }),
   beatPoint: Object.freeze({ label:'ビートP交換所', currency:'beatPoint' }),
@@ -1158,6 +1270,7 @@ ASSISTANT_COSTUMES
     // ダイヤで売るのはまだ先(いまの窓に無い)あいだは available:false で「近日追加」の札になり、買えない
     // (買う処理は available:false を断る)。窓が開いた(ハロウィン・ナイト終了)瞬間から、そのまま買える
     BREEDER_MARKET_ITEMS.push({ id:costume.id, name:costume.name, type:'costume', currency:'diamond', cost:assistantCostumeSaleEverCost(costume, 'diamond'), desc:costume.desc || '', assistantId:costume.assistantId, emoji:'👗', icon:costume.icon,
-      get shop() { return costume.released === true ? undefined : false; },
-      get available() { return assistantCostumeSaleIn(costume, 'diamond') ? undefined : false; } });
+      // 解放が要る服(unlock)は、解放するまで並べない(「近日追加」の札も出さない。2026-10-27 社長)
+      get shop() { return costume.released === true && assistantCostumeUnlockedNow(costume) ? undefined : false; },
+      get available() { return assistantCostumeSaleIn(costume, 'diamond') && assistantCostumeUnlockedNow(costume) ? undefined : false; } });
   });

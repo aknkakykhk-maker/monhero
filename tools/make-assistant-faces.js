@@ -96,7 +96,12 @@ const COSTUME_TUNE = {
   kiki: { headRatio: 0.62, headTopSkip: 0.06 },
   momosuke: { headRatio: 0.62, headTopSkip: 0.06 },
 };
-const PER_ASSISTANT = costumeArg ? COSTUME_TUNE : PER_ASSISTANT_BASE;
+// 服の絵のフォルダごとの上書き(フォルダの名前で引く)。絵の構図が服ごとに違うとき
+//   card-master … みゅあの MASTER の服(2026-10-27)。全身が画面いっぱいで羽も広いので、ハロウィンの値だと引きすぎて胸元まで入る
+const COSTUME_DIR_TUNE = {
+  'card-master': { myua: { headRatio: 0.42, headTopSkip: 0.05 } },
+};
+const PER_ASSISTANT = costumeArg ? { ...COSTUME_TUNE, ...(COSTUME_DIR_TUNE[path.basename(costumeArg)] || {}) } : PER_ASSISTANT_BASE;
 
 // どの接頭辞を処理するかは data/assistants.js の ASSISTANTS から取る。
 // 助手を増やしたとき、このツール側を書き換えなくても顔が作られるようにするため
