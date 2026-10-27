@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65adaa5750cd8e89
+// source-sha256: 73629e969060681d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -103827,6 +103827,33 @@ const cardWatchSideMeta = (meta, side) => side === 1 ? {
   first: 1 - meta.first
 } : meta;
 const cardWatchSideWinner = (w, side) => w === 0 || w === 1 ? side === 1 ? 1 - w : w : null;
+const CARD_WATCH_END_HOW = Object.freeze({
+  '投了': 'surrender',
+  '相手の投了': 'surrender',
+  '時間切れ': 'timeout',
+  '相手の時間切れ': 'timeout',
+  '相手が抜けた': 'left',
+  '通信が切れた': 'left',
+  '抜けた': 'left'
+});
+const cardWatchEndText = (end, side, nameOf) => {
+  const winner = end ? cardWatchSideWinner(end.winner, side) : null;
+  const how = end && CARD_WATCH_END_HOW[end.reason] || '';
+  if (winner === null) return {
+    winner,
+    how,
+    head: '対戦が終わりました',
+    sub: ''
+  };
+  const loser = nameOf(1 - winner);
+  const sub = how === 'surrender' ? `${loser}さんが投了しました` : how === 'timeout' ? `${loser}さんの時間切れ(${CARD_PVP_TIMEOUT_LOSE}回)` : how === 'left' ? `${loser}さんが対戦から抜けました` : '決着がつきました';
+  return {
+    winner,
+    how,
+    head: `${nameOf(winner)}さんの勝ち！`,
+    sub
+  };
+};
 const cardWatchPatchOne = (db, pl, list) => {
   if (!Array.isArray(list) || list.length !== pl.discard.length) return false;
   if (list.some((no, i) => no !== CARD_PVP_HIDDEN && !cardOf(db, no) || pl.discard[i] !== CARD_PVP_HIDDEN && no !== CARD_PVP_HIDDEN && pl.discard[i] !== no)) return false;
@@ -104166,6 +104193,13 @@ const CARD_WATCH_HOST = (() => {
       }
     },
     stop: () => {
+      if (h && h.log.length) {
+        if (!h.end) h.end = {
+          winner: 1,
+          reason: '抜けた'
+        };
+        sendWatch(hbMsg());
+      }
       closeAll();
       h = null;
     },
@@ -104571,10 +104605,11 @@ const CardWatchSide = ({
   p,
   person,
   top = false,
-  low = false
+  low = false,
+  over = false
 }) => {
   const pl = st.players[p];
-  const active = st.winner === null && cardPvpDecider(st) === p;
+  const active = !over && st.winner === null && cardPvpDecider(st) === p;
   const row = React.createElement("div", {
     className: "flex items-center gap-2 px-1"
   }, React.createElement("span", {
@@ -104644,14 +104679,28 @@ const CardPvpWatchScreen = ({
     return () => window.removeEventListener('resize', on);
   }, []);
   const lines = st ? st.log.slice(low ? -2 : -3).map(l => l.text) : [];
-  const overBox = st && meta && (w.phase === 'over' || winner !== null) && React.createElement("div", {
+  const isOver = !!(st && meta && (w.phase === 'over' || winner !== null));
+  const endText = w.end ? cardWatchEndText(w.end, w.side, nameOf) : {
+    winner,
+    how: '',
+    head: winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`,
+    sub: '決着がつきました'
+  };
+  const overBox = isOver && React.createElement("div", {
     "data-card-watch-over": winner === null ? 'none' : winner,
-    className: `rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`
+    "data-card-watch-over-how": endText.how,
+    className: `mhms-in rounded-2xl border-2 border-amber-300/70 bg-gradient-to-b from-amber-500/25 to-amber-900/20 text-center shadow-[0_0_24px_rgba(251,191,36,.25)] ${low ? 'p-1.5' : 'flex min-h-[100px] flex-col items-center justify-center p-3'}`
   }, React.createElement("div", {
-    className: `${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`
-  }, winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`, low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''), !low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && React.createElement("div", {
-    className: "mt-0.5 text-[12px] font-bold text-slate-300"
-  }, "(", w.end.reason, ")"));
+    className: "text-[10px] font-black tracking-widest text-amber-200/80"
+  }, "決着"), endText.sub && React.createElement("div", {
+    "data-card-watch-over-sub": true,
+    className: `${low ? 'text-[12px]' : 'text-[14px]'} font-black text-white`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(endText.sub)), React.createElement("div", {
+    "data-card-watch-over-head": true,
+    className: `${low ? 'text-[16px]' : 'text-[22px]'} font-black leading-tight text-amber-100`,
+    style: JA_WRAP_STYLE
+  }, jaWrap(endText.head)));
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-watch": w.phase,
@@ -104681,14 +104730,15 @@ const CardPvpWatchScreen = ({
   }, st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'), React.createElement("span", {
     "data-card-watch-eyes": w.eyes,
     className: "tabular-nums"
-  }, "👀 ", w.eyes, "人が見ています")), low && overBox, React.createElement(CardWatchSide, {
+  }, "👀 ", w.eyes, "人が見ています")), React.createElement(CardWatchSide, {
     db: db,
     st: st,
     p: 1,
     person: meta.p[1],
     top: true,
-    low: low
-  }), React.createElement("div", {
+    low: low,
+    over: isOver
+  }), isOver ? overBox : React.createElement("div", {
     "data-card-watch-center": true,
     className: `flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`
   }, w.last ? React.createElement("div", {
@@ -104722,8 +104772,9 @@ const CardPvpWatchScreen = ({
     st: st,
     p: 0,
     person: meta.p[0],
-    low: low
-  }), !low && overBox)), React.createElement("div", {
+    low: low,
+    over: isOver
+  }))), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
     className: "flex gap-2"
@@ -104743,7 +104794,7 @@ const CardPvpWatchScreen = ({
       Audio_.fgSe.tap();
       back();
     }
-  }, "観戦をやめる"))), logOpen && st && React.createElement(CardTurnLogSheet, {
+  }, isOver ? '観戦の一覧へ戻る' : '観戦をやめる'))), logOpen && st && React.createElement(CardTurnLogSheet, {
     st: st,
     meName: nameOf(0),
     foeName: nameOf(1),

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f3ccf39605f5091
+// generated-sha256: cdc701b35c492705
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62371,6 +62371,19 @@ const cardWatchNewGame = (db, meta) => cardCreateGame(db, {
 const cardWatchSideEntry = (e, side) => (side === 1 ? { ...e, by: 1 - e.by, act: cardPvpFlip(e.act), d: Array.isArray(e.d) ? [e.d[1], e.d[0]] : e.d } : e);
 const cardWatchSideMeta = (meta, side) => (side === 1 ? { ...meta, p: [meta.p[1], meta.p[0]], first: 1 - meta.first } : meta);
 const cardWatchSideWinner = (w, side) => (w === 0 || w === 1 ? (side === 1 ? 1 - w : w) : null);
+// 決着の帯の言葉(見る人の見方で。2026-10-27 社長「観戦だと投了したら終わったのがわからない」)。
+//   ホストが送る理由(reason)はホストから見た言葉(91 の finish の label)なので、勝った側から負けた側を決めて言い直す。送る知らせの形は変えない
+//   end … 届いた決着 { winner(ホストの見え方), reason } / side … 下に出す人 / nameOf(見え方の番号) … 名前
+//   返り値 { winner(見え方の番号か null), how: 'surrender'|'timeout'|'left'|'' , head, sub }
+const CARD_WATCH_END_HOW = Object.freeze({ '投了': 'surrender', '相手の投了': 'surrender', '時間切れ': 'timeout', '相手の時間切れ': 'timeout', '相手が抜けた': 'left', '通信が切れた': 'left', '抜けた': 'left' });
+const cardWatchEndText = (end, side, nameOf) => {
+  const winner = end ? cardWatchSideWinner(end.winner, side) : null;
+  const how = (end && CARD_WATCH_END_HOW[end.reason]) || '';
+  if (winner === null) return { winner, how, head: '対戦が終わりました', sub: '' };
+  const loser = nameOf(1 - winner);
+  const sub = how === 'surrender' ? `${loser}さんが投了しました` : how === 'timeout' ? `${loser}さんの時間切れ(${CARD_PVP_TIMEOUT_LOSE}回)` : how === 'left' ? `${loser}さんが対戦から抜けました` : '決着がつきました';
+  return { winner, how, head: `${nameOf(winner)}さんの勝ち！`, sub };
+};
 // 捨て札の仮の札を、届いた並びで本物にする(数が合わない・食い違うときは、その人のぶんはそのまま)
 const cardWatchPatchOne = (db, pl, list) => {
   if (!Array.isArray(list) || list.length !== pl.discard.length) return false;
@@ -62548,7 +62561,12 @@ const CARD_WATCH_HOST = (() => {
       }
     },
     end: (winner, reason) => { if (h && !h.end) { h.end = { winner: winner === 0 || winner === 1 ? winner : null, reason: String(reason || '').slice(0, 20) }; sendWatch(hbMsg()); } },
-    stop: () => { closeAll(); h = null; },
+    // 部屋を出たとき。決着の知らせは1回しか送らないと、届かなかったときに見る人が終わりを知れないので、出る前にもう一度送る。
+    //   試合の途中で出たときは、ホストが抜けた負け(相手の端末でも「相手が抜けた」の勝ちになる)として終わりを送る(2026-10-27)
+    stop: () => {
+      if (h && h.log.length) { if (!h.end) h.end = { winner: 1, reason: '抜けた' }; sendWatch(hbMsg()); }
+      closeAll(); h = null;
+    },
     eyes,
   };
 })();
@@ -62728,9 +62746,10 @@ const CardWatchMonMini = ({ db, st, p, m }) => {
   );
 };
 // low … 背の低い画面(横向き)。絵と行を小さくして、両方の場と決着の帯が下へ送らずに見えるようにする(2026-10-27 844×390 で下の場が画面の外に出た)
-const CardWatchSide = ({ db, st, p, person, top = false, low = false }) => {
+const CardWatchSide = ({ db, st, p, person, top = false, low = false, over = false }) => {
   const pl = st.players[p];
-  const active = st.winner === null && cardPvpDecider(st) === p;
+  // 決着したら「〜の番」と枠の色は出さない(投了で終わったとき、番が残って終わったように見えなかった)
+  const active = !over && st.winner === null && cardPvpDecider(st) === p;
   const row = (
     <div className="flex items-center gap-2 px-1">
       <span className={`block ${low ? 'h-[24px] w-[24px]' : 'h-[34px] w-[34px]'} shrink-0`}><CardPvpAvatar icon={person && person.icon} frame={person && person.fr} className="h-full w-full"/></span>
@@ -62762,10 +62781,14 @@ const CardPvpWatchScreen = ({ onBack }) => {
   const [low, setLow] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
   useEffect(() => { const on = () => setLow(window.innerHeight < 520); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const lines = st ? st.log.slice(low ? -2 : -3).map((l) => l.text) : [];
-  const overBox = st && meta && (w.phase === 'over' || winner !== null) && (
-    <div data-card-watch-over={winner === null ? 'none' : winner} className={`rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`}>
-      <div className={`${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`}>{winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`}{low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''}</div>
-      {!low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && <div className="mt-0.5 text-[12px] font-bold text-slate-300">({w.end.reason})</div>}
+  // 決着の帯(まんなかの「使った札」の欄に代えて出す。下の場の下に小さく出していたら、終わったのが分からなかった)
+  const isOver = !!(st && meta && (w.phase === 'over' || winner !== null));
+  const endText = w.end ? cardWatchEndText(w.end, w.side, nameOf) : { winner, how: '', head: winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`, sub: '決着がつきました' };
+  const overBox = isOver && (
+    <div data-card-watch-over={winner === null ? 'none' : winner} data-card-watch-over-how={endText.how} className={`mhms-in rounded-2xl border-2 border-amber-300/70 bg-gradient-to-b from-amber-500/25 to-amber-900/20 text-center shadow-[0_0_24px_rgba(251,191,36,.25)] ${low ? 'p-1.5' : 'flex min-h-[100px] flex-col items-center justify-center p-3'}`}>
+      <div className="text-[10px] font-black tracking-widest text-amber-200/80">決着</div>
+      {endText.sub && <div data-card-watch-over-sub className={`${low ? 'text-[12px]' : 'text-[14px]'} font-black text-white`} style={JA_WRAP_STYLE}>{jaWrap(endText.sub)}</div>}
+      <div data-card-watch-over-head className={`${low ? 'text-[16px]' : 'text-[22px]'} font-black leading-tight text-amber-100`} style={JA_WRAP_STYLE}>{jaWrap(endText.head)}</div>
     </div>
   );
   return (
@@ -62780,11 +62803,9 @@ const CardPvpWatchScreen = ({ onBack }) => {
             <span data-card-watch-turn={st.turn} className="tabular-nums">{st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'}</span>
             <span data-card-watch-eyes={w.eyes} className="tabular-nums">👀 {w.eyes}人が見ています</span>
           </div>
-          {/* 背の低い画面では、決着の帯をいちばん上に(下に置くと画面の外に出た) */}
-          {low && overBox}
-          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low}/>
-          {/* まんなか: いま使われた札と、場の記録の新しい3行 */}
-          <div data-card-watch-center className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`}>
+          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low} over={isOver}/>
+          {/* まんなか: いま使われた札と、場の記録の新しい3行。決着したら決着の帯に代える */}
+          {isOver ? overBox : <div data-card-watch-center className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`}>
             {w.last
               ? <div key={w.last.key} data-card-watch-last={w.last.cards.join(',')} className="flex shrink-0 gap-1">
                 {w.last.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <button key={i} type="button" onClick={() => setDetail(no)} className="block"><img src={CARD_IMG(c.img)} alt={c.name} className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} rounded-md object-cover shadow-lg`}/></button> : null; })}
@@ -62794,15 +62815,14 @@ const CardPvpWatchScreen = ({ onBack }) => {
               {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
               {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
             </div>
-          </div>
-          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low}/>
-          {!low && overBox}
+          </div>}
+          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low} over={isOver}/>
         </>)}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
         <div className="flex gap-2">
           {st && <button type="button" data-card-watch-log className="mh-button min-h-[48px] flex-1 rounded-2xl border border-white/15 bg-slate-900 font-black text-slate-100" onClick={() => { Audio_.fgSe.tap(); setLogOpen(true); }}>ターンの記録</button>}
-          <button type="button" data-card-watch-leave className="mh-button mh-button-primary min-h-[48px] flex-1 rounded-2xl font-black" onClick={() => { Audio_.fgSe.tap(); back(); }}>観戦をやめる</button>
+          <button type="button" data-card-watch-leave className="mh-button mh-button-primary min-h-[48px] flex-1 rounded-2xl font-black" onClick={() => { Audio_.fgSe.tap(); back(); }}>{isOver ? '観戦の一覧へ戻る' : '観戦をやめる'}</button>
         </div>
       </div>
       {logOpen && st && <CardTurnLogSheet st={st} meName={nameOf(0)} foeName={nameOf(1)} onClose={() => setLogOpen(false)}/>}

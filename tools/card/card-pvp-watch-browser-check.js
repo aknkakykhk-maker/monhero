@@ -15,6 +15,8 @@
 //   ⑥ 決着すると、観戦の画面に勝った人が出る。A・B の結果も今までどおり(片方が勝ち・片方が負け)
 //   ⑦ 観戦をやめると、マルチ対戦の入口へ戻る
 //   ⑧ 実行時エラーが無い・C は保存を書き換えない
+//   ⑨ 「もう1戦」の2試合目で、ホストでない B が途中で投了すると、観戦の画面のまんなかに決着の帯(「ビーさんが投了しました」「エーさんの勝ち！」)が出る。
+//      「〜の番」は消え、下のボタンは「観戦の一覧へ戻る」になる(2026-10-27 社長「観戦だと投了したら終わったのがわからない」)
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -205,6 +207,33 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const fromB = watchMsgs.filter((m) => m.payload && m.payload.from === idB).length;
     check('⑤ 観戦の通り道に、山札・封・デッキの中身・場そのものの項目が無い', bad.length === 0 && watchMsgs.length > 0, `${bad.join(',')} / ${watchMsgs.length}通`);
     check('⑤ ホストでない B は、観戦の通り道へ何も送らない', fromB === 0, `${fromB}通`);
+    await C.locator('[data-card-watch-leave]').click();
+    await C.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    // ⑨ 2試合目(同じ部屋の「もう1戦」)を見て、B の投了で終わる
+    await A.locator('[data-card-pvp-again]').click(); await B.locator('[data-card-pvp-again]').click();
+    const again = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 20000 }), B.locator('[data-card-battle]').waitFor({ timeout: 20000 })]).then(() => true).catch(() => false);
+    await A.waitForTimeout(4000);
+    if (!(await C.locator('[data-card-watch-go]').count())) await C.locator('[data-card-watch-open]').click().catch(() => {});
+    const row2 = await C.locator('[data-card-watch-go]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    if (row2) await C.locator('[data-card-watch-go]').first().click();
+    const watching2 = await C.waitForFunction(() => { const w = CARD_WATCH.get(); return w.phase === 'watching' && w.n > 0; }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+    check('⑨ 「もう1戦」の2試合目も、観戦の一覧から見られる', again && row2 && watching2, `もう1戦 ${again}・一覧 ${row2}・観戦 ${watching2}`);
+    await B.locator('[data-card-quit]').click();
+    await B.getByRole('button', { name: '投了する' }).click();
+    const over2 = await C.locator('[data-card-watch-over]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const ov = await C.evaluate(() => ({
+      how: document.querySelector('[data-card-watch-over]')?.getAttribute('data-card-watch-over-how'),
+      sub: document.querySelector('[data-card-watch-over-sub]')?.textContent || '',
+      head: document.querySelector('[data-card-watch-over-head]')?.textContent || '',
+      center: document.querySelectorAll('[data-card-watch-center]').length,
+      turn: [...document.querySelectorAll('[data-card-watch-side]')].some((el) => /の番/.test(el.textContent)),
+      leave: document.querySelector('[data-card-watch-leave]')?.textContent || '',
+      inView: (() => { const r = document.querySelector('[data-card-watch-over]')?.getBoundingClientRect(); return !!r && r.top >= 0 && r.bottom <= window.innerHeight; })(),
+    }));
+    check('⑨ B が投了すると、観戦の画面に決着の帯が出て、だれが投了してだれが勝ったかが分かる', over2 && ov.how === 'surrender' && ov.sub.replace(/\s/g, '') === 'ビーさんが投了しました' && ov.head.replace(/\s/g, '') === 'エーさんの勝ち！', JSON.stringify(ov));
+    check('⑨ 決着の帯は、まんなかの「使った札」の欄に代わって出て、画面の中に見える', ov.center === 0 && ov.inView, JSON.stringify(ov));
+    check('⑨ 決着したら「〜の番」が消え、下のボタンは「観戦の一覧へ戻る」', !ov.turn && ov.leave === '観戦の一覧へ戻る', JSON.stringify(ov));
+    await shot(C, 'watch-06-surrender');
     await C.locator('[data-card-watch-leave]').click();
     await C.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     const afterC = await C.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
