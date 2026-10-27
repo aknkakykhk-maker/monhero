@@ -233,7 +233,9 @@ check('参加報酬を画面に出す(開催中と受け取りの両方)',
   &&game.includes('const rhythmEventParticipationText='));
 check('入賞していなくても参加報酬だけで受け取り画面を出す',
   app.includes('if (prizes.length === 0 && !participation) { await markRhythmEventRewardClaimed(event.id); return; }')
-  &&screen.includes("{won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'}"));
+  // 2026-10-27(#4097): 文を言葉の途中で折らない jaWrap(…) で包んだ形も同じ(文は変えていない)
+  &&(screen.includes("{won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'}")
+    ||screen.includes("{won ? jaWrap('入賞おめでとうございます！') : jaWrap('ご参加ありがとうございました！')}")));
 // ★報酬のある順位までしか問い合わせない。週間は1〜10位、イベントは1〜5位
 //   (2026-09-13に週間へ報酬を付けたので、数は rankLimit で出す)
 check('受け取りは報酬のある順位ぶんだけ問い合わせる',
