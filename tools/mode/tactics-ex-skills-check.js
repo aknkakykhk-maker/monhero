@@ -646,8 +646,9 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('本体: 与ダメ(getDmg)・会心率・会心ダメ(3か所)・被ダメ(applyTurnDamageReduction)へ結線してある',
     // ★2026-10-08 メロディーのクッキー・クロミーの黒音符(勇者特性)の倍率と会心率が、間に入ってよい
     // ★2026-10-09 弓の勇者特性の倍率(bowAtkMultAt)も間に入ってよい(EXの倍率の結線はそのまま)
-    /const totalBuffMult=traitMult\*(cookieEffectNow\(\)\.dmgMult\*blackNoteEffectAt\(slotIdx,mon\?\.id\)\.dmgMult\*)?(bowAtkMultAt\(slotIdx\)\*)?tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
-    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus(\+\(tacticsExMultiBuffNow\(slotIdx\)\.critAdd\|\|0\))?(\+blackNoteEffectAt\(slotIdx,activeMon\?\.id\)\.critAdd)?\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
+    // ★2026-10-27 キュービの勇者特性「九尾四相」の与ダメ・会心率(kyubiAttackAt)も間に入ってよい(EXの倍率の結線はそのまま)
+    /const totalBuffMult=traitMult\*(cookieEffectNow\(\)\.dmgMult\*blackNoteEffectAt\(slotIdx,mon\?\.id\)\.dmgMult\*)?(kyubiAttackAt\(slotIdx,mon\?\.id,card\)\.dmgMult\*)?(bowAtkMultAt\(slotIdx\)\*)?tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
+    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus(\+\(tacticsExMultiBuffNow\(slotIdx\)\.critAdd\|\|0\))?(\+blackNoteEffectAt\(slotIdx,activeMon\?\.id\)\.critAdd)?(\+kyubiAttackAt\(slotIdx,activeMon\?\.id,card\)\.critAdd)?\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
     && (app.match(/critDmgMult:tacticsExMultiBuffNow\(slotIdx\)\.critDmg/g) || []).length === 3);
 }
 
