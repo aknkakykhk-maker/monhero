@@ -3,7 +3,7 @@
 //
 //   node tools/monster/kyubi-orihime-traits-check.js
 //
-// 2体はまだ下書きで、効き目は 22-enemy-and-bond-entries.jsx の純関数だけにある(バトルへのつなぎ込みは正式公開のとき)。
+// 決めごとは 22-enemy-and-bond-entries.jsx の純関数にあり、60-app.jsx がバトルへつなぐ。2026-10-27 に正式公開した。
 // 数字を1つ書き違えても画面はふつうに動くので、社長が選んだ数字をここで1本ずつ確かめる。
 // 本文: docs/progress/kyubi-orihime/hero-trait-ex-spec.md
 const fs = require('fs');
@@ -229,13 +229,21 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
     && /Object\.entries\(kyubiOrihimeStackMarks \|\| \{\}\)\.forEach/.test(screen));
 }
 
-// ---------- 下書きのあいだは本体に出さない ----------
+// ---------- 正式公開した(2026-10-27。ALL_PLAYER_MONSTERS にいて、下書きの表からは消えた) ----------
 const ally = read('monster-hero/data/ally-monsters.js');
 check('基礎能力は社長が決めた値(キュービ 420/150/160/70・オリヒメ 440/140/145/85)',
   /baseHp:420, baseGuts:150, baseAtk:160, baseDef:70, plusStats:\{hp:120,atk:40,def:10,guts:45\}/.test(ally)
   && /baseHp:440, baseGuts:140, baseAtk:145, baseDef:85, plusStats:\{hp:140,atk:30,def:15,guts:40\}/.test(ally));
-check('2体はまだ下書き(draft:true)のまま',
-  /Kyubi: Object\.freeze\(\{[^\n]*\n[^\n]*draft:true/.test(ally) && /Orihime: Object\.freeze\(\{[^\n]*\n[^\n]*draft:true/.test(ally));
+const allyBody = ally.slice(ally.indexOf('const ALL_PLAYER_MONSTERS = {'), ally.indexOf('const STARTER_MONSTER_IDS'));
+const draftBody = ally.slice(ally.indexOf('const UPCOMING_MONSTER_DRAFTS'));
+check('2体は ALL_PLAYER_MONSTERS にいる(勇者特性・固有技の効果の文つき)',
+  /\n  Kyubi: \{ id:'Kyubi'/.test(allyBody) && /\n  Orihime: \{ id:'Orihime'/.test(allyBody)
+  && /trait:"九尾四相"/.test(allyBody) && /trait:"天河の契り"/.test(allyBody) && (allyBody.match(/effectDesc:"霊魂：/g) || []).length === 2);
+check('下書きの表(UPCOMING_MONSTER_DRAFTS)からは消えた',
+  !/\n  Kyubi: Object\.freeze/.test(draftBody) && !/\n  Orihime: Object\.freeze/.test(draftBody));
+check('血統: キュービは純血・オリヒメはキュービ×？？？',
+  /Kyubi: +\{ main:'kyubi', sub:'kyubi' \}/.test(read('monster-hero/data/lineages.js'))
+  && /Orihime: +\{ main:'kyubi', sub:'unknown' \}/.test(read('monster-hero/data/lineages.js')));
 
 // ---------- 新モンスター確認(デバッグ)で動かして見られる ----------
 const lab = read('monster-hero/src/parts/74-screen-monster-check-debug.jsx');

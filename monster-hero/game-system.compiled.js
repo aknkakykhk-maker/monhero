@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a35fc99a1e56b5aa
+// source-sha256: c310575a4bd6062b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -12615,7 +12615,7 @@ const RELEASE_FLAGS = {
   assistantDailyLines: true,
   assistantAtsu: true,
   assistantKyuko: true,
-  assistantSorashido: false,
+  assistantSorashido: true,
   cardBattle: true,
   cardAssistantTalk: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -12949,7 +12949,8 @@ const GIFT_REWARD_LABELS = {
   trainingTicketLarge: '重トレーニングチケット',
   skipTicketJo: 'スキップチケット・序',
   skipTicketHa: 'スキップチケット・破',
-  skipTicketKyu: 'スキップチケット・急'
+  skipTicketKyu: 'スキップチケット・急',
+  beatPoint: 'ビートP'
 };
 const LOGIN_BONUS_DEFAULT = {
   currentDay: 1,
@@ -12971,6 +12972,17 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
+const SORASHIDO_GIFT_BEAT_POINTS = 10000;
+const sorashidoJoinGift = () => ({
+  id: 'sorashido_join_gift_2026_10_27',
+  title: 'ソラシドの沖縄のおみやげ',
+  source: 'assistantStory',
+  rewards: [{
+    type: 'beatPoint',
+    amount: SORASHIDO_GIFT_BEAT_POINTS
+  }]
+});
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
@@ -13509,7 +13521,8 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
     ownedItems: {
       ...(balances?.ownedItems || {})
     },
-    ownedProfileFrames: Array.isArray(balances?.ownedProfileFrames) ? [...balances.ownedProfileFrames] : []
+    ownedProfileFrames: Array.isArray(balances?.ownedProfileFrames) ? [...balances.ownedProfileFrames] : [],
+    beatPoints: Math.max(0, Math.floor(Number(balances?.beatPoints)) || 0)
   };
   const itemIds = {
     dyeMock: 'dye_mock',
@@ -13533,7 +13546,7 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
       if (!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId);
       return;
     }
-    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else {
+    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else if (type === 'beatPoint') next.beatPoints += amount;else {
       const id = type === GIFT_ITEM_REWARD_TYPE ? itemId : itemIds[type];
       next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
     }
@@ -13580,6 +13593,10 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'assistantBond') return {
     label: '仲良し度',
+    title
+  };
+  if (gift?.source === 'assistantStory') return {
+    label: 'おみやげ',
     title
   };
   if (gift?.source !== 'mission') return {
@@ -17101,15 +17118,19 @@ const helpDataRows = id => {
     case 'tacticsEnemyActions':
       return (typeof TACTICS_ACTION_DEFINITIONS !== 'undefined' ? TACTICS_ACTION_DEFINITIONS : []).filter(action => action.type !== 'WAIT' && action.type !== 'MOVE').map(action => [action.category, action.multiplier > 0 ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}` : 'ダメージなし']);
     case 'tacticsExSkills':
-      return Object.keys(typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS || {}).filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).map(monId => {
+      return Object.keys(typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS || {}).filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).flatMap(monId => {
         const def = tacticsExDefOf(monId);
         const monName = (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId] || {}).name || monId;
-        const duration = def.duration === 'turns' ? `${def.turns}ターン` : {
-          turn: 'そのターン',
-          wave: 'そのWAVE',
-          style: '選び直すまで'
-        }[def.duration] || '';
-        return [`${monName}「${def.name}」`, `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+        const rowOf = (d, role) => {
+          const duration = d.duration === 'turns' ? `${d.turns}ターン` : {
+            turn: 'そのターン',
+            wave: 'そのWAVE',
+            style: '選び直すまで'
+          }[d.duration] || '';
+          return [`${monName}「${d.name}」${role}`, `${d.unlimited ? '無制限' : `1ラン${d.maxUses}回`} ／ ${d.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+        };
+        const support = def.supportKey && TACTICS_EX_SKILLS[def.supportKey] ? tacticsExDefOf(def.supportKey) : null;
+        return support ? [rowOf(def, '(勇者のとき)'), rowOf(support, '(共モンのとき)')] : [rowOf(def, '')];
       });
     case 'tacticsHateGains':
     case 'tacticsHateTypes':
@@ -99942,7 +99963,7 @@ const CARD_PVP_HIDDEN = -1;
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
 const CARD_PVP_RESEND_MS = 1500;
-const CARD_PVP_ALIVE_MS = 60000;
+const CARD_PVP_ALIVE_MS = 120000;
 const CARD_PVP_NAME_MAX = 16;
 const CARD_PVP_TURN_MS = 60000;
 const CARD_PVP_GUARD_MS = 15000;
@@ -99960,7 +99981,6 @@ const CARD_PVP_CHAT_GAP_MS = 1500;
 const CARD_PVP_LOBBY_TOPIC = 'realtime:mhc-lobby-free';
 const CARD_PVP_LOBBY_FRESH_MS = 6000;
 const CARD_PVP_LOBBY_JOIN_MS = 8000;
-const CARD_PVP_LOBBY_LIMIT_MS = 90000;
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
 const cardPvpFlip = act => {
@@ -100429,7 +100449,7 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
-const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string').sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon)).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
   id,
   code: x.code,
   name: x.name || 'ブリーダー',
@@ -101612,16 +101632,6 @@ const CARD_PVP = (() => {
         emit();
       }
     },
-    seekAgain: () => {
-      if (s && s.mode === 'free' && s.phase === 'waiting') {
-        s = {
-          ...s,
-          seekAt: Date.now(),
-          joining: ''
-        };
-        emit();
-      }
-    },
     join: (code, profile, deck) => {
       const c = rhythmMultiNormalizeCode(code);
       if (!c) return false;
@@ -102260,7 +102270,7 @@ const CardPvpLobby = ({
   }, x.rt !== null ? `強さ ${x.rt}・` : '', "待って ", x.waitSec, "秒")), React.createElement("button", {
     type: "button",
     "data-card-pvp-seeker-pick": x.id,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102276,7 +102286,7 @@ const CardPvpLobby = ({
   }, jaWrap('押すと、その人の部屋に入って対戦が始まります')))), React.createElement("button", {
     type: "button",
     "data-card-pvp-free": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} mh-button-primary`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102289,7 +102299,7 @@ const CardPvpLobby = ({
   }, "だれとでも(自分も待つ)"), React.createElement("button", {
     type: "button",
     "data-card-pvp-create": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} border border-sky-300/40 bg-slate-900 text-sky-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102298,7 +102308,7 @@ const CardPvpLobby = ({
   }, "合言葉で部屋を作る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-open": true,
-    disabled: !ready || !roster,
+    disabled: !ready || !profileReady || !roster,
     className: `${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102322,7 +102332,7 @@ const CardPvpLobby = ({
   }, f.userName), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-to": f.otherId,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102354,7 +102364,7 @@ const CardPvpLobby = ({
   }, "断る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-accept": x.roomCode,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102389,7 +102399,7 @@ const CardPvpLobby = ({
   }), React.createElement("button", {
     type: "button",
     "data-card-pvp-join": true,
-    disabled: !ready || !rhythmMultiNormalizeCode(code),
+    disabled: !ready || !profileReady || !rhythmMultiNormalizeCode(code),
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102411,31 +102421,7 @@ const CardPvpLobby = ({
   }, room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'), React.createElement("p", {
     "data-card-pvp-waiting": Math.max(0, room.lobbyCount - 1),
     className: "mt-1 text-[13px] font-bold text-sky-100"
-  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
-    className: "mt-1 text-[12px] font-bold text-slate-300 tabular-nums"
-  }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
-    "data-card-pvp-nobody": true,
-    className: "mt-3 space-y-2"
-  }, React.createElement("p", {
-    className: "text-[13px] font-bold text-amber-100"
-  }, "いまは、だれも来ませんでした"), React.createElement("button", {
-    type: "button",
-    "data-card-pvp-seek-again": true,
-    className: `${btn} border border-white/15 bg-slate-900 text-slate-100`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.seekAgain();
-    }
-  }, "もう一度さがす"), onAssistant && React.createElement("button", {
-    type: "button",
-    "data-card-pvp-to-assistant": true,
-    className: `${btn} mh-button-primary`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.leave();
-      onAssistant();
-    }
-  }, "助手と対戦へ"))), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
+  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません')), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
     className: "rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center"
   }, React.createElement("p", {
     className: "text-[13px] font-bold text-sky-100"
@@ -102507,12 +102493,20 @@ const useCardPvpClock = (pvp, st, step) => {
   const [now, setNow] = useState(() => Date.now());
   const keyRef = useRef('');
   const startRef = useRef(Date.now());
+  const pauseRef = useRef({
+    ms: 0,
+    at: Date.now()
+  });
   const firedRef = useRef('');
   const gutsRef = useRef(-1);
   const key = pvp ? cardPvpClockKey(st) : '';
   if (key !== keyRef.current) {
     keyRef.current = key;
     startRef.current = Date.now();
+    pauseRef.current = {
+      ms: 0,
+      at: Date.now()
+    };
   }
   useEffect(() => {
     if (!pvp) return undefined;
@@ -102520,7 +102514,14 @@ const useCardPvpClock = (pvp, st, step) => {
     return () => clearInterval(t);
   }, []);
   const decider = pvp ? cardPvpDecider(st) : -1;
-  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  if (pvp && now > pauseRef.current.at) {
+    const gap = now - pauseRef.current.at;
+    if (gap > CARD_PVP_SLEEP_MS || decider === 1 && quiet > CARD_PVP_QUIET_MS || decider === 0 && room.offline) pauseRef.current.ms += gap;
+    pauseRef.current.at = now;
+  }
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
     if (!pvp || st.winner !== null) return;
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
@@ -102546,8 +102547,6 @@ const useCardPvpClock = (pvp, st, step) => {
       CARD_PVP.foeStalled();
     }
   }, [now, key]);
-  const room = CARD_PVP.get();
-  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   return {
     left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)),
     mine: decider === 0,
@@ -110413,6 +110412,45 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
+  const sorashidoGiftRef = useRef(false);
+  const grantSorashidoGift = async () => {
+    if (RELEASE_FLAGS.assistantSorashido !== true) return false;
+    if (sorashidoGiftRef.current) return false;
+    sorashidoGiftRef.current = true;
+    try {
+      const mark = await storeGet(SORASHIDO_GIFT_KEY, null, false);
+      if (mark) return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, sorashidoJoinGift());
+      const saved = await saveStoredValuesOrRollback([...(grant.granted ? [{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: grant.gifts
+      }] : []), {
+        key: SORASHIDO_GIFT_KEY,
+        before: mark,
+        next: {
+          at: new Date().toISOString(),
+          beatPoints: SORASHIDO_GIFT_BEAT_POINTS
+        }
+      }], storeGet, storeSet);
+      if (!saved) {
+        console.error('[sorashido-gift] save failed');
+        return false;
+      }
+      if (grant.granted) setGifts(grant.gifts);
+      return grant.granted;
+    } catch (error) {
+      return false;
+    } finally {
+      sorashidoGiftRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    void grantSorashidoGift();
+  }, [rhythmEventStorySeen]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
@@ -117854,12 +117892,15 @@ function MonsterHeroGame() {
       const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
       const claimedGifts = [];
       const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
+      const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
       let balances = {
         gold,
         breederPoints,
         ownedItems,
         breederXp,
-        ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current])
+        ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]),
+        beatPoints: beatBefore
       };
       let claimedCount = 0;
       const now = Date.now();
@@ -117914,6 +117955,12 @@ function MonsterHeroGame() {
         before: storedFramesBefore,
         next: framesAfter
       });
+      const beatAfter = normalizeRhythmEventPoints(balances.beatPoints);
+      if (beatAfter !== beatBefore) entries.push({
+        key: RHYTHM_EVENT_POINTS_KEY,
+        before: storedBeatBefore,
+        next: beatAfter
+      });
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({
         key: 'mh_gifts',
@@ -117934,6 +117981,7 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = framesAfter;
         setOwnedProfileFrames(framesAfter);
       }
+      if (beatAfter !== beatBefore) setRhythmEventPoints(beatAfter);
       const rewards = summarizeClaimedGiftRewards(claimedGifts);
       setRewardReceipt({
         title,
@@ -121033,6 +121081,7 @@ function MonsterHeroGame() {
         aiCopy: true
       }));
     })();
+    let copyHitFrom = null;
     for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
       const copyDmgScale = entry.aiCopy && Number.isFinite(entry.dmgScale) ? entry.dmgScale : 1;
@@ -121046,6 +121095,8 @@ function MonsterHeroGame() {
           if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
         }
       }
+      const actorName = si => entry.aiCopy ? tacticsAiCopyName(aiCopyRef.current) : battleActorName(si);
+      if (entry.aiCopy && copyHitFrom == null) copyHitFrom = attackHits.length;
       if (!isAttackCard(card)) {
         const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
         pushBattleLog(entry.aiCopy ? `🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}` : isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
@@ -121069,7 +121120,7 @@ function MonsterHeroGame() {
             const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
             if (angel) hpBeforeEnemyAttack = angel.total;
             addPopup('👼 天使の力 全員回復', 'hero', 'text-sky-200 font-black text-xl drop-shadow-md');
-            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
+            pushBattleLog(`😈👼 ${actorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
           }
         }
       }
@@ -121206,7 +121257,7 @@ function MonsterHeroGame() {
             kyukoCutSlot: tactics ? slotIdx : -1
           }));
           addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut * 100)}%減(${conf.turns}T)`, 'hero', 'text-pink-300 font-black text-xl drop-shadow-md');
-          if (tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
+          if (tactics) pushBattleLog(`🎼 ${actorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -121334,7 +121385,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE * 100)}%`,
                 tone: 'good'
               });
@@ -121345,7 +121396,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE * 100)}%`,
                 tone: 'bad'
               });
@@ -121451,7 +121502,7 @@ function MonsterHeroGame() {
               orihimeForceConfuseRef.current = true;
               showLuckBanner({
                 icon: '❓',
-                title: `${battleActorName(slotIdx)}の焦がれ待つ天ノ河`,
+                title: `${actorName(slotIdx)}の焦がれ待つ天ノ河`,
                 result: '敵の次の行動が「意味不明」に！',
                 tone: 'enemy'
               });
@@ -121462,7 +121513,7 @@ function MonsterHeroGame() {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
             icon: '🌀',
-            title: `${battleActorName(slotIdx)}のトリックコンフューズ`,
+            title: `${actorName(slotIdx)}のトリックコンフューズ`,
             result: `敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`,
             tone: 'enemy'
           });
@@ -121598,7 +121649,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🎡',
-                title: `${battleActorName(slotIdx)}の運命の輪`,
+                title: `${actorName(slotIdx)}の運命の輪`,
                 result: fateWheelPick.label,
                 tone: id === 'enemyAtkDown' || id === 'enemyTakenUp' ? 'enemy' : 'good'
               });
@@ -121688,6 +121739,10 @@ function MonsterHeroGame() {
       }
     }
     pdTag();
+    if (copyHitFrom != null) {
+      const copyName = tacticsAiCopyName(aiCopyRef.current);
+      for (let k = copyHitFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].actorName == null) attackHits[k].actorName = copyName;
+    }
     if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
       let copy = aiCopyRef.current;
       for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
@@ -121789,7 +121844,7 @@ function MonsterHeroGame() {
             for (const h of group) {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
-              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
+              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${h.actorName || battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
               setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
@@ -121876,7 +121931,7 @@ function MonsterHeroGame() {
           }
           const hitColor = hit.isCrit ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique ? 'scale-125' : 'scale-110'}` : hit.isUnique ? 'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
-          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
+          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${hit.actorName || battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
           setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)

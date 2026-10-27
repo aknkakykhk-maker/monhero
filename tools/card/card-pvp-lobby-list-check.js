@@ -36,12 +36,14 @@ const seekers = {
   b: { code: 'BBBB', at: now - 41000, seen: now - 1000, name: 'ひよこ', icon: '🐣', rt: 1500 },
   a: { code: 'AAAA', at: now - 12000, seen: now - 500, name: 'ドラゴン使い', rt: 1564 },
   old: { code: 'OOOO', at: now - 90000, seen: now - 7000, name: 'いなくなった人' },
-  noname: { code: 'NNNN', at: now - 3000, seen: now - 200 },
+  noname: { code: 'NNNN', at: now - 3000, seen: now - 200, icon: '🙂' },
+  oldver: { code: 'VVVV', at: now - 2000, seen: now - 200 },
   skew: { code: 'SSSS', at: now + 50000, seen: now - 100, name: '時計のずれ' },
 };
 const list = E.cardPvpSeekerList(seekers, now);
 check('③ 古い知らせ(6秒より前)は出さない', !list.some((x) => x.name === 'いなくなった人') && list.length === 4, list.map((x) => x.name).join(','));
 check('③ 先に待っている人が上', list[0].name === 'ひよこ' && list[1].name === 'ドラゴン使い', list.map((x) => x.name).join(','));
+check('③ 古い版の人(名前もアイコンも無い)は一覧に出さない', !list.some((x) => x.code === 'VVVV'));
 check('③ 名前の無い人は「ブリーダー」・強さは出さない', list.some((x) => x.code === 'NNNN' && x.name === 'ブリーダー' && x.rt === null));
 check('③ 待っている秒数は0〜999に収める(相手の時計がずれていても)', list.every((x) => x.waitSec >= 0 && x.waitSec <= 999) && list.find((x) => x.code === 'SSSS').waitSec === 0 && list[0].waitSec === 41, list.map((x) => x.waitSec).join(','));
 check('③ 壊れた一覧でも落ちない', E.cardPvpSeekerList(null, now).length === 0 && E.cardPvpSeekerList({ x: null, y: { code: 1 } }, now).length === 0);
