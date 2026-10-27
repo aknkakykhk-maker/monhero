@@ -1095,7 +1095,8 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
 // みゅあの新しい衣装(2026-10-27 社長「みゅあの新衣装解放。バトルカードでみゅあのマスターに勝つと解放。他の衣装の同じように売られる。新衣装は準備中」)。
 //   名前「デュエルマスター」・売り場はダイヤショップ 100,000 だけ(社長)。絵を入れて公開(10/27 社長「公開まで進めてかまわない」)。
 // ★解放の条件は unlock に書く: MFバトルカードの助手と対戦で、相手 cardFoe の難易度 cardLevel に1回でも勝つ。
-//   勝つ前はマーケットに出さない(「近日追加」の札も出さない)。解放の覚え方は下の ASSISTANT_COSTUME_UNLOCKED_KEY
+//   勝つ前もダイヤショップの「着替え」に鍵つきで並べ、札に入手条件を書く(買えない)。解放の覚え方は下の ASSISTANT_COSTUME_UNLOCKED_KEY
+//   (2026-10-27 社長「解放されるまでマーケットに出ない？ 出てないなら出して入手条件かくようにして」。前は勝つまで並べなかった)
 const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;
 // 商品の絵(顔アイコン)。画像のパスはデータの中に直接書かず、定数にして指す(image/data-image-source-check.js)
 const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=e08db4e730ee";
@@ -1109,8 +1110,9 @@ const muaCardMasterCostume = Object.freeze({
   imageDir: 'images/assistant/card-master',
   price: Object.freeze({ diamond: 100000 }),
   unlock: Object.freeze({ cardFoe: 'mua', cardLevel: 'master' }),
-  // 解放する前に、プロフィールの着替えで押したとき出す案内(遊ぶ人向けの文)
-  unlockHow: 'MFバトルカードの「助手と対戦」で、みゅあの MASTER に勝つと、マーケットのダイヤショップに並びます',
+  // 解放する前の案内(遊ぶ人向けの文)。unlockHow … プロフィールの着替えで押したとき / lockLabel … マーケットの鍵つきの札(行ごと)
+  unlockHow: 'MFバトルカードの「助手と対戦」で、みゅあの MASTER に勝つと買えます',
+  lockLabel: Object.freeze(['MFバトルカードの', '「助手と対戦」で', 'みゅあの MASTER に', '勝つと買えます']),
 });
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
@@ -1270,7 +1272,7 @@ ASSISTANT_COSTUMES
     // ダイヤで売るのはまだ先(いまの窓に無い)あいだは available:false で「近日追加」の札になり、買えない
     // (買う処理は available:false を断る)。窓が開いた(ハロウィン・ナイト終了)瞬間から、そのまま買える
     BREEDER_MARKET_ITEMS.push({ id:costume.id, name:costume.name, type:'costume', currency:'diamond', cost:assistantCostumeSaleEverCost(costume, 'diamond'), desc:costume.desc || '', assistantId:costume.assistantId, emoji:'👗', icon:costume.icon,
-      // 解放が要る服(unlock)は、解放するまで並べない(「近日追加」の札も出さない。2026-10-27 社長)
-      get shop() { return costume.released === true && assistantCostumeUnlockedNow(costume) ? undefined : false; },
+      // 解放が要る服(unlock)も解放の前から並べ、買えない(available:false)札に入手条件を出す(2026-10-27 社長。札の文は lockLabel)
+      get shop() { return costume.released === true ? undefined : false; },
       get available() { return assistantCostumeSaleIn(costume, 'diamond') && assistantCostumeUnlockedNow(costume) ? undefined : false; } });
   });
