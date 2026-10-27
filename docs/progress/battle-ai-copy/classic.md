@@ -103,4 +103,6 @@ aiCopy = { srcSlot, srcMonsterId, level, spawnTurn, turnsLeft, hp, maxHp, atk, d
 | 71-screen-battle.jsx `ClassicAiCopyCell` | 縦は4枠の右はし(幅58px)、横向き(背の低い画面)は列の下の細い帯。コピーがいないときは `display:contents` で列の組み方は今までのまま。写真 `docs/playbot/reports/2026-10-27/ai-copy-classic/` |
 
 段2(2026-10-27): 選ぶ点は共通の aiCopyAutoScore(AUTO の作戦の優先 → 与ダメ)。ガードはコピーの丈夫さで構えてパーティを守る(GUARD_EVOLUTION の flat + コピーの def × mult)。回復・強化・アシカはタクティクスと同じ aiCopyEntries で味方のカードと同じ流れに通す(ガッツはコピーの分)。
-まだ: 固有技の特別な効き目(運命のコインなど。いまはダメージだけ)/ドライバーくんの新しい部品(コピー自身の山札)へ移す/コピーの手札の窓(SorashidoCopyHandSheet)/出る・消える演出(appear・vanish)/WAVE をまたぐか(社長の答え待ち)
+まだ: 固有技の特別な効き目(運命のコインなど。いまはダメージだけ)/コピーの手札の窓(SorashidoCopyHandSheet)/出る・消える演出(appear・vanish)/WAVE をまたぐか(社長の答え待ち)
+
+段3(2026-10-27): コピーは自分の山札を持つ(社長)。summonClassicAiCopy で aiCopyBuildDeck(出たとき・切りかえたとき)、planClassicAiCopy で aiCopyDraw(プレイヤーの手札と同じ枚数)→ aiCopyPickCards、ターンの終わりに aiCopyDiscardHand。固有技の写しの出し入れ(classicAiCopyZones・CLASSIC_AI_COPY_UNIQUE_IN_DECK)は外した。プレイヤーの山札は変えない。

@@ -25,7 +25,7 @@ vm.runInContext(`${grabArray('SORASHIDO_TIERS')}
 ${read('monster-hero/src/parts/32-sorashido-copy.jsx')}
 ${read('monster-hero/src/parts/33-ai-copy.jsx')}
 ${read('monster-hero/src/parts/33-ai-copy-classic.jsx')}
-globalThis.__s = { classicAiCopyZones, CLASSIC_AI_COPY_UNIQUE_IN_DECK, summonAiCopy, classicAiCopySrc, classicAiCopyIsAttack, classicAiCopyDamage, classicAiCopySpendGuts, classicAiCopyRegenGuts };`, ctx);
+globalThis.__s = { summonAiCopy, classicAiCopySrc, classicAiCopyIsAttack, classicAiCopyDamage, classicAiCopySpendGuts, classicAiCopyRegenGuts };`, ctx);
 const s = ctx.__s;
 
 const hero = { id: 'Golem', baseAtk: 200, baseDef: 100, baseGuts: 100, plusStats: { atk: 50, def: 50, guts: 10 } };
@@ -61,19 +61,6 @@ const c0 = { guts: 50, maxGuts: 60 };
 check('使えば減る(0 より下へ行かない)', s.classicAiCopySpendGuts(c0, 20).guts === 30 && s.classicAiCopySpendGuts(c0, 99).guts === 0);
 check('ターンの終わりに戻る(上限を超えない)', s.classicAiCopyRegenGuts({ guts: 10, maxGuts: 60 }, 0.2).guts === 22 && s.classicAiCopyRegenGuts(c0, 0.5).guts === 60);
 check('コピーがいなければそのまま', s.classicAiCopyRegenGuts(null, 0.2) === null && s.classicAiCopySpendGuts(null, 5) === null);
-
-// ---- 固有技の写しの出し入れ(1か所) ----
-const u = { uid: 'cp1', sorashidoCopyOf: 'Golem', type: 'unique' };
-const zs = { deck: [{ uid: 'a' }], hand: [{ uid: 'b' }], discard: [] };
-check('いまは「コピーが持つ」形(山札へは足さない)', s.CLASSIC_AI_COPY_UNIQUE_IN_DECK === false && s.classicAiCopyZones(zs, { uniqueCard: u }).deck.length === 1);
-const z1 = s.classicAiCopyZones(zs, { uniqueCard: u }, true);
-check('案1: 山札に1枚だけ足す(2回通しても1枚)', z1.deck.length === 2 && s.classicAiCopyZones(z1, { uniqueCard: u }, true).deck.length === 2);
-const zMoved = { deck: [], hand: [u], discard: [] };
-check('案1: 手札にあれば足さない', s.classicAiCopyZones(zMoved, { uniqueCard: u }, true).deck.length === 0 && s.classicAiCopyZones(zMoved, { uniqueCard: u }, true).hand.length === 1);
-const zGone = s.classicAiCopyZones({ deck: [u, { uid: 'a' }], hand: [u], discard: [u] }, null, true);
-check('コピーが消えたら、3か所から抜く', zGone.deck.length === 1 && zGone.hand.length === 0 && zGone.discard.length === 0);
-const zSwitch = s.classicAiCopyZones({ deck: [{ ...u, uid: 'old' }], hand: [], discard: [] }, { uniqueCard: u }, true);
-check('切りかえたら前の写しを抜き、新しい写しを1枚', zSwitch.deck.length === 1 && zSwitch.deck[0].uid === 'cp1');
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
