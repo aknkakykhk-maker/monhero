@@ -10,6 +10,8 @@
 //   ・助手えらび → あいさつ → 名前とアイコン → 村の案内、を自動で進めて mh_onboarded が立つ
 //   ・そのあと HOME で流れたお話に、昔のお知らせのお話が1本も無い
 //   ・ログインボーナスの窓とお話の窓が同時に出ていない(先に一方を閉じてから次)
+//   ・続けて流すのは1本まで(2026-10-27 社長)。HOME を離れて戻ると、次の1本が流れる
+//   ・はじめての印(mh_story_one_at_a_time_v1)は、はじめての人にだけ付く(前から遊んでいる人には付かない)
 //   ・昔のお知らせのお話は「見た」の印が付いている(回想に並ぶ・二重に流れない)
 //   ・例外が出ない
 const http = require('http');
@@ -81,11 +83,12 @@ const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
     check('はじめての案内を抜けて mh_onboarded が立つ', onboarded);
 
     // HOME に着いたあと、出てくる窓を順に閉じながら、流れたお話を記録する
-    const played = [];
     let overlap = 0;
-    // お話は1分おきの見回りでも並ぶので、何も出なくなってからも少し(最大90秒)見続ける
+    // お話は1分おきの見回りでも並ぶので、何も出なくなってからも少し(最大 limit 回 × 0.5秒)見続ける
+    const watch = async (limit, quietMax) => {
+    const played = [];
     let quiet = 0;
-    for (let i = 0; i < 180; i++) {
+    for (let i = 0; i < limit; i++) {
       const state = await page.evaluate(() => ({
         story: document.querySelector('[data-event-story]')?.getAttribute('data-event-story')
           || (document.querySelector('[aria-label^="イベント回想: "]')?.getAttribute('aria-label') || '').replace(/^イベント回想: /, '') || null,
@@ -99,9 +102,30 @@ const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
       });
       if (process.env.TRACE && (state.story || state.bonus || closer)) console.log('HOME', i, JSON.stringify(state), closer);
       quiet = (!closer && !state.story && !state.bonus) ? quiet + 1 : 0;
-      if (quiet > 150) break;
+      if (quiet > quietMax) break;
       await page.waitForTimeout(500);
     }
+    return played;
+    };
+    const played = await watch(180, 150);
+    const firstStay = played.slice();
+    // HOME を離れて(プロフィールへ行って)戻ると、待っていた次の1本が流れる
+    const goHome = async () => {
+      for (let i = 0; i < 6; i++) {
+        if (await page.evaluate(() => !!document.querySelector('.mh-home-player'))) return true;
+        await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && (/戻る/.test(x.getAttribute('aria-label') || '') || /^(←|戻る)/.test((x.innerText || '').trim()))); b && b.click(); });
+        await page.waitForTimeout(600);
+      }
+      return false;
+    };
+    await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
+    await page.waitForTimeout(1200);
+    const back = await goHome();
+    const secondStay = back ? await watch(60, 20) : [];
+    played.push(...secondStay.filter((id) => !played.includes(id)));
+    check('はじめての人の最初の HOME では、お話は1本だけ流れる', firstStay.length === 1, `流れたお話: ${firstStay.join(' → ') || 'なし'}`);
+    check('HOME を離れて戻ると、次のお話が1本流れる', back && secondStay.length === 1 && !firstStay.includes(secondStay[0]), `戻れた=${back} 流れたお話: ${secondStay.join(' → ') || 'なし'}`);
+    check('はじめての人には印(mh_story_one_at_a_time_v1)が付く', await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_story_one_at_a_time_v1')) === true; } catch { return false; } }));
     // 目印の無い古い作り(直す前)と比べるときのために、題でも見分ける
     const PAST_TITLE = /きゅうこ登場|ことのはの鈴|4人のタイプ|物置の古い箱/;
     const pastPlayed = played.filter((id) => Object.values(PAST).includes(id) || PAST_TITLE.test(id));
@@ -131,6 +155,18 @@ const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
     }
     const missing = ['きゅうこ登場', 'ことのはの鈴', '4人のタイプ', '物置の古い箱'].filter((t) => !titles.includes(t));
     check('流さなかったお話は、プロフィールのイベント回想に並ぶ', groups.length > 0 && missing.length === 0, missing.length ? `回想に無い: ${missing.join('・')}` : `${groups.length}のまとまり`);
+    // 前から遊んでいる人(名前とアイコンがあり、案内を済ませている)には、印を付けない(流し方は今までどおり)
+    const old = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    old.on('pageerror', (e) => errors.push(String(e)));
+    await old.addInitScript(() => { window.__mhSupabaseStubbed = true; const put = (k, v) => localStorage.setItem(k, JSON.stringify(v)); put('mh_breeder_name', 'けんさ'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true); });
+    await old.route(/supabase|functions\/v1/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    await old.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+    await old.waitForFunction(() => typeof window.__mhBootPhase !== 'undefined' || document.querySelector('[data-mh-screen], .mh-title-modal, button'), null, { timeout: 30000 }).catch(() => {});
+    await old.waitForTimeout(6000);
+    const { oldMark, keys } = await old.evaluate(() => ({ oldMark: localStorage.getItem('mh_story_one_at_a_time_v1'), keys: Object.keys(localStorage).filter((k) => k.startsWith('mh_')).length }));
+    // 起動の読み込みが進んで保存が増えている(印が無いのは、まだ読み込みの途中だから、ではない)
+    check('前から遊んでいる人には印が付かない(続けて流す今までの流し方のまま)', keys > 10 && (oldMark === null || JSON.parse(oldMark) !== true), `印=${oldMark}・保存 ${keys}件`);
+    await old.close();
     check('例外が出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     check('検査の実行', false, String(e).split('\n')[0]);

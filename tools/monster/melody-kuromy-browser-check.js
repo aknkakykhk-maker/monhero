@@ -66,7 +66,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
   let browser;
   try {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    const page = await browser.newPage({ viewport: { width: 375, height: 667 } });
+    // ★Service Worker を止める。下の page.route(data/enemy-monsters.js の敵ライフの書き換え)は、Service Worker が返した読み込みには掛からない。
+    //   2026-10-27 の #3868 からデータの JS も Service Worker が返すようになり、書き換えが効かず WAVE1 の敵が1手で倒れて落ちていた
+    const page = await browser.newPage({ viewport: { width: 375, height: 667 }, serviceWorkers: 'block' });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
