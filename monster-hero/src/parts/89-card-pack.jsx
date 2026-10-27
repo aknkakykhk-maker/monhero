@@ -191,3 +191,34 @@ const cardBuyStarter = (db, kitId, { collection, decks, point, starter, shop }, 
   const nextDecks = decks.decks.some((d) => d.id === deck.id) || decks.decks.length >= CARD_DECK_MAX ? decks : { ...decks, decks: [...decks.decks, deck] };
   return { collection: col, decks: nextDecks, point: point - CARD_STARTER_SHOP_PRICE + dupPoint, shop: { starters: { ...shop.starters, [kitId]: Math.floor(Number(now) || 0) } }, dupPoint };
 };
+
+// スターターキットを手に入れたときの「開ける画面」用の並び(2026-10-27 社長「スターターパック買ったときもブースターパック買ったときみたいな演出入れて。最初に手に入れたときも」)
+//   見せ方だけ。中身・枚数・ビートPは cardGrantStarter(はじめの1つ)/ cardBuyStarter(売り場)が決めたもののまま
+//   束は「モンスター3体」と「技カードを8種類ずつ」。同じカードは1枚にまとめて ×枚数(count)を出す
+//   before … 受け取る前の持ち数 / dupRule … 売り場で買ったとき true(持てる数をこえた分を cardBuyStarter と同じ決まりでビートPとして見せる)
+const CARD_STARTER_OPEN_PER_PAGE = 8;
+const cardStarterOpenResult = (db, kitId, before, dupRule) => {
+  const kit = db.starters[kitId];
+  if (!kit) return null;
+  const col = { ...(before || {}) };
+  const mons = kit.monsters.map((no) => {
+    const rarity = cardMonRarity(cardMonsterOf(db, no));
+    const had = col[no] || 0;
+    const dup = !!dupRule && had >= 1;
+    col[no] = had + 1;
+    return { no, slot: 'mon', rarity, dup, point: dup ? CARD_DUP_POINT[rarity] : 0, fresh: had === 0 };
+  });
+  const order = [];
+  const count = {};
+  kit.cards.forEach((no) => { if (!count[no]) order.push(no); count[no] = (count[no] || 0) + 1; });
+  const techs = order.map((no) => {
+    const had = col[no] || 0;
+    const over = dupRule ? Math.max(0, had + count[no] - CARD_TECH_KEEP_MAX) - Math.max(0, had - CARD_TECH_KEEP_MAX) : 0;
+    col[no] = had + count[no];
+    return { no, slot: 'tech', rarity: 'normal', count: count[no], dup: over >= count[no], point: over * CARD_DUP_POINT.tech, fresh: had === 0 };
+  });
+  const packs = [mons];
+  for (let i = 0; i < techs.length; i += CARD_STARTER_OPEN_PER_PAGE) packs.push(techs.slice(i, i + CARD_STARTER_OPEN_PER_PAGE));
+  const dupPoint = [...mons, ...techs].reduce((a, c) => a + c.point, 0);
+  return { kitId, packs, dupPoint, cost: 0 };
+};

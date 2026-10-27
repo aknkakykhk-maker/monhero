@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65e29f94dd89a3bd
+// source-sha256: a12efc2f2735f1ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91154,6 +91154,57 @@ const cardBuyStarter = (db, kitId, {
     dupPoint
   };
 };
+const CARD_STARTER_OPEN_PER_PAGE = 8;
+const cardStarterOpenResult = (db, kitId, before, dupRule) => {
+  const kit = db.starters[kitId];
+  if (!kit) return null;
+  const col = {
+    ...(before || {})
+  };
+  const mons = kit.monsters.map(no => {
+    const rarity = cardMonRarity(cardMonsterOf(db, no));
+    const had = col[no] || 0;
+    const dup = !!dupRule && had >= 1;
+    col[no] = had + 1;
+    return {
+      no,
+      slot: 'mon',
+      rarity,
+      dup,
+      point: dup ? CARD_DUP_POINT[rarity] : 0,
+      fresh: had === 0
+    };
+  });
+  const order = [];
+  const count = {};
+  kit.cards.forEach(no => {
+    if (!count[no]) order.push(no);
+    count[no] = (count[no] || 0) + 1;
+  });
+  const techs = order.map(no => {
+    const had = col[no] || 0;
+    const over = dupRule ? Math.max(0, had + count[no] - CARD_TECH_KEEP_MAX) - Math.max(0, had - CARD_TECH_KEEP_MAX) : 0;
+    col[no] = had + count[no];
+    return {
+      no,
+      slot: 'tech',
+      rarity: 'normal',
+      count: count[no],
+      dup: over >= count[no],
+      point: over * CARD_DUP_POINT.tech,
+      fresh: had === 0
+    };
+  });
+  const packs = [mons];
+  for (let i = 0; i < techs.length; i += CARD_STARTER_OPEN_PER_PAGE) packs.push(techs.slice(i, i + CARD_STARTER_OPEN_PER_PAGE));
+  const dupPoint = [...mons, ...techs].reduce((a, c) => a + c.point, 0);
+  return {
+    kitId,
+    packs,
+    dupPoint,
+    cost: 0
+  };
+};
 const CARD_MOTION_SPECS = Object.freeze({
   cardJab: skm('jab', {
     c: 'white',
@@ -94930,6 +94981,8 @@ const CardBattleScreen = ({
     return CARD_PVP_JOIN.on(go);
   }, []);
   const [kitPick, setKitPick] = useState(null);
+  const [kitView, setKitView] = useState(null);
+  const [starterOpen, setStarterOpen] = useState(null);
   const [foe, setFoe] = useState({
     who: 'mua',
     level: 'easy'
@@ -95562,6 +95615,21 @@ const CardBattleScreen = ({
     onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who));
     onNavigate('CARD_BATTLE');
   };
+  if (view === 'starter-open' && starterOpen) {
+    const needTutorial = !save.tutorial.done && !save.tutorial.skipped;
+    return React.createElement(CardPackOpen, {
+      db: db,
+      result: {
+        ...starterOpen,
+        doneLabel: needTutorial ? '練習試合へ' : 'トップへ戻る'
+      },
+      onDone: () => {
+        setStarterOpen(null);
+        setView('top');
+        if (needTutorial) startTutorial();
+      }
+    });
+  }
   if (view === 'starter') {
     const kits = Object.values(db.starters);
     const pick = kitPick ? db.starters[kitPick] : null;
@@ -95576,8 +95644,10 @@ const CardBattleScreen = ({
       note: "最初の1つは無料。えらばなかった2つは、あとでビートPで買えます"
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
-    }, kits.map(k => React.createElement("button", {
+    }, kits.map(k => React.createElement("div", {
       key: k.id,
+      className: "relative"
+    }, React.createElement("button", {
       type: "button",
       "data-card-kit": k.id,
       onClick: () => {
@@ -95586,7 +95656,7 @@ const CardBattleScreen = ({
       },
       className: `w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`
     }, React.createElement("div", {
-      className: "text-[15px] font-black text-white"
+      className: "pr-[84px] text-[15px] font-black text-white"
     }, k.name), React.createElement("div", {
       className: "mt-1 flex gap-1.5"
     }, k.monsters.map(no => React.createElement("img", {
@@ -95596,7 +95666,15 @@ const CardBattleScreen = ({
       className: "w-[27%] rounded-md"
     }))), React.createElement("div", {
       className: "mt-1 text-[12px] font-bold text-slate-300"
-    }, k.monsters.map(no => cardMonsterOf(db, no).name).join('・'), " と技カード50枚")))), React.createElement("div", {
+    }, k.monsters.map(no => cardMonsterOf(db, no).name).join('・'), " と技カード50枚")), React.createElement("button", {
+      type: "button",
+      "data-card-kit-contents": k.id,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setKitView(k);
+      },
+      className: "absolute right-2 top-2 min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/70 px-2 text-[11px] font-black text-sky-100 active:scale-95"
+    }, "中身を見る")))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
     }, React.createElement("button", {
       type: "button",
@@ -95609,14 +95687,20 @@ const CardBattleScreen = ({
           setView('top');
           return;
         }
+        const before = save.collection;
         const ok = await persist(g);
         setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
         if (ok) {
-          setView('top');
-          if (!save.tutorial.done && !save.tutorial.skipped) startTutorial();
+          setStarterOpen(cardStarterOpenResult(db, kitPick, before, false));
+          setView('starter-open');
         }
       }
-    }, pick ? `「${pick.name}」にする` : 'キットをえらんでください')));
+    }, pick ? `「${pick.name}」にする` : 'キットをえらんでください')), kitView && React.createElement(CardStarterContents, {
+      db: db,
+      kit: kitView,
+      collection: false,
+      onClose: () => setKitView(null)
+    }));
   }
   if (view === 'mode') {
     return React.createElement("div", {
@@ -97875,25 +97959,32 @@ const CARD_PACK_FEW_SLOTS = Object.freeze({
     o: 1
   }]
 });
+const CARD_STARTER_BOX_COLOR = Object.freeze({
+  speed: '#2f7fe0',
+  powerful: '#ef4444',
+  miracle: '#e0a420'
+});
 const CardPackArt = ({
   db,
   pack,
+  kit = null,
   width = 200,
   torn = false,
   className = ''
 }) => {
-  const mons = cardPackMonsters(db, pack);
+  const mons = kit ? kit.monsters.map(no => cardMonsterOf(db, no)).filter(Boolean) : cardPackMonsters(db, pack);
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
   const slots = mons.length >= 5 ? CARD_PACK_SLOTS : CARD_PACK_FEW_SLOTS[mons.length] || [];
   const h = Math.round(width * 1.48);
-  const label = `第${pack.no}弾`;
+  const label = kit ? kit.name : `第${pack.no}弾`;
+  const color = kit ? CARD_STARTER_BOX_COLOR[kit.id] || '#64748b' : pack.color;
   return React.createElement("div", {
-    "data-card-pack-art": pack.id,
+    "data-card-pack-art": kit ? `starter-${kit.id}` : pack.id,
     className: `relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`,
     style: {
       width,
       height: h,
-      background: `linear-gradient(165deg, ${pack.color} 0%, ${pack.color} 38%, #0b1020 100%)`
+      background: `linear-gradient(165deg, ${color} 0%, ${color} 38%, #0b1020 100%)`
     }
   }, React.createElement("div", {
     "aria-hidden": "true",
@@ -97944,8 +98035,9 @@ const CardPackArt = ({
   }, React.createElement("div", {
     className: "font-black leading-none text-white",
     style: {
-      fontSize: Math.round(width * 0.2),
-      WebkitTextStroke: `${Math.max(2, Math.round(width / 50))}px #111`,
+      fontSize: Math.round(width * (kit ? 0.078 : 0.2)),
+      whiteSpace: kit ? 'nowrap' : undefined,
+      WebkitTextStroke: `${Math.max(2, Math.round(width / (kit ? 80 : 50)))}px #111`,
       paintOrder: 'stroke fill',
       textShadow: '0 4px 0 rgba(0,0,0,.45)'
     }
@@ -97960,7 +98052,7 @@ const CardPackArt = ({
     style: {
       fontSize: Math.round(width * 0.07)
     }
-  }, "ブースターパック"));
+  }, kit ? 'スターターキット' : 'ブースターパック'));
 };
 const CARD_RARITY_LABEL = Object.freeze({
   normal: '',
@@ -97981,6 +98073,7 @@ const CardPackOpen = ({
   const [flash, setFlash] = useState(null);
   const [spot, setSpot] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [showList, setShowList] = useState(false);
   const timers = useRef([]);
   const [seLog, setSeLog] = useState([]);
   const se = name => {
@@ -98009,6 +98102,7 @@ const CardPackOpen = ({
     timers.current.push(setTimeout(fn, ms));
   };
   const press = useCardLongPress(no => setDetail(no));
+  const kit = result.kitId ? (db.starters || {})[result.kitId] || null : null;
   const pack = cardPackOf(result.packId) || CARD_PACKS[0];
   const cards = result.packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
@@ -98065,7 +98159,7 @@ const CardPackOpen = ({
     timers.current.forEach(clearTimeout);
     timers.current = [];
     setPi(x => x + 1);
-    setPhase('closed');
+    setPhase(kit ? 'open' : 'closed');
     setFlipped([]);
     setSpot(null);
   };
@@ -98081,13 +98175,35 @@ const CardPackOpen = ({
     "data-card-pack-se": seLog.join(','),
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
-    title: pack.name,
+    title: kit ? kit.name : pack.name,
     accent: "text-amber-200",
-    note: result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''
+    note: result.packs.length > 1 ? kit ? `${pi + 1} / ${result.packs.length}(${pi === 0 ? 'モンスター' : '技カード'})` : `${pi + 1} / ${result.packs.length}パック` : ''
   }), React.createElement("div", {
     ref: listRef,
     className: `${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`
-  }, phase !== 'open' ? React.createElement("button", {
+  }, showList && kit ? React.createElement("div", {
+    "data-card-pack-starter-list": true,
+    className: "h-full min-h-0 w-full self-stretch overflow-y-auto px-1 pb-2"
+  }, React.createElement("p", {
+    className: "mb-1 text-center text-[12px] font-black text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`「${kit.name}」に入っていたカード(${kit.monsters.length + kit.cards.length}枚)`)), React.createElement(CardShopHead, null, "モンスター(", kit.monsters.length, "枚)"), React.createElement(CardShopGrid, {
+    db: db,
+    rows: kit.monsters.map(no => ({
+      no,
+      rarity: cardMonRarity(cardMonsterOf(db, no))
+    })),
+    collection: false,
+    onTap: setDetail
+  }), React.createElement(CardShopHead, null, "技カード(", kit.cards.length, "枚・", new Set(kit.cards).size, "種類)"), React.createElement(CardShopGrid, {
+    db: db,
+    rows: [...new Set(kit.cards)].map(no => ({
+      no,
+      count: kit.cards.filter(x => x === no).length
+    })),
+    collection: false,
+    onTap: setDetail
+  })) : phase !== 'open' ? React.createElement("button", {
     type: "button",
     "data-card-pack-tear": true,
     onClick: tear,
@@ -98098,6 +98214,7 @@ const CardPackOpen = ({
   }, React.createElement(CardPackArt, {
     db: db,
     pack: pack,
+    kit: kit,
     width: 210,
     torn: phase === 'tearing'
   })), phase === 'tearing' && React.createElement("div", {
@@ -98174,27 +98291,35 @@ const CardPackOpen = ({
     }))), on && rare && React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`
-    }), on && (rare || c.dup || c.fresh === undefined || c.fresh) && React.createElement("span", {
+    }), on && (rare || c.point > 0 || c.fresh === undefined || c.fresh) && React.createElement("span", {
       "data-card-pack-badges": true,
       className: "absolute inset-x-0.5 top-0.5 z-[2] flex flex-wrap items-start gap-0.5"
     }, rare && React.createElement("span", {
       className: `rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`
-    }, CARD_RARITY_LABEL[c.rarity]), c.dup && React.createElement("span", {
+    }, CARD_RARITY_LABEL[c.rarity]), c.point > 0 && React.createElement("span", {
       className: "ml-auto rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200"
-    }, "+", c.point), !c.dup && (c.fresh === undefined || c.fresh) && React.createElement("span", {
+    }, "+", c.point), !(c.point > 0) && (c.fresh === undefined || c.fresh) && React.createElement("span", {
       className: "ml-auto rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950"
-    }, "NEW"))), React.createElement(CardNameFit, {
+    }, "NEW")), on && c.count > 1 && React.createElement("span", {
+      "data-card-pack-count": c.count,
+      className: "absolute bottom-0.5 right-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[11px] font-black text-white"
+    }, "×", c.count)), React.createElement(CardNameFit, {
       name: on ? name : '\u00a0',
       className: "mt-0.5 font-bold leading-tight text-slate-100"
     }));
-  })), phase === 'open' && allOpen && React.createElement("div", {
+  })), phase === 'open' && allOpen && !showList && React.createElement("div", {
     "data-card-pack-summary": true,
     className: "mt-3 text-center text-[12px] font-bold text-slate-300"
   }, packPoint > 0 ? React.createElement(React.Fragment, null, "持てる数をこえたカードは ", React.createElement("b", {
     className: "text-amber-200"
-  }, "ビートP +", packPoint), " になりました") : 'ビートPに変わったカードはありません', last && result.packs.length > 1 && React.createElement("div", {
+  }, "ビートP +", packPoint), " になりました") : 'ビートPに変わったカードはありません', last && result.packs.length > 1 && !kit && React.createElement("div", {
     className: "mt-0.5"
-  }, "(", result.packs.length, "パックで +", result.dupPoint, ")"))), phase === 'tearing' && React.createElement("div", {
+  }, "(", result.packs.length, "パックで +", result.dupPoint, ")"), last && kit && result.dupPoint > 0 && React.createElement("div", {
+    className: "mt-0.5"
+  }, "(キット全部で +", result.dupPoint, ")"), last && kit && result.deckAdded !== false && React.createElement("div", {
+    "data-card-pack-starter-deck": true,
+    className: "mt-1 text-amber-100"
+  }, "デッキ「", kit.name, "」ができました(デッキ編成で見られます)"))), phase === 'tearing' && React.createElement("div", {
     "aria-hidden": "true",
     className: "mh-pack-whiteout"
   }), flash && React.createElement("div", {
@@ -98234,7 +98359,7 @@ const CardPackOpen = ({
     className: SCREEN_FOOTER_CLASS
   }, phase !== 'open' ? React.createElement("div", {
     className: "text-center text-[12px] font-bold text-slate-400"
-  }, "パックをタップしてください") : !allOpen ? React.createElement("button", {
+  }, kit ? 'キットをタップしてください' : 'パックをタップしてください') : !allOpen ? React.createElement("button", {
     type: "button",
     "data-card-pack-flip-all": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
@@ -98244,7 +98369,15 @@ const CardPackOpen = ({
     "data-card-pack-next": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
     onClick: next
-  }, "つぎのパック") : React.createElement("button", {
+  }, kit ? 'つぎへ' : 'つぎのパック') : kit && !showList ? React.createElement("button", {
+    type: "button",
+    "data-card-pack-list-open": true,
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setShowList(true);
+    }
+  }, "入っていたカードの一覧へ") : React.createElement("button", {
     type: "button",
     "data-card-pack-done": true,
     className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
@@ -98252,7 +98385,7 @@ const CardPackOpen = ({
       Audio_.fgSe.tap();
       onDone();
     }
-  }, result.demo ? 'トップへ戻る' : 'マーケットへ戻る')), detail && React.createElement(CardDetailModal, {
+  }, result.doneLabel || (result.demo ? 'トップへ戻る' : 'マーケットへ戻る'))), detail && React.createElement(CardDetailModal, {
     db: db,
     no: detail,
     onClose: () => setDetail(null)
@@ -98324,7 +98457,7 @@ const CardShopGrid = ({
   count,
   rarity
 }) => {
-  const missing = !((collection || {})[no] > 0);
+  const missing = collection !== false && !((collection || {})[no] > 0);
   return React.createElement("button", {
     key: no,
     type: "button",
@@ -114072,8 +114205,11 @@ function MonsterHeroGame() {
         if (!r) return {
           fail: 'points'
         };
+        const before = cardNormalizeCollection(rawCol);
         return {
           r,
+          before,
+          deckAdded: r.decks.decks.length > cardNormalizeDecks(rawDecks).decks.length,
           entries: [{
             key: K.collection,
             before: rawCol,
@@ -114116,6 +114252,15 @@ function MonsterHeroGame() {
         collection: r.collection
       }));
       setRhythmEventPoints(r.point);
+      const open = cardStarterOpenResult(CARD_BATTLE_DATA, kitId, res.before, true);
+      if (open) {
+        setCardPackOpen({
+          ...open,
+          dupPoint: r.dupPoint,
+          deckAdded: res.deckAdded
+        });
+        setGameState('CARD_PACK_OPEN');
+      }
       return {
         ok: true,
         dupPoint: r.dupPoint

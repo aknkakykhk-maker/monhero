@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5bfef2cbfc0742c9
+// generated-sha256: 6d184a99d5aa30e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55460,6 +55460,37 @@ const cardBuyStarter = (db, kitId, { collection, decks, point, starter, shop }, 
   return { collection: col, decks: nextDecks, point: point - CARD_STARTER_SHOP_PRICE + dupPoint, shop: { starters: { ...shop.starters, [kitId]: Math.floor(Number(now) || 0) } }, dupPoint };
 };
 
+// スターターキットを手に入れたときの「開ける画面」用の並び(2026-10-27 社長「スターターパック買ったときもブースターパック買ったときみたいな演出入れて。最初に手に入れたときも」)
+//   見せ方だけ。中身・枚数・ビートPは cardGrantStarter(はじめの1つ)/ cardBuyStarter(売り場)が決めたもののまま
+//   束は「モンスター3体」と「技カードを8種類ずつ」。同じカードは1枚にまとめて ×枚数(count)を出す
+//   before … 受け取る前の持ち数 / dupRule … 売り場で買ったとき true(持てる数をこえた分を cardBuyStarter と同じ決まりでビートPとして見せる)
+const CARD_STARTER_OPEN_PER_PAGE = 8;
+const cardStarterOpenResult = (db, kitId, before, dupRule) => {
+  const kit = db.starters[kitId];
+  if (!kit) return null;
+  const col = { ...(before || {}) };
+  const mons = kit.monsters.map((no) => {
+    const rarity = cardMonRarity(cardMonsterOf(db, no));
+    const had = col[no] || 0;
+    const dup = !!dupRule && had >= 1;
+    col[no] = had + 1;
+    return { no, slot: 'mon', rarity, dup, point: dup ? CARD_DUP_POINT[rarity] : 0, fresh: had === 0 };
+  });
+  const order = [];
+  const count = {};
+  kit.cards.forEach((no) => { if (!count[no]) order.push(no); count[no] = (count[no] || 0) + 1; });
+  const techs = order.map((no) => {
+    const had = col[no] || 0;
+    const over = dupRule ? Math.max(0, had + count[no] - CARD_TECH_KEEP_MAX) - Math.max(0, had - CARD_TECH_KEEP_MAX) : 0;
+    col[no] = had + count[no];
+    return { no, slot: 'tech', rarity: 'normal', count: count[no], dup: over >= count[no], point: over * CARD_DUP_POINT.tech, fresh: had === 0 };
+  });
+  const packs = [mons];
+  for (let i = 0; i < techs.length; i += CARD_STARTER_OPEN_PER_PAGE) packs.push(techs.slice(i, i + CARD_STARTER_OPEN_PER_PAGE));
+  const dupPoint = [...mons, ...techs].reduce((a, c) => a + c.point, 0);
+  return { kitId, packs, dupPoint, cost: 0 };
+};
+
 // ---- part: 85-card-battle-motion.jsx ----
 // ===== MFバトルカード: 技の動き(設計書 5-4「技と動きの対応表」) =====
 // カードの技を出したら、そのモンスターの立ち絵がモンヒロのバトルと同じ動きをする(社長 台帳 #3381「モンヒロのバトルを生かせるところは生かす」)。
@@ -57757,6 +57788,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
   useEffect(() => { const go = (c) => { if (c) setView('pvp'); }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
   const [kitPick, setKitPick] = useState(null);
+  const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
+  const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
@@ -58082,6 +58115,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
   };
 
+  // ---- はじめのスターターを開ける(パックと同じ画面。閉じたら、練習試合がまだなら練習試合へ) ----
+  if (view === 'starter-open' && starterOpen) {
+    const needTutorial = !save.tutorial.done && !save.tutorial.skipped;
+    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => { setStarterOpen(null); setView('top'); if (needTutorial) startTutorial(); }}/>;
+  }
+
   // ---- スターター選び(一度きり) ----
   if (view === 'starter') {
     const kits = Object.values(db.starters);
@@ -58091,22 +58130,30 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title="スターターをえらぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。えらばなかった2つは、あとでビートPで買えます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {kits.map((k) => (
-            <button key={k.id} type="button" data-card-kit={k.id} onClick={() => { Audio_.fgSe.tap(); setKitPick(k.id); }} className={`w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`}>
-              <div className="text-[15px] font-black text-white">{k.name}</div>
-              <div className="mt-1 flex gap-1.5">{k.monsters.map((no) => <img key={no} src={CARD_IMG(cardMonsterOf(db, no).img)} alt={cardMonsterOf(db, no).name} className="w-[27%] rounded-md"/>)}</div>
-              <div className="mt-1 text-[12px] font-bold text-slate-300">{k.monsters.map((no) => cardMonsterOf(db, no).name).join('・')} と技カード50枚</div>
-            </button>
+            // 「中身を見る」で、選ぶ前に入っているカードを確かめられる(2026-10-27 社長「最初にやるときにスターターパックの中身が分からない」案A)
+            <div key={k.id} className="relative">
+              <button type="button" data-card-kit={k.id} onClick={() => { Audio_.fgSe.tap(); setKitPick(k.id); }} className={`w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`}>
+                <div className="pr-[84px] text-[15px] font-black text-white">{k.name}</div>
+                <div className="mt-1 flex gap-1.5">{k.monsters.map((no) => <img key={no} src={CARD_IMG(cardMonsterOf(db, no).img)} alt={cardMonsterOf(db, no).name} className="w-[27%] rounded-md"/>)}</div>
+                <div className="mt-1 text-[12px] font-bold text-slate-300">{k.monsters.map((no) => cardMonsterOf(db, no).name).join('・')} と技カード50枚</div>
+              </button>
+              <button type="button" data-card-kit-contents={k.id} onClick={() => { Audio_.fgSe.tap(); setKitView(k); }} className="absolute right-2 top-2 min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/70 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>
+            </div>
           ))}
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
           <button type="button" disabled={!pick} className={`${btn} mh-button-primary`} onClick={async () => {
             const g = cardGrantStarter(db, save, kitPick, Date.now());
             if (!g) { setNotice('スターターはもう受け取っています'); setView('top'); return; }
+            const before = save.collection;
             const ok = await persist(g);
             setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
-            if (ok) { setView('top'); if (!save.tutorial.done && !save.tutorial.skipped) startTutorial(); }
+            // 受け取ったら、ブースターパックと同じ画面で開けて中身を見せてから練習試合へ(2026-10-27 社長「最初に手に入れたときも」)。
+            //   ここを通るのは、まだスターターを持っていない人だけ(cardGrantStarter が2回目を断る)なので、もう持っている人には出ない
+            if (ok) { setStarterOpen(cardStarterOpenResult(db, kitPick, before, false)); setView('starter-open'); }
           }}>{pick ? `「${pick.name}」にする` : 'キットをえらんでください'}</button>
         </div>
+        {kitView && <CardStarterContents db={db} kit={kitView} collection={false} onClose={() => setKitView(null)}/>}
       </div>
     );
   }
@@ -59075,15 +59122,18 @@ const CARD_PACK_FEW_SLOTS = Object.freeze({
   3: CARD_PACK_SLOTS.slice(2),
   4: [CARD_PACK_SLOTS[0], CARD_PACK_SLOTS[1], { left: '-2%', w: '54%', h: '54%', b: '8%', z: 2, o: 1 }, { right: '-2%', w: '54%', h: '54%', b: '8%', z: 3, o: 1 }],
 });
-const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) => {
-  const mons = cardPackMonsters(db, pack);
+// スターターキットの箱の色(キットごと)。パックと同じ作りの絵に、キットのモンスター3体とキットの名前を出す
+const CARD_STARTER_BOX_COLOR = Object.freeze({ speed: '#2f7fe0', powerful: '#ef4444', miracle: '#e0a420' });
+const CardPackArt = ({ db, pack, kit = null, width = 200, torn = false, className = '' }) => {
+  const mons = kit ? kit.monsters.map((no) => cardMonsterOf(db, no)).filter(Boolean) : cardPackMonsters(db, pack);
   // 真ん中を最後に(いちばん手前)。並べる順: 奥の左右 → 中の左右 → 真ん中
   const order = mons.length >= 5 ? [mons[0], mons[4], mons[1], mons[3], mons[2]] : mons;
   const slots = mons.length >= 5 ? CARD_PACK_SLOTS : (CARD_PACK_FEW_SLOTS[mons.length] || []);
   const h = Math.round(width * 1.48);
-  const label = `第${pack.no}弾`;
+  const label = kit ? kit.name : `第${pack.no}弾`;
+  const color = kit ? (CARD_STARTER_BOX_COLOR[kit.id] || '#64748b') : pack.color;
   return (
-    <div data-card-pack-art={pack.id} className={`relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`} style={{ width, height: h, background: `linear-gradient(165deg, ${pack.color} 0%, ${pack.color} 38%, #0b1020 100%)` }}>
+    <div data-card-pack-art={kit ? `starter-${kit.id}` : pack.id} className={`relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`} style={{ width, height: h, background: `linear-gradient(165deg, ${color} 0%, ${color} 38%, #0b1020 100%)` }}>
       <div aria-hidden="true" className="absolute inset-0 opacity-35" style={{ background: `repeating-conic-gradient(from 0deg at 50% 62%, rgba(255,255,255,.55) 0 6deg, transparent 6deg 18deg)` }}/>
       <div aria-hidden="true" className="absolute inset-0" style={{ background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,.28) 45%, transparent 60%)' }}/>
       {!torn && <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[7%]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)' }}/>}
@@ -59093,10 +59143,10 @@ const CardPackArt = ({ db, pack, width = 200, torn = false, className = '' }) =>
           style={{ width: sl.w, height: sl.h, bottom: sl.b, zIndex: sl.z, opacity: sl.o, ...(sl.center ? { left: sl.left, transform: 'translateX(-50%)' } : sl.left ? { left: sl.left } : { right: sl.right }) }}/>;
       })}
       <div className="absolute inset-x-0 top-[9%] z-[5] text-center">
-        <div className="font-black leading-none text-white" style={{ fontSize: Math.round(width * 0.2), WebkitTextStroke: `${Math.max(2, Math.round(width / 50))}px #111`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>{label}</div>
+        <div className="font-black leading-none text-white" style={{ fontSize: Math.round(width * (kit ? 0.078 : 0.2)), whiteSpace: kit ? 'nowrap' : undefined, WebkitTextStroke: `${Math.max(2, Math.round(width / (kit ? 80 : 50)))}px #111`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,.45)' }}>{label}</div>
         <div className="mt-1 font-black tracking-wider text-white/90" style={{ fontSize: Math.round(width * 0.075), textShadow: '0 2px 2px rgba(0,0,0,.7)' }}>MFバトルカード</div>
       </div>
-      <div className="absolute inset-x-[18%] bottom-[3%] z-[6] rounded-full bg-black/55 py-0.5 text-center font-black text-white" style={{ fontSize: Math.round(width * 0.07) }}>ブースターパック</div>
+      <div className="absolute inset-x-[18%] bottom-[3%] z-[6] rounded-full bg-black/55 py-0.5 text-center font-black text-white" style={{ fontSize: Math.round(width * 0.07) }}>{kit ? 'スターターキット' : 'ブースターパック'}</div>
     </div>
   );
 };
@@ -59120,6 +59170,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const [flash, setFlash] = useState(null); // { n, rarity }
   const [spot, setSpot] = useState(null);   // { i, rarity, leaving } 真ん中へ大きく出しているキラ以上
   const [detail, setDetail] = useState(null);
+  const [showList, setShowList] = useState(false); // スターターキット: 開けたあとの「入っていたカード」の一覧(社長 案B)
   const timers = useRef([]);
   // 鳴らした効果音の記録(data-card-pack-se。実機の音の確かめと、ブラウザ検査でキラの音を鳴らしたかを見る)
   const [seLog, setSeLog] = useState([]);
@@ -59141,6 +59192,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
   }, []);
   const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   const press = useCardLongPress((no) => setDetail(no));
+  // スターターキット(result.kitId)も同じ画面で開ける。破るのは最初の束だけで、2束目からはそのまま配る(2026-10-27 社長)
+  const kit = result.kitId ? (db.starters || {})[result.kitId] || null : null;
   const pack = cardPackOf(result.packId) || CARD_PACKS[0];
   const cards = result.packs[pi] || [];
   const allOpen = flipped.length >= cards.length;
@@ -59179,7 +59232,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
       at += cards[i].rarity !== 'normal' ? 380 + CARD_PACK_SPOT_MS + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
   };
-  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
+  const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase(kit ? 'open' : 'closed'); setFlipped([]); setSpot(null); };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
   // 背の高い画面では3列にしてカードを大きく見せる(4列だと小さく、下が大きく空いた。V7)。背の低い画面は4列のまま
   const cols = cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
@@ -59190,11 +59243,20 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const spotW = `min(62vw, 260px, ${Math.max(140, Math.floor((((typeof window !== 'undefined' ? window.innerHeight : 844) - 120) * 5) / 7))}px)`;
   return (
     <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} data-card-pack-se={seLog.join(',')} className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title={pack.name} accent="text-amber-200" note={result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''}/>
+      <ScreenHead title={kit ? kit.name : pack.name} accent="text-amber-200" note={result.packs.length > 1 ? (kit ? `${pi + 1} / ${result.packs.length}(${pi === 0 ? 'モンスター' : '技カード'})` : `${pi + 1} / ${result.packs.length}パック`) : ''}/>
       <div ref={listRef} className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
-        {phase !== 'open' ? (
+        {showList && kit ? (
+          // 開けたあとの一覧(2026-10-27 社長 案B)。売り場の「中身を見る」と同じ並べ方で、押すとくわしく見られる
+          <div data-card-pack-starter-list className="h-full min-h-0 w-full self-stretch overflow-y-auto px-1 pb-2">
+            <p className="mb-1 text-center text-[12px] font-black text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`「${kit.name}」に入っていたカード(${kit.monsters.length + kit.cards.length}枚)`)}</p>
+            <CardShopHead>モンスター({kit.monsters.length}枚)</CardShopHead>
+            <CardShopGrid db={db} rows={kit.monsters.map((no) => ({ no, rarity: cardMonRarity(cardMonsterOf(db, no)) }))} collection={false} onTap={setDetail}/>
+            <CardShopHead>技カード({kit.cards.length}枚・{new Set(kit.cards).size}種類)</CardShopHead>
+            <CardShopGrid db={db} rows={[...new Set(kit.cards)].map((no) => ({ no, count: kit.cards.filter((x) => x === no).length }))} collection={false} onTap={setDetail}/>
+          </div>
+        ) : phase !== 'open' ? (
           <button type="button" data-card-pack-tear onClick={tear} className={`relative ${phase === 'closed' ? 'mh-pack-idle' : 'mh-pack-shake'}`} aria-label="パックを開ける">
-            <div className={phase === 'tearing' ? 'mh-pack-drop' : ''}><CardPackArt db={db} pack={pack} width={210} torn={phase === 'tearing'}/></div>
+            <div className={phase === 'tearing' ? 'mh-pack-drop' : ''}><CardPackArt db={db} pack={pack} kit={kit} width={210} torn={phase === 'tearing'}/></div>
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)' }}/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-pillar"/>}
             {phase === 'tearing' && <div aria-hidden="true" className="mh-pack-burst"/>}
@@ -59223,14 +59285,16 @@ const CardPackOpen = ({ db, result, onDone }) => {
                     {on && rare && <div aria-hidden="true" className={`mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`}/>}
                     {/* 左上にレア度・右上に NEW か +ビートP。カードが細い画面(320×568)では2つが重なって「別絵キラ EW」と読めたので、
                         1つの行に並べ、入りきらないときは右の札を次の行へ送る(2026-10-27 パックの見回り) */}
-                    {on && (rare || c.dup || c.fresh === undefined || c.fresh) && (
+                    {on && (rare || c.point > 0 || c.fresh === undefined || c.fresh) && (
                       <span data-card-pack-badges className="absolute inset-x-0.5 top-0.5 z-[2] flex flex-wrap items-start gap-0.5">
                         {rare && <span className={`rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
-                        {c.dup && <span className="ml-auto rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
+                        {c.point > 0 && <span className="ml-auto rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
                         {/* NEW は、その種類をはじめて手に入れた1枚だけ(前から持っている・同じパックの2枚目には付けない。89 の fresh。2026-10-26 巡回)。fresh が無い札(見本)は前のまま */}
-                        {!c.dup && (c.fresh === undefined || c.fresh) && <span className="ml-auto rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                        {!(c.point > 0) && (c.fresh === undefined || c.fresh) && <span className="ml-auto rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
                       </span>
                     )}
+                    {/* スターターキットは同じカードを1枚にまとめて、入っていた枚数を出す */}
+                    {on && c.count > 1 && <span data-card-pack-count={c.count} className="absolute bottom-0.5 right-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[11px] font-black text-white">×{c.count}</span>}
                   </button>
                   <CardNameFit name={on ? name : '\u00a0'} className="mt-0.5 font-bold leading-tight text-slate-100"/>
                 </div>
@@ -59238,11 +59302,13 @@ const CardPackOpen = ({ db, result, onDone }) => {
             })}
           </div>
         )}
-        {phase === 'open' && allOpen && (
+        {phase === 'open' && allOpen && !showList && (
           <div data-card-pack-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
             {/* 「だぶった」だと、同じカードが2枚出たのに「ありません」と読めた(2026-10-26 巡回 → 社長が文をOK) */}
             {packPoint > 0 ? <>持てる数をこえたカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'ビートPに変わったカードはありません'}
-            {last && result.packs.length > 1 && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
+            {last && result.packs.length > 1 && !kit && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
+            {last && kit && result.dupPoint > 0 && <div className="mt-0.5">(キット全部で +{result.dupPoint})</div>}
+            {last && kit && result.deckAdded !== false && <div data-card-pack-starter-deck className="mt-1 text-amber-100">デッキ「{kit.name}」ができました(デッキ編成で見られます)</div>}
           </div>
         )}
       </div>
@@ -59264,10 +59330,11 @@ const CardPackOpen = ({ db, result, onDone }) => {
         );
       })()}
       <div className={SCREEN_FOOTER_CLASS}>
-        {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
+        {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">{kit ? 'キットをタップしてください' : 'パックをタップしてください'}</div>
           : !allOpen ? <button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>
-          : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
-          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>{result.demo ? 'トップへ戻る' : 'マーケットへ戻る'}</button>}
+          : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>{kit ? 'つぎへ' : 'つぎのパック'}</button>
+          : kit && !showList ? <button type="button" data-card-pack-list-open className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setShowList(true); }}>入っていたカードの一覧へ</button>
+          : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>{result.doneLabel || (result.demo ? 'トップへ戻る' : 'マーケットへ戻る')}</button>}
       </div>
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
     </div>
@@ -59299,7 +59366,8 @@ const CardShopSheet = ({ title, onClose, children, detail, setDetail, db, tag })
 const CardShopGrid = ({ db, rows, collection, onTap }) => (
   <div className="grid grid-cols-4 gap-1.5 landscape:grid-cols-7">
     {rows.map(({ no, count, rarity }) => {
-      const missing = !((collection || {})[no] > 0);
+      // collection が false のときは「未取得」を出さない(はじめのスターター選び・開けたあとの一覧。まだ何も持っていないので全部に付いてしまう)
+      const missing = collection !== false && !((collection || {})[no] > 0);
       return (
         <button key={no} type="button" data-card-shop-item={no} data-card-shop-missing={missing ? '1' : undefined} onClick={() => onTap(no)} className="relative flex flex-col items-center rounded-lg bg-white/5 p-0.5 text-center active:scale-95">
           <span className="relative block w-full">
@@ -71701,7 +71769,8 @@ function MonsterHeroGame() {
       const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]), ([rawCol, rawDecks, rawPoint, rawStarter, rawShop]) => {
         const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, { collection: cardNormalizeCollection(rawCol), decks: cardNormalizeDecks(rawDecks), point: cardNormalizePoint(rawPoint), starter: cardNormalizeStarter(rawStarter), shop: cardNormalizeShop(rawShop) }, Date.now());
         if (!r) return { fail: 'points' };
-        return { r, entries: [
+        const before = cardNormalizeCollection(rawCol);
+        return { r, before, deckAdded: r.decks.decks.length > cardNormalizeDecks(rawDecks).decks.length, entries: [
           { key: K.collection, before: rawCol, next: r.collection },
           { key: K.decks, before: rawDecks, next: r.decks },
           { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
@@ -71713,6 +71782,10 @@ function MonsterHeroGame() {
       const r = res.r;
       setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop, collection: r.collection }));
       setRhythmEventPoints(r.point);
+      // 買ったら、ブースターパックと同じ画面で開ける(2026-10-27 社長「スターターパック買ったときもブースターパック買ったときみたいな演出入れて」)。
+      //   見せ方だけで、中身とビートPは上の cardBuyStarter で決まったもの(まとめの数は r.dupPoint をそのまま出す)
+      const open = cardStarterOpenResult(CARD_BATTLE_DATA, kitId, res.before, true);
+      if (open) { setCardPackOpen({ ...open, dupPoint: r.dupPoint, deckAdded: res.deckAdded }); setGameState('CARD_PACK_OPEN'); }
       return { ok:true, dupPoint: r.dupPoint };
     } catch {
       setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');

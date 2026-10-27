@@ -266,6 +266,7 @@ async function measureCard(browser, seconds = 25) {
   if (await page.locator('[data-card-top="starter"]').count()) {
     await page.locator('[data-card-kit="powerful"]').click();
     await page.getByRole('button', { name: /にする$/ }).click();
+    await require(require('path').join(__dirname, '../card/lib/starter-open-pass.js'))(page); // はじめのスターターを開ける画面を通す
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 30000 }).catch(() => {});
   }
   // はじめては練習試合(チュートリアル)が始まる。「飛ばす」で抜けてトップへ

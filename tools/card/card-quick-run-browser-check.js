@@ -175,6 +175,7 @@ const seed = () => {
       await click('[data-card-kit="powerful"]');
       await page.waitForTimeout(300);
       await clickText('にする$');
+      await require(require('path').join(__dirname, 'lib/starter-open-pass.js'))(page); // はじめのスターターを開ける画面を通す
       await page.waitForSelector('[data-card-battle]', { timeout: 20000 }).catch(() => {});
       check('③ 練習試合(対戦の画面)にいるあいだも、画面がバトルへ飛ばない', await stayOn('[data-card-battle]', 4000));
       check('④ 対戦中は帯を出さず、盤のヘッダーに「⚔ ◯周目」だけ出る',

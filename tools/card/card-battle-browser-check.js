@@ -124,6 +124,8 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await shot(page, '01-starter');
     await page.locator('[data-card-kit="powerful"]').click();
     await page.getByRole('button', { name: /にする$/ }).click();
+    // はじめのスターターは、パックと同じ画面で開けてから練習試合へ(2026-10-27 社長「最初に手に入れたときも」)
+    check('⑪-0 スターターを受け取ると、パックと同じ画面で開けてから練習試合へ進む', await require(require('path').join(__dirname, 'lib/starter-open-pass.js'))(page));
     // ⑪ スターターを選ぶと、そのまま練習試合(チュートリアル)。5つの段を操作で通す
     await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
     await shot(page, '11-tutorial-start');
@@ -845,6 +847,25 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const buyKitId = await buyKit.getAttribute('data-card-shop-starter');
     await buyKit.locator('[data-card-shop-starter-buy]').click();
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '買う' }).click();
+    // 買うと、パックと同じ画面で開ける(2026-10-27 社長)。最後に入っていたカードの一覧が出て、閉じると売り場へ戻る
+    const kitOpened = await page.locator('[data-card-pack-open]').waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+    let kitList = null;
+    if (kitOpened) {
+      for (let k = 0; k < 8; k++) {
+        if (await page.locator('[data-card-pack-tear]').count()) await page.locator('[data-card-pack-tear]').dispatchEvent('click');
+        await page.locator('[data-card-pack-open][data-card-pack-phase="open"]').waitFor({ timeout: 10000 });
+        await page.locator('[data-card-pack-flip-all]').dispatchEvent('click').catch(() => {});
+        await page.waitForFunction(() => !document.querySelectorAll('[data-card-pack-card][data-card-pack-flipped="0"]').length, null, { timeout: 20000 });
+        if (await page.locator('[data-card-pack-next]').count()) { await page.locator('[data-card-pack-next]').dispatchEvent('click'); continue; }
+        break;
+      }
+      await page.locator('[data-card-pack-list-open]').dispatchEvent('click');
+      kitList = await page.evaluate(() => [...document.querySelectorAll('[data-card-pack-starter-list] [data-card-shop-item]')].reduce((a, b) => a + (Number((b.innerText.match(/×(\d+)/) || [])[1]) || 1), 0));
+      await page.locator('[data-card-pack-done]').dispatchEvent('click');
+      await page.locator('[data-card-shop]').waitFor({ timeout: 10000 });
+      await page.getByRole('tab', { name: 'スターター' }).click();
+    }
+    check('⑯ スターターキットを買うと、パックと同じ画面で開けられ、最後に入っていたカードの一覧(53枚)が出て、売り場へ戻る', kitOpened && kitList === 53, JSON.stringify({ kitOpened, kitList }));
     await page.waitForTimeout(500);
     const afterKit = await page.evaluate(() => ({ shop: JSON.parse(localStorage.getItem('mh_card_shop_v1') || 'null'), decks: JSON.parse(localStorage.getItem('mh_card_decks_v1') || 'null') }));
     const boughtLabel = await page.locator(`[data-card-shop-starter="${buyKitId}"] [data-card-shop-starter-buy]`).innerText();
