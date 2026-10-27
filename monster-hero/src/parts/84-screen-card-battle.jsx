@@ -1416,7 +1416,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (mode === 'choose') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">カードを1枚選んでください</div>;
     if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}>{`${st.pendingDiscard.n}枚えらんで捨てる`}</button>;
     if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない'}</button>;
-    if (mode === 'guts') return <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>;
+    // ガッツの段から攻撃に戻る(出せるときだけ。灼熱の地でダメージが出た番などは cardCanBackToAttack が false。社長の答え 2026-10-27)
+    //   練習試合(手順どおりに進める)と見返しでは出さない
+    if (mode === 'guts') return (<>
+      {myTurn && !tutorial && !replay && cardCanBackToAttack(st) && <button type="button" data-card-back-attack className={`${btn} border border-violet-300/60 bg-violet-900`} onClick={() => step({ type: 'backToAttack' })}>← 攻撃に戻る</button>}
+      <button type="button" disabled={tutOff('turn')} className={`${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`} onClick={() => askEnd({ type: 'guts', hand: picks })}>{picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'}</button>
+    </>);
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return (<>
       {/* ショットガン: 割り振りを選ぶ窓 / 変形・トランスフォーム: 空中か地上かを選んで使う */}
