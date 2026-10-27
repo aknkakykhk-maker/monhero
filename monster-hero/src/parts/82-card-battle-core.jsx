@@ -1134,7 +1134,11 @@ const CARD_AI_HABITS = Object.freeze({
   kyuko:    { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.2 },
   dra:      { attack: 0.7, keepGuard: 1.5, saveGuts: 1.0, big: 0.6, disrupt: 0.8, area: 0.8, finish: 0.8 },
   atsu:     { attack: 1.2, keepGuard: 0.6, saveGuts: 0.8, big: 1.0, disrupt: 0.8, area: 1.8, finish: 1.5 },
+  sorashido: { attack: 1.1, keepGuard: 0.9, saveGuts: 1.0, big: 0.9, disrupt: 1.5, area: 1.0, finish: 1.3 },   // 相手の手を崩す(2026-10-27 ルールくんの S2。好きな子ハムで5段×450試合を測った)
 });
+// 公開の印(RELEASE_FLAGS・data/assistants.js の ASSISTANT_RELEASE_FLAGS)が立つまで、カードの相手えらび・マルチ・観戦・記録・曲の並びに出さない(2026-10-27。ソラシド)。
+//   カードだけの一覧は作らず、助手の一覧と同じ assistantReleased で見る。デバッグからも出さない
+const cardFoeReleased = (who) => typeof assistantReleased !== 'function' || assistantReleased(who);
 // デッキを組むときだけ、くせの値を強さごとに上書きする(打ち方のくせは CARD_AI_HABITS のまま)
 //   ドラ MASTER: 大技を軽く見るくせ(big 0.6)でデッキが弱く、プレイヤー役への勝率が目安(38〜65%)の下の境目だった。
 //   デッキを組むときだけ 1.0 にして 39%→44%(900試合。2026-10-27 社長が案Aを選んだ)。守りを手放さない打ち方はそのまま
@@ -1142,7 +1146,7 @@ const CARD_AI_DECK_HABIT = Object.freeze({ dra: { master: { big: 1.0 } } });
 const cardAiDeckHabit = (who, levelId) => { const h = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko; const o = ((CARD_AI_DECK_HABIT[who] || {})[levelId]) || null; return o ? { ...h, ...o } : h; };
 // 助手どうしの強さをそろえる数(雑な手の割合に掛ける)。くせとデッキの違いで、同じ難易度でも勝率に差が出るため。
 // tools/card/card-rules-check.js の試算で、どの助手もスターター相手に同じくらいの勝率になるように決めた
-const CARD_AI_TUNE = Object.freeze({ mua: 0.6, momosuke: 0.5, kiki: 1.3, kyuko: 1, dra: 1.15, atsu: 1 });
+const CARD_AI_TUNE = Object.freeze({ mua: 0.6, momosuke: 0.5, kiki: 1.3, kyuko: 1, dra: 1.15, atsu: 1, sorashido: 1 });
 // 深く読む難易度で、くせの重みを「真ん中(1.0)」へ寄せる割合(1 = そのまま・0.5 = 半分だけ寄せる)。くせの向きは変えない。
 //   みゅあ(攻める 1.5・守りを残す 0.2・ガッツをためる 0.2)は、深く読む相手には極端なくせが裏目に出て、
 //   EXPERT・MASTER でプレイヤー役に 29〜32% しか勝てなかった(公開の条件。tools/card/card-ai-balance.js で測る)
@@ -1589,11 +1593,12 @@ const CARD_AI_DECKS = Object.freeze({
   dra:      { kit: 'powerful' },
   kyuko:    { monsters: ['C-007', 'C-005', 'C-009'] },  // ナーガ・ピクシー・モッチー
   atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'] },  // ゴーレム・ライガー・ガリ。全体攻撃を集める
+  sorashido: { monsters: ['C-008', 'C-001', 'C-003'] },  // ハム・ライガー・ゴーレム(ルールくんが測った試合でいちばん多かった3体。3体は好きな子ハムから毎試合選ぶ)。prefer はまだ無い
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
 // その種族を主血統に持つ混血・派生がみな候補になり、カードが増えれば自動で候補に入る。どの強さでも必ず1体入れる
-const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon' });
+const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'hare' });   // ソラシドはハム(2026-10-27 社長の決め)
 // 強さごとの組み方(社長の決め)。maxWave … 技などのカードの弾(好きな子の技は、その子の弾まで使える) / noise … カードの選び方の雑さ /
 // temp … 残り2体の選び方のゆらぎ(大きいほど型に合わない子も入る) / stray … 気まぐれな子(型と関係なく)が1体混ざる割合 /
 // best … いちばん強い組み合わせ(相手のデッキも見る)
@@ -1643,11 +1648,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: -0.05 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
   dra: { easy: -1.5, normal: -1.5, expert: 0.5, master: 0.5 },   // EXPERT はカウンターの直し(半分返して残りを受ける・2026-10-27)で 38% を下回ったので揺らぎを足した(57%)。MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
   atsu: { easy: -1.5, normal: -3, hard: -2.1 },
+  sorashido: { easy: -1.5, normal: -1.5, hard: -1.5, master: -0.05 },   // 2026-10-27 ルールくん(プレイヤー役への勝率 EASY 42.7・NORMAL 48.7・HARD 50.2・EXPERT 47.6・MASTER 47.8%)
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
-const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
+const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
 const CARD_AI_ATTACH_MAX = 6;
 
@@ -2092,6 +2098,7 @@ const CARD_PLAYLIST_MAX = 5;
 const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   mua: Object.freeze(['melo_toriko']), kiki: Object.freeze(['eiki_boss']), momosuke: Object.freeze(['melo_crossing_field']),
   kyuko: Object.freeze(['melo_toward_the_stars_short']), dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']), atsu: Object.freeze(['melo_against_my_own_shadow']),
+  sorashido: Object.freeze(['monster_hero_theme']),   // Monster Hero(2026-10-27 社長の答え)
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
   const out = [];
@@ -2106,6 +2113,8 @@ const cardNormalizeCpuPlaylist = (v, isTrack = () => true) => {
   const assistants = {};
   for (const who of Object.keys(CARD_CPU_PLAYLIST_DEFAULT)) {
     const list = cardNormalizePlaylistList(src[who], isTrack);
+    // 公開前の助手は既定を足さない(保存の形を変えない)。前に保存した並びがあれば消さずに残す(⑦)
+    if (!cardFoeReleased(who)) { if (list.length) assistants[who] = list; continue; }
     assistants[who] = list.length ? list : [...CARD_CPU_PLAYLIST_DEFAULT[who]];
   }
   return { v: 1, assistants };
