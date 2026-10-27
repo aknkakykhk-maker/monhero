@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5734628f0e50d44c
+// source-sha256: d7592124179f973c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -121016,8 +121016,11 @@ function MonsterHeroGame() {
         aiCopy: true
       }));
     })();
+    let copyHitFrom = null;
     for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
+      const actorName = si => entry.aiCopy ? tacticsAiCopyName(aiCopyRef.current) : battleActorName(si);
+      if (entry.aiCopy && copyHitFrom == null) copyHitFrom = attackHits.length;
       const copyDmgScale = entry.aiCopy && Number.isFinite(entry.dmgScale) ? entry.dmgScale : 1;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
@@ -121052,7 +121055,7 @@ function MonsterHeroGame() {
             const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
             if (angel) hpBeforeEnemyAttack = angel.total;
             addPopup('👼 天使の力 全員回復', 'hero', 'text-sky-200 font-black text-xl drop-shadow-md');
-            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
+            pushBattleLog(`😈👼 ${actorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
           }
         }
       }
@@ -121189,7 +121192,7 @@ function MonsterHeroGame() {
             kyukoCutSlot: tactics ? slotIdx : -1
           }));
           addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut * 100)}%減(${conf.turns}T)`, 'hero', 'text-pink-300 font-black text-xl drop-shadow-md');
-          if (tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
+          if (tactics) pushBattleLog(`🎼 ${actorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -121317,7 +121320,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE * 100)}%`,
                 tone: 'good'
               });
@@ -121328,7 +121331,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE * 100)}%`,
                 tone: 'bad'
               });
@@ -121434,7 +121437,7 @@ function MonsterHeroGame() {
               orihimeForceConfuseRef.current = true;
               showLuckBanner({
                 icon: '❓',
-                title: `${battleActorName(slotIdx)}の焦がれ待つ天ノ河`,
+                title: `${actorName(slotIdx)}の焦がれ待つ天ノ河`,
                 result: '敵の次の行動が「意味不明」に！',
                 tone: 'enemy'
               });
@@ -121445,7 +121448,7 @@ function MonsterHeroGame() {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
             icon: '🌀',
-            title: `${battleActorName(slotIdx)}のトリックコンフューズ`,
+            title: `${actorName(slotIdx)}のトリックコンフューズ`,
             result: `敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`,
             tone: 'enemy'
           });
@@ -121581,7 +121584,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🎡',
-                title: `${battleActorName(slotIdx)}の運命の輪`,
+                title: `${actorName(slotIdx)}の運命の輪`,
                 result: fateWheelPick.label,
                 tone: id === 'enemyAtkDown' || id === 'enemyTakenUp' ? 'enemy' : 'good'
               });
@@ -121671,6 +121674,10 @@ function MonsterHeroGame() {
       }
     }
     pdTag();
+    if (copyHitFrom != null) {
+      const copyName = tacticsAiCopyName(aiCopyRef.current);
+      for (let k = copyHitFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].actorName == null) attackHits[k].actorName = copyName;
+    }
     if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
       let copy = aiCopyRef.current;
       for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
@@ -121772,7 +121779,7 @@ function MonsterHeroGame() {
             for (const h of group) {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
-              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
+              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${h.actorName || battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
               setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
@@ -121859,7 +121866,7 @@ function MonsterHeroGame() {
           }
           const hitColor = hit.isCrit ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique ? 'scale-125' : 'scale-110'}` : hit.isUnique ? 'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
-          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
+          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${hit.actorName || battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
           setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)
