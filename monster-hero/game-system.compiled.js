@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 85fd6c245ce098de
+// source-sha256: 74fcf7a67c11eea2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86712,8 +86712,18 @@ const CARD_AI_HABITS = Object.freeze({
     disrupt: 0.8,
     area: 1.8,
     finish: 1.5
+  },
+  sorashido: {
+    attack: 1.1,
+    keepGuard: 0.9,
+    saveGuts: 1.0,
+    big: 0.9,
+    disrupt: 1.5,
+    area: 1.0,
+    finish: 1.3
   }
 });
+const cardFoeReleased = who => typeof assistantReleased !== 'function' || assistantReleased(who);
 const CARD_AI_DECK_HABIT = Object.freeze({
   dra: {
     master: {
@@ -86735,7 +86745,8 @@ const CARD_AI_TUNE = Object.freeze({
   kiki: 1.3,
   kyuko: 1,
   dra: 1.15,
-  atsu: 1
+  atsu: 1,
+  sorashido: 1
 });
 const CARD_AI_HABIT_BLEND = Object.freeze({
   expert: {
@@ -87370,6 +87381,9 @@ const CARD_AI_DECKS = Object.freeze({
   atsu: {
     monsters: ['C-003', 'C-001', 'C-002'],
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
+  },
+  sorashido: {
+    monsters: ['C-008', 'C-001', 'C-003']
   }
 });
 const CARD_AI_FAVORITE = Object.freeze({
@@ -87378,7 +87392,8 @@ const CARD_AI_FAVORITE = Object.freeze({
   kiki: 'golem',
   kyuko: 'mew',
   dra: 'zilla',
-  atsu: 'dragon'
+  atsu: 'dragon',
+  sorashido: 'hare'
 });
 const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
@@ -87475,6 +87490,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
     easy: -1.5,
     normal: -3,
     hard: -2.1
+  },
+  sorashido: {
+    easy: -1.5,
+    normal: -1.5,
+    hard: -1.5,
+    master: -0.05
   }
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
@@ -87482,7 +87503,8 @@ const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
   dra: 0.8,
   kyuko: 2.0,
-  atsu: 1.5
+  atsu: 1.5,
+  sorashido: 1.5
 });
 const CARD_DECK_COPY_MAX = 3;
 const CARD_AI_ATTACH_MAX = 6;
@@ -88013,7 +88035,8 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   momosuke: Object.freeze(['melo_crossing_field']),
   kyuko: Object.freeze(['melo_toward_the_stars_short']),
   dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']),
-  atsu: Object.freeze(['melo_against_my_own_shadow'])
+  atsu: Object.freeze(['melo_against_my_own_shadow']),
+  sorashido: Object.freeze(['monster_hero_theme'])
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
   const out = [];
@@ -88028,6 +88051,10 @@ const cardNormalizeCpuPlaylist = (v, isTrack = () => true) => {
   const assistants = {};
   for (const who of Object.keys(CARD_CPU_PLAYLIST_DEFAULT)) {
     const list = cardNormalizePlaylistList(src[who], isTrack);
+    if (!cardFoeReleased(who)) {
+      if (list.length) assistants[who] = list;
+      continue;
+    }
     assistants[who] = list.length ? list : [...CARD_CPU_PLAYLIST_DEFAULT[who]];
   }
   return {
@@ -88834,6 +88861,22 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['山札、もう少ないじゃん…焦ってる？笑', 'そろそろ山札が尽きるな！ 押し込むぞ！'],
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
     lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']]
+  },
+  sorashido: {
+    challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
+    start: [['デッキは組み直してきた。今日の俺は強いぜ・・・！', 'happy'], ['よろしく！ 様子見…と見せかけて攻める笑', 'wink'], ['いくぜ・・・！ 最初の1手が大事なんだよな', 'excited'], ['三線みたいに、気持ちよく勝ちたいね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいぜ・・・！', 'happy']],
+    big: [['うぉぉぉ！ ここで大技いくぜ・・・！', 'excited'], ['ガッツためといた甲斐があった笑', 'happy'], ['この流れ、攻略まとめに書いとこ笑', 'wink'], ['読みどおり！ 一気に押し込むぜ・・・！', 'excited']],
+    bigHit: [['なに！？ 今のは効いた…笑', 'surprise'], ['うわ、それ持ってたの！？ やられた笑', 'surprise'], ['痛っ…でも次の手はもう考えてあるぜ・・・！', 'troubled'], ['なんくるないさ〜。まだ巻き返せる笑', 'normal']],
+    guardMine: [['その手、読めてたぜ・・・！', 'happy'], ['守り、残しといて正解だった笑', 'wink'], ['はい、よけた！ 計算どおり笑', 'excited']],
+    guardTheirs: [['なに！？ そこで守るの！？', 'surprise'], ['読みが深いな…やるじゃん笑', 'troubled'], ['次は守りにくい手でいくぜ・・・！', 'normal']],
+    myKo: [['ごめんな…あとは俺が取り返すぜ・・・！', 'crying'], ['なに！？ ここで倒れるのかよ…笑', 'surprise'], ['まだまだ！ 作戦はここからだぜ・・・！', 'angry']],
+    theirKo: [['うぉぉぉ！ 1体いただき！', 'excited'], ['弱ってたの、見逃さないぜ・・・！', 'wink'], ['よし！ 計算どおり笑', 'happy']],
+    lastMine: [['残り1体…ここからひっくり返すのが楽しいんだよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託すぜ・・・！', 'troubled']],
+    lastTheirs: [['あと1体！ 最後まで読み切るぜ・・・！', 'excited'], ['詰めの手順、もう見えてる笑', 'wink']],
+    deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
+    deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
+    win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
+    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -89081,7 +89124,8 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kiki: ['ため撃ち砲台', 'どっかん計画', '大技まつり', 'じっくり砲'],
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
-  atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団']
+  atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
+  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊']
 });
 const CARD_DECK_NAME_MAX = 18;
 const CARD_DECK_STYLE = Object.freeze({
@@ -89222,6 +89266,28 @@ const CARD_VS_LINES = Object.freeze({
     master: {
       e: 'wink',
       t: '本気のあつだ。一気に終わらせるぞ！'
+    }
+  },
+  sorashido: {
+    easy: {
+      e: 'happy',
+      t: 'ゆるっといこ！ でも読みは手を抜かないぜ・・・！'
+    },
+    normal: {
+      e: 'wink',
+      t: '浜の風みたいに、さらっと勝たせてもらう笑'
+    },
+    hard: {
+      e: 'excited',
+      t: 'ここからは本気の読み合いだぜ・・・！'
+    },
+    expert: {
+      e: 'excited',
+      t: '攻略班の作戦、ぜんぶ試させてもらう笑'
+    },
+    master: {
+      e: 'angry',
+      t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！'
     }
   }
 });
@@ -94486,7 +94552,7 @@ const CardBattleScreen = ({
     });
   }
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
-  const foes = (debug ? allAssistants : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
+  const foes = (debug ? allAssistants.filter(a => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
   const activeDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
@@ -94840,7 +94906,8 @@ const CardBattleScreen = ({
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5 landscape:grid-cols-6"
+      "data-card-foe-grid": foes.length >= 7 ? 7 : 6,
+      className: `grid ${foes.length >= 7 ? 'grid-cols-4 gap-1.5 landscape:grid-cols-7 landscape:gap-1' : 'grid-cols-3 gap-1.5 landscape:grid-cols-6'}`
     }, foes.map(x => React.createElement("button", {
       key: x.id,
       type: "button",
@@ -94852,7 +94919,7 @@ const CardBattleScreen = ({
           who: x.id
         }));
       },
-      className: `relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
+      className: `relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
       style: foe.who === x.id ? {
         borderColor: x.accent
       } : undefined
@@ -95252,7 +95319,7 @@ const CardBattleScreen = ({
     onOpenPvpHistory: typeof CardPvpHistory === 'function' ? () => setView('pvpHistory') : null
   });
   if (view === 'options') {
-    const plWhoList = foes.length ? foes : allAssistants.filter(a => CARD_CPU_PLAYLIST_DEFAULT[a.id]);
+    const plWhoList = foes.length ? foes : allAssistants.filter(a => CARD_CPU_PLAYLIST_DEFAULT[a.id] && cardFoeReleased(a.id));
     const plCur = plWhoList.some(a => a.id === plWho) ? plWho : plWhoList[0] && plWhoList[0].id;
     const plSave = assistants => {
       void persist({
@@ -95356,7 +95423,7 @@ const CardBattleScreen = ({
       "data-card-playlist-copy-ok": true,
       onClick: () => {
         const list = [...plCopy.list];
-        plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).map(who => [who, list])));
+        plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).filter(who => cardFoeReleased(who)).map(who => [who, list])));
         setPlCopy(null);
       },
       className: "min-h-[44px] rounded-xl bg-amber-500 text-[12px] font-black text-slate-900"
@@ -95841,7 +95908,7 @@ const CardBattleScreen = ({
     value: demoWho,
     onChange: e => setDemoWho(e.target.value),
     className: "w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white"
-  }, allAssistants.filter(x => CARD_AI_HABITS[x.id]).map(x => React.createElement("option", {
+  }, allAssistants.filter(x => CARD_AI_HABITS[x.id] && cardFoeReleased(x.id)).map(x => React.createElement("option", {
     key: x.id,
     value: x.id
   }, "見本の相手: ", x.name))), React.createElement("div", {
@@ -99467,6 +99534,11 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     win: [['ほい、勝ち！ 組み方がはまってたねぇ笑', 'happy'], ['おけ〜、計算どおりって顔してるよぉw', 'wink'], ['いい勝ち方だったねぇ。ガッツの使い方、上手くなってる🫂', 'excited']],
     lose: [['ぐぬぬぬ…惜しかったねぇ。組み方、いっしょに見直そっかぁ', 'angry'], ['まあ、なんとかなるっしょ笑 次は勝てるよぉ', 'normal'], ['負けたけど、見立ては悪くなかったよ。あと一手だったねぇw', 'troubled']],
     left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']]
+  },
+  sorashido: {
+    win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
+    lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
+    left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']]
   }
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {
@@ -101029,7 +101101,7 @@ const CardPvpLobby = ({
   if (room.phase === 'over' && r) {
     const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
     const win = r.outcome === 'win';
-    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id) || null : null;
+    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
     const foeName = room.foe ? room.foe.name : 'あいて';
     const scene = r.reason === '相手が抜けた' ? 'left' : win ? 'win' : 'lose';
