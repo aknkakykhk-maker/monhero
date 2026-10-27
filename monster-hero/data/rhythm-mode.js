@@ -369,6 +369,8 @@ const RHYTHM_MONSTER_ABILITY_BY_LINEAGE=Object.freeze({
 // 血統の側を変える(ドリーミィの主血統をニャーにする)と、図鑑・種族チャレンジ・絆ランキングの種族まで変わってしまうので、こちらにした
 const RHYTHM_MONSTER_ABILITY_BY_MONSTER=Object.freeze({
   Dreamy:'HISSHI',
+  // キュービ・オリヒメ(2026-10-27 社長「キュービ 必死・オリヒメ 根性」)。下書きのあいだはだれも持っていないので、正式公開から効く
+  Kyubi:'HISSHI', Orihime:'KONJO',
 });
 const rhythmMonsterAbilityForLineage=lineageId=>
   RHYTHM_MONSTER_ABILITIES[RHYTHM_MONSTER_ABILITY_BY_LINEAGE[String(lineageId||'')]]||null;
