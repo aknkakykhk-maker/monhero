@@ -718,7 +718,11 @@ function MonsterHeroGame() {
   //   形は 33-ai-copy.jsx の冒頭。公開の印 assistantSorashido が偽のあいだは null のまま(今までと同じ)
   const [aiCopy, setAiCopy] = useState(null);
   const aiCopyRef = useRef(null);
-  const commitAiCopy = (next) => { aiCopyRef.current = next || null; setAiCopy(next || null); };
+  // 値か (prev)=>next を受ける(ダイスくんの5つの遊びの分でも使う)
+  const commitAiCopy = (next) => {
+    const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    aiCopyRef.current = v; setAiCopy(v); return v;
+  };
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
   // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
