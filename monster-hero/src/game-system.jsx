@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d761f264dbbebf4a
+// generated-sha256: 2f3ccf39605f5091
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28186,21 +28186,18 @@ const aiCopyHateGainMult = (level) => aiCopyRules(level).hateGain;
 //   'refresh' … 同じ子でもう一度。turnsLeft を最初へ戻すだけ(山札もそのまま)
 //   'switch'  … 別の子へ切りかえ。いまのコピーを外し(removeCopy)、新しい子で山札を作り直す
 //   rebuildDeck が true のとき山札を作る。プレイヤーの山札には何も足さない・抜かない(2026-10-27 社長)
-//   ★addUniqueOf・removeUniqueOf は古い形(プレイヤーの山札へ固有技を1枚足していたころ)の知らせ。
-//     33-ai-copy.jsx とその検査が aiCopyBuildDeck・aiCopyDraw へ移ったら消す。新しく使わない
 const aiCopySummonPlan = (aiCopy, { srcSlot, srcMonsterId, level }) => {
   const turnsLeft = aiCopyTurns(level);
-  if (!aiCopy) return { kind: 'new', turnsLeft, removeCopy: false, rebuildDeck: true, removeUniqueOf: null, addUniqueOf: srcMonsterId };
-  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return { kind: 'refresh', turnsLeft, removeCopy: false, rebuildDeck: false, removeUniqueOf: null, addUniqueOf: null };
-  return { kind: 'switch', turnsLeft, removeCopy: true, rebuildDeck: true, removeUniqueOf: aiCopy.srcMonsterId, addUniqueOf: srcMonsterId };
+  if (!aiCopy) return { kind: 'new', turnsLeft, removeCopy: false, rebuildDeck: true };
+  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return { kind: 'refresh', turnsLeft, removeCopy: false, rebuildDeck: false };
+  return { kind: 'switch', turnsLeft, removeCopy: true, rebuildDeck: true };
 };
 
 // ターンの終わり(コピーが出ているときだけ呼ぶ)。0 になったら消える(expired=true のとき、コピーを外す。山札も一緒に捨てる)
-// (removeUniqueOf は古い形の知らせ。上の aiCopySummonPlan と同じく、移ったら消す)
 const aiCopyTurnEnd = (aiCopy) => {
-  if (!aiCopy) return { turnsLeft: 0, expired: false, removeUniqueOf: null };
+  if (!aiCopy) return { turnsLeft: 0, expired: false };
   const turnsLeft = Math.max(0, Math.floor(aiCopySafeNum(aiCopy.turnsLeft)) - 1);
-  return { turnsLeft, expired: turnsLeft <= 0, removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null };
+  return { turnsLeft, expired: turnsLeft <= 0 };
 };
 
 // ---- コピーの山札と手札(2026-10-27 社長「山札自体を別物として扱う」「プレイヤーと同じように引く」) ----
@@ -28241,27 +28238,6 @@ const aiCopyDiscardHand = (state, hand) => ({
   deck: (state && Array.isArray(state.deck)) ? state.deck.slice() : [],
   discard: [...((state && Array.isArray(state.discard)) ? state.discard : []), ...(Array.isArray(hand) ? hand : [])],
 });
-
-// ---- 古い形(固有技をプレイヤーの山札へ1枚足していたころ・2026-10-27 の昼まで) ----
-// ★33-ai-copy.jsx(バトル部)が新しい形(aiCopyBuildDeck・aiCopyDraw・aiCopyDiscardHand)へ移ったら消す。新しく呼ばない
-const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-const aiCopyUniqueCard = (card, srcMonsterId) => (card ? { ...card, sorashidoCopyOf: srcMonsterId, uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}` } : null);
-const aiCopyIsUnique = (card, { uid = null, srcMonsterId = null } = {}) => !!card && card.sorashidoCopyOf != null
-  && (uid == null || card.uid === uid) && (srcMonsterId == null || card.sorashidoCopyOf === srcMonsterId);
-const aiCopyRemoveUnique = (zones, match) => {
-  const strip = (list) => (Array.isArray(list) ? list.filter((c) => !aiCopyIsUnique(c, match)) : []);
-  return { ...zones, deck: strip(zones && zones.deck), hand: strip(zones && zones.hand), discard: strip(zones && zones.discard) };
-};
-const aiCopyHand = (deck, uniqueCard, rng, draw = 2) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter((c) => aiCopyCanPick(c));
-  const picked = [];
-  for (let i = 0; i < draw && rest.length > 0; i++) {
-    const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
-    picked.push(rest.splice(at, 1)[0]);
-  }
-  if (uniqueCard && aiCopyCanPick(uniqueCard)) picked.push(uniqueCard);
-  return picked;
-};
 
 // 1枚を選ぶ。いちばん点の高いものを pick の見込みで、外れたら2番目以降から同じ重さで。使えるものが無ければ null
 const aiCopyPickOne = (cards, score, rng, pick) => {
