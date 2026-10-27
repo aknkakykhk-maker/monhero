@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9bf645faaf5e3915
+// source-sha256: d64f628efcc09e5c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18979,8 +18979,7 @@ const KYUBI_KAGERO_WAIT = 3;
 const KYUBI_TENSHO = Object.freeze({
   combo: 0.2,
   dmg: 0.15,
-  hit: 10,
-  crit: 0.1
+  crit: 0.2
 });
 const KYUBI_RENGOKU_MAX = 10,
   KYUBI_RENGOKU_PER = 0.05;
@@ -18991,7 +18990,6 @@ const kyubiRengokuOf = n => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(N
 const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
   const none = {
     dmgMult: 1,
-    hitAdd: 0,
     critAdd: 0,
     combo: null,
     evadeAfterAttack: false
@@ -19011,7 +19009,6 @@ const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
   if (phaseId === 'tensho') return {
     ...none,
     dmgMult: 1 + KYUBI_TENSHO.dmg,
-    hitAdd: KYUBI_TENSHO.hit,
     critAdd: KYUBI_TENSHO.crit,
     combo: {
       count: 1,
@@ -19192,7 +19189,7 @@ const rollKogare = (rollsLeft, rand) => {
 const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
 const REIKON_TURNS = 3,
   REIKON_GUTS_MULT = 0.7,
-  REIKON_HIT_DOWN = 10;
+  REIKON_EVASION_UP = 10;
 const hasReikon = id => !!id && REIKON_MONSTER_IDS.includes(id);
 const reikonOf = v => ({
   wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
@@ -19221,7 +19218,7 @@ const reikonActive = v => {
   return r.wait === 0 && r.turns > 0;
 };
 const reikonGutsMult = v => reikonActive(v) ? REIKON_GUTS_MULT : 1;
-const reikonHitDown = v => reikonActive(v) ? REIKON_HIT_DOWN : 0;
+const reikonEvasionUp = v => reikonActive(v) ? REIKON_EVASION_UP : 0;
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
   if (!trait) return '';
@@ -74428,7 +74425,7 @@ const MonsterCheckLabLines = ({
 }, t)));
 const monsterCheckReikonLine = v => {
   const r = reikonOf(v);
-  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし';
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・味方の回避率+${reikonEvasionUp(r)}%` : '霊魂: なし';
 };
 function KyubiTraitLab() {
   const [phaseId, setPhaseId] = useState('sakuretsu');
@@ -74478,7 +74475,7 @@ function KyubiTraitLab() {
   const unique = () => {
     card('attack');
     setReikon(startReikon());
-    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
   };
   const ex = () => {
     setFox(k => useKitsunebi(k));
@@ -74524,7 +74521,7 @@ function KyubiTraitLab() {
     tone: "amber",
     onClick: unique
   }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
-    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
   }), React.createElement(MonsterCheckLabButton, {
     onClick: reset
   }, "はじめに戻す"));
@@ -74576,7 +74573,7 @@ function OrihimeTraitLab() {
   };
   const unique = () => {
     setReikon(startReikon());
-    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
   };
   const star = () => {
     const h = startHoshiai(ouse, diff);
@@ -104740,6 +104737,7 @@ function MonsterHeroGame() {
     resetSweetStack();
     resetKusabi();
     resetDreamPain();
+    resetKyubi();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -104980,6 +104978,84 @@ function MonsterHeroGame() {
     return d;
   };
   const resetDreamPain = () => writeDreamPain(null);
+  const kyubiRef = useRef({
+    phase: {},
+    rengoku: {},
+    kagero: {}
+  });
+  const [kyubiView, setKyubiView] = useState(kyubiRef.current);
+  const writeKyubi = (part, key, value) => {
+    if (!key) return;
+    const next = {
+      ...kyubiRef.current,
+      [part]: {
+        ...kyubiRef.current[part],
+        [key]: value
+      }
+    };
+    kyubiRef.current = next;
+    setKyubiView(next);
+  };
+  const resetKyubi = () => {
+    kyubiRef.current = {
+      phase: {},
+      rengoku: {},
+      kagero: {}
+    };
+    setKyubiView(kyubiRef.current);
+  };
+  const kyubiPhaseAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    if (sweetOwnerAt(slotIdx) !== KYUBI_MONSTER_ID || !key) return null;
+    if (!kyubiRef.current.phase[key]) {
+      const p = kyubiPhaseOfSlot(isTacticsMode(runMode) ? slotIdx : initialBattleDistanceRef.current);
+      if (!p) return null;
+      kyubiRef.current = {
+        ...kyubiRef.current,
+        phase: {
+          ...kyubiRef.current.phase,
+          [key]: p.id
+        }
+      };
+    }
+    return kyubiRef.current.phase[key];
+  };
+  const kyubiAttackAt = (slotIdx, actorId, card) => {
+    const phase = actorId === KYUBI_MONSTER_ID ? kyubiPhaseAt(slotIdx) : null;
+    if (!phase) return kyubiPhaseEffectOf(null);
+    return kyubiPhaseEffectOf(phase, {
+      rengoku: kyubiRef.current.rengoku[trickStartKeyOf(slotIdx)],
+      skillGuts: card ? getCardBaseGuts(card) : 0
+    });
+  };
+  const gainKyubiCard = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID || !card) return;
+    const phase = kyubiPhaseAt(slotIdx),
+      key = trickStartKeyOf(slotIdx);
+    if (phase === 'rengoku') {
+      const before = kyubiRengokuOf(kyubiRef.current.rengoku[key]),
+        after = kyubiRengokuOf(before + 1);
+      if (after === before) return;
+      writeKyubi('rengoku', key, after);
+      addPopup(`🔥 煉獄 ${after}/${KYUBI_RENGOKU_MAX}`, 'hero', 'text-orange-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    } else if (phase === 'kagero' && ['atk', 'range_atk', 'unique'].includes(card.type)) {
+      const before = kageroOf(kyubiRef.current.kagero[key]),
+        after = kageroAfterAttack(before);
+      if (after.ready === before.ready) return;
+      writeKyubi('kagero', key, after);
+      addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
+    }
+  };
+  const tickKyubiKagero = () => {
+    const entries = Object.entries(kyubiRef.current.kagero);
+    if (!entries.some(([, v]) => kageroOf(v).wait > 0)) return;
+    const next = {
+      ...kyubiRef.current,
+      kagero: Object.fromEntries(entries.map(([k, v]) => [k, tickKagero(v)]))
+    };
+    kyubiRef.current = next;
+    setKyubiView(next);
+  };
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   const nextTurnBuffsRef = useRef({});
@@ -115011,7 +115087,7 @@ function MonsterHeroGame() {
     const base = bonusOwner || kikiCardBonus > 0 ? baseCardLimit : 1;
     return Math.min(cardLimit, base + (coordinationHolder ? soulCoordinationCardBonus : 0));
   };
-  const getCardGuts = (card, slotIdx = null) => {
+  const getCardBaseGuts = card => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : ['buff', 'debuff', 'heal', 'draw'].includes(card.type) ? card.guts || 20 : 20;
     if (cost > 0 && ['atk', 'range_atk', 'unique'].includes(card.type)) {
@@ -115035,6 +115111,11 @@ function MonsterHeroGame() {
       if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) cost = Math.floor(cost * (1 + 0.1 * getPermaBuff('chuuniUniqueStack')));
       if (card.type === 'unique' && card.monId === FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks', null)));
     }
+    return cost;
+  };
+  const getCardGuts = (card, slotIdx = null) => {
+    if (!card) return 0;
+    let cost = getCardBaseGuts(card);
     const slotBuffs = isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null;
     if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts')) && ['atk', 'range_atk', 'unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0));
@@ -117587,7 +117668,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -117621,7 +117702,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, kusabiCombosAt(slotIdx, mon?.id, card)),
+      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, [...kusabiCombosAt(slotIdx, mon?.id, card), kyubiAttackAt(slotIdx, mon?.id, card).combo]),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -117948,7 +118029,12 @@ function MonsterHeroGame() {
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
         }
         const forcedReflect = getTurnBuff('reflect', false);
-        const soulDefenseResult = forcedReflect ? 'reflect' : rollUnifiedSpecialDefense(defenseTable, Math.random(), Math.random());
+        const kageroEvade = !forcedReflect && defenseHeroId === KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
+        if (kageroEvade) {
+          writeKyubi('kagero', kusabiDefenseKey, kageroUseEvade(kyubiRef.current.kagero[kusabiDefenseKey]));
+          addPopup('🔥 陽炎ノ相 完全回避！', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md');
+        }
+        const soulDefenseResult = forcedReflect ? 'reflect' : kageroEvade ? 'evasion' : rollUnifiedSpecialDefense(defenseTable, Math.random(), Math.random());
         const isReflect = soulDefenseResult === 'reflect';
         const isAbsorb = soulDefenseResult === 'absorb';
         const isEvasion = soulDefenseResult === 'evasion';
@@ -118347,6 +118433,7 @@ function MonsterHeroGame() {
     }
     if (timeStopSlot == null && (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     if (timeStopSlot == null && (dreamPainRef.current.wait > 0 || dreamPainRef.current.turns > 0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
+    if (timeStopSlot == null) tickKyubiKagero();
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -119200,6 +119287,7 @@ function MonsterHeroGame() {
       const cardCost = getCardGuts(card, slotIdx);
       if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
+      if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
@@ -119477,12 +119565,12 @@ function MonsterHeroGame() {
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
-          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
+          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd + kyubiAttackAt(slotIdx, activeMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, kusabiCombosAt(slotIdx, activeMon?.id, card)),
+          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, [...kusabiCombosAt(slotIdx, activeMon?.id, card), kyubiAttackAt(slotIdx, activeMon?.id, card).combo]),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
