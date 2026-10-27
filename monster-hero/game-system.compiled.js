@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d5c9ac2c242f8611
+// source-sha256: 604b709529ae6fd1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -32339,8 +32339,9 @@ const RhythmOptions = ({
   }, React.createElement("p", null, React.createElement("b", {
     className: "tabular-nums"
   }, calibrationResult.offsetMs > 0 ? '+' : '', calibrationResult.offsetMs, "ms"), " にしました。叩いた", calibrationResult.usedCount, "回の平均は ", calibrationResult.rawMeanMs > 0 ? '+' : '', calibrationResult.rawMeanMs, "ms（ばらつき±", calibrationResult.spreadMs, "ms", calibrationResult.droppedCount > 0 ? `／${calibrationResult.droppedCount}回は外れ値として除外` : '', "）でした。"), !calibrationResult.stable && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 font-black text-rose-300"
-  }, "ばらつきが大きめです。もう一度合わせると、より合った値になります。"), React.createElement("button", {
+  }, jaWrap('ばらつきが大きめです。もう一度合わせると、より合った値になります。')), React.createElement("button", {
     type: "button",
     "data-rhythm-calibrator-dismiss": true,
     onClick: () => onClearCalibration && onClearCalibration(),
@@ -32709,14 +32710,18 @@ const RhythmOptions = ({
   }, React.createElement("summary", {
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
   }, "▸ 音量について詳しく"), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-1 ${note}`
-  }, "この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。"), React.createElement("p", {
+  }, jaWrap('この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-2 ${note}`
-  }, "2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。"), React.createElement("p", {
+  }, jaWrap('2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-2 ${note}`
-  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
+  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, jaWrap('より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-2 ${note}`
-  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。")))), tab === 'system' && React.createElement("div", {
+  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, jaWrap('まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。'))))), tab === 'system' && React.createElement("div", {
     "data-rhythm-options-panel": "system",
     className: wide ? 'space-y-2' : 'space-y-4'
   }, React.createElement("section", {
@@ -32757,9 +32762,10 @@ const RhythmOptions = ({
       className: `block px-0.5 ${wide ? 'py-2.5' : 'py-1.5'}`
     }, preset.label));
   })), !rhythmLookPresetOf(draft) && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-look-custom": true,
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
-  }, "いまは自分で選んだ組み合わせです")), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
+  }, jaWrap('いまは自分で選んだ組み合わせです'))), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -32811,15 +32817,18 @@ const RhythmOptions = ({
     "data-rhythm-option-help": true,
     className: "mt-3"
   }, React.createElement("summary", {
+    style: JA_WRAP_STYLE,
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
-  }, "▸ この端末で通知をどこまで止められるか"), React.createElement("p", {
+  }, jaWrap('▸ この端末で通知をどこまで止められるか')), React.createElement("p", {
     className: `mt-1 ${note}`
   }, helpWrap(rhythmQuietModeSupportText()))), !RHYTHM_HAPTICS.supported() && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-vibration-unsupported": true,
     className: "mt-2 text-[10px] font-bold leading-relaxed text-amber-200"
-  }, "この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。"))), !wide && React.createElement("p", {
+  }, jaWrap('この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。')))), !wide && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100"
-  }, "判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。"))), React.createElement("footer", {
+  }, jaWrap('判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。')))), React.createElement("footer", {
     "data-rhythm-options-actions": true,
     className: `z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide ? 'pt-1.5' : 'pt-2'}`,
     style: {
@@ -32851,10 +32860,12 @@ const RhythmOptions = ({
     className: "w-full max-w-xs rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center shadow-[0_0_24px_rgba(251,191,36,.15)]",
     onClick: e => e.stopPropagation()
   }, React.createElement("b", {
+    style: JA_WRAP_STYLE,
     className: "block text-[15px] font-black text-amber-200"
-  }, "変更が保存されていません"), React.createElement("p", {
+  }, jaWrap('変更が保存されていません')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300"
-  }, "このまま戻ると、いま変えた設定は元に戻ります。"), React.createElement("div", {
+  }, jaWrap('このまま戻ると、いま変えた設定は元に戻ります。')), React.createElement("div", {
     className: "mt-3 grid grid-cols-1 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -33447,9 +33458,10 @@ const RhythmSongSelect = ({
     "data-rhythm-song-loop": loopEnabled ? '1' : '0',
     className: `min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`
   }, list.length === 0 ? React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-song-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
-  }, genre && genre.favorite ? 'お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。' : genre && genre.id !== 'all' ? 'このジャンルの曲はまだありません。' : emptyText) : React.createElement("ul", {
+  }, genre && genre.favorite ? jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。') : genre && genre.id !== 'all' ? jaWrap('このジャンルの曲はまだありません。') : emptyText) : React.createElement("ul", {
     className: "space-y-0.5"
   }, blocks.map(copy => rows.map(row => {
     const entry = row.entry;
@@ -33836,8 +33848,9 @@ const RhythmSongSelect = ({
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
   }, "ジャンル"), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[10px] font-bold text-slate-400"
-  }, "選んだジャンルの曲だけを一覧に出します。"), React.createElement("div", {
+  }, jaWrap('選んだジャンルの曲だけを一覧に出します。')), React.createElement("div", {
     "data-rhythm-genre-tabs": true,
     className: "mt-3 space-y-1.5"
   }, genres.map(item => {
@@ -33864,8 +33877,9 @@ const RhythmSongSelect = ({
     }, React.createElement("b", {
       className: "block text-xs font-black text-white"
     }, on ? '● ' : '', item.favorite ? '♥ ' : '', item.label), React.createElement("small", {
+      style: JA_WRAP_STYLE,
       className: "block text-[10px] font-bold text-slate-400"
-    }, usable ? item.note : 'いまはイベントを開催していません')), React.createElement("small", {
+    }, usable ? item.note : jaWrap('いまはイベントを開催していません'))), React.createElement("small", {
       className: "shrink-0 text-[11px] font-black tabular-nums text-slate-300"
     }, usable ? `${count}曲` : '開催なし'));
   })), React.createElement("button", {
@@ -33892,8 +33906,9 @@ const RhythmSongSelect = ({
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
   }, "曲の並べ替え"), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[10px] font-bold text-slate-400"
-  }, "並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。"), React.createElement("div", {
+  }, jaWrap('並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。')), React.createElement("div", {
     className: "mt-3 space-y-1.5"
   }, RHYTHM_SORT_ORDERS.map(item => {
     const on = item.id === state.sort;
@@ -34116,6 +34131,7 @@ const RhythmHellGuide = ({
   }, helpWrap(page.text)), last && typeof rhythmHellEntryText === 'function' && rhythmHellEntryText() && React.createElement("p", {
     "data-rhythm-hell-guide-entry": true,
     style: {
+      ...JA_WRAP_STYLE,
       margin: '12px 0 0',
       padding: '8px 10px',
       borderRadius: '12px',
@@ -34126,7 +34142,7 @@ const RhythmHellGuide = ({
       lineHeight: 1.6,
       color: '#fecdd3'
     }
-  }, "🔥 ", rhythmHellEntryText(), "。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。"))), nextVideo && React.createElement("video", {
+  }, "🔥 ", rhythmHellEntryText(), jaWrap('。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。')))), nextVideo && React.createElement("video", {
     key: nextVideo.src,
     muted: true,
     playsInline: true,
@@ -56858,18 +56874,22 @@ function RhythmInfoScreen({
   }, React.createElement("div", {
     className: "my-6 text-center text-6xl"
   }, "🎵"), React.createElement("h3", {
+    style: JA_WRAP_STYLE,
     className: "text-center text-xl font-black text-cyan-200"
-  }, "モンヒロビートは準備中です"), React.createElement("p", {
+  }, jaWrap('モンヒロビートは準備中です')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-3 text-[11px] leading-relaxed text-slate-300"
-  }, "曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
+  }, jaWrap('曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-2 text-[11px] leading-relaxed text-slate-300"
-  }, "設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。"), React.createElement("div", {
+  }, jaWrap('設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。')), React.createElement("div", {
     className: "mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3"
   }, React.createElement("b", {
     className: "text-[11px] font-black text-amber-200"
   }, "正式実装前のお知らせ"), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 block text-[10px] leading-relaxed text-amber-100/90"
-  }, "いまは譜面を制作している段階です。通常プレイからは開始できません。ハイスコアの記録や報酬の付与も行いません。")), React.createElement("button", {
+  }, jaWrap('いまは譜面を制作している段階です。通常プレイからは開始できません。ハイスコアの記録や報酬の付与も行いません。'))), React.createElement("button", {
     onClick: returnToHome,
     className: "mt-5 min-h-[48px] w-full rounded-xl bg-slate-700 text-sm font-black"
   }, "HOMEへ戻る")));
@@ -56976,8 +56996,9 @@ function RhythmSongSelectScreen({
   }, React.createElement("span", {
     className: "block"
   }, "🎟️ ビートP獲得期間中"), React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
-  }, beatPointTargetSong ? '選択中のイベント対象曲は1.5倍' : '公開曲なら獲得できます')) : null;
+  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : '公開曲なら獲得できます')) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
@@ -57005,13 +57026,14 @@ function RhythmSongSelectScreen({
     className: "shrink-0 text-[9px] font-black text-slate-400"
   }, quickRunDetailOpen ? '▲' : '▼')) : null;
   const quickRunStartNode = !debugAll && !quickRunProgress && !runStage ? repeatTemplateForNewRun() ? React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-quick-run-start-button": true,
     onClick: () => {
       if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
     },
     className: "flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
-  }, "⚔ 裏でクイックの∞周回を始める") : React.createElement("details", {
+  }, jaWrap('⚔ 裏でクイックの∞周回を始める')) : React.createElement("details", {
     "data-quick-run-start-hint": true,
     className: "group px-1 py-0.5 text-[9px] leading-relaxed text-slate-500"
   }, React.createElement("summary", {
@@ -57019,8 +57041,9 @@ function RhythmSongSelectScreen({
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, "⚔"), React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "min-w-0 flex-1 truncate"
-  }, "裏でクイックの∞周回を回すには？"), React.createElement("span", {
+  }, jaWrap('裏でクイックの∞周回を回すには？')), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 text-slate-500 group-open:rotate-180"
   }, "▾")), React.createElement("p", {
@@ -57138,10 +57161,11 @@ function RhythmSongSelectScreen({
       }, label);
     }));
   })(), raidChallenge && React.createElement("div", {
+    style: JA_WRAP_STYLE,
     "data-raid-challenge-banner": true,
     role: "status",
     className: "shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100"
-  }, "🎃 レイドバトル「", raidChallenge.tierName, "」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)"), quickRunProgress && React.createElement("div", {
+  }, "🎃 レイドバトル「", raidChallenge.tierName, jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
   }, React.createElement("div", {
@@ -57178,8 +57202,9 @@ function RhythmSongSelectScreen({
     }, "ダイヤ"), React.createElement("dd", {
       className: "font-black text-amber-200"
     }, "+", Math.floor(quickRunProgress.gold + pending.gold).toLocaleString())), (pending.xp > 0 || pending.gold > 0) && React.createElement("div", {
+      style: JA_WRAP_STYLE,
       className: "col-span-2 text-[9px] text-slate-500"
-    }, "うち今の周のぶん（経験値 +", Math.floor(pending.xp).toLocaleString(), " ／ ダイヤ +", Math.floor(pending.gold).toLocaleString(), "）は、この周が終わったときに入ります（負けても、途中でやめても、ここまでのぶんは入ります）。"));
+    }, jaWrap('うち今の周のぶん（経験値 +'), Math.floor(pending.xp).toLocaleString(), " ／ ダイヤ +", Math.floor(pending.gold).toLocaleString(), jaWrap('）は、この周が終わったときに入ります（負けても、途中でやめても、ここまでのぶんは入ります）。')));
   })(), React.createElement("div", {
     className: "col-span-2 flex justify-between gap-2"
   }, React.createElement("dt", {
@@ -57187,8 +57212,9 @@ function RhythmSongSelectScreen({
   }, "勇者モン"), React.createElement("dd", {
     className: "truncate font-black text-white"
   }, mainHero?.masuName || mainHero?.name || '—'))), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-  }, quickRunProgress.finished ? quickRunResumable ? `${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。` : `${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。` : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。' : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? 'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。' : 'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'), quickRunProgress.finished && quickRunResumable && React.createElement("button", {
+  }, quickRunProgress.finished ? quickRunResumable ? jaWrap(`${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。`) : jaWrap(`${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。`) : catchingUp ? jaWrap('演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。') : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? jaWrap('ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。') : jaWrap('ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。')), quickRunProgress.finished && quickRunResumable && React.createElement("button", {
     type: "button",
     "data-quick-run-resume": true,
     onClick: () => {
@@ -57196,6 +57222,7 @@ function RhythmSongSelectScreen({
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-emerald-300/60 bg-emerald-800/70 text-[11px] font-black text-emerald-50 active:scale-[.98]"
   }, "▶ 周回を再開する"), quickRunProgress.finished && !quickRunResumable && repeatTemplateForNewRun() && React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-quick-run-restart": true,
     disabled: resultProcessing,
@@ -57203,21 +57230,24 @@ function RhythmSongSelectScreen({
       if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98] disabled:opacity-50"
-  }, resultProcessing ? '結果を記録しています…' : '⚔ 1周目から新しく始める'), quickRunStartError && React.createElement("p", {
+  }, resultProcessing ? '結果を記録しています…' : jaWrap('⚔ 1周目から新しく始める')), quickRunStartError && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] font-black text-red-300"
-  }, "いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。"), React.createElement("button", {
+  }, jaWrap('いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。')), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-quick-run-progress-back": true,
     onClick: () => {
       if (runStageRef.current) returnToBackgroundRun();
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-  }, quickRunProgress.finished && !quickRunResumable ? '⚔ バトルへ戻って結果を見る' : '⚔ バトルへ戻る'), !quickRunProgress.finished && quickRunResumable && (quickRunStopConfirm ? React.createElement("div", {
+  }, quickRunProgress.finished && !quickRunResumable ? jaWrap('⚔ バトルへ戻って結果を見る') : '⚔ バトルへ戻る'), !quickRunProgress.finished && quickRunResumable && (quickRunStopConfirm ? React.createElement("div", {
     "data-quick-run-stop-confirm": true,
     className: "mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[9px] leading-relaxed text-amber-100"
-  }, "周回をやめますか？ いまの周もここで終わり、クリアしたWAVEぶんの報酬が入ります。"), React.createElement("div", {
+  }, jaWrap('周回をやめますか？ いまの周もここで終わり、クリアしたWAVEぶんの報酬が入ります。')), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -57255,11 +57285,12 @@ function RhythmSongSelectScreen({
   }, "🏆 ", rhythmEventNotice.name, " 開催中！"), React.createElement("p", {
     className: "mt-1 text-[10px] font-black leading-tight text-fuchsia-100"
   }, rhythmEventSongsLabel(rhythmEventNotice), "：", eventSongTitles.join(' ／ ')), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-rhythm-event-notice-open": true,
     onClick: onOpenEventRanking,
     className: "mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
-  }, "🏆 ", rhythmEventNotice.kind === 'limited' ? 'イベントランキングを見る' : '週間ランキングを見る')), React.createElement("button", {
+  }, "🏆 ", rhythmEventNotice.kind === 'limited' ? jaWrap('イベントランキングを見る') : '週間ランキングを見る')), React.createElement("button", {
     type: "button",
     "data-rhythm-event-notice-close": true,
     onClick: dismissRhythmEventNotice,
@@ -57282,10 +57313,11 @@ function RhythmSongSelectScreen({
   }, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中')), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます')), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -57308,8 +57340,9 @@ function RhythmSongSelectScreen({
   }, React.createElement("div", {
     className: "flex items-start gap-1"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "min-w-0 flex-1 pt-1 text-[11px] font-black leading-snug text-cyan-100"
-  }, "✨ モンヒロビートの見た目を、もっと華やかにできるようになりました"), React.createElement("button", {
+  }, jaWrap('✨ モンヒロビートの見た目を、もっと華やかにできるようになりました')), React.createElement("button", {
     type: "button",
     onClick: dismissRhythmLookIntro,
     "aria-label": "この案内を閉じる",
@@ -57369,8 +57402,9 @@ function RhythmSongSelectScreen({
     "data-quick-run-start-portrait": true,
     className: "shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1"
   }, quickRunStartNode, quickRunStartError && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] font-black text-red-300"
-  }, "いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。")), React.createElement(RhythmSongSelect, {
+  }, jaWrap('いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。'))), React.createElement(RhythmSongSelect, {
     songs: songs,
     difficulties: difficulties,
     bestRecords: rhythmBestRecords,
@@ -57440,9 +57474,10 @@ function RhythmSongSelectScreen({
     }, "🏆"), React.createElement("span", {
       className: "landscape:hidden"
     }, "ランキング"))), rhythmSettings && rhythmSettings.assistMode && React.createElement("p", {
+      style: JA_WRAP_STYLE,
       "data-rhythm-assist-note": true,
       className: "mt-1 text-[9px] font-bold leading-snug text-emerald-200"
-    }, "アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。"))
+    }, jaWrap('アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。')))
   }));
 }
 const rhythmNoteDexHelpRow = entry => {
@@ -57593,10 +57628,11 @@ function RhythmHelpScreen({
     className: "mt-2 text-[10px] leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。'))), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-demo-help-tutorial": true,
     onClick: startRhythmTutorial,
     className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
-  }, "🎓 もう一度チュートリアルを見る"), React.createElement("p", {
+  }, jaWrap('🎓 もう一度チュートリアルを見る')), React.createElement("p", {
     className: "mt-2 text-[10px] leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('曲えらびへ戻って、助手が最初から説明します。何度でも見られます。')), React.createElement("div", {
@@ -57719,8 +57755,9 @@ function RhythmEventRewardModal({
   }, React.createElement("p", {
     className: "text-center text-[10px] font-black tracking-widest text-amber-300"
   }, "RESULT"), React.createElement("h3", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-center text-base font-black text-amber-100"
-  }, won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'), React.createElement("p", {
+  }, won ? jaWrap('入賞おめでとうございます！') : jaWrap('ご参加ありがとうございました！')), React.createElement("p", {
     className: "mt-1 text-center text-[10px] font-bold text-slate-300"
   }, event.name), React.createElement("ul", {
     className: "mt-3 space-y-2"
@@ -57750,8 +57787,9 @@ function RhythmEventRewardModal({
     onClick: onClaim,
     className: "mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50"
   }, claiming ? '受け取っています…' : '🎁 ギフトで受け取る'), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-2 text-center text-[9px] leading-relaxed text-slate-400"
-  }, "報酬はHOMEの「ギフト」へ届きます。ギフトボックスで「受け取る」を押すと、アイテムとダイヤが入ります。", weekly && '勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。')));
+  }, jaWrap('報酬はHOMEの「ギフト」へ届きます。ギフトボックスで「受け取る」を押すと、アイテムとダイヤが入ります。'), weekly && jaWrap('勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。'))));
 }
 function RhythmRankingScreen({
   loadRhythmEventRanking,
@@ -57991,8 +58029,9 @@ function RhythmRankingScreen({
   }, React.createElement("p", {
     className: "min-w-0 flex-1 text-[10px] font-black leading-tight text-amber-100"
   }, "まだ届いていない記録が", rhythmRankingPending.count, "件あります", React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "block text-[9px] font-bold text-amber-200/70"
-  }, "つながると自動で送ります", rhythmRankingPending.status ? `（エラー ${rhythmRankingPending.status}）` : '（通信がつながらなかったようです）')), React.createElement("button", {
+  }, jaWrap('つながると自動で送ります'), rhythmRankingPending.status ? `（エラー ${rhythmRankingPending.status}）` : jaWrap('（通信がつながらなかったようです）'))), React.createElement("button", {
     type: "button",
     "data-rhythm-ranking-pending-send": true,
     onClick: async () => {
@@ -58025,9 +58064,10 @@ function RhythmRankingScreen({
     className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap('まだあなたの記録がありません。1曲でも遊ぶとここに載ります。')), total.entries.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-total-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "まだ記録がありません。最初の1件になってみましょう。"), total.entries.length > 0 && React.createElement("ol", {
+  }, jaWrap('まだ記録がありません。最初の1件になってみましょう。')), total.entries.length > 0 && React.createElement("ol", {
     "data-rhythm-total-list": true,
     className: "space-y-2"
   }, total.entries.map((entry, index) => React.createElement("li", {
@@ -58049,12 +58089,14 @@ function RhythmRankingScreen({
     onClick: () => openEventPhase(phase.id),
     className: `min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${eventPhase === phase.id ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
   }, phase.label))), eventPhase === 'now' && !limitedEvent && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-none-now": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300"
-  }, "いま開催しているイベントはありません。", nextEventEntry ? React.createElement(React.Fragment, null, React.createElement("br", null), "次回は ", rhythmEventJstText(nextEventEntry.startMs), " から「", nextEventEntry.event.name, "」を開催します。") : React.createElement(React.Fragment, null, React.createElement("br", null), "次の開催をお待ちください。", prevEventEntry && '「前回」から、前のイベントの結果を見られます。')), eventPhase === 'prev' && !prevEventEntry && React.createElement("p", {
+  }, jaWrap('いま開催しているイベントはありません。'), nextEventEntry ? React.createElement(React.Fragment, null, React.createElement("br", null), "次回は ", rhythmEventJstText(nextEventEntry.startMs), " から「", nextEventEntry.event.name, "」を開催します。") : React.createElement(React.Fragment, null, React.createElement("br", null), jaWrap('次の開催をお待ちください。'), prevEventEntry && jaWrap('「前回」から、前のイベントの結果を見られます。'))), eventPhase === 'prev' && !prevEventEntry && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-none-prev": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300"
-  }, "まだ終わったイベントがありません。", React.createElement("br", null), "イベントが1回終わると、ここで結果を見られるようになります。")), boardTab && React.createElement(React.Fragment, null, event.status === 'loading' && React.createElement("p", {
+  }, jaWrap('まだ終わったイベントがありません。'), React.createElement("br", null), jaWrap('イベントが1回終わると、ここで結果を見られるようになります。'))), boardTab && React.createElement(React.Fragment, null, event.status === 'loading' && React.createElement("p", {
     "data-rhythm-event-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), event.status === 'notReady' && React.createElement("p", {
@@ -58062,9 +58104,10 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap('週間ランキングはただいま準備中です。もうしばらくお待ちください。')), event.status === 'closed' && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-closed": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "いま開催しているイベントはありません。次の開催をお待ちください。"), event.status === 'error' && React.createElement("p", {
+  }, jaWrap('いま開催しているイベントはありません。次の開催をお待ちください。')), event.status === 'error' && React.createElement("p", {
     "data-rhythm-event-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
@@ -58117,9 +58160,10 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
     style: JA_WRAP_STYLE
   }, jaWrap(eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'))), eventBoard.entries.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, eventPrev ? 'このイベントの記録はありませんでした。' : eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && React.createElement("ol", {
+  }, eventPrev ? jaWrap('このイベントの記録はありませんでした。') : eventLimited ? jaWrap('まだ記録がありません。最初の1件になってみましょう。') : jaWrap('今週はまだ記録がありません。最初の1件になってみましょう。')), eventBoard.entries.length > 0 && React.createElement("ol", {
     "data-rhythm-event-list": true,
     className: "space-y-2"
   }, eventBoard.entries.map((entry, index) => React.createElement("li", {
@@ -58152,9 +58196,10 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
   }, jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-ranking-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "まだ記録がありません。最初の1件になってみましょう。"), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && React.createElement("ol", {
+  }, jaWrap('まだ記録がありません。最初の1件になってみましょう。')), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && React.createElement("ol", {
     "data-rhythm-ranking-list": true,
     className: "space-y-2"
   }, rhythmRanking.entries.map((entry, index) => React.createElement("li", {
@@ -58278,9 +58323,10 @@ function RhythmRankingScreen({
       "data-rhythm-judgment-row": id,
       className: "text-right font-mono"
     }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), !Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) && React.createElement("p", {
+      style: JA_WRAP_STYLE,
       "data-rhythm-ranking-precise-missing": true,
       className: "mt-1 text-[8px] text-slate-500"
-    }, "JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。"), React.createElement("p", {
+    }, jaWrap('JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。')), React.createElement("p", {
       className: "mt-2 text-[9px] font-black text-amber-200"
     }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
   })(), boardTab && eventDetailOpen && React.createElement("div", {
@@ -58317,8 +58363,9 @@ function RhythmRankingScreen({
     "data-rhythm-event-rewards": true,
     className: "space-y-2"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[10px] font-black text-amber-200"
-  }, "部門別の報酬（終わったあとに受け取れます）"), eventRewardsByDivision.map(({
+  }, jaWrap('部門別の報酬（終わったあとに受け取れます）')), eventRewardsByDivision.map(({
     division,
     ranks
   }) => React.createElement("div", {
@@ -58345,25 +58392,28 @@ function RhythmRankingScreen({
   }, React.createElement("b", {
     className: "text-fuchsia-200"
   }, "参加報酬"), "\u3000", eventWeekly ? `その週に${eventParticipation.plays}回遊ぶと` : `対象曲を${eventParticipation.songs}曲すべて遊ぶと`, " ", rhythmEventParticipationText(eventParticipation)), eventWeekly && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-week-score-rule": true,
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, React.createElement("b", {
     className: "text-fuchsia-200"
   }, "スコアの数え方"), "\u3000その週に遊んだぶんを", React.createElement("b", {
     className: "text-white"
-  }, "すべて足します"), "。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは", React.createElement("b", {
+  }, "すべて足します"), jaWrap('。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは'), React.createElement("b", {
     className: "text-white"
   }, "遊んだ量"), "で競います。"), !eventWeekly && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-loop-bonus": true,
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, React.createElement("b", {
     className: "text-amber-200"
-  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります"), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
+  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000", jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×'), RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります"), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-play-bonus": true,
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, React.createElement("b", {
     className: "text-fuchsia-200"
-  }, "回数ボーナス"), "\u3000対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。", React.createElement("ul", {
+  }, "回数ボーナス"), "\u3000", jaWrap('対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。'), React.createElement("ul", {
     className: "mt-1 space-y-0.5"
   }, rhythmScoredDifficultyIds().map(id => React.createElement("li", {
     key: id,
@@ -58373,8 +58423,9 @@ function RhythmRankingScreen({
   }, RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id), React.createElement("span", {
     className: "min-w-0 flex-1 text-slate-200"
   }, rhythmEventPlayBonusPercentText(id)))))), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[9px] leading-relaxed text-slate-400"
-  }, "報酬は", eventWeekly ? 'その週が終わったあと' : 'イベントが終わったあと', "、ゲームを開いたときに受け取れます。受け取れるのは", eventWeekly ? '切り替わりから' : '終了から', "2週間までです。順位は", eventWeekly ? '切り替わった' : '終了した', "時点で決まるので、遅れて受け取っても内容は変わりません。")), React.createElement("button", {
+  }, "報酬は", eventWeekly ? 'その週が終わったあと' : 'イベントが終わったあと', jaWrap('、ゲームを開いたときに受け取れます。受け取れるのは'), eventWeekly ? '切り替わりから' : '終了から', "2週間までです。順位は", eventWeekly ? '切り替わった' : '終了した', jaWrap('時点で決まるので、遅れて受け取っても内容は変わりません。'))), React.createElement("button", {
     type: "button",
     "data-rhythm-event-detail-close": true,
     onClick: () => setEventDetailOpen(false),
@@ -81283,8 +81334,9 @@ function RhythmBuddyScoreChart({
   const [sel, setSel] = React.useState(-1);
   const [table, setTable] = React.useState(false);
   if (list.length === 0) return React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[11px] font-bold text-slate-500"
-  }, "まだ記録がありません。一緒にライブをすると、ここにスコアが並びます");
+  }, jaWrap('まだ記録がありません。一緒にライブをすると、ここにスコアが並びます'));
   const pct = x => Math.round(x.score / x.max * 1000) / 10;
   const vals = list.map(pct);
   const lo = Math.max(0, Math.floor((Math.min(...vals) - 5) / 10) * 10);
@@ -81450,8 +81502,9 @@ function RhythmBuddyDetail({
   }, "叩ける譜面の目安"), React.createElement("p", {
     className: "text-sm font-black text-cyan-100"
   }, "譜面Lv.", comfort, "まで 無理なく叩けます"), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "block text-[9px] font-bold leading-snug text-slate-400"
-  }, "よく一緒に遊んだ曲は、Lv.", comfort + 5, "くらいまで届きます。それより上の譜面ほど、スコアが落ちます")), React.createElement("div", {
+  }, jaWrap('よく一緒に遊んだ曲は、Lv.'), comfort + 5, jaWrap('くらいまで届きます。それより上の譜面ほど、スコアが落ちます'))), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
@@ -81464,8 +81517,9 @@ function RhythmBuddyDetail({
     moodId: mood.id,
     size: 22
   }), mood.label), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "朝5:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
+  }, jaWrap('朝5:00に変わります。育つ早さは経験値×'), rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "text-[10px] font-black text-slate-400"
@@ -81497,13 +81551,15 @@ function RhythmBuddyDetail({
   }, label), React.createElement("dd", {
     className: `truncate text-[12px] font-black ${value === 'まだない' ? 'text-slate-500' : 'text-pink-100'}`
   }, value)))), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 block text-[9px] font-bold leading-snug text-slate-500"
-  }, "話し方や好みは1体ずつ違います。", m.trait ? '' : `性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`, "叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります")), React.createElement("button", {
+  }, jaWrap('話し方や好みは1体ずつ違います。'), m.trait ? '' : jaWrap(`性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`), jaWrap('叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります'))), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-traits-toggle": true,
     type: "button",
     onClick: () => setTraitsOpen(v => !v),
     className: "min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
-  }, traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'), traitsOpen && React.createElement("ul", {
+  }, traitsOpen ? '性格の一覧を閉じる' : jaWrap('性格の一覧を見る(9つ)')), traitsOpen && React.createElement("ul", {
     "data-rhythm-buddy-traits": true,
     className: "space-y-1 rounded-xl bg-slate-950/60 p-2"
   }, RHYTHM_BUDDY_TRAITS.map(t => React.createElement("li", {
@@ -81549,8 +81605,9 @@ function RhythmBuddyDetail({
   }, React.createElement("h4", {
     className: "mb-1 text-[10px] font-black text-slate-400"
   }, "得意な曲", allSongs ? `(${songCount}曲)` : ''), songs.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[11px] font-bold text-slate-500"
-  }, "まだありません。一緒に遊んだ曲ほど得意になります"), songs.map(x => React.createElement("div", {
+  }, jaWrap('まだありません。一緒に遊んだ曲ほど得意になります')), songs.map(x => React.createElement("div", {
     key: x.songId,
     className: "flex items-center gap-2 py-0.5"
   }, React.createElement("span", {
@@ -81560,11 +81617,12 @@ function RhythmBuddyDetail({
   }, x.plays, "回"), React.createElement(RhythmBuddyStars, {
     stars: x.stars
   }))), songCount > 5 && React.createElement("button", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-songs-all": true,
     type: "button",
     onClick: () => setAllSongs(v => !v),
     className: "mt-1 min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
-  }, allSongs ? '上位5曲だけにする' : `遊んだ曲をすべて見る(${songCount}曲)`)), onBack && React.createElement("button", {
+  }, allSongs ? '上位5曲だけにする' : jaWrap(`遊んだ曲をすべて見る(${songCount}曲)`))), onBack && React.createElement("button", {
     type: "button",
     onClick: onBack,
     className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black"
@@ -81791,8 +81849,9 @@ function RhythmBuddyListSheet({
       className: chip(active)
     }, opt.label, active && React.createElement("span", null, settings.dir === 'asc' ? '▲' : '▼'));
   })), tab === 'lineage' && React.createElement("div", null, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
-  }, "選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。"), React.createElement("div", {
+  }, jaWrap('選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。')), React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, [{
     id: 'all',
@@ -81832,8 +81891,9 @@ function RhythmBuddyListSheet({
   }, opt.label)))), React.createElement("section", null, React.createElement("h4", {
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "性格", React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, jaWrap('(何も選ばなければすべて)'))), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, [...RHYTHM_BUDDY_TRAITS.map(t => ({
     id: t.id,
@@ -81851,8 +81911,9 @@ function RhythmBuddyListSheet({
   }, opt.label)))), React.createElement("section", null, React.createElement("h4", {
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "今日の調子", React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, jaWrap('(何も選ばなければすべて)'))), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, RHYTHM_BUDDY_MOODS.map(mood => React.createElement("button", {
     key: mood.id,
@@ -82115,8 +82176,9 @@ function RhythmBuddySheet({
   }))), masuPicker && !detail && (() => {
     const masu = selId ? (masuMons || []).find(x => x && x.id === selId) : null;
     if (!masu) return React.createElement("p", {
+      style: JA_WRAP_STYLE,
       className: "mt-2 text-center text-[11px] font-bold text-slate-400"
-    }, "呼びたいマスモンをタップしてください");
+    }, jaWrap('呼びたいマスモンをタップしてください'));
     const mon = state.mons[masu.id];
     const mood = rhythmBuddyMood(masu.id, dayKey, mon);
     const called = calledIds.includes(masu.id);
@@ -82150,9 +82212,10 @@ function RhythmBuddySheet({
       className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
     }, "呼ぶ"));
   })(), listControls.sheet, !canPay && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
-  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます"))));
+  }, jaWrap('今日の無料ぶんを使い切りました。セッション券があれば呼べます')))));
 }
 function MasuBeatScreen({
   masuMons = [],
@@ -82276,9 +82339,10 @@ function RhythmBuddyGrowth({
   }, "🎵 ", rhythmBuddyMasuName(masu)), React.createElement("span", {
     className: "text-lime-300"
   }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-levelup": true,
     className: "rounded bg-amber-300 px-1 text-slate-950"
-  }, "ビートLv.UP! Lv.", level), shown.familiarUp && React.createElement("span", {
+  }, jaWrap('ビートLv.UP! Lv.'), level), shown.familiarUp && React.createElement("span", {
     className: "text-amber-200"
   }, "この曲の得意度+1"), trait && React.createElement("span", {
     className: "text-pink-200"
@@ -82451,8 +82515,9 @@ function RhythmBuddyRankingBoard({
   }, React.createElement("b", {
     className: "block truncate text-base font-black text-lime-100"
   }, "🎶 マスモンランキング"), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "block text-[10px] font-bold text-slate-400"
-  }, "モンヒロビートで育てたマスモンの順位です"))), React.createElement("div", {
+  }, jaWrap('モンヒロビートで育てたマスモンの順位です')))), React.createElement("div", {
     className: "flex gap-1.5 overflow-x-auto"
   }, React.createElement("button", {
     type: "button",
@@ -82485,13 +82550,15 @@ function RhythmBuddyRankingBoard({
   }, state.status === 'loading' && React.createElement("p", {
     className: "py-8 text-center text-sm font-bold text-slate-400"
   }, "読み込み中…"), state.status === 'missing' && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-ranking-missing": true,
     className: "py-8 text-center text-sm font-bold text-amber-200"
-  }, "マスモンランキングは準備中です"), state.status === 'error' && React.createElement("div", {
+  }, jaWrap('マスモンランキングは準備中です')), state.status === 'error' && React.createElement("div", {
     className: "py-8 text-center"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-sm font-bold text-amber-200"
-  }, "ランキングを読み込めませんでした"), React.createElement("button", {
+  }, jaWrap('ランキングを読み込めませんでした')), React.createElement("button", {
     type: "button",
     onClick: () => {
       rhythmBuddyRankCache.delete(cacheKey);
