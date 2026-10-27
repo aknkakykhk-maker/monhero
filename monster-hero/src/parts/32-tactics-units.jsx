@@ -832,13 +832,19 @@ const tacticsAiCopyPos = (units, srcSlot) => {
   for (const p of [src + 1, src - 1]) if (p >= 0 && p <= 3 && !list[p]) return { pos: p, stacked: false };
   return { pos: src, stacked: true };
 };
-// 出たときのヘイト: 元の子のヘイトの半分(切り捨て)
-const tacticsAiCopyStartHate = (hate, srcSlot) => Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] / 2);
+// 出たときのヘイト: 元の子のヘイト × rate(切り捨て)。rate は Lv で決まる(2026-10-27 社長: Lv1 50%・Lv2 75%・Lv3 100%)。
+//   Lv → 割合は開発部の部品が返す。ここは割合を受け取るだけ(既定は Lv1 の 0.5)
+const tacticsAiCopyStartHate = (hate, srcSlot, rate = 0.5) => {
+  const r = tacticsClamp(tacticsHateNum(rate), 0, 1);
+  return Math.min(TACTICS_HATE.cap, Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] * r));
+};
 // 1ターンぶん進める(枠の子と同じ式: 前のヘイト × decay + 倍率 ×(行動のぶん + 与ダメージの割合ぶん))。
 //   gain … そのターンのコピーの行動のぶん / dealt … コピーの与ダメージ / teamDealt … 味方全員(コピーも入れる)の与ダメージ / monId … 元の子の id
-const tacticsAiCopyHateStep = (copy, { gain = 0, dealt = 0, teamDealt = 0 } = {}, monId = null) => {
+//   gainMult … たまり方の倍率(2026-10-27 社長: Lv1 ×1.0・Lv2 ×1.25・Lv3 ×1.5)。元の子の倍率に掛ける
+const tacticsAiCopyHateStep = (copy, { gain = 0, dealt = 0, teamDealt = 0 } = {}, monId = null, gainMult = 1) => {
   if (!isTacticsAiCopyStanding(copy)) return 0;
-  const p = tacticsHateProfile(monId);
+  const base = tacticsHateProfile(monId);
+  const p = { ...base, mult: base.mult * Math.max(0, tacticsHateNum(gainMult) || 1) };
   const team = Math.max(0, tacticsHateNum(teamDealt));
   const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt)) / team : 0;
   return Math.min(TACTICS_HATE.cap, tacticsHateNum(copy.hate) * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gain)) + share));

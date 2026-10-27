@@ -3,7 +3,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ① コピーを渡さないときは、狙いの重み・狙われる%・狙いの抽選・予告が今までとまったく同じ
 //   ② コピーを渡すと狙いの候補に5人目が足され、%の合計は100のまま
 //   ③ 置き場所は元の子のとなりの空いたマス(右が先)。空きが無ければ元の子と同じマスに重ねる
-//   ④ 出たときのヘイトは元の子の半分
+//   ④ 出たときのヘイトは元の子の 50/75/100%(Lv)・たまり方は ×1.0/1.25/1.5
 //   ⑤ 敵の行動がコピーに当たるか(全体・単体・間合い)
 //   ⑥ 倒されたらその場で消える(null)。盤面のライフの合計・全滅にはコピーが混ざらない
 // 計算は本体(32-tactics-units.jsx → game-system.jsx)から切り出して動かす(検査へ書き写さない)。
@@ -64,7 +64,10 @@ check('右も左もふさがっていれば重ねる', JSON.stringify(A.tacticsA
 check('端(遠)の子は左を見る', JSON.stringify(A.tacticsAiCopyPos([null, null, null, unit('d')], 3)) === JSON.stringify({ pos: 2, stacked: false }));
 
 // ④ ヘイト
-check('出たときのヘイトは元の子の半分(切り捨て)', A.tacticsAiCopyStartHate([41, 0, 0, 0], 0) === 20 && A.tacticsAiCopyStartHate(hate, 3) === 10);
+check('出たときのヘイトの既定は元の子の半分(切り捨て)', A.tacticsAiCopyStartHate([41, 0, 0, 0], 0) === 20 && A.tacticsAiCopyStartHate(hate, 3) === 10);
+check('Lv で割合を変えられる(75%・100%)', A.tacticsAiCopyStartHate([40, 0, 0, 0], 0, 0.75) === 30 && A.tacticsAiCopyStartHate([40, 0, 0, 0], 0, 1) === 40);
+const g1 = A.tacticsAiCopyHateStep({ ...copy, hate: 0 }, { gain: 10 }, null, 1), g15 = A.tacticsAiCopyHateStep({ ...copy, hate: 0 }, { gain: 10 }, null, 1.5);
+check('たまり方の倍率(×1.5)で多くたまる', g15 > g1 && Math.abs(g15 / g1 - 1.5) < 1e-9, `×1.0 ${g1} / ×1.5 ${g15}`);
 const h1 = A.tacticsAiCopyHateStep({ ...copy, hate: 20 }, { gain: 0 }, null);
 check('何もしなければヘイトは減っていく', h1 < 20, `20 → ${h1}`);
 check('倒れたコピーのヘイトは0', A.tacticsAiCopyHateStep({ ...copy, hp: 0 }, { gain: 50 }, null) === 0);

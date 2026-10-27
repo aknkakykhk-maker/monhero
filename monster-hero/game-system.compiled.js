@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c197b56cb73f9c67
+// source-sha256: 28e061dbe95ccdfe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42827,14 +42827,21 @@ const tacticsAiCopyPos = (units, srcSlot) => {
     stacked: true
   };
 };
-const tacticsAiCopyStartHate = (hate, srcSlot) => Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] / 2);
+const tacticsAiCopyStartHate = (hate, srcSlot, rate = 0.5) => {
+  const r = tacticsClamp(tacticsHateNum(rate), 0, 1);
+  return Math.min(TACTICS_HATE.cap, Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] * r));
+};
 const tacticsAiCopyHateStep = (copy, {
   gain = 0,
   dealt = 0,
   teamDealt = 0
-} = {}, monId = null) => {
+} = {}, monId = null, gainMult = 1) => {
   if (!isTacticsAiCopyStanding(copy)) return 0;
-  const p = tacticsHateProfile(monId);
+  const base = tacticsHateProfile(monId);
+  const p = {
+    ...base,
+    mult: base.mult * Math.max(0, tacticsHateNum(gainMult) || 1)
+  };
   const team = Math.max(0, tacticsHateNum(teamDealt));
   const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt)) / team : 0;
   return Math.min(TACTICS_HATE.cap, tacticsHateNum(copy.hate) * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gain)) + share));
