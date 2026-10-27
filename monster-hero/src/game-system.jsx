@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a8f144b11311d78c
+// generated-sha256: 4b211945de7cea96
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -33946,11 +33946,12 @@ function BreederMarketScreen({
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
+  //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
   const renderSectionTabs = (section, scroll=false) => {
     const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
     const value=activeSectionTab(section);
     if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
-    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5">
+    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5">
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
         className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
         style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
