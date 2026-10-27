@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afadd2094dabff4a
+// source-sha256: f60d1c62af9d6c8d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86657,6 +86657,7 @@ const cardLegalActions = (db, st) => {
   }];
   return [];
 };
+const cardCanBackToAttack = st => !!st && st.winner === null && st.phase === 'guts' && !st.pending && !st.pendingDiscard && !st.pendingChoice && !st.pendingPray && !st.pendingReveal && st.noBackTurn !== st.turn;
 const cardDecider = st => st.pendingPray ? st.pendingPray.p : st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active;
 const cardUseWho = (db, st, p, mi, cardNo) => {
   const c = cardOf(db, cardNo);
@@ -87515,6 +87516,7 @@ const cardApplyAction = (db, st0, act) => {
           cardGameOver(st, cardOther(p), '全員KO');
           return st;
         }
+        st.noBackTurn = st.turn;
       }
       st.phase = 'guts';
       return st;
@@ -87528,6 +87530,12 @@ const cardApplyAction = (db, st0, act) => {
     return st;
   }
   if (st.phase === 'guts') {
+    if (act.type === 'backToAttack') {
+      if (!cardCanBackToAttack(st0)) return null;
+      st.phase = 'main';
+      cardLog(st, `${st.players[p].name}は攻撃に戻った`);
+      return st;
+    }
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax');
     if (gm && (act.hand || []).length > gm.n) return null;
@@ -94185,7 +94193,14 @@ const CardBattleBoard = ({
         type: 'pass'
       })
     }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : '守らない');
-    if (mode === 'guts') return React.createElement("button", {
+    if (mode === 'guts') return React.createElement(React.Fragment, null, myTurn && !tutorial && !replay && cardCanBackToAttack(st) && React.createElement("button", {
+      type: "button",
+      "data-card-back-attack": true,
+      className: `${btn} border border-violet-300/60 bg-violet-900`,
+      onClick: () => step({
+        type: 'backToAttack'
+      })
+    }, "← 攻撃に戻る"), React.createElement("button", {
       type: "button",
       disabled: tutOff('turn'),
       className: `${btn} bg-gradient-to-b from-orange-400 to-orange-600${tutBtn('turn')}`,
@@ -94193,7 +94208,7 @@ const CardBattleBoard = ({
         type: 'guts',
         hand: picks
       })
-    }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了');
+    }, picks.length ? `${picks.length}枚をガッツにしてターン終了` : 'ガッツにしないでターン終了'));
     const useBtn = sel && monChosen !== undefined && finalOpts.length && !needTarget;
     return React.createElement(React.Fragment, null, useBtn && finalOpts.some(o => o.split || o.fuse) ? React.createElement("button", {
       type: "button",
@@ -101192,7 +101207,7 @@ const cardPvpVerify = (db, {
 const cardPvpInt = (v, max) => Number.isInteger(v) && v >= 0 && v <= max ? v : null;
 const cardPvpCleanAct = raw => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray'];
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray', 'backToAttack'];
   if (!types.includes(raw.type)) return null;
   const act = {
     type: raw.type
@@ -101207,7 +101222,7 @@ const cardPvpCleanAct = raw => {
     }
     return act;
   }
-  if (raw.type === 'reveal') return act;
+  if (raw.type === 'reveal' || raw.type === 'backToAttack') return act;
   if (raw.type === 'choose') {
     act.pick = cardPvpInt(raw.pick, 60);
     return act.pick === null ? null : act;
@@ -103475,6 +103490,13 @@ const CardPvpLobby = ({
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
   const t = setTimeout(() => {
+    if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({
+      type: 'backToAttack'
+    })) {
+      window.__mhCardPvpAutoBack = Number(window.__mhCardPvpAutoBack) - 1;
+      window.__mhCardPvpBackDone = (Number(window.__mhCardPvpBackDone) || 0) + 1;
+      return;
+    }
     const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
     if (act && step(act)) return;
     step(cardPvpTimeoutAct(st));
@@ -104184,7 +104206,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 9;
+const CARD_REPLAY_RULES = 10;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;
@@ -104413,6 +104435,7 @@ const cardReplayCaption = (states, i) => {
 };
 const cardReplayActText = (type, name) => {
   if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'backToAttack') return `${name}は攻撃に戻った`;
   if (type === 'pass') return `${name}は守らなかった`;
   if (type === 'reveal') return `${name}は手札を見せた`;
   if (type === 'pray') return `${name}はおいのりをした`;

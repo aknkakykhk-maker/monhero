@@ -642,6 +642,8 @@ const cardLegalActions = (db, st) => {
   return [];
 };
 // いま決める番の人(守りの途中なら守る側)
+// 攻撃に戻れるか。ガッツの段で、守り・選ぶ・捨てるの途中でなく、灼熱の地が効いた番でないときだけ(助手は使わない)
+const cardCanBackToAttack = (st) => !!st && st.winner === null && st.phase === 'guts' && !st.pending && !st.pendingDiscard && !st.pendingChoice && !st.pendingPray && !st.pendingReveal && st.noBackTurn !== st.turn;
 const cardDecider = (st) => (st.pendingPray ? st.pendingPray.p : st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active);
 
 // ---- 攻撃を出す ----
@@ -1087,6 +1089,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.life <= 0) cardKo(st, p, mi);
         });
         if (st.players[p].mons.every((m) => m.ko)) { cardGameOver(st, cardOther(p), '全員KO'); return st; }
+        st.noBackTurn = st.turn; // 灼熱の地が効いた番は、攻撃に戻れない(案A)
       }
       st.phase = 'guts'; return st;
     }
@@ -1101,6 +1104,13 @@ const cardApplyAction = (db, st0, act) => {
     return st;
   }
   if (st.phase === 'guts') {
+    // 攻撃に戻る: ガッツにする前なら、攻撃の番へ戻れる。その番に攻撃した印などはそのまま(2026-10-27 社長)
+    if (act.type === 'backToAttack') {
+      if (!cardCanBackToAttack(st0)) return null;
+      st.phase = 'main';
+      cardLog(st, `${st.players[p].name}は攻撃に戻った`);
+      return st;
+    }
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感: ガッツの段で n 枚まで
     if (gm && (act.hand || []).length > gm.n) return null;

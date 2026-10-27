@@ -25,6 +25,7 @@
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
 //   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
 //   ⑯ 入口の「いま相手を待っている人」: 合言葉の部屋は出ない・だれとでもで待っている人が名前つきで出る・[対戦する]で始まる
+//   ⑲ 攻撃に戻る: ガッツの段で「攻撃に戻る」を打っても、相手と同じ場のまま最後まで戦え、試合のあとの確かめも合う(⑯の試合で)
 //   ⑳ 投了: 投了した側の「もらったビートP」は、倒した数で決まる数の2倍・投了された側は勝ちの数(マルチは2倍・2026-10-27 社長)
 //   ⑱ ルールの版: 版がちがう人は一覧に出ない・合言葉の部屋に版を送らない古い版の人が来たら「ゲームを更新してください」・だれとでもでは組まずに待ち続ける
 //   ⑰ 片方の端末が100秒止まって戻ったら、続きから遊べる(相手は120秒まで待つ・相手の持ち時間の時計は止まる)。最後まで戦える
@@ -462,6 +463,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const rowText = seen16 ? await B.locator('[data-card-pvp-seeker]').first().innerText() : '';
     await shot(B, 'pvp-16-seekers');
     check('⑯ だれとでもで待っている人が、入口の一覧に名前つきで出る(押す前に見える)', seen16 && /検査ブリーダー/.test(rowText) && /待って \d+秒/.test(rowText), rowText.replace(/\n/g, ' '));
+    await A.evaluate(() => { window.__mhCardPvpAutoBack = 1; window.__mhCardPvpBackDone = 0; }); // ⑲ この試合で、A がガッツの段から1回「攻撃に戻る」
     if (seen16) await B.locator('[data-card-pvp-seeker-pick]').first().click();
     const met16 = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
     check('⑯ 一覧の[対戦する]で、その人の部屋に入って対戦が始まる', met16);
@@ -470,6 +472,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       while (Date.now() < end16 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
       const r16 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
       check('⑯ 一覧から始めた対戦も最後まで戦えて、片方が勝ち・片方が負け', !!r16[0] && !!r16[1] && r16[0] !== r16[1], r16.join(' / '));
+      const back19 = await A.evaluate(() => { const v = window.__mhCardPvpBackDone; window.__mhCardPvpAutoBack = 0; return v; });
+      const ver19 = [await waitVerify(A), await waitVerify(B)];
+      check('⑲ ガッツの段で「攻撃に戻る」を打っても、相手と同じ場のまま最後まで戦え、試合のあとの確かめも2台とも合う', back19 === 1 && ver19[0] === 'ok' && ver19[1] === 'ok', `戻った ${back19}回・確かめ ${ver19.join(' / ')}`);
       for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
     }
     // ⑱ ルールの版(2026-10-27 社長 ①): 版がちがう人どうしは組まない。古い版・別の版の相手は手元で作れないので、偽の中継から知らせを流し込む
