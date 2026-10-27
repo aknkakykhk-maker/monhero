@@ -59,10 +59,14 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     //   2026-10-05 ゴースト・スプーキーを先行公開(先頭に2枚)して16枚
     //   2026-10-08 メロディー・クロミーを先行公開(先頭に2枚)して18枚(同じ日に取り下げ、再公開した)
     //   2026-10-23 イルミネ・ドリーミィを先行公開(先頭に2枚)して20枚
-    const DISC_IDS = ['disc_illumine','disc_dreamy','disc_melody','disc_kuromy','disc_ghost','disc_spooky','disc_yggdrasil','disc_mel_whip','disc_zan','disc_mitarashi','disc_ark','disc_iblis','disc_snegurochka','disc_undine','disc_yaobikuni','disc_plant','disc_mia','disc_pandora','disc_eiki','disc_kenshi_mocchi'];
-    ok('ビートP交換所に円盤石が20枚ある(予告カードは残っていない)', intoEvent && cards.join() === DISC_IDS.join()
-      && (await page.$$('[data-event-point-coming-soon]')).length === 0, cards.join('・'));
+    //   2026-10-27 キュービ・オリヒメを「近日追加」(available:false)で末尾に並べて22枚(#4019)。この2枚だけは予告の札でよい
+    const DISC_IDS = ['disc_illumine','disc_dreamy','disc_melody','disc_kuromy','disc_ghost','disc_spooky','disc_yggdrasil','disc_mel_whip','disc_zan','disc_mitarashi','disc_ark','disc_iblis','disc_snegurochka','disc_undine','disc_yaobikuni','disc_plant','disc_mia','disc_pandora','disc_eiki','disc_kenshi_mocchi','disc_kyubi','disc_orihime'];
+    ok('ビートP交換所に円盤石が22枚ある(予告の札は近日追加の2枚だけ)', intoEvent && cards.join() === DISC_IDS.join()
+      && (await page.$$('[data-event-point-coming-soon]')).length <= 2, cards.join('・'));
     const costs = await page.$$eval('[data-event-point-disc] button[aria-label$="で交換"]', els => els.map(e => e.getAttribute('aria-label')));
+    // 近日追加の2枚(available:false)は、並んでいても交換できない
+    const soonBuyable = await page.$$eval('[data-event-point-disc="disc_kyubi"] button[aria-label$="で交換"]:not([disabled]), [data-event-point-disc="disc_orihime"] button[aria-label$="で交換"]:not([disabled])', els => els.length);
+    ok('近日追加のキュービ・オリヒメは交換できない', soonBuyable === 0, `${soonBuyable}`);
     ok('円盤石は全部1500ビートP', costs.length >= 1 && costs.every(l => /1500ビートPで交換$/.test(l)), costs.slice(0, 2).join(' / '));
     // 見て回るのは代表の3枚(全部を開くと時間がかかる)
     for (const id of ['disc_yggdrasil', 'disc_mel_whip', 'disc_zan']) {
