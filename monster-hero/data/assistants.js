@@ -197,19 +197,49 @@ const ASSISTANTS = [
     tagline: '無課金なのにランカー、ゆるくて頭のいい育成上手',
     intro: '考えて強くなりたい人向け。ふだんはゆるくていいかげんだけど、組み方と育て方の話になると一番くわしい。',
   },
+  {
+    // ソラシド(2026-10-27・社長の決定)。7人目の助手。公開の印 assistantSorashido が立つまでは、一覧にも・おしゃべりにも・選ぶ画面にも出ない(ASSISTANT_RELEASE_FLAGS)。
+    // 攻略班のエンジニア。パソコンが得意でAIをかなり使い、攻略サイトやAIの仕組みづくりが得意。はまると寝る間も惜しんで没頭する。
+    // 沖縄の味付け(言葉・浜・三線)。MFバトルカード好き(ニャーのデッキ)。キュービとオリヒメの推しで、とくにオリヒメ。お酒に強い(軽く扱う)。
+    // ★元のテスターさんご本人の暮らし(仕事・住まい・年齢・家族など)は書かない・推し量らない(社長)。アシストカードはまだ無い
+    id: 'sorashido',
+    name: 'ソラシド',
+    role: '助手',
+    imageDir: 'images/assistant',
+    imagePrefix: 'sorashido',
+    // 絵は社長があとで送る。届くまでは仮の顔(images/assistant/temp/sorashido_<表情>.png・表情8つ)を吹き出しにも大きい絵の場所にも使う。
+    // 公開するときは、届いた絵(images/assistant/sorashido_*.PNG と face/)へ差し替えて、この2行を消す
+    tempImageDir: 'images/assistant/temp',
+    tempImageExt: 'png',
+    expressions: ASSISTANT_EXPRESSIONS,
+    defaultExpression: ASSISTANT_DEFAULT_EXPRESSION,
+    emoji: '🌺',
+    // テーマ色は沖縄の海の青緑
+    accent: '#2dd4bf',
+    greeting: 'うぉぉぉ、呼んだ!? 攻略のことなら俺に任せて笑',
+    firstPerson: 'ふだんは「俺」。少し丁寧に話すときは「自分」か「私」。「僕」「あたし」「おで」は使わない',
+    speech: 'ため口のくだけた男性口調。語尾によく「笑」を付ける。盛り上がると「うぉぉぉ！」「なに！？」と声が大きくなり、決めたいところではかっこつけて「〜ぜ・・・！」と言う。攻略班のエンジニアらしく、すぐ計算したがり、表やまとめを作り、AIにも読ませて確かめる。勝ち負けには本気で、悔しがり方も大きいが、自分の失敗も笑いにする。沖縄の言葉(「なんくるないさ〜」「でーじ」「ちばりよー」)をときどき混ぜる(毎回は混ぜない)。です・ますは少し丁寧に話すときだけ',
+    speechQuirks: ['語尾によく「笑」を付ける(全角の「笑」。「w」は使わない)', '盛り上がると「うぉぉぉ！」「なに！？」', 'かっこつけるときは「〜ぜ・・・！」(中黒3つ)。1つの返事に1回まで', 'すぐ計算・検証・まとめを作りたがる。AIにも読ませて確かめる', '沖縄の言葉(なんくるないさ〜・でーじ・ちばりよー)をときどき混ぜる', '勝ち負けに本気。自分の失敗も笑いにする', '推しはキュービとオリヒメ(とくにオリヒメ)。MFバトルカードはニャーのデッキ'],
+    speechMarkers: '俺|自分|笑|うぉぉ|なに！？|ぜ・・・|なんくるない|でーじ|ちばりよ|計算|検証|攻略|まとめ|AI|オリヒメ|キュービ|ニャー',
+    rhythmCall: 'モンヒロビート',
+    tagline: 'すぐ計算したがる、熱くて陽気な攻略班のエンジニア',
+    intro: '攻略を詰めたい人向け。気になるとすぐ計算してまとめを作り、勝ち負けには本気。負けても「なんくるないさ〜」と笑って組み直す。',
+  },
 ];
 // 助手どうしの呼び方(だれ → だれ)。台本の決めごと(きき加入・異世界交響祭などの冒頭のコメント)をここへ1か所にまとめた。
 // おしゃべりの人柄(tools/build-assistant-chat-digest.js)はここから作る。台本で実際に使っているかは
 // tools/assistant/assistant-chat-check.js が突き合わせる。台本を書くときもこの表に合わせる
 const ASSISTANT_PEER_CALLS = Object.freeze({
-  mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン', atsu: 'あつくん', kyuko: 'きゅきゅ' },
-  kiki:     { mua: 'みゅあちん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あっくん', kyuko: 'きゅうこさん' },
-  momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん', atsu: 'あつ', kyuko: 'きゅうちゃん' },
-  dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)', atsu: 'あっくん', kyuko: 'きゅうこちゃん' },
+  mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン', atsu: 'あつくん', kyuko: 'きゅきゅ', sorashido: 'ソラちん' },
+  kiki:     { mua: 'みゅあちん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あっくん', kyuko: 'きゅうこさん', sorashido: 'ソラシドさん' },
+  momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん', atsu: 'あつ', kyuko: 'きゅうちゃん', sorashido: 'ソラ' },
+  dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラさん' },
   // あつ(2026-10-22 社長の決定)
-  atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん' },
+  atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん', sorashido: 'ソラシド' },
   // きゅうこ(2026-10-22 社長の決定)
-  kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ' },
+  kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ソラ' },
+  // ソラシド(2026-10-27 社長の決定)。ほかの助手からの呼び方も各行の sorashido に足した(みゅあ「ソラちん」・きき「ソラシドさん」・もも「ソラ」・ドラ「ソラさん」・あつ「ソラシド」・きゅうこ「ソラ」)
+  sorashido: { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', atsu: 'あっくん', kyuko: 'きゅうこ' },
 });
 // おしゃべりの受け答えの見本(2026-10-14 社長「キャラごとの喋り方の特徴がちゃんと反映されてない気がする」)。
 // 台本の実際のセリフの言い回し・くせを元に書いた。答えはどれも1〜3行・ゲームの数字や仕組みは書かない。
@@ -263,6 +293,14 @@ const ASSISTANT_CHAT_EXAMPLES = Object.freeze({
     { q: '九九の7の段わかんない', a: 'おけ〜。7、14、21、28、35、42、49、56、63。前の答えに7足すだけだから、覚えなくてもいけるよw' },
     { q: '負けちゃった…', a: 'ぐぬぬぬ…惜しかったねぇ😭 でも負けた理由が分かれば次は勝てる。どこで崩れたか一緒に見よっか' },
   ],
+  sorashido: [
+    { q: '今日ちょっと疲れたなー', a: 'おつかれ笑 今日はもう寝よ寝よ。……って、いちばん寝てないの俺なんだけど笑 なんくるないさ〜' },
+    { q: 'おすすめの遊び方ある？', a: 'うぉぉぉ、それ聞いちゃう!? まずはモンヒロバトルで1体しっかり育てるのがいいぜ・・・！ 攻略まとめ、もう作っといたから見ていいよ笑' },
+    { q: 'HELLクリアできた！', a: 'なに！？ HELLいけたの!? でーじすごいって笑 どこで抜けたか、あとで俺に計算させて！' },
+    { q: '好きな食べ物は？', a: 'ソーキそば！ あと、お酒は強いほう笑 夜中に攻略まとめながら食べるのがいちばんうまいんだよね' },
+    { q: '九九の7の段わかんない', a: 'まかせて笑 7、14、21、28、35、42、49、56、63。前の答えに7足すだけだから、計算はこれで完ぺきだぜ・・・！' },
+    { q: '負けちゃった…', a: 'くっそー、俺まで悔しい笑 でも負けたら組み直せばいいだけだぜ・・・！ どこで崩れたか、一緒に検証しよ' },
+  ],
 });
 const DEFAULT_ASSISTANT_ID = 'mua';
 const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : DEFAULT_ASSISTANT_ID);
@@ -287,7 +325,7 @@ const assistantAtsuUnlockReady = (levelOf) => typeof levelOf === 'function'
   && Object.entries(ASSISTANT_ATSU_UNLOCK_BONDS).every(([id, need]) => { const lv = Number(levelOf(id)); return Number.isFinite(lv) && lv >= need; });
 // 公開の印が立つまで、一覧にも出さない助手(印の名前は RELEASE_FLAGS・17-release-changelog-login-missions.jsx)。
 // RELEASE_FLAGS はあとの部品で作られるので、見るたびに引く(読み込み時に触ると画面が真っ白になる)
-const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu', kyuko: 'assistantKyuko' });
+const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu', kyuko: 'assistantKyuko', sorashido: 'assistantSorashido' });
 const assistantReleased = (assistantId) => {
   const flag = ASSISTANT_RELEASE_FLAGS[assistantId];
   if (!flag) return true;
@@ -800,6 +838,17 @@ const ASSISTANT_BOND_STYLES = {
       '星をつなぐ旋律', '時を越える相棒', '魂のハーモニー', 'ふたりでひとつの曲', 'ふたりのシンフォニー',
     ],
     call: (level) => (level <= 2 ? '{name}さん' : '{name}'),
+  },
+  // ソラシド(2026-10-27): 段階の名前は「攻略班の仲間」の流れ(攻略の読者 → 検証仲間 → 攻略班の相棒 → 最強の攻略班)。呼び方は既定(みゅあと同じ形)
+  sorashido: {
+    titles: [
+      '攻略まとめの読者', 'コメント欄の常連', '話の合う人', '検証仲間', '計算の相棒',
+      '攻略班の見習い', 'いつものフレンド', '夜ふかし仲間', '攻略班の一員', '本気の対戦相手',
+      'デッキの相談相手', '攻略班の右腕', '同じ画面を見る人', '頼れる相棒', '背中を預ける相棒',
+      'いちばんの理解者', 'かけがえのない相棒', '攻略班の主力', '浜で語る仲', '最高の相方',
+      '殿堂入りの検証仲間', '響きあう仲間', '心のよりどころ', '最強の相方', '伝説の攻略班',
+      '星をつなぐ相棒', '時を越える相棒', '魂の相棒', 'ふたりでひとつの攻略班', '最強の攻略班',
+    ],
   },
 };
 // その助手の30段階を作る。need はみゅあと共通、タイトル・呼び方・話し方だけ差し替える
@@ -7551,6 +7600,235 @@ addAssistantLinePack({
   },
 });
 
+// ソラシド(2026-10-27)。下地として、よく開く画面のぶんだけ先に書いた(事実はきゅうこの束と同じ)。
+// まだ書いていない場面は、みゅあのセリフへ落ちる(filterAssistantLines)。公開までに残りの場面も足す(docs/progress/2026-10-27-assistant-sorashido.md)
+// 話し方: 一人称「俺」(少し丁寧なときは「自分」)・語尾に「笑」・「うぉぉぉ！」「なに！？」・かっこつけの「〜ぜ・・・！」・沖縄の言葉をときどき
+addAssistantLinePack({
+  id: 'sorashidoCore',
+  assistantId: 'sorashido',
+  label: 'ソラシド・全画面の基本セリフ',
+  lines: {
+    home: [
+      { e:'happy',    t:'おっ、{name}来た！ 今日はなにから攻略する？笑' },
+      { e:'normal',   t:'迷ったらミッション見よ。今日やることが一覧になってるから' },
+      { e:'excited',  t:'うぉぉぉ、今日もみんなそろってる！ にぎやかでいいね笑' },
+      { e:'wink',     t:'攻略まとめ、また書き足しといた笑 AIにも読ませたから、抜けはない…はず！' },
+      { e:'normal',   t:'毎日ちょっとずつでいいよ。積み重ねがいちばん強いぜ・・・！' },
+      { e:'troubled', t:'昨日はまって、気づいたら朝だった笑 {name}はちゃんと寝てね' },
+      { e:'happy',    t:'オリヒメの羽衣のゆれ方、見た!? あれは尊いぜ・・・！' },
+      { e:'normal',   t:'疲れてる日は休も。なんくるないさ〜' },
+      { e:'excited',  t:'{name}、ちょっと俺に計算させて。今日の伸びしろ、まだあるよ笑' },
+      { e:'normal',   t:'{name}、よろしく！ 分かんないことあったら俺に聞いて', bond:[1,2] },
+      { e:'happy',    t:'{name}、だいぶ慣れてきたね。もう検証仲間だよ笑', bond:[3,5] },
+      { e:'wink',     t:'{name}の組み方のくせ、表にまとめられるくらい分かってきた笑', bond:[4,8] },
+      { e:'normal',   t:'{name}になら、デッキの相談まかせられるな', bond:[6,12] },
+      { e:'happy',    t:'{name}と話してると攻略がはかどるんだよね。ありがと笑', bond:[11,20] },
+      { e:'excited',  t:'{name}、そろそろ一緒にランキング狙えるんじゃない？ うぉぉぉ！', bond:[16,20] },
+      { e:'happy',    t:'{name}、Lv20の先まで来たか。ここからが本番だぜ・・・！', bond:21 },
+      { e:'normal',   t:'{name}が来ると、自分もちゃんとしなきゃって思うんですよね笑', bond:22 },
+      { e:'wink',     t:'{name}がへこんでる日は分かるよ。データには出なくても笑', bond:23 },
+      { e:'excited',  t:'{name}と俺で組めば、だいたいの相手はいけるって！', bond:24 },
+      { e:'happy',    t:'ここまで来たら、{name}はもう殿堂入りの検証仲間だね笑', bond:25 },
+      { e:'excited',  t:'{name}、今日もモンヒロビートいこ。新しい譜面、一緒に読も笑', bond:26 },
+      { e:'normal',   t:'{name}がいれば、どんな難易度でもなんとかなる気がする', bond:27 },
+      { e:'wink',     t:'{name}の次の一手、もう予測できる気がする笑', bond:28 },
+      { e:'happy',    t:'{name}と俺、もうふたりでひとつの攻略班だね', bond:29 },
+      { e:'excited',  t:'{name}、Lv30おめでとう！ ……ほんとにありがとうございます笑', bond:30 },
+    ],
+    onboarding: [
+      { e:'happy',    t:'俺はソラシド。攻略班のエンジニアやってる笑 よろしく！' },
+      { e:'normal',   t:'{name}、まずは名前とアイコンからね。あとで変えられるから悩まなくていいよ' },
+      { e:'wink',     t:'分かんないことがあったら、俺の吹き出し押して。まとめてあるから笑' },
+      { e:'normal',   t:'焦らなくていいよ。最初はみんなレベル1だから' },
+      { e:'happy',    t:'難しく考えなくていいよ。やってれば手が覚える！' },
+    ],
+    battleSystemSelect: [
+      { e:'normal',   t:'まずはどのバトルにするか決めよ' },
+      { e:'normal',   t:'チャレンジと種族チャレンジは「これまでのバトル」の中。まとめに書いといた笑' },
+      { e:'happy',    t:'クイックはそのまま難易度えらび。さっと遊びたい日にいいね笑' },
+      { e:'normal',   t:'記録はバトルごとに別。どっちから攻めてもいいぜ・・・！' },
+      { e:'wink',     t:'{name}、迷ったら「これまでのバトル」でいいと思う笑' },
+    ],
+    battleChallenge: [
+      { e:'normal',   t:'スコアで勝負するならチャレンジ。上のランキングも見てみて' },
+      { e:'happy',    t:'{name}、ランキングに残るのはここの記録だよ' },
+      { e:'excited',  t:'難易度上げると点も伸びる。届きそうなとこから上げてこ笑' },
+      { e:'normal',   t:'編成ひとつ変えるだけで急に通ること、あるんだよね。検証あるのみ' },
+      { e:'excited',  t:'負けても失うもんないし、ひとつ上も試してみよ。うぉぉぉ！' },
+      { e:'normal',   t:'強化の取り方で、終盤の粘りが変わるよ。ここ大事' },
+    ],
+    battleQuick: [
+      { e:'happy',    t:'サクッとやるならこれ。テンポいいよ笑' },
+      { e:'normal',   t:'{name}、育成を回すならこっち。数をこなす日はこれ一択' },
+      { e:'wink',     t:'∞周回にすれば裏で回り続ける。待ってる間にまとめ書けるやつ笑' },
+      { e:'normal',   t:'ここの記録はチャレンジとは別。気楽に回そ笑' },
+      { e:'normal',   t:'編成がそのまま出るから、組み方の検証にもちょうどいい' },
+    ],
+    battlePro: [
+      { e:'normal',   t:'ここに出られるのはベースモンだけ。育てた子はお留守番' },
+      { e:'excited',  t:'{name}、組み方の腕が出るとこだね。燃えるぜ・・・！' },
+      { e:'normal',   t:'距離と相性は必ず確認。ここは数字がうそつかないから' },
+      { e:'happy',    t:'絆が3倍たまる。新しい子を育てるならここが効率いいぜ・・・！' },
+      { e:'normal',   t:'出る3体は運しだい。5体ぜんぶ戦える子にしとこ' },
+    ],
+    resultWin: [
+      { e:'excited',  t:'うぉぉぉ、勝った！ さすが{name}笑' },
+      { e:'happy',    t:'{name}、いい流れだね。このままいこ笑' },
+      { e:'normal',   t:'勝ったときこそ、何が効いたか覚えとくといいよ。俺はメモってる' },
+      { e:'happy',    t:'前より動きがいい。ちゃんと強くなってるよ' },
+      { e:'normal',   t:'この子はマスモンに登録しとこ。あとで効いてくるから' },
+      { e:'wink',     t:'これなら次はひとつ上もいける。計算上はね笑' },
+    ],
+    resultLose: [
+      { e:'crying',   t:'くっそー、俺まで悔しい笑 次いこ次' },
+      { e:'normal',   t:'なんくるないさ〜。負けたら組み直せばいいだけだぜ・・・！' },
+      { e:'normal',   t:'崩れたところだけメモしとこ。次はそこを直せばいい' },
+      { e:'troubled', t:'俺もさっき同じとこで負けた笑 一緒に検証しよ' },
+      { e:'normal',   t:'進んだWAVEのぶんは消えないから安心して' },
+      { e:'happy',    t:'ちょっと休憩しよ。焦ると同じとこで負けるのはデータで出てる笑' },
+    ],
+    resultRetire: [
+      { e:'normal',   t:'やめどきを決められるのも強さだよ' },
+      { e:'happy',    t:'{name}、いい判断。引き際も実力のうちだぜ・・・！' },
+      { e:'normal',   t:'途中までのぶんは残るよ。ムダにはならない' },
+      { e:'normal',   t:'もらえるものは受け取ってから戻ってね' },
+      { e:'wink',     t:'仕切り直したほうが結果よくなること多いよ。データ的にも笑' },
+    ],
+    market: [
+      { e:'normal',   t:'ダイヤは戻ってこないからね。買う前に一回計算しよ' },
+      { e:'happy',    t:'{name}、何か狙ってるのある？ 先に値段だけ見とくのもアリだよ' },
+      { e:'wink',     t:'ビートPの交換所もここにあるよ。貯めっぱなしはもったいない笑' },
+      { e:'normal',   t:'アイコンはブリーダーP、そのほかはダイヤだよ' },
+      { e:'wink',     t:'買ったら編成に入れるのを忘れずに。俺はよく忘れる笑' },
+      { e:'happy',    t:'かっこいいから買う、もアリ。見た目は大事だぜ・・・！' },
+    ],
+    profile: [
+      { e:'normal',   t:'{name}の記録、ここで全部見られるよ。伸びてるの分かる？' },
+      { e:'happy',    t:'名前もアイコンも、あとからいくらでも変えられるよ' },
+      { e:'wink',     t:'助手の切り替えもここ。俺以外もみんないいやつだよ笑' },
+      { e:'normal',   t:'イベントのお話は、回想からいつでも見返せるよ' },
+      { e:'happy',    t:'仲良し度は助手ごとに別に貯まるよ。切り替えても消えないから安心して' },
+      { e:'normal',   t:'ここの名前が、そのままランキングに出るよ' },
+    ],
+    settings: [
+      { e:'normal',   t:'設定は自分好みに詰めよ。俺はこういうの全部いじる派笑' },
+      { e:'happy',    t:'{name}、BGMは曲ごとに選べるよ。俺はここ長居しちゃう笑' },
+      { e:'wink',     t:'重いときは軽くする設定へ。動作が軽いと手も軽い笑' },
+      { e:'normal',   t:'データの引き継ぎもここ。機種変える前にやっとこ' },
+      { e:'troubled', t:'引き継ぎコードだけは控えといて。消えたら戻らないから' },
+    ],
+    roster: [
+      { e:'happy',    t:'編成ね。誰を連れてく？' },
+      { e:'normal',   t:'{name}、距離のばらけ方だけは見といて' },
+      { e:'wink',     t:'役割がかぶると、苦手な相手で詰むよ。ここは計算どおり笑' },
+      { e:'normal',   t:'絆が高い子は、素の強さ以上に働くんだよね' },
+      { e:'happy',    t:'好きな子を入れるのも、ちゃんとした理由だよ。俺はオリヒメ入れたい笑' },
+      { e:'troubled', t:'「決定」を押すまでは反映されないからね' },
+    ],
+    rhythmHome: [
+      { e:'excited',  t:'モンヒロビートやる？ 譜面の作り、俺けっこう調べてる笑' },
+      { e:'normal',   t:'曲を選んで、難易度を選んで、決定。それだけだよ' },
+      { e:'wink',     t:'{name}、どの曲いく？ 試聴しながら決めるのもアリ笑' },
+      { e:'normal',   t:'きついと思ったら、オプションでノーツ速度を変えよ。調整も攻略のうち' },
+      { e:'happy',    t:'同じ曲でも難易度が変わると別物になるよね' },
+      { e:'happy',    t:'三線の音が入った曲、あったらうれしいんだけどな笑' },
+    ],
+    ranking: [
+      { e:'normal',   t:'全国のランキングね。上は果てしないけど、参考にはなるよ' },
+      { e:'happy',    t:'{name}の名前、載ってるか探してみて。見つけると嬉しいよ笑' },
+      { e:'excited',  t:'なに！？ この点数どうやって出したの!? 計算させて笑' },
+      { e:'normal',   t:'イベントのタブは、期間中の記録だけで並んでるよ' },
+      { e:'normal',   t:'上位の組み方は、まず真似してみよ。検証はそれから笑' },
+      { e:'wink',     t:'順位は気にしすぎなくていいよ。前の自分を越えれば勝ちだぜ・・・！' },
+    ],
+    missionsClaimable: [
+      { e:'excited',  t:'なに！？ 受け取れるやつがこんなに。全部もらお笑' },
+      { e:'happy',    t:'{name}、これ全部もらえるからね' },
+      { e:'normal',   t:'受け取ってから次を狙うのが効率いい。計算済み笑' },
+      { e:'normal',   t:'受け取ると、仲良し度もちょっと増えるよ' },
+      { e:'normal',   t:'ごほうびはギフトに届くから、あとで開けといて' },
+    ],
+    missionsNormal: [
+      { e:'normal',   t:'ミッションは今日のやること表。迷ったらここから' },
+      { e:'happy',    t:'{name}、ついでに終わるやつが混じってるから、見とくと得だよ' },
+      { e:'wink',     t:'いちばんもったいないのは受け取り忘れ。ほんとに笑' },
+      { e:'normal',   t:'デイリーは毎日、ウィークリーは週ごとに入れかわるよ' },
+      { e:'normal',   t:'週のぶんは月曜に切り替わるよ。終わりそうなやつから片づけよ' },
+    ],
+    giftClaimable: [
+      { e:'excited',  t:'うぉぉぉ、ギフト来てる！ 開けよ笑' },
+      { e:'normal',   t:'受け取ったものはアイテム欄に入るよ' },
+      { e:'wink',     t:'イベントのごほうびも、ここに届くよ' },
+      { e:'normal',   t:'期限は30日。忘れる前に受け取っとこ' },
+      { e:'normal',   t:'まとめて一気に受け取れるよ' },
+    ],
+    giftEmpty: [
+      { e:'normal',   t:'いまは未受取なし。きれいだね' },
+      { e:'happy',    t:'{name}、全部受け取り済み。完ぺきだぜ・・・！' },
+      { e:'normal',   t:'イベントのごほうびが来たら、ここに出るよ' },
+      { e:'normal',   t:'ミッションを進めたら、またここに届くよ' },
+      { e:'happy',    t:'また明日のぞいてみて。急ぐもんでもないし、なんくるないさ〜' },
+    ],
+    helpTop: [
+      { e:'normal',   t:'困ったらここ。だいたいの答えは書いてあるよ' },
+      { e:'happy',    t:'{name}、遠慮せず読んで。攻略はまず情報からだぜ・・・！' },
+      { e:'normal',   t:'カテゴリを選んで、項目を選んで、説明。3段だけだよ' },
+      { e:'normal',   t:'表は実際のデータから作ってるから、いつも最新。こういう仕組み好き笑' },
+      { e:'happy',    t:'読んで分からなければ、1回遊んで検証しよ。それが早い笑' },
+    ],
+    friends: [
+      { e:'normal',   t:'フレンドコードを交換すれば、すぐつながれるよ' },
+      { e:'normal',   t:'「追加」のタブに、{name}のコードがあるよ。相手に教えてあげて' },
+      { e:'happy',    t:'申請は「申請」のタブで承認。ワンタップで終わる笑' },
+      { e:'normal',   t:'フレンドになると、おたがいのプロフィールが見られるよ' },
+      { e:'happy',    t:'対戦の部屋にも誘えるよ。人数いたほうが楽しいって笑' },
+    ],
+    dailyMasuAdvice: [
+      { e:'excited',  t:'{name}、マスモンを早く増やす近道、見つけたから教える笑' },
+      { e:'normal',   t:'クイックのBeginnerでWAVE2まで行って、そこで「あきらめる」を押すだけ' },
+      { e:'wink',     t:'WAVE2まで行くのが条件。そこだけは外さないで' },
+      { e:'normal',   t:'勇者モンにした子しか登録できないから、そこも確認ね' },
+      { e:'happy',    t:'8体そろうまでは、これが最速。ちゃんと計算したぜ・・・！' },
+      { e:'happy',    t:'時間ない日はこれで十分。効率も攻略のうち笑' },
+    ],
+    dailyMasuAdviceBasic: [
+      { e:'normal',   t:'マスモンを増やすなら、まずクイックのBeginnerを最後まで遊んでみて' },
+      { e:'happy',    t:'勇者モンにした子は、終わったあとのリザルトからマスモンに登録できるよ' },
+      { e:'wink',     t:'{name}、慣れてきたら、もっと早い近道も教えるね笑' },
+      { e:'normal',   t:'マスモンが増えると、組める編成の幅が一気に広がるよ' },
+      { e:'happy',    t:'焦らなくていいよ。思い出したときで十分。なんくるないさ〜' },
+    ],
+    cardTop: [
+      { e:'excited',  t:'うぉぉぉ、MFバトルカード！ 俺これ大好きなんだよね笑' },
+      { e:'happy',    t:'勝つとビートPがたまるよ。パックはマーケットで買えるね' },
+      { e:'normal',   t:'デッキは「デッキ編成」で組みかえよ。ガッツの安い技を混ぜると回るよ' },
+      { e:'wink',     t:'俺はニャーのデッキ派。この相性となると話が変わるぜ・・・！' },
+      { e:'normal',   t:'ルールが不安なら「ルール」から練習試合ができるよ' },
+    ],
+  },
+  // 条件つきのセリフ(仲良し度が上がった・自己ベスト更新)
+  conditions: {
+    home: {
+      bondUp: [
+        { e:'excited',  t:'うぉぉぉ、仲良し度上がった！ {name}、ありがと笑' },
+        { e:'happy',    t:'{name}、レベルアップ。計算どおりだぜ・・・！' },
+        { e:'wink',     t:'{name}のこと、前よりちょっと分かってきたかも笑' },
+        { e:'normal',   t:'{name}、これからもよろしく。俺も手は抜かないから' },
+        { e:'happy',    t:'{name}とは、だいぶ息が合ってきたよね', bond:6 },
+      ],
+    },
+    resultWin: {
+      newRecord: [
+        { e:'excited',  t:'なに！？ 自己ベスト更新!? でーじすごいって笑' },
+        { e:'happy',    t:'{name}、記録更新じゃん。組み方がハマってきたね笑' },
+        { e:'wink',     t:'更新おめでと。その記録、攻略まとめに載せとく笑' },
+        { e:'excited',  t:'うぉぉぉ！ その記録、ちゃんと残しとこ！' },
+        { e:'happy',    t:'前の自分に勝ったね。それがいちばんえらい！' },
+      ],
+    },
+  },
+});
+
 // MFバトルカードのトップのひとこと(社長 台帳 #3513)。6人ぶん(1人でも欠けると assistant-check が落ちる)
 addAssistantLinePack({
   id: 'cardTopGuide',
@@ -7903,6 +8181,17 @@ const ASSISTANT_SPAM_SETS = {
       { e:'normal',   t:'…………', last:true },
     ],
     recover: { e:'happy', t:'……まあ、なんとかなるっしょ笑 いつでも呼んでねぇ' },
+  },
+  sorashido: {
+    lines: [
+      { e:'happy',    t:'おっ、どした？笑' },
+      { e:'excited',  t:'うぉぉぉ、連打速くない!? 何回押したか数えとく笑' },
+      { e:'surprise', t:'なに！？ まだ押すの!?' },
+      { e:'angry',    t:'押しすぎだって！ 計算が追いつかない笑' },
+      { e:'troubled', t:'その速さ、モンヒロビートで使お？ スコア伸びるぜ・・・！' },
+      { e:'normal',   t:'…………', last:true },
+    ],
+    recover: { e:'happy', t:'……なんくるないさ〜笑 いつでも呼んで！' },
   },
 };
 const assistantSpamLinesOf = (assistantId) => (ASSISTANT_SPAM_SETS[assistantId] && ASSISTANT_SPAM_SETS[assistantId].lines) || ASSISTANT_SPAM_LINES;
@@ -8937,6 +9226,9 @@ const STORY_GUEST_SPEAKERS = [
   //   枠いっぱいに切り抜くと、細長いドリーミィは耳・帽子・頭の玉と足元の雲が切れていた)
   { id: 'illumine', name: 'イルミネ', role: 'ゲスト', emoji: '🌌', accent: '#a78bfa', image: (typeof ILLUMINE_IMG !== 'undefined' ? ILLUMINE_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
   { id: 'dreamy', name: 'ドリーミィ', role: 'ゲスト', emoji: '🐱', accent: '#fde68a', image: (typeof DREAMY_IMG !== 'undefined' ? DREAMY_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  // ソラシドの加入のお話(2026-10-27)に出る新モンスター2体。絵は data/images/images-ally.js の全身の絵。人の言葉は話さず、鳴き声としぐさだけ
+  { id: 'kyubi', name: 'キュービ', role: 'ゲスト', emoji: '🦊', accent: '#f59e0b', image: (typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
+  { id: 'orihime', name: 'オリヒメ', role: 'ゲスト', emoji: '🎐', accent: '#93c5fd', image: (typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null), imageFit: 'contain', expressions: [], defaultExpression: 'normal' },
 ];
 
 // ===== ぱんぷきん×ジャックのストーリー(第1.5部〜終章) =====
@@ -9534,6 +9826,98 @@ const ASSISTANT_KYUKO_JOIN_STORY = [
 ];
 const ASSISTANT_KYUKO_JOIN_STORY_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん／あつニキ' };
 
+// ---------- ソラシドの加入のお話「推しに会える夜 ～ソラシド登場～」(2026-10-27・社長が案1を選んだ) ----------
+// 【流れ】(社長の決定) ①HOME に知らない人(ソラシド)が駆け込み、AIで作った「オリヒメが現れそうな夜」の予測を見せて推しを熱く語る
+//   → ②予測の夜、星の見える浜へ。来ない。ソラシドはデータを洗い直して没頭し、みんなはあきれつつ付き合う
+//   → ③風鈴の音でオリヒメが現れる。人だかりに驚いて逃げそうになり、キュービが提灯をかかげて立ちふさがる
+//   → ④ソラシドは語るのをやめて、2体が好きな音(風鈴に合わせた三線)を鳴らす。オリヒメが袖を引き、キュービも提灯を下ろす(山場)
+//   → ⑤2体は仲間に。ソラシドは「推しのそばにいたいから」助手になる。打ち上げは泡盛でも平気な顔(お酒はこの場面だけ・軽く)
+// ★山場④の「攻略より好きで通じる」と、⑤の「推しのそばにいたいから」をつなげる。④はシリアスなので「笑」や顔文字を入れない(台帳 2026-10-23)
+// ★キュービとオリヒメはモンスター。人の言葉は話さず、鳴き声としぐさだけ(きゅうこのお話のイルミネ・ドリーミィと同じ形)
+// ★元のテスターさんご本人の暮らし(仕事・住まい・年齢・家族・性別など)は書かない
+// 公開の印 assistantSorashido が立つまでは流れず、回想にも出ない。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
+// atsu:'with' はあつを解放している人だけ、atsu:'without' はその代わりに解放していない人へ出す行(きゅうこのお話と同じ)
+const ASSISTANT_SORASHIDO_JOIN_STORY = [
+  // ---- ① HOME に、知らない人が駆け込んでくる ----
+  { who:'mua',       e:'surprise', t:'ねえ、だれか走ってくる！ めっちゃ息切れてるんだけど〜' },
+  { who:'sorashido', e:'excited',  t:'はぁ、はぁ……すみません！ 自分、ソラシドっていいます！ ここの助手さんたちですよね！？' },
+  { who:'kiki',      e:'surprise', t:'あれま、ずいぶん急いでまつね。だいじょうぶでつか？' },
+  { who:'sorashido', e:'excited',  t:'これ見てください！ AIに星の動きと、いままでの目撃の記録を全部読ませて、「オリヒメが現れそうな夜」を出したんです！' },
+  { who:'dra',       e:'surprise', t:'ふむ。オリヒメって、風鈴の音といっしょに出るっていう、あの……？' },
+  { who:'sorashido', e:'excited',  t:'そう！ 羽衣がふわってして、風鈴がりんって鳴って……いつもそばにキュービがいるんだよ！ 提灯もった狐の子！ うぉぉぉ、語りだしたら止まらん笑' },
+  { who:'momosuke',  e:'wink',     t:'もうため口になってるw' },
+  { who:'sorashido', e:'happy',    t:'あ、ほんとだ笑 なんくるないさ〜。俺のことはソラシドでいいよ！' },
+  { who:'atsu',      e:'excited',  atsu:'with',    t:'で、その夜っていつ？ 俺も見たいんだけど笑' },
+  { who:'mua',       e:'surprise', atsu:'without', t:'で、その夜っていつなの〜？' },
+  { who:'sorashido', e:'excited',  t:'今夜！！ 星の見える浜で、9割の確率で会える……はずだぜ・・・！' },
+  { who:'mua',       e:'happy',    t:'ソラちん、おもしろ〜！ もうあだ名つけちゃったｗ みんなで行ってみよ！' },
+  { who:'kiki',      e:'happy',    t:'オリヒメは、私もまだ見たことがないんでつ。ご一緒しまつね♪♪' },
+  // ---- ② 予測の夜、星の見える浜。来ない ----
+  { who:'mua',       e:'troubled', t:'……来ないね〜。もう波の音しか聞こえないんだけど' },
+  { who:'dra',       e:'troubled', t:'9割って言ってなかったか。くさ' },
+  { who:'sorashido', e:'surprise', t:'なに！？ ちょっと待って、データ見直す！' },
+  { who:'sorashido', e:'troubled', t:'月の出……潮の満ち引き……風の向き……あ、風の向き入れ忘れてる笑 いちばん大事なとこ抜けてた笑' },
+  { who:'momosuke',  e:'troubled', t:'ソラ、画面に顔くっつきそうだよ〜' },
+  { who:'sorashido', e:'normal',   t:'風鈴は、風がないと鳴らない。鳴らないと、オリヒメは来ない……そういうことか……' },
+  { who:'kiki',      e:'happy',    t:'ふふ、すっかり夢中でつね。ソラシドさん、お茶ここに置いときまつよ (´ー`*)' },
+  { who:'kyuko',     e:'wink',     t:'わかるぅ、データの洗い直しって止まんないよねぇ。俺も譜面でよくやるw ソラ、がんばれ〜' },
+  { who:'atsu',      e:'happy',    atsu:'with',    t:'ソラシド、完全に徹夜する顔になってる笑' },
+  { who:'dra',       e:'happy',    atsu:'without', t:'ソラさん、完全に自分の世界に入ってるな' },
+  { who:'mua',       e:'wink',     t:'みんな、あきれてるのに誰も帰らないの、ウケるｗ' },
+  { who:'sorashido', e:'excited',  t:'……出た！ 風が変わるの、あと少し！ 今度こそ来るぜ・・・！' },
+  { who:'dra',       e:'normal',   t:'ふむ。じゃあ、もう少しだけ付き合ってやるか' },
+  // ---- ③ 風鈴の音で、オリヒメが現れる ----
+  { who:'orihime',   e:'normal',   t:'……りん……(風鈴の音)' },
+  { who:'mua',       e:'surprise', t:'今の音……！' },
+  { who:'kyubi',     e:'normal',   t:'コン……(提灯の明かりが、波の上でゆれる)' },
+  { who:'kiki',      e:'surprise', t:'あれま……海の上に、羽衣がふわっと……！' },
+  { who:'orihime',   e:'normal',   t:'…………(羽衣がひるがえる)' },
+  { who:'sorashido', e:'surprise', t:'うそ……ほんとに来た……オリヒメと、キュービ……' },
+  { who:'momosuke',  e:'excited',  t:'きれい〜！！ みんな見て見て！ もっと近くで見よ！♡' },
+  { who:'mua',       e:'excited',  t:'わ〜っ、ほんとにいた！ まぢできれい〜！' },
+  { who:'orihime',   e:'normal',   t:'りっ……！(羽衣で顔をかくして、後ろへ下がる)' },
+  { who:'dra',       e:'surprise', t:'まずい、人が多すぎて驚いてる。逃げるぞ' },
+  { who:'kyubi',     e:'normal',   t:'コンッ！(提灯をかかげて、オリヒメの前に立ちふさがる)' },
+  { who:'atsu',      e:'surprise', atsu:'with',    t:'うわ、狐の子が前に出た！ 本気で守ってる！' },
+  { who:'kiki',      e:'surprise', atsu:'without', t:'キュービが、オリヒメを守って前に出てきたでつ……！' },
+  { who:'kyubi',     e:'normal',   t:'ウゥ……(提灯の火が、ぼうっと大きくなる)' },
+  { who:'mua',       e:'troubled', t:'どうしよ……近づいたら、逃げちゃいそう……' },
+  // ---- ④ 山場。語るのをやめて、好きな音を鳴らす(シリアス。「笑」や顔文字を入れない) ----
+  { who:'sorashido', e:'normal',   t:'……みんな、ちょっとだけ下がってて' },
+  { who:'momosuke',  e:'surprise', t:'ソラ……？' },
+  { who:'sorashido', e:'normal',   t:'語りたいことは、いっぱいある。でも今は、言葉じゃないと思う' },
+  { who:'sorashido', e:'normal',   t:'(三線を取り出して、風鈴の音に合わせて、そっと弦をはじく)' },
+  { who:'orihime',   e:'normal',   t:'……りん……りん……' },
+  { who:'kiki',      e:'surprise', t:'風鈴と三線の音が……重なってまつ……' },
+  { who:'kyubi',     e:'normal',   t:'コン……(提灯の火が、少しずつ小さくなる)' },
+  { who:'dra',       e:'normal',   t:'……データじゃなくて、あの子たちの好きな音で呼んだのか' },
+  { who:'orihime',   e:'normal',   t:'…………(そっと近づいて、ソラシドの袖を引く)' },
+  { who:'kyubi',     e:'normal',   t:'……コン(提灯を下ろして、となりに座る)' },
+  { who:'mua',       e:'surprise', t:'今……袖、ひっぱった……！' },
+  { who:'sorashido', e:'crying',   t:'う……うぉぉぉ……！' },
+  { who:'sorashido', e:'crying',   t:'ずっと好きだった。会える日を調べてたのも、ただ会いたかったからなんだ……' },
+  { who:'atsu',      e:'normal',   atsu:'with',    t:'……よかったな、ソラシド' },
+  { who:'dra',       e:'normal',   atsu:'without', t:'……よかったな、ソラさん' },
+  { who:'kiki',      e:'happy',    t:'好きって気持ちが、ちゃんと届いたんでつね' },
+  // ---- ⑤ 2体は仲間に。ソラシドは助手になる。打ち上げ ----
+  { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、ソラちんから離れないんだけど〜' },
+  { who:'kyubi',     e:'normal',   t:'コン♪(ぴょんと跳ねて、しっぽをふる)' },
+  { who:'orihime',   e:'normal',   t:'りん♪(ふわりと寄って、羽衣をソラシドの肩にかける)' },
+  { who:'dra',       e:'happy',    t:'いっしょにいたいってことだな。えへへ' },
+  { who:'momosuke',  e:'wink',     t:'ねえソラ、2体といっしょに、ここで助手やればいいじゃん♡' },
+  { who:'sorashido', e:'excited',  t:'なに！？ ……やる！ 推しのそばにいたいから！ 理由はそれだけだぜ・・・！' },
+  { who:'mua',       e:'wink',     t:'理由が正直すぎｗ でも、そういうの好きぢゃん' },
+  { who:'sorashido', e:'happy',    atsu:'with',    t:'改めて、よろしく！ みゅあ、きき、もも、ドラちゃん、あっくん、きゅうこ！' },
+  { who:'sorashido', e:'happy',    atsu:'without', t:'改めて、よろしく！ みゅあ、きき、もも、ドラちゃん、きゅうこ！' },
+  // ★アシカの名前は決まっていない(2026-10-27)。決まったら、この行に「」で名前を差し込む
+  { who:'sorashido', e:'wink',     t:'あと、アシカも持ってきたよ。俺のとっておき、マーケットに置いとくね笑' },
+  { who:'kyuko',     e:'happy',    t:'じゃ、浜で打ち上げしよぉ。ソラ、なに飲むの？' },
+  { who:'sorashido', e:'happy',    t:'泡盛！ ……これくらい、なんくるないさ〜笑' },
+  { who:'kiki',      e:'surprise', t:'あれま……顔色ひとつ変わりませんね……！' },
+  { who:'sorashido', e:'happy',    t:'{name}、これからよろしく！ 推しの話なら、いつでも聞くぜ・・・！笑' },
+];
+const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラ', dra: 'ソラさん', atsu: 'ソラシド', kyuko: 'ソラ', sorashido: 'みゅあ／きき／もも／ドラちゃん／あっくん／きゅうこ' };
+
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
@@ -9605,6 +9989,9 @@ const EVENT_REPLAYS = [
   { id: 'atsu_join_2026_10_22', date: '2026-10-22 08:00', title: 'おかえり、勇者 ～W.o.F の旗～', script: ASSISTANT_ATSU_JOIN_STORY, calls: ASSISTANT_ATSU_JOIN_STORY_CALLS, unlockedKey: 'atsuJoinSeen', releaseFlag: 'assistantAtsu', hideUntilFirstLine: ['atsu'], group: 'assistant' },
   // きゅうこの加入のお話(2026-10-22)。公開の印 assistantKyuko が立つまで出ない。きゅうこは登場の行まで顔を伏せる
   { id: 'kyuko_join_2026_10_22', date: '2026-10-22 22:00', title: '月影とニャーニャー人形 ～きゅうこ登場～', script: ASSISTANT_KYUKO_JOIN_STORY, calls: ASSISTANT_KYUKO_JOIN_STORY_CALLS, unlockedKey: 'kyukoJoinSeen', releaseFlag: 'assistantKyuko', hideUntilFirstLine: ['kyuko'], group: 'assistant' },
+  // ソラシドの加入のお話(2026-10-27)。公開の印 assistantSorashido が立つまで流れず、回想にも出ない。ソラシドは駆け込んでくる行まで顔を伏せる
+  //   date は公開の日に合わせて直す(いまは台本を書いた日)
+  { id: 'sorashido_join_2026_10_27', date: '2026-10-27 12:00', title: '推しに会える夜 ～ソラシド登場～', script: ASSISTANT_SORASHIDO_JOIN_STORY, calls: ASSISTANT_SORASHIDO_JOIN_STORY_CALLS, unlockedKey: 'sorashidoJoinSeen', releaseFlag: 'assistantSorashido', hideUntilFirstLine: ['sorashido'], group: 'assistant' },
   { id: 'raid_jack_howto_2026_10_04', date: '2026-10-04 08:02', title: 'カボチャの大王ジャック ～レイドの遊び方～', script: ASSISTANT_RAID_JACK_HOWTO, calls: ASSISTANT_RAID_JACK_HOWTO_CALLS, unlockedKey: 'raidJackHowtoSeen', releaseFlag: 'raidJack', costumes: ASSISTANT_HALLOWEEN_NIGHT_COSTUMES, group: 'halloween' },
 ];
 
