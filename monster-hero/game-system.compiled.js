@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d206c951f39af8b9
+// source-sha256: a38fc26ebd34eaa0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91225,6 +91225,7 @@ const CardBattleBoard = ({
   }, [st, paused, tutI]);
   const turnSeen = useRef(null);
   useEffect(() => {
+    if (replay) return undefined;
     if (st.phase === 'setup' || st.winner !== null || st.turn < 1) return undefined;
     const id = `${st.turn}-${st.active}`;
     if (turnSeen.current === id) return undefined;

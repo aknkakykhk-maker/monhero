@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a2ef019cbc041915
+// generated-sha256: a5dfd6c3b4ced92a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -55553,6 +55553,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 案C: 自分の番になったら、ひとつ前のターン(相手の番)に起きたことをまとめて出す(練習試合・見本では出さない)
   const turnSeen = useRef(null);
   useEffect(() => {
+    // 見返しでは出さない。上の帯と下の帯が「いま見せている手を打ったときの番」を出しているので、
+    // 「この手のあとに始まる番」の帯がまんなかに出ると食い違って見えた(2026-10-27 ナガメくんの見回り)
+    if (replay) return undefined;
     if (st.phase === 'setup' || st.winner !== null || st.turn < 1) return undefined;
     const id = `${st.turn}-${st.active}`;
     if (turnSeen.current === id) return undefined;
