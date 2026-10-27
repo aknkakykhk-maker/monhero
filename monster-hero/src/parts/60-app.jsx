@@ -2664,7 +2664,11 @@ function MonsterHeroGame() {
   // HELP_ASSISTANT(data/help.js)に絵や音声を足すだけでここはそのまま使える
   // ヘルプの上の助手の吹き出し。開閉は「小さくたたむ」と同じ記憶(mh_bubble_collapsed_v1 の 'help')。顔を押すと開閉する(2026-10-26 開発部 e01・e02)
   const [helpBubbleFolded, setHelpBubbleFolded] = useBubbleCollapse('help');
-  const helpAssistantOpen = !helpBubbleFolded;
+  // 横向きの低い画面(高さ520px以下)では、吹き出しをはじめからたたむ(一覧を広く見せる。2026-10-27 社長の答え)。押せば開く。
+  //   この向きでは保存した「たたむ/ひらく」は使わず(縦向きの選びを変えない)、開いたかどうかはその場の状態だけで持つ
+  const [helpBubbleOpenShort, setHelpBubbleOpenShort] = useState(false);
+  const helpShort = typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight;
+  const helpAssistantOpen = helpShort ? helpBubbleOpenShort : !helpBubbleFolded;
   const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setShowHelp(true); };
   // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
   // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
@@ -4706,6 +4710,10 @@ function MonsterHeroGame() {
   const [cardPackOpen, setCardPackOpen] = useState(null);   // パックを開ける画面に渡す結果 { packId, packs, dupPoint, cost }
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  // はじめて遊ぶ人は、HOME に着くたびにお話を1本だけ(STORY_ONE_AT_A_TIME_KEY)。この HOME でもう流したかを覚え、HOME を離れたら戻す
+  const [storyOneAtATime, setStoryOneAtATime] = useState(false);
+  const storyShownThisHomeRef = useRef(false);
+  useEffect(() => { if (gameState !== 'HOME') storyShownThisHomeRef.current = false; }, [gameState]);
   // 招待リンク(?friend=フレンドコード)で開いたとき。URLからコードを拾って(拾ったらURLからは消す)、
   // ほかの案内が出ていないHOMEへ来たところで、フレンド画面を開いて申請の確認を出す。公開前・はじめての設定の前は何もしない
   const [pendingFriendCode, setPendingFriendCode] = useState('');
@@ -4814,8 +4822,11 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview
       && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay
       && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
+    // ★はじめて遊ぶ人は、続けて流すのを1本まで(2026-10-27 社長)。並んだお話は消さずに待たせ、HOME を離れて戻ったときに流す
+    if (storyOneAtATime && storyShownThisHomeRef.current) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
+    storyShownThisHomeRef.current = true;
     // ★流し始めたことを覚えておく(2026-09-14・ユーザー指摘「閉幕イベントが2回連続で流れた」)。
     //   「見た」の記録が付くのは**会話を最後まで見たとき**なので、読んでいる最中は
     //   まだ未読のまま。下の1分おきの見回りがそのあいだに回ると「まだ見ていない」と判断して
@@ -4824,7 +4835,7 @@ function MonsterHeroGame() {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
     setEventReplay({ id: storyId, step: 0, live: true });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime]);
   // 行動カードの絵は、ゲームに入ったら(バトルが始まる前に)1回だけ読み込んでおく。出すときだけ(公開の印かデバッグの切り替え)
   useEffect(() => { if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt(); }, [bootPhase, battleCardArtDebug]);
   // 難易度 HELL のお話を、公開した日に全員へ1回だけ流す(RHYTHM_HELL_STORY_TRIGGER が 'release'・2026-10-12 社長の決定)。
@@ -6433,6 +6444,12 @@ function MonsterHeroGame() {
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       setNewPlayerCampaignEligible(!everOnboarded);
+      // はじめて遊ぶ人の印(新しいキー。前から遊んでいる人には書かない)。一度付いたら消さない
+      try {
+        let oneAtATime = (await storeGet(STORY_ONE_AT_A_TIME_KEY, false, false)) === true;
+        if (!everOnboarded && !oneAtATime) { await storeSet(STORY_ONE_AT_A_TIME_KEY, true, false); oneAtATime = true; }
+        setStoryOneAtATime(oneAtATime);
+      } catch {}
       // 助手選択は、はじめて遊ぶ人にだけ出す。
       // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
       setAssistantChosen(!!savedAssistant || wasOnboarded);
@@ -13849,7 +13866,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
-          // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+20%(楔1つごとに+20%)。数は使ったときの楔(増える前)で決める
+          // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+40%(楔1つごとに+40%)。数は使ったときの楔(増える前)で決める
           if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
@@ -22419,8 +22436,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 「MARVELOUS→EXCELLENT→…」のように区切りの無い長い連なりは、
                     ふつうの折り返しでは切れる場所が無く、そのまま吹き出しの外へはみ出す。
                     どこでも折り返せるようにして、画面の外へ出ないようにする。 */}
-                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{page.title}</span>}
-                <span className="block text-[13px] text-white leading-relaxed mt-1" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{String(page.t).replace('{name}', breederName || 'あなた')}</span>
+                {/* 案内の文は言葉の切れ目で折る(320幅で「モンヒロビー／ト」「配置距／離」と折れていた・2026-10-27) */}
+                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5" style={JA_WRAP_STYLE}>{jaWrap(String(page.title))}</span>}
+                <span className="block text-[13px] text-white leading-relaxed mt-1" style={JA_WRAP_STYLE}>{jaWrap(String(page.t).replace('{name}', breederName || 'あなた'))}</span>
               </div>
             </div>
             {topicRef&&(
@@ -22546,12 +22564,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} className="shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
+            <button onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
-              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey="help" collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
+              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={helpShort?null:"help"} collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
