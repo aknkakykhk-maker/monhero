@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6a5f8a1baf0a7666
+// source-sha256: f3d5b67091b49382
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56070,7 +56070,7 @@ function ProfileScreen({
       alive = false;
     };
   }, []);
-  const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST;
+  const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id));
   return React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS,
@@ -72861,10 +72861,11 @@ function BattleScreen({
     const tCopyPhase = aiCopyViewPhase(tCopy, copyStanding ? 'idle' : 'appear');
     const tCopyOut = copyStanding || tCopyPhase === 'vanish';
     const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
-    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !s && !tCopy.stacked && React.createElement("div", {
+    const tCopyOnMon = !!s || !!(tCopy && tCopy.stacked);
+    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-art": i,
       "data-ai-copy-phase": tCopyPhase,
-      className: "absolute inset-0 z-[24] flex items-center justify-center pointer-events-none"
+      className: "absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]"
     }, React.createElement(SorashidoCopyFx, {
       phase: tCopyPhase
     }, React.createElement(DyedMonsterImage, {
@@ -72877,12 +72878,13 @@ function BattleScreen({
         height: '52px'
       },
       className: "object-contain drop-shadow-md"
-    }))), React.createElement("div", {
+    }))), !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-next": i,
-      className: "absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none"
+      className: `absolute ${copySrc ? 'left-[62px]' : 'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`
     }, React.createElement(SorashidoNextCardBadge, {
       card: tCopyOut ? tCopy.nextCard : null,
-      turnsLeft: tCopy.turnsLeft
+      turnsLeft: tCopy.turnsLeft,
+      layout: classicAiCopyLandscape() ? 'landscape' : 'portrait'
     })), React.createElement("div", {
       "data-tactics-ai-copy": i,
       "data-tactics-ai-copy-out": tCopyOut ? '1' : '0',
@@ -72892,12 +72894,27 @@ function BattleScreen({
         e.stopPropagation();
         setCopyHandOpen(true);
       } : undefined,
-      className: `absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+    }, React.createElement("span", {
+      className: "flex max-w-full min-w-0 items-center gap-0.5"
     }, React.createElement("span", {
       className: "min-w-0 truncate"
-    }, "🤖", tCopy.stacked ? '重なる ' : '', tCopyOut ? `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
-      className: "shrink-0 tabular-nums text-rose-200"
-    }, "狙", chancesNow.copy, "%"))) : null;
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''
+    }, "🤖"), tCopyOut ? tCopyOnMon ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "text-rose-300"
+    }, "♥"), React.createElement("span", {
+      className: "tabular-nums"
+    }, tCopy.hp)) : `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+      className: "shrink-0 tabular-nums tracking-tighter text-rose-200"
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'text-[6px] opacity-80' : ''
+    }, "狙"), chancesNow.copy, "%")), tCopyOnMon && tCopyOut && React.createElement("span", {
+      "data-tactics-ai-copy-next": i,
+      className: "block max-w-full min-w-0 truncate text-emerald-200"
+    }, tCopy.nextCard ? tCopy.nextCard.name || tCopy.nextCard.baseName || '考え中' : '考え中', React.createElement("span", {
+      className: "tabular-nums text-sky-200/90"
+    }, " あと", tCopy.turnsLeft)))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -120991,15 +121008,17 @@ function MonsterHeroGame() {
       const c = aiCopyRef.current;
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && !isTacticsMode(runMode) && isAiCopyOut(c, turnCount)) {
         let left = Math.max(0, Number(c.guts) || 0);
+        const dmgScale = atk > 0 ? Math.max(1e-6, Math.max(0, Number(c.atk) || 0) / atk) : 1e-6;
         return (c.picks || []).filter(card => {
           const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
           if (!card || cost > left) return false;
           left -= cost;
-          return !classicAiCopyIsAttack(card) && card.type !== 'guard' && card.type !== 'weak_guard';
+          return card.type !== 'guard' && card.type !== 'weak_guard';
         }).map(card => ({
           card,
           slotIdx: c.srcSlot,
-          aiCopy: true
+          aiCopy: true,
+          dmgScale
         }));
       }
       if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
@@ -121020,6 +121039,7 @@ function MonsterHeroGame() {
     })();
     for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
+      const copyDmgScale = entry.aiCopy && Number.isFinite(entry.dmgScale) ? entry.dmgScale : 1;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
@@ -121107,7 +121127,7 @@ function MonsterHeroGame() {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul);
+          const d = Math.floor(Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul) * copyDmgScale);
           const soulAttack = soulTraitAttackProfile(stunMon?.masuId ? getMasuMon(stunMon.masuId) : null, card, slotIdx);
           const stunHits = buildAttackHits({
             d,
@@ -121340,7 +121360,7 @@ function MonsterHeroGame() {
           }
         }
         const attackStartDist = attackDistance;
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult);
+        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult * copyDmgScale);
         attackCount++;
         const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
@@ -121413,7 +121433,7 @@ function MonsterHeroGame() {
         }
         {
           const trickOwnerId = isTacticsMode(runMode) ? tacticsUnitsRef.current[slotIdx]?.id : mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD > 0) {
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD > 0) {
             const refund = trickStartGutsRefund(cardCost);
             if (refund > 0) {
               gainGutsAt(slotIdx, refund);
@@ -121674,31 +121694,15 @@ function MonsterHeroGame() {
     pdTag();
     if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
       let copy = aiCopyRef.current;
-      const copyMon = slots[copy.srcSlot] || mainHero;
       for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
         const cost = Math.max(0, Number(pick?.guts ?? pick?.cost) || 0);
         if (!pick || cost > copy.guts) break;
         copy = classicAiCopySpendGuts(copy, cost);
-        const skill = pick.name || pick.baseName || '攻撃';
-        if (classicAiCopyIsAttack(pick)) {
-          const d = classicAiCopyDamage(getDmg(pick, copy.srcSlot, copyMon, localOryoAdd, localDmgModAdd, false, attackDistance), copy.atk, atk);
-          if (d > 0) {
-            totalDmg += d;
-            attackHits.push({
-              dmg: d,
-              isCrit: false,
-              slotIdx: copy.srcSlot,
-              isSpecial: true,
-              skillName: `🤖コピーの${skill}`,
-              noAnim: true
-            });
-          }
-        } else if (pick.type === 'guard' || pick.type === 'weak_guard') {
-          const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
-          currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
-          if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
-        } else continue;
-        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`, 'ally');
+        if (pick.type !== 'guard' && pick.type !== 'weak_guard') continue;
+        const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
+        currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
+        if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name || pick.baseName || 'ガード'}を使った`, 'ally');
       }
       commitAiCopy({
         ...copy,
@@ -136371,7 +136375,7 @@ function MonsterHeroGame() {
         setCostumeLockedInfo(null);
       };
       const who = assistantById(costumeAssistantId) || assistantById(selectedAssistantId);
-      const chipList = ASSISTANT_LIST.map(a => ({
+      const chipList = ASSISTANT_LIST.filter(a => assistantReleased(a.id)).map(a => ({
         id: a.id,
         label: a.name,
         count: assistantCostumesFor(a.id).filter(c => ownedAssistantCostumes.includes(c.id)).length

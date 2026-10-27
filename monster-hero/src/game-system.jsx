@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 33badec46e500a1c
+// generated-sha256: 535d14a894850439
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -35237,7 +35237,7 @@ function ProfileScreen({
     return () => { alive = false; };
   }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length
-    ? unlockedAssistants : ASSISTANT_LIST;
+    ? unlockedAssistants : ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id));
   // 根で safe-area を足さない(index.html の body が env(safe-area-inset-*) を持っており、
   // ここで足すとノッチぶんを二重に取る)。デバッグのプレビュー中だけ、画面の上に重なる
   // 固定の帯(60-app.jsx の data-onboarding-preview-bar)ぶんだけ下げる。
@@ -43905,21 +43905,29 @@ function BattleScreen({
               const tCopyPhase=aiCopyViewPhase(tCopy,copyStanding?'idle':'appear');
               const tCopyOut=copyStanding||tCopyPhase==='vanish';
               const copySrc=tCopy&&tCopy.pos===i?slots[tCopy.srcSlot]:null;
+              const tCopyOnMon=!!s||!!(tCopy&&tCopy.stacked);
               const copyChip=tacticsNewLayout&&tCopy&&tCopy.pos===i?(<>
-                {copySrc&&!s&&!tCopy.stacked&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute inset-0 z-[24] flex items-center justify-center pointer-events-none">
+                {/* 枠は横に広い(縦の画面で約176×95)。空いたマスは「左に絵・右に次に使う札・下にライフ」と横に分けて、札で絵を隠さない。
+                    子がいるマスに重なるときは、その子の絵・名前・ライフの行を隠さないよう、左下の絵の所に2行の小さな札だけを出す
+                    (1行目 ♥ライフ・狙われる%、2行目 次に使うカード。ライフの行の字にかからない幅 40% に収める。くわしくは押して手札の窓で見る)。
+                    横向きの背の低い画面は枠が縦長(約88×112)なので、空いたマスは「上に絵・下に次の札」、重なるときの札は右上(名前の段の下)へ移す。2026-10-27 セコンドくんの実画面の見回り */}
+                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]">
                   <SorashidoCopyFx phase={tCopyPhase}>
                     <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
                   </SorashidoCopyFx>
                 </div>}
-                <div data-tactics-ai-copy-next={i} className="absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none">
-                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft}/>
-                </div>
+                {!tCopyOnMon&&<div data-tactics-ai-copy-next={i} className={`absolute ${copySrc?'left-[62px]':'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`}>
+                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft} layout={classicAiCopyLandscape()?'landscape':'portrait'}/>
+                </div>}
                 {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
                 <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={tCopyOut?'1':'0'} role={aiCopy?'button':undefined} aria-label={aiCopy?'コピーの手札を見る':undefined}
                   onClick={aiCopy?(e)=>{e.stopPropagation();setCopyHandOpen(true);}:undefined}
-                  className={`absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
-                  <span className="min-w-0 truncate">🤖{tCopy.stacked?'重なる ':''}{tCopyOut?`ライフ${tCopy.hp}`:'次のターンから'}</span>
-                  {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
+                  className={`absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon?'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]':'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
+                  <span className="flex max-w-full min-w-0 items-center gap-0.5">
+                    <span className="min-w-0 truncate"><span className={tCopyOnMon?'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}>🤖</span>{tCopyOut?(tCopyOnMon?<><span className="text-rose-300">♥</span><span className="tabular-nums">{tCopy.hp}</span></>:`ライフ${tCopy.hp}`):'次のターンから'}</span>
+                    {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums tracking-tighter text-rose-200"><span className={tCopyOnMon?'text-[6px] opacity-80':''}>狙</span>{chancesNow.copy}%</span>}
+                  </span>
+                  {tCopyOnMon&&tCopyOut&&<span data-tactics-ai-copy-next={i} className="block max-w-full min-w-0 truncate text-emerald-200">{tCopy.nextCard?(tCopy.nextCard.name||tCopy.nextCard.baseName||'考え中'):'考え中'}<span className="tabular-nums text-sky-200/90"> あと{tCopy.turnsLeft}</span></span>}
                 </div>
               </>):null;
               const hateFlame=Number.isInteger(hatePct)?<span data-tactics-hate={i} data-tactics-hate-pct={hatePct} title="狙われる確率" className={`ml-0.5 shrink-0 rounded px-[2px] py-px text-[8px] font-black leading-none tracking-tighter tabular-nums ${hatePct>=50?'bg-red-950/80 text-red-200':hatePct>=30?'bg-orange-950/70 text-orange-200':'bg-black/50 text-slate-300'}`}><span className="text-[6px] opacity-80">狙</span>{hatePct}%</span>:null;
@@ -77032,11 +77040,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   使う子は元の子の枠(srcSlot)。ガッツの支払い・2枚目の半減・🔥はここでは数えない(下の「AIコピーの1手」でコピー自身のぶんとして数える)
     const aiCopyEntries=(()=>{
       const c=aiCopyRef.current;
-      // 5つの遊びも同じ: 回復・強化・アシカは味方のカードと同じ流れで効かせる(攻撃とガードは下の「AIコピー(5つの遊び)」)
+      // 5つの遊び: ガード以外(攻撃・固有技・回復・強化・アシカ)は味方のカードと同じ流れで効かせる。固有技の特別な効き目もそのまま乗る。
+      //   ダメージは dmgScale(コピーのちから ÷ パーティのちから)で縮める。ガードは下の「AIコピー(5つの遊び)」でコピーの丈夫さで構える
       if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&!isTacticsMode(runMode)&&isAiCopyOut(c,turnCount)){
         let left=Math.max(0,Number(c.guts)||0);
-        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return !classicAiCopyIsAttack(card)&&card.type!=='guard'&&card.type!=='weak_guard'; })
-          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true}));
+        // 0 は getDmg が「倍率なし(1倍)」と読むので、ごく小さい値にしておく
+        const dmgScale=atk>0?Math.max(1e-6,Math.max(0,Number(c.atk)||0)/atk):1e-6;
+        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return card.type!=='guard'&&card.type!=='weak_guard'; })
+          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true,dmgScale}));
       }
       if(!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido||!isTacticsMode(runMode)||!isAiCopyOut(c,turnCount)||!isTacticsAiCopyStanding(c)) return [];
       const cp=c.plannedTurn===turnCount?c:(planTacticsAiCopy(turnCount)||c);
@@ -77048,6 +77059,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     })();
     for (const entry of [...usedCardEntries,...aiCopyEntries]) {
       const card=entry.card;
+      // AIコピー(5つの遊び)の札は、ダメージをコピーのちからへ縮める(それ以外は1倍)
+      const copyDmgScale=entry.aiCopy&&Number.isFinite(entry.dmgScale)?entry.dmgScale:1;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       const totalHealBeforeCard=totalHeal, totalHealRateBeforeCard=totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
@@ -77114,7 +77127,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul);
+          const d=Math.floor(Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)*copyDmgScale);
           const soulAttack=soulTraitAttackProfile(stunMon?.masuId?getMasuMon(stunMon.masuId):null,card,slotIdx);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
@@ -77277,7 +77290,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
         }
         const attackStartDist=attackDistance;
-        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult); attackCount++;
+        // コピーの縮めは「この技のダメージ」の倍率(skillDmgMult)に掛けて渡す(ふつうの札は1倍なので今までと同じ)
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult*copyDmgScale); attackCount++;
         const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
         const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
@@ -77304,7 +77318,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
           const trickOwnerId=isTacticsMode(runMode)?tacticsUnitsRef.current[slotIdx]?.id:mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD>0) {
+          // AIコピーの札はコピー自身のガッツで払うので、パーティへは返さない
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD>0) {
             const refund=trickStartGutsRefund(cardCost);
             if (refund>0) { gainGutsAt(slotIdx,refund); addPopup(`🎩 ガッツ +${refund}`,'guts','text-violet-200 text-base font-bold drop-shadow-md'); }
           }
@@ -77464,27 +77479,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
-    // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前に、ターンの始めに決めておいたカードを使う。
-    //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。ダメージは元の子の間合いから、コピーのちからへ縮める。
-    //   ガードはコピーの丈夫さで構え、パーティを守る(コピーはライフを持たないため)。回復・強化・アシカは上の aiCopyEntries で効かせ済み(ここではガッツだけ払う)
+    // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前。使う札はターンの始めに決めてある(planClassicAiCopy)。
+    //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。攻撃・固有技・回復・強化・アシカは上の aiCopyEntries で
+    //   味方のカードと同じ流れに通し済み(ダメージはコピーのちからへ縮める)。ここではガッツを払い、ガードだけを構える
+    //   (コピーはライフを持たないので、ガードはコピーの丈夫さでパーティを守る)
     if(!isTacticsMode(runMode)&&aiCopyRef.current&&isAiCopyOut(aiCopyRef.current,turnCount)){
       let copy=aiCopyRef.current;
-      const copyMon=slots[copy.srcSlot]||mainHero;
       for(const pick of (Array.isArray(copy.picks)?copy.picks:[])){
         const cost=Math.max(0,Number(pick?.guts??pick?.cost)||0);
         if(!pick||cost>copy.guts) break;
         copy=classicAiCopySpendGuts(copy,cost);
-        const skill=pick.name||pick.baseName||'攻撃';
-        if(classicAiCopyIsAttack(pick)){
-          // ほかの攻撃と同じく、このターンに積んだ追加(応援など)も乗せる。2枚目の半減はコピーには掛けない(プレイヤーの枚数ではないため)
-          const d=classicAiCopyDamage(getDmg(pick,copy.srcSlot,copyMon,localOryoAdd,localDmgModAdd,false,attackDistance),copy.atk,atk);
-          if(d>0){ totalDmg+=d; attackHits.push({dmg:d, isCrit:false, slotIdx:copy.srcSlot, isSpecial:true, skillName:`🤖コピーの${skill}`, noAnim:true}); }
-        } else if(pick.type==='guard'||pick.type==='weak_guard'){
-          const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
-          currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
-          if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
-        } else continue; // 回復・強化・アシカ(ログは上の流れで出している)
-        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`,'ally');
+        if(pick.type!=='guard'&&pick.type!=='weak_guard') continue; // ログは上の流れで出している
+        const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
+        currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
+        if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name||pick.baseName||'ガード'}を使った`,'ally');
       }
       commitAiCopy({...copy, picks:[], nextCard:null});
     }
@@ -85021,7 +85030,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 押したその場で反映して保存する(閉じるまで見比べられる)。並ぶのは公開済み(released:true)の服だけ
           const closeCostume=()=>{ setShowCostumePicker(false); setCostumeLockedInfo(null); };
           const who=assistantById(costumeAssistantId)||assistantById(selectedAssistantId);
-          const chipList=ASSISTANT_LIST.map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
+          const chipList=ASSISTANT_LIST.filter(a=>assistantReleased(a.id)).map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
           const costumes=assistantCostumesFor(who.id);
           const worn=assistantCostumeById(wornAssistantCostumes[who.id]);
           const faceOf=(costume)=>costume&&costume.icon?costume.icon:null;
