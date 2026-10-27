@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2df23a78a1a60fdb
+// generated-sha256: 43d07fbe3956737a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76998,7 +76998,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       //   ダメージは dmgScale(コピーのちから ÷ パーティのちから)で縮める。ガードは下の「AIコピー(5つの遊び)」でコピーの丈夫さで構える
       if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&!isTacticsMode(runMode)&&isAiCopyOut(c,turnCount)){
         let left=Math.max(0,Number(c.guts)||0);
-        const dmgScale=atk>0?Math.max(0,Number(c.atk)||0)/atk:0;
+        // 0 は getDmg が「倍率なし(1倍)」と読むので、ごく小さい値にしておく
+        const dmgScale=atk>0?Math.max(1e-6,Math.max(0,Number(c.atk)||0)/atk):1e-6;
         return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return card.type!=='guard'&&card.type!=='weak_guard'; })
           .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true,dmgScale}));
       }
@@ -77080,7 +77081,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul*copyDmgScale);
+          const d=Math.floor(Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)*copyDmgScale);
           const soulAttack=soulTraitAttackProfile(stunMon?.masuId?getMasuMon(stunMon.masuId):null,card,slotIdx);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
@@ -77243,7 +77244,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
         }
         const attackStartDist=attackDistance;
-        const d=Math.floor(getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult)*copyDmgScale); attackCount++;
+        // コピーの縮めは「この技のダメージ」の倍率(skillDmgMult)に掛けて渡す(ふつうの札は1倍なので今までと同じ)
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult*copyDmgScale); attackCount++;
         const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
         const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
