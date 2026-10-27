@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c373ea99a6cf8495
+// source-sha256: 7af774aaf82ef146
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106760,6 +106760,20 @@ function MonsterHeroGame() {
     kyubiRef.current = next;
     setKyubiView(next);
   };
+  const clearKyubiKageroWait = () => {
+    const cur = kyubiRef.current;
+    if (!Object.values(cur.kagero).some(v => kageroOf(v).wait > 0)) return;
+    const kagero = Object.fromEntries(Object.entries(cur.kagero).map(([k, v]) => [k, {
+      ...kageroOf(v),
+      wait: 0
+    }]));
+    const next = {
+      ...cur,
+      kagero
+    };
+    kyubiRef.current = next;
+    setKyubiView(next);
+  };
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   const nextTurnBuffsRef = useRef({});
@@ -123094,6 +123108,7 @@ function MonsterHeroGame() {
     setWaveDistDamage([0, 0, 0, 0]);
     resetKusabi();
     resetDreamPain();
+    clearKyubiKageroWait();
     setWaveBuffs({});
     resetFateWheel();
     resetEnemyConfuse();
