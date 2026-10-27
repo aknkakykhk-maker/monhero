@@ -617,6 +617,8 @@ const CardPackOpen = ({ db, result, onDone }) => {
             {/* 「だぶった」だと、同じカードが2枚出たのに「ありません」と読めた(2026-10-26 巡回 → 社長が文をOK) */}
             {packPoint > 0 ? <>持てる数をこえたカードは <b className="text-amber-200">ビートP +{packPoint}</b> になりました</> : 'ビートPに変わったカードはありません'}
             {last && result.packs.length > 1 && !kit && <div className="mt-0.5">({result.packs.length}パックで +{result.dupPoint})</div>}
+            {/* ガチャポイント(2026-10-27 社長)。上限は無いので、たまっている数をそのまま出し、次の1冊までを添える */}
+            {last && result.gacha && <div data-card-pack-gacha className="mt-1 font-black text-amber-200">🎫 ガチャポイント +{result.gacha.add}(いま {result.gacha.now}・次の1冊まで あと {CARD_CATALOG_COST - cardGachaProgress(result.gacha.now)})</div>}
             {last && kit && result.dupPoint > 0 && <div className="mt-0.5">(キット全部で +{result.dupPoint})</div>}
             {last && kit && result.deckAdded !== false && <div data-card-pack-starter-deck className="mt-1 text-amber-100">デッキ「{kit.name}」ができました(デッキ編成で見られます)</div>}
           </div>
@@ -775,11 +777,103 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
 
 // 弾に入っている種族の名前(売り場でパックの名前の下に出す。例: ディノ・ハム・モッチー)
 const cardPackSpeciesLabel = (db, pack) => pack.species.map((sp) => (Object.values(db.monsters).find((m) => m.species === sp && !m.variant) || {}).name || sp).join('・');
-const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
+// ---- ガチャポイントの帯とバトルカードカタログ(2026-10-27 社長 案A「パックの上に帯」) ----
+// 帯: たまっている数をそのまま出す(上限は無い)。目盛りは次の1冊までの進み具合(730 なら 230 / 500)
+const CardGachaPanel = ({ gacha = 0, catalogs = 0, busy, onExchange, onOpenCatalog }) => {
+  const g = cardNormalizeGacha(gacha);
+  const prog = cardGachaProgress(g);
+  return (
+    <div data-card-gacha className="rounded-2xl border-2 border-amber-300/70 p-3 text-white" style={{ background: 'linear-gradient(135deg,#3b2a05ee,#1e1b4bee)' }}>
+      <div className="flex items-baseline gap-1 text-[13px] font-black text-amber-200">
+        <span>🎫 ガチャポイント</span>
+        <span data-card-gacha-point={g} className="ml-auto text-[16px] text-white">{g.toLocaleString()}</span>
+      </div>
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-950" aria-hidden="true"><i className="block h-full rounded-full" style={{ width: `${(prog / CARD_CATALOG_COST) * 100}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></div>
+      <div className="mt-1 flex text-[10.5px] font-bold text-slate-200" style={JA_WRAP_STYLE}>
+        <span className="min-w-0 flex-1">{jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}で「バトルカードカタログ」1冊と交換できます`)}</span>
+        <span className="shrink-0 pl-1 tabular-nums text-amber-100">次の1冊まで {prog} / {CARD_CATALOG_COST}</span>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <button type="button" data-card-gacha-exchange disabled={busy || g < CARD_CATALOG_COST} onClick={onExchange} className="mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40">カタログと交換({CARD_CATALOG_COST})</button>
+        <button type="button" data-card-gacha-catalog disabled={busy || catalogs < 1} onClick={onOpenCatalog} className="mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40">📖 カタログを使う({catalogs}冊)</button>
+      </div>
+    </div>
+  );
+};
+// カタログを使う画面: 第1〜8弾を切り替え、カードを押して選び、「『◯◯』をもらう」で1枚もらう(確かめを1回はさむ)。
+//   選べるのはパックから出るカード全部(cardCatalogPool)。持てる数いっぱいのカードは「持てる数いっぱい」で選べない
+const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) => {
+  const pool = cardCatalogPool(db);
+  const [packId, setPackId] = useState(CARD_PACKS[0].id);
+  const [pick, setPick] = useState(null);
+  const [confirm, setConfirm] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [done, setDone] = useState('');
+  const press = useCardLongPress((no) => setDetail(no)); // 長押しでくわしく(パックを開ける画面と同じ)
+  const col = collection || {};
+  const rows = pool.filter((x) => x.packId === packId);
+  const full = (x) => (col[x.no] || 0) >= x.max;
+  const tile = (x) => {
+    const on = pick === x.no;
+    const isFull = full(x);
+    return (
+      <button key={x.no} type="button" data-card-catalog-item={x.no} data-card-catalog-full={isFull ? '1' : undefined} disabled={isFull}
+        {...press(x.no, () => { Audio_.fgSe.tap(); setPick(x.no); setDone(''); })} style={{ WebkitUserSelect: 'none', userSelect: 'none' }} className={`relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on ? 'bg-amber-300/30 ring-2 ring-amber-300' : 'bg-white/5'} disabled:opacity-40`}>
+        <span className="relative block w-full">
+          <img src={cardShopImg(db, x.no)} alt={cardShopName(db, x.no)} loading="lazy" className="aspect-[5/7] w-full rounded-[5px] object-cover"/>
+          {x.rarity !== 'normal' && <span className="absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950">{CARD_RARITY_LABEL[x.rarity]}</span>}
+          {isFull && <span className="absolute inset-x-0 top-1/3 mx-0.5 rounded-md bg-slate-950/90 px-0.5 text-[9px] font-black text-slate-200">持てる数いっぱい</span>}
+          {!isFull && !(col[x.no] > 0) && <span className="absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow">未取得</span>}
+        </span>
+        <CardNameFit name={cardShopName(db, x.no)} className="mt-0.5 font-bold leading-tight text-slate-100"/>
+      </button>
+    );
+  };
+  const mons = rows.filter((x) => x.slot === 'mon');
+  const techs = rows.filter((x) => x.slot === 'tech');
+  // キラ・別絵キラは名前のあとにレア度を添える(同じ名前のカードが3枚あるので、どれをもらうか分かるように)
+  const nameOf = (no) => { const x = pool.find((y) => y.no === no); return `${cardShopName(db, no)}${x && x.rarity !== 'normal' ? `(${CARD_RARITY_LABEL[x.rarity]})` : ''}`; };
+  const pickName = pick ? nameOf(pick) : '';
+  return (
+    <>
+      <div data-card-catalog role="dialog" aria-modal="true" aria-label="バトルカードカタログ" onClick={onClose} className="fixed inset-0 flex items-center justify-center p-3" style={{ zIndex: MODAL_Z.dialog, backgroundColor: 'rgba(2,6,23,0.88)' }}>
+        <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-sky-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
+          <div className="shrink-0 rounded-t-[22px] bg-sky-300/15 px-3 py-2 text-center text-[15px] font-black text-sky-100">📖 バトルカードカタログ</div>
+          <div className="shrink-0 px-3 pt-2">
+            <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`好きなカードを1枚えらんで「もらう」を押すと、カタログが1冊なくなります(のこり ${catalogs}冊)。長押しでくわしく見られます。`)}</p>
+            {done && <div data-card-catalog-done className="mt-1 rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-2 py-1 text-[12px] font-black text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(done)}</div>}
+            <div className="mt-1.5 flex gap-1 overflow-x-auto pb-1" role="tablist">
+              {CARD_PACKS.map((p) => <button key={p.id} type="button" role="tab" aria-selected={p.id === packId} data-card-catalog-pack={p.id} onClick={() => { setPackId(p.id); setPick(null); }} className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${p.id === packId ? 'bg-amber-300 text-stone-900' : 'bg-slate-800 text-slate-300'}`}>第{p.no}弾</button>)}
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-1">
+            <CardShopHead>モンスター</CardShopHead>
+            <div className="grid grid-cols-4 gap-1.5 landscape:grid-cols-7">{mons.map(tile)}</div>
+            <CardShopHead>技など</CardShopHead>
+            <div className="grid grid-cols-4 gap-1.5 landscape:grid-cols-7">{techs.map(tile)}</div>
+          </div>
+          {/* 横画面は背が低いので、2つのボタンを横に並べて、カードを並べる所を広く取る */}
+          <div className="shrink-0 space-y-1.5 p-2 landscape:grid landscape:grid-cols-2 landscape:gap-1.5 landscape:space-y-0">
+            <button type="button" data-card-catalog-take disabled={!pick || busy || catalogs < 1} onClick={() => setConfirm(true)} className="mh-button mh-button-primary min-h-[46px] w-full rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40 landscape:min-h-[40px]" style={JA_WRAP_STYLE}>{pick ? jaWrap(`「${pickName}」をもらう`) : 'カードをえらんでください'}</button>
+            <button type="button" data-card-catalog-close onClick={onClose} className="mh-button min-h-[40px] w-full rounded-2xl border border-white/20 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
+          </div>
+        </div>
+      </div>
+      {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+      {confirm && <ConfirmSheet title={`「${pickName}」をもらいますか？`} message={`バトルカードカタログを1冊使います(いま ${catalogs}冊)`} confirmLabel="もらう"
+        onCancel={() => setConfirm(false)}
+        onConfirm={async () => { setConfirm(false); const no = pick; const r = await onUse(no); if (r && r.ok) { setDone(`「${nameOf(no)}」を手に入れました`); setPick(null); } }}/>}
+    </>
+  );
+};
+const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack, gacha = 0, catalogs = 0, onExchangeCatalog, onUseCatalog }) => {
   const [sheet, setSheet] = useState(null);   // { kind:'contents'|'rates', pack }
   const [confirm, setConfirm] = useState(null);
+  const [gachaConfirm, setGachaConfirm] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   return (
     <div data-card-shop-packs className="space-y-2 pb-2">
+      {onExchangeCatalog && <CardGachaPanel gacha={gacha} catalogs={catalogs} busy={busy} onExchange={() => setGachaConfirm(true)} onOpenCatalog={() => setCatalogOpen(true)}/>}
       {CARD_PACKS.map((pack) => (
         <div key={pack.id} data-card-shop-pack={pack.id} className={SCREEN_PANEL_CLASS} style={{ borderColor: `${pack.color}88` }}>
           <div className="flex items-center gap-2">
@@ -802,6 +896,8 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
       ))}
       {sheet && sheet.kind === 'contents' && <CardPackContents db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
       {sheet && sheet.kind === 'rates' && <CardPackRateSheet db={db} pack={sheet.pack} collection={collection} onClose={() => setSheet(null)}/>}
+      {gachaConfirm && <ConfirmSheet title="バトルカードカタログと交換しますか？" message={`ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`} confirmLabel="交換する" onCancel={() => setGachaConfirm(false)} onConfirm={() => { setGachaConfirm(false); void onExchangeCatalog(); }}/>}
+      {catalogOpen && <CardCatalogSheet db={db} catalogs={catalogs} collection={collection} busy={busy} onUse={onUseCatalog} onClose={() => setCatalogOpen(false)}/>}
       {confirm && <ConfirmSheet title={`${confirm.pack.name}を${confirm.count}パック買いますか？`} message={`ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`} confirmLabel="買って開ける" onCancel={() => setConfirm(null)} onConfirm={() => { const c = confirm; setConfirm(null); void onBuyPack(c.pack.id, c.count); }}/>}
     </div>
   );
