@@ -114,7 +114,11 @@ const roleOf = (m) => ROLE_BY_EFFECT[m && m.ex && m.ex.effect] || '攻め';
 // ヘイトを公開した日(RELEASE_FLAGS.tacticsHate。2026-10-18)。この日からのボットの回はヘイトのあるゲームで戦った回
 const HATE_SINCE = '2026-10-18';
 // 勇者モンが記録されていない回(2026-10-19〜22 のボット。プロモードの編成画面が変わり、勇者モンを読めていなかった)は数えない
-const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && r.hero && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)));
+// --since 2026-10-22T03:22 … この日時(r.at と同じ UTC の書き方)より後の回だけ数える。
+// ゲームの決まりが変わったとき、前の回を混ぜずに出し直すため(2026-10-26 窓口の判断: 10/22 12:21 JST にヘイトの決め方が変わったあとの回だけで出す)
+const SINCE = optArg('--since', '');
+if (SINCE && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(SINCE)) { console.error(`--since は 2026-10-22T03:22 の形(UTC): ${SINCE}`); process.exit(1); }
+const runs = (know.runs || []).filter((r) => r && r.result && r.result !== 'stopped' && r.hero && DIFF_ORDER.includes(r.difficulty) && r.use && !(r.bot && (r.bot.rotate || r.bot.fixedAllies)) && (!SINCE || String(r.at || '') >= SINCE));
 // ★クリアした回は「WAVE 11 まで届いた」と数える(2026-10-10 改善部 T3)。Hard はほぼ全員が WAVE 10 に届くので、届いた WAVE だけでは差が出ない
 const reach = (r) => (r.wave || 0) + (r.result === 'clear' ? 1 : 0);
 const sum = (a) => a.reduce((x, y) => x + y, 0);
@@ -289,7 +293,7 @@ const tried = stats.filter((s) => s.n).length;
 const measured = runs.filter((r) => r.use).length;
 out(OVERALL ? '# 味方モンスターの Tier 表(タクティクスプロ)' : '# 味方モンスターの Tier 表(タクティクスプロ・前の決め方 current。比べる用)');
 out();
-out(`更新: ${now}(JST)・数えた回: ${runs.length}回(${diffs.map((d) => `${d} ${runs.filter((r) => r.difficulty === d).length}`).join(' / ')})・戦ったモンスター: ${tried} / ${stats.length}体・技と間合いまで数えた回: ${measured}回`);
+out(`更新: ${now}(JST)・数えた回: ${runs.length}回${SINCE ? `(${SINCE} UTC より後の回だけ)` : ''}(${diffs.map((d) => `${d} ${runs.filter((r) => r.difficulty === d).length}`).join(' / ')})・戦ったモンスター: ${tried} / ${stats.length}体・技と間合いまで数えた回: ${measured}回`);
 out();
 out('研究所:ハカセくんが作る。タクティクスプロはベースモンを使うので、全員が同じ条件です。');
 out('「すべて解放してバトル」(デバッグ。記録・ランキング・報酬はつかない)で、勇者モンを入れ替えながら少しずつ集めています。');
