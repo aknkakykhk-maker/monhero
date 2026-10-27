@@ -149,6 +149,46 @@ const cardBuyPacks = (db, packId, count, { collection, pity, point }, rand) => {
   return { packs, collection: cur.collection, pity: cur.pity, point: point - cost + dupPoint, cost, dupPoint };
 };
 
+// ---- ガチャポイントとバトルカードカタログ(2026-10-27 社長「パックを1パック買うごとにガチャポイントが10たまる。500たまるとバトルカードカタログが手に入る。
+//      バトルカードカタログを使うと好きなカードを1枚手に入れられる。パック別は関係なし」) ----
+//   ・たまるのはブースターパックだけ(弾は問わない・1パック10。5パックまとめ買いは50)。スターターではたまらない
+//   ・ポイントに上限は無い。500以上あるときに「交換」でカタログ1冊(500減る・あまりは残る)。カタログはためておける
+//   ・カタログで選べるのは、どれかの弾のパックから出るカード全部(レア度は問わない)。持てる数いっぱいのカードは選べない(1冊がむだにならないように)
+//   ・保存は mh_card_gacha_points_v1(ポイント)と mh_card_catalogs_v1(冊数)。読めない・壊れているときは 0。前に買ったパックの分は入れない
+const CARD_GACHA_PER_PACK = 10;
+const CARD_CATALOG_COST = 500;
+const cardNormalizeCount = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
+const cardNormalizeGacha = cardNormalizeCount;
+const cardNormalizeCatalogs = cardNormalizeCount;
+// 次の1冊までの進み具合(帯の目盛り。730 なら 230 / 500)
+const cardGachaProgress = (gacha) => cardNormalizeGacha(gacha) % CARD_CATALOG_COST;
+// 交換: 500以上あるときだけ。返す { gacha, catalogs } / できないとき null
+const cardExchangeCatalog = ({ gacha, catalogs }) => {
+  const g = cardNormalizeGacha(gacha);
+  if (g < CARD_CATALOG_COST) return null;
+  return { gacha: g - CARD_CATALOG_COST, catalogs: cardNormalizeCatalogs(catalogs) + 1 };
+};
+// カタログで選べるカード(パックから出るもの全部)。no → 持てる数(モンスター1・技など CARD_TECH_KEEP_MAX)
+const cardCatalogPool = (db) => {
+  const out = [];
+  CARD_PACKS.forEach((pack) => {
+    ['alt', 'kira', 'normal'].forEach((rar) => cardPackMonPool(db, pack, rar).forEach((no) => out.push({ no, packId: pack.id, slot: 'mon', rarity: rar, max: 1 })));
+    cardPackTechPool(db, pack).forEach((no) => out.push({ no, packId: pack.id, slot: 'tech', rarity: 'normal', max: CARD_TECH_KEEP_MAX }));
+  });
+  return out;
+};
+// カタログを使う: 1冊減らし、選んだカードを1枚足す。返す { catalogs, collection } / できないとき null(冊数が無い・選べないカード・もう持てる数いっぱい)
+const cardUseCatalog = (db, no, { catalogs, collection }) => {
+  const c = cardNormalizeCatalogs(catalogs);
+  if (c < 1) return null;
+  const item = cardCatalogPool(db).find((x) => x.no === no);
+  if (!item) return null;
+  const col = { ...(collection || {}) };
+  if ((col[no] || 0) >= item.max) return null;
+  col[no] = (col[no] || 0) + 1;
+  return { catalogs: c - 1, collection: col };
+};
+
 // 画面に出す「出る確率」(パックの画面で、だれでも見られる)
 const cardPackRates = (db, packId) => {
   const pack = cardPackOf(packId);

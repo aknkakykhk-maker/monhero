@@ -297,7 +297,7 @@ function BreederMarketScreen({
         return <>
           {renderSectionTabs('card')}
           <div className={SCREEN_LIST_CLASS} data-card-shop data-card-shop-tab={tab}>
-            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack}/>}
+            {tab==='pack'&&<CardShopPacks db={CARD_BATTLE_DATA} point={cp} busy={busy||cardShop.busy} collection={cardShop.collection} onBuyPack={cardShop.onBuyPack} gacha={cardShop.gacha} catalogs={cardShop.catalogs} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>}
             {tab==='starter'&&<CardShopStarters db={CARD_BATTLE_DATA} point={cp} collection={cardShop.collection} busy={busy||cardShop.busy} starter={cardShop.starter} shop={cardShop.shop} onBuyStarter={cardShop.onBuyStarter}/>}
             {/* 円盤石・アシストカードは、ビートP交換所と同じ物を同じ値段(1,500)で並べる(社長 台帳 #3405)。一覧はビートP交換所のものをそのまま引く */}
             {(tab==='disc'||tab==='assist')&&<div className={MARKET_GRID_CLASS}>
