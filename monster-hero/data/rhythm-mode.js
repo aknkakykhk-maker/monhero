@@ -1916,8 +1916,12 @@ const rhythmInputMatchAgeFor=ageMs=>{
   if(Number.isFinite(hint)&&hint>(Number(ageMs)||0)){RHYTHM_TIMING_DIAG.matchByAge();return hint;}
   return Number(ageMs)||0;
 };
+// 【2026-10-27】上限を超えて遅れたと言うのに、その間ゲームが本当に止まっていたとは分からない入力(時刻だけ古い端末か、本当に遅れたかが決められない)。
+//   この指がまだ来ていないフリックを持ったら「仮の持ち主」にして、ほかの指が来たら譲る(rhythmMatchInputBatch の lateHeld・30-rhythm-play.jsx の inputStarts)
+let rhythmInputAgeUncertain=false;
+let rhythmLastMatchLateUncertain=false;
 const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
-  rhythmInputMatchAgeHint=null;
+  rhythmInputMatchAgeHint=null;rhythmInputAgeUncertain=false;
   const stamp=Number(eventTimeStamp),now=Number(nowPerfMs);
   if(!Number.isFinite(stamp)||!Number.isFinite(now))return 0;
   const age=now-stamp;
@@ -1930,6 +1934,7 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   // 当てるノーツを選ぶための本当の遅れ(rhythmInputMatchAgeFor)。基準がそろっていて、その間ゲームが本当に止まっていたと見えたときだけ覚える
   // (「時刻だけ古い」入力では覚えない＝これまでどおり)。判定に使う遅れ(下で返す値)は変えない
   if(aligned&&RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE)rhythmInputMatchAgeHint=Math.min(age,RHYTHM_INPUT_AGE_CAP_WIDE_MS);
+  if(rhythmInputMatchAgeHint===null)rhythmInputAgeUncertain=true;
   if(!rhythmTouchFixOn('inputAgeCap')){
     // 【2026-10-09・社長の指示「iPhoneの遅れの正体を調べる」】上限を超えて遅れた入力が、本当に処理が詰まった(コマが止まっていた)ものか、
     // 端末の時刻だけ古いもの(コマは来ていた)かを、直し方を入れていない端末でも数える。数えるだけで、判定には何も効かない
@@ -4132,7 +4137,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     // この指の見回りが無い(タッチ側の記録が途中で外れた): 本体が rhythmReleaseFallback で決める
     return null;
   };
-  return {bind,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,setSlideSwapListener,_sessions:sessions};
+  // 指とノーツの結び付きだけを、判定せずに外す(2026-10-27。遅れの分からない指が仮に持っていたフリックを、新しい指へ譲るとき。rhythmMatchInputBatch の lateHeld)
+  const forget=key=>{sessions.delete(String(key));};
+  return {bind,forget,settleHeld,setInputAge,record,release,clear,slideVisualLaneForIndex,slideOffForIndex,invalidateAreaRect,areaRect,setSlideSwapListener,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
@@ -4427,6 +4434,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),judgeNow=Number(nowMs),offset=Number(offsetMs)||0;
   // 入れた値は1回の照合で使い切る(例外で抜けても、次の照合へ残さない)
   const matchOverride=rhythmMatchNowOverride;rhythmMatchNowOverride=null;
+  // 遅れの分からない入力の印も1回の照合で使い切る。結び付けの側(30-rhythm-play.jsx の inputStarts)は rhythmLastMatchLateUncertain で読む
+  const lateUncertain=rhythmInputAgeUncertain;rhythmInputAgeUncertain=false;rhythmLastMatchLateUncertain=lateUncertain;
   const now=matchOverride!==null&&matchOverride<judgeNow?matchOverride:judgeNow;
   const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
   // 相手を決める前に、選べる先が狭い入力から順に並べ替える(上の説明)。
@@ -4504,6 +4513,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       for(let index=0;index<source.length;index++){
         const note=source[index];
         if(!note||note.done||note.activePointerId===null)continue;
+        if(note._lateClaimKey!=null&&note._lateClaimKey===note.activePointerId)continue;   // 遅れの分からない指が仮に持つフリック(下の lateHeld)。持ち替えの控えにはしない
         if(!(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE'))continue;
         if(note.activePointerId===key)continue;   // 自分がいま押さえている指
         if(heightMismatch(note))continue;         // 高さの違う帯(地上の指と空中の帯など)の持ち替えにはしない
@@ -4654,7 +4664,10 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
       // flickOnly … 押さえていたホールド/スライドが指を置いたまま終わったあと、その指を滑らせたときの取り直し。フリックだけを取る(下の説明・30-rhythm-play.jsx の inputMoves)
-      if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP'||input?.flickOnly===true&&note.type!=='FLICK')continue;
+      // ★遅れの分からない指が仮に持っているフリック(_lateClaimKey)は、ほかの新しい指が来たら譲る(2026-10-27 社長「A(別の指に譲る)」)。
+      //   端末の都合で遅れて届いた直前のタップの指が、すぐ後ろの同じ位置のフリックを持ってしまい、本物のフリックの指が取れずに MISS になっていた
+      const lateHeld=note&&note.activePointerId!==null&&note._lateClaimKey!=null&&note._lateClaimKey===note.activePointerId&&!lateUncertain&&!rejudge;
+      if(claimed.has(index)||!note||note.done||(note.activePointerId!==null&&!lateHeld)||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP'||input?.flickOnly===true&&note.type!=='FLICK')continue;
       const noteTime=Number(note.timeMs)+offset;
       if(tapOnly&&Number.isFinite(syntheticTime)&&Math.abs(Number(note.timeMs)-syntheticTime)>.001)continue;
       // 【2026-09-13・両手の高速タップでミスが出る】
@@ -4793,6 +4806,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     // bind が note.type を 'HOLD' へ書き換えているので、picked.type だけを見ると
     // 持ち替えた瞬間にSLIDEが普通のHOLDへ変わり、経路の追従が消える
     const originalType=picked._rhythmOriginalType||picked.type;
+    // 遅れの分からない指が仮に持っていたフリックを譲り受けた(lateHeld)。前の指の結び付きは判定せずに外す(離した瞬間に MISS にさせない)
+    if(picked.activePointerId!==null&&picked._lateClaimKey!=null&&picked._lateClaimKey===picked.activePointerId&&picked.activePointerId!==key)RHYTHM_GESTURE_RUNTIME.forget(picked.activePointerId);
     if(originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked,originalType,judgeNow,offset);
     // 触れた瞬間の音。判定のずれで鳴らし分ける(判定の関数は本体側にあるので、無いときはいちばん良い音)。
     // ★フリックは触れた瞬間には鳴らさず、払えたときにフリック音を鳴らす(プロセカ・バンドリ！と同じ。2026-09-27)

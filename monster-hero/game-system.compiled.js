@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f4c196fbef109db
+// source-sha256: 0ea1d474bf642576
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -39947,6 +39947,7 @@ const RhythmTapTest = ({
     const matchedInputs = rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs);
     rhythmSetMatchNow(null);
     RHYTHM_GESTURE_RUNTIME.setInputAge?.(0);
+    const lateUncertain = rhythmLastMatchLateUncertain === true;
     matchedInputs.forEach(({
       input,
       target,
@@ -40016,6 +40017,15 @@ const RhythmTapTest = ({
           sub: input.subLaneCoordinate,
           sky: input.sky
         });
+        if (target.activePointerId !== null && target._lateClaimKey != null && target._lateClaimKey === target.activePointerId && target.activePointerId !== input.inputKey) {
+          RHYTHM_INPUT_REC.event('late-flick-pass', {
+            note: target.index,
+            from: target.activePointerId,
+            key: input.inputKey
+          });
+          run.activePointers.delete(target.activePointerId);
+        }
+        target._lateClaimKey = lateUncertain && target._rhythmOriginalType === 'FLICK' ? input.inputKey : null;
         target.activePointerId = input.inputKey;
         if (handover) {
           target.releasedAtMs = null;
