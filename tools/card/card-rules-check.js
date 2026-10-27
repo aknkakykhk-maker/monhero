@@ -173,12 +173,24 @@ const decksAndSaves = () => {
   // 公開の条件: EXPERT・MASTER で、どの助手もプレイヤー役(スターター3つ・同じ難易度の考え方)に同じくらい勝つ。
   //   直す前は、みゅあ 33%・ももすけ(MASTER)38% と弱く、弱い子がカードポイントの稼ぎ場になっていた。細かい数は tools/card/card-ai-balance.js
   ['expert', 'master'].forEach((lv) => {
-    const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
+    // 勝率は試合の種が決まっているので、同じ作りなら毎回同じ値になる。ただ 90試合(スターターごとに30)だと、作りが少し変わるだけで ±5点ほど動く。
+    //   境目に近い助手(境目 38%・65% の ±4点 = 34〜42%・61〜69%)だけ 450試合(スターターごとに150)で測り直し、その値で決める(2026-10-27 ソランド部長・ルールくん。
+    //   ドラが境目を出たり入ったりして、その場しのぎで数字をいじることが続いたため)。ふだんは 90試合のままなので重くならない
+    const rateOf = (w, per) => {
       let win = 0, n = 0, sd = 1;
       // 助手のデッキは毎試合組み直す(好きなモンスター ベスト4から3体。2026-10-25)。MASTER はプレイヤー役のデッキを見る
       // プレイヤー役は山札の上限を見ない(playerRole。2026-10-27 ソランド判断・ドラ EXPERT の測り方をそろえるため。人が相手のときと同じ測り方)
-      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < 30; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!d.sameBlood }), E.cardAiPolicy('kyuko', lv, { playerRole: true })], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
-      return [w, win / n];
+      Object.keys(db.starters).forEach((k) => { for (let g = 0; g < per; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!d.sameBlood }), E.cardAiPolicy('kyuko', lv, { playerRole: true })], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
+      return win / n;
+    };
+    const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
+      const r90 = rateOf(w, 30);
+      if ((r90 >= 0.34 && r90 < 0.42) || (r90 > 0.61 && r90 <= 0.69)) {
+        const r450 = rateOf(w, 150);
+        console.log(`  強さの測り直し: ${w} ${lv.toUpperCase()} 90試合 ${Math.round(r90 * 100)}% → 450試合 ${Math.round(r450 * 1000) / 10}%`);
+        return [w, r450];
+      }
+      return [w, r90];
     });
     const bad = rates.filter(([, r]) => r < 0.38 || r > 0.65);
     ok(!bad.length, `${lv.toUpperCase()} の助手の強さがそろっていない(プレイヤー役への勝率 38〜65% の外): ${bad.map(([w, r]) => `${w} ${Math.round(r * 100)}%`).join('・')}`);
