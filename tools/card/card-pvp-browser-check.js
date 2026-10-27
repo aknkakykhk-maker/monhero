@@ -24,7 +24,8 @@
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
 //   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
 //   ⑯ 入口の「いま相手を待っている人」: 合言葉の部屋は出ない・だれとでもで待っている人が名前つきで出る・[対戦する]で始まる
-//   ⑮ 片方の端末が70秒止まったら、止まっていた側は「通信が切れた」の負け・相手は勝ち(2台とも勝ちにならない)
+//   ⑰ 片方の端末が100秒止まって戻ったら、続きから遊べる(相手は120秒まで待つ・相手の持ち時間の時計は止まる)。最後まで戦える
+//   ⑮ 片方の端末が130秒止まったら、相手は120秒で「相手が抜けた」の勝ち・止まっていた側は「通信が切れた」の負け(2台とも勝ちにならない)
 //   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -499,14 +500,48 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));
-    // ⑮ 片方の端末が止まった(重い・アプリを裏にした)まま70秒: 止まっていた側は戻っても相手を「抜けた」と見ず、「通信が切れた」の負け・相手は「相手が抜けた」の勝ち。
-    //   2台とも勝ちにならない(2026-10-27 テンケンくんの通し遊び・部長)。⑩ で始まった試合のまま、A の画面を75秒まるごと忙しくする(時計も止まる)
-    {
-      const ix = livePages.indexOf(A); if (ix >= 0) livePages.splice(ix, 1); // 止まっているあいだ、A へは届かない
-      const busy = A.evaluate(() => { const e = Date.now() + 75000; while (Date.now() < e) { /* 止まっている */ } }).catch(() => {});
-      for (let i = 0; i < 200 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
-      await busy;
+    // A の画面を ms のあいだまるごと忙しくする(重い・アプリを裏にした。時計も止まる)。止まっているあいだ、A へは何も届かない
+    const freezeA = async (ms) => {
+      const ix = livePages.indexOf(A); if (ix >= 0) livePages.splice(ix, 1);
+      await A.evaluate((n) => { const e = Date.now() + n; while (Date.now() < e) { /* 止まっている */ } }, ms).catch(() => {});
       livePages.push(A);
+    };
+    const newPrivateMatch = async () => {
+      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+      await A.locator('[data-card-pvp-create]').click();
+      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+      const code = (await A.locator('[data-card-pvp-room]').innerText()).trim();
+      await B.locator('[data-card-pvp-code]').fill(code);
+      await B.locator('[data-card-pvp-join]').click();
+      await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]);
+      await A.waitForTimeout(3000);
+    };
+    // ⑰ 片方の端末が100秒止まって戻る(2026-10-27 社長「120秒以内に戻れば続きから遊べる」): 相手は120秒まで待ち、相手の持ち時間の時計も止まるので、
+    //   戻ったあと続きから遊べて、最後まで戦える。⑩ で始まった試合のまま
+    {
+      await freezeA(100000);
+      await A.waitForTimeout(3000);
+      const mid = [await A.locator('[data-card-pvp-result]').count(), await B.locator('[data-card-pvp-result]').count()];
+      check('⑰ 100秒止まって戻っても、どちらも終わっていない(相手は120秒まで待つ)', mid[0] === 0 && mid[1] === 0, mid.join(' / '));
+      const end17 = Date.now() + 300000;
+      while (Date.now() < end17 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
+      await A.waitForTimeout(1500);
+      const r17 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+      const why17 = (await A.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
+      check('⑰ 戻ったあと続きから遊べて、最後まで戦える(片方が勝ち・片方が負け。抜けた・通信が切れたで終わらない)',
+        !!r17[0] && !!r17[1] && r17[0] !== r17[1] && !/相手が抜けた|通信が切れた|相手の時間切れ/.test(why17) && (await A.locator('[data-card-pvp-dropped]').count()) === 0, `${r17.join(' / ')} ${why17.replace(/\n/g, ' ').slice(0, 80)}`);
+      await newPrivateMatch();
+    }
+    // ⑮ 片方の端末が止まった(重い・アプリを裏にした)まま130秒: 相手は120秒で「相手が抜けた」の勝ち。止まっていた側は戻っても相手を「抜けた」と見ず、
+    //   「通信が切れた」の負け。2台とも勝ちにならない(2026-10-27 テンケンくんの通し遊び・部長。社長が60秒→120秒)
+    {
+      const t0 = Date.now();
+      const frozen = freezeA(130000);
+      let bEndSec = -1;
+      for (let i = 0; i < 300 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
+      if (await B.locator('[data-card-pvp-result]').count()) bEndSec = Math.round((Date.now() - t0) / 1000);
+      check('⑮ 相手は、止まってから120秒ごろに終わる(早く終わらない)', bEndSec >= 115 && bEndSec <= 132, `${bEndSec}秒`);
+      await frozen;
       for (let i = 0; i < 60 && !(await A.locator('[data-card-pvp-result]').count()); i++) await A.waitForTimeout(500);
       await A.waitForTimeout(1500);
       const ra = await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null);
@@ -515,20 +550,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       check('⑮ 止まっていた側は戻ると「通信が切れた」の負け(説明の1行つき)・相手は勝ち。2台とも勝ちにならない', ra === 'lose' && rb === 'win' && (await A.locator('[data-card-pvp-dropped]').count()) === 1, `${ra} / ${rb}`);
       check('⑮ 止まっていた側にも「もう1戦」は出ない', (await A.locator('[data-card-pvp-again]').count()) === 0);
       // ⑭ のために、もう一度合言葉の部屋で試合を始める
-      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
-      await A.locator('[data-card-pvp-create]').click();
-      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
-      const code5 = (await A.locator('[data-card-pvp-room]').innerText()).trim();
-      await B.locator('[data-card-pvp-code]').fill(code5);
-      await B.locator('[data-card-pvp-join]').click();
-      await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]);
-      await A.waitForTimeout(3000);
+      await newPrivateMatch();
     }
     // ⑭ 相手が試合の途中で画面を閉じた(「抜けます」が届かないことがある): 相手の時間切れや電波切れで終わっても「相手が抜けた」と出し、「もう1戦」は出さない(2026-10-27 部長)
     //   ⑩ で始まった試合のまま、A の画面を閉じる。閉じる前に、閉じたときの知らせ(bye)が出ないようにしておく
     await A.evaluate(() => { window.__mhCardPvpAuto = false; window.addEventListener('pagehide', (e) => e.stopImmediatePropagation(), true); window.addEventListener('beforeunload', (e) => e.stopImmediatePropagation(), true); }).catch(() => {});
     await A.close({ runBeforeUnload: false });
-    for (let i = 0; i < 240 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
+    // 相手から何も届かなくなってから120秒で決まる(2026-10-27 社長が60秒→120秒)ので、150秒まで待つ
+    for (let i = 0; i < 300 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
     await B.waitForTimeout(1500);
     const leftText = (await B.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
     await shot(B, 'pvp-14-foe-left');

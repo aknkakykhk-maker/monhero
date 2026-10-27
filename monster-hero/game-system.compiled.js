@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b012e2361145ee4b
+// source-sha256: e9f72d12b9cfe502
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99925,7 +99925,7 @@ const CARD_PVP_HIDDEN = -1;
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
 const CARD_PVP_RESEND_MS = 1500;
-const CARD_PVP_ALIVE_MS = 60000;
+const CARD_PVP_ALIVE_MS = 120000;
 const CARD_PVP_NAME_MAX = 16;
 const CARD_PVP_TURN_MS = 60000;
 const CARD_PVP_GUARD_MS = 15000;
@@ -99943,7 +99943,6 @@ const CARD_PVP_CHAT_GAP_MS = 1500;
 const CARD_PVP_LOBBY_TOPIC = 'realtime:mhc-lobby-free';
 const CARD_PVP_LOBBY_FRESH_MS = 6000;
 const CARD_PVP_LOBBY_JOIN_MS = 8000;
-const CARD_PVP_LOBBY_LIMIT_MS = 90000;
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
 const cardPvpFlip = act => {
@@ -101595,16 +101594,6 @@ const CARD_PVP = (() => {
         emit();
       }
     },
-    seekAgain: () => {
-      if (s && s.mode === 'free' && s.phase === 'waiting') {
-        s = {
-          ...s,
-          seekAt: Date.now(),
-          joining: ''
-        };
-        emit();
-      }
-    },
     join: (code, profile, deck) => {
       const c = rhythmMultiNormalizeCode(code);
       if (!c) return false;
@@ -102394,31 +102383,7 @@ const CardPvpLobby = ({
   }, room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'), React.createElement("p", {
     "data-card-pvp-waiting": Math.max(0, room.lobbyCount - 1),
     className: "mt-1 text-[13px] font-bold text-sky-100"
-  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
-    className: "mt-1 text-[12px] font-bold text-slate-300 tabular-nums"
-  }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
-    "data-card-pvp-nobody": true,
-    className: "mt-3 space-y-2"
-  }, React.createElement("p", {
-    className: "text-[13px] font-bold text-amber-100"
-  }, "いまは、だれも来ませんでした"), React.createElement("button", {
-    type: "button",
-    "data-card-pvp-seek-again": true,
-    className: `${btn} border border-white/15 bg-slate-900 text-slate-100`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.seekAgain();
-    }
-  }, "もう一度さがす"), onAssistant && React.createElement("button", {
-    type: "button",
-    "data-card-pvp-to-assistant": true,
-    className: `${btn} mh-button-primary`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.leave();
-      onAssistant();
-    }
-  }, "助手と対戦へ"))), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
+  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません')), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
     className: "rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center"
   }, React.createElement("p", {
     className: "text-[13px] font-bold text-sky-100"
@@ -102490,12 +102455,20 @@ const useCardPvpClock = (pvp, st, step) => {
   const [now, setNow] = useState(() => Date.now());
   const keyRef = useRef('');
   const startRef = useRef(Date.now());
+  const pauseRef = useRef({
+    ms: 0,
+    at: Date.now()
+  });
   const firedRef = useRef('');
   const gutsRef = useRef(-1);
   const key = pvp ? cardPvpClockKey(st) : '';
   if (key !== keyRef.current) {
     keyRef.current = key;
     startRef.current = Date.now();
+    pauseRef.current = {
+      ms: 0,
+      at: Date.now()
+    };
   }
   useEffect(() => {
     if (!pvp) return undefined;
@@ -102503,7 +102476,14 @@ const useCardPvpClock = (pvp, st, step) => {
     return () => clearInterval(t);
   }, []);
   const decider = pvp ? cardPvpDecider(st) : -1;
-  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  if (pvp && now > pauseRef.current.at) {
+    const gap = now - pauseRef.current.at;
+    if (gap > CARD_PVP_SLEEP_MS || decider === 1 && quiet > CARD_PVP_QUIET_MS || decider === 0 && room.offline) pauseRef.current.ms += gap;
+    pauseRef.current.at = now;
+  }
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
     if (!pvp || st.winner !== null) return;
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
@@ -102529,8 +102509,6 @@ const useCardPvpClock = (pvp, st, step) => {
       CARD_PVP.foeStalled();
     }
   }, [now, key]);
-  const room = CARD_PVP.get();
-  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   return {
     left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)),
     mine: decider === 0,
