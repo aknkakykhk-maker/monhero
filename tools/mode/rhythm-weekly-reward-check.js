@@ -262,7 +262,8 @@ check('受け取り済みは先に保存してからギフトを作る',
 check('週間の行に遊んだ回数を出す',/eventWeekly\?`\$\{entry\.playCount\}回/.test(screen));
 check('週間の詳細で数え方を伝えている',screen.includes('data-rhythm-week-score-rule'));
 check('∞周回の倍率は週間に出さない（対象曲が無いため）',
-  /\{!eventWeekly&&<p data-rhythm-event-loop-bonus/.test(screen));
+  // 2026-10-27(#4097): 言葉の途中で折らない style が先に付いてよい
+  /\{!eventWeekly&&<p(?: style=\{JA_WRAP_STYLE\})? data-rhythm-event-loop-bonus/.test(screen));
 check('ヘルプに順位報酬の表がある（手で書き写していない）',
   helpSrc.includes("{t:'data', id:'rhythmWeeklyRewards'}")
   &&helpRows.includes("case 'rhythmWeeklyRewards':")
