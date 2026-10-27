@@ -23,6 +23,7 @@
 //   ⑪ 招待のようすの見分け(届いている・時間切れ・断られた)
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
 //   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
+//   ⑯ 入口の「いま相手を待っている人」: 合言葉の部屋は出ない・だれとでもで待っている人が名前つきで出る・[対戦する]で始まる
 //   ⑮ 片方の端末が70秒止まったら、止まっていた側は「通信が切れた」の負け・相手は勝ち(2台とも勝ちにならない)
 //   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -434,6 +435,30 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     await A.locator('[data-card-pvp-history="list"] button').first().click();
     await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    // ⑯ いま相手を待っている人の一覧(2026-10-27 社長「マルチで誰かが募集してたりしたらここで見れるようにして」案A):
+    //   合言葉の部屋は出ない・だれとでもで待っている人は名前つきで出る・[対戦する]でその人の部屋に入って始まる
+    await B.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    await A.locator('[data-card-pvp-create]').click();
+    await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+    await B.waitForTimeout(5000);
+    const privCount = Number(await B.locator('[data-card-pvp-seekers]').getAttribute('data-card-pvp-seekers').catch(() => '-1'));
+    check('⑯ 合言葉の部屋は、入口の「いま相手を待っている人」に出ない', privCount === 0, String(privCount));
+    await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    await A.locator('[data-card-pvp-free]').click();
+    const seen16 = await B.locator('[data-card-pvp-seeker]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const rowText = seen16 ? await B.locator('[data-card-pvp-seeker]').first().innerText() : '';
+    await shot(B, 'pvp-16-seekers');
+    check('⑯ だれとでもで待っている人が、入口の一覧に名前つきで出る(押す前に見える)', seen16 && /検査ブリーダー/.test(rowText) && /待って \d+秒/.test(rowText), rowText.replace(/\n/g, ' '));
+    if (seen16) await B.locator('[data-card-pvp-seeker-pick]').first().click();
+    const met16 = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
+    check('⑯ 一覧の[対戦する]で、その人の部屋に入って対戦が始まる', met16);
+    if (met16) {
+      const end16 = Date.now() + 300000;
+      while (Date.now() < end16 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
+      const r16 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+      check('⑯ 一覧から始めた対戦も最後まで戦えて、片方が勝ち・片方が負け', !!r16[0] && !!r16[1] && r16[0] !== r16[1], r16.join(' / '));
+      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    }
     // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
     await A.locator('[data-card-pvp-invite-open]').click();
     await shot(A, 'pvp-07-invite-pick');
