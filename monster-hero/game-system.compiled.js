@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9f72d12b9cfe502
+// source-sha256: 6c24951bfd8ba12a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102232,7 +102232,7 @@ const CardPvpLobby = ({
   }, x.rt !== null ? `強さ ${x.rt}・` : '', "待って ", x.waitSec, "秒")), React.createElement("button", {
     type: "button",
     "data-card-pvp-seeker-pick": x.id,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102248,7 +102248,7 @@ const CardPvpLobby = ({
   }, jaWrap('押すと、その人の部屋に入って対戦が始まります')))), React.createElement("button", {
     type: "button",
     "data-card-pvp-free": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} mh-button-primary`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102261,7 +102261,7 @@ const CardPvpLobby = ({
   }, "だれとでも(自分も待つ)"), React.createElement("button", {
     type: "button",
     "data-card-pvp-create": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} border border-sky-300/40 bg-slate-900 text-sky-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102270,7 +102270,7 @@ const CardPvpLobby = ({
   }, "合言葉で部屋を作る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-open": true,
-    disabled: !ready || !roster,
+    disabled: !ready || !profileReady || !roster,
     className: `${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102294,7 +102294,7 @@ const CardPvpLobby = ({
   }, f.userName), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-to": f.otherId,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102326,7 +102326,7 @@ const CardPvpLobby = ({
   }, "断る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-accept": x.roomCode,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102361,7 +102361,7 @@ const CardPvpLobby = ({
   }), React.createElement("button", {
     type: "button",
     "data-card-pvp-join": true,
-    disabled: !ready || !rhythmMultiNormalizeCode(code),
+    disabled: !ready || !profileReady || !rhythmMultiNormalizeCode(code),
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();

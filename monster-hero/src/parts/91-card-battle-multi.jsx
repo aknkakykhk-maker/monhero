@@ -1078,7 +1078,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   const started = useRef('');
   useEffect(() => { if (room.phase === 'playing' && room.game && started.current !== room.match) { started.current = room.match; onStart(room.game); if (typeof cardPvpHistoryBegin === 'function' && (rankSend || (typeof window !== 'undefined' && window.__mhCardPvpRankTest === true))) cardPvpHistoryBegin(room.match, room.me && room.me.bid); } }, [room.phase, room.match]);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
-  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0;
+  const ready = !!deck && deckIssues.length === 0 && penaltyMin === 0; // 部屋に入るボタンは、プロフィール(名前・アイコン)を読み終えてから押せる(読む前だと「ブリーダー」と人型のアイコンで相手に届く。2026-10-27)
   const back = () => { CARD_PVP.leave(); CARD_WATCH.leave(); onBack(); };
   const r = room.result;
   if (watch.phase !== 'idle' && room.phase === 'idle') return <CardPvpWatchScreen/>;
@@ -1190,7 +1190,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                       <b className="block truncate text-[14px] font-black text-white">{x.name}</b>
                       <small className="block text-[11px] font-bold text-slate-400 tabular-nums">{x.rt !== null ? `強さ ${x.rt}・` : ''}待って {x.waitSec}秒</small>
                     </span>
-                    <button type="button" data-card-pvp-seeker-pick={x.id} disabled={!ready} className="mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                    <button type="button" data-card-pvp-seeker-pick={x.id} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
                       onClick={() => { Audio_.fgSe.tap(); CARD_PVP.clearNotice(); CARD_PVP.pick(x.code, { ...profile, rt: myRating ? myRating.rating : null }, deck); }}>対戦する</button>
                   </li>
                 ))}
@@ -1198,10 +1198,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
               <p className="mt-1 px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('押すと、その人の部屋に入って対戦が始まります')}</p>
             </>)}
           </div>
-          <button type="button" data-card-pvp-free disabled={!ready} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.clearNotice(); void CARD_PVP.free({ ...profile, rt: myRating ? myRating.rating : null }, deck); }}>だれとでも(自分も待つ)</button>
-          <button type="button" data-card-pvp-create disabled={!ready} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
+          <button type="button" data-card-pvp-free disabled={!ready || !profileReady} className={`${btn} mh-button-primary`} onClick={() => { Audio_.fgSe.tap(); CARD_PVP.clearNotice(); void CARD_PVP.free({ ...profile, rt: myRating ? myRating.rating : null }, deck); }}>だれとでも(自分も待つ)</button>
+          <button type="button" data-card-pvp-create disabled={!ready || !profileReady} className={`${btn} border border-sky-300/40 bg-slate-900 text-sky-100`} onClick={() => { Audio_.fgSe.tap(); void CARD_PVP.create(profile, deck); }}>合言葉で部屋を作る</button>
           {/* フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 相手を選ぶと部屋を作り、合言葉が出たところで招待を送る。相手が来たら始まる */}
-          <button type="button" data-card-pvp-invite-open disabled={!ready || !roster} className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`}
+          <button type="button" data-card-pvp-invite-open disabled={!ready || !profileReady || !roster} className={`${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`}
             onClick={() => { Audio_.fgSe.tap(); setInviteOpen((v) => !v); if (selfBid) void cardPvpRoster(selfBid).then((list) => setRoster(Array.isArray(list) ? list : [])); }}>{inviteOpen ? 'フレンドの招待を閉じる' : 'フレンドを招待'}</button>
           {inviteOpen && roster && (
             <div data-card-pvp-invite-pick className="rounded-2xl border border-emerald-300/40 bg-emerald-500/5 p-2">
@@ -1211,7 +1211,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                   {roster.slice(0, 30).map((f) => (
                     <li key={f.otherId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-1.5">
                       <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">{f.userName}</span>
-                      <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+                      <button type="button" data-card-pvp-invite-to={f.otherId} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
                         onClick={() => { Audio_.fgSe.tap(); setInviteNext(f.otherId); void CARD_PVP.create(profile, deck); }}>招待する</button>
                     </li>
                   ))}
@@ -1227,7 +1227,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
                     <small className="block text-[11px] text-emerald-200/80 tabular-nums">あと{cardPvpInviteLeftSec(x.createdAt, now)}秒</small></p>
                   <button type="button" data-card-pvp-decline={x.roomCode} className="mh-button min-h-[44px] shrink-0 rounded-xl border border-white/20 bg-slate-900 px-3 text-[13px] font-black text-slate-200"
                     onClick={() => { Audio_.fgSe.tap(); declineInvite(x); }}>断る</button>
-                  <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
+                  <button type="button" data-card-pvp-accept={x.roomCode} disabled={!ready || !profileReady} className="mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40"
                     onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(x.roomCode, profile, deck); }}>参加する</button>
                 </div>
               ))}
@@ -1242,7 +1242,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
             <div className="flex gap-2">
               <input data-card-pvp-code value={code} onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 4))} maxLength={4} inputMode="text" autoCapitalize="characters" placeholder="K7Q3"
                 className="min-h-[48px] w-0 flex-1 rounded-xl border border-white/20 bg-black/40 px-3 text-center text-[22px] font-black tracking-[.3em] text-white"/>
-              <button type="button" data-card-pvp-join disabled={!ready || !rhythmMultiNormalizeCode(code)} className="mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40"
+              <button type="button" data-card-pvp-join disabled={!ready || !profileReady || !rhythmMultiNormalizeCode(code)} className="mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40"
                 onClick={() => { Audio_.fgSe.tap(); CARD_PVP.join(code, profile, deck); }}>入る</button>
             </div>
           </div>
