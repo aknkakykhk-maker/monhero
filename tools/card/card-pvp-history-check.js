@@ -64,18 +64,19 @@ check('④ 50枚の合計は崩れない', E.cardPvpDeckGroups(foeDeck.cards).re
 // ⑤
 check('⑤ 日時は日本の時刻', E.cardPvpHistoryWhen(Date.UTC(2026, 9, 26, 15, 5)) === '10/27 00:05', E.cardPvpHistoryWhen(Date.UTC(2026, 9, 26, 15, 5)));
 
+// ⑦ 履歴があるのに読めないときは書かない(案1)
 // ⑥ 書けないときの守り(保存の見回り 2026-10-27): localStorage がいっぱいなら古い試合から減らして書く・ゲーム全体の保存(storeSet)は使わない
 (async () => {
   const full = fs.readFileSync(path.join(GAME, 'src/parts/92-card-pvp-history.jsx'), 'utf8');
   const save = full.slice(full.indexOf('// ---- 保存('), full.indexOf('// ---- 強さの点数の増減'));
   const mem = {};
-  let limit = 1e9, storeSetCalls = 0;
+  let limit = 1e9, storeSetCalls = 0, readFail = false;
   const ls = {
     setItem: (k, v) => { const used = Object.entries(mem).filter(([x]) => x !== k).reduce((a, [, x]) => a + x.length, 0); if (used + String(v).length > limit) { const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; } mem[k] = String(v); },
     getItem: (k) => (k in mem ? mem[k] : null), removeItem: (k) => { delete mem[k]; },
   };
   const c2 = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Date, window: { localStorage: ls },
-    storeGet: async (k, d) => (k in mem ? JSON.parse(mem[k]) : d), storeSet: async () => { storeSetCalls += 1; return false; },
+    storeGet: async (k, d) => (!readFail && k in mem ? JSON.parse(mem[k]) : d), storeSet: async () => { storeSetCalls += 1; return false; },
     hasWinStorage: () => false, isStorageWriteBlocked: () => false });
   vm.runInContext(`${src}\n${save}\n;this.S = { cardPvpHistoryWrite, cardPvpHistoryAdd, CARD_PVP_HISTORY_ROOM };`, c2);
   const S = c2.S;
@@ -93,6 +94,19 @@ check('⑤ 日時は日本の時刻', E.cardPvpHistoryWhen(Date.UTC(2026, 9, 26,
   limit = 10;
   got = await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(12)));
   check('⑥ まったく入らないときは、あきらめて落ちない', got === null);
+  // ⑦ 端末に履歴があるのに読めない(読み違え・形が壊れている)ときは、書かずに今までの対戦を残す(93 の見返しと同じ守り・2026-10-27 案1)
+  limit = 1e9;
+  const before = mem.mh_card_pvp_history_v1;
+  readFail = true;
+  got = await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(13)));
+  readFail = false;
+  check('⑦ 履歴があるのに読めないときは、書かずに今までの対戦を残す', got === null && mem.mh_card_pvp_history_v1 === before);
+  mem.mh_card_pvp_history_v1 = '{"broken"';
+  got = await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(14))).catch(() => null);
+  check('⑦ 形が壊れているときも、書かずに残す', got === null && mem.mh_card_pvp_history_v1 === '{"broken"');
+  delete mem.mh_card_pvp_history_v1;
+  got = await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(15)));
+  check('⑦ まだ履歴が無ければ、ふつうに書ける', got && got.length === 1 && JSON.parse(mem.mh_card_pvp_history_v1).length === 1);
   if (failed) { console.log(`\nNG: ${failed} 件`); process.exit(1); }
   console.log('\nすべて OK');
 })();
