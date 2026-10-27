@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 867c00dfdaf38c4a
+// source-sha256: a51cd6c78738e143
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45850,6 +45850,72 @@ const planAiCopyTurn = (aiCopy, {
     hand,
     picks,
     nextCard: picks[0] || null
+  };
+};
+const classicAiCopyShareOf = (mon, isHero) => {
+  if (!mon) return {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const plus = mon.plusStats && typeof mon.plusStats === 'object' ? mon.plusStats : {};
+  const pick = (heroKey, plusKey) => Math.max(0, aiCopySafeNum(isHero ? mon[heroKey] : plus[plusKey]));
+  return {
+    atk: pick('baseAtk', 'atk'),
+    def: pick('baseDef', 'def'),
+    maxGuts: pick('baseGuts', 'guts')
+  };
+};
+const classicAiCopySrc = ({
+  slots = [],
+  srcSlot = 0,
+  heroId = null,
+  party = {}
+} = {}) => {
+  const list = Array.isArray(slots) ? slots : [];
+  const shares = list.map(m => classicAiCopyShareOf(m, !!(m && heroId != null && m.id === heroId)));
+  const mine = shares[srcSlot] || {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const part = key => {
+    const total = shares.reduce((n, s) => n + s[key], 0);
+    const now = Math.max(0, aiCopySafeNum(party && party[key]));
+    if (!(total > 0)) return 0;
+    return Math.floor(now * (mine[key] / total));
+  };
+  return {
+    atk: part('atk'),
+    def: part('def'),
+    maxGuts: part('maxGuts')
+  };
+};
+const classicAiCopyIsAttack = card => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
+const classicAiCopyScore = card => {
+  if (!card) return 0;
+  if (card.type === 'unique') return 3;
+  if (classicAiCopyIsAttack(card)) return 2;
+  if (card.type === 'guard' || card.type === 'heal') return 0;
+  return 1;
+};
+const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
+  const d = Math.max(0, aiCopySafeNum(partyDmg));
+  const p = Math.max(0, aiCopySafeNum(partyAtk));
+  if (!(p > 0) || !(d > 0)) return 0;
+  return Math.floor(d * Math.max(0, aiCopySafeNum(copyAtk)) / p);
+};
+const classicAiCopySpendGuts = (aiCopy, cost) => aiCopy ? {
+  ...aiCopy,
+  guts: Math.max(0, aiCopySafeNum(aiCopy.guts) - Math.max(0, aiCopySafeNum(cost)))
+} : aiCopy;
+const classicAiCopyRegenGuts = (aiCopy, rate) => {
+  if (!aiCopy) return aiCopy;
+  const max = Math.max(0, aiCopySafeNum(aiCopy.maxGuts));
+  const add = Math.floor(max * Math.max(0, aiCopySafeNum(rate)));
+  return {
+    ...aiCopy,
+    guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add)
   };
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
