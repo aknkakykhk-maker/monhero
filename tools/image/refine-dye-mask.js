@@ -85,13 +85,16 @@ const CONFIGS = {
   ] },
   // 黒目は彩度1.0、まぶたの黄色は0.57なので、彩度0.85以上の画素だけ進む
   // 黒目のふちの暗い帯も黒目なので、暗い画素(線の扱い)も進む(lines)
-  Suezo: { grow: [{ from: 0, to: 1, diff: 40, sat: [0.85, 1], lines: true, box: [400, 360, 760, 690] }] },
+  // 黒目の上のふちの暗い所は線として扱われ、線のそろえで①へ戻っていたので、最後にもう一度たどる(growPost)
+  Suezo: { grow: [{ from: 0, to: 1, diff: 40, sat: [0.85, 1], lines: true, box: [400, 360, 760, 690] }], growPost: [{ from: 0, to: 1, diff: 40, sat: [0.85, 1], lines: true, box: [400, 360, 760, 690] }] },
   // 腕の肌色は肌③、緑のひれは①。左腕は肌色の所まで①、右腕は上半分だけ③で、左右が食い違っていた
   Yaobikuni: { grow: [
     // 肌色(色相0〜45)は肌③から、緑・黄緑(55〜140)はひれ①から、色が続くかぎり広げる。桃色の髪(色相340前後)はどちらにも入らない。
     // 最初は四角い範囲と色相で決めていて、範囲の下のふち(y=830)でしっぽのふちの黄緑の筋が横に切れていた(2026-10-27 作り直し)
     { from: [0, 1], to: 2, diff: 40, hue: [0, 45], box: [100, 380, 920, 900] },
     { from: [1, 2], to: 0, diff: 40, hue: [55, 140], box: [0, 380, 1024, 1536] },
+    // しっぽの左のふちのつや(淡い黄緑の白っぽい筋。x 333〜338・y 843〜870)が染めないままだったので、①からたどる
+    { from: -1, to: 0, diff: 40, hue: [50, 110], sat: [0.05, 1], box: [315, 800, 365, 960] },
   ] },
   // 腕と手(水色のひれ)は肌②。手の先とひじのまわりが髪①に入っていた。肌②から、色が続くかぎり髪①へ広げる
   // (2026-10-27 部長の指摘「形で範囲を決めない」。最初は多角形で指示していて、左腕の上に縦の直線が残っていた)
@@ -102,6 +105,8 @@ const CONFIGS = {
     // しっぽ(y 745 から下・x 300〜645)も同じ青なので、そこには入らないよう、腕の上と手のそばに分ける
     // 箱は1つの範囲としてまとめて使う(分けて順に広げると、箱の継ぎ目で髪の筋が横一直線に切れた)
     { from: 1, to: 0, diff: 40, hue: [210, 235], sat: [0.85, 1], boxes: [[150, 420, 380, 745], [150, 745, 298, 900], [590, 420, 860, 745], [648, 745, 860, 900]] },
+    // 左の髪の筋の先(x 228〜238・y 758〜775)は半透明のふちなので、半透明もたどる(lines)。手の輪郭の暗い青(明るさ0.85未満)には入らない
+    { from: 1, to: 0, diff: 40, hue: [208, 235], sat: [0.85, 1], val: [0.85, 1], lines: true, box: [215, 740, 240, 785] },
   ] },
 };
 
@@ -225,7 +230,7 @@ const refine = (srcData, Lin, W, H, cfg) => {
   // となりとの色の差が diff 以下で、暗い線でない画素だけ進む。進んでよい範囲 box(絵の画素 [x0,y0,x1,y1])はゆるく取り、
   // 部品がその中に収まるようにする(色が途切れた所で止まるので、box のふちは境目にならない)。boxes で複数の箱を1つの範囲にできる
   let grown = 0;
-  for (const g of cfg.grow || []) {
+  const runGrow = (list) => { for (const g of list || []) {
     const gb = g.boxes || [g.box];
     const inB = (i) => { const x = i % W, y = (i - x) / W; return gb.some(b => x >= b[0] && x < b[2] && y >= b[1] && y < b[3]); };
     let front = [];
@@ -243,7 +248,8 @@ const refine = (srcData, Lin, W, H, cfg) => {
     }
     // 広げた部品のふちに残った、元の部位の細い筋(ぼかし・線のきわ)を④でならせるよう、
     // 広げた部位に囲まれた from の小さな塊はそのあとの「小さな点をならす」で拾う
-  }
+  } };
+  runGrow(cfg.grow);
   if (grown) console.log(`色をたどって広げた画素 ${grown}`);
   // ③ 暗い線: まわり(半径3)に同じ部位が無ければ、まわりで多い部位へ
   if (cfg.lineFix) {
@@ -377,6 +383,8 @@ const refine = (srcData, Lin, W, H, cfg) => {
       specks++;
     }
   }
+  // growPost … grow と同じことを、仕上げの最後にもう一度(暗い線として扱われる所は、③の線のそろえで元へ戻るため)
+  runGrow(cfg.growPost);
   // ⑤ 子ごとの手直し。post … 仕上げたあとで、多角形の中のある部位を別の部位へ(角は絵の線の上に置く。
   // 同じ色の面が続いていて、多数決では分けられない所だけに使う)
   for (const pr of cfg.post || []) {
@@ -458,13 +466,18 @@ const labelsFromPng = async (file, srcData, W, H) => {
       if (seen[s0] || r.L[s0] < 0) continue;
       const lab = r.L[s0], comp = [s0];
       seen[s0] = 1;
+      // 数えるのを9pxで打ち切るので、打ち切ったかたまりの残りの画素から数え直すと「1pxの点」に見えてしまう。
+      // 同じ部位のとなりがほかのかたまりで数え済みなら、大きいかたまりの一部として扱う
+      const inComp = new Set(comp);
       let alone = true;
       for (let q = 0; q < comp.length && comp.length < 9; q++) {
         const p = comp[q], x = p % W;
         for (const n of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, p - W, p + W]) {
           if (n < 0 || n >= W * H) continue;
-          if (r.L[n] === lab) { if (!seen[n]) { seen[n] = 1; comp.push(n); } }
-          else if (r.L[n] !== -2) alone = false;
+          if (r.L[n] === lab) {
+            if (!seen[n]) { seen[n] = 1; comp.push(n); inComp.add(n); }
+            else if (!inComp.has(n)) alone = false;
+          } else if (r.L[n] !== -2) alone = false;
         }
       }
       if (comp.length < 9 && alone) for (const p of comp) r.L[p] = -2;
