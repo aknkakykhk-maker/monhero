@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "27562e084fd1",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":115937370,"count":708},"card":{"bytes":32186349,"count":934},"all":{"bytes":255511165,"count":1735},"core":{"bytes":14378257,"count":22}},
+  "id": "cfd61f5470ca",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":115937370,"count":708},"card":{"bytes":32186349,"count":934},"all":{"bytes":255511165,"count":1735},"core":{"bytes":14378621,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1740,7 +1740,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"6264eeaff74b","size":251924,"pack":"core"},
+    "tailwind.css": {"v":"f80713cc43f6","size":251924,"pack":"core"},
     "data/images/images-ally.js": {"v":"ae0a49eeea6f","size":58471,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"e11802f69b7d","size":59920,"pack":"core"},
@@ -1753,7 +1753,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"ddcb715aad87","size":76361,"pack":"core"},
-    "data/changelog.js": {"v":"2b6708071997","size":1478780,"pack":"core"},
+    "data/changelog.js": {"v":"fce8c43fcb9f","size":1479144,"pack":"core"},
     "data/help.js": {"v":"ce63a1ed9bc5","size":650219,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
