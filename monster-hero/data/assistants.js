@@ -207,10 +207,8 @@ const ASSISTANTS = [
     role: '助手',
     imageDir: 'images/assistant',
     imagePrefix: 'sorashido',
-    // 絵は社長があとで送る。届くまでは仮の顔(images/assistant/temp/sorashido_<表情>.png・表情8つ)を吹き出しにも大きい絵の場所にも使う。
-    // 公開するときは、届いた絵(images/assistant/sorashido_*.PNG と face/)へ差し替えて、この2行を消す
-    tempImageDir: 'images/assistant/temp',
-    tempImageExt: 'png',
+    // 絵(2026-10-27 社長): 8表情が1枚にまとまった原本(tools/art-sources/assistants/sorashido-faces-sheet.png)を、
+    // きゅうこと同じ 384x512 に切り分けた(images/assistant/sorashido_<表情>.PNG)。顔アイコンは face/ (make-assistant-faces.js)
     expressions: ASSISTANT_EXPRESSIONS,
     defaultExpression: ASSISTANT_DEFAULT_EXPRESSION,
     emoji: '🌺',
