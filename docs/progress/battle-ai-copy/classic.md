@@ -74,3 +74,19 @@ aiCopy = { srcSlot, srcMonsterId, level, spawnTurn, turnsLeft, hp, maxHp, atk, d
 - 率は元の子に対して。5つの遊びはライフを持たないので、ライフの率は使わない。狙われやすさは5つの遊びでは差が出ない(狙われない)
 - processTurn でコピーが使う所は、ドライバーくんの「Lv から枚数の上限などを返す関数」を呼び、その枚数まで「選ぶ → ガッツを引く → 撃つ」を繰り返す形にする。Lv1・Lv2 はいつも1枚
 - コピーが使う枚数は、プレイヤーの使える枚数(cardLimit)には数えない
+
+## 開発部の純粋な関数(2026-10-27 ドライバーくん。monster-hero/src/parts/32-sorashido-copy.jsx・説明は docs/progress/sorashido-assist-parts.md)
+
+クラシック系から呼ぶもの:
+
+| 関数 | 使う所 |
+| --- | --- |
+| `aiCopyStats(srcMon, level, { mode:'classic', effMul, permaAtkPct })` → `{ atk, def, maxGuts, guts, permaAtkPct }`(classic は maxHp を返さない) | 出すとき(summonAiCopy の中) |
+| `aiCopyTurns(level)`・`aiCopyRules(level)` | 続くターン・1ターンの枚数の上限 |
+| `aiCopyHand(deck, uniqueCard, rand)` → 山札の写しから2枚+固有技 | 出すとき・毎ターンの手札。山札はバトル部が渡す |
+| `aiCopyPickCards(hand, { score, costOf, guts, maxGuts, rng, level })` → 0〜2枚(先頭が nextCard) | processTurn でプレイヤーのカードのあと。score は AUTO の点・costOf は getCardGuts |
+| `aiCopyUniqueCard(card, srcMonsterId)`・`aiCopyRemoveUnique({ deck, hand, discard }, { uid })` | buildDeck に固有技を1枚足す・消えたら抜く |
+| `aiCopySummonPlan(aiCopy, { srcSlot, srcMonsterId, level })` → `{ kind:'new'|'refresh'|'switch', turnsLeft, removeCopy, removeUniqueOf, addUniqueOf }` | アシカを使ったとき |
+| `aiCopyTurnEnd(aiCopy)` | ターンの終わり(残りを減らし、0 で消す) |
+
+共通の部品(summonAiCopy・dismissAiCopy・tickAiCopy)はセコンドくんが 33-ai-copy.jsx に書き、上の関数を中で呼ぶ。クラシック系はそれを呼ぶ。
