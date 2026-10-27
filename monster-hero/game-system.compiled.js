@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f04dc0be660f4a6
+// source-sha256: 0c1c34d5eee18e1b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70420,7 +70420,6 @@ function ClassicAiCopyCell({
   }, "次のターン", React.createElement("br", null), "から"));
 }
 function BattleScreen({
-  classicAiCopy = null,
   battleOverlayOpen = false,
   applyTurnDamageReduction,
   attackAnim,
@@ -70864,6 +70863,7 @@ function BattleScreen({
   const [unitDetail, setUnitDetail] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? aiCopy || null : null;
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
   const fxRestEnabled = battleFx.restPause === 'ON';
@@ -136146,7 +136146,6 @@ function MonsterHeroGame() {
       onClick: () => setShowBackup(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs mt-3"
     }, "閉じる"))), gameState === 'BATTLE' && React.createElement(BattleScreen, {
-      classicAiCopy: !isTacticsMode(runMode) ? aiCopy : null,
       battleOverlayOpen: !!(showHeroInfo || showBattleLog || showEnemyInfo || showDeckInfo || waveScanPreview),
       applyTurnDamageReduction: applyTurnDamageReduction,
       attackAnim: attackAnim,
@@ -136241,7 +136240,7 @@ function MonsterHeroGame() {
       passTacticsTurn: passTacticsTurn,
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
-      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) ? aiCopy : null,
+      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,
