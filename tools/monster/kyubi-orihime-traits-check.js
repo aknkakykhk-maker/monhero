@@ -106,5 +106,13 @@ const ally = read('monster-hero/data/ally-monsters.js');
 check('2体はまだ下書き(draft:true)のまま',
   /Kyubi: Object\.freeze\(\{[^\n]*\n[^\n]*draft:true/.test(ally) && /Orihime: Object\.freeze\(\{[^\n]*\n[^\n]*draft:true/.test(ally));
 
+// ---------- 新モンスター確認(デバッグ)で動かして見られる ----------
+const lab = read('monster-hero/src/parts/74-screen-monster-check-debug.jsx');
+check('確認画面の技タブに、2体の「動かして見る」欄がある',
+  /mon\.id === KYUBI_MONSTER_ID && <KyubiTraitLab\/>/.test(lab) && /mon\.id === ORIHIME_MONSTER_ID && <OrihimeTraitLab\/>/.test(lab));
+check('欄は決めごとの関数をそのまま呼ぶ(数字を画面側で持たない)',
+  ['kyubiPhaseEffectOf', 'kageroAfterAttack', 'useKitsunebi', 'kitsunebiOnHit', 'tickKitsunebi', 'addOuse', 'orihimeBondEffectOf', 'startHoshiai', 'rollKogare', 'shareOrihimeDamage']
+    .every((f) => lab.includes(`${f}(`)));
+
 console.log(failed ? `\nNG: ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
