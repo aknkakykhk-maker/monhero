@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a40ee272f85ee31b
+// source-sha256: c0e8f25f4fa6d502
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -87386,7 +87386,7 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   kyuko: Object.freeze(['melo_toward_the_stars_short']),
   dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']),
   atsu: Object.freeze(['melo_against_my_own_shadow']),
-  sorashido: Object.freeze(['melo_toriko'])
+  sorashido: Object.freeze(['monster_hero_theme'])
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
   const out = [];
@@ -94225,7 +94225,8 @@ const CardBattleScreen = ({
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5 landscape:grid-cols-6"
+      "data-card-foe-grid": foes.length >= 7 ? 7 : 6,
+      className: `grid ${foes.length >= 7 ? 'grid-cols-4 gap-1.5 landscape:grid-cols-7 landscape:gap-1' : 'grid-cols-3 gap-1.5 landscape:grid-cols-6'}`
     }, foes.map(x => React.createElement("button", {
       key: x.id,
       type: "button",
@@ -94237,7 +94238,7 @@ const CardBattleScreen = ({
           who: x.id
         }));
       },
-      className: `relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
+      className: `relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
       style: foe.who === x.id ? {
         borderColor: x.accent
       } : undefined
