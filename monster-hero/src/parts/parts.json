@@ -70,6 +70,10 @@
       "role": "エイキの桜・パンドラの雷などバトル演出の部品"
     },
     {
+      "file": "24-sorashido-copy-view.jsx",
+      "role": "アシカ「ソラシドの自動化」の見せ方の部品(コピーの演出・次に使うカードの札・コピーの手札の窓)。状態は持たず、バトル部が呼ぶ"
+    },
+    {
       "file": "25-storage.jsx",
       "role": "保存層(storeGet / storeSet / storeList / setStorageWriteBlocked)と音ゲー保存の薄い関数"
     },
@@ -104,6 +108,11 @@
     {
       "file": "32-tactics-units.jsx",
       "role": "新モード(tactics)の「1体ぶん」の値と盤面の純関数。個別のライフ・ちから・丈夫さ・ガッツ、倒れる/戻す、全滅判定、敵がどの子を狙うか",
+      "pure": true
+    },
+    {
+      "file": "32-sorashido-copy.jsx",
+      "role": "アシカ「ソラシドの自動化」のAIコピーの計算(強さ・続くターン・もう一度/切りかえ・固有技の出し入れ・手札と次に使うカードの選び方)。乱数は渡して決める。バトルへの組み込みはバトル部",
       "pure": true
     },
     {
