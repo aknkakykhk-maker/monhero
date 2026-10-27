@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4311522608fc0e58
+// source-sha256: 31324e2f6d05f432
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98114,6 +98114,25 @@ const CardRecordScreen = ({
     },
     className: `min-h-[40px] rounded-xl border text-[12px] font-black ${tab === t.id ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`
   }, t.label))), React.createElement("div", {
+    "data-card-record-side": true,
+    className: "mb-2 hidden shrink-0 space-y-2 landscape:block"
+  }, onOpenReplays && React.createElement("button", {
+    type: "button",
+    "data-card-replays-open-side": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpenReplays();
+    },
+    className: "mh-button mh-button-secondary flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+  }, React.createElement("span", null, React.createElement("b", {
+    className: "block text-[13px] font-black text-sky-100"
+  }, "▶ 過去の対戦"), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "遊んだ試合を、はじめから見返せます")), React.createElement("span", {
+    className: "text-[18px] text-slate-400"
+  }, "›")), React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`
+  }, cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu'), cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp'), cell('いまの連勝', r.streak.now, '連勝', 'side-now'), cell('最高の連勝', r.streak.best, '連勝', 'side-best'))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
   }, tab === 'all' && React.createElement(React.Fragment, null, onOpenReplays && React.createElement("button", {
     type: "button",
@@ -98122,7 +98141,7 @@ const CardRecordScreen = ({
       Audio_.fgSe.tap();
       onOpenReplays();
     },
-    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left landscape:hidden"
   }, React.createElement("span", null, React.createElement("b", {
     className: "block text-[14px] font-black text-sky-100"
   }, "▶ 過去の対戦"), React.createElement("small", {
