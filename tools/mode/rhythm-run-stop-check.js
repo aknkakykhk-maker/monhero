@@ -86,7 +86,9 @@ for (const [rel, src] of sources) {
   // 結果の記録が終わるまでは押させない(周回IDが記録の途中で入れ替わらないように)
   check(`${rel}: 記録中は始め直せない`, compact.includes('disabled={resultProcessing}') || compact.includes('disabled:resultProcessing'));
   check(`${rel}: 勝負がついたときの「バトルへ戻る」は結果を見に行く言い方`,
-    compact.includes("quickRunProgress.finished&&!quickRunResumable?'⚔バトルへ戻って結果を見る':'⚔バトルへ戻る'"));
+    // 2026-10-27 #4097 で長い文を言葉の切れ目で折る形(jaWrap)になった。言い方は同じなので、どちらの書き方も受け付ける
+    compact.includes("quickRunProgress.finished&&!quickRunResumable?'⚔バトルへ戻って結果を見る':'⚔バトルへ戻る'")
+    || compact.includes("quickRunProgress.finished&&!quickRunResumable?jaWrap('⚔バトルへ戻って結果を見る'):'⚔バトルへ戻る'"));
 }
 
 // ---- 2026-10-10・社長の報告「モンビーで裏周回を負けたときに再度挑戦ができない場面が多い」 ----
