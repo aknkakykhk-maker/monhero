@@ -131,7 +131,7 @@ const transformed = babel.transformSync(
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
   // ヘルプの🆕(2026-10-18)。判定は本体と同じもの(保存の読み書きは上の実データ表の塊に入っている)
   grab(source, 'const HELP_NEW_DAYS = ', 'const DIFFICULTY_SETTINGS = {') +
-  'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
+  'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, helpShort = false, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
   '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState, openDebugSettings, requestDebugSettings,\n' +
   // ヘルプの見出しに出す助手。本体では「いま選んでいる助手」がそのまま入る
   '  activeAssistant }) => (<>\n' +
@@ -258,7 +258,7 @@ const emptyTransformed = babel.transformSync(
   `${dataTablePrelude}\n` +
   'const HELP_GUIDE = [];\nconst HELP_GUIDE_INTRO = "";\n' +
   'const helpCategoryById = () => null;\nconst helpTopicById = () => null;\n' +
-  'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
+  'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, helpShort = false, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
   '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState, openDebugSettings, requestDebugSettings,\n' +
   // ヘルプの見出しに出す助手。本体では「いま選んでいる助手」がそのまま入る
   '  activeAssistant }) => (<>\n' +
