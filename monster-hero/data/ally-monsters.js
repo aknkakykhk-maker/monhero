@@ -134,6 +134,23 @@ const ALL_PLAYER_MONSTERS = {
     unique:{ name:"おもちゃの爆弾", icon:DREAMY_ICON, monId:"Dreamy", baseMult:2.6, baseGuts:52, evoLevel:0,
       names:["おもちゃの爆弾","エーテルアイス","アルカナフレア","アルスマグナ","ララバイノクターン","ミラージュクロウ","クリムゾンノヴァ","スウィートドリーム","ドリーミィパレード"],
       effectDesc:"ドリームペイン：次のターンから3ターン、敵が受けるダメージ+40%。楔1つごとにさらに+40%(楔3つで+160%・6つで+280%)" } },
+  // キュービ種(2026-10-27 正式実装・助手ソラシドの公開と同じ日)。能力値・技・特性・タイプ・EX・ビートの能力は社長の決定(2026-10-27)。
+  // 勇者特性(九尾四相・天河の契り)・EX・固有技の効果「霊魂」は 22-enemy-and-bond-entries.jsx の KYUBI_* / ORIHIME_* / REIKON_* と 60-app.jsx がつなぐ。
+  // 固有技の段の順は社長が決めた(「Aで9段目に炸裂、8段目天翔、7に煉獄」)。動きは 24-battle-fx.jsx の SKM_KYUBI が同じ順
+  Kyubi: { id:'Kyubi', name:"キュービ", emoji:"🦊", imgUrl:KYUBI_IMG, iconUrl:KYUBI_IMG,
+    faceIconUrl:KYUBI_FACE_ICON, atkMotion:'default',
+    trait:"九尾四相", traitDesc:"勇者モンにすると：バトルが始まったときの距離で相が決まる。遠=強い連撃／中=攻撃のあと完全回避を1回(3ターンに1回)／近=すべての技が連撃・与ダメ+15%・会心率+20%／零=カードを使うたび煉獄がたまり、連撃が強くなる",
+    baseHp:420, baseGuts:150, baseAtk:160, baseDef:70, plusStats:{hp:120,atk:40,def:10,guts:45}, distAptitude:['B','D','B','B'],
+    unique:{ name:"ゆうわく", icon:KYUBI_IMG, monId:"Kyubi", baseMult:2.4, baseGuts:48, evoLevel:0,
+      names:["ゆうわく","なめろう","超狐火","神狐蒼火","八嵐天衝","陽炎","煉獄九尾陣","天河天翔","炸裂気泡陣"],
+      effectDesc:"霊魂：次のターンから3ターン、カードの消費ガッツ−30%・味方全員の回避率+10%" } },
+  Orihime: { id:'Orihime', name:"オリヒメ", emoji:"🎐", imgUrl:ORIHIME_IMG, iconUrl:ORIHIME_IMG,
+    faceIconUrl:ORIHIME_FACE_ICON, atkMotion:'default',
+    trait:"天河の契り", traitDesc:"勇者モンにすると：合流した子から相方を1体選ぶ。同じターンに同じ種類の動きをすると逢瀬がたまり、相方との距離の差(1〜3)で与ダメ上昇・被ダメ軽減・ダメージの分け合いが開く",
+    baseHp:440, baseGuts:140, baseAtk:145, baseDef:85, plusStats:{hp:140,atk:30,def:15,guts:40}, distAptitude:['B','A','D','A'],
+    unique:{ name:"求愛", icon:ORIHIME_IMG, monId:"Orihime", baseMult:2.3, baseGuts:46, evoLevel:0,
+      names:["求愛","織姫のくちづけ","超狐火・星","陽炎","神狐星火","八鈴天衝","炸裂気泡陣","煉獄九尾陣","天河天翔"],
+      effectDesc:"霊魂：次のターンから3ターン、カードの消費ガッツ−30%・味方全員の回避率+10%" } },
 };
 
 // 初期から無料で使えるモンスターのid一覧(固定)。
@@ -149,7 +166,7 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // 決まっていない項目(能力値・技・勇者特性・攻撃モーション)は書かない。画面で「未設定」と赤く出るので、
 // 何が足りないかがそのまま一覧になる。正式に実装したら ALL_PLAYER_MONSTERS へ移し、ここからは消す。
 //   draftLineage … 血統の案。本体の MONSTER_LINEAGE_MAP へ足すのは正式実装のとき(lineage-dex-check.js の決まり)
-// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05、メロディーとクロミーは 2026-10-08、イルミネとドリーミィは 2026-10-23 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
+// ユグドラシルとメルホイップは 2026-09-29、ゴーストとスプーキーは 2026-10-05、メロディーとクロミーは 2026-10-08、イルミネとドリーミィは 2026-10-23、キュービとオリヒメは 2026-10-27 に正式実装したので ALL_PLAYER_MONSTERS へ移した。
 //   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
   // 新しい16種(2026-10-24・案の段階)。カードバトルの種族と同じ顔ぶれで、立ち絵はカードの対戦画面と共用(images/monsters/<種族名>.png)。
@@ -271,20 +288,4 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C014_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'dino', sub:'golem' }) }),
   Soborobent: Object.freeze({ id:'Soborobent', name:"ソボロベント", emoji:"📦", imgUrl:HYBRID_C037_IMG, iconUrl:HYBRID_C037_IMG,
     faceIconUrl:HYBRID_C037_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'monol', sub:'worm' }) }),
-  // キュービ・オリヒメ(2026-10-27 社長「新モンスター2体実装」)。能力値・技・特性・タイプ・EX・ビートの能力は社長がすべて決めた(2026-10-27)。正式公開は社長の合図で ALL_PLAYER_MONSTERS へ移す
-  Kyubi: Object.freeze({ id:'Kyubi', name:"キュービ", emoji:"🦊", imgUrl:KYUBI_IMG, iconUrl:KYUBI_IMG,
-    faceIconUrl:KYUBI_FACE_ICON, distAptitude:['B','D','B','B'], draft:true, draftAnnounced:true,
-    // 社長が決めた値(2026-10-27。基礎能力は仮の数値から決め直し、加算・間合い・固有技の倍率と消費は仮のまま確定)。
-    // 勇者特性・EX・固有技の効果「霊魂」は 22-enemy-and-bond-entries.jsx、タイプは 32-tactics-units.jsx、ビートの能力は rhythm-mode.js
-    baseHp:420, baseGuts:150, baseAtk:160, baseDef:70, plusStats:{hp:120,atk:40,def:10,guts:45},
-    unique:{ name:"ゆうわく", icon:KYUBI_IMG, monId:"Kyubi", baseMult:2.4, baseGuts:48, evoLevel:0,
-      // 段の順は社長が決めた(2026-10-27「Aで9段目に炸裂、8段目天翔、7に煉獄」)。動きは 24-battle-fx.jsx の SKM_KYUBI が同じ順
-      names:["ゆうわく","なめろう","超狐火","神狐蒼火","八嵐天衝","陽炎","煉獄九尾陣","天河天翔","炸裂気泡陣"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'kyubi' }) }),
-  Orihime: Object.freeze({ id:'Orihime', name:"オリヒメ", emoji:"🎐", imgUrl:ORIHIME_IMG, iconUrl:ORIHIME_IMG,
-    faceIconUrl:ORIHIME_FACE_ICON, distAptitude:['B','A','D','A'], draft:true, draftAnnounced:true,
-    // 社長が決めた値(2026-10-27。基礎能力は仮の数値から決め直し、加算・間合い・固有技の倍率と消費は仮のまま確定)。
-    // 勇者特性・EX・固有技の効果「霊魂」は 22-enemy-and-bond-entries.jsx、タイプは 32-tactics-units.jsx、ビートの能力は rhythm-mode.js
-    baseHp:440, baseGuts:140, baseAtk:145, baseDef:85, plusStats:{hp:140,atk:30,def:15,guts:40},
-    unique:{ name:"求愛", icon:ORIHIME_IMG, monId:"Orihime", baseMult:2.3, baseGuts:46, evoLevel:0,
-      names:["求愛","織姫のくちづけ","超狐火・星","陽炎","神狐星火","八鈴天衝","炸裂気泡陣","煉獄九尾陣","天河天翔"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
 });

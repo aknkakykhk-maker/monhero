@@ -186,6 +186,14 @@ const FAKE_WS = () => {
   window.WebSocket = FakeWS;
 };
 // マルチの画面を巡って数える。戻り値 [名前, 折れ, 切れ] の並び
+// マルチの巡回は、2つのページを偽の通信でつなぐので、混んだ端末ではまれにボタンを押す前に時間切れになる(2026-10-27 カード部の報告。手元では通る)。
+// 「途中で止まった」ときだけ1回やり直す。本当に押せないなら、やり直しても同じ所で止まるので取りこぼさない(止まったボタンは記録に残る・#4114)
+const runMultiRetry = async (browser, W, H) => {
+  const first = await runMulti(browser, W, H);
+  if (!first.some(([name]) => name.endsWith('(途中で止まった)'))) return first;
+  console.log(`  (マルチ ${W}×${H} が途中で止まったので1回やり直す: ${first.find(([name]) => name.endsWith('(途中で止まった)'))[1][0]})`);
+  return runMulti(browser, W, H);
+};
 const runMulti = async (browser, W, H) => {
   const out = [];
   const context = await browser.newContext({ viewport: { width: W, height: H } });
@@ -373,7 +381,7 @@ if (require.main === module) (async () => {
       }
       await page.close();
       // 練習の案内とマルチの画面
-      for (const [name, wraps, clips] of [...((ONLY ? ONLY.test('練習の案内') : (PART === 'tutorial' || PART === 'all')) ? await runTutorial(browser, W, H) : []), ...((ONLY ? ONLY.test('マルチ') : (PART === 'multi' || PART === 'all')) ? await runMulti(browser, W, H) : [])]) {
+      for (const [name, wraps, clips] of [...((ONLY ? ONLY.test('練習の案内') : (PART === 'tutorial' || PART === 'all')) ? await runTutorial(browser, W, H) : []), ...((ONLY ? ONLY.test('マルチ') : (PART === 'multi' || PART === 'all')) ? await runMultiRetry(browser, W, H) : [])]) {
         if (name.endsWith('(途中で止まった)') || (wraps[0] || '').startsWith('(')) { check(`${name} ${W}×${H} を開けた`, false, wraps[0] || ''); continue; }
         for (const x of wraps) found.push(`${name} ${W}×${H}: ${x}`);
         for (const [kind, t] of clips) clipped.push(`${name} ${W}×${H}: ${kind}「${t}」`);
