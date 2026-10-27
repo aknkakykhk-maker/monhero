@@ -122,6 +122,32 @@ const makeStorage = (localStorage) => new Function('window', `${storageSource}
     const fresh = await store.storeGet('mh_card_replays_v1', null, false);
     check('①-11 書けずにメモリへ控えた新しい値があれば、そちらを読む', !!fresh && fresh.list.length === 2, JSON.stringify(fresh));
   }
+  {
+    // 「読んでから作り直して書く」所を、いっぱいの端末でまねる。書けなくても、読み込み直したあとに元の値が残る
+    //   (カードの持ち札・デッキ・ギフト・ビートP・見返し・マスモン)
+    const saved = {
+      mh_card_collection_v1: { '100': 3, '113': 1 }, mh_card_decks_v1: [{ name: 'A', cards: ['100'] }],
+      mh_gifts: [{ id: 'g1', received: false }], mh_rhythm_event_points_v1: 1200,
+      mh_card_replays_v1: { v: 1, list: [{ id: 'r1', fav: true }, { id: 'r2' }] }, mh_masu_mons: [{ id: 'm1' }],
+    };
+    const ls = fakeLocalStorage({ quota: 400 });
+    Object.entries(saved).forEach(([k, v]) => ls.setItem(k, JSON.stringify(v)));
+    ls.setItem('other', 'z'.repeat(400 - ls.__used()));
+    const store = makeStorage(ls);
+    const bad = [];
+    for (const [k, v] of Object.entries(saved)) {
+      const got = await store.storeGet(k, Array.isArray(v) ? [] : typeof v === 'number' ? 0 : null, false);
+      if (JSON.stringify(got) !== JSON.stringify(v)) bad.push(`${k} 読み=${JSON.stringify(got)}`);
+      const next = Array.isArray(got) ? [...got, { id: 'new' }] : typeof got === 'number' ? got + 10 : { ...(got || {}), added: 1 };
+      await store.storeSet(k, next, false);
+    }
+    const reload = makeStorage(ls); // 落ちて読み込み直したとき
+    for (const [k, v] of Object.entries(saved)) {
+      const got = await reload.storeGet(k, null, false);
+      if (JSON.stringify(got) !== JSON.stringify(v)) bad.push(`${k} 読み込み直し=${JSON.stringify(got)}`);
+    }
+    check('①-12 いっぱいでも、読んでから作り直して書く所で今の値が消えない(読み込み直しても残る)', bad.length === 0, bad.join(' / '));
+  }
 
   // ===== ② ランキングの控えを軽くする =====
   const app = readAppSource();
