@@ -26,6 +26,7 @@
 //   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
 //   ⑯ 入口の「いま相手を待っている人」: 合言葉の部屋は出ない・だれとでもで待っている人が名前つきで出る・[対戦する]で始まる
 //   ⑲ 攻撃に戻る: ガッツの段で「攻撃に戻る」を打っても、相手と同じ場のまま最後まで戦え、試合のあとの確かめも合う(⑯の試合で)
+//   ⑳ 投了: 投了した側の「もらったビートP」は、倒した数で決まる数の2倍・投了された側は勝ちの数(マルチは2倍・2026-10-27 社長)
 //   ⑱ ルールの版: 版がちがう人は一覧に出ない・合言葉の部屋に版を送らない古い版の人が来たら「ゲームを更新してください」・だれとでもでは組まずに待ち続ける
 //   ⑰ 片方の端末が100秒止まって戻ったら、続きから遊べる(相手は120秒まで待つ・相手の持ち時間の時計は止まる)。最後まで戦える
 //   ⑮ 片方の端末が130秒止まったら、相手は120秒で「相手が抜けた」の勝ち・止まっていた側は「通信が切れた」の負け(2台とも勝ちにならない)
@@ -270,12 +271,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const rewardB = await B.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => B.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
     const pointAfter = [await beatP(A), await beatP(B)];
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
-    // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4)。
-    // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回)。この検査の端末はその日まだ勝っていないので +450
+    // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4。2026-10-27 社長: マルチはさらに2倍で +800・+300)。
+    // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回・2倍にしない)。この検査の端末はその日まだ勝っていないので +850
     const gain = pointAfter.map((v, i) => v - pointBefore[i]);
-    // 負けは自分の番の数で減る(3回で45・10回で満額150)。その試合の番の数で決まるので、幅で見る
-    const okGain = (r, g) => (r === 'win' ? g === 450 : r === 'lose' ? g >= 45 && g <= 150 : false);
-    check('⑥ ビートPが、2台それぞれに増えている(勝ち+400とその日はじめての+50・負けは自分の番の数で45〜150)', okGain(rA, gain[0]) && okGain(rB, gain[1]), `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
+    // 負けは自分の番の数で減る(3回で90・10回で満額300。2倍なので偶数)。その試合の番の数で決まるので、幅で見る
+    const okGain = (r, g) => (r === 'win' ? g === 850 : r === 'lose' ? g >= 90 && g <= 300 && g % 2 === 0 : false);
+    check('⑥ ビートPが、2台それぞれに増えている(勝ち+800とその日はじめての+50・負けは自分の番の数で90〜300。マルチは2倍)', okGain(rA, gain[0]) && okGain(rB, gain[1]), `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
     // 結果の画面の「もらったビートP」も、+50 を足した合計
     const shown = [rewardA, rewardB].map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
     check('⑥ 結果の画面の「もらったビートP」が、増えた数と同じ', shown[0] === gain[0] && shown[1] === gain[1], `${rewardA} / ${rewardB}`);
@@ -575,6 +576,25 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       const why17 = (await A.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
       check('⑰ 戻ったあと続きから遊べて、最後まで戦える(片方が勝ち・片方が負け。抜けた・通信が切れたで終わらない)',
         !!r17[0] && !!r17[1] && r17[0] !== r17[1] && !/相手が抜けた|通信が切れた|相手の時間切れ/.test(why17) && (await A.locator('[data-card-pvp-dropped]').count()) === 0, `${r17.join(' / ')} ${why17.replace(/\n/g, ' ').slice(0, 80)}`);
+      await newPrivateMatch();
+    }
+    // ⑳ 投了(2026-10-27 社長「マルチの報酬はさらに2倍」): 何番か戦ってから A が投了する。A は倒した数で決まる数の2倍・B は勝ちの数
+    {
+      await A.waitForTimeout(40000); // 自分の番を何回か進める(3回より前に終わると0になる)
+      const alive20 = !(await A.locator('[data-card-pvp-result]').count());
+      if (alive20) {
+        await A.evaluate(() => { window.__mhCardPvpAuto = false; });
+        await A.locator('[data-card-quit]').click();
+        await A.getByRole('button', { name: '投了する' }).click();
+      }
+      for (let i = 0; i < 60 && !((await A.locator('[data-card-pvp-reward]').count()) && (await B.locator('[data-card-pvp-reward]').count())); i++) await A.waitForTimeout(500);
+      const got20 = await A.evaluate(() => { const r = CARD_PVP.get().result; const f = r && r.facts; const base = f ? cardPvpRewardBase('surrender', f) : null; return { reward: r && r.reward, f, base, x: CARD_PVP_REWARD.x }; });
+      const shown20 = await Promise.all([A, B].map((pg) => pg.locator('[data-card-pvp-reward]').innerText().catch(() => '')));
+      const nums20 = shown20.map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
+      check('⑳ 投了した側の「もらったビートP」は、倒した数で決まる数の2倍(投了された側は勝ちの 800 か、その日はじめてなら 850)',
+        alive20 && got20.reward === 'surrender' && got20.x === 2 && got20.base && nums20[0] === got20.base.point * 2 && (nums20[1] === 800 || nums20[1] === 850),
+        `A ${shown20[0].replace(/\n/g, ' ')}(倒した ${got20.f && got20.f.kos}・番 ${got20.f && got20.f.ownTurns}・2倍前 ${got20.base && got20.base.point})/ B ${nums20[1]}`);
+      await A.evaluate(() => { window.__mhCardPvpAuto = true; });
       await newPrivateMatch();
     }
     // ⑮ 片方の端末が止まった(重い・アプリを裏にした)まま130秒: 相手は120秒で「相手が抜けた」の勝ち。止まっていた側は戻っても相手を「抜けた」と見ず、
