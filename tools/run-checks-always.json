@@ -107,6 +107,7 @@
   "image/dye-mask-editor-check.js",
   "image/monster-image-quality-check.js",
   "market/assistant-costume-check.js",
+  "market/assistant-costume-unlock-check.js",
   "market/disc-rebirth-check.js",
   "market/frame-shop-check.js",
   "market/halloween-icon-check.js",
