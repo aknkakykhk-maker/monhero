@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f4c196fbef109db
+// source-sha256: fc7b435b811d4a73
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45856,6 +45856,19 @@ const planAiCopyTurn = (aiCopy, {
     picks,
     nextCard: picks[0] || null
   };
+};
+const aiCopyAutoScore = (card, {
+  strategy = 'random',
+  isAttack = null,
+  isGuard = null,
+  dmgOf = null
+} = {}) => {
+  if (!card) return -Infinity;
+  const attack = typeof isAttack === 'function' ? !!isAttack(card) : card.type === 'atk' || card.type === 'unique';
+  const guard = typeof isGuard === 'function' ? !!isGuard(card) : card.type === 'guard' || card.type === 'weak_guard';
+  const prio = strategy === 'offense' ? card.type === 'unique' ? 0 : attack ? 1 : guard || card.type === 'heal' ? 3 : 2 : strategy === 'defense' ? card.type === 'heal' ? 0 : card.type === 'guard' ? 1 : attack ? 3 : 2 : 0;
+  const dmg = attack && typeof dmgOf === 'function' ? Math.max(0, aiCopySafeNum(dmgOf(card))) : 0;
+  return -prio * 1e7 + dmg;
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -106414,10 +106427,13 @@ function MonsterHeroGame() {
     const atkRate = copy.atk / srcUnit.atk;
     const dmgOf = c => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
     const isGuardC = c => !!c && (c.type === 'guard' || c.type === 'weak_guard');
-    const usableC = c => !!c && (isGuardC(c) || dmgOf(c) > 0);
-    const strategy = autoSettings.strategy;
-    const prioC = c => strategy === 'offense' ? c.type === 'unique' ? 0 : isAttackCard(c) ? 1 : isGuardC(c) ? 3 : 2 : strategy === 'defense' ? c.type === 'guard' ? 1 : isAttackCard(c) ? 3 : 2 : 0;
-    const scoreC = c => -prioC(c) * 1e7 + (isGuardC(c) ? 0 : dmgOf(c));
+    const usableC = c => !!c && (!isAttackCard(c) || dmgOf(c) > 0);
+    const scoreC = c => aiCopyAutoScore(c, {
+      strategy: autoSettings.strategy,
+      isAttack: isAttackCard,
+      isGuard: isGuardC,
+      dmgOf
+    });
     const costC = c => getCardGuts(c, copy.srcSlot);
     return {
       dmgOf,
@@ -120504,21 +120520,39 @@ function MonsterHeroGame() {
       if (pdTagForm) for (let k = pdTagFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].pandoraForm == null) attackHits[k].pandoraForm = pdTagForm;
       pdTagFrom = attackHits.length;
     };
-    for (const entry of usedCardEntries) {
+    const aiCopyEntries = (() => {
+      const c = aiCopyRef.current;
+      if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
+      const cp = c.plannedTurn === turnCount ? c : planTacticsAiCopy(turnCount) || c;
+      const tools = tacticsAiCopyTools(cp, enemyDist);
+      if (!tools) return [];
+      let left = Math.max(0, Number(cp.guts) || 0);
+      return (cp.picks || []).filter(card => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > left) return false;
+        left -= cost;
+        return !isAttackCard(card) && !tools.isGuardC(card);
+      }).map(card => ({
+        card,
+        slotIdx: cp.srcSlot,
+        aiCopy: true
+      }));
+    })();
+    for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
       const isBreeder = isAssistCard(card);
-      if (isBreeder && !debugBattleRef.current) {
+      if (isBreeder && !entry.aiCopy && !debugBattleRef.current) {
         const cardAssistant = assistantIdOfAssistCard(card.id);
         if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
       }
       if (!isAttackCard(card)) {
         const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
-        pushBattleLog(isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
+        pushBattleLog(entry.aiCopy ? `🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}` : isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
       }
-      const halved = halveCounter.take(card, entry.slotIdx);
+      const halved = entry.aiCopy ? false : halveCounter.take(card, entry.slotIdx);
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
       if (halved) addPopup(isTacticsMode(runMode) ? '同じ子の2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
@@ -120554,7 +120588,7 @@ function MonsterHeroGame() {
         addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul, guardCardWeight(card));
       }
       const cardCost = getCardGuts(card, slotIdx);
-      if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
+      if (entry.aiCopy) {} else if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) noteOrihimeCard(slotIdx, card);

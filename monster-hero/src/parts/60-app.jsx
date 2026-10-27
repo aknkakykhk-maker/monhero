@@ -1744,7 +1744,7 @@ function MonsterHeroGame() {
   };
   // コピーの札の見方。dist は敵の間合い(コピーの立つマス pos との差で距離補正を数える)。元の子がいなければ null
   // ★選び方は AUTO と同じ見方(作戦 autoSettings.strategy の優先 → 同じ優先なら与ダメの大きい順)。
-  //   段1は攻撃とガードの札(回復・強化・ほかのアシカは次の段・2026-10-27 部長)。
+  //   攻撃とガードはコピー自身のぶん(下の「AIコピーの1手」)、回復・強化・アシカは味方のカードと同じ流れの最後に通す(aiCopyEntries)。
   //   強さは「元の子の今の攻撃 × (コピーの攻撃 ÷ 元の子の攻撃)」。ガードはコピー自身を守る(丈夫さはコピーの値)
   const tacticsAiCopyTools = (copy, dist) => {
     if (!copy) return null;
@@ -1754,11 +1754,9 @@ function MonsterHeroGame() {
     const atkRate = copy.atk / srcUnit.atk;
     const dmgOf = (c) => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
     const isGuardC = (c) => !!c && (c.type === 'guard' || c.type === 'weak_guard');
-    const usableC = (c) => !!c && (isGuardC(c) || dmgOf(c) > 0);
-    const strategy = autoSettings.strategy;
-    const prioC = (c) => strategy === 'offense' ? (c.type === 'unique' ? 0 : isAttackCard(c) ? 1 : isGuardC(c) ? 3 : 2)
-      : strategy === 'defense' ? (c.type === 'guard' ? 1 : isAttackCard(c) ? 3 : 2) : 0;
-    const scoreC = (c) => -prioC(c) * 1e7 + (isGuardC(c) ? 0 : dmgOf(c));
+    // 攻撃は与ダメが出る札だけ。ガード・回復・強化・アシカはそのまま使える(段2)。距離撃とこのアシカは aiCopyCanPick が外す
+    const usableC = (c) => !!c && (!isAttackCard(c) || dmgOf(c) > 0);
+    const scoreC = (c) => aiCopyAutoScore(c, { strategy: autoSettings.strategy, isAttack: isAttackCard, isGuard: isGuardC, dmgOf });
     const costC = (c) => getCardGuts(c, copy.srcSlot);
     return { dmgOf, isGuardC, usableC, scoreC, costC };
   };
@@ -13997,7 +13995,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 攻撃の演出はカードを全部処理したあとに順番に流れる。どのヒットがどの姿(悪魔/天使)のカードのものかを、ヒットへ印として付けておく
     let pdTagFrom=0, pdTagForm=null;
     const pdTag=()=>{ if(pdTagForm) for(let k=pdTagFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].pandoraForm==null) attackHits[k].pandoraForm=pdTagForm; pdTagFrom=attackHits.length; };
-    for (const entry of usedCardEntries) {
+    // ★AIコピー(ソラシドのアシカ)の札のうち、攻撃とガード以外(回復・強化・アシカ)は、味方のカードと同じ流れの最後に通す(段2・2026-10-27 部長)。
+    //   使う子は元の子の枠(srcSlot)。ガッツの支払い・2枚目の半減・🔥はここでは数えない(下の「AIコピーの1手」でコピー自身のぶんとして数える)
+    const aiCopyEntries=(()=>{
+      const c=aiCopyRef.current;
+      if(!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido||!isTacticsMode(runMode)||!isAiCopyOut(c,turnCount)||!isTacticsAiCopyStanding(c)) return [];
+      const cp=c.plannedTurn===turnCount?c:(planTacticsAiCopy(turnCount)||c);
+      const tools=tacticsAiCopyTools(cp,enemyDist);
+      if(!tools) return [];
+      let left=Math.max(0,Number(cp.guts)||0);
+      return (cp.picks||[]).filter(card=>{ const cost=Math.max(0,Number(tools.costC(card))||0); if(cost>left) return false; left-=cost; return !isAttackCard(card)&&!tools.isGuardC(card); })
+        .map(card=>({card,slotIdx:cp.srcSlot,aiCopy:true}));
+    })();
+    for (const entry of [...usedCardEntries,...aiCopyEntries]) {
       const card=entry.card;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       const totalHealBeforeCard=totalHeal, totalHealRateBeforeCard=totalHealRate;
@@ -14009,7 +14019,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       //   (2026-09-17・ドラを助手にしたとき、ドラの緑膝がそのまま対象になった)。
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
-      if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
+      // AIコピーが使ったアシカは仲良し度に数えない(プレイヤーが切った札ではない)
+      if(isBreeder&&!entry.aiCopy&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
       // どの子がどの札を切ったかは、ここ1か所でログへ残す。
       // ★効果ごとの分岐(攻撃UP・回復・固有技…)は40か所以上あり、そこへ書くと同じ文が散らばる
       // ★攻撃の札は書かない。このあと「◯◯の しっぽアタック → 敵に177ダメージ」が出るので、
@@ -14017,9 +14028,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ★助手のアシストカードはモンスターが使うものではないので、名前を付けない
       if(!isAttackCard(card)){
         const usedBy=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
-        pushBattleLog(isBreeder?`${card.name} を使った`:`${battleActorName(usedBy)}の ${card.name}`, 'card');
+        pushBattleLog(entry.aiCopy?`🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}`:isBreeder?`${card.name} を使った`:`${battleActorName(usedBy)}の ${card.name}`, 'card');
       }
-      const halved=halveCounter.take(card,entry.slotIdx);
+      const halved=entry.aiCopy?false:halveCounter.take(card,entry.slotIdx);
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);
@@ -14045,7 +14056,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); addGuardForSlot(slotIdx,GUARD_EVOLUTION[guardLevel].flat*0.5*effMul,GUARD_EVOLUTION[guardLevel].mult*0.5*effMul,guardCardWeight(card)); }
       // 払うのは「使う子」。新モード以外は今までどおりパーティのガッツから引く
       const cardCost=getCardGuts(card,slotIdx);
-      if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);
+      if(entry.aiCopy){ /* コピーのガッツから払う(下の「AIコピーの1手」) */ }
+      else if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);
       else setGuts(p=>Math.max(0,p-cardCost));
       // メロディの手作りクッキー: メロディー本人がカードを1枚使うたびに+1(枠を決めて使ったカードだけ。アシストカードは数えない)
       if(!isBreeder&&entry.slotIdx!=null) gainSweetStack(slotIdx,slots[slotIdx]?.id,card);

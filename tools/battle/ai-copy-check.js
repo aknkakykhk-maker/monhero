@@ -25,7 +25,7 @@ vm.createContext(ctx);
 vm.runInContext(`${grabArray('SORASHIDO_TIERS')}
 ${read('monster-hero/src/parts/32-sorashido-copy.jsx')}
 ${read('monster-hero/src/parts/33-ai-copy.jsx')}
-globalThis.__s = { SORASHIDO_TIERS, aiCopyRules, isAiCopyOut, summonAiCopy, dismissAiCopy, tickAiCopy, planAiCopyTurn };`, ctx);
+globalThis.__s = { SORASHIDO_TIERS, aiCopyRules, isAiCopyOut, summonAiCopy, dismissAiCopy, tickAiCopy, planAiCopyTurn, aiCopyAutoScore };`, ctx);
 const s = ctx.__s;
 
 const src = { maxHp: 1000, atk: 200, def: 100, maxGuts: 150 };
@@ -81,6 +81,18 @@ i = 0;
 const p3 = s.planAiCopyTurn(lv3.aiCopy, { deck: lv3.zones.deck, score: (x) => 1, costOf: (x) => x.guts, rng });
 check('Lv3 はガッツの上限120以上で2枚まで', p3.picks.length >= 1 && p3.picks.length <= 2 && lv3.aiCopy.maxGuts >= 120, `上限 ${lv3.aiCopy.maxGuts}・${p3.picks.length}枚`);
 check('コピーがいなければ何もしない', s.planAiCopyTurn(null, { deck: deck0 }) === null);
+
+// AUTO と同じ見方の点
+{
+  const atk = card(21, 'atk'), big = card(22, 'atk'), grd = card(23, 'guard'), heal = card(24, 'heal'), uq = uniqueOf('Ark');
+  const dmgOf = (c) => (c === big ? 300 : c === uq ? 200 : 100);
+  const sc = (st) => (c) => s.aiCopyAutoScore(c, { strategy: st, dmgOf });
+  const top = (st, list) => [...list].sort((a, b) => sc(st)(b) - sc(st)(a))[0];
+  check('攻撃重視は固有技が先', top('offense', [atk, big, grd, heal, uq]) === uq);
+  check('耐久重視は回復が先、その次にガード', top('defense', [atk, big, grd, heal]) === heal && top('defense', [atk, big, grd]) === grd);
+  check('作戦なし(random)は与ダメの大きい順', top('random', [atk, big, grd, uq]) === big);
+  check('札が無ければいちばん低い', s.aiCopyAutoScore(null) === -Infinity);
+}
 
 if (failed) { console.log(`\n${failed}件のNGがあります`); process.exit(1); }
 console.log('\nすべてOK');
