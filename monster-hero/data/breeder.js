@@ -603,9 +603,11 @@ const breederIconGroupKeyOf = (id) => {
   if (/^momosuke_/.test(key)) return 'momosuke';
   if (key === 'atsu' || /^atsu_/.test(key)) return 'atsu';
   if (/^kyuko_/.test(key)) return 'kyuko';
+  // ソラシド(2026-10-27)。表情8種を、ほかの助手と同じく「ソラシドのアイコン」1件にまとめる(社長の指摘)
+  if (/^sorashido_/.test(key)) return 'sorashido';
   return key.replace(/_disc_icon$/, '').replace(/_awakened_icon$/, '').replace(/_icon$/, '');
 };
-const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ',
+const BREEDER_ICON_GROUP_NAMES = Object.freeze({ mua:'みゅあ', dra:'ドラ', kiki:'きき', momosuke:'ももすけ', atsu:'あつ', kyuko:'きゅうこ', sorashido:'ソラシド',
   mua_halloween:'みゅあ（ハロウィン）', kiki_halloween:'きき（ハロウィン）', momosuke_halloween:'ももすけ（ハロウィン）', snegurochka_halloween:'スネグーラチカ（ハロウィン）' });
 // 中身が2つ以上あるキャラだけがまとまる(1つしかないアイコンは今までどおり1枚で売る)。並びは商品の並びのまま
 const BREEDER_ICON_GROUPS = (() => {
