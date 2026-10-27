@@ -1,0 +1,33 @@
+# キュービ・オリヒメ 正式公開までの進み具合(モンスター部・ズカン)
+
+決めごとの本文: [hero-trait-ex-spec.md](hero-trait-ex-spec.md)。統括部長の指示(2026-10-27): ①〜⑥を順に進める。
+60-app.jsx を触るものは1本ずつ順に入れ、1本マージするたびに統括部長へ短く知らせる。⑦(公開)は社長の合図まで止める。
+助手ソラシド・アシカ・お話は開発部クラフトくんの受け持ち。公開日は2体と同じ日にそろえる(⑦の日はクラフトくんと合わせる)。
+バトル部の受け持ち(タクティクスの画面など)にかかる所があれば、ジンくんにひと声かける。
+
+## 段取り
+
+- [x] ① 決まった値(タイプ・基礎能力・ビートの能力・固有技の倍率と段・オリヒメの技名・霊魂)と、決めごとの純関数・確認画面の欄 — #4058
+- [ ] ② 勇者特性のつなぎ込み(5つの遊び+タクティクス) — ブランチ claude/kyubi-trait-wiring
+- [ ] ③ オリヒメの相方を選ぶ画面
+- [ ] ④ タクティクスのEX 3つと札の表示
+- [ ] ⑤ 固有技の効果「霊魂」のつなぎ込み
+- [ ] ⑥ デバッグで2体を仮に編成して、実際のバトルで確かめる・run-checks。済んだら更新履歴・ヘルプ・お知らせの絵の案を統括部長へ
+- [ ] ⑦ 公開(社長の合図で)
+
+## ②のつなぎ方(調べたこと)
+
+同じ形の先例は「影潜」(楔)とクッキー・黒音符。60-app.jsx の 1105〜1230 行あたりに持ち方がまとまっている。
+
+- 持ち主: `sweetOwnerAt(slotIdx)` … 5つの遊びは勇者モン(`mainHero`)、タクティクスはその枠の子
+- 置き場所のキー: `trickStartKeyOf(slotIdx)` … 5つの遊びは `'party'`、タクティクスは枠の番号
+- 始まりの距離: `initialBattleDistanceRef.current`(0 零・1 近・2 中・3 遠)。5つの遊びもタクティクスも、勇者モンを置いた距離が入る
+  → 九尾四相の相は `kyubiPhaseOfSlot(initialBattleDistanceRef.current)` で決める(タクティクスはその子を置いた枠)
+- 連撃の足し方: `withBlackNoteCombo(exCombos, combo, extra)` の extra に足す(楔は `kusabiCombosAt`)
+- 守るときの回避: 敵の攻撃の回避の判定(楔の回避は `kusabiEvasion`、`buildUnifiedSpecialDefense` の `existingEvasion`)
+- 片付け: WAVE の切り替えは `resetKusabi(); resetDreamPain();` の4か所、ランの片付けは `resetTacticsJoinCatchUp`
+- 消費ガッツ: `cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(...))`(霊魂は⑤でここへ)
+
+## メモ
+
+- 2体は下書きなので、つないでも通常プレイは変わらない。実際のバトルで確かめるには⑥のデバッグの仮編成が要る
