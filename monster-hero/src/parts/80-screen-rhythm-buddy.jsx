@@ -331,7 +331,7 @@ function RhythmBuddyScoreChart({ recent, songName }) {
   const list = (Array.isArray(recent) ? recent : []).slice().reverse(); // 古い順
   const [sel, setSel] = React.useState(-1);
   const [table, setTable] = React.useState(false);
-  if (list.length === 0) return <p className="text-[11px] font-bold text-slate-500">まだ記録がありません。一緒にライブをすると、ここにスコアが並びます</p>;
+  if (list.length === 0) return <p style={JA_WRAP_STYLE} className="text-[11px] font-bold text-slate-500">{jaWrap('まだ記録がありません。一緒にライブをすると、ここにスコアが並びます')}</p>;
   const pct = (x) => Math.round(x.score / x.max * 1000) / 10;
   const vals = list.map(pct);
   const lo = Math.max(0, Math.floor((Math.min(...vals) - 5) / 10) * 10);
@@ -436,13 +436,13 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
       <section data-rhythm-buddy-comfort className="rounded-xl border border-cyan-300/30 bg-slate-950/60 p-2">
         <h4 className="text-[10px] font-black text-slate-400">叩ける譜面の目安</h4>
         <p className="text-sm font-black text-cyan-100">譜面Lv.{comfort}まで 無理なく叩けます</p>
-        <small className="block text-[9px] font-bold leading-snug text-slate-400">よく一緒に遊んだ曲は、Lv.{comfort + 5}くらいまで届きます。それより上の譜面ほど、スコアが落ちます</small>
+        <small style={JA_WRAP_STYLE} className="block text-[9px] font-bold leading-snug text-slate-400">{jaWrap('よく一緒に遊んだ曲は、Lv.')}{comfort + 5}{jaWrap('くらいまで届きます。それより上の譜面ほど、スコアが落ちます')}</small>
       </section>
       <div className="grid grid-cols-2 gap-2">
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">今日の調子</h4>
           <p data-rhythm-buddy-mood={mood.id} className="flex items-center gap-1 text-sm font-black"><RhythmBuddyMoodFace moodId={mood.id} size={22} />{mood.label}</p>
-          <small className="block text-[9px] font-bold leading-snug text-slate-500">朝5:00に変わります。育つ早さは経験値×{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
+          <small style={JA_WRAP_STYLE} className="block text-[9px] font-bold leading-snug text-slate-500">{jaWrap('朝5:00に変わります。育つ早さは経験値×')}{rhythmBuddyMoodExpScale(mood.id, m.trait)}</small>
         </section>
         <section className="rounded-xl bg-slate-950/60 p-2">
           <h4 className="text-[10px] font-black text-slate-400">性格</h4>
@@ -462,12 +462,12 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
             </div>
           ))}
         </dl>
-        <small className="mt-1 block text-[9px] font-bold leading-snug text-slate-500">
-          話し方や好みは1体ずつ違います。{m.trait ? '' : `性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`}叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります
+        <small style={JA_WRAP_STYLE} className="mt-1 block text-[9px] font-bold leading-snug text-slate-500">
+          {jaWrap('話し方や好みは1体ずつ違います。')}{m.trait ? '' : jaWrap(`性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`)}{jaWrap('叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります')}
         </small>
       </section>
-      <button data-rhythm-buddy-traits-toggle type="button" onClick={() => setTraitsOpen((v) => !v)} className="min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
-        {traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'}
+      <button style={JA_WRAP_STYLE} data-rhythm-buddy-traits-toggle type="button" onClick={() => setTraitsOpen((v) => !v)} className="min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
+        {traitsOpen ? '性格の一覧を閉じる' : jaWrap('性格の一覧を見る(9つ)')}
       </button>
       {traitsOpen && (
         <ul data-rhythm-buddy-traits className="space-y-1 rounded-xl bg-slate-950/60 p-2">
@@ -499,7 +499,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
       </section>
       <section data-rhythm-buddy-songs className="rounded-xl bg-slate-950/60 p-2">
         <h4 className="mb-1 text-[10px] font-black text-slate-400">得意な曲{allSongs ? `(${songCount}曲)` : ''}</h4>
-        {songs.length === 0 && <p className="text-[11px] font-bold text-slate-500">まだありません。一緒に遊んだ曲ほど得意になります</p>}
+        {songs.length === 0 && <p style={JA_WRAP_STYLE} className="text-[11px] font-bold text-slate-500">{jaWrap('まだありません。一緒に遊んだ曲ほど得意になります')}</p>}
         {songs.map((x) => (
           <div key={x.songId} className="flex items-center gap-2 py-0.5">
             <span className="min-w-0 flex-1 truncate text-[11px] font-black">{songName(x.songId)}</span>
@@ -508,8 +508,8 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
           </div>
         ))}
         {songCount > 5 && (
-          <button data-rhythm-buddy-songs-all type="button" onClick={() => setAllSongs((v) => !v)} className="mt-1 min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
-            {allSongs ? '上位5曲だけにする' : `遊んだ曲をすべて見る(${songCount}曲)`}
+          <button style={JA_WRAP_STYLE} data-rhythm-buddy-songs-all type="button" onClick={() => setAllSongs((v) => !v)} className="mt-1 min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
+            {allSongs ? '上位5曲だけにする' : jaWrap(`遊んだ曲をすべて見る(${songCount}曲)`)}
           </button>
         )}
       </section>
@@ -640,7 +640,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
         )}
         {tab === 'lineage' && (
           <div>
-            <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。</p>
+            <p style={JA_WRAP_STYLE} className="mb-2.5 text-[10px] leading-relaxed text-slate-400">{jaWrap('選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。')}</p>
             <div className="grid grid-cols-2 gap-2.5">
               {[{ id: 'all', label: 'すべて' }, ...lineages.map((l) => ({ id: l.id, label: `${l.name}種` }))].map((opt) => (
                 <button key={opt.id} type="button" onClick={() => onChange({ lineage: opt.id })} className={chip(settings.lineage === opt.id)}>{opt.label}</button>
@@ -659,7 +659,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
               </div>
             </section>
             <section>
-              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">性格<small className="ml-1 font-bold text-slate-500">(何も選ばなければすべて)</small></h4>
+              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">性格<small style={JA_WRAP_STYLE} className="ml-1 font-bold text-slate-500">{jaWrap('(何も選ばなければすべて)')}</small></h4>
               <div className="grid grid-cols-2 gap-2">
                 {[...RHYTHM_BUDDY_TRAITS.map((t) => ({ id: t.id, label: t.label })), { id: 'none', label: 'まだ見えない' }].map((opt) => (
                   <button key={opt.id} type="button" onClick={() => onChange({ traits: toggle(settings.traits, opt.id) })} className={chip(settings.traits.includes(opt.id))}>{opt.label}</button>
@@ -667,7 +667,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
               </div>
             </section>
             <section>
-              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">今日の調子<small className="ml-1 font-bold text-slate-500">(何も選ばなければすべて)</small></h4>
+              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">今日の調子<small style={JA_WRAP_STYLE} className="ml-1 font-bold text-slate-500">{jaWrap('(何も選ばなければすべて)')}</small></h4>
               <div className="grid grid-cols-2 gap-2">
                 {RHYTHM_BUDDY_MOODS.map((mood) => (
                   <button key={mood.id} type="button" onClick={() => onChange({ moods: toggle(settings.moods, mood.id) })} className={chip(settings.moods.includes(mood.id))}>
@@ -812,7 +812,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
         </div>
         {masuPicker && !detail && (() => {
           const masu = selId ? (masuMons || []).find((x) => x && x.id === selId) : null;
-          if (!masu) return <p className="mt-2 text-center text-[11px] font-bold text-slate-400">呼びたいマスモンをタップしてください</p>;
+          if (!masu) return <p style={JA_WRAP_STYLE} className="mt-2 text-center text-[11px] font-bold text-slate-400">{jaWrap('呼びたいマスモンをタップしてください')}</p>;
           const mon = state.mons[masu.id];
           const mood = rhythmBuddyMood(masu.id, dayKey, mon);
           const called = calledIds.includes(masu.id);
@@ -832,7 +832,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
           );
         })()}
         {listControls.sheet}
-        {!canPay && <p data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">今日の無料ぶんを使い切りました。セッション券があれば呼べます</p>}
+        {!canPay && <p style={JA_WRAP_STYLE} data-rhythm-buddy-empty className="mt-2 text-[11px] font-black text-rose-300">{jaWrap('今日の無料ぶんを使い切りました。セッション券があれば呼べます')}</p>}
         </div>
       </section>
     </div>
@@ -895,7 +895,7 @@ function RhythmBuddyGrowth({ masu, round, songId, diffId, durationMs, teamRank, 
     <p data-rhythm-buddy-growth className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-xl border border-lime-300/40 bg-lime-950/60 px-2 py-0.5 text-[10px] font-black leading-tight text-lime-100">
       <span className="max-w-full truncate">🎵 {rhythmBuddyMasuName(masu)}</span>
       <span className="text-lime-300">経験値+{shown.gain}</span>
-      {shown.levelUp > 0 && <span data-rhythm-buddy-levelup className="rounded bg-amber-300 px-1 text-slate-950">ビートLv.UP! Lv.{level}</span>}
+      {shown.levelUp > 0 && <span style={JA_WRAP_STYLE} data-rhythm-buddy-levelup className="rounded bg-amber-300 px-1 text-slate-950">{jaWrap('ビートLv.UP! Lv.')}{level}</span>}
       {shown.familiarUp && <span className="text-amber-200">この曲の得意度+1</span>}
       {trait && <span className="text-pink-200">性格が「{trait.label}」になった!</span>}
     </p>
@@ -984,7 +984,7 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
         {onClose && <button data-rhythm-buddy-ranking-back type="button" aria-label="戻る" onClick={onClose} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>}
         <div className="min-w-0 flex-1 leading-tight">
           <b className="block truncate text-base font-black text-lime-100">🎶 マスモンランキング</b>
-          <small className="block text-[10px] font-bold text-slate-400">モンヒロビートで育てたマスモンの順位です</small>
+          <small style={JA_WRAP_STYLE} className="block text-[10px] font-bold text-slate-400">{jaWrap('モンヒロビートで育てたマスモンの順位です')}</small>
         </div>
       </div>
       <div className="flex gap-1.5 overflow-x-auto">
@@ -1003,10 +1003,10 @@ function RhythmBuddyRankingBoard({ renderBreederIcon = null, selfName = '', onCl
       )}
       <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
         {state.status === 'loading' && <p className="py-8 text-center text-sm font-bold text-slate-400">読み込み中…</p>}
-        {state.status === 'missing' && <p data-rhythm-buddy-ranking-missing className="py-8 text-center text-sm font-bold text-amber-200">マスモンランキングは準備中です</p>}
+        {state.status === 'missing' && <p style={JA_WRAP_STYLE} data-rhythm-buddy-ranking-missing className="py-8 text-center text-sm font-bold text-amber-200">{jaWrap('マスモンランキングは準備中です')}</p>}
         {state.status === 'error' && (
           <div className="py-8 text-center">
-            <p className="text-sm font-bold text-amber-200">ランキングを読み込めませんでした</p>
+            <p style={JA_WRAP_STYLE} className="text-sm font-bold text-amber-200">{jaWrap('ランキングを読み込めませんでした')}</p>
             <button type="button" onClick={() => { rhythmBuddyRankCache.delete(cacheKey); setRetry((n) => n + 1); }} className="mt-2 min-h-[44px] rounded-xl bg-slate-800 px-4 text-sm font-black">もう一度読み込む</button>
           </div>
         )}

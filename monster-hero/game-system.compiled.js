@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c08c9a4ecc56a66
+// source-sha256: 4727dfe520d894f6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -81766,8 +81766,9 @@ function RhythmBuddyScoreChart({
   const [sel, setSel] = React.useState(-1);
   const [table, setTable] = React.useState(false);
   if (list.length === 0) return React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[11px] font-bold text-slate-500"
-  }, "まだ記録がありません。一緒にライブをすると、ここにスコアが並びます");
+  }, jaWrap('まだ記録がありません。一緒にライブをすると、ここにスコアが並びます'));
   const pct = x => Math.round(x.score / x.max * 1000) / 10;
   const vals = list.map(pct);
   const lo = Math.max(0, Math.floor((Math.min(...vals) - 5) / 10) * 10);
@@ -81933,8 +81934,9 @@ function RhythmBuddyDetail({
   }, "叩ける譜面の目安"), React.createElement("p", {
     className: "text-sm font-black text-cyan-100"
   }, "譜面Lv.", comfort, "まで 無理なく叩けます"), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "block text-[9px] font-bold leading-snug text-slate-400"
-  }, "よく一緒に遊んだ曲は、Lv.", comfort + 5, "くらいまで届きます。それより上の譜面ほど、スコアが落ちます")), React.createElement("div", {
+  }, jaWrap('よく一緒に遊んだ曲は、Lv.'), comfort + 5, jaWrap('くらいまで届きます。それより上の譜面ほど、スコアが落ちます'))), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
@@ -81947,8 +81949,9 @@ function RhythmBuddyDetail({
     moodId: mood.id,
     size: 22
   }), mood.label), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "block text-[9px] font-bold leading-snug text-slate-500"
-  }, "朝5:00に変わります。育つ早さは経験値×", rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
+  }, jaWrap('朝5:00に変わります。育つ早さは経験値×'), rhythmBuddyMoodExpScale(mood.id, m.trait))), React.createElement("section", {
     className: "rounded-xl bg-slate-950/60 p-2"
   }, React.createElement("h4", {
     className: "text-[10px] font-black text-slate-400"
@@ -81980,13 +81983,15 @@ function RhythmBuddyDetail({
   }, label), React.createElement("dd", {
     className: `truncate text-[12px] font-black ${value === 'まだない' ? 'text-slate-500' : 'text-pink-100'}`
   }, value)))), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 block text-[9px] font-bold leading-snug text-slate-500"
-  }, "話し方や好みは1体ずつ違います。", m.trait ? '' : `性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`, "叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります")), React.createElement("button", {
+  }, jaWrap('話し方や好みは1体ずつ違います。'), m.trait ? '' : jaWrap(`性格が決まると、一人称・呼び方・口ぐせが性格に合ったものへ変わることがあります。`), jaWrap('叩き方のくせは話すことだけで、スコアには関係しません。好きな曲・苦手な曲は一緒に遊ぶと決まります'))), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-traits-toggle": true,
     type: "button",
     onClick: () => setTraitsOpen(v => !v),
     className: "min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
-  }, traitsOpen ? '性格の一覧を閉じる' : '性格の一覧を見る(9つ)'), traitsOpen && React.createElement("ul", {
+  }, traitsOpen ? '性格の一覧を閉じる' : jaWrap('性格の一覧を見る(9つ)')), traitsOpen && React.createElement("ul", {
     "data-rhythm-buddy-traits": true,
     className: "space-y-1 rounded-xl bg-slate-950/60 p-2"
   }, RHYTHM_BUDDY_TRAITS.map(t => React.createElement("li", {
@@ -82032,8 +82037,9 @@ function RhythmBuddyDetail({
   }, React.createElement("h4", {
     className: "mb-1 text-[10px] font-black text-slate-400"
   }, "得意な曲", allSongs ? `(${songCount}曲)` : ''), songs.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[11px] font-bold text-slate-500"
-  }, "まだありません。一緒に遊んだ曲ほど得意になります"), songs.map(x => React.createElement("div", {
+  }, jaWrap('まだありません。一緒に遊んだ曲ほど得意になります')), songs.map(x => React.createElement("div", {
     key: x.songId,
     className: "flex items-center gap-2 py-0.5"
   }, React.createElement("span", {
@@ -82043,11 +82049,12 @@ function RhythmBuddyDetail({
   }, x.plays, "回"), React.createElement(RhythmBuddyStars, {
     stars: x.stars
   }))), songCount > 5 && React.createElement("button", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-songs-all": true,
     type: "button",
     onClick: () => setAllSongs(v => !v),
     className: "mt-1 min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
-  }, allSongs ? '上位5曲だけにする' : `遊んだ曲をすべて見る(${songCount}曲)`)), onBack && React.createElement("button", {
+  }, allSongs ? '上位5曲だけにする' : jaWrap(`遊んだ曲をすべて見る(${songCount}曲)`))), onBack && React.createElement("button", {
     type: "button",
     onClick: onBack,
     className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black"
@@ -82274,8 +82281,9 @@ function RhythmBuddyListSheet({
       className: chip(active)
     }, opt.label, active && React.createElement("span", null, settings.dir === 'asc' ? '▲' : '▼'));
   })), tab === 'lineage' && React.createElement("div", null, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
-  }, "選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。"), React.createElement("div", {
+  }, jaWrap('選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。')), React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, [{
     id: 'all',
@@ -82315,8 +82323,9 @@ function RhythmBuddyListSheet({
   }, opt.label)))), React.createElement("section", null, React.createElement("h4", {
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "性格", React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, jaWrap('(何も選ばなければすべて)'))), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, [...RHYTHM_BUDDY_TRAITS.map(t => ({
     id: t.id,
@@ -82334,8 +82343,9 @@ function RhythmBuddyListSheet({
   }, opt.label)))), React.createElement("section", null, React.createElement("h4", {
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "今日の調子", React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, jaWrap('(何も選ばなければすべて)'))), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, RHYTHM_BUDDY_MOODS.map(mood => React.createElement("button", {
     key: mood.id,
@@ -82598,8 +82608,9 @@ function RhythmBuddySheet({
   }))), masuPicker && !detail && (() => {
     const masu = selId ? (masuMons || []).find(x => x && x.id === selId) : null;
     if (!masu) return React.createElement("p", {
+      style: JA_WRAP_STYLE,
       className: "mt-2 text-center text-[11px] font-bold text-slate-400"
-    }, "呼びたいマスモンをタップしてください");
+    }, jaWrap('呼びたいマスモンをタップしてください'));
     const mon = state.mons[masu.id];
     const mood = rhythmBuddyMood(masu.id, dayKey, mon);
     const called = calledIds.includes(masu.id);
@@ -82633,9 +82644,10 @@ function RhythmBuddySheet({
       className: "min-h-[44px] shrink-0 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-4 text-sm font-black text-slate-950 disabled:opacity-40"
     }, "呼ぶ"));
   })(), listControls.sheet, !canPay && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-empty": true,
     className: "mt-2 text-[11px] font-black text-rose-300"
-  }, "今日の無料ぶんを使い切りました。セッション券があれば呼べます"))));
+  }, jaWrap('今日の無料ぶんを使い切りました。セッション券があれば呼べます')))));
 }
 function MasuBeatScreen({
   masuMons = [],
@@ -82759,9 +82771,10 @@ function RhythmBuddyGrowth({
   }, "🎵 ", rhythmBuddyMasuName(masu)), React.createElement("span", {
     className: "text-lime-300"
   }, "経験値+", shown.gain), shown.levelUp > 0 && React.createElement("span", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-levelup": true,
     className: "rounded bg-amber-300 px-1 text-slate-950"
-  }, "ビートLv.UP! Lv.", level), shown.familiarUp && React.createElement("span", {
+  }, jaWrap('ビートLv.UP! Lv.'), level), shown.familiarUp && React.createElement("span", {
     className: "text-amber-200"
   }, "この曲の得意度+1"), trait && React.createElement("span", {
     className: "text-pink-200"
@@ -82934,8 +82947,9 @@ function RhythmBuddyRankingBoard({
   }, React.createElement("b", {
     className: "block truncate text-base font-black text-lime-100"
   }, "🎶 マスモンランキング"), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "block text-[10px] font-bold text-slate-400"
-  }, "モンヒロビートで育てたマスモンの順位です"))), React.createElement("div", {
+  }, jaWrap('モンヒロビートで育てたマスモンの順位です')))), React.createElement("div", {
     className: "flex gap-1.5 overflow-x-auto"
   }, React.createElement("button", {
     type: "button",
@@ -82968,13 +82982,15 @@ function RhythmBuddyRankingBoard({
   }, state.status === 'loading' && React.createElement("p", {
     className: "py-8 text-center text-sm font-bold text-slate-400"
   }, "読み込み中…"), state.status === 'missing' && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-buddy-ranking-missing": true,
     className: "py-8 text-center text-sm font-bold text-amber-200"
-  }, "マスモンランキングは準備中です"), state.status === 'error' && React.createElement("div", {
+  }, jaWrap('マスモンランキングは準備中です')), state.status === 'error' && React.createElement("div", {
     className: "py-8 text-center"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-sm font-bold text-amber-200"
-  }, "ランキングを読み込めませんでした"), React.createElement("button", {
+  }, jaWrap('ランキングを読み込めませんでした')), React.createElement("button", {
     type: "button",
     onClick: () => {
       rhythmBuddyRankCache.delete(cacheKey);
