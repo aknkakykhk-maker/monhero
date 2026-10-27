@@ -62,7 +62,7 @@ check('連打のセリフ・おしゃべりの見本がある', a.assistantSpamL
 
 // ---- 呼び方 ----
 const pc = a.ASSISTANT_PEER_CALLS;
-check('呼び方の表(きゅうこ→ほか)', JSON.stringify(pc.kyuko) === JSON.stringify({ mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ' }), JSON.stringify(pc.kyuko));
+check('呼び方の表(きゅうこ→ほか)', JSON.stringify(pc.kyuko) === JSON.stringify({ mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ソラ' }), JSON.stringify(pc.kyuko));
 check('呼び方の表(ほか→きゅうこ)', pc.mua.kyuko === 'きゅきゅ' && pc.kiki.kyuko === 'きゅうこさん' && pc.momosuke.kyuko === 'きゅうちゃん' && pc.dra.kyuko === 'きゅうこちゃん' && pc.atsu.kyuko === 'きゅうこちゃん');
 const callBad = storyLines.filter(l => {
   const t = String(l.t).replace(/きゅうこの譜面/g, '');
