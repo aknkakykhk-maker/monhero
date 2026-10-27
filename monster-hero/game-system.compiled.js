@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7af774aaf82ef146
+// source-sha256: 49c453a960641e55
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17148,7 +17148,10 @@ const helpDataRows = id => {
         const label = lv => typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
         const lose = lv => typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0;
         const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
-        if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
+        if (typeof CARD_PVP_REWARD !== 'undefined') {
+          const x = CARD_PVP_REWARD.x || 1;
+          rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point * x} ／ 負け ${CARD_PVP_REWARD.lose.point * x}`]);
+        }
         return rows;
       }
     case 'cardPacks':
@@ -27429,6 +27432,24 @@ const hasLocalStorage = () => {
     return false;
   }
 };
+const CORRUPT_STORE_PREFIX = 'mh_corrupt_';
+const stashCorruptStoreValue = (key, raw) => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage || typeof raw !== 'string') return;
+    if (String(key).startsWith(CORRUPT_STORE_PREFIX)) return;
+    const backupKey = `${CORRUPT_STORE_PREFIX}${key}_v1`;
+    if (window.localStorage.getItem(backupKey) !== null) return;
+    window.localStorage.setItem(backupKey, raw);
+  } catch {}
+};
+const parseStoredOrStash = (key, raw) => {
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    stashCorruptStoreValue(key, raw);
+    throw error;
+  }
+};
 const storeGet = async (key, def, shared = false) => {
   try {
     if (hasWinStorage()) {
@@ -27439,10 +27460,17 @@ const storeGet = async (key, def, shared = false) => {
   try {
     if (hasLocalStorage()) {
       const raw = window.localStorage.getItem(key);
-      return raw !== null ? JSON.parse(raw) : def;
+      return raw !== null ? parseStoredOrStash(key, raw) : def;
     }
   } catch {}
-  return key in _memStore ? _memStore[key] : def;
+  if (key in _memStore) return _memStore[key];
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(key);
+      if (raw !== null) return parseStoredOrStash(key, raw);
+    }
+  } catch {}
+  return def;
 };
 let _storageWriteBlocked = false;
 const setStorageWriteBlocked = blocked => {
@@ -55485,7 +55513,11 @@ function BreederMarketScreen({
       point: cp,
       busy: busy || cardShop.busy,
       collection: cardShop.collection,
-      onBuyPack: cardShop.onBuyPack
+      onBuyPack: cardShop.onBuyPack,
+      gacha: cardShop.gacha,
+      catalogs: cardShop.catalogs,
+      onExchangeCatalog: cardShop.onExchangeCatalog,
+      onUseCatalog: cardShop.onUseCatalog
     }), tab === 'starter' && React.createElement(CardShopStarters, {
       db: CARD_BATTLE_DATA,
       point: cp,
@@ -86808,6 +86840,7 @@ const cardResolveTarget = (db, st) => {
   let dmg = (pd.shares ? pd.shares[pd.targets[pd.ti].m] : pd.base) * pd.mult;
   const mv = cardEff(main, 'multVs');
   if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
+  const baseDmg = dmg > 0 ? Math.max(0, dmg + cardFieldDmgAdd(st, main)) : dmg;
   if (pd.takeMult) dmg *= pd.takeMult;
   const ar = cardEff(main, 'area');
   const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || ar && ar.only && cardMonType(target, st.turn) !== ar.only);
@@ -86852,12 +86885,17 @@ const cardResolveTarget = (db, st) => {
     p: t.p,
     m: t.m,
     dmg,
+    base: baseDmg,
     evaded,
     guarded,
     card: pd.main
   });
   cardLog(st, missed ? `${target.name}には当たらなかった` : evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, {
-    kind: 'hit'
+    kind: 'hit',
+    ...(!missed && (evaded || guarded) && baseDmg !== dmg ? {
+      from: baseDmg,
+      to: dmg
+    } : {})
   });
   const atkMon = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
   if (dmg > 0) {
@@ -86907,6 +86945,7 @@ const cardResolveTarget = (db, st) => {
   pd.redirected = false;
   pd.endure = false;
   pd.takeMult = 0;
+  pd.guardCards = [];
 };
 const cardKo = (st, p, m) => {
   const mon = st.players[p].mons[m];
@@ -87262,6 +87301,7 @@ const cardApplyGuard = (db, st, act) => {
     mon: act.mon,
     card: no
   });
+  (pd.guardCards || (pd.guardCards = [])).push(no);
   (c.effects || []).forEach(e => {
     if (e.t === 'evade') pd.evaded = true;
     if (e.t === 'reduce') pd.reduce += e.n;
@@ -87945,6 +87985,41 @@ const cardAiFinalDamage = (db, st, add = {}) => {
   };
 };
 const cardAiIncomingDamage = (db, st) => cardAiFinalDamage(db, st).dmg;
+const cardGuardPreview = (db, st) => {
+  const pd = st && st.pending;
+  if (!pd || !Array.isArray(pd.targets) || !pd.targets[pd.ti]) return null;
+  const cards = Array.isArray(pd.guardCards) ? pd.guardCards.slice() : [];
+  const clean = {
+    ...pd,
+    evaded: false,
+    evadeAll: false,
+    reduce: 0,
+    reduceHalf: false,
+    reduceAll: false,
+    reflect: null,
+    endure: false,
+    cover: null,
+    takeMult: 0
+  };
+  const before = cardAiFinalDamage(db, {
+    ...st,
+    pending: clean
+  }).dmg;
+  if (!cards.length) return {
+    before,
+    after: before,
+    cards
+  };
+  const moved = pd.cover !== null && pd.cover !== undefined || pd.shield !== null && pd.shield !== undefined;
+  const after = moved ? null : pd.evadeAll ? cardAiFinalDamage(db, st, {
+    evaded: true
+  }).dmg : cardAiFinalDamage(db, st).dmg;
+  return {
+    before,
+    after,
+    cards
+  };
+};
 const cardAiGuardEstimate = (db, st, o, dmg) => {
   const pd = st.pending;
   const me = st.players[pd.defender];
@@ -88828,6 +88903,8 @@ const CARD_SAVE_KEYS = Object.freeze({
   bgm: 'mh_card_bgm_v1',
   cpuPlaylist: 'mh_card_cpu_playlist_v1',
   settings: 'mh_card_settings_v1',
+  gacha: 'mh_card_gacha_points_v1',
+  catalogs: 'mh_card_catalogs_v1',
   aiTalk: 'mh_card_ai_talk_v1'
 });
 const CARD_POINT_STORE_KEY = typeof RHYTHM_EVENT_POINTS_KEY !== 'undefined' ? RHYTHM_EVENT_POINTS_KEY : 'mh_rhythm_event_points_v1';
@@ -89541,6 +89618,7 @@ const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
 const CARD_PVP_REWARD = Object.freeze({
+  x: 2,
   win: {
     point: CARD_AI_LEVELS.master.point * 2,
     loops: CARD_AI_LEVELS.master.loops * 2
@@ -91092,6 +91170,64 @@ const cardBuyPacks = (db, packId, count, {
     dupPoint
   };
 };
+const CARD_GACHA_PER_PACK = 10;
+const CARD_CATALOG_COST = 500;
+const cardNormalizeCount = v => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+};
+const cardNormalizeGacha = cardNormalizeCount;
+const cardNormalizeCatalogs = cardNormalizeCount;
+const cardGachaProgress = gacha => cardNormalizeGacha(gacha) % CARD_CATALOG_COST;
+const cardExchangeCatalog = ({
+  gacha,
+  catalogs
+}) => {
+  const g = cardNormalizeGacha(gacha);
+  if (g < CARD_CATALOG_COST) return null;
+  return {
+    gacha: g - CARD_CATALOG_COST,
+    catalogs: cardNormalizeCatalogs(catalogs) + 1
+  };
+};
+const cardCatalogPool = db => {
+  const out = [];
+  CARD_PACKS.forEach(pack => {
+    ['alt', 'kira', 'normal'].forEach(rar => cardPackMonPool(db, pack, rar).forEach(no => out.push({
+      no,
+      packId: pack.id,
+      slot: 'mon',
+      rarity: rar,
+      max: 1
+    })));
+    cardPackTechPool(db, pack).forEach(no => out.push({
+      no,
+      packId: pack.id,
+      slot: 'tech',
+      rarity: 'normal',
+      max: CARD_TECH_KEEP_MAX
+    }));
+  });
+  return out;
+};
+const cardUseCatalog = (db, no, {
+  catalogs,
+  collection
+}) => {
+  const c = cardNormalizeCatalogs(catalogs);
+  if (c < 1) return null;
+  const item = cardCatalogPool(db).find(x => x.no === no);
+  if (!item) return null;
+  const col = {
+    ...(collection || {})
+  };
+  if ((col[no] || 0) >= item.max) return null;
+  col[no] = (col[no] || 0) + 1;
+  return {
+    catalogs: c - 1,
+    collection: col
+  };
+};
 const cardPackRates = (db, packId) => {
   const pack = cardPackOf(packId);
   if (!pack) return null;
@@ -91779,6 +91915,87 @@ const cardMonArt = mon => {
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
+const cardLogText = l => !l ? '' : Number.isFinite(l.from) && Number.isFinite(l.to) ? `${l.text}(${l.from} → ${l.to})` : l.text;
+const cardGuardShort = c => {
+  if (!c) return '';
+  if (c.kind === 'dge') return '回避';
+  const e = c.effects || [];
+  const r = e.find(x => x.t === 'reduce');
+  if (r) return `防御 −${r.n}`;
+  if (e.some(x => x.t === 'reduceHalf')) return '防御 半分';
+  if (e.some(x => x.t === 'reduceAll')) return '防御 0';
+  if (e.some(x => x.t === 'reflect')) return 'はね返す';
+  if (e.some(x => x.t === 'endure')) return '根性';
+  return c.name;
+};
+const CardGuardPreview = ({
+  db,
+  pv,
+  compact = false,
+  tight = false
+}) => {
+  if (!pv || !pv.cards.length) return null;
+  const names = pv.cards.map(no => {
+    const c = cardOf(db, no);
+    return c ? `${c.name}(${cardGuardShort(c)})` : '';
+  }).filter(Boolean).join('・');
+  if (tight) {
+    return React.createElement("div", {
+      "data-card-guard-preview": pv.after === null ? 'moved' : `${pv.before}-${pv.after}`,
+      className: "whitespace-nowrap text-[12px] font-black leading-tight text-white"
+    }, pv.after !== null ? React.createElement(React.Fragment, null, "受ける ", React.createElement("span", {
+      className: "text-rose-300 line-through decoration-2"
+    }, pv.before), " → ", React.createElement("span", {
+      className: "text-[14px] text-emerald-300"
+    }, pv.after)) : 'これで受ける', React.createElement("span", {
+      className: "ml-1 text-[10px] font-bold text-amber-200"
+    }, pv.cards.map(no => cardGuardShort(cardOf(db, no))).join('・')));
+  }
+  return React.createElement("div", {
+    "data-card-guard-preview": pv.after === null ? 'moved' : `${pv.before}-${pv.after}`,
+    className: "leading-tight"
+  }, pv.after !== null && React.createElement("div", {
+    className: `${compact ? 'text-[15px]' : 'text-[17px]'} font-black text-white`
+  }, "受けるダメージ ", React.createElement("span", {
+    className: "text-rose-300 line-through decoration-2"
+  }, pv.before), " → ", React.createElement("span", {
+    className: "text-[1.3em] text-emerald-300"
+  }, pv.after)), React.createElement("div", {
+    className: "text-[11px] font-bold text-amber-200",
+    style: JA_WRAP_STYLE
+  }, names, "を使った"));
+};
+const cardHitResultOf = f => {
+  if (!f || f.heal || f.self || f.reflect || !Number.isFinite(f.base)) return null;
+  if ((f.evaded || f.guarded) && f.base !== f.dmg) return {
+    kind: f.evaded ? 'evade' : 'guard',
+    before: f.base,
+    after: f.dmg
+  };
+  if (!f.evaded && !f.guarded && f.dmg > 0) return {
+    kind: 'none'
+  };
+  return null;
+};
+const CardHitResult = ({
+  f,
+  tiny = false
+}) => {
+  const r = cardHitResultOf(f);
+  if (!r) return null;
+  if (r.kind === 'none') return React.createElement("span", {
+    "data-card-hit-result": "none",
+    className: "mh-card-guard-result pointer-events-none absolute left-1/2 top-[58%] z-[51] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-1.5 text-[10px] font-bold text-slate-200"
+  }, "守らなかった");
+  return React.createElement("span", {
+    "data-card-hit-result": r.kind,
+    className: `mh-card-guard-result pointer-events-none absolute left-1/2 top-[-6px] z-[51] -translate-x-1/2 whitespace-nowrap rounded-xl border-2 bg-slate-950/85 px-1.5 text-center font-black leading-tight ${r.kind === 'evade' ? 'border-sky-300 text-sky-100' : 'border-amber-300 text-amber-100'} ${tiny ? 'text-[11px]' : 'text-[13px]'}`
+  }, r.kind === 'evade' ? '💨 回避！' : '🛡 防御！', React.createElement("br", null), React.createElement("span", {
+    className: "text-rose-300 line-through decoration-2"
+  }, r.before), " → ", React.createElement("span", {
+    className: `${tiny ? 'text-[15px]' : 'text-[18px]'} text-white`
+  }, r.after));
+};
 const cardUserLabel = (db, c) => {
   if (!c) return '';
   if (c.user === 'any') return '全モンスター';
@@ -92235,7 +92452,7 @@ const CardTurnLogSheet = ({
       lines: []
     });
     const t = turns[turns.length - 1];
-    if (l.kind === 'turn') t.head = l.text;else t.lines.push(l.text);
+    if (l.kind === 'turn') t.head = l.text;else t.lines.push(cardLogText(l));
   }
   const list = turns.filter(t => t.lines.length || t.head).reverse();
   return React.createElement("div", {
@@ -92328,7 +92545,8 @@ const CardMonSlot = ({
   tiny = false,
   wide = false,
   motion = null,
-  calm = false
+  calm = false,
+  guardTag = ''
 }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
@@ -92435,7 +92653,10 @@ const CardMonSlot = ({
     key: `${mv.key}-n`,
     "data-card-guard-num": true,
     className: "mh-card-guard-num"
-  }, mv.label), mon.ko && React.createElement("span", {
+  }, mv.label), guardTag && React.createElement("span", {
+    "data-card-guard-tag": true,
+    className: `pointer-events-none absolute left-1/2 top-0 z-[45] -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black shadow ${/回避/.test(guardTag) ? 'bg-sky-300 text-slate-950 shadow-[0_0_12px_rgba(125,211,252,.8)]' : 'bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,.8)]'}`
+  }, /回避/.test(guardTag) ? '💨' : '🛡', " ", guardTag), mon.ko && React.createElement("span", {
     className: "absolute bottom-2 rounded bg-black/70 px-1.5 text-[12px] font-black text-slate-300"
   }, "KO"), fx.map(f => React.createElement("span", {
     key: f.key,
@@ -92445,7 +92666,11 @@ const CardMonSlot = ({
       WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1',
       textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)'
     }
-  }, f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス')));
+  }, f.dmg > 0 ? `−${f.dmg}` : f.heal ? `＋${f.heal}` : 'ミス')), fx.map(f => React.createElement(CardHitResult, {
+    key: `${f.key}-r`,
+    f: f,
+    tiny: tiny
+  })));
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return React.createElement("div", _extends({
     "data-card-mon": `${p}-${m}`
@@ -92568,6 +92793,7 @@ const CardBattleBoard = ({
   const tutStage = tutorial ? CARD_TUTORIAL_STAGES[Math.min(tutI, CARD_TUTORIAL_STAGES.length - 1)] : null;
   const [motions, setMotions] = useState({});
   const motionTimers = useRef([]);
+  const actionMissed = useRef(null);
   useEffect(() => () => motionTimers.current.forEach(clearTimeout), []);
   const playMotion = (id, mv, ms) => {
     setMotions(cur => ({
@@ -92842,7 +93068,7 @@ const CardBattleBoard = ({
     }));
     if (hits.length) {
       if (settings.damageNum !== 'OFF') setFx(hits);
-      motionTimers.current.push(setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), 1000));
+      motionTimers.current.push(setTimeout(() => setFx(cur => cur.filter(f => !hits.some(h => h.key === f.key))), hits.some(h => cardHitResultOf(h) && cardHitResultOf(h).kind !== 'none') ? 1600 : 1000));
       if (hits.some(h => h.dmg >= 3)) Audio_.fgSe.crit();else if (hits.some(h => h.dmg > 0)) Audio_.fgSe.attack();else if (hits.some(h => h.heal)) Audio_.fgSe.heal();else Audio_.fgSe.guard();
     } else if (evs.some(e => e.t === 'use')) Audio_.fgSe.card();
     const kos = evs.filter(e => e.t === 'ko');
@@ -92950,7 +93176,7 @@ const CardBattleBoard = ({
         who: ul.by ? `${ul.who}(${ul.by}で)` : ul.who,
         side: use.p === CARD_ME ? 'me' : 'foe'
       });
-      motionTimers.current.push(setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200));
+      if (use.p === CARD_ME) motionTimers.current.push(setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 2200));
     } else if (evs.some(e => e.t === 'guard')) Audio_.fgSe.guard();
     if (tutorial && cardTutorialDone(tutStage.id, st, next)) setTutI(i => i + 1);
     const scene = tutorial ? null : cardLineSceneOf(db, st, next, CARD_CPU);
@@ -93012,12 +93238,13 @@ const CardBattleBoard = ({
       name: meNow ? 'あなた' : who.name
     });
     if (meNow && !replay && !game.demo && Audio_.fgSe.card) Audio_.fgSe.card();
-    setAction(null);
+    setAction(cur => meNow && cur && cur.side === 'foe' ? cur : null);
+    actionMissed.current = null;
     const bannerMs = Math.max(500, Math.round(800 * pace));
     const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), bannerMs);
     let t2 = null;
     if (meNow && !tutorial && !game.demo && !replay) {
-      const lines = st.log.filter(l => l.turn === st.turn - 1 && l.kind !== 'turn').map(l => l.text).slice(-8);
+      const lines = st.log.filter(l => l.turn === st.turn - 1 && l.kind !== 'turn').map(l => cardLogText(l)).slice(-8);
       setTurnSummary(null);
       if (lines.length) t2 = setTimeout(() => setTurnSummary({
         key: `sum-${id}`,
@@ -93032,6 +93259,9 @@ const CardBattleBoard = ({
   }, [st.turn, st.active, st.phase]);
   useEffect(() => {
     if (turnSummary && (sel || picks.length || drag)) setTurnSummary(null);
+  }, [sel, picks.length, drag]);
+  useEffect(() => {
+    if (sel || picks.length || drag) setAction(cur => cur && cur.side === 'foe' ? null : cur);
   }, [sel, picks.length, drag]);
   useEffect(() => {
     if (!turnSummary || sumOpen) return undefined;
@@ -93514,6 +93744,13 @@ const CardBattleBoard = ({
     const tm = t ? st.players[t.p].mons[t.m] : null;
     return `${cardUseText(db, st, pd.attacker, pd.mon, [pd.main])}が${tm ? tm.name : ''}に！(ダメージ${pd.base * pd.mult})`;
   })() : null;
+  const guardPv = pd ? cardGuardPreview(db, st) : null;
+  const guardUsed = !!(guardPv && guardPv.cards.length);
+  const guardTagOf = (p, m) => {
+    if (!guardUsed) return '';
+    const t = pd.targets[pd.ti];
+    return t && t.p === p && t.m === m ? guardPv.cards.map(no => cardGuardShort(cardOf(db, no))).join('・') : '';
+  };
   const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
   const logLines = st.log.filter(l => l.kind !== 'turn').slice(-3);
   const stageRef = useRef(null);
@@ -93528,6 +93765,23 @@ const CardBattleBoard = ({
   const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
   const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
   const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
+  const actionHidden = bubbleOverAction || !!downBand;
+  useEffect(() => {
+    if (action && actionHidden) actionMissed.current = action;else if (action) actionMissed.current = null;
+  }, [action && action.key, actionHidden]);
+  useEffect(() => {
+    if (actionHidden || action || !actionMissed.current) return;
+    const miss = actionMissed.current;
+    actionMissed.current = null;
+    if (turnBanner || guarding || endFx || bigCard) return;
+    const key = `${miss.key}-again`;
+    setAction({
+      ...miss,
+      key
+    });
+    const again = setTimeout(() => setAction(cur => cur && cur.key === key ? null : cur), 1200);
+    motionTimers.current.push(again);
+  }, [actionHidden]);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => {
     setStageFit(0);
@@ -93677,7 +93931,7 @@ const CardBattleBoard = ({
       onClick: () => step({
         type: 'pass'
       })
-    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : '守らない');
+    }, tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける' : '守らない');
     if (mode === 'guts') return React.createElement("button", {
       type: "button",
       disabled: tutOff('turn'),
@@ -93788,7 +94042,7 @@ const CardBattleBoard = ({
     }
   }), React.createElement("div", {
     "data-card-head": true,
-    className: `flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 items-center gap-1.5 bg-black/35 px-2 py-0.5`
+    className: `flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 bg-black/35 px-2 py-0.5`
   }, React.createElement("div", {
     className: "flex shrink-0 items-center gap-1.5"
   }, React.createElement("button", {
@@ -93816,7 +94070,7 @@ const CardBattleBoard = ({
     className: `shrink-0 whitespace-nowrap rounded-md border px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black tracking-wide ${CARD_LEVEL_TONE[tutorial ? 'tutorial' : game.level] || CARD_LEVEL_TONE.easy}`
   }, tutorial ? '練習' : CARD_LEVEL_LABEL[game.level] || ''), React.createElement("span", {
     "data-card-head-right": true,
-    className: "flex min-w-0 flex-1 items-center justify-end gap-1.5"
+    className: "flex min-w-[7.5em] flex-1 items-center justify-end gap-1.5"
   }, quickRun && React.createElement("span", {
     "data-card-battle-quick-run": quickRun.stopped ? 'stopped' : 'live',
     "aria-label": quickRun.stopped ? '裏のクイック周回は止まっています' : `裏のクイック周回 ${quickRun.loops}周目`,
@@ -93831,7 +94085,7 @@ const CardBattleBoard = ({
   }, "はじまり") : React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap"
   }, "ターン ", Math.max(1, headSt.turn)), " ・ ", React.createElement("span", {
-    className: `whitespace-nowrap ${headMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`
+    className: `inline-block max-w-full truncate whitespace-nowrap align-bottom ${headMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`
   }, headMe ? 'あなたの番' : `${who.name}の番`))))), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
@@ -93893,6 +94147,7 @@ const CardBattleBoard = ({
     p: CARD_CPU,
     m: m,
     mark: markOf(CARD_CPU, m),
+    guardTag: guardTagOf(CARD_CPU, m),
     fx: endFx ? [] : fx.filter(f => f.p === CARD_CPU && f.m === m),
     onTap: () => tapMon(CARD_CPU, m),
     press: press,
@@ -93967,7 +94222,7 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && !endFx && stageFit < 3 && !bubbleOverAction && !(turnSummary && sumOpen) && !guardAtk && React.createElement("div", {
+  })), action && !endFx && !turnBanner && stageFit < 3 && !bubbleOverAction && !(turnSummary && sumOpen) && !guardAtk && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     "data-card-action-side": action.side,
@@ -94035,11 +94290,16 @@ const CardBattleBoard = ({
     className: `${tiny || stageFit >= 1 ? 'line-clamp-1' : 'line-clamp-2'} block text-[11px] leading-snug text-slate-200`
   }, guardAtk.text))) : React.createElement("div", {
     className: "text-rose-200"
-  }, pendingText)), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
+  }, pendingText)), pendingText && React.createElement(CardGuardPreview, {
+    db: db,
+    pv: guardPv,
+    compact: compact || stageFit >= 1,
+    tight: tiny || stageFit >= 2
+  }), (pendingText ? [] : compact || tutorial || stageFit >= 1 ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => React.createElement("div", {
     key: i,
     "data-card-log-kind": l.kind || undefined,
     className: `${i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'} ${l.kind === 'ko' ? '!text-rose-300 font-black' : l.kind === 'hit' && /ダメージ/.test(l.text) ? '!text-rose-200' : ''}`
-  }, l.text)))), !wide && tutorBox, React.createElement("div", {
+  }, cardLogText(l))))), !wide && tutorBox, React.createElement("div", {
     "data-card-side-active": turnLive && turnMe ? 'me' : undefined,
     "data-card-floor": "me",
     className: `flex shrink-0 items-end justify-around rounded-2xl px-1 transition-shadow ${turnLive && turnMe ? 'shadow-[inset_0_0_0_2px_rgba(252,211,77,.8),0_0_16px_rgba(252,211,77,.35)]' : ''}`,
@@ -94053,6 +94313,7 @@ const CardBattleBoard = ({
     p: CARD_ME,
     m: m,
     mark: markOf(CARD_ME, m),
+    guardTag: guardTagOf(CARD_ME, m),
     fx: endFx ? [] : fx.filter(f => f.p === CARD_ME && f.m === m),
     onTap: () => tapMon(CARD_ME, m),
     press: press,
@@ -98336,7 +98597,10 @@ const CardPackOpen = ({
     className: "text-amber-200"
   }, "ビートP +", packPoint), " になりました") : 'ビートPに変わったカードはありません', last && result.packs.length > 1 && !kit && React.createElement("div", {
     className: "mt-0.5"
-  }, "(", result.packs.length, "パックで +", result.dupPoint, ")"), last && kit && result.dupPoint > 0 && React.createElement("div", {
+  }, "(", result.packs.length, "パックで +", result.dupPoint, ")"), last && result.gacha && React.createElement("div", {
+    "data-card-pack-gacha": true,
+    className: "mt-1 font-black text-amber-200"
+  }, "🎫 ガチャポイント +", result.gacha.add, "(いま ", result.gacha.now, "・次の1冊まで あと ", CARD_CATALOG_COST - cardGachaProgress(result.gacha.now), ")"), last && kit && result.dupPoint > 0 && React.createElement("div", {
     className: "mt-0.5"
   }, "(キット全部で +", result.dupPoint, ")"), last && kit && result.deckAdded !== false && React.createElement("div", {
     "data-card-pack-starter-deck": true,
@@ -98673,19 +98937,224 @@ const CardStarterContents = ({
   }));
 };
 const cardPackSpeciesLabel = (db, pack) => pack.species.map(sp => (Object.values(db.monsters).find(m => m.species === sp && !m.variant) || {}).name || sp).join('・');
+const CardGachaPanel = ({
+  gacha = 0,
+  catalogs = 0,
+  busy,
+  onExchange,
+  onOpenCatalog
+}) => {
+  const g = cardNormalizeGacha(gacha);
+  const prog = cardGachaProgress(g);
+  return React.createElement("div", {
+    "data-card-gacha": true,
+    className: "rounded-2xl border-2 border-amber-300/70 p-3 text-white",
+    style: {
+      background: 'linear-gradient(135deg,#3b2a05ee,#1e1b4bee)'
+    }
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-1 text-[13px] font-black text-amber-200"
+  }, React.createElement("span", null, "🎫 ガチャポイント"), React.createElement("span", {
+    "data-card-gacha-point": g,
+    className: "ml-auto text-[16px] text-white"
+  }, g.toLocaleString())), React.createElement("div", {
+    className: "mt-1.5 h-2 overflow-hidden rounded-full bg-slate-950",
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    className: "block h-full rounded-full",
+    style: {
+      width: `${prog / CARD_CATALOG_COST * 100}%`,
+      background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
+    }
+  })), React.createElement("div", {
+    className: "mt-1 flex text-[10.5px] font-bold text-slate-200",
+    style: JA_WRAP_STYLE
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, jaWrap(`ブースターパック1つで +${CARD_GACHA_PER_PACK}。${CARD_CATALOG_COST}で「バトルカードカタログ」1冊と交換できます`)), React.createElement("span", {
+    className: "shrink-0 pl-1 tabular-nums text-amber-100"
+  }, "次の1冊まで ", prog, " / ", CARD_CATALOG_COST)), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-gacha-exchange": true,
+    disabled: busy || g < CARD_CATALOG_COST,
+    onClick: onExchange,
+    className: "mh-button min-h-[42px] rounded-xl bg-amber-500 px-1 text-[12px] font-black text-stone-900 active:scale-[.98] disabled:opacity-40"
+  }, "カタログと交換(", CARD_CATALOG_COST, ")"), React.createElement("button", {
+    type: "button",
+    "data-card-gacha-catalog": true,
+    disabled: busy || catalogs < 1,
+    onClick: onOpenCatalog,
+    className: "mh-button min-h-[42px] rounded-xl bg-sky-400 px-1 text-[12px] font-black text-slate-950 active:scale-[.98] disabled:opacity-40"
+  }, "📖 カタログを使う(", catalogs, "冊)")));
+};
+const CardCatalogSheet = ({
+  db,
+  catalogs,
+  collection,
+  busy,
+  onUse,
+  onClose
+}) => {
+  const pool = cardCatalogPool(db);
+  const [packId, setPackId] = useState(CARD_PACKS[0].id);
+  const [pick, setPick] = useState(null);
+  const [confirm, setConfirm] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [done, setDone] = useState('');
+  const press = useCardLongPress(no => setDetail(no));
+  const col = collection || {};
+  const rows = pool.filter(x => x.packId === packId);
+  const full = x => (col[x.no] || 0) >= x.max;
+  const tile = x => {
+    const on = pick === x.no;
+    const isFull = full(x);
+    return React.createElement("button", _extends({
+      key: x.no,
+      type: "button",
+      "data-card-catalog-item": x.no,
+      "data-card-catalog-full": isFull ? '1' : undefined,
+      disabled: isFull
+    }, press(x.no, () => {
+      Audio_.fgSe.tap();
+      setPick(x.no);
+      setDone('');
+    }), {
+      style: {
+        WebkitUserSelect: 'none',
+        userSelect: 'none'
+      },
+      className: `relative flex flex-col items-center rounded-lg p-0.5 text-center active:scale-95 ${on ? 'bg-amber-300/30 ring-2 ring-amber-300' : 'bg-white/5'} disabled:opacity-40`
+    }), React.createElement("span", {
+      className: "relative block w-full"
+    }, React.createElement("img", {
+      src: cardShopImg(db, x.no),
+      alt: cardShopName(db, x.no),
+      loading: "lazy",
+      className: "aspect-[5/7] w-full rounded-[5px] object-cover"
+    }), x.rarity !== 'normal' && React.createElement("span", {
+      className: "absolute bottom-0.5 left-0.5 rounded-md bg-amber-300 px-1 text-[9px] font-black text-slate-950"
+    }, CARD_RARITY_LABEL[x.rarity]), isFull && React.createElement("span", {
+      className: "absolute inset-x-0 top-1/3 mx-0.5 rounded-md bg-slate-950/90 px-0.5 text-[9px] font-black text-slate-200"
+    }, "持てる数いっぱい"), !isFull && !(col[x.no] > 0) && React.createElement("span", {
+      className: "absolute left-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white shadow"
+    }, "未取得")), React.createElement(CardNameFit, {
+      name: cardShopName(db, x.no),
+      className: "mt-0.5 font-bold leading-tight text-slate-100"
+    }));
+  };
+  const mons = rows.filter(x => x.slot === 'mon');
+  const techs = rows.filter(x => x.slot === 'tech');
+  const nameOf = no => {
+    const x = pool.find(y => y.no === no);
+    return `${cardShopName(db, no)}${x && x.rarity !== 'normal' ? `(${CARD_RARITY_LABEL[x.rarity]})` : ''}`;
+  };
+  const pickName = pick ? nameOf(pick) : '';
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-catalog": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "バトルカードカタログ",
+    onClick: onClose,
+    className: "fixed inset-0 flex items-center justify-center p-3",
+    style: {
+      zIndex: MODAL_Z.dialog,
+      backgroundColor: 'rgba(2,6,23,0.88)'
+    }
+  }, React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    className: "flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-sky-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]"
+  }, React.createElement("div", {
+    className: "shrink-0 rounded-t-[22px] bg-sky-300/15 px-3 py-2 text-center text-[15px] font-black text-sky-100"
+  }, "📖 バトルカードカタログ"), React.createElement("div", {
+    className: "shrink-0 px-3 pt-2"
+  }, React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`好きなカードを1枚えらんで「もらう」を押すと、カタログが1冊なくなります(のこり ${catalogs}冊)。長押しでくわしく見られます。`)), done && React.createElement("div", {
+    "data-card-catalog-done": true,
+    className: "mt-1 rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-2 py-1 text-[12px] font-black text-emerald-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(done)), React.createElement("div", {
+    className: "mt-1.5 flex gap-1 overflow-x-auto pb-1",
+    role: "tablist"
+  }, CARD_PACKS.map(p => React.createElement("button", {
+    key: p.id,
+    type: "button",
+    role: "tab",
+    "aria-selected": p.id === packId,
+    "data-card-catalog-pack": p.id,
+    onClick: () => {
+      setPackId(p.id);
+      setPick(null);
+    },
+    className: `shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${p.id === packId ? 'bg-amber-300 text-stone-900' : 'bg-slate-800 text-slate-300'}`
+  }, "第", p.no, "弾")))), React.createElement("div", {
+    className: "min-h-0 flex-1 overflow-y-auto px-3 py-1"
+  }, React.createElement(CardShopHead, null, "モンスター"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5 landscape:grid-cols-7"
+  }, mons.map(tile)), React.createElement(CardShopHead, null, "技など"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5 landscape:grid-cols-7"
+  }, techs.map(tile))), React.createElement("div", {
+    className: "shrink-0 space-y-1.5 p-2 landscape:grid landscape:grid-cols-2 landscape:gap-1.5 landscape:space-y-0"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-catalog-take": true,
+    disabled: !pick || busy || catalogs < 1,
+    onClick: () => setConfirm(true),
+    className: "mh-button mh-button-primary min-h-[46px] w-full rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40 landscape:min-h-[40px]",
+    style: JA_WRAP_STYLE
+  }, pick ? jaWrap(`「${pickName}」をもらう`) : 'カードをえらんでください'), React.createElement("button", {
+    type: "button",
+    "data-card-catalog-close": true,
+    onClick: onClose,
+    className: "mh-button min-h-[40px] w-full rounded-2xl border border-white/20 text-[13px] font-black text-slate-200 active:scale-[.98]"
+  }, "閉じる")))), detail && React.createElement(CardDetailModal, {
+    db: db,
+    no: detail,
+    onClose: () => setDetail(null)
+  }), confirm && React.createElement(ConfirmSheet, {
+    title: `「${pickName}」をもらいますか？`,
+    message: `バトルカードカタログを1冊使います(いま ${catalogs}冊)`,
+    confirmLabel: "もらう",
+    onCancel: () => setConfirm(false),
+    onConfirm: async () => {
+      setConfirm(false);
+      const no = pick;
+      const r = await onUse(no);
+      if (r && r.ok) {
+        setDone(`「${nameOf(no)}」を手に入れました`);
+        setPick(null);
+      }
+    }
+  }));
+};
 const CardShopPacks = ({
   db,
   point,
   busy,
   collection = null,
-  onBuyPack
+  onBuyPack,
+  gacha = 0,
+  catalogs = 0,
+  onExchangeCatalog,
+  onUseCatalog
 }) => {
   const [sheet, setSheet] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [gachaConfirm, setGachaConfirm] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   return React.createElement("div", {
     "data-card-shop-packs": true,
     className: "space-y-2 pb-2"
-  }, CARD_PACKS.map(pack => React.createElement("div", {
+  }, onExchangeCatalog && React.createElement(CardGachaPanel, {
+    gacha: gacha,
+    catalogs: catalogs,
+    busy: busy,
+    onExchange: () => setGachaConfirm(true),
+    onOpenCatalog: () => setCatalogOpen(true)
+  }), CARD_PACKS.map(pack => React.createElement("div", {
     key: pack.id,
     "data-card-shop-pack": pack.id,
     className: SCREEN_PANEL_CLASS,
@@ -98759,6 +99228,22 @@ const CardShopPacks = ({
     pack: sheet.pack,
     collection: collection,
     onClose: () => setSheet(null)
+  }), gachaConfirm && React.createElement(ConfirmSheet, {
+    title: "バトルカードカタログと交換しますか？",
+    message: `ガチャポイント ${CARD_CATALOG_COST} を使います(いま ${cardNormalizeGacha(gacha).toLocaleString()})`,
+    confirmLabel: "交換する",
+    onCancel: () => setGachaConfirm(false),
+    onConfirm: () => {
+      setGachaConfirm(false);
+      void onExchangeCatalog();
+    }
+  }), catalogOpen && React.createElement(CardCatalogSheet, {
+    db: db,
+    catalogs: catalogs,
+    collection: collection,
+    busy: busy,
+    onUse: onUseCatalog,
+    onClose: () => setCatalogOpen(false)
   }), confirm && React.createElement(ConfirmSheet, {
     title: `${confirm.pack.name}を${confirm.count}パック買いますか？`,
     message: `ビートP ${cardPackPrice(confirm.pack, confirm.count).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
@@ -100252,6 +100737,15 @@ const cardPvpTimeoutAct = st => st.pendingPray ? {
   hand: []
 };
 const cardPvpReward = (outcome, facts) => {
+  const r = cardPvpRewardBase(outcome, facts);
+  const x = Number.isInteger(CARD_PVP_REWARD.x) && CARD_PVP_REWARD.x > 0 ? CARD_PVP_REWARD.x : 1;
+  return {
+    ...r,
+    point: r.point * x,
+    loops: r.loops * x
+  };
+};
+const cardPvpRewardBase = (outcome, facts) => {
   const f = facts || {
     ownTurns: 0,
     kos: 0
@@ -102741,10 +103235,10 @@ const CardPvpStatus = ({
   clock
 }) => React.createElement(React.Fragment, null, React.createElement("span", {
   "data-card-pvp-clock": clock.mine ? 'mine' : 'foe',
-  className: `rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100' : 'bg-white/10 text-slate-200'}`
+  className: `shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100' : 'bg-white/10 text-slate-200'}`
 }, clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`, clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''), clock.eyes > 0 && React.createElement("span", {
   "data-card-pvp-eyes": clock.eyes,
-  className: "ml-1 rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums",
+  className: "ml-1 shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums",
   "aria-label": `${clock.eyes}人が観戦しています`
 }, "👀 ", clock.eyes));
 const CardPvpSignal = ({
@@ -103754,10 +104248,20 @@ const cardReplayStore = async (box, keepId = null) => {
   }
   return null;
 };
+const cardReplayReadLost = raw => {
+  if (raw && typeof raw === 'object' && Array.isArray(raw.list)) return false;
+  try {
+    return typeof window !== 'undefined' && !!window.localStorage && window.localStorage.getItem(CARD_REPLAY_KEY) !== null;
+  } catch (_) {
+    return false;
+  }
+};
 const cardReplaySave = async rec => {
   if (!rec) return false;
   try {
-    const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
+    const raw = await storeGet(CARD_REPLAY_KEY, null);
+    if (cardReplayReadLost(raw)) return false;
+    const box = cardReplayAdd(raw, rec);
     if (!box.list.some(r => r.id === rec.id)) return false;
     const done = await cardReplayStore(box, rec.id);
     if (!done) return false;
@@ -104138,8 +104642,8 @@ const cardWatchSideMeta = (meta, side) => side === 1 ? {
 const cardWatchSideWinner = (w, side) => w === 0 || w === 1 ? side === 1 ? 1 - w : w : null;
 const cardWatchPatchOne = (db, pl, list) => {
   if (!Array.isArray(list) || list.length !== pl.discard.length) return false;
-  if (list.some((no, i) => no !== CARD_PVP_HIDDEN && !cardOf(db, no) || pl.discard[i] !== CARD_PVP_HIDDEN && no !== CARD_PVP_HIDDEN && pl.discard[i] !== no)) return false;
-  pl.discard = pl.discard.map((no, i) => no === CARD_PVP_HIDDEN ? list[i] : no);
+  if (list.some(no => no !== CARD_PVP_HIDDEN && !cardOf(db, no))) return false;
+  pl.discard = pl.discard.map((no, i) => list[i] !== CARD_PVP_HIDDEN ? list[i] : no);
   return true;
 };
 const cardWatchPatchDiscards = (db, st, d) => {
@@ -104502,6 +105006,7 @@ const CARD_WATCH = (() => {
     end: null,
     d: null,
     last: null,
+    hits: null,
     lastAt: 0,
     needAt: 0,
     error: '',
@@ -104548,6 +105053,7 @@ const CARD_WATCH = (() => {
       buf
     } = s;
     let last = s.last;
+    let hits = s.hits;
     buf = {
       ...buf
     };
@@ -104576,6 +105082,11 @@ const CARD_WATCH = (() => {
         p: used[used.length - 1].p,
         cards: used[used.length - 1].cards
       };
+      const hitNow = (next.events || []).filter(x => x.t === 'hit').map((x, i) => ({
+        ...x,
+        key: `${n}-${i}`
+      }));
+      if (hitNow.length) hits = hitNow;
     }
     if (s.d) st = cardWatchPatchDiscards(CARD_BATTLE_DATA, st, s.side === 1 ? [s.d[1], s.d[0]] : s.d);
     s = {
@@ -104584,6 +105095,7 @@ const CARD_WATCH = (() => {
       n,
       buf,
       last,
+      hits,
       lastAt: last !== s.last ? Date.now() : s.lastAt
     };
     if (s.end && n >= s.hostN && s.phase === 'watching') s = {
@@ -104874,13 +105386,20 @@ const CardWatchMonMini = ({
     }
   }))));
 };
+const cardWatchGuardTag = (db, st, p, m) => {
+  const pv = st && st.pending ? cardGuardPreview(db, st) : null;
+  if (!pv || !pv.cards.length) return '';
+  const t = st.pending.targets[st.pending.ti];
+  return t && t.p === p && t.m === m ? pv.cards.map(no => cardGuardShort(cardOf(db, no))).join('・') : '';
+};
 const CardWatchSide = ({
   db,
   st,
   p,
   person,
   top = false,
-  low = false
+  low = false,
+  hits = null
 }) => {
   const pl = st.players[p];
   const active = st.winner === null && cardPvpDecider(st) === p;
@@ -104923,7 +105442,9 @@ const CardWatchSide = ({
     st: st,
     p: p,
     m: m,
-    compact: true
+    compact: true,
+    guardTag: cardWatchGuardTag(db, st, p, m),
+    fx: (hits || []).filter(f => f.p === p && f.m === m)
   })));
   return React.createElement("div", {
     "data-card-watch-side": p,
@@ -104952,7 +105473,7 @@ const CardPvpWatchScreen = ({
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
-  const lines = st ? st.log.slice(low ? -2 : -3).map(l => l.text) : [];
+  const lines = st ? st.log.slice(low ? -2 : -3).map(l => cardLogText(l)) : [];
   const overBox = st && meta && (w.phase === 'over' || winner !== null) && React.createElement("div", {
     "data-card-watch-over": winner === null ? 'none' : winner,
     className: `rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`
@@ -104996,7 +105517,8 @@ const CardPvpWatchScreen = ({
     p: 1,
     person: meta.p[1],
     top: true,
-    low: low
+    low: low,
+    hits: w.hits
   }), React.createElement("div", {
     "data-card-watch-center": true,
     className: `flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`
@@ -105022,7 +105544,11 @@ const CardPvpWatchScreen = ({
     className: "min-w-0 flex-1 space-y-0.5"
   }, w.last && React.createElement("div", {
     className: "text-[11px] font-black text-violet-200"
-  }, nameOf(w.last.p), "が使った札"), lines.map((t, i) => React.createElement("div", {
+  }, nameOf(w.last.p), "が使った札"), st.pending && React.createElement(CardGuardPreview, {
+    db: db,
+    pv: cardGuardPreview(db, st),
+    compact: true
+  }), lines.map((t, i) => React.createElement("div", {
     key: i,
     className: "text-[12px] font-bold leading-snug text-white",
     style: JA_WRAP_STYLE
@@ -105031,7 +105557,8 @@ const CardPvpWatchScreen = ({
     st: st,
     p: 0,
     person: meta.p[0],
-    low: low
+    low: low,
+    hits: w.hits
   }), !low && overBox)), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
@@ -107130,6 +107657,118 @@ function MonsterHeroGame() {
       ...planned,
       plannedTurn: turn
     });
+  };
+  const runTacticsAiCopyAction = dist => {
+    const hits = [];
+    let total = 0;
+    {
+      const copy0 = aiCopyRef.current;
+      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) && isAiCopyOut(copy0, turnCount) && isTacticsAiCopyStanding(copy0)) {
+        const copy = copy0.plannedTurn === turnCount ? copy0 : planTacticsAiCopy(turnCount) || copy0;
+        const tools = tacticsAiCopyTools(copy, dist);
+        if (tools) {
+          let dealtC = 0,
+            gainC = 0,
+            gutsC = Math.max(0, Number(copy.guts) || 0),
+            guardC = 0,
+            guardCards = 0;
+          (copy.picks || []).forEach((card, k) => {
+            const cost = Math.max(0, Number(tools.costC(card)) || 0);
+            if (cost > gutsC) return;
+            gutsC -= cost;
+            gainC += tacticsHateOnFor(runMode) ? tacticsHateCardGain(card, copy.srcMonsterId, k > 0 ? 0.5 : 1) : 0;
+            if (tools.isGuardC(card)) {
+              const m = card.type === 'weak_guard' ? 0.5 : 1,
+                g = GUARD_EVOLUTION[guardLevel];
+              guardC += Math.floor(g.flat * m + Math.max(0, Number(copy.def) || 0) * g.mult * m);
+              guardCards++;
+              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name || card.baseName || 'ガード'}(ガード${guardC})`, 'ally');
+              return;
+            }
+            const d = tools.dmgOf(card);
+            if (!(d > 0)) return;
+            total += d;
+            dealtC += d;
+            hits.push({
+              dmg: d,
+              isCrit: false,
+              slotIdx: copy.pos,
+              aiCopy: true,
+              actorName: tacticsAiCopyName(copy),
+              srcMonsterId: copy.srcMonsterId,
+              isSpecial: card.type === 'unique',
+              skillName: card.name || card.baseName || '攻撃',
+              isUnique: card.type === 'unique',
+              monId: card.type === 'unique' ? card.monId : undefined
+            });
+          });
+          commitAiCopy(c => c && {
+            ...c,
+            picks: [],
+            nextCard: null,
+            guts: gutsC,
+            guardNow: guardC,
+            guardCardsNow: guardCards,
+            hateGainNow: (Number(c.hateGainNow) || 0) + gainC,
+            dealtNow: (Number(c.dealtNow) || 0) + dealtC
+          });
+          if (!(copy.picks || []).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`, 'ally');
+        }
+      }
+    }
+    return {
+      hits,
+      total
+    };
+  };
+  const playAiCopyHit = async h => {
+    setSlotSkill({
+      slotIndex: h.slotIdx,
+      name: h.skillName,
+      type: h.isUnique ? 'unique' : 'normal',
+      ownerId: h.srcMonsterId,
+      aiCopy: true
+    });
+    setAttackAnim({
+      slotIndex: h.slotIdx,
+      aiCopy: true,
+      motion: 'default',
+      skillName: h.skillName
+    });
+    if (h.isUnique) Audio_.se.special();else Audio_.se.attack();
+    await battleWait(450);
+    setAttackAnim(null);
+    setSlotSkill(null);
+    addPopup(`${h.dmg}`, 'enemy', 'text-sky-200 drop-shadow-[0_0_20px_rgba(125,211,252,0.9)] text-5xl font-black animate-bounce', `🤖 ${h.actorName}の ${h.skillName} → 敵に ${h.dmg.toLocaleString()} ダメージ`);
+    setEnemy(prev => prev ? {
+      ...prev,
+      hp: Math.max(0, prev.hp - h.dmg)
+    } : prev);
+    await battleWait(550);
+  };
+  const tacticsAiCopySoloStrike = async () => {
+    const startHp = enemy?.hp ?? 0;
+    const ca = runTacticsAiCopyAction(enemyDist);
+    if (!(ca.total > 0)) return {
+      defeated: false,
+      enemyHp: startHp
+    };
+    for (const h of ca.hits) await playAiCopyHit(h);
+    setCurrentWaveDamage(p => p + ca.total);
+    raidJackDamageRef.current += Number(ca.total) || 0;
+    const remaining = Math.max(0, startHp - ca.total);
+    enemyRevivedHpRef.current = null;
+    if (enemy && (await resolveEnemyDefeat({
+      remainingHp: remaining,
+      damage: ca.total
+    }))) return {
+      defeated: true,
+      enemyHp: 0
+    };
+    return {
+      defeated: false,
+      enemyHp: enemyRevivedHpRef.current != null ? enemyRevivedHpRef.current : remaining
+    };
   };
   const clearAiCopy = (why = '') => {
     const copy = aiCopyRef.current;
@@ -114128,12 +114767,14 @@ function MonsterHeroGame() {
     try {
       await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback);
     } catch (_) {}
-    const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    const [point, starter, shop, collection, gacha, catalogs] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null), storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]);
     const next = {
       point: cardNormalizePoint(point),
       starter: cardNormalizeStarter(starter),
       shop: cardNormalizeShop(shop),
-      collection: cardNormalizeCollection(collection)
+      collection: cardNormalizeCollection(collection),
+      gacha: cardNormalizeGacha(gacha),
+      catalogs: cardNormalizeCatalogs(catalogs)
     };
     setCardShopState(next);
     setRhythmEventPoints(next.point);
@@ -114163,7 +114804,7 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]), ([rawCol, rawPity, rawPoint, rawSplit]) => {
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null), storeGet(K.gacha, 0, false)]), ([rawCol, rawPity, rawPoint, rawSplit, rawGacha]) => {
         const point = cardNormalizePoint(rawPoint);
         const split = rawSplit !== true;
         const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
@@ -114175,8 +114816,10 @@ function MonsterHeroGame() {
         if (!r) return {
           fail: 'points'
         };
+        const gacha = cardNormalizeGacha(rawGacha) + r.packs.length * CARD_GACHA_PER_PACK;
         return {
           r,
+          gacha,
           entries: [{
             key: K.collection,
             before: rawCol,
@@ -114189,6 +114832,10 @@ function MonsterHeroGame() {
             key: CARD_POINT_STORE_KEY,
             before: rawPoint,
             next: r.point
+          }, {
+            key: K.gacha,
+            before: rawGacha,
+            next: gacha
           }, ...(split ? [{
             key: K.pitySplit,
             before: rawSplit,
@@ -114215,14 +114862,19 @@ function MonsterHeroGame() {
       setCardShopState(cur => ({
         ...(cur || {}),
         point: r.point,
-        collection: r.collection
+        collection: r.collection,
+        gacha: res.gacha
       }));
       setRhythmEventPoints(r.point);
       setCardPackOpen({
         packId,
         packs: r.packs,
         dupPoint: r.dupPoint,
-        cost: r.cost
+        cost: r.cost,
+        gacha: {
+          add: r.packs.length * CARD_GACHA_PER_PACK,
+          now: res.gacha
+        }
       });
       setGameState('CARD_PACK_OPEN');
       return {
@@ -114230,6 +114882,132 @@ function MonsterHeroGame() {
       };
     } catch {
       setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const exchangeCardCatalog = async () => {
+    if (marketPurchaseProcessingRef.current) return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]), ([rawGacha, rawCat]) => {
+        const r = cardExchangeCatalog({
+          gacha: rawGacha,
+          catalogs: rawCat
+        });
+        if (!r) return {
+          fail: 'points'
+        };
+        return {
+          r,
+          entries: [{
+            key: K.gacha,
+            before: rawGacha,
+            next: r.gacha
+          }, {
+            key: K.catalogs,
+            before: rawCat,
+            next: r.catalogs
+          }]
+        };
+      });
+      if (res.fail === 'points') {
+        void loadCardShop();
+        setMarketExchangeError('ガチャポイントが足りません。');
+        return {
+          ok: false,
+          reason: 'points'
+        };
+      }
+      if (res.fail) {
+        setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setCardShopState(cur => ({
+        ...(cur || {}),
+        gacha: res.r.gacha,
+        catalogs: res.r.catalogs
+      }));
+      return {
+        ok: true
+      };
+    } catch {
+      setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。');
+      return {
+        ok: false,
+        reason: 'save'
+      };
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
+  const spendCardCatalog = async no => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return {
+      ok: false,
+      reason: 'busy'
+    };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.catalogs, 0, false), storeGet(K.collection, null)]), ([rawCat, rawCol]) => {
+        const r = cardUseCatalog(CARD_BATTLE_DATA, no, {
+          catalogs: rawCat,
+          collection: cardNormalizeCollection(rawCol)
+        });
+        if (!r) return {
+          fail: 'catalog'
+        };
+        return {
+          r,
+          entries: [{
+            key: K.catalogs,
+            before: rawCat,
+            next: r.catalogs
+          }, {
+            key: K.collection,
+            before: rawCol,
+            next: r.collection
+          }]
+        };
+      });
+      if (res.fail === 'catalog') {
+        void loadCardShop();
+        setMarketExchangeError('カタログが無いか、そのカードはもう持てる数いっぱいです。');
+        return {
+          ok: false,
+          reason: 'catalog'
+        };
+      }
+      if (res.fail) {
+        setMarketExchangeError('保存できませんでした。カタログは変わっていません。');
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      }
+      setCardShopState(cur => ({
+        ...(cur || {}),
+        catalogs: res.r.catalogs,
+        collection: res.r.collection
+      }));
+      return {
+        ok: true
+      };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カタログは変わっていません。');
       return {
         ok: false,
         reason: 'save'
@@ -120617,7 +121395,12 @@ function MonsterHeroGame() {
     const scenario = battleScenarioRef.current;
     const acting = enemyIntent;
     const hpAfterRecovery = emergencyHp !== null ? emergencyHp : Math.min(liveEffectiveMaxHp(), hp + recoverHp);
-    await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
+    const solo = isTacticsMode(runMode) ? await tacticsAiCopySoloStrike() : {
+      defeated: false,
+      enemyHp: enemy?.hp ?? 0
+    };
+    if (solo.defeated) return;
+    await handleEnemyTurn('none', {}, acting, hpAfterRecovery, solo.enemyHp);
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? acting : null);
@@ -121162,8 +121945,13 @@ function MonsterHeroGame() {
     setFocusedCard(null);
     setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
+    const solo = isTacticsMode(runMode) ? await tacticsAiCopySoloStrike() : {
+      defeated: false,
+      enemyHp: enemy?.hp ?? 0
+    };
+    if (solo.defeated) return;
     const acting = enemyIntent;
-    await handleEnemyTurn('none', {}, acting, hp);
+    await handleEnemyTurn('none', {}, acting, hp, solo.enemyHp);
     const moveWasFrozen = acting && acting.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || tacticsExPsychoLockNow().active);
     const distForNextPredict = acting && acting.type === 'MOVE' && !moveWasFrozen ? acting.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? acting : null);
@@ -121901,57 +122689,9 @@ function MonsterHeroGame() {
     }
     popupSlotRef.current = null;
     {
-      const copy0 = aiCopyRef.current;
-      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) && isAiCopyOut(copy0, turnCount) && isTacticsAiCopyStanding(copy0)) {
-        const copy = copy0.plannedTurn === turnCount ? copy0 : planTacticsAiCopy(turnCount) || copy0;
-        const tools = tacticsAiCopyTools(copy, attackDistance);
-        if (tools) {
-          let dealtC = 0,
-            gainC = 0,
-            gutsC = Math.max(0, Number(copy.guts) || 0),
-            guardC = 0,
-            guardCards = 0;
-          (copy.picks || []).forEach((card, k) => {
-            const cost = Math.max(0, Number(tools.costC(card)) || 0);
-            if (cost > gutsC) return;
-            gutsC -= cost;
-            gainC += tacticsHateOnFor(runMode) ? tacticsHateCardGain(card, copy.srcMonsterId, k > 0 ? 0.5 : 1) : 0;
-            if (tools.isGuardC(card)) {
-              const m = card.type === 'weak_guard' ? 0.5 : 1,
-                g = GUARD_EVOLUTION[guardLevel];
-              guardC += Math.floor(g.flat * m + Math.max(0, Number(copy.def) || 0) * g.mult * m);
-              guardCards++;
-              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name || card.baseName || 'ガード'}(ガード${guardC})`, 'ally');
-              return;
-            }
-            const d = tools.dmgOf(card);
-            if (!(d > 0)) return;
-            totalDmg += d;
-            dealtC += d;
-            attackHits.push({
-              dmg: d,
-              isCrit: false,
-              slotIdx: copy.srcSlot,
-              aiCopy: true,
-              isSpecial: card.type === 'unique',
-              skillName: `${tacticsAiCopyName(copy)}の${card.name || card.baseName || '攻撃'}`,
-              isUnique: card.type === 'unique',
-              monId: card.type === 'unique' ? card.monId : undefined
-            });
-          });
-          commitAiCopy(c => c && {
-            ...c,
-            picks: [],
-            nextCard: null,
-            guts: gutsC,
-            guardNow: guardC,
-            guardCardsNow: guardCards,
-            hateGainNow: (Number(c.hateGainNow) || 0) + gainC,
-            dealtNow: (Number(c.dealtNow) || 0) + dealtC
-          });
-          if (!(copy.picks || []).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`, 'ally');
-        }
-      }
+      const ca = runTacticsAiCopyAction(attackDistance);
+      ca.hits.forEach(h => attackHits.push(h));
+      totalDmg += ca.total;
     }
     pdTag();
     if (copyHitFrom != null) {
@@ -121983,6 +122723,11 @@ function MonsterHeroGame() {
         let hitIdx = 0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          if (hit && hit.aiCopy) {
+            await playAiCopyHit(hit);
+            hitIdx++;
+            continue;
+          }
           setTacticsPandoraForms(hit && hit.pandoraForm && hit.slotIdx != null ? {
             [hit.slotIdx]: hit.pandoraForm
           } : {});
@@ -134027,7 +134772,9 @@ function MonsterHeroGame() {
         busy: false,
         onBuyPack: buyCardPacks,
         onBuyStarter: buyCardStarter,
-        onExchange: exchangeCardPoints
+        onExchange: exchangeCardPoints,
+        onExchangeCatalog: exchangeCardCatalog,
+        onUseCatalog: spendCardCatalog
       } : null,
       initialSection: cardMarketEntry ? 'card' : null
     }), gameState === 'CARD_PACK_OPEN' && cardPackOpen && React.createElement(CardPackOpen, {
@@ -144604,10 +145351,13 @@ const createAnimationStyle = () => {
     .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
     @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
     .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
+    /* 当たった瞬間の「防御！ 5 → 2」(1.6秒。ぽんと出て、しばらく止まって、消える。2026-10-27 社長・案A) */
+    .mh-card-guard-result { animation: mhCardGuardResult 1.6s ease-out both; }
+    @keyframes mhCardGuardResult { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.7); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.08); } 20% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -4px) scale(1); } }
     @keyframes mhCardDmgPop { 0% { opacity: 0; transform: scale(.4) translateY(6px); } 18% { opacity: 1; transform: scale(1.25) translateY(-4px); } 32% { transform: scale(1) translateY(-6px); } 80% { opacity: 1; transform: translateY(-14px); } 100% { opacity: 0; transform: translateY(-20px); } }
     .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
     @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
-    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band, .mh-card-guard-result { animation: none; } }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }
