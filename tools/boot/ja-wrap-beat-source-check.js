@@ -25,7 +25,7 @@ const FILES = ['29-rhythm-screens.jsx', '30-rhythm-play.jsx', '58-screen-rhythm.
 // これより短い文は、いちばん狭い札でも1行に入るとみなす
 const MIN_CHARS = 12;
 // 守られていない文の上限。2026-10-27 に154件を洗い出し、ファイルごとに直して下げていく(29 → 58 → 80 → 77 → 30。最後の PR で0にする)
-const SOURCE_WRAP_LIMIT = 137;
+const SOURCE_WRAP_LIMIT = 87;
 const WRAP_FUNCS = new Set(['jaWrap', 'helpWrap', 'jaWrapParts']);
 const KEEP_CLASS = /(^|\s|:)(break-keep|whitespace-nowrap|truncate|line-clamp-\d+)(\s|$)/;
 const KEEP_STYLE = /JA_WRAP_STYLE|wordBreak\s*:\s*['"]keep-all|whiteSpace\s*:\s*['"]nowrap|textOverflow\s*:\s*['"]ellipsis|WebkitLineClamp/;
