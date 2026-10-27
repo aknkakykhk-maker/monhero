@@ -54,6 +54,7 @@
 | `mh_story_assistant_chat_seen_v1` | boolean | 助手とおしゃべりのお話「話せるようになった日」を本編で見たか(飛ばしても立つ)。公開の後の最初の HOME で1回だけ流すため。回想・デバッグでは立てない |
 | `mh_story_tactics_types_seen_v1` | boolean | 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」を本編で見たか(飛ばしても立つ・2026-10-18)。ヘイトとタイプの公開のあと、タクティクスバトルの導入のお話を見た人の最初の HOME で1回流す。回想・デバッグから見たぶんは立てない |
 | `mh_story_card_battle_seen_v1` | boolean | お話「MFバトルカード ～物置の古い箱～」を本編で見たか(飛ばしても立つ・2026-10-24)。MFバトルカードの公開(`RELEASE_FLAGS.cardBattle`)のあとの最初の HOME で1回流す。立っていると HOME に MFバトルカードの入口が出る。true 以外(無い・壊れた値)は「まだ」。回想・デバッグから見たぶんは立てない |
+| `mh_story_one_at_a_time_v1` | boolean | はじめて遊ぶ人の印(2026-10-27)。はじめての案内を通る人にだけ起動時に true を書き、消さない。true の人は HOME に着くたびにお話を1本だけ流し、残りは HOME を離れて戻ったときに1本ずつ流す。前から遊んでいる人には書かない(無い・false なら今までどおり続けて流す) |
 | `mh_help_new_seen_v1` | string[] | ヘルプの🆕(2026-10-18)。開いたことのあるトピックの id(`added` を持つ項目だけ・新しい200件まで)。無い・壊れている = まだ何も開いていない(載せてから14日の項目に🆕が出る) |
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID。ブリーダーP交換所だけでなく、**ビートP交換所のハロウィンのアイコン(1000P)の交換でも**、まとまりの中身が全部ここへ足される(2026-10-04)。**同じキャラのアイコン(助手の表情・モンスターの顔と円盤石など)は、どれか1つでも入っていれば全部持っている扱い**(2026-10-03・`BREEDER_ICON_GROUPS` / `expandOwnedMarketIcons`)。広げるのは読むときだけで、保存値は書き換えない。買うと、まとめの中身が全部入る |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
@@ -81,6 +82,7 @@
 | `mh_card_starter_v1` | object / `cardNormalizeStarter` | スターターを受け取った一度きりの印 `{ kit, at }`。ある人には二度と配らない(`cardGrantStarter`) |
 | `mh_card_daily_v1` | object / `cardNormalizeDaily` | MFバトルカードの今日の記録 `{ day(JST), cpuPoint, pvpPoint, firstWin, foes }`。日が変われば 0 に戻る |
 | `mh_card_record_v1` | object / `cardNormalizeRecord` | MFバトルカードの戦績 `{ cpu:{win,lose,surrender}, pvp:{win,lose}, beaten:{助手id:true}, recent:[30件], byLevel:{win:{難易度:数},lose:{…}}, rank:{ total:{難易度:勝ち}, week:{key:月曜の日付, wins:{…}}, streak:{now,best} } }`。byLevel・rank は 2026-10-24 に足した項目(無い人は 0 で補う)。rank はランキングに数えてよい対戦(公開後・デバッグでない人)だけを数える(`cardRecordAfter`) |
+| `mh_card_record_detail_v1` | object / `cardNormalizeRecordDetail` | MFバトルカードの記録をくわしく(2026-10-27。記録の画面の「全体」「助手ごと」「マルチ」)。`{ v:1, seeded, foes:{助手id:{win,lose,surrender,now,best,fastest,levels}}, wins:{n,turns,fastest}, day:{key,win}, decks:{id:{name,n}}(20まで), mons:{番号:数}, moves:{番号:回数}, quick, pvpBest }`。助手と対戦の精算と同じ取引で足す(90 の `cardRecordDetailEntry`)。`seeded` … はじめて書くときに `mh_card_record_v1` の最近の30戦から助手ごとの数を1回だけ起こした印(二度は足さない)。`mh_card_record_v1` は書き換えない・Supabase へは送らない |
 | `mh_card_cpu_unlocked_v1` | object / `cardNormalizeCpuUnlocked` | コンピューター戦の難易度を開いた印 `{ hard, expert, master }`(EASY・NORMAL は最初から) |
 | `mh_card_tutorial_v1` | object / `cardNormalizeTutorial` | MFバトルカードの練習試合(チュートリアル)の印 `{ done, skipped, rewarded, at }`。`rewarded` があれば 100 ビートPを二度と渡さない(`cardTutorialFinish`) |
 | `mh_card_pack_pity_v1` | object / `cardNormalizePity` | MFバトルカードのパックの天井 `{ パックid: キラなしで開けた数 }`。2026-10-25 に8弾(p1〜p8)へ作り直した。以前の w1〜w4・hybrid の数も消さずに残す(知らないパックid・数でない値は捨てる。89-card-pack.jsx) |
