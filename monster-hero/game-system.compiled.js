@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65adaa5750cd8e89
+// source-sha256: 5b05ad123175fc7e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -59872,8 +59872,9 @@ function MasuReincarnateScreen({
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "reincarnate",
-      compact: true
-    })), renderScreenNote('reincarnate', `絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`, [`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`, '限界突破の回数や★はそのまま残ります。', '左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。']), renderMonsterSortFilterBar({
+      compact: true,
+      collapseKey: "temple:reincarnate"
+    })), renderScreenNote('reincarnate', `絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`, [`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`, '限界突破の回数や★はそのまま残ります。', '「すべて選択」は編成中とお気に入りの子を選びません。', '左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。']), renderMonsterSortFilterBar({
       singleType: true
     }), React.createElement("div", {
       className: SCREEN_LIST_CLASS
@@ -59962,18 +59963,18 @@ function MasuReincarnateScreen({
       onClick: () => setBulkTimes('max'),
       className: `mh-button mh-button-secondary min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 disabled:opacity-30 ${bulkTimes === 'max' ? 'bg-violet-600 text-white' : 'bg-slate-800'}`
     }, "最大", picked.length ? `（${timesMax}回）` : '')), React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
+      className: "grid grid-cols-[auto_auto_minmax(0,1fr)] gap-1.5"
     }, React.createElement("button", {
       type: "button",
       disabled: busy,
       onClick: pickAll,
-      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-xs font-black active:scale-95 disabled:opacity-30"
+      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 px-2.5 text-[11px] font-black active:scale-95 disabled:opacity-30"
     }, "すべて選択"), React.createElement("button", {
       type: "button",
       disabled: busy || picked.length === 0,
       onClick: () => setBulkIds([]),
-      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 text-xs font-black active:scale-95 disabled:opacity-30"
-    }, "選択を外す")), React.createElement("button", {
+      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 px-2.5 text-[11px] font-black active:scale-95 disabled:opacity-30"
+    }, "選択を外す"), React.createElement("button", {
       type: "button",
       "data-reincarnate-bulk-open": true,
       disabled: busy || picked.length === 0,
@@ -59981,10 +59982,8 @@ function MasuReincarnateScreen({
         setReincarnateError('');
         setBulkConfirmOpen(true);
       },
-      className: "mh-button mh-button-primary mt-2 w-full min-h-[52px] rounded-2xl bg-violet-600 text-sm font-black active:scale-[.98] disabled:opacity-30"
-    }, picked.length ? `まとめて転生（${picked.length}体${preview?.ok && preview.total > preview.count ? `・計${preview.total}回` : ''}）` : 'まとめて転生（□で選んでください）'), React.createElement("div", {
-      className: "mt-1 text-center text-[10px] font-bold text-slate-400"
-    }, "「すべて選択」は編成中とお気に入りの子を選びません")), bulkConfirmOpen && picked.length > 0 && React.createElement(ModalFrame, {
+      className: "mh-button mh-button-primary w-full min-h-[44px] rounded-xl bg-violet-600 px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-30"
+    }, picked.length ? `まとめて転生（${picked.length}体${preview?.ok && preview.total > preview.count ? `・計${preview.total}回` : ''}）` : '□で選んで転生'))), bulkConfirmOpen && picked.length > 0 && React.createElement(ModalFrame, {
       label: "まとめて転生の確認",
       border: "border-violet-400/70",
       onClose: busy ? null : () => setBulkConfirmOpen(false)
