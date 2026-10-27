@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b4cab18a3f721dc
+// source-sha256: 55f7771ec7ade5ca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -72884,7 +72884,7 @@ function BattleScreen({
     const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-art": i,
       "data-ai-copy-phase": tCopyPhase,
-      className: "absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none"
+      className: "absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]"
     }, React.createElement(SorashidoCopyFx, {
       phase: tCopyPhase
     }, React.createElement(DyedMonsterImage, {
@@ -72899,10 +72899,11 @@ function BattleScreen({
       className: "object-contain drop-shadow-md"
     }))), !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-next": i,
-      className: `absolute ${copySrc ? 'left-[62px]' : 'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none`
+      className: `absolute ${copySrc ? 'left-[62px]' : 'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`
     }, React.createElement(SorashidoNextCardBadge, {
       card: tCopyOut ? tCopy.nextCard : null,
-      turnsLeft: tCopy.turnsLeft
+      turnsLeft: tCopy.turnsLeft,
+      layout: classicAiCopyLandscape() ? 'landscape' : 'portrait'
     })), React.createElement("div", {
       "data-tactics-ai-copy": i,
       "data-tactics-ai-copy-out": tCopyOut ? '1' : '0',
@@ -72912,13 +72913,13 @@ function BattleScreen({
         e.stopPropagation();
         setCopyHandOpen(true);
       } : undefined,
-      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter' : 'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
     }, React.createElement("span", {
       className: "flex max-w-full min-w-0 items-center gap-0.5"
     }, React.createElement("span", {
       className: "min-w-0 truncate"
     }, React.createElement("span", {
-      className: tCopyOnMon ? 'max-[359px]:hidden' : ''
+      className: tCopyOnMon ? 'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''
     }, "🤖"), tCopyOut ? tCopyOnMon ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "text-rose-300"
     }, "♥"), React.createElement("span", {

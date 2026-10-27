@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4c1dc37f99ce4554
+// generated-sha256: 036b387fd673bd6f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -43944,21 +43944,22 @@ function BattleScreen({
               const copyChip=tacticsNewLayout&&tCopy&&tCopy.pos===i?(<>
                 {/* 枠は横に広い(縦の画面で約176×95)。空いたマスは「左に絵・右に次に使う札・下にライフ」と横に分けて、札で絵を隠さない。
                     子がいるマスに重なるときは、その子の絵・名前・ライフの行を隠さないよう、左下の絵の所に2行の小さな札だけを出す
-                    (1行目 ♥ライフ・狙われる%、2行目 次に使うカード。ライフの行の字にかからない幅 40% に収める。くわしくは押して手札の窓で見る)。2026-10-27 セコンドくんの実画面の見回り */}
-                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none">
+                    (1行目 ♥ライフ・狙われる%、2行目 次に使うカード。ライフの行の字にかからない幅 40% に収める。くわしくは押して手札の窓で見る)。
+                    横向きの背の低い画面は枠が縦長(約88×112)なので、空いたマスは「上に絵・下に次の札」、重なるときの札は右上(名前の段の下)へ移す。2026-10-27 セコンドくんの実画面の見回り */}
+                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]">
                   <SorashidoCopyFx phase={tCopyPhase}>
                     <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
                   </SorashidoCopyFx>
                 </div>}
-                {!tCopyOnMon&&<div data-tactics-ai-copy-next={i} className={`absolute ${copySrc?'left-[62px]':'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none`}>
-                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft}/>
+                {!tCopyOnMon&&<div data-tactics-ai-copy-next={i} className={`absolute ${copySrc?'left-[62px]':'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`}>
+                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft} layout={classicAiCopyLandscape()?'landscape':'portrait'}/>
                 </div>}
                 {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
                 <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={tCopyOut?'1':'0'} role={aiCopy?'button':undefined} aria-label={aiCopy?'コピーの手札を見る':undefined}
                   onClick={aiCopy?(e)=>{e.stopPropagation();setCopyHandOpen(true);}:undefined}
-                  className={`absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon?'max-w-[40%] flex-col items-start gap-px tracking-tighter':'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
+                  className={`absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon?'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]':'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
                   <span className="flex max-w-full min-w-0 items-center gap-0.5">
-                    <span className="min-w-0 truncate"><span className={tCopyOnMon?'max-[359px]:hidden':''}>🤖</span>{tCopyOut?(tCopyOnMon?<><span className="text-rose-300">♥</span><span className="tabular-nums">{tCopy.hp}</span></>:`ライフ${tCopy.hp}`):'次のターンから'}</span>
+                    <span className="min-w-0 truncate"><span className={tCopyOnMon?'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}>🤖</span>{tCopyOut?(tCopyOnMon?<><span className="text-rose-300">♥</span><span className="tabular-nums">{tCopy.hp}</span></>:`ライフ${tCopy.hp}`):'次のターンから'}</span>
                     {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums tracking-tighter text-rose-200"><span className={tCopyOnMon?'text-[6px] opacity-80':''}>狙</span>{chancesNow.copy}%</span>}
                   </span>
                   {tCopyOnMon&&tCopyOut&&<span data-tactics-ai-copy-next={i} className="block max-w-full min-w-0 truncate text-emerald-200">{tCopy.nextCard?(tCopy.nextCard.name||tCopy.nextCard.baseName||'考え中'):'考え中'}<span className="tabular-nums text-sky-200/90"> あと{tCopy.turnsLeft}</span></span>}
