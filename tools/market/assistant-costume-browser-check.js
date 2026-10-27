@@ -130,7 +130,14 @@ const seed = ({ conditions }) => {
     await goShop(page, 'ビートP');
     check('① 開始の前は、ビートP交換所に「着替え」タブが無い', !(await tabs(page)).includes('着替え'));
     await goShop(page, 'ダイヤ');
-    check('① 開始の前は、ダイヤショップにも「着替え」タブが無い', !(await tabs(page)).includes('着替え'));
+    // 10/27 から、みゅあの「デュエルマスター」がいつも(解放の前も鍵つきで)並ぶので、ダイヤショップには「着替え」タブが出る。
+    // ハロウィンの服は開始の前なので、そのタブに並ばない
+    check('① 開始の前も、ダイヤショップには「着替え」タブが出る(デュエルマスターがいるため)', (await tabs(page)).includes('着替え'));
+    await page.evaluate(() => [...document.querySelectorAll('button')].find(b => (b.innerText || '').trim() === '着替え')?.click());
+    await page.waitForTimeout(800);
+    const shelf = await page.evaluate(() => document.body.innerText || '');
+    check('① 開始の前の「着替え」タブには、デュエルマスター(鍵つき・入手条件)だけでハロウィンの服は無い',
+      /デュエルマスター/.test(shelf) && /勝つと買えます/.test(shelf) && !/ハロウィンの魔女|ハロウィンのうさ耳|ハロウィンの小悪魔/.test(shelf));
     await ctx.close();
   }
 
