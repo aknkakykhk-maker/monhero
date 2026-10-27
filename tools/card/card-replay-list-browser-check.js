@@ -147,6 +147,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const headN = await page.locator('[data-card-head-turn]').innerText();
     const barN = await page.locator('[data-card-replay-turn]').innerText();
     const turnOf = (t) => (t.match(/(\d+)/) || [])[1];
+    let banners = 0;
+    for (let k = 0; k < 3; k++) { await page.locator('[data-card-replay-next-turn]').click(); await page.waitForTimeout(150); banners += await page.locator('[data-card-turn-banner]').count(); }
+    check('④ 見返しで番を進めても、まんなかの番の帯は出ない(上下の帯と食い違わない)', banners === 0, String(banners));
     check('④ 番を進めると、上の帯の番と下の帯の番がそろう', !!turnOf(headN) && /番目の番/.test(barN) && barN.includes(`${turnOf(headN)}番目の番`), `${headN} / ${barN}`);
     await shot(page, 'replay-open');
     await page.locator('[data-card-replay-exit]').click();
