@@ -51,6 +51,9 @@ const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=c7c5ba3d8031";
 // イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコン。商品はこのファイルの下の BREEDER_MARKET_ITEMS(近日追加)
 const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=8368da2a70b6";
 const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=3f5815550d74";
+// キュービ・オリヒメ(2026-10-27・案の段階)。マーケットの「近日追加」の商品は開発部が作る
+const KYUBI_DISC_ICON = "images/disc-icons/kyubi-disc.PNG?v=3ba6c9096afd";
+const ORIHIME_DISC_ICON = "images/disc-icons/orihime-disc.PNG?v=2463cbd1dd9e";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
@@ -480,6 +483,14 @@ const BREEDER_MARKET_ITEMS = [
   { id:'dreamy_icon', name:"ドリーミィのアイコン", type:'icon', icon:DREAMY_FACE_ICON, cost:1 },
   { id:'dreamy_disc_icon', name:"ドリーミィの円盤石アイコン", type:'icon', icon:DREAMY_DISC_ICON, cost:1 },
   { id:'Dreamy', name:"ドリーミィの円盤石", type:'disc', icon:DREAMY_DISC_ICON, cost:150000, available:false },
+  // キュービ・オリヒメ(2026-10-27 社長「キュービの円盤石を近日追加で並べる」)。予告中なので6件とも available:false(「近日追加」)。
+  // 値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。ビートP交換所・MFバトルカードのショップにも近日追加で並ぶ(data/rhythm-event.js)
+  { id:'kyubi_icon', name:"キュービのアイコン", type:'icon', icon:KYUBI_FACE_ICON, cost:1, available:false },
+  { id:'kyubi_disc_icon', name:"キュービの円盤石アイコン", type:'icon', icon:KYUBI_DISC_ICON, cost:1, available:false },
+  { id:'Kyubi', name:"キュービの円盤石", type:'disc', icon:KYUBI_DISC_ICON, cost:150000, available:false },
+  { id:'orihime_icon', name:"オリヒメのアイコン", type:'icon', icon:ORIHIME_FACE_ICON, cost:1, available:false },
+  { id:'orihime_disc_icon', name:"オリヒメの円盤石アイコン", type:'icon', icon:ORIHIME_DISC_ICON, cost:1, available:false },
+  { id:'Orihime', name:"オリヒメの円盤石", type:'disc', icon:ORIHIME_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格の結晶で増やしたぶんは、結晶として持ち物に戻る。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
