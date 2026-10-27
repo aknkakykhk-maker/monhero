@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ffabdf693fdede78
+// source-sha256: 9bf645faaf5e3915
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18955,6 +18955,273 @@ const kusabiEffectText = (n, max = KUSABI_MAX) => {
   const c = kusabiCountOf(n, max);
   return c > 0 ? `楔${c}/${max} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : '';
 };
+const KYUBI_MONSTER_ID = 'Kyubi',
+  ORIHIME_MONSTER_ID = 'Orihime';
+const KYUBI_PHASES = Object.freeze([Object.freeze({
+  id: 'rengoku',
+  slot: 0,
+  name: '煉獄ノ相'
+}), Object.freeze({
+  id: 'tensho',
+  slot: 1,
+  name: '天翔ノ相'
+}), Object.freeze({
+  id: 'kagero',
+  slot: 2,
+  name: '陽炎ノ相'
+}), Object.freeze({
+  id: 'sakuretsu',
+  slot: 3,
+  name: '炸裂ノ相'
+})]);
+const KYUBI_SAKURETSU_COMBO = 0.4;
+const KYUBI_KAGERO_WAIT = 3;
+const KYUBI_TENSHO = Object.freeze({
+  combo: 0.2,
+  dmg: 0.15,
+  hit: 10,
+  crit: 0.1
+});
+const KYUBI_RENGOKU_MAX = 10,
+  KYUBI_RENGOKU_PER = 0.05;
+const KYUBI_RENGOKU_GUTS_PER = 0.003,
+  KYUBI_RENGOKU_GUTS_CAP = 0.2;
+const kyubiPhaseOfSlot = slot => KYUBI_PHASES.find(p => p.slot === Math.floor(Number(slot))) || null;
+const kyubiRengokuOf = n => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
+  const none = {
+    dmgMult: 1,
+    hitAdd: 0,
+    critAdd: 0,
+    combo: null,
+    evadeAfterAttack: false
+  };
+  if (phaseId === 'sakuretsu') return {
+    ...none,
+    combo: {
+      count: 1,
+      rate: KYUBI_SAKURETSU_COMBO,
+      label: '炸裂ノ相'
+    }
+  };
+  if (phaseId === 'kagero') return {
+    ...none,
+    evadeAfterAttack: true
+  };
+  if (phaseId === 'tensho') return {
+    ...none,
+    dmgMult: 1 + KYUBI_TENSHO.dmg,
+    hitAdd: KYUBI_TENSHO.hit,
+    critAdd: KYUBI_TENSHO.crit,
+    combo: {
+      count: 1,
+      rate: KYUBI_TENSHO.combo,
+      label: '天翔ノ相'
+    }
+  };
+  if (phaseId === 'rengoku') {
+    const r = kyubiRengokuOf(opts.rengoku),
+      guts = Math.max(0, Number(opts.skillGuts) || 0);
+    return {
+      ...none,
+      dmgMult: 1 + Math.min(KYUBI_RENGOKU_GUTS_CAP, KYUBI_RENGOKU_GUTS_PER * guts),
+      combo: r > 0 ? {
+        count: 1,
+        rate: KYUBI_RENGOKU_PER * r,
+        label: '煉獄ノ相'
+      } : null
+    };
+  }
+  return none;
+};
+const kageroOf = v => ({
+  ready: !!v?.ready,
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0))
+});
+const kageroAfterAttack = v => {
+  const k = kageroOf(v);
+  return k.wait === 0 ? {
+    ...k,
+    ready: true
+  } : k;
+};
+const kageroUseEvade = v => {
+  const k = kageroOf(v);
+  return k.ready ? {
+    ready: false,
+    wait: KYUBI_KAGERO_WAIT
+  } : k;
+};
+const tickKagero = v => {
+  const k = kageroOf(v);
+  return {
+    ...k,
+    wait: Math.max(0, k.wait - 1)
+  };
+};
+const KITSUNEBI_MAX = 5,
+  KITSUNEBI_REGEN_TURNS = 3,
+  KITSUNEBI_BUFF_TURNS = 3;
+const KITSUNEBI_ATTACK_EXTRA = 0.1,
+  KITSUNEBI_GUARD_CUT = 0.2,
+  KITSUNEBI_ASSIST_GUTS = 0.05,
+  KITSUNEBI_SHIELD_CUT = 0.5;
+const KITSUNEBI_BUFF_DMG_PER = 0.04,
+  KITSUNEBI_BUFF_TAKEN_PER = 0.03;
+const kitsunebiOf = v => ({
+  active: !!v?.active,
+  fires: Math.min(KITSUNEBI_MAX, Math.max(0, Math.floor(Number(v?.fires) || 0))),
+  regen: Math.max(0, Math.floor(Number(v?.regen) || 0)),
+  buffTurns: Math.max(0, Math.floor(Number(v?.buffTurns) || 0))
+});
+const useKitsunebi = v => ({
+  ...kitsunebiOf(v),
+  active: true,
+  fires: KITSUNEBI_MAX,
+  regen: 0,
+  buffTurns: KITSUNEBI_BUFF_TURNS
+});
+const tickKitsunebi = v => {
+  const k = kitsunebiOf(v);
+  if (!k.active) return k;
+  const regen = k.fires < KITSUNEBI_MAX ? k.regen + 1 : 0,
+    back = regen >= KITSUNEBI_REGEN_TURNS;
+  return {
+    ...k,
+    fires: back ? k.fires + 1 : k.fires,
+    regen: back ? 0 : regen,
+    buffTurns: Math.max(0, k.buffTurns - 1)
+  };
+};
+const kitsunebiOnHit = v => {
+  const k = kitsunebiOf(v);
+  return k.active && k.fires > 0 ? {
+    next: {
+      ...k,
+      fires: k.fires - 1
+    },
+    takenMult: 1 - KITSUNEBI_SHIELD_CUT
+  } : {
+    next: k,
+    takenMult: 1
+  };
+};
+const kitsunebiEffectOf = (v, kind = 'attack') => {
+  const k = kitsunebiOf(v),
+    on = k.active && k.fires > 0,
+    buff = k.active && k.buffTurns > 0;
+  return {
+    extraHit: on && kind === 'attack' ? KITSUNEBI_ATTACK_EXTRA : 0,
+    guardCut: on && kind === 'guard' ? KITSUNEBI_GUARD_CUT : 0,
+    assistGuts: on && kind === 'assist' ? KITSUNEBI_ASSIST_GUTS : 0,
+    buffDmg: buff ? KITSUNEBI_BUFF_DMG_PER * k.fires : 0,
+    buffTaken: buff ? KITSUNEBI_BUFF_TAKEN_PER * k.fires : 0
+  };
+};
+const ORIHIME_BOND_TIERS = Object.freeze({
+  1: Object.freeze({
+    max: 5
+  }),
+  2: Object.freeze({
+    max: 8
+  }),
+  3: Object.freeze({
+    max: 12
+  })
+});
+const orihimeDiffOf = (a, b) => {
+  const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b)));
+  return d >= 1 && d <= 3 ? d : 0;
+};
+const ouseOf = (n, diff) => {
+  const t = ORIHIME_BOND_TIERS[diff];
+  return t ? Math.min(t.max, Math.max(0, Math.floor(Number(n) || 0))) : Math.max(0, Math.floor(Number(n) || 0));
+};
+const addOuse = (n, diff, sameKind, partnerUp = true) => sameKind && partnerUp && ORIHIME_BOND_TIERS[diff] ? ouseOf(Number(n) + 1, diff) : ouseOf(n, diff);
+const orihimeBondEffectOf = (diff, n, partnerUp = true) => {
+  const none = {
+    dmgAdd: 0,
+    takenCut: 0,
+    share: false
+  };
+  if (!partnerUp || !ORIHIME_BOND_TIERS[diff]) return none;
+  const c = ouseOf(n, diff);
+  if (diff === 1) return {
+    ...none,
+    dmgAdd: 0.10 + 0.02 * c
+  };
+  if (diff === 2) return {
+    ...none,
+    takenCut: 0.10,
+    dmgAdd: c >= 4 ? 0.02 * c : 0
+  };
+  return {
+    dmgAdd: c >= 12 ? 0.40 : 0,
+    takenCut: c >= 6 ? 0.15 : 0,
+    share: true
+  };
+};
+const shareOrihimeDamage = dmg => {
+  const d = Math.max(0, Math.floor(Number(dmg) || 0));
+  return [Math.ceil(d / 2), Math.floor(d / 2)];
+};
+const HOSHIAI_PER_TURN = 2;
+const startHoshiai = (n, diff) => {
+  const c = ouseOf(n, diff);
+  return {
+    turns: Math.min(5, 2 + Math.floor(c / 4)),
+    rate: Math.min(0.5, 0.30 + 0.015 * c + (diff === 2 ? 0.05 : diff === 3 ? 0.10 : 0)),
+    perTurn: HOSHIAI_PER_TURN
+  };
+};
+const KOGARE_TURNS = 3,
+  KOGARE_CHANCE = 0.25,
+  KOGARE_ROLLS_PER_TURN = 2;
+const rollKogare = (rollsLeft, rand) => {
+  const left = Math.max(0, Math.floor(Number(rollsLeft) || 0));
+  if (left <= 0) return {
+    confused: false,
+    rollsLeft: 0
+  };
+  const r = Number.isFinite(rand) ? rand : Math.random();
+  return {
+    confused: r < KOGARE_CHANCE,
+    rollsLeft: left - 1
+  };
+};
+const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
+const REIKON_TURNS = 3,
+  REIKON_GUTS_MULT = 0.7,
+  REIKON_HIT_DOWN = 10;
+const hasReikon = id => !!id && REIKON_MONSTER_IDS.includes(id);
+const reikonOf = v => ({
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
+  turns: Math.max(0, Math.floor(Number(v?.turns) || 0))
+});
+const startReikon = () => ({
+  wait: 1,
+  turns: REIKON_TURNS
+});
+const tickReikon = v => {
+  const r = reikonOf(v);
+  if (r.wait > 0) return {
+    ...r,
+    wait: r.wait - 1
+  };
+  return r.turns > 1 ? {
+    ...r,
+    turns: r.turns - 1
+  } : {
+    wait: 0,
+    turns: 0
+  };
+};
+const reikonActive = v => {
+  const r = reikonOf(v);
+  return r.wait === 0 && r.turns > 0;
+};
+const reikonGutsMult = v => reikonActive(v) ? REIKON_GUTS_MULT : 1;
+const reikonHitDown = v => reikonActive(v) ? REIKON_HIT_DOWN : 0;
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
   if (!trait) return '';
@@ -23048,10 +23315,6 @@ const SKM_KYUBI = Object.freeze({
     over: 'pillar',
     burst: 'star',
     form: 'fire'
-  }), skm('warp', {
-    c: 'fire',
-    over: 'shadow',
-    burst: 'dust'
   }), skm('gather', {
     c: 'blue',
     fx: skmFx('fall', 'flame', 10),
@@ -23062,23 +23325,27 @@ const SKM_KYUBI = Object.freeze({
     c: 'wind',
     over: 'tornado',
     burst: 'leaf'
-  }), skm('cast', {
-    c: 'sky',
-    fx: skmFx('orbit', 'bubble', 10),
-    over: 'boom',
-    burst: 'bubble'
-  }), skm('float', {
-    c: 'cosmic',
-    fx: skmFx('fall', 'star', 12),
-    over: 'aurora',
-    burst: 'star',
-    form: 'light'
+  }), skm('warp', {
+    c: 'fire',
+    over: 'shadow',
+    burst: 'dust'
   }), skm('gather', {
     c: 'blood',
     fx: skmFx('orbit', 'flame', 9),
     over: 'eclipse',
     burst: 'spark',
     form: 'fire'
+  }), skm('float', {
+    c: 'cosmic',
+    fx: skmFx('fall', 'star', 12),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  }), skm('cast', {
+    c: 'sky',
+    fx: skmFx('orbit', 'bubble', 10),
+    over: 'boom',
+    burst: 'bubble'
   })]
 });
 const SKM_ORIHIME = Object.freeze({
@@ -23101,19 +23368,19 @@ const SKM_ORIHIME = Object.freeze({
     burst: 'star',
     form: 'light'
   }), {
-    ...SKM_KYUBI.unique[3],
+    ...SKM_KYUBI.unique[5],
     c: 'cosmic'
+  }, {
+    ...SKM_KYUBI.unique[3],
+    c: 'sky'
   }, {
     ...SKM_KYUBI.unique[4],
     c: 'sky'
   }, {
-    ...SKM_KYUBI.unique[5],
-    c: 'sky'
-  }, {
-    ...SKM_KYUBI.unique[6],
+    ...SKM_KYUBI.unique[8],
     c: 'pink'
   }, {
-    ...SKM_KYUBI.unique[8],
+    ...SKM_KYUBI.unique[6],
     c: 'psy'
   }, {
     ...SKM_KYUBI.unique[7],
@@ -37328,6 +37595,7 @@ const RhythmTapTest = ({
   }, [stageGl, stageArtSrc, renderQualityStill]);
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
+  const hudSongLong = !isLandscape && rhythmSongFullName(song).length > 30;
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(orientation: landscape)');
@@ -40790,6 +41058,11 @@ const RhythmTapTest = ({
           em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
         return Math.max(13, Math.min(20, Math.floor(avail / Math.max(1, em))));
       })(),
+      introTitlePortraitFont = (() => {
+        const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 390) - 40, 400),
+          em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
+        return Math.max(16, Math.min(24, Math.floor(avail * 2 * .9 / Math.max(1, em))));
+      })(),
       introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
       introCredit = rhythmSongIntroCredit(song),
       introLevel = Number(chart?.level),
@@ -40875,7 +41148,7 @@ const RhythmTapTest = ({
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           overflowWrap: 'anywhere',
-          fontSize: '24px'
+          fontSize: `${introTitlePortraitFont}px`
         }),
         padding: '0 8px 3px',
         margin: isLandscape ? '1px -8px 0' : '4px -8px 0',
@@ -40988,11 +41261,12 @@ const RhythmTapTest = ({
     style: {
       maxWidth: hudArtSrc && !isLandscape ? 'calc(31cqw - 34px)' : undefined,
       display: '-webkit-box',
-      WebkitLineClamp: isLandscape ? '2' : '3',
+      WebkitLineClamp: isLandscape ? '2' : hudSongLong ? '5' : '3',
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden',
       lineHeight: '1.25',
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+      textShadow: '0 1px 4px rgba(2,6,23,.92)',
+      fontSize: hudSongLong ? '9px' : undefined
     }
   }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
@@ -42391,6 +42665,14 @@ const MONSTER_TYPE_OF = {
   Dreamy: {
     main: 'supporter',
     sub: 'shadow'
+  },
+  Kyubi: {
+    main: 'attacker',
+    sub: 'shadow'
+  },
+  Orihime: {
+    main: 'supporter',
+    sub: 'tank'
   }
 };
 const monsterTypeOf = monId => {
@@ -64981,22 +65263,24 @@ function WaveResultScreen({
         zIndex: 30000,
         '--ph': '251,191,36'
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden"
+      "data-wave-result": true,
+      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:!fixed [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:px-6"
     }, React.createElement("div", {
-      className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll"
+      className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:contents"
     }, React.createElement("div", {
-      className: "mb-2 shrink-0 flex flex-col items-center gap-1"
+      className: "mb-2 shrink-0 flex flex-col items-center gap-1 [@media(max-height:700px)]:mb-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-end [@media(orientation:landscape)_and_(max-height:520px)]:mb-3"
     }, React.createElement("span", {
       className: "mh-ph-plate mh-train-sub"
     }, "WAVE ", waveResult.wave, " CLEAR"), React.createElement(Trophy, {
-      className: "mh-train-title text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.8)]",
+      className: "mh-train-title text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.8)] [@media(max-height:700px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:block",
       size: 34
     }), React.createElement("div", {
       className: "mh-ph-heading"
     }, React.createElement("h2", {
       className: "mh-ph-title mh-train-title text-xl font-black italic uppercase tracking-tighter"
     }, "WAVE ", waveResult.wave, " リザルト"))), React.createElement("div", {
-      className: "mh-wave-rows mh-ph-panel w-full max-w-sm p-3 space-y-1.5 mb-3 shrink-0"
+      "data-wave-result-rows": true,
+      className: "mh-wave-rows mh-ph-panel w-full max-w-sm p-3 space-y-1.5 mb-3 shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:max-h-full [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto [@media(orientation:landscape)_and_(max-height:520px)]:mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:self-stretch"
     }, React.createElement("div", {
       className: "grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1"
     }, React.createElement("span", {
@@ -65177,7 +65461,7 @@ function WaveResultScreen({
       onClick: handleNextWave,
       disabled: runFinalizing,
       "aria-busy": runFinalizing,
-      className: `w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0${battleTutorialSpotClass('waveNext')} ${runFinalizing ? 'bg-slate-500 text-slate-300 cursor-not-allowed' : 'bg-white text-indigo-900 active:scale-95'}`
+      className: `w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:self-start${battleTutorialSpotClass('waveNext')} ${runFinalizing ? 'bg-slate-500 text-slate-300 cursor-not-allowed' : 'bg-white text-indigo-900 active:scale-95'}`
     }, runFinalizing ? '処理中…' : React.createElement(React.Fragment, null, "次へ進む ", React.createElement(ChevronRight, {
       className: "inline",
       size: 20
@@ -65637,9 +65921,9 @@ function ChampionScreen({
   }), React.createElement("h1", {
     className: "mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl"
   }, "CHAMPION"), !isQuickMode(runMode) && React.createElement("div", {
-    className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"
+    className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"
   }, React.createElement("div", {
-    className: "text-5xl font-mono font-black text-white"
+    className: "text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
@@ -74124,6 +74408,249 @@ const monsterCheckStatRows = mon => {
     };
   });
 };
+const monsterCheckPct = v => `${Math.round(Number(v || 0) * 1000) / 10}%`;
+const MonsterCheckLabButton = ({
+  onClick,
+  children,
+  tone = 'slate',
+  active = false
+}) => React.createElement("button", {
+  type: "button",
+  onClick: onClick,
+  className: `min-h-[44px] rounded-xl px-2 text-[11px] font-black active:scale-95 ${active ? 'bg-fuchsia-600 text-white' : tone === 'amber' ? 'bg-amber-700/70 text-white' : 'bg-slate-800 text-slate-100'}`
+}, children);
+const MonsterCheckLabLines = ({
+  lines
+}) => React.createElement("div", {
+  className: "rounded-lg bg-black/40 p-2 text-[10px] font-bold leading-relaxed text-cyan-100"
+}, lines.filter(Boolean).map((t, i) => React.createElement("div", {
+  key: i
+}, t)));
+const monsterCheckReikonLine = v => {
+  const r = reikonOf(v);
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし';
+};
+function KyubiTraitLab() {
+  const [phaseId, setPhaseId] = useState('sakuretsu');
+  const [guts, setGuts] = useState(56);
+  const [rengoku, setRengoku] = useState(0);
+  const [kagero, setKagero] = useState(kageroOf(null));
+  const [fox, setFox] = useState(kitsunebiOf(null));
+  const [reikon, setReikon] = useState(reikonOf(null));
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setRengoku(0);
+    setKagero(kageroOf(null));
+    setFox(kitsunebiOf(null));
+    setReikon(reikonOf(null));
+    setTurn(1);
+    setLog('');
+  };
+  const eff = kyubiPhaseEffectOf(phaseId, {
+    rengoku,
+    skillGuts: guts
+  });
+  const card = kind => {
+    if (phaseId === 'rengoku') setRengoku(n => kyubiRengokuOf(n + 1));
+    if (kind === 'attack' && phaseId === 'kagero') setKagero(k => kageroAfterAttack(k));
+    const f = kitsunebiEffectOf(fox, kind);
+    setLog(kind === 'attack' ? `攻撃: 与ダメ×${(eff.dmgMult * (1 + f.buffDmg)).toFixed(3)}${eff.combo ? `・${eff.combo.label}の連撃${monsterCheckPct(eff.combo.rate)}` : ''}${f.extraHit ? `・狐火の追加${monsterCheckPct(f.extraHit)}` : ''}` : kind === 'guard' ? `ガード: 狐火で被ダメ−${monsterCheckPct(f.guardCut)}` : `助け: 狐火でガッツ+${monsterCheckPct(f.assistGuts)}`);
+  };
+  const hit = () => {
+    if (phaseId === 'kagero' && kagero.ready) {
+      setKagero(k => kageroUseEvade(k));
+      setLog('攻撃を受けた: 陽炎ノ相で完全回避(狐火は減らない)');
+      return;
+    }
+    const r = kitsunebiOnHit(fox),
+      f = kitsunebiEffectOf(fox);
+    setFox(r.next);
+    setLog(`攻撃を受けた: 被ダメ×${(r.takenMult * (1 - f.buffTaken)).toFixed(3)}${r.takenMult < 1 ? '(狐火が1つ盾になって消えた)' : ''}`);
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setKagero(k => tickKagero(k));
+    setFox(k => tickKitsunebi(k));
+    setReikon(r => tickReikon(r));
+    setLog('ターンを進めた');
+  };
+  const unique = () => {
+    card('attack');
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+  };
+  const ex = () => {
+    setFox(k => useKitsunebi(k));
+    setLog(fox.active ? '九尾幻灯(2回目): 狐火満タン・強化かけ直し' : '九尾幻灯: 狐火5個・幻灯強化3ターン');
+  };
+  const f = kitsunebiEffectOf(fox);
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Kyubi",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, KYUBI_PHASES.map(p => React.createElement(MonsterCheckLabButton, {
+    key: p.id,
+    active: p.id === phaseId,
+    onClick: () => {
+      setPhaseId(p.id);
+      reset();
+    }
+  }, RANGE_LABELS[p.slot], React.createElement("br", null), p.name))), phaseId === 'rengoku' && React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, [20, 40, 56].map(g => React.createElement(MonsterCheckLabButton, {
+    key: g,
+    active: g === guts,
+    onClick: () => setGuts(g)
+  }, "消費ガッツ", g))), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('attack')
+  }, "攻撃のカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('guard')
+  }, "ガードのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('assist')
+  }, "助けのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: hit
+  }, "攻撃を受ける"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: ex
+  }, "EX 九尾幻灯"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
+function OrihimeTraitLab() {
+  const [diff, setDiff] = useState(3);
+  const [partnerUp, setPartnerUp] = useState(true);
+  const [ouse, setOuse] = useState(0);
+  const [hoshiai, setHoshiai] = useState(null);
+  const [kogare, setKogare] = useState({
+    turns: 0,
+    rollsLeft: 0
+  });
+  const [reikon, setReikon] = useState(reikonOf(null));
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setOuse(0);
+    setHoshiai(null);
+    setKogare({
+      turns: 0,
+      rollsLeft: 0
+    });
+    setReikon(reikonOf(null));
+    setTurn(1);
+    setLog('');
+  };
+  const bond = orihimeBondEffectOf(diff, ouse, partnerUp);
+  const max = ORIHIME_BOND_TIERS[diff]?.max || 0;
+  const move = same => {
+    setOuse(n => addOuse(n, diff, same, partnerUp));
+    setLog(same ? partnerUp ? '同じ種類の動き: 逢瀬+1' : '相方が倒れているので逢瀬は増えない' : '違う種類の動き: 逢瀬はそのまま');
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setHoshiai(h => h && h.turns > 1 ? {
+      ...h,
+      turns: h.turns - 1
+    } : null);
+    setKogare(k => k.turns > 1 ? {
+      turns: k.turns - 1,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    } : {
+      turns: 0,
+      rollsLeft: 0
+    });
+    setReikon(r => tickReikon(r));
+    setLog('ターンを進めた');
+  };
+  const unique = () => {
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+  };
+  const star = () => {
+    const h = startHoshiai(ouse, diff);
+    setHoshiai(h);
+    setOuse(0);
+    setLog(`星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(h.rate)}・1ターン${h.perTurn}回まで(逢瀬は0へ)`);
+  };
+  const longing = () => {
+    setKogare({
+      turns: KOGARE_TURNS,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    });
+    setLog(`焦がれ待つ天ノ河: ${KOGARE_TURNS}ターン`);
+  };
+  const attack = () => {
+    if (kogare.turns <= 0) {
+      setLog('攻撃が当たった(焦がれ待つ天ノ河は効いていない)');
+      return;
+    }
+    const r = rollKogare(kogare.rollsLeft);
+    setKogare(k => ({
+      ...k,
+      rollsLeft: r.rollsLeft
+    }));
+    setLog(kogare.rollsLeft <= 0 ? 'このターンはもう振れない' : r.confused ? '攻撃が当たった: 敵が「意味不明」になった' : '攻撃が当たった: 意味不明にはならなかった');
+  };
+  const share = () => {
+    const [a, b] = bond.share ? shareOrihimeDamage(100) : [100, 0];
+    setLog(bond.share ? `100のダメージを分け合う: 受けた子${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ');
+  };
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Orihime",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, [1, 2, 3].map(d => React.createElement(MonsterCheckLabButton, {
+    key: d,
+    active: d === diff,
+    onClick: () => {
+      setDiff(d);
+      reset();
+    }
+  }, "間合いの差", d)), React.createElement(MonsterCheckLabButton, {
+    active: !partnerUp,
+    onClick: () => setPartnerUp(v => !v)
+  }, partnerUp ? '相方 立っている' : '相方 倒れた')), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(true)
+  }, "2体が同じ動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(false)
+  }, "違う動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    onClick: attack
+  }, "攻撃が当たる"), React.createElement(MonsterCheckLabButton, {
+    onClick: share
+  }, "100のダメージを受ける"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: star
+  }, "勇者EX 星合の刻"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: longing
+  }, "共モンEX 焦がれ待つ天ノ河"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / 間合いの差${diff} / 逢瀬 ${ouse}/${max}`, `つながり: ${bond.dmgAdd ? `与ダメ+${monsterCheckPct(bond.dmgAdd)} ` : ''}${bond.takenCut ? `被ダメ−${monsterCheckPct(bond.takenCut)} ` : ''}${bond.share ? 'ダメージを分け合う' : ''}${!bond.dmgAdd && !bond.takenCut && !bond.share ? 'なし' : ''}`, hoshiai ? `星合: あと${hoshiai.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(hoshiai.rate)}・1ターン${hoshiai.perTurn}回まで` : '星合: なし', monsterCheckReikonLine(reikon), kogare.turns ? `焦がれ待つ天ノ河: あと${kogare.turns}ターン・このターン振れる残り${kogare.rollsLeft}回(${monsterCheckPct(KOGARE_CHANCE)})` : '焦がれ待つ天ノ河: なし', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
 function MonsterCheckDebugScreen({
   masuMons = [],
   unlockedMonsterIds = [],
@@ -74716,7 +75243,7 @@ function MonsterCheckDebugScreen({
     className: "space-y-2"
   }, row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
     block: true
-  }), React.createElement("div", null, React.createElement("div", {
+  }), mon.id === KYUBI_MONSTER_ID && React.createElement(KyubiTraitLab, null), mon.id === ORIHIME_MONSTER_ID && React.createElement(OrihimeTraitLab, null), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
   }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? mon.draft ? draftNamePills(HERO_ATK_NAMES[mon.id], 'border-red-500/30 bg-red-950/25') : skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
     className: "text-center text-[11px] font-bold text-rose-300"
