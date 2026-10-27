@@ -164,8 +164,12 @@ const check = (name, ok, detail = '') => {
       return idx;
     };
 
-    const usedIdx = await playTurn(true);
-    check('WAVE1 でソラシドのカードを勇者に使える', usedIdx >= 0);
+    // 手札はくじで配られるので、ソラシドが手札に来るまで攻撃以外のカードでつなぐ(最大8ターン)
+    const hasSorashido = () => page.evaluate(() => [...document.querySelectorAll('[data-hand-card]')].some((c) => c.getAttribute('data-card-usable') === 'true' && /ソラシド/.test(c.textContent)));
+    let waited = 0;
+    while (!(await hasSorashido()) && waited < 8) { await playTurn(false); waited += 1; }
+    const usedIdx = await hasSorashido() ? await playTurn(true) : -1;
+    check('WAVE1 でソラシドのカードを勇者に使える', usedIdx >= 0, `手札に来るまで ${waited} ターン`);
     let log = await readLog();
     check('① 使った次のターンからコピーが出る(記録「一緒に戦う」)', /一緒に戦う/.test(log), (log.match(/🤖[^🤖]{0,40}/g) || []).join(' / '));
     let gone = false; let lost = false;
