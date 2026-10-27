@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fc5ce128e41bff2d
+// source-sha256: c76226ba8d6dbcb0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91258,8 +91258,9 @@ const CardBattleBoard = ({
       const os = chosen || attackOpts.filter(o => o.hand[0] === i).concat(attackOpts.filter(o => o.hand[0] !== i && o.hand.includes(i)));
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
+        const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
         keys.forEach(k => {
-          if (!out[k] || o.hand.length > out[k].hand.length) out[k] = o;
+          if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
         });
       });
     }

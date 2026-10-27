@@ -11,7 +11,8 @@
 // 見ているもの(助手と対戦の始まりを、検査のときだけの口 window.__mhCardScene で決めた場面にする。手札: 技・クリティカル・集中・ほか2枚)
 //   A 技を押して組み合わせ「技だけ」を選び、マウスで相手まで運ぶ → 技だけが出る(クリティカル・集中は手札に残る)
 //   B 技を押して組み合わせ「技だけ」を選び、相手を押す → 技だけが出る(タップとそろう)
-//   C 何も選ばずに、マウスで相手まで運ぶ → いまの既定(組める札を全部付ける・技を押したときに先に選ばれている組み合わせと同じ)
+//   C 何も選ばずに、マウスで相手まで運ぶ → 運んだ技1枚だけで出る(組み合わせの札は見えていないので、付けたつもりが無いのに付かないように。2026-10-27 部長と決めた)
+//   D 付ける札(集中)だけを運ぶ → 1枚では出せないので、いちばん枚数の多い組み合わせで出る
 //   どれも実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -156,8 +157,16 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="1-0"]');
     await settle(page, n0);
     names = await handNames(page);
-    check('C 何も選ばずに運ぶと、いまの既定(組める札を全部付ける)で出る', (await handCount(page)) === n0 - 3 && !names.includes('クリティカル') && !names.includes('集中'), `${n0}→${await handCount(page)}枚`);
+    check('C 何も選ばずに運ぶと、運んだ技1枚だけで出る(クリティカル・集中は付かない)', (await handCount(page)) === n0 - 1 && names.includes('クリティカル') && names.includes('集中'), `${n0}→${await handCount(page)}枚`);
     if (SHOT) await page.screenshot({ path: path.join(SHOT, 'drag-set-default.png') });
+    await page.close();
+    // ---- D 付ける札(集中)を運ぶ: 1枚では出せないので、いちばん枚数の多い組み合わせ ----
+    page = await open();
+    n0 = await handCount(page);
+    await mouseDrag(page, '[data-card-hand-card="2"]', '[data-card-mon="1-0"]');
+    await settle(page, n0);
+    names = await handNames(page);
+    check('D 付ける札(集中)を運ぶと、いちばん枚数の多い組み合わせで出る', (await handCount(page)) === n0 - 3, `${n0}→${await handCount(page)}枚・${names.join(',')}`);
     check('実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
