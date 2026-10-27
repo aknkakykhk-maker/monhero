@@ -2,7 +2,7 @@
 // MFバトルカードの通し遊び(2026-10-27 カード部ソランドくんの割り振り)。検査ではなく、人が遊ぶのと同じ押し方で最後まで通す台本。
 // 1日にたくさんの直しが入ったあとに、実物の画面で「止まらない・エラーが出ない・押した手が消えない」をまとめて見る。
 //
-//   node tools/card/card-playthrough.js [--sizes 390x844,844x390,320x568] [--levels easy,normal,hard,expert,master] [--shots <フォルダ>] [--no-tutorial]
+//   node tools/card/card-playthrough.js [--sizes 390x844,844x390,320x568] [--levels easy,normal,hard,expert,master] [--foe <助手id>] [--shots <フォルダ>] [--no-tutorial]
 //
 // やること(画面の大きさごと)
 //   ① デバッグ設定の入口からスターターを選ぶ(本番のランキングへは送らない。Supabase への通信は全部ここで止める)
@@ -23,6 +23,8 @@ const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] :
 const SIZES = opt('--sizes', '390x844,844x390,320x568').split(',').map((s) => s.split('x').map(Number));
 const LEVELS = opt('--levels', 'easy,normal,hard,expert,master').split(',');
 const FOES = { easy: 'mua', normal: 'momosuke', hard: 'kiki', expert: 'kyuko', master: 'atsu' };
+// --foe <助手id> で、どの難易度も同じ助手と戦う(新しく入った助手を通すとき)
+if (opt('--foe', '')) Object.keys(FOES).forEach((k) => { FOES[k] = opt('--foe', ''); });
 const SHOT = opt('--shots', '');
 const TUTORIAL = !args.includes('--no-tutorial');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2' };
