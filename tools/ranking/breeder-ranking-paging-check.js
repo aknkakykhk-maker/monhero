@@ -44,6 +44,16 @@ const seed = () => {
   // 通信を差し替えたので、差し替えた表だけ、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
   await page.addInitScript(() => { window.__mhSupabaseStubbed = ['rankings']; });
   await page.evaluate(() => { window.__mhSupabaseStubbed = ['rankings']; }).catch(() => {});
+  // 1人1行の表 breeder_levels(2026-10-27〜)もゲームが読む。差し替えないと本番の表を読みに行き、
+  // 本物の上位の人が混ざって「Lvの高い順」が崩れた(2026-10-27)。ここは「まだ1行も無い」として空で返し、
+  // rankings だけで並べる道(表が無い・読めないときと同じ)を確かめる。
+  // 書き込みの止め(__mhSupabaseStubbed)には足さない(ゲームはこの表へ書かない。万一書いても受け取るだけ)
+  const breederLevelRequests = [];
+  await page.route('**/rest/v1/breeder_levels**', async (route) => {
+    breederLevelRequests.push(route.request().method());
+    if (route.request().method() !== 'GET') { await route.fulfill({ status: 201, body: '' }); return; }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
   await page.route('**/rest/v1/rankings**', async (route) => {
     const url = new URL(route.request().url());
     if (route.request().method() !== 'GET') { await route.fulfill({ status: 201, body: '' }); return; }
@@ -101,6 +111,7 @@ const seed = () => {
   for (const [name, level] of LIGHT) check(`記録が少ない ${name}(Lv.${level}) も消えない`, has(name), names.join(' / '));
   check('同じ人が何行も持っていても一覧では1件にまとまる',
     names.filter(t => t.includes('ヘビー太郎')).length === 1);
+  check('ブリーダーLvの表(breeder_levels)は本番へ読みに行かず、差し替えた所で受けた', breederLevelRequests.includes('GET'), breederLevelRequests.join(',') || '読みに来なかった');
   check('Lvの高い順に並ぶ', /ヘビー太郎/.test(names[0] || ''), names[0] || '');
   const paged = requests.filter(r => r.order.startsWith('level.desc'));
   check('1回の取得で打ち切らずページ送りしている', paged.length >= 2, paged.map(r => `${r.offset}+${r.returned}`).join(', '));
