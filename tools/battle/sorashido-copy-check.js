@@ -31,8 +31,8 @@ var BREEDER_EVO_NAMES = ${breeder.slice(breeder.indexOf('const BREEDER_EVO_NAMES
 ${read('monster-hero/src/parts/32-sorashido-copy.jsx')}
 globalThis.__s = { SORASHIDO_TIERS, BREEDER_EVO_NAMES, setSorashidoJoinSeenForShop, sorashidoCardOnSale, teachingCardReleased,
   aiCopyRules, aiCopyTurns, aiCopyStats, aiCopyStartHate, aiCopyHateGainMult, aiCopySummonPlan, aiCopyTurnEnd,
-  aiCopyUniqueCard, aiCopyRemoveUnique, aiCopyCanPick, aiCopyHand, aiCopyPickCards, sorashidoCopyDesc,
-  SORASHIDO_COPY_SLOT, SORASHIDO_COPY_UNIQUE_COUNT, SORASHIDO_COPY_HAND_DRAW };`, ctx);
+  aiCopyCanPick, aiCopyBuildDeck, aiCopyDraw, aiCopyDiscardHand, aiCopyPickCards, sorashidoCopyDesc,
+  SORASHIDO_COPY_SLOT, SORASHIDO_COPY_HAND_DRAW };`, ctx);
 const s = ctx.__s;
 
 check('段階の名前は 自動化 → 全自動 → 無人運転', JSON.stringify(s.BREEDER_EVO_NAMES.sorashido) === JSON.stringify(['ソラシドの自動化', 'ソラシドの全自動', 'ソラシドの無人運転']));
@@ -83,38 +83,49 @@ check('タクティクスの🔥のたまり方は ×1.0/×1.25/×1.5', s.aiCopy
 
 // ---- 続くターン・もう一度・切りかえ ----
 const p0 = s.aiCopySummonPlan(null, { srcSlot: 1, srcMonsterId: 'Mocchi', level: 0 });
-check('はじめて使うと new・固有技を1枚足す・続くターン2', p0.kind === 'new' && p0.turnsLeft === 2 && p0.addUniqueOf === 'Mocchi' && p0.removeUniqueOf === null && !p0.removeCopy);
+check('はじめて使うと new・山札を作る・続くターン2', p0.kind === 'new' && p0.turnsLeft === 2 && p0.rebuildDeck === true && !p0.removeCopy);
 const copy = { srcSlot: 1, srcMonsterId: 'Mocchi', level: 0, turnsLeft: 1 };
 const again = s.aiCopySummonPlan(copy, { srcSlot: 1, srcMonsterId: 'Mocchi', level: 0 });
-check('出ているあいだにもう一度使うと、続くターンが最初に戻る(固有技は足さない)', again.kind === 'refresh' && again.turnsLeft === 2 && again.addUniqueOf === null && !again.removeCopy);
+check('出ているあいだにもう一度使うと、続くターンが最初に戻る(山札はそのまま)', again.kind === 'refresh' && again.turnsLeft === 2 && again.rebuildDeck === false && !again.removeCopy);
 const sw = s.aiCopySummonPlan(copy, { srcSlot: 2, srcMonsterId: 'Golem', level: 1 });
-check('別の子で使うと切りかわる(前のコピーと前の固有技を抜き、新しい固有技を1枚)', sw.kind === 'switch' && sw.removeCopy && sw.removeUniqueOf === 'Mocchi' && sw.addUniqueOf === 'Golem' && sw.turnsLeft === 3);
+check('別の子で使うと切りかわる(いまのコピーを外し、新しい子で山札を作り直す)', sw.kind === 'switch' && sw.removeCopy && sw.rebuildDeck === true && sw.turnsLeft === 3);
+// addUniqueOf・removeUniqueOf は古い形の知らせとして、バトル部が新しい部品へ移るまで残している(ここでは見ない)
 let left = { srcSlot: 0, srcMonsterId: 'Tiger', turnsLeft: s.aiCopyTurns(2) };
 const ends = [];
-for (let i = 0; i < 4; i++) { const x = s.aiCopyTurnEnd(left); ends.push(x.expired); left = { ...left, turnsLeft: x.turnsLeft }; if (x.expired) check('消えたら固有技を抜く', x.removeUniqueOf === 'Tiger'); }
+for (let i = 0; i < 4; i++) { const x = s.aiCopyTurnEnd(left); ends.push(x.expired); left = { ...left, turnsLeft: x.turnsLeft }; }
 check('Lv3 は 4ターン戦って消える', JSON.stringify(ends) === JSON.stringify([false, false, false, true]));
 
-// ---- 固有技の出し入れ ----
-const uni = { id: 'u-mocchi', type: 'unique', name: 'モッチ砲', uid: 'u1' };
-const tagged = s.aiCopyUniqueCard(uni, 'Mocchi');
-check('足す固有技は、どの Lv でもいつも1枚(印と uid つきの写し)', s.SORASHIDO_COPY_UNIQUE_COUNT === 1 && tagged.sorashidoCopyOf === 'Mocchi' && tagged.uid !== uni.uid && uni.sorashidoCopyOf === undefined);
-const zones = { deck: [uni, tagged, { id: 'a' }], hand: [tagged, { id: 'b' }], discard: [{ id: 'c' }, tagged], other: 1 };
-const byOwner = s.aiCopyRemoveUnique(zones, { srcMonsterId: 'Mocchi' });
-const byUid = s.aiCopyRemoveUnique(zones, { uid: tagged.uid });
-check('山札・手札・墓地のどこからでもコピーの固有技を抜く(元の子の固有技は残す・持ち主でも uid でも)', byOwner.deck.length === 2 && byOwner.deck[0] === uni && byOwner.hand.length === 1 && byOwner.discard.length === 1 && byOwner.other === 1 && zones.deck.length === 3
-  && JSON.stringify(byUid) === JSON.stringify(byOwner) && s.aiCopyRemoveUnique(zones, { srcMonsterId: 'Golem' }).deck.length === 3);
-
-// ---- 手札と使うカード ----
+// ---- コピーの山札と手札 ----
 const seq = (vals) => { let i = 0; return () => vals[i++ % vals.length]; };
-const deck = [
-  { id: 'atk1', type: 'atk', p: 10 }, { id: 'range1', type: 'range_atk', p: 99 }, { id: 'sorashido', type: 'buff', p: 99 },
-  { id: 'guard1', type: 'guard', p: 3 }, { id: 'kyuko', type: 'buff', p: 5 },
-];
-const deckBefore = deck.length;
-const hand = s.aiCopyHand(deck, tagged, seq([0, 0]));
-check('手札は山札の写しから2枚+固有技(山札は減らさない)', hand.length === 3 && deck.length === deckBefore && hand[2] === tagged, hand.map((c) => c.id).join(','));
-check('距離技(青い枠)とソラシドのアシカは選ばない・固有技とほかのアシカは選べる', !hand.some((c) => c.type === 'range_atk' || c.id === 'sorashido')
-  && s.aiCopyCanPick({ type: 'unique' }) && s.aiCopyCanPick({ id: 'kyuko', type: 'buff' }) && !s.aiCopyCanPick({ type: 'range_atk' }) && !s.aiCopyCanPick({ id: 'sorashido' }));
+const own = { id: 'u-m', type: 'unique', name: 'モッチ砲', monId: 'Mocchi', ownerSlotIdx: 1 };
+const other = { id: 'u-g', type: 'unique', name: 'ゴーレムパンチ', monId: 'Golem', ownerSlotIdx: 2 };
+const sameKindOtherSlot = { id: 'u-m2', type: 'unique', name: 'モッチ砲', monId: 'Mocchi', ownerSlotIdx: 3 };
+const zones = {
+  deck: [{ id: 'atk1', type: 'atk', p: 10 }, { id: 'range1', type: 'range_atk', p: 99 }, own, other],
+  hand: [{ id: 'sorashido', type: 'buff', p: 99 }, { id: 'kyuko', type: 'buff', p: 5 }, sameKindOtherSlot],
+  discard: [{ id: 'guard1', type: 'guard', p: 3 }],
+};
+const before = JSON.stringify(zones);
+const built = s.aiCopyBuildDeck(zones, { srcSlot: 1, srcMonsterId: 'Mocchi' });
+const ids = built.deck.map((c) => c.id).sort().join(',');
+check('コピーの山札は、プレイヤーの山札・手札・捨て札の写しから、距離撃・ソラシド・ほかの子の固有技を抜いたもの', ids === ['atk1', 'guard1', 'kyuko', 'u-m'].sort().join(',') && built.discard.length === 0, ids);
+check('コピーした子の固有技はもとから入っているので残る(足しもしない)・プレイヤーの山札は変えない', built.deck.filter((c) => c.type === 'unique').length === 1 && JSON.stringify(zones) === before);
+check('固有技の持ち主は枠の番号(ownerSlotIdx)で見分ける(同じ種類のほかの枠の子は抜く)', !built.deck.includes(sameKindOtherSlot));
+check('枠の番号が無いカードは種類(monId)で見分ける', s.aiCopyBuildDeck({ deck: [{ type: 'unique', monId: 'Mocchi' }, { type: 'unique', monId: 'Golem' }] }, { srcMonsterId: 'Mocchi' }).deck.length === 1);
+const d1 = s.aiCopyDraw(built, 3, seq([0]));
+check('引く: 山札から渡した枚数を重ならずに引く(渡した山札は変えない)', d1.hand.length === 3 && new Set(d1.hand).size === 3 && d1.deck.length === 1 && built.deck.length === 4);
+const after1 = s.aiCopyDiscardHand(d1, d1.hand);
+check('ターンの終わりに手札は捨て札へ', after1.deck.length === 1 && after1.discard.length === 3);
+const d2 = s.aiCopyDraw(after1, 3, seq([0]));
+check('山札が尽きたら、捨て札を山札へ戻して続けて引く(プレイヤーと同じ)', d2.hand.length === 3 && d2.discard.length === 0 && d2.deck.length === 1);
+check('山札も捨て札も尽きたら、あるだけ引く', s.aiCopyDraw({ deck: [{ id: 'a' }], discard: [] }, 3, seq([0])).hand.length === 1);
+let ownIn = 0;
+for (let i = 0; i < 4000; i++) { const r = ((i * 7919) % 4000 + 0.5) / 4000; const r2 = ((i * 104729) % 4000 + 0.5) / 4000; if (s.aiCopyDraw(built, 2, seq([r, r2])).hand.includes(own)) ownIn++; }
+check('固有技が手札に来るのは枚数どおりの確率(山札4枚から2枚なら半分)・特別扱いしない', Math.abs(ownIn / 4000 - 0.5) < 0.03, `${ownIn}/4000`);
+check('SORASHIDO_TIERS に決まった割合(uniqueRate)は持たない', s.SORASHIDO_TIERS.every((t) => !('uniqueRate' in t)));
+check('選ばない: 距離撃・ソラシド・(持ち主を渡したとき)ほかの子の固有技。ほかのアシカは選べる',
+  !s.aiCopyCanPick({ type: 'range_atk' }) && !s.aiCopyCanPick({ id: 'sorashido' }) && s.aiCopyCanPick({ id: 'kyuko', type: 'buff' })
+  && s.aiCopyCanPick(own, { srcSlot: 1 }) && !s.aiCopyCanPick(other, { srcSlot: 1 }));
 const pickHand = [{ id: 'x', p: 1, guts: 10 }, { id: 'best', p: 9, guts: 30 }, { id: 'y', p: 5, guts: 20 }];
 const score = (c) => c.p;
 const pick = (opt) => s.aiCopyPickCards(pickHand, { score, guts: 100, maxGuts: 100, ...opt }).map((c) => c.id);
@@ -132,8 +143,8 @@ check('Lv3 はガッツの上限120以上で、2枚ぶん足りるときだけ2�
 let bestCount = 0;
 for (let i = 0; i < 1000; i++) { const v = (i + 0.5) / 1000; if (pick({ rng: seq([v, v]), level: 1 })[0] === 'best') bestCount++; }
 check('Lv2 は いちばん点の高いカードを 65% の見込みで選ぶ', bestCount === 650, `${bestCount}/1000`);
-check('5人目の枠は 4・コピーが見る枚数は 2', s.SORASHIDO_COPY_SLOT === 4 && s.SORASHIDO_COPY_HAND_DRAW === 2);
-check('説明文に Lv ごとの続くターンと強さが出る', /2ターン/.test(s.sorashidoCopyDesc(0)) && /4ターン/.test(s.sorashidoCopyDesc(2)) && /ちから90%/.test(s.sorashidoCopyDesc(2)) && /2枚まで/.test(s.sorashidoCopyDesc(2)) && !/2枚まで/.test(s.sorashidoCopyDesc(1)));
+check('5人目の枠は 4・引く枚数の既定は 3(呼ぶ側はプレイヤーの手札の枚数を渡す)', s.SORASHIDO_COPY_SLOT === 4 && s.SORASHIDO_COPY_HAND_DRAW === 3);
+check('説明文に Lv ごとの続くターンと強さが出る', /2ターン/.test(s.sorashidoCopyDesc(0)) && /4ターン/.test(s.sorashidoCopyDesc(2)) && /ちから90%/.test(s.sorashidoCopyDesc(2)) && /2枚まで/.test(s.sorashidoCopyDesc(2)) && !/2枚まで/.test(s.sorashidoCopyDesc(1)) && /自分の山札\(距離撃とほかの子の固有技を抜いたもの\)から引く/.test(s.sorashidoCopyDesc(0)));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
