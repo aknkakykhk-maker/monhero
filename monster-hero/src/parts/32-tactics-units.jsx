@@ -531,7 +531,9 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
   });
   if (isTacticsAiCopyStanding(copy)) {
     const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
-    list.push({ index: TACTICS_AI_COPY_TARGET, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) });
+    // ヘイトが切のとき(hate が配列でない)は、4体と同じく倍率1
+    const mult = Array.isArray(hate) ? tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) : 1;
+    list.push({ index: TACTICS_AI_COPY_TARGET, weight: (1 + safeBias * (1 - remain)) * mult });
   }
   return list;
 };
@@ -892,6 +894,8 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
   if (intent.targetsAll) return alive;
+  // AIコピーを狙った技は4体には当たらない(下の間合い攻撃の保険で別の子へ流れないように先に返す)
+  if (intent.targetCopy) return [];
   // ★間合い攻撃は「**予告した間合い**にいる子」を狙う。距離撃で敵を動かしても狙いは変わらず、
   //   威力だけが落ちる(missValue ＝ ×TACTICS_SWEEP_MISS_MULT)。
   //   2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
