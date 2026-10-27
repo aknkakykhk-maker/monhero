@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: de1761e09a3cdeb1
+// source-sha256: 58290e62fd2bdb49
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17171,7 +17171,7 @@ const helpDataRows = id => {
         return [[`Lv.1 → ${ENHANCE_POINT_DOUBLE_LEVEL}`, 'レベルアップ1回につき 強化ポイント 1'], [`Lv.${ENHANCE_POINT_DOUBLE_LEVEL} → ${ENHANCE_POINT_TRIPLE_LEVEL}（虹★4）`, 'レベルアップ1回につき 強化ポイント 2'], [`Lv.${ENHANCE_POINT_TRIPLE_LEVEL} → ${MAX_MASU_LEVEL_CAP}（虹★5）`, 'レベルアップ1回につき 強化ポイント 3']];
       }
     case 'teachings':
-      return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
+      return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).filter(card => typeof teachingCardReleased !== 'function' || teachingCardReleased(card)).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
     case 'skipTickets':
       return marketItems.filter(item => skipIds.has(item.id)).map(item => [item.name, `${DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty} で使える ／ マーケット ${item.cost.toLocaleString()}ダイヤ`]);
     case 'items':
@@ -27215,6 +27215,150 @@ const TapRippleLayer = ({
     }
   })));
 };
+const SORASHIDO_GREEN = '#34d399';
+const SORASHIDO_COPY_CSS = `
+[data-sorashido-fx]{position:relative;display:inline-block;isolation:isolate}
+[data-sorashido-fx] > [data-sorashido-body]{position:relative;z-index:1}
+[data-sorashido-fx="idle"] > [data-sorashido-body],[data-sorashido-fx="thinking"] > [data-sorashido-body]{opacity:.78;filter:drop-shadow(0 0 1px ${SORASHIDO_GREEN}) drop-shadow(0 0 3px rgba(52,211,153,.75))}
+[data-sorashido-fx="appear"] > [data-sorashido-body]{animation:mhSoraBuild 1.1s steps(11,end) both;filter:drop-shadow(0 0 3px rgba(52,211,153,.9))}
+@keyframes mhSoraBuild{0%{opacity:0;clip-path:inset(100% 0 0 0)}15%{opacity:.35}100%{opacity:.78;clip-path:inset(0 0 0 0)}}
+[data-sorashido-code]{position:absolute;inset:-6% -4%;z-index:2;pointer-events:none;overflow:hidden}
+[data-sorashido-code] i{position:absolute;top:-30%;width:1.5px;height:60%;background:linear-gradient(180deg,transparent,${SORASHIDO_GREEN},transparent);opacity:.85;animation:mhSoraRain .9s linear infinite}
+@keyframes mhSoraRain{from{transform:translateY(0)}to{transform:translateY(220%)}}
+[data-sorashido-gear]{position:absolute;right:-4px;top:-4px;z-index:3;width:16px;height:16px;line-height:16px;font-size:13px;text-align:center;color:${SORASHIDO_GREEN};text-shadow:0 0 3px rgba(0,0,0,.9);animation:mhSoraGear 1.2s linear infinite}
+@keyframes mhSoraGear{to{transform:rotate(360deg)}}
+[data-sorashido-fx="vanish"] > [data-sorashido-body]{animation:mhSoraNoise .7s steps(7,end) forwards}
+@keyframes mhSoraNoise{0%{opacity:.78;transform:translateX(0)}20%{transform:translateX(-2px);clip-path:inset(10% 0 55% 0)}40%{transform:translateX(2px);clip-path:inset(45% 0 20% 0)}60%{opacity:.5;transform:translateX(-1px);clip-path:inset(0 0 70% 0)}100%{opacity:0;clip-path:inset(50% 0 50% 0)}}
+[data-sorashido-spark]{position:absolute;left:50%;top:50%;z-index:3;width:4px;height:4px;border-radius:9999px;background:#d1fae5;box-shadow:0 0 6px ${SORASHIDO_GREEN};opacity:0;animation:mhSoraSpark .9s ease-out .35s forwards}
+@keyframes mhSoraSpark{0%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.4)}}
+[data-sorashido-next]{display:flex;flex-direction:column;align-items:center;width:100%;max-width:100%;min-width:0;padding:2px 3px;border-radius:8px;border:1px solid rgba(52,211,153,.75);background:rgba(2,44,34,.9);color:#d1fae5;font-weight:900;box-shadow:0 0 6px rgba(52,211,153,.45);text-align:center}
+[data-sorashido-next] > b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%;font-size:10px;line-height:12px;word-break:keep-all;overflow-wrap:anywhere}
+[data-sorashido-next][data-sorashido-layout="landscape"] > b{font-size:9px;line-height:11px}
+[data-sorashido-next] > small{font-size:8px;line-height:10px;color:#6ee7b7}
+@media (prefers-reduced-motion: reduce){[data-sorashido-fx] *,[data-sorashido-fx] > [data-sorashido-body]{animation:none!important}[data-sorashido-fx="vanish"] > [data-sorashido-body]{opacity:0}}
+`;
+const SORASHIDO_CODE_LINES = [6, 17, 29, 41, 52, 63, 74, 86, 95];
+const SORASHIDO_SPARKS = [[-26, -22], [24, -26], [-30, 8], [30, 6], [-12, 28], [14, 30], [0, -34], [-34, -6], [34, -10], [6, 34]];
+function SorashidoCopyFx({
+  phase = 'idle',
+  children
+}) {
+  const p = ['appear', 'idle', 'thinking', 'vanish'].includes(phase) ? phase : 'idle';
+  return React.createElement("span", {
+    "data-sorashido-fx": p
+  }, React.createElement("style", null, SORASHIDO_COPY_CSS), React.createElement("span", {
+    "data-sorashido-body": true
+  }, children), p === 'appear' && React.createElement("span", {
+    "data-sorashido-code": true,
+    "aria-hidden": "true"
+  }, SORASHIDO_CODE_LINES.map((x, i) => React.createElement("i", {
+    key: i,
+    style: {
+      left: `${x}%`,
+      animationDelay: `${i % 4 * 0.12}s`
+    }
+  }))), p === 'thinking' && React.createElement("span", {
+    "data-sorashido-gear": true,
+    "aria-hidden": "true"
+  }, "⚙"), p === 'vanish' && SORASHIDO_SPARKS.map(([dx, dy], i) => React.createElement("span", {
+    key: i,
+    "data-sorashido-spark": true,
+    "aria-hidden": "true",
+    style: {
+      '--dx': `${dx}px`,
+      '--dy': `${dy}px`
+    }
+  })));
+}
+function SorashidoNextCardBadge({
+  card,
+  layout = 'portrait',
+  turnsLeft = null
+}) {
+  const name = card ? card.name || card.baseName || '' : '';
+  return React.createElement("span", {
+    "data-sorashido-next": card ? 'card' : 'thinking',
+    "data-sorashido-layout": layout,
+    "aria-label": card ? `コピーが次に使うカード: ${name}` : 'コピーが次に使うカードを考え中'
+  }, React.createElement("b", null, card ? jaWrap(name) : '⚙ 考え中'), Number.isFinite(turnsLeft) && turnsLeft > 0 && React.createElement("small", {
+    "data-sorashido-turns": true,
+    className: "whitespace-nowrap tabular-nums"
+  }, layout === 'landscape' ? `あと${turnsLeft}` : `あと${turnsLeft}ターン`));
+}
+function SorashidoCopyHandSheet({
+  open,
+  copyName = '',
+  turnsLeft = null,
+  cards = [],
+  nextCard = null,
+  guts = null,
+  maxGuts = null,
+  onClose,
+  renderCard
+}) {
+  if (!open) return null;
+  const list = Array.isArray(cards) ? cards : [];
+  return React.createElement("div", {
+    "data-sorashido-hand-sheet": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "AIコピーの手札",
+    className: "fixed inset-0 flex items-end justify-center sm:items-center",
+    style: {
+      zIndex: 95000,
+      background: 'rgba(0,0,0,.6)'
+    },
+    onClick: () => onClose && onClose()
+  }, React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-2 bg-slate-950 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:rounded-3xl [@media(max-height:500px)]:max-h-[94dvh] [@media(max-height:500px)]:overflow-y-auto",
+    style: {
+      borderColor: SORASHIDO_GREEN
+    },
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-emerald-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap(`${copyName || 'コピー'}のAIコピー`)), React.createElement("small", {
+    className: "block text-[10px] font-bold text-emerald-100/75"
+  }, Number.isFinite(turnsLeft) ? `あと${turnsLeft}ターン` : '', Number.isFinite(guts) && Number.isFinite(maxGuts) ? `・ガッツ ${guts}/${maxGuts}` : '')), React.createElement("button", {
+    type: "button",
+    "data-sorashido-hand-close": true,
+    onClick: () => onClose && onClose(),
+    className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95"
+  }, "閉じる")), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('コピーは毎ターン、この中から自分で1枚だけ選んで使います。光っているのが次に使うカードです。')), React.createElement("div", {
+    "data-sorashido-hand": true,
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, list.map((card, i) => {
+    const next = !!nextCard && (card === nextCard || card.uid && card.uid === nextCard.uid || !card.uid && card.id === nextCard.id && card.name === nextCard.name);
+    return React.createElement("div", {
+      key: card.uid || `${card.id}-${i}`,
+      "data-sorashido-hand-card": i,
+      "data-sorashido-hand-next": next ? '1' : undefined,
+      className: "relative rounded-xl border p-1.5 text-center",
+      style: {
+        borderColor: next ? SORASHIDO_GREEN : 'rgba(255,255,255,.15)',
+        boxShadow: next ? '0 0 10px rgba(52,211,153,.6)' : 'none'
+      }
+    }, typeof renderCard === 'function' ? renderCard(card) : React.createElement(React.Fragment, null, React.createElement("b", {
+      className: "block text-[11px] font-black text-white",
+      style: JA_LABEL_STYLE
+    }, jaWrap(card.name || card.baseName || '')), Number.isFinite(Number(card.guts ?? card.cost)) && React.createElement("small", {
+      className: "block text-[9px] font-bold tabular-nums text-slate-400"
+    }, "ガッツ ", Number(card.guts ?? card.cost))), next && React.createElement("small", {
+      "data-sorashido-hand-next-label": true,
+      className: "mt-0.5 block text-[9px] font-black text-emerald-300"
+    }, "次に使う"));
+  }), list.length === 0 && React.createElement("p", {
+    className: "col-span-3 py-3 text-center text-[11px] font-bold text-slate-400"
+  }, "使えるカードがありません"))));
+}
 const _memStore = {};
 const hasWinStorage = () => typeof window !== 'undefined' && !!window.storage;
 const hasLocalStorage = () => {
@@ -42551,6 +42695,7 @@ const TACTICS_HATE = {
   assist: {
     atsu: 'taunt',
     kyuko: 'cover',
+    sorashido: 'buff',
     mua: 'heal',
     momosuke: 'heal',
     meloso: 'heal',
@@ -45411,6 +45556,170 @@ const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
   return tacticsAliveSlots(units).includes(slot) ? [slot] : list;
 };
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
+const SORASHIDO_CARD_ID = 'sorashido';
+const SORASHIDO_COPY_SLOT = 4;
+const SORASHIDO_COPY_UNIQUE_COUNT = 1;
+const SORASHIDO_COPY_HAND_DRAW = 2;
+const aiCopySafeNum = (value, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+const aiCopyRules = level => {
+  const tiers = typeof SORASHIDO_TIERS !== 'undefined' && Array.isArray(SORASHIDO_TIERS) ? SORASHIDO_TIERS : [];
+  const lv = Math.max(0, Math.min(tiers.length - 1, Math.floor(aiCopySafeNum(level)) || 0));
+  const t = tiers[lv] || {
+    rates: {
+      hp: 0.5,
+      atk: 0.6,
+      def: 0.5,
+      guts: 0.6
+    },
+    turns: 2,
+    pick: 0.5,
+    maxCards: 1,
+    hateStart: 0.5,
+    hateGain: 1
+  };
+  return {
+    ...t,
+    maxCards: Math.max(1, Math.floor(aiCopySafeNum(t.maxCards, 1))),
+    gutsFor2: aiCopySafeNum(t.gutsFor2, Infinity)
+  };
+};
+const aiCopyTurns = level => aiCopyRules(level).turns;
+const aiCopyStats = (src, level, {
+  mode = 'tactics',
+  effMul = 1,
+  permaAtkPct = 0
+} = {}) => {
+  const m = Math.max(0, aiCopySafeNum(effMul, 1));
+  const r = aiCopyRules(level).rates;
+  const of = (key, rate, min = 0) => Math.max(min, Math.floor(Math.max(0, aiCopySafeNum(src && src[key])) * rate * m));
+  const maxGuts = of('maxGuts', r.guts);
+  const out = {
+    atk: of('atk', r.atk),
+    def: of('def', r.def),
+    maxGuts,
+    guts: maxGuts,
+    permaAtkPct: Math.max(0, aiCopySafeNum(permaAtkPct))
+  };
+  if (mode === 'tactics') {
+    const maxHp = of('maxHp', r.hp, 1);
+    out.maxHp = maxHp;
+    out.hp = maxHp;
+  }
+  return out;
+};
+const aiCopyStartHate = (srcHate, level) => Math.max(0, Math.min(100, Math.floor(aiCopySafeNum(srcHate) * aiCopyRules(level).hateStart)));
+const aiCopyHateGainMult = level => aiCopyRules(level).hateGain;
+const aiCopySummonPlan = (aiCopy, {
+  srcSlot,
+  srcMonsterId,
+  level
+}) => {
+  const turnsLeft = aiCopyTurns(level);
+  if (!aiCopy) return {
+    kind: 'new',
+    turnsLeft,
+    removeCopy: false,
+    removeUniqueOf: null,
+    addUniqueOf: srcMonsterId
+  };
+  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return {
+    kind: 'refresh',
+    turnsLeft,
+    removeCopy: false,
+    removeUniqueOf: null,
+    addUniqueOf: null
+  };
+  return {
+    kind: 'switch',
+    turnsLeft,
+    removeCopy: true,
+    removeUniqueOf: aiCopy.srcMonsterId,
+    addUniqueOf: srcMonsterId
+  };
+};
+const aiCopyTurnEnd = aiCopy => {
+  if (!aiCopy) return {
+    turnsLeft: 0,
+    expired: false,
+    removeUniqueOf: null
+  };
+  const turnsLeft = Math.max(0, Math.floor(aiCopySafeNum(aiCopy.turnsLeft)) - 1);
+  return {
+    turnsLeft,
+    expired: turnsLeft <= 0,
+    removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null
+  };
+};
+const aiCopyUniqueCard = (card, srcMonsterId) => card ? {
+  ...card,
+  sorashidoCopyOf: srcMonsterId,
+  uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}`
+} : null;
+const aiCopyIsUnique = (card, {
+  uid = null,
+  srcMonsterId = null
+} = {}) => !!card && card.sorashidoCopyOf != null && (uid == null || card.uid === uid) && (srcMonsterId == null || card.sorashidoCopyOf === srcMonsterId);
+const aiCopyRemoveUnique = (zones, match) => {
+  const strip = list => Array.isArray(list) ? list.filter(c => !aiCopyIsUnique(c, match)) : [];
+  return {
+    ...zones,
+    deck: strip(zones && zones.deck),
+    hand: strip(zones && zones.hand),
+    discard: strip(zones && zones.discard)
+  };
+};
+const aiCopyCanPick = card => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
+const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
+  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+  const picked = [];
+  for (let i = 0; i < draw && rest.length > 0; i++) {
+    const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
+    picked.push(rest.splice(at, 1)[0]);
+  }
+  if (uniqueCard && aiCopyCanPick(uniqueCard)) picked.push(uniqueCard);
+  return picked;
+};
+const aiCopyPickOne = (cards, score, rng, pick) => {
+  if (cards.length === 0) return null;
+  const ranked = cards.map((c, i) => ({
+    c,
+    i,
+    s: aiCopySafeNum(typeof score === 'function' ? score(c) : 0)
+  })).sort((a, b) => b.s - a.s || a.i - b.i);
+  if (ranked.length === 1 || aiCopySafeNum(rng && rng()) < pick) return ranked[0].c;
+  const others = ranked.slice(1);
+  return others[Math.min(others.length - 1, Math.floor(Math.max(0, aiCopySafeNum(rng && rng())) * others.length))].c;
+};
+const aiCopyPickCards = (hand, {
+  score,
+  costOf,
+  guts,
+  maxGuts,
+  rng,
+  level
+}) => {
+  const rules = aiCopyRules(level);
+  const cost = c => Math.max(0, aiCopySafeNum(typeof costOf === 'function' ? costOf(c) : c && (c.guts ?? c.cost), 0));
+  let left = Math.max(0, aiCopySafeNum(guts));
+  const pool = (Array.isArray(hand) ? hand : []).filter(aiCopyCanPick);
+  const first = aiCopyPickOne(pool.filter(c => cost(c) <= left), score, rng, rules.pick);
+  if (!first) return [];
+  const out = [first];
+  left -= cost(first);
+  if (rules.maxCards >= 2 && aiCopySafeNum(maxGuts) >= rules.gutsFor2) {
+    const second = aiCopyPickOne(pool.filter(c => c !== first && cost(c) <= left), score, rng, rules.pick);
+    if (second) out.push(second);
+  }
+  return out;
+};
+const sorashidoCopyDesc = level => {
+  const t = aiCopyRules(level),
+    p = v => Math.round(v * 100);
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+};
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
 const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
@@ -60514,15 +60823,21 @@ function MasuOfferingScreen({
       compact: true
     })), introVisible && React.createElement("div", {
       "data-offering-intro": true,
-      className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3"
+      className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1.5"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
     }, React.createElement("div", {
       className: "text-[11px] font-black text-violet-200"
-    }, "お布施の使い方"), React.createElement("ol", {
-      className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"
+    }, "お布施の使い方"), React.createElement("button", {
+      type: "button",
+      onClick: onDismissIntro,
+      className: "mh-button mh-button-secondary hidden [@media(orientation:landscape)_and_(max-height:520px)]:block min-h-[32px] shrink-0 rounded-lg border border-white/20 bg-slate-900 px-3 text-[11px] font-black active:scale-[.98]"
+    }, "わかった")), React.createElement("ol", {
+      className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:leading-snug"
     }, React.createElement("li", null, "お布施をするマスモンを選びます。"), React.createElement("li", null, "「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。"), React.createElement("li", null, "見積もりを見て「お布施する」を押します。")), React.createElement("button", {
       type: "button",
       onClick: onDismissIntro,
-      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98]"
+      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98] [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
     }, "わかった")), renderScreenNote('offering', 'ダイヤを払って、マスモンへ直接絆経験値を与えられます。', ['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。', '上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。']), renderMonsterSortFilterBar({
       singleType: true
     }), React.createElement("div", {
@@ -109214,6 +109529,9 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
+    if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
+  }, [rhythmEventStorySeen]);
+  useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
@@ -123550,6 +123868,7 @@ function MonsterHeroGame() {
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
     if (t.id === 'kiki') return `次の${level + 2}ターン 使えるカード +1枚・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
+    if (t.id === 'sorashido') return sorashidoCopyDesc(level);
     if (t.id === 'kyuko') {
       const tier = KYUKO_TIERS[Math.min(level, KYUKO_TIERS.length - 1)];
       return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
@@ -127891,10 +128210,12 @@ function MonsterHeroGame() {
           "data-extreme-mode-info": true,
           "aria-label": "極限チャレンジの説明を開く",
           onClick: () => setModeInfoId(EXTREME_MODE.id),
-          className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
-        }, "このモードの説明")
+          className: "shrink-0 min-h-[38px] px-3 max-[359px]:px-2.5 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
+        }, React.createElement("span", {
+          className: "max-[359px]:hidden"
+        }, "このモードの"), "説明")
       }), React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
+        className: "w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
@@ -128268,8 +128589,9 @@ function MonsterHeroGame() {
         }, value)))), React.createElement("div", {
           className: "mhbt-note"
         }, React.createElement("span", {
-          className: "truncate"
-        }, noteText), quick && hasExtremeSpecialRules(key) && React.createElement("span", {
+          className: "truncate [@media(orientation:landscape)_and_(max-height:520px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible",
+          style: JA_LABEL_STYLE
+        }, jaWrap(noteText)), quick && hasExtremeSpecialRules(key) && React.createElement("span", {
           className: "shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300"
         }, "特殊ルールあり")), React.createElement("div", {
           className: `mhbt-reward min-h-[54px] flex items-center gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start ${species && speciesRewardClaimed(key) ? 'opacity-70' : ''}`,
@@ -135966,6 +136288,7 @@ function MonsterHeroGame() {
       };
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
+        "data-story-has-stage": stageGuest ? '1' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
@@ -141823,6 +142146,16 @@ const createAnimationStyle = () => {
       [data-story-sheet] [data-story-cast] { margin-bottom: .375rem; zoom: .72; }
       [data-story-sheet] [data-story-buttons] { margin-top: .5rem; }
       [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
+    }
+    /* お話の上のステージ(ゲストの顔と吹き出し)は、横の低い画面では窓と重なって読めなかった(2026-10-27 クラフトくん)。
+       ステージを画面の上の端へ寄せて顔を小さくし、ステージが出ているあいだは窓の高さを「ステージの下端から下」までに縮める
+       (台詞の部分は窓の中で流れ、ボタンはいつも見える。ステージの下端は 60-app.jsx の storyMeasureRef が測る) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 6px) !important; }
+      [data-story-stage] [data-story-guest] { zoom: .6; }
+      [data-story-stage] [data-story-guest-bubble] { margin-top: 2px !important; padding: 4px 10px; }
+      [data-story-stage] [data-story-guest-bubble] > span.block { font-size: 12px; line-height: 1.45; margin-top: 2px; }
+      [data-event-story][data-story-has-stage] [data-story-sheet] { max-height: calc(var(--mh-vh) - var(--story-stage-bottom, 120px) - 6px) !important; }
     }
     /* お話の真ん中に出すモンスター(2026-10-27「推しに会える夜」)。縦の画面は上のステージ(top は 60-app.jsx で決める)と下の窓のあいだ。
        大きさは置き場の高さと画面の幅の小さいほうに合わせた正方形(待機アニメは正方形の箱で軸を合わせる) */
