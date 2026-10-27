@@ -111,7 +111,8 @@ check('スタックはランのあいだ持ち越し、ランの片付けで0へ
 check('クッキーはカードを払った直後に、本人の枠を決めたカードだけ数える', app.includes('if(!isBreeder&&entry.slotIdx!=null) gainSweetStack(slotIdx,slots[slotIdx]?.id,card);'));
 check('黒音符は攻撃が当たったときに数える', app.includes('if (finalD>0) gainSweetStack(slotIdx,activeMon?.id,card,true);'));
 check('与ダメ(getDmg)にクッキー10個と黒音符が乗る', app.includes('const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*'));
-check('会心率に黒音符(5個から)が足される', app.includes('+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate'));
+// 2026-10-27 キュービの九尾四相の会心率(kyubiAttackAt)が黒音符のあとに付いてよい(持っていなければ0)
+check('会心率に黒音符(5個から)が足される', /\+blackNoteEffectAt\(slotIdx,activeMon\?\.id\)\.critAdd(\+kyubiAttackAt\(slotIdx,activeMon\?\.id,card\)\.critAdd)?\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate/.test(app));
 // 2026-10-12 社長の決定で、あつの挑発(バフ札から出る攻撃)にも黒音符の連撃を乗せた(#2859)ので3か所
 check('連撃は実際の攻撃・予測表示・あつの挑発の3か所に付く', (app.match(/withBlackNoteCombo\(withFateCombo\(/g) || []).length === 3);
 check('被ダメの最後にクッキー7個からの軽減が掛かる', /\*cookieEffectNow\(\)\.takenMult\)+ \/\/ クッキー7個から/.test(app));

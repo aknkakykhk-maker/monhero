@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a2cdaf7d43fb4c3d
+// source-sha256: 10e209be5e2c5e09
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17390,6 +17390,21 @@ const ASSISTANT_FALLBACK = {
 const STORY_GUEST_LIST = typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS) ? STORY_GUEST_SPEAKERS : [];
 const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || STORY_GUEST_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
 const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
+const STORY_MONSTER_ART = Object.freeze({
+  Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
+  Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null
+});
+const storyMeasureRef = (name, kind) => el => {
+  if (!el) return;
+  const root = el.closest('[data-event-story]');
+  if (!root) return;
+  const put = () => root.style.setProperty(name, `${Math.round(kind === 'bottom' ? el.offsetTop + el.offsetHeight : el.offsetHeight)}px`);
+  put();
+  if (!el.__mhStoryRo && typeof ResizeObserver === 'function') {
+    el.__mhStoryRo = new ResizeObserver(put);
+    el.__mhStoryRo.observe(el);
+  }
+};
 const assistantSceneById = key => key && ASSISTANT_SCENE_MAP[key] || null;
 const ASSISTANT_BOND_FALLBACK = {
   points: 0,
@@ -42375,9 +42390,9 @@ const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_EN
   return Math.min(TACTICS_ENEMY_POWER_MAX, Math.max(1, raw));
 };
 const TACTICS_TARGET_LOW_HP_BIAS = 2;
-const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
-  return tacticsAliveSlots(units).map(index => {
+  const list = tacticsAliveSlots(units).map(index => {
     const unit = normalizeTacticsUnit(units[index]);
     const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
     return {
@@ -42385,12 +42400,24 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
       weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index)
     };
   });
+  if (isTacticsAiCopyStanding(copy)) {
+    const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
+    list.push({
+      index: TACTICS_AI_COPY_TARGET,
+      weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0)
+    });
+  }
+  return list;
 };
-const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
-  const out = [null, null, null, null];
-  const weights = tacticsTargetWeights(units, bias, hate);
+const tacticsTargetChancesWithCopy = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS, copy = null) => {
+  const out = {
+    slots: [null, null, null, null],
+    copy: null
+  };
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!weights.length || !(total > 0)) return out;
+  const order = index => index === TACTICS_AI_COPY_TARGET ? 99 : index;
   const parts = weights.map(entry => {
     const v = entry.weight / total * 100;
     return {
@@ -42400,19 +42427,20 @@ const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_B
     };
   });
   let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
-  [...parts].sort((a, b) => b.rest - a.rest || a.index - b.index).forEach(p => {
+  [...parts].sort((a, b) => b.rest - a.rest || order(a.index) - order(b.index)).forEach(p => {
     if (left > 0) {
       p.pct += 1;
       left -= 1;
     }
   });
   parts.forEach(p => {
-    out[p.index] = p.pct;
+    if (p.index === TACTICS_AI_COPY_TARGET) out.copy = p.pct;else out.slots[p.index] = p.pct;
   });
   return out;
 };
-const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
-  const weights = tacticsTargetWeights(units, bias, hate);
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => tacticsTargetChancesWithCopy(units, hate, bias, null).slots;
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   if (!weights.length) return null;
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!(total > 0)) return weights[0].index;
@@ -42430,14 +42458,19 @@ const tacticsTargetName = (units, slotIndex) => {
   return unit && String(unit.name || '').trim() || `${slotIndex + 1}番目の子`;
 };
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
-const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return {
     ...intent,
     targetName: TACTICS_ALL_TARGET_LABEL
   };
   const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
-  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate);
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate, copy);
+  if (targetSlot === TACTICS_AI_COPY_TARGET) return {
+    ...intent,
+    targetCopy: true,
+    targetName: tacticsAiCopyName(copy)
+  };
   return targetSlot == null ? intent : {
     ...intent,
     targetSlot,
@@ -42795,6 +42828,55 @@ const tacticsHateHelpRows = id => {
     return rows;
   }
   return [];
+};
+const TACTICS_AI_COPY_TARGET = 'copy';
+const isTacticsAiCopyStanding = copy => !!copy && tacticsHateNum(copy.hp) > 0 && tacticsHateNum(copy.maxHp) > 0;
+const tacticsAiCopyName = copy => `${copy && String(copy.name || '').trim() || '仲間'}のコピー`;
+const tacticsAiCopyPos = (units, srcSlot) => {
+  const list = Array.isArray(units) ? units : [];
+  const src = Number.isInteger(srcSlot) ? tacticsClamp(srcSlot, 0, 3) : 0;
+  for (const p of [src + 1, src - 1]) if (p >= 0 && p <= 3 && !list[p]) return {
+    pos: p,
+    stacked: false
+  };
+  return {
+    pos: src,
+    stacked: true
+  };
+};
+const tacticsAiCopyStartHate = (hate, srcSlot, rate = 0.5) => {
+  const r = tacticsClamp(tacticsHateNum(rate), 0, 1);
+  return Math.min(TACTICS_HATE.cap, Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] * r));
+};
+const tacticsAiCopyHateStep = (copy, {
+  gain = 0,
+  dealt = 0,
+  teamDealt = 0
+} = {}, monId = null, gainMult = 1) => {
+  if (!isTacticsAiCopyStanding(copy)) return 0;
+  const base = tacticsHateProfile(monId);
+  const p = {
+    ...base,
+    mult: base.mult * Math.max(0, tacticsHateNum(gainMult) || 1)
+  };
+  const team = Math.max(0, tacticsHateNum(teamDealt));
+  const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt)) / team : 0;
+  return Math.min(TACTICS_HATE.cap, tacticsHateNum(copy.hate) * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gain)) + share));
+};
+const tacticsIntentHitsAiCopy = (intent, copy) => {
+  if (!intent || !isTacticsAiCopyStanding(copy)) return false;
+  if (intent.targetsAll) return true;
+  if (intent.targetCopy) return true;
+  if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot) && Number.isInteger(intent.sweepDist)) return copy.pos === intent.sweepDist;
+  return false;
+};
+const damageTacticsAiCopy = (copy, amount) => {
+  if (!copy) return null;
+  const hp = Math.max(0, tacticsHateNum(copy.hp) - Math.max(0, Math.floor(tacticsHateNum(amount))));
+  return hp > 0 ? {
+    ...copy,
+    hp
+  } : null;
 };
 const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
   if (!intent || intent.variant !== 'sweep') return true;
@@ -64749,7 +64831,10 @@ function PickSlotScreen({
   heroStyleDef = null,
   heroStyle = null,
   onHeroStyle = null,
-  perSlotApt = false
+  perSlotApt = false,
+  partnerOffer = null,
+  partnerPick = false,
+  onPartnerPick = null
 }) {
   const mon = currentPickingMon;
   const pickedStyle = heroStyleDef ? heroStyleDef.styles.some(st => st.id === heroStyle) ? heroStyle : heroStyleDef.defaultStyle : null;
@@ -64834,7 +64919,18 @@ function PickSlotScreen({
       className: `min-h-[40px] rounded-lg border-2 px-1 text-[11px] font-black active:scale-95 ${pickedStyle === st.id ? 'border-fuchsia-300 bg-fuchsia-700 text-white' : 'border-white/20 bg-black/40 text-slate-300'}`
     }, st.label))), React.createElement("div", {
       className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
-    }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), React.createElement("div", {
+    }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), partnerOffer && React.createElement("div", {
+      "data-orihime-partner": true,
+      className: "mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5 text-left"
+    }, React.createElement("button", {
+      type: "button",
+      "data-orihime-partner-pick": true,
+      "aria-pressed": !!partnerPick,
+      onClick: () => onPartnerPick && onPartnerPick(!partnerPick),
+      className: `min-h-[44px] w-full rounded-lg border-2 px-2 text-[12px] font-black active:scale-95 ${partnerPick ? 'border-sky-300 bg-sky-700 text-white' : 'border-white/20 bg-black/40 text-slate-200'}`
+    }, "🎐 ", partnerPick ? '相方にする(このまま置く)' : 'この子を相方にする'), React.createElement("div", {
+      className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
+    }, partnerOffer.heroName, "の「天河の契り」の相方になります。相方は1体だけで、置いた距離とのへだたりで効き目が変わります。")), React.createElement("div", {
       className: "mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2"
     }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、その子の適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
       className: "grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll"
@@ -91620,7 +91716,7 @@ const CardBattleBoard = ({
     if (!tutorial) say('start');
   }, []);
   useEffect(() => {
-    if (!bubble || tutorial || bigCard || turnBanner || guarding) return undefined;
+    if (!bubble || tutorial || bigCard || turnBanner || downBand || guarding) return undefined;
     const key = bubble.key;
     const ms = bubbleLeft.current[key] ?? cardBubbleMs(bubble.text);
     const at = Date.now();
@@ -91631,7 +91727,7 @@ const CardBattleBoard = ({
         [key]: Math.max(800, ms - (Date.now() - at))
       };
     };
-  }, [bubble && bubble.key, !!bigCard, !!turnBanner, guarding]);
+  }, [bubble && bubble.key, !!bigCard, !!turnBanner, !!downBand, guarding]);
   useEffect(() => {
     if (tutorial && tutStage) setTutQ(tutStage.lines.slice());
   }, [tutI]);
@@ -92457,6 +92553,9 @@ const CardBattleBoard = ({
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
+  const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
+  const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
+  const bubbleOverAction = !!(tiny && !wide && bubble && !bubble.cut && !replay && !tutorial);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => {
     setStageFit(0);
@@ -92834,7 +92933,7 @@ const CardBattleBoard = ({
     ref: stageRef,
     "data-card-stage": true,
     "data-card-stage-fit": stageFit,
-    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1`,
+    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`,
     style: {
       justifyContent: 'safe center'
     }
@@ -92845,7 +92944,7 @@ const CardBattleBoard = ({
     "data-card-bubble-ms": tutorial ? undefined : cardBubbleMs(bubble.text),
     onClick: tutorial ? undefined : nextBubble,
     "data-card-bubble-cut": bubble.cut ? '1' : undefined,
-    className: `${bigCard || turnBanner || guarding || endFx ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubble.cut ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
+    className: `${bubbleHidden ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubbleInFlow ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -92860,7 +92959,7 @@ const CardBattleBoard = ({
   })) : React.createElement("img", {
     src: assistantFaceImage(who, bubble.face || face),
     alt: "",
-    className: `${bubble.cut ? (tiny ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
+    className: `${bubble.cut ? (tiny || stageFit >= 2 ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
   }), React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("span", {
@@ -92871,12 +92970,14 @@ const CardBattleBoard = ({
   }, who.name, bubble.cut ? ' ★' : ''), React.createElement("span", {
     style: JA_WRAP_STYLE
   }, cardJaWrap(bubble.text)))), React.createElement("div", {
-    className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
-  }), React.createElement("span", {
     "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0 overflow-hidden"
+  }, React.createElement("div", {
+    className: "absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
+  }), React.createElement("span", {
     "data-card-vs-mark": true,
-    className: "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]"
-  }, "VS"), breederFx && React.createElement("div", {
+    className: "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]"
+  }, "VS")), breederFx && React.createElement("div", {
     key: breederFx.key,
     "data-card-breeder-fx": breederFx.p === CARD_ME ? 'me' : 'foe',
     "aria-hidden": "true",
@@ -92894,7 +92995,7 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && !endFx && stageFit < 3 && !(turnSummary && sumOpen) && !guardAtk && React.createElement("div", {
+  })), action && !endFx && stageFit < 3 && !bubbleOverAction && !(turnSummary && sumOpen) && !guardAtk && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     "data-card-action-side": action.side,
@@ -92911,9 +93012,9 @@ const CardBattleBoard = ({
       className: `${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`
     }) : null;
   }), React.createElement("div", {
-    className: `${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
+    className: `${tiny || wide ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
   }, action.who, React.createElement("span", {
-    className: tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
+    className: tiny || wide ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
   }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), st.field && cardOf(db, st.field.no) && React.createElement("button", {
     type: "button",
     "data-card-env": st.field.no,
@@ -92940,7 +93041,7 @@ const CardBattleBoard = ({
     className: "min-w-0 truncate"
   }, `${who.name}のターンにしたこと(${turnSummary.lines.length})`), React.createElement("span", {
     className: "shrink-0 text-rose-300"
-  }, "▸ 見る")), React.createElement("div", {
+  }, "▸ 見る")), !(stageFit >= 3 && bubbleInFlow) && React.createElement("div", {
     "data-card-log": true,
     className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
@@ -104817,6 +104918,7 @@ function MonsterHeroGame() {
     resetKusabi();
     resetDreamPain();
     resetKyubi();
+    resetOrihime();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -105125,6 +105227,117 @@ function MonsterHeroGame() {
       addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
     }
   };
+  const orihimeRef = useRef({
+    partner: {},
+    ouse: {}
+  });
+  const [orihimeView, setOrihimeView] = useState(orihimeRef.current);
+  const writeOrihime = (part, key, value) => {
+    if (!key) return;
+    const next = {
+      ...orihimeRef.current,
+      [part]: {
+        ...orihimeRef.current[part],
+        [key]: value
+      }
+    };
+    orihimeRef.current = next;
+    setOrihimeView(next);
+  };
+  const resetOrihime = () => {
+    orihimeRef.current = {
+      partner: {},
+      ouse: {}
+    };
+    orihimeTurnKindsRef.current = {};
+    setOrihimeView(orihimeRef.current);
+  };
+  const setOrihimePartner = (selfSlot, partnerSlot) => {
+    if (!Number.isInteger(partnerSlot)) return;
+    writeOrihime('partner', isTacticsMode(runMode) ? String(selfSlot) : 'party', partnerSlot);
+  };
+  const orihimeHasPartner = () => Number.isInteger(orihimeRef.current.partner[isTacticsMode(runMode) ? String(initialBattleDistanceRef.current) : 'party']);
+  const [orihimePartnerPick, setOrihimePartnerPick] = useState(false);
+  const tacticsUnitUp = slotIdx => {
+    const u = tacticsUnitsRef.current[slotIdx];
+    return !!u && Number(u.hp) > 0;
+  };
+  const orihimeBondAt = key => {
+    const partnerSlot = orihimeRef.current.partner[key];
+    if (!Number.isInteger(partnerSlot)) return null;
+    const tactics = isTacticsMode(runMode);
+    const selfSlot = tactics ? Number(key) : initialBattleDistanceRef.current;
+    const selfId = tactics ? tacticsUnitsRef.current[selfSlot]?.id : mainHero?.id;
+    if (selfId !== ORIHIME_MONSTER_ID) return null;
+    const diff = orihimeDiffOf(selfSlot, partnerSlot);
+    const up = tactics ? tacticsUnitUp(selfSlot) && tacticsUnitUp(partnerSlot) : !!slots[partnerSlot];
+    const ouse = ouseOf(orihimeRef.current.ouse[key], diff);
+    return {
+      key,
+      selfSlot,
+      partnerSlot,
+      diff,
+      ouse,
+      up,
+      effect: orihimeBondEffectOf(diff, ouse, up)
+    };
+  };
+  const orihimeBonds = () => (isTacticsMode(runMode) ? Object.keys(orihimeRef.current.partner) : ['party']).map(orihimeBondAt).filter(Boolean);
+  const orihimeBondOfSlot = slotIdx => orihimeBonds().find(b => b.selfSlot === slotIdx || b.partnerSlot === slotIdx) || null;
+  const orihimeDmgMultAt = slotIdx => {
+    const b = Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null;
+    return b ? 1 + b.effect.dmgAdd : 1;
+  };
+  const orihimeTakenMultAt = slotIdx => {
+    const b = isTacticsMode(runMode) ? Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null : orihimeBondAt('party');
+    return b ? 1 - b.effect.takenCut : 1;
+  };
+  const orihimeTurnKindsRef = useRef({});
+  const orihimeCardKindOf = card => !card ? null : ['atk', 'range_atk', 'unique'].includes(card.type) ? 'attack' : card.type === 'guard' ? 'guard' : 'assist';
+  const noteOrihimeCard = (slotIdx, card) => {
+    const kind = orihimeCardKindOf(card);
+    if (!kind || !Number.isInteger(slotIdx) || !orihimeBondOfSlot(slotIdx)) return;
+    const k = String(slotIdx),
+      cur = orihimeTurnKindsRef.current[k] || [];
+    if (!cur.includes(kind)) orihimeTurnKindsRef.current = {
+      ...orihimeTurnKindsRef.current,
+      [k]: [...cur, kind]
+    };
+  };
+  const settleOrihimeOuse = () => {
+    const kinds = orihimeTurnKindsRef.current;
+    orihimeTurnKindsRef.current = {};
+    orihimeBonds().forEach(b => {
+      const a = kinds[String(b.selfSlot)] || [],
+        c = kinds[String(b.partnerSlot)] || [];
+      const after = addOuse(b.ouse, b.diff, a.some(x => c.includes(x)), b.up);
+      if (after === b.ouse) return;
+      writeOrihime('ouse', b.key, after);
+      addPopup(`🎐 逢瀬 ${after}/${ORIHIME_BOND_TIERS[b.diff].max}`, 'hero', 'text-sky-200 text-base font-bold drop-shadow-md', undefined, b.selfSlot);
+    });
+  };
+  const orihimeShareTargets = (targets, damage) => {
+    let rest = (Array.isArray(targets) ? targets : []).filter(Number.isInteger);
+    const parts = [];
+    orihimeBonds().filter(b => b.up && b.effect.share).forEach(b => {
+      [[b.selfSlot, b.partnerSlot], [b.partnerSlot, b.selfSlot]].forEach(([from, to]) => {
+        if (!rest.includes(from) || rest.includes(to)) return;
+        const [mine, theirs] = shareOrihimeDamage(damage);
+        rest = rest.filter(i => i !== from);
+        parts.push({
+          slots: [from],
+          damage: mine
+        }, {
+          slots: [to],
+          damage: theirs
+        });
+      });
+    });
+    return [{
+      slots: rest,
+      damage
+    }, ...parts];
+  };
   const tickKyubiKagero = () => {
     const entries = Object.entries(kyubiRef.current.kagero);
     if (!entries.some(([, v]) => kageroOf(v).wait > 0)) return;
@@ -105343,7 +105556,8 @@ function MonsterHeroGame() {
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
     const targets = tacticsTargetsNow(intent, actingDist);
-    return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
+    const parts = orihimeShareTargets(targets, damage);
+    return commitTacticsUnits(parts.reduce((units, part) => damageTacticsTargets(units, part.slots, part.damage), tacticsUnitsRef.current));
   };
   const tacticsHeal = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
   const tacticsRateHeal = (hpRate, gutsRate, includeDowned = true) => {
@@ -116827,7 +117041,7 @@ function MonsterHeroGame() {
     if (isTacticsMode(runMode) && Number.isInteger(slot) && slot >= 0 && slot !== slotIdx) return 1;
     return Math.max(0.1, 1 - Math.min(0.9, rate));
   };
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx) * orihimeTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -117753,7 +117967,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * orihimeDmgMultAt(slotIdx) * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -118519,6 +118733,7 @@ function MonsterHeroGame() {
     if (timeStopSlot == null && (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     if (timeStopSlot == null && (dreamPainRef.current.wait > 0 || dreamPainRef.current.turns > 0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
     if (timeStopSlot == null) tickKyubiKagero();
+    if (timeStopSlot == null) settleOrihimeOuse();
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -119373,6 +119588,7 @@ function MonsterHeroGame() {
       if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
+      if (!isBreeder && entry.slotIdx != null) noteOrihimeCard(slotIdx, card);
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
@@ -122231,6 +122447,11 @@ function MonsterHeroGame() {
       ...m
     };
     applySlots(nextSlots);
+    if (!isHero && orihimePartnerPick && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+      setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
+      addPopup(`🎐 ${m.masuName || m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
+    }
+    setOrihimePartnerPick(false);
     clearSlotUniqueSelection(slotIdx);
     if (isHero) stopAllAuto();
     if (!isHero) Audio_.se.join();
@@ -135244,6 +135465,11 @@ function MonsterHeroGame() {
       })(),
       heroStyle: tacticsHeroStyle,
       onHeroStyle: setTacticsHeroStyle,
+      partnerOffer: mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner() ? {
+        heroName: mainHero.masuName || mainHero.name
+      } : null,
+      partnerPick: orihimePartnerPick,
+      onPartnerPick: setOrihimePartnerPick,
       onRepick: () => {
         if (!mainHero && speciesChallengeBattleRunRef.current) {
           setCurrentPickingMon(null);
@@ -135420,6 +135646,14 @@ function MonsterHeroGame() {
       const bottomLine = speakingGuest ? assistIdx >= 0 ? script[assistIdx] : null : line;
       const bottomSpeaker = bottomLine ? assistantById(bottomLine.who) : speaker;
       const fx = line.fx || null;
+      let monstersIdx = -1;
+      for (let i = step; i >= 0; i--) {
+        if (Array.isArray(script[i].monsters)) {
+          monstersIdx = i;
+          break;
+        }
+      }
+      const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
         transform: '255,237,180',
         rankup: ['251,146,60', '251,191,36', '192,132,252', '248,113,113', '250,204,21'][Math.max(0, stageTier - 1)],
@@ -135511,6 +135745,7 @@ function MonsterHeroGame() {
           background: 'transparent'
         }
       }), stageGuest && React.createElement("div", {
+        ref: storyMeasureRef('--story-stage-bottom', 'bottom'),
         "data-story-stage": true,
         className: "pointer-events-none",
         "data-story-shake": fx === 'transform' || fx === 'rankup' ? step % 2 : undefined,
@@ -135597,7 +135832,29 @@ function MonsterHeroGame() {
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
         style: bubbleWrapStyle()
-      }, bubbleLines(speakText(bubbleLine, stageGuest)))))), fx && React.createElement("div", {
+      }, bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
+        "data-story-monsters": storyMonsters.length,
+        "aria-hidden": "true",
+        className: "pointer-events-none",
+        style: {
+          top: stageGuest ? 'calc(var(--story-stage-bottom, 30vh) + 6px)' : 'calc(env(safe-area-inset-top) + 6vh)'
+        }
+      }, storyMonsters.map(m => {
+        const art = React.createElement("img", {
+          src: STORY_MONSTER_ART[m.id],
+          alt: "",
+          draggable: false,
+          className: "block h-full w-full object-contain"
+        });
+        return React.createElement("span", {
+          key: `${m.id}:${m.pose}`,
+          "data-story-monster": m.id,
+          "data-story-pose": m.pose
+        }, m.pose === 'idle' ? withMonsterIdleArt(m.id, art, {
+          fill: true,
+          own: true
+        }) : art);
+      })), fx && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -135628,6 +135885,7 @@ function MonsterHeroGame() {
           animation: 'storyBanner 2.2s ease-out both'
         }
       }, line.fxText)), React.createElement("div", {
+        ref: storyMeasureRef('--story-sheet-h', 'height'),
         onClick: next,
         "data-story-sheet": true,
         "data-story-shake": fx === 'transform' || fx === 'rankup' ? step % 2 : undefined,
@@ -141326,6 +141584,28 @@ const createAnimationStyle = () => {
       [data-story-sheet] [data-story-buttons] { margin-top: .5rem; }
       [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
     }
+    /* お話の真ん中に出すモンスター(2026-10-27「推しに会える夜」)。縦の画面は上のステージ(top は 60-app.jsx で決める)と下の窓のあいだ。
+       大きさは置き場の高さと画面の幅の小さいほうに合わせた正方形(待機アニメは正方形の箱で軸を合わせる) */
+    [data-story-monsters] { position: absolute; left: 0; right: 0; bottom: calc(var(--story-sheet-h, 50vh) + 18px); z-index: 2; display: flex; align-items: flex-end; justify-content: center; gap: 4%; padding: 0 4%; }
+    /* いちばん大きくなる「前に出る」(1.14倍)でも置き場からはみ出さないよう、ふだんの大きさは置き場の 1/1.14。大きくなるときは足元を軸に上へ伸びる */
+    [data-story-monster] { position: relative; display: block; height: min(calc(100% / 1.14), 37vw, 210px); aspect-ratio: 1 / 1; transform-origin: 50% 100%; }
+    [data-story-pose="in"] { animation: storyMonIn .7s ease-out both; }
+    [data-story-pose="back"] { animation: storyMonBack 1s ease-out both; }
+    [data-story-pose="front"] { animation: storyMonFront .5s ease-out both; }
+    [data-story-pose="approach"] { animation: storyMonApproach .8s ease-out both; }
+    [data-story-pose="hop"] { animation: storyMonHop 1.1s ease-out both; }
+    @keyframes storyMonIn { 0% { opacity: 0; transform: translateY(14px) scale(.85); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyMonBack { 0% { transform: none; } 30% { transform: translateY(-8%) scale(.86); } 45% { transform: translate(-4%, -8%) scale(.86); } 60% { transform: translate(4%, -8%) scale(.86); } 75% { transform: translate(-2%, -8%) scale(.86); } 100% { transform: translateY(-8%) scale(.86); } }
+    @keyframes storyMonFront { 0% { transform: none; } 100% { transform: scale(1.14); } }
+    /* 寄るのは足元のすき間(18px)の中まで。大きさの上限 210px の 7% ≒ 15px */
+    @keyframes storyMonApproach { 0% { transform: none; } 100% { transform: translateY(7%) scale(1.06); } }
+    @keyframes storyMonHop { 0%, 100% { transform: none; } 18% { transform: translateY(-16%); } 36% { transform: none; } 56% { transform: translateY(-10%); } 74% { transform: none; } }
+    /* 横の低い画面は、窓(幅 28rem)の左右の空きに小さく出す。窓・顔の列・ボタンには重ねない */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
+      [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
+    }
+    @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
