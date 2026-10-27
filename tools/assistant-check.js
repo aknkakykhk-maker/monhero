@@ -173,11 +173,21 @@ const linesOf = (whoId) => SCENES.flatMap(([k, def]) => [
 //   画面はふつうに動いてしまうので、気づけるのはここだけ。実際に、モンヒロビートの
 //   「これまでの記録」でももすけのぶんが1本も無く、みゅあの言葉で話していた。
 //   これまではももすけだけ momosuke-check が見ていたので、全員ぶんをここで見る
+// ★公開の印(ASSISTANT_RELEASE_FLAGS)が偽の助手は、下地を作っている途中なので求めない(2026-10-27 ソラシド。よく開く場面から先に書く)。
+//   印を真にしたら、ほかの助手と同じく全場面を求める(本番で印を立てたまま書き忘れることはない)
+const releaseFlagOn = (id) => {
+  const table = (assistantsSrc.match(/const ASSISTANT_RELEASE_FLAGS = Object\.freeze\(\{([^}]*)\}\)/) || [])[1] || '';
+  const flag = (table.match(new RegExp(`\\b${id}:\\s*'([A-Za-z]+)'`)) || [])[1];
+  if (!flag) return true;
+  const m = source.match(new RegExp(`^\\s*${flag}:\\s*(true|false)\\s*,`, 'm'));
+  return !m || m[1] === 'true';
+};
+const coverIds = () => a.ASSISTANTS.map(x => x.id).filter(id => id !== 'mua' && releaseFlagOn(id));
 check('どの助手も、全場面に自分のセリフがある(ほかの助手へ落ちていない)', (() => {
-  const ids = a.ASSISTANTS.map(x => x.id).filter(id => id !== 'mua');
+  const ids = coverIds();
   return ids.every(id => SCENES.every(([k]) => linesOf(id).some(l => l.k === k)));
 })(), (() => {
-  const ids = a.ASSISTANTS.map(x => x.id).filter(id => id !== 'mua');
+  const ids = coverIds();
   const missing = ids.flatMap(id => SCENES
     .filter(([k]) => !linesOf(id).some(l => l.k === k))
     .map(([k]) => `${id}:${k}`));

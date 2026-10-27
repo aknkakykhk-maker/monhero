@@ -18,7 +18,8 @@
 - [x] `RELEASE_FLAGS.assistantSorashido: false`(17-release-changelog-login-missions.jsx)・`EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido`(10-core.jsx・お話用)
 - [x] `ASSISTANTS` の7人目(data/assistants.js)・`ASSISTANT_RELEASE_FLAGS.sorashido`。印が偽のあいだは一覧・選ぶ画面・ヘルプの表(助手の一覧・仲良し度の表)に出ない
 - [x] `ASSISTANT_PEER_CALLS`(両向き)・`ASSISTANT_CHAT_EXAMPLES`(6問)・`ASSISTANT_BOND_STYLES.sorashido`(段階の名前30。呼び方は既定)
-- [x] 基本のセリフ `sorashidoCore`(よく開く22場面+仲良し度アップ・自己ベスト)。HOME のフレンド申請のひとこと
+- [x] 基本のセリフ `sorashidoCore`(よく開く24場面+仲良し度アップ・自己ベスト)・連打のセリフ(ASSISTANT_SPAM_SETS)。HOME のフレンド申請のひとこと
+- [x] 検査: `assistant-check.js` の「全場面に自分のセリフ」は、公開の印が偽の助手には求めない(印を真にした時点で求める)。`assistant-face-check.js` に仮の顔の基準・`kyuko-check.js`・`assistant-bond-reward-check.js` を7人に合わせた
 - [x] 仮の顔 `images/assistant/temp/sorashido_<表情>.png`(8つ・「仮」の札つき)。`tempImageDir` で吹き出しにも大きい絵の場所にも出る
 
 ## 公開までに残っていること
