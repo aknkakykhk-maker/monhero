@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0a00f66f2effe681
+// source-sha256: 397e5fe82ec6ac63
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -102882,19 +102882,52 @@ const CardPvpWatchList = ({
     style: JA_WRAP_STYLE
   }, jaWrap('見るだけで、操作やスタンプはできません。手札は見えません')));
 };
+const CardWatchMonMini = ({
+  db,
+  st,
+  p,
+  m
+}) => {
+  const mon = st.players[p].mons[m];
+  const pct = Math.max(0, Math.round(mon.life / mon.max * 100));
+  return React.createElement("div", {
+    "data-card-watch-mon": `${p}-${m}`,
+    className: `flex w-[32%] min-w-0 items-center gap-1 ${mon.ko ? 'opacity-50' : ''}`
+  }, React.createElement("img", {
+    src: mon.ko ? CARD_BACK_IMG() : CARD_IMG(cardMonsterOf(db, mon.no).img),
+    alt: mon.name,
+    className: "h-[40px] w-[28px] shrink-0 rounded-[3px] object-cover shadow"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "truncate text-[11px] font-black leading-tight text-white"
+  }, mon.name), React.createElement("div", {
+    className: "text-[12px] font-black leading-tight tabular-nums text-white"
+  }, mon.ko ? 'KO' : mon.life, React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, " / ", mon.max)), React.createElement("div", {
+    className: "h-[5px] overflow-hidden rounded bg-slate-700"
+  }, React.createElement("div", {
+    className: `h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`,
+    style: {
+      width: `${pct}%`
+    }
+  }))));
+};
 const CardWatchSide = ({
   db,
   st,
   p,
   person,
-  top = false
+  top = false,
+  low = false
 }) => {
   const pl = st.players[p];
   const active = st.winner === null && cardPvpDecider(st) === p;
   const row = React.createElement("div", {
     className: "flex items-center gap-2 px-1"
   }, React.createElement("span", {
-    className: "block h-[34px] w-[34px] shrink-0"
+    className: `block ${low ? 'h-[24px] w-[24px]' : 'h-[34px] w-[34px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
     icon: person && person.icon,
     frame: person && person.fr,
@@ -102914,11 +102947,17 @@ const CardWatchSide = ({
     key: i,
     src: CARD_BACK_IMG(),
     alt: "",
-    className: "h-[30px] w-[21px] rounded-[2px] shadow"
+    className: `${low ? 'h-[22px] w-[15px]' : 'h-[30px] w-[21px]'} rounded-[2px] shadow`
   }))));
   const mons = React.createElement("div", {
     className: "flex justify-between"
-  }, pl.mons.map((_, m) => React.createElement(CardMonSlot, {
+  }, pl.mons.map((_, m) => low ? React.createElement(CardWatchMonMini, {
+    key: m,
+    db: db,
+    st: st,
+    p: p,
+    m: m
+  }) : React.createElement(CardMonSlot, {
     key: m,
     db: db,
     st: st,
@@ -102928,7 +102967,7 @@ const CardWatchSide = ({
   })));
   return React.createElement("div", {
     "data-card-watch-side": p,
-    className: `rounded-2xl border p-1.5 ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`
+    className: `rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`
   }, top ? React.createElement(React.Fragment, null, row, mons) : React.createElement(React.Fragment, null, mons, row));
 };
 const CardPvpWatchScreen = ({
@@ -102947,7 +102986,21 @@ const CardPvpWatchScreen = ({
   const st = w.st;
   const winner = w.end ? cardWatchSideWinner(w.end.winner, w.side) : st && st.winner !== null ? st.winner : null;
   const nameOf = p => meta && meta.p[p] ? meta.p[p].name : p === 0 ? 'ブリーダー' : 'あいて';
-  const lines = st ? st.log.slice(-3).map(l => l.text) : [];
+  const [low, setLow] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
+  useEffect(() => {
+    const on = () => setLow(window.innerHeight < 520);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const lines = st ? st.log.slice(low ? -2 : -3).map(l => l.text) : [];
+  const overBox = st && meta && (w.phase === 'over' || winner !== null) && React.createElement("div", {
+    "data-card-watch-over": winner === null ? 'none' : winner,
+    className: `rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`
+  }, React.createElement("div", {
+    className: `${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`
+  }, winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`, low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''), !low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && React.createElement("div", {
+    className: "mt-0.5 text-[12px] font-bold text-slate-300"
+  }, "(", w.end.reason, ")"));
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-watch": w.phase,
@@ -102958,7 +103011,7 @@ const CardPvpWatchScreen = ({
     onBack: back,
     note: meta ? `${nameOf(0)} vs ${nameOf(1)}` : 'つないでいます…'
   }), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} space-y-2 pb-3`
+    className: `${SCREEN_LIST_CLASS} ${low ? 'space-y-1' : 'space-y-2'} pb-3`
   }, w.phase === 'full' && React.createElement("p", {
     "data-card-watch-full": true,
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100",
@@ -102977,15 +103030,16 @@ const CardPvpWatchScreen = ({
   }, st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'), React.createElement("span", {
     "data-card-watch-eyes": w.eyes,
     className: "tabular-nums"
-  }, "👀 ", w.eyes, "人が見ています")), React.createElement(CardWatchSide, {
+  }, "👀 ", w.eyes, "人が見ています")), low && overBox, React.createElement(CardWatchSide, {
     db: db,
     st: st,
     p: 1,
     person: meta.p[1],
-    top: true
+    top: true,
+    low: low
   }), React.createElement("div", {
     "data-card-watch-center": true,
-    className: "flex min-h-[100px] items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-2"
+    className: `flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`
   }, w.last ? React.createElement("div", {
     key: w.last.key,
     "data-card-watch-last": w.last.cards.join(','),
@@ -103000,10 +103054,10 @@ const CardPvpWatchScreen = ({
     }, React.createElement("img", {
       src: CARD_IMG(c.img),
       alt: c.name,
-      className: "h-[88px] w-[63px] rounded-md object-cover shadow-lg"
+      className: `${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} rounded-md object-cover shadow-lg`
     })) : null;
   })) : React.createElement("div", {
-    className: "h-[88px] w-[63px] shrink-0 rounded-md border border-dashed border-white/15"
+    className: `${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`
   }), React.createElement("div", {
     className: "min-w-0 flex-1 space-y-0.5"
   }, w.last && React.createElement("div", {
@@ -103016,15 +103070,9 @@ const CardPvpWatchScreen = ({
     db: db,
     st: st,
     p: 0,
-    person: meta.p[0]
-  }), (w.phase === 'over' || winner !== null) && React.createElement("div", {
-    "data-card-watch-over": winner === null ? 'none' : winner,
-    className: "rounded-2xl border border-amber-300/50 bg-amber-500/10 p-3 text-center"
-  }, React.createElement("div", {
-    className: "text-[16px] font-black text-amber-100"
-  }, winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`), w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && React.createElement("div", {
-    className: "mt-0.5 text-[12px] font-bold text-slate-300"
-  }, "(", w.end.reason, ")")))), React.createElement("div", {
+    person: meta.p[0],
+    low: low
+  }), !low && overBox)), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
     className: "flex gap-2"

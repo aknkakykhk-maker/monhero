@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 117054f1db3a1639
+// generated-sha256: 09b85903d94fe5bc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61688,12 +61688,28 @@ const CardPvpWatchList = ({ roster = [] }) => {
 };
 
 // ---- 画面: 観戦(両方の場を横から見る。手札は両方とも裏の札で、枚数だけ) ----
-const CardWatchSide = ({ db, st, p, person, top = false }) => {
+// 背の低い画面用の小さいモンスターの札(カードの絵・名前・ライフ・倒れた印だけ。立ち絵は出さない)
+const CardWatchMonMini = ({ db, st, p, m }) => {
+  const mon = st.players[p].mons[m];
+  const pct = Math.max(0, Math.round((mon.life / mon.max) * 100));
+  return (
+    <div data-card-watch-mon={`${p}-${m}`} className={`flex w-[32%] min-w-0 items-center gap-1 ${mon.ko ? 'opacity-50' : ''}`}>
+      <img src={mon.ko ? CARD_BACK_IMG() : CARD_IMG(cardMonsterOf(db, mon.no).img)} alt={mon.name} className="h-[40px] w-[28px] shrink-0 rounded-[3px] object-cover shadow"/>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[11px] font-black leading-tight text-white">{mon.name}</div>
+        <div className="text-[12px] font-black leading-tight tabular-nums text-white">{mon.ko ? 'KO' : mon.life}<span className="text-[10px] text-slate-400"> / {mon.max}</span></div>
+        <div className="h-[5px] overflow-hidden rounded bg-slate-700"><div className={`h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`} style={{ width: `${pct}%` }}/></div>
+      </div>
+    </div>
+  );
+};
+// low … 背の低い画面(横向き)。絵と行を小さくして、両方の場と決着の帯が下へ送らずに見えるようにする(2026-10-27 844×390 で下の場が画面の外に出た)
+const CardWatchSide = ({ db, st, p, person, top = false, low = false }) => {
   const pl = st.players[p];
   const active = st.winner === null && cardPvpDecider(st) === p;
   const row = (
     <div className="flex items-center gap-2 px-1">
-      <span className="block h-[34px] w-[34px] shrink-0"><CardPvpAvatar icon={person && person.icon} frame={person && person.fr} className="h-full w-full"/></span>
+      <span className={`block ${low ? 'h-[24px] w-[24px]' : 'h-[34px] w-[34px]'} shrink-0`}><CardPvpAvatar icon={person && person.icon} frame={person && person.fr} className="h-full w-full"/></span>
       <div className="min-w-0 flex-1">
         <div className={`truncate text-[13px] font-black ${active ? 'text-amber-200' : 'text-white'}`}>{(person && person.name) || pl.name}{active ? ' の番' : ''}</div>
         <div data-card-watch-counts={p} className="flex flex-wrap gap-x-2 text-[11px] font-bold text-slate-300 tabular-nums">
@@ -61701,12 +61717,12 @@ const CardWatchSide = ({ db, st, p, person, top = false }) => {
         </div>
       </div>
       <div data-card-watch-hand={p} className="flex shrink-0 -space-x-3" aria-label={`手札${pl.hand.length}枚`}>
-        {pl.hand.slice(0, 7).map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className="h-[30px] w-[21px] rounded-[2px] shadow"/>)}
+        {pl.hand.slice(0, 7).map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className={`${low ? 'h-[22px] w-[15px]' : 'h-[30px] w-[21px]'} rounded-[2px] shadow`}/>)}
       </div>
     </div>
   );
-  const mons = <div className="flex justify-between">{pl.mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact/>)}</div>;
-  return <div data-card-watch-side={p} className={`rounded-2xl border p-1.5 ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`}>{top ? <>{row}{mons}</> : <>{mons}{row}</>}</div>;
+  const mons = <div className="flex justify-between">{pl.mons.map((_, m) => (low ? <CardWatchMonMini key={m} db={db} st={st} p={p} m={m}/> : <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact/>))}</div>;
+  return <div data-card-watch-side={p} className={`rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`}>{top ? <>{row}{mons}</> : <>{mons}{row}</>}</div>;
 };
 const CardPvpWatchScreen = ({ onBack }) => {
   const [w, setW] = useState(() => CARD_WATCH.get());
@@ -61719,11 +61735,19 @@ const CardPvpWatchScreen = ({ onBack }) => {
   const st = w.st;
   const winner = w.end ? cardWatchSideWinner(w.end.winner, w.side) : st && st.winner !== null ? st.winner : null;
   const nameOf = (p) => (meta && meta.p[p] ? meta.p[p].name : p === 0 ? 'ブリーダー' : 'あいて');
-  const lines = st ? st.log.slice(-3).map((l) => l.text) : [];
+  const [low, setLow] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
+  useEffect(() => { const on = () => setLow(window.innerHeight < 520); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  const lines = st ? st.log.slice(low ? -2 : -3).map((l) => l.text) : [];
+  const overBox = st && meta && (w.phase === 'over' || winner !== null) && (
+    <div data-card-watch-over={winner === null ? 'none' : winner} className={`rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`}>
+      <div className={`${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`}>{winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`}{low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''}</div>
+      {!low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && <div className="mt-0.5 text-[12px] font-bold text-slate-300">({w.end.reason})</div>}
+    </div>
+  );
   return (
     <div data-mh-screen data-card-watch={w.phase} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="観戦" accent="text-violet-200" onBack={back} note={meta ? `${nameOf(0)} vs ${nameOf(1)}` : 'つないでいます…'}/>
-      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-3`}>
+      <div className={`${SCREEN_LIST_CLASS} ${low ? 'space-y-1' : 'space-y-2'} pb-3`}>
         {w.phase === 'full' && <p data-card-watch-full className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(`この対戦は、見ている人が${CARD_WATCH_MAX}人に達しています。少しあとでお試しください`)}</p>}
         {w.phase === 'connecting' && <p className="rounded-xl bg-white/5 p-3 text-center text-[13px] font-bold text-slate-200">対戦につないでいます…</p>}
         {w.error && <p data-card-watch-error className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[12px] font-bold text-rose-100" style={JA_WRAP_STYLE}>{jaWrap(w.error)}</p>}
@@ -61732,26 +61756,23 @@ const CardPvpWatchScreen = ({ onBack }) => {
             <span data-card-watch-turn={st.turn} className="tabular-nums">{st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'}</span>
             <span data-card-watch-eyes={w.eyes} className="tabular-nums">👀 {w.eyes}人が見ています</span>
           </div>
-          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top/>
+          {/* 背の低い画面では、決着の帯をいちばん上に(下に置くと画面の外に出た) */}
+          {low && overBox}
+          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low}/>
           {/* まんなか: いま使われた札と、場の記録の新しい3行 */}
-          <div data-card-watch-center className="flex min-h-[100px] items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-2">
+          <div data-card-watch-center className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`}>
             {w.last
               ? <div key={w.last.key} data-card-watch-last={w.last.cards.join(',')} className="flex shrink-0 gap-1">
-                {w.last.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <button key={i} type="button" onClick={() => setDetail(no)} className="block"><img src={CARD_IMG(c.img)} alt={c.name} className="h-[88px] w-[63px] rounded-md object-cover shadow-lg"/></button> : null; })}
+                {w.last.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <button key={i} type="button" onClick={() => setDetail(no)} className="block"><img src={CARD_IMG(c.img)} alt={c.name} className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} rounded-md object-cover shadow-lg`}/></button> : null; })}
               </div>
-              : <div className="h-[88px] w-[63px] shrink-0 rounded-md border border-dashed border-white/15"/>}
+              : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
             <div className="min-w-0 flex-1 space-y-0.5">
               {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
               {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
             </div>
           </div>
-          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]}/>
-          {(w.phase === 'over' || winner !== null) && (
-            <div data-card-watch-over={winner === null ? 'none' : winner} className="rounded-2xl border border-amber-300/50 bg-amber-500/10 p-3 text-center">
-              <div className="text-[16px] font-black text-amber-100">{winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`}</div>
-              {w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && <div className="mt-0.5 text-[12px] font-bold text-slate-300">({w.end.reason})</div>}
-            </div>
-          )}
+          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low}/>
+          {!low && overBox}
         </>)}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
