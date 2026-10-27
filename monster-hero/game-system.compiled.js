@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9479b22c8bd8d9bc
+// source-sha256: 0aef16a9e20d6853
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18721,6 +18721,38 @@ const BATTLE_STACK_MARKS = Object.freeze({
     mark: '💤',
     img: '',
     label: 'ドリームペイン',
+    unit: 'T'
+  }),
+  rengoku: Object.freeze({
+    mark: '♨️',
+    img: '',
+    label: '煉獄'
+  }),
+  kagero: Object.freeze({
+    mark: '🌫️',
+    img: '',
+    label: '陽炎の完全回避'
+  }),
+  kitsunebi: Object.freeze({
+    mark: '🦊',
+    img: '',
+    label: '狐火'
+  }),
+  ouse: Object.freeze({
+    mark: '🎐',
+    img: '',
+    label: '逢瀬'
+  }),
+  hoshiai: Object.freeze({
+    mark: '🌌',
+    img: '',
+    label: '星合の刻',
+    unit: 'T'
+  }),
+  reikon: Object.freeze({
+    mark: '🕯️',
+    img: '',
+    label: '霊魂',
     unit: 'T'
   })
 });
@@ -70644,6 +70676,7 @@ function BattleScreen({
   dismissTacticsExIntro,
   tacticsPandoraForms,
   trickStartView,
+  kyubiOrihimeStackMarks,
   sweetStackView,
   bowStackView,
   fateWheelView,
@@ -70893,6 +70926,7 @@ function BattleScreen({
       put(i, 'avoid', c.avoid);
       put(i, 'konjo', c.konjo);
     });
+    Object.entries(kyubiOrihimeStackMarks || {}).forEach(([i, c]) => Object.entries(c || {}).forEach(([kind, n]) => put(Number(i), kind, n)));
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => {
       out[Number(i)] = {
         ...(c || {})
@@ -106410,6 +106444,32 @@ function MonsterHeroGame() {
     reikonRef.current = next;
     setReikonView(next);
   };
+  const kyubiOrihimeStackMarks = (() => {
+    const out = {},
+      slotOf = key => key === 'party' ? initialBattleDistanceRef.current : Number(key);
+    const put = (key, kind, n) => {
+      const i = slotOf(key),
+        c = Math.max(0, Math.floor(Number(n) || 0));
+      if (!Number.isInteger(i) || c <= 0) return;
+      out[i] = {
+        ...(out[i] || {}),
+        [kind]: c
+      };
+    };
+    Object.entries(kyubiView.rengoku || {}).forEach(([k, n]) => put(k, 'rengoku', n));
+    Object.entries(kyubiView.kagero || {}).forEach(([k, v]) => put(k, 'kagero', kageroOf(v).ready ? 1 : 0));
+    Object.entries(kyubiView.kitsunebi || {}).forEach(([k, v]) => {
+      const f = kitsunebiOf(v);
+      if (f.active) put(k, 'kitsunebi', f.fires);
+    });
+    Object.entries(orihimeView.ouse || {}).forEach(([k, n]) => put(k, 'ouse', n));
+    Object.entries(orihimeView.hoshiai || {}).forEach(([k, v]) => put(k, 'hoshiai', v && v.turns));
+    Object.entries(reikonView || {}).forEach(([k, v]) => {
+      const r = reikonOf(v);
+      put(k, 'reikon', r.wait > 0 ? 0 : r.turns);
+    });
+    return out;
+  })();
   const tickKyubiKagero = () => {
     const cur = kyubiRef.current;
     const kagero = Object.fromEntries(Object.entries(cur.kagero).map(([k, v]) => [k, tickKagero(v)]));
@@ -136508,6 +136568,7 @@ function MonsterHeroGame() {
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
+      kyubiOrihimeStackMarks: kyubiOrihimeStackMarks,
       tacticsShields: isTacticsMode(runMode) && tacticsExEnabled ? [0, 1, 2, 3].map(i => tacticsExShieldAt(tacticsExState, i, tacticsExNow)) : null,
       sweetStackView: sweetStackView,
       bowStackView: bowStackView,

@@ -440,6 +440,13 @@ const BATTLE_STACK_MARKS = Object.freeze({
   roar:       Object.freeze({ mark:'📢', img:'', label:'咆哮' }),              // 敵: 自分にかけた攻撃アップ
   kusabi:     Object.freeze({ mark:'🔻', img:'', label:'楔' }),                // 敵: イルミネ・ドリーミィ(影潜)が付けた楔
   dreamPain:  Object.freeze({ mark:'💤', img:'', label:'ドリームペイン', unit:'T' }), // 敵: ドリーミィの固有技(被ダメージ上昇の残りターン)
+  // キュービ・オリヒメ(2026-10-27・公開前)。数は 60-app の kyubiOrihimeStackMarks が枠ごとに作る
+  rengoku:    Object.freeze({ mark:'♨️', img:'', label:'煉獄' }),              // キュービ(九尾四相・煉獄ノ相)
+  kagero:     Object.freeze({ mark:'🌫️', img:'', label:'陽炎の完全回避' }),    // キュービ(九尾四相・陽炎ノ相)。持っていれば1
+  kitsunebi:  Object.freeze({ mark:'🦊', img:'', label:'狐火' }),              // キュービ(九尾幻灯・タクティクス)
+  ouse:       Object.freeze({ mark:'🎐', img:'', label:'逢瀬' }),              // オリヒメ(天河の契り)
+  hoshiai:    Object.freeze({ mark:'🌌', img:'', label:'星合の刻', unit:'T' }), // オリヒメ(星合の刻・タクティクス)の残りターン
+  reikon:     Object.freeze({ mark:'🕯️', img:'', label:'霊魂', unit:'T' }),     // キュービ・オリヒメの固有技の効果の残りターン
 });
 // ★モンスターごとの演出(2026-10-12 社長の決定「3体を入れて、残りも順に」。案の一覧は docs/proto/monster-visuals/README.md)。
 //   「マーク×数」の上乗せで、数字の代わりにはしない。置くのは枠の絵のまわりだけ。軽量表示・超省エネでは出さない。

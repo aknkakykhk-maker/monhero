@@ -213,6 +213,7 @@ const check = (name, ok, detail = '') => {
     await page.waitForTimeout(1500);
     const afterUse = await log();
     check('使うと狐火5/5の吹き出し', /狐火 5\/5/.test(afterUse), afterUse.slice(0, 160));
+    check('キュービの枠に「🦊×5」の札(狐火の数)が出る', await page.locator(`[data-stack-mark="kitsunebi"][data-stack-count="5"]`).count() >= 1);
     if (process.env.OUT) await page.screenshot({ path: process.env.OUT + '/kyubi-2-ex.png' });
     const before = await partyOf(kSlot);
     // オートに切り替えて、しばらく戦わせ、出た吹き出し・ログの文字を拾う
