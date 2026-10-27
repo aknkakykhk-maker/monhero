@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f60d1c62af9d6c8d
+// source-sha256: 65793108ec12bd29
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57562,43 +57562,53 @@ function MonsterDexDetailScreen({
   }, "固有技（進化段階）"), skillPills(getUniqueSkillLevels(mon), 'border-white/10 bg-amber-950/30'), React.createElement("div", {
     className: "text-[11px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words"
   }, "\"", mon.unique?.effectDesc || '', "\"")), (() => {
-    const exDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
-    if (!exDef) return null;
-    const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
-      turn: 'そのターン',
-      wave: 'そのWAVE',
-      style: '再使用まで'
-    }[exDef.duration] || String(exDef.duration || '—');
+    const heroExDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
+    if (!heroExDef) return null;
+    const supportExDef = heroExDef.supportKey ? tacticsExDefOf(heroExDef.supportKey) : null;
+    const exRows = supportExDef ? [[heroExDef, '勇者のとき'], [supportExDef, '共モンのとき']] : [[heroExDef, '']];
     return React.createElement("div", {
-      "data-dex-ex-skill": true,
-      className: "rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"
-    }, React.createElement("div", {
-      className: "flex items-center justify-between gap-2"
-    }, React.createElement("div", {
-      className: "text-[10px] font-black text-violet-300 tracking-widest"
-    }, "EXスキル"), React.createElement("div", {
-      className: "text-[9px] font-black text-violet-200/80"
-    }, "タクティクス専用")), React.createElement("div", {
-      className: "mt-0.5 text-[12px] font-black text-white"
-    }, "EX《", exDef.name, "》"), React.createElement("div", {
-      className: "mt-1 text-[10px] font-bold text-slate-200"
-    }, React.createElement(ExDescText, {
-      text: exDef.desc
-    })), React.createElement("div", {
-      className: "mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"
-    }, React.createElement("span", {
-      className: "rounded-lg bg-black/30 px-1.5 py-1"
-    }, "回数 ", React.createElement("b", {
-      className: "text-white"
-    }, exDef.unlimited ? '無制限' : `${exDef.usesPerWave ? '各WAVE ' : 'ラン'}${exDef.maxUses}回`)), React.createElement("span", {
-      className: "rounded-lg bg-black/30 px-1.5 py-1"
-    }, "効果時間 ", React.createElement("b", {
-      className: "text-white"
-    }, durationLabel)), React.createElement("span", {
-      className: "rounded-lg bg-black/30 px-1.5 py-1"
-    }, "通常カード ", React.createElement("b", {
-      className: "text-white"
-    }, exDef.withCards ? '併用可' : '併用不可'))));
+      className: "flex flex-col gap-2"
+    }, exRows.map(([exDef, roleLabel]) => {
+      const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
+        turn: 'そのターン',
+        wave: 'そのWAVE',
+        style: '再使用まで'
+      }[exDef.duration] || String(exDef.duration || '—');
+      return React.createElement("div", {
+        key: exDef.id || exDef.name,
+        "data-dex-ex-skill": true,
+        "data-dex-ex-role": roleLabel || undefined,
+        className: "rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"
+      }, React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, React.createElement("div", {
+        className: "text-[10px] font-black text-violet-300 tracking-widest"
+      }, "EXスキル", roleLabel && React.createElement("span", {
+        className: "ml-1.5 rounded-full bg-violet-800/60 px-1.5 py-0.5 text-[9px] text-violet-100 tracking-normal"
+      }, roleLabel)), React.createElement("div", {
+        className: "text-[9px] font-black text-violet-200/80"
+      }, "タクティクス専用")), React.createElement("div", {
+        className: "mt-0.5 text-[12px] font-black text-white"
+      }, "EX《", exDef.name, "》"), React.createElement("div", {
+        className: "mt-1 text-[10px] font-bold text-slate-200"
+      }, React.createElement(ExDescText, {
+        text: exDef.desc
+      })), React.createElement("div", {
+        className: "mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"
+      }, React.createElement("span", {
+        className: "rounded-lg bg-black/30 px-1.5 py-1"
+      }, "回数 ", React.createElement("b", {
+        className: "text-white"
+      }, exDef.unlimited ? '無制限' : `${exDef.usesPerWave ? '各WAVE ' : 'ラン'}${exDef.maxUses}回`)), React.createElement("span", {
+        className: "rounded-lg bg-black/30 px-1.5 py-1"
+      }, "効果時間 ", React.createElement("b", {
+        className: "text-white"
+      }, durationLabel)), React.createElement("span", {
+        className: "rounded-lg bg-black/30 px-1.5 py-1"
+      }, "通常カード ", React.createElement("b", {
+        className: "text-white"
+      }, exDef.withCards ? '併用可' : '併用不可'))));
+    }));
   })()))) : React.createElement("div", {
     className: "flex-1 min-h-0 flex items-center justify-center"
   }, React.createElement(ScreenEmpty, {
@@ -121757,7 +121767,7 @@ function MonsterHeroGame() {
         unitsLog = tacticsUnitsRef.current,
         nowLog = tacticsExLiveRef.current.now;
       slots.forEach((m, i) => {
-        const dLog = m ? tacticsExDefOf(m.id) : null;
+        const dLog = m ? raidExDefOf(m.id) : null;
         if (!dLog || dLog.duration !== 'turns') return;
         const who = `EX ${battleActorName(i)}「${dLog.name}」`;
         if (dLog.effect === 'thunder') {
@@ -126638,41 +126648,52 @@ function MonsterHeroGame() {
       className: "text-[10px] text-slate-500 font-bold mt-1 leading-tight",
       style: JA_WRAP_STYLE
     }, jaWrap('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます'))), renderSkillSection(mon), (() => {
-      const exDef = typeof tacticsExDefOf === 'function' ? raidExDefOf(mon.id) : null;
-      if (!exDef) return null;
-      const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
-        turn: 'そのターン',
-        wave: 'そのWAVE',
-        style: '再使用まで'
-      }[exDef.duration] || String(exDef.duration || '—');
+      const heroExDef = typeof tacticsExRoleDefOf === 'function' ? tacticsExRoleDefOf(mon.id, true) : null;
+      if (!heroExDef) return null;
+      const roleSupportDef = tacticsExRoleDefOf(mon.id, false);
+      const supportExDef = roleSupportDef && roleSupportDef.id !== heroExDef.id ? roleSupportDef : null;
+      const exRows = supportExDef ? [[heroExDef, '勇者のとき'], [supportExDef, '共モンのとき']] : [[raidExDefOf(mon.id), '']];
       return React.createElement("div", {
-        "data-monster-detail-ex": true,
-        className: "rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0"
-      }, React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
-      }, React.createElement("div", {
-        className: "text-[10px] font-black uppercase tracking-widest text-violet-300"
-      }, "EXスキル"), React.createElement("div", {
-        className: "text-[9px] font-black text-violet-200/80"
-      }, "タクティクス専用")), React.createElement("div", {
-        className: "mt-0.5 text-[12px] font-black text-white"
-      }, "EX《", exDef.name, "》"), React.createElement("div", {
-        className: "mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
-      }, helpWrap(exDef.desc)), React.createElement("div", {
-        className: "mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black"
-      }, React.createElement("div", {
-        className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
-      }, "回数", React.createElement("span", {
-        className: "block text-white"
-      }, exDef.unlimited ? '無制限' : `${exDef.maxUses}回`)), React.createElement("div", {
-        className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
-      }, "効果時間", React.createElement("span", {
-        className: "block text-white"
-      }, durationLabel)), React.createElement("div", {
-        className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
-      }, "通常カード", React.createElement("span", {
-        className: "block text-white"
-      }, exDef.withCards ? '併用可' : '併用不可'))));
+        className: "flex flex-col gap-2 min-w-0"
+      }, exRows.map(([exDef, roleLabel]) => {
+        const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
+          turn: 'そのターン',
+          wave: 'そのWAVE',
+          style: '再使用まで'
+        }[exDef.duration] || String(exDef.duration || '—');
+        return React.createElement("div", {
+          key: exDef.id || exDef.name,
+          "data-monster-detail-ex": true,
+          "data-monster-detail-ex-role": roleLabel || undefined,
+          className: "rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0"
+        }, React.createElement("div", {
+          className: "flex items-center justify-between gap-2"
+        }, React.createElement("div", {
+          className: "text-[10px] font-black uppercase tracking-widest text-violet-300"
+        }, "EXスキル", roleLabel && React.createElement("span", {
+          className: "ml-1.5 rounded-full bg-violet-800/60 px-1.5 py-0.5 text-[9px] normal-case text-violet-100 tracking-normal"
+        }, roleLabel)), React.createElement("div", {
+          className: "text-[9px] font-black text-violet-200/80"
+        }, "タクティクス専用")), React.createElement("div", {
+          className: "mt-0.5 text-[12px] font-black text-white"
+        }, "EX《", exDef.name, "》"), React.createElement("div", {
+          className: "mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
+        }, helpWrap(exDef.desc)), React.createElement("div", {
+          className: "mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black"
+        }, React.createElement("div", {
+          className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
+        }, "回数", React.createElement("span", {
+          className: "block text-white"
+        }, exDef.unlimited ? '無制限' : `${exDef.maxUses}回`)), React.createElement("div", {
+          className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
+        }, "効果時間", React.createElement("span", {
+          className: "block text-white"
+        }, durationLabel)), React.createElement("div", {
+          className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
+        }, "通常カード", React.createElement("span", {
+          className: "block text-white"
+        }, exDef.withCards ? '併用可' : '併用不可'))));
+      }));
     })(), renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません'), React.createElement("div", {
       className: "grid grid-cols-2 gap-2 shrink-0"
     }, React.createElement("div", {
