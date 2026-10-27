@@ -116,9 +116,17 @@ const cardPvpHistoryRoomLeft = () => {
   try { window.localStorage.setItem(CARD_PVP_HISTORY_PROBE_KEY, 'x'.repeat(CARD_PVP_HISTORY_ROOM)); return true; } catch (_) { return false; } finally { try { window.localStorage.removeItem(CARD_PVP_HISTORY_PROBE_KEY); } catch (_) { /* 消せなくても続ける */ } }
 };
 // 書けない・書いたあと空きが無いときは、古い試合から減らして書き直す(いちばん新しい試合は残す)。それでも入らなければあきらめる(ゲームは止めない)
+// 端末に履歴があるのに、読んだ値が配列でない(読めない・形が壊れている)ときは、書かない(93 の見返しと同じ守り・2026-10-27 案1)。
+//   読み違えた空の一覧から作り直して書くと、今までの対戦が消える
+const cardPvpHistoryReadLost = (raw) => {
+  if (Array.isArray(raw)) return false;
+  try { return typeof window !== 'undefined' && !!window.localStorage && window.localStorage.getItem(CARD_PVP_HISTORY_KEY) !== null; } catch (_) { return false; }
+};
 const cardPvpHistoryWrite = async (fn) => {
   try {
-    const list = fn(await cardPvpHistoryLoad()).slice();
+    const raw = await storeGet(CARD_PVP_HISTORY_KEY, null, false);
+    if (cardPvpHistoryReadLost(raw)) return null;
+    const list = fn(cardPvpNormalizeHistory(raw)).slice();
     for (;;) {
       const ok = await cardPvpHistoryPut(list);
       if (ok && cardPvpHistoryRoomLeft()) return list;
