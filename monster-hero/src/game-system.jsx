@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31427350c74a3ef2
+// generated-sha256: 9fb8cf3f9bfbd631
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28321,29 +28321,41 @@ const planAiCopyTurn = (aiCopy, { deck = [], score = null, costOf = null, rng = 
 // 2026-10-27 バトル部ダイスくん。出し方・消し方・数え方は共通の 33-ai-copy.jsx、数字は 32-sorashido-copy.jsx。
 // ここは「5つの遊びはパーティで1組の値を持つ」ことに合わせる所だけ(画面・保存・乱数の元に触らない)。
 //   ・コピーはライフを持たない(パーティのライフを使う。狙われない・倒されない。社長の答え・案2)
-//   ・強さの元は「元の子1体のぶん」(ジン部長の答え)。勇者モンは基礎の値、供モンは合流で足したぶん(plusStats)。
-//     そのあとの育成・強化はパーティの値にまとめて入っているので、いまのパーティの値を「その子のぶんの割合」で分けて持たせる
-//     (育成していなければ、その子のぶんがそのまま出る)
+//   ・強さの元は「元の子1体の基礎の値」(勇者モンも供モンも同じ物差し。2026-10-27 ジン部長・社長の答え待ちの仮)。
+//     そのあとの育成・強化はパーティの値にまとめて入っているので、増えたぶん(いまのパーティ − 4枠がパーティへ足したぶん)を
+//     「その子がパーティへ足したぶんの割合」で分けて足す(育成していなければ基礎の値がそのまま出る)
+//     ★社長の答えが「供モンは合流で足したぶん(plusStats)」なら、CLASSIC_AI_COPY_ALLY_BASE を 'plus' にするだけで戻る
 //   ・攻撃は元の子の間合い(srcSlot)から、コピーのちからで撃つ(パーティのちからで出したダメージを、ちからの比で縮める)
 
-// その子がパーティへ足しているぶん(勇者モンは基礎、供モンは合流ボーナス)
+// 供モンのコピーの物差し。'base' … その子の基礎の値(勇者モンと同じ) / 'plus' … 合流で足したぶん
+const CLASSIC_AI_COPY_ALLY_BASE = 'base';
+
+// その子がパーティへ足しているぶん(勇者モンは基礎、供モンは合流ボーナス)。育成ぶんを分ける割合に使う
 const classicAiCopyShareOf = (mon, isHero) => {
   if (!mon) return { atk: 0, def: 0, maxGuts: 0 };
   const plus = (mon.plusStats && typeof mon.plusStats === 'object') ? mon.plusStats : {};
   const pick = (heroKey, plusKey) => Math.max(0, aiCopySafeNum(isHero ? mon[heroKey] : plus[plusKey]));
   return { atk: pick('baseAtk', 'atk'), def: pick('baseDef', 'def'), maxGuts: pick('baseGuts', 'guts') };
 };
+// コピーの物差しになる「その子の値」(育成ぶんを足す前)
+const classicAiCopyBaseOf = (mon, isHero) => {
+  if (!mon) return { atk: 0, def: 0, maxGuts: 0 };
+  if (isHero || CLASSIC_AI_COPY_ALLY_BASE !== 'base') return classicAiCopyShareOf(mon, isHero);
+  return { atk: Math.max(0, aiCopySafeNum(mon.baseAtk)), def: Math.max(0, aiCopySafeNum(mon.baseDef)), maxGuts: Math.max(0, aiCopySafeNum(mon.baseGuts)) };
+};
 
 // コピーの元の値(aiCopyStats へ渡す src)。slots … いまの4枠 / heroId … 勇者モンの id / party … パーティの atk・def・maxGuts
 const classicAiCopySrc = ({ slots = [], srcSlot = 0, heroId = null, party = {} } = {}) => {
   const list = Array.isArray(slots) ? slots : [];
-  const shares = list.map((m) => classicAiCopyShareOf(m, !!(m && heroId != null && m.id === heroId)));
+  const isHeroAt = (m) => !!(m && heroId != null && m.id === heroId);
+  const shares = list.map((m) => classicAiCopyShareOf(m, isHeroAt(m)));
   const mine = shares[srcSlot] || { atk: 0, def: 0, maxGuts: 0 };
+  const base = classicAiCopyBaseOf(list[srcSlot], isHeroAt(list[srcSlot]));
   const part = (key) => {
     const total = shares.reduce((n, s) => n + s[key], 0);
-    const now = Math.max(0, aiCopySafeNum(party && party[key]));
-    if (!(total > 0)) return 0;
-    return Math.floor(now * (mine[key] / total));
+    const grown = Math.max(0, aiCopySafeNum(party && party[key]) - total);
+    const extra = total > 0 ? grown * (mine[key] / total) : 0;
+    return Math.floor(base[key] + extra);
   };
   return { atk: part('atk'), def: part('def'), maxGuts: part('maxGuts') };
 };
