@@ -18,9 +18,8 @@ const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
-// ソラシド(2026-10-27)。顔の絵は社長があとで送る。届くまでは字のアイコン(公開の印 assistantSorashido が偽のあいだは出ない)。
-//   届いたら images/assistant/face/sorashido_happy.PNG にする
-const SORASHIDO_FACE_ICON = "🤖";
+// ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
+const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=27d67b71522c";
 // スネグーラチカの高解像度の立ち絵。顔アイコン(make-face-icons.js)の元絵で、覚醒のほうはマーケットのアイコン商品で使う。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
