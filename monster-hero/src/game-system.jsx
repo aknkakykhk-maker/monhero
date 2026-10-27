@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e1235c3ae3f9a330
+// generated-sha256: 41cb8afbd7b432f8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -36095,10 +36095,16 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
                     <div className="text-[11px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words">"{mon.unique?.effectDesc||''}"</div>
                   </div>
                   {(()=>{
-                    const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
-                    if(!exDef)return null;
+                    const heroExDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
+                    if(!heroExDef)return null;
+                    // 勇者モンでないときに別のEXになる子(supportKey。2026-10-28 社長「オリヒメの共モンの時のEXスキルの内容がちが〜う」)は、
+                    // 「勇者のとき」「共モンのとき」の2段で並べる。バトルで使う引き替えは 32-tactics-units.jsx の tacticsExRoleDefOf
+                    const supportExDef=heroExDef.supportKey?tacticsExDefOf(heroExDef.supportKey):null;
+                    const exRows=supportExDef?[[heroExDef,'勇者のとき'],[supportExDef,'共モンのとき']]:[[heroExDef,'']];
+                    return <div className="flex flex-col gap-2">{exRows.map(([exDef,roleLabel])=>{
                     const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
-                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 text-[10px] font-bold text-slate-200"><ExDescText text={exDef.desc}/></div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.usesPerWave?'各WAVE ':'ラン'}${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
+                    return <div key={exDef.id||exDef.name} data-dex-ex-skill data-dex-ex-role={roleLabel||undefined} className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル{roleLabel&&<span className="ml-1.5 rounded-full bg-violet-800/60 px-1.5 py-0.5 text-[9px] text-violet-100 tracking-normal">{roleLabel}</span>}</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 text-[10px] font-bold text-slate-200"><ExDescText text={exDef.desc}/></div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.usesPerWave?'各WAVE ':'ラン'}${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
+                    })}</div>;
                   })()}
                 </div>)}
               </div>
@@ -77322,7 +77328,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
       const stLog=tacticsExStateRef.current, unitsLog=tacticsUnitsRef.current, nowLog=tacticsExLiveRef.current.now;
       slots.forEach((m,i)=>{
-        const dLog=m?tacticsExDefOf(m.id):null;
+        // 勇者モンでない子は共モンのときの定義で数える(オリヒメの焦がれ待つ天ノ河。2026-10-28)
+        const dLog=m?raidExDefOf(m.id):null;
         if(!dLog||dLog.duration!=='turns') return;
         const who=`EX ${battleActorName(i)}「${dLog.name}」`;
         if(dLog.effect==='thunder'){
@@ -80981,11 +80988,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight" style={JA_WRAP_STYLE}>{jaWrap('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます')}</div></div>
       {renderSkillSection(mon)}
       {(()=>{
-        const exDef=typeof tacticsExDefOf==='function'?raidExDefOf(mon.id):null;
-        if(!exDef)return null;
+        const baseExDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
+        if(!baseExDef)return null;
+        // 勇者モンでないときに別のEXになる子(オリヒメ)は「勇者のとき」「共モンのとき」の2段で並べる(2026-10-28。図鑑と同じ)。
+        // ほかの子は今までどおり raidExDefOf(mon.id)(レイドの回数の上書きを含む)
+        const supportExDef=baseExDef.supportKey?tacticsExDefOf(baseExDef.supportKey):null;
+        const exRows=supportExDef?[[baseExDef,'勇者のとき'],[supportExDef,'共モンのとき']]:[[raidExDefOf(mon.id),'']];
+        return <div className="flex flex-col gap-2 min-w-0">{exRows.map(([exDef,roleLabel])=>{
         const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
-        return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
-          <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
+        return <div key={exDef.id||exDef.name} data-monster-detail-ex data-monster-detail-ex-role={roleLabel||undefined} className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
+          <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル{roleLabel&&<span className="ml-1.5 rounded-full bg-violet-800/60 px-1.5 py-0.5 text-[9px] normal-case text-violet-100 tracking-normal">{roleLabel}</span>}</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
           <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
           <div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{helpWrap(exDef.desc)}</div>
           <div className="mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black">
@@ -80994,6 +81006,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">通常カード<span className="block text-white">{exDef.withCards?'併用可':'併用不可'}</span></div>
           </div>
         </div>;
+        })}</div>;
       })()}
       {/* ② 選び方で決まる効果。個体そのものの強さ(総合力)とは別物なので見出しで分ける */}
       {renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません')}
