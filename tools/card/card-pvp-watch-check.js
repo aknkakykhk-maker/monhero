@@ -12,6 +12,7 @@
 //   ④ 途中から見る人(はじめの何手かを、あとからまとめてもらう)も同じ場になる
 //   ⑤ 受け取った知らせの掃除(知らない形・大きすぎる数・手札の番号の形)
 //   ⑥ 対戦中の一覧の並び(フレンドの試合が先・古い知らせは消える)
+//   ⑧ 決着の帯の言葉: ホストから見た理由(投了・相手の投了・時間切れ・相手が抜けた・通信が切れた)を、見る人の見方(いつ・だれが投了したか・だれの勝ちか)で言い直す。下に出す人を入れ替えても合う
 //   ⑦ 捨て札から絞り込んで選ぶ札(回避プログラム・悪夢)と全体カードの多い試合でも、マルチと観戦で手がはねられない
 const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = require('crypto');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
@@ -23,7 +24,7 @@ vm.runInContext(`${read('data/card-battle-cards.js')}\n;\n${read('src/parts/82-c
   + 'const rhythmMultiText = (v, max) => String(v == null ? "" : v).replace(/[\\u0000-\\u001f]/g, "").slice(0, max);\n'
   + `${multi}\n;\n${watch}\n;\nthis.E = { CARD_BATTLE_DATA, cardAiChooseAction, cardAiPolicy, cardLegalActions, cardAiFillBind, cardUsableBy, cardDeckProblems, cardAiBuildDeck, cardApplyAction, CARD_PVP_HIDDEN, cardPvpFlip, cardPvpRevealOf, cardPvpNewGame,
     cardPvpApplyRemote, cardPvpPatchDiscard, cardPvpCleanMessage, cardPvpTimeoutAct, cardPvpDecider, cardWatchNewGame, cardWatchApply, cardWatchSideEntry, cardWatchSideMeta, cardWatchPatchDiscards,
-    cardWatchCleanMessage, cardWatchLiveList, CARD_WATCH_LIVE_FRESH_MS };`, ctx);
+    cardWatchCleanMessage, cardWatchLiveList, CARD_WATCH_LIVE_FRESH_MS, cardWatchEndText };`, ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const H = E.CARD_PVP_HIDDEN;
@@ -212,6 +213,28 @@ check(`④ 途中から見る人も、はじめからの手をまとめてもら
     c: { match: 'c', p: [{ bid: 'q' }, { bid: 'f2' }], eyes: 5, at: now, seen: now }, d: { match: 'd', p: [{ bid: 'f' }, { bid: 'w' }], eyes: 0, at: now, seen: now - E.CARD_WATCH_LIVE_FRESH_MS - 1 } };
   const list = E.cardWatchLiveList(seen, now, new Set(['f', 'f2']));
   check('⑥ フレンドの試合が先・古い知らせは消える・フレンドがどちら側かが分かる', list.map((x) => x.match).join() === 'c,b,a' && list[0].friend === 1 && list[1].friend === 0 && list[2].friend === -1);
+}
+{
+  // ⑧ 決着の帯の言葉(ホスト A=0・相手 B=1。見る人の見え方 side=0 ならホストが下(0)、side=1 なら B が下(0))
+  const names = (side) => (p) => (side === 1 ? ['ビー', 'エー'] : ['エー', 'ビー'])[p];
+  const T = (end, side, turn = 0) => { const r = E.cardWatchEndText(end, side, names(side), turn); return `${r.winner}|${r.how}|${r.head}|${r.sub}`; };
+  const cases = [
+    [{ winner: 0, reason: '相手の投了' }, 0, 9, '0|surrender|エーさんの勝ち！|ターン9で ビーさんが投了しました'],
+    [{ winner: 0, reason: '相手の投了' }, 1, 9, '1|surrender|エーさんの勝ち！|ターン9で ビーさんが投了しました'],
+    [{ winner: 1, reason: '投了' }, 0, 0, '1|surrender|ビーさんの勝ち！|エーさんが投了しました'],
+    [{ winner: 1, reason: '時間切れ' }, 1, 12, '0|timeout|ビーさんの勝ち！|ターン12で エーさんの時間切れ(3回)'],
+    [{ winner: 0, reason: '相手の時間切れ' }, 0, 3, '0|timeout|エーさんの勝ち！|ターン3で ビーさんの時間切れ(3回)'],
+    [{ winner: 0, reason: '相手が抜けた' }, 0, 5, '0|left|エーさんの勝ち！|ターン5で ビーさんが対戦から抜けました'],
+    [{ winner: 1, reason: '通信が切れた' }, 0, 5, '1|left|ビーさんの勝ち！|ターン5で エーさんが対戦から抜けました'],
+    [{ winner: 1, reason: '抜けた' }, 1, 5, '0|left|ビーさんの勝ち！|ターン5で エーさんが対戦から抜けました'],
+    [{ winner: 0, reason: '勝ち' }, 0, 20, '0||エーさんの勝ち！|決着がつきました'],
+    [{ winner: 1, reason: '負け' }, 1, 20, '0||ビーさんの勝ち！|決着がつきました'],
+    [{ winner: null, reason: '' }, 0, 4, 'null||対戦が終わりました|'],
+  ];
+  const bad = cases.filter(([e, side, turn, want]) => T(e, side, turn) !== want).map(([e, side, turn, want]) => `${JSON.stringify(e)} side${side}: ${T(e, side, turn)} (期待 ${want})`);
+  check('⑧ 決着の帯の言葉が、見る人の見方で合う(いつ・だれが投了・時間切れ・抜けた・ふつうの決着)', !bad.length, bad.slice(0, 3).join(' / '));
+  const hb = E.cardWatchCleanMessage({ t: 'w-hb', from: 'h', match: 'm1', n: 3, eyes: 1, end: { winner: 0, reason: '相手の投了' } });
+  check('⑧ 決着の知らせが掃除を通っても、理由の言葉が残る', hb && hb.end && hb.end.reason === '相手の投了' && hb.end.winner === 0, JSON.stringify(hb && hb.end));
 }
 console.log(failed ? `\nNG が ${failed} 件あります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

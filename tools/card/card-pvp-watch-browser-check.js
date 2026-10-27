@@ -10,11 +10,13 @@
 //   ① C の一覧に、対戦中のフレンド(A)の試合が出る(realtime:mhc-live)
 //   ② 「見る」で観戦の画面になり、途中からでも、はじめからの手をもらって、いまの場面まで追いつく
 //   ③ 見ている人の数が、A と B の対戦の画面に「👀 1」と出る
-//   ④ 観戦の画面に、両方の手札は裏の札(枚数だけ)で出る。C の場の山札は全部仮の札
+//   ④ 観戦の画面(対戦の盤面の観戦の形)に、両方の手札は裏の札(枚数だけ)で出る。表の手札は無い。C の場の山札は全部仮の札
 //   ⑤ 観戦の通り道に流れた知らせに、山札・封・デッキの中身の項目が無い。B(ホストでない人)は観戦の通り道へ何も送らない
 //   ⑥ 決着すると、観戦の画面に勝った人が出る。A・B の結果も今までどおり(片方が勝ち・片方が負け)
 //   ⑦ 観戦をやめると、マルチ対戦の入口へ戻る
 //   ⑧ 実行時エラーが無い・C は保存を書き換えない
+//   ⑨ 「もう1戦」の2試合目で、ホストでない B が途中で投了すると、観戦の盤面に決着の帯(「ターン◯で ビーさんが投了しました」「エーさんの勝ち！」)が出る。
+//      帯を閉じると、下のボタンは「観戦の一覧へ戻る」(2026-10-27 社長「観戦だと投了したら終わったのがわからない」「どちらがいつ投了したか」)
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -177,9 +179,9 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     check('③ 見ている人の数が、2人の対戦の画面に「👀 1」と出る', eyesA === '1' && eyesB === '1', `${eyesA} / ${eyesB}`);
     await shot(C, 'watch-02-screen'); await shot(A, 'watch-03-host'); await shot(B, 'watch-04-guest');
     // 場が進むと画面の描き直しが少し遅れるので、裏の札の数と手札の数がそろう瞬間を待ってから読む
-    await C.waitForFunction(() => { const st = CARD_WATCH.get().st; return st && [0, 1].every((p) => document.querySelectorAll(`[data-card-watch-hand="${p}"] img`).length === Math.min(7, st.players[p].hand.length)); }, null, { timeout: 10000 }).catch(() => {});
-    const hid = await C.evaluate(() => { const st = CARD_WATCH.get().st; return { deck: st.players.every((p) => p.deck.every((no) => no === CARD_PVP_HIDDEN)), backs: [0, 1].map((p) => document.querySelectorAll(`[data-card-watch-hand="${p}"] img`).length), hands: st.players.map((p) => p.hand.length) }; });
-    check('④ 観戦の画面に、両方の手札が裏の札で出る・山札は全部仮の札', hid.deck && hid.backs.every((n, i) => n === Math.min(7, hid.hands[i])), JSON.stringify(hid));
+    await C.waitForFunction(() => { const st = CARD_WATCH.get().st; const b = [0, 1].map((p) => document.querySelectorAll(p === 0 ? '[data-card-watch-hand="0"] img' : '[data-card-hand-of="1"] img').length); return st && b[0] === Math.min(8, st.players[0].hand.length) && b[1] === st.players[1].hand.length; }, null, { timeout: 10000 }).catch(() => {});
+    const hid = await C.evaluate(() => { const st = CARD_WATCH.get().st; return { deck: st.players.every((p) => p.deck.every((no) => no === CARD_PVP_HIDDEN)), backs: [0, 1].map((p) => document.querySelectorAll(p === 0 ? '[data-card-watch-hand="0"] img' : '[data-card-hand-of="1"] img').length), front: document.querySelectorAll('[data-card-hand-card]').length, hands: st.players.map((p) => p.hand.length) }; });
+    check('④ 観戦の画面に、両方の手札が裏の札で出る・山札は全部仮の札', hid.deck && hid.front === 0 && hid.backs[0] === Math.min(8, hid.hands[0]) && hid.backs[1] === hid.hands[1], JSON.stringify(hid));
     // 終わるまで追う(途中で、観戦の場が当てられなくなっていないか)
     const deadline = Date.now() + 300000;
     let broke = '';
@@ -206,6 +208,32 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const fromB = watchMsgs.filter((m) => m.payload && m.payload.from === idB).length;
     check('⑤ 観戦の通り道に、山札・封・デッキの中身・場そのものの項目が無い', bad.length === 0 && watchMsgs.length > 0, `${bad.join(',')} / ${watchMsgs.length}通`);
     check('⑤ ホストでない B は、観戦の通り道へ何も送らない', fromB === 0, `${fromB}通`);
+    if (await C.locator('[data-card-watch-over]').count()) await C.locator('[data-card-watch-over]').click();
+    await C.locator('[data-card-watch-leave]').click();
+    await C.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    // ⑨ 2試合目(同じ部屋の「もう1戦」)を見て、B の投了で終わる
+    await A.locator('[data-card-pvp-again]').click(); await B.locator('[data-card-pvp-again]').click();
+    const again = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 20000 }), B.locator('[data-card-battle]').waitFor({ timeout: 20000 })]).then(() => true).catch(() => false);
+    await A.waitForTimeout(4000);
+    if (!(await C.locator('[data-card-watch-go]').count())) await C.locator('[data-card-watch-open]').click().catch(() => {});
+    const row2 = await C.locator('[data-card-watch-go]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    if (row2) await C.locator('[data-card-watch-go]').first().click();
+    const watching2 = await C.waitForFunction(() => { const w = CARD_WATCH.get(); return w.phase === 'watching' && w.n > 0 && !!document.querySelector('[data-card-watch-badge]'); }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+    check('⑨ 「もう1戦」の2試合目も、観戦の一覧から盤面で見られる', again && row2 && watching2, `もう1戦 ${again}・一覧 ${row2}・観戦 ${watching2}`);
+    await B.locator('[data-card-quit]').click();
+    await B.getByRole('button', { name: '投了する' }).click();
+    const over2 = await C.locator('[data-card-watch-over]').waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const ov = await C.evaluate(() => ({
+      how: document.querySelector('[data-card-watch-over]')?.getAttribute('data-card-watch-over-how'),
+      sub: (document.querySelector('[data-card-watch-over-sub]')?.textContent || '').replace(/\s/g, ''),
+      head: (document.querySelector('[data-card-watch-over-head]')?.textContent || '').replace(/\s/g, ''),
+      inView: (() => { const r = document.querySelector('[data-card-watch-over-head]')?.getBoundingClientRect(); return !!r && r.top >= 0 && r.bottom <= window.innerHeight; })(),
+    }));
+    check('⑨ B が投了すると、観戦の盤面に決着の帯が出て、いつ・だれが投了して・だれが勝ったかが分かる', over2 && ov.how === 'surrender' && /^ターン\d+でビーさんが投了しました$/.test(ov.sub) && ov.head === 'エーさんの勝ち！' && ov.inView, JSON.stringify(ov));
+    await C.waitForTimeout(800); await shot(C, 'watch-06-surrender');
+    await C.locator('[data-card-watch-over]').click();
+    const leave2 = (await C.locator('[data-card-watch-leave]').textContent().catch(() => '')) || '';
+    check('⑨ 決着の帯を閉じると盤面が見え、下のボタンは「観戦の一覧へ戻る」', leave2 === '観戦の一覧へ戻る', leave2);
     await C.locator('[data-card-watch-leave]').click();
     await C.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     const afterC = await C.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('mh_')).map((k) => [k, localStorage.getItem(k)])));
