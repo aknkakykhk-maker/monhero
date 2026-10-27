@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f34e2d32c456b4d8
+// source-sha256: 6df140017dff4005
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112502,14 +112502,14 @@ function MonsterHeroGame() {
     ...mon,
     debugOnly: true
   }));
-  const debugOnlyMonsterList = () => [...Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly), ...draftPreviewMonsterList()];
+  const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon => mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = list => {
     if (battleScenarioRef.current) return list;
     if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon = makeDebugStrongestMonster();
-    const preview = debugOnlyMonsterList();
+    const preview = [...debugOnlyMonsterList(), ...draftPreviewMonsterList()];
     const previewIds = new Set(preview.map(mon => mon.id));
     return [debugMon, ...preview, ...list.filter(mon => mon?.id !== debugMon.id && !previewIds.has(mon?.id))];
   };

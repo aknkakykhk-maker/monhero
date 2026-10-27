@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e0d961a5c531db11
+// generated-sha256: 75325719a0cb1e54
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -70517,7 +70517,7 @@ function MonsterHeroGame() {
   const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS))
     .filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult))
     .map(mon => ({ atkMotion:'default', ...mon, debugOnly:true }));
-  const debugOnlyMonsterList = () => [...Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly), ...draftPreviewMonsterList()];
+  const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   // いま戦っている編成に、正式実装前のモンスター(debugOnly)が1体でも入っているか。
   // debugBattleRef が false のまま(難易度の「この難易度で挑戦」が必ず false へ戻すため)でも
   // 記録・全国ランキングへ残さないための保険。ここが唯一の判定元になる
@@ -70536,7 +70536,7 @@ function MonsterHeroGame() {
     if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
-    const preview=debugOnlyMonsterList();
+    const preview=[...debugOnlyMonsterList(),...draftPreviewMonsterList()];
     const previewIds=new Set(preview.map(mon=>mon.id));
     return [debugMon,...preview,...list.filter(mon=>mon?.id!==debugMon.id&&!previewIds.has(mon?.id))];
   };
