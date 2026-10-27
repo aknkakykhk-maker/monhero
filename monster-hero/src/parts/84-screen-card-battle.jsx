@@ -2129,6 +2129,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
   useEffect(() => { const go = (c) => { if (c) setView('pvp'); }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
   const [kitPick, setKitPick] = useState(null);
+  const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
+  const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
   const [foe, setFoe] = useState({ who: 'mua', level: 'easy' });
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
@@ -2454,6 +2456,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onNavigate('CARD_BATTLE');
   };
 
+  // ---- はじめのスターターを開ける(パックと同じ画面。閉じたら、練習試合がまだなら練習試合へ) ----
+  if (view === 'starter-open' && starterOpen) {
+    const needTutorial = !save.tutorial.done && !save.tutorial.skipped;
+    return <CardPackOpen db={db} result={{ ...starterOpen, doneLabel: needTutorial ? '練習試合へ' : 'トップへ戻る' }} onDone={() => { setStarterOpen(null); setView('top'); if (needTutorial) startTutorial(); }}/>;
+  }
+
   // ---- スターター選び(一度きり) ----
   if (view === 'starter') {
     const kits = Object.values(db.starters);
@@ -2463,22 +2471,30 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <ScreenHead title="スターターをえらぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。えらばなかった2つは、あとでビートPで買えます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {kits.map((k) => (
-            <button key={k.id} type="button" data-card-kit={k.id} onClick={() => { Audio_.fgSe.tap(); setKitPick(k.id); }} className={`w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`}>
-              <div className="text-[15px] font-black text-white">{k.name}</div>
-              <div className="mt-1 flex gap-1.5">{k.monsters.map((no) => <img key={no} src={CARD_IMG(cardMonsterOf(db, no).img)} alt={cardMonsterOf(db, no).name} className="w-[27%] rounded-md"/>)}</div>
-              <div className="mt-1 text-[12px] font-bold text-slate-300">{k.monsters.map((no) => cardMonsterOf(db, no).name).join('・')} と技カード50枚</div>
-            </button>
+            // 「中身を見る」で、選ぶ前に入っているカードを確かめられる(2026-10-27 社長「最初にやるときにスターターパックの中身が分からない」案A)
+            <div key={k.id} className="relative">
+              <button type="button" data-card-kit={k.id} onClick={() => { Audio_.fgSe.tap(); setKitPick(k.id); }} className={`w-full rounded-2xl border-2 p-2 text-left ${kitPick === k.id ? 'border-amber-300 bg-amber-500/15' : 'border-white/10 bg-slate-900/70'}`}>
+                <div className="pr-[84px] text-[15px] font-black text-white">{k.name}</div>
+                <div className="mt-1 flex gap-1.5">{k.monsters.map((no) => <img key={no} src={CARD_IMG(cardMonsterOf(db, no).img)} alt={cardMonsterOf(db, no).name} className="w-[27%] rounded-md"/>)}</div>
+                <div className="mt-1 text-[12px] font-bold text-slate-300">{k.monsters.map((no) => cardMonsterOf(db, no).name).join('・')} と技カード50枚</div>
+              </button>
+              <button type="button" data-card-kit-contents={k.id} onClick={() => { Audio_.fgSe.tap(); setKitView(k); }} className="absolute right-2 top-2 min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/70 px-2 text-[11px] font-black text-sky-100 active:scale-95">中身を見る</button>
+            </div>
           ))}
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
           <button type="button" disabled={!pick} className={`${btn} mh-button-primary`} onClick={async () => {
             const g = cardGrantStarter(db, save, kitPick, Date.now());
             if (!g) { setNotice('スターターはもう受け取っています'); setView('top'); return; }
+            const before = save.collection;
             const ok = await persist(g);
             setNotice(ok ? `「${pick.name}」を受け取りました。ビートP${CARD_STARTER_POINT}もいっしょに！` : '保存できませんでした。もう一度お試しください');
-            if (ok) { setView('top'); if (!save.tutorial.done && !save.tutorial.skipped) startTutorial(); }
+            // 受け取ったら、ブースターパックと同じ画面で開けて中身を見せてから練習試合へ(2026-10-27 社長「最初に手に入れたときも」)。
+            //   ここを通るのは、まだスターターを持っていない人だけ(cardGrantStarter が2回目を断る)なので、もう持っている人には出ない
+            if (ok) { setStarterOpen(cardStarterOpenResult(db, kitPick, before, false)); setView('starter-open'); }
           }}>{pick ? `「${pick.name}」にする` : 'キットをえらんでください'}</button>
         </div>
+        {kitView && <CardStarterContents db={db} kit={kitView} collection={false} onClose={() => setKitView(null)}/>}
       </div>
     );
   }
