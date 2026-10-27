@@ -172,6 +172,10 @@ const check = (name, ok, detail = '') => {
     check('WAVE1 でソラシドのカードを勇者に使える', usedIdx >= 0, `手札に来るまで ${waited} ターン`);
     let log = await readLog();
     check('① 使った次のターンからコピーが出る(記録「一緒に戦う」)', /一緒に戦う/.test(log), (log.match(/🤖[^🤖]{0,40}/g) || []).join(' / '));
+    // 枠の札の印(セコンドくん #4112): data-tactics-ai-copy-out="1" ならコピーが出ている
+    const copyOut = () => page.evaluate(() => [...document.querySelectorAll('[data-tactics-ai-copy-out]')].map((e) => e.getAttribute('data-tactics-ai-copy-out')).join(','));
+    const hasMark = /data-tactics-ai-copy-out/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8'));
+    if (hasMark) check('① 出ているあいだ、枠の札の印が「出ている」(data-tactics-ai-copy-out="1")', (await copyOut()).split(',').includes('1'), await copyOut());
     let gone = false; let lost = false;
     for (let t = 0; t < 5 && !gone; t += 1) {
       await playTurn(false);
@@ -180,6 +184,7 @@ const check = (name, ok, detail = '') => {
       gone = /消えた\(時間切れ\)/.test(log);
     }
     check('② 続くターンが切れたらコピーが消える(記録「消えた(時間切れ)」)', gone, (log.match(/🤖[^🤖]{0,40}/g) || []).join(' / '));
+    if (hasMark) check('② 消えたあとは枠の札が出ていない', !(await copyOut()).split(',').includes('1'), await copyOut() || '札なし');
     check('③ コピーが出ていたあいだに負けにならない(勇者が立っている)', !lost);
     check('③ 倒れた数の記録にコピーが入らない', !/コピーが倒れた|コピー.{0,6}倒れ(た|ました)/.test(log));
 

@@ -144,6 +144,19 @@ const downed = (b) => T.tacticsDownedSlots(b).length;
   }
 }
 
+// ---- ④-2 本体: みんなの山札の枚数はコピーの有無で変わらない ----
+// タクティクスも5つの遊びも、固有技の写しはみんなの山札へ入れず、コピー自身が持つ(aiCopy.uniqueCard。セコンドくん・ダイスくん 2026-10-27)。
+// 本体で summonAiCopy を呼ぶ所は、みんなの山札を渡さず空の山札で呼んでいること
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const calls = [...app.matchAll(/summonAiCopy\(\s*\{([^}]*\{[^}]*\}[^}]*)\}/g)].map((m) => m[1]);
+  const all = (app.match(/\bsummonAiCopy\(/g) || []).length;
+  check('本体: summonAiCopy は空の山札で呼ぶ(みんなの山札・手札・捨て札の枚数がコピーの有無で変わらない)',
+    all === 0 || (calls.length === all && calls.every((c) => /zones:\s*\{\s*deck:\s*\[\],\s*hand:\s*\[\],\s*discard:\s*\[\]\s*\}/.test(c))), `${all}か所`);
+  const dismissCalls = (app.match(/\bdismissAiCopy\(/g) || []).length;
+  check('本体: コピーを外すときも、みんなの山札から抜く処理を通さない(写しが入っていないので)', dismissCalls === 0, `${dismissCalls}か所`);
+}
+
 // ---- ⑤ 5つの遊び・保存 ----
 {
   const src = { maxHp: 1000, atk: 200, def: 100, maxGuts: 150 };
