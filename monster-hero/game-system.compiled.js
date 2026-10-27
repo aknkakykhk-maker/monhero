@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3abdf007b3cdda64
+// source-sha256: c197b56cb73f9c67
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37590,6 +37590,7 @@ const RhythmTapTest = ({
   }, [stageGl, stageArtSrc, renderQualityStill]);
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
+  const hudSongLong = !isLandscape && rhythmSongFullName(song).length > 30;
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(orientation: landscape)');
@@ -41052,6 +41053,11 @@ const RhythmTapTest = ({
           em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
         return Math.max(13, Math.min(20, Math.floor(avail / Math.max(1, em))));
       })(),
+      introTitlePortraitFont = (() => {
+        const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 390) - 40, 400),
+          em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
+        return Math.max(16, Math.min(24, Math.floor(avail * 2 * .9 / Math.max(1, em))));
+      })(),
       introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
       introCredit = rhythmSongIntroCredit(song),
       introLevel = Number(chart?.level),
@@ -41137,7 +41143,7 @@ const RhythmTapTest = ({
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           overflowWrap: 'anywhere',
-          fontSize: '24px'
+          fontSize: `${introTitlePortraitFont}px`
         }),
         padding: '0 8px 3px',
         margin: isLandscape ? '1px -8px 0' : '4px -8px 0',
@@ -41250,11 +41256,12 @@ const RhythmTapTest = ({
     style: {
       maxWidth: hudArtSrc && !isLandscape ? 'calc(31cqw - 34px)' : undefined,
       display: '-webkit-box',
-      WebkitLineClamp: isLandscape ? '2' : '3',
+      WebkitLineClamp: isLandscape ? '2' : hudSongLong ? '5' : '3',
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden',
       lineHeight: '1.25',
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+      textShadow: '0 1px 4px rgba(2,6,23,.92)',
+      fontSize: hudSongLong ? '9px' : undefined
     }
   }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
