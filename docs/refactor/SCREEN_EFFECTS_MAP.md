@@ -58,7 +58,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => setCanSkip(true), 900)` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーのスキップを出す |
 | `if (!started) finish(false); }, BOSS_MOVIE_START_TIMEOUT_MS` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーが始まらないときに打ち切る。部品が閉じるときは後片付けが待っている側を起こす |
 | `fxRestTimerRef.current = setTimeout(` | screen | 止める(71-screen-battle.jsx) | タクティクスで操作が無いあいだ演出を休ませる。止めても休まないだけ |
-| `timer.current = setTimeout(() => { fired.current = true; onLong(no); }, ms)` | screen | 止める | MFバトルカード(84)のカードの長押し。指を離すと止める・画面を離れたら止める |
+| `timer.current = setTimeout(() => { fired.current = true; last.current = null; onLong(no); }, ms)` | screen | 止める | MFバトルカード(84)のカードの長押し。指を離すと止める・画面を離れたら止める |
 | `motionTimers.current.push(setTimeout(() => setMotions(` | screen | 止める | MFバトルカードの技の動きを、見せ終わったら外す。対戦の画面を離れたら止めてよい(motionTimers はまとめて止める) |
 | `const t = setTimeout(nextBubble, ms);` | screen | 止める | MFバトルカードの対戦中の助手の吹き出し(マルチのひとことも)を、字の数で決めた時間のあと次の台詞へ(無ければ消す)。effect の後始末で止める |
 | `setTimeout(() => { setBubble(null); setTutQ((q) => q.slice(1)); }, 2100)` | screen | 止める | MFバトルカードの練習試合の台詞を順に出す。画面の中だけの進み |
@@ -69,6 +69,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `motionTimers.current.push(setTimeout(() => setBeams((cur) => [...cur, beam])` | screen | 止める | MFバトルカードのはね返しの光線を、盾のあとに出す |
 | `motionTimers.current.push(setTimeout(() => setBeams((cur) => cur.filter(` | screen | 止める | MFバトルカードのはね返しの光線を消す |
 | `motionTimers.current.push(setTimeout(() => setAction(` | screen | 止める | MFバトルカードの「◯◯の技」の帯を消す |
+| `motionTimers.current.push(setTimeout(() => setDownBand(` | screen | 止める | MFバトルカードのまんなかの「◯◯ ダウン！」の帯を消す |
 | `const act = tutorial ? cardTutorialCpu(db, tutStage.id, st) : cardAiChooseAction(db, st, policy);` | screen | 止める | MFバトルカードの相手(助手)の1手。対戦の画面の中だけで進む。離れたら止めてよい(対戦はそこで終わる) |
 | `setTimeout(() => setTurnBanner(` | screen | 止める | MFバトルカードの「◯◯のターン」の帯を消す |
 | `t2 = setTimeout(() => setTurnSummary(` | screen | 止める | MFバトルカードの相手の番のまとめを、番の帯が消えてから出す |
@@ -116,7 +117,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `}, TACTICS_SLOT_FX_MS);` | progress | 止める(次を出すとき) | タクティクスの枠の出来事の札を消す。止めると出たまま |
 | `setTacticsExCutin(null); }, ms` | progress | 止める(次を出すとき) | EXのカットイン(教えカードの演出もここへまとまった)を消す。止めると出たまま |
 | `setEffect(null), TRANSCEND_ENHANCE_FX_MS` | progress | 投げっぱなし | 超越強化の演出を消す。止めると出たまま |
-| `setTimeout(() => onFinish({ outcome: st.winner === CARD_ME` | progress | 止める(画面を閉じたとき) | MFバトルカードの勝ち負けを少し見せてから結果へ進め、記録とカードポイントを保存する。止めると記録が残らない |
+| `const t = setTimeout(go, CARD_RESULT_WAIT_MS` | progress | 止める(画面を閉じたとき) | MFバトルカードの勝ち負けを少し見せてから結果へ進め、記録とカードポイントを保存する。止めると記録が残らない |
 
 ## 対象外 — 16 箇所
 
