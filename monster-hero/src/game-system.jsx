@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aea9e18ec571ef9c
+// generated-sha256: 723960fd8423d2fb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -16471,7 +16471,18 @@ const storeGet = async (key, def, shared=false) => {
       return raw !== null ? JSON.parse(raw) : def;
     }
   } catch { /* fall through to memory */ }
-  return key in _memStore ? _memStore[key] : def;
+  if (key in _memStore) return _memStore[key];
+  // ★保存の場所がいっぱいだと hasLocalStorage() のためし書きが失敗する。そのときも読むだけはできるので、
+  //   書かずに読む(ここで既定値を返すと「保存が無い」と読み違え、読んだ値から作り直して書く所で消える。
+  //   2026-10-27 カードの見返しで、★の試合ごと49試合が消えるのを検査で見つけた)。
+  //   書けずにメモリへ控えた値があれば、そちらが新しいので上で先に返す
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(key);
+      if (raw !== null) return JSON.parse(raw);
+    }
+  } catch { /* 読めなければ既定値 */ }
+  return def;
 };
 // 初回プレイのプレビュー中だけ、保存を丸ごと止めるための鍵。★重要
 // 画面ごとに「プレビューなら保存しない」を書き分ける方式だと、必ず書き忘れが出る
@@ -62491,10 +62502,18 @@ const cardReplayStore = async (box, keepId = null) => {
   return null;
 };
 // 書く直前に読み直して足す(同じ端末でゲームを2つ開いていても、片方の記録を消さない)
+// 端末に見返しの保存が「ある」のに、読んだ値が null か形が壊れているときは、書かない(2026-10-27 案1)。
+//   読み違えた空の箱から作り直して書くと、今までの試合と★が消える(保存の場所がいっぱいのときに起きた)
+const cardReplayReadLost = (raw) => {
+  if (raw && typeof raw === 'object' && Array.isArray(raw.list)) return false;
+  try { return typeof window !== 'undefined' && !!window.localStorage && window.localStorage.getItem(CARD_REPLAY_KEY) !== null; } catch (_) { return false; }
+};
 const cardReplaySave = async (rec) => {
   if (!rec) return false;
   try {
-    const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
+    const raw = await storeGet(CARD_REPLAY_KEY, null);
+    if (cardReplayReadLost(raw)) return false;
+    const box = cardReplayAdd(raw, rec);
     if (!box.list.some((r) => r.id === rec.id)) return false;
     const done = await cardReplayStore(box, rec.id);
     if (!done) return false;
