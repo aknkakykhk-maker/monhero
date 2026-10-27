@@ -252,7 +252,8 @@ function RewardPickScreen({
                         <span className="rounded-full bg-amber-400 px-2 py-px text-[9px] font-black text-slate-900">いま強化する子</span>
                         <span className="text-[9px] font-black text-slate-400">{RANGE_LABELS[currentSlot]}距離</span>
                       </div>
-                      <div className="mt-0.5 truncate text-[17px] font-black leading-tight text-white">{`${currentName||'全員'}のトレーニング`}</div>
+                      {/* 320 で「モッチーのトレー…」と切れていた。2行まで出し、言葉の切れ目で折る(2026-10-27 ジン・WAVE の合間の見回り) */}
+                      <div className="mt-0.5 line-clamp-2 text-[17px] max-[359px]:text-[15px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{jaWrap(`${currentName||'全員'}のトレーニング`)}</div>
                     </div>
                     <div className="shrink-0 text-center font-mono leading-none">
                       <span className="block text-[8px] font-black text-slate-400">選んだ数</span>

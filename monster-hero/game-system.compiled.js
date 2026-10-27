@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4727dfe520d894f6
+// source-sha256: a5087919abe9cc19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -24307,6 +24307,16 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
     c2: '#1d4ed8',
     motif: 'rise'
   },
+  hoshiai: {
+    c1: '#e0f2fe',
+    c2: '#6366f1',
+    motif: 'rise'
+  },
+  kogare: {
+    c1: '#fbcfe8',
+    c2: '#7c3aed',
+    motif: 'rise'
+  },
   cookieBox: {
     c1: '#fce7f3',
     c2: '#ec4899',
@@ -43806,6 +43816,30 @@ const TACTICS_EX_SKILLS = Object.freeze({
     turns: 3,
     effect: 'kitsunebi'
   }),
+  Orihime: Object.freeze({
+    id: 'orihime_hoshiai',
+    name: '星合の刻',
+    useNote: '逢瀬を全部使う・相方と続けて攻撃(逢瀬と間合いの差で強く長く)',
+    desc: '逢瀬を全部使い、数ターン「星合」になる。\n・星合のあいだ、オリヒメか相方が攻撃すると、もう片方が続けて攻撃する(続く攻撃は与ダメ30%＋逢瀬1つにつき1.5%、間合いの差2なら+5%・差3なら+10%。上限50%)\n・続く攻撃は1ターンに2回まで。続く攻撃から、また続く攻撃は出ない\n・続くターン: 2ターン＋逢瀬4つごとに1ターン(最大5ターン)\n・終わると逢瀬は0に戻る',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turn',
+    supportKey: 'OrihimeSupport',
+    effect: 'hoshiai'
+  }),
+  OrihimeSupport: Object.freeze({
+    id: 'orihime_kogare',
+    name: '焦がれ待つ天ノ河',
+    useNote: '3ターン 攻撃が当たると25%で敵が「意味不明」(1ターン2回まで)',
+    desc: '3ターンのあいだ、オリヒメの攻撃が当たると、25%で敵の次の行動が「意味不明」になる。\n・確率を振るのは1ターンに2回まで\n・逢瀬は使わない\n・意味不明のターン、敵は動けず、味方の攻撃は会心確定(スプーキーの乱心と同じ)',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    effect: 'kogare'
+  }),
   Spooky: Object.freeze({
     id: 'spooky_trick_confuse',
     name: 'トリックコンフューズ',
@@ -43898,7 +43932,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null,
   hasStack: ctx => ctx && Number(ctx.stacks) > 0 ? null : `${ctx && ctx.stackLabel || 'スタック'}が1つも無いと使えない`
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille', 'kitsunebi']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille', 'kitsunebi', 'hoshiai', 'kogare']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -44083,6 +44117,10 @@ const normalizeTacticsExDef = raw => {
 };
 const tacticsExDurationText = def => !def ? null : def.duration === 'turns' ? `使ったターンから${def.turns}ターンのあいだ（WAVEが変わると切れる）` : TACTICS_EX_DURATION_TEXT[def.duration] || null;
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) => monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null;
+const tacticsExRoleDefOf = (monId, isHero, table = TACTICS_EX_SKILLS) => {
+  const def = tacticsExDefOf(monId, table);
+  return def && def.supportKey && !isHero ? tacticsExDefOf(def.supportKey, table) : def;
+};
 const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_EFFECTS) => !!(def && def.effect && implemented.includes(def.effect));
 const createTacticsExState = () => ({
   uses: {},
@@ -45681,6 +45719,138 @@ const sorashidoCopyDesc = level => {
   const t = aiCopyRules(level),
     p = v => Math.round(v * 100);
   return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+};
+const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
+const summonAiCopy = (state, {
+  srcSlot,
+  srcMonsterId,
+  name = '',
+  level = 0,
+  src = null,
+  uniqueCard = null,
+  turn = 0,
+  mode = 'tactics',
+  effMul = 1,
+  permaAtkPct = 0,
+  extra = null
+} = {}) => {
+  const now = state && state.aiCopy || null;
+  let zones = state && state.zones || {
+    deck: [],
+    hand: [],
+    discard: []
+  };
+  const plan = aiCopySummonPlan(now, {
+    srcSlot,
+    srcMonsterId,
+    level
+  });
+  if (plan.kind === 'refresh') {
+    return {
+      aiCopy: {
+        ...now,
+        level,
+        turnsLeft: plan.turnsLeft,
+        ...(extra || {})
+      },
+      zones,
+      plan
+    };
+  }
+  if (plan.removeUniqueOf != null) zones = aiCopyRemoveUnique(zones, {
+    srcMonsterId: plan.removeUniqueOf
+  });
+  const uniq = plan.addUniqueOf != null ? aiCopyUniqueCard(uniqueCard, plan.addUniqueOf) : null;
+  if (uniq) zones = {
+    ...zones,
+    deck: [...(Array.isArray(zones.deck) ? zones.deck : []), uniq]
+  };
+  const stats = aiCopyStats(src, level, {
+    mode,
+    effMul,
+    permaAtkPct
+  });
+  const aiCopy = {
+    srcSlot,
+    srcMonsterId,
+    name: String(name || ''),
+    level,
+    spawnTurn: aiCopySafeNum(turn) + 1,
+    turnsLeft: plan.turnsLeft,
+    ...stats,
+    hand: [],
+    nextCard: null,
+    picks: [],
+    uniqueCardUid: uniq ? uniq.uid : null,
+    ...(extra || {})
+  };
+  return {
+    aiCopy,
+    zones,
+    plan
+  };
+};
+const dismissAiCopy = state => {
+  const now = state && state.aiCopy || null;
+  const zones = state && state.zones || {
+    deck: [],
+    hand: [],
+    discard: []
+  };
+  if (!now) return {
+    aiCopy: null,
+    zones
+  };
+  const match = now.uniqueCardUid ? {
+    uid: now.uniqueCardUid
+  } : {
+    srcMonsterId: now.srcMonsterId
+  };
+  return {
+    aiCopy: null,
+    zones: aiCopyRemoveUnique(zones, match)
+  };
+};
+const tickAiCopy = (state, turn) => {
+  const now = state && state.aiCopy || null;
+  if (!isAiCopyOut(now, turn)) return state;
+  const end = aiCopyTurnEnd(now);
+  if (end.expired) return {
+    ...dismissAiCopy(state),
+    expired: true
+  };
+  return {
+    ...state,
+    aiCopy: {
+      ...now,
+      turnsLeft: end.turnsLeft
+    }
+  };
+};
+const planAiCopyTurn = (aiCopy, {
+  deck = [],
+  score = null,
+  costOf = null,
+  rng = Math.random
+} = {}) => {
+  if (!aiCopy) return aiCopy;
+  const uniq = (Array.isArray(deck) ? deck : []).find(c => c && aiCopy.uniqueCardUid && c.uid === aiCopy.uniqueCardUid) || null;
+  const rest = (Array.isArray(deck) ? deck : []).filter(c => c !== uniq);
+  const hand = aiCopyHand(rest, uniq, rng);
+  const picks = aiCopyPickCards(hand, {
+    score,
+    costOf,
+    guts: aiCopy.guts,
+    maxGuts: aiCopy.maxGuts,
+    rng,
+    level: aiCopy.level
+  });
+  return {
+    ...aiCopy,
+    hand,
+    picks,
+    nextCard: picks[0] || null
+  };
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -64907,7 +65077,7 @@ function PickHeroAllyScreen({
               key: stat.key,
               className: "min-w-0 block"
             }, React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none break-all"
+              className: "block text-slate-500 font-black leading-none whitespace-nowrap max-[359px]:text-[6.5px] max-[359px]:tracking-[-0.04em]"
             }, stat.label), preview.tactics ? stat.diff > 0 ? React.createElement("span", {
               className: "block leading-none text-slate-500"
             }, stat.before, " →") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? React.createElement("span", {
@@ -64924,15 +65094,17 @@ function PickHeroAllyScreen({
               "data-tactics-join-turns": preview.catchUpTurns,
               className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
               style: {
-                fontSize: '8px'
+                fontSize: '8px',
+                ...JA_LABEL_STYLE
               }
-            }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）'), preview.tactics && React.createElement("div", {
+            }, jaWrap(preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）')), preview.tactics && React.createElement("div", {
               "data-tactics-join-dist-catchup": Math.round((preview.distCatchUp || 0) * 1000) / 10,
               className: `w-full text-center leading-none font-black ${preview.distCatchUp > 0 ? 'text-cyan-300' : 'text-slate-500'}`,
               style: {
-                fontSize: '8px'
+                fontSize: '8px',
+                ...JA_LABEL_STYLE
               }
-            }, preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし'), React.createElement("div", {
+            }, jaWrap(preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし')), React.createElement("div", {
               className: "mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
               style: {
                 fontSize: '8px'
@@ -66098,8 +66270,9 @@ function RewardPickScreen({
     }, "いま強化する子"), React.createElement("span", {
       className: "text-[9px] font-black text-slate-400"
     }, RANGE_LABELS[currentSlot], "距離")), React.createElement("div", {
-      className: "mt-0.5 truncate text-[17px] font-black leading-tight text-white"
-    }, `${currentName || '全員'}のトレーニング`)), React.createElement("div", {
+      className: "mt-0.5 line-clamp-2 text-[17px] max-[359px]:text-[15px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, jaWrap(`${currentName || '全員'}のトレーニング`))), React.createElement("div", {
       className: "shrink-0 text-center font-mono leading-none"
     }, React.createElement("span", {
       className: "block text-[8px] font-black text-slate-400"
@@ -105705,7 +105878,9 @@ function MonsterHeroGame() {
   };
   const orihimeRef = useRef({
     partner: {},
-    ouse: {}
+    ouse: {},
+    hoshiai: {},
+    kogare: {}
   });
   const [orihimeView, setOrihimeView] = useState(orihimeRef.current);
   const writeOrihime = (part, key, value) => {
@@ -105723,10 +105898,29 @@ function MonsterHeroGame() {
   const resetOrihime = () => {
     orihimeRef.current = {
       partner: {},
-      ouse: {}
+      ouse: {},
+      hoshiai: {},
+      kogare: {}
     };
     orihimeTurnKindsRef.current = {};
+    orihimeForceConfuseRef.current = false;
     setOrihimeView(orihimeRef.current);
+  };
+  const orihimeForceConfuseRef = useRef(false);
+  const hoshiaiComboAt = (slotIdx, consume) => {
+    if (!isTacticsMode(runMode) || !Number.isInteger(slotIdx)) return null;
+    const b = orihimeBondOfSlot(slotIdx),
+      h = b ? orihimeRef.current.hoshiai[b.key] : null;
+    if (!b || !b.up || !h || h.turns <= 0 || h.used >= h.perTurn) return null;
+    if (consume) writeOrihime('hoshiai', b.key, {
+      ...h,
+      used: h.used + 1
+    });
+    return {
+      count: 1,
+      rate: h.rate,
+      label: '星合の刻'
+    };
   };
   const setOrihimePartner = (selfSlot, partnerSlot) => {
     if (!Number.isInteger(partnerSlot)) return;
@@ -105791,6 +105985,26 @@ function MonsterHeroGame() {
       writeOrihime('ouse', b.key, after);
       addPopup(`🎐 逢瀬 ${after}/${ORIHIME_BOND_TIERS[b.diff].max}`, 'hero', 'text-sky-200 text-base font-bold drop-shadow-md', undefined, b.selfSlot);
     });
+  };
+  const tickOrihimeEx = () => {
+    const cur = orihimeRef.current;
+    if (!Object.keys(cur.hoshiai).length && !Object.keys(cur.kogare).length) return;
+    const tickOne = (table, reset) => Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.turns > 1 ? {
+      ...v,
+      turns: v.turns - 1,
+      ...reset
+    } : null]).filter(([, v]) => v));
+    const next = {
+      ...cur,
+      hoshiai: tickOne(cur.hoshiai, {
+        used: 0
+      }),
+      kogare: tickOne(cur.kogare, {
+        rolls: KOGARE_ROLLS_PER_TURN
+      })
+    };
+    orihimeRef.current = next;
+    setOrihimeView(next);
   };
   const orihimeShareTargets = (targets, damage) => {
     let rest = (Array.isArray(targets) ? targets : []).filter(Number.isInteger);
@@ -107272,7 +107486,7 @@ function MonsterHeroGame() {
   const raidJackDamageRef = useRef(0);
   const tacticsRaidPresentLevel = turn => Math.max(0, Math.floor((Number(turn) || 0) / 2));
   const raidExDefOf = monId => {
-    const def = tacticsExDefOf(monId);
+    const def = tacticsExRoleDefOf(monId, mainHero?.id === monId);
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? {
       ...def,
       unlimited: false,
@@ -117405,6 +117619,10 @@ function MonsterHeroGame() {
     const confuseBefore = enemyConfuseRef.current;
     const confusion = rollEnemyConfusion(aimed, confuseBefore);
     if (confusion.turns !== confuseBefore) writeEnemyConfuse(confusion.turns);
+    if (aimed && orihimeForceConfuseRef.current) {
+      orihimeForceConfuseRef.current = false;
+      if (confusion.intent?.type !== 'CONFUSED') confusion.intent = confusedEnemyIntent(aimed);
+    }
     const upcoming = confusion.intent;
     if (aimed && confuseBefore > 0) {
       if (upcoming?.type === 'CONFUSED') showLuckBanner({
@@ -118488,7 +118706,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, [...kusabiCombosAt(slotIdx, mon?.id, card), kyubiAttackAt(slotIdx, mon?.id, card).combo, kyubiAttackAt(slotIdx, mon?.id, card).foxCombo]),
+      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, [...kusabiCombosAt(slotIdx, mon?.id, card), kyubiAttackAt(slotIdx, mon?.id, card).combo, kyubiAttackAt(slotIdx, mon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, false)]),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -119221,6 +119439,7 @@ function MonsterHeroGame() {
     if (timeStopSlot == null && (dreamPainRef.current.wait > 0 || dreamPainRef.current.turns > 0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
     if (timeStopSlot == null) tickKyubiKagero();
     if (timeStopSlot == null) settleOrihimeOuse();
+    if (timeStopSlot == null) tickOrihimeEx();
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -119790,6 +120009,21 @@ function MonsterHeroGame() {
     Audio_.se.card();
     const toggled = def.duration === 'style' ? `（${tacticsExStyleLabel(def, next, slotIdx, mon.id)}）` : '';
     pushBattleLog(`EX ${mon.masuName || mon.name}「${def.name}」${toggled}`, 'ally');
+    if (def.effect === 'hoshiai') {
+      const key = String(slotIdx),
+        b = orihimeBondAt(key),
+        h = startHoshiai(b ? b.ouse : 0, b ? b.diff : 0);
+      writeOrihime('hoshiai', key, {
+        ...h,
+        used: 0
+      });
+      writeOrihime('ouse', key, 0);
+      pushBattleLog(`🌌 星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${Math.round(h.rate * 100)}%${b ? '' : '(相方がいないので、続く攻撃は出ない)'}`, 'ally');
+    }
+    if (def.effect === 'kogare') writeOrihime('kogare', String(slotIdx), {
+      turns: KOGARE_TURNS,
+      rolls: KOGARE_ROLLS_PER_TURN
+    });
     if (def.effect === 'kitsunebi') {
       writeKyubi('kitsunebi', String(slotIdx), useKitsunebi(kyubiRef.current.kitsunebi[String(slotIdx)]));
       addPopup(`🦊 狐火 ${KITSUNEBI_MAX}/${KITSUNEBI_MAX}`, 'hero', 'text-blue-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
@@ -120362,7 +120596,7 @@ function MonsterHeroGame() {
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, [...kusabiCombosAt(slotIdx, activeMon?.id, card), kyubiAttackAt(slotIdx, activeMon?.id, card).combo, kyubiAttackAt(slotIdx, activeMon?.id, card).foxCombo]),
+          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, [...kusabiCombosAt(slotIdx, activeMon?.id, card), kyubiAttackAt(slotIdx, activeMon?.id, card).combo, kyubiAttackAt(slotIdx, activeMon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, true)]),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
@@ -120425,6 +120659,25 @@ function MonsterHeroGame() {
         }
         if (finalD > 0) gainSweetStack(slotIdx, activeMon?.id, card, true);
         if (finalD > 0) gainKusabi(slotIdx, activeMon?.id);
+        {
+          const kg = isTacticsMode(runMode) && finalD > 0 ? orihimeRef.current.kogare[String(slotIdx)] : null;
+          if (kg && kg.turns > 0 && kg.rolls > 0) {
+            const r = rollKogare(kg.rolls);
+            writeOrihime('kogare', String(slotIdx), {
+              ...kg,
+              rolls: r.rollsLeft
+            });
+            if (r.confused) {
+              orihimeForceConfuseRef.current = true;
+              showLuckBanner({
+                icon: '❓',
+                title: `${battleActorName(slotIdx)}の焦がれ待つ天ノ河`,
+                result: '敵の次の行動が「意味不明」に！',
+                tone: 'enemy'
+              });
+            }
+          }
+        }
         if (finalD > 0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled && tacticsExConfusesOnHit(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
