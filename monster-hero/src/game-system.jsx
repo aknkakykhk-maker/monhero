@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 22db1afe7e22884d
+// generated-sha256: e4bd8484593a555a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64663,7 +64663,7 @@ function MonsterHeroGame() {
     if (!copy) return copy;
     const handSize = Math.max(1, Array.isArray(handPileRef.current.hand) && handPileRef.current.hand.length > 0 ? handPileRef.current.hand.length : 5);
     // ★選び方は AUTO と同じ見方(作戦の優先 → 同じ優先なら与ダメの大きい順。タクティクスと同じ aiCopyAutoScore)。
-    //   与ダメは元の子の間合いから、コピーのちからへ縮めた値
+    //   与ダメは元の子の間合いから、コピーのちからへ縮めた値。ターンの始めに選ぶので、そのターンに積む追加(応援など)はまだ無い(0)
     const mon = slots[copy.srcSlot] || mainHero;
     const dmgOf = (c) => classicAiCopyDamage(getDmg(c, copy.srcSlot, mon, 0, 0, false, enemyDist), copy.atk, atk);
     const isGuardC = (c) => !!c && (c.type === 'guard' || c.type === 'weak_guard');
@@ -77381,7 +77381,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         copy=classicAiCopySpendGuts(copy,cost);
         const skill=pick.name||pick.baseName||'攻撃';
         if(classicAiCopyIsAttack(pick)){
-          const d=classicAiCopyDamage(getDmg(pick,copy.srcSlot,copyMon,0,0,false,attackDistance),copy.atk,atk);
+          // ほかの攻撃と同じく、このターンに積んだ追加(応援など)も乗せる。2枚目の半減はコピーには掛けない(プレイヤーの枚数ではないため)
+          const d=classicAiCopyDamage(getDmg(pick,copy.srcSlot,copyMon,localOryoAdd,localDmgModAdd,false,attackDistance),copy.atk,atk);
           if(d>0){ totalDmg+=d; attackHits.push({dmg:d, isCrit:false, slotIdx:copy.srcSlot, isSpecial:true, skillName:`🤖コピーの${skill}`, noAnim:true}); }
         } else if(pick.type==='guard'||pick.type==='weak_guard'){
           const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
