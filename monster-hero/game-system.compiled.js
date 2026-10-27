@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f40184ec110b6c2
+// source-sha256: 8055191e0972a3a9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99702,6 +99702,7 @@ const CARD_PVP_STALL_GRACE_MS = 20000;
 const CARD_PVP_QUIET_MS = 6000;
 const CARD_PVP_RECONNECT_MS = 3000;
 const CARD_PVP_VERIFY_WAIT_MS = 15000;
+const CARD_PVP_SLEEP_MS = 10000;
 const CARD_PVP_PENALTY_KEY = 'mh_card_pvp_penalty_v1';
 const CARD_PVP_PENALTY_MS = 3 * 60 * 1000;
 const cardPvpNormalizePenalty = v => Number.isFinite(v) && v > 0 ? v : 0;
@@ -100038,7 +100039,8 @@ const cardPvpCleanMessage = raw => {
       bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
       dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null,
       rd: cardPvpInt(raw.rd, 1000) || 0,
-      w: cardPvpInt(raw.w, 999) || 0
+      w: cardPvpInt(raw.w, 999) || 0,
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null
     };
   }
   if (raw.t === 'start') return {
@@ -100597,6 +100599,7 @@ const CARD_PVP = (() => {
   let s = null;
   let socket = null;
   let alive = false;
+  let lastTickAt = 0;
   let tick = null;
   let retry = null;
   let lobby = null;
@@ -100614,6 +100617,7 @@ const CARD_PVP = (() => {
     match: '',
     hostFirst: false,
     first: 0,
+    lostAt: 0,
     game: null,
     startMsg: null,
     foeInMatch: false,
@@ -100675,7 +100679,8 @@ const CARD_PVP = (() => {
     bid: s.me.bid || null,
     dn: s.me.dn || null,
     rd: s.round || 0,
-    w: isHost() ? cardPvpWatchHost().eyes() : 0
+    w: isHost() ? cardPvpWatchHost().eyes() : 0,
+    ov: s.phase === 'over' && s.match ? s.match : null
   });
   const watchPush = (by, act, reveal, st) => {
     if (isHost()) cardPvpWatchHost().push({
@@ -100805,6 +100810,7 @@ const CARD_PVP = (() => {
     }
     set({
       phase: 'playing',
+      lostAt: 0,
       match: msg.match,
       hostFirst: msg.hostFirst,
       first,
@@ -100855,6 +100861,22 @@ const CARD_PVP = (() => {
       });
       emit();
     }
+  };
+  const noteLost = tick => {
+    const nowT = Date.now();
+    const slept = lastTickAt > 0 && nowT - lastTickAt > CARD_PVP_SLEEP_MS;
+    if (tick || slept) lastTickAt = nowT;
+    if (s && s.phase === 'playing' && (slept || tick && !alive)) s = {
+      ...s,
+      lostAt: nowT,
+      ...(slept && s.foe ? {
+        foe: {
+          ...s.foe,
+          seen: nowT
+        }
+      } : {})
+    };
+    return slept;
   };
   const forceEnd = outcome => {
     if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
@@ -100969,6 +100991,10 @@ const CARD_PVP = (() => {
           ...foe
         }
       };
+      if (s.phase === 'playing' && msg.ov && msg.ov === s.match && s.lostAt) {
+        forceEnd('dropped');
+        return;
+      }
       maybeStart();
       if (s.match && msg.match === s.match) s = {
         ...s,
@@ -101070,7 +101096,13 @@ const CARD_PVP = (() => {
         alive = true;
         set({
           offline: false,
-          phase: s.phase === 'connecting' ? 'waiting' : s.phase
+          phase: s.phase === 'connecting' ? 'waiting' : s.phase,
+          ...(s.phase === 'playing' && s.foe ? {
+            foe: {
+              ...s.foe,
+              seen: Date.now()
+            }
+          } : {})
         });
         hb();
       },
@@ -101226,7 +101258,9 @@ const CARD_PVP = (() => {
     connect();
     if (mode === 'free') openLobby();
     tick = setInterval(() => {
-      if (!s || !socket) return;
+      if (!s) return;
+      noteLost(true);
+      if (!socket) return;
       hb();
       if (s.mode === 'free' && s.phase === 'waiting') seekTick();
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
@@ -101342,7 +101376,11 @@ const CARD_PVP = (() => {
       });
       forceEnd('timeout');
     },
-    foeStalled: () => forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout'),
+    foeStalled: () => {
+      noteLost(false);
+      if (s && s.lostAt && Date.now() - s.lostAt < CARD_PVP_ALIVE_MS) return;
+      forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout');
+    },
     auto: fn => {
       if (!s) return fn();
       s.autoActing = true;
@@ -101380,9 +101418,10 @@ const CARD_PVP = (() => {
         foeSurrender: '相手の投了',
         foeLeft: '相手が抜けた',
         timeout: '時間切れ',
-        foeTimeout: '相手の時間切れ'
+        foeTimeout: '相手の時間切れ',
+        dropped: '通信が切れた'
       }[outcome] || '';
-      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
+      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : outcome === 'dropped' ? 'left' : 'lose';
       const forced = !['win', 'lose'].includes(outcome);
       if (isHost()) cardPvpWatchHost().end(reward === 'win' ? 0 : 1, label);
       set({
@@ -101721,7 +101760,7 @@ const CardPvpLobby = ({
     meName: profile.name
   });
   if (room.phase === 'over' && r) {
-    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
+    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -101770,7 +101809,11 @@ const CardPvpLobby = ({
       style: JA_WRAP_STYLE
     }, jaWrap(`${foeName}さんとのマルチ対戦`)), React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
-    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), React.createElement("p", {
+    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), r.reason === '通信が切れた' && React.createElement("p", {
+      "data-card-pvp-dropped": true,
+      className: "mt-1 text-[12px] font-bold text-amber-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap('通信が切れていたため、この試合は負けになりました')), React.createElement("p", {
       "data-card-pvp-verify": r.verify,
       className: `mt-1 rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
       style: JA_WRAP_STYLE
