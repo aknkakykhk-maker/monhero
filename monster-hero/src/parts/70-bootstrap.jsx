@@ -2468,6 +2468,8 @@ const createAnimationStyle = () => {
     .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
     .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
     .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    /* 緊急回復の文「味方のライフとガッツを30%ずつ回復」は 320 で「味方のライフとガッツ…」と切れた。2行まで折る(2026-10-27 バトル中の窓の見回り) */
+    .ex-cutin--emergency .ex-cutin__sub { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; text-wrap:wrap; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
     .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
     .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }
