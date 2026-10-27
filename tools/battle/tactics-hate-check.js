@@ -86,7 +86,7 @@ check('③ A:10,000 と B:100,000 のように桁が違っても、割合が同�
   const w = G.tacticsTargetWeights(us, G.TACTICS_TARGET_LOW_HP_BIAS, hate), tot = w.reduce((a, x) => a + x.weight, 0), c = ch(us, hate);
   check('④ 敵が狙いを決める重みと同じ割合(表示と抽選が食い違わない)', w.every((x) => Math.abs(c[x.index] - x.weight / tot * 100) < 1), JSON.stringify(c));
   const battleSrc = read('monster-hero/src/parts/71-screen-battle.jsx');
-  check('④ 枠の表示は tacticsTargetChances を通す(炎の段は出さない)', /tacticsTargetChances\(tacticsUnits,tacticsHate\)\[i\]/.test(battleSrc) && /data-tactics-hate-pct=\{hatePct\}/.test(battleSrc)  && !/tacticsHateFlame/.test(battleSrc) && !('flames' in H));
+  check('④ 枠の表示は tacticsTargetChances(コピー込みは WithCopy)を通す(炎の段は出さない)', /tacticsTargetChancesWithCopy\(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,[^)]*\)/.test(battleSrc) && /hatePct=chancesNow\?chancesNow\.slots\[i\]/.test(battleSrc) && /data-tactics-hate-pct=\{hatePct\}/.test(battleSrc)  && !/tacticsHateFlame/.test(battleSrc) && !('flames' in H));
 }
 
 // ⑤

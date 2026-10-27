@@ -26,7 +26,7 @@ vm.createContext(sandbox);
 vm.runInContext(slice('const TACTICS_START_GUTS_RATE', '// ===== イベント・レイドボス「ジャック」の定義')
   + ';globalThis.api={createTacticsUnit,tacticsTargetWeights,tacticsTargetChances,tacticsTargetChancesWithCopy,chooseTacticsTarget,withTacticsTarget,'
   + 'tacticsTotalHp,isTacticsWipedOut,TACTICS_AI_COPY_TARGET,isTacticsAiCopyStanding,tacticsAiCopyPos,tacticsAiCopyStartHate,'
-  + 'tacticsAiCopyHateStep,tacticsIntentHitsAiCopy,damageTacticsAiCopy,tacticsAiCopyName};', sandbox);
+  + 'tacticsAiCopyHateStep,tacticsIntentHitsAiCopy,damageTacticsAiCopy,tacticsAiCopyName,tacticsIntentTargets};', sandbox);
 const A = sandbox.api;
 
 const unit = (id, hp = 500) => ({ ...A.createTacticsUnit({ id, name: id, hp, maxHp: hp, atk: 100, def: 100, guts: 100 }) });
@@ -76,6 +76,13 @@ check('倒れたコピーのヘイトは0', A.tacticsAiCopyHateStep({ ...copy, h
 check('全体攻撃はコピーにも当たる', A.tacticsIntentHitsAiCopy({ targetsAll: true }, copy));
 check('単体攻撃は targetCopy のときだけ', A.tacticsIntentHitsAiCopy({ targetCopy: true }, copy) && !A.tacticsIntentHitsAiCopy({ targetSlot: 0 }, copy));
 check('狙いの無い間合い攻撃はコピーのマスなら当たる', A.tacticsIntentHitsAiCopy({ variant: 'sweep', sweepDist: 2 }, copy) && !A.tacticsIntentHitsAiCopy({ variant: 'sweep', sweepDist: 1 }, copy));
+check('コピーを狙った技は枠の子に当たらない(間合い攻撃の保険でも流れない)',
+  A.tacticsIntentTargets({ targetCopy: true }, board).length === 0 && A.tacticsIntentTargets({ targetCopy: true, variant: 'sweep', sweepDist: 1 }, board, 1).length === 0);
+{
+  const off = A.tacticsTargetWeights(board, 2, null, copy).find(p => p.index === A.TACTICS_AI_COPY_TARGET);
+  const offSlot = A.tacticsTargetWeights(board, 2, null).find(p => p.index === 0);
+  check('ヘイトが切のときはコピーの倍率も1(満タンなら枠の満タンの子と同じ重さ)', off && Math.abs(off.weight - offSlot.weight * (1 + 2 * (1 - copy.hp / copy.maxHp)) / (1 + 2 * (1 - board[0].hp / board[0].maxHp))) < 1e-9, off && `${off.weight}`);
+}
 
 // ⑥ 倒されたら消える・盤面に混ざらない
 check('ライフが残れば減るだけ', A.damageTacticsAiCopy(copy, 100).hp === 150);
