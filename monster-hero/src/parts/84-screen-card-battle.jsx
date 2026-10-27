@@ -1346,9 +1346,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   隠れているあいだ(守りを選ぶ・番の帯・ダウンの帯・大写し・決着)は場所を取らない(844×390 の守りで、見えないカットインが記録を押し出した)
   const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
   const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
-  // 小さい縦の画面では、上に重ねたふつうの吹き出しが技の札の上半分を隠す(320×568・2行の台詞。2026-10-27 フキダシくん)。
+  // 小さい縦の画面と横の画面では、上に重ねたふつうの吹き出しが技の札を隠す(320×568 は上半分・844×390 は丸ごと。2026-10-27 フキダシくん)。
   //   吹き出しが出ているあいだは技の札を出さない(何の技かは記録の1行に出ている。台詞が消えれば札が出る)
-  const bubbleOverAction = !!(tiny && !wide && bubble && !bubble.cut && !replay && !tutorial);
+  const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
   React.useLayoutEffect(() => {
