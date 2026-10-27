@@ -60,7 +60,9 @@ const helpPart = read('monster-hero/src/parts/20-market-notices-help.jsx');
 check('ヘルプの「ブリーダーの教え」の表は、公開前のアシカを出さない', /filter\(card => typeof teachingCardReleased !== 'function' \|\| teachingCardReleased\(card\)\)/.test(helpPart));
 const app = read('monster-hero/src/parts/60-app.jsx');
 check('説明文(getDynamicDesc)はこの表から作る', /if\(t\.id==='sorashido'\) return sorashidoCopyDesc\(level\);/.test(app));
-check('MFバトルカードには入れない', !/sorashido/.test(read('monster-hero/src/parts/82-card-battle-core.jsx')));
+// MFバトルカードには、助手ソラシドが対戦相手として出る(カード部・2026-10-27)。入れないのはアシカの効果(AIコピー)のほう
+const cardParts = fs.readdirSync(path.join(ROOT, 'monster-hero/src/parts')).filter((f) => /^(8\d|9\d)-card/.test(f)).map((f) => read(`monster-hero/src/parts/${f}`)).join('\n');
+check('MFバトルカードにはアシカの効果(AIコピー)を入れない', cardParts.length > 0 && !/copy_sorashido|aiCopy[A-Z]/.test(cardParts));
 const copySrc = read('monster-hero/src/parts/32-sorashido-copy.jsx');
 check('保存しない(storeGet・storeSet・localStorage を使わない)', !/storeGet|storeSet|localStorage/.test(copySrc));
 
