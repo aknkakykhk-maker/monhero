@@ -4273,6 +4273,32 @@ const createAnimationStyle = () => {
     .mh-card-dodge { animation: mhCardDodge .62s ease-out both; }
     .mh-card-guard { animation: mhCardGuard .7s ease-out both; }
     .mh-card-hit { animation: mhRjJackHit .6s ease-out both; }
+    /* 当たった子の白い光・ダメージの数字・倒れたときの帯(2026-10-26 改良の案 B) */
+    /* 全体カードの背景に切りかわる(2026-10-26 改良の案 D) */
+    .mh-card-field-bg { animation: mhCardFieldBg .6s ease-out both; }
+    @keyframes mhCardFieldBg { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-field-bg { animation: none; } }
+    /* 勝った・負けた瞬間(2026-10-26 改良の案 C)。決着の動きを少し見せてから出す */
+    .mh-card-end { animation: mhCardEndIn .35s ease-out .25s both; }
+    @keyframes mhCardEndIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+    .mh-card-end-title { animation: mhCardEndTitle .5s cubic-bezier(.2,1.4,.4,1) .3s both; }
+    @keyframes mhCardEndTitle { 0% { opacity: 0; transform: scale(.3); } 100% { opacity: 1; transform: scale(1); } }
+    .mh-card-end-rays { background: repeating-conic-gradient(rgba(253,230,138,.28) 0 8deg, rgba(253,230,138,0) 8deg 20deg); -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%); animation: mhCardEndRays 6s linear infinite; }
+    @keyframes mhCardEndRays { 0% { transform: translate(-50%,-50%) rotate(0deg); } 100% { transform: translate(-50%,-50%) rotate(360deg); } }
+    .mh-card-confetti { animation: mhCardConfetti 1.8s ease-in both; }
+    @keyframes mhCardConfetti { 0% { opacity: 0; transform: translate(0,-20px) rotate(0deg); } 10% { opacity: 1; } 100% { opacity: .9; transform: translate(var(--cf-x), 105vh) rotate(var(--cf-r)); } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-end, .mh-card-end-title, .mh-card-end-rays, .mh-card-confetti { animation: none; } }
+    /* 大事な場面の台詞のカットイン(右から入る。2026-10-26 改良の案 B) */
+    .mh-card-cutin { animation: mhCardCutin .35s cubic-bezier(.2,.9,.3,1.2) both; }
+    @keyframes mhCardCutin { 0% { opacity: 0; transform: translateX(40%); } 100% { opacity: 1; transform: translateX(0); } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-cutin { animation: none; } }
+    .mh-card-hit-flash { position: absolute; inset: 0; border-radius: 12px; background: rgba(255,255,255,.85); pointer-events: none; animation: mhCardHitFlash .28s ease-out both; }
+    @keyframes mhCardHitFlash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-card-dmg-pop { animation: mhCardDmgPop 1s ease-out both; }
+    @keyframes mhCardDmgPop { 0% { opacity: 0; transform: scale(.4) translateY(6px); } 18% { opacity: 1; transform: scale(1.25) translateY(-4px); } 32% { transform: scale(1) translateY(-6px); } 80% { opacity: 1; transform: translateY(-14px); } 100% { opacity: 0; transform: translateY(-20px); } }
+    .mh-card-down-band { animation: mhCardDownBand 1.1s ease-out both; }
+    @keyframes mhCardDownBand { 0% { opacity: 0; transform: scaleY(.2); } 15% { opacity: 1; transform: scaleY(1.08); } 25% { transform: scaleY(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-hit-flash, .mh-card-dmg-pop, .mh-card-down-band { animation: none; } }
     .mh-card-ko { animation: mhCardKo .9s ease-in forwards; transform-origin: 50% 90%; }
     /* 「画面の揺れ: 揺らさない」(カードのオプション)のときの受けた動き。揺らさずに赤く光るだけ */
     @keyframes mhCardHitCalm { 0%,100% { filter: none; } 30% { filter: drop-shadow(0 0 10px rgba(248,113,113,1)) brightness(1.3); } }
@@ -4305,7 +4331,12 @@ const createAnimationStyle = () => {
     .mh-card-turn-call { animation: mhCardTurnCall .8s ease-out both; }
     @keyframes mhCardTurnCall { 0% { opacity: 0; transform: scale(.7); } 20% { opacity: 1; transform: scale(1.06); } 32% { transform: scale(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes mhCardBig { 0% { opacity: 0; scale: .85; } 100% { opacity: 1; scale: 1; } }
-    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-turn-call, .mh-card-big { animation: none; } }
+    /* 番の替わり目の横いっぱいの帯(左からさっと入って、右へ抜ける)と、画面のふちの光(2026-10-26 改良の案 A) */
+    .mh-card-turn-sweep { animation: mhCardTurnSweep .8s cubic-bezier(.2,.8,.3,1) both; }
+    @keyframes mhCardTurnSweep { 0% { opacity: 0; transform: translateX(-60%) skewY(-4deg); } 18% { opacity: 1; transform: translateX(0) skewY(-4deg); } 80% { opacity: 1; transform: translateX(0) skewY(-4deg); } 100% { opacity: 0; transform: translateX(40%) skewY(-4deg); } }
+    .mh-card-turn-edge { animation: mhCardTurnEdge .8s ease-out both; }
+    @keyframes mhCardTurnEdge { 0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .mh-card-turn-banner, .mh-card-turn-call, .mh-card-big, .mh-card-turn-sweep, .mh-card-turn-edge { animation: none; } }
     /* ==== MFバトルカードのパックを開ける演出(87-card-deck-edit.jsx の CardPackOpen。社長「派手に」台帳 #3503) ====
        破る: 上の帯がちぎれて飛ぶ・光があふれる / めくる: 1枚ずつ裏返る / キラ: めくる前から裏が光って揺れる・めくったら大きく光る */
     @keyframes mhPackIdle { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1deg); } }

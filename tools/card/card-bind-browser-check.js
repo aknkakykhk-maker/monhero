@@ -114,9 +114,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       await page.locator('[data-card-hand-card="0"]').click();
       await page.waitForTimeout(200);
       const user = page.locator('[data-card-mon].ring-amber-300').first();
-      if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
+      // 使う子・狙う相手は、1回目のタップを CARD_DOUBLE_TAP_MS(350ms)待ってから決まる(#3873)。待つ前に次を押すと1回目が取り消されるので、その間より長く待つ
+      if (await user.count()) { await user.click(); await page.waitForTimeout(450); }
       await page.locator('[data-card-mon="1-0"]').click();
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(450);
     };
     await openBind();
     const names = await page.locator('[data-card-bind-name]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-bind-name')));
