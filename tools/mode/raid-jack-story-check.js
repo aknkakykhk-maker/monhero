@@ -114,7 +114,9 @@ const transformed = babel.transformSync(
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'raid-jack-story-check.jsx' });
 const moduleScope = { exports: {} };
 // お話・お知らせの文は言葉の区切りの部品(21-assistant.jsx の bubbleWrap)を通して描く(2026-10-24)。ここでは文の中身だけを見るので、そのまま返す
-const BUBBLE_WRAP_STUB = 'const bubbleWrap = (t) => t, bubbleWrapStyle = () => undefined;\n';
+const BUBBLE_WRAP_STUB = 'const bubbleWrap = (t) => t, bubbleWrapStyle = () => undefined;\n'
+  // お話の真ん中のモンスター(2026-10-27・21-assistant.jsx)。ここでは位置を測らず、絵の対応も空にしておく
+  + 'const storyMeasureRef = () => undefined, STORY_MONSTER_ART = {}, withMonsterIdleArt = (id, art) => art;\n';
 new Function('module', 'exports', 'React', BUBBLE_WRAP_STUB + transformed.code)(moduleScope, moduleScope.exports, React);
 const GUESTS = e.STORY_GUEST_SPEAKERS;
 const byId = (id) => e.ASSISTANTS.find((x) => x.id === id) || GUESTS.find((x) => x.id === id) || e.ASSISTANTS[0];

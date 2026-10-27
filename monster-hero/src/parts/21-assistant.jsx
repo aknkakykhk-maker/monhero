@@ -15,6 +15,22 @@ const assistantById = (id) => ASSISTANT_LIST.find(a => a.id === id)
   || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
 // 台本に出てくる話し手(顔を並べる人)。助手に加えて、台本に出てくる登場人物も並べる
 const storyCastOf = (script) => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
+// お話の真ん中に出すモンスターの全身の絵(台本の monsters の id → 絵。2026-10-27「推しに会える夜」)。足すときはここへ1行
+const STORY_MONSTER_ART = Object.freeze({
+  Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
+  Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null,
+});
+// お話の層の位置を測って、いちばん外側の箱([data-event-story])の CSS 変数へ書く ref。
+// 上のステージの下端(--story-stage-bottom)と下の窓の高さ(--story-sheet-h)で、真ん中のモンスターの置き場を決める。
+// ★動きの途中(登場・揺れ)のずれを拾わないよう、transform の効かない offsetTop / offsetHeight で測る。大きさが変わったら測り直す
+const storyMeasureRef = (name, kind) => (el) => {
+  if (!el) return;
+  const root = el.closest('[data-event-story]');
+  if (!root) return;
+  const put = () => root.style.setProperty(name, `${Math.round(kind === 'bottom' ? el.offsetTop + el.offsetHeight : el.offsetHeight)}px`);
+  put();
+  if (!el.__mhStoryRo && typeof ResizeObserver === 'function') { el.__mhStoryRo = new ResizeObserver(put); el.__mhStoryRo.observe(el); }
+};
 const assistantSceneById = (key) => (key && ASSISTANT_SCENE_MAP[key]) || null;
 // ---- 親密度(みゅあとの仲良し度)を各画面へ配る ----
 // 吹き出しはどの画面にも置くので、画面ごとに props を渡さずに済むよう Context で配る。
