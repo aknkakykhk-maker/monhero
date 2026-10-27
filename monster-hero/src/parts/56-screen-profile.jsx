@@ -154,7 +154,7 @@ function ProfileScreen({
     return () => { alive = false; };
   }, []);
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length
-    ? unlockedAssistants : ASSISTANT_LIST;
+    ? unlockedAssistants : ASSISTANT_LIST.filter(a => typeof assistantReleased !== 'function' || assistantReleased(a.id));
   // 根で safe-area を足さない(index.html の body が env(safe-area-inset-*) を持っており、
   // ここで足すとノッチぶんを二重に取る)。デバッグのプレビュー中だけ、画面の上に重なる
   // 固定の帯(60-app.jsx の data-onboarding-preview-bar)ぶんだけ下げる。
