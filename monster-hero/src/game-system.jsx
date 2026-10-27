@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1b751d55010bbfa2
+// generated-sha256: fff234c404c52c02
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -12056,14 +12056,19 @@ const helpDataRows = (id) => {
     // タクティクスのEXスキル(2026-09-23)。持っている子・名前・回数・カードとの併用・効果時間を定義から作る。
     // ★EXを足したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
     case 'tacticsExSkills':
-      // ★公開前の子(下書き。2026-10-27 キュービの九尾幻灯)のEXは出さない。遊べる子(ALL_PLAYER_MONSTERS)のEXだけを並べる
+      // ★公開前の子(下書き)のEXは出さない。遊べる子(ALL_PLAYER_MONSTERS)のEXだけを並べる。
+      //   勇者でないときに別のEXになる子(supportKey。2026-10-27 オリヒメの焦がれ待つ天ノ河)は、その行も「共モンのとき」として続けて並べる
       return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {})
-        .filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).map(monId => {
+        .filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).flatMap(monId => {
         const def = tacticsExDefOf(monId);
         const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
-        const duration = def.duration === 'turns' ? `${def.turns}ターン` : ({ turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[def.duration] || '');
-        return [`${monName}「${def.name}」`,
-          `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+        const rowOf = (d, role) => {
+          const duration = d.duration === 'turns' ? `${d.turns}ターン` : ({ turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[d.duration] || '');
+          return [`${monName}「${d.name}」${role}`,
+            `${d.unlimited ? '無制限' : `1ラン${d.maxUses}回`} ／ ${d.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+        };
+        const support = def.supportKey && TACTICS_EX_SKILLS[def.supportKey] ? tacticsExDefOf(def.supportKey) : null;
+        return support ? [rowOf(def, '(勇者のとき)'), rowOf(support, '(共モンのとき)')] : [rowOf(def, '')];
       });
     // タクティクスの狙われやすさ(🔥・ヘイト)の仕組みの数字(2026-10-22 社長「こういう質問とかにもおしゃべりで答えられたらいいね」→「ヘルプに目安の表を足す」)。
     // ★数字は TACTICS_HATE・MONSTER_TYPES・TACTICS_TARGET_LOW_HP_BIAS から作り、目安の確率はゲームの狙いの関数(tacticsTargetWeights)で計算する。

@@ -53,6 +53,25 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-10-27 キュービ・オリヒメの正式実装(文と絵は社長「この文で」「この形で」)。助手ソラシドの公開と同じ日で、
+    // 円盤石はソラシドのお話を見てから並ぶので、お知らせもソラシドの公開の印で出す。絵は tools/image/make-kyubi-orihime-release-notice.js
+    date: "2026-10-27 18:19", type:'update', group:'monster', title:'新モンスター「キュービ」「オリヒメ」が仲間になりました', status:'new', releaseFlag:'assistantSorashido',
+    image: 'images/events/kyubi-orihime-release-notice.jpg?v=081a39f72310',
+    items:[
+      '九尾の妖狐キュービと、天の川の妖狐オリヒメが登場。助手ソラシドのお話『推しに会える夜』を見ると、マーケットに2体の円盤石が並びます',
+      'キュービの勇者特性「九尾四相」は、はじめに立つ距離で4つの相から1つが決まります',
+      'オリヒメの勇者特性「天河の契り」は、相方を1体選び、2体の絆で強くなります',
+      'タクティクスのEX: キュービ「九尾幻灯」、オリヒメ「星合の刻」(勇者のとき)・「焦がれ待つ天ノ河」(共モンのとき)',
+    ],
+    gallery: [
+      { caption:'キュービの紹介', image:'images/events/kyubi-profile.jpg?v=d168264c4409' },
+      { caption:'オリヒメの紹介', image:'images/events/orihime-profile.jpg?v=901fad80f508' },
+      { caption:'キュービ 染色イメージ「月夜ぎつね」', image:'images/events/kyubi-dye-preview.jpg?v=0db8cc51559e' },
+      { caption:'オリヒメ 染色イメージ「桜」', image:'images/events/orihime-dye-preview.jpg?v=fee8c692d78b' },
+    ],
+    assistantNotice: { id:'update_notice_kyubi_orihime_release_v1', type:'market' },
+  },
+  {
     // マルチ対戦の入口に、いま「だれとでも」で待っている人の一覧(91・案A)。文は社長「この文で」2026-10-27
     date: "2026-10-27 17:35", type:'update', group:'cardBattle', title:'マルチ対戦で、いま相手を待っている人が見られるようになりました', status:'new',
     items:[
