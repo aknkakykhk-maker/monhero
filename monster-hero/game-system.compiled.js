@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90f908751b3421c3
+// source-sha256: a5b6ab08423836fe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107342,10 +107342,12 @@ function MonsterHeroGame() {
             hits.push({
               dmg: d,
               isCrit: false,
-              slotIdx: copy.srcSlot,
+              slotIdx: copy.pos,
               aiCopy: true,
+              actorName: tacticsAiCopyName(copy),
+              srcMonsterId: copy.srcMonsterId,
               isSpecial: card.type === 'unique',
-              skillName: `${tacticsAiCopyName(copy)}の${card.name || card.baseName || '攻撃'}`,
+              skillName: card.name || card.baseName || '攻撃',
               isUnique: card.type === 'unique',
               monId: card.type === 'unique' ? card.monId : undefined
             });
@@ -107369,6 +107371,31 @@ function MonsterHeroGame() {
       total
     };
   };
+  const playAiCopyHit = async h => {
+    setSlotSkill({
+      slotIndex: h.slotIdx,
+      name: h.skillName,
+      type: h.isUnique ? 'unique' : 'normal',
+      ownerId: h.srcMonsterId,
+      aiCopy: true
+    });
+    setAttackAnim({
+      slotIndex: h.slotIdx,
+      aiCopy: true,
+      motion: 'default',
+      skillName: h.skillName
+    });
+    if (h.isUnique) Audio_.se.special();else Audio_.se.attack();
+    await battleWait(450);
+    setAttackAnim(null);
+    setSlotSkill(null);
+    addPopup(`${h.dmg}`, 'enemy', 'text-sky-200 drop-shadow-[0_0_20px_rgba(125,211,252,0.9)] text-5xl font-black animate-bounce', `🤖 ${h.actorName}の ${h.skillName} → 敵に ${h.dmg.toLocaleString()} ダメージ`);
+    setEnemy(prev => prev ? {
+      ...prev,
+      hp: Math.max(0, prev.hp - h.dmg)
+    } : prev);
+    await battleWait(550);
+  };
   const tacticsAiCopySoloStrike = async () => {
     const startHp = enemy?.hp ?? 0;
     const ca = runTacticsAiCopyAction(enemyDist);
@@ -107376,15 +107403,7 @@ function MonsterHeroGame() {
       defeated: false,
       enemyHp: startHp
     };
-    for (const h of ca.hits) {
-      addPopup(`🤖 ${h.skillName} −${h.dmg}`, 'enemy', 'text-sky-200 font-black text-xl drop-shadow-md');
-      setEnemy(prev => prev ? {
-        ...prev,
-        hp: Math.max(0, prev.hp - h.dmg)
-      } : prev);
-      pushBattleLog(`${h.skillName} → 敵に${h.dmg}ダメージ`, 'ally');
-      await battleWait(500);
-    }
+    for (const h of ca.hits) await playAiCopyHit(h);
     setCurrentWaveDamage(p => p + ca.total);
     raidJackDamageRef.current += Number(ca.total) || 0;
     const remaining = Math.max(0, startHp - ca.total);
@@ -122215,6 +122234,11 @@ function MonsterHeroGame() {
         let hitIdx = 0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          if (hit && hit.aiCopy) {
+            await playAiCopyHit(hit);
+            hitIdx++;
+            continue;
+          }
           setTacticsPandoraForms(hit && hit.pandoraForm && hit.slotIdx != null ? {
             [hit.slotIdx]: hit.pandoraForm
           } : {});
