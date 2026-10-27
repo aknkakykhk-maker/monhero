@@ -102,7 +102,7 @@ var GAME_BUILD = '31c4eafcfac6';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-10-27 10:17';
+window.__mhBuildDate = '2026-10-27 10:20';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -2258,7 +2258,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=a36e573b23c1" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=2b6708071997" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/changelog.js?v=72ef4c1cb973" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
 <script src="data/help.js?v=e69e19d20625" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
