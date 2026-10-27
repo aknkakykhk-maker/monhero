@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dfc34ef7625dec16
+// source-sha256: d8f2f44c94ec3bae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70904,7 +70904,11 @@ function BattleScreen({
       borderColor: `${battleModeInfo(runMode).color}66`,
       backgroundColor: 'rgba(0,0,0,.35)'
     }
-  }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : isRaidJackMode(runMode) ? React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", enemy?.name || '') : React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), React.createElement("div", {
+  }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : isRaidJackMode(runMode) ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, battleModeInfo(runMode).short), " / ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, enemy?.name || '')) : React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), React.createElement("div", {
     "data-battle-metrics": true,
     className: "shrink-0 flex items-center gap-1 px-1 leading-none"
   }, React.createElement("div", {
@@ -71212,7 +71216,7 @@ function BattleScreen({
     "data-raid-growth-chip": true,
     onClick: () => setRaidGrowthOpen(true),
     "aria-label": "レイドバトルのターンごとの強化の内訳を開く",
-    className: "mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]"
+    className: "mt-1 flex w-full min-w-0 items-center gap-1.5 max-[359px]:gap-1 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 max-[359px]:px-1 py-0.5 text-[9px] max-[359px]:text-[8px] font-black leading-tight text-emerald-100 active:scale-[.99]"
   }, React.createElement("span", {
     className: "shrink-0 text-emerald-300"
   }, "⬆ 強化"), React.createElement("span", {
@@ -71372,8 +71376,13 @@ function BattleScreen({
     }, React.createElement(Target, {
       size: 9
     }), "次の行動"), React.createElement("div", {
-      className: "mt-0.5 text-[11px] font-black leading-tight [@media(max-height:640px)]:col-start-1 [@media(max-height:640px)]:min-w-0 [@media(max-height:640px)]:truncate"
-    }, intentTitle), aimedName ? React.createElement("div", {
+      className: "mt-0.5 text-[11px] font-black leading-tight [@media(max-height:640px)]:col-start-1 [@media(max-height:640px)]:min-w-0 [@media(max-height:640px)]:overflow-hidden [@media(max-height:640px)]:whitespace-nowrap [@media(max-height:640px)]:[container-type:inline-size]"
+    }, React.createElement("span", {
+      className: "block [@media(max-height:640px)]:[font-size:var(--mh-intent-fit)]",
+      style: {
+        '--mh-intent-fit': `min(11px, calc(100cqw / ${[...String(intentTitle || '')].length + 0.3}))`
+      }
+    }, intentTitle)), aimedName ? React.createElement("div", {
       className: "mt-0.5 truncate text-[9px] font-bold leading-none opacity-90 [@media(max-height:640px)]:col-start-1"
     }, "🎯", aimedName) : null, enemyIntent.type === 'CONFUSED' ? React.createElement("div", {
       "data-enemy-confused": true,
@@ -72737,8 +72746,13 @@ function BattleScreen({
       size: 8,
       className: "shrink-0 mr-0.5 text-amber-300"
     }), React.createElement("span", {
-      className: `min-w-0 text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
-    }, s?.name || '---'), hateFlame && !tacticsNewLayout && hateFlame, assignedCount > 0 && !tacticsNewLayout && React.createElement("span", {
+      className: `min-w-0 flex-1 overflow-hidden whitespace-nowrap font-black uppercase leading-none [container-type:inline-size] ${tacticsNewLayout ? '' : 'text-center'} ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
+    }, React.createElement("span", {
+      className: "block",
+      style: {
+        fontSize: `min(10px, calc(100cqw / ${[...String(s?.name || '---')].length + 0.3}))`
+      }
+    }, s?.name || '---')), hateFlame && !tacticsNewLayout && hateFlame, assignedCount > 0 && !tacticsNewLayout && React.createElement("span", {
       className: "ml-1 text-[10px] font-black text-indigo-300"
     }, "×", assignedCount), slotBuffMarks.map(mark => React.createElement("span", {
       key: mark.text,
@@ -73056,7 +73070,7 @@ function BattleScreen({
       }, React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
       }, React.createElement("span", {
-        className: "text-[8px] font-black tracking-wider text-pink-300"
+        className: "shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300"
       }, "ライフ"), React.createElement("span", {
         className: "font-mono leading-none"
       }, Array.isArray(tacticsShields) && tacticsShields[i] > 0 && React.createElement("span", {
@@ -73065,7 +73079,7 @@ function BattleScreen({
       }, "🛡️", tacticsShields[i]), React.createElement("span", {
         className: "text-[11px] font-black text-white"
       }, tacticsUnit.hp), React.createElement("span", {
-        className: "text-[8px] text-slate-400"
+        className: "text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400"
       }, "/", tacticsUnit.maxHp))), React.createElement("div", {
         className: "relative h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
@@ -73088,13 +73102,13 @@ function BattleScreen({
       })), React.createElement("div", {
         className: "flex h-[10px] items-center justify-between leading-none"
       }, React.createElement("span", {
-        className: "text-[8px] font-black tracking-wider text-amber-300"
+        className: "shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-amber-300"
       }, "GUTS"), React.createElement("span", {
         className: "font-mono leading-none"
       }, React.createElement("span", {
         className: "text-[11px] font-black text-white"
       }, tacticsUnit.guts), React.createElement("span", {
-        className: "text-[8px] text-slate-400"
+        className: "text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400"
       }, "/", tacticsUnit.maxGuts))), React.createElement("div", {
         className: "h-[2px] overflow-hidden rounded-full bg-black/60",
         style: {
