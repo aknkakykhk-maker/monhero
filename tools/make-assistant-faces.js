@@ -80,8 +80,13 @@ const PER_ASSISTANT_BASE = {
   //   輪郭の高さ 505px(上端7)に対して一辺300 → ratio 0.594、上端20 → skip 0.026
   kyuko: { headRatio: 0.594, headTopSkip: 0.026 },
   // ソラシド(2026-10-27)は きゅうこと同じ 384x512 の胸から上の絵(髪の上端と絵の下端を枠いっぱいにそろえた)。
-  //   ★仮にきゅうこと同じ案B「頭ぜんぶ」。社長が4案(A 顔のアップ / B 頭ぜんぶ / C 頭と首 / D 肩まで)から選んだら直す
-  sorashido: { headRatio: 0.594, headTopSkip: 0.026 },
+  //   社長が4案から C「頭と首」を選んだ(一辺 = 輪郭の高さ × 0.68)。社長「センター調整はして」
+  //   首を傾けた絵が多く、頭の形の真ん中と顔の真ん中がずれるので、表情ごとに顔のまんなか(目と鼻のあいだ。絵の幅・高さに対する 0〜1)を
+  //   faceCenters に書き、その点を丸のまんなかに置く(docs/rules/ASSETS.md「顔のまんなかは1か所で決める」の助手の形)
+  sorashido: { headRatio: 0.68, faceCenters: {
+    normal: [0.509, 0.419], happy: [0.475, 0.414], troubled: [0.56, 0.44], excited: [0.563, 0.436],
+    angry: [0.563, 0.405], surprise: [0.542, 0.406], wink: [0.568, 0.443], crying: [0.575, 0.345],
+  } },
 };
 
 // 着替えの絵(2026-10-04 ハロウィン衣装)は構図が元の服と違う(みゅあは縦長の全身、ききとももすけは正方形のバストアップ)ので、別の切り出し方を使う
@@ -161,6 +166,25 @@ const run = async () => {
     if (!bounds) { console.log(`NG: ${file} は全部透明です`); continue; }
     const height = bounds.bottom - bounds.top + 1;
     const side = Math.round(height * headRatio);
+    // faceCenters … 表情ごとの顔のまんなか(絵の幅・高さに対する 0〜1)。書いてあれば、その点を丸のまんなかに置く。
+    // 枠が絵の外へはみ出しても顔をずらさない(はみ出た所は透明のまま)
+    const expr = file.replace(/\.png$/i, '').slice(prefix.length + 1);
+    const center = tune.faceCenters && tune.faceCenters[expr];
+    if (center) {
+      const scale = OUT_SIZE / side;
+      const fx = center[0] * img.width, fy = center[1] * img.height;
+      const out = createCanvas(OUT_SIZE, OUT_SIZE);
+      const octx = out.getContext('2d');
+      octx.imageSmoothingEnabled = true;
+      octx.imageSmoothingQuality = 'high';
+      octx.drawImage(img, 0, 0, img.width, img.height, OUT_SIZE / 2 - fx * scale, OUT_SIZE / 2 - fy * scale, img.width * scale, img.height * scale);
+      let buf = out.toBuffer('image/png', { compressionLevel: 9 });
+      if (sharp) buf = await sharp(buf).png({ palette: true, colours: 256, effort: 7, compressionLevel: 9 }).toBuffer();
+      const outPath = path.join(outDir, file.replace(/\.png$/i, '.PNG'));
+      fs.writeFileSync(outPath, buf);
+      console.log(`${file} → face/${path.basename(outPath)}  顔のまんなか (${center.join(',')}) を真ん中に・一辺 ${side}px  ${Math.round(buf.length / 1024)}KB`);
+      continue;
+    }
     let sy = Math.round(bounds.top + height * headTopSkip);
     const cx = headCenterX(sctx, img.width, sy, side);
     let sx = Math.round(cx - side / 2 + side * headShiftX);
