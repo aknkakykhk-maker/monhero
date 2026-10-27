@@ -164,7 +164,12 @@ function installFeelPlayer(o) {
       if (n.type === 'HOLD' || n.type === 'SLIDE') {
         holding.push({ id, n, p, yRatio: y, press, varying, off: c - centerOf(n), until: (Number(n.endTimeMs) || n.timeMs) + gauss() * o.sigma * 0.5 });
       } else if (n.type === 'FLICK') {
-        setTimeout(() => { const fd = flickDirOf(n.index), q1 = flickTo(p, fd, 30), q2 = flickTo(p, fd, 70); send(makeEvents('move', id, q1)); send(makeEvents('move', id, q2)); send(makeEvents('up', id, q2)); }, 25 + lateMs);
+        // flickStepMs(--flick-step): 0 は今までどおり「動く・動く・離す」を同じ瞬間にまとめて送る。正の数なら、その間隔ずつずらして送る
+        //   (2026-10-27 FLICK のまれな取りこぼしが、合図をまとめて送るボットのせいかを切り分けるため)。はじいた向きは押下に控える
+        const step = Number(o.flickStepMs) || 0;
+        setTimeout(() => { const fd = flickDirOf(n.index), q1 = flickTo(p, fd, 30), q2 = flickTo(p, fd, 70); press.flickDir = fd;
+          if (step > 0) { send(makeEvents('move', id, q1)); setTimeout(() => send(makeEvents('move', id, q2)), step); setTimeout(() => send(makeEvents('up', id, q2)), step * 2); }
+          else { send(makeEvents('move', id, q1)); send(makeEvents('move', id, q2)); send(makeEvents('up', id, q2)); } }, 25 + lateMs);
       } else {
         setTimeout(() => send(makeEvents('up', id, p)), 45 + rand() * 30 + lateMs);
       }
