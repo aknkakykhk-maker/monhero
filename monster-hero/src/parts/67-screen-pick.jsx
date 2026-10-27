@@ -736,6 +736,7 @@ function PickSlotScreen({
   battleTutorial, battleTutorialSpotClass, currentPickingMon, distTotalBonus,
   getDistAptitude, onRepick, phasePlan, scenarioPicksSlot, setupMon, slots, wave,
   heroStyleDef = null, heroStyle = null, onHeroStyle = null, perSlotApt = false,
+  partnerOffer = null, partnerPick = false, onPartnerPick = null,
 }) {
   const mon=currentPickingMon;
   // 勇者モンの初期スタイル(タクティクスで、スタイル式のEXを持つ子を勇者モンにしたときだけ)。
@@ -788,6 +789,17 @@ function PickSlotScreen({
             ))}
           </div>
           <div className="mt-1 text-[9px] font-bold leading-snug text-slate-300">{(heroStyleDef.styles.find(st=>st.id===pickedStyle)||{}).desc}</div>
+        </div>
+      )}
+      {/* ★オリヒメが勇者モンのとき、相方が決まるまで合流のたびに出す(2026-10-27 社長: 案ア)。押してから置いた子が相方になる */}
+      {partnerOffer&&(
+        <div data-orihime-partner className="mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5 text-left">
+          <button type="button" data-orihime-partner-pick aria-pressed={!!partnerPick}
+            onClick={()=>onPartnerPick&&onPartnerPick(!partnerPick)}
+            className={`min-h-[44px] w-full rounded-lg border-2 px-2 text-[12px] font-black active:scale-95 ${partnerPick?'border-sky-300 bg-sky-700 text-white':'border-white/20 bg-black/40 text-slate-200'}`}>
+            🎐 {partnerPick?'相方にする(このまま置く)':'この子を相方にする'}
+          </button>
+          <div className="mt-1 text-[9px] font-bold leading-snug text-slate-300">{partnerOffer.heroName}の「天河の契り」の相方になります。相方は1体だけで、置いた距離とのへだたりで効き目が変わります。</div>
         </div>
       )}
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
