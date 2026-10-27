@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00449f4e9ba16d2a
+// source-sha256: cd9863f87ee3526c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -32729,9 +32729,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
     full: true
-  }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('道の奥行き', segments('roadDepth', RHYTHM_ROAD_DEPTH_LABELS), '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。', {
-    full: true
-  }), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
     full: true
@@ -36949,7 +36947,7 @@ const RhythmTapTest = ({
   };
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
   RHYTHM_ROAD_WIDTH.set(orientationIsLandscape() ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1);
-  const cameraDeep = useState(() => settings.roadDepth === 'DEEP' || rhythmCameraDeepActive())[0];
+  const cameraDeep = useState(() => rhythmCameraDeepActive())[0];
   RHYTHM_PROJECTION_CAMERA.set(cameraDeep);
   const [skyLineTick, setSkyLineTick] = useState(0);
   if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
@@ -60787,15 +60785,21 @@ function MasuOfferingScreen({
       compact: true
     })), introVisible && React.createElement("div", {
       "data-offering-intro": true,
-      className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3"
+      className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1.5"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
     }, React.createElement("div", {
       className: "text-[11px] font-black text-violet-200"
-    }, "お布施の使い方"), React.createElement("ol", {
-      className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"
+    }, "お布施の使い方"), React.createElement("button", {
+      type: "button",
+      onClick: onDismissIntro,
+      className: "mh-button mh-button-secondary hidden [@media(orientation:landscape)_and_(max-height:520px)]:block min-h-[32px] shrink-0 rounded-lg border border-white/20 bg-slate-900 px-3 text-[11px] font-black active:scale-[.98]"
+    }, "わかった")), React.createElement("ol", {
+      className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:leading-snug"
     }, React.createElement("li", null, "お布施をするマスモンを選びます。"), React.createElement("li", null, "「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。"), React.createElement("li", null, "見積もりを見て「お布施する」を押します。")), React.createElement("button", {
       type: "button",
       onClick: onDismissIntro,
-      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98]"
+      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98] [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
     }, "わかった")), renderScreenNote('offering', 'ダイヤを払って、マスモンへ直接絆経験値を与えられます。', ['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。', '上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。']), renderMonsterSortFilterBar({
       singleType: true
     }), React.createElement("div", {
@@ -104246,6 +104250,24 @@ const DEBUG_TRIALS = [{
   title: '🎵 床と空中の見た目(試作3・立体)',
   note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
   when: '次の演奏から'
+}, {
+  id: 'rhythm_floor3d_c3b',
+  added: '2026-10-16',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_floor3d_proto_v1',
+  on: 'c3b',
+  title: '🎵 空中の見た目(案3+カメラを寝かせる)',
+  note: '案3の見た目に加えて、カメラを寝かせて道を奥へ深くします(遠くのノーツは小さく、手前で速く近づきます)。押す場所も同じ計算でそろって変わるので、見た目と押す場所はずれません。判定の時刻・色は変わりません',
+  when: '次の演奏から'
+}, {
+  id: 'rhythm_floor3d_c3',
+  added: '2026-10-16',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_floor3d_proto_v1',
+  on: 'c3',
+  title: '🎵 空中の見た目(案3・明るい板と光の帯)',
+  note: '空中のタップを明るく薄い板と光る縁に、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。地上と道は今のまま。色・判定は変わりません',
+  when: '次の演奏から'
 }];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
 const tacticsHateProtoOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.tacticsHate === true;
@@ -128070,10 +128092,12 @@ function MonsterHeroGame() {
           "data-extreme-mode-info": true,
           "aria-label": "極限チャレンジの説明を開く",
           onClick: () => setModeInfoId(EXTREME_MODE.id),
-          className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
-        }, "このモードの説明")
+          className: "shrink-0 min-h-[38px] px-3 max-[359px]:px-2.5 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
+        }, React.createElement("span", {
+          className: "max-[359px]:hidden"
+        }, "このモードの"), "説明")
       }), React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
+        className: "w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
@@ -128447,8 +128471,9 @@ function MonsterHeroGame() {
         }, value)))), React.createElement("div", {
           className: "mhbt-note"
         }, React.createElement("span", {
-          className: "truncate"
-        }, noteText), quick && hasExtremeSpecialRules(key) && React.createElement("span", {
+          className: "truncate [@media(orientation:landscape)_and_(max-height:520px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible",
+          style: JA_LABEL_STYLE
+        }, jaWrap(noteText)), quick && hasExtremeSpecialRules(key) && React.createElement("span", {
           className: "shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300"
         }, "特殊ルールあり")), React.createElement("div", {
           className: `mhbt-reward min-h-[54px] flex items-center gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start ${species && speciesRewardClaimed(key) ? 'opacity-70' : ''}`,

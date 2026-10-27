@@ -18571,8 +18571,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                  チャレンジの極限タブへ入れ込んだとき(2026-09-19)に入口ごと無くなっていたので、ここへ置き直す。
                  説明の中身は EXTREME_MODE の points。モードの説明モーダルをそのまま使う */}
             <BattleScreenHead eyebrow="EXTREME CHALLENGE ・ SELECT LEVEL" title="極限チャレンジ" accent="text-fuchsia-300" onBack={()=>setGameState('BATTLE_MODE_SELECT')}
-              right={<button data-extreme-mode-info aria-label="極限チャレンジの説明を開く" onClick={()=>setModeInfoId(EXTREME_MODE.id)} className="shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95">このモードの説明</button>}/>
-            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
+              right={<button data-extreme-mode-info aria-label="極限チャレンジの説明を開く" onClick={()=>setModeInfoId(EXTREME_MODE.id)} className="shrink-0 min-h-[38px] px-3 max-[359px]:px-2.5 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95">{/* 幅の狭い画面では「説明」だけにして、見出しの「極限チャレンジ」を切らない(320 で「極限チャレ…」。2026-10-27 ジン部長の見回り) */}<span className="max-[359px]:hidden">このモードの</span>説明</button>}/>
+            {/* 横向きの背の低い画面(844×390 など)では、札を左右2列(左=記録・倍率/右=説明・特殊ルール・ボタン)にして、
+                「この難易度で挑戦」まで最初から見えるようにする(画面の下へ出て押せなかった。難易度えらび #3790 と同じ形。2026-10-27 ジン部長の見回り) */}
+            <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 {/* チャレンジの難易度選択と同じ「通常 / 極限」タブ。
                     極限チャレンジはチャレンジの極限タブとして入れ込んだので、
@@ -18753,7 +18755,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <small>{species?'この種族での自己ベスト':ranked?'自己ベストスコア':'最高到達WAVE'} ・ {species?`クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns!==null?` ／ 最短 ${speciesRecord(key).bestTurns}T`:''}`:ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</small>
                         </div>
                         <div className="mhbt-cells">{rateCells(setting).map(([label,value,boosted])=><div key={label}>{label}<b className={boosted?'underline decoration-2':''}>{value}</b></div>)}</div>
-                        <div className="mhbt-note"><span className="truncate">{noteText}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
+                        {/* 横向きの背の低い画面では札が2列になり、この行が狭くなって「初回クリアで超越の実／難易度は種族ごと…」と切れていた。その画面だけ言葉の切れ目で折る(2026-10-27 ジン部長の見回り) */}<div className="mhbt-note"><span className="truncate [@media(orientation:landscape)_and_(max-height:520px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible" style={JA_LABEL_STYLE}>{jaWrap(noteText)}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
                         <div className={`mhbt-reward min-h-[54px] flex items-center gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start ${species&&speciesRewardClaimed(key)?'opacity-70':''}`} data-psyche-reward={key} data-species-reward-claimed={species?String(speciesRewardClaimed(key)):undefined}>
                           <span className={`shrink-0 whitespace-nowrap text-[10px] leading-tight font-black text-center ${species&&speciesRewardClaimed(key)?'text-slate-500':'text-fuchsia-200'}`}>クリア<br/>報酬</span>
