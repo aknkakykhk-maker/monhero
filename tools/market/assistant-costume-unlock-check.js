@@ -8,7 +8,8 @@
 //
 // 見るもの
 //   ① 公開の印が偽なら、解放していても並ばない(印を切り替えて確かめる。10/27 に公開して本物は真)
-//   ② (印を真にしたつもりで)勝つ前は並ばない/勝ったら並ぶ(ダイヤショップ・仮の 100,000 ダイヤ)
+//   ② (印を真にしたつもりで)勝つ前は鍵つきで並ぶ(買えない・札に入手条件)/勝ったら買える(ダイヤショップ 100,000 ダイヤ)
+//      (2026-10-27 社長「解放されるまでマーケットに出ない？ 出てないなら出して入手条件かくようにして」で、前の「勝つまで並べない」から変えた)
 //   ③ 前からの記録(詳しい記録・もとの記録の最近の30戦)で MASTER に勝っている人は並ぶ。0勝なら並ばない
 //   ④ 勝ち以外・ほかの相手・ほかの難易度では解放しない。足すだけで前の id を消さない
 //   ⑤ 壊れた値でも落ちない(配列に落とす)
@@ -44,6 +45,7 @@ const load = (released) => {
   const out = ctx.out;
   out.item = () => out.items.find(item => item.id === ID);
   out.listed = () => { const item = out.item(); return !!item && item.shop !== false && item.available !== false; };
+  out.lockedOnShelf = () => { const item = out.item(); return !!item && item.shop !== false && item.available === false; };
   return out;
 };
 
@@ -57,12 +59,13 @@ check('公開の印が偽のあいだは、解放していてもマーケット�
 
 // ② 勝つ前・勝ったあと
 const shop = load(true);
-check('勝つ前は並ばない(「近日追加」も出さない = shop が false)', shop.item() && shop.item().shop === false && shop.item().available === false);
+check('勝つ前も並ぶが買えない(shop は false でなく、available が false)', shop.lockedOnShelf());
+check('鍵つきの札に出す入手条件(lockLabel)が「MASTER に勝つと買えます」', (() => { const c = shop.ASSISTANT_COSTUMES.find(x => x.id === ID); return Array.isArray(c.lockLabel) && /MASTER/.test(c.lockLabel.join('')) && /勝つと買えます/.test(c.lockLabel.join('')); })());
 const entry = shop.assistantCostumeUnlockEntry(null, { who: 'mua', level: 'master', outcome: 'win' });
 check('みゅあの MASTER に勝つと、新しいキーへ保存する1件ができる',
   !!entry && entry.key === 'mh_assistant_costume_unlocked_v1' && entry.before === null && JSON.stringify(entry.next) === JSON.stringify([ID]));
 shop.addAssistantCostumeUnlockedNow(entry.next);
-check('勝ったら並ぶ(ダイヤショップの着替え・仮の 100,000 ダイヤ)', shop.listed() && shop.item().currency === 'diamond' && shop.item().cost === 100000 && shop.item().type === 'costume');
+check('勝ったら買える(ダイヤショップの着替え・100,000 ダイヤ)', shop.listed() && shop.item().currency === 'diamond' && shop.item().cost === 100000 && shop.item().type === 'costume');
 
 // ③ 前からの記録
 check('前からの記録で MASTER に勝っている人は解放', load(true).resolveUnlockedAssistantCostumes([], { foes: { mua: { win: 5, levels: { master: 2 } } } }).includes(ID));
@@ -75,7 +78,7 @@ check('もとの記録が壊れていても落ちない', [null, 'x', { recent: 
 check('ほかの助手の MASTER では解放しない', !load(true).resolveUnlockedAssistantCostumes([], { foes: { kiki: { levels: { master: 4 } } } }).includes(ID));
 const seeded = load(true);
 seeded.setAssistantCostumeUnlockedNow(seeded.resolveUnlockedAssistantCostumes(null, { foes: { mua: { levels: { master: 1 } } } }));
-check('前からの記録だけでも並ぶ', seeded.listed());
+check('前からの記録だけでも買える', seeded.listed());
 
 // ④ 勝ち以外・足すだけ
 const E = load(true).assistantCostumeUnlockEntry;
@@ -106,8 +109,8 @@ check('アプリの読み込みが、新しいキーとカードの記録2つか
   /setAssistantCostumeUnlockedNow\(resolveUnlockedAssistantCostumes\(await storeGet\(ASSISTANT_COSTUME_UNLOCKED_KEY, \[\], false\), await storeGet\(CARD_RECORD_DETAIL_KEY, null, false\), await storeGet\(CARD_SAVE_KEYS\.record, null, false\)\)\)/.test(app));
 check('アプリはもとの記録(mh_card_record_v1)も書き換えない(この読み込みは storeGet だけ)', !/storeSet\(CARD_SAVE_KEYS\.record/.test(app));
 check('アプリはカードの記録を書き換えない(この PR で storeSet(CARD_RECORD_DETAIL_KEY) を足していない)', !/storeSet\(CARD_RECORD_DETAIL_KEY/.test(app));
-check('マーケットの商品は、解放するまで shop と available を偽にする',
-  breeder.includes("get shop() { return costume.released === true && assistantCostumeUnlockedNow(costume) ? undefined : false; }")
+check('マーケットの商品は、公開していれば並べ、解放するまで available を偽にする',
+  breeder.includes("get shop() { return costume.released === true ? undefined : false; }")
   && breeder.includes("get available() { return assistantCostumeSaleIn(costume, 'diamond') && assistantCostumeUnlockedNow(costume) ? undefined : false; }"));
 check('保存の一覧(SAVE_DATA.md)に新しいキーがある', saveSpec.includes('`mh_assistant_costume_unlocked_v1`'));
 
@@ -130,6 +133,8 @@ check('本物は公開の印が真で、名前は「デュエルマスター」�
   && (() => { const c = load(true).ASSISTANT_COSTUMES.find(x => x.id === ID); return c.name === 'デュエルマスター' && c.imageDir === 'images/assistant/card-master' && /card-master\/face\/myua_happy\.PNG/.test(c.icon); })());
 check('解放の前にプロフィールで押すと、買える場所ではなく条件を出す',
   /assistantCostumeUnlockedNow\(lockedCostume\)\?/.test(app) && app.includes('lockedCostume.unlockHow') && typeof load(true).ASSISTANT_COSTUMES.find(x => x.id === ID).unlockHow === 'string');
+
+check('マーケットの札が、解放していない服には入手条件(lockLabel)を出す', /costume\.unlock && typeof assistantCostumeUnlockedNow === 'function' && !assistantCostumeUnlockedNow\(costume\) && Array\.isArray\(costume\.lockLabel\)\) return \[\.\.\.costume\.lockLabel\]/.test(read('monster-hero/src/parts/20-market-notices-help.jsx')));
 
 console.log(failed ? `\n${failed} 件失敗` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

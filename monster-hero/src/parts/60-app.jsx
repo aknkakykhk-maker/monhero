@@ -22050,12 +22050,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
           const lockedInfo=lockedCostume&&(
             <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-              {/* 解放の条件がある服(みゅあの MASTER に勝つと並ぶ服など)は、解放するまで条件を出す(まだマーケットに並んでいないため。2026-10-27) */}
+              {/* 解放の条件がある服(みゅあの MASTER に勝つと買える服など)は、解放するまで買える条件を出す(マーケットには鍵つきで並んでいる。2026-10-27) */}
               {assistantCostumeUnlockedNow(lockedCostume)?<>
               <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
               </>:<>
-              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はまだマーケットに並んでいません</p>
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットに並んでいます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1" style={JA_WRAP_STYLE}>{jaWrap(lockedCostume.unlockHow||'')}</p>
               </>}
               <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(lockedCostume.desc||'')}</p>

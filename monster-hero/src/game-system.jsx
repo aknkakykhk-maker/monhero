@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e4bd8484593a555a
+// generated-sha256: ec2b7b866f50e86b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11690,6 +11690,8 @@ const marketLabelNodes = (label) => marketLabelSegments(label)
 // いまビートP交換所で買える窓が開いていれば、その一言も添える。窓が読めないときは undefined(ふつうの「近日追加」)
 const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  // 解放が要る服(みゅあの「デュエルマスター」など)は、解放するまで入手条件を札に出す(2026-10-27 社長)
+  if (costume && costume.unlock && typeof assistantCostumeUnlockedNow === 'function' && !assistantCostumeUnlockedNow(costume) && Array.isArray(costume.lockLabel)) return [...costume.lockLabel];
   const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
   const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
   const fromMs = diamond ? Date.parse(diamond.from) : NaN;
@@ -11721,7 +11723,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px] max-[359px]:tracking-[-0.05em]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -42327,19 +42329,26 @@ const CLASSIC_AI_COPY_CSS = `
   [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
   [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
 }`;
+// 演出の段階。60 から aiCopy.fx('appear'|'thinking'|'vanish')が来ればそれを使い、無ければ fallback(出る前 appear・出たら idle)
+const aiCopyViewPhase = (copy, fallback) => (copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback);
 const classicAiCopyLandscape = () => {
   try { return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches; }
   catch (e) { return false; }
 };
-function ClassicAiCopyCell({ copy, turnCount }) {
+function ClassicAiCopyCell({ copy, turnCount, onOpen }) {
   if (!copy) return null;
-  const out = isAiCopyOut(copy, turnCount);
+  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
+  // 消えていく0.7秒(phase==='vanish')は、ターン切れで数え上は「出ていない」になっても出ていたときの札のまま描く
+  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
+  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
   const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)), maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
   return (
-    <div data-ai-copy-cell={out ? 'out' : 'waiting'} aria-label={`${tacticsAiCopyName(copy)}(5人目の味方)`}>
+    <div data-ai-copy-cell={out ? 'out' : 'waiting'} data-ai-copy-phase={phase} aria-label={`${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`}
+      role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
+      onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
       <style>{CLASSIC_AI_COPY_CSS}</style>
-      <SorashidoCopyFx phase={out ? 'idle' : 'appear'}><span className="text-2xl leading-none">{SORASHIDO_FACE_ICON}</span></SorashidoCopyFx>
+      <SorashidoCopyFx phase={phase}><span className="text-2xl leading-none">{SORASHIDO_FACE_ICON}</span></SorashidoCopyFx>
       <span className="w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200">{copy.name || '仲間'}<br/>のコピー</span>
       {out
         ? <><span className="whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200">G {guts}/{maxGuts}</span>
@@ -42545,7 +42554,24 @@ function BattleScreen({
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   // AIコピー(5つの遊び)の札。aiCopy は公開の印が偽なら null。タクティクスの札は盤の側(data-tactics-ai-copy)
-  const classicAiCopy = !Array.isArray(tacticsUnits) ? (aiCopy || null) : null;
+  //   コピーの手札の窓は5つの遊びの札・タクティクスの札(data-tactics-ai-copy)の両方から開くので、ここに1つだけ置く。
+  //   消えるとき(ターン切れ・WAVE の始めで aiCopy が null になったとき)は、直前の形を0.7秒だけ fx='vanish' で描いてから消す(60 は触らない)。
+  //   公開の印が偽なら aiCopy はずっと null なので、どちらも何も出さない
+  const [copyHandOpen, setCopyHandOpen] = useState(false);
+  const [copyGhost, setCopyGhost] = useState(null);
+  const copyPrevRef = useRef(null);
+  useEffect(() => {
+    if (aiCopy) { copyPrevRef.current = aiCopy; setCopyGhost(null); return undefined; }
+    const prev = copyPrevRef.current;
+    copyPrevRef.current = null;
+    setCopyHandOpen(false);
+    if (!prev) return undefined;
+    setCopyGhost({ ...prev, fx: 'vanish' });
+    const timer = setTimeout(() => setCopyGhost(null), 700);
+    return () => clearTimeout(timer);
+  }, [aiCopy]);
+  const shownAiCopy = aiCopy || copyGhost;
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? (shownAiCopy || null) : null;
   // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
@@ -43884,19 +43910,25 @@ function BattleScreen({
               // コピーは、コピーが立つマス(pos)の枠に出す(2026-10-27 部長: 見せ方は開発部の部品 24-sorashido-copy-view.jsx)。
               //   空いたマスなら元の子の絵を SorashidoCopyFx で包んで置く(出る前は appear・出たら idle)。重なるときは絵を出さず札だけ
               //   上に次に使う札(SorashidoNextCardBadge)、下にライフ・狙われる%の小さな札
-              const copySrc=aiCopy&&aiCopy.pos===i?slots[aiCopy.srcSlot]:null;
-              const copyChip=tacticsNewLayout&&aiCopy&&aiCopy.pos===i?(<>
-                {copySrc&&!s&&!aiCopy.stacked&&<div data-tactics-ai-copy-art={i} className="absolute inset-0 z-[24] flex items-center justify-center pointer-events-none">
-                  <SorashidoCopyFx phase={copyStanding?'idle':'appear'}>
+              //   消える0.7秒は shownAiCopy(直前の形・fx='vanish')で描く。狙われる%などの数えは aiCopy のまま
+              const tCopy=shownAiCopy;
+              const tCopyPhase=aiCopyViewPhase(tCopy,copyStanding?'idle':'appear');
+              const tCopyOut=copyStanding||tCopyPhase==='vanish';
+              const copySrc=tCopy&&tCopy.pos===i?slots[tCopy.srcSlot]:null;
+              const copyChip=tacticsNewLayout&&tCopy&&tCopy.pos===i?(<>
+                {copySrc&&!s&&!tCopy.stacked&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute inset-0 z-[24] flex items-center justify-center pointer-events-none">
+                  <SorashidoCopyFx phase={tCopyPhase}>
                     <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
                   </SorashidoCopyFx>
                 </div>}
                 <div data-tactics-ai-copy-next={i} className="absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none">
-                  <SorashidoNextCardBadge card={copyStanding?aiCopy.nextCard:null} turnsLeft={aiCopy.turnsLeft}/>
+                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft}/>
                 </div>
-                <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={copyStanding?'1':'0'}
-                  className="absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap">
-                  <span className="min-w-0 truncate">🤖{aiCopy.stacked?'重なる ':''}{copyStanding?`ライフ${aiCopy.hp}`:'次のターンから'}</span>
+                {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
+                <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={tCopyOut?'1':'0'} role={aiCopy?'button':undefined} aria-label={aiCopy?'コピーの手札を見る':undefined}
+                  onClick={aiCopy?(e)=>{e.stopPropagation();setCopyHandOpen(true);}:undefined}
+                  className={`absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
+                  <span className="min-w-0 truncate">🤖{tCopy.stacked?'重なる ':''}{tCopyOut?`ライフ${tCopy.hp}`:'次のターンから'}</span>
                   {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
                 </div>
               </>):null;
@@ -44252,7 +44284,10 @@ function BattleScreen({
               </button>);
             })}
           </div>
-          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount}/>}
+          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount} onOpen={()=>setCopyHandOpen(true)}/>}
+          {/* 手札の窓は body へ出す(横向きでは敵の段の札が枠の並びより上の重なりにあり、窓の上へ出てしまったため) */}
+          {aiCopy&&copyHandOpen&&typeof document!=='undefined'&&ReactDOM.createPortal(<SorashidoCopyHandSheet open copyName={aiCopy.name||'仲間'} turnsLeft={aiCopy.turnsLeft}
+            cards={Array.isArray(aiCopy.hand)?aiCopy.hand:[]} nextCard={aiCopy.nextCard||null} guts={aiCopy.guts} maxGuts={aiCopy.maxGuts} onClose={()=>setCopyHandOpen(false)}/>,document.body)}
           </div>
         </div>
         {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える
@@ -84952,12 +84987,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
           const lockedInfo=lockedCostume&&(
             <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-              {/* 解放の条件がある服(みゅあの MASTER に勝つと並ぶ服など)は、解放するまで条件を出す(まだマーケットに並んでいないため。2026-10-27) */}
+              {/* 解放の条件がある服(みゅあの MASTER に勝つと買える服など)は、解放するまで買える条件を出す(マーケットには鍵つきで並んでいる。2026-10-27) */}
               {assistantCostumeUnlockedNow(lockedCostume)?<>
               <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
               </>:<>
-              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はまだマーケットに並んでいません</p>
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットに並んでいます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1" style={JA_WRAP_STYLE}>{jaWrap(lockedCostume.unlockHow||'')}</p>
               </>}
               <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(lockedCostume.desc||'')}</p>
