@@ -198,12 +198,13 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
     /Orihime: Object\.freeze\(\{\n    id: 'orihime_hoshiai',\n    name: '星合の刻',[\s\S]*?maxUses: 3, unlimited: false, withCards: true,[\s\S]*?supportKey: 'OrihimeSupport',\n    effect: 'hoshiai',/.test(units)
     && /OrihimeSupport: Object\.freeze\(\{\n    id: 'orihime_kogare',\n    name: '焦がれ待つ天ノ河',[\s\S]*?maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,\n    effect: 'kogare',/.test(units)
     && /'kitsunebi', 'hoshiai', 'kogare'\]/.test(units));
-  check('勇者でない子は supportKey の定義へ引き替える', /const def = base && base\.supportKey && mainHero\?\.id !== monId \? tacticsExDefOf\(base\.supportKey\) : base;/.test(app));
+  check('勇者でない子は supportKey の定義へ引き替える', /const def = tacticsExRoleDefOf\(monId, mainHero\?\.id === monId\);/.test(app)
+    && /return def && def\.supportKey && !isHero \? tacticsExDefOf\(def\.supportKey, table\) : def;/.test(units));
   check('星合: 逢瀬を全部使って始め、2体の攻撃に続く攻撃(実際は回数を使い、予測は使わない)',
     /if\(def\.effect==='hoshiai'\)\{[\s\S]*?startHoshiai\(b\?b\.ouse:0, b\?b\.diff:0\)[\s\S]*?writeOrihime\('ouse',key,0\);/.test(app)
     && app.includes('hoshiaiComboAt(slotIdx,false)])') && app.includes('hoshiaiComboAt(slotIdx,true)])'));
   check('焦がれ: 当たると振り(1ターン2回まで)、当たりなら次の予告を意味不明に', /const r=rollKogare\(kg\.rolls\);/.test(app)
-    && /const upcoming = forcedConfuse \? confusedEnemyIntent\(aimed\) : confusion\.intent;/.test(app));
+    && /if \(confusion\.intent\?\.type !== 'CONFUSED'\) confusion\.intent = confusedEnemyIntent\(aimed\);/.test(app));
   check('どちらも次のターンへ進むところで残りを減らす', /tickOrihimeEx\(\); \/\/ ★星合の刻/.test(app));
 }
 

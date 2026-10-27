@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8be48f262290135b
+// source-sha256: de1761e09a3cdeb1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43972,6 +43972,10 @@ const normalizeTacticsExDef = raw => {
 };
 const tacticsExDurationText = def => !def ? null : def.duration === 'turns' ? `使ったターンから${def.turns}ターンのあいだ（WAVEが変わると切れる）` : TACTICS_EX_DURATION_TEXT[def.duration] || null;
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) => monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null;
+const tacticsExRoleDefOf = (monId, isHero, table = TACTICS_EX_SKILLS) => {
+  const def = tacticsExDefOf(monId, table);
+  return def && def.supportKey && !isHero ? tacticsExDefOf(def.supportKey, table) : def;
+};
 const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_EFFECTS) => !!(def && def.effect && implemented.includes(def.effect));
 const createTacticsExState = () => ({
   uses: {},
@@ -106981,8 +106985,7 @@ function MonsterHeroGame() {
   const raidJackDamageRef = useRef(0);
   const tacticsRaidPresentLevel = turn => Math.max(0, Math.floor((Number(turn) || 0) / 2));
   const raidExDefOf = monId => {
-    const base = tacticsExDefOf(monId);
-    const def = base && base.supportKey && mainHero?.id !== monId ? tacticsExDefOf(base.supportKey) : base;
+    const def = tacticsExRoleDefOf(monId, mainHero?.id === monId);
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? {
       ...def,
       unlimited: false,
@@ -117112,9 +117115,11 @@ function MonsterHeroGame() {
     const confuseBefore = enemyConfuseRef.current;
     const confusion = rollEnemyConfusion(aimed, confuseBefore);
     if (confusion.turns !== confuseBefore) writeEnemyConfuse(confusion.turns);
-    const forcedConfuse = !!aimed && orihimeForceConfuseRef.current && confusion.intent?.type !== 'CONFUSED';
-    if (aimed) orihimeForceConfuseRef.current = false;
-    const upcoming = forcedConfuse ? confusedEnemyIntent(aimed) : confusion.intent;
+    if (aimed && orihimeForceConfuseRef.current) {
+      orihimeForceConfuseRef.current = false;
+      if (confusion.intent?.type !== 'CONFUSED') confusion.intent = confusedEnemyIntent(aimed);
+    }
+    const upcoming = confusion.intent;
     if (aimed && confuseBefore > 0) {
       if (upcoming?.type === 'CONFUSED') showLuckBanner({
         icon: '❓',
