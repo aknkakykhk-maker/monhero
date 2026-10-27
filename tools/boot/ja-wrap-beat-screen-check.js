@@ -27,6 +27,8 @@ const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8971;
 const LIST = process.argv.includes('--list');
 // マルチの画面だけを巡る(直すときに早く回すため)
 const MULTI_ONLY = process.argv.includes('--multi-only');
+// 巡る画面を名前で絞る(直すときに早く回すため)。例: ONLY='ランキング|図鑑|練習' node tools/boot/ja-wrap-beat-screen-check.js --list
+const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY) : null;
 // 言葉の途中で折れてよい数。2026-10-26 に0まで直した
 const BEAT_SCREEN_WRAP_LIMIT = 0;
 // 字の切れてよい数(わざと切っている所は CLIP_ALLOW で外す)
@@ -56,7 +58,18 @@ const SCREENS = [
   ['オプション・軽さ', ['!オプション', '!軽さ']],
   ['ランキング', ['!ランキング']],
   ['記録', ['!記録']],
+  // 2026-10-27 足した(ビート部 リバースくん・部長テンポくんの依頼「まだ回っていない画面を足す」)
+  ['ランキング・マスモン', ['!ランキング', '!マスモンランキング']],
+  ['曲えらび・全国ランキング(この曲)', ['!ソロライブ', '#[data-rhythm-demo-ranking]']],
+  ['曲えらび・全国ランキング(総合)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!総合']],
+  ['曲えらび・全国ランキング(週間)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!週間']],
+  ['曲えらび・全国ランキング(イベント)', ['!ソロライブ', '#[data-rhythm-demo-ranking]', '!イベント']],
+  ['曲えらび・HELL の鍵', ['!ソロライブ', '#[data-rhythm-song-row]|Grievous Lady', '#[data-rhythm-difficulty="HELL"]']],
+  ['ノーツ図鑑', ['!遊びかた', '!ノーツ図鑑']],
+  ['これまでの記録(プロフィールから)', ['@HOME', '%プロフィールを開く', '#[data-profile-rhythm-history]']],
 ];
+// 道筋の1手の書き方: '!字'(字を含むボタン)・'=字'(字がそれだけのボタン)・'#セレクタ'(と '|字' でその字を含むもの)・'%名前'(aria-label)。
+// 先頭の '@HOME' は、モンヒロビートへ入らずに HOME から始める
 const SIZES = [[320, 568], [375, 667], [390, 844], [844, 390]];
 
 const SCAN = () => {
@@ -252,6 +265,44 @@ const runMulti = async (browser, W, H) => {
   return out;
 };
 
+// ===== 練習(はじめての案内)の吹き出し(2026-10-27 ビート部 リバースくん) =====
+// 案内を見ていない保存値で曲えらびを開き、「次へ」で送りながら1枚ずつ数える。お知らせを閉じるときも「スキップ」は押さない(案内が終わってしまう)
+const runTutorial = async (browser, W, H) => {
+  const out = [];
+  const page = await browser.newPage({ viewport: { width: W, height: H } });
+  await page.route(/supabase\.co/, (r) => r.abort());
+  await page.addInitScript(() => {
+    const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true);
+    put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
+    put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
+    put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
+  });
+  try {
+    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), null, { timeout: 40000 });
+    await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+    await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+    await page.waitForTimeout(1200);
+    for (let i = 0; i < 10; i++) { const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^(受け取る|閉じる|OK|確認|あとで読む)$/.test((x.innerText || '').trim()) && x.getClientRects().length && !x.closest('[aria-label="はじめての案内"]')); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
+    await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(800);
+    // 案内がモードえらびで始まっていなければ、曲えらびへ進む
+    if (!(await page.locator('[aria-label="はじめての案内"]').count())) await page.locator('button:visible', { hasText: 'ソロライブ' }).first().click({ timeout: 8000 });
+    await page.waitForSelector('[aria-label="はじめての案内"]', { timeout: 15000 });
+    for (let n = 1; n <= 20; n++) {
+      await page.waitForTimeout(700);
+      out.push([`練習の案内(${n}枚目)`, await page.evaluate(SCAN), await page.evaluate(CLIP, CLIP_ALLOW.map(([k, sel]) => [k, sel]))]);
+      const next = page.locator('[aria-label="はじめての案内"] button:visible').filter({ hasText: /^\s*次へ\s*$/ });
+      if (!(await next.count())) break;
+      await next.first().click({ timeout: 5000 });
+    }
+  } catch (e) { out.push(['練習の案内(途中で止まった)', [`(${e.message.split('\n')[0].slice(0, 100)})`], []]); }
+  await page.close();
+  return out;
+};
+
 // リザルトの検査(ja-wrap-beat-result-check.js)が同じ数え方を使う
 module.exports = { SCAN, CLIP, CLIP_ALLOW };
 if (require.main === module) (async () => {
@@ -273,22 +324,30 @@ if (require.main === module) (async () => {
         put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true); put('mh_rhythm_tutorial_seen_v1', true);
       });
       const closeAll = async () => { for (let i = 0; i < 10; i++) { const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^(受け取る|閉じる|OK|確認|スキップ|あとで読む)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!ok) break; await page.waitForTimeout(300); } };
-      const toModeSelect = async () => {
+      const toModeSelect = async (stayHome = false) => {
         await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
         await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), null, { timeout: 40000 });
         await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
         await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
         await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
         await page.waitForTimeout(1200); await closeAll();
+        if (stayHome) return;
         await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
         await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(1000); await closeAll();
       };
-      for (const [name, steps] of (MULTI_ONLY ? [] : SCREENS)) {
+      for (const [name, steps] of (MULTI_ONLY ? [] : SCREENS.filter(([nm]) => !ONLY || ONLY.test(nm)))) {
         try {
-          await toModeSelect();
-          for (const s of steps) {
-            const loc = s.startsWith('=') ? page.locator('button:visible').filter({ hasText: new RegExp(`^\\s*${s.slice(1)}\\s*$`) }) : page.locator('button:visible', { hasText: s.slice(1) });
-            await loc.first().click({ timeout: 8000 }); await page.waitForTimeout(1200);
+          await toModeSelect(steps[0] === '@HOME');
+          for (const s of steps.filter((x) => x !== '@HOME')) {
+            const [sel, text] = s.slice(1).split('|');
+            const loc = s.startsWith('=') ? page.locator('button:visible').filter({ hasText: new RegExp(`^\\s*${s.slice(1)}\\s*$`) })
+              : s.startsWith('#') ? (text ? page.locator(`${sel}:visible`, { hasText: text }) : page.locator(`${sel}:visible`))
+              : s.startsWith('%') ? page.locator(`[aria-label="${s.slice(1)}"]:visible`)
+              : page.locator('button:visible', { hasText: s.slice(1) });
+            // 目印(#)で押す手は、ページの中で直接押す(曲の一覧は輪になっていて同じ行が並ぶので、画面の上の押し方だと重なりで止まる)
+            if (s.startsWith('#')) { const ok = await page.evaluate(([q, t]) => { const el = [...document.querySelectorAll(q)].find((x) => x.getClientRects().length && (!t || (x.innerText || '').includes(t))); if (el) el.click(); return !!el; }, [sel, text || '']); if (!ok) throw new Error(`押せない: ${s}`); }
+            else await loc.first().click({ timeout: 8000 });
+            await page.waitForTimeout(1200);
           }
           await page.waitForTimeout(800);
           for (const x of await page.evaluate(SCAN)) found.push(`${name} ${W}×${H}: ${x}`);
@@ -296,9 +355,9 @@ if (require.main === module) (async () => {
         } catch (e) { check(`${name} ${W}×${H} を開けた`, false, e.message.split('\n')[0].slice(0, 120)); }
       }
       await page.close();
-      // マルチの画面
-      for (const [name, wraps, clips] of await runMulti(browser, W, H)) {
-        if (name.startsWith('マルチ(途中で止まった)') || (wraps[0] || '').startsWith('(')) { check(`${name} ${W}×${H} を開けた`, false, wraps[0] || ''); continue; }
+      // 練習の案内とマルチの画面
+      for (const [name, wraps, clips] of [...(MULTI_ONLY || (ONLY && !ONLY.test('練習の案内')) ? [] : await runTutorial(browser, W, H)), ...(ONLY && !ONLY.test('マルチ') ? [] : await runMulti(browser, W, H))]) {
+        if (name.endsWith('(途中で止まった)') || (wraps[0] || '').startsWith('(')) { check(`${name} ${W}×${H} を開けた`, false, wraps[0] || ''); continue; }
         for (const x of wraps) found.push(`${name} ${W}×${H}: ${x}`);
         for (const [kind, t] of clips) clipped.push(`${name} ${W}×${H}: ${kind}「${t}」`);
       }
