@@ -94,6 +94,7 @@ setFlag(false);
 // ⑤ 表を全部持っている(仮の値)
 [['CARD_AI_HABITS', E.CARD_AI_HABITS], ['CARD_AI_TUNE', E.CARD_AI_TUNE], ['CARD_AI_DECKS', E.CARD_AI_DECKS], ['CARD_AI_FAVORITE', E.CARD_AI_FAVORITE], ['CARD_CPU_PLAYLIST_DEFAULT', E.CARD_CPU_PLAYLIST_DEFAULT]]
   .forEach(([name, t]) => check(`⑤ 82 の ${name} にソラシドがある`, t[NEW] != null));
+check('⑤ ソラシドの既定の曲は Monster Hero(2026-10-27 社長の答え)', same(E.CARD_CPU_PLAYLIST_DEFAULT[NEW], ['monster_hero_theme']));
 const habitKeys = Object.keys(E.CARD_AI_HABITS.mua).sort();
 check('⑤ ソラシドの打ち方のくせが、ほかの助手と同じ項目', same(Object.keys(E.CARD_AI_HABITS[NEW]).sort(), habitKeys));
 // 83・91 は画面の部品と一緒に書かれているので、表の中身の文字で確かめる

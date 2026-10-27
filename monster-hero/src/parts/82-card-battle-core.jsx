@@ -2097,7 +2097,7 @@ const CARD_PLAYLIST_MAX = 5;
 const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   mua: Object.freeze(['melo_toriko']), kiki: Object.freeze(['eiki_boss']), momosuke: Object.freeze(['melo_crossing_field']),
   kyuko: Object.freeze(['melo_toward_the_stars_short']), dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']), atsu: Object.freeze(['melo_against_my_own_shadow']),
-  sorashido: Object.freeze(['melo_toriko']),   // 仮(2026-10-27)
+  sorashido: Object.freeze(['monster_hero_theme']),   // Monster Hero(2026-10-27 社長の答え)
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
   const out = [];
