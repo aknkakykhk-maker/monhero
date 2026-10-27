@@ -55,7 +55,7 @@ const CHANGELOG = [
   {
     // 2026-10-27 キュービ・オリヒメの正式実装(文と絵は社長「この文で」「この形で」)。助手ソラシドの公開と同じ日で、
     // 円盤石はソラシドのお話を見てから並ぶので、お知らせもソラシドの公開の印で出す。絵は tools/image/make-kyubi-orihime-release-notice.js
-    date: "2026-10-27 19:45", type:'update', group:'monster', title:'新モンスター「キュービ」「オリヒメ」が仲間になりました', status:'new', releaseFlag:'assistantSorashido',
+    date: "2026-10-27 18:19", type:'update', group:'monster', title:'新モンスター「キュービ」「オリヒメ」が仲間になりました', status:'new', releaseFlag:'assistantSorashido',
     image: 'images/events/kyubi-orihime-release-notice.jpg?v=081a39f72310',
     items:[
       '九尾の妖狐キュービと、天の川の妖狐オリヒメが登場。助手ソラシドのお話『推しに会える夜』を見ると、マーケットに2体の円盤石が並びます',
