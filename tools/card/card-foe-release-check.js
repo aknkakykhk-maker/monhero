@@ -5,7 +5,7 @@
 //
 //   決まり(ソランド部長): 印(RELEASE_FLAGS.assistantSorashido)が立つ前は、カードの相手えらび・マルチ・観戦・記録・曲の並びのどこにも出ない。
 //   カードだけの別の一覧は作らず、助手の一覧と同じ assistantReleased(data/assistants.js)で見る(82 の cardFoeReleased)。デバッグからも出さない。
-//   助手の一覧(ASSISTANTS)にソラシドが入るのはクラフトくんの枝なので、ここでは仮のソラシドを一覧の後ろに足して確かめる。
+//   助手の一覧(ASSISTANTS)にソラシドがいないときは、仮のソラシドを一覧の後ろに足して確かめる。
 //   ① 印が偽: cardFoeReleased が偽・いまの6人は真
 //   ② 印が偽: 相手えらび(ふだん・デバッグ)・見本の相手・曲の並びの助手に出ない。顔ぶれはいまの6人のまま
 //   ③ 印が偽: 曲の並びの保存の形が、いまの6人分のまま(既定・壊れた値・前の保存)。前に保存したソラシドの並びは消さない
@@ -36,7 +36,8 @@ const demoExpr = grab(/\{(allAssistants\.filter\(\(x\) => CARD_AI_HABITS\[x\.id\
 const plExpr = grab(/const plWhoList = (.+);\n/, '曲の並びの助手');
 const copyExpr = grab(/plSave\(Object\.fromEntries\((Object\.keys\(CARD_CPU_PLAYLIST_DEFAULT\)[^\n]*?)\.map\(\(who\) => \[who, list\]\)\)\)/, '並びを全員にうつす');
 const run = (expr, vars) => {
-  const all = [...E.ASSISTANTS, { id: NEW, name: 'ソラシド' }];
+  // 助手の一覧にソラシドがいなければ(クラフト部の枝が入る前)、仮のソラシドを後ろに足す
+  const all = E.ASSISTANTS.some((a) => a.id === NEW) ? [...E.ASSISTANTS] : [...E.ASSISTANTS, { id: NEW, name: 'ソラシド' }];
   const sb = vm.createContext({ ...vars, allAssistants: all, cardFoeReleased: E.cardFoeReleased, CARD_AI_HABITS: E.CARD_AI_HABITS, CARD_CPU_PLAYLIST_DEFAULT: E.CARD_CPU_PLAYLIST_DEFAULT,
     assistantsUnlockedFrom: (seen) => all.filter((a) => E.assistantUnlockedBy(a.id, seen)) });
   return vm.runInContext(expr, sb);

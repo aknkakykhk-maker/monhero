@@ -4,7 +4,7 @@
 //
 //   7人(ソラシドの印が立ったとき)は縦4列(4人＋3人)・横7列。ソラシドは7番目で、いまの6人の並びは変えない。
 //   6人まで(印が立つ前)は、いまの縦3列・横6列のまま。
-//   助手の一覧(ASSISTANTS)にソラシドが入るのはクラフト部の枝なので、ここでは読み込んだ data/assistants.js の後ろに仮のソラシド(顔はみゅあの絵)を足し、
+//   助手の一覧(ASSISTANTS)にソラシドがいないときは、読み込んだ data/assistants.js の後ろに仮のソラシド(顔はみゅあの絵)を足し、
 //   印(RELEASE_FLAGS.assistantSorashido)は配信する JS の中で書き換えて立てる。ファイルは書き換えない
 //   ① 印が偽: 6人・縦3列・横6列。ソラシドの札が無い
 //   ② 印が真: 7人・縦4列・横7列。はじめの6人の並びは印が偽のときと同じで、7番目がソラシド
@@ -31,7 +31,7 @@ const serve = () => new Promise((resolve) => {
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const SIZES = [[320, 568], [390, 844], [568, 320], [844, 390]];
-const FAKE = "\n;ASSISTANTS.push({ id: 'sorashido', name: 'ソラシド', role: '助手', imageDir: 'images/assistant', imagePrefix: 'myua', expressions: ASSISTANT_EXPRESSIONS, defaultExpression: ASSISTANT_DEFAULT_EXPRESSION, emoji: '🎵', accent: '#38bdf8', greeting: '' });\n";
+const FAKE = "\n;if (!ASSISTANTS.some((a) => a.id === 'sorashido')) ASSISTANTS.push({ id: 'sorashido', name: 'ソラシド', role: '助手', imageDir: 'images/assistant', imagePrefix: 'myua', expressions: ASSISTANT_EXPRESSIONS, defaultExpression: ASSISTANT_DEFAULT_EXPRESSION, emoji: '🎵', accent: '#38bdf8', greeting: '' });\n";
 
 (async () => {
   let playwright;
@@ -48,7 +48,7 @@ const FAKE = "\n;ASSISTANTS.push({ id: 'sorashido', name: 'ソラシド', role: 
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       // 本物の Supabase へは書かない(読むだけは通す)
       await ctx.route(/supabase\.co\//, (r) => (r.request().method() === 'GET' ? r.continue() : r.fulfill({ status: 201, contentType: 'application/json', body: '[]' })));
-      // 仮のソラシドを一覧の後ろに足す(印が偽のときも足して、印で外れることを見る)
+      // 一覧にいなければ仮のソラシドを後ろに足す(印が偽のときも足して、印で外れることを見る)
       await ctx.route(/\/data\/assistants\.js/, async (r) => {
         const body = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8');
         await r.fulfill({ status: 200, contentType: 'text/javascript', body: body + FAKE });
