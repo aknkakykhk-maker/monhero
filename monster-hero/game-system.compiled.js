@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cd72963441f61585
+// source-sha256: 478bd7a61670e05c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -72874,10 +72874,11 @@ function BattleScreen({
     const tCopyPhase = aiCopyViewPhase(tCopy, copyStanding ? 'idle' : 'appear');
     const tCopyOut = copyStanding || tCopyPhase === 'vanish';
     const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
-    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !s && !tCopy.stacked && React.createElement("div", {
+    const tCopyOnMon = !!s || !!(tCopy && tCopy.stacked);
+    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-art": i,
       "data-ai-copy-phase": tCopyPhase,
-      className: "absolute inset-0 z-[24] flex items-center justify-center pointer-events-none"
+      className: "absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]"
     }, React.createElement(SorashidoCopyFx, {
       phase: tCopyPhase
     }, React.createElement(DyedMonsterImage, {
@@ -72890,12 +72891,13 @@ function BattleScreen({
         height: '52px'
       },
       className: "object-contain drop-shadow-md"
-    }))), React.createElement("div", {
+    }))), !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-next": i,
-      className: "absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none"
+      className: `absolute ${copySrc ? 'left-[62px]' : 'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`
     }, React.createElement(SorashidoNextCardBadge, {
       card: tCopyOut ? tCopy.nextCard : null,
-      turnsLeft: tCopy.turnsLeft
+      turnsLeft: tCopy.turnsLeft,
+      layout: classicAiCopyLandscape() ? 'landscape' : 'portrait'
     })), React.createElement("div", {
       "data-tactics-ai-copy": i,
       "data-tactics-ai-copy-out": tCopyOut ? '1' : '0',
@@ -72905,12 +72907,27 @@ function BattleScreen({
         e.stopPropagation();
         setCopyHandOpen(true);
       } : undefined,
-      className: `absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+    }, React.createElement("span", {
+      className: "flex max-w-full min-w-0 items-center gap-0.5"
     }, React.createElement("span", {
       className: "min-w-0 truncate"
-    }, "🤖", tCopy.stacked ? '重なる ' : '', tCopyOut ? `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
-      className: "shrink-0 tabular-nums text-rose-200"
-    }, "狙", chancesNow.copy, "%"))) : null;
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''
+    }, "🤖"), tCopyOut ? tCopyOnMon ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "text-rose-300"
+    }, "♥"), React.createElement("span", {
+      className: "tabular-nums"
+    }, tCopy.hp)) : `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+      className: "shrink-0 tabular-nums tracking-tighter text-rose-200"
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'text-[6px] opacity-80' : ''
+    }, "狙"), chancesNow.copy, "%")), tCopyOnMon && tCopyOut && React.createElement("span", {
+      "data-tactics-ai-copy-next": i,
+      className: "block max-w-full min-w-0 truncate text-emerald-200"
+    }, tCopy.nextCard ? tCopy.nextCard.name || tCopy.nextCard.baseName || '考え中' : '考え中', React.createElement("span", {
+      className: "tabular-nums text-sky-200/90"
+    }, " あと", tCopy.turnsLeft)))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -121053,15 +121070,17 @@ function MonsterHeroGame() {
       const c = aiCopyRef.current;
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && !isTacticsMode(runMode) && isAiCopyOut(c, turnCount)) {
         let left = Math.max(0, Number(c.guts) || 0);
+        const dmgScale = atk > 0 ? Math.max(1e-6, Math.max(0, Number(c.atk) || 0) / atk) : 1e-6;
         return (c.picks || []).filter(card => {
           const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
           if (!card || cost > left) return false;
           left -= cost;
-          return !classicAiCopyIsAttack(card) && card.type !== 'guard' && card.type !== 'weak_guard';
+          return card.type !== 'guard' && card.type !== 'weak_guard';
         }).map(card => ({
           card,
           slotIdx: c.srcSlot,
-          aiCopy: true
+          aiCopy: true,
+          dmgScale
         }));
       }
       if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
@@ -121080,8 +121099,10 @@ function MonsterHeroGame() {
         aiCopy: true
       }));
     })();
+    let copyHitFrom = null;
     for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
+      const copyDmgScale = entry.aiCopy && Number.isFinite(entry.dmgScale) ? entry.dmgScale : 1;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
@@ -121092,6 +121113,8 @@ function MonsterHeroGame() {
           if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
         }
       }
+      const actorName = si => entry.aiCopy ? tacticsAiCopyName(aiCopyRef.current) : battleActorName(si);
+      if (entry.aiCopy && copyHitFrom == null) copyHitFrom = attackHits.length;
       if (!isAttackCard(card)) {
         const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
         pushBattleLog(entry.aiCopy ? `🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}` : isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
@@ -121115,7 +121138,7 @@ function MonsterHeroGame() {
             const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
             if (angel) hpBeforeEnemyAttack = angel.total;
             addPopup('👼 天使の力 全員回復', 'hero', 'text-sky-200 font-black text-xl drop-shadow-md');
-            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
+            pushBattleLog(`😈👼 ${actorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
           }
         }
       }
@@ -121169,7 +121192,7 @@ function MonsterHeroGame() {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul);
+          const d = Math.floor(Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul) * copyDmgScale);
           const soulAttack = soulTraitAttackProfile(stunMon?.masuId ? getMasuMon(stunMon.masuId) : null, card, slotIdx);
           const stunHits = buildAttackHits({
             d,
@@ -121252,7 +121275,7 @@ function MonsterHeroGame() {
             kyukoCutSlot: tactics ? slotIdx : -1
           }));
           addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut * 100)}%減(${conf.turns}T)`, 'hero', 'text-pink-300 font-black text-xl drop-shadow-md');
-          if (tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
+          if (tactics) pushBattleLog(`🎼 ${actorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -121380,7 +121403,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE * 100)}%`,
                 tone: 'good'
               });
@@ -121391,7 +121414,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE * 100)}%`,
                 tone: 'bad'
               });
@@ -121402,7 +121425,7 @@ function MonsterHeroGame() {
           }
         }
         const attackStartDist = attackDistance;
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult);
+        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult * copyDmgScale);
         attackCount++;
         const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
@@ -121475,7 +121498,7 @@ function MonsterHeroGame() {
         }
         {
           const trickOwnerId = isTacticsMode(runMode) ? tacticsUnitsRef.current[slotIdx]?.id : mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD > 0) {
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD > 0) {
             const refund = trickStartGutsRefund(cardCost);
             if (refund > 0) {
               gainGutsAt(slotIdx, refund);
@@ -121497,7 +121520,7 @@ function MonsterHeroGame() {
               orihimeForceConfuseRef.current = true;
               showLuckBanner({
                 icon: '❓',
-                title: `${battleActorName(slotIdx)}の焦がれ待つ天ノ河`,
+                title: `${actorName(slotIdx)}の焦がれ待つ天ノ河`,
                 result: '敵の次の行動が「意味不明」に！',
                 tone: 'enemy'
               });
@@ -121508,7 +121531,7 @@ function MonsterHeroGame() {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
             icon: '🌀',
-            title: `${battleActorName(slotIdx)}のトリックコンフューズ`,
+            title: `${actorName(slotIdx)}のトリックコンフューズ`,
             result: `敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`,
             tone: 'enemy'
           });
@@ -121644,7 +121667,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🎡',
-                title: `${battleActorName(slotIdx)}の運命の輪`,
+                title: `${actorName(slotIdx)}の運命の輪`,
                 result: fateWheelPick.label,
                 tone: id === 'enemyAtkDown' || id === 'enemyTakenUp' ? 'enemy' : 'good'
               });
@@ -121734,33 +121757,21 @@ function MonsterHeroGame() {
       }
     }
     pdTag();
+    if (copyHitFrom != null) {
+      const copyName = tacticsAiCopyName(aiCopyRef.current);
+      for (let k = copyHitFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].actorName == null) attackHits[k].actorName = copyName;
+    }
     if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
       let copy = aiCopyRef.current;
-      const copyMon = slots[copy.srcSlot] || mainHero;
       for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
         const cost = Math.max(0, Number(pick?.guts ?? pick?.cost) || 0);
         if (!pick || cost > copy.guts) break;
         copy = classicAiCopySpendGuts(copy, cost);
-        const skill = pick.name || pick.baseName || '攻撃';
-        if (classicAiCopyIsAttack(pick)) {
-          const d = classicAiCopyDamage(getDmg(pick, copy.srcSlot, copyMon, localOryoAdd, localDmgModAdd, false, attackDistance), copy.atk, atk);
-          if (d > 0) {
-            totalDmg += d;
-            attackHits.push({
-              dmg: d,
-              isCrit: false,
-              slotIdx: copy.srcSlot,
-              isSpecial: true,
-              skillName: `🤖コピーの${skill}`,
-              noAnim: true
-            });
-          }
-        } else if (pick.type === 'guard' || pick.type === 'weak_guard') {
-          const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
-          currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
-          if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
-        } else continue;
-        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`, 'ally');
+        if (pick.type !== 'guard' && pick.type !== 'weak_guard') continue;
+        const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
+        currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
+        if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name || pick.baseName || 'ガード'}を使った`, 'ally');
       }
       commitAiCopy({
         ...copy,
@@ -121851,7 +121862,7 @@ function MonsterHeroGame() {
             for (const h of group) {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
-              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
+              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${h.actorName || battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
               setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
@@ -121938,7 +121949,7 @@ function MonsterHeroGame() {
           }
           const hitColor = hit.isCrit ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique ? 'scale-125' : 'scale-110'}` : hit.isUnique ? 'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
-          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
+          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${hit.actorName || battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
           setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)

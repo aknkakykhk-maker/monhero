@@ -14083,11 +14083,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   使う子は元の子の枠(srcSlot)。ガッツの支払い・2枚目の半減・🔥はここでは数えない(下の「AIコピーの1手」でコピー自身のぶんとして数える)
     const aiCopyEntries=(()=>{
       const c=aiCopyRef.current;
-      // 5つの遊びも同じ: 回復・強化・アシカは味方のカードと同じ流れで効かせる(攻撃とガードは下の「AIコピー(5つの遊び)」)
+      // 5つの遊び: ガード以外(攻撃・固有技・回復・強化・アシカ)は味方のカードと同じ流れで効かせる。固有技の特別な効き目もそのまま乗る。
+      //   ダメージは dmgScale(コピーのちから ÷ パーティのちから)で縮める。ガードは下の「AIコピー(5つの遊び)」でコピーの丈夫さで構える
       if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&!isTacticsMode(runMode)&&isAiCopyOut(c,turnCount)){
         let left=Math.max(0,Number(c.guts)||0);
-        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return !classicAiCopyIsAttack(card)&&card.type!=='guard'&&card.type!=='weak_guard'; })
-          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true}));
+        // 0 は getDmg が「倍率なし(1倍)」と読むので、ごく小さい値にしておく
+        const dmgScale=atk>0?Math.max(1e-6,Math.max(0,Number(c.atk)||0)/atk):1e-6;
+        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return card.type!=='guard'&&card.type!=='weak_guard'; })
+          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true,dmgScale}));
       }
       if(!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido||!isTacticsMode(runMode)||!isAiCopyOut(c,turnCount)||!isTacticsAiCopyStanding(c)) return [];
       const cp=c.plannedTurn===turnCount?c:(planTacticsAiCopy(turnCount)||c);
@@ -14097,8 +14100,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       return (cp.picks||[]).filter(card=>{ const cost=Math.max(0,Number(tools.costC(card))||0); if(cost>left) return false; left-=cost; return !isAttackCard(card)&&!tools.isGuardC(card); })
         .map(card=>({card,slotIdx:cp.srcSlot,aiCopy:true}));
     })();
+    let copyHitFrom=null; // AIコピーの札が積んだヒットの始まり(数字の吹き出しの名前に使う)
     for (const entry of [...usedCardEntries,...aiCopyEntries]) {
       const card=entry.card;
+      // AIコピー(5つの遊び)の札は、ダメージをコピーのちからへ縮める(それ以外は1倍)
+      const copyDmgScale=entry.aiCopy&&Number.isFinite(entry.dmgScale)?entry.dmgScale:1;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       const totalHealBeforeCard=totalHeal, totalHealRateBeforeCard=totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
@@ -14111,6 +14117,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       // AIコピーが使ったアシカは仲良し度に数えない(プレイヤーが切った札ではない)
       if(!entry.aiCopy){ if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); } }
+      // ★AIコピーの札は、帯・ログ・ダメージの数字に出す名前を「〜のコピー」にする(元の子が動いたと取り違えないように。2026-10-27 部長)
+      const actorName=(si)=>entry.aiCopy?tacticsAiCopyName(aiCopyRef.current):battleActorName(si);
+      if(entry.aiCopy&&copyHitFrom==null) copyHitFrom=attackHits.length;
       // どの子がどの札を切ったかは、ここ1か所でログへ残す。
       // ★効果ごとの分岐(攻撃UP・回復・固有技…)は40か所以上あり、そこへ書くと同じ文が散らばる
       // ★攻撃の札は書かない。このあと「◯◯の しっぽアタック → 敵に177ダメージ」が出るので、
@@ -14138,7 +14147,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const angel=tacticsRateHeal(boxNow.angelRate,boxNow.angelRate,false);
             if(angel) hpBeforeEnemyAttack=angel.total;
             addPopup('👼 天使の力 全員回復','hero','text-sky-200 font-black text-xl drop-shadow-md');
-            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`,'ally');
+            pushBattleLog(`😈👼 ${actorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`,'ally');
           }
         }
       }
@@ -14165,7 +14174,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul);
+          const d=Math.floor(Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)*copyDmgScale);
           const soulAttack=soulTraitAttackProfile(stunMon?.masuId?getMasuMon(stunMon.masuId):null,card,slotIdx);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
@@ -14222,7 +14231,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(tactics) kyukoRedirectRef.current=slotIdx;
           writePermaBuffs(p=>({...p, kyukoCutRate:cut, kyukoCutTurns:conf.turns, kyukoCutSlot:tactics?slotIdx:-1}));
           addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut*100)}%減(${conf.turns}T)`,'hero','text-pink-300 font-black text-xl drop-shadow-md');
-          if(tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`,'ally');
+          if(tactics) pushBattleLog(`🎼 ${actorName(slotIdx)}が、このターンの単体攻撃を引き受ける`,'ally');
         }
         else if (card.subType==='buff_kiki') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2); const comboAdd=localBoostFromCard(card).combo*effMul; localGlobalComboAdd+=comboAdd; addPermaBuff('globalComboDmgPct',comboAdd); writePermaBuffs(p=>({...p,kikiCardBonusTurns:Math.max(1,(level+1)*effMul)+2})); addPopup(`全体連撃+${((3+level*2)*effMul).toFixed(effMul===1?0:1)}%!`,'hero','text-sky-300 text-lg font-bold'); }
       }
@@ -14315,10 +14324,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             fateDmgMult=fateCoinDmgMult(side);
             if(side==='heads'){
               writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
-              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`, tone:'good' });
+              showLuckBanner({ icon:'🪙', title:`${actorName(slotIdx)}の運命のコイン`, result:`表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE*100)}%`, tone:'good' });
             }else{
               writePermaBuffs(p=>({...p,fateStacks:withFateCoinGuts(p.fateStacks)}));
-              showLuckBanner({ icon:'🪙', title:`${battleActorName(slotIdx)}の運命のコイン`, result:`裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`, tone:'bad' });
+              showLuckBanner({ icon:'🪙', title:`${actorName(slotIdx)}の運命のコイン`, result:`裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE*100)}%`, tone:'bad' });
             }
           }
           // 運命の輪(スプーキー): 6つから1つ。ダメージ3倍・2倍はこの技に、ほかは当たったあとに効かせる(下の固有技の効果)
@@ -14328,7 +14337,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
         }
         const attackStartDist=attackDistance;
-        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult); attackCount++;
+        // コピーの縮めは「この技のダメージ」の倍率(skillDmgMult)に掛けて渡す(ふつうの札は1倍なので今までと同じ)
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult*copyDmgScale); attackCount++;
         const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
         const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
@@ -14355,7 +14365,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
           const trickOwnerId=isTacticsMode(runMode)?tacticsUnitsRef.current[slotIdx]?.id:mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD>0) {
+          // AIコピーの札はコピー自身のガッツで払うので、パーティへは返さない
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD>0) {
             const refund=trickStartGutsRefund(cardCost);
             if (refund>0) { gainGutsAt(slotIdx,refund); addPopup(`🎩 ガッツ +${refund}`,'guts','text-violet-200 text-base font-bold drop-shadow-md'); }
           }
@@ -14367,12 +14378,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★焦がれ待つ天ノ河(オリヒメ・共モン): 効いているあいだに本人の攻撃が当たったら25%を振る(1ターン2回まで)。当たりなら敵の次の行動が意味不明
         { const kg=isTacticsMode(runMode)&&finalD>0?orihimeRef.current.kogare[String(slotIdx)]:null;
           if(kg&&kg.turns>0&&kg.rolls>0){ const r=rollKogare(kg.rolls); writeOrihime('kogare',String(slotIdx),{ ...kg, rolls:r.rollsLeft });
-            if(r.confused){ orihimeForceConfuseRef.current=true; showLuckBanner({ icon:'❓', title:`${battleActorName(slotIdx)}の焦がれ待つ天ノ河`, result:'敵の次の行動が「意味不明」に！', tone:'enemy' }); } } }
+            if(r.confused){ orihimeForceConfuseRef.current=true; showLuckBanner({ icon:'❓', title:`${actorName(slotIdx)}の焦がれ待つ天ノ河`, result:'敵の次の行動が「意味不明」に！', tone:'enemy' }); } } }
         // ★トリックコンフューズ(スプーキー): 効いているあいだに本人の攻撃が当たったら、敵を3ターン乱心にする(当て直すと3へ数え直す)
         if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
           && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
-          showLuckBanner({ icon:'🌀', title:`${battleActorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`, tone:'enemy' });
+          showLuckBanner({ icon:'🌀', title:`${actorName(slotIdx)}のトリックコンフューズ`, result:`敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`, tone:'enemy' });
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -14442,7 +14453,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               else if(id==='enemyTakenUp') writeFateWheel({...fateWheelRef.current,takenUp:FATE_WHEEL_DEBUFF_TURNS});
               else if(id==='combo') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'combo')}));
               else if(id==='atk') writePermaBuffs(p=>({...p,fateStacks:withFateSlotStack(p.fateStacks,slotIdx,'atk')}));
-              showLuckBanner({ icon:'🎡', title:`${battleActorName(slotIdx)}の運命の輪`, result:fateWheelPick.label, tone:(id==='enemyAtkDown'||id==='enemyTakenUp')?'enemy':'good' });
+              showLuckBanner({ icon:'🎡', title:`${actorName(slotIdx)}の運命の輪`, result:fateWheelPick.label, tone:(id==='enemyAtkDown'||id==='enemyTakenUp')?'enemy':'good' });
             }
           }
           else if(card.monId==='Pandora'){
@@ -14515,27 +14526,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
-    // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前に、ターンの始めに決めておいたカードを使う。
-    //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。ダメージは元の子の間合いから、コピーのちからへ縮める。
-    //   ガードはコピーの丈夫さで構え、パーティを守る(コピーはライフを持たないため)。回復・強化・アシカは上の aiCopyEntries で効かせ済み(ここではガッツだけ払う)
+    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].actorName==null) attackHits[k].actorName=copyName; }
+    // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前。使う札はターンの始めに決めてある(planClassicAiCopy)。
+    //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。攻撃・固有技・回復・強化・アシカは上の aiCopyEntries で
+    //   味方のカードと同じ流れに通し済み(ダメージはコピーのちからへ縮める)。ここではガッツを払い、ガードだけを構える
+    //   (コピーはライフを持たないので、ガードはコピーの丈夫さでパーティを守る)
     if(!isTacticsMode(runMode)&&aiCopyRef.current&&isAiCopyOut(aiCopyRef.current,turnCount)){
       let copy=aiCopyRef.current;
-      const copyMon=slots[copy.srcSlot]||mainHero;
       for(const pick of (Array.isArray(copy.picks)?copy.picks:[])){
         const cost=Math.max(0,Number(pick?.guts??pick?.cost)||0);
         if(!pick||cost>copy.guts) break;
         copy=classicAiCopySpendGuts(copy,cost);
-        const skill=pick.name||pick.baseName||'攻撃';
-        if(classicAiCopyIsAttack(pick)){
-          // ほかの攻撃と同じく、このターンに積んだ追加(応援など)も乗せる。2枚目の半減はコピーには掛けない(プレイヤーの枚数ではないため)
-          const d=classicAiCopyDamage(getDmg(pick,copy.srcSlot,copyMon,localOryoAdd,localDmgModAdd,false,attackDistance),copy.atk,atk);
-          if(d>0){ totalDmg+=d; attackHits.push({dmg:d, isCrit:false, slotIdx:copy.srcSlot, isSpecial:true, skillName:`🤖コピーの${skill}`, noAnim:true}); }
-        } else if(pick.type==='guard'||pick.type==='weak_guard'){
-          const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
-          currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
-          if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
-        } else continue; // 回復・強化・アシカ(ログは上の流れで出している)
-        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`,'ally');
+        if(pick.type!=='guard'&&pick.type!=='weak_guard') continue; // ログは上の流れで出している
+        const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
+        currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
+        if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name||pick.baseName||'ガード'}を使った`,'ally');
       }
       commitAiCopy({...copy, picks:[], nextCard:null});
     }
@@ -14621,7 +14627,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // ★ログには「誰の何の技で何点入ったか」を書く(吹き出しは数字だけなので、
               //   あとから読むと誰の攻撃か分からない)
               addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,
-                `${battleActorName(h.slotIdx)}${h.skillName?`の ${h.skillName}`:'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit?'（会心）':''}`);
+                `${h.actorName||battleActorName(h.slotIdx)}${h.skillName?`の ${h.skillName}`:'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit?'（会心）':''}`);
               setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-h.dmg)}:prev);
               tacticsProLogDamage(tacticsProLogRef.current, { by: slots[h.slotIdx]?.id, amount: h.dmg });
               await battleWait(comboStepMs);
@@ -14679,7 +14685,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hitColor=hit.isCrit?`text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique?'scale-125':'scale-110'}`:hit.isUnique?'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,
-            `${battleActorName(hit.slotIdx)}${hit.skillName?`の ${hit.skillName}`:'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit?'（会心）':''}`);
+            `${hit.actorName||battleActorName(hit.slotIdx)}${hit.skillName?`の ${hit.skillName}`:'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit?'（会心）':''}`);
           setEnemy(prev=>prev?{...prev,hp:Math.max(0,prev.hp-hit.dmg)}:prev);
           tacticsProLogDamage(tacticsProLogRef.current, { by: slots[hit.slotIdx]?.id, amount: hit.dmg });
           if (hit.isUnique) tacticsProLogSkill(tacticsProLogRef.current, 'unique', slots[hit.slotIdx]?.id, turnCount);
