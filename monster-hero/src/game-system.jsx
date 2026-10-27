@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e6d5331ed1b031c
+// generated-sha256: f5f98ca3ed25f42d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -48790,7 +48790,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         hideRandom
         notice={(
           <div className="flex items-center gap-1.5">
-            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300">全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。{!room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'}</p>
+            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。')}{!room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')}</p>
             {/* 狭い画面では、制限時間の切り替えを注意書きの右に置く(行を増やさない。広い画面はヘッダーに出る) */}
             {isHost && selectTimeButton('min-[481px]:hidden', true)}
           </div>

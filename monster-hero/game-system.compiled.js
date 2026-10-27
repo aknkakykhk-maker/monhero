@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 30463d84b654387d
+// source-sha256: 376727a544d65ed6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -80727,8 +80727,9 @@ function RhythmMultiScreen({
     notice: React.createElement("div", {
       className: "flex items-center gap-1.5"
     }, React.createElement("p", {
-      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
-    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。", !room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'), isHost && selectTimeButton('min-[481px]:hidden', true)),
+      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {
