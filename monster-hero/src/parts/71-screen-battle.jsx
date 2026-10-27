@@ -2662,15 +2662,20 @@ function BattleScreen({
               const tCopyOut=copyStanding||tCopyPhase==='vanish';
               const copySrc=tCopy&&tCopy.pos===i?slots[tCopy.srcSlot]:null;
               const tCopyOnMon=!!s||!!(tCopy&&tCopy.stacked);
+              const tCopyHit=!!(isAnimating&&attackAnim.aiCopy&&copySrc&&!tCopyOnMon);
               const copyChip=tacticsNewLayout&&tCopy&&tCopy.pos===i?(<>
                 {/* 枠は横に広い(縦の画面で約176×95)。空いたマスは「左に絵・右に次に使う札・下にライフ」と横に分けて、札で絵を隠さない。
                     子がいるマスに重なるときは、その子の絵・名前・ライフの行を隠さないよう、左下の絵の所に2行の小さな札だけを出す
                     (1行目 ♥ライフ・狙われる%、2行目 次に使うカード。ライフの行の字にかからない幅 40% に収める。くわしくは押して手札の窓で見る)。
                     横向きの背の低い画面は枠が縦長(約88×112)なので、空いたマスは「上に絵・下に次の札」、重なるときの札は右上(名前の段の下)へ移す。2026-10-27 セコンドくんの実画面の見回り */}
-                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} className="absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]">
-                  <SorashidoCopyFx phase={tCopyPhase}>
-                    <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
-                  </SorashidoCopyFx>
+                {/* コピーが打つとき(60 の playAiCopyHit が attackAnim.aiCopy を約0.45秒出す)は、空いたマスのコピーの絵を元の子と同じ攻撃の動きで敵へ向けて動かす。
+                    技名は下の枠の中の吹き出し(data-tactics-slot-skill)がそのまま出す。重なるときは元の子の絵が動くのでここでは動かさない */}
+                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} data-tactics-ai-copy-hit={tCopyHit?'1':undefined} className={`absolute left-1 top-[26px] bottom-[16px] ${tCopyHit?'z-[80]':'z-[24]'} flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]`}>
+                  <div style={tCopyHit?{position:'relative',animation:attackMotionAnimation(attackAnim),...(attackAimStyle||{})}:undefined}>
+                    <SorashidoCopyFx phase={tCopyPhase}>
+                      <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
+                    </SorashidoCopyFx>
+                  </div>
                 </div>}
                 {!tCopyOnMon&&<div data-tactics-ai-copy-next={i} className={`absolute ${copySrc?'left-[62px]':'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`}>
                   <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft} layout={classicAiCopyLandscape()?'landscape':'portrait'}/>
