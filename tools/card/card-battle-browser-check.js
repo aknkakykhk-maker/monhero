@@ -378,9 +378,24 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           return { h: Math.round(c.height), over };
         });
         if (SHOT) await shot(page, '44a-turn-summary-chip');
-        await page.locator('[data-card-turn-summary-chip]').click().catch(() => {});
+        // 押す前に、札のまんなかでいちばん手前にある物を見ておく(開かなかったときの手がかり。2026-10-27 ソランドくん)
+        const probe = () => page.evaluate(() => {
+          const c = document.querySelector('[data-card-turn-summary-chip]'); if (!c) return { chip: false };
+          const r = c.getBoundingClientRect(); const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          const name = (el) => (el ? `${el.tagName.toLowerCase()}${[...el.attributes].filter((a) => a.name.startsWith('data-card')).map((a) => `[${a.name}]`).join('')}` : 'なし');
+          const st = document.querySelector('[data-card-stage]');
+          return { chip: true, top: c.contains(top) ? '札' : name(top && (top.closest('[data-card-bubble],[data-card-action],[data-card-log],[data-card-big],[data-card-turn-banner],[data-card-down-band]') || top)),
+            mode: document.querySelector('[data-card-battle]')?.getAttribute('data-card-mode'), fit: st?.getAttribute('data-card-stage-fit'),
+            kids: st ? [...st.children].map((k) => name(k) + Math.round(k.getBoundingClientRect().height)).join(',') : '' };
+        }).catch(() => null);
+        const before = await probe(); const t0 = Date.now();
+        await page.locator('[data-card-turn-summary-chip]').click({ timeout: 4000 }).catch((e) => { sumChip.clickErr = String(e.message || e).split('\n')[0].slice(0, 120); });
         await page.waitForTimeout(300);
         sumChip.opened = await page.locator('[data-card-turn-summary]').count();
+        if (!sumChip.opened) {
+          sumChip.why = { before, after: await probe(), ms: Date.now() - t0 };
+          await shot(page, '44x-turn-summary-not-opened').catch(() => {});
+        }
         if (SHOT) await shot(page, '44-turn-summary');
       }
       (await page.locator('[data-card-pose]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-pose')))).forEach((x) => poseSeen.add(x));
