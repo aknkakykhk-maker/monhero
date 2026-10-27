@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b012e2361145ee4b
+// source-sha256: 6a5f8a1baf0a7666
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17101,15 +17101,19 @@ const helpDataRows = id => {
     case 'tacticsEnemyActions':
       return (typeof TACTICS_ACTION_DEFINITIONS !== 'undefined' ? TACTICS_ACTION_DEFINITIONS : []).filter(action => action.type !== 'WAIT' && action.type !== 'MOVE').map(action => [action.category, action.multiplier > 0 ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}` : 'ダメージなし']);
     case 'tacticsExSkills':
-      return Object.keys(typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS || {}).filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).map(monId => {
+      return Object.keys(typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS || {}).filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).flatMap(monId => {
         const def = tacticsExDefOf(monId);
         const monName = (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId] || {}).name || monId;
-        const duration = def.duration === 'turns' ? `${def.turns}ターン` : {
-          turn: 'そのターン',
-          wave: 'そのWAVE',
-          style: '選び直すまで'
-        }[def.duration] || '';
-        return [`${monName}「${def.name}」`, `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+        const rowOf = (d, role) => {
+          const duration = d.duration === 'turns' ? `${d.turns}ターン` : {
+            turn: 'そのターン',
+            wave: 'そのWAVE',
+            style: '選び直すまで'
+          }[d.duration] || '';
+          return [`${monName}「${d.name}」${role}`, `${d.unlimited ? '無制限' : `1ラン${d.maxUses}回`} ／ ${d.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+        };
+        const support = def.supportKey && TACTICS_EX_SKILLS[def.supportKey] ? tacticsExDefOf(def.supportKey) : null;
+        return support ? [rowOf(def, '(勇者のとき)'), rowOf(support, '(共モンのとき)')] : [rowOf(def, '')];
       });
     case 'tacticsHateGains':
     case 'tacticsHateTypes':
