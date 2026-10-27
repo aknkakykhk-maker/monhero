@@ -1097,13 +1097,15 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
 // ★解放の条件は unlock に書く: MFバトルカードの助手と対戦で、相手 cardFoe の難易度 cardLevel に1回でも勝つ。
 //   勝つ前はマーケットに出さない(「近日追加」の札も出さない)。解放の覚え方は下の ASSISTANT_COSTUME_UNLOCKED_KEY
 const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;
+// 商品の絵(顔アイコン)。画像のパスはデータの中に直接書かず、定数にして指す(image/data-image-source-check.js)
+const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=e08db4e730ee";
 const muaCardMasterCostume = Object.freeze({
   id: 'mua_card_master_v1', assistantId: 'mua',
   name: 'デュエルマスター', desc: 'MFバトルカードの決闘者ふうの衣装。黒い服に白と青のマント、赤い指なし手袋と金の三角のペンダントです。',
   get released() { return ASSISTANT_COSTUME_MUA_MASTER_RELEASE === true; },
   // 絵は社長が用意(10/27)。元の絵は tools/art-sources/assistants/mua-card-master/。立ち絵は 768×1024、顔は make-assistant-faces.js で作った
   // (当て方: 1ほほえむ=normal/2手を差し出して笑う=happy/3ウインク=wink/4驚く=surprise/5照れ=troubled/6怒る=angry/7もじもじ=crying/8指さして笑う=excited)
-  icon: 'images/assistant/card-master/face/myua_happy.PNG?v=e08db4e730ee',
+  icon: MUA_CARD_MASTER_COSTUME_ART,
   imageDir: 'images/assistant/card-master',
   price: Object.freeze({ diamond: 100000 }),
   unlock: Object.freeze({ cardFoe: 'mua', cardLevel: 'master' }),
