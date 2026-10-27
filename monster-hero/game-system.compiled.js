@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35c2cd2d6f1a17d1
+// source-sha256: 2a3348d1c91f0ff7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -78968,10 +78968,17 @@ function RhythmMultiScreen({
       className: "min-w-0 flex-1 leading-tight"
     }, React.createElement("small", {
       className: "block text-[9px] font-black text-cyan-200"
-    }, last ? last.name : 'チャット'), React.createElement("b", {
+    }, last ? last.name : 'チャット'), last ? React.createElement("b", {
       "data-rhythm-multi-chat-latest": true,
       className: "block truncate text-[12px] font-black text-white"
-    }, last ? last.text : 'タップで開く')), chatUnread > 0 && React.createElement("b", {
+    }, last.text) : React.createElement("b", {
+      "data-rhythm-multi-chat-latest": true,
+      className: "block text-[11px] font-black leading-tight text-white"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "タップで"), React.createElement("wbr", null), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "開く"))), chatUnread > 0 && React.createElement("b", {
       "data-rhythm-multi-chat-unread": true,
       className: "absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white"
     }, chatUnread > 9 ? '9+' : chatUnread));
@@ -79179,8 +79186,9 @@ function RhythmMultiScreen({
       "aria-hidden": "true",
       className: "text-2xl leading-none"
     }, "🎵"), React.createElement("p", {
-      className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100"
-    }, "マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります"), React.createElement("button", {
+      className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap('マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります')), React.createElement("button", {
       type: "button",
       onClick: () => closeBuddyIntro(true),
       className: "min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950"
@@ -79339,8 +79347,9 @@ function RhythmMultiScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-white"
     }, "部屋をつくる"), React.createElement("p", {
-      className: "text-[11px] font-bold leading-snug text-slate-300"
-    }, "合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう"), React.createElement("button", {
+      className: "text-[11px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう')), React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
       onClick: createPrivate,
@@ -79588,8 +79597,9 @@ function RhythmMultiScreen({
     })), React.createElement("div", {
       className: "min-w-0 flex-1 landscape:max-w-[34%]"
     }, React.createElement("b", {
-      className: "block truncate text-sm font-black"
-    }, drawnSong ? rhythmSongFullName(drawnSong) : ''), React.createElement("small", {
+      className: "block text-sm font-black leading-tight",
+      style: JA_WRAP_STYLE
+    }, drawnSong ? jaWrap(rhythmSongFullName(drawnSong)) : ''), React.createElement("small", {
       className: "block text-[10px] font-black text-slate-400"
     }, team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`), view.streak >= 2 && React.createElement("small", {
       "data-rhythm-multi-streak": true,
@@ -81420,8 +81430,9 @@ function RhythmBuddySheet({
     tickets: tickets,
     className: "mb-1 text-slate-200"
   }), React.createElement("p", {
-    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日", RHYTHM_BUDDY_FREE_PER_DAY, "回までは無料、そのあとはセッション券を1枚使います。")), React.createElement("div", {
+    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
