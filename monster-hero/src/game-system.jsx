@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 58485ba37bc7eca9
+// generated-sha256: a12033e40bf6c2ca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -20297,7 +20297,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                   (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
                 <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
-                {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+                {!calibrationResult.stable&&<p style={JA_WRAP_STYLE} className="mt-1 font-black text-rose-300">{jaWrap('ばらつきが大きめです。もう一度合わせると、より合った値になります。')}</p>}
                 <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">閉じる</button>
               </div>}
             </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
@@ -20492,12 +20492,12 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 <section className={card}>
           <details data-rhythm-option-help className="mt-3">
             <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量について詳しく</summary>
-            <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+            <p style={JA_WRAP_STYLE} className={`mt-1 ${note}`}>{jaWrap('この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。')}</p>
             {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
-            <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
+            <p style={JA_WRAP_STYLE} className={`mt-2 ${note}`}>{jaWrap('2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。')}</p>
             {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ */}
-            <p className={`mt-2 ${note}`}>タップ音量は0〜{RHYTHM_NOTE_SE_VOLUME_MAX}まで上げられます（{RHYTHM_VOLUME_MAX}より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。</p>
-            <p className={`mt-2 ${note}`}>BGM音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
+            <p style={JA_WRAP_STYLE} className={`mt-2 ${note}`}>タップ音量は0〜{RHYTHM_NOTE_SE_VOLUME_MAX}まで上げられます（{RHYTHM_VOLUME_MAX}{jaWrap('より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。')}</p>
+            <p style={JA_WRAP_STYLE} className={`mt-2 ${note}`}>BGM音量は0〜{RHYTHM_VOLUME_MAX}{jaWrap('まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。')}</p>
           </details>
         </section>
 </div>}
@@ -20513,7 +20513,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 className={`overflow-hidden rounded-xl border-2 text-[11px] font-black leading-tight ${on?'border-cyan-300 bg-cyan-400 text-slate-950':'border-white/15 bg-slate-900 text-slate-200'}`}>
                 {!wide&&<img src={preset.image} alt="" aria-hidden="true" loading="lazy" decoding="async" draggable={false} className="block aspect-[240/427] w-full object-cover"/>}
                 <span className={`block px-0.5 ${wide?'py-2.5':'py-1.5'}`}>{preset.label}</span></button>;})}</div>
-              {!rhythmLookPresetOf(draft)&&<p data-rhythm-look-custom className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">いまは自分で選んだ組み合わせです</p>}
+              {!rhythmLookPresetOf(draft)&&<p style={JA_WRAP_STYLE} data-rhythm-look-custom className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">{jaWrap('いまは自分で選んだ組み合わせです')}</p>}
             </div>,
               '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。',{full:true})}
 {/* 何が起きるのか画面に書いていなかったので、2026-09-13に説明を足した
@@ -20602,13 +20602,13 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 </section>
 <section className={card}>
           <details data-rhythm-option-help className="mt-3">
-            <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ この端末で通知をどこまで止められるか</summary>
+            <summary style={JA_WRAP_STYLE} className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">{jaWrap('▸ この端末で通知をどこまで止められるか')}</summary>
             <p className={`mt-1 ${note}`}>{helpWrap(rhythmQuietModeSupportText())}</p>
           </details>
-          {!RHYTHM_HAPTICS.supported()&&<p data-rhythm-vibration-unsupported className="mt-2 text-[10px] font-bold leading-relaxed text-amber-200">この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。</p>}
+          {!RHYTHM_HAPTICS.supported()&&<p style={JA_WRAP_STYLE} data-rhythm-vibration-unsupported className="mt-2 text-[10px] font-bold leading-relaxed text-amber-200">{jaWrap('この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。')}</p>}
         </section>
 </div>}
-        {!wide&&<p className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>}
+        {!wide&&<p style={JA_WRAP_STYLE} className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">{jaWrap('判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。')}</p>}
       </div>
     </div>
     <footer data-rhythm-options-actions className={`z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide?'pt-1.5':'pt-2'}`} style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>
@@ -20619,8 +20619,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
     {leaveAsk&&<div data-rhythm-options-leave role="dialog" aria-modal="true" aria-label="変更が保存されていません"
       className="fixed inset-0 z-[9000] flex items-center justify-center bg-slate-950/80 p-5" onClick={()=>setLeaveAsk(false)}>
       <div className="w-full max-w-xs rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center shadow-[0_0_24px_rgba(251,191,36,.15)]" onClick={e=>e.stopPropagation()}>
-        <b className="block text-[15px] font-black text-amber-200">変更が保存されていません</b>
-        <p className="mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300">このまま戻ると、いま変えた設定は元に戻ります。</p>
+        <b style={JA_WRAP_STYLE} className="block text-[15px] font-black text-amber-200">{jaWrap('変更が保存されていません')}</b>
+        <p style={JA_WRAP_STYLE} className="mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300">{jaWrap('このまま戻ると、いま変えた設定は元に戻ります。')}</p>
         <div className="mt-3 grid grid-cols-1 gap-2">
           <button type="button" data-rhythm-options-leave-save onClick={saveAndBack} className="min-h-[48px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950">保存して戻る</button>
           <button type="button" data-rhythm-options-leave-discard onClick={()=>{setLeaveAsk(false);onBack();}} className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200">保存せずに戻る</button>
@@ -21145,7 +21145,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
       className={`min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`}>
       {list.length===0
-        ?<p data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?'お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。':genre&&genre.id!=='all'?'このジャンルの曲はまだありません。':emptyText}</p>
+        ?<p style={JA_WRAP_STYLE} data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。'):genre&&genre.id!=='all'?jaWrap('このジャンルの曲はまだありません。'):emptyText}</p>
         :<ul className="space-y-0.5">{blocks.map(copy=>rows.map(row=>{
           const entry=row.entry;
           const main=copy===1;
@@ -21389,7 +21389,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-cyan-300/60 bg-slate-900 p-4"
         style={{paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
         <h3 className="text-sm font-black text-white">ジャンル</h3>
-        <p className="mt-1 text-[10px] font-bold text-slate-400">選んだジャンルの曲だけを一覧に出します。</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-[10px] font-bold text-slate-400">{jaWrap('選んだジャンルの曲だけを一覧に出します。')}</p>
         <div data-rhythm-genre-tabs className="mt-3 space-y-1.5">
           {genres.map(item=>{
             const on=!!genre&&item.id===genre.id,usable=genreUsable(item);
@@ -21399,7 +21399,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               className={`flex min-h-[52px] w-full items-center justify-between gap-2 rounded-xl border-2 px-3 text-left ${on?'border-cyan-200 bg-cyan-900/50':usable?'border-white/15 bg-slate-950/60':'border-white/10 bg-slate-950/40 opacity-60'}`}>
               <span className="min-w-0">
                 <b className="block text-xs font-black text-white">{on?'● ':''}{item.favorite?'♥ ':''}{item.label}</b>
-                <small className="block text-[10px] font-bold text-slate-400">{usable?item.note:'いまはイベントを開催していません'}</small>
+                <small style={JA_WRAP_STYLE} className="block text-[10px] font-bold text-slate-400">{usable?item.note:jaWrap('いまはイベントを開催していません')}</small>
               </span>
               <small className="shrink-0 text-[11px] font-black tabular-nums text-slate-300">{usable?`${count}曲`:'開催なし'}</small>
             </button>;
@@ -21416,7 +21416,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-fuchsia-400/60 bg-slate-900 p-4"
         style={{paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
         <h3 className="text-sm font-black text-white">曲の並べ替え</h3>
-        <p className="mt-1 text-[10px] font-bold text-slate-400">並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-[10px] font-bold text-slate-400">{jaWrap('並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。')}</p>
         <div className="mt-3 space-y-1.5">
           {RHYTHM_SORT_ORDERS.map(item=>{
             const on=item.id===state.sort;
@@ -21497,7 +21497,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
           <h2 data-rhythm-hell-guide-title style={{margin:video?0:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
           <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{helpWrap(page.text)}</p>
           {/* 最後のページに、はじめての HELL の目安(Lv. がいちばん低い HELL・実データから。2026-10-21 改善部 N6) */}
-          {last&&typeof rhythmHellEntryText==='function'&&rhythmHellEntryText()&&<p data-rhythm-hell-guide-entry style={{margin:'12px 0 0',padding:'8px 10px',borderRadius:'12px',border:'1px solid rgba(251,113,133,.5)',background:'rgba(76,5,25,.55)',fontSize:'13px',fontWeight:900,lineHeight:1.6,color:'#fecdd3'}}>🔥 {rhythmHellEntryText()}。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。</p>}
+          {last&&typeof rhythmHellEntryText==='function'&&rhythmHellEntryText()&&<p data-rhythm-hell-guide-entry style={{...JA_WRAP_STYLE,margin:'12px 0 0',padding:'8px 10px',borderRadius:'12px',border:'1px solid rgba(251,113,133,.5)',background:'rgba(76,5,25,.55)',fontSize:'13px',fontWeight:900,lineHeight:1.6,color:'#fecdd3'}}>🔥 {rhythmHellEntryText()}{jaWrap('。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。')}</p>}
         </div>
       </div>
       {nextVideo&&<video key={nextVideo.src} muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} style={{position:'absolute',width:'1px',height:'1px',opacity:0,pointerEvents:'none'}}>
