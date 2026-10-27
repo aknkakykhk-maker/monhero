@@ -782,8 +782,9 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
           <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
         </header>
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="mb-1 text-slate-200" />
-        <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400">
-          マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日{RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。
+        {/* 言葉の切れ目で折る(320幅で「呼べま／す」「あ／と」と折れていた・2026-10-26) */}
+        <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
+          {jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)}
         </p>
         </div>
         <div className="flex min-h-0 flex-1 flex-col">

@@ -107,11 +107,12 @@ function BreederMarketScreen({
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
+  //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
   const renderSectionTabs = (section, scroll=false) => {
     const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
     const value=activeSectionTab(section);
     if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
-    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5">
+    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5">
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
         className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
         style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
@@ -304,10 +305,11 @@ function BreederMarketScreen({
                 const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
                 const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
                 const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'cardPoint', cost:offer.cost };
+                const soon=offer.available===false; // まだ仲間にできない子(予告中)は近日追加。ダイヤショップとは別に、この札の available で開く(メロディー等はダイヤは近日・ここは販売中)
                 const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
                 return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-disc':offer.id}}
-                  item={item} owned={owned} comingSoon={false}
-                  canBuy={!owned&&cp>=offer.cost&&!busy}
+                  item={item} owned={owned} comingSoon={soon}
+                  canBuy={!soon&&!owned&&cp>=offer.cost&&!busy}
                   disabled={purchaseProcessing}
                   onZoom={()=>onZoomIcon(disc||item)}
                   onBuy={()=>openSheet({ item, confirm:()=>cardShop.onExchange(offer),
@@ -368,10 +370,11 @@ function BreederMarketScreen({
             const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
             const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
             const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
+                const soon=offer.available===false; // まだ仲間にできない子(予告中)は近日追加。ダイヤショップとは別に、この札の available で開く(メロディー等はダイヤは近日・ここは販売中)
             const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-disc':offer.id}}
-              item={item} owned={owned} comingSoon={false}
-              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              item={item} owned={owned} comingSoon={soon}
+              canBuy={!soon&&!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(disc||item)}
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false,
