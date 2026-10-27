@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ea6904b223ba914
+// source-sha256: 39b16d55969a62b2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45805,7 +45805,6 @@ const summonAiCopy = (state, {
   name = '',
   level = 0,
   src = null,
-  uniqueCard = null,
   turn = 0,
   mode = 'tactics',
   effMul = 1,
@@ -45813,7 +45812,7 @@ const summonAiCopy = (state, {
   extra = null
 } = {}) => {
   const now = state && state.aiCopy || null;
-  let zones = state && state.zones || {
+  const zones = state && state.zones || {
     deck: [],
     hand: [],
     discard: []
@@ -45835,14 +45834,10 @@ const summonAiCopy = (state, {
       plan
     };
   }
-  if (plan.removeUniqueOf != null) zones = aiCopyRemoveUnique(zones, {
-    srcMonsterId: plan.removeUniqueOf
+  const pile = aiCopyBuildDeck(zones, {
+    srcSlot,
+    srcMonsterId
   });
-  const uniq = plan.addUniqueOf != null ? aiCopyUniqueCard(uniqueCard, plan.addUniqueOf) : null;
-  if (uniq) zones = {
-    ...zones,
-    deck: [...(Array.isArray(zones.deck) ? zones.deck : []), uniq]
-  };
   const stats = aiCopyStats(src, level, {
     mode,
     effMul,
@@ -45856,10 +45851,11 @@ const summonAiCopy = (state, {
     spawnTurn: aiCopySafeNum(turn) + 1,
     turnsLeft: plan.turnsLeft,
     ...stats,
+    deck: pile.deck,
+    discard: pile.discard,
     hand: [],
     nextCard: null,
     picks: [],
-    uniqueCardUid: uniq ? uniq.uid : null,
     ...(extra || {})
   };
   return {
@@ -45868,27 +45864,14 @@ const summonAiCopy = (state, {
     plan
   };
 };
-const dismissAiCopy = state => {
-  const now = state && state.aiCopy || null;
-  const zones = state && state.zones || {
+const dismissAiCopy = state => ({
+  aiCopy: null,
+  zones: state && state.zones || {
     deck: [],
     hand: [],
     discard: []
-  };
-  if (!now) return {
-    aiCopy: null,
-    zones
-  };
-  const match = now.uniqueCardUid ? {
-    uid: now.uniqueCardUid
-  } : {
-    srcMonsterId: now.srcMonsterId
-  };
-  return {
-    aiCopy: null,
-    zones: aiCopyRemoveUnique(zones, match)
-  };
-};
+  }
+});
 const tickAiCopy = (state, turn) => {
   const now = state && state.aiCopy || null;
   if (!isAiCopyOut(now, turn)) return state;
@@ -45906,28 +45889,49 @@ const tickAiCopy = (state, turn) => {
   };
 };
 const planAiCopyTurn = (aiCopy, {
-  deck = [],
+  count = SORASHIDO_COPY_HAND_DRAW,
   score = null,
   costOf = null,
+  usable = null,
   rng = Math.random
 } = {}) => {
   if (!aiCopy) return aiCopy;
-  const uniq = (Array.isArray(deck) ? deck : []).find(c => c && aiCopy.uniqueCardUid && c.uid === aiCopy.uniqueCardUid) || null;
-  const rest = (Array.isArray(deck) ? deck : []).filter(c => c !== uniq);
-  const hand = aiCopyHand(rest, uniq, rng);
-  const picks = aiCopyPickCards(hand, {
+  const cleared = Array.isArray(aiCopy.hand) && aiCopy.hand.length ? endAiCopyTurn(aiCopy) : aiCopy;
+  const drawn = aiCopyDraw({
+    deck: cleared.deck,
+    discard: cleared.discard
+  }, count, rng);
+  const choosable = drawn.hand.filter(c => typeof usable !== 'function' || usable(c));
+  const picks = aiCopyPickCards(choosable, {
     score,
     costOf,
-    guts: aiCopy.guts,
-    maxGuts: aiCopy.maxGuts,
+    guts: cleared.guts,
+    maxGuts: cleared.maxGuts,
     rng,
-    level: aiCopy.level
+    level: cleared.level
   });
   return {
-    ...aiCopy,
-    hand,
+    ...cleared,
+    deck: drawn.deck,
+    discard: drawn.discard,
+    hand: drawn.hand,
     picks,
     nextCard: picks[0] || null
+  };
+};
+const endAiCopyTurn = aiCopy => {
+  if (!aiCopy) return aiCopy;
+  const pile = aiCopyDiscardHand({
+    deck: aiCopy.deck,
+    discard: aiCopy.discard
+  }, aiCopy.hand);
+  return {
+    ...aiCopy,
+    deck: pile.deck,
+    discard: pile.discard,
+    hand: [],
+    picks: [],
+    nextCard: null
   };
 };
 const aiCopyAutoScore = (card, {
@@ -106675,7 +106679,6 @@ function MonsterHeroGame() {
     if (!unit) return;
     const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
     const piles = handPileRef.current;
-    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])].find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
     const {
       pos,
       stacked
@@ -106685,9 +106688,9 @@ function MonsterHeroGame() {
     const res = summonAiCopy({
       aiCopy: before,
       zones: {
-        deck: [],
-        hand: [],
-        discard: []
+        deck: piles.deck || [],
+        hand: piles.hand || [],
+        discard: piles.graveyard || []
       }
     }, {
       srcSlot: slotIdx,
@@ -106695,7 +106698,6 @@ function MonsterHeroGame() {
       name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '',
       level,
       src,
-      uniqueCard,
       turn: turnCount,
       mode: 'tactics',
       effMul
@@ -106704,8 +106706,7 @@ function MonsterHeroGame() {
       ...res.aiCopy,
       pos,
       stacked,
-      hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart),
-      uniqueCard: res.zones.deck[0] || null
+      hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart)
     };
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
@@ -106789,16 +106790,12 @@ function MonsterHeroGame() {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
     const tools = tacticsAiCopyTools(copy, enemyDist);
     if (!tools) return null;
-    const piles = handPileRef.current;
-    const pool = [...(piles.deck || []), ...(piles.graveyard || []), ...(piles.hand || [])].filter(c => c && c.type !== 'unique' && tools.usableC(c));
-    const uniq = copy.uniqueCard && tools.usableC(copy.uniqueCard) ? copy.uniqueCard : null;
-    const planned = planAiCopyTurn({
-      ...copy,
-      uniqueCardUid: uniq ? uniq.uid : null
-    }, {
-      deck: uniq ? [...pool, uniq] : pool,
+    const count = (handPileRef.current.hand || []).length || 5;
+    const planned = planAiCopyTurn(copy, {
+      count,
       score: tools.scoreC,
-      costOf: tools.costC
+      costOf: tools.costC,
+      usable: tools.usableC
     });
     return commitAiCopy({
       ...planned,
@@ -120162,7 +120159,7 @@ function MonsterHeroGame() {
         }
       }, turnCount);
       if (ticked.expired) clearAiCopy('消えた(時間切れ)');else {
-        commitAiCopy(ticked.aiCopy);
+        commitAiCopy(endAiCopyTurn(ticked.aiCopy));
         planTacticsAiCopy(turnCount + 1);
       }
     }
