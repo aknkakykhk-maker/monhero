@@ -17,7 +17,7 @@
   - 共モンのときの定義は TACTICS_EX_SKILLS.OrihimeSupport(Orihime の supportKey)。raidExDefOf が勇者でない子を引き替える
   - ⑦で直すこと: ヘルプのEXの表は遊べる子(ALL_PLAYER_MONSTERS)のキーだけ並べるので、OrihimeSupport が出ない。公開のときに「supportKey の先も並べる(共モンのとき)」を足す
   - 星合の続く攻撃は、ヒット列に「攻撃した子の与ダメ×率」の1本として足している(相方の力では殴らない)。確かめのときに社長へ見せる
-- [ ] ④-3 札の表示(BATTLE_STACK_MARKS に煉獄♨️・陽炎🌫️・狐火🦊・逢瀬🎐・星合🌌T・霊魂🕯️T。60-app の kyubiOrihimeStackMarks → 71 の allyStackCounts) — ブランチ claude/kyubi-orihime-marks(ジンくんと場所は分け済み)
+- [x] ④-3 札の表示(BATTLE_STACK_MARKS に煉獄♨️・陽炎🌫️・狐火🦊・逢瀬🎐・星合🌌T・霊魂🕯️T。60-app の kyubiOrihimeStackMarks → 71 の allyStackCounts) — #4132
   - 公開前の子のEXはヘルプの表に出さない(20-market-notices-help.jsx の tacticsExSkills)
 - [x] ⑤ 固有技の効果「霊魂」のつなぎ込み(消費ガッツ×0.7・味方全員の回避率+10%・3ターン。reikonRef) — #4102
 - [x] ⑥ デバッグで2体を仮に編成して、実際のバトルで確かめる・run-checks — #4128
@@ -26,7 +26,17 @@
   - 確かめ: tools/monster/kyubi-orihime-browser-check.js(九尾幻灯・煉獄・星合の刻・霊魂・エラーなし)。写真 field-*.jpg
   - オートで戦わせた結果: キュービ 煉獄1→6/10(WAVEをまたいで残る)・霊魂・7WAVEまでエラーなし / オリヒメ 相方が自動で決まり逢瀬1/5・霊魂・8WAVEまでエラーなし
   - 見られていないもの: 狐火の盾(Beginnerの敵はキュービが受ける前に倒れる)・星合の続く攻撃・焦がれの意味不明(共モンのオリヒメは勇者の一覧にしか出ないので)。純関数の検査は通っている
-- [ ] ⑦ 公開(社長の合図で)
+- [ ] ⑦ 公開(社長の合図で。ソラシドと同じ日。日はクラフトくんと合わせる) — ブランチ claude/kyubi-orihime-launch
+  - 文と絵は社長の「この文で」「この形で」済み(2026-10-27)。お知らせの絵の下書き: docs/progress/kyubi-orihime/notice-draft/、道具: tools/image/make-kyubi-orihime-release-notice.js
+  - 公開のPRでやること:
+    - UPCOMING_MONSTER_DRAFTS から ALL_PLAYER_MONSTERS へ移す(draft を外す・atkMotion・trait/traitDesc・unique.effectDesc を入れる)。kyubi-orihime-traits-check の「下書きのまま」の確認を「公開した」へ替える
+    - 説明文: 九尾四相・天河の契り・霊魂(統括部長へ送った案のまま)
+    - 円盤石の商品(#4019 の近日追加を外す)・顔アイコン/円盤石アイコンの販売(available)。クラフトくんの #4124(メロディー・クロミーの円盤石)はこのPRのマージ直後に入る
+    - お知らせの絵3枚を monster-hero/images/events/ へ(1枚目の最下行は円盤石の値段・並べ方に合わせて替える)
+    - 更新履歴(題「新モンスター『キュービ』『オリヒメ』が仲間になりました」・本文5行。メロディとクロミーの行はクラフトくんと合わせる。日時は入れるときの実時刻JST)・ヘルプの節・助手の告知
+    - ヘルプのタクティクスEXの表: supportKey の先(OrihimeSupport・焦がれ待つ天ノ河)も「共モンのとき」として並べる
+    - 公開後に要らなくなるもの: デバッグの試す用の写し(draftPreviewMonsterList は ALL_PLAYER_MONSTERS にいる子を除くので、そのままでよい)
+  - マージしたら、すぐクラフトくん(session_01VRYhgmPT7CS6iFeyRbpz1p)へ知らせる
 
 ## ②のつなぎ方(調べたこと)
 
