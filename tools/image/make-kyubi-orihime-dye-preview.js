@@ -31,7 +31,7 @@ const DYE_CANDIDATES = {
   Kyubi: {
     A: { style: '白ぎつね', colors: [c(250,18,100), c(250,15,100), c(210,6,100), c(355,85,85), c(0,0,100)], bg: ['#1b1638', '#5a5aa8', '#e4e2ff'], accent: '#f1edff', dots: ['rgba(240,235,255,.6)', 'rgba(255,170,170,.45)'] },
     B: { style: '紅葉ぎつね', colors: [c(15,60,40), c(25,85,95), c(40,15,100), c(45,85,95), c(15,60,35)], bg: ['#2a0e05', '#a0401a', '#ffc27a'], accent: '#ffd9a0', dots: ['rgba(255,200,120,.6)', 'rgba(255,140,90,.5)'] },
-    C: { style: '月夜ぎつね', colors: [c(230,55,45), c(230,35,85), c(220,18,100), c(280,60,70), c(230,30,22)], bg: ['#070c2a', '#24366e', '#8fb2e8'], accent: '#cfe0ff', dots: ['rgba(200,220,255,.6)', 'rgba(170,140,255,.45)'] },
+    C: { style: '月夜ぎつね', colors: [c(230,55,45,85), c(230,35,85,90), c(220,18,100,80), c(280,60,70,90), c(230,30,22,90)], bg: ['#070c2a', '#24366e', '#8fb2e8'], accent: '#cfe0ff', dots: ['rgba(200,220,255,.6)', 'rgba(170,140,255,.45)'] },
     D: { style: '桜ぎつね', colors: [c(340,35,95), c(340,30,100), c(350,8,100), c(330,70,90), c(340,18,100)], bg: ['#2a0b1f', '#a04a78', '#ffd0e4'], accent: '#ffd8ea', dots: ['rgba(255,200,225,.6)', 'rgba(255,255,255,.45)'] },
     // C を色の札と濃さだけで作り直した物(遊ぶ人が染色の画面でそのまま選べる形。2026-10-27)
     C2: { style: '月夜ぎつね', colors: ['blue@55', 'blue_light@80', 'blue_light@45', 'purple', 'black'], bg: ['#070c2a', '#24366e', '#8fb2e8'], accent: '#cfe0ff', dots: ['rgba(200,220,255,.6)', 'rgba(170,140,255,.45)'] },
@@ -46,7 +46,7 @@ const DYE_CANDIDATES = {
     // 2026-10-27 社長「A〜E のどれでもない」→ A〜E と似た色(水色・茶・緑・白紺・えんじ)を外して作り直した5案。
     // 遊ぶ人が染色の画面でそのまま選べるよう、カスタムではなく色の札と濃さだけで染める
     F: { style: '星空', colors: ['yellow_light', 'purple_light', 'yellow', 'purple', 'purple'], bg: ['#0c0620', '#3a1f6e', '#f3d27a'], accent: '#ffe9a8', dots: ['rgba(255,230,150,.7)', 'rgba(200,170,255,.5)'] },
-    G: { style: '桜', colors: ['pink', 'pink_light', 'red_light', 'white', 'pink_light'], bg: ['#3a1024', '#c25a86', '#ffe4ee'], accent: '#ffe0ec', dots: ['rgba(255,210,230,.7)', 'rgba(255,255,255,.5)'] },
+    G: { style: '桜', colors: ['pink@85', 'pink_light@90', 'red_light@85', 'white', 'pink_light@90'], bg: ['#3a1024', '#c25a86', '#ffe4ee'], accent: '#ffe0ec', dots: ['rgba(255,210,230,.7)', 'rgba(255,255,255,.5)'] },
     H: { style: '黒と朱', colors: ['black', 'gray', 'black', 'red', 'black'], bg: ['#080808', '#3a0c08', '#e0452a'], accent: '#ffb39a', dots: ['rgba(255,120,80,.55)', 'rgba(255,255,255,.3)'] },
     I: { style: '月光', colors: ['gray', 'blue_light', 'white', 'blue', 'blue'], bg: ['#05081e', '#1e2a6a', '#d8e0f0'], accent: '#e4ecff', dots: ['rgba(230,240,255,.65)', 'rgba(160,180,255,.45)'] },
     J: { style: '朝顔', colors: ['purple', 'pink_light', 'pink', 'blue', 'magenta'], bg: ['#120a3a', '#5a3aa8', '#ffc4e6'], accent: '#ffd6f0', dots: ['rgba(255,190,230,.6)', 'rgba(180,160,255,.5)'] },
@@ -63,39 +63,52 @@ const REGION_NAMES = {
 // 染色イメージの下に「どの色の札・どの濃さで染めたか」の表を描く(2026-10-27 社長「どの色と透明度とかわかるようにして」)。
 // 値は手で書かず、染めるのに使った colors から出す。色の札の名前と見本の色はゲームの MASU_COLOR_LABELS・MASU_COLOR_SWATCH を
 // そのまま読むので、染色の画面の呼び方と同じになる。スマホの更新履歴(幅340pxほど)でも読めるよう、字は大きめにする
-const TABLE_HEAD = 120;
-// カスタムの色がある表は2段組み(上に「カスタム」と濃さ、下に数字)にするので、行を高くする
-const tableRowOf = (colors) => (colors || []).some((cid) => typeof cid === 'string' && cid.startsWith('custom:')) ? 136 : 112;
+const TABLE_HEAD = 190, TABLE_ROW = 136, TABLE_FOOT = 70;
 const hsvHex = (h, s, v) => { const f = (n) => { const k = (n + h / 60) % 6; return Math.round(255 * v * (1 - s * Math.max(0, Math.min(k, 4 - k, 1)))); }; return '#' + [f(5), f(3), f(1)].map((n) => n.toString(16).padStart(2, '0')).join(''); };
+// 色1つぶんの表の中身。2体とも同じ形にする(2026-10-27 社長「透明度どっち？ %が2つあるし。オリヒメにはないし」)。
+//   色の列: 色の名前(カスタムなら「カスタム」)と、染色の画面のカスタムの色選びで「−」「＋」で合わせる数字(色相・彩度・明るさ。%は付けない)
+//   濃さの列: 濃さ(透明度)だけ%を付ける。100%=透けない
+// 名前の付いた色の数字は、カスタムで入れるとほぼ同じ色になる値にする。ゲームはカスタムの明るさ v を
+// 下へ0.32・上へ0.24の幅にして染める(_resolveColorTarget)ので、色の札の幅の下の端(vMin)から v = vMin + 0.32 と逆に求める
 const describeColor = (dye, colorId) => {
-  if (!colorId) return { swatch: null, name: '元の色のまま', alpha: null };
+  if (!colorId) return { swatch: null, name: '元の色のまま', nums: '', alpha: null };
   const { base, alpha } = dye.splitColorAlpha(colorId);
   const m = /^custom:(\d+):(\d+):(\d+)$/.exec(base);
-  if (m) return { swatch: hsvHex(+m[1], +m[2] / 100, +m[3] / 100), name: 'カスタム', note: `(色相${m[1]}・彩度${m[2]}・明るさ${m[3]})`, alpha };
-  return { swatch: dye.MASU_COLOR_SWATCH[base] || '#888888', name: dye.MASU_COLOR_LABELS[base] || base, alpha };
+  if (m) return { swatch: hsvHex(+m[1], +m[2] / 100, +m[3] / 100), name: 'カスタム', nums: `色相${m[1]}・彩度${m[2]}・明るさ${m[3]}`, alpha };
+  const t = dye.MASU_COLOR_TARGET[base];
+  const nums = t ? `色相${Math.round(t.h)}・彩度${Math.round(t.s * 100)}・明るさ${Math.min(100, Math.round((t.vMin + 0.32) * 100))}` : '';
+  return { swatch: dye.MASU_COLOR_SWATCH[base] || '#888888', name: dye.MASU_COLOR_LABELS[base] || base, nums, alpha };
 };
+const tableHeightOf = (p) => TABLE_HEAD + TABLE_ROW * (REGION_NAMES[p.baseId] || []).length + TABLE_FOOT;
 const drawDyeTable = (x, top, W, dye, p) => {
   const names = REGION_NAMES[p.baseId] || [];
-  const ROW = tableRowOf(p.colors);
-  const h = TABLE_HEAD + ROW * names.length + 30;
+  const h = tableHeightOf(p);
+  const anyNamed = (p.colors || []).some((cid) => cid && !String(cid).startsWith('custom:'));
   x.fillStyle = '#16122a'; x.fillRect(0, top, W, h);
   x.lineWidth = 12; x.strokeStyle = p.accent; x.strokeRect(6, top - 6, W - 12, h);
-  x.save(); x.font = '58px MPR'; x.fillStyle = p.accent; x.textBaseline = 'middle';
-  x.fillText('染め方(染色の画面で選ぶ色と濃さ)', 60, top + TABLE_HEAD / 2 + 6); x.restore();
+  x.save(); x.textBaseline = 'middle';
+  x.font = '58px MPR'; x.fillStyle = p.accent; x.fillText('染め方(染色の画面で選ぶ色と濃さ)', 60, top + 62);
+  // 列の見出し
+  x.font = '44px MPR'; x.fillStyle = 'rgba(255,255,255,.75)';
+  x.fillText('部位', 60, top + 148); x.fillText('色', 890, top + 148);
+  x.textAlign = 'right'; x.fillText('濃さ(透明度)', W - 60, top + 148); x.textAlign = 'left';
+  x.restore();
   names.forEach((label, i) => {
-    const y = top + TABLE_HEAD + i * ROW + ROW / 2;
+    const y = top + TABLE_HEAD + i * TABLE_ROW + TABLE_ROW / 2;
     const d = describeColor(dye, p.colors[i]);
-    if (i % 2 === 0) { x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(30, y - ROW / 2, W - 60, ROW); }
+    if (i % 2 === 0) { x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(30, y - TABLE_ROW / 2, W - 60, TABLE_ROW); }
     x.save(); x.textBaseline = 'middle';
     x.font = '56px MPR'; x.fillStyle = '#ffffff'; x.fillText(label, 60, y);
-    // 画面(染色の窓)と同じ書き方にする: 色の札は名前、カスタムは「カスタム(色相○・彩度○・明るさ○)」、濃さは「濃さ○%」
-    const top1 = d.note ? y - 28 : y;
-    if (d.swatch) { x.fillStyle = d.swatch; x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 5; x.beginPath(); x.roundRect(890, top1 - 38, 76, 76, 14); x.fill(); x.stroke(); }
-    x.font = d.note ? '52px MPR' : '60px MPR'; x.fillStyle = '#fff6d8'; x.fillText(d.name, 990, top1);
-    if (d.note) { x.font = '46px MPR'; x.fillStyle = '#ffffff'; x.fillText(d.note, 890, y + 34); }
-    if (d.alpha !== null) { x.font = d.note ? '52px MPR' : '60px MPR'; x.fillStyle = '#ffffff'; x.textAlign = 'right'; x.fillText(`濃さ${d.alpha}%`, W - 60, top1); }
+    const y1 = y - 28;
+    if (d.swatch) { x.fillStyle = d.swatch; x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 5; x.beginPath(); x.roundRect(890, y1 - 34, 68, 68, 12); x.fill(); x.stroke(); }
+    x.font = '52px MPR'; x.fillStyle = '#fff6d8'; x.fillText(d.name, 976, y1);
+    if (d.nums) { x.font = '46px MPR'; x.fillStyle = '#ffffff'; x.fillText(d.nums, 890, y + 34); }
+    if (d.alpha !== null) { x.font = '60px MPR'; x.fillStyle = '#ffffff'; x.textAlign = 'right'; x.fillText(`${d.alpha}%`, W - 60, y); }
     x.restore();
   });
+  x.save(); x.textBaseline = 'middle'; x.font = '34px MPR'; x.fillStyle = 'rgba(255,255,255,.7)';
+  x.fillText(anyNamed ? '濃さ100%=透けない。名前の付いた色の数字は、カスタムで入れるとほぼ同じ色になる値です' : '濃さ100%=透けない。数字は染色の画面のカスタムの「−」「＋」で合わせる値です', 60, top + h - TABLE_FOOT / 2 - 6);
+  x.restore();
   return h;
 };
 const PREVIEWS = [
@@ -195,7 +208,7 @@ const dyed = async (dye, url, baseId, colors) => {
     x.lineWidth = 12; x.strokeStyle = p.accent; x.strokeRect(6, 6, W - 12, H - 12);
     const outPath = path.join(process.env.CANDIDATES && process.env.OUT_DIR ? path.resolve(process.env.OUT_DIR) : path.join(ROOT, 'monster-hero', 'images', 'events'), p.out);
     // 下に表の帯を足す(高さは部位の数で決まる)
-    const tableH = TABLE_HEAD + tableRowOf(p.colors) * (REGION_NAMES[p.baseId] || []).length + 30;
+    const tableH = tableHeightOf(p);
     const full = createCanvas(W, H + tableH), fx = full.getContext('2d');
     fx.drawImage(c, 0, 0);
     drawDyeTable(fx, H, W, dye, p);
