@@ -1433,6 +1433,19 @@ function MonsterHeroGame() {
     const next = Object.fromEntries(entries.map(([k, v]) => [k, tickReikon(v)]).filter(([, v]) => v.wait > 0 || v.turns > 0));
     reikonRef.current = next; setReikonView(next);
   };
+  // ★キュービ・オリヒメの「マーク×数」(2026-10-27・④-3)。{ 枠: { kind: 数 } } を作り、バトル画面の allyStackCounts へ足す。
+  //   キー 'party'(5つの遊び)は勇者モンを置いた距離の枠へ。描いている時点の state(kyubiView・orihimeView・reikonView)から読む
+  const kyubiOrihimeStackMarks = (() => {
+    const out = {}, slotOf = (key) => (key === 'party' ? initialBattleDistanceRef.current : Number(key));
+    const put = (key, kind, n) => { const i = slotOf(key), c = Math.max(0, Math.floor(Number(n) || 0)); if (!Number.isInteger(i) || c <= 0) return; out[i] = { ...(out[i] || {}), [kind]: c }; };
+    Object.entries(kyubiView.rengoku || {}).forEach(([k, n]) => put(k, 'rengoku', n));
+    Object.entries(kyubiView.kagero || {}).forEach(([k, v]) => put(k, 'kagero', kageroOf(v).ready ? 1 : 0));
+    Object.entries(kyubiView.kitsunebi || {}).forEach(([k, v]) => { const f = kitsunebiOf(v); if (f.active) put(k, 'kitsunebi', f.fires); });
+    Object.entries(orihimeView.ouse || {}).forEach(([k, n]) => put(k, 'ouse', n));
+    Object.entries(orihimeView.hoshiai || {}).forEach(([k, v]) => put(k, 'hoshiai', v && v.turns));
+    Object.entries(reikonView || {}).forEach(([k, v]) => { const r = reikonOf(v); put(k, 'reikon', r.wait > 0 ? 0 : r.turns); });
+    return out;
+  })();
   // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
   const tickKyubiKagero = () => {
     const cur = kyubiRef.current;
@@ -22155,7 +22168,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
-            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} kyubiOrihimeStackMarks={kyubiOrihimeStackMarks} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
