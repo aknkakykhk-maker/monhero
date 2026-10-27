@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 499e7b989eff1dd0
+// generated-sha256: 6ae92f42afabd7a5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -20297,7 +20297,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                   (2026-09-13・ユーザー指摘「設定にもなってない」。決めるのは測り終わった画面) */}
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
                 <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
-                {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
+                {!calibrationResult.stable&&<p style={JA_WRAP_STYLE} className="mt-1 font-black text-rose-300">{jaWrap('ばらつきが大きめです。もう一度合わせると、より合った値になります。')}</p>}
                 <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">閉じる</button>
               </div>}
             </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
@@ -20492,12 +20492,12 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 <section className={card}>
           <details data-rhythm-option-help className="mt-3">
             <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ 音量について詳しく</summary>
-            <p className={`mt-1 ${note}`}>この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。</p>
+            <p style={JA_WRAP_STYLE} className={`mt-1 ${note}`}>{jaWrap('この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。')}</p>
             {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
-            <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
+            <p style={JA_WRAP_STYLE} className={`mt-2 ${note}`}>{jaWrap('2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。')}</p>
             {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ */}
-            <p className={`mt-2 ${note}`}>タップ音量は0〜{RHYTHM_NOTE_SE_VOLUME_MAX}まで上げられます（{RHYTHM_VOLUME_MAX}より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。</p>
-            <p className={`mt-2 ${note}`}>BGM音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
+            <p style={JA_WRAP_STYLE} className={`mt-2 ${note}`}>タップ音量は0〜{RHYTHM_NOTE_SE_VOLUME_MAX}まで上げられます（{RHYTHM_VOLUME_MAX}{jaWrap('より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。')}</p>
+            <p style={JA_WRAP_STYLE} className={`mt-2 ${note}`}>BGM音量は0〜{RHYTHM_VOLUME_MAX}{jaWrap('まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。')}</p>
           </details>
         </section>
 </div>}
@@ -20513,7 +20513,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 className={`overflow-hidden rounded-xl border-2 text-[11px] font-black leading-tight ${on?'border-cyan-300 bg-cyan-400 text-slate-950':'border-white/15 bg-slate-900 text-slate-200'}`}>
                 {!wide&&<img src={preset.image} alt="" aria-hidden="true" loading="lazy" decoding="async" draggable={false} className="block aspect-[240/427] w-full object-cover"/>}
                 <span className={`block px-0.5 ${wide?'py-2.5':'py-1.5'}`}>{preset.label}</span></button>;})}</div>
-              {!rhythmLookPresetOf(draft)&&<p data-rhythm-look-custom className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">いまは自分で選んだ組み合わせです</p>}
+              {!rhythmLookPresetOf(draft)&&<p style={JA_WRAP_STYLE} data-rhythm-look-custom className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">{jaWrap('いまは自分で選んだ組み合わせです')}</p>}
             </div>,
               '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。',{full:true})}
 {/* 何が起きるのか画面に書いていなかったので、2026-09-13に説明を足した
@@ -20602,13 +20602,13 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 </section>
 <section className={card}>
           <details data-rhythm-option-help className="mt-3">
-            <summary className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">▸ この端末で通知をどこまで止められるか</summary>
+            <summary style={JA_WRAP_STYLE} className="min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90">{jaWrap('▸ この端末で通知をどこまで止められるか')}</summary>
             <p className={`mt-1 ${note}`}>{helpWrap(rhythmQuietModeSupportText())}</p>
           </details>
-          {!RHYTHM_HAPTICS.supported()&&<p data-rhythm-vibration-unsupported className="mt-2 text-[10px] font-bold leading-relaxed text-amber-200">この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。</p>}
+          {!RHYTHM_HAPTICS.supported()&&<p style={JA_WRAP_STYLE} data-rhythm-vibration-unsupported className="mt-2 text-[10px] font-bold leading-relaxed text-amber-200">{jaWrap('この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。')}</p>}
         </section>
 </div>}
-        {!wide&&<p className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</p>}
+        {!wide&&<p style={JA_WRAP_STYLE} className="rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100">{jaWrap('判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。')}</p>}
       </div>
     </div>
     <footer data-rhythm-options-actions className={`z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide?'pt-1.5':'pt-2'}`} style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}>
@@ -20619,8 +20619,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
     {leaveAsk&&<div data-rhythm-options-leave role="dialog" aria-modal="true" aria-label="変更が保存されていません"
       className="fixed inset-0 z-[9000] flex items-center justify-center bg-slate-950/80 p-5" onClick={()=>setLeaveAsk(false)}>
       <div className="w-full max-w-xs rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center shadow-[0_0_24px_rgba(251,191,36,.15)]" onClick={e=>e.stopPropagation()}>
-        <b className="block text-[15px] font-black text-amber-200">変更が保存されていません</b>
-        <p className="mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300">このまま戻ると、いま変えた設定は元に戻ります。</p>
+        <b style={JA_WRAP_STYLE} className="block text-[15px] font-black text-amber-200">{jaWrap('変更が保存されていません')}</b>
+        <p style={JA_WRAP_STYLE} className="mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300">{jaWrap('このまま戻ると、いま変えた設定は元に戻ります。')}</p>
         <div className="mt-3 grid grid-cols-1 gap-2">
           <button type="button" data-rhythm-options-leave-save onClick={saveAndBack} className="min-h-[48px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950">保存して戻る</button>
           <button type="button" data-rhythm-options-leave-discard onClick={()=>{setLeaveAsk(false);onBack();}} className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200">保存せずに戻る</button>
@@ -21145,7 +21145,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
       className={`min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`}>
       {list.length===0
-        ?<p data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?'お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。':genre&&genre.id!=='all'?'このジャンルの曲はまだありません。':emptyText}</p>
+        ?<p style={JA_WRAP_STYLE} data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。'):genre&&genre.id!=='all'?jaWrap('このジャンルの曲はまだありません。'):emptyText}</p>
         :<ul className="space-y-0.5">{blocks.map(copy=>rows.map(row=>{
           const entry=row.entry;
           const main=copy===1;
@@ -21389,7 +21389,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-cyan-300/60 bg-slate-900 p-4"
         style={{paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
         <h3 className="text-sm font-black text-white">ジャンル</h3>
-        <p className="mt-1 text-[10px] font-bold text-slate-400">選んだジャンルの曲だけを一覧に出します。</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-[10px] font-bold text-slate-400">{jaWrap('選んだジャンルの曲だけを一覧に出します。')}</p>
         <div data-rhythm-genre-tabs className="mt-3 space-y-1.5">
           {genres.map(item=>{
             const on=!!genre&&item.id===genre.id,usable=genreUsable(item);
@@ -21399,7 +21399,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
               className={`flex min-h-[52px] w-full items-center justify-between gap-2 rounded-xl border-2 px-3 text-left ${on?'border-cyan-200 bg-cyan-900/50':usable?'border-white/15 bg-slate-950/60':'border-white/10 bg-slate-950/40 opacity-60'}`}>
               <span className="min-w-0">
                 <b className="block text-xs font-black text-white">{on?'● ':''}{item.favorite?'♥ ':''}{item.label}</b>
-                <small className="block text-[10px] font-bold text-slate-400">{usable?item.note:'いまはイベントを開催していません'}</small>
+                <small style={JA_WRAP_STYLE} className="block text-[10px] font-bold text-slate-400">{usable?item.note:jaWrap('いまはイベントを開催していません')}</small>
               </span>
               <small className="shrink-0 text-[11px] font-black tabular-nums text-slate-300">{usable?`${count}曲`:'開催なし'}</small>
             </button>;
@@ -21416,7 +21416,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
         className="max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-fuchsia-400/60 bg-slate-900 p-4"
         style={{paddingBottom:'calc(1rem + var(--mh-sa-bottom))'}}>
         <h3 className="text-sm font-black text-white">曲の並べ替え</h3>
-        <p className="mt-1 text-[10px] font-bold text-slate-400">並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-[10px] font-bold text-slate-400">{jaWrap('並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。')}</p>
         <div className="mt-3 space-y-1.5">
           {RHYTHM_SORT_ORDERS.map(item=>{
             const on=item.id===state.sort;
@@ -21497,7 +21497,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
           <h2 data-rhythm-hell-guide-title style={{margin:video?0:'6px 0 0',fontSize:'22px',fontWeight:900,lineHeight:1.25,color:'#fff'}}>{page.title}</h2>
           <p data-rhythm-hell-guide-text style={{margin:'10px 0 0',fontSize:'14px',fontWeight:700,lineHeight:1.7,color:'#e2e8f0'}}>{helpWrap(page.text)}</p>
           {/* 最後のページに、はじめての HELL の目安(Lv. がいちばん低い HELL・実データから。2026-10-21 改善部 N6) */}
-          {last&&typeof rhythmHellEntryText==='function'&&rhythmHellEntryText()&&<p data-rhythm-hell-guide-entry style={{margin:'12px 0 0',padding:'8px 10px',borderRadius:'12px',border:'1px solid rgba(251,113,133,.5)',background:'rgba(76,5,25,.55)',fontSize:'13px',fontWeight:900,lineHeight:1.6,color:'#fecdd3'}}>🔥 {rhythmHellEntryText()}。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。</p>}
+          {last&&typeof rhythmHellEntryText==='function'&&rhythmHellEntryText()&&<p data-rhythm-hell-guide-entry style={{...JA_WRAP_STYLE,margin:'12px 0 0',padding:'8px 10px',borderRadius:'12px',border:'1px solid rgba(251,113,133,.5)',background:'rgba(76,5,25,.55)',fontSize:'13px',fontWeight:900,lineHeight:1.6,color:'#fecdd3'}}>🔥 {rhythmHellEntryText()}{jaWrap('。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。')}</p>}
         </div>
       </div>
       {nextVideo&&<video key={nextVideo.src} muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} style={{position:'absolute',width:'1px',height:'1px',opacity:0,pointerEvents:'none'}}>
@@ -55759,13 +55759,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   useEffect(() => { if (!tutorial) say('start'); }, []);
   // 出しておく時間。大写しのカード・番の札が出ているあいだは止め、消えたら残りから数え直す。練習試合はみゅあの台詞の流れ(下)が決める
   useEffect(() => {
-    if (!bubble || tutorial || bigCard || turnBanner || guarding) return undefined;   // 番の札のあいだも見えないので止める(ブレイブくんの #番の札)
+    // ダウンの帯のあいだも隠れて読めないので止める(倒れた瞬間の台詞が帯の下で約1秒減っていた。2026-10-27 フキダシくん)
+    if (!bubble || tutorial || bigCard || turnBanner || downBand || guarding) return undefined;   // 番の札のあいだも見えないので止める(ブレイブくんの #番の札)
     const key = bubble.key;
     const ms = bubbleLeft.current[key] ?? cardBubbleMs(bubble.text);
     const at = Date.now();
     const t = setTimeout(nextBubble, ms);
     return () => { clearTimeout(t); bubbleLeft.current = { [key]: Math.max(800, ms - (Date.now() - at)) }; };
-  }, [bubble && bubble.key, !!bigCard, !!turnBanner, guarding]);
+  }, [bubble && bubble.key, !!bigCard, !!turnBanner, !!downBand, guarding]);
   // 練習試合: 段が変わったら、その段の台詞を出す。みゅあの台詞は吹き出しに出して、少ししたら次へ。ドラの台詞は説明の窓に出す
   useEffect(() => { if (tutorial && tutStage) setTutQ(tutStage.lines.slice()); }, [tutI]);
   useEffect(() => {
@@ -56353,6 +56354,13 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [boardFit, setBoardFit] = useState(0);
   const [boardFitKey, setBoardFitKey] = useState(0);
   useEffect(() => { const on = () => setBoardFitKey((k) => k + 1); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
+  // 吹き出しをまんなかの流れの中に置くとき(上に重ねない)= 顔の大きいカットイン。入り切らなければ stageFit が詰める。
+  //   隠れているあいだ(守りを選ぶ・番の帯・ダウンの帯・大写し・決着)は場所を取らない(844×390 の守りで、見えないカットインが記録を押し出した)
+  const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
+  const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
+  // 小さい縦の画面では、上に重ねたふつうの吹き出しが技の札の上半分を隠す(320×568・2行の台詞。2026-10-27 フキダシくん)。
+  //   吹き出しが出ているあいだは技の札を出さない(何の技かは記録の1行に出ている。台詞が消えれば札が出る)
+  const bubbleOverAction = !!(tiny && !wide && bubble && !bubble.cut && !replay && !tutorial);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
   React.useLayoutEffect(() => {
@@ -56517,24 +56525,28 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
       {/* 入り切らないときも上から並べる(safe center)。吹き出しの上が切れないように */}
-      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1`} style={{ justifyContent: 'safe center' }}>
+      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`} style={{ justifyContent: 'safe center' }}>
         {/* 案A: 番が替わったときの帯は、盤全体の真ん中へ移した(下の data-card-turn-banner。2026-10-26 ソラシドさん) */}
         {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。押すと次の台詞へ進む(練習試合は指の操作を下へ通す)。
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
             番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && !replay && (
-          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} data-card-bubble-cut={bubble.cut ? '1' : undefined} className={`${bigCard || turnBanner || guarding || endFx ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubble.cut ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} data-card-bubble-cut={bubble.cut ? '1' : undefined} className={`${bubbleHidden ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubbleInFlow ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut
               ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]`
               : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
             {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
-              : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${bubble.cut ? (tiny ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>}
+              : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${bubble.cut ? (tiny || stageFit >= 2 ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>}
             <span className="min-w-0 flex-1"><span className={bubble.cut ? 'block text-[11px] tracking-wider' : 'mr-1 text-[11px]'} style={{ color: who.accent }}>{who.name}{bubble.cut ? ' ★' : ''}</span><span style={JA_WRAP_STYLE}>{cardJaWrap(bubble.text)}</span></span>
           </div>
         )}
-        <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
-        <span aria-hidden="true" data-card-vs-mark className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]">VS</span>
+        {/* まんなかの線とうすい「VS」は、まんなかと同じ大きさの枠に入れる。はみ出した分がまんなかの高さに数えられて、
+            低い画面(横 72px)では stageFit がいつも最後まで詰め、技の帯の札が毎回消えていた(2026-10-27 ⑲) */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"/>
+          <span data-card-vs-mark className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]">VS</span>
+        </div>
         {/* ブリーダーのカード: 使った側の助手・ブリーダーの顔を、まんなかの端に光らせて出す(相手は右上・自分は左下。設計書 5-4) */}
         {breederFx && (
           <div key={breederFx.key} data-card-breeder-fx={breederFx.p === CARD_ME ? 'me' : 'foe'} aria-hidden="true"
@@ -56545,13 +56557,14 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               : pvp ? <CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/> : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
-        {action && !endFx && stageFit < 3 && !(turnSummary && sumOpen) && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
+        {action && !endFx && stageFit < 3 && !bubbleOverAction && !(turnSummary && sumOpen) && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
           <div key={action.key} data-card-action data-card-action-side={action.side} className={`relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
             {/* 案A: どちらが使った技か(相手=赤・自分=金) */}
             <span data-card-fit className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? '相手' : '自分'}</span>
             {!compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
-            {/* 小さい段は1行(だれ「技」)にして、まんなかの高さに収める(2段だと上が切れた。カゲあつくんの確認 2026-10-25) */}
-            <div className={`${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`}>{action.who}<span className={tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'}>「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
+            {/* 小さい段は1行(だれ「技」)にして、まんなかの高さに収める(2段だと上が切れた。カゲあつくんの確認 2026-10-25)。
+                横の画面もまんなかが 72px ほどしかなく、2行だと記録と合わせて入らず札が毎回消えていた(2026-10-27 ⑲)ので1行 */}
+            <div className={`${tiny || wide ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`}>{action.who}<span className={tiny || wide ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'}>「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
           </div>
         )}
         {/* 場の全体カード(両方に効く)。タップで詳しい画面。名前は切らずに折り返す */}
@@ -56570,6 +56583,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           </button>
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
+        {/* 顔の大きいカットインは、まんなか(横 72px・小さい縦 89px ほど)に記録といっしょには入り切らない(2026-10-27 デッキくん ⑲ 記録の下が 11〜22px 切れる)。
+            詰めの段が最後(3)まで行っても入らないときは、カットインのあいだだけ記録を出さない(倒れたことはダウンの帯が知らせる。台詞が消えれば戻る) */}
+        {!(stageFit >= 3 && bubbleInFlow) && (
         <div data-card-log className={`relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
@@ -56584,6 +56600,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             : <div className="text-rose-200">{pendingText}</div>)}
           {(pendingText ? [] : (compact || tutorial || stageFit >= 1) ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} data-card-log-kind={l.kind || undefined} className={`${i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'} ${l.kind === 'ko' ? '!text-rose-300 font-black' : l.kind === 'hit' && /ダメージ/.test(l.text) ? '!text-rose-200' : ''}`}>{l.text}</div>)}
         </div>
+        )}
       </div>
       {/* 自分の番のあいだは、自分の場のふちを金色に光らせる */}
       {/* 練習試合のドラの窓(縦の画面)。自分のモンスターの列の上に、まんなかへ重ねて出す。
@@ -70524,9 +70541,9 @@ function MonsterHeroGame() {
 
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
     if (offer?.available === false) return { ok:false, reason:'soon' };
-    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -70707,9 +70724,9 @@ function MonsterHeroGame() {
   };
   // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはビートP
   const exchangeCardPoints = async (offer) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない(ビートP交換所と同じ)
     if (offer?.available === false) return { ok:false, reason:'soon' };
-    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
