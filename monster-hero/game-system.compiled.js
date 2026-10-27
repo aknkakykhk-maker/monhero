@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e5a984d35ac881f
+// source-sha256: a40ee272f85ee31b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86064,13 +86064,13 @@ const CARD_AI_HABITS = Object.freeze({
     finish: 1.5
   },
   sorashido: {
-    attack: 1.0,
-    keepGuard: 1.0,
+    attack: 1.1,
+    keepGuard: 0.9,
     saveGuts: 1.0,
-    big: 1.0,
-    disrupt: 1.0,
+    big: 0.9,
+    disrupt: 1.5,
     area: 1.0,
-    finish: 1.0
+    finish: 1.3
   }
 });
 const cardFoeReleased = who => typeof assistantReleased !== 'function' || assistantReleased(who);
@@ -86743,7 +86743,7 @@ const CARD_AI_FAVORITE = Object.freeze({
   kyuko: 'mew',
   dra: 'zilla',
   atsu: 'dragon',
-  sorashido: 'mocchi'
+  sorashido: 'hare'
 });
 const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
@@ -86814,6 +86814,12 @@ const CARD_AI_BUILD = Object.freeze({
   }
 });
 const CARD_AI_DECK_TUNE = Object.freeze({
+  sorashido: {
+    easy: -1.5,
+    normal: -1.5,
+    hard: -1.5,
+    master: -0.05
+  },
   mua: {
     easy: -0.7,
     normal: -2.1,
@@ -86844,6 +86850,7 @@ const CARD_AI_DECK_TUNE = Object.freeze({
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
 const CARD_AI_LANE_MIN = Object.freeze({
+  sorashido: 1.5,
   momosuke: 1.5,
   dra: 0.8,
   kyuko: 2.0,
