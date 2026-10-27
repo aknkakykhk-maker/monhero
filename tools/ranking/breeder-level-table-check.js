@@ -125,6 +125,9 @@ const run = async () => {
   for (const f of stubbers) {
     const t = fs.readFileSync(f, 'utf8');
     assert(/route\(|createFakeSupabase|sb\.handle/.test(t), `${f}: __mhSupabaseStubbed = true を立てるのに Supabase を差し替えていない(本番へ書いてしまう)`);
+    // 表(rest/v1)だけ差し替えて、助手の中継(functions/v1)を忘れると、本物の Edge Function が AI を呼ぶ。
+    // 「host ごとまとめて差し替え」「fake-supabase」「functions/v1 の差し替え」のどれかが要る
+    assert(/functions\/v1|createFakeSupabase|sb\.handle|supabase\\?\.co|\*\*\/\*/.test(t), `${f}: Supabase の表だけ差し替えて、助手の中継(functions/v1)を差し替えていない(本物の AI を呼んでしまう)`);
   }
   console.log(`OK: __mhSupabaseStubbed = true を立てる検査(${stubbers.length}本)は Supabase を差し替えている`);
 

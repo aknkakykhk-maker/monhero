@@ -109,6 +109,7 @@ const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=ce9b0ee85836";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
+const GOLEM_DYE_MASK = "images/monsters/golem-dye-mask.PNG?v=b6b1cf1c4bf0";
 const MONOL_IMG = "images/monsters/monol.png?v=64e141b7fbb1";
 const OBORO_IMG = "images/monsters/oboro.png?v=b9f9b77e528d";
 const PLANT_IMG = "images/monsters/plant.PNG?v=398cacbadab3";
@@ -128,7 +129,7 @@ const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=c4c739ed5b
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
 const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
-const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
+const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=72185954c1f9";
 // 2026年9月に追加準備中のレア「剣士モッチー」(モッチー×？？？)。正式実装まではデバッグ専用。
 // 染色は5部位で、承認済みマスクの色分けがそのままリポジトリ仕様に合っている
 // (赤=①肌 / 緑=②コート・ブーツ / 青=③髪 / 黄=④左手の剣 / マゼンタ=⑤右手の剣)。
@@ -377,7 +378,7 @@ const HYBRID_C056_FACE_ICON = "images/monster-icons/face/c056.png?v=ed4aac02295a
 const HYBRID_C057_FACE_ICON = "images/monster-icons/face/c057.png?v=13230681ef1d";
 const HYBRID_C058_FACE_ICON = "images/monster-icons/face/c058.png?v=3bfcaaa0ceaf";
 const HYBRID_C059_FACE_ICON = "images/monster-icons/face/c059.png?v=106d33ba40e0";
-const HYBRID_C060_FACE_ICON = "images/monster-icons/face/c060.png?v=6068ebe63111";
+const HYBRID_C060_FACE_ICON = "images/monster-icons/face/c060.png?v=7b1d704aac06";
 const HYBRID_C061_FACE_ICON = "images/monster-icons/face/c061.png?v=920ea9e836ad";
 const HYBRID_C062_FACE_ICON = "images/monster-icons/face/c062.png?v=07f17eb1dfee";
 const HYBRID_C055_FACE_ICON = "images/monster-icons/face/c055.png?v=a71918e0b84b";
@@ -398,7 +399,7 @@ const HYBRID_C034_FACE_ICON = "images/monster-icons/face/c034.png?v=ec1be7dcb7a6
 const HYBRID_C035_FACE_ICON = "images/monster-icons/face/c035.png?v=895f6b37c7db";
 const HYBRID_C036_FACE_ICON = "images/monster-icons/face/c036.png?v=cb3c4f4a19a6";
 const HYBRID_C038_FACE_ICON = "images/monster-icons/face/c038.png?v=4eaeb9ce0c27";
-const HYBRID_C039_FACE_ICON = "images/monster-icons/face/c039.png?v=673f2f41e714";
+const HYBRID_C039_FACE_ICON = "images/monster-icons/face/c039.png?v=a42c3f14dd98";
 const HYBRID_C040_FACE_ICON = "images/monster-icons/face/c040.png?v=c09a8d93ef8e";
 const HYBRID_C041_FACE_ICON = "images/monster-icons/face/c041.png?v=e5b9e37dddf1";
 const HYBRID_C042_FACE_ICON = "images/monster-icons/face/c042.png?v=9331e5dd8316";
@@ -593,7 +594,7 @@ const ART_ANCHORS = Object.freeze({
   HYBRID_C057: Object.freeze({ face: Object.freeze([0.509, 0.135]) }),
   HYBRID_C058: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
   HYBRID_C059: Object.freeze({ face: Object.freeze([0.5, 0.525]) }),
-  HYBRID_C060: Object.freeze({ face: Object.freeze([0.515, 0.435]) }),
+  HYBRID_C060: Object.freeze({ face: Object.freeze([0.515, 0.435]), zoom: 0.871 }),
   HYBRID_C061: Object.freeze({ face: Object.freeze([0.5, 0.475]) }),
   HYBRID_C062: Object.freeze({ face: Object.freeze([0.5, 0.649]) }),
   HYBRID_C055: Object.freeze({ face: Object.freeze([0.5, 0.387]) }),
@@ -613,7 +614,7 @@ const ART_ANCHORS = Object.freeze({
   HYBRID_C035: Object.freeze({ face: Object.freeze([0.505, 0.275]) }),
   HYBRID_C036: Object.freeze({ face: Object.freeze([0.5, 0.2]) }),
   HYBRID_C038: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
-  HYBRID_C039: Object.freeze({ face: Object.freeze([0.381, 0.3]) }),
+  HYBRID_C039: Object.freeze({ face: Object.freeze([0.381, 0.3]), zoom: 0.819 }),
   HYBRID_C040: Object.freeze({ face: Object.freeze([0.5, 0.45]) }),
   HYBRID_C041: Object.freeze({ face: Object.freeze([0.5, 0.625]) }),
   HYBRID_C042: Object.freeze({ face: Object.freeze([0.5, 0.18]) }),
@@ -625,6 +626,8 @@ const ART_ANCHORS = Object.freeze({
   HYBRID_C037: Object.freeze({ face: Object.freeze([0.5, 0.5]) }),
   HYBRID_C014: Object.freeze({ face: Object.freeze([0.359, 0.21]) }),
   HYBRID_C011: Object.freeze({ face: Object.freeze([0.503, 0.11]) }),
+  KYUBI: Object.freeze({ face: Object.freeze([0.53, 0.23]) }),
+  ORIHIME: Object.freeze({ face: Object.freeze([0.557, 0.225]) }),
 });
 // <monster-thumbs>
 // 小さい枠(64px 以下)で使うモンスターの小さい版。tools/image/make-monster-thumbs.js が作る(手で書かない)
@@ -714,11 +717,12 @@ const ART_CONTENT_BOXES = {
   "monsters/dreamy-dye-mask.PNG": [0, 0, 1, 0.999, 0.699],
   "monsters/dreamy.png": [0, 0, 1, 1, 0.699],
   "monsters/durahan.png": [0, 0, 1, 1, 0.757],
-  "monsters/eiki-dye-mask.PNG": [0.001, 0.008, 1, 1, 0.841],
+  "monsters/eiki-dye-mask.PNG": [0.001, 0.004, 1, 1, 0.841],
   "monsters/eiki.png": [0, 0, 1, 1, 0.841],
   "monsters/gali.png": [0, 0, 1, 1, 0.771],
   "monsters/ghost-dye-mask.PNG": [0, 0, 1, 1, 0.671],
   "monsters/ghost.png": [0, 0, 1, 1, 0.671],
+  "monsters/golem-dye-mask.PNG": [0.129, 0.053, 0.873, 0.902, 1],
   "monsters/golem.png": [0.129, 0.053, 0.873, 0.902, 1],
   "monsters/ham.png": [0.242, 0.053, 0.758, 0.946, 1],
   "monsters/henger.png": [0, 0, 1, 1, 1.171],
