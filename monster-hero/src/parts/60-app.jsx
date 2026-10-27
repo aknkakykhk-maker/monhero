@@ -1715,24 +1715,22 @@ function MonsterHeroGame() {
   };
   // ===== AIコピー(ソラシドのアシカ) =====
   // タクティクス: 使った子のとなりの空いたマス(無ければ同じマス)に、次のターンから出す。🔥は元の子の🔥 × Lv の割合から。
-  //   ★固有技の写しは、みんなの山札へは入れずコピー自身が持つ(uniqueCard)。カードを使う途中で山札を書き換えると、
-  //   ターンの終わりの山札の作り直しで消えるため。コピーの手札を作るときだけ足す(planAiCopyTurn)
+  //   ★コピーは自分の山札を持つ(出たとき・切りかえたときにプレイヤーの山札・手札・捨て札の写しから作る。33-ai-copy.jsx)。
+  //   プレイヤーの山札には何も足さない・抜かない(2026-10-27 社長)
   const summonTacticsAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
     const unit = tacticsUnitsRef.current[slotIdx];
     if (!unit) return;
     const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
     const piles = handPileRef.current;
-    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])]
-      .find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
     const { pos, stacked } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
     const rules = aiCopyRules(level);
     const before = aiCopyRef.current;
-    const res = summonAiCopy({ aiCopy: before, zones: { deck: [], hand: [], discard: [] } },
-      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, uniqueCard, turn: turnCount, mode: 'tactics', effMul });
+    const res = summonAiCopy({ aiCopy: before, zones: { deck: piles.deck || [], hand: piles.hand || [], discard: piles.graveyard || [] } },
+      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, turn: turnCount, mode: 'tactics', effMul });
     const next = res.plan.kind === 'refresh'
       ? res.aiCopy
-      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart), uniqueCard: res.zones.deck[0] || null };
+      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart) };
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh'
       ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った`
@@ -1781,19 +1779,18 @@ function MonsterHeroGame() {
     const costC = (c) => getCardGuts(c, copy.srcSlot);
     return { dmgOf, isGuardC, usableC, scoreC, costC };
   };
-  // そのターンに使う札を決めて持たせる(手札・次に使う札)。みんなの山札・捨て札の写しから選ぶ(減らさない)
+  // そのターンに使う札を決めて持たせる(手札・次に使う札)。コピー自身の山札から引く
   const planTacticsAiCopy = (turn) => {
     const copy = aiCopyRef.current;
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
     const tools = tacticsAiCopyTools(copy, enemyDist);
     if (!tools) return null;
-    const piles = handPileRef.current;
-    const pool = [...(piles.deck || []), ...(piles.graveyard || []), ...(piles.hand || [])].filter(c => c && c.type !== 'unique' && tools.usableC(c));
-    const uniq = copy.uniqueCard && tools.usableC(copy.uniqueCard) ? copy.uniqueCard : null;
-    const planned = planAiCopyTurn({ ...copy, uniqueCardUid: uniq ? uniq.uid : null }, { deck: uniq ? [...pool, uniq] : pool, score: tools.scoreC, costOf: tools.costC });
+    // 引く枚数はプレイヤーの手札と同じ(社長「普通に山札の枚数で自分たちと同じような確率」)
+    const count = (handPileRef.current.hand || []).length || 5;
+    const planned = planAiCopyTurn(copy, { count, score: tools.scoreC, costOf: tools.costC, usable: tools.usableC });
     return commitAiCopy({ ...planned, plannedTurn: turn });
   };
-  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。タクティクスは写しを山札に入れていないので、山札は触らない
+  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。プレイヤーの山札は触らない(コピーの山札ごと消える)
   const clearAiCopy = (why = '') => {
     const copy = aiCopyRef.current;
     if (!copy) return;
@@ -7818,6 +7815,12 @@ function MonsterHeroGame() {
   // 正式実装前(debugOnly)のモンスターを、デバッグ戦の勇者モン選択にだけ並べる。
   // 通常のロースター(unlockedMonsterIds で絞る)・図鑑・マーケットには出ないので、
   // 「実際に選んで戦って確かめる」ことだけがここでできるようになる
+  // ★下書きの子(UPCOMING_MONSTER_DRAFTS)のうち、能力値と固有技の倍率がそろった子も「試す用の写し」として混ぜる
+  //   (2026-10-27 キュービ・オリヒメの公開前の確かめ。統括部長の段取り⑥)。写しには debugOnly:true を付けるので、
+  //   記録・全国ランキングには残らない(runHasDebugOnlyMonster)。デバッグのバトルモードの勇者モンの一覧にだけ出る
+  const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS))
+    .filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult))
+    .map(mon => ({ atkMotion:'default', ...mon, debugOnly:true }));
   const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   // いま戦っている編成に、正式実装前のモンスター(debugOnly)が1体でも入っているか。
   // debugBattleRef が false のまま(難易度の「この難易度で挑戦」が必ず false へ戻すため)でも
@@ -7837,7 +7840,7 @@ function MonsterHeroGame() {
     if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
-    const preview=debugOnlyMonsterList();
+    const preview=[...debugOnlyMonsterList(),...draftPreviewMonsterList()];
     const previewIds=new Set(preview.map(mon=>mon.id));
     return [debugMon,...preview,...list.filter(mon=>mon?.id!==debugMon.id&&!previewIds.has(mon?.id))];
   };
@@ -13500,7 +13503,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // AIコピー: 出ているときだけ、ターンの終わりに1つ数える。0 で消える(時間停止のターンは数えない)
     if(timeStopSlot==null&&aiCopyRef.current){
       const ticked=tickAiCopy({ aiCopy:aiCopyRef.current, zones:{ deck:[], hand:[], discard:[] } },turnCount);
-      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else { commitAiCopy(ticked.aiCopy); planTacticsAiCopy(turnCount+1); }
+      // 残ったら手札を捨て札へ回してから(endAiCopyTurn)、次のターンの札を決める
+      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else { commitAiCopy(endAiCopyTurn(ticked.aiCopy)); planTacticsAiCopy(turnCount+1); }
     }
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
     // AIコピー(5つの遊び): 次のターンに出ているなら、使うカードを決めておく
@@ -14108,7 +14112,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo,kusabiCombosAt(slotIdx,stunMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,true),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,stunMon?.id).combo,[...kusabiCombosAt(slotIdx,stunMon?.id,card),kyubiAttackAt(slotIdx,stunMon?.id,card).combo,kyubiAttackAt(slotIdx,stunMon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,true)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           if(d>0) gainKusabi(slotIdx,stunMon?.id); // ★楔(影潜): あつの挑発も本人の攻撃なので数える
           fireTacticsExCross(slotIdx);
@@ -16377,8 +16381,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
     const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
-    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない
-    if (!isHero && orihimePartnerPick && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない。
+    //   オートで合流したときは配置の画面を通らないので、相方がまだいなければ、その子を自動で相方にする(2026-10-27 社長: 案ア)
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName||m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }
