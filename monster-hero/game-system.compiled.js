@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eddda83c197c809d
+// source-sha256: 32ec3c3f1157d3db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92741,8 +92741,13 @@ const CardBattleBoard = ({
   const pressMs = CARD_PRESS_MS[settings.press] || 450;
   const confirmOn = key => settings[key] === 'ON' && !game.tutorial && !game.demo && !(typeof window !== 'undefined' && window.__mhCardPvpAuto);
   const replay = game.replay || null;
-  const pvp = game.pvp || (replay && replay.kind === 'pvp' ? replay.foe : null);
-  const pvpLive = pvp && !replay;
+  const watch = game.watch || null;
+  const pvp = game.pvp || (replay && replay.kind === 'pvp' ? replay.foe : null) || (watch ? watch.top : null);
+  const pvpLive = pvp && !replay && !watch;
+  const meName = watch ? watch.bottom.name : 'あなた';
+  const [watchEnd, setWatchEnd] = useState(null);
+  const [watchEyes, setWatchEyes] = useState(0);
+  const [watchEndHide, setWatchEndHide] = useState(false);
   const [replayAt, setReplayAt] = useState(0);
   const who = pvp ? {
     id: 'pvp',
@@ -93054,9 +93059,9 @@ const CardBattleBoard = ({
     if (pvpLive && !forced) CARD_PVP.local(st, act, next);
     flyGuts(st, next, act);
     if (pvp && bigMs > 0) {
-      const p0 = forced ? CARD_CPU : CARD_ME;
-      const shownCards = forced ? (next.events || []).filter(e => (e.t === 'use' || e.t === 'guard') && e.p === CARD_CPU).flatMap(e => e.t === 'use' ? e.cards : [e.card]) : cardsOfAct(st, CARD_ME, act);
-      if (shownCards.length) showBigCard(shownCards, p0 === CARD_ME ? 'あなた' : who.name, bigMs, p0 === CARD_ME ? 'me' : 'foe');
+      const p0 = watch ? cardDeciderOf(st) : forced ? CARD_CPU : CARD_ME;
+      const shownCards = forced ? (next.events || []).filter(e => (e.t === 'use' || e.t === 'guard') && e.p === p0).flatMap(e => e.t === 'use' ? e.cards : [e.card]) : cardsOfAct(st, CARD_ME, act);
+      if (shownCards.length) showBigCard(shownCards, p0 === CARD_ME ? meName : who.name, bigMs, p0 === CARD_ME ? 'me' : 'foe');
     }
     stRef.current = next;
     const evs = next.events || [];
@@ -93235,15 +93240,15 @@ const CardBattleBoard = ({
     setTurnBanner({
       key,
       me: meNow,
-      name: meNow ? 'あなた' : who.name
+      name: meNow ? meName : who.name
     });
-    if (meNow && !replay && !game.demo && Audio_.fgSe.card) Audio_.fgSe.card();
+    if (meNow && !replay && !watch && !game.demo && Audio_.fgSe.card) Audio_.fgSe.card();
     setAction(cur => meNow && cur && cur.side === 'foe' ? cur : null);
     actionMissed.current = null;
     const bannerMs = Math.max(500, Math.round(800 * pace));
     const t = setTimeout(() => setTurnBanner(cur => cur && cur.key === key ? null : cur), bannerMs);
     let t2 = null;
-    if (meNow && !tutorial && !game.demo && !replay) {
+    if (meNow && !tutorial && !game.demo && !replay && !watch) {
       const lines = st.log.filter(l => l.turn === st.turn - 1 && l.kind !== 'turn').map(l => cardLogText(l)).slice(-8);
       setTurnSummary(null);
       if (lines.length) t2 = setTimeout(() => setTurnSummary({
@@ -93302,6 +93307,25 @@ const CardBattleBoard = ({
       }
     });
   }, []);
+  useEffect(() => {
+    if (!watch || typeof watch.attach !== 'function') return undefined;
+    return watch.attach({
+      onState: (next, quiet) => {
+        if (!next) return;
+        if (quiet) {
+          stRef.current = next;
+          setSt(next);
+          setAction(null);
+          setBigCard(null);
+          setFx([]);
+          return;
+        }
+        stepRef.current(null, next);
+      },
+      onEnd: end => setWatchEnd(end || null),
+      onEyes: n => setWatchEyes(Number.isInteger(n) ? n : 0)
+    });
+  }, []);
   useCardPvpAuto(db, pvpLive, st, step, paused);
   const pvpClock = useCardPvpClock(pvpLive, st, step);
   const demoAt = useRef(0);
@@ -93317,9 +93341,9 @@ const CardBattleBoard = ({
     return () => clearTimeout(t);
   }, [st, paused]);
   const endNow = useRef(null);
-  const endFx = st.winner !== null && !tutorial && !replay;
+  const endFx = st.winner !== null && !tutorial && !replay && !watch;
   useEffect(() => {
-    if (st.winner === null || finished.current || tutorial || replay) return undefined;
+    if (st.winner === null || finished.current || tutorial || replay || watch) return undefined;
     finished.current = true;
     const go = () => {
       clearTimeout(t);
@@ -93344,7 +93368,7 @@ const CardBattleBoard = ({
   const me = st.players[CARD_ME];
   const opp = st.players[CARD_CPU];
   const decider = cardDeciderOf(st);
-  const myTurn = !replay && st.winner === null && decider === CARD_ME;
+  const myTurn = !replay && !watch && st.winner === null && decider === CARD_ME;
   const turnMe = st.active === CARD_ME;
   const headSt = replay && replayAt > 0 ? replay.states[replayAt - 1] : st;
   const headMe = headSt.active === CARD_ME;
@@ -93889,6 +93913,23 @@ const CardBattleBoard = ({
   };
   const footer = (() => {
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
+    if (watch) {
+      const over = st.winner !== null || !!watchEnd;
+      const nm = p => p === CARD_ME ? meName : who.name;
+      const say = over ? '' : decider === st.active ? `${nm(decider)}の番…` : `${nm(decider)}が守りを考えています…`;
+      return React.createElement(React.Fragment, null, say && React.createElement("div", {
+        "data-card-watch-say": true,
+        className: "flex min-w-0 flex-1 items-center justify-center truncate text-[13px] font-bold text-slate-300"
+      }, say), React.createElement("button", {
+        type: "button",
+        "data-card-watch-leave": true,
+        className: `${btn} ${over ? 'mh-button-primary' : 'border border-white/20 bg-slate-800'}`,
+        onClick: () => onFinish({
+          outcome: 'watchExit',
+          st
+        })
+      }, over ? '観戦の一覧へ戻る' : '観戦をやめる'));
+    }
     if (st.winner !== null && !tutorial) return React.createElement("div", {
       className: "flex-1 text-center text-[15px] font-black text-amber-200"
     }, endFx ? '\u00a0' : st.winner === CARD_ME ? '勝ち！' : '負け…');
@@ -94049,18 +94090,25 @@ const CardBattleBoard = ({
     type: "button",
     "data-card-quit": true,
     "data-card-replay-exit": replay ? '' : undefined,
+    "data-card-watch-exit": watch ? '' : undefined,
     onClick: () => replay ? onFinish({
       outcome: 'replayExit',
       st
+    }) : watch ? onFinish({
+      outcome: 'watchExit',
+      st
     }) : setQuit(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
-  }, replay ? 'とじる' : tutorial ? '飛ばす' : '投了'), pvpLive && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
+  }, replay ? 'とじる' : watch ? 'やめる' : tutorial ? '飛ばす' : '投了'), pvpLive && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
     type: "button",
     "data-card-log-open": true,
     onClick: () => setLogSheet(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200",
     "aria-label": "ターンの記録を見る"
-  }, "記録")), replay ? React.createElement("span", {
+  }, "記録")), watch ? React.createElement("span", {
+    "data-card-watch-badge": true,
+    className: `shrink-0 whitespace-nowrap rounded-md border border-violet-300/60 bg-violet-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-violet-100`
+  }, "観戦", watchEyes ? ` 👀${watchEyes}` : '') : replay ? React.createElement("span", {
     "data-card-replay-badge": true,
     className: `shrink-0 whitespace-nowrap rounded-md border border-sky-300/60 bg-sky-500/20 px-1.5 py-0.5 ${tiny ? 'text-[10px]' : 'text-[11px]'} font-black text-sky-100`
   }, "リプレイ") : pvp ? React.createElement(CardPvpStatus, {
@@ -94086,7 +94134,7 @@ const CardBattleBoard = ({
     className: "whitespace-nowrap"
   }, "ターン ", Math.max(1, headSt.turn)), " ・ ", React.createElement("span", {
     className: `inline-block max-w-full truncate whitespace-nowrap align-bottom ${headMe ? 'rounded-md bg-amber-300 px-1.5 py-0.5 font-black text-slate-950' : 'text-slate-400'}`
-  }, headMe ? 'あなたの番' : `${who.name}の番`))))), React.createElement("div", {
+  }, headMe ? `${meName}の番` : `${who.name}の番`))))), React.createElement("div", {
     "data-card-wide-row": true,
     className: wide ? 'flex min-h-0 flex-1 flex-row' : 'contents'
   }, React.createElement("div", {
@@ -94230,7 +94278,7 @@ const CardBattleBoard = ({
   }, React.createElement("span", {
     "data-card-fit": true,
     className: `shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`
-  }, action.side === 'foe' ? '相手' : '自分'), !compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => {
+  }, action.side === 'foe' ? watch ? who.name : '相手' : watch ? meName : '自分'), !compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => {
     const c = cardOf(db, no);
     return c ? React.createElement("img", {
       key: i,
@@ -94380,7 +94428,21 @@ const CardBattleBoard = ({
       set: s
     }),
     className: `rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`
-  }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), React.createElement("div", {
+  }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), watch ? React.createElement("div", {
+    "data-card-hand": true,
+    "data-card-watch-hand": CARD_ME,
+    className: "flex shrink-0 items-center justify-center gap-2 px-1 pb-1 pt-1",
+    "aria-label": `手札${me.hand.length}枚`
+  }, React.createElement("div", {
+    className: "flex -space-x-4"
+  }, me.hand.slice(0, 8).map((_, i) => React.createElement("img", {
+    key: i,
+    src: CARD_BACK_IMG(),
+    alt: "",
+    className: `${tiny ? 'h-[40px] w-[28px]' : 'h-[56px] w-[40px]'} rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]`
+  }))), React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "手札 ", me.hand.length, "枚")) : React.createElement(React.Fragment, null, React.createElement("div", {
     "data-card-hand": true,
     "data-card-hand-dim": mode === 'wait' ? '1' : undefined,
     "data-card-board-fit": boardFit || undefined,
@@ -94436,7 +94498,7 @@ const CardBattleBoard = ({
     }, "ガッツ", c ? c.guts : '-'), React.createElement("span", {
       className: `block ${handLarge ? 'text-[13px]' : 'text-[11px]'} font-extrabold text-amber-200`
     }, cardCaption(c)))));
-  })), React.createElement("div", {
+  }))), React.createElement("div", {
     "data-card-footer": true,
     className: "flex shrink-0 gap-2 px-2.5 pb-2 pt-1"
   }, replay ? React.createElement(CardReplayBar, {
@@ -94519,7 +94581,7 @@ const CardBattleBoard = ({
     "data-card-fit": true,
     className: "max-w-full rounded-xl border border-rose-300/60 bg-black/80 px-3 py-1 text-center text-[14px] font-black leading-snug text-white",
     style: JA_WRAP_STYLE
-  }, React.createElement("span", {
+  }, !watch && React.createElement("span", {
     className: `mr-1 rounded px-1 text-[11px] ${bigCard.side === 'me' ? 'bg-amber-300 text-slate-950' : 'bg-rose-500'}`
   }, bigCard.side === 'me' ? '自分' : '相手'), bigCard.who, "「", bigCard.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"), bigCard.cards.length === 1 && (cardOf(db, bigCard.cards[0]) || {}).kind === 'fld' && React.createElement("div", {
     "data-card-big-field": true,
@@ -94527,7 +94589,31 @@ const CardBattleBoard = ({
     style: JA_WRAP_STYLE
   }, React.createElement("span", {
     className: "mr-1 rounded bg-emerald-400 px-1 text-[10px] font-black text-emerald-950"
-  }, "全体カード"), jaWrap(cardOf(db, bigCard.cards[0]).text || ''))), endFx && React.createElement("div", {
+  }, "全体カード"), jaWrap(cardOf(db, bigCard.cards[0]).text || ''))), watch && (watchEnd || st.winner !== null) && !watchEndHide && (() => {
+    const w0 = watchEnd ? watchEnd.winner : st.winner;
+    const head = watchEnd && watchEnd.head ? watchEnd.head : w0 === null || w0 === undefined ? '対戦が終わりました' : `${w0 === CARD_ME ? meName : who.name}さんの勝ち！`;
+    const sub = watchEnd && watchEnd.sub ? watchEnd.sub : '決着がつきました';
+    return React.createElement("div", {
+      "data-card-watch-over": w0 === null || w0 === undefined ? 'none' : w0,
+      "data-card-watch-over-how": watchEnd && watchEnd.how || '',
+      role: "button",
+      "aria-label": "決着の帯を閉じる",
+      onClick: () => setWatchEndHide(true),
+      className: "mh-card-end absolute inset-0 z-[58] flex cursor-pointer flex-col items-center justify-center bg-slate-950/70 px-4"
+    }, React.createElement("span", {
+      className: "text-[11px] font-black tracking-widest text-amber-200/80"
+    }, "決着"), React.createElement("span", {
+      "data-card-watch-over-sub": true,
+      className: "mt-1 text-center text-[15px] font-black text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap(sub)), React.createElement("b", {
+      "data-card-watch-over-head": true,
+      className: "mt-1 block text-center text-[28px] font-black leading-tight text-amber-200 [text-shadow:0_3px_0_#7c2d12]",
+      style: JA_WRAP_STYLE
+    }, jaWrap(head)), React.createElement("span", {
+      className: "absolute bottom-5 text-[12px] font-bold text-white/70"
+    }, "タップで盤面を見る"));
+  })(), endFx && React.createElement("div", {
     "data-card-end-fx": st.winner === CARD_ME ? 'win' : 'lose',
     role: "button",
     "aria-label": "結果へ進む",
@@ -94570,7 +94656,7 @@ const CardBattleBoard = ({
     }
   }, downBand.names.join('・'), " ダウン！"), React.createElement("span", {
     className: "text-[12px] font-bold tracking-wider text-rose-100"
-  }, downBand.p === CARD_ME ? 'あなた' : '相手', "のモンスター 残り", downBand.left, "体"))), turnBanner && !bigCard && !(tutorial && tutSay) && React.createElement("div", {
+  }, watch ? `${downBand.p === CARD_ME ? meName : who.name}さん` : downBand.p === CARD_ME ? 'あなた' : '相手', "のモンスター 残り", downBand.left, "体"))), turnBanner && !bigCard && !(tutorial && tutSay) && React.createElement("div", {
     key: turnBanner.key,
     "data-card-turn-banner": turnBanner.me ? 'me' : 'foe',
     "aria-live": "polite",
@@ -94587,14 +94673,14 @@ const CardBattleBoard = ({
   }, React.createElement("span", {
     "aria-hidden": "true",
     className: "text-[11px] font-black tracking-[.4em] text-white/85"
-  }, turnBanner.me ? 'YOUR TURN' : 'ENEMY TURN'), React.createElement("span", {
+  }, watch ? 'TURN' : turnBanner.me ? 'YOUR TURN' : 'ENEMY TURN'), React.createElement("span", {
     "data-card-turn-name": true,
     className: "max-w-full px-4 font-black leading-tight tracking-wider [text-shadow:0_3px_0_rgba(0,0,0,.35)]",
     style: {
       fontSize: 'clamp(24px, 8vw, 36px)',
       ...JA_LABEL_STYLE
     }
-  }, turnBanner.me ? 'あなたのターン' : `${turnBanner.name}のターン`))), turnSummary && sumOpen && !bigCard && React.createElement("button", {
+  }, turnBanner.me && !watch ? 'あなたのターン' : `${turnBanner.name}のターン`))), turnSummary && sumOpen && !bigCard && React.createElement("button", {
     type: "button",
     key: turnSummary.key,
     "data-card-turn-summary": true,
