@@ -79,6 +79,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
     if (await has('[data-card-top="starter"]')) {
       await page.click('[data-card-kit="powerful"]');
       await page.getByRole('button', { name: /にする$/ }).click();
+      await require(require('path').join(__dirname, 'lib/starter-open-pass.js'))(page); // はじめのスターターを開ける画面を通す
       await page.waitForSelector('[data-card-battle]', { timeout: 20000 });
       await page.click('[data-card-quit]');
       await page.waitForTimeout(300);

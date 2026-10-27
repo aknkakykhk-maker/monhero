@@ -139,6 +139,7 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
     if (await has('[data-card-top="starter"]')) {
       await page.click('[data-card-kit="powerful"]');
       await page.getByRole('button', { name: /にする$/ }).click();
+      await require(require('path').join(__dirname, 'lib/starter-open-pass.js'))(page); // はじめのスターターを開ける画面を通す
       await page.waitForSelector('[data-card-battle]', { timeout: 20000 });
       await page.click('[data-card-quit]');
       await page.waitForTimeout(300);
@@ -153,6 +154,8 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
     await page.click('[data-card-options-open]');
     await page.waitForSelector('[data-card-options]', { timeout: 8000 });
     await page.locator('[data-card-playlist]').scrollIntoViewIfNeeded();
+    // 助手の数は、ゲームの中の公開済みの助手から数える(ソラシドの公開で7人になった。2026-10-27)
+    const OPEN = await page.evaluate(() => Object.keys(CARD_CPU_PLAYLIST_DEFAULT).filter((w) => cardFoeReleased(w)));
     const ui = await page.evaluate(() => ({
       cpuSelect: !!document.querySelector('[data-card-bgm-select="cpu"]'),
       top: !!document.querySelector('[data-card-bgm-select="top"]'), pvp: !!document.querySelector('[data-card-bgm-select="pvp"]'),
@@ -160,7 +163,7 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
       rows: [...document.querySelectorAll('[data-card-playlist-rows="who"] [data-card-playlist-row]')].map((r) => r.getAttribute('data-card-playlist-row')),
     }));
     check('② 助手と対戦の1曲えらびの欄が無く、トップ画面・マルチ対戦の欄は残る', !ui.cpuSelect && ui.top && ui.pvp);
-    check('② 助手6人を選べ、はじめはその助手の曲1つ', ui.who.length === 6 && ui.rows.join() === 'melo_toriko', JSON.stringify(ui));
+    check(`② 公開済みの助手${OPEN.length}人を選べ、はじめはその助手の曲1つ`, OPEN.length >= 6 && JSON.stringify([...ui.who].sort()) === JSON.stringify([...OPEN].sort()) && ui.rows.join() === 'melo_toriko', JSON.stringify({ ...ui, OPEN }));
     const opened = await stored();
     check('② 開いただけでは保存しない', opened.pl === null && before0.pl === null && opened.bgm === before0.bgm, JSON.stringify(opened));
     if (SHOT) await shot('options-playlist-1');
@@ -231,7 +234,7 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
     await page.click('[data-card-playlist-copy-ok]');
     await page.waitForTimeout(300);
     const copied = (await stored()).pl;
-    check('④ 「置き換える」で助手みんなが同じ曲になる', copied && Object.keys(copied.assistants).length === 6 && Object.values(copied.assistants).every((l) => JSON.stringify(l) === '["__pl_a","__pl_b"]'), JSON.stringify(copied));
+    check('④ 「置き換える」で助手みんなが同じ曲になる', copied && JSON.stringify(Object.keys(copied.assistants).sort()) === JSON.stringify([...OPEN].sort()) && Object.values(copied.assistants).every((l) => JSON.stringify(l) === '["__pl_a","__pl_b"]'), JSON.stringify(copied));
     await page.click('[data-card-playlist-who="kiki"]');
     await page.selectOption('[data-card-playlist-change="0"]', '__pl_bad');
     await page.selectOption('[data-card-playlist-change="1"]', '__pl_bad2');

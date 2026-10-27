@@ -86,6 +86,7 @@ const serve = () => new Promise((resolve) => {
     await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
     await page.locator('[data-card-kit="powerful"]').click();
     await page.getByRole('button', { name: /にする$/ }).click();
+    await require(require('path').join(__dirname, 'lib/starter-open-pass.js'))(page); // はじめのスターターを開ける画面を通す
     // 練習試合は飛ばして、コンピューター戦へ
     await page.locator('[data-card-tutor]').waitFor({ timeout: 20000 });
     await page.locator('[data-card-quit]').click();

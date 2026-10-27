@@ -3,6 +3,7 @@
 // 案: docs/spec/card-battle/MULTI_PLAN.md
 //
 //   node tools/card/card-pvp-browser-check.js
+//   run-checks-timeout: 1200(⑰⑮⑭ で、端末が止まる・相手が抜けるのを本当の時間で待つ。合わせて10分を超える)
 //   SHOT_DIR=<フォルダ> を付けると、2つの画面の写真を残す(自分の番・あいての番・守りの番・結果)
 //
 // ★外へはつながない。WebSocket を偽物に差し替え、2台のページのあいだを Node が中継する(window.__fakeWsRelay → 全部のページの __fakeWsRecv)。
@@ -23,7 +24,11 @@
 //   ⑪ 招待のようすの見分け(届いている・時間切れ・断られた)
 //   ⑫ 過去の対戦を見る: 確かめが通った試合が2台とも残る・結果の画面の「この対戦を見る」から、はじめ・1手・番ごと・最後まで見られる・相手の手札が表・「とじる」で戻る
 //   ⑭ 相手が試合の途中で画面を閉じたら「相手が抜けた」・「もう1戦」は出ない
-//   ⑮ 片方の端末が70秒止まったら、止まっていた側は「通信が切れた」の負け・相手は勝ち(2台とも勝ちにならない)
+//   ⑯ 入口の「いま相手を待っている人」: 合言葉の部屋は出ない・だれとでもで待っている人が名前つきで出る・[対戦する]で始まる
+//   ⑳ 投了: 投了した側の「もらったビートP」は、倒した数で決まる数の2倍・投了された側は勝ちの数(マルチは2倍・2026-10-27 社長)
+//   ⑱ ルールの版: 版がちがう人は一覧に出ない・合言葉の部屋に版を送らない古い版の人が来たら「ゲームを更新してください」・だれとでもでは組まずに待ち続ける
+//   ⑰ 片方の端末が100秒止まって戻ったら、続きから遊べる(相手は120秒まで待つ・相手の持ち時間の時計は止まる)。最後まで戦える
+//   ⑮ 片方の端末が130秒止まったら、相手は120秒で「相手が抜けた」の勝ち・止まっていた側は「通信が切れた」の負け(2台とも勝ちにならない)
 //   ⑬ マルチの履歴(92): 2台とも試合が残る・相手のデッキが全部・強さの点数の増減(偽の表)・入口から一覧と相手のデッキが開ける
 const http = require('http'), path = require('path'), fs = require('fs');
 const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -169,6 +174,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
       await page.locator(`[data-card-kit="${kit}"]`).click();
       await page.getByRole('button', { name: /にする$/ }).click();
+      await require(require('path').join(__dirname, 'lib/starter-open-pass.js'))(page); // はじめのスターターを開ける画面を通す
       await page.locator('[data-card-quit]').waitFor({ timeout: 20000 });
       await page.locator('[data-card-quit]').click();
       await page.getByRole('button', { name: '飛ばす' }).last().click();
@@ -264,12 +270,12 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const rewardB = await B.locator('[data-card-pvp-reward]').waitFor({ timeout: 10000 }).then(() => B.locator('[data-card-pvp-reward]').innerText()).catch(() => '');
     const pointAfter = [await beatP(A), await beatP(B)];
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
-    // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4)。
-    // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回)。この検査の端末はその日まだ勝っていないので +450
+    // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4。2026-10-27 社長: マルチはさらに2倍で +800・+300)。
+    // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回・2倍にしない)。この検査の端末はその日まだ勝っていないので +850
     const gain = pointAfter.map((v, i) => v - pointBefore[i]);
-    // 負けは自分の番の数で減る(3回で45・10回で満額150)。その試合の番の数で決まるので、幅で見る
-    const okGain = (r, g) => (r === 'win' ? g === 450 : r === 'lose' ? g >= 45 && g <= 150 : false);
-    check('⑥ ビートPが、2台それぞれに増えている(勝ち+400とその日はじめての+50・負けは自分の番の数で45〜150)', okGain(rA, gain[0]) && okGain(rB, gain[1]), `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
+    // 負けは自分の番の数で減る(3回で90・10回で満額300。2倍なので偶数)。その試合の番の数で決まるので、幅で見る
+    const okGain = (r, g) => (r === 'win' ? g === 850 : r === 'lose' ? g >= 90 && g <= 300 && g % 2 === 0 : false);
+    check('⑥ ビートPが、2台それぞれに増えている(勝ち+800とその日はじめての+50・負けは自分の番の数で90〜300。マルチは2倍)', okGain(rA, gain[0]) && okGain(rB, gain[1]), `A ${pointBefore[0]} → ${pointAfter[0]}(${rA})・B ${pointBefore[1]} → ${pointAfter[1]}(${rB})`);
     // 結果の画面の「もらったビートP」も、+50 を足した合計
     const shown = [rewardA, rewardB].map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
     check('⑥ 結果の画面の「もらったビートP」が、増えた数と同じ', shown[0] === gain[0] && shown[1] === gain[1], `${rewardA} / ${rewardB}`);
@@ -434,6 +440,67 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     await A.locator('[data-card-pvp-history="list"] button').first().click();
     await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    // ⑯ いま相手を待っている人の一覧(2026-10-27 社長「マルチで誰かが募集してたりしたらここで見れるようにして」案A):
+    //   合言葉の部屋は出ない・だれとでもで待っている人は名前つきで出る・[対戦する]でその人の部屋に入って始まる
+    await B.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    await A.locator('[data-card-pvp-create]').click();
+    await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+    await B.waitForTimeout(5000);
+    const privCount = Number(await B.locator('[data-card-pvp-seekers]').getAttribute('data-card-pvp-seekers').catch(() => '-1'));
+    check('⑯ 合言葉の部屋は、入口の「いま相手を待っている人」に出ない', privCount === 0, String(privCount));
+    // 古い版の人の「待っています」(名前もアイコンも無い)は一覧に出さない。だれとでもの自動の組み合わせには使えるよう、受け取ってはおく(2026-10-27 社長 案ア)
+    const oldSeen = await B.evaluate(async () => {
+      window.__fakeWsRecv('realtime:mhc-lobby-free', { t: 'seek', from: 'cOLDVER1', code: 'QZ7K', at: Date.now() - 5000 }, -1, 'old-version');
+      await new Promise((r) => setTimeout(r, 1200));
+      return { kept: !!(CARD_PVP.get().seekers || {}).cOLDVER1, rows: document.querySelectorAll('[data-card-pvp-seeker]').length };
+    });
+    check('⑯ 古い版の人(名前もアイコンも無い)は一覧に出さない(だれとでもで組むために、受け取ってはおく)', oldSeen.kept && oldSeen.rows === 0, JSON.stringify(oldSeen));
+    await B.waitForTimeout(6500); // 古い版の知らせが古くなってから(だれとでもで、そちらへ組みに行かないように)
+    await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+    await A.locator('[data-card-pvp-free]').click();
+    const seen16 = await B.locator('[data-card-pvp-seeker]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
+    const rowText = seen16 ? await B.locator('[data-card-pvp-seeker]').first().innerText() : '';
+    await shot(B, 'pvp-16-seekers');
+    check('⑯ だれとでもで待っている人が、入口の一覧に名前つきで出る(押す前に見える)', seen16 && /検査ブリーダー/.test(rowText) && /待って \d+秒/.test(rowText), rowText.replace(/\n/g, ' '));
+    if (seen16) await B.locator('[data-card-pvp-seeker-pick]').first().click();
+    const met16 = await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]).then(() => true).catch(() => false);
+    check('⑯ 一覧の[対戦する]で、その人の部屋に入って対戦が始まる', met16);
+    if (met16) {
+      const end16 = Date.now() + 300000;
+      while (Date.now() < end16 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
+      const r16 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+      check('⑯ 一覧から始めた対戦も最後まで戦えて、片方が勝ち・片方が負け', !!r16[0] && !!r16[1] && r16[0] !== r16[1], r16.join(' / '));
+      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+    }
+    // ⑱ ルールの版(2026-10-27 社長 ①): 版がちがう人どうしは組まない。古い版・別の版の相手は手元で作れないので、偽の中継から知らせを流し込む
+    {
+      const rv = await A.evaluate(() => cardPvpRulesVersion());
+      const otherRows = await B.evaluate(async (v) => {
+        window.__fakeWsRecv('realtime:mhc-lobby-free', { t: 'seek', from: 'cOTHERV1', code: 'WV9X', at: Date.now() - 3000, name: '別の版の人', icon: '🙂', rv: v + 1 }, -1, 'other-version');
+        await new Promise((r) => setTimeout(r, 1200));
+        return document.querySelectorAll('[data-card-pvp-seeker]').length;
+      }, rv);
+      check('⑱ 版がちがう人は、入口の「いま相手を待っている人」に出ない', otherRows === 0, String(otherRows));
+      await A.locator('[data-card-pvp-create]').click();
+      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+      const code18 = (await A.locator('[data-card-pvp-room]').innerText()).trim();
+      await A.evaluate((c) => window.__fakeWsRecv(`realtime:mhc-room-${c}`, { t: 'hb', from: 'cOLDHB1', name: '古い版の人', icon: '🙂', at: Date.now() - 1000 }, -1, 'old-version'), code18);
+      const updSeen = await A.locator('[data-card-pvp="error"]').waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+      const updText = updSeen ? await A.locator('[data-mh-screen]').first().innerText().catch(() => '') : '';
+      await shot(A, 'pvp-18-update');
+      check('⑱ 合言葉の部屋に、版を送らない古い版の人が来たら組まずに「ゲームを更新してください」', updSeen && /ゲームを更新してください/.test(updText) && !(await A.locator('[data-card-battle]').count()));
+      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+      await A.locator('[data-card-pvp-free]').click();
+      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+      const freeState = await A.evaluate(async () => {
+        const c = CARD_PVP.get().code;
+        for (let i = 0; i < 3; i++) { window.__fakeWsRecv(`realtime:mhc-room-${c}`, { t: 'hb', from: 'cOLDHB2', name: '古い版の人', icon: '🙂', at: Date.now() - 1000 }, -1, 'old-version'); await new Promise((r) => setTimeout(r, 700)); }
+        const r = CARD_PVP.get(); return { phase: r.phase, foe: !!r.foe };
+      });
+      check('⑱ だれとでもで古い版の人が部屋に来ても組まず、そのまま待ち続ける', freeState.phase === 'waiting' && !freeState.foe, JSON.stringify(freeState));
+      await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
+      await B.waitForTimeout(6500); // 別の版の「待っています」が古くなってから
+    }
     // ⑧ フレンドを招待(2026-10-26 社長「マルチ対戦でフレンド招待もいれて」): 入口でフレンドを選ぶ → 部屋を作って招待を送る
     await A.locator('[data-card-pvp-invite-open]').click();
     await shot(A, 'pvp-07-invite-pick');
@@ -474,14 +541,67 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && !volatile.test(k) && before[k] !== after[k]);
     check('⑤ 実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
     check('⑤ mh_card_* 以外の保存を書き換えていない', changed.length === 0, changed.slice(0, 5).join(', '));
-    // ⑮ 片方の端末が止まった(重い・アプリを裏にした)まま70秒: 止まっていた側は戻っても相手を「抜けた」と見ず、「通信が切れた」の負け・相手は「相手が抜けた」の勝ち。
-    //   2台とも勝ちにならない(2026-10-27 テンケンくんの通し遊び・部長)。⑩ で始まった試合のまま、A の画面を75秒まるごと忙しくする(時計も止まる)
-    {
-      const ix = livePages.indexOf(A); if (ix >= 0) livePages.splice(ix, 1); // 止まっているあいだ、A へは届かない
-      const busy = A.evaluate(() => { const e = Date.now() + 75000; while (Date.now() < e) { /* 止まっている */ } }).catch(() => {});
-      for (let i = 0; i < 200 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
-      await busy;
+    // A の画面を ms のあいだまるごと忙しくする(重い・アプリを裏にした。時計も止まる)。止まっているあいだ、A へは何も届かない
+    const freezeA = async (ms) => {
+      const ix = livePages.indexOf(A); if (ix >= 0) livePages.splice(ix, 1);
+      await A.evaluate((n) => { const e = Date.now() + n; while (Date.now() < e) { /* 止まっている */ } }, ms).catch(() => {});
       livePages.push(A);
+    };
+    const newPrivateMatch = async () => {
+      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
+      await A.locator('[data-card-pvp-create]').click();
+      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
+      const code = (await A.locator('[data-card-pvp-room]').innerText()).trim();
+      await B.locator('[data-card-pvp-code]').fill(code);
+      await B.locator('[data-card-pvp-join]').click();
+      await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]);
+      await A.waitForTimeout(3000);
+    };
+    // ⑰ 片方の端末が100秒止まって戻る(2026-10-27 社長「120秒以内に戻れば続きから遊べる」): 相手は120秒まで待ち、相手の持ち時間の時計も止まるので、
+    //   戻ったあと続きから遊べて、最後まで戦える。⑩ で始まった試合のまま
+    {
+      await freezeA(100000);
+      await A.waitForTimeout(3000);
+      const mid = [await A.locator('[data-card-pvp-result]').count(), await B.locator('[data-card-pvp-result]').count()];
+      check('⑰ 100秒止まって戻っても、どちらも終わっていない(相手は120秒まで待つ)', mid[0] === 0 && mid[1] === 0, mid.join(' / '));
+      const end17 = Date.now() + 300000;
+      while (Date.now() < end17 && !((await A.locator('[data-card-pvp-result]').count()) && (await B.locator('[data-card-pvp-result]').count()))) await A.waitForTimeout(500);
+      await A.waitForTimeout(1500);
+      const r17 = [await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null), await B.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null)];
+      const why17 = (await A.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
+      check('⑰ 戻ったあと続きから遊べて、最後まで戦える(片方が勝ち・片方が負け。抜けた・通信が切れたで終わらない)',
+        !!r17[0] && !!r17[1] && r17[0] !== r17[1] && !/相手が抜けた|通信が切れた|相手の時間切れ/.test(why17) && (await A.locator('[data-card-pvp-dropped]').count()) === 0, `${r17.join(' / ')} ${why17.replace(/\n/g, ' ').slice(0, 80)}`);
+      await newPrivateMatch();
+    }
+    // ⑳ 投了(2026-10-27 社長「マルチの報酬はさらに2倍」): 何番か戦ってから A が投了する。A は倒した数で決まる数の2倍・B は勝ちの数
+    {
+      await A.waitForTimeout(40000); // 自分の番を何回か進める(3回より前に終わると0になる)
+      const alive20 = !(await A.locator('[data-card-pvp-result]').count());
+      if (alive20) {
+        await A.evaluate(() => { window.__mhCardPvpAuto = false; });
+        await A.locator('[data-card-quit]').click();
+        await A.getByRole('button', { name: '投了する' }).click();
+      }
+      for (let i = 0; i < 60 && !((await A.locator('[data-card-pvp-reward]').count()) && (await B.locator('[data-card-pvp-reward]').count())); i++) await A.waitForTimeout(500);
+      const got20 = await A.evaluate(() => { const r = CARD_PVP.get().result; const f = r && r.facts; const base = f ? cardPvpRewardBase('surrender', f) : null; return { reward: r && r.reward, f, base, x: CARD_PVP_REWARD.x }; });
+      const shown20 = await Promise.all([A, B].map((pg) => pg.locator('[data-card-pvp-reward]').innerText().catch(() => '')));
+      const nums20 = shown20.map((t) => Number(((t || '').match(/もらったビートP:\s*(\d+)/) || [])[1]));
+      check('⑳ 投了した側の「もらったビートP」は、倒した数で決まる数の2倍(投了された側は勝ちの 800 か、その日はじめてなら 850)',
+        alive20 && got20.reward === 'surrender' && got20.x === 2 && got20.base && nums20[0] === got20.base.point * 2 && (nums20[1] === 800 || nums20[1] === 850),
+        `A ${shown20[0].replace(/\n/g, ' ')}(倒した ${got20.f && got20.f.kos}・番 ${got20.f && got20.f.ownTurns}・2倍前 ${got20.base && got20.base.point})/ B ${nums20[1]}`);
+      await A.evaluate(() => { window.__mhCardPvpAuto = true; });
+      await newPrivateMatch();
+    }
+    // ⑮ 片方の端末が止まった(重い・アプリを裏にした)まま130秒: 相手は120秒で「相手が抜けた」の勝ち。止まっていた側は戻っても相手を「抜けた」と見ず、
+    //   「通信が切れた」の負け。2台とも勝ちにならない(2026-10-27 テンケンくんの通し遊び・部長。社長が60秒→120秒)
+    {
+      const t0 = Date.now();
+      const frozen = freezeA(130000);
+      let bEndSec = -1;
+      for (let i = 0; i < 300 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
+      if (await B.locator('[data-card-pvp-result]').count()) bEndSec = Math.round((Date.now() - t0) / 1000);
+      check('⑮ 相手は、止まってから120秒ごろに終わる(早く終わらない)', bEndSec >= 115 && bEndSec <= 132, `${bEndSec}秒`);
+      await frozen;
       for (let i = 0; i < 60 && !(await A.locator('[data-card-pvp-result]').count()); i++) await A.waitForTimeout(500);
       await A.waitForTimeout(1500);
       const ra = await A.locator('[data-card-pvp-result]').getAttribute('data-card-pvp-result').catch(() => null);
@@ -490,20 +610,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       check('⑮ 止まっていた側は戻ると「通信が切れた」の負け(説明の1行つき)・相手は勝ち。2台とも勝ちにならない', ra === 'lose' && rb === 'win' && (await A.locator('[data-card-pvp-dropped]').count()) === 1, `${ra} / ${rb}`);
       check('⑮ 止まっていた側にも「もう1戦」は出ない', (await A.locator('[data-card-pvp-again]').count()) === 0);
       // ⑭ のために、もう一度合言葉の部屋で試合を始める
-      for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
-      await A.locator('[data-card-pvp-create]').click();
-      await A.locator('[data-card-pvp="waiting"]').waitFor({ timeout: 10000 });
-      const code5 = (await A.locator('[data-card-pvp-room]').innerText()).trim();
-      await B.locator('[data-card-pvp-code]').fill(code5);
-      await B.locator('[data-card-pvp-join]').click();
-      await Promise.all([A.locator('[data-card-battle]').waitFor({ timeout: 30000 }), B.locator('[data-card-battle]').waitFor({ timeout: 30000 })]);
-      await A.waitForTimeout(3000);
+      await newPrivateMatch();
     }
     // ⑭ 相手が試合の途中で画面を閉じた(「抜けます」が届かないことがある): 相手の時間切れや電波切れで終わっても「相手が抜けた」と出し、「もう1戦」は出さない(2026-10-27 部長)
     //   ⑩ で始まった試合のまま、A の画面を閉じる。閉じる前に、閉じたときの知らせ(bye)が出ないようにしておく
     await A.evaluate(() => { window.__mhCardPvpAuto = false; window.addEventListener('pagehide', (e) => e.stopImmediatePropagation(), true); window.addEventListener('beforeunload', (e) => e.stopImmediatePropagation(), true); }).catch(() => {});
     await A.close({ runBeforeUnload: false });
-    for (let i = 0; i < 240 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
+    // 相手から何も届かなくなってから120秒で決まる(2026-10-27 社長が60秒→120秒)ので、150秒まで待つ
+    for (let i = 0; i < 300 && !(await B.locator('[data-card-pvp-result]').count()); i++) await B.waitForTimeout(500);
     await B.waitForTimeout(1500);
     const leftText = (await B.locator('[data-mh-screen]').first().innerText().catch(() => '')).slice(0, 300);
     await shot(B, 'pvp-14-foe-left');

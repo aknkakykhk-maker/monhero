@@ -123,7 +123,7 @@ const mime = f => ({ '.js': 'application/javascript', '.html': 'text/html', '.cs
         events.push({ at: n.timeMs, f: () => { const mk = (id, q) => new Touch({ identifier: id, target: area, clientX: q.x, clientY: q.y, pageX: q.x, pageY: q.y, screenX: q.x, screenY: q.y, radiusX: 18, radiusY: 18, force: 1 });
           area.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 2, pointerType: 'touch', isPrimary: false, clientX: p.x, clientY: p.y, button: 0, buttons: 1 }));
           area.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [mk(2, p)], targetTouches: [mk(2, p)], changedTouches: [mk(2, p)] }));
-          ti.makeEvents('down', 2, p); window.__mhOmitUntil = window.__mhTestHooks.rhythmSongMs() + omitgap; } });
+          ti.makeEvents('down', 2, p).build?.(); window.__mhOmitUntil = window.__mhTestHooks.rhythmSongMs() + omitgap; } });
       } else
       events.push({ at: n.timeMs, f: () => ti.send(ti.makeEvents('down', 2, p)) });
       if (n.type === 'FLICK' || bflick) { events.push({ at: n.timeMs + 25, f: () => ti.send(ti.makeEvents('move', 2, { x: p.x, y: p.y - 30 })) }); events.push({ at: n.timeMs + 45, f: () => ti.send(ti.makeEvents('move', 2, { x: p.x, y: p.y - 60 })) }); events.push({ at: n.timeMs + 60, f: () => ti.send(ti.makeEvents('up', 2, { x: p.x, y: p.y - 60 })) }); }

@@ -89,6 +89,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (await page.locator('[data-card-top="starter"]').count()) {
       await page.locator('[data-card-kit="speed"]').click();
       await page.getByRole('button', { name: /にする$/ }).click();
+      await require(require('path').join(__dirname, 'lib/starter-open-pass.js'))(page); // はじめのスターターを開ける画面を通す
       await page.locator('[data-card-quit]').waitFor({ timeout: 20000 });
       await page.locator('[data-card-quit]').click();
       await page.getByRole('button', { name: /^飛ばす$/ }).last().click();

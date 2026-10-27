@@ -119,7 +119,7 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
     await page.waitForSelector('[data-card-top]',{timeout:20000}).catch(()=>{});
     if(await has('[data-card-top="starter"]')){
       await measureCard('スターターえらび');
-      await page.click('[data-card-kit="powerful"]');await page.getByRole('button',{name:/にする$/}).click();
+      await page.click('[data-card-kit="powerful"]');await page.getByRole('button',{name:/にする$/}).click();await require(require('path').join(__dirname,'card/lib/starter-open-pass.js'))(page);
       await page.waitForSelector('[data-card-battle]',{timeout:20000}).catch(()=>{});
       await measureCard('練習試合(対戦の盤)');
       await page.click('[data-card-quit]');await page.waitForTimeout(300);
