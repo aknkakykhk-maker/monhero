@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5f01f72c6a125871
+// generated-sha256: 22db1afe7e22884d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64648,18 +64648,17 @@ function MonsterHeroGame() {
     if (!mon) return;
     const src = classicAiCopySrc({ slots, srcSlot: slotIdx, heroId: mainHero?.id, party: { atk, def, maxGuts } });
     const piles = handPileRef.current;
-    const res = summonAiCopy({ aiCopy: aiCopyRef.current, zones: { deck: [], hand: [], discard: [] } },
+    // コピーの山札は共通の summonAiCopy が作る(出たとき・切りかえたとき。プレイヤーの山札・手札・捨て札をそのまま渡す)
+    const res = summonAiCopy({ aiCopy: aiCopyRef.current, zones: { deck: piles.deck || [], hand: piles.hand || [], discard: piles.graveyard || [] } },
       { srcSlot: slotIdx, srcMonsterId: mon.id, name: mon.masuName || mon.name || '', level, src, turn: turnCount, mode: 'classic', effMul });
-    const own = res.plan.kind === 'refresh' ? null
-      : aiCopyBuildDeck({ deck: piles.deck || [], hand: piles.hand || [], discard: piles.graveyard || [] }, { srcSlot: slotIdx, srcMonsterId: mon.id });
-    const next = own ? { ...res.aiCopy, deck: own.deck, discard: own.discard, hand: [], uniqueCard: null, uniqueCardUid: null } : res.aiCopy;
+    const next = res.aiCopy;
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh'
       ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った`
       : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
   };
   // 5つの遊び: ターンの始めに、コピー自身の山札からプレイヤーの手札と同じ枚数を引き(尽きたら捨て札を混ぜ直す)、使うカードを決めておく
-  //   (枠の札に「次に使うカード」を出す)。手札はターンの終わりに捨て札へ(aiCopyDiscardHand)
+  //   (枠の札に「次に使うカード」を出す)。手札はターンの終わりの共通の endAiCopyTurn が捨て札へ
   const planClassicAiCopy = (copy) => {
     if (!copy) return copy;
     const handSize = Math.max(1, Array.isArray(handPileRef.current.hand) && handPileRef.current.hand.length > 0 ? handPileRef.current.hand.length : 5);
@@ -64669,9 +64668,7 @@ function MonsterHeroGame() {
     const dmgOf = (c) => classicAiCopyDamage(getDmg(c, copy.srcSlot, mon, 0, 0, false, enemyDist), copy.atk, atk);
     const isGuardC = (c) => !!c && (c.type === 'guard' || c.type === 'weak_guard');
     const score = (c) => aiCopyAutoScore(c, { strategy: autoSettings.strategy, isAttack: isAttackCard, isGuard: isGuardC, dmgOf });
-    const drawn = aiCopyDraw({ deck: Array.isArray(copy.deck) ? copy.deck : [], discard: Array.isArray(copy.discard) ? copy.discard : [] }, handSize, Math.random);
-    const picks = aiCopyPickCards(drawn.hand, { score, guts: copy.guts, maxGuts: copy.maxGuts, rng: Math.random, level: copy.level });
-    return { ...copy, hand: drawn.hand, deck: drawn.deck, discard: drawn.discard, picks, nextCard: picks[0] || null };
+    return planAiCopyTurn(copy, { count: handSize, score });
   };
   // コピーの札の見方。dist は敵の間合い(コピーの立つマス pos との差で距離補正を数える)。元の子がいなければ null
   // ★選び方は AUTO と同じ見方(作戦 autoSettings.strategy の優先 → 同じ優先なら与ダメの大きい順)。
@@ -76411,8 +76408,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
     // AIコピー(5つの遊び): コピーのガッツもターンの終わりにパーティと同じ率で戻す(ジン部長の答え②・仮)
-    //   引いた手札はここで捨て札へ(使ったカードも使わなかったカードも。プレイヤーと同じ)
-    if(timeStopSlot==null&&aiCopyRef.current&&!isTacticsMode(runMode)&&isAiCopyOut(aiCopyRef.current,turnCount)) commitAiCopy(c=>({ ...classicAiCopyRegenGuts(c,soulAdjustedGutsRecoveryRate), ...aiCopyDiscardHand({ deck:c.deck||[], discard:c.discard||[] },c.hand||[]), hand:[] }));
+    if(timeStopSlot==null&&aiCopyRef.current&&!isTacticsMode(runMode)&&isAiCopyOut(aiCopyRef.current,turnCount)) commitAiCopy(c=>classicAiCopyRegenGuts(c,soulAdjustedGutsRecoveryRate));
     // AIコピー: 出ているときだけ、ターンの終わりに1つ数える。0 で消える(時間停止のターンは数えない)
     if(timeStopSlot==null&&aiCopyRef.current){
       const ticked=tickAiCopy({ aiCopy:aiCopyRef.current, zones:{ deck:[], hand:[], discard:[] } },turnCount);

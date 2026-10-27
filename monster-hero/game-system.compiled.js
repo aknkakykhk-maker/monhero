@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c9f12255b7bcf4ba
+// source-sha256: 2ba38213e5653f51
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -106649,9 +106649,9 @@ function MonsterHeroGame() {
     const res = summonAiCopy({
       aiCopy: aiCopyRef.current,
       zones: {
-        deck: [],
-        hand: [],
-        discard: []
+        deck: piles.deck || [],
+        hand: piles.hand || [],
+        discard: piles.graveyard || []
       }
     }, {
       srcSlot: slotIdx,
@@ -106663,22 +106663,7 @@ function MonsterHeroGame() {
       mode: 'classic',
       effMul
     });
-    const own = res.plan.kind === 'refresh' ? null : aiCopyBuildDeck({
-      deck: piles.deck || [],
-      hand: piles.hand || [],
-      discard: piles.graveyard || []
-    }, {
-      srcSlot: slotIdx,
-      srcMonsterId: mon.id
-    });
-    const next = own ? {
-      ...res.aiCopy,
-      deck: own.deck,
-      discard: own.discard,
-      hand: [],
-      uniqueCard: null,
-      uniqueCardUid: null
-    } : res.aiCopy;
+    const next = res.aiCopy;
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
   };
@@ -106694,25 +106679,10 @@ function MonsterHeroGame() {
       isGuard: isGuardC,
       dmgOf
     });
-    const drawn = aiCopyDraw({
-      deck: Array.isArray(copy.deck) ? copy.deck : [],
-      discard: Array.isArray(copy.discard) ? copy.discard : []
-    }, handSize, Math.random);
-    const picks = aiCopyPickCards(drawn.hand, {
-      score,
-      guts: copy.guts,
-      maxGuts: copy.maxGuts,
-      rng: Math.random,
-      level: copy.level
+    return planAiCopyTurn(copy, {
+      count: handSize,
+      score
     });
-    return {
-      ...copy,
-      hand: drawn.hand,
-      deck: drawn.deck,
-      discard: drawn.discard,
-      picks,
-      nextCard: picks[0] || null
-    };
   };
   const tacticsAiCopyTools = (copy, dist) => {
     if (!copy) return null;
@@ -120102,14 +120072,7 @@ function MonsterHeroGame() {
       if (boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if (timeStopSlot != null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
-    if (timeStopSlot == null && aiCopyRef.current && !isTacticsMode(runMode) && isAiCopyOut(aiCopyRef.current, turnCount)) commitAiCopy(c => ({
-      ...classicAiCopyRegenGuts(c, soulAdjustedGutsRecoveryRate),
-      ...aiCopyDiscardHand({
-        deck: c.deck || [],
-        discard: c.discard || []
-      }, c.hand || []),
-      hand: []
-    }));
+    if (timeStopSlot == null && aiCopyRef.current && !isTacticsMode(runMode) && isAiCopyOut(aiCopyRef.current, turnCount)) commitAiCopy(c => classicAiCopyRegenGuts(c, soulAdjustedGutsRecoveryRate));
     if (timeStopSlot == null && aiCopyRef.current) {
       const ticked = tickAiCopy({
         aiCopy: aiCopyRef.current,
