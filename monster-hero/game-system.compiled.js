@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38d1020ca5afc1da
+// source-sha256: 5cd5fe50c99dca0f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -404,6 +404,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantKyuko() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
+  },
+  get assistantSorashido() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true;
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
@@ -12612,6 +12615,7 @@ const RELEASE_FLAGS = {
   assistantDailyLines: true,
   assistantAtsu: true,
   assistantKyuko: true,
+  assistantSorashido: false,
   cardBattle: true,
   cardAssistantTalk: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -12966,6 +12970,7 @@ const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
+const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
@@ -17180,7 +17185,7 @@ const helpDataRows = id => {
     case 'assistantBond':
       {
         const callUnlockLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
-        const list = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length ? ASSISTANT_LIST : [];
+        const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
         const base = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || [];
         return base.map(s => {
           const per = list.map(who => {
@@ -58601,6 +58606,8 @@ function MasuDonationScreen({
   })), React.createElement("p", {
     className: "shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "寄付一覧の並べ替え",
@@ -58629,7 +58636,7 @@ function MasuDonationScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  })), donationError && React.createElement("div", {
+  }))), donationError && React.createElement("div", {
     className: "shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"
   }, React.createElement(AlertCircle, {
     size: 12,
@@ -62550,6 +62557,8 @@ function MasuFusionScreen({
     });
   };
   const fusionSortBar = React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "合体一覧の並べ替え",
@@ -62577,7 +62586,7 @@ function MasuFusionScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  }));
+  })));
   const fusionGuide = renderScreenNote('fusion', '主が残り、副は消えます。副の絆経験値はそのまま主へ加わります。', ['上がった絆レベルの数だけ、主が強化ポイントを獲得します。', '主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます（副の強化は引き継がれません）。', '技を引き継がない合体は0ダイヤ、引き継ぐ合体は3000ダイヤです。', '固有技の引き継ぎは、副が絆Lv.30以上のときだけ選べます。条件を満たすと副の固有技が主に記録されます。']);
   if (fusionStep === 'main') {
     return React.createElement("div", {
@@ -64137,18 +64146,20 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
-      className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
+      className: "-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5"
     }, React.createElement("span", {
       className: "mh-ph-plate"
-    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement(PhaseSteps, {
+    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement("div", {
+      className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+    }, React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "ally",
       nextWave: wave > 0 ? wave + 1 : null
-    })), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
+    }))), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
       className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}${pickMode === 'hero' && !battleTutorial ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(AssistantBubble, {
       key: pickMode,
@@ -67228,7 +67239,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   momosuke: who => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
-  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`
+  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: who => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`
 });
 function HomeFriendRequestNotice({
   activeAssistant,
@@ -80738,8 +80750,9 @@ function RhythmMultiScreen({
     notice: React.createElement("div", {
       className: "flex items-center gap-1.5"
     }, React.createElement("p", {
-      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
-    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。", !room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'), isHost && selectTimeButton('min-[481px]:hidden', true)),
+      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {
@@ -106324,12 +106337,18 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   const monsterCardName = (node, className = 'text-white', band = false) => {
     const long = band && typeof node === 'string' && node.length >= 9;
+    const fit = !band && typeof node === 'string';
     return React.createElement("div", {
-      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : 'h-[16px] truncate leading-tight'} ${className}`,
+      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : fit ? 'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]' : 'h-[16px] truncate leading-tight'} ${className}`,
       style: band ? {
         textShadow: '0 1px 2px rgba(0,0,0,.95)'
       } : undefined
-    }, node);
+    }, fit ? React.createElement("span", {
+      className: "block",
+      style: {
+        fontSize: `min(11px, calc(100cqw / ${[...node].length + 0.3}))`
+      }
+    }, node) : node);
   };
   const monsterCardInfo = (node, sub) => node || sub ? React.createElement("div", {
     className: "w-full flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 leading-none",
@@ -108592,7 +108611,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -108830,6 +108849,13 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
@@ -110365,7 +110391,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []), ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -111784,6 +111810,7 @@ function MonsterHeroGame() {
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
+    sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -142294,6 +142321,12 @@ const createAnimationStyle = () => {
       .mh-phase-card-nums { font-size: 9px !important; }
       /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
       .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+    }
+    /* 幅も狭い(320 など)と1枚が66px前後になり、名前が「走り/込み」「ドミノ/倒し」と語の途中で折れた。
+       余白を詰めて名前を1行に収める(2026-10-27 ジン・WAVE の合間の見回り) */
+    @container (max-height: 560px) and (max-width: 340px) {
+      .mh-phase-card { padding: 6px 5px !important; }
+      .mh-phase-card-name { font-size: 11px !important; white-space: nowrap; letter-spacing: -0.03em; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、

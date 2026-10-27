@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b129c08cbb83ebda
+// generated-sha256: d53cbd26b9efc071
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -313,6 +313,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantAtsu() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true; },
   // きゅうこの加入のお話(kyuko_join_2026_10_22・2026-10-22)。きゅうこの公開と一緒に出る
   get assistantKyuko() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true; },
+  // ソラシドのお話(2026-10-27〜台本を書いている途中)。ソラシドの公開と一緒に出る
+  get assistantSorashido() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true; },
   // MFバトルカードのはじまり(card_battle_intro_2026・2026-10-24)。MFバトルカードの公開と一緒に出る
   get cardBattle() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true; },
 });
@@ -8910,6 +8912,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
   //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
   assistantKyuko: true,
+  // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
+  //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantSorashido: false,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -9235,6 +9240,8 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 // きゅうこの加入のお話(2026-10-22)。id は data/assistants.js の EVENT_REPLAYS と data/breeder.js の KYUKO_JOIN_STORY_ID_FOR_SHOP と同じ
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
+// ソラシドの加入のお話(2026-10-27)。id は data/assistants.js の EVENT_REPLAYS と同じ
+const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
 // 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
 // ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
@@ -12173,7 +12180,8 @@ const helpDataRows = (id) => {
     // 必要な仲良し度(need)はどの助手も同じなので、Lvを1行にまとめられる
     case 'assistantBond': {
       const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
-      const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length) ? ASSISTANT_LIST : [];
+      // 公開の印が立つまでの助手(ソラシドなど)は並べない(assistantReleased・data/assistants.js)
+      const list = ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
       const base = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [];
       return base.map(s => {
         const per = list.map(who => {
@@ -36855,7 +36863,9 @@ function MasuDonationScreen({
         <p className="shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
         {/* 並べ替えは合体と同じ「並べ替え＋横に流れるボタン」の形にそろえる(2026-10-05。7つを4列に詰めて総合力だけ2列ぶんの幅だった)。
             右端のぼかしと末尾の余白は合体と同じ(2026-10-27・320で続きがあると気づけなかった) */}
-        <div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="寄付一覧の並べ替え" style={{WebkitMaskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)',maskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)'}}><span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>{options.map(o=>{const active=donationSortKey===o.key;const direction=donationSortDir==='asc'?'低い順':'高い順';const activeLabel=o.key==='power'?`${o.label}：${direction}`:`${o.label}${donationSortDir==='asc'?' ▲':' ▼'}`;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} aria-pressed={active} aria-label={o.key==='power'?(active?`総合力を${direction}で表示中。押すと${donationSortDir==='asc'?'高い順':'低い順'}に変更`:'総合力を高い順に並べ替え'):undefined} className={`shrink-0 min-h-[44px] px-3 max-[359px]:px-2 rounded-xl text-[11px] leading-tight font-black border whitespace-nowrap active:scale-95 ${active?'border-amber-300/70 bg-amber-500/25 text-amber-100':'bg-slate-900 border-white/10 text-slate-300'}`}>{active?activeLabel:o.label}</button>})}<span aria-hidden="true" className="shrink-0 w-3"/></div>
+        {/* 横に送る札の列にも mh-scroll が付くので、画面の直下に置くと横持ちの2列の仕組み(index.html の [data-mh-screen]:has(> .mh-scroll))が
+            一覧と取り違えて右の列の全高へ置き、一覧のカードと重なっていた(2026-10-27 ジン部長の見回り)。ひと包みして直下から外す */}
+        <div className="shrink-0"><div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="寄付一覧の並べ替え" style={{WebkitMaskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)',maskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)'}}><span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>{options.map(o=>{const active=donationSortKey===o.key;const direction=donationSortDir==='asc'?'低い順':'高い順';const activeLabel=o.key==='power'?`${o.label}：${direction}`:`${o.label}${donationSortDir==='asc'?' ▲':' ▼'}`;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} aria-pressed={active} aria-label={o.key==='power'?(active?`総合力を${direction}で表示中。押すと${donationSortDir==='asc'?'高い順':'低い順'}に変更`:'総合力を高い順に並べ替え'):undefined} className={`shrink-0 min-h-[44px] px-3 max-[359px]:px-2 rounded-xl text-[11px] leading-tight font-black border whitespace-nowrap active:scale-95 ${active?'border-amber-300/70 bg-amber-500/25 text-amber-100':'bg-slate-900 border-white/10 text-slate-300'}`}>{active?activeLabel:o.label}</button>})}<span aria-hidden="true" className="shrink-0 w-3"/></div></div>
         {donationError&&<div className="shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"><AlertCircle size={12} className="inline mr-1"/>{donationError}</div>}
         <div className={SCREEN_LIST_CLASS}>
           {masuMons.length===0?<ScreenEmpty emoji="💎" lines={['まだマスモンがいません。','勇者モンでランを終えると登録できます。']}/>:<div className="grid grid-cols-3 gap-1.5 pb-3">{sorted.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=masuBondLevelInfo(masu);const active=monsterRosterIds.includes(`masu:${masu.id}`);const selected=selectedSet.has(String(masu.id));const trial=selected?{ok:true}:buildMasuDonations({...donationArgs,targetIds:[...donationSelectedIds,masu.id]});const canSelect=trial.ok;return <button key={masu.id} disabled={donationProcessing||(!selected&&!canSelect)} aria-pressed={selected} onClick={()=>{setDonationError('');setDonationSelectedIds(ids=>selected?ids.filter(id=>String(id)!==String(masu.id)):[...ids,masu.id]);}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 disabled:opacity-35 ${selected?'border-amber-300 bg-violet-950/80':'border-violet-500/30'}`}>
@@ -38245,7 +38255,10 @@ function MasuFusionScreen({
       };
       // 320幅で右の札が切れて、続きがあると気づけなかった(2026-10-27)。札の余白を詰め、右端をぼかして続きを知らせる。
       // 最後の札がぼけないよう、末尾に小さい余白を置く
+      // 横に送る札の列にも mh-scroll が付くので、画面の直下に置くと横持ちの2列の仕組み(index.html の [data-mh-screen]:has(> .mh-scroll))が
+      // 一覧と取り違えて右の列の全高へ置き、一覧のカードと重なっていた(2026-10-27 ジン部長の見回り)。ひと包みして直下から外す
       const fusionSortBar = (
+        <div className="shrink-0">
         <div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="合体一覧の並べ替え" style={{WebkitMaskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)',maskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)'}}>
           <span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>
           {FUSION_SORT_OPTIONS.map(o=>{
@@ -38258,6 +38271,7 @@ function MasuFusionScreen({
             );
           })}
           <span aria-hidden="true" className="shrink-0 w-3"/>
+        </div>
         </div>
       );
       // ルールは5行あって画面の3分の1を占めていた。主役はモンスターの一覧なので、
@@ -39008,12 +39022,12 @@ function PickHeroAllyScreen({
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
       <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
-        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
+        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
-      {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
+      {pickMode==='ally'&&<div className="-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
-        {/* このあと何枚の画面を通ってバトルへ戻るのか */}
-        {phasePlan&&<PhaseSteps plan={phasePlan} current="ally" nextWave={wave>0?wave+1:null}/>}
+        {/* このあと何枚の画面を通ってバトルへ戻るのか。横向きの背の低い画面は畳み、札が「くわしく見る」まで見えるようにする(2026-10-27) */}
+        {phasePlan&&<div className="[@media(orientation:landscape)_and_(max-height:520px)]:hidden"><PhaseSteps plan={phasePlan} current="ally" nextWave={wave>0?wave+1:null}/></div>}
       </div>}
       {/* 勇者モンは編成に入れていないベースモンからも選べる(マスモン登録のためだけに編成を入れ替えなくてよい) */}
       {/* プロモードの編成(枠を上に固定)は、一覧の場所を空けるため吹き出しを出さない(「主役になる子を選びましょ」は6体を選ぶ流れと合わない)。案内は枠の下の1行が持つ */}
@@ -40613,6 +40627,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
@@ -48804,7 +48819,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         hideRandom
         notice={(
           <div className="flex items-center gap-1.5">
-            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300">全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。{!room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'}</p>
+            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。')}{!room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')}</p>
             {/* 狭い画面では、制限時間の切り替えを注意書きの右に置く(行を増やさない。広い画面はヘッダーに出る) */}
             {isHost && selectTimeButton('min-[481px]:hidden', true)}
           </div>
@@ -64784,7 +64799,9 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   // 名前帯(band)は名前を切らずに折り返す。名前は12字まで付けられるので、9字以上は字を1段小さくし、左右の余白も詰めて
   // 320幅でも2行(1行6字)に収める(2026-10-27・部長「切らずに全部出す・2行まで」。11pxだと12字で3行になっていた)
-  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div> };
+  // 帯の無い形は1行。名前(字)は「…」で切らず、カードの幅に合わせて字を縮めて全部出す(320 の神殿で「オボロゲソ…」と切れていた。
+  // 2026-10-27 ジン部長の見回り。編成の枠の名前 #3857 と同じ形)。字でないもの(部品)は今までどおり
+  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; const fit=!band&&typeof node==='string'; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:fit?'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]':'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{fit?<span className="block" style={{fontSize:`min(11px, calc(100cqw / ${[...node].length+0.3}))`}}>{node}</span>:node}</div> };
   // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた。
   // ★ただし**入りきらなければ折り返す**(2026-09-18)。字を読める大きさへ上げたら、
   //   「絆 397/400」と「+456P」がカード幅(約96px)を超え、ハートが枠の外へはみ出した。
@@ -66958,7 +66975,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -67180,6 +67197,15 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // ソラシドの加入のお話(2026-10-27)。きゅうこと同じく、公開のあとの最初の HOME でだれにでも1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
+  // 公開の印 assistantSorashido が偽なら何もしない
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
@@ -68837,6 +68863,8 @@ function MonsterHeroGame() {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
         // きゅうこの加入(2026-10-27 社長「開催中のイベントだけ出す」)。見た扱いにすると、マーケットのカード「きゅうこ」もふつうに並ぶ
         const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
+          // ソラシドのお話は公開してからだけ(公開前に始めた人を見た扱いにすると、公開の日に流れなくなる)
+          ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []),
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -70135,6 +70163,7 @@ function MonsterHeroGame() {
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
+    sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -89768,6 +89797,12 @@ const createAnimationStyle = () => {
       .mh-phase-card-nums { font-size: 9px !important; }
       /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
       .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+    }
+    /* 幅も狭い(320 など)と1枚が66px前後になり、名前が「走り/込み」「ドミノ/倒し」と語の途中で折れた。
+       余白を詰めて名前を1行に収める(2026-10-27 ジン・WAVE の合間の見回り) */
+    @container (max-height: 560px) and (max-width: 340px) {
+      .mh-phase-card { padding: 6px 5px !important; }
+      .mh-phase-card-name { font-size: 11px !important; white-space: nowrap; letter-spacing: -0.03em; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
