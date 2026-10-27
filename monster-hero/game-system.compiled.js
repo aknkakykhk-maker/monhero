@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e79f9c89264a75b8
+// source-sha256: 00a9d9177bd9d03f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64968,13 +64968,13 @@ function WaveResultScreen({
   waveResult
 }) {
   return (React.createElement("div", {
-      "data-wave-result": true,
       style: {
         position: "absolute",
         inset: 0,
         zIndex: 30000,
         '--ph': '251,191,36'
       },
+      "data-wave-result": true,
       className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:!fixed [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:px-6"
     }, React.createElement("div", {
       className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:contents"

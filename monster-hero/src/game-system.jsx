@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5091cd0adb0223e7
+// generated-sha256: 3357990cf74d8699
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39535,7 +39535,7 @@ function WaveResultScreen({
     // mh-phase / mh-ph-* … 強化フェーズの画面と同じ飾り(濃紺の地・金の縁)。--ph はこの画面の識別色
     // 横持ちの背の低い画面(844×390 など)では、バトルの枠(幅 390px)の中だと内訳の下半分が送らないと見えなかった(2026-10-27 ジン部長の見回り)。
     // その画面だけ画面いっぱいに広げて2列にする: 左に見出しと「次へ進む」、右に内訳(内訳だけを送る)。クイックのリザルト(#3954)と同じ考え方
-    <div data-wave-result style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:!fixed [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:px-6">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} data-wave-result className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:!fixed [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:px-6">
       <div className="w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:contents">
       <div className="mb-2 shrink-0 flex flex-col items-center gap-1 [@media(max-height:700px)]:mb-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-end [@media(orientation:landscape)_and_(max-height:520px)]:mb-3">
         <span className="mh-ph-plate mh-train-sub">WAVE {waveResult.wave} CLEAR</span>
