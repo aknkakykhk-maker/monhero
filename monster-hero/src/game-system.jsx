@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e200da1e2efe133
+// generated-sha256: 8067de8787a98871
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64509,7 +64509,11 @@ function MonsterHeroGame() {
   // HELP_ASSISTANT(data/help.js)に絵や音声を足すだけでここはそのまま使える
   // ヘルプの上の助手の吹き出し。開閉は「小さくたたむ」と同じ記憶(mh_bubble_collapsed_v1 の 'help')。顔を押すと開閉する(2026-10-26 開発部 e01・e02)
   const [helpBubbleFolded, setHelpBubbleFolded] = useBubbleCollapse('help');
-  const helpAssistantOpen = !helpBubbleFolded;
+  // 横向きの低い画面(高さ520px以下)では、吹き出しをはじめからたたむ(一覧を広く見せる。2026-10-27 社長の答え)。押せば開く。
+  //   この向きでは保存した「たたむ/ひらく」は使わず(縦向きの選びを変えない)、開いたかどうかはその場の状態だけで持つ
+  const [helpBubbleOpenShort, setHelpBubbleOpenShort] = useState(false);
+  const helpShort = typeof window !== 'undefined' && window.innerHeight <= 520 && window.innerWidth > window.innerHeight;
+  const helpAssistantOpen = helpShort ? helpBubbleOpenShort : !helpBubbleFolded;
   const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setShowHelp(true); };
   // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
   // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
@@ -84404,12 +84408,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} className="shrink-0 max-w-[34%] min-h-[44px] -ml-1 px-1 flex items-center gap-0.5 text-[12px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
+            <button onClick={()=>helpShort?setHelpBubbleOpenShort(!helpAssistantOpen):setHelpBubbleFolded(helpAssistantOpen)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?32:48} accent={accent} expression={assistantExpression}/></button>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 [@media(orientation:landscape)_and_(max-height:520px)]:py-1 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
               {/* 横向きの背の低い画面では、吹き出しを小さい形にして一覧を広く見せる(開いた時点の画面の形で決める) */}
-              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey="help" collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
+              <AssistantBubble key={`${helpCatId||''}/${helpTopicId||''}`} scene={assistantScene} line={assistantLine} detail={assistantDetail} helpRef={assistantHelpRef} expression={assistantExpression} accent={accent} compact={typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight} collapseKey={helpShort?null:"help"} collapseHidden maxLines={topic?(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?1:2):(typeof window!=='undefined'&&window.innerHeight<=520&&window.innerWidth>window.innerHeight?2:0)}/>
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
