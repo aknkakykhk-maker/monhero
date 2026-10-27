@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c24951bfd8ba12a
+// source-sha256: ea00cbd32056212d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100411,7 +100411,7 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
-const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string').sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon)).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
   id,
   code: x.code,
   name: x.name || 'ブリーダー',

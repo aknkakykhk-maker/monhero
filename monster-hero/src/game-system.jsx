@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 42f2dc1be0ff870d
+// generated-sha256: cf603bb2b003c937
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60548,9 +60548,10 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
 };
 const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => ((a * 31) + ch.charCodeAt(0)) >>> 0, 7);
 // いま「だれとでも」で待っている人の一覧(入口に出す)。新しく届いた知らせだけ・先に待っている人が上。合言葉(code)は画面に出さない(入るときにだけ使う)
-//   古い版の人は名前などを送らないので、名前は「ブリーダー」・強さは出さない
+//   古い版の人(18:08 の公開より前)は名前もアイコンも送らず、だれか分からないので、一覧に出さない(2026-10-27 社長 案ア)。
+//   新しい版は、プロフィールが無い人でも名前とアイコンを必ず送る。古い版の人とも、「だれとでも(自分も待つ)」なら、これまでどおり自動で組む(s.seekers には残す)
 const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {})
-  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string')
+  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon))
   .sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1))
   .map(([id, x]) => ({ id, code: x.code, name: x.name || 'ブリーダー', icon: x.icon || null, fr: x.fr || null, rt: Number.isInteger(x.rt) ? x.rt : null, waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000))) })); // 待っている秒数は相手の端末の時計なので、ずれても0〜999に収める
 

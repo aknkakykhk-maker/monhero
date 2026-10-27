@@ -445,6 +445,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await B.waitForTimeout(5000);
     const privCount = Number(await B.locator('[data-card-pvp-seekers]').getAttribute('data-card-pvp-seekers').catch(() => '-1'));
     check('⑯ 合言葉の部屋は、入口の「いま相手を待っている人」に出ない', privCount === 0, String(privCount));
+    // 古い版の人の「待っています」(名前もアイコンも無い)は一覧に出さない。だれとでもの自動の組み合わせには使えるよう、受け取ってはおく(2026-10-27 社長 案ア)
+    const oldSeen = await B.evaluate(async () => {
+      window.__fakeWsRecv('realtime:mhc-lobby-free', { t: 'seek', from: 'cOLDVER1', code: 'QZ7K', at: Date.now() - 5000 }, -1, 'old-version');
+      await new Promise((r) => setTimeout(r, 1200));
+      return { kept: !!(CARD_PVP.get().seekers || {}).cOLDVER1, rows: document.querySelectorAll('[data-card-pvp-seeker]').length };
+    });
+    check('⑯ 古い版の人(名前もアイコンも無い)は一覧に出さない(だれとでもで組むために、受け取ってはおく)', oldSeen.kept && oldSeen.rows === 0, JSON.stringify(oldSeen));
+    await B.waitForTimeout(6500); // 古い版の知らせが古くなってから(だれとでもで、そちらへ組みに行かないように)
     await A.locator('[data-card-pvp-leave]').click(); await A.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     await A.locator('[data-card-pvp-free]').click();
     const seen16 = await B.locator('[data-card-pvp-seeker]').first().waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
