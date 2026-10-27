@@ -16,6 +16,7 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
   atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
+  sorashido: ['ソラシド隊'],   // 仮(2026-10-27)
 });
 // 長すぎるときは MASTER の「本気の」を省く(320幅の札で2行に収まる長さ)
 const CARD_DECK_NAME_MAX = 18;
@@ -65,6 +66,13 @@ const CARD_VS_LINES = Object.freeze({
     hard: { e: 'excited', t: '全員まとめていくからな。《覚悟しとけよ笑》' },
     expert: { e: 'excited', t: '全部の弾から全体攻撃を集めてきた！' },
     master: { e: 'wink', t: '本気のあつだ。一気に終わらせるぞ！' },
+  },
+  sorashido: {   // 仮(2026-10-27)
+    easy: { e: 'happy', t: 'よろしくね' },
+    normal: { e: 'happy', t: 'よろしくね' },
+    hard: { e: 'excited', t: 'よろしくね' },
+    expert: { e: 'excited', t: 'よろしくね' },
+    master: { e: 'wink', t: 'よろしくね' },
   },
 });
 // 練習試合のひとこと(みゅあ)

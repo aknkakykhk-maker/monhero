@@ -287,7 +287,7 @@ const assistantAtsuUnlockReady = (levelOf) => typeof levelOf === 'function'
   && Object.entries(ASSISTANT_ATSU_UNLOCK_BONDS).every(([id, need]) => { const lv = Number(levelOf(id)); return Number.isFinite(lv) && lv >= need; });
 // 公開の印が立つまで、一覧にも出さない助手(印の名前は RELEASE_FLAGS・17-release-changelog-login-missions.jsx)。
 // RELEASE_FLAGS はあとの部品で作られるので、見るたびに引く(読み込み時に触ると画面が真っ白になる)
-const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu', kyuko: 'assistantKyuko' });
+const ASSISTANT_RELEASE_FLAGS = Object.freeze({ atsu: 'assistantAtsu', kyuko: 'assistantKyuko', sorashido: 'assistantSorashido' });
 const assistantReleased = (assistantId) => {
   const flag = ASSISTANT_RELEASE_FLAGS[assistantId];
   if (!flag) return true;
