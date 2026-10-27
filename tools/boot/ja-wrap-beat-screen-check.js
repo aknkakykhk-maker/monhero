@@ -4,12 +4,14 @@
 //
 //   node tools/boot/ja-wrap-beat-screen-check.js          # 320×568・375×667・390×844・844×390 で画面を巡って数える
 //   node tools/boot/ja-wrap-beat-screen-check.js --list   # 折れた所を全部出す
+//   node tools/boot/ja-wrap-beat-screen-check.js --multi-only --list   # マルチの画面だけ
 //
 // ja-wrap-check.js は短い札(16字まで・題名・タブ)だけを数え、長い文は数えない。ここではモンヒロビートの画面に限って、長い文も数える。
 // 画面の字を1文字ずつの位置で見て行の変わり目を出し、その変わり目が Intl.Segmenter の1語の中か、句読点・閉じかっこ・長音が行の頭に落ちたら数える。
 //   片仮名の続き(10字未満)の途中・最後の行が仮名2字以下だけ(「演奏しま／した」)も数える(2026-10-27)
 //   ・空白・<wbr> で折れたのは数えない(作り手が決めた折り目)。英数字だけの語・10字以上の語(1行に入らない)も数えない
-//   ・見る画面: モードえらび・曲えらび・マスモン設定・遊びかた・ビートLv・オプションの4つのタブ・ランキング・記録
+//   ・見る画面: モードえらび・曲えらび・マスモン設定・遊びかた・ビートLv・オプションの4つのタブ・ランキング・記録、
+//     マルチ(フリーマッチの待ち・プライベートのシート/つくった待ち/入った・選曲・マスモンを呼ぶ・結果。偽の通信で、本番の部屋は作らない)
 // 直し方: その文を jaWrap(…) で包み、style に JA_WRAP_STYLE を付ける(41-screen-ui.jsx)。字が決まっている札は <wbr> と break-keep でもよい
 //
 // 同じ巡りで、字の「切れ」も数える(2026-10-26 ビート部・部長テンポくんの依頼。フリーマッチの待ち人数が札の下の端で切れていた):
@@ -23,6 +25,8 @@
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8971;
 const LIST = process.argv.includes('--list');
+// マルチの画面だけを巡る(直すときに早く回すため)
+const MULTI_ONLY = process.argv.includes('--multi-only');
 // 言葉の途中で折れてよい数。2026-10-26 に0まで直した
 const BEAT_SCREEN_WRAP_LIMIT = 0;
 // 字の切れてよい数(わざと切っている所は CLIP_ALLOW で外す)
@@ -133,6 +137,121 @@ const CLIP = (allow) => {
   return out;
 };
 
+// ===== マルチの画面(2026-10-26 ビート部・部長テンポくんの依頼) =====
+// フリーマッチの待ち・プライベートの部屋(作る/入る)・選曲・マスモンを呼ぶ・結果も、同じ数え方で巡る。
+// ★外へはつながない。WebSocket を偽物に差し替え、同じブラウザの2つのページのあいだを BroadcastChannel で中継する
+//   (tools/mode/rhythm-multi-layout-check.js と同じ考え方)。本番の部屋は作らない。Supabase への通信は止める
+const FAKE_WS = () => {
+  class FakeWS {
+    constructor() { this.readyState = 0; this.topic = null; this.ch = null; setTimeout(() => { this.readyState = 1; if (this.onopen) this.onopen({}); }, 0); }
+    deliver(obj) { const data = JSON.stringify(obj); setTimeout(() => { if (this.readyState === 1 && this.onmessage) this.onmessage({ data }); }, 0); }
+    send(data) {
+      const m = JSON.parse(data);
+      if (m.event === 'phx_join') {
+        this.topic = m.topic; this.ch = new BroadcastChannel(`fake-ws:${m.topic}`);
+        this.ch.onmessage = (e) => this.deliver({ topic: this.topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload: e.data } });
+        this.deliver({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: 'ok', response: {} } });
+        return;
+      }
+      if (m.event !== 'broadcast') return;
+      const payload = m.payload && m.payload.payload;
+      if (this.ch) this.ch.postMessage(payload);
+      this.deliver({ topic: this.topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload } });
+    }
+    close() { this.readyState = 3; if (this.ch) this.ch.close(); if (this.onclose) this.onclose({}); }
+  }
+  window.WebSocket = FakeWS;
+};
+// マルチの画面を巡って数える。戻り値 [名前, 折れ, 切れ] の並び
+const runMulti = async (browser, W, H) => {
+  const out = [];
+  const context = await browser.newContext({ viewport: { width: W, height: H } });
+  await context.addInitScript(FAKE_WS);
+  await context.route(/supabase\.co/, (r) => r.abort());
+  const open = async (name, masu) => {
+    const page = await context.newPage();
+    await page.addInitScript(([nm, withMasu]) => {
+      const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+      put('mh_breeder_name', nm); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true);
+      put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
+      put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true); put('mh_rhythm_tutorial_seen_v1', true); put('mh_rhythm_hell_story_seen_v1', true);
+      // 起動したときのお詫び・補償のお知らせは配り済みにしておく(画面を覆って止まるため)
+      put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
+      if (withMasu) put('mh_masu_mons', [{ id: 'm1', baseId: 'Mocchi', name: 'もちまる', bondXp: 5000, createdAt: 1 }]);
+    }, [name, !!masu]);
+    await page.addInitScript(require('./quiet-boot-seed').eventStorySeed());
+    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), null, { timeout: 40000 });
+    await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+    await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+    await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d || d.closest('[data-rhythm-multi],[data-rhythm-mode-private-sheet],[data-rhythm-buddy-picker],[data-rhythm-buddy-sheet],[data-rhythm-buddy-list-sheet]')) return; const b = [...d.querySelectorAll('button')].find((x) => /^(受け取る|OK|確認|スキップ|あとで読む)$/.test((x.innerText || x.getAttribute('aria-label') || '').trim())); if (b) b.click(); }, 400); });
+    await page.waitForTimeout(1500);
+    // HOME に着いたら、ログインボーナスなどのお知らせを一通り閉じる(ここでは「閉じる」も押してよい)
+    for (let i = 0; i < 10; i++) { const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^(受け取る|閉じる|OK|確認|スキップ|あとで読む)$/.test((x.innerText || '').trim()) && x.getClientRects().length); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
+    await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(800);
+    return page;
+  };
+  const scan = async (name, page) => { await page.waitForTimeout(900); out.push([name, await page.evaluate(SCAN), await page.evaluate(CLIP, CLIP_ALLOW.map(([k, sel]) => [k, sel]))]); };
+  const step = (p) => p.evaluate(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') || '');
+  try {
+    // フリーマッチの待ち(ほかの部屋が見つからないので、自分で部屋を作って待つ)
+    { const P = await open('は');
+      await P.locator('[data-rhythm-multi-free]').click();
+      await P.waitForFunction(() => !!document.querySelector('[data-rhythm-multi]'), null, { timeout: 20000 });
+      await scan('フリーマッチの待ち', P); await P.close(); }
+    const A = await open('あ', true), B = await open('い');
+    // プライベートの部屋をつくる → 待ち
+    await A.locator('[data-rhythm-mode-private-open]').click();
+    await A.waitForSelector('[data-rhythm-mode-private-sheet]', { timeout: 5000 });
+    await scan('プライベート(シート)', A);
+    await A.locator('[data-rhythm-multi-create]').click();
+    await A.waitForSelector('[data-rhythm-multi-room-code]', { timeout: 15000 });
+    await scan('プライベート(つくった・待ち)', A);
+    const code = (await A.locator('[data-rhythm-multi-room-code]').innerText()).trim();
+    // 入る側: 合言葉を入れて入る
+    await B.locator('[data-rhythm-mode-private-open]').click();
+    await B.locator('[data-rhythm-multi-code-input]').fill(code);
+    await B.locator('[data-rhythm-multi-join]').click();
+    await A.waitForFunction(() => typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view() && RHYTHM_MULTI.view().members.length === 2, null, { timeout: 20000 });
+    await scan('プライベート(入った)', B);
+    await scan('プライベート(2人そろった・部屋主)', A);
+    await A.locator('[data-rhythm-multi-confirm]').click();
+    await A.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'select', null, { timeout: 15000 });
+    await scan('マルチの選曲', A);
+    // マスモンを呼ぶ画面(マスモンを持たせた部屋主で開いて、閉じる)
+    if (await A.evaluate(() => { const b = [...document.querySelectorAll('[data-rhythm-buddy-open]')].find((x) => x.getClientRects().length); if (b) b.click(); return !!b; })) {
+      await A.waitForSelector('[data-rhythm-buddy-picker],[data-rhythm-buddy-sheet],[data-rhythm-buddy-list-sheet]', { timeout: 8000 }).catch(() => {});
+      await scan('マスモンを呼ぶ', A);
+      await A.keyboard.press('Escape').catch(() => {});
+      await A.evaluate(() => { const s = document.querySelector('[data-rhythm-buddy-picker],[data-rhythm-buddy-sheet],[data-rhythm-buddy-list-sheet]'); const b = s && [...s.querySelectorAll('button')].find((x) => /閉じる|もどる|戻る|✕/.test(x.innerText || x.getAttribute('aria-label') || '')); if (b) b.click(); });
+      await A.waitForTimeout(600);
+    } else out.push(['マスモンを呼ぶ', ['(呼ぶボタンが見つからない)'], []]);
+    // 2人でライブを始めて、結果を届けて、抜ける → 結果
+    await A.locator('[data-rhythm-demo-start]').click();
+    await B.waitForSelector('[data-rhythm-multi-omakase]', { timeout: 15000 }); await B.locator('[data-rhythm-multi-omakase]').click();
+    await A.waitForSelector('[data-rhythm-multi-ready]', { timeout: 20000 }); await B.waitForSelector('[data-rhythm-multi-ready]', { timeout: 20000 });
+    await A.locator('[data-rhythm-multi-ready]').click(); await B.locator('[data-rhythm-multi-ready]').click();
+    await A.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 }); await B.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });
+    const round = await A.evaluate(() => RHYTHM_MULTI.view().room.round);
+    await A.evaluate((id) => RHYTHM_MULTI.reportResult(id, { score: 912345, cleared: true, fullCombo: true, maxCombo: 231, judgments: { MARVELOUS: 180, EXCELLENT: 40, GREAT: 11, GOOD: 0, BAD: 0, MISS: 0 }, fast: 12, slow: 7 }, false, { diffId: 'MASTER' }), round);
+    await B.evaluate((id) => RHYTHM_MULTI.reportResult(id, { score: 640000, cleared: true, maxCombo: 120, judgments: { MARVELOUS: 90, EXCELLENT: 80, GREAT: 30, GOOD: 10, BAD: 5, MISS: 16 }, fast: 30, slow: 25 }, false, { diffId: 'EXPERT' }), round);
+    for (const p of [A, B]) for (let i = 0; i < 6; i += 1) {
+      if (!(await p.evaluate(() => !!document.querySelector('[data-rhythm-play-area]')))) break;
+      await p.evaluate(() => document.querySelector('[data-rhythm-pause]')?.click()); await p.waitForTimeout(700);
+      await p.locator('[data-rhythm-pause-exit]').click({ force: true, timeout: 3000 }).catch(() => {}); await p.waitForTimeout(1200);
+    }
+    await A.waitForFunction(() => document.querySelector('[data-rhythm-multi]')?.getAttribute('data-rhythm-multi-step') === 'result', null, { timeout: 30000 });
+    await scan('マルチの結果', A);
+  } catch (e) {
+    out.push([`マルチ(途中で止まった)`, [`(${e.message.split('\n')[0].slice(0, 100)})`], []]);
+    if (process.env.MULTI_SHOT) for (const [i, p] of context.pages().entries()) await p.screenshot({ path: `${process.env.MULTI_SHOT}/multi-${W}x${H}-${i}.png` }).catch(() => {});
+  }
+  await context.close();
+  return out;
+};
+
 // リザルトの検査(ja-wrap-beat-result-check.js)が同じ数え方を使う
 module.exports = { SCAN, CLIP, CLIP_ALLOW };
 if (require.main === module) (async () => {
@@ -164,7 +283,7 @@ if (require.main === module) (async () => {
         await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
         await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(1000); await closeAll();
       };
-      for (const [name, steps] of SCREENS) {
+      for (const [name, steps] of (MULTI_ONLY ? [] : SCREENS)) {
         try {
           await toModeSelect();
           for (const s of steps) {
@@ -177,6 +296,12 @@ if (require.main === module) (async () => {
         } catch (e) { check(`${name} ${W}×${H} を開けた`, false, e.message.split('\n')[0].slice(0, 120)); }
       }
       await page.close();
+      // マルチの画面
+      for (const [name, wraps, clips] of await runMulti(browser, W, H)) {
+        if (name.startsWith('マルチ(途中で止まった)') || (wraps[0] || '').startsWith('(')) { check(`${name} ${W}×${H} を開けた`, false, wraps[0] || ''); continue; }
+        for (const x of wraps) found.push(`${name} ${W}×${H}: ${x}`);
+        for (const [kind, t] of clips) clipped.push(`${name} ${W}×${H}: ${kind}「${t}」`);
+      }
     }
   } finally { await browser.close(); server.close(); }
   const uniq = [...new Set(found)];
