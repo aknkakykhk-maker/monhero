@@ -8206,26 +8206,43 @@ function MonsterHeroGame() {
     setRhythmEventPoints(next.point);
     return next;
   };
+  // 2つのタブで同時に買ったとき、片方の結果がもう片方に上書きされて「出たカードが入らない」ことがあった(2026-10-27 カード巡回部)。
+  // navigator.locks があればタブをまたいで1つずつ買う。さらに書く直前に読み直し、読んだときから変わっていたら計算し直す(3回まで。台帳 #190 と同じ考え)
+  const cardShopLocked = (fn) => (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function'
+    ? navigator.locks.request('mh_card_shop', () => fn()) : fn());
+  const cardShopTry = async (read, make) => cardShopLocked(async () => {
+    for (let tries = 0; tries < 3; tries++) {
+      const raw = await read();
+      const out = make(raw);
+      if (!out.entries) return out;
+      if (JSON.stringify(await read()) !== JSON.stringify(raw)) continue; // ほかのタブで買った → 読み直して計算し直す
+      return (await saveStoredValuesOrRollback(out.entries, storeGet, storeSet)) ? out : { fail: 'save' };
+    }
+    return { fail: 'save' };
+  });
   const buyCardPacks = async (packId, count) => {
     if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawPity, rawPoint, rawSplit] = await Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]);
-      const point = cardNormalizePoint(rawPoint);
-      // 以前の4弾の天井の数は、新しい8弾へ1回だけ写す(印 mh_card_pack_pity_split_v1。以前の数は消さない)
-      const split = rawSplit !== true;
-      const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
-      const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
-      if (!r) { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; } // 別のタブで使ったあとなど、表示が古いことがあるので読み直す
-      const saved = await saveStoredValuesOrRollback([
-        { key: K.collection, before: rawCol, next: r.collection },
-        { key: K.pity, before: rawPity, next: r.pity },
-        { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
-        ...(split ? [{ key: K.pitySplit, before: rawSplit, next: true }] : []),
-      ], storeGet, storeSet);
-      if (!saved) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]), ([rawCol, rawPity, rawPoint, rawSplit]) => {
+        const point = cardNormalizePoint(rawPoint);
+        // 以前の4弾の天井の数は、新しい8弾へ1回だけ写す(印 mh_card_pack_pity_split_v1。以前の数は消さない)
+        const split = rawSplit !== true;
+        const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
+        const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
+        if (!r) return { fail: 'points' };
+        return { r, entries: [
+          { key: K.collection, before: rawCol, next: r.collection },
+          { key: K.pity, before: rawPity, next: r.pity },
+          { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
+          ...(split ? [{ key: K.pitySplit, before: rawSplit, next: true }] : []),
+        ] };
+      });
+      if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; } // 別のタブで使ったあとなど、表示が古いことがあるので読み直す
+      if (res.fail) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
+      const r = res.r;
       setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection }));
       setRhythmEventPoints(r.point); // ビートPと同じ財布なので、ビートP交換所の残高もそろえる
       setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost });
@@ -8242,16 +8259,19 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const [rawCol, rawDecks, rawPoint, rawStarter, rawShop] = await Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]);
-      const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, { collection: cardNormalizeCollection(rawCol), decks: cardNormalizeDecks(rawDecks), point: cardNormalizePoint(rawPoint), starter: cardNormalizeStarter(rawStarter), shop: cardNormalizeShop(rawShop) }, Date.now());
-      if (!r) { void loadCardShop(); setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。'); return { ok:false, reason:'points' }; }
-      const saved = await saveStoredValuesOrRollback([
-        { key: K.collection, before: rawCol, next: r.collection },
-        { key: K.decks, before: rawDecks, next: r.decks },
-        { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
-        { key: K.shop, before: rawShop, next: r.shop },
-      ], storeGet, storeSet);
-      if (!saved) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.decks, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null)]), ([rawCol, rawDecks, rawPoint, rawStarter, rawShop]) => {
+        const r = cardBuyStarter(CARD_BATTLE_DATA, kitId, { collection: cardNormalizeCollection(rawCol), decks: cardNormalizeDecks(rawDecks), point: cardNormalizePoint(rawPoint), starter: cardNormalizeStarter(rawStarter), shop: cardNormalizeShop(rawShop) }, Date.now());
+        if (!r) return { fail: 'points' };
+        return { r, entries: [
+          { key: K.collection, before: rawCol, next: r.collection },
+          { key: K.decks, before: rawDecks, next: r.decks },
+          { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
+          { key: K.shop, before: rawShop, next: r.shop },
+        ] };
+      });
+      if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('買えませんでした(ビートPが足りないか、もう持っています)。'); return { ok:false, reason:'points' }; }
+      if (res.fail) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
+      const r = res.r;
       setCardShopState((cur) => ({ ...(cur || {}), point: r.point, shop: r.shop, collection: r.collection }));
       setRhythmEventPoints(r.point);
       return { ok:true, dupPoint: r.dupPoint };
@@ -22611,7 +22631,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {titleModal}
 
       {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">やめる</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
-      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3">最新のゲームデータを読み込み直します。<br/>セーブデータは消えません。</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
+      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3" style={JA_WRAP_STYLE}>{jaWrap('最新のゲームデータを読み込み直します。')}<br/>{jaWrap('セーブデータは消えません。')}</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
 
       {/* ランキングの編成をくわしく見る。一覧は軽さ優先で素の絵のままにしてあるので、
           染色(実際にその人が染めた色)を見せるのはこの画面だけ。ここなら1件ぶん

@@ -2154,11 +2154,12 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   ) : null);
   // 本家の左上の題字(MULTI LIVE)と、その下の小さな段の名前。右に残り時間とチャット
   const header = (step, onBackClick, opts = {}) => (
-    <header className="z-10 flex shrink-0 items-center gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
+    <header className="z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
       <button data-rhythm-multi-back type="button" aria-label="戻る" className="min-h-[44px] min-w-[44px] max-[380px]:min-w-[36px] shrink-0 rounded-xl text-lg font-black text-slate-300" onClick={onBackClick}>←</button>
-      <div className="min-w-0 flex-1 leading-none">
-        <b className="block truncate text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
-        <small className="mt-0.5 block truncate text-[10px] font-black text-fuchsia-200">▶ {step}{view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : ''}</small>
+      {/* 題字には最低の幅を残す。右のボタンが入りきらない細い画面では、ボタンのほうを2段目へ回す(「…」で切らない) */}
+      <div className="min-w-[7.5rem] flex-1 leading-none">
+        <b className="block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
+        <small className="mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200">▶ {step}{view ? <> ・ <span className="whitespace-nowrap">{view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} {view.code}</span></> : ''}</small>
       </div>
       {/* クイック∞周回を裏で回しているときの進み具合(曲えらびの帯と同じ中身)。対戦の待ち時間も周回は進む */}
       {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[38%] max-[480px]:max-w-[24%]" />}
@@ -2220,7 +2221,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <span aria-hidden="true" className="text-xl leading-none">💬</span>
         <span className="min-w-0 flex-1 leading-tight">
           <small className="block text-[9px] font-black text-cyan-200">{last ? last.name : 'チャット'}</small>
-          <b data-rhythm-multi-chat-latest className="block truncate text-[12px] font-black text-white">{last ? last.text : 'タップで開く'}</b>
+          {/* 発言は1行に詰める。まだ発言が無いときの「タップで開く」は折り返す(幅30%の札で「タップで開…」と切れていた・2026-10-26) */}
+          {last
+            ? <b data-rhythm-multi-chat-latest className="block truncate text-[12px] font-black text-white">{last.text}</b>
+            : <b data-rhythm-multi-chat-latest className="block text-[11px] font-black leading-tight text-white" ><span className="whitespace-nowrap">タップで</span><wbr /><span className="whitespace-nowrap">開く</span></b>}
         </span>
         {chatUnread > 0 && <b data-rhythm-multi-chat-unread className="absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white">{chatUnread > 9 ? '9+' : chatUnread}</b>}
       </button>
@@ -2323,7 +2327,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             {ms.multi && !buddyIntroSeen && masuMons.length > 0 && (
               <section data-rhythm-buddy-intro className="mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5">
                 <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
-                <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります</p>
+                <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100" style={JA_WRAP_STYLE}>{jaWrap('マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります')}</p>
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
                 <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </section>
@@ -2382,7 +2386,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </div>
               <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
                 <b className="block text-[13px] font-black text-white">部屋をつくる</b>
-                <p className="text-[11px] font-bold leading-snug text-slate-300">合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう')}</p>
                 <button data-rhythm-multi-create type="button" onClick={createPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">＋ 部屋をつくる</button>
               </section>
               <section className="space-y-1.5 rounded-2xl border border-violet-300/25 bg-slate-950/50 p-3">
@@ -2530,7 +2534,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <section data-rhythm-multi-results className="relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2 [@media(max-height:440px)]:py-1 [[data-mh-view-rotation=true]_&]:py-1" style={{ marginTop: 'calc(.4rem + var(--mh-sa-top))' }}>
           {drawnSong && <span className="h-12 w-12 shrink-0 landscape:h-14 landscape:w-14"><RhythmSongArt song={drawnSong} marked={false} /></span>}
           <div className="min-w-0 flex-1 landscape:max-w-[34%]">
-            <b className="block truncate text-sm font-black">{drawnSong ? rhythmSongFullName(drawnSong) : ''}</b>
+            {/* 曲名は「…」で切らずに、言葉の切れ目で折る(320幅で「… MF × ICHIKA MIX」が切れて、どの曲か分からなかった・2026-10-26) */}
+            <b className="block text-sm font-black leading-tight" style={JA_WRAP_STYLE}>{drawnSong ? jaWrap(rhythmSongFullName(drawnSong)) : ''}</b>
             <small className="block text-[10px] font-black text-slate-400">{team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`}</small>
             {/* 同じメンバーで続けたライブ(連続ボーナス・2026-10-03) */}
             {view.streak >= 2 && <small data-rhythm-multi-streak className="mt-0.5 inline-block rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-2 text-[10px] font-black text-white">🔥 連続{view.streak}曲目 ・ ごほうび+{Math.round(rhythmMultiStreakBonus(view.streak) * 100)}%</small>}
