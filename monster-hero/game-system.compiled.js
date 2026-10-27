@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 48a11d22d5df005e
+// source-sha256: e61ecb7a8d4aee22
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94125,20 +94125,16 @@ const CardBattleBoard = ({
     className: `flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 bg-black/35 px-2 py-0.5`
   }, React.createElement("div", {
     className: "flex shrink-0 items-center gap-1.5"
-  }, React.createElement("button", {
+  }, !watch && React.createElement("button", {
     type: "button",
     "data-card-quit": true,
     "data-card-replay-exit": replay ? '' : undefined,
-    "data-card-watch-exit": watch ? '' : undefined,
     onClick: () => replay ? onFinish({
       outcome: 'replayExit',
       st
-    }) : watch ? onFinish({
-      outcome: 'watchExit',
-      st
     }) : setQuit(true),
     className: "rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200"
-  }, replay ? 'とじる' : watch ? 'やめる' : tutorial ? '飛ばす' : '投了'), pvpLive && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
+  }, replay ? 'とじる' : tutorial ? '飛ばす' : '投了'), pvpLive && React.createElement(CardPvpChat, null), !tutorial && React.createElement("button", {
     type: "button",
     "data-card-log-open": true,
     onClick: () => setLogSheet(true),

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 49b2194fdf0701dd
+// generated-sha256: fbfc87c3d1643f9c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57396,7 +57396,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       )}
       <div data-card-head className={`flex ${compact ? 'min-h-[36px]' : 'min-h-[44px]'} shrink-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 bg-black/35 px-2 py-0.5`}>
         <div className="flex shrink-0 items-center gap-1.5">
-          <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} data-card-watch-exit={watch ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : watch ? onFinish({ outcome: 'watchExit', st }) : setQuit(true))} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{replay ? 'とじる' : watch ? 'やめる' : tutorial ? '飛ばす' : '投了'}</button>
+          {/* 観戦では出さない(下の「観戦をやめる」と2つ並んでいた。2026-10-27 部長) */}
+          {!watch && <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200">{replay ? 'とじる' : tutorial ? '飛ばす' : '投了'}</button>}
           {pvpLive && <CardPvpChat/>}
           {!tutorial && <button type="button" data-card-log-open onClick={() => setLogSheet(true)} className="rounded-lg border border-white/20 px-2 py-1 text-[12px] font-black text-slate-200" aria-label="ターンの記録を見る">記録</button>}
         </div>
