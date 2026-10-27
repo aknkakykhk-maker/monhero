@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd857a3a5347a8d1
+// source-sha256: d1e3fdf1d2923083
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16518,6 +16518,7 @@ const marketLabelNodes = label => marketLabelSegments(label).map((seg, index) =>
 }, index > 0 && React.createElement("wbr", null), seg));
 const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  if (costume && costume.unlock && typeof assistantCostumeUnlockedNow === 'function' && !assistantCostumeUnlockedNow(costume) && Array.isArray(costume.lockLabel)) return [...costume.lockLabel];
   const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
   const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
   const fromMs = diamond ? Date.parse(diamond.from) : NaN;
@@ -16557,7 +16558,7 @@ const MarketProductCard = ({
     disabled: disabled,
     previewIcon: previewIcon
   }), React.createElement("div", {
-    className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
+    className: `w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name || '') ? 'text-[10px] max-[359px]:text-[9px] max-[359px]:tracking-[-0.05em]' : /（/.test(item.name || '') ? 'text-[10px]' : 'text-[11px]'} font-black leading-tight ${comingSoon ? 'text-slate-400' : 'text-white'}`,
     style: {
       minHeight: '36px',
       textWrap: 'wrap',
@@ -136236,7 +136237,7 @@ function MonsterHeroGame() {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
       }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ '))) : React.createElement(React.Fragment, null, React.createElement("p", {
         className: "text-[10px] font-black text-amber-300 leading-tight text-center"
-      }, lockedCostume.name, "はまだマーケットに並んでいません"), React.createElement("p", {
+      }, lockedCostume.name, "はマーケットに並んでいます"), React.createElement("p", {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1",
         style: JA_WRAP_STYLE
       }, jaWrap(lockedCostume.unlockHow || ''))), React.createElement("p", {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7c1f752448a40fe9
+// generated-sha256: 7cd0f60a870a45b5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11690,6 +11690,8 @@ const marketLabelNodes = (label) => marketLabelSegments(label)
 // いまビートP交換所で買える窓が開いていれば、その一言も添える。窓が読めないときは undefined(ふつうの「近日追加」)
 const marketCostumeSoonLabel = (item, nowMs = Date.now()) => {
   const costume = typeof ASSISTANT_COSTUMES !== 'undefined' ? ASSISTANT_COSTUMES.find(c => c && c.id === item?.id) : null;
+  // 解放が要る服(みゅあの「デュエルマスター」など)は、解放するまで入手条件を札に出す(2026-10-27 社長)
+  if (costume && costume.unlock && typeof assistantCostumeUnlockedNow === 'function' && !assistantCostumeUnlockedNow(costume) && Array.isArray(costume.lockLabel)) return [...costume.lockLabel];
   const windows = costume && Array.isArray(costume.saleWindows) ? costume.saleWindows : [];
   const diamond = windows.find(w => w && w.shop === 'diamond' && w.from);
   const fromMs = diamond ? Date.parse(diamond.from) : NaN;
@@ -11721,7 +11723,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
-    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className={`w-full flex items-start justify-center text-center ${/[ァ-ヶー]{7,}/.test(item.name||'')?'text-[10px] max-[359px]:text-[9px] max-[359px]:tracking-[-0.05em]':/（/.test(item.name||'')?'text-[10px]':'text-[11px]'} font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',textWrap:'wrap',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
     {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
@@ -84961,12 +84963,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
           const lockedInfo=lockedCostume&&(
             <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-              {/* 解放の条件がある服(みゅあの MASTER に勝つと並ぶ服など)は、解放するまで条件を出す(まだマーケットに並んでいないため。2026-10-27) */}
+              {/* 解放の条件がある服(みゅあの MASTER に勝つと買える服など)は、解放するまで買える条件を出す(マーケットには鍵つきで並んでいる。2026-10-27) */}
               {assistantCostumeUnlockedNow(lockedCostume)?<>
               <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
               </>:<>
-              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はまだマーケットに並んでいません</p>
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットに並んでいます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1" style={JA_WRAP_STYLE}>{jaWrap(lockedCostume.unlockHow||'')}</p>
               </>}
               <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(lockedCostume.desc||'')}</p>
