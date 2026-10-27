@@ -139,7 +139,7 @@ const ALL_PLAYER_MONSTERS = {
   // 固有技の段の順は社長が決めた(「Aで9段目に炸裂、8段目天翔、7に煉獄」)。動きは 24-battle-fx.jsx の SKM_KYUBI が同じ順
   Kyubi: { id:'Kyubi', name:"キュービ", emoji:"🦊", imgUrl:KYUBI_IMG, iconUrl:KYUBI_IMG,
     faceIconUrl:KYUBI_FACE_ICON, atkMotion:'default',
-    trait:"九尾四相", traitDesc:"勇者モンにすると：バトルが始まったときの距離で相が決まる。遠=強い連撃／中=攻撃のあと完全回避を1回(3ターンに1回)／近=すべての技が連撃・与ダメ+15%・会心率+20%／零=カードを使うたび煉獄がたまり、連撃が強くなる",
+    trait:"九尾四相", traitDesc:"勇者モンにすると：バトルが始まったときの距離で相が決まる。遠=強い連撃／中=攻撃のあと完全回避を1回(3ターンに1回・WAVEが変わると待ちは無くなる)／近=すべての技が連撃・与ダメ+15%・会心率+20%／零=カードを使うたび煉獄がたまり、連撃が強くなる",
     baseHp:420, baseGuts:150, baseAtk:160, baseDef:70, plusStats:{hp:120,atk:40,def:10,guts:45}, distAptitude:['B','D','B','B'],
     unique:{ name:"ゆうわく", icon:KYUBI_IMG, monId:"Kyubi", baseMult:2.4, baseGuts:48, evoLevel:0,
       names:["ゆうわく","なめろう","超狐火","神狐蒼火","八嵐天衝","陽炎","煉獄九尾陣","天河天翔","炸裂気泡陣"],

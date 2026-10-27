@@ -88,6 +88,8 @@
 | `mh_card_pack_pity_v1` | object / `cardNormalizePity` | MFバトルカードのパックの天井 `{ パックid: キラなしで開けた数 }`。2026-10-25 に8弾(p1〜p8)へ作り直した。以前の w1〜w4・hybrid の数も消さずに残す(知らないパックid・数でない値は捨てる。89-card-pack.jsx) |
 | `mh_card_pack_pity_split_v1` | boolean | 以前の4弾(w1〜w4)の天井の数を、新しい8弾へ1回だけ写した印(w1→p1〜p3 / w2→p4・p5 / w3→p6 / w4→p7・p8。新しい弾に数があれば上書きしない。89 の `cardSplitPity`・60 の buyCardPacks) |
 | `mh_card_shop_v1` | object / `cardNormalizeShop` | マーケットで買った選ばなかったスターターキットの印 `{ starters:{ キットid: 時刻 } }`。印があるキットは二度と買えない(`cardBuyStarter`) |
+| `mh_card_gacha_points_v1` | number / `cardNormalizeGacha` | MFバトルカードのガチャポイント(2026-10-27)。ブースターパック1つで +10(パックを買う保存と同じまとまりで1回だけ足す)。上限なし。500で `cardExchangeCatalog` がカタログ1冊にかえる(500減る・あまりは残る)。無い・壊れていたら 0。公開前に買ったパックの分は入れない |
+| `mh_card_catalogs_v1` | number / `cardNormalizeCatalogs` | 持っているバトルカードカタログの冊数。`cardUseCatalog` が1冊減らして、選んだカードを `mh_card_collection_v1` に1枚足す(持てる数いっぱいのカードは選べない)。無い・壊れていたら 0 |
 | `mh_card_top_assist_v1` | object | MFバトルカードのトップの助手の出し入れ `{ modeSelectArt, modeSelectComment }`。無い・壊れていたら両方ON |
 | `mh_card_rank_sync_v1` | string | MFバトルカードのランキング(表 `card_battle_ranks_v2`。無い環境では旧表 `card_battle_ranks`)へ最後に送った行の中身。同じなら送り直さない(90-card-rank.jsx) |
 | `mh_card_bgm_v1` | object / `normalizeCardBgm` | MFバトルカードのBGM `{ top: 曲id(トップ画面・2026-10-26 に足した項目), cpu: 'auto'(相手の助手に合わせる)か曲id, pvp: 曲id }`。オプションで曲を選んだときだけ書く。無い項目・知らない曲idは既定(top `atsu_cup_theme` = MF × ICHIKA MIX・cpu `auto`・pvp `ichika_battle`)へ。選んだ人の値は書き換えない |
@@ -97,6 +99,7 @@
 | `mh_card_ai_talk_v1` | object / `cardNormalizeAiTalk` | MFバトルカードの助手のおしゃべり(AI)の入/切 `{ on: 真偽 }`(2026-10-25)。無い・壊れていたら入。呼べるのは公開の印かデバッグ端末だけ(83-card-battle-talk-ai.jsx) |
 | `mh_raid_jack_frame_gift_v1` | object / `null` | プロフィールフレーム「ハロウィン・妖」をギフトで届けた印(`{ at, frameId }`・2026-10-20)。レイドで大王まで倒せたときの終章を見た参加者へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する |
 | `mh_sorashido_gift_v1` | object / `null` | ソラシドの沖縄のおみやげ(10,000ビートP)をギフトで届けた印(`{ at, beatPoints }`・2026-10-27)。ソラシドの加入のお話を見終えた人へ1回だけ届けるため。ギフトの一覧(`mh_gifts`)は古いものから消えるので、それだけでは二重を防げない。イベント回想で見直しても届かない |
+| `mh_corrupt_<元のキー>_v1` | string | 保存の JSON が壊れていて読めなかったときの、壊れた元の文字列の控え(2026-10-27)。読み込み(storeGet)が見つけたときに1回だけ書く(すでにあれば書かない)。元のキーは既定値で読まれ、作り直して書く所でそのまま上書きされるため、手で直せるよう残す。ゲームはこのキーを読まない |
 | `mh_assistant_bond_rewards_v1` | object / `null` | 助手の仲良し度の節目(Lv22・25・28・30)のごほうびを、**最初の量**(`ASSISTANT_BOND_LEVEL_REWARDS_V1`)で届けた印(`{ 助手のid: [22, 25, ...] }`・2026-10-21 #3241)。量を上げたあと(下の v2)は書かず、読むだけ。この印がある節目には、今の量との差のぶんだけを追加で届ける |
 | `mh_assistant_bond_rewards_v2` | object / `null` | 助手の仲良し度のLvごとのごほうび(Lv2〜30・`ASSISTANT_BOND_LEVEL_REWARDS`)を**今の量**で届けた(または最初の量との差を届けた)印(`{ 助手のid: [2, 3, ...] }`・2026-10-21)。助手ごとに各Lv1回。ギフトの一覧(`mh_gifts`)は古いものから消えるので、二重に届けないためにこの印を持つ。ギフトと同じ取引で保存する。起動時に、もう越えているLvのぶんをまとめて届ける |
 | `mh_raid_jack_boss_down_v1` | object / `null` | レイドの大王ジャックが(みんなで)倒されたのを見た印(`{ at }`・2026-10-20)。フレーム「ハロウィン・恐」をマーケットで買えるようにする条件。倒されたことは取り消されないので、一度見たら持っておき、サーバーへ届かないときも使う |
