@@ -20852,7 +20852,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hasAnyColor = dyePreviewColors.some(Boolean);
           // 部位ごとのタブで切り替える形(DyeTabbedSheet。2026-10-27 社長が案Cを選んだ)。保存の形はこれまでと同じ
           return (
-            <DyeTabbedSheet baseId={masu.baseId} src={base.imgUrl||base.iconUrl} name={masu.name} colors={dyePreviewColors}
+            <DyeTabbedSheet aria-label={`${masu.name}の染色`} baseId={masu.baseId} src={base.imgUrl||base.iconUrl} name={masu.name} colors={dyePreviewColors}
               title={`${masu.name}を染める`} onClose={closeDyePicker}
               onChange={(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;})}
               onCustom={(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}

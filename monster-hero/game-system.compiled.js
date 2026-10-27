@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1eebbc249dddf1a0
+// source-sha256: be0081775e736305
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10977,7 +10977,8 @@ const DyeTabbedSheet = ({
   title,
   onClose,
   footer,
-  note
+  note,
+  'aria-label': ariaLabel
 }) => {
   const [region, setRegion] = useState(0);
   const regionCount = dyeRegionCount(baseId);
@@ -10990,11 +10991,11 @@ const DyeTabbedSheet = ({
       inset: 0,
       zIndex: 31500,
       paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
-      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
     },
     role: "dialog",
     "aria-modal": "true",
-    "aria-label": title
+    "aria-label": ariaLabel || title
   }, React.createElement("div", {
     className: "w-full max-w-md [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl mx-auto flex-1 min-h-0 flex flex-col gap-2"
   }, React.createElement("div", {
@@ -132271,6 +132272,7 @@ function MonsterHeroGame() {
       }, (_, i) => (dyePreviewColors[i] || null) === (curColors[i] || null)).every(Boolean);
       const hasAnyColor = dyePreviewColors.some(Boolean);
       return React.createElement(DyeTabbedSheet, {
+        "aria-label": `${masu.name}の染色`,
         baseId: masu.baseId,
         src: base.imgUrl || base.iconUrl,
         name: masu.name,

@@ -1706,14 +1706,14 @@ const DYE_REGION_LABELS = ['①','②','③','④','⑤','⑥'];
 // 以前は小さな窓の中に、直径92pxの丸い顔アイコンと、全部位の色のボタン(29個×部位の数)が縦に積まれていて、
 // モンスターが小さく、下の部位まで長く送る必要があった。いまは画面いっぱいに出し、上に全身・下に1部位ぶんの操作を置く。
 // 保存の形(色idの配列)は変えない。濃さ・カスタム・「−」「＋」は DyeRegionColorControls のまま
-const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, onClose, footer, note }) => {
+const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, onClose, footer, note, 'aria-label': ariaLabel }) => {
   const [region, setRegion] = useState(0);
   const regionCount = dyeRegionCount(baseId);
   const current = Math.min(region, Math.max(0, regionCount - 1));
   return (
     <div data-dye-sheet className="fixed inset-0 flex flex-col gap-2 bg-slate-950 px-3"
-      style={{ position:'fixed', inset:0, zIndex:31500, paddingTop:'calc(0.75rem + env(safe-area-inset-top))', paddingBottom:'calc(0.75rem + env(safe-area-inset-bottom))' }}
-      role="dialog" aria-modal="true" aria-label={title}>
+      style={{ position:'fixed', inset:0, zIndex:31500, paddingTop:'calc(0.75rem + env(safe-area-inset-top))', paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }}
+      role="dialog" aria-modal="true" aria-label={ariaLabel || title}>
       <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl mx-auto flex-1 min-h-0 flex flex-col gap-2">
         <div className="flex items-center justify-between shrink-0">
           <h3 className="text-sm font-black text-white">🎨 {title}</h3>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6c3c4ffba6db795c
+// generated-sha256: eb9669cde7cc40e3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7986,14 +7986,14 @@ const DYE_REGION_LABELS = ['①','②','③','④','⑤','⑥'];
 // 以前は小さな窓の中に、直径92pxの丸い顔アイコンと、全部位の色のボタン(29個×部位の数)が縦に積まれていて、
 // モンスターが小さく、下の部位まで長く送る必要があった。いまは画面いっぱいに出し、上に全身・下に1部位ぶんの操作を置く。
 // 保存の形(色idの配列)は変えない。濃さ・カスタム・「−」「＋」は DyeRegionColorControls のまま
-const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, onClose, footer, note }) => {
+const DyeTabbedSheet = ({ baseId, src, name, colors, onChange, onCustom, title, onClose, footer, note, 'aria-label': ariaLabel }) => {
   const [region, setRegion] = useState(0);
   const regionCount = dyeRegionCount(baseId);
   const current = Math.min(region, Math.max(0, regionCount - 1));
   return (
     <div data-dye-sheet className="fixed inset-0 flex flex-col gap-2 bg-slate-950 px-3"
-      style={{ position:'fixed', inset:0, zIndex:31500, paddingTop:'calc(0.75rem + env(safe-area-inset-top))', paddingBottom:'calc(0.75rem + env(safe-area-inset-bottom))' }}
-      role="dialog" aria-modal="true" aria-label={title}>
+      style={{ position:'fixed', inset:0, zIndex:31500, paddingTop:'calc(0.75rem + env(safe-area-inset-top))', paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }}
+      role="dialog" aria-modal="true" aria-label={ariaLabel || title}>
       <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl mx-auto flex-1 min-h-0 flex flex-col gap-2">
         <div className="flex items-center justify-between shrink-0">
           <h3 className="text-sm font-black text-white">🎨 {title}</h3>
@@ -82554,7 +82554,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hasAnyColor = dyePreviewColors.some(Boolean);
           // 部位ごとのタブで切り替える形(DyeTabbedSheet。2026-10-27 社長が案Cを選んだ)。保存の形はこれまでと同じ
           return (
-            <DyeTabbedSheet baseId={masu.baseId} src={base.imgUrl||base.iconUrl} name={masu.name} colors={dyePreviewColors}
+            <DyeTabbedSheet aria-label={`${masu.name}の染色`} baseId={masu.baseId} src={base.imgUrl||base.iconUrl} name={masu.name} colors={dyePreviewColors}
               title={`${masu.name}を染める`} onClose={closeDyePicker}
               onChange={(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;})}
               onCustom={(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}
