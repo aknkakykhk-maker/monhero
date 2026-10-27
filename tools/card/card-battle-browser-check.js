@@ -582,10 +582,19 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     const volatile = /^mh_(debug_entry|debug_menu|last_|play_|session|boot|reload|device|playtime|visit|bgm_|se_|audio|login|daily_|mission|update|seen_build|build)/;
     // ★ポイントはビートP(2026-10-26 社長「カードポイントを廃止してビートポイントにして」)。ビートPの残高 mh_rhythm_event_points_v1 だけは書いてよい
     const BEAT_KEY = 'mh_rhythm_event_points_v1';
-    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k) && before[k] !== after.all[k]);
+    // 起動のあと、裏の通信が終わったときにアプリ全体が書くキー(カードの画面とは関係ない。2026-10-27 リプレイが確かめた)。
+    //   mh_ranking_cache … ランキングを読み終えたとき(60-app の saveRankingCache)
+    //   mh_rhythm_event_reward_v1 … 起動して1回だけ、モンヒロビートのイベント報酬を確かめたとき(markRhythmEventRewardClaimed)
+    // HOME で何もしなくても起動後 1.5〜6秒で書かれ、通信が遅いと上の控え(before)より後になって、対戦中に書かれたように見えていた
+    const BOOT_BG = new Set(['mh_ranking_cache', 'mh_rhythm_event_reward_v1']);
+    const changed = Object.keys(before).filter((k) => !k.startsWith('mh_card_') && k !== BEAT_KEY && !BOOT_BG.has(k) && !volatile.test(k) && before[k] !== after.all[k]);
     check('⑧ カードバトル以外の保存キーを書き換えていない(ビートPの残高を除く)', changed.length === 0, changed.join(', '));
-    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !volatile.test(k));
+    const added = Object.keys(after.all).filter((k) => !(k in before) && !k.startsWith('mh_card_') && k !== BEAT_KEY && !BOOT_BG.has(k) && !volatile.test(k));
     check('⑧ 新しく増えた保存キーは mh_card_* とビートPの残高だけ', added.length === 0, added.join(', '));
+    // 上で除いた2つは、カードの部品(82〜93)からは書かない(名前も出てこない)ことを、元のファイルで確かめる
+    const cardParts = fs.readdirSync(path.join(root, 'monster-hero/src/parts')).filter((f) => /^(8[2-9]|9\d)-.*\.jsx$/.test(f));
+    const bgInCard = cardParts.filter((f) => [...BOOT_BG].some((k) => fs.readFileSync(path.join(root, 'monster-hero/src/parts', f), 'utf8').includes(k)));
+    check('⑧ 起動のあとの裏の通信が書く2つのキーを、カードの部品からは書いていない', cardParts.length > 0 && bgInCard.length === 0, bgInCard.join(', ') || `${cardParts.length}ファイル`);
     // ⑬ 結果の画面の「クイック周回 ◯周ぶん」(デバッグの見本。NORMAL の勝ち = 16周ぶん・保存しない)
     await page.locator('[data-card-top="result"] button').first().click();
     await page.waitForTimeout(300);
