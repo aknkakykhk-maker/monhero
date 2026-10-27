@@ -604,18 +604,19 @@ const KYUBI_PHASES = Object.freeze([
 ]);
 const KYUBI_SAKURETSU_COMBO = 0.4;                 // 遠: 与ダメ40%の連撃×1
 const KYUBI_KAGERO_WAIT = 3;                       // 中: 完全回避を使ったら3ターン待ち
-const KYUBI_TENSHO = Object.freeze({ combo:0.2, dmg:0.15, hit:10, crit:0.1 }); // 近: 連撃20%×1・与ダメ+15%・命中+10%・会心率+10%
+// 近: 連撃20%×1・与ダメ+15%・会心率+20%(バトルに命中の判定が無いので、命中+10%は会心率へ回した。2026-10-27 社長)
+const KYUBI_TENSHO = Object.freeze({ combo:0.2, dmg:0.15, crit:0.2 });
 const KYUBI_RENGOKU_MAX = 10, KYUBI_RENGOKU_PER = 0.05;           // 零: 煉獄(上限10)1つにつき連撃5%
 const KYUBI_RENGOKU_GUTS_PER = 0.003, KYUBI_RENGOKU_GUTS_CAP = 0.2; // 零: 消費ガッツ1につき与ダメ+0.3%(上限+20%)
 const kyubiPhaseOfSlot = (slot) => KYUBI_PHASES.find((p) => p.slot === Math.floor(Number(slot))) || null;
 const kyubiRengokuOf = (n) => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(Number(n) || 0)));
-// 相の効き目。{ dmgMult, hitAdd(命中%), critAdd(会心率・小数), combo(exCombos の形 / null), evadeAfterAttack }
+// 相の効き目。{ dmgMult, critAdd(会心率・小数), combo(exCombos の形 / null), evadeAfterAttack }
 //   opts.rengoku … いまの煉獄の数 / opts.skillGuts … その技の消費ガッツ
 const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
-  const none = { dmgMult: 1, hitAdd: 0, critAdd: 0, combo: null, evadeAfterAttack: false };
+  const none = { dmgMult: 1, critAdd: 0, combo: null, evadeAfterAttack: false };
   if (phaseId === 'sakuretsu') return { ...none, combo: { count: 1, rate: KYUBI_SAKURETSU_COMBO, label: '炸裂ノ相' } };
   if (phaseId === 'kagero') return { ...none, evadeAfterAttack: true };
-  if (phaseId === 'tensho') return { ...none, dmgMult: 1 + KYUBI_TENSHO.dmg, hitAdd: KYUBI_TENSHO.hit, critAdd: KYUBI_TENSHO.crit,
+  if (phaseId === 'tensho') return { ...none, dmgMult: 1 + KYUBI_TENSHO.dmg, critAdd: KYUBI_TENSHO.crit,
     combo: { count: 1, rate: KYUBI_TENSHO.combo, label: '天翔ノ相' } };
   if (phaseId === 'rengoku') {
     const r = kyubiRengokuOf(opts.rengoku), guts = Math.max(0, Number(opts.skillGuts) || 0);
@@ -680,10 +681,11 @@ const rollKogare = (rollsLeft, rand) => { const left = Math.max(0, Math.floor(Nu
   return { confused: r < KOGARE_CHANCE, rollsLeft: left - 1 }; };
 // 固有技の効果「霊魂」(キュービ・オリヒメ共通。2026-10-27 社長が「推奨」の段を選んだ)
 //   使った次のターンから3ターン、カードの消費ガッツ−30%(5つの遊びは味方のカード全部・タクティクスは使った子のカードだけ)。
-//   さらに敵に幻惑: 同じ3ターン、敵の命中−10%。使い直したらかけ直し(重ならない)。幻惑は敵1体ぶんなのでWAVEが変わると消える。
+//   さらに幻惑: 同じ3ターン、味方全員の回避率+10%(バトルに命中の判定が無いので「敵の命中−10%」を読み替えた。2026-10-27 社長。
+//   5つの遊びもタクティクスも、どの敵の攻撃にも効く。俊足・影潜と同じ回避の表に足す)。使い直したらかけ直し(重ならない)。
 //   煉獄ノ相のダメージは、軽くなる前の消費で数える(kyubiPhaseEffectOf へは元の消費ガッツを渡す)
 const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
-const REIKON_TURNS = 3, REIKON_GUTS_MULT = 0.7, REIKON_HIT_DOWN = 10;
+const REIKON_TURNS = 3, REIKON_GUTS_MULT = 0.7, REIKON_EVASION_UP = 10;
 const hasReikon = (id) => !!id && REIKON_MONSTER_IDS.includes(id);
 // { wait: 効きはじめるまでのターン, turns: 効く残りターン }。ドリームペインと同じ数え方
 const reikonOf = (v) => ({ wait: Math.max(0, Math.floor(Number(v?.wait) || 0)), turns: Math.max(0, Math.floor(Number(v?.turns) || 0)) });
@@ -693,8 +695,8 @@ const tickReikon = (v) => { const r = reikonOf(v); if (r.wait > 0) return { ...r
 const reikonActive = (v) => { const r = reikonOf(v); return r.wait === 0 && r.turns > 0; };
 // 消費ガッツに掛ける倍率(既存の gutsCostMult と同じく、掛けたあと切り捨てる)
 const reikonGutsMult = (v) => (reikonActive(v) ? REIKON_GUTS_MULT : 1);
-// 敵の命中から引く量(%)
-const reikonHitDown = (v) => (reikonActive(v) ? REIKON_HIT_DOWN : 0);
+// 味方全員の回避率に足す量(%。回避の表は%で持つ)
+const reikonEvasionUp = (v) => (reikonActive(v) ? REIKON_EVASION_UP : 0);
 // いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
