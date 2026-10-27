@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00a9d9177bd9d03f
+// source-sha256: 8f8f041fd1bf0085
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18950,6 +18950,273 @@ const kusabiEffectText = (n, max = KUSABI_MAX) => {
   const c = kusabiCountOf(n, max);
   return c > 0 ? `楔${c}/${max} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : '';
 };
+const KYUBI_MONSTER_ID = 'Kyubi',
+  ORIHIME_MONSTER_ID = 'Orihime';
+const KYUBI_PHASES = Object.freeze([Object.freeze({
+  id: 'rengoku',
+  slot: 0,
+  name: '煉獄ノ相'
+}), Object.freeze({
+  id: 'tensho',
+  slot: 1,
+  name: '天翔ノ相'
+}), Object.freeze({
+  id: 'kagero',
+  slot: 2,
+  name: '陽炎ノ相'
+}), Object.freeze({
+  id: 'sakuretsu',
+  slot: 3,
+  name: '炸裂ノ相'
+})]);
+const KYUBI_SAKURETSU_COMBO = 0.4;
+const KYUBI_KAGERO_WAIT = 3;
+const KYUBI_TENSHO = Object.freeze({
+  combo: 0.2,
+  dmg: 0.15,
+  hit: 10,
+  crit: 0.1
+});
+const KYUBI_RENGOKU_MAX = 10,
+  KYUBI_RENGOKU_PER = 0.05;
+const KYUBI_RENGOKU_GUTS_PER = 0.003,
+  KYUBI_RENGOKU_GUTS_CAP = 0.2;
+const kyubiPhaseOfSlot = slot => KYUBI_PHASES.find(p => p.slot === Math.floor(Number(slot))) || null;
+const kyubiRengokuOf = n => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
+  const none = {
+    dmgMult: 1,
+    hitAdd: 0,
+    critAdd: 0,
+    combo: null,
+    evadeAfterAttack: false
+  };
+  if (phaseId === 'sakuretsu') return {
+    ...none,
+    combo: {
+      count: 1,
+      rate: KYUBI_SAKURETSU_COMBO,
+      label: '炸裂ノ相'
+    }
+  };
+  if (phaseId === 'kagero') return {
+    ...none,
+    evadeAfterAttack: true
+  };
+  if (phaseId === 'tensho') return {
+    ...none,
+    dmgMult: 1 + KYUBI_TENSHO.dmg,
+    hitAdd: KYUBI_TENSHO.hit,
+    critAdd: KYUBI_TENSHO.crit,
+    combo: {
+      count: 1,
+      rate: KYUBI_TENSHO.combo,
+      label: '天翔ノ相'
+    }
+  };
+  if (phaseId === 'rengoku') {
+    const r = kyubiRengokuOf(opts.rengoku),
+      guts = Math.max(0, Number(opts.skillGuts) || 0);
+    return {
+      ...none,
+      dmgMult: 1 + Math.min(KYUBI_RENGOKU_GUTS_CAP, KYUBI_RENGOKU_GUTS_PER * guts),
+      combo: r > 0 ? {
+        count: 1,
+        rate: KYUBI_RENGOKU_PER * r,
+        label: '煉獄ノ相'
+      } : null
+    };
+  }
+  return none;
+};
+const kageroOf = v => ({
+  ready: !!v?.ready,
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0))
+});
+const kageroAfterAttack = v => {
+  const k = kageroOf(v);
+  return k.wait === 0 ? {
+    ...k,
+    ready: true
+  } : k;
+};
+const kageroUseEvade = v => {
+  const k = kageroOf(v);
+  return k.ready ? {
+    ready: false,
+    wait: KYUBI_KAGERO_WAIT
+  } : k;
+};
+const tickKagero = v => {
+  const k = kageroOf(v);
+  return {
+    ...k,
+    wait: Math.max(0, k.wait - 1)
+  };
+};
+const KITSUNEBI_MAX = 5,
+  KITSUNEBI_REGEN_TURNS = 3,
+  KITSUNEBI_BUFF_TURNS = 3;
+const KITSUNEBI_ATTACK_EXTRA = 0.1,
+  KITSUNEBI_GUARD_CUT = 0.2,
+  KITSUNEBI_ASSIST_GUTS = 0.05,
+  KITSUNEBI_SHIELD_CUT = 0.5;
+const KITSUNEBI_BUFF_DMG_PER = 0.04,
+  KITSUNEBI_BUFF_TAKEN_PER = 0.03;
+const kitsunebiOf = v => ({
+  active: !!v?.active,
+  fires: Math.min(KITSUNEBI_MAX, Math.max(0, Math.floor(Number(v?.fires) || 0))),
+  regen: Math.max(0, Math.floor(Number(v?.regen) || 0)),
+  buffTurns: Math.max(0, Math.floor(Number(v?.buffTurns) || 0))
+});
+const useKitsunebi = v => ({
+  ...kitsunebiOf(v),
+  active: true,
+  fires: KITSUNEBI_MAX,
+  regen: 0,
+  buffTurns: KITSUNEBI_BUFF_TURNS
+});
+const tickKitsunebi = v => {
+  const k = kitsunebiOf(v);
+  if (!k.active) return k;
+  const regen = k.fires < KITSUNEBI_MAX ? k.regen + 1 : 0,
+    back = regen >= KITSUNEBI_REGEN_TURNS;
+  return {
+    ...k,
+    fires: back ? k.fires + 1 : k.fires,
+    regen: back ? 0 : regen,
+    buffTurns: Math.max(0, k.buffTurns - 1)
+  };
+};
+const kitsunebiOnHit = v => {
+  const k = kitsunebiOf(v);
+  return k.active && k.fires > 0 ? {
+    next: {
+      ...k,
+      fires: k.fires - 1
+    },
+    takenMult: 1 - KITSUNEBI_SHIELD_CUT
+  } : {
+    next: k,
+    takenMult: 1
+  };
+};
+const kitsunebiEffectOf = (v, kind = 'attack') => {
+  const k = kitsunebiOf(v),
+    on = k.active && k.fires > 0,
+    buff = k.active && k.buffTurns > 0;
+  return {
+    extraHit: on && kind === 'attack' ? KITSUNEBI_ATTACK_EXTRA : 0,
+    guardCut: on && kind === 'guard' ? KITSUNEBI_GUARD_CUT : 0,
+    assistGuts: on && kind === 'assist' ? KITSUNEBI_ASSIST_GUTS : 0,
+    buffDmg: buff ? KITSUNEBI_BUFF_DMG_PER * k.fires : 0,
+    buffTaken: buff ? KITSUNEBI_BUFF_TAKEN_PER * k.fires : 0
+  };
+};
+const ORIHIME_BOND_TIERS = Object.freeze({
+  1: Object.freeze({
+    max: 5
+  }),
+  2: Object.freeze({
+    max: 8
+  }),
+  3: Object.freeze({
+    max: 12
+  })
+});
+const orihimeDiffOf = (a, b) => {
+  const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b)));
+  return d >= 1 && d <= 3 ? d : 0;
+};
+const ouseOf = (n, diff) => {
+  const t = ORIHIME_BOND_TIERS[diff];
+  return t ? Math.min(t.max, Math.max(0, Math.floor(Number(n) || 0))) : Math.max(0, Math.floor(Number(n) || 0));
+};
+const addOuse = (n, diff, sameKind, partnerUp = true) => sameKind && partnerUp && ORIHIME_BOND_TIERS[diff] ? ouseOf(Number(n) + 1, diff) : ouseOf(n, diff);
+const orihimeBondEffectOf = (diff, n, partnerUp = true) => {
+  const none = {
+    dmgAdd: 0,
+    takenCut: 0,
+    share: false
+  };
+  if (!partnerUp || !ORIHIME_BOND_TIERS[diff]) return none;
+  const c = ouseOf(n, diff);
+  if (diff === 1) return {
+    ...none,
+    dmgAdd: 0.10 + 0.02 * c
+  };
+  if (diff === 2) return {
+    ...none,
+    takenCut: 0.10,
+    dmgAdd: c >= 4 ? 0.02 * c : 0
+  };
+  return {
+    dmgAdd: c >= 12 ? 0.40 : 0,
+    takenCut: c >= 6 ? 0.15 : 0,
+    share: true
+  };
+};
+const shareOrihimeDamage = dmg => {
+  const d = Math.max(0, Math.floor(Number(dmg) || 0));
+  return [Math.ceil(d / 2), Math.floor(d / 2)];
+};
+const HOSHIAI_PER_TURN = 2;
+const startHoshiai = (n, diff) => {
+  const c = ouseOf(n, diff);
+  return {
+    turns: Math.min(5, 2 + Math.floor(c / 4)),
+    rate: Math.min(0.5, 0.30 + 0.015 * c + (diff === 2 ? 0.05 : diff === 3 ? 0.10 : 0)),
+    perTurn: HOSHIAI_PER_TURN
+  };
+};
+const KOGARE_TURNS = 3,
+  KOGARE_CHANCE = 0.25,
+  KOGARE_ROLLS_PER_TURN = 2;
+const rollKogare = (rollsLeft, rand) => {
+  const left = Math.max(0, Math.floor(Number(rollsLeft) || 0));
+  if (left <= 0) return {
+    confused: false,
+    rollsLeft: 0
+  };
+  const r = Number.isFinite(rand) ? rand : Math.random();
+  return {
+    confused: r < KOGARE_CHANCE,
+    rollsLeft: left - 1
+  };
+};
+const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
+const REIKON_TURNS = 3,
+  REIKON_GUTS_MULT = 0.7,
+  REIKON_HIT_DOWN = 10;
+const hasReikon = id => !!id && REIKON_MONSTER_IDS.includes(id);
+const reikonOf = v => ({
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
+  turns: Math.max(0, Math.floor(Number(v?.turns) || 0))
+});
+const startReikon = () => ({
+  wait: 1,
+  turns: REIKON_TURNS
+});
+const tickReikon = v => {
+  const r = reikonOf(v);
+  if (r.wait > 0) return {
+    ...r,
+    wait: r.wait - 1
+  };
+  return r.turns > 1 ? {
+    ...r,
+    turns: r.turns - 1
+  } : {
+    wait: 0,
+    turns: 0
+  };
+};
+const reikonActive = v => {
+  const r = reikonOf(v);
+  return r.wait === 0 && r.turns > 0;
+};
+const reikonGutsMult = v => reikonActive(v) ? REIKON_GUTS_MULT : 1;
+const reikonHitDown = v => reikonActive(v) ? REIKON_HIT_DOWN : 0;
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
   if (!trait) return '';
@@ -23043,10 +23310,6 @@ const SKM_KYUBI = Object.freeze({
     over: 'pillar',
     burst: 'star',
     form: 'fire'
-  }), skm('warp', {
-    c: 'fire',
-    over: 'shadow',
-    burst: 'dust'
   }), skm('gather', {
     c: 'blue',
     fx: skmFx('fall', 'flame', 10),
@@ -23057,23 +23320,27 @@ const SKM_KYUBI = Object.freeze({
     c: 'wind',
     over: 'tornado',
     burst: 'leaf'
-  }), skm('cast', {
-    c: 'sky',
-    fx: skmFx('orbit', 'bubble', 10),
-    over: 'boom',
-    burst: 'bubble'
-  }), skm('float', {
-    c: 'cosmic',
-    fx: skmFx('fall', 'star', 12),
-    over: 'aurora',
-    burst: 'star',
-    form: 'light'
+  }), skm('warp', {
+    c: 'fire',
+    over: 'shadow',
+    burst: 'dust'
   }), skm('gather', {
     c: 'blood',
     fx: skmFx('orbit', 'flame', 9),
     over: 'eclipse',
     burst: 'spark',
     form: 'fire'
+  }), skm('float', {
+    c: 'cosmic',
+    fx: skmFx('fall', 'star', 12),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  }), skm('cast', {
+    c: 'sky',
+    fx: skmFx('orbit', 'bubble', 10),
+    over: 'boom',
+    burst: 'bubble'
   })]
 });
 const SKM_ORIHIME = Object.freeze({
@@ -23096,19 +23363,19 @@ const SKM_ORIHIME = Object.freeze({
     burst: 'star',
     form: 'light'
   }), {
-    ...SKM_KYUBI.unique[3],
+    ...SKM_KYUBI.unique[5],
     c: 'cosmic'
+  }, {
+    ...SKM_KYUBI.unique[3],
+    c: 'sky'
   }, {
     ...SKM_KYUBI.unique[4],
     c: 'sky'
   }, {
-    ...SKM_KYUBI.unique[5],
-    c: 'sky'
-  }, {
-    ...SKM_KYUBI.unique[6],
+    ...SKM_KYUBI.unique[8],
     c: 'pink'
   }, {
-    ...SKM_KYUBI.unique[8],
+    ...SKM_KYUBI.unique[6],
     c: 'psy'
   }, {
     ...SKM_KYUBI.unique[7],
@@ -27808,6 +28075,7 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -27816,10 +28084,11 @@ const sbAutomationWriteBlocked = (url, method) => {
     const m = String(method || 'GET').toUpperCase();
     if (m === 'GET' || m === 'HEAD') return false;
     const u = String(url || '');
-    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (!u.startsWith(SUPABASE_URL)) return false;
+    const path = u.slice(SUPABASE_URL.length).split('?')[0];
+    if (path.startsWith('/rest/v1/rpc/') && !SB_WRITE_RPCS.includes(path.slice('/rest/v1/rpc/'.length))) return false;
     if (Array.isArray(stubbed)) {
-      const path = u.slice(SUPABASE_URL.length).split('?')[0];
-      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
+      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/rest/v1/rpc/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
     }
     return true;
   } catch {
@@ -42384,6 +42653,14 @@ const MONSTER_TYPE_OF = {
   Dreamy: {
     main: 'supporter',
     sub: 'shadow'
+  },
+  Kyubi: {
+    main: 'attacker',
+    sub: 'shadow'
+  },
+  Orihime: {
+    main: 'supporter',
+    sub: 'tank'
   }
 };
 const monsterTypeOf = monId => {
@@ -74118,6 +74395,249 @@ const monsterCheckStatRows = mon => {
     };
   });
 };
+const monsterCheckPct = v => `${Math.round(Number(v || 0) * 1000) / 10}%`;
+const MonsterCheckLabButton = ({
+  onClick,
+  children,
+  tone = 'slate',
+  active = false
+}) => React.createElement("button", {
+  type: "button",
+  onClick: onClick,
+  className: `min-h-[44px] rounded-xl px-2 text-[11px] font-black active:scale-95 ${active ? 'bg-fuchsia-600 text-white' : tone === 'amber' ? 'bg-amber-700/70 text-white' : 'bg-slate-800 text-slate-100'}`
+}, children);
+const MonsterCheckLabLines = ({
+  lines
+}) => React.createElement("div", {
+  className: "rounded-lg bg-black/40 p-2 text-[10px] font-bold leading-relaxed text-cyan-100"
+}, lines.filter(Boolean).map((t, i) => React.createElement("div", {
+  key: i
+}, t)));
+const monsterCheckReikonLine = v => {
+  const r = reikonOf(v);
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし';
+};
+function KyubiTraitLab() {
+  const [phaseId, setPhaseId] = useState('sakuretsu');
+  const [guts, setGuts] = useState(56);
+  const [rengoku, setRengoku] = useState(0);
+  const [kagero, setKagero] = useState(kageroOf(null));
+  const [fox, setFox] = useState(kitsunebiOf(null));
+  const [reikon, setReikon] = useState(reikonOf(null));
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setRengoku(0);
+    setKagero(kageroOf(null));
+    setFox(kitsunebiOf(null));
+    setReikon(reikonOf(null));
+    setTurn(1);
+    setLog('');
+  };
+  const eff = kyubiPhaseEffectOf(phaseId, {
+    rengoku,
+    skillGuts: guts
+  });
+  const card = kind => {
+    if (phaseId === 'rengoku') setRengoku(n => kyubiRengokuOf(n + 1));
+    if (kind === 'attack' && phaseId === 'kagero') setKagero(k => kageroAfterAttack(k));
+    const f = kitsunebiEffectOf(fox, kind);
+    setLog(kind === 'attack' ? `攻撃: 与ダメ×${(eff.dmgMult * (1 + f.buffDmg)).toFixed(3)}${eff.combo ? `・${eff.combo.label}の連撃${monsterCheckPct(eff.combo.rate)}` : ''}${f.extraHit ? `・狐火の追加${monsterCheckPct(f.extraHit)}` : ''}` : kind === 'guard' ? `ガード: 狐火で被ダメ−${monsterCheckPct(f.guardCut)}` : `助け: 狐火でガッツ+${monsterCheckPct(f.assistGuts)}`);
+  };
+  const hit = () => {
+    if (phaseId === 'kagero' && kagero.ready) {
+      setKagero(k => kageroUseEvade(k));
+      setLog('攻撃を受けた: 陽炎ノ相で完全回避(狐火は減らない)');
+      return;
+    }
+    const r = kitsunebiOnHit(fox),
+      f = kitsunebiEffectOf(fox);
+    setFox(r.next);
+    setLog(`攻撃を受けた: 被ダメ×${(r.takenMult * (1 - f.buffTaken)).toFixed(3)}${r.takenMult < 1 ? '(狐火が1つ盾になって消えた)' : ''}`);
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setKagero(k => tickKagero(k));
+    setFox(k => tickKitsunebi(k));
+    setReikon(r => tickReikon(r));
+    setLog('ターンを進めた');
+  };
+  const unique = () => {
+    card('attack');
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+  };
+  const ex = () => {
+    setFox(k => useKitsunebi(k));
+    setLog(fox.active ? '九尾幻灯(2回目): 狐火満タン・強化かけ直し' : '九尾幻灯: 狐火5個・幻灯強化3ターン');
+  };
+  const f = kitsunebiEffectOf(fox);
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Kyubi",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, KYUBI_PHASES.map(p => React.createElement(MonsterCheckLabButton, {
+    key: p.id,
+    active: p.id === phaseId,
+    onClick: () => {
+      setPhaseId(p.id);
+      reset();
+    }
+  }, RANGE_LABELS[p.slot], React.createElement("br", null), p.name))), phaseId === 'rengoku' && React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, [20, 40, 56].map(g => React.createElement(MonsterCheckLabButton, {
+    key: g,
+    active: g === guts,
+    onClick: () => setGuts(g)
+  }, "消費ガッツ", g))), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('attack')
+  }, "攻撃のカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('guard')
+  }, "ガードのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('assist')
+  }, "助けのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: hit
+  }, "攻撃を受ける"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: ex
+  }, "EX 九尾幻灯"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
+function OrihimeTraitLab() {
+  const [diff, setDiff] = useState(3);
+  const [partnerUp, setPartnerUp] = useState(true);
+  const [ouse, setOuse] = useState(0);
+  const [hoshiai, setHoshiai] = useState(null);
+  const [kogare, setKogare] = useState({
+    turns: 0,
+    rollsLeft: 0
+  });
+  const [reikon, setReikon] = useState(reikonOf(null));
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setOuse(0);
+    setHoshiai(null);
+    setKogare({
+      turns: 0,
+      rollsLeft: 0
+    });
+    setReikon(reikonOf(null));
+    setTurn(1);
+    setLog('');
+  };
+  const bond = orihimeBondEffectOf(diff, ouse, partnerUp);
+  const max = ORIHIME_BOND_TIERS[diff]?.max || 0;
+  const move = same => {
+    setOuse(n => addOuse(n, diff, same, partnerUp));
+    setLog(same ? partnerUp ? '同じ種類の動き: 逢瀬+1' : '相方が倒れているので逢瀬は増えない' : '違う種類の動き: 逢瀬はそのまま');
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setHoshiai(h => h && h.turns > 1 ? {
+      ...h,
+      turns: h.turns - 1
+    } : null);
+    setKogare(k => k.turns > 1 ? {
+      turns: k.turns - 1,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    } : {
+      turns: 0,
+      rollsLeft: 0
+    });
+    setReikon(r => tickReikon(r));
+    setLog('ターンを進めた');
+  };
+  const unique = () => {
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+  };
+  const star = () => {
+    const h = startHoshiai(ouse, diff);
+    setHoshiai(h);
+    setOuse(0);
+    setLog(`星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(h.rate)}・1ターン${h.perTurn}回まで(逢瀬は0へ)`);
+  };
+  const longing = () => {
+    setKogare({
+      turns: KOGARE_TURNS,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    });
+    setLog(`焦がれ待つ天ノ河: ${KOGARE_TURNS}ターン`);
+  };
+  const attack = () => {
+    if (kogare.turns <= 0) {
+      setLog('攻撃が当たった(焦がれ待つ天ノ河は効いていない)');
+      return;
+    }
+    const r = rollKogare(kogare.rollsLeft);
+    setKogare(k => ({
+      ...k,
+      rollsLeft: r.rollsLeft
+    }));
+    setLog(kogare.rollsLeft <= 0 ? 'このターンはもう振れない' : r.confused ? '攻撃が当たった: 敵が「意味不明」になった' : '攻撃が当たった: 意味不明にはならなかった');
+  };
+  const share = () => {
+    const [a, b] = bond.share ? shareOrihimeDamage(100) : [100, 0];
+    setLog(bond.share ? `100のダメージを分け合う: 受けた子${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ');
+  };
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Orihime",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, [1, 2, 3].map(d => React.createElement(MonsterCheckLabButton, {
+    key: d,
+    active: d === diff,
+    onClick: () => {
+      setDiff(d);
+      reset();
+    }
+  }, "間合いの差", d)), React.createElement(MonsterCheckLabButton, {
+    active: !partnerUp,
+    onClick: () => setPartnerUp(v => !v)
+  }, partnerUp ? '相方 立っている' : '相方 倒れた')), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(true)
+  }, "2体が同じ動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(false)
+  }, "違う動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    onClick: attack
+  }, "攻撃が当たる"), React.createElement(MonsterCheckLabButton, {
+    onClick: share
+  }, "100のダメージを受ける"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: star
+  }, "勇者EX 星合の刻"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: longing
+  }, "共モンEX 焦がれ待つ天ノ河"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / 間合いの差${diff} / 逢瀬 ${ouse}/${max}`, `つながり: ${bond.dmgAdd ? `与ダメ+${monsterCheckPct(bond.dmgAdd)} ` : ''}${bond.takenCut ? `被ダメ−${monsterCheckPct(bond.takenCut)} ` : ''}${bond.share ? 'ダメージを分け合う' : ''}${!bond.dmgAdd && !bond.takenCut && !bond.share ? 'なし' : ''}`, hoshiai ? `星合: あと${hoshiai.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(hoshiai.rate)}・1ターン${hoshiai.perTurn}回まで` : '星合: なし', monsterCheckReikonLine(reikon), kogare.turns ? `焦がれ待つ天ノ河: あと${kogare.turns}ターン・このターン振れる残り${kogare.rollsLeft}回(${monsterCheckPct(KOGARE_CHANCE)})` : '焦がれ待つ天ノ河: なし', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
 function MonsterCheckDebugScreen({
   masuMons = [],
   unlockedMonsterIds = [],
@@ -74710,7 +75230,7 @@ function MonsterCheckDebugScreen({
     className: "space-y-2"
   }, row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
     block: true
-  }), React.createElement("div", null, React.createElement("div", {
+  }), mon.id === KYUBI_MONSTER_ID && React.createElement(KyubiTraitLab, null), mon.id === ORIHIME_MONSTER_ID && React.createElement(OrihimeTraitLab, null), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
   }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? mon.draft ? draftNamePills(HERO_ATK_NAMES[mon.id], 'border-red-500/30 bg-red-950/25') : skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
     className: "text-center text-[11px] font-bold text-rose-300"
@@ -91329,6 +91849,7 @@ const CardBattleBoard = ({
   }, [st, paused, tutI]);
   const turnSeen = useRef(null);
   useEffect(() => {
+    if (replay) return undefined;
     if (st.phase === 'setup' || st.winner !== null || st.turn < 1) return undefined;
     const id = `${st.turn}-${st.active}`;
     if (turnSeen.current === id) return undefined;
@@ -91692,7 +92213,7 @@ const CardBattleBoard = ({
       });
     }
     if (mode === 'guard') guardOpts.filter(o => o.hand === i).forEach(o => {
-      out[`${CARD_ME}-${o.mon}`] = o;
+      out[`${CARD_ME}-${o.to !== undefined ? o.to : o.mon}`] = o;
     });
     if ((mode === 'guts' || mode === 'setup') && !picks.includes(i)) {
       const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : gutsMax;
@@ -91735,6 +92256,32 @@ const CardBattleBoard = ({
       }
     };
     tapHand(i);
+  };
+  const dropUse = t => {
+    const monKey = o => o.mon === undefined ? -1 : o.mon;
+    const users = [...new Set(attackOpts.filter(o => o.hand[0] === t.hand[0]).map(monKey))];
+    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
+      setSel({
+        hand: t.hand[0]
+      });
+      setHint('使う子をタップしてください');
+      return;
+    }
+    const same = attackOpts.filter(o => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
+    if (t.split || t.fuse) {
+      setSplitAsk(same.filter(o => o.split || o.fuse));
+      return;
+    }
+    if (t.form) {
+      setSel({
+        hand: t.hand[0],
+        mon: monKey(t),
+        set: JSON.stringify(t.hand)
+      });
+      setHint('空中か地上かを選んでください');
+      return;
+    }
+    askUse(t);
   };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
@@ -91798,7 +92345,7 @@ const CardBattleBoard = ({
         if (t === 'pick') {
           Audio_.fgSe.tap();
           setPicks(cur => cur.includes(i) ? cur : [...cur, i]);
-        } else if (t && mode === 'attack') askUse(t);else if (t) step(t);
+        } else if (t && mode === 'attack') dropUse(t);else if (t) step(t);
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
@@ -98116,6 +98663,25 @@ const CardRecordScreen = ({
     },
     className: `min-h-[40px] rounded-xl border text-[12px] font-black ${tab === t.id ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`
   }, t.label))), React.createElement("div", {
+    "data-card-record-side": true,
+    className: "mb-2 hidden shrink-0 space-y-2 landscape:block"
+  }, onOpenReplays && React.createElement("button", {
+    type: "button",
+    "data-card-replays-open-side": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpenReplays();
+    },
+    className: "mh-button mh-button-secondary flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+  }, React.createElement("span", null, React.createElement("b", {
+    className: "block text-[13px] font-black text-sky-100"
+  }, "▶ 過去の対戦"), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "遊んだ試合を、はじめから見返せます")), React.createElement("span", {
+    className: "text-[18px] text-slate-400"
+  }, "›")), React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`
+  }, cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu'), cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp'), cell('いまの連勝', r.streak.now, '連勝', 'side-now'), cell('最高の連勝', r.streak.best, '連勝', 'side-best'))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
   }, tab === 'all' && React.createElement(React.Fragment, null, onOpenReplays && React.createElement("button", {
     type: "button",
@@ -98124,7 +98690,7 @@ const CardRecordScreen = ({
       Audio_.fgSe.tap();
       onOpenReplays();
     },
-    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left landscape:hidden"
   }, React.createElement("span", null, React.createElement("b", {
     className: "block text-[14px] font-black text-sky-100"
   }, "▶ 過去の対戦"), React.createElement("small", {
@@ -102864,19 +103430,52 @@ const CardPvpWatchList = ({
     style: JA_WRAP_STYLE
   }, jaWrap('見るだけで、操作やスタンプはできません。手札は見えません')));
 };
+const CardWatchMonMini = ({
+  db,
+  st,
+  p,
+  m
+}) => {
+  const mon = st.players[p].mons[m];
+  const pct = Math.max(0, Math.round(mon.life / mon.max * 100));
+  return React.createElement("div", {
+    "data-card-watch-mon": `${p}-${m}`,
+    className: `flex w-[32%] min-w-0 items-center gap-1 ${mon.ko ? 'opacity-50' : ''}`
+  }, React.createElement("img", {
+    src: mon.ko ? CARD_BACK_IMG() : CARD_IMG(cardMonsterOf(db, mon.no).img),
+    alt: mon.name,
+    className: "h-[40px] w-[28px] shrink-0 rounded-[3px] object-cover shadow"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "truncate text-[11px] font-black leading-tight text-white"
+  }, mon.name), React.createElement("div", {
+    className: "text-[12px] font-black leading-tight tabular-nums text-white"
+  }, mon.ko ? 'KO' : mon.life, React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, " / ", mon.max)), React.createElement("div", {
+    className: "h-[5px] overflow-hidden rounded bg-slate-700"
+  }, React.createElement("div", {
+    className: `h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`,
+    style: {
+      width: `${pct}%`
+    }
+  }))));
+};
 const CardWatchSide = ({
   db,
   st,
   p,
   person,
-  top = false
+  top = false,
+  low = false
 }) => {
   const pl = st.players[p];
   const active = st.winner === null && cardPvpDecider(st) === p;
   const row = React.createElement("div", {
     className: "flex items-center gap-2 px-1"
   }, React.createElement("span", {
-    className: "block h-[34px] w-[34px] shrink-0"
+    className: `block ${low ? 'h-[24px] w-[24px]' : 'h-[34px] w-[34px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
     icon: person && person.icon,
     frame: person && person.fr,
@@ -102896,11 +103495,17 @@ const CardWatchSide = ({
     key: i,
     src: CARD_BACK_IMG(),
     alt: "",
-    className: "h-[30px] w-[21px] rounded-[2px] shadow"
+    className: `${low ? 'h-[22px] w-[15px]' : 'h-[30px] w-[21px]'} rounded-[2px] shadow`
   }))));
   const mons = React.createElement("div", {
     className: "flex justify-between"
-  }, pl.mons.map((_, m) => React.createElement(CardMonSlot, {
+  }, pl.mons.map((_, m) => low ? React.createElement(CardWatchMonMini, {
+    key: m,
+    db: db,
+    st: st,
+    p: p,
+    m: m
+  }) : React.createElement(CardMonSlot, {
     key: m,
     db: db,
     st: st,
@@ -102910,7 +103515,7 @@ const CardWatchSide = ({
   })));
   return React.createElement("div", {
     "data-card-watch-side": p,
-    className: `rounded-2xl border p-1.5 ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`
+    className: `rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`
   }, top ? React.createElement(React.Fragment, null, row, mons) : React.createElement(React.Fragment, null, mons, row));
 };
 const CardPvpWatchScreen = ({
@@ -102929,7 +103534,21 @@ const CardPvpWatchScreen = ({
   const st = w.st;
   const winner = w.end ? cardWatchSideWinner(w.end.winner, w.side) : st && st.winner !== null ? st.winner : null;
   const nameOf = p => meta && meta.p[p] ? meta.p[p].name : p === 0 ? 'ブリーダー' : 'あいて';
-  const lines = st ? st.log.slice(-3).map(l => l.text) : [];
+  const [low, setLow] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
+  useEffect(() => {
+    const on = () => setLow(window.innerHeight < 520);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const lines = st ? st.log.slice(low ? -2 : -3).map(l => l.text) : [];
+  const overBox = st && meta && (w.phase === 'over' || winner !== null) && React.createElement("div", {
+    "data-card-watch-over": winner === null ? 'none' : winner,
+    className: `rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`
+  }, React.createElement("div", {
+    className: `${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`
+  }, winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`, low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''), !low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && React.createElement("div", {
+    className: "mt-0.5 text-[12px] font-bold text-slate-300"
+  }, "(", w.end.reason, ")"));
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-watch": w.phase,
@@ -102940,7 +103559,7 @@ const CardPvpWatchScreen = ({
     onBack: back,
     note: meta ? `${nameOf(0)} vs ${nameOf(1)}` : 'つないでいます…'
   }), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} space-y-2 pb-3`
+    className: `${SCREEN_LIST_CLASS} ${low ? 'space-y-1' : 'space-y-2'} pb-3`
   }, w.phase === 'full' && React.createElement("p", {
     "data-card-watch-full": true,
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100",
@@ -102959,15 +103578,16 @@ const CardPvpWatchScreen = ({
   }, st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'), React.createElement("span", {
     "data-card-watch-eyes": w.eyes,
     className: "tabular-nums"
-  }, "👀 ", w.eyes, "人が見ています")), React.createElement(CardWatchSide, {
+  }, "👀 ", w.eyes, "人が見ています")), low && overBox, React.createElement(CardWatchSide, {
     db: db,
     st: st,
     p: 1,
     person: meta.p[1],
-    top: true
+    top: true,
+    low: low
   }), React.createElement("div", {
     "data-card-watch-center": true,
-    className: "flex min-h-[100px] items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-2"
+    className: `flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`
   }, w.last ? React.createElement("div", {
     key: w.last.key,
     "data-card-watch-last": w.last.cards.join(','),
@@ -102982,10 +103602,10 @@ const CardPvpWatchScreen = ({
     }, React.createElement("img", {
       src: CARD_IMG(c.img),
       alt: c.name,
-      className: "h-[88px] w-[63px] rounded-md object-cover shadow-lg"
+      className: `${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} rounded-md object-cover shadow-lg`
     })) : null;
   })) : React.createElement("div", {
-    className: "h-[88px] w-[63px] shrink-0 rounded-md border border-dashed border-white/15"
+    className: `${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`
   }), React.createElement("div", {
     className: "min-w-0 flex-1 space-y-0.5"
   }, w.last && React.createElement("div", {
@@ -102998,15 +103618,9 @@ const CardPvpWatchScreen = ({
     db: db,
     st: st,
     p: 0,
-    person: meta.p[0]
-  }), (w.phase === 'over' || winner !== null) && React.createElement("div", {
-    "data-card-watch-over": winner === null ? 'none' : winner,
-    className: "rounded-2xl border border-amber-300/50 bg-amber-500/10 p-3 text-center"
-  }, React.createElement("div", {
-    className: "text-[16px] font-black text-amber-100"
-  }, winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`), w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && React.createElement("div", {
-    className: "mt-0.5 text-[12px] font-bold text-slate-300"
-  }, "(", w.end.reason, ")")))), React.createElement("div", {
+    person: meta.p[0],
+    low: low
+  }), !low && overBox)), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
     className: "flex gap-2"
