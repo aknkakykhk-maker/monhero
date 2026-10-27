@@ -245,8 +245,8 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
       {/* 詳細パネルはスクロールの外に固定する。スクロール領域の中へ sticky で置くと、iPhoneのSafariで
           中身の一部だけ描き直されず、選んだ子と違う名前・数字が混ざって見えることがあった。
           key を子ごとに変えて、選び直すたびに作り直す */}
-      <div className="shrink-0 pt-1.5">
-        <div key={focus?focus.id:'none'} data-pro-pick-detail className="rounded-2xl border border-white/15 bg-slate-950 p-2">
+      <div className="shrink-0 pt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1">
+        <div key={focus?focus.id:'none'} data-pro-pick-detail className="rounded-2xl border border-white/15 bg-slate-950 p-2 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5">
           {!focus?(
             <div className="py-3 text-center text-[10px] font-black text-slate-400">モンスターをタップすると、ここに詳しい情報が出ます</div>
           ):(<>
@@ -259,7 +259,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
                   <button type="button" data-pro-pick-fold aria-expanded={!detailFolded} aria-label={detailFolded?'詳しい情報をひらく':'詳しい情報をたたむ'} onClick={()=>setDetailFolded(v=>!v)}
                     className="shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95">{detailFolded?'▲ ひらく':'▼ たたむ'}</button></div>
                 {!detailFolded&&<>
-                {monsterTypeProtoOn()&&<div data-pick-type-row className="flex"><MonsterTypeBadge monId={focus.id}/></div>}
+                {monsterTypeProtoOn()&&<div data-pick-type-row className={`flex${header?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><MonsterTypeBadge monId={focus.id}/></div>}
                 {/* 血統と固有技は1行にまとめる(2026-10-22。一覧を広げるため) */}
                 <div className={`truncate text-[9px] font-black text-slate-400 leading-tight${header?' [@media(max-height:640px)]:hidden':''}`}>{(()=>{const l=monsterLineageOf(focus.id);return l.main.id===l.sub.id?`${l.main.name}の純血`:`${l.main.name} × ${l.sub.name}`;})()}<span className="ml-1.5 text-[10px] text-amber-300"><Zap size={10} className="inline mr-0.5"/>{focus.unique.name}</span></div>
                 <div className={`truncate text-[9px] text-indigo-200 font-black leading-tight${header?' [@media(max-height:640px)]:hidden':''}`}><span className="text-indigo-400">勇者特性 </span>{focus.trait||'特性なし'}</div>
@@ -275,10 +275,10 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
                 <div key={label} className="min-w-0 rounded-md bg-white/5 py-0.5"><div className="text-[7px] text-slate-500 font-black leading-tight whitespace-nowrap">{label}</div><div className={`text-[11px] font-black leading-tight rounded ${DIST_APTITUDE_COLOR[apt(focus,i)]}`}>{apt(focus,i)}</div></div>
               ))}
             </div>}
-            <div className="mt-1.5 flex gap-1.5">
-              <button onClick={()=>toggleFav(focus.id)} aria-pressed={prefs.fav.includes(focus.id)} aria-label={prefs.fav.includes(focus.id)?'お気に入りを外す':'お気に入りに入れる'} className={`shrink-0 w-11 min-h-[40px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id)?'border-amber-400/60 bg-amber-900/40 text-amber-300':'border-slate-700 bg-slate-900 text-slate-500'}`}>★</button>
-              <button onClick={()=>onDetail&&onDetail(focus)} className="shrink-0 px-3 min-h-[40px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95">詳しく</button>
-              <button disabled={disabled(focus)} onClick={()=>onSelect(focus)} aria-label={confirmAria?confirmAria(focus):undefined} className={`flex-1 min-h-[40px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`}>{typeof confirmLabel==='function'?confirmLabel(focus):confirmLabel}</button>
+            <div className="mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 flex gap-1.5">
+              <button onClick={()=>toggleFav(focus.id)} aria-pressed={prefs.fav.includes(focus.id)} aria-label={prefs.fav.includes(focus.id)?'お気に入りを外す':'お気に入りに入れる'} className={`shrink-0 w-11 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id)?'border-amber-400/60 bg-amber-900/40 text-amber-300':'border-slate-700 bg-slate-900 text-slate-500'}`}>★</button>
+              <button onClick={()=>onDetail&&onDetail(focus)} className="shrink-0 px-3 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95">詳しく</button>
+              <button disabled={disabled(focus)} onClick={()=>onSelect(focus)} aria-label={confirmAria?confirmAria(focus):undefined} className={`flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`}>{typeof confirmLabel==='function'?confirmLabel(focus):confirmLabel}</button>
             </div>
           </>)}
         </div>
@@ -337,7 +337,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
     :`枠を押して、下の子を「枠に入れる」(どの順でもOK・あと${need-filled}体)`;
   const top=(
     <section data-pro-party className="mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5">
-      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200"><span>{step==='hero'?'② 勇者モンをえらぶ':'① 編成する子をえらぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
+      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"><span>{step==='hero'?'② 勇者モンをえらぶ':'① 編成する子をえらぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
       <div className={`grid gap-1 ${need>4?'grid-cols-6':'grid-cols-4'} pt-1`}>{ids.map(slot)}</div>
       <div data-pro-party-guide title={guide} className="mt-1 rounded-lg bg-indigo-950/40 px-2 py-1 text-[10px] font-bold text-indigo-100 [@media(max-height:640px)]:hidden">{guide}</div>
     </section>
@@ -365,7 +365,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
         confirmAria={m=>ids.includes(m.id)?`${m.name}を枠から外す`:`${m.name}を枠に入れる`}
         onSelect={m=>{if(!ids.includes(m.id)&&full)return;put(m);}} onDetail={onDetail}/>
       <button type="button" data-pro-party-next disabled={!full} onClick={()=>setStep('hero')}
-        className="mt-1.5 shrink-0 min-h-[44px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンをえらぶ)':`あと${need-filled}体えらんでください`}</button>
+        className="mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンをえらぶ)':`あと${need-filled}体えらんでください`}</button>
     </div>
   );
 }
@@ -393,9 +393,9 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
+      <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
-        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
+        <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。この子の勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
         <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
@@ -404,7 +404,9 @@ function PickHeroAllyScreen({
       </div>}
       {/* 勇者モンは編成に入れていないベースモンからも選べる(マスモン登録のためだけに編成を入れ替えなくてよい) */}
       {/* プロモードの編成(枠を上に固定)は、一覧の場所を空けるため吹き出しを出さない(「主役になる子を選びましょ」は6体を選ぶ流れと合わない)。案内は枠の下の1行が持つ */}
-      {!(pickMode==='hero'&&isProMode(runMode)&&!battleTutorial)&&<div className={`shrink-0 w-full max-w-md mx-auto mb-2${pickMode==='ally'?' mh-phase-tall':''}`}><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>}
+      {/* 横向きの背の低い画面(844×390 など)の勇者モンえらびは、吹き出し・説明の行を畳み、タブを低くし、札を3列にする。
+          見出しと吹き出しとタブで上の 210px を使い、札が1段の上半分しか見えなかった(2026-10-27 ジン)。チュートリアル中は畳まない */}
+      {!(pickMode==='hero'&&isProMode(runMode)&&!battleTutorial)&&<div className={`shrink-0 w-full max-w-md mx-auto mb-2${pickMode==='ally'?' mh-phase-tall':''}${pickMode==='hero'&&!battleTutorial?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>}
       {/* 供モン合流は「いま何がどれだけ増えるか」を選ぶ場面なので、トレーニング画面と同じ形で
           基準になる現在値をここに固定表示する。各カードは自分の変動しか出さないため、
           ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
@@ -473,14 +475,14 @@ function PickHeroAllyScreen({
         </div>
       )}
       {pickMode==='hero'&&(
-        <div className="shrink-0 w-full max-w-md mx-auto mb-2">
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1">
           {/* プロモードはベースモンだけなので、編成との切替は出さない */}
           {!isProMode(runMode)&&<div className="flex gap-1.5">
             {[['roster','編成'],['base','ベースモン']].map(([key,label])=>(
-              <button key={key} onClick={()=>{setHeroPickTab(key); setCurrentPickingMon(null);}} aria-pressed={heroPickTab===key} className={`flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab===key?'bg-indigo-600 border-indigo-300 text-white shadow-lg':'bg-slate-900 border-slate-700 text-slate-400'}`}>{label}</button>
+              <button key={key} onClick={()=>{setHeroPickTab(key); setCurrentPickingMon(null);}} aria-pressed={heroPickTab===key} className={`flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab===key?'bg-indigo-600 border-indigo-300 text-white shadow-lg':'bg-slate-900 border-slate-700 text-slate-400'}`}>{label}</button>
             ))}
           </div>}
-          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}`}>{isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
+          <div className={`text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${battleTutorial?'':' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`}>{isProMode(runMode)?'プロモードはベースモンだけ(育てたマスモンは連れていけません)':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
         </div>
       )}
       {/* あふれる可能性のあるスクロール領域へ justify-center を付けると、あふれたぶんが
@@ -527,7 +529,7 @@ function PickHeroAllyScreen({
           <button aria-label="次の供モン" disabled={allyCardIndex>=list.length-1} onClick={()=>stepAlly(1)} className="absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
         </div>}
         <div ref={allyCarousel?allyCarouselRef:null} onScroll={allyCarousel?(e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(best!==allyCardIndex)setAllyCardIndex(best);}):undefined}
-             className={allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':'grid grid-cols-2 gap-2.5'}
+             className={allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':`grid grid-cols-2 gap-2.5${pickMode==='hero'?' [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-3 [@media(orientation:landscape)_and_(max-height:520px)]:gap-2':''}`}
              style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:pickMode==='hero'&&isProMode(runMode)?{display:'flex',flexDirection:'column'}:undefined}>
         {list.map((m,cardIndex)=>{const isSel=currentPickingMon?.id===m.id;const focused=allyCarousel&&cardIndex===allyCardIndex;
           // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
@@ -548,11 +550,11 @@ function PickHeroAllyScreen({
                   合流は加算量(+50など)だけ出しても得かどうか分からないので、
                   トレーニング画面と同じく変化そのものを見せる */}
               {pickMode==='hero'?(
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
-                <div className="flex justify-between"><span className="text-slate-500">ライフ</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">ちから</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">丈夫さ</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">ガッツ</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-1 [@media(orientation:landscape)_and_(max-height:520px)]:px-0 font-mono" style={{fontSize:'9px'}}>
+                <div className="flex justify-between gap-0.5"><span className="text-slate-500 whitespace-nowrap">ライフ</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
+                <div className="flex justify-between gap-0.5"><span className="text-slate-500 whitespace-nowrap">ちから</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
+                <div className="flex justify-between gap-0.5"><span className="text-slate-500 whitespace-nowrap">丈夫さ</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
+                <div className="flex justify-between gap-0.5"><span className="text-slate-500 whitespace-nowrap">ガッツ</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
               </div>
               ):(()=>{const preview=allyJoinPreview(m); return (<>
                 {/* 上の「現在のステータス」が今の値を出しているので、カードは合流後の値と
