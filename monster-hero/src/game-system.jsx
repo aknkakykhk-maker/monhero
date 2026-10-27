@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6d2766224f850269
+// generated-sha256: 2d626b4cae578422
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15515,7 +15515,7 @@ const TacticsExCutin = ({ cutin }) => {
           <div className="ex-cutin__tag">{cutin.tag || 'EX SKILL'}</div>
           {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
           <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
-          <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
+          <div className="ex-cutin__sub">{(() => { const t = `${cutin.monName}${cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}`; return typeof jaWrap === 'function' ? jaWrap(t) : t; })()}</div>
           {cutin.note ? <div data-ex-cutin-note className="ex-cutin__note">{cutin.note}</div> : null}
         </div>
       </div>
@@ -25779,7 +25779,9 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
   });
   if (isTacticsAiCopyStanding(copy)) {
     const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
-    list.push({ index: TACTICS_AI_COPY_TARGET, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) });
+    // ヘイトが切のとき(hate が配列でない)は、4体と同じく倍率1
+    const mult = Array.isArray(hate) ? tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) : 1;
+    list.push({ index: TACTICS_AI_COPY_TARGET, weight: (1 + safeBias * (1 - remain)) * mult });
   }
   return list;
 };
@@ -26140,6 +26142,8 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
   if (intent.targetsAll) return alive;
+  // AIコピーを狙った技は4体には当たらない(下の間合い攻撃の保険で別の子へ流れないように先に返す)
+  if (intent.targetCopy) return [];
   // ★間合い攻撃は「**予告した間合い**にいる子」を狙う。距離撃で敵を動かしても狙いは変わらず、
   //   威力だけが落ちる(missValue ＝ ×TACTICS_SWEEP_MISS_MULT)。
   //   2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
@@ -42211,7 +42215,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
@@ -42733,7 +42737,7 @@ function BattleScreen({
           ].join(',')}}/>
         {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
         <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン) */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<>{battleModeInfo(runMode).short} / {enemy?.name||''}</>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
+          <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}{!isRaidJackMode(runMode)&&<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>}{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない。389以下は「…」で切らず「/」のあとで2行に(320 で「Beg…」。2026-10-27 ジン) */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap max-[389px]:whitespace-normal max-[389px]:leading-tight" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:isRaidJackMode(runMode)?<><span className="whitespace-nowrap">{battleModeInfo(runMode).short}</span> / <span className="whitespace-nowrap">{enemy?.name||''}</span></>:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
           <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
             <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
             {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[10px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
@@ -42839,7 +42843,7 @@ function BattleScreen({
             )}
             {raidGrowth&&(
               <button type="button" data-raid-growth-chip onClick={()=>setRaidGrowthOpen(true)} aria-label="レイドバトルのターンごとの強化の内訳を開く"
-                className="mt-1 flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 py-0.5 text-[9px] font-black leading-tight text-emerald-100 active:scale-[.99]">
+                className="mt-1 flex w-full min-w-0 items-center gap-1.5 max-[359px]:gap-1 overflow-hidden whitespace-nowrap rounded-md border border-emerald-400/40 bg-emerald-950/50 px-1.5 max-[359px]:px-1 py-0.5 text-[9px] max-[359px]:text-[8px] font-black leading-tight text-emerald-100 active:scale-[.99]">
                 <span className="shrink-0 text-emerald-300">⬆ 強化</span>
                 <span className="shrink-0">全ステ <b className="text-emerald-200">+{raidGrowth.statPct}%</b></span>
                 <span className="shrink-0 text-amber-200">技・アシカ {raidGrowth.levelUps}/{raidGrowth.levelUpMax}</span>
@@ -42970,7 +42974,8 @@ function BattleScreen({
                 className={`absolute right-2 bottom-1 z-[45] w-[100px] rounded-xl border px-1.5 py-1 shadow-lg animate-pulse [@media(max-height:640px)]:grid [@media(max-height:640px)]:w-[112px] [@media(max-height:640px)]:grid-cols-[minmax(0,1fr)_auto] [@media(max-height:640px)]:items-center [@media(max-height:640px)]:gap-x-1 [@media(max-height:640px)]:py-0.5${battleTutorialSpotClass('enemyIntent')} ${focusedCard&&!tacticsNewLayout?'invisible':'visible'} ${tone}`}>
                 {/* 背の低い画面(高さ640以下)は舞台が低いので、ダメージの数字を右の列へ移して3行ぶんの高さに収める(2026-10-20 改善部 M2) */}
                 <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-wider opacity-80 [@media(max-height:640px)]:col-start-1"><Target size={9}/>次の行動</div>
-                <div className="mt-0.5 text-[11px] font-black leading-tight [@media(max-height:640px)]:col-start-1 [@media(max-height:640px)]:min-w-0 [@media(max-height:640px)]:truncate">{intentTitle}</div>
+                {/* 背の低い画面は1行。「カボチャ…」と切らず、札の幅に合わせて字を縮める(2026-10-27 レイドの見回り) */}
+                <div className="mt-0.5 text-[11px] font-black leading-tight [@media(max-height:640px)]:col-start-1 [@media(max-height:640px)]:min-w-0 [@media(max-height:640px)]:overflow-hidden [@media(max-height:640px)]:whitespace-nowrap [@media(max-height:640px)]:[container-type:inline-size]"><span className="block [@media(max-height:640px)]:[font-size:var(--mh-intent-fit)]" style={{'--mh-intent-fit':`min(11px, calc(100cqw / ${[...String(intentTitle||'')].length+0.3}))`}}>{intentTitle}</span></div>
                 {aimedName?<div className="mt-0.5 truncate text-[9px] font-bold leading-none opacity-90 [@media(max-height:640px)]:col-start-1">🎯{aimedName}</div>:null}
                 {enemyIntent.type==='CONFUSED'?<div data-enemy-confused className="mt-0.5 text-[9px] font-bold leading-tight opacity-90">動けない・会心確定</div>:null}
                 {rawDmg>0&&showPlannedInBubble&&plannedText?(
@@ -43713,7 +43718,17 @@ function BattleScreen({
               // 狙われる確率(%)。2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいい」で、炎の段から数字に替えた。
               // 敵が狙いを決めるのと同じ重み(tacticsTargetChances → tacticsTargetWeights)で、生きている子だけで割る。倒れている子には出さない。
               // 印は「狙」の小さな字(予告の当たり先の🎯と紛れないように・狭い枠で名前を削りすぎないように)
-              const hatePct=s&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChances(tacticsUnits,tacticsHate)[i]:null;
+              // ★AIコピー(ソラシドのアシカの5人目)が立っていれば、%はコピーも入れて割る(4体とコピーで合計100)。aiCopy は公開の印が偽のあいだ null
+              const copyStanding=!!aiCopy&&isTacticsAiCopyStanding(aiCopy)&&aiCopy.spawnTurn<=turnCount;
+              const chancesNow=s&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,copyStanding?aiCopy:null):null;
+              const hatePct=chancesNow?chancesNow.slots[i]:null;
+              // コピーの札は、コピーが立つマス(pos)の枠に出す。名前・ライフ・残りターン・狙われる%
+              const copyChip=tacticsNewLayout&&aiCopy&&aiCopy.pos===i?(<div data-tactics-ai-copy={i} data-tactics-ai-copy-out={copyStanding?'1':'0'}
+                className="absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap">
+                <span className="min-w-0 truncate">🤖{aiCopy.stacked?'重なる ':''}{copyStanding?`ライフ${aiCopy.hp}`:'次のターンから'}</span>
+                {copyStanding&&<span className="shrink-0 tabular-nums text-sky-200/90">あと{aiCopy.turnsLeft}</span>}
+                {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
+              </div>):null;
               const hateFlame=Number.isInteger(hatePct)?<span data-tactics-hate={i} data-tactics-hate-pct={hatePct} title="狙われる確率" className={`ml-0.5 shrink-0 rounded px-[2px] py-px text-[8px] font-black leading-none tracking-tighter tabular-nums ${hatePct>=50?'bg-red-950/80 text-red-200':hatePct>=30?'bg-orange-950/70 text-orange-200':'bg-black/50 text-slate-300'}`}><span className="text-[6px] opacity-80">狙</span>{hatePct}%</span>:null;
               // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
               // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
@@ -43796,6 +43811,7 @@ function BattleScreen({
                   {(previewDmg>0||previewGuard>0)&&<div data-tactics-image-previews className="flex shrink-0 items-center gap-0.5">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>}
                   <div className="flex min-w-0 flex-1 justify-end">{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"><span className="shrink-0">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}</span>{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}</div>
                 </div>)}
+                {copyChip}
                 {/* 効果の光。吹き出しが出るたびに key が変わるので、同じ効果が続いても毎回光り直す。
                     緊急回復・回復カードの戻り(tacticsSlotFx の heal/guts)もここで光らせる */}
                 {tacticsNewLayout&&(()=>{
@@ -43863,7 +43879,7 @@ function BattleScreen({
                     「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                 {/* 縁を回る光。回すのは中の大きな光の輪(transform)だけにして、塗りを毎コマ描き直さない(70-bootstrap の data-slot-ring) */}
                 {tacticsNewLayout&&<i aria-hidden="true" data-slot-ring/>}
-                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-1 backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`min-w-0 text-[10px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{hateFlame&&!tacticsNewLayout&&hateFlame}{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}{tacticsNewLayout&&slotExInfo&&(<span data-slot-head-right className="ml-auto flex shrink-0 items-center gap-0.5 pl-0.5">{slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:(slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:'')}</span>)}</span>)}</div>
+                <div data-slot-head={tacticsNewLayout?i:undefined} className={`${tacticsNewLayout?'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-1 backdrop-blur-sm':'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-400/10 border-amber-200/20':'bg-white/[.025] border-white/[.055]'}`}>{tacticsNewLayout&&<span className={`mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`}>{RANGE_LABELS[i]}</span>}{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`min-w-0 flex-1 overflow-hidden whitespace-nowrap font-black uppercase leading-none [container-type:inline-size] ${tacticsNewLayout?'':'text-center'} ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}><span className="block" style={{fontSize:`min(10px, calc(100cqw / ${[...String(s?.name||'---')].length+0.3}))`}}>{s?.name||'---'}</span></span>{hateFlame&&!tacticsNewLayout&&hateFlame}{assignedCount>0&&!tacticsNewLayout&&<span className="ml-1 text-[10px] font-black text-indigo-300">×{assignedCount}</span>}{slotBuffMarks.map(mark=>(<span key={mark.text} data-tactics-slot-buff={mark.text} className={`ml-1 shrink-0 text-[8px] font-black leading-none ${mark.cls}`}>{mark.text}</span>))}{tacticsNewLayout&&slotExInfo&&(<span data-slot-head-right className="ml-auto flex shrink-0 items-center gap-0.5 pl-0.5">{slotExInfo&&(<span data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text} className={`max-w-[80px] truncate rounded px-1 py-0.5 text-[8px] font-black leading-none ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>EX{slotExInfo.badge.text!=='EX'?` ${slotExInfo.badge.text}`:(slotExInfo.badge.uses!=null?`×${slotExInfo.badge.uses}`:'')}</span>)}</span>)}</div>
                 {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                   return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`${tacticsNewLayout?'absolute left-1 top-[20px]':'shrink-0'} z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
@@ -44041,10 +44057,10 @@ function BattleScreen({
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="text-[8px] font-black tracking-wider text-pink-300">ライフ</span>
+                        <span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-pink-300">ライフ</span>
                         <span className="font-mono leading-none">{/* ★ミルフィーシールド(ドリーミィのEX)の残り。ライフの数字の前に出す */}
                           {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&<span data-tactics-shield={tacticsShields[i]} className="mr-1 text-[9px] font-black text-sky-200">🛡️{tacticsShields[i]}</span>}
-                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
+                          <span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
                       <div className="relative h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full w-full origin-left transition-transform duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{transform:`scaleX(${Math.min(100,Math.max(0,hpPct))/100})`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
@@ -44052,8 +44068,8 @@ function BattleScreen({
                         {Array.isArray(tacticsShields)&&tacticsShields[i]>0&&tacticsUnit.maxHp>0&&<div data-tactics-shield-bar className="absolute inset-y-0 left-0 bg-sky-300/80" style={{width:`${Math.min(100,tacticsShields[i]/tacticsUnit.maxHp*100)}%`,boxShadow:'0 0 6px rgba(125,211,252,.8)'}}></div>}
                       </div>
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="text-[8px] font-black tracking-wider text-amber-300">GUTS</span>
-                        <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.guts}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxGuts}</span></span>
+                        <span className="shrink-0 whitespace-nowrap text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] font-black tracking-wider [@media(orientation:landscape)_and_(max-height:520px)]:tracking-normal text-amber-300">GUTS</span>
+                        <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.guts}</span><span className="text-[8px] [@media(orientation:landscape)_and_(max-height:520px)]:text-[7px] text-slate-400">/{tacticsUnit.maxGuts}</span></span>
                       </div>
                       <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-guts-bar className="h-full w-full origin-left bg-gradient-to-r from-amber-500 to-yellow-300 transition-transform duration-500" style={{transform:`scaleX(${Math.min(100,Math.max(0,gutsPct))/100})`,boxShadow:'0 0 6px rgba(251,191,36,.55)'}}></div>
@@ -56736,9 +56752,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   隠れているあいだ(守りを選ぶ・番の帯・ダウンの帯・大写し・決着)は場所を取らない(844×390 の守りで、見えないカットインが記録を押し出した)
   const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
   const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
-  // 小さい縦の画面では、上に重ねたふつうの吹き出しが技の札の上半分を隠す(320×568・2行の台詞。2026-10-27 フキダシくん)。
+  // 小さい縦の画面と横の画面では、上に重ねたふつうの吹き出しが技の札を隠す(320×568 は上半分・844×390 は丸ごと。2026-10-27 フキダシくん)。
   //   吹き出しが出ているあいだは技の札を出さない(何の技かは記録の1行に出ている。台詞が消えれば札が出る)
-  const bubbleOverAction = !!(tiny && !wide && bubble && !bubble.cut && !replay && !tutorial);
+  const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
   React.useLayoutEffect(() => {
@@ -57339,6 +57355,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
+  sorashido_angry: [384, 512, 0, 0, 384, 512],
+  sorashido_crying: [384, 512, 0, 0, 384, 512],
+  sorashido_excited: [384, 512, 0, 3, 384, 509],
+  sorashido_happy: [384, 512, 0, 0, 384, 512],
+  sorashido_normal: [384, 512, 0, 0, 384, 512],
+  sorashido_surprise: [384, 512, 0, 2, 384, 510],
+  sorashido_troubled: [384, 512, 0, 0, 384, 512],
+  sorashido_wink: [384, 512, 0, 2, 384, 510],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
@@ -57765,6 +57789,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
+      // 助手の服の解放(data/breeder.js。2026-10-27 社長「バトルカードでみゅあのマスターに勝つと解放」)。どの相手・難易度で解放するかは breeder.js が決める。
+      // 勝ちの記録を保存できたあとに、別に保存する(こちらが書けなくても勝ちの記録は落とさない。次に開いたとき、
+      // 記録の MASTER の勝ちから解放し直せる)。デバッグの対戦は呼ばない(見本・練習試合は上で抜けている)
+      if (ok && outcome === 'win' && !debug) {
+        try {
+          const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), { who: game.who, level: game.level, outcome });
+          if (unlockEntry && await storeSet(unlockEntry.key, unlockEntry.next)) addAssistantCostumeUnlockedNow(unlockEntry.next);
+        } catch (_) { /* 解放の保存に失敗しても、対戦の結果はそのまま出す */ }
+      }
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
@@ -63381,6 +63414,15 @@ function MonsterHeroGame() {
   const [tacticsPandoraForms, setTacticsPandoraForms] = useState({}); // パンドラの箱: 枠ごとの「いま見せている姿」('devil'|'angel')。カードを切っている間だけ入る
   const handPileRef = useRef({ hand: [], deck: [], graveyard: [] }); // EXスキルが「いまの」手札・山札・墓地を読むための控え(毎回の描画で更新)
   handPileRef.current = { hand, deck, graveyard };
+  // ★AIコピー(ソラシドのアシカの5人目・2026-10-27 社長の決め)。保存しない。共通の部品は 33-ai-copy.jsx、タクティクスの分は 32-tactics-units.jsx。
+  //   形は 33-ai-copy.jsx の冒頭。公開の印 assistantSorashido が偽のあいだは null のまま(今までと同じ)
+  const [aiCopy, setAiCopy] = useState(null);
+  const aiCopyRef = useRef(null);
+  // 値か (prev)=>next を受ける(ダイスくんの5つの遊びの分でも使う)
+  const commitAiCopy = (next) => {
+    const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    aiCopyRef.current = v; setAiCopy(v); return v;
+  };
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
   // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
@@ -64344,8 +64386,10 @@ function MonsterHeroGame() {
   //   レイドも同じタクティクスの盤面なので同じにする(2026-10-19 社長「タクティクスバトルをレイドは使ってるんだから同じにするの当たり前」)
   const tacticsHateOnFor = (mode) => isTacticsMode(mode) && tacticsHateProtoOn();
   const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode)
-    ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null)
+    ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null, tacticsAiCopyAimable())
     : intent);
+  // 敵の狙いの候補に入れるコピー(公開の印が真で、立っているときだけ。偽のあいだは null で今までと同じ)
+  const tacticsAiCopyAimable = () => (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsAiCopyStanding(aiCopyRef.current)) ? aiCopyRef.current : null;
   const commitTacticsHate = (next) => { tacticsHateRef.current = next; setTacticsHate(next); };
   const addTacticsHatePending = (slotIdx, gain) => {
     if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || !(gain > 0)) return;
@@ -64359,7 +64403,51 @@ function MonsterHeroGame() {
     if (!tacticsHateOnFor(mode)) return;
     const units = tacticsUnitsRef.current;
     commitTacticsHate(tacticsHateStep(tacticsHateRef.current, { gains: tacticsHatePendingRef.current, dealt: tacticsHateDealtRef.current }, units, units.map(u => u && u.id)));
+    // AIコピーの🔥も同じタイミングで進める(たまり方は Lv の倍率)
+    const copy = aiCopyRef.current;
+    if (copy && isTacticsAiCopyStanding(copy)) {
+      const dealt = Math.max(0, Number(copy.dealtNow) || 0);
+      const teamDealt = tacticsHateDealtRef.current.reduce((a, v) => a + (Number(v) || 0), 0) + dealt;
+      const hate = tacticsAiCopyHateStep(copy, { gain: copy.hateGainNow || 0, dealt, teamDealt }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
+      commitAiCopy({ ...copy, hate, hateGainNow: 0, dealtNow: 0 });
+    }
     clearTacticsHateTurn();
+  };
+  // ===== AIコピー(ソラシドのアシカ) =====
+  // タクティクス: 使った子のとなりの空いたマス(無ければ同じマス)に、次のターンから出す。🔥は元の子の🔥 × Lv の割合から。
+  //   ★固有技の写しは、みんなの山札へは入れずコピー自身が持つ(uniqueCard)。カードを使う途中で山札を書き換えると、
+  //   ターンの終わりの山札の作り直しで消えるため。コピーの手札を作るときだけ足す(planAiCopyTurn)
+  const summonTacticsAiCopy = (slotIdx, level, effMul = 1) => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    const unit = tacticsUnitsRef.current[slotIdx];
+    if (!unit) return;
+    const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
+    const piles = handPileRef.current;
+    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])]
+      .find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
+    const { pos, stacked } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
+    const rules = aiCopyRules(level);
+    const before = aiCopyRef.current;
+    const res = summonAiCopy({ aiCopy: before, zones: { deck: [], hand: [], discard: [] } },
+      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, uniqueCard, turn: turnCount, mode: 'tactics', effMul });
+    const next = res.plan.kind === 'refresh'
+      ? res.aiCopy
+      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart), uniqueCard: res.zones.deck[0] || null };
+    commitAiCopy(next);
+    pushBattleLog(res.plan.kind === 'refresh'
+      ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った`
+      : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
+  };
+  // 5つの遊びの分はダイスくんが書く(パーティのライフを使う・狙われない・倒されない)。それまでは何もしない
+  const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+  };
+  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。タクティクスは写しを山札に入れていないので、山札は触らない
+  const clearAiCopy = (why = '') => {
+    const copy = aiCopyRef.current;
+    if (!copy) return;
+    commitAiCopy(null);
+    if (why) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${why}`, 'ally');
   };
   // ===== ライフの増減(新モードだけ盤面へ) =====
   // どれも「新モードなら増減後の合計ライフ、ほかのモードなら null」を返す。
@@ -64499,8 +64587,11 @@ function MonsterHeroGame() {
   const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)
     ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null);
   // 20ターン経過。全員を倒して、敗北の見え方をそろえる
-  const tacticsWipe = () => isTacticsMode(runMode)
-    ? commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current)) : null;
+  const tacticsWipe = () => {
+    if (!isTacticsMode(runMode)) return null;
+    clearAiCopy();
+    return commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current));
+  };
   // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
   // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
   const enemyRevivalUsedRef = useRef(0);
@@ -69181,6 +69272,8 @@ function MonsterHeroGame() {
       ownedAssistantCostumesRef.current = loadedCostumes;
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
+      // 解放が要る服(みゅあの MASTER に勝つと並ぶ服など)。新しいキーと、カードの記録2つ(読むだけ)から起こす(2026-10-27)
+      setAssistantCostumeUnlockedNow(resolveUnlockedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, [], false), await storeGet(CARD_RECORD_DETAIL_KEY, null, false), await storeGet(CARD_SAVE_KEYS.record, null, false)));
       setRhythmClearTotal(await loadRhythmClearTotal());
       // 大王が倒された印があれば、マーケットを開く前から鍵を外しておく(無ければマーケットに入ったときに確かめる)
       if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
@@ -74302,7 +74395,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // targetSlot は新モード専用。★渡したときだけ「その子の丈夫さ」で受ける。
   //   渡さなければ今までどおりパーティの丈夫さなので、既存モードの呼び出しは何も変わらない
-  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {
+  // targetDef … AIコピーが受けるとき、コピー自身の丈夫さ(特性は元の子 targetSlot のもの)
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null, targetDef=null) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     // ★運命の輪(スプーキー)の「敵の与ダメ−30%」は、モノリスの敵攻撃ダウンと同じく敵の攻撃力へ掛ける
@@ -74325,7 +74419,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ? tacticsBattleUnit(targetSlot) : null;
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「丈夫さ+20%」を、狙われた子の丈夫さへ掛ける
     const defVal = (targetUnit
-      ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)
+      ? resolveEffectiveMaxStat(Number.isFinite(targetDef) ? targetDef : normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)
       * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
@@ -75647,13 +75741,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
           tookEnemyAttack=true;
           const targets=tacticsTargetsNow(intent,actingEnemyDist);
+          // ★AIコピー(5人目)が当たるか。当たればコピー自身の丈夫さで受ける(ガード・回避は無し)。0 になったら消える(倒れた数・全滅には入らない)
+          const copyNow=aiCopyRef.current;
+          const copyHit=EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isAiCopyOut(copyNow,turnCount)&&tacticsIntentHitsAiCopy(intent,copyNow);
+          if(copyHit){
+            const rushN=intent.variant==='rush'?Math.max(1,Math.floor(Number(intent.hits)||1)):1;
+            const hitC=resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent,copyNow.srcSlot,copyNow.def),rushN,0,0);
+            const fdC=applyImmediateTakenReduction(hitC.taken);
+            const afterC=damageTacticsAiCopy(copyNow,fdC);
+            addPopup(`🤖 ${tacticsAiCopyName(copyNow)} −${fdC}`,'hero','text-sky-200 font-black text-lg drop-shadow-md');
+            pushBattleLog(`${tacticsAiCopyName(copyNow)}に${fdC}ダメージ`,'enemy');
+            if(afterC) commitAiCopy(afterC); else clearAiCopy('倒されて消えた');
+            if(!targets.length) await battleWait(600);
+          }
           const coverSlot=tacticsCoverSlotNow();
           if(coverSlot!=null&&targets.length){
             addPopup(`かばう！ ${tacticsTargetName(tacticsUnitsRef.current,coverSlot)}`,'hero','text-sky-300 font-black text-xl drop-shadow-md');
             pushBattleLog(`${battleActorName(coverSlot)}が攻撃をすべて引き受けた`);
             await battleWait(600);
           }
-          if(!targets.length){
+          if(!targets.length&&copyHit){
+            // コピーだけが受けた(4体はだれも受けていない)
+          } else if(!targets.length){
             addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
             await battleWait(700);
           } else {
@@ -76035,6 +76144,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    // AIコピー: 出ているときだけ、ターンの終わりに1つ数える。0 で消える(時間停止のターンは数えない)
+    if(timeStopSlot==null&&aiCopyRef.current){
+      const ticked=tickAiCopy({ aiCopy:aiCopyRef.current, zones:{ deck:[], hand:[], discard:[] } },turnCount);
+      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else commitAiCopy(ticked.aiCopy);
+    }
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
     // ★ジャック戦は RAID_JACK_TURNS(20)ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスも20ターン
     if(raidJackRunRef.current){
@@ -76662,6 +76776,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         // きゅうこの譜面: このターンの単体攻撃を使った子へ向け(タクティクス)、使った子の被ダメを数ターン減らす。🔥は上げない。
         //   効果量は data/breeder.js の KYUKO_TIERS。重ねて使ったら、あとのカードで張り直す(足さない)
+        else if (card.subType==='copy_sorashido') {
+          // ソラシドの自動化(2026-10-27 社長の決め)。使った子の AIコピーが次のターンから戦う。Lv は ownedTeachings の段
+          const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2);
+          if(isTacticsMode(runMode)) summonTacticsAiCopy(slotIdx,level,effMul); else summonClassicAiCopy(slotIdx,level,effMul);
+        }
         else if (card.subType==='cover_kyuko') {
           const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=Math.min(owned?owned.evoLevel:0,KYUKO_TIERS.length-1);
           const conf=KYUKO_TIERS[tier]; const cut=Math.min(0.9,conf.cut*effMul);
@@ -76930,6 +77049,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       await battleWait(250);
     }
     popupSlotRef.current=null;
+    // ===== AIコピーの1手(ソラシドのアシカ)。味方のカードのあと、敵へのダメージをまとめて当てる前 =====
+    // ★攻撃のカードだけを使う(ガード・回復などは使わない・暫定)。ガッツは毎ターン満タンから。
+    //   強さは「元の子の今の攻撃 × (コピーの攻撃 ÷ 元の子の攻撃)」、間合いはコピーの立つマス(pos)で数える。
+    //   与ダメは attackHits に aiCopy の印で足す(敵のライフには入る・枠ごとの与ダメと元の子の🔥には入れない)
+    {
+      const copy=aiCopyRef.current;
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy,turnCount)&&isTacticsAiCopyStanding(copy)){
+        const srcMon=slots[copy.srcSlot]; const srcUnit=tacticsBattleUnit(copy.srcSlot);
+        if(srcMon&&srcUnit&&srcUnit.atk>0){
+          const distFrom=copy.srcSlot+(attackDistance-copy.pos);
+          const atkRate=copy.atk/srcUnit.atk;
+          const dmgOf=(c)=>Math.floor(getDmg(c,copy.srcSlot,srcMon,0,0,false,distFrom)*atkRate);
+          const piles=handPileRef.current;
+          const pool=[...(piles.deck||[]),...(piles.graveyard||[])].filter(c=>c&&c.type!=='unique'&&dmgOf(c)>0);
+          const uniq=copy.uniqueCard&&dmgOf(copy.uniqueCard)>0?copy.uniqueCard:null;
+          const planned=planAiCopyTurn({...copy,guts:copy.maxGuts,uniqueCardUid:uniq?uniq.uid:null},
+            { deck:uniq?[...pool,uniq]:pool, score:dmgOf, costOf:(c)=>getCardGuts(c,copy.srcSlot) });
+          let dealtC=0, gainC=0;
+          (planned.picks||[]).forEach((card,k)=>{
+            const d=dmgOf(card); if(!(d>0)) return;
+            totalDmg+=d; dealtC+=d;
+            gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
+            attackHits.push({dmg:d,isCrit:false,slotIdx:copy.srcSlot,aiCopy:true,isSpecial:card.type==='unique',skillName:`${tacticsAiCopyName(copy)}の${card.name||card.baseName||'攻撃'}`,isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
+          });
+          commitAiCopy({...planned,hateGainNow:(Number(copy.hateGainNow)||0)+gainC,dealtNow:(Number(copy.dealtNow)||0)+dealtC});
+          if(!(planned.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
+        }
+      }
+    }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
     if (totalDmg>0) {
@@ -77087,7 +77235,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         setCurrentWaveDamage(p=>p+totalDmg); raidJackDamageRef.current+=Number(totalDmg)||0;
         const turnDistDmg=[0,0,0,0];
-        for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
+        for(const h of attackHits){ if(h.aiCopy) continue; const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
         setWaveDistDamage(prev=>{const n=[...prev]; for(let k=0;k<4;k++) n[k]=(n[k]||0)+turnDistDmg[k]; return n;});
         if(tacticsHateOnFor(runMode)) tacticsHateDealtRef.current=tacticsHateDealtRef.current.map((v,k)=>v+turnDistDmg[k]); // ヘイト(試作): 与ダメージの割合
         // Show combined total for multi-hit
@@ -77150,7 +77298,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];
-    { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
+    { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ if(h.aiCopy) continue; const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
     // このターンに削ったぶんを引いた、敵の本当のライフ。撃破判定と敵の行動へ同じ値を渡す。
     // (enemy はターン開始時の値で止まっているので、必ずここを通してから使う)
     let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);
@@ -77966,6 +78114,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
+    // AIコピーは WAVE の終わりで消える(2026-10-27 窓口: WAVE をまたぐかは社長に確認中。それまでは消す)
+    commitAiCopy(null);
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
@@ -80173,7 +80323,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <article key={`score-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="score" role="button" tabIndex={0} aria-label={`${entry?.userName||'名無しのブリーダー'}のパーティー詳細を見る`} onClick={()=>setRankingPartyDetail(entry)} className={`${rankingCardClass(index)} px-2 py-1.5 active:scale-[.99] cursor-pointer`}>
         <div className="flex items-center gap-1.5 min-w-0">
           {rankingPlace(index)}{rankingBreederIcon(entry)}
-          <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[9px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span>{speciesLabel&&<span data-ranking-species-label className="shrink-0 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-1.5 py-0.5 text-[7px] font-black text-cyan-200 whitespace-nowrap">{speciesLabel}</span>}</div>
+          {/* 幅の狭い画面(320)では名前・ブリーダーLv・点が1行に並ぶと名前が「ブリー…」まで縮んで読めなかった(2026-10-27 ジン部長の見回り)。
+              その幅だけブリーダーLv を名前の下の行へ回す(名前は10字まで。1行あれば切れない) */}
+          <div className="flex flex-1 items-baseline gap-1 min-w-0 max-[359px]:flex-col max-[359px]:items-start max-[359px]:gap-0"><span className="max-w-full text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[9px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span>{speciesLabel&&<span data-ranking-species-label className="shrink-0 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-1.5 py-0.5 text-[7px] font-black text-cyan-200 whitespace-nowrap">{speciesLabel}</span>}</div>
           <div className="text-right text-[10px] font-black whitespace-nowrap text-indigo-300">{scoreLabel}</div>
         </div>
         {runStat&&<div data-ranking-run-stat={runStat.cleared?'turns':'wave'} className={`mt-0.5 text-right text-[8px] font-black whitespace-nowrap ${runStat.cleared?'text-amber-300':'text-slate-400'}`}>{runStat.cleared&&<Crown size={8} className="inline mr-0.5 mb-px"/>}{runStat.text}</div>}
@@ -81087,7 +81239,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
               {/* みゅあは一番上。その下に「種類」→「難易度」のタブが続く。
                   モードのタブを出さないぶん、それぞれに余裕を持たせている */}
-              <div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>
+              <div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>
               <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
               {/* 一覧そのものは共通の描画へ寄せている。既存の「バトル」から見るスコアはチャレンジのぶん */}
               {rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}
@@ -81287,9 +81439,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="flex justify-center items-center gap-1 py-0.5">{modes.map((m,i)=><button key={m.id} aria-label={`${i+1}ページ目`} onClick={()=>scrollToLoopIndex(modes.length+i)} className={`mhbs-dot relative mx-1 mh-hit-expand-dot ${m.id===current.id?'on':''}`}/>)}</div>
                 <div className="shrink-0 pt-2 pb-1 mb-auto"><AssistantBubble key={current.id} scene={battleModeAssistantScene(current.id)} accent={current.color} faceSize={56}/></div>
               </div>}
-              {modeSelectTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBreederRankingBody()}</div>}
-              {modeSelectTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBondRankingBody()}</div>}
-              {modeSelectTab==='power'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderPowerRankingBody()}</div>}
+              {modeSelectTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>{renderBreederRankingBody()}</div>}
+              {modeSelectTab==='bond'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>{renderBondRankingBody()}</div>}
+              {modeSelectTab==='power'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>{renderPowerRankingBody()}</div>}
             </div>
           </div>);
         })()}
@@ -81538,8 +81690,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* ★名前の長いモードでは「◯◯ランキング」が1行に入らず、モード名のほうが切れていた。
                   モード名を主にして、「ランキング」は小さく下へ置く(2026-09-21) */}
             <BattleScreenHead eyebrow="MONHERO BATTLE ・ RANKING" title={mode.label} accentStyle={{color:mode.color}} note="ランキング" onBack={()=>setGameState(scoreRankingBack)}/>
-            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
-              <div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>
+            {/* 横向きの背の低い画面では、ランキングの一覧が1行半しか見えなかった(2026-10-27 ジン部長の見回り)。
+                その画面だけ幅を広げ、助手の吹き出しを畳んで一覧に高さを回す(モード選択のブリーダーLv・絆Lv・総合力の札も同じ) */}
+            <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1">
+              <div className="shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"><AssistantBubble scene="ranking" compact/></div>
               {/* 一覧はモード選択画面・既存のバトル画面と同じ描画を呼ぶ(画面を複製しない)。
                   種族チャレンジは一般公開まで全国ランキングへ送らないので、同じ画面の作りのまま
                   自分の種族×難易度の記録を出す */}
@@ -84477,15 +84631,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </span>
                 {selected&&<PickerCheckMark/>}
                 <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:'元の服'}</span>
-                {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">マーケットで購入</span>}
+                {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{costume&&!assistantCostumeUnlockedNow(costume)?'解放の条件あり':'マーケットで購入'}</span>}
               </button>
             );
           };
           const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
           const lockedInfo=lockedCostume&&(
             <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+              {/* 解放の条件がある服(みゅあの MASTER に勝つと並ぶ服など)は、解放するまで条件を出す(まだマーケットに並んでいないため。2026-10-27) */}
+              {assistantCostumeUnlockedNow(lockedCostume)?<>
               <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
+              </>:<>
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はまだマーケットに並んでいません</p>
+              <p className="text-[9px] text-slate-300 leading-tight text-center mt-1" style={JA_WRAP_STYLE}>{jaWrap(lockedCostume.unlockHow||'')}</p>
+              </>}
               <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(lockedCostume.desc||'')}</p>
             </div>
           );
@@ -84598,7 +84758,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}
@@ -85836,11 +85996,11 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         </div>
       )}
       {showDeckInfo&&(<div className="fixed inset-0 p-4 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2"><h3 className="font-black italic uppercase text-indigo-400 text-base">Deck View</h3><button onClick={()=>setShowDeckInfo(false)} className="px-4 py-2 bg-white/10 rounded-full text-[11px] active:scale-90 text-white">閉じる</button></div><div className="flex-1 overflow-y-auto">{(()=>{
-        const renderCard=(c,isUsed)=>(<button key={c.uid} onClick={()=>setFocusedCard(c)} style={TYPE_INLINE_STYLE[c.type]||{}} className={`relative w-full aspect-square rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b active:scale-95 transition-all ${TYPE_COLORS[c.type]} ${isUsed?'opacity-35 grayscale':''}`}>{isUsed&&<div className="absolute top-1 right-1 text-[6px] font-black text-white bg-black/60 px-1 rounded uppercase z-10">済</div>}<div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5"><div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div><div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{getCardGuts(c)}</div></div></button>);
+        const renderCard=(c,isUsed)=>(<button key={c.uid} onClick={()=>setFocusedCard(c)} style={TYPE_INLINE_STYLE[c.type]||{}} className={`relative w-full aspect-square rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b active:scale-95 transition-all ${TYPE_COLORS[c.type]} ${isUsed?'opacity-35 grayscale':''}`}>{isUsed&&<div className="absolute top-1 right-1 text-[6px] font-black text-white bg-black/60 px-1 rounded uppercase z-10">済</div>}<div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5"><div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 [container-type:inline-size]" style={JA_LABEL_STYLE}>{(()=>{/* 「しっぽア/タック」「ニコラ/オの力」と語の途中で折れていた(2026-10-27 バトル中の窓の見回り)。言葉の切れ目で折り、いちばん長いかたまりが入らないときだけ字を縮める */const pts=jaWrapPoints(c.name);const longest=Math.max(1,...String(typeof pts==='string'?pts:c.name).split('\u200B').map(t=>[...t].length));return <span className="block w-full" style={{fontSize:`min(9px, calc(100cqw / ${longest+0.3}))`}}>{jaWrap(c.name)}</span>;})()}</div><div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{getCardGuts(c)}</div></div></button>);
         return(<>
-          {hand.length>0&&(<div className="mb-4"><div className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2">手札 ({hand.length})</div><div className="grid gap-1.5" style={{gridTemplateColumns:'repeat(5, minmax(0, 1fr))'}}>{hand.map(c=>renderCard(c,false))}</div></div>)}
-          {deck.length>0&&(<div className="mb-4"><div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">山札 ({deck.length})</div><div className="grid gap-1.5" style={{gridTemplateColumns:'repeat(5, minmax(0, 1fr))'}}>{deck.map(c=>renderCard(c,false))}</div></div>)}
-          {graveyard.length>0&&(<div><div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">捨て札 ({graveyard.length})</div><div className="grid gap-1.5" style={{gridTemplateColumns:'repeat(5, minmax(0, 1fr))'}}>{graveyard.map(c=>renderCard(c,true))}</div></div>)}
+          {hand.length>0&&(<div className="mb-4"><div className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2">手札 ({hand.length})</div><div className="grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10">{hand.map(c=>renderCard(c,false))}</div></div>)}
+          {deck.length>0&&(<div className="mb-4"><div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">山札 ({deck.length})</div><div className="grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10">{deck.map(c=>renderCard(c,false))}</div></div>)}
+          {graveyard.length>0&&(<div><div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">捨て札 ({graveyard.length})</div><div className="grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10">{graveyard.map(c=>renderCard(c,true))}</div></div>)}
         </>);
       })()}</div></div>)}
       {/* 技選択: 通常技/距離技/固有技カードの名前をタップすると開く、選択可能なタイル一覧
@@ -86023,8 +86183,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </div>
         </div>
       )}
-      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{scanEnemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
-      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll" style={{justifyContent:'safe center'}}>{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
+      {(showEnemyInfo&&enemy||waveScanPreview)&&(()=>{const scanEnemy=waveScanPreview?.enemy||enemy;const scanDist=waveScanPreview?2:enemyDist;const scanBeforeBattle=!!waveScanPreview;const scanState={...(scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)),definitions:enemyActionDefinitionsFor(runMode,scanEnemy?.id,scanEnemy?.difficulty,scanEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current};const actions=enemyActionProbabilities(scanEnemy,scanDist,scanState);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:waveScanPreview?71000:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><div><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3>{waveScanPreview&&<small className="text-indigo-300 font-black">WAVE {waveScanPreview.wave}・戦闘開始前</small>}</div><button onClick={()=>{if(waveScanPreview)setWaveScanPreview(null);else setShowEnemyInfo(false);}} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[200px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:pt-2">{/* 横向きの背の低い画面(844×390 など)は、絵と名前を左・数字の欄を右に並べる。縦に積むと欄が1段しか見えなかった(2026-10-27 バトル中の窓の見回り) */}{scanEnemy.imgUrl?(<div className={`${isMooBoss(scanEnemy.id)?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center [@media(orientation:landscape)_and_(max-height:520px)]:h-[150px] [@media(orientation:landscape)_and_(max-height:520px)]:w-[180px] flex shrink-0 items-center justify-center overflow-hidden`}><img src={scanEnemy.imgUrl} alt={scanEnemy.name} style={enemyArtStyle(scanEnemy.id,'scan')} className={`${isMooBoss(scanEnemy.id)?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{scanEnemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:text-center [@media(orientation:landscape)_and_(max-height:520px)]:text-xl">{scanEnemy.name}</h4><section className="w-full space-y-3 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{scanEnemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{scanEnemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">{scanBeforeBattle?'戦闘状況':'現在の間合い'}</div><b>{scanBeforeBattle?'戦闘開始前':`${RANGE_LABELS[scanDist]}距離`}</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=enemyActionDisplayName(scanEnemy,action);const power=Math.floor(scanEnemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{!scanBeforeBattle&&enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==scanDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>{action.effectText||'なし'}</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。</aside></section></div></div></div>);})()}
+      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[180px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:content-start" style={{justifyContent:'safe center'}}>{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:mb-2 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-xl">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:max-w-none [@media(orientation:landscape)_and_(max-height:520px)]:p-4">{/* 新モードは1体ずつ値を持つので、ここで全員ぶんを出す(2026-09-19 ユーザーの質問)。
   下のブロックはパーティ合計(ガードの段階などを決める値)なので、そのまま残す */}
 {isTacticsMode(runMode)&&(<div data-tactics-status className="space-y-1.5 text-left">
   <div className="text-[9px] font-black uppercase tracking-widest text-indigo-300">1体ずつのステータス</div>
@@ -88761,6 +88921,8 @@ const createAnimationStyle = () => {
     .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
     .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
     .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    /* 緊急回復の文「味方のライフとガッツを30%ずつ回復」は 320 で「味方のライフとガッツ…」と切れた。2行まで折る(2026-10-27 バトル中の窓の見回り) */
+    .ex-cutin--emergency .ex-cutin__sub { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; text-wrap:wrap; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
     .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
     .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }

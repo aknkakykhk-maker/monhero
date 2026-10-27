@@ -1346,9 +1346,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   //   隠れているあいだ(守りを選ぶ・番の帯・ダウンの帯・大写し・決着)は場所を取らない(844×390 の守りで、見えないカットインが記録を押し出した)
   const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
   const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
-  // 小さい縦の画面では、上に重ねたふつうの吹き出しが技の札の上半分を隠す(320×568・2行の台詞。2026-10-27 フキダシくん)。
+  // 小さい縦の画面と横の画面では、上に重ねたふつうの吹き出しが技の札を隠す(320×568 は上半分・844×390 は丸ごと。2026-10-27 フキダシくん)。
   //   吹き出しが出ているあいだは技の札を出さない(何の技かは記録の1行に出ている。台詞が消えれば札が出る)
-  const bubbleOverAction = !!(tiny && !wide && bubble && !bubble.cut && !replay && !tutorial);
+  const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => { setStageFit(0); }, [stageKey]);
   React.useLayoutEffect(() => {
@@ -1949,6 +1949,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
+  sorashido_angry: [384, 512, 0, 0, 384, 512],
+  sorashido_crying: [384, 512, 0, 0, 384, 512],
+  sorashido_excited: [384, 512, 0, 3, 384, 509],
+  sorashido_happy: [384, 512, 0, 0, 384, 512],
+  sorashido_normal: [384, 512, 0, 0, 384, 512],
+  sorashido_surprise: [384, 512, 0, 2, 384, 510],
+  sorashido_troubled: [384, 512, 0, 0, 384, 512],
+  sorashido_wink: [384, 512, 0, 2, 384, 510],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
@@ -2375,6 +2383,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
+      // 助手の服の解放(data/breeder.js。2026-10-27 社長「バトルカードでみゅあのマスターに勝つと解放」)。どの相手・難易度で解放するかは breeder.js が決める。
+      // 勝ちの記録を保存できたあとに、別に保存する(こちらが書けなくても勝ちの記録は落とさない。次に開いたとき、
+      // 記録の MASTER の勝ちから解放し直せる)。デバッグの対戦は呼ばない(見本・練習試合は上で抜けている)
+      if (ok && outcome === 'win' && !debug) {
+        try {
+          const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), { who: game.who, level: game.level, outcome });
+          if (unlockEntry && await storeSet(unlockEntry.key, unlockEntry.next)) addAssistantCostumeUnlockedNow(unlockEntry.next);
+        } catch (_) { /* 解放の保存に失敗しても、対戦の結果はそのまま出す */ }
+      }
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
