@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3e8c49ad87fff6bc
+// generated-sha256: 3ad05f2573135df2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83899,7 +83899,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {line.fxText&&<div data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{line.fxText}</div>}
             </div>
           )}
-          <div onClick={next} data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+          {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
+              窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
+          <div onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+            <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
                 (2026-10-23 社長「枠からはみ出してる。縦のスペース空いてるんだから2列にするとかしてちゃんと見た目よくして」。
@@ -83929,7 +83932,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {step+1} / {script.length}
               {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
-            <div className={`relative mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
+            </div>
+            <div data-story-buttons className={`relative mt-3 grid shrink-0 ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
               <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'閉じる':'次へ'}</button>
             </div>
@@ -88274,6 +88278,14 @@ const createAnimationStyle = () => {
     @keyframes storyPop { 0% { opacity: .4; transform: translateY(6px) scale(.97); } 100% { opacity: 1; transform: none; } }
     @keyframes storyFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes storyGrow { 0% { opacity: 0; transform: scale(.5); filter: brightness(2.4); } 40% { opacity: 1; transform: scale(1.3); filter: brightness(1.7); } 70% { transform: scale(.96); filter: brightness(1.15); } 100% { transform: scale(1); filter: brightness(1); } }
+    /* お話の窓: 横向きの低い画面では余白と顔の段を詰める(2026-10-27 844×390 で「次へ」が画面の外へ出た)。ボタンの列は 60-app.jsx の data-story-buttons で縮めない */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-story-sheet][data-story-sheet] { padding: .5rem .75rem; padding-bottom: calc(.5rem + env(safe-area-inset-bottom)) !important; }
+      [data-story-sheet] [data-story-body] > p:first-child { margin-bottom: .25rem; }
+      [data-story-sheet] [data-story-cast] { margin-bottom: .375rem; zoom: .72; }
+      [data-story-sheet] [data-story-buttons] { margin-top: .5rem; }
+      [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
+    }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
