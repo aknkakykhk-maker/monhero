@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04b65ee07e74a9a6
+// source-sha256: 765dd5edbf720abf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -16635,7 +16635,9 @@ const MarketNotice = ({
   tone = 'error',
   children,
   ...rest
-}) => React.createElement("div", _extends({}, rest, {
+}) => React.createElement("div", _extends({
+  style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+}, rest, {
   className: `mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone === 'error' ? 'border-red-500/40 bg-red-950/30 text-red-300' : 'border-amber-300/30 bg-amber-500/10 text-amber-100'}`
 }), children);
 const MarketModal = props => React.createElement(ModalFrame, props);
@@ -22883,6 +22885,142 @@ const SKM_DREAMY = Object.freeze({
     form: 'bloom'
   })]
 });
+const SKM_KYUBI = Object.freeze({
+  normal: [skm('slash', {
+    c: 'fire',
+    over: 'claw',
+    burst: 'dust'
+  }), skm('cast', {
+    c: 'fire',
+    fx: skmFx('shot', 'spark', 4),
+    burst: 'spark'
+  }), skm('cast', {
+    c: 'blue',
+    fx: skmFx('orbit', 'fire', 5),
+    burst: 'star',
+    form: 'fire'
+  }), skm('kick', {
+    c: 'red',
+    over: 'fist',
+    burst: 'dust'
+  }), skm('toss', {
+    c: 'fire',
+    fx: skmFx('lob', 'orb', 1, {
+      s: 1.4
+    }),
+    over: 'boom',
+    burst: 'spark'
+  }), skm('jump', {
+    c: 'gold',
+    fx: skmFx('fall', 'orb', 1, {
+      s: 1.6
+    }),
+    over: 'boom',
+    burst: 'star'
+  }), skm('roll', {
+    c: 'fire',
+    fx: skmFx('orbit', 'flame', 8),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  }), skm('dash', {
+    c: 'holy',
+    line: 'ray',
+    over: 'xslash',
+    burst: 'star',
+    form: 'light'
+  }), skm('gather', {
+    c: 'psy',
+    fx: skmFx('orbit', 'orb', 9),
+    over: 'eye',
+    burst: 'star'
+  })],
+  unique: [skm('hop', {
+    c: 'pink',
+    fx: skmFx('shot', 'heart', 4),
+    burst: 'heart'
+  }), skm('lick', {
+    c: 'pink',
+    line: 'tongue',
+    burst: 'heart'
+  }), skm('cast', {
+    c: 'blue',
+    fx: skmFx('orbit', 'fire', 9),
+    over: 'pillar',
+    burst: 'star',
+    form: 'fire'
+  }), skm('warp', {
+    c: 'fire',
+    over: 'shadow',
+    burst: 'dust'
+  }), skm('gather', {
+    c: 'blue',
+    fx: skmFx('fall', 'flame', 10),
+    over: 'pillar',
+    burst: 'spark',
+    form: 'fire'
+  }), skm('spin', {
+    c: 'wind',
+    over: 'tornado',
+    burst: 'leaf'
+  }), skm('cast', {
+    c: 'sky',
+    fx: skmFx('orbit', 'bubble', 10),
+    over: 'boom',
+    burst: 'bubble'
+  }), skm('float', {
+    c: 'cosmic',
+    fx: skmFx('fall', 'star', 12),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  }), skm('gather', {
+    c: 'blood',
+    fx: skmFx('orbit', 'flame', 9),
+    over: 'eclipse',
+    burst: 'spark',
+    form: 'fire'
+  })]
+});
+const SKM_ORIHIME = Object.freeze({
+  normal: SKM_KYUBI.normal.map((m, i) => ({
+    ...m,
+    c: ['sky', 'pink', 'cosmic', 'pink', 'gold', 'gold', 'pink', 'cosmic', 'psy'][i]
+  })),
+  unique: [skm('hop', {
+    c: 'pink',
+    fx: skmFx('shot', 'heart', 6),
+    over: 'bloom',
+    burst: 'heart'
+  }), {
+    ...SKM_KYUBI.unique[1],
+    c: 'sakura'
+  }, skm('cast', {
+    c: 'cosmic',
+    fx: skmFx('orbit', 'star', 9),
+    over: 'pillar',
+    burst: 'star',
+    form: 'light'
+  }), {
+    ...SKM_KYUBI.unique[3],
+    c: 'cosmic'
+  }, {
+    ...SKM_KYUBI.unique[4],
+    c: 'sky'
+  }, {
+    ...SKM_KYUBI.unique[5],
+    c: 'sky'
+  }, {
+    ...SKM_KYUBI.unique[6],
+    c: 'pink'
+  }, {
+    ...SKM_KYUBI.unique[8],
+    c: 'psy'
+  }, {
+    ...SKM_KYUBI.unique[7],
+    c: 'sky'
+  }]
+});
 const SKILL_MOTION_SETS = Object.freeze({
   ...SKILL_MOTION_SETS_MAIN,
   Yaobikuni: skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'),
@@ -22891,7 +23029,9 @@ const SKILL_MOTION_SETS = Object.freeze({
   Melody: SKM_MELODY,
   Kuromy: SKM_KUROMY,
   Illumine: SKM_ILLUMINE,
-  Dreamy: SKM_DREAMY
+  Dreamy: SKM_DREAMY,
+  Kyubi: SKM_KYUBI,
+  Orihime: SKM_ORIHIME
 });
 const SKM_BODY_TIMING = Object.freeze({
   bash: [.48, 560],
@@ -52471,6 +52611,36 @@ function WaitForOverlayClose({
   }, []);
   return blocked ? null : children;
 }
+function ScrollMoreList({
+  className = '',
+  moreText,
+  children,
+  ...rest
+}) {
+  const ref = useRef(null);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setMore(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
+    measure();
+    el.addEventListener('scroll', measure, {
+      passive: true
+    });
+    window.addEventListener('resize', measure);
+    return () => {
+      el.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+  return React.createElement(React.Fragment, null, React.createElement("div", _extends({
+    ref: ref,
+    className: className
+  }, rest), children), more && React.createElement("div", {
+    "data-scroll-more": true,
+    className: "mt-1.5 text-center text-[10px] font-black text-amber-200"
+  }, moreText));
+}
 const PickerSheet = ({
   title,
   note = '',
@@ -53239,7 +53409,7 @@ function ArtPickerModal({
   }, "おまかせ(季節に合わせて切り替え)", auto && React.createElement("small", {
     className: "block text-[10px] font-bold text-amber-200/80"
   }, "いまは「", (options.find(o => o.id === resolved) || options[0]).label, "」を出しています")), React.createElement("div", {
-    className: "shrink-0 grid grid-cols-2 gap-3"
+    className: "shrink-0 grid grid-cols-2 gap-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[repeat(2,minmax(0,150px))] [@media(orientation:landscape)_and_(max-height:520px)]:justify-center"
   }, options.map(option => {
     const selected = value === option.id;
     return React.createElement("button", {
@@ -53819,7 +53989,7 @@ function BreederMarketScreen({
     return React.createElement("div", {
       role: "tablist",
       "data-market-tabs-scroll": section,
-      className: "mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5"
+      className: "mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5"
     }, items.map(tab => {
       const on = tab.id === value;
       return React.createElement("button", {
@@ -55217,8 +55387,12 @@ function ProfileScreen({
       }, React.createElement("b", {
         className: "block text-[12px] font-black leading-tight text-white break-words [text-wrap:balance]"
       }, who.name, active && '（選択中）'), React.createElement("small", {
-        className: "block text-[10px] text-slate-400 truncate"
-      }, "Lv.", lv, " ", t ? t.title : '')));
+        className: "flex flex-wrap gap-x-1 text-[10px] leading-snug text-slate-400"
+      }, React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, "Lv.", lv), t && t.title ? React.createElement("span", {
+        className: "whitespace-nowrap"
+      }, t.title) : null)));
     })), React.createElement("div", {
       className: "mt-1 text-[10px] text-slate-400"
     }, "仲良し度は助手ごとに別々に貯まります。切り替えても消えません。")));
@@ -133071,12 +133245,14 @@ function MonsterHeroGame() {
       className: "text-[11px] font-black text-amber-300"
     }, rewardReceipt.title), React.createElement("h3", {
       className: "mt-0.5 text-lg font-black text-white"
-    }, "手に入れたもの")), React.createElement("div", {
-      className: "mt-3 max-h-[46vh] space-y-1.5 overflow-y-auto"
+    }, "手に入れたもの")), React.createElement(ScrollMoreList, {
+      "data-reward-receipt-list": true,
+      moreText: `全${rewardReceipt.rewards.length}件・窓の中を下へ送ると続きが見られます`,
+      className: "mt-3 max-h-[46vh] grid grid-cols-1 gap-1.5 overflow-y-auto landscape:grid-cols-2"
     }, rewardReceipt.rewards.map((reward, idx) => React.createElement("div", {
       key: idx,
       "data-reward-receipt-row": true,
-      className: "rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white"
+      className: "rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white landscape:px-2 landscape:py-1.5 landscape:text-[11px] landscape:leading-tight"
     }, giftRewardText(reward)))), rewardReceipt.count > 1 && React.createElement("div", {
       className: "mt-2 text-center text-[10px] font-bold text-slate-400"
     }, rewardReceipt.count, "件をまとめて受け取りました"), React.createElement("div", {
@@ -134668,8 +134844,9 @@ function MonsterHeroGame() {
       className: "w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"
     }, React.createElement("h3", {
       id: "game-update-confirm-title",
-      className: "text-lg font-black mb-3"
-    }, "最新のゲームデータを読み込み直します。", React.createElement("br", null), "セーブデータは消えません。"), React.createElement("div", {
+      className: "text-lg font-black mb-3",
+      style: JA_WRAP_STYLE
+    }, jaWrap('最新のゲームデータを読み込み直します。'), React.createElement("br", null), jaWrap('セーブデータは消えません。')), React.createElement("div", {
       className: "space-y-3 mt-6"
     }, React.createElement("button", {
       onClick: reloadLatestVersion,
@@ -141126,6 +141303,8 @@ const createAnimationStyle = () => {
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
     @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
+    @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
