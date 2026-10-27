@@ -513,10 +513,10 @@ const BREEDER_MARKET_ITEMS = [
   // 同じ日のユーザー指示「公開して」で再公開し、アイコン2種の available:false をまた外した(ダイヤの円盤石は近日追加のまま)
   { id:'melody_icon', name:"メロディーのアイコン", type:'icon', icon:MELODY_FACE_ICON, cost:1 },
   { id:'melody_disc_icon', name:"メロディーの円盤石アイコン", type:'icon', icon:MELODY_DISC_ICON, cost:1 },
-  { id:'Melody', name:"メロディーの円盤石", type:'disc', icon:MELODY_DISC_ICON, cost:150000, available:false },
+  { id:'Melody', name:"メロディーの円盤石", type:'disc', icon:MELODY_DISC_ICON, cost:150000 }, // キュービ・オリヒメの公開と同時にダイヤショップへ(2026-10-27 社長「一緒に出す」。150,000ダイヤ)
   { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1 },
   { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1 },
-  { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
+  { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000 }, // キュービ・オリヒメの公開と同時にダイヤショップへ(2026-10-27 社長「一緒に出す」。150,000ダイヤ)
   // イルミネ(イルミネ×イルミネ)とドリーミィ(イルミネ×ニャー)。
   // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」で、メロディー・クロミーと同じく6件とも available:false(「近日追加」)で並べた。
   // 値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。
