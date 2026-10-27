@@ -8,7 +8,7 @@
 //   A. カララギマンゴー＋ジョイのサポートの場面: どの助手も、どの強さでも、ジョイを付けた手を選ばない(雑な手のときも)
 //   B. 純血のスピード: 狙う相手が純血だけなら付けない手を選ぶ/混血を狙うなら付けた手も選べる(付ける札は外さない)
 //   C. 助手どうしの対戦を回し、手を打つたびに
-//      ・ほかに手があるのに、付けても変わらない札(cardAiAttachUseless)を付けた手を選んでいない
+//      ・ほかに手があるのに、付けても変わらない札(cardAttachUseless)を付けた手を選んでいない
 //      ・記録(use の出来事)に出る札が、出した手の札と同じ
 //      ・手札から減った札が、出した札とカード投げで捨てた札と同じ(勝手に増えたり抜けたりしない)
 const fs = require('fs');
@@ -18,7 +18,7 @@ const vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, cardCreateGame, cardApplyAction, cardAttackOptions, cardAiChooseAction, cardAiPolicy, cardAiAttachUseless, cardAiBuildDeck, cardAiSeededRand, cardDecider, cardOther, cardRngNext };', ctx);
+  + 'this.E = { CARD_BATTLE_DATA, CARD_AI_HABITS, cardCreateGame, cardApplyAction, cardAttackOptions, cardAiChooseAction, cardAiPolicy, cardAttachUseless, cardAiBuildDeck, cardAiSeededRand, cardDecider, cardOther, cardRngNext };', ctx);
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 const VERBOSE = process.argv.includes('--verbose');
@@ -55,10 +55,20 @@ const names = (st, act) => (act.hand || []).map((i) => st.players[st.active].han
 {
   const pure = scene(['C-031', 'C-003', 'C-006'], ['C-003', 'C-006', 'C-001'], ['264', '346'], []);
   const po = E.cardAttackOptions(db, pure).filter((o) => o.mon === 0 && o.target && o.target.m === 0);
-  check('B 純血の相手には、純血のスピードを付けた手を外す', po.some((o) => o.hand.length === 2) && po.filter((o) => o.hand.length === 2).every((o) => E.cardAiAttachUseless(db, pure, o)));
+  check('B 純血の相手には、純血のスピードを付けた手を外す', po.some((o) => o.hand.length === 2) && po.filter((o) => o.hand.length === 2).every((o) => E.cardAttachUseless(db, pure, o)));
   const hy = scene(['C-031', 'C-003', 'C-006'], ['C-010', 'C-006', 'C-001'], ['264', '346'], []);
   const ho = E.cardAttackOptions(db, hy).filter((o) => o.mon === 0 && o.target && o.target.m === 0);
-  check('B 混血の相手なら、純血のスピードを付けた手は外さない', ho.some((o) => o.hand.length === 2) && ho.every((o) => !E.cardAiAttachUseless(db, hy, o)));
+  check('B 混血の相手なら、純血のスピードを付けた手は外さない', ho.some((o) => o.hand.length === 2) && ho.every((o) => !E.cardAttachUseless(db, hy, o)));
+}
+// ---- B2. 払うガッツを減らす札は、少しでも減るなら外さない(光合成 −2 を払うガッツ1以上のプラントの技に) ----
+{
+  const plantPow = Object.values(db.cards).find((c) => c.ready && c.user === 'plant' && c.kind === 'pow' && c.guts >= 1 && !(c.effects || []).length);
+  const plant = Object.values(db.monsters).find((m) => m.species === 'plant' && !m.main && !m.variant);
+  if (plantPow && plant) {
+    const st = scene([plant.no, 'C-003', 'C-006'], ['C-003', 'C-006', 'C-001'], [plantPow.no, '209'], []);
+    const o = E.cardAttackOptions(db, st).filter((x) => x.mon === 0 && x.hand.length === 2);
+    check(`B2 光合成を払うガッツ${plantPow.guts}の技に付ける手は外さない`, o.length > 0 && o.every((x) => !E.cardAttachUseless(db, st, x)));
+  } else check('B2 材料: プラントの技', false);
 }
 // ---- C ----
 {
@@ -79,8 +89,8 @@ const names = (st, act) => (act.hand || []).map((i) => st.players[st.active].han
           const p = st.active;
           const cardsPlayed = act.hand.map((i) => st.players[p].hand[i]);
           if (cardsPlayed.length > 1) combos++;
-          if (E.cardAiAttachUseless(db, st, act)) {
-            const others = E.cardAttackOptions(db, st).some((o) => !E.cardAiAttachUseless(db, st, o));
+          if (E.cardAttachUseless(db, st, act)) {
+            const others = E.cardAttackOptions(db, st).some((o) => !E.cardAttachUseless(db, st, o));
             check(`C ${a}対${b} ${lv}: 付けても変わらない札を付けない(${cardsPlayed.join('+')})`, !others);
           }
           const next = E.cardApplyAction(db, st, act);

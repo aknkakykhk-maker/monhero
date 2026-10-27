@@ -1537,22 +1537,25 @@ const cardAiFillBind = (db, st, o, policy) => {
 };
 
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
-// 付ける札が何も変えない手か(2026-10-27 観戦の記録: ドラがカララギマンゴーにジョイのサポートを付けて2枚出していた)
-//   ・払うガッツを減らす札(ジョイのサポート・光合成・団結・急襲)を、払うガッツがもう0の札に付ける
+// 付ける札が何も変えない手か(2026-10-27 観戦の記録: ドラがカララギマンゴーにジョイのサポートを付けて2枚出していた。社長が案A＋Bを選んだ)
+//   助手(cardAiChooseAction)は選ばない・画面(84)は組み合わせのボタンに出さない。どちらもこの関数で決める(ルールでは出してよい手のまま)
+//   o … cardAttackOptions の手1つ(st.active の手札で見る)。むだと見るのは次の2つ
+//   ・払うガッツを減らすだけの札(ジョイのサポート・光合成・団結・急襲)で、外しても払うガッツが同じか少ない
 //   ・純血のスピードを、狙う相手に純血でない子がいない技に付ける
-// ルールでは出してよい手なので、助手が選ばないだけにする(人は選べる)
-const cardAiAttachUseless = (db, st, o) => {
+const CARD_COST_ONLY_EFFS = ['attach', 'attachFree', 'attachCost', 'attachCostHalf'];
+const cardAttachUseless = (db, st, o) => {
   const p = st.active;
   const me = st.players[p];
-  if ((o.type !== 'attack' && o.type !== 'breeder') || !Array.isArray(o.hand) || o.hand.length < 2) return false;
+  if (!o || (o.type !== 'attack' && o.type !== 'breeder') || !Array.isArray(o.hand) || o.hand.length < 2) return false;
   const main = cardOf(db, me.hand[o.hand[0]]);
   if (!main) return false;
-  const base = cardFieldCostOf(st, main.guts || 0);
   const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter((t) => t.p !== p);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand);
   return o.hand.slice(1).some((i) => {
     const c = cardOf(db, me.hand[i]);
     if (!c) return false;
-    if ((cardHasEff(c, 'attachFree') || cardHasEff(c, 'attachCost') || cardHasEff(c, 'attachCostHalf')) && base === 0) return true;
+    const effs = (c.effects || []).map((e) => e.t);
+    if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i)) <= cost;
     if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some((t) => cardIsHybridMon(st.players[t.p].mons[t.m]))) return true;
     return false;
   });
@@ -1593,7 +1596,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   }
   const opts0 = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
   // 付けても何も変わらない札は付けない(カードを1枚むだにするだけ。外すと手が無くなるときは元のまま)
-  const useful = opts0.filter((o) => !cardAiAttachUseless(db, st, o));
+  const useful = opts0.filter((o) => !cardAttachUseless(db, st, o));
   const opts = useful.length ? useful : opts0;
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);

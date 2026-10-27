@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a12efc2f2735f1ba
+// source-sha256: 47312cdb58cc68b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88162,6 +88162,24 @@ const cardAiFillBind = (db, st, o, policy) => {
     bind: name
   };
 };
+const CARD_COST_ONLY_EFFS = ['attach', 'attachFree', 'attachCost', 'attachCostHalf'];
+const cardAttachUseless = (db, st, o) => {
+  const p = st.active;
+  const me = st.players[p];
+  if (!o || o.type !== 'attack' && o.type !== 'breeder' || !Array.isArray(o.hand) || o.hand.length < 2) return false;
+  const main = cardOf(db, me.hand[o.hand[0]]);
+  if (!main) return false;
+  const targets = (cardHasEff(main, 'area') ? cardAreaTargets(st, p, o.mon, main) : o.target ? [o.target] : []).filter(t => t.p !== p);
+  const cost = cardActionCost(db, st, p, me.hand, o.hand);
+  return o.hand.slice(1).some(i => {
+    const c = cardOf(db, me.hand[i]);
+    if (!c) return false;
+    const effs = (c.effects || []).map(e => e.t);
+    if (effs.length && effs.every(t => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter(x => x !== i)) <= cost;
+    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some(t => cardIsHybridMon(st.players[t.p].mons[t.m]))) return true;
+    return false;
+  });
+};
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   if (st.pendingPray) {
     const use = cardPrayOptions(db, st).find(o => o.hand);
@@ -88225,7 +88243,9 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
       hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active])))
     };
   }
-  const opts = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
+  const opts0 = cardAttackOptions(db, st).filter(o => !cardAiLosesBy(db, st, o, st.active, policy));
+  const useful = opts0.filter(o => !cardAttachUseless(db, st, o));
+  const opts = useful.length ? useful : opts0;
   if (!opts.length) return {
     type: 'endAttacks'
   };
