@@ -251,7 +251,7 @@ check('血統: キュービは純血・オリヒメはキュービ×？？？',
   const appSrc = read('monster-hero/src/parts/60-app.jsx');
   const twoRows = /\[\[\w+,'勇者のとき'\],\[supportExDef,'共モンのとき'\]\]/;
   check('図鑑のEX欄は supportKey の子を「勇者のとき」「共モンのとき」の2段で出す', /heroExDef\.supportKey\?tacticsExDefOf\(heroExDef\.supportKey\)/.test(dex) && twoRows.test(dex));
-  check('マスモン詳細のEX欄も同じ2段', /baseExDef\.supportKey\?tacticsExDefOf\(baseExDef\.supportKey\)/.test(appSrc) && twoRows.test(appSrc));
+  check('マスモン詳細のEX欄も同じ2段', /const roleSupportDef=tacticsExRoleDefOf\(mon\.id,false\);/.test(appSrc) && twoRows.test(appSrc));
   check('ターン終わりのEXの残りのログは、共モンのときの定義で数える', /const dLog=m\?raidExDefOf\(m\.id\):null;/.test(appSrc));
 }
 

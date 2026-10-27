@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 41cb8afbd7b432f8
+// generated-sha256: a9de8951d5744ae1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80988,12 +80988,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight" style={JA_WRAP_STYLE}>{jaWrap('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます')}</div></div>
       {renderSkillSection(mon)}
       {(()=>{
-        const baseExDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
-        if(!baseExDef)return null;
+        const heroExDef=typeof tacticsExRoleDefOf==='function'?tacticsExRoleDefOf(mon.id,true):null;
+        if(!heroExDef)return null;
         // 勇者モンでないときに別のEXになる子(オリヒメ)は「勇者のとき」「共モンのとき」の2段で並べる(2026-10-28。図鑑と同じ)。
         // ほかの子は今までどおり raidExDefOf(mon.id)(レイドの回数の上書きを含む)
-        const supportExDef=baseExDef.supportKey?tacticsExDefOf(baseExDef.supportKey):null;
-        const exRows=supportExDef?[[baseExDef,'勇者のとき'],[supportExDef,'共モンのとき']]:[[raidExDefOf(mon.id),'']];
+        const roleSupportDef=tacticsExRoleDefOf(mon.id,false);
+        const supportExDef=roleSupportDef&&roleSupportDef.id!==heroExDef.id?roleSupportDef:null;
+        const exRows=supportExDef?[[heroExDef,'勇者のとき'],[supportExDef,'共モンのとき']]:[[raidExDefOf(mon.id),'']];
         return <div className="flex flex-col gap-2 min-w-0">{exRows.map(([exDef,roleLabel])=>{
         const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
         return <div key={exDef.id||exDef.name} data-monster-detail-ex data-monster-detail-ex-role={roleLabel||undefined} className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">

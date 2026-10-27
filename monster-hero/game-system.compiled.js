@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00adadc15bd67a9e
+// source-sha256: 65793108ec12bd29
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -126648,10 +126648,11 @@ function MonsterHeroGame() {
       className: "text-[10px] text-slate-500 font-bold mt-1 leading-tight",
       style: JA_WRAP_STYLE
     }, jaWrap('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます'))), renderSkillSection(mon), (() => {
-      const baseExDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
-      if (!baseExDef) return null;
-      const supportExDef = baseExDef.supportKey ? tacticsExDefOf(baseExDef.supportKey) : null;
-      const exRows = supportExDef ? [[baseExDef, '勇者のとき'], [supportExDef, '共モンのとき']] : [[raidExDefOf(mon.id), '']];
+      const heroExDef = typeof tacticsExRoleDefOf === 'function' ? tacticsExRoleDefOf(mon.id, true) : null;
+      if (!heroExDef) return null;
+      const roleSupportDef = tacticsExRoleDefOf(mon.id, false);
+      const supportExDef = roleSupportDef && roleSupportDef.id !== heroExDef.id ? roleSupportDef : null;
+      const exRows = supportExDef ? [[heroExDef, '勇者のとき'], [supportExDef, '共モンのとき']] : [[raidExDefOf(mon.id), '']];
       return React.createElement("div", {
         className: "flex flex-col gap-2 min-w-0"
       }, exRows.map(([exDef, roleLabel]) => {
