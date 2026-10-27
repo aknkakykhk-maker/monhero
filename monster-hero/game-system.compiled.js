@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3d5b67091b49382
+// source-sha256: 22954d082ee6dc4f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99946,7 +99946,7 @@ const CARD_PVP_HIDDEN = -1;
 const CARD_PVP_ROOM_TOPIC = 'realtime:mhc-room-';
 const CARD_PVP_HEARTBEAT_MS = 2000;
 const CARD_PVP_RESEND_MS = 1500;
-const CARD_PVP_ALIVE_MS = 60000;
+const CARD_PVP_ALIVE_MS = 120000;
 const CARD_PVP_NAME_MAX = 16;
 const CARD_PVP_TURN_MS = 60000;
 const CARD_PVP_GUARD_MS = 15000;
@@ -99964,7 +99964,6 @@ const CARD_PVP_CHAT_GAP_MS = 1500;
 const CARD_PVP_LOBBY_TOPIC = 'realtime:mhc-lobby-free';
 const CARD_PVP_LOBBY_FRESH_MS = 6000;
 const CARD_PVP_LOBBY_JOIN_MS = 8000;
-const CARD_PVP_LOBBY_LIMIT_MS = 90000;
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
 const cardPvpFlip = act => {
@@ -100433,7 +100432,7 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
-const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string').sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon)).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
   id,
   code: x.code,
   name: x.name || 'ブリーダー',
@@ -101616,16 +101615,6 @@ const CARD_PVP = (() => {
         emit();
       }
     },
-    seekAgain: () => {
-      if (s && s.mode === 'free' && s.phase === 'waiting') {
-        s = {
-          ...s,
-          seekAt: Date.now(),
-          joining: ''
-        };
-        emit();
-      }
-    },
     join: (code, profile, deck) => {
       const c = rhythmMultiNormalizeCode(code);
       if (!c) return false;
@@ -102264,7 +102253,7 @@ const CardPvpLobby = ({
   }, x.rt !== null ? `強さ ${x.rt}・` : '', "待って ", x.waitSec, "秒")), React.createElement("button", {
     type: "button",
     "data-card-pvp-seeker-pick": x.id,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102280,7 +102269,7 @@ const CardPvpLobby = ({
   }, jaWrap('押すと、その人の部屋に入って対戦が始まります')))), React.createElement("button", {
     type: "button",
     "data-card-pvp-free": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} mh-button-primary`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102293,7 +102282,7 @@ const CardPvpLobby = ({
   }, "だれとでも(自分も待つ)"), React.createElement("button", {
     type: "button",
     "data-card-pvp-create": true,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: `${btn} border border-sky-300/40 bg-slate-900 text-sky-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102302,7 +102291,7 @@ const CardPvpLobby = ({
   }, "合言葉で部屋を作る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-open": true,
-    disabled: !ready || !roster,
+    disabled: !ready || !profileReady || !roster,
     className: `${btn} border border-emerald-300/40 bg-slate-900 text-emerald-100`,
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102326,7 +102315,7 @@ const CardPvpLobby = ({
   }, f.userName), React.createElement("button", {
     type: "button",
     "data-card-pvp-invite-to": f.otherId,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[40px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102358,7 +102347,7 @@ const CardPvpLobby = ({
   }, "断る"), React.createElement("button", {
     type: "button",
     "data-card-pvp-accept": x.roomCode,
-    disabled: !ready,
+    disabled: !ready || !profileReady,
     className: "mh-button mh-button-primary min-h-[44px] shrink-0 rounded-xl px-3 text-[13px] font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102393,7 +102382,7 @@ const CardPvpLobby = ({
   }), React.createElement("button", {
     type: "button",
     "data-card-pvp-join": true,
-    disabled: !ready || !rhythmMultiNormalizeCode(code),
+    disabled: !ready || !profileReady || !rhythmMultiNormalizeCode(code),
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl px-4 font-black disabled:opacity-40",
     onClick: () => {
       Audio_.fgSe.tap();
@@ -102415,31 +102404,7 @@ const CardPvpLobby = ({
   }, room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'), React.createElement("p", {
     "data-card-pvp-waiting": Math.max(0, room.lobbyCount - 1),
     className: "mt-1 text-[13px] font-bold text-sky-100"
-  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'), !room.foe && now - room.seekAt <= CARD_PVP_LOBBY_LIMIT_MS && React.createElement("p", {
-    className: "mt-1 text-[12px] font-bold text-slate-300 tabular-nums"
-  }, "あと", Math.max(0, Math.ceil((CARD_PVP_LOBBY_LIMIT_MS - Math.max(0, now - room.seekAt)) / 1000)), "秒"), !room.foe && now - room.seekAt > CARD_PVP_LOBBY_LIMIT_MS && React.createElement("div", {
-    "data-card-pvp-nobody": true,
-    className: "mt-3 space-y-2"
-  }, React.createElement("p", {
-    className: "text-[13px] font-bold text-amber-100"
-  }, "いまは、だれも来ませんでした"), React.createElement("button", {
-    type: "button",
-    "data-card-pvp-seek-again": true,
-    className: `${btn} border border-white/15 bg-slate-900 text-slate-100`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.seekAgain();
-    }
-  }, "もう一度さがす"), onAssistant && React.createElement("button", {
-    type: "button",
-    "data-card-pvp-to-assistant": true,
-    className: `${btn} mh-button-primary`,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      CARD_PVP.leave();
-      onAssistant();
-    }
-  }, "助手と対戦へ"))), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
+  }, room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません')), (room.phase === 'connecting' || room.phase === 'waiting') && room.mode !== 'free' && React.createElement("div", {
     className: "rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center"
   }, React.createElement("p", {
     className: "text-[13px] font-bold text-sky-100"
@@ -102511,12 +102476,20 @@ const useCardPvpClock = (pvp, st, step) => {
   const [now, setNow] = useState(() => Date.now());
   const keyRef = useRef('');
   const startRef = useRef(Date.now());
+  const pauseRef = useRef({
+    ms: 0,
+    at: Date.now()
+  });
   const firedRef = useRef('');
   const gutsRef = useRef(-1);
   const key = pvp ? cardPvpClockKey(st) : '';
   if (key !== keyRef.current) {
     keyRef.current = key;
     startRef.current = Date.now();
+    pauseRef.current = {
+      ms: 0,
+      at: Date.now()
+    };
   }
   useEffect(() => {
     if (!pvp) return undefined;
@@ -102524,7 +102497,14 @@ const useCardPvpClock = (pvp, st, step) => {
     return () => clearInterval(t);
   }, []);
   const decider = pvp ? cardPvpDecider(st) : -1;
-  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current) : 0;
+  const room = CARD_PVP.get();
+  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
+  if (pvp && now > pauseRef.current.at) {
+    const gap = now - pauseRef.current.at;
+    if (gap > CARD_PVP_SLEEP_MS || decider === 1 && quiet > CARD_PVP_QUIET_MS || decider === 0 && room.offline) pauseRef.current.ms += gap;
+    pauseRef.current.at = now;
+  }
+  const left = pvp ? cardPvpLimitMs(st) - (now - startRef.current - pauseRef.current.ms) : 0;
   useEffect(() => {
     if (!pvp || st.winner !== null) return;
     if (decider === 0 && st.phase === 'guts' && !st.pending && gutsRef.current === st.turn) {
@@ -102550,8 +102530,6 @@ const useCardPvpClock = (pvp, st, step) => {
       CARD_PVP.foeStalled();
     }
   }, [now, key]);
-  const room = CARD_PVP.get();
-  const quiet = pvp && room.foe ? now - room.foe.seen : 0;
   return {
     left: Math.max(0, Math.min(Math.ceil(left / 1000), pvp ? cardPvpLimitMs(st) / 1000 : 0)),
     mine: decider === 0,
@@ -121037,6 +121015,7 @@ function MonsterHeroGame() {
         aiCopy: true
       }));
     })();
+    let copyHitFrom = null;
     for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
       const copyDmgScale = entry.aiCopy && Number.isFinite(entry.dmgScale) ? entry.dmgScale : 1;
@@ -121050,6 +121029,8 @@ function MonsterHeroGame() {
           if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
         }
       }
+      const actorName = si => entry.aiCopy ? tacticsAiCopyName(aiCopyRef.current) : battleActorName(si);
+      if (entry.aiCopy && copyHitFrom == null) copyHitFrom = attackHits.length;
       if (!isAttackCard(card)) {
         const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
         pushBattleLog(entry.aiCopy ? `🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}` : isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
@@ -121073,7 +121054,7 @@ function MonsterHeroGame() {
             const angel = tacticsRateHeal(boxNow.angelRate, boxNow.angelRate, false);
             if (angel) hpBeforeEnemyAttack = angel.total;
             addPopup('👼 天使の力 全員回復', 'hero', 'text-sky-200 font-black text-xl drop-shadow-md');
-            pushBattleLog(`😈👼 ${battleActorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
+            pushBattleLog(`😈👼 ${actorName(entry.slotIdx)}の強化ダイスキライライ。悪魔の連撃と、天使の回復が同時に出た`, 'ally');
           }
         }
       }
@@ -121210,7 +121191,7 @@ function MonsterHeroGame() {
             kyukoCutSlot: tactics ? slotIdx : -1
           }));
           addPopup(`🎼 ${BREEDER_EVO_NAMES.kyuko[tier]} 被ダメ${Math.round(cut * 100)}%減(${conf.turns}T)`, 'hero', 'text-pink-300 font-black text-xl drop-shadow-md');
-          if (tactics) pushBattleLog(`🎼 ${battleActorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
+          if (tactics) pushBattleLog(`🎼 ${actorName(slotIdx)}が、このターンの単体攻撃を引き受ける`, 'ally');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -121338,7 +121319,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `表！ ダメージ${FATE_COIN_HEADS_MULT}倍・連撃+${Math.round(FATE_COMBO_RATE * 100)}%`,
                 tone: 'good'
               });
@@ -121349,7 +121330,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🪙',
-                title: `${battleActorName(slotIdx)}の運命のコイン`,
+                title: `${actorName(slotIdx)}の運命のコイン`,
                 result: `裏… ダメージ${FATE_COIN_TAILS_MULT}倍・消費ガッツ+${Math.round(FATE_COIN_GUTS_RATE * 100)}%`,
                 tone: 'bad'
               });
@@ -121455,7 +121436,7 @@ function MonsterHeroGame() {
               orihimeForceConfuseRef.current = true;
               showLuckBanner({
                 icon: '❓',
-                title: `${battleActorName(slotIdx)}の焦がれ待つ天ノ河`,
+                title: `${actorName(slotIdx)}の焦がれ待つ天ノ河`,
                 result: '敵の次の行動が「意味不明」に！',
                 tone: 'enemy'
               });
@@ -121466,7 +121447,7 @@ function MonsterHeroGame() {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
             icon: '🌀',
-            title: `${battleActorName(slotIdx)}のトリックコンフューズ`,
+            title: `${actorName(slotIdx)}のトリックコンフューズ`,
             result: `敵が乱心！ 次の${ENEMY_CONFUSE_TURNS}回の行動が、50%で意味不明になる`,
             tone: 'enemy'
           });
@@ -121602,7 +121583,7 @@ function MonsterHeroGame() {
               }));
               showLuckBanner({
                 icon: '🎡',
-                title: `${battleActorName(slotIdx)}の運命の輪`,
+                title: `${actorName(slotIdx)}の運命の輪`,
                 result: fateWheelPick.label,
                 tone: id === 'enemyAtkDown' || id === 'enemyTakenUp' ? 'enemy' : 'good'
               });
@@ -121692,6 +121673,10 @@ function MonsterHeroGame() {
       }
     }
     pdTag();
+    if (copyHitFrom != null) {
+      const copyName = tacticsAiCopyName(aiCopyRef.current);
+      for (let k = copyHitFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].actorName == null) attackHits[k].actorName = copyName;
+    }
     if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
       let copy = aiCopyRef.current;
       for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
@@ -121793,7 +121778,7 @@ function MonsterHeroGame() {
             for (const h of group) {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
-              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
+              addPopup(h.isCrit ? `${h.dmg}!!` : `${h.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${h.actorName || battleActorName(h.slotIdx)}${h.skillName ? `の ${h.skillName}` : 'の攻撃'} → 敵に ${h.dmg.toLocaleString()} ダメージ${h.isCrit ? '（会心）' : ''}`);
               setEnemy(prev => prev ? {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
@@ -121880,7 +121865,7 @@ function MonsterHeroGame() {
           }
           const hitColor = hit.isCrit ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique ? 'scale-125' : 'scale-110'}` : hit.isUnique ? 'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
-          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
+          addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${hit.actorName || battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
           setEnemy(prev => prev ? {
             ...prev,
             hp: Math.max(0, prev.hp - hit.dmg)
