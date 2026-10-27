@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa2bf8e2d6bf4931
+// source-sha256: 7d12b5ac6bc8419a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -12949,7 +12949,8 @@ const GIFT_REWARD_LABELS = {
   trainingTicketLarge: '重トレーニングチケット',
   skipTicketJo: 'スキップチケット・序',
   skipTicketHa: 'スキップチケット・破',
-  skipTicketKyu: 'スキップチケット・急'
+  skipTicketKyu: 'スキップチケット・急',
+  beatPoint: 'ビートP'
 };
 const LOGIN_BONUS_DEFAULT = {
   currentDay: 1,
@@ -12971,6 +12972,17 @@ const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
+const SORASHIDO_GIFT_BEAT_POINTS = 10000;
+const sorashidoJoinGift = () => ({
+  id: 'sorashido_join_gift_2026_10_27',
+  title: 'ソラシドの沖縄のおみやげ',
+  source: 'assistantStory',
+  rewards: [{
+    type: 'beatPoint',
+    amount: SORASHIDO_GIFT_BEAT_POINTS
+  }]
+});
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
@@ -13509,7 +13521,8 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
     ownedItems: {
       ...(balances?.ownedItems || {})
     },
-    ownedProfileFrames: Array.isArray(balances?.ownedProfileFrames) ? [...balances.ownedProfileFrames] : []
+    ownedProfileFrames: Array.isArray(balances?.ownedProfileFrames) ? [...balances.ownedProfileFrames] : [],
+    beatPoints: Math.max(0, Math.floor(Number(balances?.beatPoints)) || 0)
   };
   const itemIds = {
     dyeMock: 'dye_mock',
@@ -13533,7 +13546,7 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
       if (!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId);
       return;
     }
-    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else {
+    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else if (type === 'beatPoint') next.beatPoints += amount;else {
       const id = type === GIFT_ITEM_REWARD_TYPE ? itemId : itemIds[type];
       next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
     }
@@ -13580,6 +13593,10 @@ const giftTitleDisplay = gift => {
   };
   if (gift?.source === 'assistantBond') return {
     label: '仲良し度',
+    title
+  };
+  if (gift?.source === 'assistantStory') return {
+    label: 'おみやげ',
     title
   };
   if (gift?.source !== 'mission') return {
@@ -110321,6 +110338,45 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
+  const sorashidoGiftRef = useRef(false);
+  const grantSorashidoGift = async () => {
+    if (RELEASE_FLAGS.assistantSorashido !== true) return false;
+    if (sorashidoGiftRef.current) return false;
+    sorashidoGiftRef.current = true;
+    try {
+      const mark = await storeGet(SORASHIDO_GIFT_KEY, null, false);
+      if (mark) return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, sorashidoJoinGift());
+      const saved = await saveStoredValuesOrRollback([...(grant.granted ? [{
+        key: 'mh_gifts',
+        before: beforeGifts,
+        next: grant.gifts
+      }] : []), {
+        key: SORASHIDO_GIFT_KEY,
+        before: mark,
+        next: {
+          at: new Date().toISOString(),
+          beatPoints: SORASHIDO_GIFT_BEAT_POINTS
+        }
+      }], storeGet, storeSet);
+      if (!saved) {
+        console.error('[sorashido-gift] save failed');
+        return false;
+      }
+      if (grant.granted) setGifts(grant.gifts);
+      return grant.granted;
+    } catch (error) {
+      return false;
+    } finally {
+      sorashidoGiftRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    void grantSorashidoGift();
+  }, [rhythmEventStorySeen]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
@@ -117762,12 +117818,15 @@ function MonsterHeroGame() {
       const sourceGifts = Array.isArray(baseGifts) ? baseGifts : gifts;
       const claimedGifts = [];
       const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
+      const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
       let balances = {
         gold,
         breederPoints,
         ownedItems,
         breederXp,
-        ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current])
+        ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]),
+        beatPoints: beatBefore
       };
       let claimedCount = 0;
       const now = Date.now();
@@ -117822,6 +117881,12 @@ function MonsterHeroGame() {
         before: storedFramesBefore,
         next: framesAfter
       });
+      const beatAfter = normalizeRhythmEventPoints(balances.beatPoints);
+      if (beatAfter !== beatBefore) entries.push({
+        key: RHYTHM_EVENT_POINTS_KEY,
+        before: storedBeatBefore,
+        next: beatAfter
+      });
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({
         key: 'mh_gifts',
@@ -117842,6 +117907,7 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = framesAfter;
         setOwnedProfileFrames(framesAfter);
       }
+      if (beatAfter !== beatBefore) setRhythmEventPoints(beatAfter);
       const rewards = summarizeClaimedGiftRewards(claimedGifts);
       setRewardReceipt({
         title,
