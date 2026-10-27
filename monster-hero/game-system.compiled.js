@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6df140017dff4005
+// source-sha256: 91a747ac54ff3d0c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45563,8 +45563,7 @@ const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const SORASHIDO_CARD_ID = 'sorashido';
 const SORASHIDO_COPY_SLOT = 4;
-const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-const SORASHIDO_COPY_HAND_DRAW = 2;
+const SORASHIDO_COPY_HAND_DRAW = 3;
 const aiCopySafeNum = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -45627,6 +45626,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'new',
     turnsLeft,
     removeCopy: false,
+    rebuildDeck: true,
     removeUniqueOf: null,
     addUniqueOf: srcMonsterId
   };
@@ -45634,6 +45634,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'refresh',
     turnsLeft,
     removeCopy: false,
+    rebuildDeck: false,
     removeUniqueOf: null,
     addUniqueOf: null
   };
@@ -45641,6 +45642,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'switch',
     turnsLeft,
     removeCopy: true,
+    rebuildDeck: true,
     removeUniqueOf: aiCopy.srcMonsterId,
     addUniqueOf: srcMonsterId
   };
@@ -45658,6 +45660,46 @@ const aiCopyTurnEnd = aiCopy => {
     removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null
   };
 };
+const aiCopyUniqueIsOwn = (card, {
+  srcSlot = null,
+  srcMonsterId = null
+} = {}) => {
+  if (Number.isInteger(card.ownerSlotIdx) && Number.isInteger(srcSlot)) return card.ownerSlotIdx === srcSlot;
+  return card.monId != null && card.monId === srcMonsterId;
+};
+const aiCopyCanPick = (card, src = null) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID && (card.type !== 'unique' || !src || aiCopyUniqueIsOwn(card, src));
+const aiCopyBuildDeck = (zones, src) => {
+  const all = ['deck', 'hand', 'discard'].flatMap(k => zones && Array.isArray(zones[k]) ? zones[k] : []);
+  return {
+    deck: all.filter(c => aiCopyCanPick(c, src || {})),
+    discard: []
+  };
+};
+const aiCopyDraw = (state, count, rng) => {
+  let deck = state && Array.isArray(state.deck) ? state.deck.slice() : [];
+  let discard = state && Array.isArray(state.discard) ? state.discard.slice() : [];
+  const n = Math.max(0, Math.floor(aiCopySafeNum(count, SORASHIDO_COPY_HAND_DRAW)));
+  const hand = [];
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) {
+      if (discard.length === 0) break;
+      deck = discard;
+      discard = [];
+    }
+    const at = Math.min(deck.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * deck.length));
+    hand.push(deck.splice(at, 1)[0]);
+  }
+  return {
+    hand,
+    deck,
+    discard
+  };
+};
+const aiCopyDiscardHand = (state, hand) => ({
+  deck: state && Array.isArray(state.deck) ? state.deck.slice() : [],
+  discard: [...(state && Array.isArray(state.discard) ? state.discard : []), ...(Array.isArray(hand) ? hand : [])]
+});
+const SORASHIDO_COPY_UNIQUE_COUNT = 1;
 const aiCopyUniqueCard = (card, srcMonsterId) => card ? {
   ...card,
   sorashidoCopyOf: srcMonsterId,
@@ -45676,9 +45718,8 @@ const aiCopyRemoveUnique = (zones, match) => {
     discard: strip(zones && zones.discard)
   };
 };
-const aiCopyCanPick = card => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+const aiCopyHand = (deck, uniqueCard, rng, draw = 2) => {
+  const rest = (Array.isArray(deck) ? deck : []).filter(c => aiCopyCanPick(c));
   const picked = [];
   for (let i = 0; i < draw && rest.length > 0; i++) {
     const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
@@ -45723,7 +45764,7 @@ const aiCopyPickCards = (hand, {
 const sorashidoCopyDesc = level => {
   const t = aiCopyRules(level),
     p = v => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
 const summonAiCopy = (state, {
@@ -45856,6 +45897,114 @@ const planAiCopyTurn = (aiCopy, {
     picks,
     nextCard: picks[0] || null
   };
+};
+const aiCopyAutoScore = (card, {
+  strategy = 'random',
+  isAttack = null,
+  isGuard = null,
+  dmgOf = null
+} = {}) => {
+  if (!card) return -Infinity;
+  const attack = typeof isAttack === 'function' ? !!isAttack(card) : card.type === 'atk' || card.type === 'unique';
+  const guard = typeof isGuard === 'function' ? !!isGuard(card) : card.type === 'guard' || card.type === 'weak_guard';
+  const prio = strategy === 'offense' ? card.type === 'unique' ? 0 : attack ? 1 : guard || card.type === 'heal' ? 3 : 2 : strategy === 'defense' ? card.type === 'heal' ? 0 : card.type === 'guard' ? 1 : attack ? 3 : 2 : 0;
+  const dmg = attack && typeof dmgOf === 'function' ? Math.max(0, aiCopySafeNum(dmgOf(card))) : 0;
+  return -prio * 1e7 + dmg;
+};
+const CLASSIC_AI_COPY_ALLY_BASE = 'base';
+const classicAiCopyShareOf = (mon, isHero) => {
+  if (!mon) return {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const plus = mon.plusStats && typeof mon.plusStats === 'object' ? mon.plusStats : {};
+  const pick = (heroKey, plusKey) => Math.max(0, aiCopySafeNum(isHero ? mon[heroKey] : plus[plusKey]));
+  return {
+    atk: pick('baseAtk', 'atk'),
+    def: pick('baseDef', 'def'),
+    maxGuts: pick('baseGuts', 'guts')
+  };
+};
+const classicAiCopyBaseOf = (mon, isHero) => {
+  if (!mon) return {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  if (isHero || CLASSIC_AI_COPY_ALLY_BASE !== 'base') return classicAiCopyShareOf(mon, isHero);
+  return {
+    atk: Math.max(0, aiCopySafeNum(mon.baseAtk)),
+    def: Math.max(0, aiCopySafeNum(mon.baseDef)),
+    maxGuts: Math.max(0, aiCopySafeNum(mon.baseGuts))
+  };
+};
+const classicAiCopySrc = ({
+  slots = [],
+  srcSlot = 0,
+  heroId = null,
+  party = {}
+} = {}) => {
+  const list = Array.isArray(slots) ? slots : [];
+  const isHeroAt = m => !!(m && heroId != null && m.id === heroId);
+  const shares = list.map(m => classicAiCopyShareOf(m, isHeroAt(m)));
+  const mine = shares[srcSlot] || {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const base = classicAiCopyBaseOf(list[srcSlot], isHeroAt(list[srcSlot]));
+  const part = key => {
+    const total = shares.reduce((n, s) => n + s[key], 0);
+    const grown = Math.max(0, aiCopySafeNum(party && party[key]) - total);
+    const extra = total > 0 ? grown * (mine[key] / total) : 0;
+    return Math.floor(base[key] + extra);
+  };
+  return {
+    atk: part('atk'),
+    def: part('def'),
+    maxGuts: part('maxGuts')
+  };
+};
+const classicAiCopyIsAttack = card => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
+const classicAiCopyScore = card => {
+  if (!card) return 0;
+  if (card.type === 'unique') return 3;
+  if (classicAiCopyIsAttack(card)) return 2;
+  if (card.type === 'guard' || card.type === 'heal') return 0;
+  return 1;
+};
+const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
+  const d = Math.max(0, aiCopySafeNum(partyDmg));
+  const p = Math.max(0, aiCopySafeNum(partyAtk));
+  if (!(p > 0) || !(d > 0)) return 0;
+  return Math.floor(d * Math.max(0, aiCopySafeNum(copyAtk)) / p);
+};
+const classicAiCopySpendGuts = (aiCopy, cost) => aiCopy ? {
+  ...aiCopy,
+  guts: Math.max(0, aiCopySafeNum(aiCopy.guts) - Math.max(0, aiCopySafeNum(cost)))
+} : aiCopy;
+const classicAiCopyRegenGuts = (aiCopy, rate) => {
+  if (!aiCopy) return aiCopy;
+  const max = Math.max(0, aiCopySafeNum(aiCopy.maxGuts));
+  const add = Math.floor(max * Math.max(0, aiCopySafeNum(rate)));
+  return {
+    ...aiCopy,
+    guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add)
+  };
+};
+const CLASSIC_AI_COPY_UNIQUE_IN_DECK = false;
+const classicAiCopyZones = (zones, copy, inDeck = CLASSIC_AI_COPY_UNIQUE_IN_DECK) => {
+  const z = zones || {};
+  const keepUid = inDeck && copy && copy.uniqueCard ? copy.uniqueCard.uid : null;
+  const clean = list => (Array.isArray(list) ? list : []).filter(c => !(c && c.sorashidoCopyOf != null && (keepUid == null || c.uid !== keepUid)));
+  const out = {
+    deck: clean(z.deck),
+    hand: clean(z.hand),
+    discard: clean(z.discard)
+  };
+  if (keepUid != null && ![...out.deck, ...out.hand, ...out.discard].some(c => c && c.uid === keepUid)) out.deck = [...out.deck, copy.uniqueCard];
+  return out;
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -70291,6 +70440,55 @@ const kindOfTacticsSlotFx = fx => {
   if (fx.guard) return 'guard';
   return null;
 };
+const CLASSIC_AI_COPY_CSS = `
+[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
+[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
+[data-ai-copy-cell]{width:58px;flex:0 0 58px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55)}
+@media (orientation: landscape) and (max-height: 520px){
+  [data-ai-copy-row]{flex-direction:column;gap:3px}
+  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
+  [data-ai-copy-cell]{width:100%;flex:0 0 21px;height:21px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:hidden}
+  [data-ai-copy-cell] [data-sorashido-fx] .text-2xl{font-size:14px}
+  [data-ai-copy-cell] br{display:none}
+  [data-ai-copy-cell] > span{width:auto;flex:0 0 auto}
+  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+}`;
+const classicAiCopyLandscape = () => {
+  try {
+    return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
+  } catch (e) {
+    return false;
+  }
+};
+function ClassicAiCopyCell({
+  copy,
+  turnCount
+}) {
+  if (!copy) return null;
+  const out = isAiCopyOut(copy, turnCount);
+  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
+  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)),
+    maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
+  return React.createElement("div", {
+    "data-ai-copy-cell": out ? 'out' : 'waiting',
+    "aria-label": `${tacticsAiCopyName(copy)}(5人目の味方)`
+  }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement(SorashidoCopyFx, {
+    phase: out ? 'idle' : 'appear'
+  }, React.createElement("span", {
+    className: "text-2xl leading-none"
+  }, SORASHIDO_FACE_ICON)), React.createElement("span", {
+    className: "w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200"
+  }, copy.name || '仲間', React.createElement("br", null), "のコピー"), out ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200"
+  }, "G ", guts, "/", maxGuts), React.createElement(SorashidoNextCardBadge, {
+    card: copy.nextCard || null,
+    layout: layout,
+    turnsLeft: copy.turnsLeft
+  })) : React.createElement("span", {
+    className: "text-center text-[9px] font-black leading-tight text-emerald-300"
+  }, "次のターン", React.createElement("br", null), "から"));
+}
 function BattleScreen({
   battleOverlayOpen = false,
   applyTurnDamageReduction,
@@ -70735,6 +70933,7 @@ function BattleScreen({
   const [unitDetail, setUnitDetail] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? aiCopy || null : null;
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
   const fxRestEnabled = battleFx.restPause === 'ON';
@@ -72481,6 +72680,9 @@ function BattleScreen({
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
   }, p.text))))), React.createElement("div", {
+    "data-ai-copy-row": classicAiCopy && !tacticsNewLayout ? '' : undefined,
+    className: classicAiCopy && !tacticsNewLayout ? '' : 'contents'
+  }, React.createElement("div", {
     "data-tactics-debug-layout": tacticsNewLayout ? '2x2' : undefined,
     className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
@@ -73336,6 +73538,9 @@ function BattleScreen({
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "距離")));
+  })), classicAiCopy && !tacticsNewLayout && React.createElement(ClassicAiCopyCell, {
+    copy: classicAiCopy,
+    turnCount: turnCount
   }))), tacticsExIntroVisible && React.createElement("div", {
     "data-tactics-ex-intro": true,
     className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
@@ -99689,6 +99894,7 @@ const CARD_PVP_STALL_GRACE_MS = 20000;
 const CARD_PVP_QUIET_MS = 6000;
 const CARD_PVP_RECONNECT_MS = 3000;
 const CARD_PVP_VERIFY_WAIT_MS = 15000;
+const CARD_PVP_SLEEP_MS = 10000;
 const CARD_PVP_PENALTY_KEY = 'mh_card_pvp_penalty_v1';
 const CARD_PVP_PENALTY_MS = 3 * 60 * 1000;
 const cardPvpNormalizePenalty = v => Number.isFinite(v) && v > 0 ? v : 0;
@@ -100025,7 +100231,8 @@ const cardPvpCleanMessage = raw => {
       bid: typeof raw.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.bid) ? raw.bid : null,
       dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null,
       rd: cardPvpInt(raw.rd, 1000) || 0,
-      w: cardPvpInt(raw.w, 999) || 0
+      w: cardPvpInt(raw.w, 999) || 0,
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null
     };
   }
   if (raw.t === 'start') return {
@@ -100584,6 +100791,7 @@ const CARD_PVP = (() => {
   let s = null;
   let socket = null;
   let alive = false;
+  let lastTickAt = 0;
   let tick = null;
   let retry = null;
   let lobby = null;
@@ -100601,6 +100809,7 @@ const CARD_PVP = (() => {
     match: '',
     hostFirst: false,
     first: 0,
+    lostAt: 0,
     game: null,
     startMsg: null,
     foeInMatch: false,
@@ -100662,7 +100871,8 @@ const CARD_PVP = (() => {
     bid: s.me.bid || null,
     dn: s.me.dn || null,
     rd: s.round || 0,
-    w: isHost() ? cardPvpWatchHost().eyes() : 0
+    w: isHost() ? cardPvpWatchHost().eyes() : 0,
+    ov: s.phase === 'over' && s.match ? s.match : null
   });
   const watchPush = (by, act, reveal, st) => {
     if (isHost()) cardPvpWatchHost().push({
@@ -100792,6 +101002,7 @@ const CARD_PVP = (() => {
     }
     set({
       phase: 'playing',
+      lostAt: 0,
       match: msg.match,
       hostFirst: msg.hostFirst,
       first,
@@ -100842,6 +101053,22 @@ const CARD_PVP = (() => {
       });
       emit();
     }
+  };
+  const noteLost = tick => {
+    const nowT = Date.now();
+    const slept = lastTickAt > 0 && nowT - lastTickAt > CARD_PVP_SLEEP_MS;
+    if (tick || slept) lastTickAt = nowT;
+    if (s && s.phase === 'playing' && (slept || tick && !alive)) s = {
+      ...s,
+      lostAt: nowT,
+      ...(slept && s.foe ? {
+        foe: {
+          ...s.foe,
+          seen: nowT
+        }
+      } : {})
+    };
+    return slept;
   };
   const forceEnd = outcome => {
     if (s && s.phase === 'playing' && board) board.onForceEnd(outcome);
@@ -100956,6 +101183,10 @@ const CARD_PVP = (() => {
           ...foe
         }
       };
+      if (s.phase === 'playing' && msg.ov && msg.ov === s.match && s.lostAt) {
+        forceEnd('dropped');
+        return;
+      }
       maybeStart();
       if (s.match && msg.match === s.match) s = {
         ...s,
@@ -101057,7 +101288,13 @@ const CARD_PVP = (() => {
         alive = true;
         set({
           offline: false,
-          phase: s.phase === 'connecting' ? 'waiting' : s.phase
+          phase: s.phase === 'connecting' ? 'waiting' : s.phase,
+          ...(s.phase === 'playing' && s.foe ? {
+            foe: {
+              ...s.foe,
+              seen: Date.now()
+            }
+          } : {})
         });
         hb();
       },
@@ -101213,7 +101450,9 @@ const CARD_PVP = (() => {
     connect();
     if (mode === 'free') openLobby();
     tick = setInterval(() => {
-      if (!s || !socket) return;
+      if (!s) return;
+      noteLost(true);
+      if (!socket) return;
       hb();
       if (s.mode === 'free' && s.phase === 'waiting') seekTick();
       if (s.startMsg && !s.foeInMatch && isHost()) send(s.startMsg);
@@ -101329,7 +101568,11 @@ const CARD_PVP = (() => {
       });
       forceEnd('timeout');
     },
-    foeStalled: () => forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout'),
+    foeStalled: () => {
+      noteLost(false);
+      if (s && s.lostAt && Date.now() - s.lostAt < CARD_PVP_ALIVE_MS) return;
+      forceEnd(s && s.foe && Date.now() - s.foe.seen > CARD_PVP_QUIET_MS ? 'foeLeft' : 'foeTimeout');
+    },
     auto: fn => {
       if (!s) return fn();
       s.autoActing = true;
@@ -101367,9 +101610,10 @@ const CARD_PVP = (() => {
         foeSurrender: '相手の投了',
         foeLeft: '相手が抜けた',
         timeout: '時間切れ',
-        foeTimeout: '相手の時間切れ'
+        foeTimeout: '相手の時間切れ',
+        dropped: '通信が切れた'
       }[outcome] || '';
-      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : 'lose';
+      const reward = ['win', 'foeSurrender', 'foeLeft', 'foeTimeout'].includes(outcome) ? 'win' : outcome === 'surrender' ? 'surrender' : outcome === 'dropped' ? 'left' : 'lose';
       const forced = !['win', 'lose'].includes(outcome);
       if (isHost()) cardPvpWatchHost().end(reward === 'win' ? 0 : 1, label);
       set({
@@ -101708,7 +101952,7 @@ const CardPvpLobby = ({
     meName: profile.name
   });
   if (room.phase === 'over' && r) {
-    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
+    const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ' || r.reason === '通信が切れた';
     const win = r.outcome === 'win';
     const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
@@ -101757,7 +102001,11 @@ const CardPvpLobby = ({
       style: JA_WRAP_STYLE
     }, jaWrap(`${foeName}さんとのマルチ対戦`)), React.createElement("div", {
       className: "text-[12px] font-bold text-slate-300"
-    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), React.createElement("p", {
+    }, win ? '勝ち' : r.reward === 'surrender' ? '投了' : '負け', r.reason && !['勝ち', '負け', '投了'].includes(r.reason) ? `(${r.reason})` : ''), r.reason === '通信が切れた' && React.createElement("p", {
+      "data-card-pvp-dropped": true,
+      className: "mt-1 text-[12px] font-bold text-amber-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap('通信が切れていたため、この試合は負けになりました')), React.createElement("p", {
       "data-card-pvp-verify": r.verify,
       className: `mt-1 rounded-xl px-2 py-1.5 text-[12px] font-bold ${r.verify === 'ok' ? 'bg-emerald-500/15 text-emerald-100' : r.verify === 'ng' ? 'bg-rose-500/15 text-rose-100' : 'bg-white/5 text-slate-200'}`,
       style: JA_WRAP_STYLE
@@ -106404,6 +106652,52 @@ function MonsterHeroGame() {
   };
   const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    const mon = slots[slotIdx];
+    if (!mon) return;
+    const src = classicAiCopySrc({
+      slots,
+      srcSlot: slotIdx,
+      heroId: mainHero?.id,
+      party: {
+        atk,
+        def,
+        maxGuts
+      }
+    });
+    const piles = handPileRef.current;
+    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])].find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
+    const res = summonAiCopy({
+      aiCopy: aiCopyRef.current,
+      zones: {
+        deck: [],
+        hand: [],
+        discard: []
+      }
+    }, {
+      srcSlot: slotIdx,
+      srcMonsterId: mon.id,
+      name: mon.masuName || mon.name || '',
+      level,
+      src,
+      uniqueCard,
+      turn: turnCount,
+      mode: 'classic',
+      effMul
+    });
+    const next = res.plan.kind === 'refresh' ? res.aiCopy : {
+      ...res.aiCopy,
+      uniqueCard: res.zones.deck[0] || null
+    };
+    commitAiCopy(next);
+    pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
+  };
+  const planClassicAiCopy = copy => {
+    if (!copy) return copy;
+    const deckNow = Array.isArray(handPileRef.current.deck) ? handPileRef.current.deck : [];
+    return planAiCopyTurn(copy, {
+      deck: copy.uniqueCard ? [...deckNow, copy.uniqueCard] : deckNow,
+      score: classicAiCopyScore
+    });
   };
   const tacticsAiCopyTools = (copy, dist) => {
     if (!copy) return null;
@@ -106414,10 +106708,13 @@ function MonsterHeroGame() {
     const atkRate = copy.atk / srcUnit.atk;
     const dmgOf = c => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
     const isGuardC = c => !!c && (c.type === 'guard' || c.type === 'weak_guard');
-    const usableC = c => !!c && (isGuardC(c) || dmgOf(c) > 0);
-    const strategy = autoSettings.strategy;
-    const prioC = c => strategy === 'offense' ? c.type === 'unique' ? 0 : isAttackCard(c) ? 1 : isGuardC(c) ? 3 : 2 : strategy === 'defense' ? c.type === 'guard' ? 1 : isAttackCard(c) ? 3 : 2 : 0;
-    const scoreC = c => -prioC(c) * 1e7 + (isGuardC(c) ? 0 : dmgOf(c));
+    const usableC = c => !!c && (!isAttackCard(c) || dmgOf(c) > 0);
+    const scoreC = c => aiCopyAutoScore(c, {
+      strategy: autoSettings.strategy,
+      isAttack: isAttackCard,
+      isGuard: isGuardC,
+      dmgOf
+    });
     const costC = c => getCardGuts(c, copy.srcSlot);
     return {
       dmgOf,
@@ -119794,6 +120091,7 @@ function MonsterHeroGame() {
       if (boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if (timeStopSlot != null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    if (timeStopSlot == null && aiCopyRef.current && !isTacticsMode(runMode) && isAiCopyOut(aiCopyRef.current, turnCount)) commitAiCopy(c => classicAiCopyRegenGuts(c, soulAdjustedGutsRecoveryRate));
     if (timeStopSlot == null && aiCopyRef.current) {
       const ticked = tickAiCopy({
         aiCopy: aiCopyRef.current,
@@ -119810,6 +120108,7 @@ function MonsterHeroGame() {
     }
     const nextTurn = timeStopSlot != null ? turnCount : turnCount + 1;
     setTurnCount(nextTurn);
+    if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, nextTurn)) commitAiCopy(c => planClassicAiCopy(c));
     if (raidJackRunRef.current) {
       raidJackRunRef.current.turns = Math.min(nextTurn, RAID_JACK_TURNS);
       if (nextTurn > RAID_JACK_TURNS) {
@@ -120509,21 +120808,41 @@ function MonsterHeroGame() {
       if (pdTagForm) for (let k = pdTagFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].pandoraForm == null) attackHits[k].pandoraForm = pdTagForm;
       pdTagFrom = attackHits.length;
     };
-    for (const entry of usedCardEntries) {
+    const aiCopyEntries = (() => {
+      const c = aiCopyRef.current;
+      if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
+      const cp = c.plannedTurn === turnCount ? c : planTacticsAiCopy(turnCount) || c;
+      const tools = tacticsAiCopyTools(cp, enemyDist);
+      if (!tools) return [];
+      let left = Math.max(0, Number(cp.guts) || 0);
+      return (cp.picks || []).filter(card => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > left) return false;
+        left -= cost;
+        return !isAttackCard(card) && !tools.isGuardC(card);
+      }).map(card => ({
+        card,
+        slotIdx: cp.srcSlot,
+        aiCopy: true
+      }));
+    })();
+    for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
       const isBreeder = isAssistCard(card);
-      if (isBreeder && !debugBattleRef.current) {
-        const cardAssistant = assistantIdOfAssistCard(card.id);
-        if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
+      if (!entry.aiCopy) {
+        if (isBreeder && !debugBattleRef.current) {
+          const cardAssistant = assistantIdOfAssistCard(card.id);
+          if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
+        }
       }
       if (!isAttackCard(card)) {
         const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
-        pushBattleLog(isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
+        pushBattleLog(entry.aiCopy ? `🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}` : isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
       }
-      const halved = halveCounter.take(card, entry.slotIdx);
+      const halved = entry.aiCopy ? false : halveCounter.take(card, entry.slotIdx);
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
       if (halved) addPopup(isTacticsMode(runMode) ? '同じ子の2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
@@ -120559,7 +120878,7 @@ function MonsterHeroGame() {
         addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul, guardCardWeight(card));
       }
       const cardCost = getCardGuts(card, slotIdx);
-      if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
+      if (entry.aiCopy) {} else if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) noteOrihimeCard(slotIdx, card);
@@ -121161,6 +121480,36 @@ function MonsterHeroGame() {
       }
     }
     pdTag();
+    if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
+      let copy = aiCopyRef.current;
+      const copyMon = slots[copy.srcSlot] || mainHero;
+      for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
+        const cost = Math.max(0, Number(pick?.guts ?? pick?.cost) || 0);
+        if (!pick || cost > copy.guts) break;
+        copy = classicAiCopySpendGuts(copy, cost);
+        const skill = pick.name || pick.baseName || '攻撃';
+        if (classicAiCopyIsAttack(pick)) {
+          const d = classicAiCopyDamage(getDmg(pick, copy.srcSlot, copyMon, 0, 0, false, attackDistance), copy.atk, atk);
+          if (d > 0) {
+            totalDmg += d;
+            attackHits.push({
+              dmg: d,
+              isCrit: false,
+              slotIdx: copy.srcSlot,
+              isSpecial: true,
+              skillName: `🤖コピーの${skill}`,
+              noAnim: true
+            });
+          }
+        }
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`, 'ally');
+      }
+      commitAiCopy({
+        ...copy,
+        picks: [],
+        nextCard: null
+      });
+    }
     if (totalDmg > 0) {
       if (totalDmg > 0) {
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
@@ -121454,6 +121803,16 @@ function MonsterHeroGame() {
       ...p,
       kikiCardBonusTurns: Math.max(0, p.kikiCardBonusTurns - 1)
     } : p);
+    if (!isTacticsMode(runMode)) {
+      const z = classicAiCopyZones({
+        deck: nextDeck,
+        hand: nextHand,
+        discard: nextGraveyard
+      }, aiCopyRef.current);
+      nextDeck = z.deck;
+      nextHand = z.hand;
+      nextGraveyard = z.discard;
+    }
     setHand(nextHand);
     setDeck(nextDeck);
     setGraveyard(nextGraveyard);
@@ -136112,7 +136471,7 @@ function MonsterHeroGame() {
       passTacticsTurn: passTacticsTurn,
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
-      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) ? aiCopy : null,
+      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,

@@ -8354,6 +8354,16 @@ addAssistantLinePack({ id: 'marketShopsKyuko', assistantId: 'kyuko', label: 'マ
     { e:'happy',   t:'ここはイベントがないときも交換できますよ' },
   ],
 } } });
+addAssistantLinePack({ id: 'marketShopsSorashido', assistantId: 'sorashido', label: 'マーケットの売り場ごとのひとこと(sorashido)', lines: {}, conditions: { market: {
+  shopExchange: [
+    { e:'normal',  t:'素材の交換所だね。持ってる数は上に出てるよ笑' },
+    { e:'excited', t:'交換したら、マスモンを鍛えにいこ。計算どおり強くなるぜ・・・！' },
+  ],
+  shopEvent: [
+    { e:'happy',   t:'ビートPは、モンヒロビートとバトルカードで貯まるよ笑' },
+    { e:'normal',  t:'円盤石とアシストは、1つにつき1回だけ交換できるよ' },
+  ],
+} } });
 
 // お布施・魂格進化の画面の台詞(2026-10-27)。前は神殿全体の場面(temple)を借りて、合体・寄付の話をしていた
 addAssistantLinePack({ id: 'templeScreensKiki', assistantId: 'kiki', label: 'きき・お布施と魂格進化', lines: {
