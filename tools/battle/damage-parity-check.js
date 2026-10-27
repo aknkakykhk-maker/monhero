@@ -45,6 +45,12 @@ const laterSrc = (source.match(/const withBlackNoteCombo = \(exCombos, combo(, e
   // 2026-10-22 イルミネ・ドリーミィの楔の連撃(楔0・イルミネの固有技でなければ何も足さない)
   + '\nconst kusabiCombosAt = () => [];'
   + '\nconst gainKusabi = () => {};'
+  // 2026-10-27 キュービ・オリヒメ(九尾四相・天河の契り・狐火・星合)。持っていなければ倍率1・連撃なし
+  + '\nconst kyubiAttackAt = () => ({ dmgMult: 1, critAdd: 0, combo: null, foxCombo: null });'
+  + '\nconst orihimeDmgMultAt = () => 1;'
+  + '\nconst hoshiaiComboAt = () => null;'
+  + '\nconst gainKyubiCard = () => {};'
+  + '\nconst noteOrihimeCard = () => {};'
   // タクティクス専用(ほかのモードでは何もしない)
   + '\nconst aquaStackFromCard = () => null;'
   + '\nconst fireTacticsExCross = () => null;';
