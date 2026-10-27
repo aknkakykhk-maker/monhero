@@ -38,7 +38,7 @@ aiCopy = { srcSlot, srcMonsterId, level, spawnTurn, turnsLeft, hp, maxHp, atk, d
 | ① 枠 | 71-screen-battle.jsx | 味方の枠 2441 `slots.map`(`grid-cols-4`。タクティクスの新配置は `2x2`) | 4列 | 4人の列の右はしに、コピーの札(ライフ・ガッツ・残りターン・元の子の間合い)を足す。間合いの軸(4列)とは別に置き、5つ目の間合いに見えないようにする |
 | ① 枠 | 71-screen-battle.jsx | 横向き(#3953 の2列)の CSS 12〜30 行 `.grid.grid-cols-4 … height:112px` | 4列で高さ固定 | 横向きは列の下にコピーの札を置くので、左の列の高さの割り振り(grid-template-rows)に1段足して測り直す |
 | ① 枠 | 71-screen-battle.jsx | 極限の小さい枠 1633 `data-ultra-ally-slots grid-cols-4` | 4列 | 同じく右はし(横向きは下)に小さい札 |
-| ② 状態 | 60-app.jsx | 新しい state `aiCopy`(696 の近く)・`resetAllState` 10171・`returnToHome` 10871・`handleGiveUp` 11149・`initBattle` 15045 | — | ランの始め・終わり・やめたときに `null` へ戻す。WAVE をまたいでも残る(ターン数で消える)。ライフは持たない(ガッツだけ) |
+| ② 状態 | 60-app.jsx | 新しい state `aiCopy`(696 の近く)・`resetAllState` 10171・`returnToHome` 10871・`handleGiveUp` 11149・`initBattle` 15045 | — | ランの始め・終わり・やめたときに `null` へ戻す。WAVE の終わりに消す(続くターンが残っていても消し、山札の固有技もそこで抜く。窓口の答え待ちの仮。またいで残す答えなら dismissAiCopy を呼ぶ所を外すだけにする)。ライフは持たない(ガッツだけ) |
 | ③ 敵の狙い | 60-app.jsx | `handleEnemyTurn` 12410〜(クラシックの攻撃は 12914〜12920) | 攻撃は全部パーティの `hp` へ | **変えない**(社長の答え: コピーは狙われない。攻撃は今までどおりパーティの1組へ) |
 | ④ 山札 | 60-app.jsx | `buildDeck` 14816 | 固有技は4枠ぶん | コピーがいれば固有技を1枚足す(`ownerSlotIdx: 'copy'` のような印)。消えたら手札・山札・捨て札から抜く(タクティクスの `ensureTacticsExUniqueInHand` と同じ抜き方) |
 | ④ 山札 | 60-app.jsx | `getCardGuts` 10139・`slotMaxUses` 10119・`dragAssignToSlot` 11966 | 置き先は4枠 | プレイヤーはコピーへカードを置けない(コピーは自分の手札で動く)。コピーの固有技カードはコピー専用 |
