@@ -216,7 +216,8 @@ const runMulti = async (browser, W, H) => {
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
-    await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d || d.closest('[data-rhythm-multi],[data-rhythm-mode-private-sheet],[data-rhythm-buddy-picker],[data-rhythm-buddy-sheet],[data-rhythm-buddy-list-sheet]')) return; const b = [...d.querySelectorAll('button')].find((x) => /^(受け取る|OK|確認|スキップ|あとで読む)$/.test((x.innerText || x.getAttribute('aria-label') || '').trim())); if (b) b.click(); }, 400); });
+    // 助手のワンポイントアドバイスの窓は、モードえらびの上にときどき出てボタンを覆う(2026-10-27 カード部パックくんが撮った画面で見つけた)。「閉じる」で閉じる
+    await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d || d.closest('[data-rhythm-multi],[data-rhythm-mode-private-sheet],[data-rhythm-buddy-picker],[data-rhythm-buddy-sheet],[data-rhythm-buddy-list-sheet]')) return; const tip = /ワンポイントアドバイス/.test(d.getAttribute('aria-label') || ''); const b = [...d.querySelectorAll('button')].find((x) => (tip ? /^(閉じる)$/ : /^(受け取る|OK|確認|スキップ|あとで読む)$/).test((x.innerText || x.getAttribute('aria-label') || '').trim())); if (b) b.click(); }, 400); });
     await page.waitForTimeout(1500);
     // HOME に着いたら、ログインボーナスなどのお知らせを一通り閉じる(ここでは「閉じる」も押してよい)
     for (let i = 0; i < 10; i++) { const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^(受け取る|閉じる|OK|確認|スキップ|あとで読む)$/.test((x.innerText || '').trim()) && x.getClientRects().length); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
