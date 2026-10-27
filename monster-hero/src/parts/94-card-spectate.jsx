@@ -226,7 +226,7 @@ const CARD_WATCH = (() => {
   let alive = false;
   let tick = null;
   let retry = null;
-  const blank = () => ({ phase: 'idle', match: '', side: 0, id: '', meta: null, st: null, n: 0, buf: {}, hostN: 0, eyes: 0, end: null, d: null, last: null, lastAt: 0, needAt: 0, error: '', seenAt: 0, counted: false });
+  const blank = () => ({ phase: 'idle', match: '', side: 0, id: '', meta: null, st: null, n: 0, buf: {}, hostN: 0, eyes: 0, end: null, d: null, last: null, hits: null, lastAt: 0, needAt: 0, error: '', seenAt: 0, counted: false });
   const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても続ける */ } });
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.id, match: s.match }); };
@@ -241,6 +241,7 @@ const CARD_WATCH = (() => {
     if (!s.st) return;
     let { st, n, buf } = s;
     let last = s.last;
+    let hits = s.hits;
     buf = { ...buf };
     while (buf[n + 1]) {
       const e = cardWatchSideEntry(buf[n + 1], s.side);
@@ -251,9 +252,12 @@ const CARD_WATCH = (() => {
       // まんなかに出す「いま使った札」(使った・守ったカード)
       const used = (next.events || []).filter((x) => x.t === 'use' || x.t === 'guard').map((x) => ({ p: x.p, cards: x.t === 'use' ? x.cards : [x.card] })).filter((x) => x.cards.every((no) => cardOf(CARD_BATTLE_DATA, no)));
       if (used.length) last = { key: `${n}`, p: used[used.length - 1].p, cards: used[used.length - 1].cards };
+      // 当たりの結果(「防御！ 5 → 2」・ダメージの数字。対戦の画面と同じ部品で出す。2026-10-27 社長・案A)
+      const hitNow = (next.events || []).filter((x) => x.t === 'hit').map((x, i) => ({ ...x, key: `${n}-${i}` }));
+      if (hitNow.length) hits = hitNow;
     }
     if (s.d) st = cardWatchPatchDiscards(CARD_BATTLE_DATA, st, s.side === 1 ? [s.d[1], s.d[0]] : s.d);
-    s = { ...s, st, n, buf, last, lastAt: last !== s.last ? Date.now() : s.lastAt };
+    s = { ...s, st, n, buf, last, hits, lastAt: last !== s.last ? Date.now() : s.lastAt };
     if (s.end && n >= s.hostN && s.phase === 'watching') s = { ...s, phase: 'over' };
     emit();
   };
@@ -392,8 +396,15 @@ const CardWatchMonMini = ({ db, st, p, m }) => {
     </div>
   );
 };
+// 守りの番のあいだ、守った子の上に使った守りを出す(対戦の画面の guardTagOf と同じ。84 の cardGuardShort)
+const cardWatchGuardTag = (db, st, p, m) => {
+  const pv = st && st.pending ? cardGuardPreview(db, st) : null;
+  if (!pv || !pv.cards.length) return '';
+  const t = st.pending.targets[st.pending.ti];
+  return t && t.p === p && t.m === m ? pv.cards.map((no) => cardGuardShort(cardOf(db, no))).join('・') : '';
+};
 // low … 背の低い画面(横向き)。絵と行を小さくして、両方の場と決着の帯が下へ送らずに見えるようにする(2026-10-27 844×390 で下の場が画面の外に出た)
-const CardWatchSide = ({ db, st, p, person, top = false, low = false }) => {
+const CardWatchSide = ({ db, st, p, person, top = false, low = false, hits = null }) => {
   const pl = st.players[p];
   const active = st.winner === null && cardPvpDecider(st) === p;
   const row = (
@@ -410,7 +421,7 @@ const CardWatchSide = ({ db, st, p, person, top = false, low = false }) => {
       </div>
     </div>
   );
-  const mons = <div className="flex justify-between">{pl.mons.map((_, m) => (low ? <CardWatchMonMini key={m} db={db} st={st} p={p} m={m}/> : <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact/>))}</div>;
+  const mons = <div className="flex justify-between">{pl.mons.map((_, m) => (low ? <CardWatchMonMini key={m} db={db} st={st} p={p} m={m}/> : <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact guardTag={cardWatchGuardTag(db, st, p, m)} fx={(hits || []).filter((f) => f.p === p && f.m === m)}/>))}</div>;
   return <div data-card-watch-side={p} className={`rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`}>{top ? <>{row}{mons}</> : <>{mons}{row}</>}</div>;
 };
 const CardPvpWatchScreen = ({ onBack }) => {
@@ -426,7 +437,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
   const nameOf = (p) => (meta && meta.p[p] ? meta.p[p].name : p === 0 ? 'ブリーダー' : 'あいて');
   const [low, setLow] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
   useEffect(() => { const on = () => setLow(window.innerHeight < 520); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
-  const lines = st ? st.log.slice(low ? -2 : -3).map((l) => l.text) : [];
+  const lines = st ? st.log.slice(low ? -2 : -3).map((l) => cardLogText(l)) : [];
   const overBox = st && meta && (w.phase === 'over' || winner !== null) && (
     <div data-card-watch-over={winner === null ? 'none' : winner} className={`rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`}>
       <div className={`${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`}>{winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`}{low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''}</div>
@@ -447,7 +458,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
           </div>
           {/* 背の低い画面では、決着の帯をいちばん上に(下に置くと画面の外に出た) */}
           {low && overBox}
-          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low}/>
+          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low} hits={w.hits}/>
           {/* まんなか: いま使われた札と、場の記録の新しい3行 */}
           <div data-card-watch-center className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`}>
             {w.last
@@ -457,10 +468,11 @@ const CardPvpWatchScreen = ({ onBack }) => {
               : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
             <div className="min-w-0 flex-1 space-y-0.5">
               {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
+              {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
               {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
             </div>
           </div>
-          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low}/>
+          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low} hits={w.hits}/>
           {!low && overBox}
         </>)}
       </div>

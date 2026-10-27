@@ -757,6 +757,9 @@ const cardResolveTarget = (db, st) => {
   let dmg = (pd.shares ? pd.shares[pd.targets[pd.ti].m] : pd.base) * pd.mult; // ショットガンは、その子に割り振った点
   const mv = cardEff(main, 'multVs');
   if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
+  // 守らなかったら受けたダメージ(画面の「5 → 2」の「前」。全体カードの足し引きは守らなくても掛かるので含め、
+  //   守る側が出す肉を切らせては含めない)。出来事に付けるだけで、結果は変えない(2026-10-27 社長・案A)
+  const baseDmg = dmg > 0 ? Math.max(0, dmg + cardFieldDmgAdd(st, main)) : dmg;
   if (pd.takeMult) dmg *= pd.takeMult; // 肉を切らせて
   // 守りで持ちょうが変わった(吹き上げる・ひきずりこむ)ときは、当てる直前に当たるかを見直す
   const ar = cardEff(main, 'area');
@@ -789,8 +792,9 @@ const cardResolveTarget = (db, st) => {
   const guarded = pd.reduce > 0 || pd.reduceHalf || pd.reduceAll || !!pd.reflect || pd.cover !== null;
   const res = { p: t.p, m: t.m, dmg, evaded, reflected };
   pd.results.push(res);
-  cardEvent(st, { t: 'hit', p: t.p, m: t.m, dmg, evaded, guarded, card: pd.main });
-  cardLog(st, missed ? `${target.name}には当たらなかった` : evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, { kind: 'hit' });
+  cardEvent(st, { t: 'hit', p: t.p, m: t.m, dmg, base: baseDmg, evaded, guarded, card: pd.main });
+  // 守り・回避で減ったときは、記録の行に「前 → 後」の数も持たせる(文は変えない。画面が「(5 → 2)」を添える。2026-10-27 社長・案A)
+  cardLog(st, missed ? `${target.name}には当たらなかった` : evaded && dmg === 0 ? `${target.name}は回避した` : `${target.name}に${dmg}ダメージ${evaded ? '(回避されても半分)' : ''}`, { kind: 'hit', ...(!missed && (evaded || guarded) && baseDmg !== dmg ? { from: baseDmg, to: dmg } : {}) });
   const atkMon = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
   if (dmg > 0) {
     pd.hitAny = true;
@@ -814,7 +818,7 @@ const cardResolveTarget = (db, st) => {
   if (target.life <= 0 && !target.ko) cardKo(st, t.p, t.m);
   // 次の相手へ(守りの状態は1体ごとに戻す)
   pd.ti += 1; pd.evaded = false; pd.reduce = 0; pd.reduceHalf = false; pd.reduceAll = false; pd.reflect = null; pd.cover = null; pd.noEvade = false;
-  pd.redirected = false; pd.endure = false; pd.takeMult = 0; // 隠れる・根性・肉を切らせては1体ぶん(盾になる・みんな下がれ・我慢は1回の攻撃ぶん)
+  pd.redirected = false; pd.endure = false; pd.takeMult = 0; pd.guardCards = []; // 隠れる・根性・肉を切らせては1体ぶん(盾になる・みんな下がれ・我慢は1回の攻撃ぶん)
 };
 
 const cardKo = (st, p, m) => {
@@ -954,6 +958,7 @@ const cardApplyGuard = (db, st, act) => {
   user.guardTurn = st.turn; // 挟み撃ちが見る
   cardLog(st, `${user.name}の「${c.name}」`, { kind: 'guard', p: q, cards: [no] });
   cardEvent(st, { t: 'guard', p: q, mon: act.mon, card: no });
+  (pd.guardCards || (pd.guardCards = [])).push(no); // 画面の「◯◯(防御 −3)を使った」用(ルールは見ない)
   (c.effects || []).forEach((e) => {
     if (e.t === 'evade') pd.evaded = true;
     if (e.t === 'reduce') pd.reduce += e.n;
@@ -1385,6 +1390,20 @@ const cardAiFinalDamage = (db, st, add = {}) => {
   return { dmg, back };
 };
 const cardAiIncomingDamage = (db, st) => cardAiFinalDamage(db, st).dmg;
+// 守りの番の画面に出す「受けるダメージ 前 → 後」(2026-10-27 社長「いくつからいくつとか、わかりやすい表記」)。
+//   before … 守りを使わなかったら受けるダメージ / after … いま出した守りで受けるダメージ / cards … 出した守りの札
+//   みんな下がれ(evadeAll)は狙われた子も回避する。かばう・身代わりで受ける子が替わったときは after を出さない(null)
+const cardGuardPreview = (db, st) => {
+  const pd = st && st.pending;
+  if (!pd || !Array.isArray(pd.targets) || !pd.targets[pd.ti]) return null;
+  const cards = Array.isArray(pd.guardCards) ? pd.guardCards.slice() : [];
+  const clean = { ...pd, evaded: false, evadeAll: false, reduce: 0, reduceHalf: false, reduceAll: false, reflect: null, endure: false, cover: null, takeMult: 0 };
+  const before = cardAiFinalDamage(db, { ...st, pending: clean }).dmg;
+  if (!cards.length) return { before, after: before, cards };
+  const moved = (pd.cover !== null && pd.cover !== undefined) || (pd.shield !== null && pd.shield !== undefined);
+  const after = moved ? null : (pd.evadeAll ? cardAiFinalDamage(db, st, { evaded: true }).dmg : cardAiFinalDamage(db, st).dmg);
+  return { before, after, cards };
+};
 // 守りの1枚を出したときの見込み。ルール(cardResolveTarget)と同じ決まりで数える。tools/card/card-ai-rule-sync-check.js が実際の結果と突き合わせる
 //   返す: after(狙われた子が受けるダメージ)/ extra(ほかの得損)/ back(はね返すダメージ)/ cost(そのとき払うガッツ)
 const cardAiGuardEstimate = (db, st, o, dmg) => {
