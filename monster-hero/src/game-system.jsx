@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a27beb8422de56e
+// generated-sha256: 52a7b9e7abff09d8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13317,6 +13317,94 @@ const dreamPainTakenBonus = (v) => { const d = dreamPainOf(v); return d.wait ===
 // 楔の効き目の短い文(バフの札)
 const kusabiEffectText = (n, max = KUSABI_MAX) => { const c = kusabiCountOf(n, max);
   return c > 0 ? `楔${c}/${max} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : ''; };
+// ==== キュービ「九尾四相」「九尾幻灯」/ オリヒメ「天河の契り」「星合の刻」「焦がれ待つ天ノ河」。2026-10-27 社長の決定 ====
+// 仕組みは社長の資料、数字はモンスター部の案の「推奨」(社長が4つとも選んだ)。本文: docs/progress/kyubi-orihime/hero-trait-ex-spec.md
+// 2体はまだ下書き(ALL_PLAYER_MONSTERS の外)。ここは純関数だけで、新モンスター確認(デバッグ)の画面から動かして見る。
+// バトルへのつなぎ込みは正式公開のときに、ここの関数を呼ぶ形で入れる。煉獄・狐火・逢瀬は保存しない(ランの途中だけ)
+const KYUBI_MONSTER_ID = 'Kyubi', ORIHIME_MONSTER_ID = 'Orihime';
+// 九尾四相: バトルが始まったときに立っている距離の枠(0 零・1 近・2 中・3 遠)で決まり、バトルのあいだ続く
+const KYUBI_PHASES = Object.freeze([
+  Object.freeze({ id:'rengoku',   slot:0, name:'煉獄ノ相' }),
+  Object.freeze({ id:'tensho',    slot:1, name:'天翔ノ相' }),
+  Object.freeze({ id:'kagero',    slot:2, name:'陽炎ノ相' }),
+  Object.freeze({ id:'sakuretsu', slot:3, name:'炸裂ノ相' }),
+]);
+const KYUBI_SAKURETSU_COMBO = 0.4;                 // 遠: 与ダメ40%の連撃×1
+const KYUBI_KAGERO_WAIT = 3;                       // 中: 完全回避を使ったら3ターン待ち
+const KYUBI_TENSHO = Object.freeze({ combo:0.2, dmg:0.15, hit:10, crit:0.1 }); // 近: 連撃20%×1・与ダメ+15%・命中+10%・会心率+10%
+const KYUBI_RENGOKU_MAX = 10, KYUBI_RENGOKU_PER = 0.05;           // 零: 煉獄(上限10)1つにつき連撃5%
+const KYUBI_RENGOKU_GUTS_PER = 0.003, KYUBI_RENGOKU_GUTS_CAP = 0.2; // 零: 消費ガッツ1につき与ダメ+0.3%(上限+20%)
+const kyubiPhaseOfSlot = (slot) => KYUBI_PHASES.find((p) => p.slot === Math.floor(Number(slot))) || null;
+const kyubiRengokuOf = (n) => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+// 相の効き目。{ dmgMult, hitAdd(命中%), critAdd(会心率・小数), combo(exCombos の形 / null), evadeAfterAttack }
+//   opts.rengoku … いまの煉獄の数 / opts.skillGuts … その技の消費ガッツ
+const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
+  const none = { dmgMult: 1, hitAdd: 0, critAdd: 0, combo: null, evadeAfterAttack: false };
+  if (phaseId === 'sakuretsu') return { ...none, combo: { count: 1, rate: KYUBI_SAKURETSU_COMBO, label: '炸裂ノ相' } };
+  if (phaseId === 'kagero') return { ...none, evadeAfterAttack: true };
+  if (phaseId === 'tensho') return { ...none, dmgMult: 1 + KYUBI_TENSHO.dmg, hitAdd: KYUBI_TENSHO.hit, critAdd: KYUBI_TENSHO.crit,
+    combo: { count: 1, rate: KYUBI_TENSHO.combo, label: '天翔ノ相' } };
+  if (phaseId === 'rengoku') {
+    const r = kyubiRengokuOf(opts.rengoku), guts = Math.max(0, Number(opts.skillGuts) || 0);
+    return { ...none, dmgMult: 1 + Math.min(KYUBI_RENGOKU_GUTS_CAP, KYUBI_RENGOKU_GUTS_PER * guts),
+      combo: r > 0 ? { count: 1, rate: KYUBI_RENGOKU_PER * r, label: '煉獄ノ相' } : null };
+  }
+  return none;
+};
+// 陽炎ノ相の完全回避。{ ready: 持っているか, wait: 次に持てるまでのターン }
+const kageroOf = (v) => ({ ready: !!v?.ready, wait: Math.max(0, Math.floor(Number(v?.wait) || 0)) });
+const kageroAfterAttack = (v) => { const k = kageroOf(v); return k.wait === 0 ? { ...k, ready: true } : k; };
+const kageroUseEvade = (v) => { const k = kageroOf(v); return k.ready ? { ready: false, wait: KYUBI_KAGERO_WAIT } : k; };
+const tickKagero = (v) => { const k = kageroOf(v); return { ...k, wait: Math.max(0, k.wait - 1) }; };
+// 九尾幻灯(EX): 狐火。{ active: 一度でも使ったか, fires, regen: 戻るまでの数え, buffTurns: 幻灯強化の残り }
+const KITSUNEBI_MAX = 5, KITSUNEBI_REGEN_TURNS = 3, KITSUNEBI_BUFF_TURNS = 3;
+const KITSUNEBI_ATTACK_EXTRA = 0.1, KITSUNEBI_GUARD_CUT = 0.2, KITSUNEBI_ASSIST_GUTS = 0.05, KITSUNEBI_SHIELD_CUT = 0.5;
+const KITSUNEBI_BUFF_DMG_PER = 0.04, KITSUNEBI_BUFF_TAKEN_PER = 0.03;
+const kitsunebiOf = (v) => ({ active: !!v?.active, fires: Math.min(KITSUNEBI_MAX, Math.max(0, Math.floor(Number(v?.fires) || 0))),
+  regen: Math.max(0, Math.floor(Number(v?.regen) || 0)), buffTurns: Math.max(0, Math.floor(Number(v?.buffTurns) || 0)) });
+// 使う(2回目も同じ): 狐火を満タンへ、強化はかけ直し(重ならない)
+const useKitsunebi = (v) => ({ ...kitsunebiOf(v), active: true, fires: KITSUNEBI_MAX, regen: 0, buffTurns: KITSUNEBI_BUFF_TURNS });
+// ターンが進むとき: 強化の残りを1つ減らし、3ターンごとに狐火が1つ戻る
+const tickKitsunebi = (v) => { const k = kitsunebiOf(v); if (!k.active) return k;
+  const regen = k.fires < KITSUNEBI_MAX ? k.regen + 1 : 0, back = regen >= KITSUNEBI_REGEN_TURNS;
+  return { ...k, fires: back ? k.fires + 1 : k.fires, regen: back ? 0 : regen, buffTurns: Math.max(0, k.buffTurns - 1) }; };
+// 攻撃を受けたとき(完全回避したときは呼ばない): 狐火が1つあれば盾になって消える。{ next, takenMult }
+const kitsunebiOnHit = (v) => { const k = kitsunebiOf(v);
+  return k.active && k.fires > 0 ? { next: { ...k, fires: k.fires - 1 }, takenMult: 1 - KITSUNEBI_SHIELD_CUT } : { next: k, takenMult: 1 }; };
+// ふだんの助けと幻灯強化。kind … 'attack' | 'guard' | 'assist'
+const kitsunebiEffectOf = (v, kind = 'attack') => { const k = kitsunebiOf(v), on = k.active && k.fires > 0, buff = k.active && k.buffTurns > 0;
+  return { extraHit: on && kind === 'attack' ? KITSUNEBI_ATTACK_EXTRA : 0, guardCut: on && kind === 'guard' ? KITSUNEBI_GUARD_CUT : 0,
+    assistGuts: on && kind === 'assist' ? KITSUNEBI_ASSIST_GUTS : 0,
+    buffDmg: buff ? KITSUNEBI_BUFF_DMG_PER * k.fires : 0, buffTaken: buff ? KITSUNEBI_BUFF_TAKEN_PER * k.fires : 0 }; };
+// 天河の契り: 相方との間合いの差(1〜3)で決まる。逢瀬は同じターンに2体が同じ種類の動きをすると+1
+const ORIHIME_BOND_TIERS = Object.freeze({ 1: Object.freeze({ max: 5 }), 2: Object.freeze({ max: 8 }), 3: Object.freeze({ max: 12 }) });
+const orihimeDiffOf = (a, b) => { const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b))); return d >= 1 && d <= 3 ? d : 0; };
+const ouseOf = (n, diff) => { const t = ORIHIME_BOND_TIERS[diff]; return t ? Math.min(t.max, Math.max(0, Math.floor(Number(n) || 0))) : Math.max(0, Math.floor(Number(n) || 0)); };
+// 逢瀬を足す。partnerUp … 相方が立っているか(倒れたらつながりは止まり、溜まった数は残る)
+const addOuse = (n, diff, sameKind, partnerUp = true) => (sameKind && partnerUp && ORIHIME_BOND_TIERS[diff] ? ouseOf(Number(n) + 1, diff) : ouseOf(n, diff));
+// つながりの効き目。{ dmgAdd(与ダメに足す率), takenCut(被ダメを減らす率), share(ダメージを2体で分け合うか) }
+const orihimeBondEffectOf = (diff, n, partnerUp = true) => {
+  const none = { dmgAdd: 0, takenCut: 0, share: false };
+  if (!partnerUp || !ORIHIME_BOND_TIERS[diff]) return none;
+  const c = ouseOf(n, diff);
+  if (diff === 1) return { ...none, dmgAdd: 0.10 + 0.02 * c };
+  if (diff === 2) return { ...none, takenCut: 0.10, dmgAdd: c >= 4 ? 0.02 * c : 0 };
+  return { dmgAdd: c >= 12 ? 0.40 : 0, takenCut: c >= 6 ? 0.15 : 0, share: true };
+};
+// 間合いの差3: 受けたダメージを2体で半分ずつ。合計は増えない([受けた子, 相方])
+const shareOrihimeDamage = (dmg) => { const d = Math.max(0, Math.floor(Number(dmg) || 0)); return [Math.ceil(d / 2), Math.floor(d / 2)]; };
+// 星合の刻(勇者EX): 逢瀬を全部使う。{ turns, rate(続く攻撃の与ダメ), perTurn(1ターンに続く回数の上限) }。使ったら逢瀬は0
+const HOSHIAI_PER_TURN = 2;
+const startHoshiai = (n, diff) => { const c = ouseOf(n, diff);
+  return { turns: Math.min(5, 2 + Math.floor(c / 4)), rate: Math.min(0.5, 0.30 + 0.015 * c + (diff === 2 ? 0.05 : diff === 3 ? 0.10 : 0)),
+    perTurn: HOSHIAI_PER_TURN }; };
+// 焦がれ待つ天ノ河(共モンEX): 3ターン、攻撃が当たったら25%で敵を「意味不明」に。振るのは1ターンに2回まで
+const KOGARE_TURNS = 3, KOGARE_CHANCE = 0.25, KOGARE_ROLLS_PER_TURN = 2;
+// rand … 0〜1(省けば Math.random)。{ confused, rollsLeft }
+const rollKogare = (rollsLeft, rand) => { const left = Math.max(0, Math.floor(Number(rollsLeft) || 0));
+  if (left <= 0) return { confused: false, rollsLeft: 0 };
+  const r = Number.isFinite(rand) ? rand : Math.random();
+  return { confused: r < KOGARE_CHANCE, rollsLeft: left - 1 }; };
 // いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);

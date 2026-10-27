@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 641d3cc5a56c5079
+// source-sha256: 8db4bb81fced76f9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18855,6 +18855,240 @@ const dreamPainTakenBonus = v => {
 const kusabiEffectText = (n, max = KUSABI_MAX) => {
   const c = kusabiCountOf(n, max);
   return c > 0 ? `楔${c}/${max} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : '';
+};
+const KYUBI_MONSTER_ID = 'Kyubi',
+  ORIHIME_MONSTER_ID = 'Orihime';
+const KYUBI_PHASES = Object.freeze([Object.freeze({
+  id: 'rengoku',
+  slot: 0,
+  name: '煉獄ノ相'
+}), Object.freeze({
+  id: 'tensho',
+  slot: 1,
+  name: '天翔ノ相'
+}), Object.freeze({
+  id: 'kagero',
+  slot: 2,
+  name: '陽炎ノ相'
+}), Object.freeze({
+  id: 'sakuretsu',
+  slot: 3,
+  name: '炸裂ノ相'
+})]);
+const KYUBI_SAKURETSU_COMBO = 0.4;
+const KYUBI_KAGERO_WAIT = 3;
+const KYUBI_TENSHO = Object.freeze({
+  combo: 0.2,
+  dmg: 0.15,
+  hit: 10,
+  crit: 0.1
+});
+const KYUBI_RENGOKU_MAX = 10,
+  KYUBI_RENGOKU_PER = 0.05;
+const KYUBI_RENGOKU_GUTS_PER = 0.003,
+  KYUBI_RENGOKU_GUTS_CAP = 0.2;
+const kyubiPhaseOfSlot = slot => KYUBI_PHASES.find(p => p.slot === Math.floor(Number(slot))) || null;
+const kyubiRengokuOf = n => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
+  const none = {
+    dmgMult: 1,
+    hitAdd: 0,
+    critAdd: 0,
+    combo: null,
+    evadeAfterAttack: false
+  };
+  if (phaseId === 'sakuretsu') return {
+    ...none,
+    combo: {
+      count: 1,
+      rate: KYUBI_SAKURETSU_COMBO,
+      label: '炸裂ノ相'
+    }
+  };
+  if (phaseId === 'kagero') return {
+    ...none,
+    evadeAfterAttack: true
+  };
+  if (phaseId === 'tensho') return {
+    ...none,
+    dmgMult: 1 + KYUBI_TENSHO.dmg,
+    hitAdd: KYUBI_TENSHO.hit,
+    critAdd: KYUBI_TENSHO.crit,
+    combo: {
+      count: 1,
+      rate: KYUBI_TENSHO.combo,
+      label: '天翔ノ相'
+    }
+  };
+  if (phaseId === 'rengoku') {
+    const r = kyubiRengokuOf(opts.rengoku),
+      guts = Math.max(0, Number(opts.skillGuts) || 0);
+    return {
+      ...none,
+      dmgMult: 1 + Math.min(KYUBI_RENGOKU_GUTS_CAP, KYUBI_RENGOKU_GUTS_PER * guts),
+      combo: r > 0 ? {
+        count: 1,
+        rate: KYUBI_RENGOKU_PER * r,
+        label: '煉獄ノ相'
+      } : null
+    };
+  }
+  return none;
+};
+const kageroOf = v => ({
+  ready: !!v?.ready,
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0))
+});
+const kageroAfterAttack = v => {
+  const k = kageroOf(v);
+  return k.wait === 0 ? {
+    ...k,
+    ready: true
+  } : k;
+};
+const kageroUseEvade = v => {
+  const k = kageroOf(v);
+  return k.ready ? {
+    ready: false,
+    wait: KYUBI_KAGERO_WAIT
+  } : k;
+};
+const tickKagero = v => {
+  const k = kageroOf(v);
+  return {
+    ...k,
+    wait: Math.max(0, k.wait - 1)
+  };
+};
+const KITSUNEBI_MAX = 5,
+  KITSUNEBI_REGEN_TURNS = 3,
+  KITSUNEBI_BUFF_TURNS = 3;
+const KITSUNEBI_ATTACK_EXTRA = 0.1,
+  KITSUNEBI_GUARD_CUT = 0.2,
+  KITSUNEBI_ASSIST_GUTS = 0.05,
+  KITSUNEBI_SHIELD_CUT = 0.5;
+const KITSUNEBI_BUFF_DMG_PER = 0.04,
+  KITSUNEBI_BUFF_TAKEN_PER = 0.03;
+const kitsunebiOf = v => ({
+  active: !!v?.active,
+  fires: Math.min(KITSUNEBI_MAX, Math.max(0, Math.floor(Number(v?.fires) || 0))),
+  regen: Math.max(0, Math.floor(Number(v?.regen) || 0)),
+  buffTurns: Math.max(0, Math.floor(Number(v?.buffTurns) || 0))
+});
+const useKitsunebi = v => ({
+  ...kitsunebiOf(v),
+  active: true,
+  fires: KITSUNEBI_MAX,
+  regen: 0,
+  buffTurns: KITSUNEBI_BUFF_TURNS
+});
+const tickKitsunebi = v => {
+  const k = kitsunebiOf(v);
+  if (!k.active) return k;
+  const regen = k.fires < KITSUNEBI_MAX ? k.regen + 1 : 0,
+    back = regen >= KITSUNEBI_REGEN_TURNS;
+  return {
+    ...k,
+    fires: back ? k.fires + 1 : k.fires,
+    regen: back ? 0 : regen,
+    buffTurns: Math.max(0, k.buffTurns - 1)
+  };
+};
+const kitsunebiOnHit = v => {
+  const k = kitsunebiOf(v);
+  return k.active && k.fires > 0 ? {
+    next: {
+      ...k,
+      fires: k.fires - 1
+    },
+    takenMult: 1 - KITSUNEBI_SHIELD_CUT
+  } : {
+    next: k,
+    takenMult: 1
+  };
+};
+const kitsunebiEffectOf = (v, kind = 'attack') => {
+  const k = kitsunebiOf(v),
+    on = k.active && k.fires > 0,
+    buff = k.active && k.buffTurns > 0;
+  return {
+    extraHit: on && kind === 'attack' ? KITSUNEBI_ATTACK_EXTRA : 0,
+    guardCut: on && kind === 'guard' ? KITSUNEBI_GUARD_CUT : 0,
+    assistGuts: on && kind === 'assist' ? KITSUNEBI_ASSIST_GUTS : 0,
+    buffDmg: buff ? KITSUNEBI_BUFF_DMG_PER * k.fires : 0,
+    buffTaken: buff ? KITSUNEBI_BUFF_TAKEN_PER * k.fires : 0
+  };
+};
+const ORIHIME_BOND_TIERS = Object.freeze({
+  1: Object.freeze({
+    max: 5
+  }),
+  2: Object.freeze({
+    max: 8
+  }),
+  3: Object.freeze({
+    max: 12
+  })
+});
+const orihimeDiffOf = (a, b) => {
+  const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b)));
+  return d >= 1 && d <= 3 ? d : 0;
+};
+const ouseOf = (n, diff) => {
+  const t = ORIHIME_BOND_TIERS[diff];
+  return t ? Math.min(t.max, Math.max(0, Math.floor(Number(n) || 0))) : Math.max(0, Math.floor(Number(n) || 0));
+};
+const addOuse = (n, diff, sameKind, partnerUp = true) => sameKind && partnerUp && ORIHIME_BOND_TIERS[diff] ? ouseOf(Number(n) + 1, diff) : ouseOf(n, diff);
+const orihimeBondEffectOf = (diff, n, partnerUp = true) => {
+  const none = {
+    dmgAdd: 0,
+    takenCut: 0,
+    share: false
+  };
+  if (!partnerUp || !ORIHIME_BOND_TIERS[diff]) return none;
+  const c = ouseOf(n, diff);
+  if (diff === 1) return {
+    ...none,
+    dmgAdd: 0.10 + 0.02 * c
+  };
+  if (diff === 2) return {
+    ...none,
+    takenCut: 0.10,
+    dmgAdd: c >= 4 ? 0.02 * c : 0
+  };
+  return {
+    dmgAdd: c >= 12 ? 0.40 : 0,
+    takenCut: c >= 6 ? 0.15 : 0,
+    share: true
+  };
+};
+const shareOrihimeDamage = dmg => {
+  const d = Math.max(0, Math.floor(Number(dmg) || 0));
+  return [Math.ceil(d / 2), Math.floor(d / 2)];
+};
+const HOSHIAI_PER_TURN = 2;
+const startHoshiai = (n, diff) => {
+  const c = ouseOf(n, diff);
+  return {
+    turns: Math.min(5, 2 + Math.floor(c / 4)),
+    rate: Math.min(0.5, 0.30 + 0.015 * c + (diff === 2 ? 0.05 : diff === 3 ? 0.10 : 0)),
+    perTurn: HOSHIAI_PER_TURN
+  };
+};
+const KOGARE_TURNS = 3,
+  KOGARE_CHANCE = 0.25,
+  KOGARE_ROLLS_PER_TURN = 2;
+const rollKogare = (rollsLeft, rand) => {
+  const left = Math.max(0, Math.floor(Number(rollsLeft) || 0));
+  if (left <= 0) return {
+    confused: false,
+    rollsLeft: 0
+  };
+  const r = Number.isFinite(rand) ? rand : Math.random();
+  return {
+    confused: r < KOGARE_CHANCE,
+    rollsLeft: left - 1
+  };
 };
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
