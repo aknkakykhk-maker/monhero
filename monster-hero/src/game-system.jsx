@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e8a6a3f5ec2a078c
+// generated-sha256: 1dee036c12ac091d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25779,7 +25779,9 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
   });
   if (isTacticsAiCopyStanding(copy)) {
     const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
-    list.push({ index: TACTICS_AI_COPY_TARGET, weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) });
+    // ヘイトが切のとき(hate が配列でない)は、4体と同じく倍率1
+    const mult = Array.isArray(hate) ? tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0) : 1;
+    list.push({ index: TACTICS_AI_COPY_TARGET, weight: (1 + safeBias * (1 - remain)) * mult });
   }
   return list;
 };
@@ -26140,6 +26142,8 @@ const tacticsIntentTargets = (intent, units, enemyDist = null) => {
   const alive = tacticsAliveSlots(units);
   if (!intent || !alive.length) return [];
   if (intent.targetsAll) return alive;
+  // AIコピーを狙った技は4体には当たらない(下の間合い攻撃の保険で別の子へ流れないように先に返す)
+  if (intent.targetCopy) return [];
   // ★間合い攻撃は「**予告した間合い**にいる子」を狙う。距離撃で敵を動かしても狙いは変わらず、
   //   威力だけが落ちる(missValue ＝ ×TACTICS_SWEEP_MISS_MULT)。
   //   2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
@@ -42211,7 +42215,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, enemyDebuffs, battleUnitStatusOf, battleEnemyStatus, enemyStackCounts, debugStackMarks, tacticsSlotCountersAt, discardCards, actionUsed, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, hamCounterFx, skipHamCounterFx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot, tacticsHate, tacticsHateOn, aiCopy,
   tacticsExIntroVisible, dismissTacticsExIntro, tacticsPandoraForms, trickStartView, sweetStackView, bowStackView, fateWheelView, tacticsShields, enemyConfuseTurns, luckBanners,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
@@ -43714,7 +43718,17 @@ function BattleScreen({
               // 狙われる確率(%)。2026-10-22 社長「ヘイトは炎じゃなくて数値化したほうがいい」で、炎の段から数字に替えた。
               // 敵が狙いを決めるのと同じ重み(tacticsTargetChances → tacticsTargetWeights)で、生きている子だけで割る。倒れている子には出さない。
               // 印は「狙」の小さな字(予告の当たり先の🎯と紛れないように・狭い枠で名前を削りすぎないように)
-              const hatePct=s&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChances(tacticsUnits,tacticsHate)[i]:null;
+              // ★AIコピー(ソラシドのアシカの5人目)が立っていれば、%はコピーも入れて割る(4体とコピーで合計100)。aiCopy は公開の印が偽のあいだ null
+              const copyStanding=!!aiCopy&&isTacticsAiCopyStanding(aiCopy)&&aiCopy.spawnTurn<=turnCount;
+              const chancesNow=s&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,copyStanding?aiCopy:null):null;
+              const hatePct=chancesNow?chancesNow.slots[i]:null;
+              // コピーの札は、コピーが立つマス(pos)の枠に出す。名前・ライフ・残りターン・狙われる%
+              const copyChip=tacticsNewLayout&&aiCopy&&aiCopy.pos===i?(<div data-tactics-ai-copy={i} data-tactics-ai-copy-out={copyStanding?'1':'0'}
+                className="absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap">
+                <span className="min-w-0 truncate">🤖{aiCopy.stacked?'重なる ':''}{copyStanding?`ライフ${aiCopy.hp}`:'次のターンから'}</span>
+                {copyStanding&&<span className="shrink-0 tabular-nums text-sky-200/90">あと{aiCopy.turnsLeft}</span>}
+                {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
+              </div>):null;
               const hateFlame=Number.isInteger(hatePct)?<span data-tactics-hate={i} data-tactics-hate-pct={hatePct} title="狙われる確率" className={`ml-0.5 shrink-0 rounded px-[2px] py-px text-[8px] font-black leading-none tracking-tighter tabular-nums ${hatePct>=50?'bg-red-950/80 text-red-200':hatePct>=30?'bg-orange-950/70 text-orange-200':'bg-black/50 text-slate-300'}`}><span className="text-[6px] opacity-80">狙</span>{hatePct}%</span>:null;
               // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
               // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない
@@ -43797,6 +43811,7 @@ function BattleScreen({
                   {(previewDmg>0||previewGuard>0)&&<div data-tactics-image-previews className="flex shrink-0 items-center gap-0.5">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>}
                   <div className="flex min-w-0 flex-1 justify-end">{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"><span className="shrink-0">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}</span>{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}</div>
                 </div>)}
+                {copyChip}
                 {/* 効果の光。吹き出しが出るたびに key が変わるので、同じ効果が続いても毎回光り直す。
                     緊急回復・回復カードの戻り(tacticsSlotFx の heal/guts)もここで光らせる */}
                 {tacticsNewLayout&&(()=>{
@@ -64371,8 +64386,10 @@ function MonsterHeroGame() {
   //   レイドも同じタクティクスの盤面なので同じにする(2026-10-19 社長「タクティクスバトルをレイドは使ってるんだから同じにするの当たり前」)
   const tacticsHateOnFor = (mode) => isTacticsMode(mode) && tacticsHateProtoOn();
   const aimTacticsIntent = (intent, mode) => (isTacticsMode(mode)
-    ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null)
+    ? withTacticsTarget(intent, tacticsUnitsRef.current, Math.random, TACTICS_TARGET_LOW_HP_BIAS, tacticsHateOnFor(mode) ? tacticsHateRef.current : null, tacticsAiCopyAimable())
     : intent);
+  // 敵の狙いの候補に入れるコピー(公開の印が真で、立っているときだけ。偽のあいだは null で今までと同じ)
+  const tacticsAiCopyAimable = () => (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsAiCopyStanding(aiCopyRef.current)) ? aiCopyRef.current : null;
   const commitTacticsHate = (next) => { tacticsHateRef.current = next; setTacticsHate(next); };
   const addTacticsHatePending = (slotIdx, gain) => {
     if (!Number.isInteger(slotIdx) || slotIdx < 0 || slotIdx > 3 || !(gain > 0)) return;
@@ -64389,8 +64406,10 @@ function MonsterHeroGame() {
     // AIコピーの🔥も同じタイミングで進める(たまり方は Lv の倍率)
     const copy = aiCopyRef.current;
     if (copy && isTacticsAiCopyStanding(copy)) {
-      const hate = tacticsAiCopyHateStep(copy, { gain: copy.hateGainNow || 0 }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
-      commitAiCopy({ ...copy, hate, hateGainNow: 0 });
+      const dealt = Math.max(0, Number(copy.dealtNow) || 0);
+      const teamDealt = tacticsHateDealtRef.current.reduce((a, v) => a + (Number(v) || 0), 0) + dealt;
+      const hate = tacticsAiCopyHateStep(copy, { gain: copy.hateGainNow || 0, dealt, teamDealt }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
+      commitAiCopy({ ...copy, hate, hateGainNow: 0, dealtNow: 0 });
     }
     clearTacticsHateTurn();
   };
@@ -74370,7 +74389,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // targetSlot は新モード専用。★渡したときだけ「その子の丈夫さ」で受ける。
   //   渡さなければ今までどおりパーティの丈夫さなので、既存モードの呼び出しは何も変わらない
-  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null) => {
+  // targetDef … AIコピーが受けるとき、コピー自身の丈夫さ(特性は元の子 targetSlot のもの)
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent, targetSlot=null, targetDef=null) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     // ★運命の輪(スプーキー)の「敵の与ダメ−30%」は、モノリスの敵攻撃ダウンと同じく敵の攻撃力へ掛ける
@@ -74393,7 +74413,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ? tacticsBattleUnit(targetSlot) : null;
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「丈夫さ+20%」を、狙われた子の丈夫さへ掛ける
     const defVal = (targetUnit
-      ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)
+      ? resolveEffectiveMaxStat(Number.isFinite(targetDef) ? targetDef : normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef)
       * trickStartDefMult(trickStartStacksAt(isTacticsMode(runMode) ? targetSlot : null));
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
@@ -75715,13 +75735,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
           tookEnemyAttack=true;
           const targets=tacticsTargetsNow(intent,actingEnemyDist);
+          // ★AIコピー(5人目)が当たるか。当たればコピー自身の丈夫さで受ける(ガード・回避は無し)。0 になったら消える(倒れた数・全滅には入らない)
+          const copyNow=aiCopyRef.current;
+          const copyHit=EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isAiCopyOut(copyNow,turnCount)&&tacticsIntentHitsAiCopy(intent,copyNow);
+          if(copyHit){
+            const rushN=intent.variant==='rush'?Math.max(1,Math.floor(Number(intent.hits)||1)):1;
+            const hitC=resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent,copyNow.srcSlot,copyNow.def),rushN,0,0);
+            const fdC=applyImmediateTakenReduction(hitC.taken);
+            const afterC=damageTacticsAiCopy(copyNow,fdC);
+            addPopup(`🤖 ${tacticsAiCopyName(copyNow)} −${fdC}`,'hero','text-sky-200 font-black text-lg drop-shadow-md');
+            pushBattleLog(`${tacticsAiCopyName(copyNow)}に${fdC}ダメージ`,'enemy');
+            if(afterC) commitAiCopy(afterC); else clearAiCopy('倒されて消えた');
+            if(!targets.length) await battleWait(600);
+          }
           const coverSlot=tacticsCoverSlotNow();
           if(coverSlot!=null&&targets.length){
             addPopup(`かばう！ ${tacticsTargetName(tacticsUnitsRef.current,coverSlot)}`,'hero','text-sky-300 font-black text-xl drop-shadow-md');
             pushBattleLog(`${battleActorName(coverSlot)}が攻撃をすべて引き受けた`);
             await battleWait(600);
           }
-          if(!targets.length){
+          if(!targets.length&&copyHit){
+            // コピーだけが受けた(4体はだれも受けていない)
+          } else if(!targets.length){
             addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
             await battleWait(700);
           } else {
@@ -77008,6 +77043,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       await battleWait(250);
     }
     popupSlotRef.current=null;
+    // ===== AIコピーの1手(ソラシドのアシカ)。味方のカードのあと、敵へのダメージをまとめて当てる前 =====
+    // ★攻撃のカードだけを使う(ガード・回復などは使わない・暫定)。ガッツは毎ターン満タンから。
+    //   強さは「元の子の今の攻撃 × (コピーの攻撃 ÷ 元の子の攻撃)」、間合いはコピーの立つマス(pos)で数える。
+    //   与ダメは attackHits に aiCopy の印で足す(敵のライフには入る・枠ごとの与ダメと元の子の🔥には入れない)
+    {
+      const copy=aiCopyRef.current;
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy,turnCount)&&isTacticsAiCopyStanding(copy)){
+        const srcMon=slots[copy.srcSlot]; const srcUnit=tacticsBattleUnit(copy.srcSlot);
+        if(srcMon&&srcUnit&&srcUnit.atk>0){
+          const distFrom=copy.srcSlot+(attackDistance-copy.pos);
+          const atkRate=copy.atk/srcUnit.atk;
+          const dmgOf=(c)=>Math.floor(getDmg(c,copy.srcSlot,srcMon,0,0,false,distFrom)*atkRate);
+          const piles=handPileRef.current;
+          const pool=[...(piles.deck||[]),...(piles.graveyard||[])].filter(c=>c&&c.type!=='unique'&&dmgOf(c)>0);
+          const uniq=copy.uniqueCard&&dmgOf(copy.uniqueCard)>0?copy.uniqueCard:null;
+          const planned=planAiCopyTurn({...copy,guts:copy.maxGuts,uniqueCardUid:uniq?uniq.uid:null},
+            { deck:uniq?[...pool,uniq]:pool, score:dmgOf, costOf:(c)=>getCardGuts(c,copy.srcSlot) });
+          let dealtC=0, gainC=0;
+          (planned.picks||[]).forEach((card,k)=>{
+            const d=dmgOf(card); if(!(d>0)) return;
+            totalDmg+=d; dealtC+=d;
+            gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
+            attackHits.push({dmg:d,isCrit:false,slotIdx:copy.srcSlot,aiCopy:true,isSpecial:card.type==='unique',skillName:`${tacticsAiCopyName(copy)}の${card.name||card.baseName||'攻撃'}`,isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
+          });
+          commitAiCopy({...planned,hateGainNow:(Number(copy.hateGainNow)||0)+gainC,dealtNow:(Number(copy.dealtNow)||0)+dealtC});
+          if(!(planned.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
+        }
+      }
+    }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
     if (totalDmg>0) {
@@ -77165,7 +77229,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         setCurrentWaveDamage(p=>p+totalDmg); raidJackDamageRef.current+=Number(totalDmg)||0;
         const turnDistDmg=[0,0,0,0];
-        for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
+        for(const h of attackHits){ if(h.aiCopy) continue; const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
         setWaveDistDamage(prev=>{const n=[...prev]; for(let k=0;k<4;k++) n[k]=(n[k]||0)+turnDistDmg[k]; return n;});
         if(tacticsHateOnFor(runMode)) tacticsHateDealtRef.current=tacticsHateDealtRef.current.map((v,k)=>v+turnDistDmg[k]); // ヘイト(試作): 与ダメージの割合
         // Show combined total for multi-hit
@@ -77228,7 +77292,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];
-    { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
+    { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ if(h.aiCopy) continue; const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
     // このターンに削ったぶんを引いた、敵の本当のライフ。撃破判定と敵の行動へ同じ値を渡す。
     // (enemy はターン開始時の値で止まっているので、必ずここを通してから使う)
     let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);
@@ -84688,7 +84752,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}
