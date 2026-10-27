@@ -714,6 +714,15 @@ function MonsterHeroGame() {
   const [tacticsPandoraForms, setTacticsPandoraForms] = useState({}); // パンドラの箱: 枠ごとの「いま見せている姿」('devil'|'angel')。カードを切っている間だけ入る
   const handPileRef = useRef({ hand: [], deck: [], graveyard: [] }); // EXスキルが「いまの」手札・山札・墓地を読むための控え(毎回の描画で更新)
   handPileRef.current = { hand, deck, graveyard };
+  // ★AIコピー(ソラシドのアシカの5人目・2026-10-27 社長の決め)。保存しない。共通の部品は 33-ai-copy.jsx、タクティクスの分は 32-tactics-units.jsx。
+  //   形は 33-ai-copy.jsx の冒頭。公開の印 assistantSorashido が偽のあいだは null のまま(今までと同じ)
+  const [aiCopy, setAiCopy] = useState(null);
+  const aiCopyRef = useRef(null);
+  // 値か (prev)=>next を受ける(ダイスくんの5つの遊びの分でも使う)
+  const commitAiCopy = (next) => {
+    const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    aiCopyRef.current = v; setAiCopy(v); return v;
+  };
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
   // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
@@ -1692,7 +1701,49 @@ function MonsterHeroGame() {
     if (!tacticsHateOnFor(mode)) return;
     const units = tacticsUnitsRef.current;
     commitTacticsHate(tacticsHateStep(tacticsHateRef.current, { gains: tacticsHatePendingRef.current, dealt: tacticsHateDealtRef.current }, units, units.map(u => u && u.id)));
+    // AIコピーの🔥も同じタイミングで進める(たまり方は Lv の倍率)
+    const copy = aiCopyRef.current;
+    if (copy && isTacticsAiCopyStanding(copy)) {
+      const hate = tacticsAiCopyHateStep(copy, { gain: copy.hateGainNow || 0 }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
+      commitAiCopy({ ...copy, hate, hateGainNow: 0 });
+    }
     clearTacticsHateTurn();
+  };
+  // ===== AIコピー(ソラシドのアシカ) =====
+  // タクティクス: 使った子のとなりの空いたマス(無ければ同じマス)に、次のターンから出す。🔥は元の子の🔥 × Lv の割合から。
+  //   ★固有技の写しは、みんなの山札へは入れずコピー自身が持つ(uniqueCard)。カードを使う途中で山札を書き換えると、
+  //   ターンの終わりの山札の作り直しで消えるため。コピーの手札を作るときだけ足す(planAiCopyTurn)
+  const summonTacticsAiCopy = (slotIdx, level, effMul = 1) => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    const unit = tacticsUnitsRef.current[slotIdx];
+    if (!unit) return;
+    const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
+    const piles = handPileRef.current;
+    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])]
+      .find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
+    const { pos, stacked } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
+    const rules = aiCopyRules(level);
+    const before = aiCopyRef.current;
+    const res = summonAiCopy({ aiCopy: before, zones: { deck: [], hand: [], discard: [] } },
+      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, uniqueCard, turn: turnCount, mode: 'tactics', effMul });
+    const next = res.plan.kind === 'refresh'
+      ? res.aiCopy
+      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart), uniqueCard: res.zones.deck[0] || null };
+    commitAiCopy(next);
+    pushBattleLog(res.plan.kind === 'refresh'
+      ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った`
+      : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
+  };
+  // 5つの遊びの分はダイスくんが書く(パーティのライフを使う・狙われない・倒されない)。それまでは何もしない
+  const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+  };
+  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。タクティクスは写しを山札に入れていないので、山札は触らない
+  const clearAiCopy = (why = '') => {
+    const copy = aiCopyRef.current;
+    if (!copy) return;
+    commitAiCopy(null);
+    if (why) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${why}`, 'ally');
   };
   // ===== ライフの増減(新モードだけ盤面へ) =====
   // どれも「新モードなら増減後の合計ライフ、ほかのモードなら null」を返す。
@@ -1832,8 +1883,11 @@ function MonsterHeroGame() {
   const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)
     ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null);
   // 20ターン経過。全員を倒して、敗北の見え方をそろえる
-  const tacticsWipe = () => isTacticsMode(runMode)
-    ? commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current)) : null;
+  const tacticsWipe = () => {
+    if (!isTacticsMode(runMode)) return null;
+    clearAiCopy();
+    return commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current));
+  };
   // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
   // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
   const enemyRevivalUsedRef = useRef(0);
@@ -13364,6 +13418,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    // AIコピー: 出ているときだけ、ターンの終わりに1つ数える。0 で消える(時間停止のターンは数えない)
+    if(timeStopSlot==null&&aiCopyRef.current){
+      const ticked=tickAiCopy({ aiCopy:aiCopyRef.current, zones:{ deck:[], hand:[], discard:[] } },turnCount);
+      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else commitAiCopy(ticked.aiCopy);
+    }
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
     // ★ジャック戦は RAID_JACK_TURNS(20)ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスも20ターン
     if(raidJackRunRef.current){
@@ -13991,6 +14050,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         // きゅうこの譜面: このターンの単体攻撃を使った子へ向け(タクティクス)、使った子の被ダメを数ターン減らす。🔥は上げない。
         //   効果量は data/breeder.js の KYUKO_TIERS。重ねて使ったら、あとのカードで張り直す(足さない)
+        else if (card.subType==='copy_sorashido') {
+          // ソラシドの自動化(2026-10-27 社長の決め)。使った子の AIコピーが次のターンから戦う。Lv は ownedTeachings の段
+          const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2);
+          if(isTacticsMode(runMode)) summonTacticsAiCopy(slotIdx,level,effMul); else summonClassicAiCopy(slotIdx,level,effMul);
+        }
         else if (card.subType==='cover_kyuko') {
           const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=Math.min(owned?owned.evoLevel:0,KYUKO_TIERS.length-1);
           const conf=KYUKO_TIERS[tier]; const cut=Math.min(0.9,conf.cut*effMul);
@@ -15295,6 +15359,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
+    // AIコピーは WAVE の終わりで消える(2026-10-27 窓口: WAVE をまたぐかは社長に確認中。それまでは消す)
+    commitAiCopy(null);
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
