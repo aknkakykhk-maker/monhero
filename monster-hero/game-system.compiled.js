@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1a0ddf8e89435a4
+// source-sha256: 8405e729e47b079c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70491,6 +70491,7 @@ const CLASSIC_AI_COPY_CSS = `
   [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
   [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
 }`;
+const aiCopyViewPhase = (copy, fallback) => copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback;
 const classicAiCopyLandscape = () => {
   try {
     return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
@@ -70500,18 +70501,34 @@ const classicAiCopyLandscape = () => {
 };
 function ClassicAiCopyCell({
   copy,
-  turnCount
+  turnCount,
+  onOpen
 }) {
   if (!copy) return null;
-  const out = isAiCopyOut(copy, turnCount);
+  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
+  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
+  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
   const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
   const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)),
     maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
   return React.createElement("div", {
     "data-ai-copy-cell": out ? 'out' : 'waiting',
-    "aria-label": `${tacticsAiCopyName(copy)}(5人目の味方)`
+    "data-ai-copy-phase": phase,
+    "aria-label": `${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`,
+    role: canOpen ? 'button' : undefined,
+    tabIndex: canOpen ? 0 : undefined,
+    style: canOpen ? {
+      cursor: 'pointer'
+    } : undefined,
+    onClick: canOpen ? onOpen : undefined,
+    onKeyDown: canOpen ? e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onOpen();
+      }
+    } : undefined
   }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement(SorashidoCopyFx, {
-    phase: out ? 'idle' : 'appear'
+    phase: phase
   }, React.createElement("span", {
     className: "text-2xl leading-none"
   }, SORASHIDO_FACE_ICON)), React.createElement("span", {
@@ -70972,7 +70989,28 @@ function BattleScreen({
   const [unitDetail, setUnitDetail] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
-  const classicAiCopy = !Array.isArray(tacticsUnits) ? aiCopy || null : null;
+  const [copyHandOpen, setCopyHandOpen] = useState(false);
+  const [copyGhost, setCopyGhost] = useState(null);
+  const copyPrevRef = useRef(null);
+  useEffect(() => {
+    if (aiCopy) {
+      copyPrevRef.current = aiCopy;
+      setCopyGhost(null);
+      return undefined;
+    }
+    const prev = copyPrevRef.current;
+    copyPrevRef.current = null;
+    setCopyHandOpen(false);
+    if (!prev) return undefined;
+    setCopyGhost({
+      ...prev,
+      fx: 'vanish'
+    });
+    const timer = setTimeout(() => setCopyGhost(null), 700);
+    return () => clearTimeout(timer);
+  }, [aiCopy]);
+  const shownAiCopy = aiCopy || copyGhost;
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? shownAiCopy || null : null;
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
   const fxRestEnabled = battleFx.restPause === 'ON';
@@ -72872,12 +72910,16 @@ function BattleScreen({
     const copyStanding = !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount;
     const chancesNow = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, copyStanding ? aiCopy : null) : null;
     const hatePct = chancesNow ? chancesNow.slots[i] : null;
-    const copySrc = aiCopy && aiCopy.pos === i ? slots[aiCopy.srcSlot] : null;
-    const copyChip = tacticsNewLayout && aiCopy && aiCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !s && !aiCopy.stacked && React.createElement("div", {
+    const tCopy = shownAiCopy;
+    const tCopyPhase = aiCopyViewPhase(tCopy, copyStanding ? 'idle' : 'appear');
+    const tCopyOut = copyStanding || tCopyPhase === 'vanish';
+    const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
+    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !s && !tCopy.stacked && React.createElement("div", {
       "data-tactics-ai-copy-art": i,
+      "data-ai-copy-phase": tCopyPhase,
       className: "absolute inset-0 z-[24] flex items-center justify-center pointer-events-none"
     }, React.createElement(SorashidoCopyFx, {
-      phase: copyStanding ? 'idle' : 'appear'
+      phase: tCopyPhase
     }, React.createElement(DyedMonsterImage, {
       baseId: copySrc.id,
       src: copySrc.imgUrl,
@@ -72892,15 +72934,21 @@ function BattleScreen({
       "data-tactics-ai-copy-next": i,
       className: "absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none"
     }, React.createElement(SorashidoNextCardBadge, {
-      card: copyStanding ? aiCopy.nextCard : null,
-      turnsLeft: aiCopy.turnsLeft
+      card: tCopyOut ? tCopy.nextCard : null,
+      turnsLeft: tCopy.turnsLeft
     })), React.createElement("div", {
       "data-tactics-ai-copy": i,
-      "data-tactics-ai-copy-out": copyStanding ? '1' : '0',
-      className: "absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap"
+      "data-tactics-ai-copy-out": tCopyOut ? '1' : '0',
+      role: aiCopy ? 'button' : undefined,
+      "aria-label": aiCopy ? 'コピーの手札を見る' : undefined,
+      onClick: aiCopy ? e => {
+        e.stopPropagation();
+        setCopyHandOpen(true);
+      } : undefined,
+      className: `absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
     }, React.createElement("span", {
       className: "min-w-0 truncate"
-    }, "🤖", aiCopy.stacked ? '重なる ' : '', copyStanding ? `ライフ${aiCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+    }, "🤖", tCopy.stacked ? '重なる ' : '', tCopyOut ? `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
       className: "shrink-0 tabular-nums text-rose-200"
     }, "狙", chancesNow.copy, "%"))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
@@ -73579,8 +73627,18 @@ function BattleScreen({
     }, RANGE_LABELS[i], "距離")));
   })), classicAiCopy && !tacticsNewLayout && React.createElement(ClassicAiCopyCell, {
     copy: classicAiCopy,
-    turnCount: turnCount
-  }))), tacticsExIntroVisible && React.createElement("div", {
+    turnCount: turnCount,
+    onOpen: () => setCopyHandOpen(true)
+  }), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
+    open: true,
+    copyName: aiCopy.name || '仲間',
+    turnsLeft: aiCopy.turnsLeft,
+    cards: Array.isArray(aiCopy.hand) ? aiCopy.hand : [],
+    nextCard: aiCopy.nextCard || null,
+    guts: aiCopy.guts,
+    maxGuts: aiCopy.maxGuts,
+    onClose: () => setCopyHandOpen(false)
+  }), document.body))), tacticsExIntroVisible && React.createElement("div", {
     "data-tactics-ex-intro": true,
     className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
   }, React.createElement("div", {
