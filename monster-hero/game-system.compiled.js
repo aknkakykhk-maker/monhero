@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2848e2cde746a18e
+// source-sha256: 470878f0280f72bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -127435,7 +127435,7 @@ function MonsterHeroGame() {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
-          className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:h-auto [@media(orientation:landscape)_and_(max-height:520px)]:pt-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:content-start transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
+          className: `mhbt-tile mhbt-d-${setting.id} dark snap-center shrink-0 w-[82%] max-[359px]:w-[90%] h-[400px] flex flex-col px-4 pt-3 pb-2.5 transition-all ${active ? 'on scale-100 opacity-100' : 'scale-[.92] opacity-45'} ${previewable ? '' : 'dim'}`,
           style: {
             '--acc': theme.accent
           }
@@ -127443,11 +127443,11 @@ function MonsterHeroGame() {
           "aria-hidden": "true",
           className: "mhbt-mark"
         }, setting.label), React.createElement("div", {
-          className: "mhbt-eyebrow [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
+          className: "mhbt-eyebrow"
         }, "EXTREME DIFFICULTY"), React.createElement("h3", {
-          className: "mhbt-name truncate text-[22px] [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
+          className: "mhbt-name truncate text-[22px]"
         }, setting.label), React.createElement("div", {
-          className: "mt-1 h-[42px] shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]"
+          className: "mt-1 h-[42px] shrink-0 rounded-xl bg-black/40 px-2.5 py-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]"
         }, React.createElement("small", {
           className: "block text-[8px] text-white/70 font-black"
         }, setting.available ? `${setting.label}の記録` : '難易度情報'), React.createElement("b", {
@@ -127455,14 +127455,14 @@ function MonsterHeroGame() {
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
         }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
-          className: "grid grid-cols-3 gap-1 mt-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"
+          className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => React.createElement("div", {
           key: label,
           className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap"
         }, label, React.createElement("b", {
           className: "block text-[11px] leading-tight text-white"
         }, value)))), React.createElement("div", {
-          className: `grid ${heroProofReward > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-1 mt-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1`
+          className: `grid ${heroProofReward > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-1 mt-1`
         }, [['経験値', setting.xp ? `×${setting.xp}` : '対象外'], ['虹のプシュケー', setting.psyche ?? '対象外']].map(([label, value]) => React.createElement("div", {
           key: label,
           className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap"
@@ -127475,10 +127475,10 @@ function MonsterHeroGame() {
           className: "block text-[11px] leading-tight text-white"
         }, "：", heroProofReward, "個"))), React.createElement("p", {
           "data-extreme-card-description": setting.id,
-          className: "mt-1 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-2 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
+          className: "mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
         }, setting.cardDescription || setting.description), React.createElement("div", {
           "data-extreme-special-rules": setting.id,
-          className: "mt-1 h-[34px] shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-3 flex items-center justify-center rounded-lg border px-2 text-center",
+          className: "mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border px-2 text-center",
           style: {
             borderColor: `rgba(${theme.rgb},.58)`,
             backgroundColor: `rgba(${theme.rgb},.14)`
@@ -127486,10 +127486,10 @@ function MonsterHeroGame() {
         }, React.createElement("b", {
           className: "text-[10px] leading-tight text-amber-300"
         }, "⚠ ", setting.label, " ", extremeRuleSummaryText(setting.id)))) : React.createElement("div", {
-          className: "mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:py-4 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
+          className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
         }, "？？？"), React.createElement("div", {
           "data-extreme-card-actions": true,
-          className: "grid grid-cols-[minmax(0,1fr)] gap-1.5 mt-auto pt-2 pb-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-4 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0 [@media(orientation:landscape)_and_(max-height:520px)]:self-end"
+          className: "grid grid-cols-[minmax(0,1fr)] gap-1.5 mt-auto pt-2 pb-1"
         }, React.createElement("div", {
           className: "flex min-w-0 gap-1.5"
         }, React.createElement("button", {
