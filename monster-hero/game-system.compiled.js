@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 159bebcfa430f1d8
+// source-sha256: d950daf1110f881b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -85948,6 +85948,21 @@ const CARD_AI_HABITS = Object.freeze({
     finish: 1.5
   }
 });
+const CARD_AI_DECK_HABIT = Object.freeze({
+  dra: {
+    master: {
+      big: 1.0
+    }
+  }
+});
+const cardAiDeckHabit = (who, levelId) => {
+  const h = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const o = (CARD_AI_DECK_HABIT[who] || {})[levelId] || null;
+  return o ? {
+    ...h,
+    ...o
+  } : h;
+};
 const CARD_AI_TUNE = Object.freeze({
   mua: 0.6,
   momosuke: 0.5,
@@ -86616,8 +86631,8 @@ const CARD_AI_TEAM = Object.freeze({
 });
 const cardAiSameBloodScale = familySize => Math.max(0, Math.min(1, (familySize - 1) / 4));
 const cardAiBloodOf = m => String(m.wave) === 'hybrid' ? m.main : m.species;
-const cardAiTeamValue = (db, who, team, m, maxWave) => {
-  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+const cardAiTeamValue = (db, who, team, m, maxWave, levelId = null) => {
+  const habit = cardAiDeckHabit(who, levelId);
   const mine = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, {
     ...m,
     ko: false
@@ -86820,8 +86835,8 @@ const cardAiMonWave = (db, m, card) => {
   const base = Object.values(db.monsters).find(x => !x.variant && x.species === sp && String(x.wave) !== 'hybrid');
   return base ? Number(base.wave) || 1 : 4;
 };
-const cardAiMonScore = (db, who, m, maxWave) => {
-  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+const cardAiMonScore = (db, who, m, maxWave, levelId = null) => {
+  const habit = cardAiDeckHabit(who, levelId);
   const vals = Object.values(db.cards).filter(c => c.ready && c.user !== 'any' && c.user !== 'breeder' && c.wave <= Math.max(maxWave, cardAiMonWave(db, m, c)) && cardUsableBy(c, {
     ...m,
     ko: false
@@ -86832,7 +86847,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const cfg = CARD_AI_BUILD[levelId] || CARD_AI_BUILD.normal;
   const favs = cardAiFavoriteCandidates(db, who).map(no => cardMonsterOf(db, no));
   if (!favs.length) return [];
-  const favScore = favs.map(m => cardAiMonScore(db, who, m, cfg.maxWave) * (cardIsHybridMon(m) ? 0.9 : 1));
+  const favScore = favs.map(m => cardAiMonScore(db, who, m, cfg.maxWave, levelId) * (cardIsHybridMon(m) ? 0.9 : 1));
   const favW = favs.map(m => String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2);
   const fav = cfg.best ? favs[favScore.indexOf(Math.max(...favScore))] : favs[cardAiPickIndex(favW, rand)];
   const cands = Object.values(db.monsters).filter(m => m.ready !== false && !m.dexOnly && !m.variant && m.species !== fav.species && m.species !== CARD_AI_FAVORITE[who] && (String(m.wave) === 'hybrid' ? cfg.maxWave >= 99 && m.main !== CARD_AI_FAVORITE[who] : Number(m.wave) <= cfg.maxWave));
@@ -86854,7 +86869,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   const pool = byScore ? [...cands, ...family.filter(m => !m.variant)] : cands;
   const scored = pool.map(m => ({
     m,
-    v: cardAiMonScore(db, who, m, cfg.maxWave) + counter(m)
+    v: cardAiMonScore(db, who, m, cfg.maxWave, levelId) + counter(m)
   }));
   const out = [fav.no];
   const usedSpecies = new Set([fav.species, String(fav.wave) === 'hybrid' ? fav.main : fav.species]);
@@ -86869,7 +86884,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
       if (famLeft.length) {
         const m = famLeft.map(x => ({
           x,
-          v: cardAiTeamValue(db, who, team, x, cfg.maxWave) + counter(x)
+          v: cardAiTeamValue(db, who, team, x, cfg.maxWave, levelId) + counter(x)
         })).reduce((a2, b2) => b2.v > a2.v ? b2 : a2).x;
         out.push(m.no);
         usedNos.add(m.species);
@@ -86887,7 +86902,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     const team = out.map(no => cardMonsterOf(db, no));
     const left = scored.filter(x => !usedNos.has(x.m.species) && (isFamily.has(x.m.no) || !usedSpecies.has(x.m.species) && !(String(x.m.wave) === 'hybrid' && usedSpecies.has(x.m.main)))).map(x => isFamily.has(x.m.no) ? {
       ...x,
-      v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave) + counter(x.m)
+      v: cardAiTeamValue(db, who, team, x.m, cfg.maxWave, levelId) + counter(x.m)
     } : x);
     if (!left.length) break;
     let pick;
@@ -86914,7 +86929,7 @@ const cardAiBuildDeck = (db, who, levelId = 'normal', rand = null, opts = {}) =>
   const rnd = typeof rand === 'function' ? rand : cardAiSeededRand(`${who}:${levelId}`);
   const monsters = cardAiPickTrio(db, who, levelId, rnd, opts && opts.playerDeck);
   const maxWave = cfg.maxWave;
-  const habit = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko;
+  const habit = cardAiDeckHabit(who, levelId);
   const mons = monsters.map(no => cardMonsterOf(db, no));
   const pool = Object.values(db.cards).filter(c => c.ready && (c.user === 'any' || c.user === 'breeder' ? c.wave <= maxWave : mons.some(m => cardUsableBy(c, {
     ...m,
