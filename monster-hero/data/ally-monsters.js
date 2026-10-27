@@ -286,5 +286,5 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     // 勇者特性・EX・固有技の効果「霊魂」は 22-enemy-and-bond-entries.jsx、タイプは 32-tactics-units.jsx、ビートの能力は rhythm-mode.js
     baseHp:440, baseGuts:140, baseAtk:145, baseDef:85, plusStats:{hp:140,atk:30,def:15,guts:40},
     unique:{ name:"求愛", icon:ORIHIME_IMG, monId:"Orihime", baseMult:2.3, baseGuts:46, evoLevel:0,
-      names:["求愛","なめろう","超狐火・星","陽炎","神狐蒼火","八嵐天衝","炸裂気泡陣","煉獄九尾陣","天河天翔"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
+      names:["求愛","織姫のくちづけ","超狐火・星","陽炎","神狐星火","八鈴天衝","炸裂気泡陣","煉獄九尾陣","天河天翔"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
 });

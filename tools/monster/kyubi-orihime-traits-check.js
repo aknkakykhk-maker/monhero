@@ -122,11 +122,11 @@ check('モンヒロビートの能力(キュービ 必死・オリヒメ 根性)
 
 // ---------- 固有技の段(社長 2026-10-27「Aで9段目に炸裂、8段目天翔、7に煉獄」)と、技ごとの動き ----------
 const KYUBI_UNIQUE = ['ゆうわく','なめろう','超狐火','神狐蒼火','八嵐天衝','陽炎','煉獄九尾陣','天河天翔','炸裂気泡陣'];
-const ORIHIME_UNIQUE = ['求愛','なめろう','超狐火・星','陽炎','神狐蒼火','八嵐天衝','炸裂気泡陣','煉獄九尾陣','天河天翔'];
+const ORIHIME_UNIQUE = ['求愛','織姫のくちづけ','超狐火・星','陽炎','神狐星火','八鈴天衝','炸裂気泡陣','煉獄九尾陣','天河天翔'];
 const allyAll = read('monster-hero/data/ally-monsters.js');
 check('キュービの固有技は×2.4・消費48、段は社長の並び',
   allyAll.includes('monId:"Kyubi", baseMult:2.4, baseGuts:48') && allyAll.includes(`names:${JSON.stringify(KYUBI_UNIQUE)}`));
-check('オリヒメの固有技は×2.3・消費46、名前と並びは変えない',
+check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだもの・並びは変えない',
   allyAll.includes('monId:"Orihime", baseMult:2.3, baseGuts:46') && allyAll.includes(`names:${JSON.stringify(ORIHIME_UNIQUE)}`));
 {
   const fx = read('monster-hero/src/parts/24-battle-fx.jsx');
@@ -134,7 +134,8 @@ check('オリヒメの固有技は×2.3・消費46、名前と並びは変えな
   const ob = fx.slice(fx.indexOf('const SKM_ORIHIME'), fx.indexOf('const SKILL_MOTION_SETS = '));
   const names = (b) => [...b.slice(b.indexOf('unique:[')).matchAll(/skm\([^\n]*\/\/ ([^\n]+)$/gm)].map((m) => m[1].trim());
   check('キュービの動き(SKM_KYUBI.unique)は名前と同じ順', JSON.stringify(names(kb)) === JSON.stringify(KYUBI_UNIQUE), names(kb).join('・'));
-  const borrowed = [...ob.matchAll(/SKM_KYUBI\.unique\[(\d)\][^\n]*\/\/ ([^\n]+)$/gm)].map((m) => [Number(m[1]), m[2].trim()]);
+  // 名前を変えた3つは「(キュービの◯◯の動き)」と書いてあるので、その◯◯で突き合わせる
+  const borrowed = [...ob.matchAll(/SKM_KYUBI\.unique\[(\d)\][^\n]*\/\/ ([^\n(]+)(?:\(キュービの([^\n]+)の動き\))?$/gm)].map((m) => [Number(m[1]), (m[3] || m[2]).trim()]);
   check('オリヒメの動きは、キュービの同じ名前の技の動きを借りる',
     borrowed.length === 7 && borrowed.every(([i, n]) => KYUBI_UNIQUE[i] === n), JSON.stringify(borrowed));
 }

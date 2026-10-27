@@ -738,11 +738,11 @@ const SKM_ORIHIME = Object.freeze({
   normal:SKM_KYUBI.normal.map((m, i) => ({ ...m, c:['sky', 'pink', 'cosmic', 'pink', 'gold', 'gold', 'pink', 'cosmic', 'psy'][i] })),
   unique:[
     skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 6), over:'bloom', burst:'heart' }),                    // 求愛
-    { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // なめろう
+    { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // 織姫のくちづけ(キュービのなめろうの動き)
     skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 9), over:'pillar', burst:'star', form:'light' }),   // 超狐火・星
     { ...SKM_KYUBI.unique[5], c:'cosmic' },                                                                   // 陽炎
-    { ...SKM_KYUBI.unique[3], c:'sky' },                                                                      // 神狐蒼火
-    { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 八嵐天衝
+    { ...SKM_KYUBI.unique[3], c:'sky' },                                                                      // 神狐星火(キュービの神狐蒼火の動き)
+    { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 八鈴天衝(キュービの八嵐天衝の動き)
     { ...SKM_KYUBI.unique[8], c:'pink' },                                                                     // 炸裂気泡陣
     { ...SKM_KYUBI.unique[6], c:'psy' },                                                                      // 煉獄九尾陣
     { ...SKM_KYUBI.unique[7], c:'sky' }],                                                                     // 天河天翔
