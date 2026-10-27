@@ -3,6 +3,7 @@
 // 案: docs/spec/card-battle/MULTI_PLAN.md
 //
 //   node tools/card/card-pvp-browser-check.js
+//   run-checks-timeout: 1200(⑰⑮⑭ で、端末が止まる・相手が抜けるのを本当の時間で待つ。合わせて10分を超える)
 //   SHOT_DIR=<フォルダ> を付けると、2つの画面の写真を残す(自分の番・あいての番・守りの番・結果)
 //
 // ★外へはつながない。WebSocket を偽物に差し替え、2台のページのあいだを Node が中継する(window.__fakeWsRelay → 全部のページの __fakeWsRecv)。
