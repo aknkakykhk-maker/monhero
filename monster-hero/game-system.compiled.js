@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bfeec1be77aa18a2
+// source-sha256: b7dbcaa740a024ad
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -125866,9 +125866,9 @@ function MonsterHeroGame() {
     }, React.createElement("div", {
       className: "flex items-center gap-1.5 min-w-0"
     }, rankingPlace(index), rankingBreederIcon(entry), React.createElement("div", {
-      className: "flex flex-1 items-baseline gap-1 min-w-0"
+      className: "flex flex-1 items-baseline gap-1 min-w-0 max-[359px]:flex-col max-[359px]:items-start max-[359px]:gap-0"
     }, React.createElement("span", {
-      className: "text-[10px] font-black text-white truncate"
+      className: "max-w-full text-[10px] font-black text-white truncate"
     }, entry?.userName || '名無しのブリーダー'), React.createElement("span", {
       className: "text-[9px] text-indigo-300 whitespace-nowrap shrink-0"
     }, breederLevelLabel), speciesLabel && React.createElement("span", {
@@ -128049,7 +128049,7 @@ function MonsterHeroGame() {
     })(), battleMenuTab === 'ranking' && React.createElement("div", {
       className: "flex-1 min-h-0 flex flex-col"
     }, React.createElement("div", {
-      className: "shrink-0 w-full mb-2.5"
+      className: "shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
     }, React.createElement(AssistantBubble, {
       scene: "ranking",
       compact: true
@@ -128482,21 +128482,21 @@ function MonsterHeroGame() {
       }))), modeSelectTab === 'breeder' && React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col"
       }, React.createElement("div", {
-        className: "shrink-0 w-full mb-2.5"
+        className: "shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
       }, React.createElement(AssistantBubble, {
         scene: "ranking",
         compact: true
       })), renderBreederRankingBody()), modeSelectTab === 'bond' && React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col"
       }, React.createElement("div", {
-        className: "shrink-0 w-full mb-2.5"
+        className: "shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
       }, React.createElement(AssistantBubble, {
         scene: "ranking",
         compact: true
       })), renderBondRankingBody()), modeSelectTab === 'power' && React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col"
       }, React.createElement("div", {
-        className: "shrink-0 w-full mb-2.5"
+        className: "shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
       }, React.createElement(AssistantBubble, {
         scene: "ranking",
         compact: true
@@ -129085,9 +129085,9 @@ function MonsterHeroGame() {
         note: "ランキング",
         onBack: () => setGameState(scoreRankingBack)
       }), React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
+        className: "w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
-        className: "shrink-0 w-full mb-2.5"
+        className: "shrink-0 w-full mb-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
       }, React.createElement(AssistantBubble, {
         scene: "ranking",
         compact: true
