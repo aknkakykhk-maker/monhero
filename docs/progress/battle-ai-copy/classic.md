@@ -103,6 +103,9 @@ aiCopy = { srcSlot, srcMonsterId, level, spawnTurn, turnsLeft, hp, maxHp, atk, d
 | 71-screen-battle.jsx `ClassicAiCopyCell` | 縦は4枠の右はし(幅58px)、横向き(背の低い画面)は列の下の細い帯。コピーがいないときは `display:contents` で列の組み方は今までのまま。写真 `docs/playbot/reports/2026-10-27/ai-copy-classic/` |
 
 段2(2026-10-27): 選ぶ点は共通の aiCopyAutoScore(AUTO の作戦の優先 → 与ダメ)。ガードはコピーの丈夫さで構えてパーティを守る(GUARD_EVOLUTION の flat + コピーの def × mult)。回復・強化・アシカはタクティクスと同じ aiCopyEntries で味方のカードと同じ流れに通す(ガッツはコピーの分)。
-まだ: 固有技の特別な効き目(運命のコインなど。いまはダメージだけ)/コピーの手札の窓(SorashidoCopyHandSheet)/出る・消える演出(appear・vanish)/WAVE をまたぐか(社長の答え待ち)
+コピーの手札の窓(SorashidoCopyHandSheet)/出る・消える演出(appear・vanish)/WAVE をまたぐか(社長の答え待ち)
 
 段3(2026-10-27): コピーは自分の山札を持つ(社長)。共通の summonAiCopy に プレイヤーの山札・手札・捨て札を渡して山札を作る(出たとき・切りかえたとき)。planClassicAiCopy は planAiCopyTurn(count=プレイヤーの手札の枚数)。ターンの終わりは共通の endAiCopyTurn。固有技の写しの出し入れ(classicAiCopyZones・CLASSIC_AI_COPY_UNIQUE_IN_DECK)は外した。プレイヤーの山札は変えない。
+
+段4(2026-10-27): コピーの攻撃・固有技も aiCopyEntries に入れ、プレイヤーのカードと同じ流れに通す。流れの中の getDmg 2か所(あつの挑発・ふつうの攻撃)に dmgScale(コピーのちから ÷ パーティのちから)を掛ける。固有技の特別な効き目はプレイヤーと同じに乗る。ガードだけはコピーの丈夫さで構える別の所。トリックスタートのガッツ返しはコピーの札では返さない。
+まだ(部長の判断待ち): 運命のコインの帯・ダメージの数字・ログに出る名前が元の子の名前(見た目だけ)/スエゾーやドレインで戻るガッツはパーティへ入る

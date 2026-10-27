@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0aef16a9e20d6853
+// source-sha256: 96f399d679410a31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -120912,15 +120912,17 @@ function MonsterHeroGame() {
       const c = aiCopyRef.current;
       if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && !isTacticsMode(runMode) && isAiCopyOut(c, turnCount)) {
         let left = Math.max(0, Number(c.guts) || 0);
+        const dmgScale = atk > 0 ? Math.max(0, Number(c.atk) || 0) / atk : 0;
         return (c.picks || []).filter(card => {
           const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
           if (!card || cost > left) return false;
           left -= cost;
-          return !classicAiCopyIsAttack(card) && card.type !== 'guard' && card.type !== 'weak_guard';
+          return card.type !== 'guard' && card.type !== 'weak_guard';
         }).map(card => ({
           card,
           slotIdx: c.srcSlot,
-          aiCopy: true
+          aiCopy: true,
+          dmgScale
         }));
       }
       if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
@@ -120941,6 +120943,7 @@ function MonsterHeroGame() {
     })();
     for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
+      const copyDmgScale = entry.aiCopy && Number.isFinite(entry.dmgScale) ? entry.dmgScale : 1;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
@@ -121028,7 +121031,7 @@ function MonsterHeroGame() {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul);
+          const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul * copyDmgScale);
           const soulAttack = soulTraitAttackProfile(stunMon?.masuId ? getMasuMon(stunMon.masuId) : null, card, slotIdx);
           const stunHits = buildAttackHits({
             d,
@@ -121261,7 +121264,7 @@ function MonsterHeroGame() {
           }
         }
         const attackStartDist = attackDistance;
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult);
+        const d = Math.floor(getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, fateDmgMult) * copyDmgScale);
         attackCount++;
         const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
         const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
@@ -121334,7 +121337,7 @@ function MonsterHeroGame() {
         }
         {
           const trickOwnerId = isTacticsMode(runMode) ? tacticsUnitsRef.current[slotIdx]?.id : mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD > 0) {
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD > 0) {
             const refund = trickStartGutsRefund(cardCost);
             if (refund > 0) {
               gainGutsAt(slotIdx, refund);
@@ -121595,31 +121598,15 @@ function MonsterHeroGame() {
     pdTag();
     if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
       let copy = aiCopyRef.current;
-      const copyMon = slots[copy.srcSlot] || mainHero;
       for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
         const cost = Math.max(0, Number(pick?.guts ?? pick?.cost) || 0);
         if (!pick || cost > copy.guts) break;
         copy = classicAiCopySpendGuts(copy, cost);
-        const skill = pick.name || pick.baseName || '攻撃';
-        if (classicAiCopyIsAttack(pick)) {
-          const d = classicAiCopyDamage(getDmg(pick, copy.srcSlot, copyMon, localOryoAdd, localDmgModAdd, false, attackDistance), copy.atk, atk);
-          if (d > 0) {
-            totalDmg += d;
-            attackHits.push({
-              dmg: d,
-              isCrit: false,
-              slotIdx: copy.srcSlot,
-              isSpecial: true,
-              skillName: `🤖コピーの${skill}`,
-              noAnim: true
-            });
-          }
-        } else if (pick.type === 'guard' || pick.type === 'weak_guard') {
-          const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
-          currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
-          if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
-        } else continue;
-        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`, 'ally');
+        if (pick.type !== 'guard' && pick.type !== 'weak_guard') continue;
+        const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
+        currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
+        if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name || pick.baseName || 'ガード'}を使った`, 'ally');
       }
       commitAiCopy({
         ...copy,
