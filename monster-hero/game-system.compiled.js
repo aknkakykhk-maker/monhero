@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 067c204698fc4745
+// source-sha256: 525d69d05c2acf56
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45563,8 +45563,7 @@ const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
 const SORASHIDO_CARD_ID = 'sorashido';
 const SORASHIDO_COPY_SLOT = 4;
-const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-const SORASHIDO_COPY_HAND_DRAW = 2;
+const SORASHIDO_COPY_HAND_DRAW = 3;
 const aiCopySafeNum = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -45627,6 +45626,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'new',
     turnsLeft,
     removeCopy: false,
+    rebuildDeck: true,
     removeUniqueOf: null,
     addUniqueOf: srcMonsterId
   };
@@ -45634,6 +45634,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'refresh',
     turnsLeft,
     removeCopy: false,
+    rebuildDeck: false,
     removeUniqueOf: null,
     addUniqueOf: null
   };
@@ -45641,6 +45642,7 @@ const aiCopySummonPlan = (aiCopy, {
     kind: 'switch',
     turnsLeft,
     removeCopy: true,
+    rebuildDeck: true,
     removeUniqueOf: aiCopy.srcMonsterId,
     addUniqueOf: srcMonsterId
   };
@@ -45658,6 +45660,46 @@ const aiCopyTurnEnd = aiCopy => {
     removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null
   };
 };
+const aiCopyUniqueIsOwn = (card, {
+  srcSlot = null,
+  srcMonsterId = null
+} = {}) => {
+  if (Number.isInteger(card.ownerSlotIdx) && Number.isInteger(srcSlot)) return card.ownerSlotIdx === srcSlot;
+  return card.monId != null && card.monId === srcMonsterId;
+};
+const aiCopyCanPick = (card, src = null) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID && (card.type !== 'unique' || !src || aiCopyUniqueIsOwn(card, src));
+const aiCopyBuildDeck = (zones, src) => {
+  const all = ['deck', 'hand', 'discard'].flatMap(k => zones && Array.isArray(zones[k]) ? zones[k] : []);
+  return {
+    deck: all.filter(c => aiCopyCanPick(c, src || {})),
+    discard: []
+  };
+};
+const aiCopyDraw = (state, count, rng) => {
+  let deck = state && Array.isArray(state.deck) ? state.deck.slice() : [];
+  let discard = state && Array.isArray(state.discard) ? state.discard.slice() : [];
+  const n = Math.max(0, Math.floor(aiCopySafeNum(count, SORASHIDO_COPY_HAND_DRAW)));
+  const hand = [];
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) {
+      if (discard.length === 0) break;
+      deck = discard;
+      discard = [];
+    }
+    const at = Math.min(deck.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * deck.length));
+    hand.push(deck.splice(at, 1)[0]);
+  }
+  return {
+    hand,
+    deck,
+    discard
+  };
+};
+const aiCopyDiscardHand = (state, hand) => ({
+  deck: state && Array.isArray(state.deck) ? state.deck.slice() : [],
+  discard: [...(state && Array.isArray(state.discard) ? state.discard : []), ...(Array.isArray(hand) ? hand : [])]
+});
+const SORASHIDO_COPY_UNIQUE_COUNT = 1;
 const aiCopyUniqueCard = (card, srcMonsterId) => card ? {
   ...card,
   sorashidoCopyOf: srcMonsterId,
@@ -45676,9 +45718,8 @@ const aiCopyRemoveUnique = (zones, match) => {
     discard: strip(zones && zones.discard)
   };
 };
-const aiCopyCanPick = card => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+const aiCopyHand = (deck, uniqueCard, rng, draw = 2) => {
+  const rest = (Array.isArray(deck) ? deck : []).filter(c => aiCopyCanPick(c));
   const picked = [];
   for (let i = 0; i < draw && rest.length > 0; i++) {
     const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
@@ -45723,7 +45764,7 @@ const aiCopyPickCards = (hand, {
 const sorashidoCopyDesc = level => {
   const t = aiCopyRules(level),
     p = v => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
 const summonAiCopy = (state, {

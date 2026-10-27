@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 367160f6862cf56e
+// generated-sha256: 3c8632884a09d143
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28140,10 +28140,8 @@ const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot)
 const SORASHIDO_CARD_ID = 'sorashido';
 // 5人目の枠の番号(タクティクスの4枠 0〜3 の次)
 const SORASHIDO_COPY_SLOT = 4;
-// 山札に足すコピーの子の固有技は、どの Lv でもいつも1枚
-const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-// コピーが毎ターン山札の写しから見るカードの枚数(これに足した固有技を加える)
-const SORASHIDO_COPY_HAND_DRAW = 2;
+// コピーが毎ターン引く枚数の既定(呼ぶ側はプレイヤーの手札と同じ枚数を渡す)
+const SORASHIDO_COPY_HAND_DRAW = 3;
 
 const aiCopySafeNum = (value, fallback = 0) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
 
@@ -28175,41 +28173,78 @@ const aiCopyStartHate = (srcHate, level) => Math.max(0, Math.min(100, Math.floor
 const aiCopyHateGainMult = (level) => aiCopyRules(level).hateGain;
 
 // アシカを使ったときの判定。aiCopy はいまのコピー(無ければ null)。返す kind ごとにバトル側がやること:
-//   'new'     … コピーを作る(次のターンの始まりに出す)。addUniqueOf の固有技を1枚足す
-//   'refresh' … 同じ子でもう一度。turnsLeft を最初へ戻すだけ(固有技は足さない・1枚のまま)
-//   'switch'  … 別の子へ切りかえ。いまのコピーを外し(removeCopy)、removeUniqueOf の固有技を抜き、addUniqueOf を1枚足す
+//   'new'     … コピーを作る(次のターンの始まりに出す)。山札を作る(aiCopyBuildDeck)
+//   'refresh' … 同じ子でもう一度。turnsLeft を最初へ戻すだけ(山札もそのまま)
+//   'switch'  … 別の子へ切りかえ。いまのコピーを外し(removeCopy)、新しい子で山札を作り直す
+//   rebuildDeck が true のとき山札を作る。プレイヤーの山札には何も足さない・抜かない(2026-10-27 社長)
+//   ★addUniqueOf・removeUniqueOf は古い形(プレイヤーの山札へ固有技を1枚足していたころ)の知らせ。
+//     33-ai-copy.jsx とその検査が aiCopyBuildDeck・aiCopyDraw へ移ったら消す。新しく使わない
 const aiCopySummonPlan = (aiCopy, { srcSlot, srcMonsterId, level }) => {
   const turnsLeft = aiCopyTurns(level);
-  if (!aiCopy) return { kind: 'new', turnsLeft, removeCopy: false, removeUniqueOf: null, addUniqueOf: srcMonsterId };
-  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return { kind: 'refresh', turnsLeft, removeCopy: false, removeUniqueOf: null, addUniqueOf: null };
-  return { kind: 'switch', turnsLeft, removeCopy: true, removeUniqueOf: aiCopy.srcMonsterId, addUniqueOf: srcMonsterId };
+  if (!aiCopy) return { kind: 'new', turnsLeft, removeCopy: false, rebuildDeck: true, removeUniqueOf: null, addUniqueOf: srcMonsterId };
+  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return { kind: 'refresh', turnsLeft, removeCopy: false, rebuildDeck: false, removeUniqueOf: null, addUniqueOf: null };
+  return { kind: 'switch', turnsLeft, removeCopy: true, rebuildDeck: true, removeUniqueOf: aiCopy.srcMonsterId, addUniqueOf: srcMonsterId };
 };
 
-// ターンの終わり(コピーが出ているときだけ呼ぶ)。0 になったら消える(expired=true のとき、コピーと固有技を抜く)
+// ターンの終わり(コピーが出ているときだけ呼ぶ)。0 になったら消える(expired=true のとき、コピーを外す。山札も一緒に捨てる)
+// (removeUniqueOf は古い形の知らせ。上の aiCopySummonPlan と同じく、移ったら消す)
 const aiCopyTurnEnd = (aiCopy) => {
   if (!aiCopy) return { turnsLeft: 0, expired: false, removeUniqueOf: null };
   const turnsLeft = Math.max(0, Math.floor(aiCopySafeNum(aiCopy.turnsLeft)) - 1);
   return { turnsLeft, expired: turnsLeft <= 0, removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null };
 };
 
-// ---- 固有技の出し入れ ----
-// 足す1枚。元の固有技のカードに印(sorashidoCopyOf・uid)を付けた写し。抜くときは uid か印で探す
+// ---- コピーの山札と手札(2026-10-27 社長「山札自体を別物として扱う」「プレイヤーと同じように引く」) ----
+// コピーの山札に入れない(=選ばない)カード: 距離撃(青い枠 range_atk)・ソラシドのアシカそのもの・コピーした子以外の味方の固有技。
+//   コピーした子の固有技は、もとからプレイヤーの山札にあるのでそのまま残る(足しもしない)。ほかのアシカは残す。
+// 固有技の持ち主は、カードの ownerSlotIdx(枠の番号)で見分け、無ければ monId(モンスターの種類)で見分ける(60-app.jsx の固有技のカード)
+const aiCopyUniqueIsOwn = (card, { srcSlot = null, srcMonsterId = null } = {}) => {
+  if (Number.isInteger(card.ownerSlotIdx) && Number.isInteger(srcSlot)) return card.ownerSlotIdx === srcSlot;
+  return card.monId != null && card.monId === srcMonsterId;
+};
+const aiCopyCanPick = (card, src = null) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID
+  && (card.type !== 'unique' || !src || aiCopyUniqueIsOwn(card, src));
+
+// コピーが出たとき(と切りかえたとき)に作る山札。zones はプレイヤーの { deck, hand, discard }(手札・捨て札も含めた全体の写しを取る)。
+// src は { srcSlot, srcMonsterId }。返すのは { deck, discard }(捨て札は空から)。プレイヤーの配列は変えない
+const aiCopyBuildDeck = (zones, src) => {
+  const all = ['deck', 'hand', 'discard'].flatMap((k) => (zones && Array.isArray(zones[k]) ? zones[k] : []));
+  return { deck: all.filter((c) => aiCopyCanPick(c, src || {})), discard: [] };
+};
+
+// 引く(プレイヤーと同じ引き方): 山札から無作為・重ならずに count 枚。山札が尽きたら、捨て札を山札へ戻して続ける。
+// state は { deck, discard }。返すのは { hand, deck, discard }(新しい配列。渡した配列は変えない)
+const aiCopyDraw = (state, count, rng) => {
+  let deck = (state && Array.isArray(state.deck)) ? state.deck.slice() : [];
+  let discard = (state && Array.isArray(state.discard)) ? state.discard.slice() : [];
+  const n = Math.max(0, Math.floor(aiCopySafeNum(count, SORASHIDO_COPY_HAND_DRAW)));
+  const hand = [];
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) { if (discard.length === 0) break; deck = discard; discard = []; }
+    const at = Math.min(deck.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * deck.length));
+    hand.push(deck.splice(at, 1)[0]);
+  }
+  return { hand, deck, discard };
+};
+
+// ターンの終わり: 手札(使ったカードも、使わなかったカードも)を捨て札へ。返すのは { deck, discard }
+const aiCopyDiscardHand = (state, hand) => ({
+  deck: (state && Array.isArray(state.deck)) ? state.deck.slice() : [],
+  discard: [...((state && Array.isArray(state.discard)) ? state.discard : []), ...(Array.isArray(hand) ? hand : [])],
+});
+
+// ---- 古い形(固有技をプレイヤーの山札へ1枚足していたころ・2026-10-27 の昼まで) ----
+// ★33-ai-copy.jsx(バトル部)が新しい形(aiCopyBuildDeck・aiCopyDraw・aiCopyDiscardHand)へ移ったら消す。新しく呼ばない
+const SORASHIDO_COPY_UNIQUE_COUNT = 1;
 const aiCopyUniqueCard = (card, srcMonsterId) => (card ? { ...card, sorashidoCopyOf: srcMonsterId, uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}` } : null);
 const aiCopyIsUnique = (card, { uid = null, srcMonsterId = null } = {}) => !!card && card.sorashidoCopyOf != null
   && (uid == null || card.uid === uid) && (srcMonsterId == null || card.sorashidoCopyOf === srcMonsterId);
-// 山札・手札・墓地のどこからでも、コピーの分の固有技を抜く。zones は { deck, hand, discard }(どれも配列)。元の配列は変えない
 const aiCopyRemoveUnique = (zones, match) => {
   const strip = (list) => (Array.isArray(list) ? list.filter((c) => !aiCopyIsUnique(c, match)) : []);
   return { ...zones, deck: strip(zones && zones.deck), hand: strip(zones && zones.hand), discard: strip(zones && zones.discard) };
 };
-
-// ---- コピーの手札と使うカード ----
-// コピーは選ばない: 距離技(青い枠 range_atk)と、ソラシドのアシカそのもの。固有技とほかのアシカは選べる
-const aiCopyCanPick = (card) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
-
-// 毎ターンの手札: みんなの山札は減らさず、山札の写しから2枚(選べるものから)+コピーの子の固有技1枚
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+const aiCopyHand = (deck, uniqueCard, rng, draw = 2) => {
+  const rest = (Array.isArray(deck) ? deck : []).filter((c) => aiCopyCanPick(c));
   const picked = [];
   for (let i = 0; i < draw && rest.length > 0; i++) {
     const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
@@ -28251,7 +28286,7 @@ const aiCopyPickCards = (hand, { score, costOf, guts, maxGuts, rng, level }) => 
 // ---- 説明文(ブリーダーの教え・マーケット・カードの詳しい画面) ----
 const sorashidoCopyDesc = (level) => {
   const t = aiCopyRules(level), p = (v) => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 
 // ---- part: 33-ai-copy.jsx ----

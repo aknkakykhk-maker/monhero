@@ -36,7 +36,7 @@
 | `aiCopyHateGainMult(level)` | タクティクスで🔥が増えるとき | ×1.0 / ×1.25 / ×1.5 |
 | `aiCopyUniqueCard(card, srcMonsterId)` | 固有技を1枚足すとき | 印 `sorashidoCopyOf` と `uid` を付けた写し(`uniqueCardUid` に持つ) |
 | `aiCopyRemoveUnique({ deck, hand, discard }, { uid } または { srcMonsterId })` | 抜くとき | 3か所から印の付いた分だけを抜いた新しい配列 |
-| `aiCopyHand(deck, uniqueCard, rng)` | コピーの番の前 | 山札の写しから2枚+固有技(山札は減らさない・距離技とソラシドは選ばない) |
+| (古い形)`aiCopyHand` | — | 下の「2026-10-27 の変更」の `aiCopyBuildDeck`・`aiCopyDraw` に替わりました |
 | `aiCopyPickCards(hand, { score, costOf, guts, maxGuts, rng, level })` | 手札を作ったあと | 使うカードの配列(0〜2枚)。先頭が `nextCard`。`score` には AUTO の点を渡す |
 
 `aiCopySummonPlan` の `kind` ごとに、バトル側がやること:
@@ -66,6 +66,32 @@
 
 検査は `tools/battle/sorashido-copy-view-check.js` です(320・390・844×390 で、はみ出し・押せる大きさ・札の読みやすさを見ます)。
 報告の写真と動画は `docs/playbot/reports/2026-10-27/sorashido-assist/` に置きました。
+
+## 2026-10-27 の変更: コピーは自分の山札を持つ(固有技は足さない)
+
+社長の答えは「山札自体を別物として扱えば足す必要はない」「普通に山札の枚数で、自分たちと同じような確率」です。
+
+| 関数 | いつ呼ぶ | 返すもの |
+| --- | --- | --- |
+| `aiCopyBuildDeck(zones, { srcSlot, srcMonsterId })` | コピーが出たとき・切りかえたとき(`plan.rebuildDeck`) | `{ deck, discard: [] }` |
+| `aiCopyDraw({ deck, discard }, count, rng)` | 毎ターンの始め | `{ hand, deck, discard }` |
+| `aiCopyDiscardHand({ deck, discard }, hand)` | ターンの終わり | `{ deck, discard }` |
+| `aiCopyCanPick(card, { srcSlot, srcMonsterId })` | 山札に入れるかの見分け | 真偽 |
+
+- `aiCopyBuildDeck` の中身: プレイヤーの山札・手札・捨て札の写しから、距離撃(`range_atk`)・ソラシドのアシカ・コピーした子以外の味方の固有技を抜いたものです。
+  - コピーした子の固有技はもとから入っているので残ります。足しもしません。
+- `aiCopyDraw` の引き方: プレイヤーと同じく、無作為・重ならずに `count` 枚を引きます。山札が尽きたら捨て札を戻して続けます。
+  - `count` には、プレイヤーの手札と同じ枚数を呼ぶ側が渡します(既定は3)。
+- `aiCopyDiscardHand`: ターンの終わりに、手札(使ったカードも使わなかったカードも)を捨て札へ移します。
+- 固有技の持ち主は、カードの `ownerSlotIdx`(枠の番号)で見分けます。無ければ `monId`(モンスターの種類)で見分けます(60-app.jsx の固有技のカード)。
+- `aiCopySummonPlan` の `kind` ごとの山札の扱い: `new`・`switch` は山札を作り直し、`refresh` はそのままにします。
+- 決まった割合(`uniqueRate`)は持ちません。
+- 説明文とヘルプは「コピーは自分の山札(距離撃とほかの子の固有技を抜いたもの)から引く」の言い方です。
+
+★古い形として次のものを残しています。33-ai-copy.jsx とその検査が新しい部品へ移ったら消します。
+
+- `aiCopyHand`・`aiCopyUniqueCard`・`aiCopyRemoveUnique`・`SORASHIDO_COPY_UNIQUE_COUNT`
+- `aiCopySummonPlan` と `aiCopyTurnEnd` の `addUniqueOf`・`removeUniqueOf`
 
 ## まだ決めていないこと
 
