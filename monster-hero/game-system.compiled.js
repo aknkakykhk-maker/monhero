@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e37905c8a99dcc79
+// source-sha256: 23eacfcecdf85265
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -12969,6 +12969,7 @@ const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
+const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
@@ -89960,12 +89961,12 @@ const CardResultBanner = ({
   "data-card-result-banner": tone,
   className: "mhms-in py-1 text-center"
 }, React.createElement("div", {
-  className: `text-[44px] font-black italic leading-none tracking-wider ${tone === 'win' ? 'text-amber-200' : tone === 'lose' ? 'text-slate-300' : 'text-sky-200'}`,
+  className: `text-[44px] font-black italic leading-none tracking-wider [@media(orientation:portrait)_and_(max-height:600px)]:text-[34px] ${tone === 'win' ? 'text-amber-200' : tone === 'lose' ? 'text-slate-300' : 'text-sky-200'}`,
   style: {
     textShadow: tone === 'win' ? '0 0 18px rgba(251,191,36,.65), 0 3px 0 #7c2d12' : '0 3px 0 #0f172a'
   }
 }, title), sub && React.createElement("div", {
-  className: "mt-1 text-[10px] font-black tracking-[0.3em] text-white/70"
+  className: "mt-1 text-[10px] font-black tracking-[0.3em] text-white/70 [@media(orientation:portrait)_and_(max-height:600px)]:hidden"
 }, sub));
 const CARD_NAME_KATAKANA_BREAKS = Object.freeze({
   'カララギマンゴー': 4,
@@ -90304,7 +90305,7 @@ const CardResultTalk = ({
     alt: a.name,
     className: "w-[46%]",
     style: {
-      height: 'min(220px, 28vh)'
+      height: 'min(220px, 28vh, max(110px, calc(var(--mh-vh) - 460px)))'
     }
   }), React.createElement("div", {
     className: "mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]",
@@ -107809,6 +107810,11 @@ function MonsterHeroGame() {
   const [cardPackOpen, setCardPackOpen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  const [storyOneAtATime, setStoryOneAtATime] = useState(false);
+  const storyShownThisHomeRef = useRef(false);
+  useEffect(() => {
+    if (gameState !== 'HOME') storyShownThisHomeRef.current = false;
+  }, [gameState]);
   const [pendingFriendCode, setPendingFriendCode] = useState('');
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -107942,8 +107948,10 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
+    if (storyOneAtATime && storyShownThisHomeRef.current) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
+    storyShownThisHomeRef.current = true;
     if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
@@ -107952,7 +107960,7 @@ function MonsterHeroGame() {
       step: 0,
       live: true
     });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime]);
   useEffect(() => {
     if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt();
   }, [bootPhase, battleCardArtDebug]);
@@ -109439,6 +109447,14 @@ function MonsterHeroGame() {
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       setNewPlayerCampaignEligible(!everOnboarded);
+      try {
+        let oneAtATime = (await storeGet(STORY_ONE_AT_A_TIME_KEY, false, false)) === true;
+        if (!everOnboarded && !oneAtATime) {
+          await storeSet(STORY_ONE_AT_A_TIME_KEY, true, false);
+          oneAtATime = true;
+        }
+        setStoryOneAtATime(oneAtATime);
+      } catch {}
       setAssistantChosen(!!savedAssistant || wasOnboarded);
       const kikiIntroSeen = await storeGet(KIKI_INTRO_SEEN_KEY, false, false);
       setKikiIntroSeenFlag(kikiIntroSeen === true);
