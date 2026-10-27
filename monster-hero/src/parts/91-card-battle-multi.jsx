@@ -1323,6 +1323,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
   const t = setTimeout(() => {
+    // 検査のときだけ: ガッツの段で、window.__mhCardPvpAutoBack の回数だけ「攻撃に戻る」を打つ(打てた回数を __mhCardPvpBackDone に数える)
+    if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({ type: 'backToAttack' })) {
+      window.__mhCardPvpAutoBack = Number(window.__mhCardPvpAutoBack) - 1; window.__mhCardPvpBackDone = (Number(window.__mhCardPvpBackDone) || 0) + 1; return;
+    }
     const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
     if (act && step(act)) return;
     step(cardPvpTimeoutAct(st));
