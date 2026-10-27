@@ -8272,9 +8272,9 @@ function MonsterHeroGame() {
 
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
     if (offer?.available === false) return { ok:false, reason:'soon' };
-    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -8455,9 +8455,9 @@ function MonsterHeroGame() {
   };
   // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはビートP
   const exchangeCardPoints = async (offer) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない(ビートP交換所と同じ)
     if (offer?.available === false) return { ok:false, reason:'soon' };
-    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
