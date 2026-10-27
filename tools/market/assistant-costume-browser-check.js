@@ -187,7 +187,7 @@ const seed = ({ conditions }) => {
     await page.evaluate(() => document.querySelector('[data-assistant-costume-option="mua_card_master_v1"]')?.click());
     await page.waitForTimeout(800);
     const lockedText = await page.evaluate(() => document.querySelector('[data-assistant-costume-locked-info]')?.textContent || '');
-    check('② まだ解放していないデュエルマスターを押すと、買える場所ではなく解放の条件が出る', /まだマーケットに並んでいません/.test(lockedText) && /MASTER/.test(lockedText) && !/100,000ダイヤ/.test(lockedText), lockedText.slice(0, 80));
+    check('② まだ解放していないデュエルマスターを押すと、買える場所ではなく解放の条件が出る', /マーケットに並んでいます/.test(lockedText) && /勝つと買えます/.test(lockedText) && /MASTER/.test(lockedText) && !/100,000ダイヤ/.test(lockedText), lockedText.slice(0, 80));
     await page.evaluate(() => document.querySelector('[data-assistant-costume-option="mua_halloween_2026"]')?.click());
     await page.waitForTimeout(1200);
     check('② 魔女を着ると mh_assistant_costume_worn_v1 に残る', (await store(page, 'mh_assistant_costume_worn_v1'))?.mua === 'mua_halloween_2026', JSON.stringify(await store(page, 'mh_assistant_costume_worn_v1')));

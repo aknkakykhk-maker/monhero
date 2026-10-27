@@ -51,7 +51,7 @@ const latest = CHANGELOG[0];
 const latestItems = Array.isArray(latest?.items) ? latest.items : [];
 const addsToMarket = latest?.type === 'update'
   && [latest.title || '', ...latestItems].some(text => text.includes('マーケット') && text.includes('追加'));
-// 例外は1つだけ: 勝ち条件で解放される服(data/breeder.js で unlock を持つ服)のお知らせ。解放するまでマーケットに並ばないので、
+// 例外は1つだけ: 勝ち条件で解放される服(data/breeder.js で unlock を持つ服)のお知らせ。解放するまで買えないので、
 // 告知の「マーケットを見る」を押しても服が無い(2026-10-27 部長の判断・案A。みゅあの「デュエルマスター」)。
 // 印 noMarketNotice:{ costumeId } の服が、本当に unlock を持つ服であるときだけ通す
 const breederSource = fs.readFileSync(path.join(WEB_ROOT, 'data/breeder.js'), 'utf8');
