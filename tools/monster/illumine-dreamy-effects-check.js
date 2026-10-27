@@ -67,13 +67,13 @@ const s0 = x.seleneChaserOf(0), s3 = x.seleneChaserOf(3);
 check('セレーネチェイサーは(楔+1)倍(楔0で5%×1・+1% / 楔3で5%×4・+4%)',
   s0.combo.count === 1 && near(s0.combo.rate, 0.05) && near(s0.comboDmgAdd, 0.01)
   && s3.combo.count === 4 && near(s3.comboDmgAdd, 0.04));
-check('ドリームペインは楔0で+20%、楔3で+80%、楔6で+140%',
-  near(x.dreamPainTakenOf(0), 0.2) && near(x.dreamPainTakenOf(3), 0.8) && near(x.dreamPainTakenOf(6), 1.4));
+check('ドリームペインは楔0で+40%、楔3で+160%、楔6で+280%(2026-10-27 社長「楔1つごとも40%」)',
+  near(x.dreamPainTakenOf(0), 0.4) && near(x.dreamPainTakenOf(3), 1.6) && near(x.dreamPainTakenOf(6), 2.8));
 {
   let d = x.startDreamPain(3);
   const seq = [x.dreamPainTakenBonus(d)];
   for (let i = 0; i < 4; i++) { d = x.tickDreamPain(d); seq.push(x.dreamPainTakenBonus(d)); }
-  check('ドリームペインは使ったターンは効かず、次のターンから3ターン', JSON.stringify(seq.map(v => Math.round(v * 100))) === '[0,80,80,80,0]',
+  check('ドリームペインは使ったターンは効かず、次のターンから3ターン', JSON.stringify(seq.map(v => Math.round(v * 100))) === '[0,160,160,160,0]',
     JSON.stringify(seq));
 }
 check('黒音符の連撃の入口(withBlackNoteCombo)で楔の連撃も足す', /const withBlackNoteCombo = \(exCombos, combo, extra = null\)/.test(bond));
