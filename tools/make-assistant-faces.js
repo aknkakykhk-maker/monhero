@@ -83,7 +83,8 @@ const PER_ASSISTANT_BASE = {
   //   社長が4案から C「頭と首」を選んだ(一辺 = 輪郭の高さ × 0.68)。社長「センター調整はして」
   //   首を傾けた絵が多く、頭の形の真ん中と顔の真ん中がずれるので、表情ごとに顔のまんなか(目と鼻のあいだ。絵の幅・高さに対する 0〜1)を
   //   faceCenters に書き、その点を丸のまんなかに置く(docs/rules/ASSETS.md「顔のまんなかは1か所で決める」の助手の形)
-  sorashido: { headRatio: 0.68, faceCenters: {
+  //   社長「もうちょい下にしたい」→ 3段の見本から「2 中くらい」を選んだ(2026-10-27)。顔のまんなかを、丸のまんなかより丸の大きさの10%下に置く(faceOffsetY)
+  sorashido: { headRatio: 0.68, faceOffsetY: 0.10, faceCenters: {
     normal: [0.509, 0.419], happy: [0.475, 0.414], troubled: [0.56, 0.44], excited: [0.563, 0.436],
     angry: [0.563, 0.405], surprise: [0.542, 0.406], wink: [0.568, 0.443], crying: [0.575, 0.345],
   } },
@@ -167,7 +168,8 @@ const run = async () => {
     const height = bounds.bottom - bounds.top + 1;
     const side = Math.round(height * headRatio);
     // faceCenters … 表情ごとの顔のまんなか(絵の幅・高さに対する 0〜1)。書いてあれば、その点を丸のまんなかに置く。
-    // 枠が絵の外へはみ出しても顔をずらさない(はみ出た所は透明のまま)
+    // 枠が絵の外へはみ出しても顔をずらさない(はみ出た所は透明のまま)。
+    // faceOffsetY … 顔のまんなかを、丸のまんなかから下へずらす割合(丸の大きさに対して。正は下)
     const expr = file.replace(/\.png$/i, '').slice(prefix.length + 1);
     const center = tune.faceCenters && tune.faceCenters[expr];
     if (center) {
@@ -177,7 +179,8 @@ const run = async () => {
       const octx = out.getContext('2d');
       octx.imageSmoothingEnabled = true;
       octx.imageSmoothingQuality = 'high';
-      octx.drawImage(img, 0, 0, img.width, img.height, OUT_SIZE / 2 - fx * scale, OUT_SIZE / 2 - fy * scale, img.width * scale, img.height * scale);
+      const offsetY = Number.isFinite(tune.faceOffsetY) ? tune.faceOffsetY : 0;
+      octx.drawImage(img, 0, 0, img.width, img.height, OUT_SIZE / 2 - fx * scale, OUT_SIZE * (0.5 + offsetY) - fy * scale, img.width * scale, img.height * scale);
       let buf = out.toBuffer('image/png', { compressionLevel: 9 });
       if (sharp) buf = await sharp(buf).png({ palette: true, colours: 256, effort: 7, compressionLevel: 9 }).toBuffer();
       const outPath = path.join(outDir, file.replace(/\.png$/i, '.PNG'));
