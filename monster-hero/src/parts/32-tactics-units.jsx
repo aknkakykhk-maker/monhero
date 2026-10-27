@@ -635,7 +635,8 @@ const TACTICS_HATE = {
   action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 5, taunt: 40, cover: 0, ex: 10 },
   exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
   // 助手のカード(id)がどの行動か
-  assist: { atsu: 'taunt', kyuko: 'cover', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
+  // sorashido はソラシドの自動化(2026-10-27 社長「強めると同じ5」)
+  assist: { atsu: 'taunt', kyuko: 'cover', sorashido: 'buff', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
   // 回復の量(ライフの回復率 + ガッツの回復率 × 0.5)。段 0〜2
   healAmount: { mua: [0.5, 1.05, 1.35], momosuke: [0.25, 1.05, 1.35], meloso: [0.45, 0.45, 0.45] },
   // 子ごとの上書き(タイプの既定値より強く/弱くしたい子だけ)。mult … 増え方の倍率 / add … 行動ごとの上乗せ / always … 行動のたびの上乗せ
@@ -1674,6 +1675,26 @@ const TACTICS_EX_SKILLS = Object.freeze({
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     effect: 'kitsunebi',
   }),
+  // ★オリヒメ(2026-10-27 社長の決定・数字は案の「推奨」)。勇者モンのときは「星合の刻」、ほかの子が勇者のとき(共モン)は
+  //   「焦がれ待つ天ノ河」。supportKey … 勇者でないときに使う定義の名前(60-app の raidExDefOf が引き替える。モンスターごとの if にしない)。
+  //   星合の続く攻撃・焦がれの意味不明の振りは 22-enemy-and-bond-entries.jsx の startHoshiai / rollKogare、持ち方は 60-app の orihimeRef
+  Orihime: Object.freeze({
+    id: 'orihime_hoshiai',
+    name: '星合の刻',
+    useNote: '逢瀬を全部使う・相方と続けて攻撃(逢瀬と間合いの差で強く長く)',
+    desc: '逢瀬を全部使い、数ターン「星合」になる。\n・星合のあいだ、オリヒメか相方が攻撃すると、もう片方が続けて攻撃する(続く攻撃は与ダメ30%＋逢瀬1つにつき1.5%、間合いの差2なら+5%・差3なら+10%。上限50%)\n・続く攻撃は1ターンに2回まで。続く攻撃から、また続く攻撃は出ない\n・続くターン: 2ターン＋逢瀬4つごとに1ターン(最大5ターン)\n・終わると逢瀬は0に戻る',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    supportKey: 'OrihimeSupport',
+    effect: 'hoshiai',
+  }),
+  OrihimeSupport: Object.freeze({
+    id: 'orihime_kogare',
+    name: '焦がれ待つ天ノ河',
+    useNote: '3ターン 攻撃が当たると25%で敵が「意味不明」(1ターン2回まで)',
+    desc: '3ターンのあいだ、オリヒメの攻撃が当たると、25%で敵の次の行動が「意味不明」になる。\n・確率を振るのは1ターンに2回まで\n・逢瀬は使わない\n・意味不明のターン、敵は動けず、味方の攻撃は会心確定(スプーキーの乱心と同じ)',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    effect: 'kogare',
+  }),
   Spooky: Object.freeze({
     id: 'spooky_trick_confuse',
     name: 'トリックコンフューズ',
@@ -1738,7 +1759,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille', 'kitsunebi']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille', 'kitsunebi', 'hoshiai', 'kogare']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1868,6 +1889,11 @@ const tacticsExDurationText = (def) => (!def ? null
 // そのモンスターのEX。持っていなければ null
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) =>
   (monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null);
+// 勇者モンかどうかで定義を引き替える。supportKey を持つ子(オリヒメ)は、勇者モンでなければその名前の定義を使う(2026-10-27)
+const tacticsExRoleDefOf = (monId, isHero, table = TACTICS_EX_SKILLS) => {
+  const def = tacticsExDefOf(monId, table);
+  return def && def.supportKey && !isHero ? tacticsExDefOf(def.supportKey, table) : def;
+};
 const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_EFFECTS) =>
   !!(def && def.effect && implemented.includes(def.effect));
 

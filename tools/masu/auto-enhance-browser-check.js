@@ -70,6 +70,8 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
     browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
+    // 起動直後に HOME で流れるお話(イベント回想に並ぶもの)を見たことにする。入れないと、お話の窓の下で強化の画面が押せない(2026-10-27)
+    await page.addInitScript(require('../boot/quiet-boot-seed').quietBootSeed());
     await page.addInitScript(seed, TARGET);
     await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
