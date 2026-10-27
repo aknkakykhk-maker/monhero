@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e89c8ab4ae094ef6
+// generated-sha256: 6d184a99d5aa30e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65156,6 +65156,16 @@ function MonsterHeroGame() {
   useEffect(()=>()=>{if(trainingEffectTimerRef.current)clearTimeout(trainingEffectTimerRef.current);},[]);
   useEffect(()=>{if(gameState!=='TRAINING_BOARD'||trainingMapOverview)return;requestAnimationFrame(()=>{const viewport=trainingMapRef.current,current=TRAINING_NODE_BY_ID[trainingSession?.position],next=TRAINING_NODE_BY_ID[trainingSession?.routePreview?.[0]];if(!viewport||!current)return;const focus=next?{x:current.x+(next.x-current.x)*.7,y:current.y+(next.y-current.y)*.7}:current;viewport.scrollTo({left:720*focus.x/100-viewport.clientWidth*.42,top:520*focus.y/100-viewport.clientHeight*.5,behavior:'smooth'});});},[gameState,trainingSession?.position,trainingSession?.routePreview?.[0],trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
+  // ギフトの一覧(mh_gifts)へ書き足す処理を、1本ずつ順番に走らせる(2026-10-27)。
+  // ★起動したときやお話を見終えたとき、ソラシドのおみやげと仲良し度のごほうびが同じときに mh_gifts を読み書きして、
+  //   saveStoredValuesOrRollback の読み戻しが食い違い、片方の保存が巻き戻っていた(assistant-bond-reward-browser-check が見つけた)。
+  //   前の処理が終わってから次を始める。前の処理が失敗しても、次は走る
+  const giftWriteChainRef = useRef(Promise.resolve());
+  const runGiftWrite = (task) => {
+    const run = giftWriteChainRef.current.then(task, task);
+    giftWriteChainRef.current = run.catch(() => {});
+    return run;
+  };
   const [giftTab, setGiftTab] = useState('unclaimed');
   // 受け取った直後に出す「手に入れたもの」の窓。{ title, rewards:[{type,itemId?,amount}], count } / null
   const [rewardReceipt, setRewardReceipt] = useState(null);
@@ -68325,7 +68335,7 @@ function MonsterHeroGame() {
   // ★ギフトと「届けた」印(mh_sorashido_gift_v1)を同じ取引で保存する。どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)
   // ★公開の印 assistantSorashido が偽なら届けない。回想で見直しても、印があるので二度は届かない
   const sorashidoGiftRef = useRef(false);
-  const grantSorashidoGift = async () => {
+  const grantSorashidoGift = () => runGiftWrite(async () => {
     if (RELEASE_FLAGS.assistantSorashido !== true) return false;
     if (sorashidoGiftRef.current) return false;
     sorashidoGiftRef.current = true;
@@ -68344,7 +68354,7 @@ function MonsterHeroGame() {
       return grant.granted;
     } catch (error) { return false; }
     finally { sorashidoGiftRef.current = false; }
-  };
+  });
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
     void grantSorashidoGift();
@@ -71015,7 +71025,8 @@ function MonsterHeroGame() {
     if (assistantBondRewardRunningRef.current) { assistantBondRewardAgainRef.current = true; return; }
     assistantBondRewardRunningRef.current = true;
     try {
-      do {
+      // ほかのギフトの書き足し(ソラシドのおみやげなど)と重ならないよう、順番に走らせる(runGiftWrite)
+      await runGiftWrite(async () => { do {
         assistantBondRewardAgainRef.current = false;
         // ★まだ解放していない助手(あつ・ドラ)のごほうびは、解放するまで届けない(届ける計算のときだけLv0とみなす。
         //   保存してある仲良し度はそのまま残すので、加入のお話を見たら、その時点のLvまでのごほうびがまとめて届く)
@@ -71035,7 +71046,7 @@ function MonsterHeroGame() {
         ], storeGet, storeSet);
         if (!saved) { console.error('[assistant-bond-reward] save failed'); break; }
         if (grant.granted.length) setGifts(grant.gifts);
-      } while (assistantBondRewardAgainRef.current);
+      } while (assistantBondRewardAgainRef.current); });
     } catch (error) {
       console.error('[assistant-bond-reward] failed:', error && error.message ? error.message : error);
     } finally { assistantBondRewardRunningRef.current = false; }
@@ -83753,7 +83764,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 戻るの導線(押したタブへ戻る)は tools/boot/mission-gift-badge-check.js が見張っている */}
             <ScreenHead title={rosterTab==='monster'?'モンスター編成':'アシストカード編成'} accent="text-indigo-400" backLabel="M/B管理へ戻る"
               onBack={()=>{setManagementTab(rosterTab==='monster'?'monster':'assist');setGameState('MB_MANAGEMENT');}}/>
-            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="roster" compact/></div>
+            {/* 助手のひとことは「たたむ」で小さくできる(2026-10-27・札が1.5段しか見えなかった。神殿と同じ形) */}
+            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="roster" compact collapseKey={`roster:${rosterTab}`}/></div>
             {rosterTab==='monster'?(
               /* 横画面の2カラムは [data-mh-screen]:has(> .mh-scroll) で「根の直下」だけを見る。
                  ここを div で包むと編成画面だけ組み替わらないので、包まない(フラグメント) */
@@ -83791,7 +83803,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* ★4体ずつ2段に並べる(2026-09-18・ユーザー指示)。
                       横スクロールだった頃は8体のうち7体しか見えず、いま誰を入れているのかを
                       確かめるのに横へ送る必要があった。2段にすれば8体が一度に見える。 */}
-                  <div className="grid flex-1 grid-cols-4 gap-1.5 justify-items-center min-h-[36px] items-center">
+                  {/* 縦向きで背の低い画面(高さ700以下)では8体を1段に並べる(2026-10-27・375×667で札が1.5段しか見えなかった)。
+                      幅360未満は顔を26pxにして1段に収める。
+                      横向きは一覧が右の列に分かれるので2段のまま(左の列が狭くはみ出す) */}
+                  <div className="grid flex-1 grid-cols-4 gap-1.5 justify-items-center min-h-[36px] items-center [@media(orientation:portrait)_and_(max-height:700px)]:grid-cols-8 [@media(orientation:portrait)_and_(max-height:700px)]:gap-0.5 [@media(orientation:portrait)_and_(max-height:700px)]:min-h-[26px]">
                     {draftMonsterRoster.length===0?(
                       <span className="text-[10px] text-slate-400 font-bold">まだ選ばれていません</span>
                     ):(draftMonsterRoster.map(entryId=>{
@@ -83800,7 +83815,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       const base = isMasu ? (masu && ALL_PLAYER_MONSTERS[masu.baseId]) : ALL_PLAYER_MONSTERS[entryId];
                       if (!base) return null;
                       return (
-                        <button key={entryId} type="button" aria-label={`${isMasu?masu.name:base.name}を編成から外す`} onClick={()=>toggleDraftMonster(entryId)} className="shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative">
+                        <button key={entryId} type="button" aria-label={`${isMasu?masu.name:base.name}を編成から外す`} onClick={()=>toggleDraftMonster(entryId)} className="shrink-0 w-9 h-9 [@media(orientation:portrait)_and_(max-height:700px)]:w-[26px] [@media(orientation:portrait)_and_(max-height:700px)]:h-[26px] [@media(orientation:portrait)_and_(max-height:700px)_and_(min-width:360px)]:w-8 [@media(orientation:portrait)_and_(max-height:700px)_and_(min-width:360px)]:h-8 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative">
                           {isMasu?(<><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></>):(<img src={base.iconUrl} alt={base.name} style={monsterArtFitStyle(base.id)} className="w-full h-full object-cover"/>)}
                         </button>
                       );

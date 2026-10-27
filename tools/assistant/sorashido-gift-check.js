@@ -47,9 +47,10 @@ const take = (src, name) => {
 // ② 本体のつなぎ
 {
   check('印は新しいキー mh_sorashido_gift_v1', giftsSrc.includes("const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';"));
-  const at = app.indexOf('const grantSorashidoGift = async () => {');
-  const body = at >= 0 ? app.slice(at, app.indexOf('\n  };\n', at)) : '';
-  check('届ける関数がある', !!body);
+  const at = app.indexOf('const grantSorashidoGift = () => runGiftWrite(async () => {');
+  const body = at >= 0 ? app.slice(at, app.indexOf('\n  });\n', at)) : '';
+  check('届ける関数がある(ギフトの書き足しは runGiftWrite で順番に走らせる)', !!body);
+  check('仲良し度のごほうびも同じ順番待ちに入る(同時に mh_gifts を書かない)', /await runGiftWrite\(async \(\) => \{ do \{/.test(app));
   check('公開の印が偽なら届けない', /RELEASE_FLAGS\.assistantSorashido !== true\) return false/.test(body));
   check('印があれば届けない(回想で見直しても二度目は無い)', /storeGet\(SORASHIDO_GIFT_KEY[\s\S]*?if \(mark\) return false/.test(body));
   check('ギフトと印を同じ取引で保存する', /saveStoredValuesOrRollback\(\[[\s\S]*?'mh_gifts'[\s\S]*?SORASHIDO_GIFT_KEY[\s\S]*?\]/.test(body));

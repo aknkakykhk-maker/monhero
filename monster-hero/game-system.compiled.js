@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6789ecbcf36ea133
+// source-sha256: a12efc2f2735f1ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107354,6 +107354,12 @@ function MonsterHeroGame() {
     });
   }, [gameState, trainingSession?.position, trainingSession?.routePreview?.[0], trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
+  const giftWriteChainRef = useRef(Promise.resolve());
+  const runGiftWrite = task => {
+    const run = giftWriteChainRef.current.then(task, task);
+    giftWriteChainRef.current = run.catch(() => {});
+    return run;
+  };
   const [giftTab, setGiftTab] = useState('unclaimed');
   const [rewardReceipt, setRewardReceipt] = useState(null);
   const [missions, setMissions] = useState(() => normalizeMissions(null));
@@ -110555,7 +110561,7 @@ function MonsterHeroGame() {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
   const sorashidoGiftRef = useRef(false);
-  const grantSorashidoGift = async () => {
+  const grantSorashidoGift = () => runGiftWrite(async () => {
     if (RELEASE_FLAGS.assistantSorashido !== true) return false;
     if (sorashidoGiftRef.current) return false;
     sorashidoGiftRef.current = true;
@@ -110588,7 +110594,7 @@ function MonsterHeroGame() {
     } finally {
       sorashidoGiftRef.current = false;
     }
-  };
+  });
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
     void grantSorashidoGift();
@@ -113210,35 +113216,37 @@ function MonsterHeroGame() {
     }
     assistantBondRewardRunningRef.current = true;
     try {
-      do {
-        assistantBondRewardAgainRef.current = false;
-        const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current) ? 0 : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
-        const savedGifts = await storeGet('mh_gifts', [], false);
-        const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
-        const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
-        const mark = await storeGet(ASSISTANT_BOND_REWARDS_V2_KEY, null, false);
-        const grant = buildAssistantBondRewardGrant({
-          gifts: beforeGifts,
-          delivered: markV1,
-          deliveredV2: mark,
-          levels
-        });
-        if (!grant.changed) continue;
-        const saved = await saveStoredValuesOrRollback([...(grant.granted.length ? [{
-          key: 'mh_gifts',
-          before: beforeGifts,
-          next: grant.gifts
-        }] : []), {
-          key: ASSISTANT_BOND_REWARDS_V2_KEY,
-          before: mark,
-          next: grant.deliveredV2
-        }], storeGet, storeSet);
-        if (!saved) {
-          console.error('[assistant-bond-reward] save failed');
-          break;
-        }
-        if (grant.granted.length) setGifts(grant.gifts);
-      } while (assistantBondRewardAgainRef.current);
+      await runGiftWrite(async () => {
+        do {
+          assistantBondRewardAgainRef.current = false;
+          const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current) ? 0 : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
+          const savedGifts = await storeGet('mh_gifts', [], false);
+          const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+          const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+          const mark = await storeGet(ASSISTANT_BOND_REWARDS_V2_KEY, null, false);
+          const grant = buildAssistantBondRewardGrant({
+            gifts: beforeGifts,
+            delivered: markV1,
+            deliveredV2: mark,
+            levels
+          });
+          if (!grant.changed) continue;
+          const saved = await saveStoredValuesOrRollback([...(grant.granted.length ? [{
+            key: 'mh_gifts',
+            before: beforeGifts,
+            next: grant.gifts
+          }] : []), {
+            key: ASSISTANT_BOND_REWARDS_V2_KEY,
+            before: mark,
+            next: grant.deliveredV2
+          }], storeGet, storeSet);
+          if (!saved) {
+            console.error('[assistant-bond-reward] save failed');
+            break;
+          }
+          if (grant.granted.length) setGifts(grant.gifts);
+        } while (assistantBondRewardAgainRef.current);
+      });
     } catch (error) {
       console.error('[assistant-bond-reward] failed:', error && error.message ? error.message : error);
     } finally {
@@ -133990,7 +133998,8 @@ function MonsterHeroGame() {
       className: "shrink-0 w-full mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "roster",
-      compact: true
+      compact: true,
+      collapseKey: `roster:${rosterTab}`
     })), rosterTab === 'monster' ? React.createElement(React.Fragment, null, React.createElement("div", {
       className: "shrink-0 mb-2 rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-2"
     }, React.createElement("div", {
@@ -134063,7 +134072,7 @@ function MonsterHeroGame() {
     }, React.createElement("span", {
       className: "text-[10px] font-black text-indigo-300 shrink-0 leading-tight"
     }, "編成中", React.createElement("br", null), draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length), React.createElement("div", {
-      className: "grid flex-1 grid-cols-4 gap-1.5 justify-items-center min-h-[36px] items-center"
+      className: "grid flex-1 grid-cols-4 gap-1.5 justify-items-center min-h-[36px] items-center [@media(orientation:portrait)_and_(max-height:700px)]:grid-cols-8 [@media(orientation:portrait)_and_(max-height:700px)]:gap-0.5 [@media(orientation:portrait)_and_(max-height:700px)]:min-h-[26px]"
     }, draftMonsterRoster.length === 0 ? React.createElement("span", {
       className: "text-[10px] text-slate-400 font-bold"
     }, "まだ選ばれていません") : draftMonsterRoster.map(entryId => {
@@ -134076,7 +134085,7 @@ function MonsterHeroGame() {
         type: "button",
         "aria-label": `${isMasu ? masu.name : base.name}を編成から外す`,
         onClick: () => toggleDraftMonster(entryId),
-        className: "shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative"
+        className: "shrink-0 w-9 h-9 [@media(orientation:portrait)_and_(max-height:700px)]:w-[26px] [@media(orientation:portrait)_and_(max-height:700px)]:h-[26px] [@media(orientation:portrait)_and_(max-height:700px)_and_(min-width:360px)]:w-8 [@media(orientation:portrait)_and_(max-height:700px)_and_(min-width:360px)]:h-8 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative"
       }, isMasu ? React.createElement(React.Fragment, null, React.createElement(DyedMonsterImage, {
         baseId: masu.baseId,
         src: base.iconUrl,
