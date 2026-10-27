@@ -49,7 +49,10 @@ check('台本とセリフを集められた',pages.length>0,`${pages.length}件`
 
 // --- 実装が「どこでも折り返してよい」を指定しているか ---
 check('吹き出しの本文と小見出しに、どこでも折り返す指定がある',
-  (game.match(/overflowWrap:'anywhere',wordBreak:'break-word'/g)||[]).length>=2);
+  // 2026-10-27 から、案内の吹き出しは言葉の切れ目で折る形(style={JA_WRAP_STYLE} と jaWrap)。JA_WRAP_STYLE も overflowWrap:'anywhere' を持つので、
+  // 長すぎる語はこれまでどおりどこでも折れる(はみ出さない)。どちらの書き方でも、本文と小見出しの2か所にあればよい
+  ((game.match(/overflowWrap:'anywhere',wordBreak:'break-word'/g)||[]).length+(game.match(/style=\{JA_WRAP_STYLE\}>\{jaWrap\(String\(page\.(t|title)\)/g)||[]).length)>=2
+  &&/JA_WRAP_STYLE = Object\.freeze\(\{[^}]*overflowWrap: 'anywhere'/.test(game));
 
 const BODY_WIDTH=200;
 (async()=>{

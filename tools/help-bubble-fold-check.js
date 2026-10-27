@@ -1,7 +1,9 @@
 // ヘルプ(攻略情報局)の上の助手の吹き出しを「たためる」ことを、実際の画面で確かめる(2026-10-26 開発部 e01・e02)。
 //   ① はじめはひらいている ② 吹き出しの「▴」でたたむと何も出なくなり、mh_bubble_collapsed_v1 に 'help' が入る(上の助手の顔は薄くなる)
 //   ③ 読み込み直しても、ヘルプはたたんだまま ④ 上の助手の顔を押すとひらき、記録から消える
-//   ⑤ 横向き(844×390)でも同じ(ひらいた吹き出しが2行までに収まり、一覧が見える)
+//   ⑤ 横向きの低い画面(844×390・667×375)では、はじめからたたんである(2026-10-27 社長の答え)。押せばひらき、ひらいた吹き出しは2行までに収まる。
+//      この向きでは保存(mh_bubble_collapsed_v1)を読み書きしない(縦向きの選びを変えない)
+//   ①〜④は縦向き(390×760)で確かめる
 //
 // 実行: node tools/help-bubble-fold-check.js(配信は tools/serve.py を :8899 で)
 const path = require('path');
@@ -23,7 +25,7 @@ const seed = () => {
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 760 }, hasTouch: true });
   const sb = createFakeSupabase();
   await ctx.route('**/*', (route) => { const u = route.request().url(); if (/supabase\.co/.test(u)) return sb.handle(route); return route.continue(); });
   await ctx.addInitScript(() => { window.__mhSupabaseStubbed = true; });
@@ -56,8 +58,6 @@ const seed = () => {
   await boot();
   await openHelp();
   check('① ヘルプの吹き出しは、はじめはひらいている', (await bubbleShown()) && (await raw()) === null);
-  const n = await lines();
-  check('⑤ 横向きでは吹き出しの本文が2行までに収まる', n !== null && n <= 2, `${n}行`);
   check('「▴」を押せる', await click(/ひとことをたたむ/));
   await page.waitForTimeout(600);
   check('② たたむと吹き出しが何も出なくなる', !(await bubbleShown()));
@@ -72,6 +72,23 @@ const seed = () => {
   await boot();
   await openHelp();
   check('壊れた値でも落ちず、ひらいたまま', await bubbleShown());
+
+  // ⑤ 横向きの低い画面: はじめからたたんである。保存は読み書きしない
+  for (const [w, h] of [[844, 390], [667, 375]]) {
+    await page.evaluate((k) => localStorage.removeItem(k), KEY);
+    await page.setViewportSize({ width: w, height: h });
+    await boot();
+    await openHelp();
+    check(`⑤ ${w}×${h}: ヘルプの吹き出しは、はじめからたたんである`, !(await bubbleShown()));
+    check(`⑤ ${w}×${h}: 上の助手の顔を押せる`, await click(/助手のひとことを開く/));
+    await page.waitForTimeout(600);
+    const n = await lines();
+    check(`⑤ ${w}×${h}: 押すとひらき、本文が2行までに収まる`, (await bubbleShown()) && n !== null && n <= 2, `${n}行`);
+    check(`⑤ ${w}×${h}: 保存には何も書かない`, (await raw()) === null, String(await raw()));
+    // この向きでは吹き出しの中に「▴」を出さず、上の助手の顔でたたむ(「▴」は保存に書くため)
+    check(`⑤ ${w}×${h}: 吹き出しの中に「▴」は無い`, !(await click(/ひとことをたたむ/)));
+    check(`⑤ ${w}×${h}: 上の助手の顔でたため、保存には何も書かない`, (await click(/助手のひとことを開く/)) && (await page.waitForTimeout(600), !(await bubbleShown())) && (await raw()) === null);
+  }
   check('画面でエラーが出ていない', fatal.length === 0, fatal.slice(0, 2).join(' | '));
 
   await browser.close();
