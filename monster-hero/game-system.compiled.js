@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2813592464086ea
+// source-sha256: 38b72af55087dc71
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -59363,7 +59363,8 @@ function MasuDonationScreen({
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
   }, React.createElement(AssistantBubble, {
     scene: "donation",
-    compact: true
+    compact: true,
+    collapseKey: "temple:donation"
   })), React.createElement("p", {
     className: "shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
@@ -59453,9 +59454,10 @@ function MasuDonationScreen({
       }, "編成を維持できません") : null
     }));
   }))), React.createElement("div", {
-    className: "shrink-0 mt-2 rounded-2xl border border-violet-400/60 bg-slate-950 px-3 py-2 shadow-xl"
+    "data-donation-footer": true,
+    className: "shrink-0 mt-2 flex items-center gap-2 rounded-2xl border border-violet-400/60 bg-slate-950 px-3 py-2 shadow-xl"
   }, React.createElement("div", {
-    className: "flex items-center justify-between mb-2 text-[10px] font-black"
+    className: "min-w-0 flex-1 flex flex-col gap-0.5 text-[10px] font-black leading-tight"
   }, React.createElement("span", {
     className: "text-violet-200"
   }, "選択数：", React.createElement("b", {
@@ -59468,7 +59470,7 @@ function MasuDonationScreen({
   }), " ", selectedDiamonds.toLocaleString(), " / 虹のプシュケー ×", selectedPsyche)), React.createElement("button", {
     disabled: !donationSelectedIds.length || donationProcessing || !selectedResult?.ok,
     onClick: () => setDonationConfirmOpen(true),
-    className: "w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-violet-600 to-amber-600 text-sm font-black text-white active:scale-[.98] disabled:opacity-30"
+    className: "shrink-0 min-h-[44px] rounded-xl bg-gradient-to-r from-violet-600 to-amber-600 px-3 text-[12px] font-black text-white active:scale-[.98] disabled:opacity-30"
   }, "選んだマスモンを寄付する")));
 }
 function MasuDonationConfirm({
@@ -59627,7 +59629,8 @@ function MasuRebirthScreen({
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "rebirth",
-      compact: true
+      compact: true,
+      collapseKey: "temple:rebirth"
     })), renderScreenNote('rebirth', 'レベル上限に届いたマスモンを、虹のプシュケーで上へ伸ばせます。', [`30凸までは上限+${BREAKTHROUGH_LEVEL_CAP_GAIN}。31〜35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。`, '虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。', `必要な虹のプシュケーは1回目${BREAKTHROUGH_ITEM_BASE}個、以降1回ごとに+${BREAKTHROUGH_ITEM_STEP}個。チャレンジ／クイックをクリアするともらえます。`]), React.createElement("div", {
       className: "shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/60 bg-fuchsia-950/30 px-3 py-2"
     }, React.createElement("span", {
@@ -60260,7 +60263,8 @@ function MasuTranscendenceScreen({
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "transcendence",
-      compact: true
+      compact: true,
+      collapseKey: "temple:transcendence"
     })), React.createElement(ScreenLead, null, "Lv.", MAX_MASU_LEVEL_CAP, "・虹★", BREAKTHROUGH_STARS_PER_TIER, "（限界突破", FINAL_BREAKTHROUGH_COUNT, "回）まで育てたマスモンだけが超越できます。超越するとLv上限が", TRANSCEND_LEVEL_CAP, "になり、Lv", MAX_MASU_LEVEL_CAP + 1, "以降のレベルアップで超越ポイントを獲得します。1個体につき1回だけです。"), React.createElement("div", {
       className: "shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2"
     }, React.createElement("span", {
@@ -60432,7 +60436,8 @@ function MasuSoulRankScreen({
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "soulRank",
-      compact: true
+      compact: true,
+      collapseKey: "temple:soulRank"
     })), React.createElement(ScreenLead, null, "超越後、現在のLv上限まで育ったマスモンを次の魂格へ進化できます。進化しても現在Lvは上がらず、Lv上限だけが100解放されます。"), React.createElement("div", {
       className: "shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2"
     }, React.createElement("span", {
@@ -61120,7 +61125,8 @@ function MasuOfferingScreen({
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "offering",
-      compact: true
+      compact: true,
+      collapseKey: "temple:offering"
     })), introVisible && React.createElement("div", {
       "data-offering-intro": true,
       className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1.5"

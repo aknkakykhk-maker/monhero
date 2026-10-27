@@ -69,7 +69,7 @@ function MasuOfferingScreen({
     const entries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
     return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="お布施" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact collapseKey="temple:offering"/></div>
       {/* 横持ちの背の低い画面では、この札が大きくて左の列の並べ替えの札が画面の下へ押し出されていた(2026-10-27 ジン部長の見回り)。
           その画面だけ「わかった」を題名の横へ小さく置き、手順の字と行の間を詰める。縦の画面は変えない */}
       {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1.5">

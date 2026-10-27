@@ -44,7 +44,7 @@ function MasuDonationScreen({
       return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="寄付" accent="text-violet-300" onBack={onLeaveDonation} backLabel="神殿へ戻る" disabled={donationProcessing}/>
         {/* 寄付の台詞(donation)は用意してあったのに、画面に吹き出しが無かった(2026-10-27) */}
-        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="donation" compact/></div>
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="donation" compact collapseKey="temple:donation"/></div>
         <p className="shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
         {/* 並べ替えは合体と同じ「並べ替え＋横に流れるボタン」の形にそろえる(2026-10-05。7つを4列に詰めて総合力だけ2列ぶんの幅だった)。
             右端のぼかしと末尾の余白は合体と同じ(2026-10-27・320で続きがあると気づけなかった) */}
@@ -60,7 +60,7 @@ function MasuDonationScreen({
               status:!canSelect&&!selected?(isMasuLocked(lockedMasuIds,masu.id)?<span className="text-[10px] font-black leading-tight text-amber-200">🔒 お気に入り</span>:<span className="text-[10px] font-black leading-tight text-red-300">編成を維持できません</span>):null})}
           </button>})}</div>}
         </div>
-        <div className="shrink-0 mt-2 rounded-2xl border border-violet-400/60 bg-slate-950 px-3 py-2 shadow-xl"><div className="flex items-center justify-between mb-2 text-[10px] font-black"><span className="text-violet-200">選択数：<b className="text-white text-sm">{donationSelectedIds.length}体</b></span><span className="text-amber-300">合計 <Gem size={11} className="inline"/> {selectedDiamonds.toLocaleString()} / 虹のプシュケー ×{selectedPsyche}</span></div><button disabled={!donationSelectedIds.length||donationProcessing||!selectedResult?.ok} onClick={()=>setDonationConfirmOpen(true)} className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-violet-600 to-amber-600 text-sm font-black text-white active:scale-[.98] disabled:opacity-30">選んだマスモンを寄付する</button></div>
+        {/* 札の欄を広く取れるよう、選択数・合計とボタンを1段にまとめる(前は2段。2026-10-27 社長「狭くて見づらい」) */}<div data-donation-footer className="shrink-0 mt-2 flex items-center gap-2 rounded-2xl border border-violet-400/60 bg-slate-950 px-3 py-2 shadow-xl"><div className="min-w-0 flex-1 flex flex-col gap-0.5 text-[10px] font-black leading-tight"><span className="text-violet-200">選択数：<b className="text-white text-sm">{donationSelectedIds.length}体</b></span><span className="text-amber-300">合計 <Gem size={11} className="inline"/> {selectedDiamonds.toLocaleString()} / 虹のプシュケー ×{selectedPsyche}</span></div><button disabled={!donationSelectedIds.length||donationProcessing||!selectedResult?.ok} onClick={()=>setDonationConfirmOpen(true)} className="shrink-0 min-h-[44px] rounded-xl bg-gradient-to-r from-violet-600 to-amber-600 px-3 text-[12px] font-black text-white active:scale-[.98] disabled:opacity-30">選んだマスモンを寄付する</button></div>
       </div>;
     
 }

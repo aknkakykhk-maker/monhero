@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a31f36777ecb50e8
+// generated-sha256: 979337424650c34d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37386,7 +37386,7 @@ function MasuDonationScreen({
       return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="寄付" accent="text-violet-300" onBack={onLeaveDonation} backLabel="神殿へ戻る" disabled={donationProcessing}/>
         {/* 寄付の台詞(donation)は用意してあったのに、画面に吹き出しが無かった(2026-10-27) */}
-        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="donation" compact/></div>
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="donation" compact collapseKey="temple:donation"/></div>
         <p className="shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
         {/* 並べ替えは合体と同じ「並べ替え＋横に流れるボタン」の形にそろえる(2026-10-05。7つを4列に詰めて総合力だけ2列ぶんの幅だった)。
             右端のぼかしと末尾の余白は合体と同じ(2026-10-27・320で続きがあると気づけなかった) */}
@@ -37402,7 +37402,7 @@ function MasuDonationScreen({
               status:!canSelect&&!selected?(isMasuLocked(lockedMasuIds,masu.id)?<span className="text-[10px] font-black leading-tight text-amber-200">🔒 お気に入り</span>:<span className="text-[10px] font-black leading-tight text-red-300">編成を維持できません</span>):null})}
           </button>})}</div>}
         </div>
-        <div className="shrink-0 mt-2 rounded-2xl border border-violet-400/60 bg-slate-950 px-3 py-2 shadow-xl"><div className="flex items-center justify-between mb-2 text-[10px] font-black"><span className="text-violet-200">選択数：<b className="text-white text-sm">{donationSelectedIds.length}体</b></span><span className="text-amber-300">合計 <Gem size={11} className="inline"/> {selectedDiamonds.toLocaleString()} / 虹のプシュケー ×{selectedPsyche}</span></div><button disabled={!donationSelectedIds.length||donationProcessing||!selectedResult?.ok} onClick={()=>setDonationConfirmOpen(true)} className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-violet-600 to-amber-600 text-sm font-black text-white active:scale-[.98] disabled:opacity-30">選んだマスモンを寄付する</button></div>
+        {/* 札の欄を広く取れるよう、選択数・合計とボタンを1段にまとめる(前は2段。2026-10-27 社長「狭くて見づらい」) */}<div data-donation-footer className="shrink-0 mt-2 flex items-center gap-2 rounded-2xl border border-violet-400/60 bg-slate-950 px-3 py-2 shadow-xl"><div className="min-w-0 flex-1 flex flex-col gap-0.5 text-[10px] font-black leading-tight"><span className="text-violet-200">選択数：<b className="text-white text-sm">{donationSelectedIds.length}体</b></span><span className="text-amber-300">合計 <Gem size={11} className="inline"/> {selectedDiamonds.toLocaleString()} / 虹のプシュケー ×{selectedPsyche}</span></div><button disabled={!donationSelectedIds.length||donationProcessing||!selectedResult?.ok} onClick={()=>setDonationConfirmOpen(true)} className="shrink-0 min-h-[44px] rounded-xl bg-gradient-to-r from-violet-600 to-amber-600 px-3 text-[12px] font-black text-white active:scale-[.98] disabled:opacity-30">選んだマスモンを寄付する</button></div>
       </div>;
     
 }
@@ -37455,7 +37455,7 @@ function MasuRebirthScreen({
 }) {
 
       const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
-      if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)); return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="限界突破" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div>{renderScreenNote('rebirth','レベル上限に届いたマスモンを、虹のプシュケーで上へ伸ばせます。',[`30凸までは上限+${BREAKTHROUGH_LEVEL_CAP_GAIN}。31〜35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。`,'虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。',`必要な虹のプシュケーは1回目${BREAKTHROUGH_ITEM_BASE}個、以降1回ごとに+${BREAKTHROUGH_ITEM_STEP}個。チャレンジ／クイックをクリアするともらえます。`])}<div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/60 bg-fuchsia-950/30 px-3 py-2"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div>{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🌈" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;
+      if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)); return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="限界突破" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact collapseKey="temple:rebirth"/></div>{renderScreenNote('rebirth','レベル上限に届いたマスモンを、虹のプシュケーで上へ伸ばせます。',[`30凸までは上限+${BREAKTHROUGH_LEVEL_CAP_GAIN}。31〜35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。`,'虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。',`必要な虹のプシュケーは1回目${BREAKTHROUGH_ITEM_BASE}個、以降1回ごとに+${BREAKTHROUGH_ITEM_STEP}個。チャレンジ／クイックをクリアするともらえます。`])}<div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/60 bg-fuchsia-950/30 px-3 py-2"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div>{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🌈" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;
 // 押せない子は、何が足りないかをカードに出す(2026-10-05。薄くなるだけで理由が分からなかった)
 const why=cap>=MAX_MASU_LEVEL_CAP?'最大まで突破済み':lvl.level<cap?`あとLv.${cap-lvl.level}で突破`:!enoughPsyche?`🌈あと${(need-ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)).toLocaleString()}個`:'';return <button key={masu.id} disabled={!can} data-breakthrough-why={why||undefined} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:<span className="block text-center leading-tight"><span className={`text-[10px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</span>{!can&&why&&<small className="block text-[10px] font-bold text-slate-300">{why}</small>}{can&&<small className="block text-[10px] font-black text-emerald-300">突破できます</small>}</span>})}</button>})}</div>}</div></div>; }
       const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
@@ -37578,7 +37578,7 @@ function MasuTranscendenceScreen({
           .filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
         return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
           <ScreenHead title="超越" accent="text-amber-200" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="transcendence" compact/></div>
+          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="transcendence" compact collapseKey="temple:transcendence"/></div>
           <ScreenLead>Lv.{MAX_MASU_LEVEL_CAP}・虹★{BREAKTHROUGH_STARS_PER_TIER}（限界突破{FINAL_BREAKTHROUGH_COUNT}回）まで育てたマスモンだけが超越できます。超越するとLv上限が{TRANSCEND_LEVEL_CAP}になり、Lv{MAX_MASU_LEVEL_CAP+1}以降のレベルアップで超越ポイントを獲得します。1個体につき1回だけです。</ScreenLead>
           <div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2">
             <span className="text-[10px] font-black text-amber-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span>
@@ -37647,7 +37647,7 @@ function MasuSoulRankScreen({
           .filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
         return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
           <ScreenHead title="魂格進化" accent="text-sky-200" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="soulRank" compact/></div>
+          <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="soulRank" compact collapseKey="temple:soulRank"/></div>
           <ScreenLead>超越後、現在のLv上限まで育ったマスモンを次の魂格へ進化できます。進化しても現在Lvは上がらず、Lv上限だけが100解放されます。</ScreenLead>
           <div className="shrink-0 mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-950/30 px-3 py-2"><span className="flex items-center gap-1 text-[10px] font-black text-amber-200"><span aria-hidden="true">🏅</span>勇者の証</span><span className="text-[11px] font-mono font-black text-white">所持 {heroProofHave.toLocaleString()}</span></div>
           {renderMonsterSortFilterBar({singleType:true})}
@@ -37900,7 +37900,7 @@ function MasuOfferingScreen({
     const entries = sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
     return <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="お布施" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact/></div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="offering" compact collapseKey="temple:offering"/></div>
       {/* 横持ちの背の低い画面では、この札が大きくて左の列の並べ替えの札が画面の下へ押し出されていた(2026-10-27 ジン部長の見回り)。
           その画面だけ「わかった」を題名の横へ小さく置き、手順の字と行の間を詰める。縦の画面は変えない */}
       {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1.5">
