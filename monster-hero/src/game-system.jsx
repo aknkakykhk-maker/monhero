@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7d96d06acec4bcf2
+// generated-sha256: 68826652819d1c53
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77047,9 +77047,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let copyHitFrom=null; // AIコピーの札が積んだヒットの始まり(数字の吹き出しの名前に使う)
     for (const entry of [...usedCardEntries,...aiCopyEntries]) {
       const card=entry.card;
-      // ★AIコピーの札は、帯・ログ・ダメージの数字に出す名前を「〜のコピー」にする(元の子が動いたと取り違えないように。2026-10-27 部長)
-      const actorName=(si)=>entry.aiCopy?tacticsAiCopyName(aiCopyRef.current):battleActorName(si);
-      if(entry.aiCopy&&copyHitFrom==null) copyHitFrom=attackHits.length;
       // AIコピー(5つの遊び)の札は、ダメージをコピーのちからへ縮める(それ以外は1倍)
       const copyDmgScale=entry.aiCopy&&Number.isFinite(entry.dmgScale)?entry.dmgScale:1;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
@@ -77064,6 +77061,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       // AIコピーが使ったアシカは仲良し度に数えない(プレイヤーが切った札ではない)
       if(!entry.aiCopy){ if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); } }
+      // ★AIコピーの札は、帯・ログ・ダメージの数字に出す名前を「〜のコピー」にする(元の子が動いたと取り違えないように。2026-10-27 部長)
+      const actorName=(si)=>entry.aiCopy?tacticsAiCopyName(aiCopyRef.current):battleActorName(si);
+      if(entry.aiCopy&&copyHitFrom==null) copyHitFrom=attackHits.length;
       // どの子がどの札を切ったかは、ここ1か所でログへ残す。
       // ★効果ごとの分岐(攻撃UP・回復・固有技…)は40か所以上あり、そこへ書くと同じ文が散らばる
       // ★攻撃の札は書かない。このあと「◯◯の しっぽアタック → 敵に177ダメージ」が出るので、
