@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 63d0b8d27aada802
+// source-sha256: 81d2561a9c28868a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -123424,7 +123424,7 @@ function MonsterHeroGame() {
       ...m
     };
     applySlots(nextSlots);
-    if (!isHero && orihimePartnerPick && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName || m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }

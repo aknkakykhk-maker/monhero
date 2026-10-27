@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2d626b4cae578422
+// generated-sha256: ffc5da5d222fdddb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78986,8 +78986,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
     const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
-    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない
-    if (!isHero && orihimePartnerPick && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない。
+    //   オートで合流したときは配置の画面を通らないので、相方がまだいなければ、その子を自動で相方にする(2026-10-27 社長: 案ア)
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName||m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }

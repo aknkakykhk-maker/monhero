@@ -16286,8 +16286,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
     const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
-    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない
-    if (!isHero && orihimePartnerPick && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない。
+    //   オートで合流したときは配置の画面を通らないので、相方がまだいなければ、その子を自動で相方にする(2026-10-27 社長: 案ア)
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName||m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }

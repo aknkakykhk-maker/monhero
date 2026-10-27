@@ -170,7 +170,7 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
   const pick = read('monster-hero/src/parts/67-screen-pick.jsx');
   check('配置の画面: オリヒメが勇者で相方が決まるまで「この子を相方にする」を出し、押してから置いた子が相方になる(社長: 案ア)',
     /partnerOffer=\{mainHero\?\.id===ORIHIME_MONSTER_ID&&!orihimeHasPartner\(\)/.test(app)
-    && /if \(!isHero && orihimePartnerPick && mainHero\?\.id===ORIHIME_MONSTER_ID && !orihimeHasPartner\(\)\) \{\n      setOrihimePartner\(initialBattleDistanceRef\.current, slotIdx\);/.test(app)
+    && /if \(!isHero && \(orihimePartnerPick \|\| autoBattleRef\.current\) && mainHero\?\.id===ORIHIME_MONSTER_ID && !orihimeHasPartner\(\)\) \{\n      setOrihimePartner\(initialBattleDistanceRef\.current, slotIdx\);/.test(app) /* オートで合流した子は自動で相方(社長: 案ア) */
     && /\{partnerOffer&&\(/.test(pick) && /data-orihime-partner-pick/.test(pick) && /min-h-\[44px\]/.test(pick));
 }
 
