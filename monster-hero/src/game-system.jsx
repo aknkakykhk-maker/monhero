@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0b29df9fa11b7865
+// generated-sha256: 830ab20042c1fb19
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63096,6 +63096,33 @@ const CardWatchSide = ({ db, st, p, person, top = false, low = false, hits = nul
   const mons = <div className="flex justify-between">{pl.mons.map((_, m) => (low ? <CardWatchMonMini key={m} db={db} st={st} p={p} m={m}/> : <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact guardTag={cardWatchGuardTag(db, st, p, m)} fx={(hits || []).filter((f) => f.p === p && f.m === m)}/>))}</div>;
   return <div data-card-watch-side={p} className={`rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`}>{top ? <>{row}{mons}</> : <>{mons}{row}</>}</div>;
 };
+// 縦の画面の帯(対戦の画面の「相手の帯」と同じ形: 顔・名前・山札/ガッツ/捨て札の丸札)。手札は裏の札で枚数だけ
+const CardWatchBand = ({ st, p, person, active, small }) => {
+  const pl = st.players[p];
+  const chip = `rounded-md border ${small ? 'px-1' : 'px-1.5'} py-0.5`;
+  return (
+    <div data-card-watch-band={p} className={`flex ${small ? 'h-[40px]' : 'h-[48px]'} shrink-0 items-center gap-2 px-1`}>
+      <span className={`block ${small ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={person && person.icon} frame={person && person.fr} className="h-full w-full"/></span>
+      <div className="min-w-0 flex-1 truncate text-[13px] font-black leading-tight text-white">{(person && person.name) || pl.name}{active && <small className="block text-[10px] font-black text-amber-200">{small ? 'の番' : 'いまこの人の番'}</small>}</div>
+      <div data-card-watch-counts={p} className={`flex shrink-0 items-center whitespace-nowrap font-bold ${small ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`}>
+        {small && <span data-card-watch-hand={p} className="flex" aria-label={`手札${pl.hand.length}枚`}>{pl.hand.slice(0, 7).map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className="-ml-1.5 h-[18px] w-[13px] rounded-[2px] shadow-[0_0_0_1px_rgba(255,255,255,.35)] first:ml-0"/>)}</span>}
+        <span className={`${chip} border-white/20 bg-white/10`}>山札 {pl.deck.length}</span>
+        <span className={`${chip} border-amber-300/40 bg-amber-500/10 text-amber-100`}>ガッツ {pl.guts.length}</span>
+        <span className={`${chip} border-white/20 bg-white/10`}>捨て札 {pl.discard.length}</span>
+      </div>
+    </div>
+  );
+};
+// 伏せた手札の列(両方とも裏のまま。枚数だけ分かる)
+const CardWatchHandRow = ({ st, p, small }) => {
+  const n = st.players[p].hand.length;
+  return (
+    <div data-card-watch-hand={p} className="flex items-center justify-center gap-2 py-0.5" aria-label={`手札${n}枚`}>
+      <div className="flex -space-x-4">{st.players[p].hand.slice(0, 8).map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className={`${small ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]`}/>)}</div>
+      <span className="text-[11px] font-bold text-slate-300">手札 {n}枚</span>
+    </div>
+  );
+};
 const CardPvpWatchScreen = ({ onBack }) => {
   const [w, setW] = useState(() => CARD_WATCH.get());
   useEffect(() => CARD_WATCH.subscribe(setW), []);
@@ -63124,28 +63151,64 @@ const CardPvpWatchScreen = ({ onBack }) => {
         {w.phase === 'connecting' && <p className="rounded-xl bg-white/5 p-3 text-center text-[13px] font-bold text-slate-200">対戦につないでいます…</p>}
         {w.error && <p data-card-watch-error className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[12px] font-bold text-rose-100" style={JA_WRAP_STYLE}>{jaWrap(w.error)}</p>}
         {st && meta && (<>
+          {low ? (<>
           <div className="flex items-center justify-between px-1 text-[12px] font-bold text-slate-300">
-            <span data-card-watch-turn={st.turn} className="tabular-nums">{st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'}</span>
-            <span data-card-watch-eyes={w.eyes} className="tabular-nums">👀 {w.eyes}人が見ています</span>
-          </div>
-          {/* 背の低い画面では、決着の帯をいちばん上に(下に置くと画面の外に出た) */}
-          {low && overBox}
-          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low} hits={w.hits}/>
-          {/* まんなか: いま使われた札と、場の記録の新しい3行 */}
-          <div data-card-watch-center className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`}>
-            {w.last
-              ? <div key={w.last.key} data-card-watch-last={w.last.cards.join(',')} className="flex shrink-0 gap-1">
-                {w.last.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <button key={i} type="button" onClick={() => setDetail(no)} className="block"><img src={CARD_IMG(c.img)} alt={c.name} className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} rounded-md object-cover shadow-lg`}/></button> : null; })}
-              </div>
-              : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
-            <div className="min-w-0 flex-1 space-y-0.5">
-              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
-              {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
-              {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
+              <span data-card-watch-turn={st.turn} className="tabular-nums">{st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'}</span>
+              <span data-card-watch-eyes={w.eyes} className="tabular-nums">👀 {w.eyes}人が見ています</span>
             </div>
-          </div>
-          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low} hits={w.hits}/>
-          {!low && overBox}
+            {/* 背の低い画面では、決着の帯をいちばん上に(下に置くと画面の外に出た) */}
+            {low && overBox}
+            <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low} hits={w.hits}/>
+            {/* まんなか: いま使われた札と、場の記録の新しい3行 */}
+            <div data-card-watch-center className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`}>
+              {w.last
+                ? <div key={w.last.key} data-card-watch-last={w.last.cards.join(',')} className="flex shrink-0 gap-1">
+                  {w.last.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <button key={i} type="button" onClick={() => setDetail(no)} className="block"><img src={CARD_IMG(c.img)} alt={c.name} className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} rounded-md object-cover shadow-lg`}/></button> : null; })}
+                </div>
+                : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
+              <div className="min-w-0 flex-1 space-y-0.5">
+                {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
+                {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
+                {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
+              </div>
+            </div>
+            <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low} hits={w.hits}/>
+            {!low && overBox}
+          </>) : (() => {
+            const small = typeof window !== 'undefined' && window.innerWidth < 360;
+            const turnP = st.winner === null ? cardPvpDecider(st) : null;
+            const action = w.last && cardOf(db, w.last.cards[0]) ? w.last : null;
+            return (<>
+              {/* 上の帯: どちらの番かを大きく(対戦の画面の「ターン◯・あなたの番」と同じ金の札) */}
+              <div className="flex items-center justify-between gap-2 px-1">
+                <span data-card-watch-eyes={w.eyes} className="shrink-0 whitespace-nowrap rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-black tabular-nums text-slate-200">👀 {w.eyes}</span>
+                <span data-card-watch-turn={st.turn} className="min-w-0 truncate rounded-xl bg-amber-300 px-2.5 py-0.5 text-[13px] font-black text-slate-950">{st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'}{turnP !== null ? `・${nameOf(turnP)}の番` : ''}</span>
+              </div>
+              {!small && <CardWatchHandRow st={st} p={1}/>}
+              <div data-card-watch-side={1} className={`rounded-2xl ${turnP === 1 ? 'ring-2 ring-amber-300/70' : ''} bg-gradient-to-b from-indigo-900/50 to-transparent`}>
+                <CardWatchBand st={st} p={1} person={meta.p[1]} active={turnP === 1} small={small}/>
+                <div className="flex justify-between">{st.players[1].mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={1} m={m} compact tiny={small} guardTag={cardWatchGuardTag(db, st, 1, m)} fx={(w.hits || []).filter((f) => f.p === 1 && f.m === m)}/>)}</div>
+              </div>
+              {/* まんなか: 対戦の画面と同じ技の箱(だれ・札の絵・「技名」)。上の人=赤・下の人=金 */}
+              <div data-card-watch-center className={`flex flex-col items-center justify-center gap-1 ${small ? 'min-h-[44px]' : 'min-h-[84px]'}`}>
+                {action ? (
+                  <div key={action.key} data-card-watch-action={action.p} className={`flex max-w-full items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 py-1 shadow-lg ${action.p === 1 ? 'border-rose-400/80' : 'border-amber-300/70'}`}>
+                    <span className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.p === 1 ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{nameOf(action.p)}</span>
+                    {!small && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <button key={i} type="button" onClick={() => setDetail(no)} className="block shrink-0"><img src={CARD_IMG(c.img)} alt={c.name} className="h-[64px] w-[46px] rounded-[4px] object-cover shadow"/></button> : null; })}
+                    <div className={`min-w-0 ${small ? 'text-[13px]' : 'text-[15px]'} font-black leading-tight text-amber-200`} style={JA_WRAP_STYLE}>「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</div>
+                  </div>
+                ) : <div className="text-[12px] font-bold text-slate-400">まだ札は使われていません</div>}
+                {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
+                {!small && lines.slice(-1).map((t, i) => <div key={i} className="max-w-full truncate text-[11px] font-bold text-slate-300">{t}</div>)}
+              </div>
+              <div data-card-watch-side={0} className={`rounded-2xl ${turnP === 0 ? 'ring-2 ring-amber-300/70' : ''} bg-gradient-to-t from-amber-900/30 to-transparent`}>
+                <div className="flex justify-between">{st.players[0].mons.map((_, m) => <CardMonSlot key={m} db={db} st={st} p={0} m={m} compact tiny={small} guardTag={cardWatchGuardTag(db, st, 0, m)} fx={(w.hits || []).filter((f) => f.p === 0 && f.m === m)}/>)}</div>
+                <CardWatchBand st={st} p={0} person={meta.p[0]} active={turnP === 0} small={small}/>
+              </div>
+              {!small && <CardWatchHandRow st={st} p={0}/>}
+              {overBox}
+            </>);
+          })()}
         </>)}
       </div>
       <div className={SCREEN_FOOTER_CLASS}>

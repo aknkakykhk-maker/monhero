@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d34b2b40642d6fae
+// source-sha256: 36af5976e8dc5377
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105145,6 +105145,69 @@ const CardWatchSide = ({
     className: `rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`
   }, top ? React.createElement(React.Fragment, null, row, mons) : React.createElement(React.Fragment, null, mons, row));
 };
+const CardWatchBand = ({
+  st,
+  p,
+  person,
+  active,
+  small
+}) => {
+  const pl = st.players[p];
+  const chip = `rounded-md border ${small ? 'px-1' : 'px-1.5'} py-0.5`;
+  return React.createElement("div", {
+    "data-card-watch-band": p,
+    className: `flex ${small ? 'h-[40px]' : 'h-[48px]'} shrink-0 items-center gap-2 px-1`
+  }, React.createElement("span", {
+    className: `block ${small ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
+  }, React.createElement(CardPvpAvatar, {
+    icon: person && person.icon,
+    frame: person && person.fr,
+    className: "h-full w-full"
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1 truncate text-[13px] font-black leading-tight text-white"
+  }, person && person.name || pl.name, active && React.createElement("small", {
+    className: "block text-[10px] font-black text-amber-200"
+  }, small ? 'の番' : 'いまこの人の番')), React.createElement("div", {
+    "data-card-watch-counts": p,
+    className: `flex shrink-0 items-center whitespace-nowrap font-bold ${small ? 'gap-1 text-[10px]' : 'gap-1.5 text-[11px]'}`
+  }, small && React.createElement("span", {
+    "data-card-watch-hand": p,
+    className: "flex",
+    "aria-label": `手札${pl.hand.length}枚`
+  }, pl.hand.slice(0, 7).map((_, i) => React.createElement("img", {
+    key: i,
+    src: CARD_BACK_IMG(),
+    alt: "",
+    className: "-ml-1.5 h-[18px] w-[13px] rounded-[2px] shadow-[0_0_0_1px_rgba(255,255,255,.35)] first:ml-0"
+  }))), React.createElement("span", {
+    className: `${chip} border-white/20 bg-white/10`
+  }, "山札 ", pl.deck.length), React.createElement("span", {
+    className: `${chip} border-amber-300/40 bg-amber-500/10 text-amber-100`
+  }, "ガッツ ", pl.guts.length), React.createElement("span", {
+    className: `${chip} border-white/20 bg-white/10`
+  }, "捨て札 ", pl.discard.length)));
+};
+const CardWatchHandRow = ({
+  st,
+  p,
+  small
+}) => {
+  const n = st.players[p].hand.length;
+  return React.createElement("div", {
+    "data-card-watch-hand": p,
+    className: "flex items-center justify-center gap-2 py-0.5",
+    "aria-label": `手札${n}枚`
+  }, React.createElement("div", {
+    className: "flex -space-x-4"
+  }, st.players[p].hand.slice(0, 8).map((_, i) => React.createElement("img", {
+    key: i,
+    src: CARD_BACK_IMG(),
+    alt: "",
+    className: `${small ? 'h-[40px] w-[28px]' : 'h-[52px] w-[37px]'} rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]`
+  }))), React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, "手札 ", n, "枚"));
+};
 const CardPvpWatchScreen = ({
   onBack
 }) => {
@@ -105197,7 +105260,7 @@ const CardPvpWatchScreen = ({
     "data-card-watch-error": true,
     className: "rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[12px] font-bold text-rose-100",
     style: JA_WRAP_STYLE
-  }, jaWrap(w.error)), st && meta && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, jaWrap(w.error)), st && meta && React.createElement(React.Fragment, null, low ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "flex items-center justify-between px-1 text-[12px] font-bold text-slate-300"
   }, React.createElement("span", {
     "data-card-watch-turn": st.turn,
@@ -105253,7 +105316,101 @@ const CardPvpWatchScreen = ({
     person: meta.p[0],
     low: low,
     hits: w.hits
-  }), !low && overBox)), React.createElement("div", {
+  }), !low && overBox) : (() => {
+    const small = typeof window !== 'undefined' && window.innerWidth < 360;
+    const turnP = st.winner === null ? cardPvpDecider(st) : null;
+    const action = w.last && cardOf(db, w.last.cards[0]) ? w.last : null;
+    return React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "flex items-center justify-between gap-2 px-1"
+    }, React.createElement("span", {
+      "data-card-watch-eyes": w.eyes,
+      className: "shrink-0 whitespace-nowrap rounded-full bg-black/40 px-2 py-0.5 text-[11px] font-black tabular-nums text-slate-200"
+    }, "👀 ", w.eyes), React.createElement("span", {
+      "data-card-watch-turn": st.turn,
+      className: "min-w-0 truncate rounded-xl bg-amber-300 px-2.5 py-0.5 text-[13px] font-black text-slate-950"
+    }, st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ', turnP !== null ? `・${nameOf(turnP)}の番` : '')), !small && React.createElement(CardWatchHandRow, {
+      st: st,
+      p: 1
+    }), React.createElement("div", {
+      "data-card-watch-side": 1,
+      className: `rounded-2xl ${turnP === 1 ? 'ring-2 ring-amber-300/70' : ''} bg-gradient-to-b from-indigo-900/50 to-transparent`
+    }, React.createElement(CardWatchBand, {
+      st: st,
+      p: 1,
+      person: meta.p[1],
+      active: turnP === 1,
+      small: small
+    }), React.createElement("div", {
+      className: "flex justify-between"
+    }, st.players[1].mons.map((_, m) => React.createElement(CardMonSlot, {
+      key: m,
+      db: db,
+      st: st,
+      p: 1,
+      m: m,
+      compact: true,
+      tiny: small,
+      guardTag: cardWatchGuardTag(db, st, 1, m),
+      fx: (w.hits || []).filter(f => f.p === 1 && f.m === m)
+    })))), React.createElement("div", {
+      "data-card-watch-center": true,
+      className: `flex flex-col items-center justify-center gap-1 ${small ? 'min-h-[44px]' : 'min-h-[84px]'}`
+    }, action ? React.createElement("div", {
+      key: action.key,
+      "data-card-watch-action": action.p,
+      className: `flex max-w-full items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 py-1 shadow-lg ${action.p === 1 ? 'border-rose-400/80' : 'border-amber-300/70'}`
+    }, React.createElement("span", {
+      className: `shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.p === 1 ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`
+    }, nameOf(action.p)), !small && action.cards.slice(0, 3).map((no, i) => {
+      const c = cardOf(db, no);
+      return c ? React.createElement("button", {
+        key: i,
+        type: "button",
+        onClick: () => setDetail(no),
+        className: "block shrink-0"
+      }, React.createElement("img", {
+        src: CARD_IMG(c.img),
+        alt: c.name,
+        className: "h-[64px] w-[46px] rounded-[4px] object-cover shadow"
+      })) : null;
+    }), React.createElement("div", {
+      className: `min-w-0 ${small ? 'text-[13px]' : 'text-[15px]'} font-black leading-tight text-amber-200`,
+      style: JA_WRAP_STYLE
+    }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」")) : React.createElement("div", {
+      className: "text-[12px] font-bold text-slate-400"
+    }, "まだ札は使われていません"), st.pending && React.createElement(CardGuardPreview, {
+      db: db,
+      pv: cardGuardPreview(db, st),
+      compact: true
+    }), !small && lines.slice(-1).map((t, i) => React.createElement("div", {
+      key: i,
+      className: "max-w-full truncate text-[11px] font-bold text-slate-300"
+    }, t))), React.createElement("div", {
+      "data-card-watch-side": 0,
+      className: `rounded-2xl ${turnP === 0 ? 'ring-2 ring-amber-300/70' : ''} bg-gradient-to-t from-amber-900/30 to-transparent`
+    }, React.createElement("div", {
+      className: "flex justify-between"
+    }, st.players[0].mons.map((_, m) => React.createElement(CardMonSlot, {
+      key: m,
+      db: db,
+      st: st,
+      p: 0,
+      m: m,
+      compact: true,
+      tiny: small,
+      guardTag: cardWatchGuardTag(db, st, 0, m),
+      fx: (w.hits || []).filter(f => f.p === 0 && f.m === m)
+    }))), React.createElement(CardWatchBand, {
+      st: st,
+      p: 0,
+      person: meta.p[0],
+      active: turnP === 0,
+      small: small
+    })), !small && React.createElement(CardWatchHandRow, {
+      st: st,
+      p: 0
+    }), overBox);
+  })())), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
     className: "flex gap-2"
