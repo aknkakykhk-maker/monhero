@@ -1146,6 +1146,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         if (quiet) { stRef.current = next; setSt(next); setAction(null); setBigCard(null); setFx([]); return; }
         stepRef.current(null, next);
       },
+      onPatch: (next) => { if (next) { stRef.current = next; setSt(next); } }, // 捨て札の並びが本物になっただけ(動きは出さない)
       onEnd: (end) => setWatchEnd(end || null),
       onEyes: (n) => setWatchEyes(Number.isInteger(n) ? n : 0),
     });
@@ -1538,15 +1539,15 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [, setBoardFitTick] = useState(0);
   useEffect(() => {
     const b = boardRef.current;
-    if (!replay || !b) return undefined;
+    if (!(replay || watch) || !b) return undefined;   // 観戦も、縦の短い端末で下が切れやすいので同じに測り直す(2026-10-27 部長)
     const on = (e) => { if (e.target && e.target.tagName === 'IMG') setBoardFitTick((t) => t + 1); };
     b.addEventListener('load', on, true);
     return () => b.removeEventListener('load', on, true);
-  }, [!!replay]);
+  }, [!!replay, !!watch]);
   React.useLayoutEffect(() => {
     const b = boardRef.current;
     const f = b && b.querySelector('[data-card-footer]');
-    const fitMax = replay ? 4 : 2;
+    const fitMax = replay || watch ? 4 : 2;
     if (!f || boardFit >= fitMax) return;
     if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit((x) => Math.min(fitMax, x + 1));
   });
@@ -1844,7 +1845,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* 観戦: 下の人の手札も裏の札で、枚数だけ(中身は観戦の知らせに流れない) */}
       {watch ? (
         <div data-card-hand data-card-watch-hand={CARD_ME} className="flex shrink-0 items-center justify-center gap-2 px-1 pb-1 pt-1" aria-label={`手札${me.hand.length}枚`}>
-          <div className="flex -space-x-4">{me.hand.slice(0, 8).map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className={`${tiny ? 'h-[40px] w-[28px]' : 'h-[56px] w-[40px]'} rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]`}/>)}</div>
+          <div className="flex -space-x-4">{me.hand.slice(0, 8).map((_, i) => <img key={i} src={CARD_BACK_IMG()} alt="" className={`${tiny || boardFit >= 2 ? (boardFit >= 3 ? 'h-[28px] w-[20px]' : 'h-[40px] w-[28px]') : 'h-[56px] w-[40px]'} rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]`}/>)}</div>
           <span className="text-[11px] font-bold text-slate-300">手札 {me.hand.length}枚</span>
         </div>
       ) : (<>

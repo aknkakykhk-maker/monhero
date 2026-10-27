@@ -7,7 +7,7 @@
 // ページの中で、2人の打ち手(コンピューター)が戦った試合の場を1手ずつ作り、観戦の形の盤面へ「当てたあとの場」として流す
 //   ① 押せない: 手札の札(data-card-hand-card)が無く、下の人の手札は裏の札で枚数だけ。上の帯に投了のボタン(やめる)は無い(下の「観戦をやめる」だけ)
 //   ② 名前で出す: 上の帯「ターン◯・◯◯の番」・番の知らせ・技の箱・大写し・倒れたときの帯に「あなた」「自分」「相手」が出ない
-//   ③ 技の箱(data-card-action)・大写しが、対戦と同じ道で出る
+//   ③ 技の箱(data-card-action)・大写しが、対戦と同じ道で出る。場の子にかかっている効果の札(data-card-status。#4176)も、対戦と同じに出る
 //   ④ 途中から見る形(quiet)では、動きを出さずにその場へ飛ぶ
 //   ⑤ 決着しても結果の画面へ進まない(onFinish を呼ばない)。WIN/LOSE ではなく、名前の決着の帯。届いた決着の言葉(投了など)を出す
 //   ⑥ 「観戦をやめる」で onFinish({ outcome: 'watchExit' })
@@ -43,11 +43,24 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // 盤面を、ほかの画面の上に重ねて開く(観戦の形)。手は2人の打ち手で作り、window.__watch.push() で1手ずつ流す
     await page.evaluate(() => {
       const db = CARD_BATTLE_DATA;
-      const kits = Object.keys(db.starters);
-      const deck = (k) => ({ monsters: db.starters[k].monsters.slice(), cards: db.starters[k].cards.slice() });
-      let st = cardCreateGame(db, { decks: [deck(kits[0]), deck(kits[1])], names: ['ビー', 'エー'], seed: 7, first: 0 });
+      // 効果の札(#4176)が出る場面も見たいので、MASTER の助手のデッキどうしで、途中で効果がかかる試合の種を先に探す
       const pol = cardAiPolicy('kyuko', 'normal');
-      let seed = 99; const rand = () => { const n = cardRngNext(seed); seed = n.s; return n.v; };
+      const mk = (g) => cardCreateGame(db, { decks: [cardAiBuildDeck(db, 'momosuke', 'master', cardAiSeededRand(`w0:${g}`)), cardAiBuildDeck(db, 'kiki', 'master', cardAiSeededRand(`w1:${g}`))], names: ['ビー', 'エー'], seed: 7 + g, first: g % 2 });
+      const rndOf = (sd) => { let x = sd; return () => { const n = cardRngNext(x); x = n.s; return n.v; }; };
+      const hasStatus = (st) => [0, 1].some((p) => st.players[p].mons.some((mn, m) => !mn.ko && cardMonStatuses(st, p, m).some((x) => x.pill)));
+      let pick = 0;
+      for (let g = 0; g < 30; g++) {
+        let t = mk(g); const rr = rndOf(99 + g); let found = false;
+        for (let k = 0; k < 120 && t.winner === null; k++) {
+          const a = cardAiChooseAction(db, t, pol, rr); const n = a && cardApplyAction(db, t, a);
+          const fb = !n && (t.pending ? { type: 'pass' } : t.phase === 'main' ? { type: 'endAttacks' } : t.phase === 'guts' ? { type: 'guts', hand: [] } : null);
+          t = n || (fb && cardApplyAction(db, t, fb)) || t; if (!n && !fb) break;
+          if (hasStatus(t)) { found = true; break; }
+        }
+        if (found) { pick = g; break; }
+      }
+      let st = mk(pick);
+      let seed = 99 + pick; const rand = () => { const n = cardRngNext(seed); seed = n.s; return n.v; };
       const W = window.__watch = { handler: null, finished: [], states: [] };
       const next = () => {
         const who = st.pendingDiscard ? st.pendingDiscard.p : st.phase === 'setup' ? cardOther(st.first) : cardDecider(st);
@@ -58,7 +71,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         if (!n2) return null;
         st = n2; return { st, who };
       };
-      W.push = (quiet) => { const r = next(); if (r && W.handler) W.handler.onState(r.st, !!quiet); return r ? { winner: r.st.winner, turn: r.st.turn } : null; };
+      W.push = (quiet) => { const r = next(); if (r && W.handler) W.handler.onState(r.st, !!quiet); if (r) W.lastSt = r.st; return r ? { winner: r.st.winner, turn: r.st.turn } : null; };
       W.end = (e) => { if (W.handler) W.handler.onEnd(e); };
       const game = { key: 'watch-check', st, watch: { top: { name: 'エー', icon: '🦊' }, bottom: { name: 'ビー' }, attach: (h) => { W.handler = h; return () => { if (W.handler === h) W.handler = null; }; } } };
       const host = document.createElement('div');
@@ -72,7 +85,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // 始めのガッツの番などを抜けるまで、何手か流す
     const look = () => page.evaluate(() => {
       const root = document.getElementById('watch-host');
-      const text = root.innerText;
+      // カードの大写しと、守りの番の「受けている攻撃」の説明文(「全ての相手モンスターに〜」など、カードそのものの文)は見張りから外す
+      const clone = root.cloneNode(true); clone.querySelectorAll('[data-card-big], [data-card-guard-attack-text]').forEach((x) => x.remove());
+      document.body.appendChild(clone); clone.style.display = 'none';
+      const text = clone.textContent; clone.remove();
       return {
         handCards: root.querySelectorAll('[data-card-hand-card]').length,
         backs: root.querySelectorAll('[data-card-watch-hand] img').length,
@@ -85,7 +101,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
         wide: root.scrollWidth <= window.innerWidth + 1,
       };
     });
-    let sawAction = false, sawBig = false, tags = new Set(), anata = false, heads = new Set();
+    let sawAction = false, sawBig = false, tags = new Set(), anata = false, heads = new Set(), statusSeen = 0, statusMiss = [];
     for (let i = 0; i < 40; i++) {
       const r = await page.evaluate(() => window.__watch.push(false));
       if (!r) break;
@@ -95,6 +111,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       if (await page.locator('#watch-host [data-card-big]').count()) sawBig = true;
       if (l.anata) anata = true;
       heads.add(l.head.replace(/\s+/g, ''));
+      // 効果がかかっている子(cardMonStatuses が空でない)には、その子の札の行が出ている
+      const stat = await page.evaluate(() => {
+        const st = window.__watch.lastSt; if (!st || typeof cardMonStatuses !== 'function') return { want: [], miss: [] };
+        const want = []; [0, 1].forEach((p) => st.players[p].mons.forEach((mn, m) => { if (!mn.ko && cardMonStatuses(st, p, m).some((x) => x.pill)) want.push(`${p}-${m}`); }));
+        return { want, miss: want.filter((k) => !document.querySelector(`#watch-host [data-card-status="${k}"]`)) };
+      });
+      statusSeen += stat.want.length; statusMiss.push(...stat.miss);
       if (r.winner !== null) break;
     }
     const l1 = await look();
@@ -107,7 +130,18 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     // ④ 途中から見る形: まとめて流す
     const before = await page.evaluate(() => document.querySelectorAll('#watch-host [data-card-dmg-num]').length);
     let r = null;
-    for (let i = 0; i < 400; i++) { r = await page.evaluate(() => window.__watch.push(true)); if (!r || r.winner !== null) break; }
+    for (let i = 0; i < 400; i++) {
+      r = await page.evaluate(() => window.__watch.push(true));
+      if (!r || r.winner !== null) break;
+      await page.waitForTimeout(20);
+      const stat = await page.evaluate(() => {
+        const st = window.__watch.lastSt; const want = [];
+        [0, 1].forEach((p) => st.players[p].mons.forEach((mn, m) => { if (!mn.ko && cardMonStatuses(st, p, m).some((x) => x.pill)) want.push(`${p}-${m}`); }));
+        return { want, miss: want.filter((k) => !document.querySelector(`#watch-host [data-card-status="${k}"]`)) };
+      });
+      statusSeen += stat.want.length; statusMiss.push(...stat.miss);
+    }
+    check('③ 効果のかかった子に、効果の札が対戦と同じに出る', statusSeen > 0 && statusMiss.length === 0, `かかっていた ${statusSeen}回・出ていない ${statusMiss.slice(0, 4).join(',')}`);
     await page.waitForTimeout(300);
     const quietFx = await page.evaluate(() => ({ big: !!document.querySelector('#watch-host [data-card-big]'), action: !!document.querySelector('#watch-host [data-card-action]') }));
     check('④ 途中から見る形では、動き(大写し・技の箱)を出さずにその場へ飛ぶ', !quietFx.big && !quietFx.action, JSON.stringify({ ...quietFx, before }));
