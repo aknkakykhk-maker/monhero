@@ -89,7 +89,7 @@ const again = s.aiCopySummonPlan(copy, { srcSlot: 1, srcMonsterId: 'Mocchi', lev
 check('出ているあいだにもう一度使うと、続くターンが最初に戻る(山札はそのまま)', again.kind === 'refresh' && again.turnsLeft === 2 && again.rebuildDeck === false && !again.removeCopy);
 const sw = s.aiCopySummonPlan(copy, { srcSlot: 2, srcMonsterId: 'Golem', level: 1 });
 check('別の子で使うと切りかわる(いまのコピーを外し、新しい子で山札を作り直す)', sw.kind === 'switch' && sw.removeCopy && sw.rebuildDeck === true && sw.turnsLeft === 3);
-// addUniqueOf・removeUniqueOf は古い形の知らせとして、バトル部が新しい部品へ移るまで残している(ここでは見ない)
+check('プレイヤーの山札へ足す・抜く知らせは出さない(古い形は 2026-10-27 に外した)', [p0, again, sw].every((x) => !('addUniqueOf' in x) && !('removeUniqueOf' in x)));
 let left = { srcSlot: 0, srcMonsterId: 'Tiger', turnsLeft: s.aiCopyTurns(2) };
 const ends = [];
 for (let i = 0; i < 4; i++) { const x = s.aiCopyTurnEnd(left); ends.push(x.expired); left = { ...left, turnsLeft: x.turnsLeft }; }
