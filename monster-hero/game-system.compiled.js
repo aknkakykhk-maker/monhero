@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c373ea99a6cf8495
+// source-sha256: b829d0aafe490439
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -27442,7 +27442,14 @@ const storeGet = async (key, def, shared = false) => {
       return raw !== null ? JSON.parse(raw) : def;
     }
   } catch {}
-  return key in _memStore ? _memStore[key] : def;
+  if (key in _memStore) return _memStore[key];
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(key);
+      if (raw !== null) return JSON.parse(raw);
+    }
+  } catch {}
+  return def;
 };
 let _storageWriteBlocked = false;
 const setStorageWriteBlocked = blocked => {

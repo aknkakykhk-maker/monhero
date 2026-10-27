@@ -15,7 +15,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // という筋で、ダイヤも転生もプシュケーも同時に巻き戻る。
 //
 // 【見かた】本番の関数をそのまま切り出して、いっぱいの localStorage で動かす。
-//   ① storeSet は失敗を数えて false を返す(黙って素通りしない)
+//   ① storeSet は失敗を数えて false を返す(黙って素通りしない)。いっぱいでも storeGet は保存してある値を読む
 //   ② ランキングの控えは、保存する形だけ軽くする(party[].detail を落とす・難易度に上限)
 //   ③ 受け取り済みのギフトは新しいものだけ残す(ログインボーナスと補償は消さない)
 //   ④ 書けない状態では∞周回を始めず、回っていれば止める
@@ -106,6 +106,21 @@ const makeStorage = (localStorage) => new Function('window', `${storageSource}
     check('①-8 使用量はこのゲームのキー(mh_)だけを数える',
       !!usage && usage.items.length === 1 && usage.items[0].key === 'mh_masu_mons' && usage.total === 100 + 'mh_masu_mons'.length,
       usage ? `件数=${usage.items.length} / 合計=${usage.total}` : '取得できませんでした');
+  }
+  {
+    // いっぱいで、ためし書きすら入らない。それでも保存してある値は読める(「無い」と読み違えると、
+    // 読んだ値から作り直して書く所で消える。2026-10-27 カードの見返しで★の試合ごと49試合が消えた)
+    const ls = fakeLocalStorage({ quota: 60 });
+    ls.setItem('mh_card_replays_v1', JSON.stringify({ v: 1, list: [{ id: 'a' }] }));
+    ls.setItem('other', 'z'.repeat(60 - ls.__used()));
+    const store = makeStorage(ls);
+    const got = await store.storeGet('mh_card_replays_v1', null, false);
+    check('①-9 いっぱいでも、保存してある値は読める(既定値に化けない)', !!got && Array.isArray(got.list) && got.list.length === 1, JSON.stringify(got));
+    check('①-10 無いキーは、いっぱいでも既定値', (await store.storeGet('mh_none', 'def', false)) === 'def');
+    // 書けずにメモリへ控えた値は、端末にある古い値より新しいので、そちらを返す
+    await store.storeSet('mh_card_replays_v1', { v: 1, list: [{ id: 'a' }, { id: 'b' }] }, false);
+    const fresh = await store.storeGet('mh_card_replays_v1', null, false);
+    check('①-11 書けずにメモリへ控えた新しい値があれば、そちらを読む', !!fresh && fresh.list.length === 2, JSON.stringify(fresh));
   }
 
   // ===== ② ランキングの控えを軽くする =====
