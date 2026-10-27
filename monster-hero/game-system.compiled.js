@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e61ecb7a8d4aee22
+// source-sha256: 3969ba03a6a9fc85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91923,6 +91923,128 @@ const cardMonArt = mon => {
 };
 const cardTodayJst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const cardCaption = c => !c ? '' : c.kind === 'dge' ? '回避' : c.kind === 'blk' ? '防御' : c.kind === 'spe' ? '特殊' : c.kind === 'fld' ? '全体' : Number.isFinite(c.damage) ? `ダメージ${c.damage}` : '';
+const cardMonStatuses = (st, p, m) => {
+  const mon = st && st.players[p] && st.players[p].mons[m];
+  if (!mon || mon.ko) return [];
+  const T = st.turn;
+  const left = until => until > T ? `あと${until - T + 1}` : 'この番';
+  const out = [];
+  const kindsJa = ks => (ks || []).map(k => k === 'pow' ? 'ちから' : k === 'int' ? 'かしこさ' : k).join('・');
+  if (mon.mult && Number.isFinite(mon.mult.turn) && mon.mult.turn >= T) out.push({
+    key: 'mult',
+    short: `技×${mon.mult.n}`,
+    left: mon.mult.turn > T ? '次' : 'この番',
+    text: `${mon.mult.turn > T ? '次の番' : 'この番'}の${kindsJa(mon.mult.kinds)}技のダメージが${mon.mult.n}倍`,
+    tone: 'up',
+    pill: true
+  });
+  if (mon.charge) out.push({
+    key: 'charge',
+    short: `ため×${mon.charge.n}`,
+    left: '',
+    text: `次の${kindsJa(mon.charge.kinds)}技のダメージが${mon.charge.n}倍(ダメージを受けると消える)`,
+    tone: 'up',
+    pill: true
+  });
+  if (Number.isFinite(mon.safeUntil) && mon.safeUntil >= T) out.push({
+    key: 'safe',
+    short: '無敵',
+    left: left(mon.safeUntil),
+    text: 'ダメージを受けない',
+    tone: 'guard',
+    pill: true
+  });
+  if (Number.isFinite(mon.noGuardUntil) && mon.noGuardUntil >= T) out.push({
+    key: 'noGuard',
+    short: '守れない',
+    left: left(mon.noGuardUntil),
+    text: '回避・防御のカードを出せない',
+    tone: 'down',
+    pill: true
+  });
+  if (Number.isFinite(mon.airUntil) && mon.airUntil >= T) out.push({
+    key: 'air',
+    short: '空中',
+    left: left(mon.airUntil),
+    text: '持ちょうが空中(地上の子しか狙えない技は当たらない)',
+    tone: 'type',
+    pill: true
+  });else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({
+    key: 'water',
+    short: '水中',
+    left: left(mon.waterUntil),
+    text: '持ちょうが水中',
+    tone: 'type',
+    pill: true
+  });
+  (Array.isArray(st.taunts) ? st.taunts : []).filter(t => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({
+    key: `taunt${i}`,
+    short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定',
+    left: left(t.turn),
+    text: t.mode === 'not' ? '相手はこの子を狙えない' : '相手の攻撃は、この子しか狙えない',
+    tone: 'aim',
+    pill: true
+  }));
+  if (mon.cocoon) out.push({
+    key: 'cocoon',
+    short: 'まゆ',
+    left: '',
+    text: '羽化のほかのカードは出せない',
+    tone: 'down',
+    pill: true
+  });
+  if (mon.stunTurn === T + (st.active === p ? 0 : 1)) out.push({
+    key: 'stun',
+    short: '攻撃できない',
+    left: st.active === p ? 'この番' : '次',
+    text: `${st.active === p ? 'この番' : '次の番'}は攻撃できない`,
+    tone: 'down',
+    pill: false
+  });
+  return out;
+};
+const CARD_STATUS_TONE = {
+  up: 'bg-rose-400 text-slate-950',
+  down: 'bg-slate-300 text-slate-950',
+  guard: 'bg-emerald-300 text-slate-950',
+  type: 'bg-sky-300 text-slate-950',
+  aim: 'bg-amber-300 text-slate-950'
+};
+const CardStatusList = ({
+  list
+}) => !list || !list.length ? null : React.createElement("div", {
+  "data-card-status-list": true,
+  className: "space-y-1.5"
+}, list.map(x => React.createElement("div", {
+  key: x.key,
+  className: "flex items-start gap-2"
+}, React.createElement("span", {
+  className: `shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-black ${CARD_STATUS_TONE[x.tone] || CARD_STATUS_TONE.down}`
+}, x.short, x.left ? ` ${x.left}` : ''), React.createElement("span", {
+  className: "min-w-0 text-[12px] font-bold leading-snug text-slate-200",
+  style: JA_WRAP_STYLE
+}, x.text))));
+const CardStatusSheet = ({
+  name,
+  list,
+  onClose
+}) => React.createElement("div", {
+  "data-card-status-sheet": true,
+  onClick: onClose,
+  className: "fixed inset-0 flex items-center justify-center bg-black/60 px-4",
+  style: {
+    zIndex: MODAL_Z.dialog
+  }
+}, React.createElement("div", {
+  className: "w-full max-w-sm rounded-2xl border-2 border-amber-300/80 bg-slate-950/95 p-3 text-slate-100"
+}, React.createElement("div", {
+  className: "mb-2 text-[15px] font-black",
+  style: JA_WRAP_STYLE
+}, name, "にかかっている効果"), React.createElement(CardStatusList, {
+  list: list
+}), React.createElement("div", {
+  className: "mt-2 text-right text-[10px] font-bold text-slate-400"
+}, "タップで閉じる")));
 const cardLogText = l => !l ? '' : Number.isFinite(l.from) && Number.isFinite(l.to) ? `${l.text}(${l.from} → ${l.to})` : l.text;
 const cardGuardShort = c => {
   if (!c) return '';
@@ -92329,7 +92451,9 @@ const CardFoeStyle = ({
 const CardDetailModal = ({
   db,
   no,
-  onClose
+  onClose,
+  status = null,
+  statusName = ''
 }) => {
   const c = cardOf(db, no);
   const m = c ? null : cardMonsterOf(db, no);
@@ -92388,7 +92512,15 @@ const CardDetailModal = ({
     "data-card-dex-only": true,
     className: "mt-2 text-[12px] font-bold text-amber-300",
     style: JA_LABEL_STYLE
-  }, jaWrap('まだ手に入らないカードです(パックには入っていません)'))), React.createElement("button", {
+  }, jaWrap('まだ手に入らないカードです(パックには入っていません)'))), m && status && status.length > 0 && React.createElement("div", {
+    "data-card-detail-status": true,
+    className: "w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900/90 p-3 text-slate-100"
+  }, React.createElement("div", {
+    className: "mb-1.5 text-[13px] font-black text-amber-200",
+    style: JA_WRAP_STYLE
+  }, statusName || m.name, "にかかっている効果"), React.createElement(CardStatusList, {
+    list: status
+  })), React.createElement("button", {
     type: "button",
     onClick: onClose,
     className: "mh-button mh-button-secondary min-h-[48px] w-full max-w-sm rounded-2xl border border-white/20 bg-slate-900 font-black"
@@ -92554,7 +92686,10 @@ const CardMonSlot = ({
   wide = false,
   motion = null,
   calm = false,
-  guardTag = ''
+  guardTag = '',
+  onStatus = null,
+  statusLock = false,
+  onPressMon = null
 }) => {
   const mon = st.players[p].mons[m];
   const art = cardMonArt(mon);
@@ -92562,6 +92697,8 @@ const CardMonSlot = ({
   const opp = p === CARD_CPU;
   const pct = Math.max(0, Math.round(mon.life / mon.max * 100));
   const stunned = mon.stunTurn === st.turn + (st.active === p ? 0 : 1) && !mon.ko;
+  const pills = cardMonStatuses(st, p, m).filter(x => x.pill);
+  const pillMax = tiny ? 1 : 2;
   const info = React.createElement("div", {
     className: "flex items-center gap-1"
   }, React.createElement("span", {
@@ -92678,11 +92815,39 @@ const CardMonSlot = ({
     key: `${f.key}-r`,
     f: f,
     tiny: tiny
-  })));
+  })), pills.length > 0 && React.createElement("div", {
+    "data-card-status": `${p}-${m}`,
+    className: `absolute inset-x-0 ${opp ? 'top-0' : 'bottom-0'} z-[30] flex items-center justify-center gap-0.5 ${statusLock ? 'pointer-events-none' : ''}`
+  }, pills.slice(0, pillMax).map(x => React.createElement("span", {
+    key: x.key,
+    "data-card-status-pill": x.key,
+    className: `pointer-events-none whitespace-nowrap rounded-full px-1 text-[9px] font-black leading-[14px] shadow ${CARD_STATUS_TONE[x.tone] || CARD_STATUS_TONE.down}`
+  }, x.short, x.left ? ` ${x.left}` : '')), pills.length > pillMax && (onStatus && !statusLock ? React.createElement("button", {
+    type: "button",
+    "data-card-status-more": true,
+    onPointerDown: e => e.stopPropagation(),
+    onClick: e => {
+      e.stopPropagation();
+      onStatus(p, m);
+    },
+    className: "whitespace-nowrap rounded-full bg-slate-950/90 px-1.5 text-[9px] font-black leading-[14px] text-white ring-1 ring-white/50"
+  }, "+", pills.length - pillMax) : React.createElement("span", {
+    "data-card-status-more": true,
+    className: "pointer-events-none whitespace-nowrap rounded-full bg-slate-950/90 px-1.5 text-[9px] font-black leading-[14px] text-white ring-1 ring-white/50"
+  }, "+", pills.length - pillMax))));
   const ring = mark === 'drop' ? 'ring-4 ring-emerald-300 bg-emerald-400/15' : mark === 'target' ? 'ring-4 ring-rose-400' : mark === 'user' ? 'ring-4 ring-amber-300' : mark === 'acting' ? 'ring-2 ring-amber-300/80' : '';
   return React.createElement("div", _extends({
     "data-card-mon": `${p}-${m}`
-  }, press ? press(mon.no, onTap) : {
+  }, press ? (() => {
+    const h = press(mon.no, onTap);
+    return onPressMon ? {
+      ...h,
+      onPointerDown: e => {
+        onPressMon(p, m);
+        h.onPointerDown(e);
+      }
+    } : h;
+  })() : {
     onClick: onTap
   }, {
     className: `relative flex w-[31%] flex-col items-center rounded-xl p-0.5 ${ring}`,
@@ -92775,6 +92940,8 @@ const CardBattleBoard = ({
   const [bubble, setBubble] = useState(null);
   const [face, setFace] = useState('normal');
   const [detail, setDetail] = useState(null);
+  const [statusSheet, setStatusSheet] = useState(null);
+  const monPressed = useRef(null);
   const [discard, setDiscard] = useState(null);
   const [hint, setHint] = useState('');
   const [quit, setQuit] = useState(false);
@@ -94214,6 +94381,20 @@ const CardBattleBoard = ({
     m: m,
     mark: markOf(CARD_CPU, m),
     guardTag: guardTagOf(CARD_CPU, m),
+    statusLock: (mode === 'attack' || mode === 'guard') && !!sel,
+    onStatus: (sp, sm) => {
+      Audio_.fgSe.tap();
+      setStatusSheet({
+        p: sp,
+        m: sm
+      });
+    },
+    onPressMon: (sp, sm) => {
+      monPressed.current = {
+        p: sp,
+        m: sm
+      };
+    },
     fx: endFx ? [] : fx.filter(f => f.p === CARD_CPU && f.m === m),
     onTap: () => tapMon(CARD_CPU, m),
     press: press,
@@ -94380,6 +94561,20 @@ const CardBattleBoard = ({
     m: m,
     mark: markOf(CARD_ME, m),
     guardTag: guardTagOf(CARD_ME, m),
+    statusLock: (mode === 'attack' || mode === 'guard') && !!sel,
+    onStatus: (sp, sm) => {
+      Audio_.fgSe.tap();
+      setStatusSheet({
+        p: sp,
+        m: sm
+      });
+    },
+    onPressMon: (sp, sm) => {
+      monPressed.current = {
+        p: sp,
+        m: sm
+      };
+    },
     fx: endFx ? [] : fx.filter(f => f.p === CARD_ME && f.m === m),
     onTap: () => tapMon(CARD_ME, m),
     press: press,
@@ -94566,10 +94761,21 @@ const CardBattleBoard = ({
     key: g.key,
     g: g,
     still: settings.motion === 'OFF'
-  }))), document.body), detail && React.createElement(CardDetailModal, {
-    db: db,
-    no: detail,
-    onClose: () => setDetail(null)
+  }))), document.body), detail && (() => {
+    const pm = monPressed.current;
+    const mn = pm && st.players[pm.p] && st.players[pm.p].mons[pm.m];
+    const ok = !!(mn && mn.no === detail);
+    return React.createElement(CardDetailModal, {
+      db: db,
+      no: detail,
+      onClose: () => setDetail(null),
+      status: ok ? cardMonStatuses(st, pm.p, pm.m) : null,
+      statusName: ok ? mn.name : ''
+    });
+  })(), statusSheet && st.players[statusSheet.p] && st.players[statusSheet.p].mons[statusSheet.m] && React.createElement(CardStatusSheet, {
+    name: st.players[statusSheet.p].mons[statusSheet.m].name,
+    list: cardMonStatuses(st, statusSheet.p, statusSheet.m),
+    onClose: () => setStatusSheet(null)
   }), bigCard && React.createElement("div", {
     key: `${bigCard.key}-tap`,
     "data-card-big-skip": true,
@@ -103676,9 +103882,19 @@ const cardPvpHistoryRoomLeft = () => {
     } catch (_) {}
   }
 };
+const cardPvpHistoryReadLost = raw => {
+  if (Array.isArray(raw)) return false;
+  try {
+    return typeof window !== 'undefined' && !!window.localStorage && window.localStorage.getItem(CARD_PVP_HISTORY_KEY) !== null;
+  } catch (_) {
+    return false;
+  }
+};
 const cardPvpHistoryWrite = async fn => {
   try {
-    const list = fn(await cardPvpHistoryLoad()).slice();
+    const raw = await storeGet(CARD_PVP_HISTORY_KEY, null, false);
+    if (cardPvpHistoryReadLost(raw)) return null;
+    const list = fn(cardPvpNormalizeHistory(raw)).slice();
     for (;;) {
       const ok = await cardPvpHistoryPut(list);
       if (ok && cardPvpHistoryRoomLeft()) return list;
