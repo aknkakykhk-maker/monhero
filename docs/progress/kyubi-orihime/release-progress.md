@@ -12,8 +12,11 @@
   - 命中の判定が無いので(社長の答え): 天翔ノ相は会心率+20%、霊魂の幻惑は「味方全員の回避率+10%」(⑤で回避の表へ)
 - [x] ②-2+③ オリヒメ「天河の契り」のつなぎ込みと、配置の画面の「この子を相方にする」(社長: 案ア・合流のたびに選べる) — #4075
   - 相方の入れ物は orihimeRef(partner/ouse)、効き目は orihimeDmgMultAt / orihimeTakenMultAt / orihimeShareTargets(タクティクスの分け合い)
-- [ ] ④-1 キュービ「九尾幻灯」(タクティクスのEX。効果 kitsunebi・狐火は kyubiRef.kitsunebi でランの終わりまで) — ブランチ claude/kyubi-orihime-ex
-- [ ] ④-2 オリヒメ「星合の刻」(勇者のとき)・「焦がれ待つ天ノ河」(共モンのとき)
+- [x] ④-1 キュービ「九尾幻灯」(タクティクスのEX。効果 kitsunebi・狐火は kyubiRef.kitsunebi でランの終わりまで) — #4090
+- [ ] ④-2 オリヒメ「星合の刻」(勇者のとき)・「焦がれ待つ天ノ河」(共モンのとき) — ブランチ claude/orihime-ex
+  - 共モンのときの定義は TACTICS_EX_SKILLS.OrihimeSupport(Orihime の supportKey)。raidExDefOf が勇者でない子を引き替える
+  - ⑦で直すこと: ヘルプのEXの表は遊べる子(ALL_PLAYER_MONSTERS)のキーだけ並べるので、OrihimeSupport が出ない。公開のときに「supportKey の先も並べる(共モンのとき)」を足す
+  - 星合の続く攻撃は、ヒット列に「攻撃した子の与ダメ×率」の1本として足している(相方の力では殴らない)。確かめのときに社長へ見せる
 - [ ] ④-3 札の表示(狐火・逢瀬・煉獄など。戦いの枠=バトル部の受け持ち。ソラシドの5人目の枠のあとに、ジンくんへ声をかけてから)
   - 公開前の子のEXはヘルプの表に出さない(20-market-notices-help.jsx の tacticsExSkills)
 - [ ] ⑤ 固有技の効果「霊魂」のつなぎ込み
