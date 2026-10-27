@@ -36,7 +36,7 @@
 | `aiCopyHateGainMult(level)` | タクティクスで🔥が増えるとき | ×1.0 / ×1.25 / ×1.5 |
 | `aiCopyUniqueCard(card, srcMonsterId)` | 固有技を1枚足すとき | 印 `sorashidoCopyOf` と `uid` を付けた写し(`uniqueCardUid` に持つ) |
 | `aiCopyRemoveUnique({ deck, hand, discard }, { uid } または { srcMonsterId })` | 抜くとき | 3か所から印の付いた分だけを抜いた新しい配列 |
-| `aiCopyHand(deck, uniqueCard, rng, draw, uniqueRate)` | コピーの番の前 | 山札の写しから2枚+固有技(入る見込み `aiCopyRules(level).uniqueRate`: 30/40/50%。渡さなければいつも入る)。山札は減らさない・距離技とソラシドは選ばない |
+| `aiCopyHand(deck, uniqueCard, rng, draw)` | コピーの番の前 | コピーの山札(山札の写し+固有技1枚)から `draw` 枚(プレイヤーの手札と同じ枚数)を引く。プレイヤーの山札は変えない・距離技とソラシドは選ばない |
 | `aiCopyPickCards(hand, { score, costOf, guts, maxGuts, rng, level })` | 手札を作ったあと | 使うカードの配列(0〜2枚)。先頭が `nextCard`。`score` には AUTO の点を渡す |
 
 `aiCopySummonPlan` の `kind` ごとに、バトル側がやること:
@@ -67,15 +67,18 @@
 検査は `tools/battle/sorashido-copy-view-check.js` です(320・390・844×390 で、はみ出し・押せる大きさ・札の読みやすさを見ます)。
 報告の写真と動画は `docs/playbot/reports/2026-10-27/sorashido-assist/` に置きました。
 
-## 2026-10-27 の変更: 固有技はプレイヤーの山札に入れない
+## 2026-10-27 の変更: 固有技はプレイヤーの山札に入れず、コピーの山札に1枚
 
-社長の答えで、AIコピーの固有技は「コピーの手札に入ることがある(いつもあるとは限らない)。プレイヤーの山札は変えない」になりました。
+社長の答えは「普通に山札の枚数で、自分たちと同じような確率」です。
 
-- `SORASHIDO_TIERS` の各段に `uniqueRate`(Lv1 0.3・Lv2 0.4・Lv3 0.5)を足しました。EXTREME の効果倍率は掛けません。
-- `aiCopyHand` に、5つ目の引数 `uniqueRate` を足しました。毎ターン手札を作るとき、2枚を引いたあと `rng() < uniqueRate` なら固有技を足します。
-- 山札へ入れる・抜く部品は呼ばなくなりました(`aiCopyUniqueCard`・`aiCopyRemoveUnique`)。`aiCopyUniqueCard` は、手札に入れる1枚の印付けにだけ使ってかまいません。
+- コピーの山札は、プレイヤーの山札の写し(選べるものだけ)に、コピーした子の固有技を1枚足したものです(`aiCopyDeck(deck, uniqueCard)`)。プレイヤーの山札は変えません。
+- 毎ターンの手札は `aiCopyHand(deck, uniqueCard, rng, draw)` で作ります。コピーの山札から `draw` 枚を、無作為・重ならずに引きます。
+  - `draw` には、プレイヤーの手札と同じ枚数を呼ぶ側が渡します(既定は3)。
+  - 固有技が来るかは枚数どおりの確率で、特別扱いしません。
+- 決まった割合(`uniqueRate`)は持ちません。
+- 山札へ入れる・抜く部品(`aiCopyRemoveUnique`)は呼ばなくなりました。`aiCopyUniqueCard` は、コピーの山札に入れる1枚の印付けにだけ使えます。
 - `aiCopySummonPlan` の `addUniqueOf`・`removeUniqueOf` は、「どの子の固有技か」の知らせとして残しています。
-- 説明文とヘルプに「固有技が手札に入る見込み」を足しました。
+- 説明文とヘルプも「固有技はコピーの山札に1枚入る」の言い方にしました。
 
 ## まだ決めていないこと
 

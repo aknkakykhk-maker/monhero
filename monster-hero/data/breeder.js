@@ -116,12 +116,10 @@ const KYUKO_TIERS = [
 //   pick      : コピーが「いちばん点の高いカード」を選ぶ見込み。外れたら2番目以降から選ぶ
 //   maxCards  : 1ターンに使う枚数の上限。2枚は、コピーのガッツの上限が gutsFor2 以上で、今のガッツが2枚ぶん足りるときだけ
 //   hateStart : タクティクスで、出たときの🔥(元の子の🔥に対する割合)。hateGain : 🔥のたまり方の倍率
-//   uniqueRate: コピーの子の固有技が、毎ターンのコピーの手札に入る見込み(2026-10-27 社長「入ることがある・プレイヤーの山札は変えない」)。
-//               EXTREME などの効果倍率は掛けない
 const SORASHIDO_TIERS = [
-  { rates:{ hp:0.5, atk:0.6, def:0.5, guts:0.6 }, turns:2, pick:0.5,  maxCards:1, hateStart:0.5,  hateGain:1.0,  uniqueRate:0.3 },
-  { rates:{ hp:0.7, atk:0.8, def:0.7, guts:0.8 }, turns:3, pick:0.65, maxCards:1, hateStart:0.75, hateGain:1.25, uniqueRate:0.4 },
-  { rates:{ hp:0.8, atk:0.9, def:0.8, guts:0.9 }, turns:4, pick:0.8,  maxCards:2, hateStart:1.0,  hateGain:1.5, gutsFor2:120, uniqueRate:0.5 },
+  { rates:{ hp:0.5, atk:0.6, def:0.5, guts:0.6 }, turns:2, pick:0.5,  maxCards:1, hateStart:0.5,  hateGain:1.0 },
+  { rates:{ hp:0.7, atk:0.8, def:0.7, guts:0.8 }, turns:3, pick:0.65, maxCards:1, hateStart:0.75, hateGain:1.25 },
+  { rates:{ hp:0.8, atk:0.9, def:0.8, guts:0.9 }, turns:4, pick:0.8,  maxCards:2, hateStart:1.0,  hateGain:1.5, gutsFor2:120 },
 ];
 
 // 行動カードの絵(2026-10-15 社長「バトルカードの変更も進めて」。原本は tools/art-sources/card-frames・skill-icons)。

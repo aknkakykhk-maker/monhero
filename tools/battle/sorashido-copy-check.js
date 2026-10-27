@@ -31,15 +31,15 @@ var BREEDER_EVO_NAMES = ${breeder.slice(breeder.indexOf('const BREEDER_EVO_NAMES
 ${read('monster-hero/src/parts/32-sorashido-copy.jsx')}
 globalThis.__s = { SORASHIDO_TIERS, BREEDER_EVO_NAMES, setSorashidoJoinSeenForShop, sorashidoCardOnSale, teachingCardReleased,
   aiCopyRules, aiCopyTurns, aiCopyStats, aiCopyStartHate, aiCopyHateGainMult, aiCopySummonPlan, aiCopyTurnEnd,
-  aiCopyUniqueCard, aiCopyRemoveUnique, aiCopyCanPick, aiCopyHand, aiCopyPickCards, sorashidoCopyDesc,
+  aiCopyUniqueCard, aiCopyRemoveUnique, aiCopyCanPick, aiCopyDeck, aiCopyHand, aiCopyPickCards, sorashidoCopyDesc,
   SORASHIDO_COPY_SLOT, SORASHIDO_COPY_UNIQUE_COUNT, SORASHIDO_COPY_HAND_DRAW };`, ctx);
 const s = ctx.__s;
 
 check('段階の名前は 自動化 → 全自動 → 無人運転', JSON.stringify(s.BREEDER_EVO_NAMES.sorashido) === JSON.stringify(['ソラシドの自動化', 'ソラシドの全自動', 'ソラシドの無人運転']));
 check('効果量の表は社長の決定どおり(強さ・続くターン 2→3→4・選ぶ見込み 50→65→80%・枚数・🔥)', JSON.stringify(s.SORASHIDO_TIERS) === JSON.stringify([
-  { rates: { hp: 0.5, atk: 0.6, def: 0.5, guts: 0.6 }, turns: 2, pick: 0.5, maxCards: 1, hateStart: 0.5, hateGain: 1.0, uniqueRate: 0.3 },
-  { rates: { hp: 0.7, atk: 0.8, def: 0.7, guts: 0.8 }, turns: 3, pick: 0.65, maxCards: 1, hateStart: 0.75, hateGain: 1.25, uniqueRate: 0.4 },
-  { rates: { hp: 0.8, atk: 0.9, def: 0.8, guts: 0.9 }, turns: 4, pick: 0.8, maxCards: 2, hateStart: 1.0, hateGain: 1.5, gutsFor2: 120, uniqueRate: 0.5 },
+  { rates: { hp: 0.5, atk: 0.6, def: 0.5, guts: 0.6 }, turns: 2, pick: 0.5, maxCards: 1, hateStart: 0.5, hateGain: 1.0 },
+  { rates: { hp: 0.7, atk: 0.8, def: 0.7, guts: 0.8 }, turns: 3, pick: 0.65, maxCards: 1, hateStart: 0.75, hateGain: 1.25 },
+  { rates: { hp: 0.8, atk: 0.9, def: 0.8, guts: 0.9 }, turns: 4, pick: 0.8, maxCards: 2, hateStart: 1.0, hateGain: 1.5, gutsFor2: 120 },
 ]));
 check('カードはガッツ20・公開の印 assistantSorashido・はじめから持つカードではない',
   /\{ id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido',[^\n]*guts:20, releaseFlag:'assistantSorashido' \}/.test(breeder)
@@ -111,16 +111,14 @@ const deck = [
   { id: 'guard1', type: 'guard', p: 3 }, { id: 'kyuko', type: 'buff', p: 5 },
 ];
 const deckBefore = deck.length;
-const hand = s.aiCopyHand(deck, tagged, seq([0, 0]));
-check('uniqueRate を渡さなければ、固有技はいつも入る(前の形)', hand.length === 3 && deck.length === deckBefore && hand[2] === tagged, hand.map((c) => c.id).join(','));
-const rate = (lv) => s.aiCopyRules(lv).uniqueRate;
-check('固有技が手札に入る見込みは Lv1 30%・Lv2 40%・Lv3 50%(EXTREME でも変えない)', rate(0) === 0.3 && rate(1) === 0.4 && rate(2) === 0.5);
-const withRate = (roll, lv) => s.aiCopyHand(deck, tagged, seq([0, 0, roll]), 2, rate(lv));
-check('見込みの内側なら固有技が入り、外れたら入らない(2枚は引く・山札は減らさない)',
-  withRate(0.29, 0).length === 3 && withRate(0.3, 0).length === 2 && withRate(0.49, 2).includes(tagged) && !withRate(0.5, 2).includes(tagged) && deck.length === deckBefore);
+const cdeck = s.aiCopyDeck(deck, tagged);
+check('コピーの山札は、山札の写し(選べるものだけ)+コピーした子の固有技1枚(プレイヤーの山札は変えない)', cdeck.length === 4 && cdeck.filter((c) => c === tagged).length === 1 && deck.length === deckBefore && !deck.includes(tagged), cdeck.map((c) => c.id).join(','));
+const hand = s.aiCopyHand(deck, tagged, seq([0, 0, 0]), 3);
+check('手札は、コピーの山札からプレイヤーと同じ枚数(渡した draw)を重ならずに引く', hand.length === 3 && new Set(hand).size === 3 && s.aiCopyHand(deck, tagged, seq([0]), 2).length === 2 && s.aiCopyHand(deck, tagged, seq([0]), 9).length === 4, hand.map((c) => c.id).join(','));
 let uniqueIn = 0;
-for (let i = 0; i < 1000; i++) if (withRate((i + 0.5) / 1000, 1).includes(tagged)) uniqueIn++;
-check('Lv2 は 1000回のうち400回だけ固有技が入る', uniqueIn === 400, `${uniqueIn}/1000`);
+for (let i = 0; i < 4000; i++) { const r = ((i * 7919) % 4000 + 0.5) / 4000; const r2 = ((i * 104729) % 4000 + 0.5) / 4000; if (s.aiCopyHand(deck, tagged, seq([r, r2]), 2).includes(tagged)) uniqueIn++; }
+check('固有技が手札に来るのは枚数どおりの確率(山札4枚から2枚なら半分)・特別扱いしない', Math.abs(uniqueIn / 4000 - 0.5) < 0.03, `${uniqueIn}/4000`);
+check('SORASHIDO_TIERS に決まった割合(uniqueRate)は持たない', s.SORASHIDO_TIERS.every((t) => !('uniqueRate' in t)));
 check('距離技(青い枠)とソラシドのアシカは選ばない・固有技とほかのアシカは選べる', !hand.some((c) => c.type === 'range_atk' || c.id === 'sorashido')
   && s.aiCopyCanPick({ type: 'unique' }) && s.aiCopyCanPick({ id: 'kyuko', type: 'buff' }) && !s.aiCopyCanPick({ type: 'range_atk' }) && !s.aiCopyCanPick({ id: 'sorashido' }));
 const pickHand = [{ id: 'x', p: 1, guts: 10 }, { id: 'best', p: 9, guts: 30 }, { id: 'y', p: 5, guts: 20 }];
@@ -140,8 +138,8 @@ check('Lv3 はガッツの上限120以上で、2枚ぶん足りるときだけ2�
 let bestCount = 0;
 for (let i = 0; i < 1000; i++) { const v = (i + 0.5) / 1000; if (pick({ rng: seq([v, v]), level: 1 })[0] === 'best') bestCount++; }
 check('Lv2 は いちばん点の高いカードを 65% の見込みで選ぶ', bestCount === 650, `${bestCount}/1000`);
-check('5人目の枠は 4・コピーが見る枚数は 2', s.SORASHIDO_COPY_SLOT === 4 && s.SORASHIDO_COPY_HAND_DRAW === 2);
-check('説明文に Lv ごとの続くターンと強さが出る', /2ターン/.test(s.sorashidoCopyDesc(0)) && /4ターン/.test(s.sorashidoCopyDesc(2)) && /ちから90%/.test(s.sorashidoCopyDesc(2)) && /2枚まで/.test(s.sorashidoCopyDesc(2)) && !/2枚まで/.test(s.sorashidoCopyDesc(1)) && /固有技が手札に入る見込み 30%/.test(s.sorashidoCopyDesc(0)));
+check('5人目の枠は 4・引く枚数の既定は 3(呼ぶ側はプレイヤーの手札の枚数を渡す)', s.SORASHIDO_COPY_SLOT === 4 && s.SORASHIDO_COPY_HAND_DRAW === 3);
+check('説明文に Lv ごとの続くターンと強さが出る', /2ターン/.test(s.sorashidoCopyDesc(0)) && /4ターン/.test(s.sorashidoCopyDesc(2)) && /ちから90%/.test(s.sorashidoCopyDesc(2)) && /2枚まで/.test(s.sorashidoCopyDesc(2)) && !/2枚まで/.test(s.sorashidoCopyDesc(1)) && /固有技はコピーの山札に1枚入る/.test(s.sorashidoCopyDesc(0)));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

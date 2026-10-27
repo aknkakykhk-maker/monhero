@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4c7b21de589fb51
+// generated-sha256: c7f7bdce92d7149d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -28140,14 +28140,14 @@ const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot)
 const SORASHIDO_CARD_ID = 'sorashido';
 // 5人目の枠の番号(タクティクスの4枠 0〜3 の次)
 const SORASHIDO_COPY_SLOT = 4;
-// コピーの手札に入る固有技は、入るときはいつも1枚(入るかどうかは SORASHIDO_TIERS の uniqueRate)
+// コピーの山札に入れる、コピーした子の固有技の枚数(どの Lv でもいつも1枚)
 const SORASHIDO_COPY_UNIQUE_COUNT = 1;
-// コピーが毎ターン山札の写しから見るカードの枚数(これに足した固有技を加える)
-const SORASHIDO_COPY_HAND_DRAW = 2;
+// コピーが毎ターン引く枚数の既定(呼ぶ側はプレイヤーの手札と同じ枚数を渡す)
+const SORASHIDO_COPY_HAND_DRAW = 3;
 
 const aiCopySafeNum = (value, fallback = 0) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
 
-// Lv(0〜2)ごとの決まり。{ rates, turns, pick, maxCards, hateStart, hateGain, gutsFor2, uniqueRate }
+// Lv(0〜2)ごとの決まり。{ rates, turns, pick, maxCards, hateStart, hateGain, gutsFor2 }
 const aiCopyRules = (level) => {
   const tiers = (typeof SORASHIDO_TIERS !== 'undefined' && Array.isArray(SORASHIDO_TIERS)) ? SORASHIDO_TIERS : [];
   const lv = Math.max(0, Math.min(tiers.length - 1, Math.floor(aiCopySafeNum(level)) || 0));
@@ -28195,8 +28195,8 @@ const aiCopyTurnEnd = (aiCopy) => {
 };
 
 // ---- 固有技の出し入れ ----
-// ★2026-10-27 社長の答えで、固有技はプレイヤーの山札へ入れず、コピーの手札に「入ることがある」形になった(aiCopyHand の uniqueRate)。
-//   下の3つは山札へ入れていたころの部品で、いまのバトルからは呼ばない(aiCopyUniqueCard は手札に入れる1枚の印付けにだけ使ってよい)。
+// ★2026-10-27 社長の答えで、固有技はプレイヤーの山札へ入れず、コピー自身の山札に1枚入る形になった(aiCopyHand)。
+//   下の3つは山札へ入れていたころの部品で、いまのバトルからは呼ばない(aiCopyUniqueCard はコピーの山札に入れる1枚の印付けにだけ使ってよい)。
 // 足す1枚。元の固有技のカードに印(sorashidoCopyOf・uid)を付けた写し。抜くときは uid か印で探す
 const aiCopyUniqueCard = (card, srcMonsterId) => (card ? { ...card, sorashidoCopyOf: srcMonsterId, uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}` } : null);
 const aiCopyIsUnique = (card, { uid = null, srcMonsterId = null } = {}) => !!card && card.sorashidoCopyOf != null
@@ -28211,18 +28211,21 @@ const aiCopyRemoveUnique = (zones, match) => {
 // コピーは選ばない: 距離技(青い枠 range_atk)と、ソラシドのアシカそのもの。固有技とほかのアシカは選べる
 const aiCopyCanPick = (card) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
 
-// 毎ターンの手札: みんなの山札は減らさず、山札の写しから2枚(選べるものから)+コピーの子の固有技(入る見込み uniqueRate)。
-//   uniqueRate を渡さなければ、固有技はいつも入る(前の形)。乱数は「2枚を引く分」のあとに「固有技が入るか」の1回を使う
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW, uniqueRate = null) => {
-  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+// コピーの山札: プレイヤーの山札の写し(選べるものだけ)+コピーした子の固有技1枚。プレイヤーの山札は変えない
+const aiCopyDeck = (deck, uniqueCard) => {
+  const out = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+  if (uniqueCard && aiCopyCanPick(uniqueCard)) out.push(uniqueCard);
+  return out;
+};
+// 毎ターンの手札(2026-10-27 社長「普通に山札の枚数で自分たちと同じような確率」): コピーの山札から、プレイヤーと同じ枚数(draw)を
+// 同じ引き方(無作為・重ならない)で引く。固有技が手札に来るかは枚数どおりの確率で、特別扱いしない
+const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
+  const rest = aiCopyDeck(deck, uniqueCard);
+  const n = Math.max(0, Math.floor(aiCopySafeNum(draw, SORASHIDO_COPY_HAND_DRAW)));
   const picked = [];
-  for (let i = 0; i < draw && rest.length > 0; i++) {
+  for (let i = 0; i < n && rest.length > 0; i++) {
     const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
     picked.push(rest.splice(at, 1)[0]);
-  }
-  if (uniqueCard && aiCopyCanPick(uniqueCard)) {
-    const rate = uniqueRate == null ? 1 : Math.max(0, Math.min(1, aiCopySafeNum(uniqueRate, 1)));
-    if (rate >= 1 || aiCopySafeNum(rng && rng(), 1) < rate) picked.push(uniqueCard);
   }
   return picked;
 };
@@ -28259,7 +28262,7 @@ const aiCopyPickCards = (hand, { score, costOf, guts, maxGuts, rng, level }) => 
 // ---- 説明文(ブリーダーの教え・マーケット・カードの詳しい画面) ----
 const sorashidoCopyDesc = (level) => {
   const t = aiCopyRules(level), p = (v) => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・固有技が手札に入る見込み ${p(aiCopySafeNum(t.uniqueRate, 1))}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・元の子の固有技はコピーの山札に1枚入る${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
 
 // ---- part: 33-ai-copy.jsx ----
