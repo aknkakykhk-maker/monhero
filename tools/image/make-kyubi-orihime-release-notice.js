@@ -154,7 +154,7 @@ const keyVisual = async () => {
   x.save(); x.font = '78px MPB'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = '#3b0a0a';
   const msg = '円盤石で仲間にしよう！'; x.strokeText(msg, W / 2, 1640);
   const bt = x.createLinearGradient(0, 1600, 0, 1680); bt.addColorStop(0, '#fff6c2'); bt.addColorStop(1, '#f0b93a'); x.fillStyle = bt; x.fillText(msg, W / 2, 1640); x.restore();
-  x.save(); x.font = '42px MPB'; x.textAlign = 'center'; x.fillStyle = '#fde68a'; x.fillText(process.env.NOTICE_SUB || 'マーケットに並びます', W / 2, 1726); x.restore();
+  x.save(); x.font = '42px MPB'; x.textAlign = 'center'; x.fillStyle = '#fde68a'; x.fillText('お話『推しに会える夜』を見ると、円盤石が並びます', W / 2, 1726); x.restore();
   x.lineWidth = 14; x.strokeStyle = '#fcd9a8'; x.strokeRect(7, 7, W - 14, H - 14);
   await save(c, 'kyubi-orihime-release-notice.jpg', 880, 880);
 };
