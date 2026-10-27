@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f1021f0a45caac76
+// source-sha256: a2ba74b6a12c79fe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -23310,10 +23310,6 @@ const SKM_KYUBI = Object.freeze({
     over: 'pillar',
     burst: 'star',
     form: 'fire'
-  }), skm('warp', {
-    c: 'fire',
-    over: 'shadow',
-    burst: 'dust'
   }), skm('gather', {
     c: 'blue',
     fx: skmFx('fall', 'flame', 10),
@@ -23324,23 +23320,27 @@ const SKM_KYUBI = Object.freeze({
     c: 'wind',
     over: 'tornado',
     burst: 'leaf'
-  }), skm('cast', {
-    c: 'sky',
-    fx: skmFx('orbit', 'bubble', 10),
-    over: 'boom',
-    burst: 'bubble'
-  }), skm('float', {
-    c: 'cosmic',
-    fx: skmFx('fall', 'star', 12),
-    over: 'aurora',
-    burst: 'star',
-    form: 'light'
+  }), skm('warp', {
+    c: 'fire',
+    over: 'shadow',
+    burst: 'dust'
   }), skm('gather', {
     c: 'blood',
     fx: skmFx('orbit', 'flame', 9),
     over: 'eclipse',
     burst: 'spark',
     form: 'fire'
+  }), skm('float', {
+    c: 'cosmic',
+    fx: skmFx('fall', 'star', 12),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  }), skm('cast', {
+    c: 'sky',
+    fx: skmFx('orbit', 'bubble', 10),
+    over: 'boom',
+    burst: 'bubble'
   })]
 });
 const SKM_ORIHIME = Object.freeze({
@@ -23363,19 +23363,19 @@ const SKM_ORIHIME = Object.freeze({
     burst: 'star',
     form: 'light'
   }), {
-    ...SKM_KYUBI.unique[3],
+    ...SKM_KYUBI.unique[5],
     c: 'cosmic'
+  }, {
+    ...SKM_KYUBI.unique[3],
+    c: 'sky'
   }, {
     ...SKM_KYUBI.unique[4],
     c: 'sky'
   }, {
-    ...SKM_KYUBI.unique[5],
-    c: 'sky'
-  }, {
-    ...SKM_KYUBI.unique[6],
+    ...SKM_KYUBI.unique[8],
     c: 'pink'
   }, {
-    ...SKM_KYUBI.unique[8],
+    ...SKM_KYUBI.unique[6],
     c: 'psy'
   }, {
     ...SKM_KYUBI.unique[7],

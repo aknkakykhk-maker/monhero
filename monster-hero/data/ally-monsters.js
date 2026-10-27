@@ -277,13 +277,14 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     // 社長が決めた値(2026-10-27。基礎能力は仮の数値から決め直し、加算・間合い・固有技の倍率と消費は仮のまま確定)。
     // 勇者特性・EX・固有技の効果「霊魂」は 22-enemy-and-bond-entries.jsx、タイプは 32-tactics-units.jsx、ビートの能力は rhythm-mode.js
     baseHp:420, baseGuts:150, baseAtk:160, baseDef:70, plusStats:{hp:120,atk:40,def:10,guts:45},
-    unique:{ name:"ゆうわく", icon:KYUBI_IMG, monId:"Kyubi", baseMult:2.8, baseGuts:56, evoLevel:0,
-      names:["ゆうわく","なめろう","超狐火","陽炎","神狐蒼火","八嵐天衝","炸裂気泡陣","天河天翔","煉獄九尾陣"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'kyubi' }) }),
+    unique:{ name:"ゆうわく", icon:KYUBI_IMG, monId:"Kyubi", baseMult:2.4, baseGuts:48, evoLevel:0,
+      // 段の順は社長が決めた(2026-10-27「Aで9段目に炸裂、8段目天翔、7に煉獄」)。動きは 24-battle-fx.jsx の SKM_KYUBI が同じ順
+      names:["ゆうわく","なめろう","超狐火","神狐蒼火","八嵐天衝","陽炎","煉獄九尾陣","天河天翔","炸裂気泡陣"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'kyubi' }) }),
   Orihime: Object.freeze({ id:'Orihime', name:"オリヒメ", emoji:"🎐", imgUrl:ORIHIME_IMG, iconUrl:ORIHIME_IMG,
     faceIconUrl:ORIHIME_FACE_ICON, distAptitude:['B','A','D','A'], draft:true, draftAnnounced:true,
     // 社長が決めた値(2026-10-27。基礎能力は仮の数値から決め直し、加算・間合い・固有技の倍率と消費は仮のまま確定)。
     // 勇者特性・EX・固有技の効果「霊魂」は 22-enemy-and-bond-entries.jsx、タイプは 32-tactics-units.jsx、ビートの能力は rhythm-mode.js
     baseHp:440, baseGuts:140, baseAtk:145, baseDef:85, plusStats:{hp:140,atk:30,def:15,guts:40},
-    unique:{ name:"求愛", icon:ORIHIME_IMG, monId:"Orihime", baseMult:2.6, baseGuts:52, evoLevel:0,
+    unique:{ name:"求愛", icon:ORIHIME_IMG, monId:"Orihime", baseMult:2.3, baseGuts:46, evoLevel:0,
       names:["求愛","なめろう","超狐火・星","陽炎","神狐蒼火","八嵐天衝","炸裂気泡陣","煉獄九尾陣","天河天翔"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
 });
