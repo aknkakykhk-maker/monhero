@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 90645de226edc23d
+// generated-sha256: 1bd783f5ddff2d65
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7980,13 +7980,14 @@ const MonsterArtFrame = ({ baseId, src, alt='', masuColors=null, className='', f
 };
 // 本番の染色モーダルとDebugで共有する色選択UI。色ID（元色=null、プリセット、カスタム）を
 // そのまま受け渡し、表示側も共通のDyedMonsterImageへ渡すため、Debug専用の色変換を持たない。
-const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
+// 【試作・この枝だけ】only: 1つの部位だけ出す / big: 色のボタンを大きくする(染色の画面の改良案 A〜D の見本用)
+const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom, only = null, big = false }) => {
   const regionCount = dyeRegionCount(baseId);
   const regionLabels = ['①','②','③','④','⑤'];
-  return <div className="space-y-2">{Array.from({length:regionCount}).map((_,idx)=>(
+  return <div className="space-y-2">{Array.from({length:regionCount},(_,i)=>i).filter(i=>only==null||i===only).map((idx)=>(
     <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
       <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
-      <div className="grid grid-cols-6 gap-0.5">
+      <div className={big?'grid grid-cols-5 gap-1 [&>button]:min-h-[48px] [&>button>span:last-child]:text-[10px] [&>button>span:first-child]:w-5 [&>button>span:first-child]:h-5':'grid grid-cols-6 gap-0.5'}>
         <button onClick={()=>onChange(idx,null)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7}/></span><span className="text-[5.5px] font-black">元の色</span></button>
         {/* 色を選び直しても濃さは引き継ぐ(色だけ変えたいときに毎回つまみを直さなくてよいように) */}
         {Object.keys(MASU_COLOR_TARGET).map(colorId=><button key={colorId} onClick={()=>onChange(idx,withColorAlpha(colorId,colorAlphaOf(colors[idx])))} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${splitColorAlpha(colors[idx]).base===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}/><span className="text-[5.5px] font-black">{MASU_COLOR_LABELS[colorId]}</span></button>)}
@@ -8012,6 +8013,51 @@ const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
       </div>}
     </div>
   ))}</div>;
+};
+
+// 【試作・この枝だけ】染色の画面の改良案 A〜D(2026-10-27 社長「染色画面がちょっと使いづらい。モンスターが少し小さいからかな？」)。
+// localStorage の proto_dye_layout に A〜D を入れたときだけ、染色の窓の代わりにこの並びで出す。保存の形は変えない
+const DyeProtoLayout = ({ layout, baseId, src, name, colors, onChange, onCustom, title, onClose, footer }) => {
+  const [region, setRegion] = useState(0);
+  const [open, setOpen] = useState(true);
+  const regionCount = dyeRegionCount(baseId);
+  const labels = ['①','②','③','④','⑤'];
+  const landscape = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
+  const preview = <DyedMonsterImage baseId={baseId} src={src} alt={name} masuColors={colors} className="w-full h-full object-contain"/>;
+  const ctrl = (o = {}) => <DyeRegionColorControls baseId={baseId} colors={colors} onChange={onChange} onCustom={onCustom} {...o}/>;
+  const tabs = regionCount > 1 && <div data-dye-proto-tabs className="flex gap-1.5 shrink-0">{Array.from({ length: regionCount }, (_, i) => (
+    <button key={i} type="button" onClick={() => setRegion(i)} className={`flex-1 min-h-[44px] rounded-xl border font-black text-sm ${region === i ? 'bg-fuchsia-600 border-fuchsia-300 text-white' : 'bg-slate-800 border-white/10 text-fuchsia-200'}`}>
+      {labels[i]}{colors[i] ? <span className="ml-1 inline-block w-3 h-3 rounded-full border border-white/40 align-middle" style={{ background: getColorSwatchHex(colors[i]) }}/> : null}
+    </button>))}</div>;
+  const head = <div className="flex items-center justify-between shrink-0"><h3 className="text-sm font-black text-white">🎨 {title} <span className="ml-1 rounded-full bg-fuchsia-500/30 px-2 py-0.5 text-[11px] text-fuchsia-100">案{layout}</span></h3>
+    <button type="button" aria-label="染色を閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-white font-black">✕</button></div>;
+  const stage = (cls) => <div className={`relative rounded-2xl bg-gradient-to-b from-fuchsia-950/60 to-slate-950 border border-fuchsia-400/30 flex items-center justify-center p-2 ${cls}`}>{preview}</div>;
+  const shell = 'fixed inset-0 flex flex-col gap-2 bg-slate-950 p-3';
+  const pad = { position: 'fixed', inset: 0, zIndex: 31500, paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' };
+  if (layout === 'D' && landscape) {
+    return <div data-dye-proto="D" className={shell} style={pad}>{head}
+      <div className="flex-1 min-h-0 flex gap-3">
+        {stage('w-[40%] h-full')}
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2">{tabs}<div className="flex-1 min-h-0 overflow-y-auto mh-scroll">{ctrl({ only: region, big: true })}</div>{footer}</div>
+      </div></div>;
+  }
+  if (layout === 'C' || layout === 'D') {
+    return <div data-dye-proto={layout} className={shell} style={pad}>{head}
+      {stage('h-[38%] shrink-0')}{tabs}
+      <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">{ctrl({ only: region, big: true })}</div>{footer}</div>;
+  }
+  if (layout === 'B') {
+    return <div data-dye-proto="B" className={shell} style={pad}>{head}
+      {stage('flex-1 min-h-0')}
+      <div className={`shrink-0 flex flex-col gap-2 rounded-t-3xl border-t-2 border-fuchsia-500 bg-slate-900 p-3 -mx-3 ${open ? 'max-h-[52%]' : ''}`}>
+        <button type="button" onClick={() => setOpen(!open)} className="min-h-[44px] rounded-xl bg-slate-800 font-black text-fuchsia-100 text-sm">{open ? '▾ 色を選ぶ(たたむ)' : '▴ 色を選ぶ(ひらく)'}</button>
+        {open && <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">{ctrl({ big: true })}</div>}
+        {footer}
+      </div></div>;
+  }
+  return <div data-dye-proto="A" className={shell} style={pad}>{head}
+    {stage('h-[46%] shrink-0')}
+    <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">{ctrl({ big: true })}</div>{footer}</div>;
 };
 // マスモンの全身表示は画面ごとにiconUrlへ切り替えず、通常表示と同じ立ち絵を使う。
 // iconUrlしか持たない旧データも従来どおり表示できるようフォールバックは残す。
@@ -82088,6 +82134,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const regionLabels = ['①','②','③'];
           const noChange = Array.from({length:regionCount},(_,i)=>(dyePreviewColors[i]||null)===(curColors[i]||null)).every(Boolean);
           const hasAnyColor = dyePreviewColors.some(Boolean);
+          // 【試作・この枝だけ】染色の画面の改良案 A〜D
+          const dyeProto = (()=>{ try { return window.localStorage.getItem('proto_dye_layout'); } catch { return null; } })();
+          if (['A','B','C','D'].includes(dyeProto)) {
+            const onDyeChange=(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;});
+            const onDyeCustom=(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});};
+            return <DyeProtoLayout layout={dyeProto} baseId={masu.baseId} src={base.imgUrl||base.iconUrl} name={masu.name} colors={dyePreviewColors}
+              onChange={onDyeChange} onCustom={onDyeCustom} title={`${masu.name}を染める`} onClose={closeDyePicker}
+              footer={<div className="flex gap-2 shrink-0"><button onClick={closeDyePicker} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">やめる</button>
+                <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColors); closeDyePicker(); }} disabled={noChange} className={`flex-1 min-h-[44px] rounded-xl font-black text-xs ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white'}`}>この色に染める</button></div>}/>;
+          }
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label={`${masu.name}の染色`}>
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-3 shadow-2xl max-h-full overflow-hidden">

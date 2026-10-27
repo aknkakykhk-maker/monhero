@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 765dd5edbf720abf
+// source-sha256: 8bb5b0c547e1dfbb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10970,7 +10970,9 @@ const DyeRegionColorControls = ({
   baseId,
   colors,
   onChange,
-  onCustom
+  onCustom,
+  only = null,
+  big = false
 }) => {
   const regionCount = dyeRegionCount(baseId);
   const regionLabels = ['①', '②', '③', '④', '⑤'];
@@ -10978,13 +10980,13 @@ const DyeRegionColorControls = ({
     className: "space-y-2"
   }, Array.from({
     length: regionCount
-  }).map((_, idx) => React.createElement("div", {
+  }, (_, i) => i).filter(i => only == null || i === only).map(idx => React.createElement("div", {
     key: idx,
     className: "bg-black/30 rounded-xl p-2 border border-white/5"
   }, React.createElement("div", {
     className: "text-[8px] text-fuchsia-300 font-black uppercase mb-1"
   }, regionCount > 1 ? `染色${regionLabels[idx] || idx + 1}` : '染色'), React.createElement("div", {
-    className: "grid grid-cols-6 gap-0.5"
+    className: big ? 'grid grid-cols-5 gap-1 [&>button]:min-h-[48px] [&>button>span:last-child]:text-[10px] [&>button>span:first-child]:w-5 [&>button>span:first-child]:h-5' : 'grid grid-cols-6 gap-0.5'
   }, React.createElement("button", {
     onClick: () => onChange(idx, null),
     className: `flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx] ? 'border-fuchsia-400 ring-2 ring-fuchsia-400' : 'border-white/10'}`
@@ -11051,6 +11053,130 @@ const DyeRegionColorControls = ({
     onStep: () => onChange(idx, withColorAlpha(colors[idx], colorAlphaOf(colors[idx]) + 1)),
     className: "min-h-[36px] w-11 shrink-0 touch-none select-none rounded-lg border border-white/15 bg-slate-800 text-[15px] font-black text-white active:scale-95 disabled:opacity-30"
   }, "+")))));
+};
+const DyeProtoLayout = ({
+  layout,
+  baseId,
+  src,
+  name,
+  colors,
+  onChange,
+  onCustom,
+  title,
+  onClose,
+  footer
+}) => {
+  const [region, setRegion] = useState(0);
+  const [open, setOpen] = useState(true);
+  const regionCount = dyeRegionCount(baseId);
+  const labels = ['①', '②', '③', '④', '⑤'];
+  const landscape = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
+  const preview = React.createElement(DyedMonsterImage, {
+    baseId: baseId,
+    src: src,
+    alt: name,
+    masuColors: colors,
+    className: "w-full h-full object-contain"
+  });
+  const ctrl = (o = {}) => React.createElement(DyeRegionColorControls, _extends({
+    baseId: baseId,
+    colors: colors,
+    onChange: onChange,
+    onCustom: onCustom
+  }, o));
+  const tabs = regionCount > 1 && React.createElement("div", {
+    "data-dye-proto-tabs": true,
+    className: "flex gap-1.5 shrink-0"
+  }, Array.from({
+    length: regionCount
+  }, (_, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    onClick: () => setRegion(i),
+    className: `flex-1 min-h-[44px] rounded-xl border font-black text-sm ${region === i ? 'bg-fuchsia-600 border-fuchsia-300 text-white' : 'bg-slate-800 border-white/10 text-fuchsia-200'}`
+  }, labels[i], colors[i] ? React.createElement("span", {
+    className: "ml-1 inline-block w-3 h-3 rounded-full border border-white/40 align-middle",
+    style: {
+      background: getColorSwatchHex(colors[i])
+    }
+  }) : null)));
+  const head = React.createElement("div", {
+    className: "flex items-center justify-between shrink-0"
+  }, React.createElement("h3", {
+    className: "text-sm font-black text-white"
+  }, "🎨 ", title, " ", React.createElement("span", {
+    className: "ml-1 rounded-full bg-fuchsia-500/30 px-2 py-0.5 text-[11px] text-fuchsia-100"
+  }, "案", layout)), React.createElement("button", {
+    type: "button",
+    "aria-label": "染色を閉じる",
+    onClick: onClose,
+    className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-white font-black"
+  }, "✕"));
+  const stage = cls => React.createElement("div", {
+    className: `relative rounded-2xl bg-gradient-to-b from-fuchsia-950/60 to-slate-950 border border-fuchsia-400/30 flex items-center justify-center p-2 ${cls}`
+  }, preview);
+  const shell = 'fixed inset-0 flex flex-col gap-2 bg-slate-950 p-3';
+  const pad = {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 31500,
+    paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
+    paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+  };
+  if (layout === 'D' && landscape) {
+    return React.createElement("div", {
+      "data-dye-proto": "D",
+      className: shell,
+      style: pad
+    }, head, React.createElement("div", {
+      className: "flex-1 min-h-0 flex gap-3"
+    }, stage('w-[40%] h-full'), React.createElement("div", {
+      className: "flex-1 min-w-0 min-h-0 flex flex-col gap-2"
+    }, tabs, React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    }, ctrl({
+      only: region,
+      big: true
+    })), footer)));
+  }
+  if (layout === 'C' || layout === 'D') {
+    return React.createElement("div", {
+      "data-dye-proto": layout,
+      className: shell,
+      style: pad
+    }, head, stage('h-[38%] shrink-0'), tabs, React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    }, ctrl({
+      only: region,
+      big: true
+    })), footer);
+  }
+  if (layout === 'B') {
+    return React.createElement("div", {
+      "data-dye-proto": "B",
+      className: shell,
+      style: pad
+    }, head, stage('flex-1 min-h-0'), React.createElement("div", {
+      className: `shrink-0 flex flex-col gap-2 rounded-t-3xl border-t-2 border-fuchsia-500 bg-slate-900 p-3 -mx-3 ${open ? 'max-h-[52%]' : ''}`
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => setOpen(!open),
+      className: "min-h-[44px] rounded-xl bg-slate-800 font-black text-fuchsia-100 text-sm"
+    }, open ? '▾ 色を選ぶ(たたむ)' : '▴ 色を選ぶ(ひらく)'), open && React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    }, ctrl({
+      big: true
+    })), footer));
+  }
+  return React.createElement("div", {
+    "data-dye-proto": "A",
+    className: shell,
+    style: pad
+  }, head, stage('h-[46%] shrink-0'), React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, ctrl({
+    big: true
+  })), footer);
 };
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
 const makePatternLayer = (patch = {}) => ({
@@ -131492,6 +131618,54 @@ function MonsterHeroGame() {
         length: regionCount
       }, (_, i) => (dyePreviewColors[i] || null) === (curColors[i] || null)).every(Boolean);
       const hasAnyColor = dyePreviewColors.some(Boolean);
+      const dyeProto = (() => {
+        try {
+          return window.localStorage.getItem('proto_dye_layout');
+        } catch {
+          return null;
+        }
+      })();
+      if (['A', 'B', 'C', 'D'].includes(dyeProto)) {
+        const onDyeChange = (idx, colorId) => setDyePreviewColors(prev => {
+          const next = [...prev];
+          next[idx] = colorId;
+          return next;
+        });
+        const onDyeCustom = idx => {
+          const parsed = _parseCustomColorId(dyePreviewColors[idx]);
+          setCustomColorPicker({
+            mode: 'production',
+            idx,
+            h: parsed?.h ?? 210,
+            s: parsed?.s ?? .7,
+            v: parsed?.v ?? .7
+          });
+        };
+        return React.createElement(DyeProtoLayout, {
+          layout: dyeProto,
+          baseId: masu.baseId,
+          src: base.imgUrl || base.iconUrl,
+          name: masu.name,
+          colors: dyePreviewColors,
+          onChange: onDyeChange,
+          onCustom: onDyeCustom,
+          title: `${masu.name}を染める`,
+          onClose: closeDyePicker,
+          footer: React.createElement("div", {
+            className: "flex gap-2 shrink-0"
+          }, React.createElement("button", {
+            onClick: closeDyePicker,
+            className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs"
+          }, "やめる"), React.createElement("button", {
+            onClick: () => {
+              useDyeItem(masu.id, dyePreviewColors);
+              closeDyePicker();
+            },
+            disabled: noChange,
+            className: `flex-1 min-h-[44px] rounded-xl font-black text-xs ${noChange ? 'bg-slate-800 text-slate-600' : 'bg-fuchsia-600 text-white'}`
+          }, "この色に染める"))
+        });
+      }
       return React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",
         style: {

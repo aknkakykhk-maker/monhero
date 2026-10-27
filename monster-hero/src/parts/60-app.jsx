@@ -20830,6 +20830,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const regionLabels = ['①','②','③'];
           const noChange = Array.from({length:regionCount},(_,i)=>(dyePreviewColors[i]||null)===(curColors[i]||null)).every(Boolean);
           const hasAnyColor = dyePreviewColors.some(Boolean);
+          // 【試作・この枝だけ】染色の画面の改良案 A〜D
+          const dyeProto = (()=>{ try { return window.localStorage.getItem('proto_dye_layout'); } catch { return null; } })();
+          if (['A','B','C','D'].includes(dyeProto)) {
+            const onDyeChange=(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;});
+            const onDyeCustom=(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});};
+            return <DyeProtoLayout layout={dyeProto} baseId={masu.baseId} src={base.imgUrl||base.iconUrl} name={masu.name} colors={dyePreviewColors}
+              onChange={onDyeChange} onCustom={onDyeCustom} title={`${masu.name}を染める`} onClose={closeDyePicker}
+              footer={<div className="flex gap-2 shrink-0"><button onClick={closeDyePicker} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">やめる</button>
+                <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColors); closeDyePicker(); }} disabled={noChange} className={`flex-1 min-h-[44px] rounded-xl font-black text-xs ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white'}`}>この色に染める</button></div>}/>;
+          }
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label={`${masu.name}の染色`}>
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-3 shadow-2xl max-h-full overflow-hidden">
