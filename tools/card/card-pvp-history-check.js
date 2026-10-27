@@ -9,6 +9,7 @@
 //   ③ 30試合まで・同じ試合は上書き・新しい試合が先頭
 //   ④ 強さの点数の増減(+16・-14・±0)と、同じ札のまとめ
 //   ⑤ 日時は日本の時刻
+//   ⑥ 書けないときの守り: いっぱいなら古い試合から減らして書く・ゲーム全体の保存(storeSet)は使わない・まったく入らなければあきらめる
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const src = fs.readFileSync(path.join(GAME, 'src/parts/92-card-pvp-history.jsx'), 'utf8').split('// ---- 保存(')[0];
@@ -63,5 +64,36 @@ check('④ 50枚の合計は崩れない', E.cardPvpDeckGroups(foeDeck.cards).re
 // ⑤
 check('⑤ 日時は日本の時刻', E.cardPvpHistoryWhen(Date.UTC(2026, 9, 26, 15, 5)) === '10/27 00:05', E.cardPvpHistoryWhen(Date.UTC(2026, 9, 26, 15, 5)));
 
-if (failed) { console.log(`\nNG: ${failed} 件`); process.exit(1); }
-console.log('\nすべて OK');
+// ⑥ 書けないときの守り(保存の見回り 2026-10-27): localStorage がいっぱいなら古い試合から減らして書く・ゲーム全体の保存(storeSet)は使わない
+(async () => {
+  const full = fs.readFileSync(path.join(GAME, 'src/parts/92-card-pvp-history.jsx'), 'utf8');
+  const save = full.slice(full.indexOf('// ---- 保存('), full.indexOf('// ---- 強さの点数の増減'));
+  const mem = {};
+  let limit = 1e9, storeSetCalls = 0;
+  const ls = {
+    setItem: (k, v) => { const used = Object.entries(mem).filter(([x]) => x !== k).reduce((a, [, x]) => a + x.length, 0); if (used + String(v).length > limit) { const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; } mem[k] = String(v); },
+    getItem: (k) => (k in mem ? mem[k] : null), removeItem: (k) => { delete mem[k]; },
+  };
+  const c2 = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Date, window: { localStorage: ls },
+    storeGet: async (k, d) => (k in mem ? JSON.parse(mem[k]) : d), storeSet: async () => { storeSetCalls += 1; return false; },
+    hasWinStorage: () => false, isStorageWriteBlocked: () => false });
+  vm.runInContext(`${src}\n${save}\n;this.S = { cardPvpHistoryWrite, cardPvpHistoryAdd, CARD_PVP_HISTORY_ROOM };`, c2);
+  const S = c2.S;
+  const one = (i) => ({ ...ok, match: `m${String(i).padStart(8, '0')}`, at: i });
+  let got = await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(1)));
+  check('⑥ 空きがあれば、そのまま書ける(ゲーム全体の保存は使わない)', got && got.length === 1 && storeSetCalls === 0 && JSON.parse(mem.mh_card_pvp_history_v1).length === 1);
+  for (let i = 2; i <= 10; i++) await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(i)));
+  const per = mem.mh_card_pvp_history_v1.length / 10;
+  // 残す空き(128KB)を入れて、6試合ぶんしか入らない大きさにする
+  limit = S.CARD_PVP_HISTORY_ROOM + Math.floor(per * 6.5);
+  got = await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(11)));
+  const saved = JSON.parse(mem.mh_card_pvp_history_v1);
+  check('⑥ いっぱいなら、古い試合から減らして書く(いちばん新しい試合は残る)', got && saved.length >= 1 && saved.length <= 6 && saved[0].match === 'm00000011', `${saved.length}試合・先頭 ${saved[0] && saved[0].match}`);
+  check('⑥ いっぱいでも、ゲーム全体の保存(storeSet)は呼ばない', storeSetCalls === 0);
+  limit = 10;
+  got = await S.cardPvpHistoryWrite((l) => S.cardPvpHistoryAdd(l, one(12)));
+  check('⑥ まったく入らないときは、あきらめて落ちない', got === null);
+  if (failed) { console.log(`\nNG: ${failed} 件`); process.exit(1); }
+  console.log('\nすべて OK');
+})();
+
