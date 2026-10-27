@@ -3210,6 +3210,28 @@ const createAnimationStyle = () => {
       [data-story-sheet] [data-story-buttons] { margin-top: .5rem; }
       [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
     }
+    /* お話の真ん中に出すモンスター(2026-10-27「推しに会える夜」)。縦の画面は上のステージ(top は 60-app.jsx で決める)と下の窓のあいだ。
+       大きさは置き場の高さと画面の幅の小さいほうに合わせた正方形(待機アニメは正方形の箱で軸を合わせる) */
+    [data-story-monsters] { position: absolute; left: 0; right: 0; bottom: calc(var(--story-sheet-h, 50vh) + 18px); z-index: 2; display: flex; align-items: flex-end; justify-content: center; gap: 4%; padding: 0 4%; }
+    /* いちばん大きくなる「前に出る」(1.14倍)でも置き場からはみ出さないよう、ふだんの大きさは置き場の 1/1.14。大きくなるときは足元を軸に上へ伸びる */
+    [data-story-monster] { position: relative; display: block; height: min(calc(100% / 1.14), 37vw, 210px); aspect-ratio: 1 / 1; transform-origin: 50% 100%; }
+    [data-story-pose="in"] { animation: storyMonIn .7s ease-out both; }
+    [data-story-pose="back"] { animation: storyMonBack 1s ease-out both; }
+    [data-story-pose="front"] { animation: storyMonFront .5s ease-out both; }
+    [data-story-pose="approach"] { animation: storyMonApproach .8s ease-out both; }
+    [data-story-pose="hop"] { animation: storyMonHop 1.1s ease-out both; }
+    @keyframes storyMonIn { 0% { opacity: 0; transform: translateY(14px) scale(.85); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyMonBack { 0% { transform: none; } 30% { transform: translateY(-8%) scale(.86); } 45% { transform: translate(-4%, -8%) scale(.86); } 60% { transform: translate(4%, -8%) scale(.86); } 75% { transform: translate(-2%, -8%) scale(.86); } 100% { transform: translateY(-8%) scale(.86); } }
+    @keyframes storyMonFront { 0% { transform: none; } 100% { transform: scale(1.14); } }
+    /* 寄るのは足元のすき間(18px)の中まで。大きさの上限 210px の 7% ≒ 15px */
+    @keyframes storyMonApproach { 0% { transform: none; } 100% { transform: translateY(7%) scale(1.06); } }
+    @keyframes storyMonHop { 0%, 100% { transform: none; } 18% { transform: translateY(-16%); } 36% { transform: none; } 56% { transform: translateY(-10%); } 74% { transform: none; } }
+    /* 横の低い画面は、窓(幅 28rem)の左右の空きに小さく出す。窓・顔の列・ボタンには重ねない */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
+      [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
+    }
+    @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
@@ -4138,6 +4160,12 @@ const createAnimationStyle = () => {
       .mh-phase-card-nums { font-size: 9px !important; }
       /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
       .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+    }
+    /* 幅も狭い(320 など)と1枚が66px前後になり、名前が「走り/込み」「ドミノ/倒し」と語の途中で折れた。
+       余白を詰めて名前を1行に収める(2026-10-27 ジン・WAVE の合間の見回り) */
+    @container (max-height: 560px) and (max-width: 340px) {
+      .mh-phase-card { padding: 6px 5px !important; }
+      .mh-phase-card-name { font-size: 11px !important; white-space: nowrap; letter-spacing: -0.03em; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
