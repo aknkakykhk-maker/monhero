@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db5d3f89479cb57d
+// source-sha256: 07d40057ddf6d1a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112261,13 +112261,13 @@ function MonsterHeroGame() {
     }
   };
   const exchangeRhythmEventPoints = async (offer, quantity = 1) => {
-    if (offer?.available === false) return {
-      ok: false,
-      reason: 'soon'
-    };
     if (marketPurchaseProcessingRef.current) return {
       ok: false,
       reason: 'busy'
+    };
+    if (offer?.available === false) return {
+      ok: false,
+      reason: 'soon'
     };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -112596,13 +112596,13 @@ function MonsterHeroGame() {
     }
   };
   const exchangeCardPoints = async offer => {
-    if (offer?.available === false) return {
-      ok: false,
-      reason: 'soon'
-    };
     if (marketPurchaseProcessingRef.current) return {
       ok: false,
       reason: 'busy'
+    };
+    if (offer?.available === false) return {
+      ok: false,
+      reason: 'soon'
     };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
