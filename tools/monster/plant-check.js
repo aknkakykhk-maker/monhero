@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// プレイヤーモンスター全28種(2026-09-29 ユグドラシル・メルホイップ、2026-10-05 ゴースト・スプーキー、2026-10-08 メロディー・クロミー、2026-10-23 イルミネ・ドリーミィを足した)と、初期解放8種・図鑑説明がそろっているか。
+// プレイヤーモンスター全30種(2026-09-29 ユグドラシル・メルホイップ、2026-10-05 ゴースト・スプーキー、2026-10-08 メロディー・クロミー、2026-10-23 イルミネ・ドリーミィ、2026-10-27 キュービ・オリヒメを足した)と、初期解放8種・図鑑説明がそろっているか。
 'use strict';
 
 const fs = require('fs');
@@ -22,7 +22,7 @@ const plant = monsters.Plant;
 const oboro = monsters.Oboro;
 const checks = [
   ['Plantがプレイヤーモンスターに存在', plant?.id === 'Plant' && plant.name === 'プラント'],
-  ['プレイヤーモンスターは全28種', Object.keys(monsters).length === 28],
+  ['プレイヤーモンスターは全30種', Object.keys(monsters).length === 30],
   ['初期解放は8種を維持', starters.length === 8],
   ['全種に図鑑説明が存在', Object.keys(monsters).every(id => typeof dexDescriptions[id] === 'string' && dexDescriptions[id].trim())],
   ['Plant図鑑説明は指定文どおり', dexDescriptions.Plant === '非力だが多彩な攻撃手段を持っている\nほかの地域と比べると、IMa地方のプラントは弱いと言われているようだ'],

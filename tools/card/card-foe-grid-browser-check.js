@@ -5,7 +5,7 @@
 //   7人(ソラシドの印が立ったとき)は縦4列(4人＋3人)・横7列。ソラシドは7番目で、いまの6人の並びは変えない。
 //   6人まで(印が立つ前)は、いまの縦3列・横6列のまま。
 //   助手の一覧(ASSISTANTS)にソラシドがいないときは、読み込んだ data/assistants.js の後ろに仮のソラシド(顔はみゅあの絵)を足し、
-//   印(RELEASE_FLAGS.assistantSorashido)は配信する JS の中で書き換えて立てる。ファイルは書き換えない
+//   印(RELEASE_FLAGS.assistantSorashido)は配信する JS の中で回ごとに偽・真に書き換える(公開のあとも両方を見る)。ファイルは書き換えない
 //   ① 印が偽: 6人・縦3列・横6列。ソラシドの札が無い
 //   ② 印が真: 7人・縦4列・横7列。はじめの6人の並びは印が偽のときと同じで、7番目がソラシド
 //   ③ どちらも 320×568・390×844・568×320・844×390 で、名前と顔が札からはみ出さず、札が画面の横幅に収まる
@@ -53,14 +53,13 @@ const FAKE = "\n;if (!ASSISTANTS.some((a) => a.id === 'sorashido')) ASSISTANTS.p
         const body = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'assistants.js'), 'utf8');
         await r.fulfill({ status: 200, contentType: 'text/javascript', body: body + FAKE });
       });
-      if (on) {
-        await ctx.route(/game-system\.compiled\.js/, async (r) => {
-          const body = fs.readFileSync(path.join(root, 'monster-hero', 'game-system.compiled.js'), 'utf8');
-          const next = body.replace(/assistantSorashido:\s*false/, 'assistantSorashido: true');
-          if (next === body) check(`${label}: 配信する JS の中で印を立てられる`, false);
-          await r.fulfill({ status: 200, contentType: 'text/javascript', body: next });
-        });
-      }
+      // 印は、ファイルの値(公開の前は false・公開のあとは true)にかかわらず、配信する JS の中で回ごとに決める(2026-10-27 公開のあとも両方を確かめるため)
+      await ctx.route(/game-system\.compiled\.js/, async (r) => {
+        const body = fs.readFileSync(path.join(root, 'monster-hero', 'game-system.compiled.js'), 'utf8');
+        const re = /assistantSorashido:\s*(?:true|false)/;
+        if (!re.test(body)) check(`${label}: 配信する JS の中で印を決められる`, false);
+        await r.fulfill({ status: 200, contentType: 'text/javascript', body: body.replace(re, `assistantSorashido: ${on}`) });
+      });
       await ctx.addInitScript(() => {
         if (sessionStorage.getItem('__seeded')) return;
         sessionStorage.setItem('__seeded', '1');

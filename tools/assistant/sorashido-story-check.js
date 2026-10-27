@@ -27,7 +27,7 @@ const entry = EVENT_REPLAYS.find((ev) => ev.id === 'sorashido_join_2026_10_27');
 check('回想に登録されている(公開の印で出し入れ・助手のお話のまとまり)', !!entry && entry.releaseFlag === 'assistantSorashido' && entry.group === 'assistant'
   && entry.unlockedKey === 'sorashidoJoinSeen' && entry.script === STORY, entry ? entry.title : 'なし');
 check('ゲーム側のお話の id がデータと同じ', rel.includes("const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';"));
-check('公開の印はまだ偽のまま(社長が「公開」と言うまで立てない)', /assistantSorashido: false,/.test(rel) && core.includes('get assistantSorashido()'));
+check('公開の印が立っている(2026-10-27 社長が公開を決めた)', /assistantSorashido: true,/.test(rel) && core.includes('get assistantSorashido()'));
 check('見たかどうかは既存の「見終えたお話の id」で持つ(新しい保存キーを作らない)',
   /RHYTHM_EVENT_STORY_IDS = \[[^\]]*SORASHIDO_JOIN_STORY_ID[,\]]/.test(app)
   && app.includes('sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)')

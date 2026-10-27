@@ -18,9 +18,8 @@ const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
-// ソラシド(2026-10-27)。顔の絵は社長があとで送る。届くまでは字のアイコン(公開の印 assistantSorashido が偽のあいだは出ない)。
-//   届いたら images/assistant/face/sorashido_happy.PNG にする
-const SORASHIDO_FACE_ICON = "🤖";
+// ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
+const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=27d67b71522c";
 // スネグーラチカの高解像度の立ち絵。顔アイコン(make-face-icons.js)の元絵で、覚醒のほうはマーケットのアイコン商品で使う。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
@@ -513,10 +512,10 @@ const BREEDER_MARKET_ITEMS = [
   // 同じ日のユーザー指示「公開して」で再公開し、アイコン2種の available:false をまた外した(ダイヤの円盤石は近日追加のまま)
   { id:'melody_icon', name:"メロディーのアイコン", type:'icon', icon:MELODY_FACE_ICON, cost:1 },
   { id:'melody_disc_icon', name:"メロディーの円盤石アイコン", type:'icon', icon:MELODY_DISC_ICON, cost:1 },
-  { id:'Melody', name:"メロディーの円盤石", type:'disc', icon:MELODY_DISC_ICON, cost:150000, available:false },
+  { id:'Melody', name:"メロディーの円盤石", type:'disc', icon:MELODY_DISC_ICON, cost:150000 }, // キュービ・オリヒメの公開と同時にダイヤショップへ(2026-10-27 社長「一緒に出す」。150,000ダイヤ)
   { id:'kuromy_icon', name:"クロミーのアイコン", type:'icon', icon:KUROMY_FACE_ICON, cost:1 },
   { id:'kuromy_disc_icon', name:"クロミーの円盤石アイコン", type:'icon', icon:KUROMY_DISC_ICON, cost:1 },
-  { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000, available:false },
+  { id:'Kuromy', name:"クロミーの円盤石", type:'disc', icon:KUROMY_DISC_ICON, cost:150000 }, // キュービ・オリヒメの公開と同時にダイヤショップへ(2026-10-27 社長「一緒に出す」。150,000ダイヤ)
   // イルミネ(イルミネ×イルミネ)とドリーミィ(イルミネ×ニャー)。
   // 2026-10-22 社長「先にモンスター実装予告をいつもの出したい」で、メロディー・クロミーと同じく6件とも available:false(「近日追加」)で並べた。
   // 値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。
@@ -530,11 +529,13 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Dreamy', name:"ドリーミィの円盤石", type:'disc', icon:DREAMY_DISC_ICON, cost:150000, available:false },
   // キュービ・オリヒメ(2026-10-27 社長「キュービの円盤石を近日追加で並べる」)。予告中なので6件とも available:false(「近日追加」)。
   // 値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。ビートP交換所・MFバトルカードのショップにも近日追加で並ぶ(data/rhythm-event.js)
-  { id:'kyubi_icon', name:"キュービのアイコン", type:'icon', icon:KYUBI_FACE_ICON, cost:1, available:false },
-  { id:'kyubi_disc_icon', name:"キュービの円盤石アイコン", type:'icon', icon:KYUBI_DISC_ICON, cost:1, available:false },
+  // キュービ・オリヒメはソラシドのお話「推しに会える夜」と同時に公開する(2026-10-27 社長)。お話を見たら顔アイコン・円盤石アイコンが並ぶ。
+  //   円盤石(ダイヤ)はイルミネ・ドリーミィと同じく、お話を見たあとも近日追加のまま(先にビートP交換所で 1,500P。rhythm-event.js)
+  { id:'kyubi_icon', name:"キュービのアイコン", type:'icon', icon:KYUBI_FACE_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
+  { id:'kyubi_disc_icon', name:"キュービの円盤石アイコン", type:'icon', icon:KYUBI_DISC_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
   { id:'Kyubi', name:"キュービの円盤石", type:'disc', icon:KYUBI_DISC_ICON, cost:150000, available:false },
-  { id:'orihime_icon', name:"オリヒメのアイコン", type:'icon', icon:ORIHIME_FACE_ICON, cost:1, available:false },
-  { id:'orihime_disc_icon', name:"オリヒメの円盤石アイコン", type:'icon', icon:ORIHIME_DISC_ICON, cost:1, available:false },
+  { id:'orihime_icon', name:"オリヒメのアイコン", type:'icon', icon:ORIHIME_FACE_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
+  { id:'orihime_disc_icon', name:"オリヒメの円盤石アイコン", type:'icon', icon:ORIHIME_DISC_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
   { id:'Orihime', name:"オリヒメの円盤石", type:'disc', icon:ORIHIME_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
