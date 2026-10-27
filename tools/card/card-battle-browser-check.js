@@ -337,6 +337,15 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           const name = el.closest('[data-card-turn-banner]') ? '番の帯' : el.closest('[data-card-big]') ? '大きいカードの文' : el.closest('[data-card-turn-summary]') ? 'まとめ' : el.closest('[data-card-log-sheet]') ? '記録の一覧' : el.closest('[data-card-action]') ? '技の帯の札' : 'ほか';
           seen.push(name);
           const scroller = el.closest('.overflow-y-auto');
+          // 番の帯(2026-10-26 案A)は横いっぱいの帯が左から流れて右へ抜ける動きなので、写りの箱はずっと横へずれている。
+          //   動かない外の枠(inset-0)が画面の中か、名前の字が帯の幅に入るかを、動きを除いた並びの箱で測る
+          const sweep = el.closest('[data-card-turn-banner]');
+          if (sweep) {
+            const o = sweep.getBoundingClientRect(); const nm = el.querySelector('[data-card-turn-name]');
+            if (o.left < -1 || o.right > W + 1 || o.top < -1 || o.bottom > H + 1) out.push(`${name}が画面の外`);
+            if (nm && (nm.scrollWidth > nm.clientWidth + 1 || nm.offsetWidth > el.clientWidth + 1)) out.push(`${name}の字が横に切れる(「${nm.textContent.slice(0, 12)}」)`);
+            return;
+          }
           if (!scroller && (b.left < -1 || b.right > W + 1 || b.top < -1 || b.bottom > H + 1)) out.push(`${name}が画面の外`);
           if (el.scrollWidth > el.clientWidth + 1) out.push(`${name}の字が横に切れる(「${el.textContent.slice(0, 12)}」)`);
         });
