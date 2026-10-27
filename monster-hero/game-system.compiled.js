@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5a174978ef1e8fa
+// source-sha256: e35b4e5873274124
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93835,17 +93835,17 @@ const CardBattleBoard = ({
   const [, setBoardFitTick] = useState(0);
   useEffect(() => {
     const b = boardRef.current;
-    if (!replay || !b) return undefined;
+    if (!(replay || watch) || !b) return undefined;
     const on = e => {
       if (e.target && e.target.tagName === 'IMG') setBoardFitTick(t => t + 1);
     };
     b.addEventListener('load', on, true);
     return () => b.removeEventListener('load', on, true);
-  }, [!!replay]);
+  }, [!!replay, !!watch]);
   React.useLayoutEffect(() => {
     const b = boardRef.current;
     const f = b && b.querySelector('[data-card-footer]');
-    const fitMax = replay ? 4 : 2;
+    const fitMax = replay || watch ? 4 : 2;
     if (!f || boardFit >= fitMax) return;
     if (f.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5) setBoardFit(x => Math.min(fitMax, x + 1));
   });
@@ -94467,7 +94467,7 @@ const CardBattleBoard = ({
     key: i,
     src: CARD_BACK_IMG(),
     alt: "",
-    className: `${tiny ? 'h-[40px] w-[28px]' : 'h-[56px] w-[40px]'} rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]`
+    className: `${tiny || boardFit >= 2 ? boardFit >= 3 ? 'h-[28px] w-[20px]' : 'h-[40px] w-[28px]' : 'h-[56px] w-[40px]'} rounded-[3px] shadow-[0_0_0_1px_rgba(255,255,255,.35)]`
   }))), React.createElement("span", {
     className: "text-[11px] font-bold text-slate-300"
   }, "手札 ", me.hand.length, "枚")) : React.createElement(React.Fragment, null, React.createElement("div", {
