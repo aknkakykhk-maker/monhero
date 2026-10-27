@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "bb5ab4e38416",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120451797,"count":740},"card":{"bytes":32186349,"count":934},"all":{"bytes":260025592,"count":1767},"core":{"bytes":14607400,"count":22}},
+  "id": "d5cf1505e1e8",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":120451797,"count":740},"card":{"bytes":32186349,"count":934},"all":{"bytes":260025592,"count":1767},"core":{"bytes":14613074,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -1772,7 +1772,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"85a756b78b36","size":259690,"pack":"core"},
+    "tailwind.css": {"v":"839e22a2f383","size":259690,"pack":"core"},
     "data/images/images-ally.js": {"v":"339d35b4bd5f","size":59425,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"02429b21b01b","size":60450,"pack":"core"},
@@ -1785,12 +1785,12 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"a36e573b23c1","size":76742,"pack":"core"},
-    "data/changelog.js": {"v":"f854d899ea69","size":1484209,"pack":"core"},
-    "data/help.js": {"v":"3826ba2fac49","size":652528,"pack":"core"},
+    "data/changelog.js": {"v":"aa7a5f6c6f03","size":1485113,"pack":"core"},
+    "data/help.js": {"v":"367413949034","size":652787,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"2963326622c9","size":910370,"pack":"core"},
     "data/card-battle-cards.js": {"v":"a22bbee23b63","size":112716,"pack":"core"},
-    "game-system.compiled.js": {"v":"c0b1553d3a12","size":6744462,"pack":"core"}
+    "game-system.compiled.js": {"v":"4cd5b477dd78","size":6748973,"pack":"core"}
   }
 }
