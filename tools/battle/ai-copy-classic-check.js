@@ -3,7 +3,7 @@
 //   node tools/battle/ai-copy-classic-check.js
 //
 // 見ること:
-//   ・強さの元は「元の子1体のぶん」: 勇者モンは基礎、供モンは合流ボーナス。育成ぶんはその割合で分ける
+//   ・強さの元は「元の子1体の基礎の値」(勇者モンも供モンも)。育成ぶんは、その子がパーティへ足したぶんの割合で分けて足す
 //   ・共通の summonAiCopy(mode:'classic')へ渡すと、ライフを持たないコピーになる(パーティのライフを使う)
 //   ・コピーの攻撃はちからの比で縮む / 選ぶ点は 固有技 > 攻撃 > 強める > 守り・回復
 //   ・ガッツは使えば減り、ターンの終わりに上限まで戻る(上限を超えない)
@@ -34,11 +34,13 @@ const slots = [null, hero, ally, null];
 
 // ---- 強さの元 ----
 const plain = s.classicAiCopySrc({ slots, srcSlot: 2, heroId: 'Golem', party: { atk: 250, def: 125, maxGuts: 120 } });
-check('育成なし: 供モンは合流ボーナスのぶんがそのまま', plain.atk === 50 && plain.def === 25 && plain.maxGuts === 20, JSON.stringify(plain));
+check('育成なし: 供モンも基礎の値がそのまま', plain.atk === 140 && plain.def === 140 && plain.maxGuts === 140, JSON.stringify(plain));
 const heroSrc = s.classicAiCopySrc({ slots, srcSlot: 1, heroId: 'Golem', party: { atk: 250, def: 125, maxGuts: 120 } });
 check('育成なし: 勇者モンは基礎の値(合流ボーナスは見ない)', heroSrc.atk === 200 && heroSrc.def === 100 && heroSrc.maxGuts === 100, JSON.stringify(heroSrc));
 const grown = s.classicAiCopySrc({ slots, srcSlot: 2, heroId: 'Golem', party: { atk: 500, def: 250, maxGuts: 240 } });
-check('育成したぶんは、その子のぶんの割合で分ける', grown.atk === 100 && grown.def === 50 && grown.maxGuts === 40, JSON.stringify(grown));
+check('育成したぶんは、その子がパーティへ足したぶんの割合で足す', grown.atk === 190 && grown.def === 165 && grown.maxGuts === 160, JSON.stringify(grown));
+const heroGrown = s.classicAiCopySrc({ slots, srcSlot: 1, heroId: 'Golem', party: { atk: 500, def: 250, maxGuts: 240 } });
+check('勇者モンも同じ(基礎+育成ぶんの割合)', heroGrown.atk === 400 && heroGrown.def === 200 && heroGrown.maxGuts === 200, JSON.stringify(heroGrown));
 const empty = s.classicAiCopySrc({ slots: [null, null, null, null], srcSlot: 0, heroId: null, party: { atk: 100 } });
 check('空の枠・壊れた値でも 0 で返す', empty.atk === 0 && empty.def === 0 && empty.maxGuts === 0);
 
