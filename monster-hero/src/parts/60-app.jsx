@@ -1014,6 +1014,7 @@ function MonsterHeroGame() {
   resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
   resetKyubi(); // 九尾四相(相・煉獄・陽炎)はランのあいだ持つ
   resetOrihime(); // 天河の契り(相方・逢瀬)もランのあいだ持つ
+  resetReikon(); // 霊魂(キュービ・オリヒメの固有技)の残り
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -1415,6 +1416,22 @@ function MonsterHeroGame() {
       });
     });
     return [{ slots: rest, damage }, ...parts];
+  };
+  // ★固有技の効果「霊魂」(キュービ・オリヒメ共通。2026-10-27 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の REIKON_*・*Reikon*。
+  //   使った次のターンから3ターン、カードの消費ガッツ×0.7(5つの遊びは味方のカード全部・タクティクスは使った子のカードだけ)と、
+  //   味方全員の回避率+10%(どの敵の攻撃にも)。キーはトリックスタートと同じ。片付けは resetTacticsJoinCatchUp
+  const reikonRef = useRef({});
+  const [reikonView, setReikonView] = useState({});
+  const writeReikonKey = (key, v) => { if (!key) return; const next = { ...reikonRef.current, [key]: reikonOf(v) }; reikonRef.current = next; setReikonView(next); };
+  const resetReikon = () => { reikonRef.current = {}; setReikonView({}); };
+  const reikonGutsMultAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? reikonGutsMult(reikonRef.current[key]) : 1; };
+  // 味方全員の回避率に足す量(%)。だれかの霊魂が効いていれば足す(重ならない)
+  const reikonEvasionNow = () => Object.values(reikonRef.current).reduce((most, v) => Math.max(most, reikonEvasionUp(v)), 0);
+  const tickReikonAll = () => {
+    const entries = Object.entries(reikonRef.current);
+    if (!entries.length) return;
+    const next = Object.fromEntries(entries.map(([k, v]) => [k, tickReikon(v)]).filter(([, v]) => v.wait > 0 || v.turns > 0));
+    reikonRef.current = next; setReikonView(next);
   };
   // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
   const tickKyubiKagero = () => {
@@ -6551,6 +6568,8 @@ function MonsterHeroGame() {
       ownedAssistantCostumesRef.current = loadedCostumes;
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
+      // 解放が要る服(みゅあの MASTER に勝つと並ぶ服など)。新しいキーと、カードの記録2つ(読むだけ)から起こす(2026-10-27)
+      setAssistantCostumeUnlockedNow(resolveUnlockedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, [], false), await storeGet(CARD_RECORD_DETAIL_KEY, null, false), await storeGet(CARD_SAVE_KEYS.record, null, false)));
       setRhythmClearTotal(await loadRhythmClearTotal());
       // 大王が倒された印があれば、マーケットを開く前から鍵を外しておく(無ければマーケットに入ったときに確かめる)
       if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
@@ -10438,6 +10457,8 @@ function MonsterHeroGame() {
     if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts'))
       && ['atk','range_atk','unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0));
+    // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ消費ガッツ×0.7(5つの遊びはパーティ、タクティクスは使った子の枠)
+    cost = Math.floor(cost * reikonGutsMultAt(slotIdx));
     if (cost>0 && (getTurnBuff('pandoraResonanceTurns',0)>0
       || tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns')>0)) cost=Math.floor(cost*0.5);
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
@@ -12855,7 +12876,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : (defenseSlot!=null ? (tacticsUnitsRef.current[defenseSlot]?.id || null) : null);
         // ★影潜(イルミネ・ドリーミィ): 受ける子が持ち主なら、楔1つごとに回避率+15%。キーは既存5モード 'party'・タクティクスは受ける子の枠
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : (defenseSlot!=null ? String(defenseSlot) : null);
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
+        // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ、味方全員の回避率+10%。楔の回避と同じ値に足して、同じ表へ入れる
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
         const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion:soulBattleParty.evasion,
           soulReflect:soulBattleParty.reflect,
@@ -13281,6 +13303,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (timeStopSlot==null) tickKyubiKagero(); // ★陽炎ノ相(キュービ)の完全回避の待ちも1つ進める
     if (timeStopSlot==null) settleOrihimeOuse(); // ★天河の契り(オリヒメ): 2体が同じ種類の動きをしたら逢瀬+1
     if (timeStopSlot==null) tickOrihimeEx(); // ★星合の刻・焦がれ待つ天ノ河(オリヒメ)の残りを1つ減らす
+    if (timeStopSlot==null) tickReikonAll(); // ★霊魂(キュービ・オリヒメの固有技)の残りを1つ減らす
     // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
     // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
     {
@@ -14195,6 +14218,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+40%(楔1つごとに+40%)。数は使ったときの楔(増える前)で決める
           if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
+          // 霊魂(キュービ・オリヒメ): 次のターンから3ターン、消費ガッツ×0.7・味方全員の回避率+10%。使い直したらかけ直し(重ならない)
+          if(hasReikon(card.monId)){writeReikonKey(trickStartKeyOf(slotIdx),startReikon()); addPopup(`👻 霊魂 次のターンから${REIKON_TURNS}ターン 消費ガッツ−${Math.round((1-REIKON_GUTS_MULT)*100)}%・回避+${REIKON_EVASION_UP}%`,'hero','text-violet-200 text-base font-bold drop-shadow-md',undefined,slotIdx);}
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
           // ★タクティクスは「使った子だけ」に効く(2026-09-22 ユーザー選択)。ステータスが
@@ -21847,15 +21872,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </span>
                 {selected&&<PickerCheckMark/>}
                 <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:'元の服'}</span>
-                {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">マーケットで購入</span>}
+                {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{costume&&!assistantCostumeUnlockedNow(costume)?'解放の条件あり':'マーケットで購入'}</span>}
               </button>
             );
           };
           const lockedCostume=costumeLockedInfo?assistantCostumeById(costumeLockedInfo):null;
           const lockedInfo=lockedCostume&&(
             <div data-assistant-costume-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+              {/* 解放の条件がある服(みゅあの MASTER に勝つと並ぶ服など)は、解放するまで条件を出す(まだマーケットに並んでいないため。2026-10-27) */}
+              {assistantCostumeUnlockedNow(lockedCostume)?<>
               <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はマーケットで買えます</p>
               <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">{assistantCostumeSales(lockedCostume).map(sale=>`${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop==='diamond'?'ダイヤ':'ビートP'}`).join(' ／ ')}</p>
+              </>:<>
+              <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{lockedCostume.name}はまだマーケットに並んでいません</p>
+              <p className="text-[9px] text-slate-300 leading-tight text-center mt-1" style={JA_WRAP_STYLE}>{jaWrap(lockedCostume.unlockHow||'')}</p>
+              </>}
               <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{helpWrap(lockedCostume.desc||'')}</p>
             </div>
           );

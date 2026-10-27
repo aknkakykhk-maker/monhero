@@ -1092,11 +1092,89 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
     Object.freeze({ shop:'diamond', cost:100000, from:ASSISTANT_COSTUME_HALLOWEEN_END_AT }),
   ]),
 });
+// みゅあの新しい衣装(2026-10-27 社長「みゅあの新衣装解放。バトルカードでみゅあのマスターに勝つと解放。他の衣装の同じように売られる。新衣装は準備中」)。
+//   名前「デュエルマスター」・売り場はダイヤショップ 100,000 だけ(社長)。絵を入れて公開(10/27 社長「公開まで進めてかまわない」)。
+// ★解放の条件は unlock に書く: MFバトルカードの助手と対戦で、相手 cardFoe の難易度 cardLevel に1回でも勝つ。
+//   勝つ前はマーケットに出さない(「近日追加」の札も出さない)。解放の覚え方は下の ASSISTANT_COSTUME_UNLOCKED_KEY
+const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;
+// 商品の絵(顔アイコン)。画像のパスはデータの中に直接書かず、定数にして指す(image/data-image-source-check.js)
+const MUA_CARD_MASTER_COSTUME_ART = "images/assistant/card-master/face/myua_happy.PNG?v=e08db4e730ee";
+const muaCardMasterCostume = Object.freeze({
+  id: 'mua_card_master_v1', assistantId: 'mua',
+  name: 'デュエルマスター', desc: 'MFバトルカードの決闘者ふうの衣装。黒い服に白と青のマント、赤い指なし手袋と金の三角のペンダントです。',
+  get released() { return ASSISTANT_COSTUME_MUA_MASTER_RELEASE === true; },
+  // 絵は社長が用意(10/27)。元の絵は tools/art-sources/assistants/mua-card-master/。立ち絵は 768×1024、顔は make-assistant-faces.js で作った
+  // (当て方: 1ほほえむ=normal/2手を差し出して笑う=happy/3ウインク=wink/4驚く=surprise/5照れ=troubled/6怒る=angry/7もじもじ=crying/8指さして笑う=excited)
+  icon: MUA_CARD_MASTER_COSTUME_ART,
+  imageDir: 'images/assistant/card-master',
+  price: Object.freeze({ diamond: 100000 }),
+  unlock: Object.freeze({ cardFoe: 'mua', cardLevel: 'master' }),
+  // 解放する前に、プロフィールの着替えで押したとき出す案内(遊ぶ人向けの文)
+  unlockHow: 'MFバトルカードの「助手と対戦」で、みゅあの MASTER に勝つと、マーケットのダイヤショップに並びます',
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
   halloweenCostume('momosuke', 'momosuke', 'ハロウィンの小悪魔', 'ハロウィン・ナイトの衣装。ふわふわの耳と小さな翼の小悪魔コスプレです。'),
+  muaCardMasterCostume,
 ]);
+// ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
+// 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。
+// 解放しているとみなすのは、次のどちらか:
+//   ① 新しいキーに id が入っている
+//   ② MFバトルカードの記録 mh_card_record_detail_v1 の foes[相手].levels[難易度] が1以上(前から勝っている人のため。このキーは読むだけ)
+//   ③ もとの記録 mh_card_record_v1 の最近の30戦(recent)に { who:相手, level:難易度, outcome:'win' } がある
+//      (②は 10/27 の #4034 からのキーで、それより前の勝ちは最近の30戦から起こした分しか無い。カード部リプレイくんの指摘。読むだけ)
+// 勝った瞬間に覚えるのはカード部の精算(84 の助手と対戦の記録を足す所)。そこで assistantCostumeUnlockEntry を呼んで
+// 保存の1件({ key, before, next })を足し、保存できたら setAssistantCostumeUnlockedNow で今の画面へも伝える。
+const ASSISTANT_COSTUME_UNLOCKED_KEY = 'mh_assistant_costume_unlocked_v1';
+// 壊れた値でも必ず文字列の配列へ落とす(持っている服と同じ直し方)
+const normalizeUnlockedAssistantCostumes = (value) => normalizeOwnedAssistantCostumes(value);
+// その服をカードの記録(mh_card_record_detail_v1 の生の値)だけで解放しているか
+const assistantCostumeUnlockedByCardRecord = (costume, cardRecordDetail) => {
+  const rule = costume && costume.unlock;
+  if (!rule || typeof rule.cardFoe !== 'string' || typeof rule.cardLevel !== 'string') return false;
+  const detail = (cardRecordDetail && typeof cardRecordDetail === 'object' && !Array.isArray(cardRecordDetail)) ? cardRecordDetail : {};
+  const foes = (detail.foes && typeof detail.foes === 'object' && !Array.isArray(detail.foes)) ? detail.foes : {};
+  const foe = foes[rule.cardFoe];
+  const levels = (foe && typeof foe === 'object' && foe.levels && typeof foe.levels === 'object') ? foe.levels : {};
+  const wins = Number(levels[rule.cardLevel]);
+  return Number.isFinite(wins) && wins >= 1;
+};
+// その服を、もとの記録(mh_card_record_v1 の生の値)の最近の30戦だけで解放しているか
+const assistantCostumeUnlockedByCardRecent = (costume, cardRecord) => {
+  const rule = costume && costume.unlock;
+  if (!rule || typeof rule.cardFoe !== 'string' || typeof rule.cardLevel !== 'string') return false;
+  const recent = (cardRecord && typeof cardRecord === 'object' && Array.isArray(cardRecord.recent)) ? cardRecord.recent : [];
+  return recent.some(x => x && typeof x === 'object' && x.who === rule.cardFoe && x.level === rule.cardLevel && x.outcome === 'win');
+};
+// 解放されている服のidの一覧(新しいキーの値と、カードの記録2つから起こしたものを合わせる)
+const resolveUnlockedAssistantCostumes = (storedUnlocked, cardRecordDetail, cardRecord) => {
+  const list = normalizeUnlockedAssistantCostumes(storedUnlocked);
+  ASSISTANT_COSTUMES.forEach(costume => {
+    if (costume && costume.unlock && !list.includes(costume.id)
+      && (assistantCostumeUnlockedByCardRecord(costume, cardRecordDetail) || assistantCostumeUnlockedByCardRecent(costume, cardRecord))) list.push(costume.id);
+  });
+  return list;
+};
+// 助手と対戦で1試合が終わったとき、新しく解放される服のid(勝ち以外・当てはまらない相手や難易度は空)
+const assistantCostumesUnlockedByCardWin = ({ who, level, outcome } = {}) => (outcome === 'win'
+  ? ASSISTANT_COSTUMES.filter(costume => costume && costume.unlock && costume.unlock.cardFoe === who && costume.unlock.cardLevel === level).map(costume => costume.id)
+  : []);
+// カード部が呼ぶ口: 保存の1件 { key, before, next }。足すものが無ければ null(保存しない)。
+//   storedRaw … 新しいキーの今の値(storeGet で読んだまま)。next は足すだけ(前の id は消さない)
+const assistantCostumeUnlockEntry = (storedRaw, { who, level, outcome } = {}) => {
+  const add = assistantCostumesUnlockedByCardWin({ who, level, outcome });
+  const before = normalizeUnlockedAssistantCostumes(storedRaw);
+  const next = normalizeUnlockedAssistantCostumes([...before, ...add]);
+  return next.length === before.length ? null : { key: ASSISTANT_COSTUME_UNLOCKED_KEY, before: storedRaw, next };
+};
+// 画面が描く瞬間に見る「解放した服」。アプリが読み込みで入れ、カードの精算が勝ったあとに入れ直す
+let ASSISTANT_COSTUME_UNLOCKED_NOW = [];
+const setAssistantCostumeUnlockedNow = (list) => { ASSISTANT_COSTUME_UNLOCKED_NOW = normalizeUnlockedAssistantCostumes(list); };
+const addAssistantCostumeUnlockedNow = (ids) => setAssistantCostumeUnlockedNow([...ASSISTANT_COSTUME_UNLOCKED_NOW, ...(Array.isArray(ids) ? ids : [])]);
+// その服を売ってよいか(解放の条件が無い服はいつでも。条件がある服は解放してから)
+const assistantCostumeUnlockedNow = (costume) => !!costume && (!costume.unlock || ASSISTANT_COSTUME_UNLOCKED_NOW.includes(costume.id));
 const ASSISTANT_COSTUME_SHOPS = Object.freeze({
   diamond:   Object.freeze({ label:'ダイヤショップ', currency:'diamond' }),
   beatPoint: Object.freeze({ label:'ビートP交換所', currency:'beatPoint' }),
@@ -1192,6 +1270,7 @@ ASSISTANT_COSTUMES
     // ダイヤで売るのはまだ先(いまの窓に無い)あいだは available:false で「近日追加」の札になり、買えない
     // (買う処理は available:false を断る)。窓が開いた(ハロウィン・ナイト終了)瞬間から、そのまま買える
     BREEDER_MARKET_ITEMS.push({ id:costume.id, name:costume.name, type:'costume', currency:'diamond', cost:assistantCostumeSaleEverCost(costume, 'diamond'), desc:costume.desc || '', assistantId:costume.assistantId, emoji:'👗', icon:costume.icon,
-      get shop() { return costume.released === true ? undefined : false; },
-      get available() { return assistantCostumeSaleIn(costume, 'diamond') ? undefined : false; } });
+      // 解放が要る服(unlock)は、解放するまで並べない(「近日追加」の札も出さない。2026-10-27 社長)
+      get shop() { return costume.released === true && assistantCostumeUnlockedNow(costume) ? undefined : false; },
+      get available() { return assistantCostumeSaleIn(costume, 'diamond') && assistantCostumeUnlockedNow(costume) ? undefined : false; } });
   });
