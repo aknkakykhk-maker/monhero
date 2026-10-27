@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d72bb08a912e612f
+// source-sha256: 2317e66c88e88897
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -12969,6 +12969,7 @@ const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
+const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
@@ -107809,6 +107810,11 @@ function MonsterHeroGame() {
   const [cardPackOpen, setCardPackOpen] = useState(null);
   const rhythmEventStorySeenRef = useRef(null);
   const [rhythmEventStoryPending, setRhythmEventStoryPending] = useState(null);
+  const [storyOneAtATime, setStoryOneAtATime] = useState(false);
+  const storyShownThisHomeRef = useRef(false);
+  useEffect(() => {
+    if (gameState !== 'HOME') storyShownThisHomeRef.current = false;
+  }, [gameState]);
   const [pendingFriendCode, setPendingFriendCode] = useState('');
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -107942,8 +107948,10 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (!rhythmEventStoryPending) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && battleGuideChecked && battleTutorialStep == null && !loginBonusPopup)) return;
+    if (storyOneAtATime && storyShownThisHomeRef.current) return;
     const storyId = rhythmEventStoryPending;
     setRhythmEventStoryPending(null);
+    storyShownThisHomeRef.current = true;
     if (!rhythmEventStoryStartedRef.current.includes(storyId)) {
       rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, storyId];
     }
@@ -107952,7 +107960,7 @@ function MonsterHeroGame() {
       step: 0,
       live: true
     });
-  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup]);
+  }, [rhythmEventStoryPending, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, battleGuideChecked, battleTutorialStep, loginBonusPopup, storyOneAtATime]);
   useEffect(() => {
     if (bootPhase === 'GAME' && battleCardArtOn()) preloadBattleCardArt();
   }, [bootPhase, battleCardArtDebug]);
@@ -109439,6 +109447,14 @@ function MonsterHeroGame() {
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       setNewPlayerCampaignEligible(!everOnboarded);
+      try {
+        let oneAtATime = (await storeGet(STORY_ONE_AT_A_TIME_KEY, false, false)) === true;
+        if (!everOnboarded && !oneAtATime) {
+          await storeSet(STORY_ONE_AT_A_TIME_KEY, true, false);
+          oneAtATime = true;
+        }
+        setStoryOneAtATime(oneAtATime);
+      } catch {}
       setAssistantChosen(!!savedAssistant || wasOnboarded);
       const kikiIntroSeen = await storeGet(KIKI_INTRO_SEEN_KEY, false, false);
       setKikiIntroSeenFlag(kikiIntroSeen === true);
