@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29ac4dd928502fe8
+// source-sha256: 0a00f66f2effe681
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -56738,8 +56738,9 @@ function RhythmSongSelectScreen({
     "aria-hidden": "true",
     className: "shrink-0 text-slate-500 group-open:rotate-180"
   }, "▾")), React.createElement("p", {
-    className: "pb-1"
-  }, "クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。")) : null;
+    className: "pb-1",
+    style: JA_WRAP_STYLE
+  }, jaWrap('クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。'))) : null;
   const selectNoticeShort = useRhythmShortPortrait();
   const selectNoticesOpen = rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView), rhythmPlayedSongCount(rhythmBestRecords), selectNoticeShort);
   const quickRunStartRowVisible = !debugAll && !quickRunProgress && !runStage;
@@ -57206,8 +57207,9 @@ function RhythmNoteDexScreen({
       paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
-    className: "text-[11px] leading-relaxed text-slate-300"
-  }, "ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。"), React.createElement("div", {
+    className: "text-[11px] leading-relaxed text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。')), React.createElement("div", {
     "data-rhythm-note-dex-list": true,
     className: "mt-3 grid gap-2",
     style: {
@@ -57722,8 +57724,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), total.status === 'notReady' && React.createElement("p", {
     "data-rhythm-total-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "総合ランキングはただいま準備中です。もうしばらくお待ちください。"), total.status === 'error' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('総合ランキングはただいま準備中です。もうしばらくお待ちください。')), total.status === 'error' && React.createElement("p", {
     "data-rhythm-total-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
@@ -57733,8 +57736,9 @@ function RhythmRankingScreen({
     className: "mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
   }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲を選ぶ"), !total.self && React.createElement("p", {
     "data-rhythm-total-self-empty": true,
-    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, "まだあなたの記録がありません。1曲でも遊ぶとここに載ります。"), total.entries.length === 0 && React.createElement("p", {
+    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだあなたの記録がありません。1曲でも遊ぶとここに載ります。')), total.entries.length === 0 && React.createElement("p", {
     "data-rhythm-total-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "まだ記録がありません。最初の1件になってみましょう。"), total.entries.length > 0 && React.createElement("ol", {
@@ -57769,8 +57773,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), event.status === 'notReady' && React.createElement("p", {
     "data-rhythm-event-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "週間ランキングはただいま準備中です。もうしばらくお待ちください。"), event.status === 'closed' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('週間ランキングはただいま準備中です。もうしばらくお待ちください。')), event.status === 'closed' && React.createElement("p", {
     "data-rhythm-event-closed": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "いま開催しているイベントはありません。次の開催をお待ちください。"), event.status === 'error' && React.createElement("p", {
@@ -57823,8 +57828,9 @@ function RhythmRankingScreen({
     className: "mb-3"
   }, React.createElement("p", {
     "data-rhythm-event-self-empty": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'))), eventBoard.entries.length === 0 && React.createElement("p", {
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, eventPrev ? 'このイベントの記録はありませんでした。' : eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && React.createElement("ol", {
@@ -63496,11 +63502,11 @@ function ProMonsterGridPicker({
   }, activeTab === 'all' ? 'すべて' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-3"
   }, shownList.map(m => tile(m, 'all-')))), React.createElement("div", {
-    className: "shrink-0 pt-1.5"
+    className: "shrink-0 pt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1"
   }, React.createElement("div", {
     key: focus ? focus.id : 'none',
     "data-pro-pick-detail": true,
-    className: "rounded-2xl border border-white/15 bg-slate-950 p-2"
+    className: "rounded-2xl border border-white/15 bg-slate-950 p-2 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5"
   }, !focus ? React.createElement("div", {
     className: "py-3 text-center text-[10px] font-black text-slate-400"
   }, "モンスターをタップすると、ここに詳しい情報が出ます") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -63534,7 +63540,7 @@ function ProMonsterGridPicker({
     className: "shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95"
   }, detailFolded ? '▲ ひらく' : '▼ たたむ')), !detailFolded && React.createElement(React.Fragment, null, monsterTypeProtoOn() && React.createElement("div", {
     "data-pick-type-row": true,
-    className: "flex"
+    className: `flex${header ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
   }, React.createElement(MonsterTypeBadge, {
     monId: focus.id
   })), React.createElement("div", {
@@ -63569,20 +63575,20 @@ function ProMonsterGridPicker({
   }, label), React.createElement("div", {
     className: `text-[11px] font-black leading-tight rounded ${DIST_APTITUDE_COLOR[apt(focus, i)]}`
   }, apt(focus, i))))), React.createElement("div", {
-    className: "mt-1.5 flex gap-1.5"
+    className: "mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 flex gap-1.5"
   }, React.createElement("button", {
     onClick: () => toggleFav(focus.id),
     "aria-pressed": prefs.fav.includes(focus.id),
     "aria-label": prefs.fav.includes(focus.id) ? 'お気に入りを外す' : 'お気に入りに入れる',
-    className: `shrink-0 w-11 min-h-[40px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
+    className: `shrink-0 w-11 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
   }, "★"), React.createElement("button", {
     onClick: () => onDetail && onDetail(focus),
-    className: "shrink-0 px-3 min-h-[40px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
+    className: "shrink-0 px-3 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
   }, "詳しく"), React.createElement("button", {
     disabled: disabled(focus),
     onClick: () => onSelect(focus),
     "aria-label": confirmAria ? confirmAria(focus) : undefined,
-    className: `flex-1 min-h-[40px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
+    className: `flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
   }, typeof confirmLabel === 'function' ? confirmLabel(focus) : confirmLabel))))));
 }
 function ProPartyPicker({
@@ -63702,7 +63708,7 @@ function ProPartyPicker({
     "data-pro-party": true,
     className: "mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5"
   }, React.createElement("div", {
-    className: "mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200"
+    className: "mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"
   }, React.createElement("span", null, step === 'hero' ? '② 勇者モンをえらぶ' : '① 編成する子をえらぶ'), React.createElement("span", {
     className: "text-[9px] text-slate-400"
   }, filled, " / ", need)), React.createElement("div", {
@@ -63757,7 +63763,7 @@ function ProPartyPicker({
     "data-pro-party-next": true,
     disabled: !full,
     onClick: () => setStep('hero'),
-    className: "mt-1.5 shrink-0 min-h-[44px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+    className: "mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
   }, full ? '次へ(勇者モンをえらぶ)' : `あと${need - filled}体えらんでください`));
 }
 function PickHeroAllyScreen({
@@ -63835,7 +63841,7 @@ function PickHeroAllyScreen({
       },
       className: `absolute inset-0 p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase mh-ph-bg' : ''}`
     }, React.createElement("div", {
-      className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
+      className: "mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"
     }, React.createElement("button", {
       type: "button",
       "aria-label": "戻る",
@@ -63850,7 +63856,7 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
@@ -63862,7 +63868,7 @@ function PickHeroAllyScreen({
       current: "ally",
       nextWave: wave > 0 ? wave + 1 : null
     })), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
-      className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}`
+      className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}${pickMode === 'hero' && !battleTutorial ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(AssistantBubble, {
       key: pickMode,
       scene: pickMode === 'hero' ? 'pickHero' : 'pickAlly',
@@ -63961,7 +63967,7 @@ function PickHeroAllyScreen({
         className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
       }, formatAptPct(cur)));
     })))), pickMode === 'hero' && React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+      className: "shrink-0 w-full max-w-md mx-auto mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1"
     }, !isProMode(runMode) && React.createElement("div", {
       className: "flex gap-1.5"
     }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => React.createElement("button", {
@@ -63971,9 +63977,9 @@ function PickHeroAllyScreen({
         setCurrentPickingMon(null);
       },
       "aria-pressed": heroPickTab === key,
-      className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+      className: `flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
     }, label))), React.createElement("div", {
-      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
+      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${battleTutorial ? '' : ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`
     }, isProMode(runMode) ? 'プロモードはベースモンだけ(育てたマスモンは連れていけません)' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
       className: `flex-1 ${pickMode === 'hero' && isProMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
     }, React.createElement("div", {
@@ -64052,7 +64058,7 @@ function PickHeroAllyScreen({
           });
           if (best !== allyCardIndex) setAllyCardIndex(best);
         } : undefined,
-        className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
+        className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : `grid grid-cols-2 gap-2.5${pickMode === 'hero' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-3 [@media(orientation:landscape)_and_(max-height:520px)]:gap-2' : ''}`,
         style: allyCarousel ? {
           paddingLeft: '18%',
           paddingRight: '18%',
@@ -64107,32 +64113,32 @@ function PickHeroAllyScreen({
           }, React.createElement(Zap, {
             size: 9
           }), " ", m.unique.name), pickMode === 'hero' ? React.createElement("div", {
-            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
+            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-1 [@media(orientation:landscape)_and_(max-height:520px)]:px-0 font-mono",
             style: {
               fontSize: '9px'
             }
           }, React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "ライフ"), React.createElement("span", {
             className: "text-pink-400 font-bold"
           }, m.baseHp)), React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "ちから"), React.createElement("span", {
             className: "text-red-400 font-bold"
           }, m.baseAtk)), React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "丈夫さ"), React.createElement("span", {
             className: "text-emerald-400 font-bold"
           }, m.baseDef)), React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "ガッツ"), React.createElement("span", {
             className: "text-amber-400 font-bold"
           }, m.baseGuts))) : (() => {
@@ -91929,7 +91935,7 @@ const CardBattleBoard = ({
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (st.winner !== null && !tutorial) return React.createElement("div", {
       className: "flex-1 text-center text-[15px] font-black text-amber-200"
-    }, st.winner === CARD_ME ? '勝ち！' : '負け…');
+    }, endFx ? '\u00a0' : st.winner === CARD_ME ? '勝ち！' : '負け…');
     if (tutorial && (st.winner !== null || tutStage.next)) return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
     }, "ドラの説明を読んで「次へ」");
@@ -92007,7 +92013,7 @@ const CardBattleBoard = ({
       })
     }, "攻撃おわり → ガッツへ"));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
@@ -92305,7 +92311,7 @@ const CardBattleBoard = ({
     className: "shrink-0 text-rose-300"
   }, "▸ 見る")), React.createElement("div", {
     "data-card-log": true,
-    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
+    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && (guardAtk ? React.createElement("button", _extends({
     type: "button",
@@ -92574,7 +92580,7 @@ const CardBattleBoard = ({
       fontSize: st.winner === CARD_ME ? 'clamp(64px, 22vw, 96px)' : 'clamp(44px, 15vw, 64px)'
     }
   }, st.winner === CARD_ME ? 'WIN!' : 'LOSE'), React.createElement("span", {
-    className: `relative mt-2 px-4 text-center text-[15px] font-black ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`,
+    className: `relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`,
     style: JA_LABEL_STYLE
   }, st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'), React.createElement("span", {
     className: "absolute bottom-5 text-[12px] font-bold text-white/70"
@@ -98109,6 +98115,25 @@ const CardRecordScreen = ({
     },
     className: `min-h-[40px] rounded-xl border text-[12px] font-black ${tab === t.id ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`
   }, t.label))), React.createElement("div", {
+    "data-card-record-side": true,
+    className: "mb-2 hidden shrink-0 space-y-2 landscape:block"
+  }, onOpenReplays && React.createElement("button", {
+    type: "button",
+    "data-card-replays-open-side": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpenReplays();
+    },
+    className: "mh-button mh-button-secondary flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+  }, React.createElement("span", null, React.createElement("b", {
+    className: "block text-[13px] font-black text-sky-100"
+  }, "▶ 過去の対戦"), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "遊んだ試合を、はじめから見返せます")), React.createElement("span", {
+    className: "text-[18px] text-slate-400"
+  }, "›")), React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`
+  }, cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu'), cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp'), cell('いまの連勝', r.streak.now, '連勝', 'side-now'), cell('最高の連勝', r.streak.best, '連勝', 'side-best'))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
   }, tab === 'all' && React.createElement(React.Fragment, null, onOpenReplays && React.createElement("button", {
     type: "button",
@@ -98117,7 +98142,7 @@ const CardRecordScreen = ({
       Audio_.fgSe.tap();
       onOpenReplays();
     },
-    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left landscape:hidden"
   }, React.createElement("span", null, React.createElement("b", {
     className: "block text-[14px] font-black text-sky-100"
   }, "▶ 過去の対戦"), React.createElement("small", {
@@ -135406,17 +135431,11 @@ function MonsterHeroGame() {
         }
       }, who.name), page.title && React.createElement("span", {
         className: "block text-[11px] font-black text-white mt-0.5",
-        style: {
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word'
-        }
-      }, page.title), React.createElement("span", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(String(page.title))), React.createElement("span", {
         className: "block text-[13px] text-white leading-relaxed mt-1",
-        style: {
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word'
-        }
-      }, String(page.t).replace('{name}', breederName || 'あなた')))), topicRef && React.createElement("button", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(String(page.t).replace('{name}', breederName || 'あなた'))))), topicRef && React.createElement("button", {
         onClick: () => {
           setHelpCatId(page.help.split('/')[0]);
           setHelpTopicId(page.help.split('/')[1]);
