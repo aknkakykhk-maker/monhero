@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f65ae948ee36e9ad
+// source-sha256: 641d3cc5a56c5079
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91577,11 +91577,13 @@ const CardBattleBoard = ({
   const dropTargetsOf = i => {
     const out = {};
     if (mode === 'attack') {
-      const os = attackOpts.filter(o => o.hand[0] === i).concat(attackOpts.filter(o => o.hand[0] !== i && o.hand.includes(i)));
+      const chosen = sel && setChosen && JSON.parse(setChosen).includes(i) ? finalOpts : null;
+      const os = chosen || attackOpts.filter(o => o.hand[0] === i).concat(attackOpts.filter(o => o.hand[0] !== i && o.hand.includes(i)));
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
+        const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
         keys.forEach(k => {
-          if (!out[k] || o.hand.length > out[k].hand.length) out[k] = o;
+          if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
         });
       });
     }
@@ -92303,6 +92305,7 @@ const CardBattleBoard = ({
   }, sets.map(s => React.createElement("button", {
     key: s,
     type: "button",
+    "data-card-set": s,
     onClick: () => setSel({
       ...sel,
       mon: monChosen,
