@@ -10,6 +10,7 @@
 //   ③ ★を付けると保存され、開き直しても付いている。11試合目の★は付かず、案内が出る
 //   ④ 行を押すと見返しが開き、「とじる」で一覧へ戻る。はじまりと1手目の上の帯は「はじまり」・上下の帯の番がそろう・吹き出しは出ない
 //   ⑤ 保存の場所がいっぱいのとき: ほかのセーブ(mh_ のキー)を書き換えず、ゲーム全体の「保存できない」の数も増やさない。
+//      見返しが端末にあるのに読めないときは、書かずに今までの試合と★を残す
 //      古い試合(★は残す)から消して入れ、書いたあとも空きを残す
 //   ⑥ 実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -177,6 +178,22 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     });
     check('⑤ いっぱいでも、ほかのセーブを書き換えず、ゲーム全体の「保存できない」の数も増えない', full.same && full.fails === 0, JSON.stringify(full));
     check('⑤ 古い試合から消して新しい試合を入れ、★の試合は残し、書いたあとも空きを残す', full.saved && full.top === 'tnew' && full.nAfter < full.nBefore + 1 && full.favs === 10 && full.room, JSON.stringify(full));
+    // ⑤-2 端末に見返しがあるのに読めない(形が壊れている)ときは、書かずに false。元の保存はそのまま(2026-10-27 案1)
+    const lost = await page.evaluate(async () => {
+      const good = localStorage.getItem('mh_card_replays_v1');
+      const rec = JSON.parse(good).list[0];
+      localStorage.setItem('mh_card_replays_v1', '{"v":1,"list":[{"id":"t1"');
+      const saved = await cardReplaySave({ ...rec, id: 'tlost', at: Date.parse('2026-10-29T00:00:00+09:00'), fav: false });
+      const kept = localStorage.getItem('mh_card_replays_v1') === '{"v":1,"list":[{"id":"t1"';
+      localStorage.setItem('mh_card_replays_v1', good);
+      const again = await cardReplaySave({ ...rec, id: 'tback', at: Date.parse('2026-10-29T00:00:00+09:00'), fav: false });
+      const box = JSON.parse(localStorage.getItem('mh_card_replays_v1'));
+      localStorage.removeItem('mh_card_replays_v1');
+      const fresh = await cardReplaySave({ ...rec, id: 'tfirst', at: 1, fav: false });
+      return { saved, kept, again, favs: box.list.filter((r) => r.fav).length, n: box.list.length, fresh };
+    });
+    check('⑤ 見返しが端末にあるのに読めないときは、書かずに元の保存を残す/読めれば★ごと残して足す/まだ無ければ書ける',
+      lost.saved === false && lost.kept && lost.again === true && lost.favs === 10 && lost.fresh === true, JSON.stringify(lost));
     check('⑥ 実行時エラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     check('最後まで動く', false, String(e).slice(0, 400));
