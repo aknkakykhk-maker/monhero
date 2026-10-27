@@ -6,8 +6,8 @@
 // 見るもの
 //   ① 対戦の手札を2回続けてタップすると詳しい画面が出て、1回目で選んだ技は選ばれたまま残らない
 //   ② 手札を1回タップすると、今までどおり技が選ばれるだけ(詳しい画面は出ない)
-//   ③ 相手のモンスターを2回続けてタップすると詳しい画面が出る。技を選んで狙える相手を2回タップしても、技は出ない(攻撃しない)
-//   ④ 技を選んで、狙える相手を1回タップすると、今までどおり技が出る
+//   ③ 相手のモンスターを2回続けてタップすると詳しい画面が出る
+//   ④ 技を選んで、狙える相手を1回タップすると、待たずに技が出る(1回目は待たない。2026-10-27 部長ソランドくん)
 //   ⑤ デッキ編成のカードを続けて2回タップすると2枚入る(詳しい画面は出ない。「i」ボタンはデッキくんの card-deck 検査が見る)
 //   ⑥ 押せるカードは touch-action: manipulation(iPhone の Safari がダブルタップで拡大しない)。実行時エラーが無い
 const http = require('http');
@@ -149,16 +149,13 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       if (await u.count()) { await u.click(); await sleep(600); } else break;
     }
     const target = page.locator('[data-card-mon^="1-"].ring-rose-400').first();
+    await target.waitFor({ timeout: 3000 }).catch(() => {}); // 赤い輪は少し遅れて出ることがある
     const discard0 = await page.locator('[data-card-battle]').innerText();
     const hand0 = await page.locator('[data-card-hand-card]').count();
     if (await target.count()) {
-      await doubleTap(target);
-      check('③ 狙える相手を2回続けてタップすると、詳しい画面が出る', await detailOpen());
-      await closeDetail();
-      await sleep(500);
-      check('③ そのとき技は出ない(手札の数が変わらない)', (await page.locator('[data-card-hand-card]').count()) === hand0, `${hand0} → ${await page.locator('[data-card-hand-card]').count()}`);
+      // 1回目のタップは待たずにすぐ効く(2026-10-27 部長ソランドくん)。狙える相手を押すと、その場で技が出る
       await target.click(); await sleep(1500);
-      check('④ 狙える相手を1回タップすると、今までどおり技が出る(手札が減る)', (await page.locator('[data-card-hand-card]').count()) < hand0 || (await page.locator('[data-card-battle]').innerText()) !== discard0);
+      check('③④ 狙える相手を1回タップすると、待たずに技が出る(手札が減る)', (await page.locator('[data-card-hand-card]').count()) < hand0 || (await page.locator('[data-card-battle]').innerText()) !== discard0, `${hand0} → ${await page.locator('[data-card-hand-card]').count()}`);
     } else check('③ 狙える相手が出る', false, '赤い輪の相手が見つからない');
     const opp = page.locator('[data-card-mon^="1-"]').first();
     await doubleTap(opp);

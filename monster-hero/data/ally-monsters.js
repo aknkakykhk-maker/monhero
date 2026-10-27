@@ -38,6 +38,9 @@ const HERO_ATK_NAMES = {
   // ドリーミィはイルミネと同じ名前を混ぜて、人形・ねこ・夢に合う所だけ変えた(社長「無理矢理すぎるからもう少し自然に」)
   Illumine: ["プラズマ","ヴェノムエッジ","シールドバッシュ","ストレート","モーニングスター","アサシンクロウ","アサルトアロー","ブレードダンス","バスターソード"],
   Dreamy: ["プラズマ","ヴェノムエッジ","ドールバッシュ","ストレート","モーニングスター","キャットクロウ","ハートアロー","ドリームダンス","パステルソード"],
+  // キュービ・オリヒメ(2026-10-27・案の段階)。元のゲームの技を、名前のまま強さの順に(社長が案1「元の名前のまま」を選んだ。オリヒメも提灯の技のまま)
+  Kyubi: ["ひっかき","ひのこ","狐火","下駄蹴り","提灯投げ","提灯落とし","火炎車","神光石火","九重神眼"],
+  Orihime: ["ひっかき","ひのこ","狐火","下駄蹴り","提灯投げ","提灯落とし","火炎車","神光石火","九重神眼"],
   // ゴースト(2026-10-05・案の段階)。並びと決めた経緯は docs/spec/GHOST_SKILLS.md
   Ghost:  ["ピコピコハンマー","ソウルビーム","ハトのおとしもの","びっくり","体当たり","カード","すてきステッキ","大パンチ","コンビネーション"],
   // スプーキー: ゴーストと同じ並びで、カード→カード・クラブ、コンビネーション→グリンネーション(オリジナル技)
@@ -130,7 +133,7 @@ const ALL_PLAYER_MONSTERS = {
     baseHp:360, baseGuts:130, baseAtk:115, baseDef:60, plusStats:{hp:120,atk:35,def:15,guts:40}, distAptitude:['B','D','D','A'],
     unique:{ name:"おもちゃの爆弾", icon:DREAMY_ICON, monId:"Dreamy", baseMult:2.6, baseGuts:52, evoLevel:0,
       names:["おもちゃの爆弾","エーテルアイス","アルカナフレア","アルスマグナ","ララバイノクターン","ミラージュクロウ","クリムゾンノヴァ","スウィートドリーム","ドリーミィパレード"],
-      effectDesc:"ドリームペイン：次のターンから3ターン、敵が受けるダメージ+20%。楔1つごとにさらに+20%(楔3つで+80%・6つで+140%)" } },
+      effectDesc:"ドリームペイン：次のターンから3ターン、敵が受けるダメージ+40%。楔1つごとにさらに+40%(楔3つで+160%・6つで+280%)" } },
 };
 
 // 初期から無料で使えるモンスターのid一覧(固定)。
@@ -270,7 +273,15 @@ const UPCOMING_MONSTER_DRAFTS = Object.freeze({
     faceIconUrl:HYBRID_C037_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'monol', sub:'worm' }) }),
   // キュービ・オリヒメ(2026-10-27 社長「新モンスター2体実装」)。能力値・技・特性・タイプ・顔アイコンは社長が決めてから入れる
   Kyubi: Object.freeze({ id:'Kyubi', name:"キュービ", emoji:"🦊", imgUrl:KYUBI_IMG, iconUrl:KYUBI_IMG,
-    faceIconUrl:KYUBI_FACE_ICON, distAptitude:['B','D','B','B'], draft:true, draftAnnounced:true, draftLineage:Object.freeze({ main:'kyubi', sub:'kyubi' }) }),
+    faceIconUrl:KYUBI_FACE_ICON, distAptitude:['B','D','B','B'], draft:true, draftAnnounced:true,
+    // 仮の数値(2026-10-27 社長「仮の数値として入れておく」。あとで変わる前提)。勇者特性・固有技の効果・タイプ・EX・ビートの能力は保留
+    baseHp:420, baseGuts:150, baseAtk:175, baseDef:70, plusStats:{hp:120,atk:40,def:10,guts:45},
+    unique:{ name:"ゆうわく", icon:KYUBI_IMG, monId:"Kyubi", baseMult:2.8, baseGuts:56, evoLevel:0,
+      names:["ゆうわく","なめろう","超狐火","陽炎","神狐蒼火","八嵐天衝","炸裂気泡陣","天河天翔","煉獄九尾陣"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'kyubi' }) }),
   Orihime: Object.freeze({ id:'Orihime', name:"オリヒメ", emoji:"🎐", imgUrl:ORIHIME_IMG, iconUrl:ORIHIME_IMG,
-    faceIconUrl:ORIHIME_FACE_ICON, distAptitude:['B','A','D','A'], draft:true, draftAnnounced:true, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
+    faceIconUrl:ORIHIME_FACE_ICON, distAptitude:['B','A','D','A'], draft:true, draftAnnounced:true,
+    // 仮の数値(2026-10-27 社長「仮の数値として入れておく」。あとで変わる前提)。勇者特性・固有技の効果・タイプ・EX・ビートの能力は保留
+    baseHp:400, baseGuts:140, baseAtk:145, baseDef:75, plusStats:{hp:140,atk:30,def:15,guts:40},
+    unique:{ name:"求愛", icon:ORIHIME_IMG, monId:"Orihime", baseMult:2.6, baseGuts:52, evoLevel:0,
+      names:["求愛","なめろう","超狐火・星","陽炎","神狐蒼火","八嵐天衝","炸裂気泡陣","煉獄九尾陣","天河天翔"] }, draftLineage:Object.freeze({ main:'kyubi', sub:'unknown' }) }),
 });
