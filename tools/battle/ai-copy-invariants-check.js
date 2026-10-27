@@ -7,9 +7,8 @@
 //   ① タクティクスの勝ち負け: コピーが立っていても、盤面(4枠)の全員が倒れたら全滅。コピーのライフは盤面の合計に入らない
 //   ② タクティクスの倒れた数: コピーが倒されても(その場で消える)盤面は1つも変わらず、倒れた数にも入らない
 //   ③ タクティクスの狙い: コピーがいるときの抽選は「枠の番号」か「コピー」だけ。コピーがいないときは今までと同じ
-//   ④ 山札の枚数: 出す +1 / もう一度 +0 / 切りかえ ±0 / ターン切れ・WAVE の終わり・20ターン経過で外す → 元の山札・手札・捨て札にぴったり戻る。
-//      (本体では、みんなの山札の枚数が変わるのは5つの遊びだけ。タクティクスは写しをコピーが持つ — ダイスくん。部品は同じなので両方で見る)
-//      コピーの手札を作っても、みんなの山札は減らない
+//   ④ 山札の枚数: プレイヤーの山札・手札・捨て札は、出す・もう一度・切りかえ・コピーの手札・外すのどれでも変わらない
+//      (2026-10-27 社長: コピーは自分の山札を持つ。プレイヤーの山札の写しから作り、距離撃・ほかの味方の固有技は抜く)
 //   ⑤ 5つの遊び・保存: コピーはライフを持たない。負けの判定・ランキング・報酬はパーティの hp と slots だけを見る。
 //      部品は保存に触らず、新しい mh_* の鍵を足していない
 //   ⑥ ブラウザで1戦: 本体につながったら tools/battle/ai-copy-invariants-browser-check.js(公開の印をその中でだけ真にして1戦流す)
@@ -123,38 +122,33 @@ const downed = (b) => T.tacticsDownedSlots(b).length;
   const base = count(zones0); const baseIds = ids(zones0);
   const src = { maxHp: 1000, atk: 200, def: 100, maxGuts: 150 };
   for (const mode of ['tactics', 'classic']) {
-    const s1 = C.summonAiCopy({ aiCopy: null, zones: zones0 }, { srcSlot: 1, srcMonsterId: 'golem', name: 'ゴーレム', level: 0, src, uniqueCard: uniqueOf('golem'), turn: 3, mode });
-    check(`${mode}: 出すと山札が1枚だけ増える(コピーの固有技)`, count(s1.zones) === base + 1);
-    const s2 = C.summonAiCopy(s1, { srcSlot: 1, srcMonsterId: 'golem', level: 1, src, uniqueCard: uniqueOf('golem'), turn: 4, mode });
-    check(`${mode}: 同じ子にもう一度使っても増えない`, count(s2.zones) === base + 1 && s2.plan.kind === 'refresh');
-    const s3 = C.summonAiCopy(s2, { srcSlot: 2, srcMonsterId: 'tiger', level: 1, src, uniqueCard: uniqueOf('tiger'), turn: 5, mode });
-    check(`${mode}: 別の子に切りかえても1枚のまま(前の写しが抜けて新しい写し)`, count(s3.zones) === base + 1 && s3.zones.deck.some((c) => c.sorashidoCopyOf === 'tiger') && !s3.zones.deck.some((c) => c.sorashidoCopyOf === 'golem'));
-    // コピーの手札を作っても、みんなの山札は減らない
-    const planned = C.planAiCopyTurn(s3.aiCopy, { deck: s3.zones.deck, score: () => 1, costOf: (c) => c.guts || 0, rng: seeded(3) });
-    check(`${mode}: コピーの手札を作っても山札は減らない`, count(s3.zones) === base + 1 && Array.isArray(planned.hand));
-    // 写しが手札や捨て札へ動いていても、外せば必ず元に戻る
-    const moved = { ...s3, zones: { deck: s3.zones.deck.filter((c) => c.sorashidoCopyOf == null), hand: [...s3.zones.hand, ...s3.zones.deck.filter((c) => c.sorashidoCopyOf != null)], discard: s3.zones.discard } };
-    const out = C.dismissAiCopy(moved);
-    check(`${mode}: 外すと元の山札・手札・捨て札にぴったり戻る(写しが手札にあっても)`, out.aiCopy === null && ids(out.zones) === baseIds, ids(out.zones));
+    // ★2026-10-27 社長: コピーは自分の山札を持つ(プレイヤーの山札・手札・捨て札の写しから作る)。プレイヤーの山札には何も足さない・抜かない
+    const s1 = C.summonAiCopy({ aiCopy: null, zones: zones0 }, { srcSlot: 1, srcMonsterId: 'golem', name: 'ゴーレム', level: 0, src, turn: 3, mode });
+    check(`${mode}: 出してもプレイヤーの山札・手札・捨て札は変わらない`, s1.zones === zones0 && ids(s1.zones) === baseIds);
+    check(`${mode}: コピーの山札は写しから作る(距離撃は抜く)`, Array.isArray(s1.aiCopy.deck) && s1.aiCopy.deck.length === base - 1 && !s1.aiCopy.deck.some((c) => c.type === 'range_atk'));
+    const s2 = C.summonAiCopy(s1, { srcSlot: 1, srcMonsterId: 'golem', level: 1, src, turn: 4, mode });
+    check(`${mode}: 同じ子にもう一度使っても変わらない`, ids(s2.zones) === baseIds && s2.plan.kind === 'refresh');
+    const s3 = C.summonAiCopy(s2, { srcSlot: 2, srcMonsterId: 'tiger', level: 1, src, turn: 5, mode });
+    check(`${mode}: 別の子に切りかえても変わらない(コピーの山札は作り直す)`, ids(s3.zones) === baseIds && s3.plan.rebuildDeck === true);
+    // コピーの手札を作っても、プレイヤーの山札は減らない(引くのはコピーの山札から)
+    const planned = C.planAiCopyTurn(s3.aiCopy, { count: 5, score: () => 1, costOf: (c) => c.guts || 0, rng: seeded(3) });
+    check(`${mode}: コピーの手札を作ってもプレイヤーの山札は減らない`, ids(s3.zones) === baseIds && Array.isArray(planned.hand) && planned.hand.length > 0);
+    const out = C.dismissAiCopy(s3);
+    check(`${mode}: 外してもプレイヤーの山札・手札・捨て札はそのまま`, out.aiCopy === null && ids(out.zones) === baseIds, ids(out.zones));
     // ターン切れで外れる
     let st = s1; let turn = 4; let guard = 0;
     while (st.aiCopy && guard++ < 10) { st = C.tickAiCopy(st, turn); turn += 1; }
-    check(`${mode}: 続くターンが切れたら外れ、山札が元の枚数に戻る`, st.aiCopy === null && ids(st.zones) === baseIds);
+    check(`${mode}: 続くターンが切れたら外れ、山札はそのまま`, st.aiCopy === null && ids(st.zones) === baseIds);
     check(`${mode}: コピーを出す前(使ったターン)は数えない`, C.tickAiCopy(s1, 3).aiCopy && C.tickAiCopy(s1, 3).aiCopy.turnsLeft === s1.aiCopy.turnsLeft);
   }
 }
 
 // ---- ④-2 本体: みんなの山札の枚数はコピーの有無で変わらない ----
-// タクティクスも5つの遊びも、固有技の写しはみんなの山札へ入れず、コピー自身が持つ(aiCopy.uniqueCard。セコンドくん・ダイスくん 2026-10-27)。
-// 本体で summonAiCopy を呼ぶ所は、みんなの山札を渡さず空の山札で呼んでいること
+// コピーは自分の山札を持つ(2026-10-27 社長)。本体は summonAiCopy・dismissAiCopy の返す zones を、プレイヤーの山札・手札・捨て札へ書き戻さない
 {
   const app = read('monster-hero/src/parts/60-app.jsx');
-  const calls = [...app.matchAll(/summonAiCopy\(\s*\{([^}]*\{[^}]*\}[^}]*)\}/g)].map((m) => m[1]);
-  const all = (app.match(/\bsummonAiCopy\(/g) || []).length;
-  check('本体: summonAiCopy は空の山札で呼ぶ(みんなの山札・手札・捨て札の枚数がコピーの有無で変わらない)',
-    all === 0 || (calls.length === all && calls.every((c) => /zones:\s*\{\s*deck:\s*\[\],\s*hand:\s*\[\],\s*discard:\s*\[\]\s*\}/.test(c))), `${all}か所`);
-  const dismissCalls = (app.match(/\bdismissAiCopy\(/g) || []).length;
-  check('本体: コピーを外すときも、みんなの山札から抜く処理を通さない(写しが入っていないので)', dismissCalls === 0, `${dismissCalls}か所`);
+  const writesBack = (app.match(/set(Deck|Hand|Graveyard)\(\s*res\.zones|set(Deck|Hand|Graveyard)\(\s*out\.zones/g) || []).length;
+  check('本体: summonAiCopy・dismissAiCopy の返す zones を山札・手札・捨て札へ書き戻さない', writesBack === 0, `${writesBack}か所`);
 }
 
 // ---- ⑤ 5つの遊び・保存 ----

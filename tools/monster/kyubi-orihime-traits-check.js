@@ -170,7 +170,7 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
   const pick = read('monster-hero/src/parts/67-screen-pick.jsx');
   check('配置の画面: オリヒメが勇者で相方が決まるまで「この子を相方にする」を出し、押してから置いた子が相方になる(社長: 案ア)',
     /partnerOffer=\{mainHero\?\.id===ORIHIME_MONSTER_ID&&!orihimeHasPartner\(\)/.test(app)
-    && /if \(!isHero && orihimePartnerPick && mainHero\?\.id===ORIHIME_MONSTER_ID && !orihimeHasPartner\(\)\) \{\n      setOrihimePartner\(initialBattleDistanceRef\.current, slotIdx\);/.test(app)
+    && /if \(!isHero && \(orihimePartnerPick \|\| autoBattleRef\.current\) && mainHero\?\.id===ORIHIME_MONSTER_ID && !orihimeHasPartner\(\)\) \{\n      setOrihimePartner\(initialBattleDistanceRef\.current, slotIdx\);/.test(app) /* オートで合流した子は自動で相方(社長: 案ア) */
     && /\{partnerOffer&&\(/.test(pick) && /data-orihime-partner-pick/.test(pick) && /min-h-\[44px\]/.test(pick));
 }
 
@@ -183,7 +183,7 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
     /Kyubi: Object\.freeze\(\{\n    id: 'kyubi_kyubi_gento',\n    name: '九尾幻灯',[\s\S]*?maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,\n    effect: 'kitsunebi',/.test(units)
     && /'millefeuille', 'kitsunebi'[,\]]/.test(units));
   check('使うと狐火を満タンに・幻灯強化をかけ直す', /if\(def\.effect==='kitsunebi'\)\{\n      writeKyubi\('kitsunebi',String\(slotIdx\),useKitsunebi\(/.test(app));
-  check('攻撃に狐火の追加の一撃(ヒット列2か所)・与ダメ、被ダメに強化とガード', app.includes('kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,')
+  check('攻撃に狐火の追加の一撃(ヒット列3か所・あつの挑発も)・与ダメ、被ダメに強化とガード', app.includes('kyubiAttackAt(slotIdx,stunMon?.id,card).foxCombo,') && app.includes('kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,')
     && app.includes('kyubiAttackAt(slotIdx,activeMon?.id,card).foxCombo,') && app.includes('*tacticsExPartyBuffNow().taken*kyubiTakenMultAt(slotIdx):1)'));
   check('受けたときは狐火1つが盾(当てる直前)・ターンで戻る・ランの片付けまで残る',
     /kitsunebiShieldParts\(orihimeShareTargets/.test(app) && /const next = tickKitsunebi\(v\);/.test(app) && /kitsunebi: \{\}, guard: \{\} \}; setKyubiView/.test(app));
@@ -216,6 +216,17 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
   check('味方全員の回避率+10%(楔の回避と同じ値に足して同じ表へ。5つの遊びでも表を作り直す)',
     /const kusabiEvasion = \(hasKusabiTrait\(defenseHeroId\) && kusabiDefenseKey \? kusabiEvasionOf\(kusabiAt\(defenseSlot\)\) : 0\) \+ reikonEvasionNow\(\);/.test(app));
   check('残りは次のターンへ進むところで減らし、ランの片付けで消す', /tickReikonAll\(\); \/\/ ★霊魂/.test(app) && /resetReikon\(\); \/\/ 霊魂/.test(app));
+}
+
+// ---------- ④-3 札(マーク×数) ----------
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const screen = read('monster-hero/src/parts/71-screen-battle.jsx');
+  check('マーク×数に煉獄・陽炎・狐火・逢瀬・星合・霊魂の種類がある',
+    ['rengoku', 'kagero', 'kitsunebi', 'ouse', 'hoshiai', 'reikon'].every((k) => new RegExp(`\\n  ${k}: +Object\\.freeze\\(\\{ mark:`).test(bond)));
+  check('60-app が枠ごとの数を作って画面へ渡し、画面は味方の札に足す',
+    /const kyubiOrihimeStackMarks = \(\(\) => \{/.test(app) && /kyubiOrihimeStackMarks=\{kyubiOrihimeStackMarks\}/.test(app)
+    && /Object\.entries\(kyubiOrihimeStackMarks \|\| \{\}\)\.forEach/.test(screen));
 }
 
 // ---------- 下書きのあいだは本体に出さない ----------

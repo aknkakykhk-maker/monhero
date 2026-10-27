@@ -65,9 +65,11 @@ check('固有技の分岐がある(ガッツ20%・このターンの即時倍率
 check('次ターンの予約はほかの軽減を消さず掛け算で重ねる',
   /tacticsSlotRate\(p\.bySlot,slotIdx,'takenDamageMult',1\.0\)\*guardMult/.test(branch)
   && /takenDamageMult:\(Number\.isFinite\(cur\)&&cur>0\?cur:1\)\*guardMult/.test(branch));
-check('このターンの倍率を敵の番へ渡し、敵の番の被ダメ6か所すべてが通す',
+// 2026-10-27: ソラシドのAIコピー(5人目)が受ける所も通すので7か所(コピーは枠を持たないので枠の番号は渡さない)
+check('このターンの倍率を敵の番へ渡し、敵の番の被ダメ7か所すべてが通す',
   /takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot\}/.test(app)
-  && (app.match(/applyImmediateTakenReduction\(/g) || []).length === 6);
+  && (app.match(/applyImmediateTakenReduction\(/g) || []).length === 7
+  && /const fdC=applyImmediateTakenReduction\(hitC\.taken\);/.test(app));
 check('予告の数字にも使ったターンぶんが入る',
   /if \(hit\.taken > 0\) hit\.taken \*= plannedLifeTreeMult\(slotIdx\);\n    const taken = applyTurnDamageReduction\(hit\.taken, slotIdx\);/.test(screen)
   && /if \(!isLifeTreeGuardCard\(card\)\) return;/.test(screen));

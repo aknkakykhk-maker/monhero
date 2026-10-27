@@ -38,7 +38,7 @@ aiCopy = { srcSlot, srcMonsterId, level, spawnTurn, turnsLeft, hp, maxHp, atk, d
 | ① 枠 | 71-screen-battle.jsx | 味方の枠 2441 `slots.map`(`grid-cols-4`。タクティクスの新配置は `2x2`) | 4列 | 4人の列の右はしに、コピーの札(ライフ・ガッツ・残りターン・元の子の間合い)を足す。間合いの軸(4列)とは別に置き、5つ目の間合いに見えないようにする |
 | ① 枠 | 71-screen-battle.jsx | 横向き(#3953 の2列)の CSS 12〜30 行 `.grid.grid-cols-4 … height:112px` | 4列で高さ固定 | 横向きは列の下にコピーの札を置くので、左の列の高さの割り振り(grid-template-rows)に1段足して測り直す |
 | ① 枠 | 71-screen-battle.jsx | 極限の小さい枠 1633 `data-ultra-ally-slots grid-cols-4` | 4列 | 同じく右はし(横向きは下)に小さい札 |
-| ② 状態 | 60-app.jsx | 新しい state `aiCopy`(696 の近く)・`resetAllState` 10171・`returnToHome` 10871・`handleGiveUp` 11149・`initBattle` 15045 | — | ランの始め・終わり・やめたときに `null` へ戻す。WAVE をまたいでも残る(ターン数で消える)。ライフは持たない(ガッツだけ) |
+| ② 状態 | 60-app.jsx | 新しい state `aiCopy`(696 の近く)・`resetAllState` 10171・`returnToHome` 10871・`handleGiveUp` 11149・`initBattle` 15045 | — | ランの始め・終わり・やめたときに `null` へ戻す。WAVE の終わりに消す(続くターンが残っていても消し、山札の固有技もそこで抜く。窓口の答え待ちの仮。またいで残す答えなら dismissAiCopy を呼ぶ所を外すだけにする)。ライフは持たない(ガッツだけ) |
 | ③ 敵の狙い | 60-app.jsx | `handleEnemyTurn` 12410〜(クラシックの攻撃は 12914〜12920) | 攻撃は全部パーティの `hp` へ | **変えない**(社長の答え: コピーは狙われない。攻撃は今までどおりパーティの1組へ) |
 | ④ 山札 | 60-app.jsx | `buildDeck` 14816 | 固有技は4枠ぶん | コピーがいれば固有技を1枚足す(`ownerSlotIdx: 'copy'` のような印)。消えたら手札・山札・捨て札から抜く(タクティクスの `ensureTacticsExUniqueInHand` と同じ抜き方) |
 | ④ 山札 | 60-app.jsx | `getCardGuts` 10139・`slotMaxUses` 10119・`dragAssignToSlot` 11966 | 置き先は4枠 | プレイヤーはコピーへカードを置けない(コピーは自分の手札で動く)。コピーの固有技カードはコピー専用 |
@@ -62,3 +62,50 @@ aiCopy = { srcSlot, srcMonsterId, level, spawnTurn, turnsLeft, hp, maxHp, atk, d
 
 - 開発部(ドライバーくん・枝 claude/sorashido-assist): アシカの札・ルールの部品(コピーの強さ・ターン数・切りかえ・固有技の出し入れ・手札と「次に使うカード」の決め方)・見せ方の部品
 - バトル部: バトルの状態に5人目を持たせる・敵の狙い(タクティクスだけ)・ターンの順番(プレイヤーのカードのあと1枚)・ダメージとガード・負けの判定から外す・枠の置き場。クラシック系 = ダイスくん、タクティクス = セコンドくん。出す・消す・ターンの始めと終わり・コピーの1枚を使う所は2人で1つの部品にする(タクティクスだけのライフ・狙い・倒れは分ける)
+
+## 社長が決めた Lv ごとの数字(2026-10-27・ジン部長から)
+
+| Lv | 続くターン | ちから | 丈夫さ | ガッツ | うまさ | 1ターンに使う枚数 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 2 | 60% | 50% | 60% | 50% | 1枚 |
+| 2 | 3 | 80% | 70% | 80% | 65% | 1枚 |
+| 3 | 4 | 90% | 80% | 90% | 80% | コピーのガッツの上限が 120 以上で、いまのガッツが2枚ぶん足りるときだけ2枚(上限2枚)。ほかは1枚 |
+
+- 率は元の子に対して。5つの遊びはライフを持たないので、ライフの率は使わない。狙われやすさは5つの遊びでは差が出ない(狙われない)
+- processTurn でコピーが使う所は、ドライバーくんの「Lv から枚数の上限などを返す関数」を呼び、その枚数まで「選ぶ → ガッツを引く → 撃つ」を繰り返す形にする。Lv1・Lv2 はいつも1枚
+- コピーが使う枚数は、プレイヤーの使える枚数(cardLimit)には数えない
+
+## 開発部の純粋な関数(2026-10-27 ドライバーくん。monster-hero/src/parts/32-sorashido-copy.jsx・説明は docs/progress/sorashido-assist-parts.md)
+
+クラシック系から呼ぶもの:
+
+| 関数 | 使う所 |
+| --- | --- |
+| `aiCopyStats(srcMon, level, { mode:'classic', effMul, permaAtkPct })` → `{ atk, def, maxGuts, guts, permaAtkPct }`(classic は maxHp を返さない) | 出すとき(summonAiCopy の中) |
+| `aiCopyTurns(level)`・`aiCopyRules(level)` | 続くターン・1ターンの枚数の上限 |
+| `aiCopyHand(deck, uniqueCard, rand)` → 山札の写しから2枚+固有技 | 出すとき・毎ターンの手札。山札はバトル部が渡す |
+| `aiCopyPickCards(hand, { score, costOf, guts, maxGuts, rng, level })` → 0〜2枚(先頭が nextCard) | processTurn でプレイヤーのカードのあと。score は AUTO の点・costOf は getCardGuts |
+| `aiCopyUniqueCard(card, srcMonsterId)`・`aiCopyRemoveUnique({ deck, hand, discard }, { uid })` | buildDeck に固有技を1枚足す・消えたら抜く |
+| `aiCopySummonPlan(aiCopy, { srcSlot, srcMonsterId, level })` → `{ kind:'new'|'refresh'|'switch', turnsLeft, removeCopy, removeUniqueOf, addUniqueOf }` | アシカを使ったとき |
+| `aiCopyTurnEnd(aiCopy)` | ターンの終わり(残りを減らし、0 で消す) |
+
+共通の部品(summonAiCopy・dismissAiCopy・tickAiCopy)はセコンドくんが 33-ai-copy.jsx に書き、上の関数を中で呼ぶ。クラシック系はそれを呼ぶ。
+
+## 作ったもの(2026-10-27 ダイスくん・公開の印 assistantSorashido の裏)
+
+| 所 | 中身 |
+| --- | --- |
+| 33-ai-copy-classic.jsx | `classicAiCopySrc`(元の子1体の値。供モンも基礎の値=定数 `CLASSIC_AI_COPY_ALLY_BASE`。'plus' で合流ぶんへ戻せる)・`classicAiCopyIsAttack`・`classicAiCopyDamage`・`classicAiCopySpendGuts`・`classicAiCopyRegenGuts`。検査 `tools/battle/ai-copy-classic-check.js` |
+| 60-app.jsx `summonClassicAiCopy` | セコンドくんの分かれ道(copy_sorashido)から呼ばれる。固有技の写しはタクティクスと同じく**山札に入れずコピーが持つ**(uniqueCard)。山札の枚数は変わらない |
+| 60-app.jsx `planClassicAiCopy` | ターンの終わり(setTurnCount の直後)に、次のターンに出ているコピーの手札と使うカードを決める(枠の札の「次に使うカード」) |
+| 60-app.jsx processTurn | `pdTag()` の直後・敵の番の前に、決めておいたカードを使う。ガッツはコピーの分。攻撃は getDmg を元の子の間合いで出し、ちからの比で縮めて attackHits へ(noAnim) |
+| 60-app.jsx ターンの終わり | tickAiCopy の直前に、コピーのガッツをパーティと同じ率で戻す(仮) |
+| 71-screen-battle.jsx `ClassicAiCopyCell` | 縦は4枠の右はし(幅58px)、横向き(背の低い画面)は列の下の細い帯。コピーがいないときは `display:contents` で列の組み方は今までのまま。写真 `docs/playbot/reports/2026-10-27/ai-copy-classic/` |
+
+段2(2026-10-27): 選ぶ点は共通の aiCopyAutoScore(AUTO の作戦の優先 → 与ダメ)。ガードはコピーの丈夫さで構えてパーティを守る(GUARD_EVOLUTION の flat + コピーの def × mult)。回復・強化・アシカはタクティクスと同じ aiCopyEntries で味方のカードと同じ流れに通す(ガッツはコピーの分)。
+コピーの手札の窓(SorashidoCopyHandSheet)/出る・消える演出(appear・vanish)/WAVE をまたぐか(社長の答え待ち)
+
+段3(2026-10-27): コピーは自分の山札を持つ(社長)。共通の summonAiCopy に プレイヤーの山札・手札・捨て札を渡して山札を作る(出たとき・切りかえたとき)。planClassicAiCopy は planAiCopyTurn(count=プレイヤーの手札の枚数)。ターンの終わりは共通の endAiCopyTurn。固有技の写しの出し入れ(classicAiCopyZones・CLASSIC_AI_COPY_UNIQUE_IN_DECK)は外した。プレイヤーの山札は変えない。
+
+段4(2026-10-27): コピーの攻撃・固有技も aiCopyEntries に入れ、プレイヤーのカードと同じ流れに通す。流れの中の getDmg 2か所(あつの挑発・ふつうの攻撃)に dmgScale(コピーのちから ÷ パーティのちから)を掛ける。固有技の特別な効き目はプレイヤーと同じに乗る。ガードだけはコピーの丈夫さで構える別の所。トリックスタートのガッツ返しはコピーの札では返さない。
+まだ(部長の判断待ち): 運命のコインの帯・ダメージの数字・ログに出る名前が元の子の名前(見た目だけ)/スエゾーやドレインで戻るガッツはパーティへ入る
