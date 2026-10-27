@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3968d88c46fe9c36
+// generated-sha256: 9e200da1e2efe133
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -54721,9 +54721,10 @@ const CARD_FIELD_BG = Object.freeze({
 });
 const CardResultBanner = ({ title, sub, tone = 'win' }) => (
   <div data-card-result-banner={tone} className="mhms-in py-1 text-center">
-    <div className={`text-[44px] font-black italic leading-none tracking-wider ${tone === 'win' ? 'text-amber-200' : tone === 'lose' ? 'text-slate-300' : 'text-sky-200'}`}
+    {/* 背の低い縦の画面(320×568 など)では小さくする。大きいままだと、もらったビートPが画面の下に隠れた(2026-10-27 通しの点検) */}
+    <div className={`text-[44px] font-black italic leading-none tracking-wider [@media(orientation:portrait)_and_(max-height:600px)]:text-[34px] ${tone === 'win' ? 'text-amber-200' : tone === 'lose' ? 'text-slate-300' : 'text-sky-200'}`}
       style={{ textShadow: tone === 'win' ? '0 0 18px rgba(251,191,36,.65), 0 3px 0 #7c2d12' : '0 3px 0 #0f172a' }}>{title}</div>
-    {sub && <div className="mt-1 text-[10px] font-black tracking-[0.3em] text-white/70">{sub}</div>}
+    {sub && <div className="mt-1 text-[10px] font-black tracking-[0.3em] text-white/70 [@media(orientation:portrait)_and_(max-height:600px)]:hidden">{sub}</div>}
   </div>
 );
 // カードやモンスターの名前を1行に収める(2026-10-24 改善部の点検 V4「ぐるぐるアタッ/ク」「ストライクリパ/ー」)。
@@ -54967,7 +54968,7 @@ const CardResultTalk = ({ a, lineScene, talkFacts }) => {
   const face = ai ? ai.face : line ? line.face : 'normal';
   return (
     <div data-card-result-talk={ai ? 'ai' : 'line'} className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900/70 p-2">
-      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh)' }}/>
+      <CardAssistantArt src={assistantFullImage(a, face)} alt={a.name} className="w-[46%]" style={{ height: 'min(220px, 28vh, max(110px, calc(var(--mh-vh) - 460px)))' }}/>
       <div className="mb-2 min-w-0 flex-1 rounded-2xl border-2 bg-white px-2 py-1 text-[13px] font-extrabold leading-snug text-[#1f1333]" style={{ borderColor: a.accent, ...JA_WRAP_STYLE }}>{cardJaWrap(text)}</div>
     </div>
   );
