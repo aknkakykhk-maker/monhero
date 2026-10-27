@@ -10276,6 +10276,15 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'sorashido', e:'happy',    atsu:'without', t:'改めて、よろしく！ みゅあさん、ききさん、ももさん、ドラさん、きゅうこちゃん！' },
   // ★アシカの名前は決まっていない(2026-10-27)。決まったら、この行に「」で名前を差し込む
   { who:'sorashido', e:'wink',     t:'あと、アシカも持ってきたよ。俺のとっておき、マーケットに置いとくね笑' },
+  // おみやげ(2026-10-27 社長「この文で」)。10,000ビートPはお話を見終えたらギフトで届く(mh_sorashido_gift_v1・60-app の grantSorashidoGift)
+  { who:'sorashido', e:'excited',  t:'それと、沖縄のおみやげ！ {name}に10,000ビートP、ギフトに入れといたぜ・・・！' },
+  { who:'mua',       e:'surprise', t:'え、おみやげがビートPなの！？ ソラちん、太っ腹すぎぢゃん！' },
+  { who:'sorashido', e:'happy',    t:'それでMFバトルカードのパック開けて！ 10,000あれば30パックはいけるから笑' },
+  { who:'dra',       e:'happy',    t:'ふむ。ソラシドもMFバトルカードやるのか' },
+  { who:'sorashido', e:'excited',  t:'やるやる！ 推しはハム！ ハムのデッキで、計算どおりに勝つのが最高なんだよね笑' },
+  { who:'atsu',      e:'excited',  atsu:'with',    t:'お、じゃあ今度対戦しよ！ 俺、MFバトルカードはけっこう本気だよ笑' },
+  { who:'dra',       e:'happy',    atsu:'without', t:'じゃあ今度、おでと対戦するか。手加減はしないぞ。えへへ' },
+  { who:'sorashido', e:'excited',  t:'うぉぉぉ、望むところ！ 計算どおりに勝たせてもらうぜ・・・！' },
   { who:'kyuko',     e:'happy',    t:'じゃ、浜で打ち上げしよぉ。ばこちゃん、なに飲むの？' },
   { who:'sorashido', e:'happy',    t:'泡盛！ ……これくらい、なんくるないさ〜笑' },
   { who:'kiki',      e:'surprise', t:'あれま……顔色ひとつ変わりませんね……！' },

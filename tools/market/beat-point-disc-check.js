@@ -64,9 +64,10 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     ok('ビートP交換所に円盤石が22枚ある(予告の札は近日追加の2枚だけ)', intoEvent && cards.join() === DISC_IDS.join()
       && (await page.$$('[data-event-point-coming-soon]')).length <= 2, cards.join('・'));
     const costs = await page.$$eval('[data-event-point-disc] button[aria-label$="で交換"]', els => els.map(e => e.getAttribute('aria-label')));
-    // 近日追加の2枚(available:false)は、並んでいても交換できない
+    // キュービ・オリヒメは、ソラシドのお話「推しに会える夜」を見るまで近日追加で、見たあとに交換できる(2026-10-27 社長「ストーリーで同時に公開」)。
+    //   この検査はお話をすべて見た状態で起動するので、ここでは交換できるのが正しい。見る前の近日追加はデータ側(sorashidoCardOnSale)で確かめる
     const soonBuyable = await page.$$eval('[data-event-point-disc="disc_kyubi"] button[aria-label$="で交換"]:not([disabled]), [data-event-point-disc="disc_orihime"] button[aria-label$="で交換"]:not([disabled])', els => els.length);
-    ok('近日追加のキュービ・オリヒメは交換できない', soonBuyable === 0, `${soonBuyable}`);
+    ok('お話を見たあとは、キュービ・オリヒメも交換できる', soonBuyable === 2, `${soonBuyable}`);
     ok('円盤石は全部1500ビートP', costs.length >= 1 && costs.every(l => /1500ビートPで交換$/.test(l)), costs.slice(0, 2).join(' / '));
     // 見て回るのは代表の3枚(全部を開くと時間がかかる)
     for (const id of ['disc_yggdrasil', 'disc_mel_whip', 'disc_zan']) {
