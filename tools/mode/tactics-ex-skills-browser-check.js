@@ -285,7 +285,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     //   札の置き場所ではなく「名前が切れていない・札が名前に重なっていない」を見る
     const nameCut = await page.evaluate((slot) => {
       const b = document.querySelector(`button[data-slot-index="${slot}"]`);
-      const row = b && b.querySelector('.truncate');
+      // 枠の名前は「…」で切らず字を縮めて1行に収める入れ物(container-type:inline-size)。#4107 から .truncate ではなくなった(.truncate だと EX の札そのものを拾ってしまう)
+      const row = b && (b.querySelector('[data-slot-head] span[class*="container-type:inline-size"]') || b.querySelector('.truncate'));
       const mark = b && b.querySelector('[data-tactics-ex-mark]');
       if (!row || !mark) return null;
       const r = row.getBoundingClientRect(), m = mark.getBoundingClientRect();
