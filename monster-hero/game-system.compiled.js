@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05e11c53dbd779f8
+// source-sha256: 40eaaab8a433d63d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -133845,7 +133845,8 @@ function MonsterHeroGame() {
       className: "shrink-0 w-full mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "roster",
-      compact: true
+      compact: true,
+      collapseKey: `roster:${rosterTab}`
     })), rosterTab === 'monster' ? React.createElement(React.Fragment, null, React.createElement("div", {
       className: "shrink-0 mb-2 rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-2"
     }, React.createElement("div", {
@@ -133918,7 +133919,7 @@ function MonsterHeroGame() {
     }, React.createElement("span", {
       className: "text-[10px] font-black text-indigo-300 shrink-0 leading-tight"
     }, "編成中", React.createElement("br", null), draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length), React.createElement("div", {
-      className: "grid flex-1 grid-cols-4 gap-1.5 justify-items-center min-h-[36px] items-center"
+      className: "grid flex-1 grid-cols-4 gap-1.5 justify-items-center min-h-[36px] items-center [@media(orientation:portrait)_and_(max-height:700px)]:grid-cols-8 [@media(orientation:portrait)_and_(max-height:700px)]:gap-0.5 [@media(orientation:portrait)_and_(max-height:700px)]:min-h-[26px]"
     }, draftMonsterRoster.length === 0 ? React.createElement("span", {
       className: "text-[10px] text-slate-400 font-bold"
     }, "まだ選ばれていません") : draftMonsterRoster.map(entryId => {
@@ -133931,7 +133932,7 @@ function MonsterHeroGame() {
         type: "button",
         "aria-label": `${isMasu ? masu.name : base.name}を編成から外す`,
         onClick: () => toggleDraftMonster(entryId),
-        className: "shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative"
+        className: "shrink-0 w-9 h-9 [@media(orientation:portrait)_and_(max-height:700px)]:w-[26px] [@media(orientation:portrait)_and_(max-height:700px)]:h-[26px] [@media(orientation:portrait)_and_(max-height:700px)_and_(min-width:360px)]:w-8 [@media(orientation:portrait)_and_(max-height:700px)_and_(min-width:360px)]:h-8 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative"
       }, isMasu ? React.createElement(React.Fragment, null, React.createElement(DyedMonsterImage, {
         baseId: masu.baseId,
         src: base.iconUrl,
