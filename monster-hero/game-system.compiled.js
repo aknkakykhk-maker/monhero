@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7bae60a72c63360a
+// source-sha256: 1f2e2415ba7cbf37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88162,7 +88162,7 @@ const cardAiFillBind = (db, st, o, policy) => {
     bind: name
   };
 };
-const cardAiAttachUseless = (db, st, o) => {
+const cardAttachUseless = (db, st, o) => {
   if (!o || !Array.isArray(o.hand) || o.hand.length < 2) return false;
   const p = st.active,
     hand = st.players[p].hand;
@@ -93113,7 +93113,7 @@ const CardBattleBoard = ({
   }, [bubble && bubble.key]);
   const turnLive = st.winner === null && st.phase !== 'setup' && st.turn >= 1;
   const mode = !myTurn ? 'wait' : st.pendingPray ? 'pray' : st.pendingReveal ? 'reveal' : st.pendingChoice ? 'choose' : st.pendingDiscard ? 'discard' : st.phase === 'setup' ? 'setup' : st.pending ? 'guard' : st.phase === 'main' ? 'attack' : st.phase === 'guts' ? 'guts' : 'wait';
-  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(o => tutAllow(o) && !cardAiAttachUseless(db, st, o)) : [];
+  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(o => tutAllow(o) && !cardAttachUseless(db, st, o)) : [];
   const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find(o => o.hand) || null : null;
   const prayKey = mode === 'pray' && !prayUse ? `${st.turn}-${st.log.length}` : '';
   useEffect(() => {
