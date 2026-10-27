@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0aef16a9e20d6853
+// source-sha256: 35756cc717ded655
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100366,12 +100366,17 @@ const cardPvpCleanMessage = raw => {
   }
   if (raw.t === 'seek') {
     const code = rhythmMultiNormalizeCode(raw.code);
-    return code && Number.isFinite(raw.at) ? {
+    if (!code || !Number.isFinite(raw.at)) return null;
+    return {
       t: 'seek',
       from,
       code,
-      at: raw.at
-    } : null;
+      at: raw.at,
+      name: typeof raw.name === 'string' ? rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null : null,
+      icon: typeof raw.icon === 'string' ? rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null : null,
+      fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null
+    };
   }
   if (raw.t === 'chat') {
     const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1);
@@ -100444,6 +100449,15 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string').sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
+  id,
+  code: x.code,
+  name: x.name || 'ブリーダー',
+  icon: x.icon || null,
+  fr: x.fr || null,
+  rt: Number.isInteger(x.rt) ? x.rt : null,
+  waitSec: Math.max(0, Math.floor((now - x.at) / 1000))
+}));
 const cardPvpIconIds = () => {
   const out = [];
   try {
@@ -101412,7 +101426,11 @@ const CARD_PVP = (() => {
         [msg.from]: {
           code: msg.code,
           at: msg.at,
-          seen: Date.now()
+          seen: Date.now(),
+          name: msg.name,
+          icon: msg.icon,
+          fr: msg.fr,
+          rt: msg.rt
         }
       }
     };
@@ -101478,7 +101496,11 @@ const CARD_PVP = (() => {
     lobbySend({
       t: 'seek',
       code: s.code,
-      at: s.seekAt
+      at: s.seekAt,
+      name: s.me.name,
+      icon: s.me.icon,
+      fr: s.me.fr || null,
+      rt: Number.isInteger(s.me.rt) ? s.me.rt : null
     });
     emit();
   };
@@ -101513,6 +101535,7 @@ const CARD_PVP = (() => {
         fr: typeof profile.frame === 'string' && profile.frame ? profile.frame.slice(0, 40) : null,
         at: Date.now(),
         bid: typeof bid === 'string' ? bid : null,
+        rt: Number.isFinite(profile.rt) ? Math.max(0, Math.min(10000, Math.round(profile.rt))) : null,
         dn: rhythmMultiText(typeof deck.name === 'string' ? deck.name : '', 30) || null
       }
     };
@@ -102192,7 +102215,10 @@ const CardPvpLobby = ({
     className: `${btn} mh-button-primary`,
     onClick: () => {
       Audio_.fgSe.tap();
-      void CARD_PVP.free(profile, deck);
+      void CARD_PVP.free({
+        ...profile,
+        rt: myRating ? myRating.rating : null
+      }, deck);
     }
   }, "だれとでも"), React.createElement("button", {
     type: "button",
