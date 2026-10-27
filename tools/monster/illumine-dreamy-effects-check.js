@@ -98,7 +98,8 @@ check('敵の絵の隅に楔とドリームペインのマークを出す', /kus
 const tactics2 = tactics;
 check('ジエンド: 3ターン・5回・ヘイト−30・楔が2倍', /Illumine: Object\.freeze\(\{\s*id: 'illumine_the_end',\s*name: 'ジエンド',[\s\S]{0,800}maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,\s*hateDown: 30,\s*effect: 'kusabiDouble'/.test(tactics2));
 check('ミルフィーシールド: 3ターン・5回・ちから丈夫さ+5%と楔1つごとに+5%', /Dreamy: Object\.freeze\(\{\s*id: 'dreamy_millefeuille_shield',\s*name: 'ミルフィーシールド',[\s\S]{0,900}maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,\s*millefeuille: Object\.freeze\(\{ statBase: 0\.05, statPer: 0\.05 \}\),\s*effect: 'millefeuille'/.test(tactics2));
-check('2つとも効果を実装済みの一覧に入っている', /'kusabiDouble', 'millefeuille'\]\);/.test(tactics2));
+// 2026-10-27 からキュービ・オリヒメの効果(kitsunebi など)が後ろに続く
+check('2つとも効果を実装済みの一覧に入っている', /'kusabiDouble', 'millefeuille'[,\]]/.test(tactics2));
 check('ジエンドのあいだは楔が1回で2つ・上限12', /const cap = kusabiCapAt\(slotIdx\), before = kusabiAt\(slotIdx\), after = kusabiCountOf\(before \+ \(cap > KUSABI_MAX \? 2 : 1\), cap\);/.test(app));
 check('ジエンドを使うとヘイトを下げる', /def\.hateDown>0\)\{ const h=\[\.\.\.tacticsHateRef\.current\]; h\[slotIdx\]=Math\.max\(0,/.test(app));
 check('ミルフィーシールドは使った瞬間の楔とシールドを控える', /const millefeuilleSnapshot=def\.millefeuille\?\{ kusabi:/.test(app) && /\.\.\.\(def\.millefeuille\?millefeuilleSnapshot:\{\}\)/.test(app));
