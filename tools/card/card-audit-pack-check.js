@@ -207,13 +207,13 @@ E.CARD_PACKS.forEach((p, pi) => {
   check('C 2回目の勝ちには +50 が付かない', w2.bonus === 0 && w2.total === 200);
   check('C 負け・降参・自分の番2回の勝ちには +50 が付かない', E.cardCpuReward(day, 'easy', 'lose', { ownTurns: 10, kos: 0 }).bonus === 0 && E.cardCpuReward(day, 'easy', 'surrender', { ownTurns: 10, kos: 3 }).bonus === 0 && E.cardCpuReward(day, 'easy', 'win', { ownTurns: 2, kos: 3 }).bonus === 0);
   check('C 日が変わると +50 がまたもらえる(その日の数を読み直す)', E.cardNormalizeDaily({ ...w1.daily, day: '2026-10-26' }, '2026-10-27').firstWin === false);
-  // マルチ: 勝ち400・44周/負け150・16周(自分の番10回)/抜けた0/自分の番が3回より前は0
+  // マルチ: 勝ち800・88周/負け300・32周(自分の番10回)/抜けた0/自分の番が3回より前は0(2026-10-27 社長がマルチだけ2倍)
   const pw = E.cardPvpReward('win', { ownTurns: 4, kos: 3 }); const pl = E.cardPvpReward('lose', { ownTurns: 10, kos: 1 });
-  check('C マルチ: 勝ち 400・44周(MASTER の2倍)', pw.point === 400 && pw.loops === 44);
-  check('C マルチ: 負け(自分の番10回)150・16周(MASTER の負けと同じ)', pl.point === 150 && pl.loops === 16, `${pl.point}・${pl.loops}`);
-  check('C マルチ: 負け(自分の番5回)は半分', E.cardPvpReward('lose', { ownTurns: 5, kos: 0 }).point === 75);
+  check('C マルチ: 勝ち 800・88周(MASTER の2倍をさらに2倍)', pw.point === 800 && pw.loops === 88);
+  check('C マルチ: 負け(自分の番10回)300・32周(MASTER の負けの2倍)', pl.point === 300 && pl.loops === 32, `${pl.point}・${pl.loops}`);
+  check('C マルチ: 負け(自分の番5回)は半分', E.cardPvpReward('lose', { ownTurns: 5, kos: 0 }).point === 150);
   check('C マルチ: 抜けたら0・自分の番2回なら0', E.cardPvpReward('left', { ownTurns: 10, kos: 3 }).point === 0 && E.cardPvpReward('win', { ownTurns: 2, kos: 3 }).point === 0);
-  check('C マルチ: 降参(倒した2体)は20', E.cardPvpReward('surrender', { ownTurns: 10, kos: 2 }).point === 20);
+  check('C マルチ: 降参(倒した2体)は40', E.cardPvpReward('surrender', { ownTurns: 10, kos: 2 }).point === 40);
   // マルチの結果の保存(84 の pvpReward): +50 の印をクイック周回のあとの書き直しでも残す(印が消えると1日に何度も +50 になる)
   const p84 = read('src/parts/84-screen-card-battle.jsx');
   const i = p84.indexOf('const pvpReward = async');

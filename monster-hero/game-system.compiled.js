@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c373ea99a6cf8495
+// source-sha256: 536b3a7c62b7f893
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17148,7 +17148,10 @@ const helpDataRows = id => {
         const label = lv => typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
         const lose = lv => typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0;
         const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
-        if (typeof CARD_PVP_REWARD !== 'undefined') rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point} ／ 負け ${CARD_PVP_REWARD.lose.point}`]);
+        if (typeof CARD_PVP_REWARD !== 'undefined') {
+          const x = CARD_PVP_REWARD.x || 1;
+          rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point * x} ／ 負け ${CARD_PVP_REWARD.lose.point * x}`]);
+        }
         return rows;
       }
     case 'cardPacks':
@@ -89541,6 +89544,7 @@ const CARD_FIRST_WIN_BONUS = 50;
 const CARD_MIN_OWN_TURNS = 3;
 const CARD_LOSE_FULL_TURNS = 10;
 const CARD_PVP_REWARD = Object.freeze({
+  x: 2,
   win: {
     point: CARD_AI_LEVELS.master.point * 2,
     loops: CARD_AI_LEVELS.master.loops * 2
@@ -100252,6 +100256,15 @@ const cardPvpTimeoutAct = st => st.pendingPray ? {
   hand: []
 };
 const cardPvpReward = (outcome, facts) => {
+  const r = cardPvpRewardBase(outcome, facts);
+  const x = Number.isInteger(CARD_PVP_REWARD.x) && CARD_PVP_REWARD.x > 0 ? CARD_PVP_REWARD.x : 1;
+  return {
+    ...r,
+    point: r.point * x,
+    loops: r.loops * x
+  };
+};
+const cardPvpRewardBase = (outcome, facts) => {
   const f = facts || {
     ownTurns: 0,
     kos: 0
