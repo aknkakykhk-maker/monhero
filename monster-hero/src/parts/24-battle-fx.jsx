@@ -709,8 +709,46 @@ const SKM_DREAMY = Object.freeze({
     skm('gather', { c:'pink', fx:skmFx('orbit', 'heart', 10), over:'rainbow', burst:'heart', form:'bloom' })], // ドリーミィパレード
 });
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
+// キュービ(2026-10-27・案の段階): 九尾の狐。青い狐火・提灯・下駄・まどわし寄り。技の名前は元のゲームのまま(社長が案1を選んだ)
+const SKM_KYUBI = Object.freeze({
+  normal:[
+    skm('slash', { c:'fire', over:'claw', burst:'dust' }),                                                   // ひっかき
+    skm('cast', { c:'fire', fx:skmFx('shot', 'spark', 4), burst:'spark' }),                                 // ひのこ
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 5), burst:'star', form:'fire' }),                     // 狐火
+    skm('kick', { c:'red', over:'fist', burst:'dust' }),                                                     // 下駄蹴り
+    skm('toss', { c:'fire', fx:skmFx('lob', 'orb', 1, { s:1.4 }), over:'boom', burst:'spark' }),            // 提灯投げ
+    skm('jump', { c:'gold', fx:skmFx('fall', 'orb', 1, { s:1.6 }), over:'boom', burst:'star' }),            // 提灯落とし
+    skm('roll', { c:'fire', fx:skmFx('orbit', 'flame', 8), over:'boom', burst:'spark', form:'fire' }),      // 火炎車
+    skm('dash', { c:'holy', line:'ray', over:'xslash', burst:'star', form:'light' }),                       // 神光石火
+    skm('gather', { c:'psy', fx:skmFx('orbit', 'orb', 9), over:'eye', burst:'star' })],                     // 九重神眼
+  unique:[
+    skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 4), burst:'heart' }),                                   // ゆうわく
+    skm('lick', { c:'pink', line:'tongue', burst:'heart' }),                                                 // なめろう
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 9), over:'pillar', burst:'star', form:'fire' }),      // 超狐火
+    skm('warp', { c:'fire', over:'shadow', burst:'dust' }),                                                  // 陽炎
+    skm('gather', { c:'blue', fx:skmFx('fall', 'flame', 10), over:'pillar', burst:'spark', form:'fire' }),  // 神狐蒼火
+    skm('spin', { c:'wind', over:'tornado', burst:'leaf' }),                                                 // 八嵐天衝
+    skm('cast', { c:'sky', fx:skmFx('orbit', 'bubble', 10), over:'boom', burst:'bubble' }),                 // 炸裂気泡陣
+    skm('float', { c:'cosmic', fx:skmFx('fall', 'star', 12), over:'aurora', burst:'star', form:'light' }),  // 天河天翔
+    skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 9), over:'eclipse', burst:'spark', form:'fire' })], // 煉獄九尾陣
+});
+// オリヒメ(2026-10-27・案の段階): 星の海から来たキュービ種。キュービと同じ名前の技は同じ動きで、星空の色にする。
+// 固有技は専用技(求愛・超狐火・星)が入り、いちばん上が天河天翔(キュービは煉獄九尾陣)なので、8段目と9段目が入れ替わる
+const SKM_ORIHIME = Object.freeze({
+  normal:SKM_KYUBI.normal.map((m, i) => ({ ...m, c:['sky', 'pink', 'cosmic', 'pink', 'gold', 'gold', 'pink', 'cosmic', 'psy'][i] })),
+  unique:[
+    skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 6), over:'bloom', burst:'heart' }),                    // 求愛
+    { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // なめろう
+    skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 9), over:'pillar', burst:'star', form:'light' }),   // 超狐火・星
+    { ...SKM_KYUBI.unique[3], c:'cosmic' },                                                                   // 陽炎
+    { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 神狐蒼火
+    { ...SKM_KYUBI.unique[5], c:'sky' },                                                                      // 八嵐天衝
+    { ...SKM_KYUBI.unique[6], c:'pink' },                                                                     // 炸裂気泡陣
+    { ...SKM_KYUBI.unique[8], c:'psy' },                                                                      // 煉獄九尾陣
+    { ...SKM_KYUBI.unique[7], c:'sky' }],                                                                     // 天河天翔
+});
 const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY,
-  Illumine:SKM_ILLUMINE, Dreamy:SKM_DREAMY });
+  Illumine:SKM_ILLUMINE, Dreamy:SKM_DREAMY, Kyubi:SKM_KYUBI, Orihime:SKM_ORIHIME });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
