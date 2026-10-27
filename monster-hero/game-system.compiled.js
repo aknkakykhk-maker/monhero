@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8afa3ffdb89bf931
+// source-sha256: beed87deb7509ed6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57723,8 +57723,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), total.status === 'notReady' && React.createElement("p", {
     "data-rhythm-total-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "総合ランキングはただいま準備中です。もうしばらくお待ちください。"), total.status === 'error' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('総合ランキングはただいま準備中です。もうしばらくお待ちください。')), total.status === 'error' && React.createElement("p", {
     "data-rhythm-total-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
@@ -57734,8 +57735,9 @@ function RhythmRankingScreen({
     className: "mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
   }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲を選ぶ"), !total.self && React.createElement("p", {
     "data-rhythm-total-self-empty": true,
-    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, "まだあなたの記録がありません。1曲でも遊ぶとここに載ります。"), total.entries.length === 0 && React.createElement("p", {
+    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだあなたの記録がありません。1曲でも遊ぶとここに載ります。')), total.entries.length === 0 && React.createElement("p", {
     "data-rhythm-total-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "まだ記録がありません。最初の1件になってみましょう。"), total.entries.length > 0 && React.createElement("ol", {
@@ -57770,8 +57772,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), event.status === 'notReady' && React.createElement("p", {
     "data-rhythm-event-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "週間ランキングはただいま準備中です。もうしばらくお待ちください。"), event.status === 'closed' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('週間ランキングはただいま準備中です。もうしばらくお待ちください。')), event.status === 'closed' && React.createElement("p", {
     "data-rhythm-event-closed": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "いま開催しているイベントはありません。次の開催をお待ちください。"), event.status === 'error' && React.createElement("p", {
@@ -57824,8 +57827,9 @@ function RhythmRankingScreen({
     className: "mb-3"
   }, React.createElement("p", {
     "data-rhythm-event-self-empty": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'))), eventBoard.entries.length === 0 && React.createElement("p", {
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, eventPrev ? 'このイベントの記録はありませんでした。' : eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && React.createElement("ol", {
