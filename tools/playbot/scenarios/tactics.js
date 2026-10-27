@@ -463,7 +463,7 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
   await fightTactics(s, stats, { maxMs, speedUp: true, brainCtx: { mem, log } });
   const end = await readTactics(s);
   const endText = await s.page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 300));
-  if (end.over) { stats.finished = true; await s.shot('tactics-result'); }
+  if (end.over) { stats.finished = true; await shotIfResult(s); await s.shot('tactics-result'); }
   // 勝ち負け: 最後の WAVE まで着いて決着した=クリア / 途中で決着=負け(ターン切れか全員倒れた) / 時間切れ=打ち切り
   const lastWave = log.data.waves[log.data.waves.length - 1];
   if (stats.finished) {
