@@ -11,7 +11,7 @@
 // 見ているもの(助手と対戦の始まりを、検査のときだけの口 window.__mhCardScene で決めた場面にする。マウスで運ぶ。指も同じ pointer の処理)
 //   A ショットガン(割り振り): タップは割り振りを選ぶ画面が出る / 運んでも、選ぶ画面が出る(選ばずに出さない)
 //   B 変形(空中か地上か): タップは空中・地上のボタン / 運んでも、どちらかを選ばずに出さない
-//   C 加勢(使う子が3体): 子を選んでから運ぶと、選んだ子で出る
+//   C 加勢(使う子が3体): 子を選んでから運ぶと、選んだ子で出る / 選ばずに運ぶと、出さずに「使う子をタップ」(案B)/ 使う子が1体だけの技はそのまま出る
 //   D 隠れる(守りの移す先): タップは移す先の味方を選ぶ / 運んで置いた味方へ移す(置き先と移す先がそろう)
 //   E 友をかばう(かばう子): 運んで置いた子がかばう(タップとそろう)
 //   どれも実行時エラーが無い
@@ -23,6 +23,7 @@ const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boo
 const root = path.resolve(__dirname, '..', '..');
 const PORT = Number(process.env.CARD_PORT) || 8997;
 const SHOT = process.env.SHOT_DIR || '';
+const TAP_WAIT = 900; // 場の子を押してから効くまで(CARD_DOUBLE_TAP_MS)より長く
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2' };
 const serve = () => new Promise((resolve) => {
   const server = http.createServer((req, res) => {
@@ -119,7 +120,9 @@ const sceneScript = (spec) => `(() => {
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
     const want = spec.attackMe !== undefined ? 'guard' : 'attack';
     await page.waitForFunction((w) => { const b = document.querySelector('[data-card-battle]'); return b && b.getAttribute('data-card-mode') === w; }, want, { timeout: 20000 });
-    await page.waitForTimeout(400);
+    // 始まりの演出(番の帯・配る動き)が終わってから操作する(途中だと運ぶ操作を受け付けないことがあった)
+    await page.waitForFunction(() => !document.querySelector('[data-card-turn-banner]'), null, { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(1200);
     return page;
   };
   const handCount = (pg) => pg.evaluate(() => document.querySelectorAll('[data-card-hand-card]').length);
@@ -130,7 +133,8 @@ const sceneScript = (spec) => `(() => {
     for (let k = 1; k <= 12; k++) { await pg.mouse.move(a.x + a.width / 2 + ((b.x + b.width / 2) - (a.x + a.width / 2)) * k / 12, a.y + a.height / 2 + ((b.y + b.height / 2) - (a.y + a.height / 2)) * k / 12); await pg.waitForTimeout(16); }
     await pg.mouse.up();
   };
-  const settle = async (pg, n0) => { for (let i = 0; i < 20; i++) { await pg.waitForTimeout(150); if ((await handCount(pg)) !== n0) break; } await pg.waitForTimeout(500); };
+  // 自分の手は、先にカードを大きく見せてから当たる(数秒)。手札が減ってから、記録に載るまで少し待つ
+  const settle = async (pg, n0) => { for (let i = 0; i < 50; i++) { await pg.waitForTimeout(150); if ((await handCount(pg)) !== n0) break; } await pg.waitForTimeout(1200); };
   // ターンの記録(いちばん新しいターン)の文
   const lastLog = async (pg) => {
     await pg.locator('[data-card-log-open]').first().dispatchEvent('click');
@@ -148,8 +152,9 @@ const sceneScript = (spec) => `(() => {
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(300);
     check('A タップ: ショットガンを押すと「割り振る」ボタンが出る', await page.locator('[data-card-split-open]').count() > 0);
-    await page.locator('[data-card-hand-card="0"]').click(); // 選び外す
-    await page.waitForTimeout(200);
+    // 同じ札を続けて押すと「2回続けてタップ=詳しい画面」になるので、運ぶ確かめは開き直した画面で
+    await page.close();
+    page = await open({ mons: ['pixie', 'golem', 'tiger'], hand: ['054', '100', '100', '100', '100'] });
     let log = '';
     let n0 = await handCount(page);
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="1-1"]');
@@ -166,8 +171,8 @@ const sceneScript = (spec) => `(() => {
     await page.waitForTimeout(300);
     const formBtns = await page.locator('[data-card-form]').count();
     check('B タップ: 変形を押すと、空中・地上のボタンが出る', formBtns === 2, `${formBtns} 個`);
-    await page.locator('[data-card-hand-card="0"]').click();
-    await page.waitForTimeout(200);
+    await page.close();
+    page = await open({ mons: ['henger', 'golem', 'tiger'], hand: ['185', '100', '100', '100', '100'] });
     n0 = await handCount(page);
     // 置き先は使う子(自分)。変形は1枚引くので手札の数は変わらない。ターンの記録で、出たかを見る
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="0-0"]');
@@ -182,22 +187,41 @@ const sceneScript = (spec) => `(() => {
     page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['112', '100', '100', '100', '100'] });
     await page.locator('[data-card-hand-card="0"]').click();
     await page.waitForTimeout(300);
+    // 場の子を押すと、2回続けてタップ(詳しい画面)かを見分けるため CARD_DOUBLE_TAP_MS 待ってから効く。そのぶん待つ
     await page.locator('[data-card-mon="0-2"]').click(); // 3番目の子(ピクシー)を選ぶ
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(TAP_WAIT);
     await shot(page, 'c-picked');
     n0 = await handCount(page);
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="1-0"]');
+    await page.waitForTimeout(300);
+    await shot(page, 'c-dropped');
     await settle(page, n0);
     log = await lastLog(page);
     check('C 運ぶ: 加勢で出どころの子(ピクシー)を選んでから運ぶと、ピクシーで出る', /ピクシー/.test(log), log.slice(-160));
     await page.close();
-    // 選ばずに運ぶとき(参考): どの子で出るか
+    // 使う子を選ばずに運ぶと、出さずに「使う子をタップ」の案内で止まる(案B。前は黙って先頭の子で出ていた)。そのあと子と相手を押せば出る
     page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['112', '100', '100', '100', '100'] });
     n0 = await handCount(page);
     await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="1-0"]');
+    await page.waitForTimeout(700);
+    n1 = await handCount(page);
+    const hintC = await page.locator('[data-card-battle]').innerText();
+    check('C 運ぶ: 使う子が3体いる加勢を、子を選ばずに運ぶと、出さずに「使う子をタップ」の案内', n1 === n0 && /使う子をタップ/.test(hintC), `手札 ${n0}→${n1}`);
+    await page.locator('[data-card-mon="0-1"]').click();
+    await page.waitForTimeout(TAP_WAIT);
+    await shot(page, 'c-after-hint');
+    await page.locator('[data-card-mon="1-0"]').click();
     await settle(page, n0);
     log = await lastLog(page);
-    console.log(`参考: 加勢を何も選ばずに運ぶと — ${log.slice(-160)}`);
+    check('C そのあと子(ライガー)と相手を押すと、選んだ子で出る', /「加勢」/.test(log) && /ライガー/.test(log), log.slice(-120));
+    await page.close();
+    // 使う子が1体だけの技は、運んだらそのまま出る(ピクシーのキック: 文の無い技)
+    page = await open({ mons: ['pixie', 'golem', 'tiger'], hand: ['050', '100', '100', '100', '100'] });
+    n0 = await handCount(page);
+    await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="1-0"]');
+    await settle(page, n0);
+    n1 = await handCount(page);
+    check('C 使う子が1体だけの技(キック)は、運んだらそのまま出る', n1 === n0 - 1, `手札 ${n0}→${n1}`);
     await page.close();
 
     // ---- D 隠れる(モッチー・107): 守りの番。運んで置いた味方へ目標を移す ----
