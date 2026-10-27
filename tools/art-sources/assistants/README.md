@@ -57,6 +57,22 @@
 4. 写したあとは原本をここから消す(親の README の「同じ中身を2か所で持たない」)。
    `dra-expressions-sheet.png` は切り出し前の原本なので残してよい
 
+## みゅあの MASTER の服(`mua-card-master/`・2026-10-27)
+
+社長が用意した、MFバトルカードでみゅあの MASTER に勝つと買えるようになる服の原本(1086×1448・背景透け)。
+配信用は `monster-hero/images/assistant/card-master/`(立ち絵 768×1024・減色PNG)と、その `face/`
+(`node tools/make-assistant-faces.js monster-hero/images/assistant/card-master` で作る。切り出し方は同ツールの `COSTUME_DIR_TUNE`)。
+
+| 原本 | しぐさ | 表情の名前 |
+| --- | --- | --- |
+| `myua_new_costume_01.png` | ほほえむ | normal |
+| `myua_new_costume_02.png` | 手を差し出して笑う | happy |
+| `myua_new_costume_03.png` | ウインクで指さし | wink |
+| `myua_new_costume_04.png` | 驚く | surprise |
+| `myua_new_costume_05.png` | 照れて両手を口元に | troubled |
+| `myua_new_costume_06.png` | 腰に手をあてて怒る | angry |
+| `myua_new_costume_07.png` | もじもじ(涙をぬぐう) | crying |
+| `myua_new_costume_08.png` | 指さして笑う | excited |
 ## ソラシド(2026-10-27)
 
 7人目の助手。`sorashido-faces-sheet.png` が受け取った原本(1448x1086・背景透過・8表情が4列×2段)。

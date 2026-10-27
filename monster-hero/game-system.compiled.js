@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6b636d88af160ac
+// source-sha256: 759de020b92c15f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45719,6 +45719,138 @@ const sorashidoCopyDesc = level => {
   const t = aiCopyRules(level),
     p = v => Math.round(v * 100);
   return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+};
+const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
+const summonAiCopy = (state, {
+  srcSlot,
+  srcMonsterId,
+  name = '',
+  level = 0,
+  src = null,
+  uniqueCard = null,
+  turn = 0,
+  mode = 'tactics',
+  effMul = 1,
+  permaAtkPct = 0,
+  extra = null
+} = {}) => {
+  const now = state && state.aiCopy || null;
+  let zones = state && state.zones || {
+    deck: [],
+    hand: [],
+    discard: []
+  };
+  const plan = aiCopySummonPlan(now, {
+    srcSlot,
+    srcMonsterId,
+    level
+  });
+  if (plan.kind === 'refresh') {
+    return {
+      aiCopy: {
+        ...now,
+        level,
+        turnsLeft: plan.turnsLeft,
+        ...(extra || {})
+      },
+      zones,
+      plan
+    };
+  }
+  if (plan.removeUniqueOf != null) zones = aiCopyRemoveUnique(zones, {
+    srcMonsterId: plan.removeUniqueOf
+  });
+  const uniq = plan.addUniqueOf != null ? aiCopyUniqueCard(uniqueCard, plan.addUniqueOf) : null;
+  if (uniq) zones = {
+    ...zones,
+    deck: [...(Array.isArray(zones.deck) ? zones.deck : []), uniq]
+  };
+  const stats = aiCopyStats(src, level, {
+    mode,
+    effMul,
+    permaAtkPct
+  });
+  const aiCopy = {
+    srcSlot,
+    srcMonsterId,
+    name: String(name || ''),
+    level,
+    spawnTurn: aiCopySafeNum(turn) + 1,
+    turnsLeft: plan.turnsLeft,
+    ...stats,
+    hand: [],
+    nextCard: null,
+    picks: [],
+    uniqueCardUid: uniq ? uniq.uid : null,
+    ...(extra || {})
+  };
+  return {
+    aiCopy,
+    zones,
+    plan
+  };
+};
+const dismissAiCopy = state => {
+  const now = state && state.aiCopy || null;
+  const zones = state && state.zones || {
+    deck: [],
+    hand: [],
+    discard: []
+  };
+  if (!now) return {
+    aiCopy: null,
+    zones
+  };
+  const match = now.uniqueCardUid ? {
+    uid: now.uniqueCardUid
+  } : {
+    srcMonsterId: now.srcMonsterId
+  };
+  return {
+    aiCopy: null,
+    zones: aiCopyRemoveUnique(zones, match)
+  };
+};
+const tickAiCopy = (state, turn) => {
+  const now = state && state.aiCopy || null;
+  if (!isAiCopyOut(now, turn)) return state;
+  const end = aiCopyTurnEnd(now);
+  if (end.expired) return {
+    ...dismissAiCopy(state),
+    expired: true
+  };
+  return {
+    ...state,
+    aiCopy: {
+      ...now,
+      turnsLeft: end.turnsLeft
+    }
+  };
+};
+const planAiCopyTurn = (aiCopy, {
+  deck = [],
+  score = null,
+  costOf = null,
+  rng = Math.random
+} = {}) => {
+  if (!aiCopy) return aiCopy;
+  const uniq = (Array.isArray(deck) ? deck : []).find(c => c && aiCopy.uniqueCardUid && c.uid === aiCopy.uniqueCardUid) || null;
+  const rest = (Array.isArray(deck) ? deck : []).filter(c => c !== uniq);
+  const hand = aiCopyHand(rest, uniq, rng);
+  const picks = aiCopyPickCards(hand, {
+    score,
+    costOf,
+    guts: aiCopy.guts,
+    maxGuts: aiCopy.maxGuts,
+    rng,
+    level: aiCopy.level
+  });
+  return {
+    ...aiCopy,
+    hand,
+    picks,
+    nextCard: picks[0] || null
+  };
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -94932,6 +95064,16 @@ const CardBattleScreen = ({
           collection: save.collection,
           profile: rank.profile
         });
+        if (ok && outcome === 'win' && !debug) {
+          try {
+            const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), {
+              who: game.who,
+              level: game.level,
+              outcome
+            });
+            if (unlockEntry && (await storeSet(unlockEntry.key, unlockEntry.next))) addAssistantCostumeUnlockedNow(unlockEntry.next);
+          } catch (_) {}
+        }
         let quick = null;
         if (loops > 0 && onQuickLoops) {
           try {
@@ -105380,6 +105522,7 @@ function MonsterHeroGame() {
     resetDreamPain();
     resetKyubi();
     resetOrihime();
+    resetReikon();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -105900,6 +106043,33 @@ function MonsterHeroGame() {
       slots: rest,
       damage
     }, ...parts];
+  };
+  const reikonRef = useRef({});
+  const [reikonView, setReikonView] = useState({});
+  const writeReikonKey = (key, v) => {
+    if (!key) return;
+    const next = {
+      ...reikonRef.current,
+      [key]: reikonOf(v)
+    };
+    reikonRef.current = next;
+    setReikonView(next);
+  };
+  const resetReikon = () => {
+    reikonRef.current = {};
+    setReikonView({});
+  };
+  const reikonGutsMultAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    return key ? reikonGutsMult(reikonRef.current[key]) : 1;
+  };
+  const reikonEvasionNow = () => Object.values(reikonRef.current).reduce((most, v) => Math.max(most, reikonEvasionUp(v)), 0);
+  const tickReikonAll = () => {
+    const entries = Object.entries(reikonRef.current);
+    if (!entries.length) return;
+    const next = Object.fromEntries(entries.map(([k, v]) => [k, tickReikon(v)]).filter(([, v]) => v.wait > 0 || v.turns > 0));
+    reikonRef.current = next;
+    setReikonView(next);
   };
   const tickKyubiKagero = () => {
     const cur = kyubiRef.current;
@@ -110883,6 +111053,7 @@ function MonsterHeroGame() {
       ownedAssistantCostumesRef.current = loadedCostumes;
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
+      setAssistantCostumeUnlockedNow(resolveUnlockedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, [], false), await storeGet(CARD_RECORD_DETAIL_KEY, null, false), await storeGet(CARD_SAVE_KEYS.record, null, false)));
       setRhythmClearTotal(await loadRhythmClearTotal());
       if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
       if (catchUp.length !== loadedFrames.length) {
@@ -115992,6 +116163,7 @@ function MonsterHeroGame() {
     const slotBuffs = isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null;
     if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts')) && ['atk', 'range_atk', 'unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0));
+    cost = Math.floor(cost * reikonGutsMultAt(slotIdx));
     if (cost > 0 && (getTurnBuff('pandoraResonanceTurns', 0) > 0 || tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns') > 0)) cost = Math.floor(cost * 0.5);
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * getPermaBuff('snegurochkaGutsDiscountStacks')));
     const soulOwner = Number.isInteger(slotIdx) && slots[slotIdx]?.masuId ? getMasuMon(slots[slotIdx].masuId) : null;
@@ -118887,7 +119059,7 @@ function MonsterHeroGame() {
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : defenseSlot != null ? String(defenseSlot) : null;
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
         const defenseTable = !isTacticsMode(runMode) && kusabiEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion: soulBattleParty.evasion,
           soulReflect: soulBattleParty.reflect,
@@ -119313,6 +119485,7 @@ function MonsterHeroGame() {
     if (timeStopSlot == null) tickKyubiKagero();
     if (timeStopSlot == null) settleOrihimeOuse();
     if (timeStopSlot == null) tickOrihimeEx();
+    if (timeStopSlot == null) tickReikonAll();
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -120567,6 +120740,10 @@ function MonsterHeroGame() {
               bonus: dreamPainTakenOf(kusabiBeforeAttack) * effMul
             });
             addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus * 100)}%`, 'enemy', 'text-fuchsia-300 text-lg font-bold');
+          }
+          if (hasReikon(card.monId)) {
+            writeReikonKey(trickStartKeyOf(slotIdx), startReikon());
+            addPopup(`👻 霊魂 次のターンから${REIKON_TURNS}ターン 消費ガッツ−${Math.round((1 - REIKON_GUTS_MULT) * 100)}%・回避+${REIKON_EVASION_UP}%`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
           }
           if (card.monId === 'Ham') {
             immediateStun = true;
@@ -135428,17 +135605,22 @@ function MonsterHeroGame() {
           className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
         }, costume ? costume.name : '元の服'), !owned && React.createElement("span", {
           className: "text-[8px] font-black leading-tight text-center text-amber-400"
-        }, "マーケットで購入"));
+        }, costume && !assistantCostumeUnlockedNow(costume) ? '解放の条件あり' : 'マーケットで購入'));
       };
       const lockedCostume = costumeLockedInfo ? assistantCostumeById(costumeLockedInfo) : null;
       const lockedInfo = lockedCostume && React.createElement("div", {
         "data-assistant-costume-locked-info": true,
         className: "rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
-      }, React.createElement("p", {
+      }, assistantCostumeUnlockedNow(lockedCostume) ? React.createElement(React.Fragment, null, React.createElement("p", {
         className: "text-[10px] font-black text-amber-300 leading-tight text-center"
       }, lockedCostume.name, "はマーケットで買えます"), React.createElement("p", {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
-      }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ ')), React.createElement("p", {
+      }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ '))) : React.createElement(React.Fragment, null, React.createElement("p", {
+        className: "text-[10px] font-black text-amber-300 leading-tight text-center"
+      }, lockedCostume.name, "はまだマーケットに並んでいません"), React.createElement("p", {
+        className: "text-[9px] text-slate-300 leading-tight text-center mt-1",
+        style: JA_WRAP_STYLE
+      }, jaWrap(lockedCostume.unlockHow || ''))), React.createElement("p", {
         className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
       }, helpWrap(lockedCostume.desc || '')));
       return React.createElement(PickerSheet, {
