@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2a12682458ffe29
+// source-sha256: dfcb2b4680852da8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70436,6 +70436,7 @@ function BattleScreen({
   tacticsCoverSlot,
   tacticsHate,
   tacticsHateOn,
+  aiCopy,
   tacticsExIntroVisible,
   dismissTacticsExIntro,
   tacticsPandoraForms,
@@ -72624,7 +72625,20 @@ function BattleScreen({
     const slotAimed = aimedSlots.includes(i);
     const slotAimHit = slotAimed ? plannedHitWithCover(i) : null;
     const slotExInfo = tacticsExInfo ? tacticsExInfo(i) : null;
-    const hatePct = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChances(tacticsUnits, tacticsHate)[i] : null;
+    const copyStanding = !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount;
+    const chancesNow = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, copyStanding ? aiCopy : null) : null;
+    const hatePct = chancesNow ? chancesNow.slots[i] : null;
+    const copyChip = tacticsNewLayout && aiCopy && aiCopy.pos === i ? React.createElement("div", {
+      "data-tactics-ai-copy": i,
+      "data-tactics-ai-copy-out": copyStanding ? '1' : '0',
+      className: "absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap"
+    }, React.createElement("span", {
+      className: "min-w-0 truncate"
+    }, "🤖", aiCopy.stacked ? '重なる ' : '', copyStanding ? `ライフ${aiCopy.hp}` : '次のターンから'), copyStanding && React.createElement("span", {
+      className: "shrink-0 tabular-nums text-sky-200/90"
+    }, "あと", aiCopy.turnsLeft), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+      className: "shrink-0 tabular-nums text-rose-200"
+    }, "狙", chancesNow.copy, "%")) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -72819,7 +72833,7 @@ function BattleScreen({
       className: "shrink-0"
     }, "🎯", slotAimHit.taken > 0 ? `-${tacticsAimNum(slotAimHit.taken)}` : ''), slotAimHit.parts.length > 1 ? React.createElement("span", {
       className: "min-w-0 truncate text-[7px] font-bold text-red-200/85"
-    }, tacticsAimParts(slotAimHit.parts, tacticsAimNum(slotAimHit.taken))) : null))), tacticsNewLayout && (() => {
+    }, tacticsAimParts(slotAimHit.parts, tacticsAimNum(slotAimHit.taken))) : null))), copyChip, tacticsNewLayout && (() => {
       const last = popups.filter(p => p.slot === i && p.side !== 'enemy').slice(-1)[0];
       const f = tacticsSlotFx && tacticsSlotFx[i];
       let kind = last ? tacticsAuraKindOf(last.text, last.side) : null,
@@ -136002,6 +136016,7 @@ function MonsterHeroGame() {
       passTacticsTurn: passTacticsTurn,
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
+      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) ? aiCopy : null,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,
