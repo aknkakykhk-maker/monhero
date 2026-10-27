@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 573712fb42e1075b
+// generated-sha256: ab85facc48c4d948
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56730,13 +56730,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const reward = cardCpuReward(fresh.daily, open.level, 'surrender', open.facts);
     const loops = cardCpuLoops(open.level, 'surrender', open.facts);
     const nextRecord = cardRecordAfter(fresh.record, { who: open.who, level: open.level, outcome: 'surrender', at: Date.now(), rankable: open.rankable });
-    const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord }, fresh.raw, [{ key: CARD_CPU_OPEN_KEY, next: null, before: raw }]);
+    // 記録をくわしく(90 の mh_card_record_detail_v1): 助手ごとの投了だけ足す(デッキ・技は分からない)
+    const detailEntry = await cardRecordDetailEntry(fresh.record, (d) => cardRecordDetailAfter(d, { who: open.who, level: open.level, outcome: 'surrender', turns: open.facts && open.facts.ownTurns, today: cardTodayJst() }));
+    const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord }, fresh.raw, [{ key: CARD_CPU_OPEN_KEY, next: null, before: raw }, detailEntry]);
     if (!ok) return null;
     if (openIdRef.current === open.id) openIdRef.current = null;
     if (open.rankable && rank && rank.send) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
     let quick = null;
     if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
-    if (quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
+    if (quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily }, [await cardRecordDetailEntry(nextRecord, (d) => ({ ...d, quick: d.quick + loops }))]);
     setNotice(`前回の対戦は途中で終わったので、投了として数えました${reward.total > 0 ? `(ビートP +${reward.total.toLocaleString()})` : ''}`);
     return { reward, loops };
   };
@@ -56853,25 +56855,29 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const nextRecord = cardRecordAfter(fresh.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
       const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
       const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
-      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, openExtra);
+      // 過去の対戦を見る(93): この試合の手の一覧。先に作っておき、保存は結果を書いたあと(使った技を数えるのにも使う)
+      const log = cpuLogRef.current;
+      const replayRec = log && log.id === game.key ? cardReplayFromCpu(db, { id: `c${log.id}`, at: Date.now(), myDeck: log.decks[0], cpuDeck: log.decks[1], seed: log.seed, first: log.first, history: log.acts,
+        foe: { name: log.foeName, who: game.who, deckName: log.deckName }, outcome, reason: '', level: game.level }) : null;
+      if (log && log.id === game.key) cpuLogRef.current = null;
+      // 記録をくわしく(90 の mh_card_record_detail_v1。見本の対戦は数えない)。デッキ・場の3体・使った技も足す
+      const usedDeck = save.decks.decks.find((d) => d.id === save.decks.active) || null;
+      const usedMons = log && log.decks[0] ? log.decks[0].monsters : ((st && st.players && st.players[CARD_ME] && st.players[CARD_ME].mons) || []).map((m) => m.no);
+      const detailEntry = game.demo ? null : await cardRecordDetailEntry(fresh.record, (d) => cardRecordDetailAfter(d, { who: game.who, level: game.level, outcome, turns: facts.ownTurns,
+        deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
+      const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // クイック周回ぶん: 周回クリア扱いにするのは、ビートと同じく、AUTO設定のクイックの難易度を通したことがある人だけ(配る側が決める)
       let quick = null;
       if (loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
       // 足せた周の数を、その日の数へ足す(トップの周回の札の詳細「今日バトルカードで足した周回」)
-      if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
+      if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily }, [await cardRecordDetailEntry(nextRecord, (d) => ({ ...d, quick: d.quick + loops }))]);
       // 対戦後のひとこと(AI)の材料。見本の対戦・マルチは聞かない
       const talkFacts = !game.demo && !game.pvp ? cardTalkAfterFacts(db, st, { cpu: CARD_CPU, outcome, level: game.level, comeback }) : null;
       // 過去の対戦を見る(93): この試合の手の一覧を端末に取っておく。保存できたら結果の画面に「この対戦を見る」
       let replayId = null;
-      const log = cpuLogRef.current;
-      if (log && log.id === game.key) {
-        cpuLogRef.current = null;
-        const rec = cardReplayFromCpu(db, { id: `c${log.id}`, at: Date.now(), myDeck: log.decks[0], cpuDeck: log.decks[1], seed: log.seed, first: log.first, history: log.acts,
-          foe: { name: log.foeName, who: game.who, deckName: log.deckName }, outcome, reason: '', level: game.level });
-        if (rec && await cardReplaySave(rec)) replayId = rec.id;
-      }
+      if (replayRec && await cardReplaySave(replayRec)) replayId = replayRec.id;
       setResult({ outcome, reward, opened, saved: ok, who: game.who, level: game.level, loops, quick, facts, talk: talkFacts, replay: replayId });
       onBgm && onBgm(save.bgm.top);
       onNavigate('CARD_TOP');
@@ -56997,7 +57003,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         record: { ...record, pvp: { win: record.pvp.win + (win ? 1 : 0), lose: record.pvp.lose + (win ? 0 : 1) } } }, fresh.raw);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(got.loops); } catch (_) { quick = null; } }
-      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } });
+      if (ok && quick) await persist({ daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0, quickLoops: (daily.quickLoops || 0) + got.loops } }, { daily: { ...daily, pvpPoint: daily.pvpPoint + got.point, firstWin: daily.firstWin || bonus > 0 } },
+        [await cardRecordDetailEntry(record, (d) => ({ ...d, quick: d.quick + got.loops }))]);
       return { ...got, saved: ok, quick };
     };
     return <CardPvpLobby onOpenReplay={(id) => { void openReplay(id, 'pvp'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meFrame={(rank && rank.profile && rank.profile.frame) || null} deck={activeDeck} deckIssues={deckIssues} onBack={() => setView('mode')} onReward={pvpReward} assistant={topAssistant} point={save.point} onAssistant={() => setView('foe')} rankSend={!!(rank && rank.send) && !debug} onStart={(g) => {
@@ -57195,43 +57202,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   // ---- 記録 ----
   // 過去の対戦の一覧(93-card-replay.jsx。2026-10-27 社長「記録にも残してそこからみれるように」)
   if (view === 'replays') return <CardReplayList onOpen={(id) => { void openReplay(id, 'replays'); }} onBack={() => setView('record')}/>;
-  if (view === 'record') {
-    const rec = save.record;
-    const r = rec.rank;
-    const weekNow = cardWeekKeyJst(Date.now());
-    return (
-      <div data-mh-screen data-card-record-view className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="記録" accent="text-amber-200" onBack={() => setView('top')} note="MFバトルカード"/>
-        <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
-          <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); setView('replays'); }}
-            className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
-            <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
-            <span className="text-[18px] text-slate-400">›</span>
-          </button>
-          {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
-          <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
-            <div data-card-record className="text-[16px] font-black text-white">{rec.cpu.win}勝 {rec.cpu.lose + rec.cpu.surrender}敗{rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''}</div>
-            <table data-card-record-levels className="mt-2 w-full text-[12px] font-bold">
-              <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
-              <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{CARD_LEVEL_LABEL[lv]}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
-            </table>
-            {/* 難易度別は 2026-10-24 から数えている。それより前から遊んでいて、合計と合わない人にだけ断る(はじめての人には出さない) */}
-            {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className="mt-1 text-[10px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
-          </div>
-          <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
-            <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
-              {[['今週の勝ち', CARD_LEVEL_ORDER.reduce((a, lv) => a + (r.week.key === weekNow ? r.week.wins[lv] : 0), 0), '勝'], ['いまの連勝', r.streak.now, '連勝'], ['最高の連勝', r.streak.best, '連勝']].map(([label, v, u]) => (
-                <div key={label} className="rounded-xl bg-black/30 py-1.5"><small className="block text-[10px] font-bold text-slate-400">{label}</small><b className="text-[16px] font-black text-amber-200">{v}</b><small className="text-[10px] font-bold text-slate-400">{u}</small></div>
-              ))}
-            </div>
-            <p className="mt-1 text-[10px] font-bold leading-snug text-slate-500" style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // マルチの履歴(92-card-pvp-history.jsx)。記録の「マルチ」から開く
+  if (view === 'pvpHistory' && typeof CardPvpHistory === 'function') return <CardPvpHistory onBack={() => setView('record')} onOpenReplay={(id) => { void openReplay(id, 'pvpHistory'); }} replayHas={cardReplayHas} meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={myName}/>;
+  // 記録(90-card-rank.jsx の CardRecordScreen。2026-10-27 社長「全体」「助手ごと」「マルチ」)
+  if (view === 'record') return <CardRecordScreen db={db} save={save} foes={foes} levelLabel={CARD_LEVEL_LABEL} onBack={() => setView('top')} onOpenReplays={() => setView('replays')} onOpenPvpHistory={typeof CardPvpHistory === 'function' ? () => setView('pvpHistory') : null}/>;
   // ---- オプション(BGM・演出) ----
   if (view === 'options') {
     // 裏のクイック周回の自動(社長 2026-10-25「モンヒロビートと同じように」)。編成は AUTO設定の「モンヒロビート中に回すクイック周回」と同じものを使う
@@ -58764,6 +58738,316 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
             </article>
           );
         })}
+      </div>
+    </div>
+  );
+};
+
+// ---- 記録をくわしく(2026-10-27 社長: 「全体」「助手ごと」「マルチ」の3つのタブ・よく使う技まで数える・これから遊んだ分から) ----
+// 保存は新しいキー mh_card_record_detail_v1 だけ(mh_card_record_v1 は書き換えない。Supabase へは何も送らない)。
+//   foes  … 助手ごと { win, lose, surrender, now(いまの連勝), best(最高の連勝), fastest(いちばん早い勝ちの自分の番。0=まだ), levels(難易度ごとの勝ち) }
+//   wins  … 助手と対戦の勝ち { n, turns(自分の番の合計), fastest }。勝つまでの平均に使う
+//   day   … 今日の勝ち { key(日本時間の日付), win }
+//   decks … 使ったデッキ { id: { name, n } }(多い順に20まで) / mons … 場に出したモンスター { 番号: 戦った数 } / moves … 使った技 { 番号: 回数 }
+//   quick … MFバトルカードから足したクイック周回の合計 / pvpBest … マルチのいちばん高かった強さ
+//   seeded … 前からの記録(mh_card_record_v1 の最近の30戦)から助手ごとの数を1回だけ起こした印。二度は足さない
+// デッキ・モンスター・技は助手と対戦だけ数える(マルチは「マルチの履歴」に試合ごとのデッキが残る)
+const CARD_RECORD_DETAIL_KEY = 'mh_card_record_detail_v1';
+const CARD_RECORD_DETAIL_DECKS_MAX = 20;
+const cardRecN = (v) => (Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
+const cardRecCounts = (v, max = 600) => {
+  if (!cardIsPlainObject(v)) return {};
+  return Object.fromEntries(Object.entries(v).filter(([k, n]) => k && k.length <= 40 && cardRecN(n) > 0).slice(0, max).map(([k, n]) => [k, cardRecN(n)]));
+};
+const cardRecFoe = (v) => {
+  const f = cardIsPlainObject(v) ? v : {};
+  return { win: cardRecN(f.win), lose: cardRecN(f.lose), surrender: cardRecN(f.surrender), now: cardRecN(f.now), best: cardRecN(f.best), fastest: cardRecN(f.fastest), levels: cardNormalizeLevelCounts(f.levels) };
+};
+const cardNormalizeRecordDetail = (v) => {
+  const r = cardIsPlainObject(v) ? v : {};
+  const foes = cardIsPlainObject(r.foes) ? r.foes : {};
+  const wins = cardIsPlainObject(r.wins) ? r.wins : {};
+  const day = cardIsPlainObject(r.day) ? r.day : {};
+  const decks = cardIsPlainObject(r.decks) ? r.decks : {};
+  return {
+    v: 1, seeded: r.seeded === true,
+    foes: Object.fromEntries(Object.entries(foes).filter(([who]) => who && who.length <= 32).slice(0, 64).map(([who, f]) => [who, cardRecFoe(f)])),
+    wins: { n: cardRecN(wins.n), turns: cardRecN(wins.turns), fastest: cardRecN(wins.fastest) },
+    day: { key: typeof day.key === 'string' ? day.key.slice(0, 10) : '', win: cardRecN(day.win) },
+    decks: Object.fromEntries(Object.entries(decks).filter(([id, d]) => id && id.length <= 40 && cardIsPlainObject(d) && cardRecN(d.n) > 0).slice(0, CARD_RECORD_DETAIL_DECKS_MAX)
+      .map(([id, d]) => [id, { name: typeof d.name === 'string' ? d.name.slice(0, 40) : '', n: cardRecN(d.n) }])),
+    mons: cardRecCounts(r.mons), moves: cardRecCounts(r.moves),
+    quick: cardRecN(r.quick), pvpBest: cardRecN(r.pvpBest),
+  };
+};
+// 前からの記録の「最近の30戦」(新しい順)から、助手ごとの勝ち負けと連勝を起こす(1回だけ。seeded の印を付ける)
+const cardRecordDetailSeed = (d, record) => {
+  if (d.seeded) return d;
+  const foes = { ...d.foes };
+  const recent = (record && Array.isArray(record.recent) ? record.recent : []).filter((x) => x && typeof x.who === 'string' && x.who && x.who.length <= 32).slice().reverse();
+  recent.forEach((x) => {
+    const f = foes[x.who] ? { ...foes[x.who], levels: { ...foes[x.who].levels } } : cardRecFoe(null);
+    if (x.outcome === 'win') { f.win += 1; f.now += 1; f.best = Math.max(f.best, f.now); if (x.level in f.levels) f.levels[x.level] += 1; }
+    else if (x.outcome === 'surrender') { f.surrender += 1; f.now = 0; }
+    else if (x.outcome === 'lose') { f.lose += 1; f.now = 0; }
+    foes[x.who] = f;
+  });
+  return { ...d, foes, seeded: true };
+};
+// 助手と対戦を1試合足す。turns … 自分の番の数 / deck … { id, name } / mons … 場の3体の番号 / moves … { 番号: 回数 } / today … cardTodayJst()
+const cardRecordDetailAfter = (d0, { who, level, outcome, turns = 0, deck = null, mons = [], moves = {}, today = '' }) => {
+  const d = { ...d0, foes: { ...d0.foes } };
+  if (typeof who === 'string' && who && who.length <= 32) {
+    const f = d.foes[who] ? { ...d.foes[who], levels: { ...d.foes[who].levels } } : cardRecFoe(null);
+    const t = cardRecN(turns);
+    if (outcome === 'win') {
+      f.win += 1; f.now += 1; f.best = Math.max(f.best, f.now);
+      if (level in f.levels) f.levels[level] += 1;
+      if (t > 0) f.fastest = f.fastest ? Math.min(f.fastest, t) : t;
+      d.wins = { n: d.wins.n + 1, turns: d.wins.turns + t, fastest: t > 0 ? (d.wins.fastest ? Math.min(d.wins.fastest, t) : t) : d.wins.fastest };
+      d.day = { key: today, win: (d.day.key === today ? d.day.win : 0) + 1 };
+    } else if (outcome === 'surrender') { f.surrender += 1; f.now = 0; }
+    else { f.lose += 1; f.now = 0; }
+    d.foes[who] = f;
+  }
+  if (deck && typeof deck.id === 'string' && deck.id) {
+    // 20を超えたら少ないものから捨てる。いま使ったデッキは必ず残す(同じ数の古いデッキに押し出されないように)
+    const cur = { name: typeof deck.name === 'string' ? deck.name.slice(0, 40) : '', n: ((d.decks[deck.id] && d.decks[deck.id].n) || 0) + 1 };
+    const others = Object.entries(d.decks).filter(([id]) => id !== deck.id).sort((a, b) => b[1].n - a[1].n).slice(0, CARD_RECORD_DETAIL_DECKS_MAX - 1);
+    d.decks = Object.fromEntries([[deck.id, cur], ...others]);
+  }
+  const monCount = { ...d.mons };
+  (Array.isArray(mons) ? mons : []).forEach((no) => { if (typeof no === 'string' && no && no.length <= 40) monCount[no] = (monCount[no] || 0) + 1; });
+  d.mons = monCount;
+  const mv = { ...d.moves };
+  Object.entries(cardIsPlainObject(moves) ? moves : {}).forEach(([no, n]) => { if (cardRecN(n) > 0) mv[no] = (mv[no] || 0) + cardRecN(n); });
+  d.moves = mv;
+  return d;
+};
+// 1試合で自分(なぞり直しの 0 番)が使った技を数える。rec … 93 の試合の記録(cardReplayFromCpu)。技 = ちから・かしこさ・特殊のカード
+const CARD_RECORD_MOVE_KINDS = new Set(['pow', 'int', 'spe']);
+const cardRecordMovesOf = (db, rec) => {
+  const out = {};
+  if (!rec || typeof cardReplayBuild !== 'function') return out;
+  let built;
+  try { built = cardReplayBuild(db, rec); } catch (_) { return out; }
+  const states = built.states || [];
+  for (let i = 1; i < states.length; i++) {
+    const prev = states[i - 1].log || [];
+    const next = states[i].log || [];
+    // 場の記録(log)は古いものから捨てられるので、前の場の最後の1行より後ろを、この手で足された行とみる
+    const last = prev.length ? JSON.stringify(prev[prev.length - 1]) : null;
+    let from = 0;
+    if (last !== null) { for (let k = next.length - 1; k >= 0; k--) { if (JSON.stringify(next[k]) === last) { from = k + 1; break; } } }
+    next.slice(from).forEach((e) => {
+      if (!e || e.kind !== 'use' || e.p !== 0 || !Array.isArray(e.cards)) return;
+      e.cards.forEach((no) => { const c = cardOf(db, no); if (c && CARD_RECORD_MOVE_KINDS.has(c.kind)) out[no] = (out[no] || 0) + 1; });
+    });
+  }
+  return out;
+};
+// 保存の1件(84 の persist の extra へ渡す形 { key, next, before })。fn … 起こした記録を受け取って、次の記録を返す
+const cardRecordDetailEntry = async (record, fn) => {
+  let raw = null;
+  try { raw = await storeGet(CARD_RECORD_DETAIL_KEY, null); } catch (_) { raw = null; }
+  return { key: CARD_RECORD_DETAIL_KEY, before: raw, next: fn(cardRecordDetailSeed(cardNormalizeRecordDetail(raw), record)) };
+};
+
+// ---- 画面: 記録(トップの「記録」から。84 の view 'record') ----
+// 「全体」… 前からの表(助手と対戦・難易度ごと・ランキングの記録)＋勝ち方・よく使う・ほか / 「助手ごと」… 押すと開く / 「マルチ」… 強さ・移り・最近の試合
+// 新しく数えるものは「この記録ができてからのぶん」と書く(前の試合は数えられない)
+const CARD_RECORD_TABS = Object.freeze([{ id: 'all', label: '全体' }, { id: 'foe', label: '助手ごと' }, { id: 'multi', label: 'マルチ' }]);
+const cardRecordTop = (counts, n) => Object.entries(counts || {}).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, n);
+const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel = {}, onBack, onOpenReplays = null, onOpenPvpHistory = null }) => {
+  const [tab, setTab] = useState('all');
+  const [detail, setDetail] = useState(null);
+  const [openFoe, setOpenFoe] = useState(null);
+  const [multi, setMulti] = useState(null); // { history, rating, place } 
+  const rec = save.record;
+  useEffect(() => {
+    let alive = true;
+    storeGet(CARD_RECORD_DETAIL_KEY, null).then((raw) => { if (alive) setDetail(cardRecordDetailSeed(cardNormalizeRecordDetail(raw), rec)); }).catch(() => { if (alive) setDetail(cardRecordDetailSeed(cardNormalizeRecordDetail(null), rec)); });
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    if (tab !== 'multi' || multi) return undefined;
+    let alive = true;
+    (async () => {
+      const history = typeof cardPvpHistoryLoad === 'function' ? await cardPvpHistoryLoad() : [];
+      let rating = null;
+      let place = null;
+      try {
+        const bid = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        const e = bid && typeof sbFetchCardPvpOwnRating === 'function' ? await sbFetchCardPvpOwnRating(bid) : null;
+        if (e) {
+          rating = e.rating;
+          const above = typeof sbCountCardPvpAbove === 'function' ? await sbCountCardPvpAbove(e.rating) : null;
+          if (above) place = { n: above.above + 1, capped: above.capped };
+        }
+      } catch (_) { /* 読めなければ点数は出さない */ }
+      if (!alive) return;
+      setMulti({ history, rating, place });
+      // いちばん高かった強さ: 履歴の点数・いまの点数のうち大きいほうを残す(大きくなったときだけ書く。新しいキーだけ)
+      const best = Math.max(0, ...history.map((h) => (h.rating ? h.rating.after : 0)), Number.isFinite(rating) ? rating : 0);
+      try {
+        const raw = await storeGet(CARD_RECORD_DETAIL_KEY, null);
+        const d = cardNormalizeRecordDetail(raw);
+        if (best > d.pvpBest) {
+          const next = { ...d, pvpBest: best };
+          if (await saveStoredValuesOrRollback([{ key: CARD_RECORD_DETAIL_KEY, before: raw, next }], storeGet, storeSet) && alive) setDetail((cur) => (cur ? { ...cur, pvpBest: best } : cur));
+        }
+      } catch (_) { /* 次に開いたときにやり直す */ }
+    })();
+    return () => { alive = false; };
+  }, [tab]);
+  const d = detail || cardRecordDetailSeed(cardNormalizeRecordDetail(null), rec);
+  const r = rec.rank;
+  const weekNow = cardWeekKeyJst(Date.now());
+  const today = cardTodayJst();
+  const dex = cardDexCounts(db, save.collection);
+  const small = 'mt-1 text-[10px] font-bold leading-snug text-slate-500';
+  const cell = (label, v, u, key) => (
+    <div key={key || label} className="min-w-0 rounded-xl bg-black/30 px-1 py-1.5"><small className="block text-[10px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(label)}</small><b className="text-[16px] font-black text-amber-200">{v}</b><small className="text-[10px] font-bold text-slate-400">{u}</small></div>
+  );
+  const row = (label, value, key) => (
+    <div key={key || label} className="flex items-start justify-between gap-2 border-t border-white/10 py-1 text-[12px] font-bold first:border-t-0"><span className="shrink-0 text-slate-300">{label}</span><span className="min-w-0 text-right text-slate-100" style={JA_WRAP_STYLE}>{value}</span></div>
+  );
+  const nameOf = (no) => ((cardOf(db, no) || cardMonsterOf(db, no) || {}).name) || no;
+  const deckTop = Object.entries(d.decks).sort((a, b) => b[1].n - a[1].n)[0] || null;
+  const monTop = cardRecordTop(d.mons, 2);
+  const moveTop = cardRecordTop(d.moves, 3);
+  const winAvg = d.wins.n ? Math.round((d.wins.turns / d.wins.n) * 10) / 10 : null;
+  const foeList = foes.filter((a) => a && a.id);
+  const pvpGames = rec.pvp.win + rec.pvp.lose;
+  const hist = multi ? multi.history : [];
+  const chart = hist.filter((h) => h.rating).slice(0, 20).reverse();
+  const chartMin = chart.length ? Math.min(...chart.map((h) => Math.min(h.rating.before, h.rating.after))) : 0;
+  const chartMax = chart.length ? Math.max(...chart.map((h) => Math.max(h.rating.before, h.rating.after))) : 0;
+  return (
+    <div data-mh-screen data-card-record-view className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="記録" accent="text-amber-200" onBack={onBack} note="MFバトルカード"/>
+      <div role="tablist" aria-label="記録の種類" className="grid grid-cols-3 gap-1.5 pb-2">
+        {CARD_RECORD_TABS.map((t) => (
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} data-card-record-tab={t.id} onClick={() => { Audio_.fgSe.tap(); setTab(t.id); }}
+            className={`min-h-[40px] rounded-xl border text-[12px] font-black ${tab === t.id ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>{t.label}</button>
+        ))}
+      </div>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
+        {tab === 'all' && (<>
+          {onOpenReplays && (
+            <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
+              className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
+              <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+              <span className="text-[18px] text-slate-400">›</span>
+            </button>
+          )}
+          {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
+            <div data-card-record className="text-[16px] font-black text-white">{rec.cpu.win}勝 {rec.cpu.lose + rec.cpu.surrender}敗{rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''}</div>
+            <table data-card-record-levels className="mt-2 w-full text-[12px] font-bold">
+              <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
+              <tbody>{CARD_LEVEL_ORDER.map((lv) => <tr key={lv} className="border-t border-white/10"><td className="py-1 text-slate-200">{levelLabel[lv] || lv}</td><td className="py-1 text-right text-amber-200">{rec.byLevel.win[lv]}</td><td className="py-1 text-right text-slate-300">{rec.byLevel.lose[lv]}</td></tr>)}</tbody>
+            </table>
+            {/* 難易度別は 2026-10-24 から数えている。それより前から遊んでいて、合計と合わない人にだけ断る(はじめての人には出さない) */}
+            {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className={small} style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
+          </div>
+          <div data-card-record-wins className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">勝ち方(助手と対戦)</div>
+            <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
+              {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, '番')}
+              {cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? '番目' : '')}
+              {cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')}
+            </div>
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「番」は自分の番の数です。この記録ができてからのぶんです')}</p>
+          </div>
+          <div data-card-record-often className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">よく使う(助手と対戦)</div>
+            {row('デッキ', deckTop ? `${deckTop[1].name || 'デッキ'}(${deckTop[1].n}戦)` : 'まだありません', 'deck')}
+            {row('モンスター', monTop.length ? monTop.map(([no, n]) => `${nameOf(no)}(${n}戦)`).join('・') : 'まだありません', 'mon')}
+            {row('技', moveTop.length ? moveTop.map(([no, n]) => `${nameOf(no)}(${n}回)`).join('・') : 'まだありません', 'move')}
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('この記録ができてからのぶんです')}</p>
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">ランキングの記録</div>
+            <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
+              {cell('今週の勝ち', CARD_LEVEL_ORDER.reduce((a, lv) => a + (r.week.key === weekNow ? r.week.wins[lv] : 0), 0), '勝')}
+              {cell('いまの連勝', r.streak.now, '連勝')}
+              {cell('最高の連勝', r.streak.best, '連勝')}
+            </div>
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
+          </div>
+          <div data-card-record-other className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">ほか</div>
+            {row('カード図鑑', `${dex.count} / ${dex.total} 種類`, 'dex')}
+            {row('クイック周回(MFバトルカードから)', `${d.quick}周`, 'quick')}
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('クイック周回の数は、この記録ができてからのぶんです')}</p>
+          </div>
+        </>)}
+        {tab === 'foe' && (
+          <div data-card-record-foes className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">助手ごとの勝ち負け</div>
+            {foeList.map((a) => {
+              const f = d.foes[a.id] || cardRecFoe(null);
+              const played = f.win + f.lose + f.surrender;
+              const open = openFoe === a.id;
+              return (
+                <div key={a.id} data-card-record-foe={a.id} className="border-t border-white/10 first:border-t-0">
+                  <button type="button" aria-expanded={open} onClick={() => { Audio_.fgSe.tap(); setOpenFoe(open ? null : a.id); }} className="flex min-h-[48px] w-full items-center gap-2 py-1 text-left">
+                    <img src={assistantFaceImage(a, 'normal')} alt="" className="h-[36px] w-[36px] shrink-0 rounded-lg border-2 bg-black object-cover object-top" style={{ borderColor: a.accent }}/>
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-black text-white">{a.name}</span>
+                    <span className="shrink-0 text-[12px] font-black text-slate-100">{played ? `${f.win}勝 ${f.lose + f.surrender}敗` : 'まだ'}</span>
+                    <span aria-hidden="true" className="w-3 shrink-0 text-[11px] text-slate-400">{open ? '▼' : '▶'}</span>
+                  </button>
+                  {open && (
+                    <div data-card-record-foe-open={a.id} className="mb-2 rounded-xl bg-amber-500/10 px-2 py-1.5">
+                      {row('投了', `${f.surrender}`, 'sur')}
+                      {row('いまの連勝', `${f.now}連勝`, 'now')}
+                      {row('最高の連勝', `${f.best}連勝`, 'best')}
+                      {row('いちばん早い勝ち', f.fastest ? `${f.fastest}番目` : '—', 'fast')}
+                      <div className="mt-1 text-[10px] font-bold text-slate-400">難易度ごとの勝ち</div>
+                      <div className="mt-0.5 grid grid-cols-5 gap-1 text-center text-[10px] font-bold">
+                        {CARD_LEVEL_ORDER.map((lv) => <div key={lv} className="min-w-0 rounded-md bg-black/30 py-0.5"><span className="block truncate text-slate-400">{levelLabel[lv] || lv}</span><b className="text-[12px] text-amber-200">{f.levels[lv]}</b></div>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('助手ごとの数は、この記録ができてからのぶんです(それより前は、最近の30戦から分かる分だけ入っています)')}</p>
+          </div>
+        )}
+        {tab === 'multi' && (<>
+          <div data-card-record-multi className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">マルチ対戦</div>
+            <div className="text-[16px] font-black text-white">{rec.pvp.win}勝 {rec.pvp.lose}敗</div>
+            {row('いまの強さ', !multi ? '読み込み中…' : Number.isFinite(multi.rating) ? `${multi.rating}${multi.place ? `(${multi.place.capped ? `${multi.place.n}位より下` : `${multi.place.n}位`})` : ''}` : pvpGames ? '—' : 'まだ対戦していません', 'rating')}
+            {row('いちばん高かった強さ', d.pvpBest ? `${d.pvpBest}` : '—', 'best')}
+          </div>
+          <div data-card-record-trend className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">強さの移り(最近20戦)</div>
+            {chart.length ? (<>
+              <div className="mt-1.5 flex h-[56px] items-end gap-[3px]" aria-label={`${chart[0].rating.before}から${chart[chart.length - 1].rating.after}`}>
+                {chart.map((h) => {
+                  const span = Math.max(1, chartMax - chartMin);
+                  return <i key={h.match} className={`block min-w-0 flex-1 rounded-t-[3px] ${h.outcome === 'win' ? 'bg-sky-400' : 'bg-slate-500'}`} style={{ height: `${Math.round(20 + ((h.rating.after - chartMin) / span) * 80)}%` }}/>;
+                })}
+              </div>
+              <p className="mt-1 text-[11px] font-bold text-slate-300">{chart[0].rating.before} → {chart[chart.length - 1].rating.after}</p>
+            </>) : <p className="mt-1 text-[12px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(multi ? '強さの点数が分かる試合が、まだありません' : '読み込み中…')}</p>}
+          </div>
+          <div data-card-record-recent className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">最近のマルチ</div>
+            {hist.length ? hist.slice(0, 3).map((h) => row(h.foe.name, `${h.outcome === 'win' ? '勝ち' : '負け'}${h.rating ? ` ${h.rating.after - h.rating.before >= 0 ? '+' : '−'}${Math.abs(h.rating.after - h.rating.before)}` : ''}`, h.match))
+              : <p className="mt-1 text-[12px] font-bold text-slate-400">{multi ? 'まだありません' : '読み込み中…'}</p>}
+            {onOpenPvpHistory && (
+              <button type="button" data-card-record-pvp-history onClick={() => { Audio_.fgSe.tap(); onOpenPvpHistory(); }}
+                className="mh-button mh-button-secondary mt-2 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-white/15 bg-slate-800 px-3 text-left text-[13px] font-black text-slate-100">
+                <span>マルチの履歴(相手のデッキ)</span><span className="text-slate-400">›</span>
+              </button>
+            )}
+          </div>
+        </>)}
       </div>
     </div>
   );
