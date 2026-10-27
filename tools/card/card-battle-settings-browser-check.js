@@ -172,21 +172,24 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
         // ② 技を使う前の確認: 使える技 → 狙える相手
         const usable = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].filter((el) => !/opacity-45/.test(el.className)).map((el) => el.getAttribute('data-card-hand-card')));
         let fired = false;
+        // 同じ札を CARD_DOUBLE_TAP_MS(350ms)の内に2回押すと詳しい画面が開き、狙う相手は1回目を 350ms 待ってから決まる(#3873)。
+        //   押し直し・決まるのを見るときは、その間より長く待つ
+        const TAP_GAP = 450;
         for (const i of usable) {
           await page.locator(`[data-card-hand-card="${i}"]`).click();
-          await page.waitForTimeout(150);
+          await page.waitForTimeout(TAP_GAP);
           const tgt = page.locator('[data-card-mon].ring-rose-400').first();
           if (!(await tgt.count())) { if (await page.getByRole('button', { name: '使う' }).count()) { await page.getByRole('button', { name: '使う' }).click(); fired = true; break; } await page.locator(`[data-card-hand-card="${i}"]`).click(); continue; }
           const logBefore = await page.locator('[data-card-log]').textContent();
           await tgt.click();
-          await page.waitForTimeout(250);
+          await page.waitForTimeout(TAP_GAP);
           const sheet = await has('[data-confirm-sheet]');
           if (sheet && cancelOk === null) {
             if (SHOT) await shot('confirm-use');
             await page.getByRole('button', { name: 'やめる' }).click();
             await page.waitForTimeout(250);
             cancelOk = (await page.locator('[data-card-log]').textContent()) === logBefore && !(await has('[data-confirm-sheet]'));
-            await tgt.click(); await page.waitForTimeout(250);
+            await tgt.click(); await page.waitForTimeout(TAP_GAP);
           }
           if (await has('[data-confirm-sheet]')) {
             await page.locator('[role="dialog"] button, [data-confirm-sheet] ~ div button').filter({ hasText: /^使う$/ }).first().click().catch(async () => { await page.getByRole('button', { name: '使う' }).last().click(); });
