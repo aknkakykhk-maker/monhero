@@ -1059,14 +1059,13 @@ const halloweenCostume = (assistantId, imagePrefix, name, desc) => ({
   ]),
 });
 // みゅあの新しい衣装(2026-10-27 社長「みゅあの新衣装解放。バトルカードでみゅあのマスターに勝つと解放。他の衣装の同じように売られる。新衣装は準備中」)。
-//   名前・説明は仮置き(社長に確かめ中)。売り場はダイヤショップ 100,000 だけ(社長)。絵は入れた(10/27)が、
-//   公開の印は偽のまま。社長に見せてから印を真にする。
+//   名前「デュエルマスター」・売り場はダイヤショップ 100,000 だけ(社長)。絵を入れて公開(10/27 社長「公開まで進めてかまわない」)。
 // ★解放の条件は unlock に書く: MFバトルカードの助手と対戦で、相手 cardFoe の難易度 cardLevel に1回でも勝つ。
 //   勝つ前はマーケットに出さない(「近日追加」の札も出さない)。解放の覚え方は下の ASSISTANT_COSTUME_UNLOCKED_KEY
-const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = false;
+const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;
 const muaCardMasterCostume = Object.freeze({
   id: 'mua_card_master_v1', assistantId: 'mua',
-  name: 'マスターの衣装(仮)', desc: 'MFバトルカードで、みゅあの MASTER に勝つと買えるようになる衣装です。(仮)',
+  name: 'デュエルマスター', desc: 'MFバトルカードの決闘者ふうの衣装。黒い服に白と青のマント、赤い指なし手袋と金の三角のペンダントです。',
   get released() { return ASSISTANT_COSTUME_MUA_MASTER_RELEASE === true; },
   // 絵は社長が用意(10/27)。元の絵は tools/art-sources/assistants/mua-card-master/。立ち絵は 768×1024、顔は make-assistant-faces.js で作った
   // (当て方: 1ほほえむ=normal/2手を差し出して笑う=happy/3ウインク=wink/4驚く=surprise/5照れ=troubled/6怒る=angry/7もじもじ=crying/8指さして笑う=excited)
@@ -1074,6 +1073,8 @@ const muaCardMasterCostume = Object.freeze({
   imageDir: 'images/assistant/card-master',
   price: Object.freeze({ diamond: 100000 }),
   unlock: Object.freeze({ cardFoe: 'mua', cardLevel: 'master' }),
+  // 解放する前に、プロフィールの着替えで押したとき出す案内(遊ぶ人向けの文)
+  unlockHow: 'MFバトルカードの「助手と対戦」で、みゅあの MASTER に勝つと、マーケットのダイヤショップに並びます',
 });
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),

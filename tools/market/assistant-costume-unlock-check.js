@@ -7,7 +7,7 @@
 //   前から勝っている人は mh_card_record_detail_v1 の foes.mua.levels.master が1以上なら解放とみなす(読むだけ)。
 //
 // 見るもの
-//   ① 絵が届くまでは公開の印が偽で、解放していても並ばない
+//   ① 公開の印が偽なら、解放していても並ばない(印を切り替えて確かめる。10/27 に公開して本物は真)
 //   ② (印を真にしたつもりで)勝つ前は並ばない/勝ったら並ぶ(ダイヤショップ・仮の 100,000 ダイヤ)
 //   ③ 前からの記録(詳しい記録・もとの記録の最近の30戦)で MASTER に勝っている人は並ぶ。0勝なら並ばない
 //   ④ 勝ち以外・ほかの相手・ほかの難易度では解放しない。足すだけで前の id を消さない
@@ -38,7 +38,8 @@ const ID = 'mua_card_master_v1';
 const load = (released) => {
   const ctx = { BREEDER_MARKET_ITEMS: [] };
   vm.createContext(ctx);
-  const src = released ? block.replace('const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = false;', 'const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;') : block;
+  // 公開の印を、ファイルの値に関係なく決めて読む(10/27 から本物は真)
+  const src = block.replace(/const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = (true|false);/, `const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = ${released ? 'true' : 'false'};`);
   vm.runInContext(`${src}\nthis.out={ASSISTANT_COSTUMES,ASSISTANT_COSTUME_UNLOCKED_KEY,normalizeUnlockedAssistantCostumes,resolveUnlockedAssistantCostumes,assistantCostumeUnlockEntry,setAssistantCostumeUnlockedNow,addAssistantCostumeUnlockedNow,assistantCostumeById,items:BREEDER_MARKET_ITEMS};`, ctx);
   const out = ctx.out;
   out.item = () => out.items.find(item => item.id === ID);
@@ -46,7 +47,7 @@ const load = (released) => {
   return out;
 };
 
-// ① 公開の印が偽のあいだ
+// ① 公開の印が偽のとき
 const hidden = load(false);
 check('服が1着、みゅあの服として足されている', hidden.ASSISTANT_COSTUMES.filter(c => c.id === ID && c.assistantId === 'mua').length === 1);
 check('解放の条件は「みゅあの MASTER に勝つ」', (() => { const c = hidden.ASSISTANT_COSTUMES.find(x => x.id === ID); return c.unlock && c.unlock.cardFoe === 'mua' && c.unlock.cardLevel === 'master'; })());
@@ -123,6 +124,12 @@ check('条件は「保存できた・勝ち・デバッグでない」', /if \(o
 check('解放の保存が書けたときだけ、いまの画面へ伝える', /if \(unlockEntry && await storeSet\(unlockEntry\.key, unlockEntry\.next\)\) addAssistantCostumeUnlockedNow\(unlockEntry\.next\);/.test(cardBattle));
 check('失敗しても対戦の結果を止めない(try で包む)', /try \{\s*const unlockEntry/.test(cardBattle));
 check('カードの記録(mh_card_record_detail_v1)をこの呼び出しで書かない', !/storeSet\(CARD_RECORD_DETAIL_KEY/.test(cardBattle));
+
+// ⑧ 公開(10/27 社長「公開まで進めてかまわない」)
+check('本物は公開の印が真で、名前は「デュエルマスター」・絵は card-master', /const ASSISTANT_COSTUME_MUA_MASTER_RELEASE = true;/.test(breeder)
+  && (() => { const c = load(true).ASSISTANT_COSTUMES.find(x => x.id === ID); return c.name === 'デュエルマスター' && c.imageDir === 'images/assistant/card-master' && /card-master\/face\/myua_happy\.PNG/.test(c.icon); })());
+check('解放の前にプロフィールで押すと、買える場所ではなく条件を出す',
+  /assistantCostumeUnlockedNow\(lockedCostume\)\?/.test(app) && app.includes('lockedCostume.unlockHow') && typeof load(true).ASSISTANT_COSTUMES.find(x => x.id === ID).unlockHow === 'string');
 
 console.log(failed ? `\n${failed} 件失敗` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
