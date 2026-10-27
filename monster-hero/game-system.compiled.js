@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52e9e13d797188eb
+// source-sha256: 74cbda22a4f64100
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -45871,6 +45871,101 @@ const aiCopyAutoScore = (card, {
   const dmg = attack && typeof dmgOf === 'function' ? Math.max(0, aiCopySafeNum(dmgOf(card))) : 0;
   return -prio * 1e7 + dmg;
 };
+const CLASSIC_AI_COPY_ALLY_BASE = 'base';
+const classicAiCopyShareOf = (mon, isHero) => {
+  if (!mon) return {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const plus = mon.plusStats && typeof mon.plusStats === 'object' ? mon.plusStats : {};
+  const pick = (heroKey, plusKey) => Math.max(0, aiCopySafeNum(isHero ? mon[heroKey] : plus[plusKey]));
+  return {
+    atk: pick('baseAtk', 'atk'),
+    def: pick('baseDef', 'def'),
+    maxGuts: pick('baseGuts', 'guts')
+  };
+};
+const classicAiCopyBaseOf = (mon, isHero) => {
+  if (!mon) return {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  if (isHero || CLASSIC_AI_COPY_ALLY_BASE !== 'base') return classicAiCopyShareOf(mon, isHero);
+  return {
+    atk: Math.max(0, aiCopySafeNum(mon.baseAtk)),
+    def: Math.max(0, aiCopySafeNum(mon.baseDef)),
+    maxGuts: Math.max(0, aiCopySafeNum(mon.baseGuts))
+  };
+};
+const classicAiCopySrc = ({
+  slots = [],
+  srcSlot = 0,
+  heroId = null,
+  party = {}
+} = {}) => {
+  const list = Array.isArray(slots) ? slots : [];
+  const isHeroAt = m => !!(m && heroId != null && m.id === heroId);
+  const shares = list.map(m => classicAiCopyShareOf(m, isHeroAt(m)));
+  const mine = shares[srcSlot] || {
+    atk: 0,
+    def: 0,
+    maxGuts: 0
+  };
+  const base = classicAiCopyBaseOf(list[srcSlot], isHeroAt(list[srcSlot]));
+  const part = key => {
+    const total = shares.reduce((n, s) => n + s[key], 0);
+    const grown = Math.max(0, aiCopySafeNum(party && party[key]) - total);
+    const extra = total > 0 ? grown * (mine[key] / total) : 0;
+    return Math.floor(base[key] + extra);
+  };
+  return {
+    atk: part('atk'),
+    def: part('def'),
+    maxGuts: part('maxGuts')
+  };
+};
+const classicAiCopyIsAttack = card => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
+const classicAiCopyScore = card => {
+  if (!card) return 0;
+  if (card.type === 'unique') return 3;
+  if (classicAiCopyIsAttack(card)) return 2;
+  if (card.type === 'guard' || card.type === 'heal') return 0;
+  return 1;
+};
+const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
+  const d = Math.max(0, aiCopySafeNum(partyDmg));
+  const p = Math.max(0, aiCopySafeNum(partyAtk));
+  if (!(p > 0) || !(d > 0)) return 0;
+  return Math.floor(d * Math.max(0, aiCopySafeNum(copyAtk)) / p);
+};
+const classicAiCopySpendGuts = (aiCopy, cost) => aiCopy ? {
+  ...aiCopy,
+  guts: Math.max(0, aiCopySafeNum(aiCopy.guts) - Math.max(0, aiCopySafeNum(cost)))
+} : aiCopy;
+const classicAiCopyRegenGuts = (aiCopy, rate) => {
+  if (!aiCopy) return aiCopy;
+  const max = Math.max(0, aiCopySafeNum(aiCopy.maxGuts));
+  const add = Math.floor(max * Math.max(0, aiCopySafeNum(rate)));
+  return {
+    ...aiCopy,
+    guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add)
+  };
+};
+const CLASSIC_AI_COPY_UNIQUE_IN_DECK = false;
+const classicAiCopyZones = (zones, copy, inDeck = CLASSIC_AI_COPY_UNIQUE_IN_DECK) => {
+  const z = zones || {};
+  const keepUid = inDeck && copy && copy.uniqueCard ? copy.uniqueCard.uid : null;
+  const clean = list => (Array.isArray(list) ? list : []).filter(c => !(c && c.sorashidoCopyOf != null && (keepUid == null || c.uid !== keepUid)));
+  const out = {
+    deck: clean(z.deck),
+    hand: clean(z.hand),
+    discard: clean(z.discard)
+  };
+  if (keepUid != null && ![...out.deck, ...out.hand, ...out.discard].some(c => c && c.uid === keepUid)) out.deck = [...out.deck, copy.uniqueCard];
+  return out;
+};
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
 const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
@@ -70305,6 +70400,55 @@ const kindOfTacticsSlotFx = fx => {
   if (fx.guard) return 'guard';
   return null;
 };
+const CLASSIC_AI_COPY_CSS = `
+[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
+[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
+[data-ai-copy-cell]{width:58px;flex:0 0 58px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55)}
+@media (orientation: landscape) and (max-height: 520px){
+  [data-ai-copy-row]{flex-direction:column;gap:3px}
+  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
+  [data-ai-copy-cell]{width:100%;flex:0 0 21px;height:21px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:hidden}
+  [data-ai-copy-cell] [data-sorashido-fx] .text-2xl{font-size:14px}
+  [data-ai-copy-cell] br{display:none}
+  [data-ai-copy-cell] > span{width:auto;flex:0 0 auto}
+  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+}`;
+const classicAiCopyLandscape = () => {
+  try {
+    return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
+  } catch (e) {
+    return false;
+  }
+};
+function ClassicAiCopyCell({
+  copy,
+  turnCount
+}) {
+  if (!copy) return null;
+  const out = isAiCopyOut(copy, turnCount);
+  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
+  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)),
+    maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
+  return React.createElement("div", {
+    "data-ai-copy-cell": out ? 'out' : 'waiting',
+    "aria-label": `${tacticsAiCopyName(copy)}(5人目の味方)`
+  }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement(SorashidoCopyFx, {
+    phase: out ? 'idle' : 'appear'
+  }, React.createElement("span", {
+    className: "text-2xl leading-none"
+  }, SORASHIDO_FACE_ICON)), React.createElement("span", {
+    className: "w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200"
+  }, copy.name || '仲間', React.createElement("br", null), "のコピー"), out ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200"
+  }, "G ", guts, "/", maxGuts), React.createElement(SorashidoNextCardBadge, {
+    card: copy.nextCard || null,
+    layout: layout,
+    turnsLeft: copy.turnsLeft
+  })) : React.createElement("span", {
+    className: "text-center text-[9px] font-black leading-tight text-emerald-300"
+  }, "次のターン", React.createElement("br", null), "から"));
+}
 function BattleScreen({
   battleOverlayOpen = false,
   applyTurnDamageReduction,
@@ -70749,6 +70893,7 @@ function BattleScreen({
   const [unitDetail, setUnitDetail] = useState(null);
   const exPanel = exPanelSlot != null && tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? aiCopy || null : null;
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
   const fxRestEnabled = battleFx.restPause === 'ON';
@@ -72495,6 +72640,9 @@ function BattleScreen({
       backgroundColor: 'rgba(2,6,23,0.8)'
     }
   }, p.text))))), React.createElement("div", {
+    "data-ai-copy-row": classicAiCopy && !tacticsNewLayout ? '' : undefined,
+    className: classicAiCopy && !tacticsNewLayout ? '' : 'contents'
+  }, React.createElement("div", {
     "data-tactics-debug-layout": tacticsNewLayout ? '2x2' : undefined,
     className: `grid ${tacticsNewLayout ? 'grid-cols-2 grid-rows-2 gap-1.5' : 'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
     style: {
@@ -73350,6 +73498,9 @@ function BattleScreen({
     }, React.createElement("span", {
       className: "text-[10px] font-black uppercase tracking-tighter leading-none"
     }, RANGE_LABELS[i], "距離")));
+  })), classicAiCopy && !tacticsNewLayout && React.createElement(ClassicAiCopyCell, {
+    copy: classicAiCopy,
+    turnCount: turnCount
   }))), tacticsExIntroVisible && React.createElement("div", {
     "data-tactics-ex-intro": true,
     className: "relative shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1 [@media(max-height:640px)]:h-0 [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:border-t-0"
@@ -106461,6 +106612,52 @@ function MonsterHeroGame() {
   };
   const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    const mon = slots[slotIdx];
+    if (!mon) return;
+    const src = classicAiCopySrc({
+      slots,
+      srcSlot: slotIdx,
+      heroId: mainHero?.id,
+      party: {
+        atk,
+        def,
+        maxGuts
+      }
+    });
+    const piles = handPileRef.current;
+    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])].find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
+    const res = summonAiCopy({
+      aiCopy: aiCopyRef.current,
+      zones: {
+        deck: [],
+        hand: [],
+        discard: []
+      }
+    }, {
+      srcSlot: slotIdx,
+      srcMonsterId: mon.id,
+      name: mon.masuName || mon.name || '',
+      level,
+      src,
+      uniqueCard,
+      turn: turnCount,
+      mode: 'classic',
+      effMul
+    });
+    const next = res.plan.kind === 'refresh' ? res.aiCopy : {
+      ...res.aiCopy,
+      uniqueCard: res.zones.deck[0] || null
+    };
+    commitAiCopy(next);
+    pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
+  };
+  const planClassicAiCopy = copy => {
+    if (!copy) return copy;
+    const deckNow = Array.isArray(handPileRef.current.deck) ? handPileRef.current.deck : [];
+    return planAiCopyTurn(copy, {
+      deck: copy.uniqueCard ? [...deckNow, copy.uniqueCard] : deckNow,
+      score: classicAiCopyScore
+    });
   };
   const tacticsAiCopyTools = (copy, dist) => {
     if (!copy) return null;
@@ -119849,6 +120046,7 @@ function MonsterHeroGame() {
       if (boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if (timeStopSlot != null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    if (timeStopSlot == null && aiCopyRef.current && !isTacticsMode(runMode) && isAiCopyOut(aiCopyRef.current, turnCount)) commitAiCopy(c => classicAiCopyRegenGuts(c, soulAdjustedGutsRecoveryRate));
     if (timeStopSlot == null && aiCopyRef.current) {
       const ticked = tickAiCopy({
         aiCopy: aiCopyRef.current,
@@ -119865,6 +120063,7 @@ function MonsterHeroGame() {
     }
     const nextTurn = timeStopSlot != null ? turnCount : turnCount + 1;
     setTurnCount(nextTurn);
+    if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, nextTurn)) commitAiCopy(c => planClassicAiCopy(c));
     if (raidJackRunRef.current) {
       raidJackRunRef.current.turns = Math.min(nextTurn, RAID_JACK_TURNS);
       if (nextTurn > RAID_JACK_TURNS) {
@@ -121236,6 +121435,36 @@ function MonsterHeroGame() {
       }
     }
     pdTag();
+    if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
+      let copy = aiCopyRef.current;
+      const copyMon = slots[copy.srcSlot] || mainHero;
+      for (const pick of Array.isArray(copy.picks) ? copy.picks : []) {
+        const cost = Math.max(0, Number(pick?.guts ?? pick?.cost) || 0);
+        if (!pick || cost > copy.guts) break;
+        copy = classicAiCopySpendGuts(copy, cost);
+        const skill = pick.name || pick.baseName || '攻撃';
+        if (classicAiCopyIsAttack(pick)) {
+          const d = classicAiCopyDamage(getDmg(pick, copy.srcSlot, copyMon, 0, 0, false, attackDistance), copy.atk, atk);
+          if (d > 0) {
+            totalDmg += d;
+            attackHits.push({
+              dmg: d,
+              isCrit: false,
+              slotIdx: copy.srcSlot,
+              isSpecial: true,
+              skillName: `🤖コピーの${skill}`,
+              noAnim: true
+            });
+          }
+        }
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`, 'ally');
+      }
+      commitAiCopy({
+        ...copy,
+        picks: [],
+        nextCard: null
+      });
+    }
     if (totalDmg > 0) {
       if (totalDmg > 0) {
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
@@ -121529,6 +121758,16 @@ function MonsterHeroGame() {
       ...p,
       kikiCardBonusTurns: Math.max(0, p.kikiCardBonusTurns - 1)
     } : p);
+    if (!isTacticsMode(runMode)) {
+      const z = classicAiCopyZones({
+        deck: nextDeck,
+        hand: nextHand,
+        discard: nextGraveyard
+      }, aiCopyRef.current);
+      nextDeck = z.deck;
+      nextHand = z.hand;
+      nextGraveyard = z.discard;
+    }
     setHand(nextHand);
     setDeck(nextDeck);
     setGraveyard(nextGraveyard);
@@ -136187,7 +136426,7 @@ function MonsterHeroGame() {
       passTacticsTurn: passTacticsTurn,
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
-      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) ? aiCopy : null,
+      aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,

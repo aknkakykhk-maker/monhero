@@ -1057,6 +1057,43 @@ const kindOfTacticsSlotFx = (fx) => {
 // ・省エネ切替ボタンだけ、バトル画面の中でもういちど gameState==='BATTLE' を見ていた。
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
+// ★AIコピー(ソラシドのアシカ)の5つの遊びの札。縦は4人の列の右はし、横向き(背の低い画面)は列の下に置く(ジン部長の決め)。
+//   4列(=間合い)の外に置いて、5つ目の間合いに見えないようにする。コピーがいないときは列の組み方を変えない(display:contents)
+const CLASSIC_AI_COPY_CSS = `
+[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
+[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
+[data-ai-copy-cell]{width:58px;flex:0 0 58px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55)}
+@media (orientation: landscape) and (max-height: 520px){
+  [data-ai-copy-row]{flex-direction:column;gap:3px}
+  [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
+  [data-ai-copy-cell]{width:100%;flex:0 0 21px;height:21px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:hidden}
+  [data-ai-copy-cell] [data-sorashido-fx] .text-2xl{font-size:14px}
+  [data-ai-copy-cell] br{display:none}
+  [data-ai-copy-cell] > span{width:auto;flex:0 0 auto}
+  [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
+  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
+}`;
+const classicAiCopyLandscape = () => {
+  try { return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches; }
+  catch (e) { return false; }
+};
+function ClassicAiCopyCell({ copy, turnCount }) {
+  if (!copy) return null;
+  const out = isAiCopyOut(copy, turnCount);
+  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
+  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)), maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
+  return (
+    <div data-ai-copy-cell={out ? 'out' : 'waiting'} aria-label={`${tacticsAiCopyName(copy)}(5人目の味方)`}>
+      <style>{CLASSIC_AI_COPY_CSS}</style>
+      <SorashidoCopyFx phase={out ? 'idle' : 'appear'}><span className="text-2xl leading-none">{SORASHIDO_FACE_ICON}</span></SorashidoCopyFx>
+      <span className="w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200">{copy.name || '仲間'}<br/>のコピー</span>
+      {out
+        ? <><span className="whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200">G {guts}/{maxGuts}</span>
+            <SorashidoNextCardBadge card={copy.nextCard || null} layout={layout} turnsLeft={copy.turnsLeft}/></>
+        : <span className="text-center text-[9px] font-black leading-tight text-emerald-300">次のターン<br/>から</span>}
+    </div>
+  );
+}
 function BattleScreen({
   battleOverlayOpen = false, applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
@@ -1253,6 +1290,8 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // AIコピー(5つの遊び)の札。aiCopy は公開の印が偽なら null。タクティクスの札は盤の側(data-tactics-ai-copy)
+  const classicAiCopy = !Array.isArray(tacticsUnits) ? (aiCopy || null) : null;
   // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
@@ -2438,6 +2477,7 @@ function BattleScreen({
           {/* 味方の枠。高さは中身の合計で決まる(名前18 + 絵64 + ライフ/ガッツ + 距離ラベル20)。
               ★枠は overflow-visible なので、足りないと下へはみ出して手札の帯に食い込む。
                 ライフ・ガッツをラベル付きで整列させたとき(2026-09-22)に実際はみ出した */}
+          <div data-ai-copy-row={classicAiCopy&&!tacticsNewLayout?'':undefined} className={classicAiCopy&&!tacticsNewLayout?'':'contents'}>
           <div data-tactics-debug-layout={tacticsNewLayout?'2x2':undefined} className={`grid ${tacticsNewLayout?'grid-cols-2 grid-rows-2 gap-1.5':'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:tacticsNewLayout?'clamp(196px,23dvh,214px)':'clamp(152px,18dvh,168px)'}}>
             {slots.map((s,i)=>{
               // Count how many cards already assigned to this slot
@@ -2957,6 +2997,8 @@ function BattleScreen({
                 {!tacticsNewLayout&&<div className="h-[20px] shrink-0 ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20"><span className="text-[10px] font-black uppercase tracking-tighter leading-none">{RANGE_LABELS[i]}距離</span></div>}
               </button>);
             })}
+          </div>
+          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount}/>}
           </div>
         </div>
         {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える
