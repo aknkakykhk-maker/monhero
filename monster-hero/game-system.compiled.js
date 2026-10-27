@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0244566698a16a1c
+// source-sha256: ba35b74c35852ed7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95043,6 +95043,16 @@ const CardBattleScreen = ({
           collection: save.collection,
           profile: rank.profile
         });
+        if (ok && outcome === 'win' && !debug) {
+          try {
+            const unlockEntry = assistantCostumeUnlockEntry(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, null), {
+              who: game.who,
+              level: game.level,
+              outcome
+            });
+            if (unlockEntry && (await storeSet(unlockEntry.key, unlockEntry.next))) addAssistantCostumeUnlockedNow(unlockEntry.next);
+          } catch (_) {}
+        }
         let quick = null;
         if (loops > 0 && onQuickLoops) {
           try {
@@ -111022,6 +111032,7 @@ function MonsterHeroGame() {
       ownedAssistantCostumesRef.current = loadedCostumes;
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
+      setAssistantCostumeUnlockedNow(resolveUnlockedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, [], false), await storeGet(CARD_RECORD_DETAIL_KEY, null, false), await storeGet(CARD_SAVE_KEYS.record, null, false)));
       setRhythmClearTotal(await loadRhythmClearTotal());
       if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);
       if (catchUp.length !== loadedFrames.length) {
@@ -135573,17 +135584,22 @@ function MonsterHeroGame() {
           className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
         }, costume ? costume.name : '元の服'), !owned && React.createElement("span", {
           className: "text-[8px] font-black leading-tight text-center text-amber-400"
-        }, "マーケットで購入"));
+        }, costume && !assistantCostumeUnlockedNow(costume) ? '解放の条件あり' : 'マーケットで購入'));
       };
       const lockedCostume = costumeLockedInfo ? assistantCostumeById(costumeLockedInfo) : null;
       const lockedInfo = lockedCostume && React.createElement("div", {
         "data-assistant-costume-locked-info": true,
         className: "rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
-      }, React.createElement("p", {
+      }, assistantCostumeUnlockedNow(lockedCostume) ? React.createElement(React.Fragment, null, React.createElement("p", {
         className: "text-[10px] font-black text-amber-300 leading-tight text-center"
       }, lockedCostume.name, "はマーケットで買えます"), React.createElement("p", {
         className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
-      }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ ')), React.createElement("p", {
+      }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ '))) : React.createElement(React.Fragment, null, React.createElement("p", {
+        className: "text-[10px] font-black text-amber-300 leading-tight text-center"
+      }, lockedCostume.name, "はまだマーケットに並んでいません"), React.createElement("p", {
+        className: "text-[9px] text-slate-300 leading-tight text-center mt-1",
+        style: JA_WRAP_STYLE
+      }, jaWrap(lockedCostume.unlockHow || ''))), React.createElement("p", {
         className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
       }, helpWrap(lockedCostume.desc || '')));
       return React.createElement(PickerSheet, {
