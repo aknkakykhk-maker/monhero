@@ -58,6 +58,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => setCanSkip(true), 900)` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーのスキップを出す |
 | `if (!started) finish(false); }, BOSS_MOVIE_START_TIMEOUT_MS` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーが始まらないときに打ち切る。部品が閉じるときは後片付けが待っている側を起こす |
 | `fxRestTimerRef.current = setTimeout(` | screen | 止める(71-screen-battle.jsx) | タクティクスで操作が無いあいだ演出を休ませる。止めても休まないだけ |
+| `setTimeout(() => setCopyGhost(null), 700)` | screen | 止める(71-screen-battle.jsx) | ソラシドのAIコピー(5人目)が消えたとき、直前の姿を0.7秒だけ残して消す。止めても残った姿が消えないだけで、進行には関わらない(2026-10-27 #4131) |
 | `timer.current = setTimeout(() => { fired.current = true; last.current = null; onLong(no); }, ms)` | screen | 止める | MFバトルカード(84)のカードの長押し。指を離すと止める・画面を離れたら止める |
 | `motionTimers.current.push(setTimeout(() => setMotions(` | screen | 止める | MFバトルカードの技の動きを、見せ終わったら外す。対戦の画面を離れたら止めてよい(motionTimers はまとめて止める) |
 | `const t = setTimeout(nextBubble, ms);` | screen | 止める | MFバトルカードの対戦中の助手の吹き出し(マルチのひとことも)を、字の数で決めた時間のあと次の台詞へ(無ければ消す)。effect の後始末で止める |

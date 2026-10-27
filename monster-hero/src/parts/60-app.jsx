@@ -14048,11 +14048,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   使う子は元の子の枠(srcSlot)。ガッツの支払い・2枚目の半減・🔥はここでは数えない(下の「AIコピーの1手」でコピー自身のぶんとして数える)
     const aiCopyEntries=(()=>{
       const c=aiCopyRef.current;
-      // 5つの遊びも同じ: 回復・強化・アシカは味方のカードと同じ流れで効かせる(攻撃とガードは下の「AIコピー(5つの遊び)」)
+      // 5つの遊び: ガード以外(攻撃・固有技・回復・強化・アシカ)は味方のカードと同じ流れで効かせる。固有技の特別な効き目もそのまま乗る。
+      //   ダメージは dmgScale(コピーのちから ÷ パーティのちから)で縮める。ガードは下の「AIコピー(5つの遊び)」でコピーの丈夫さで構える
       if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&!isTacticsMode(runMode)&&isAiCopyOut(c,turnCount)){
         let left=Math.max(0,Number(c.guts)||0);
-        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return !classicAiCopyIsAttack(card)&&card.type!=='guard'&&card.type!=='weak_guard'; })
-          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true}));
+        // 0 は getDmg が「倍率なし(1倍)」と読むので、ごく小さい値にしておく
+        const dmgScale=atk>0?Math.max(1e-6,Math.max(0,Number(c.atk)||0)/atk):1e-6;
+        return (c.picks||[]).filter(card=>{ const cost=Math.max(0,Number(card?.guts??card?.cost)||0); if(!card||cost>left) return false; left-=cost; return card.type!=='guard'&&card.type!=='weak_guard'; })
+          .map(card=>({card,slotIdx:c.srcSlot,aiCopy:true,dmgScale}));
       }
       if(!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido||!isTacticsMode(runMode)||!isAiCopyOut(c,turnCount)||!isTacticsAiCopyStanding(c)) return [];
       const cp=c.plannedTurn===turnCount?c:(planTacticsAiCopy(turnCount)||c);
@@ -14064,6 +14067,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     })();
     for (const entry of [...usedCardEntries,...aiCopyEntries]) {
       const card=entry.card;
+      // AIコピー(5つの遊び)の札は、ダメージをコピーのちからへ縮める(それ以外は1倍)
+      const copyDmgScale=entry.aiCopy&&Number.isFinite(entry.dmgScale)?entry.dmgScale:1;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       const totalHealBeforeCard=totalHeal, totalHealRateBeforeCard=totalHealRate;
       // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
@@ -14130,7 +14135,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul);
+          const d=Math.floor(Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)*copyDmgScale);
           const soulAttack=soulTraitAttackProfile(stunMon?.masuId?getMasuMon(stunMon.masuId):null,card,slotIdx);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
@@ -14293,7 +14298,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
         }
         const attackStartDist=attackDistance;
-        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult); attackCount++;
+        // コピーの縮めは「この技のダメージ」の倍率(skillDmgMult)に掛けて渡す(ふつうの札は1倍なので今までと同じ)
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult*copyDmgScale); attackCount++;
         const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
         const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
         const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
@@ -14320,7 +14326,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   タクティクスは攻撃した子が持ち主のとき、その子へ。既存5モードは勇者モンが持ち主のとき、パーティへ
         {
           const trickOwnerId=isTacticsMode(runMode)?tacticsUnitsRef.current[slotIdx]?.id:mainHero?.id;
-          if (hasTrickStartTrait(trickOwnerId) && finalD>0) {
+          // AIコピーの札はコピー自身のガッツで払うので、パーティへは返さない
+          if (!entry.aiCopy && hasTrickStartTrait(trickOwnerId) && finalD>0) {
             const refund=trickStartGutsRefund(cardCost);
             if (refund>0) { gainGutsAt(slotIdx,refund); addPopup(`🎩 ガッツ +${refund}`,'guts','text-violet-200 text-base font-bold drop-shadow-md'); }
           }
@@ -14480,27 +14487,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
-    // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前に、ターンの始めに決めておいたカードを使う。
-    //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。ダメージは元の子の間合いから、コピーのちからへ縮める。
-    //   ガードはコピーの丈夫さで構え、パーティを守る(コピーはライフを持たないため)。回復・強化・アシカは上の aiCopyEntries で効かせ済み(ここではガッツだけ払う)
+    // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前。使う札はターンの始めに決めてある(planClassicAiCopy)。
+    //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。攻撃・固有技・回復・強化・アシカは上の aiCopyEntries で
+    //   味方のカードと同じ流れに通し済み(ダメージはコピーのちからへ縮める)。ここではガッツを払い、ガードだけを構える
+    //   (コピーはライフを持たないので、ガードはコピーの丈夫さでパーティを守る)
     if(!isTacticsMode(runMode)&&aiCopyRef.current&&isAiCopyOut(aiCopyRef.current,turnCount)){
       let copy=aiCopyRef.current;
-      const copyMon=slots[copy.srcSlot]||mainHero;
       for(const pick of (Array.isArray(copy.picks)?copy.picks:[])){
         const cost=Math.max(0,Number(pick?.guts??pick?.cost)||0);
         if(!pick||cost>copy.guts) break;
         copy=classicAiCopySpendGuts(copy,cost);
-        const skill=pick.name||pick.baseName||'攻撃';
-        if(classicAiCopyIsAttack(pick)){
-          // ほかの攻撃と同じく、このターンに積んだ追加(応援など)も乗せる。2枚目の半減はコピーには掛けない(プレイヤーの枚数ではないため)
-          const d=classicAiCopyDamage(getDmg(pick,copy.srcSlot,copyMon,localOryoAdd,localDmgModAdd,false,attackDistance),copy.atk,atk);
-          if(d>0){ totalDmg+=d; attackHits.push({dmg:d, isCrit:false, slotIdx:copy.srcSlot, isSpecial:true, skillName:`🤖コピーの${skill}`, noAnim:true}); }
-        } else if(pick.type==='guard'||pick.type==='weak_guard'){
-          const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
-          currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
-          if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
-        } else continue; // 回復・強化・アシカ(ログは上の流れで出している)
-        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`,'ally');
+        if(pick.type!=='guard'&&pick.type!=='weak_guard') continue; // ログは上の流れで出している
+        const g=GUARD_EVOLUTION[guardLevel]||GUARD_EVOLUTION[0];
+        currentTurnGuardFlat+=(g.flat+Math.max(0,Number(copy.def)||0)*g.mult)*(pick.type==='weak_guard'?0.5:1);
+        if(pick.type==='guard') guardTypeInTurn='guard'; else if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard';
+        pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${pick.name||pick.baseName||'ガード'}を使った`,'ally');
       }
       commitAiCopy({...copy, picks:[], nextCard:null});
     }
@@ -22037,7 +22038,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 押したその場で反映して保存する(閉じるまで見比べられる)。並ぶのは公開済み(released:true)の服だけ
           const closeCostume=()=>{ setShowCostumePicker(false); setCostumeLockedInfo(null); };
           const who=assistantById(costumeAssistantId)||assistantById(selectedAssistantId);
-          const chipList=ASSISTANT_LIST.map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
+          const chipList=ASSISTANT_LIST.filter(a=>assistantReleased(a.id)).map(a=>({id:a.id,label:a.name,count:assistantCostumesFor(a.id).filter(c=>ownedAssistantCostumes.includes(c.id)).length}));
           const costumes=assistantCostumesFor(who.id);
           const worn=assistantCostumeById(wornAssistantCostumes[who.id]);
           const faceOf=(costume)=>costume&&costume.icon?costume.icon:null;
