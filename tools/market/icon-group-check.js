@@ -48,6 +48,18 @@ const inGroups = groups.flatMap(g => g.memberIds);
 check('どの商品も、どれか1つのまとまりにしか入らない', new Set(inGroups).size === inGroups.length);
 check('まとまりの中身は、実在するアイコン商品だけ', inGroups.every(id => iconItems.some(i => i.id === id)));
 check('アイコン商品のid・値段は今までどおり(全部1pt)', iconItems.every(i => i.cost === 1));
+// 助手の表情アイコン(<名前>_normal・_happy … の8種)は、キャラごとに1つのまとまり(2026-10-27 社長の指摘:
+//   ソラシドだけ表情ごとに8件ばらばらに並んでいた。助手を増やしたときに breederIconGroupKeyOf へ足し忘れても、ここで止まる)
+{
+  const EXPR = ['normal', 'happy', 'wink', 'excited', 'surprise', 'troubled', 'angry', 'crying'];
+  const prefixes = [...new Set(iconItems.map(i => (/^(.+)_(normal|happy|wink|excited|surprise|troubled|angry|crying)$/.exec(i.id) || [])[1]).filter(Boolean))]
+    .filter(p => EXPR.every(e => iconItems.some(i => i.id === `${p}_${e}`)));
+  const loose = prefixes.filter(p => { const g = groupOf(`${p}_normal`); return !g || !EXPR.every(e => g.memberIds.includes(`${p}_${e}`)); });
+  check('助手の表情アイコン8種は、どのキャラも1つのまとまり(表情ごとにばらばらに並ばない)', prefixes.length >= 6 && loose.length === 0,
+    loose.length ? loose.join(',') : `${prefixes.length}人`);
+  check('ソラシドの表情は「ソラシド」のまとまりで、どれか1つで8種ぜんぶ', idsOf('sorashido').length === 8
+    && (groups.find(g => g.id === 'sorashido') || {}).name === 'ソラシド' && expand(['sorashido_wink']).filter(id => /^sorashido_/.test(id)).length === 8);
+}
 
 // ③ 持っているアイコンを広げる
 const one = expand(['undine_icon']);
