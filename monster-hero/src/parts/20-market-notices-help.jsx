@@ -12,15 +12,14 @@ const MARKET_FRAME_RING_BOX = 1.2;
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
-  Tiger: { scale: 2.31, x: 3, y: 38 },
+  // ライガー(Tiger)はここで寄せない。顔アイコンを社長が選んだ A(頭まるごと)で作ったので、どの画面でも同じ絵のまま出す(2026-10-26)
   // アーク(ark_icon)はここで寄せない。顔アイコン(make-face-icons.js の ARK)を顔が真ん中に来るよう作り直したので、どの画面でも同じ絵のまま出す(2026-10-26)
   kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
-  snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
+  // スネグーラチカ・プラント・ユグドラシル・メルホイップはここで寄せない。この寄り方(社長が選んだ A)で顔アイコンを作り直し、
+  // どの画面でも同じ絵のまま出す(2026-10-26。基準は data/images/images-ally.js の ART_ANCHORS)
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
-  // イブリース。1.42は「頭上のボールを枠の外へ出す」ために選んだ倍率だったが、
-  // 顔に寄りすぎて角も上下も切れていた(2026-09-05・ユーザー指摘「近すぎる」)。
-  // 角と光輪が丸ごと入るところまで引いた。ボールは元絵の一部なので出してよい。
-  iblis_icon: { scale: 1.30, x: 0, y: -11 },
+  // イブリース・パンドラはここで寄せない。社長が選んだ寄り方(イブリース=輪まで入れる案1・パンドラ=A)で顔アイコンを作り、
+  // どの画面でも同じ絵のまま出す(2026-10-27)
   // ウンディーネ・ヤオビクニの本人アイコンは、エイキ・剣士モッチーと同じく専用の顔クロップ
   // (UNDINE_FACE_ICON / YAOBIKUNI_FACE_ICON)を使うので、ここでの拡大・位置調整は要らない
   // (元から丸枠向けに切り出してある)。
@@ -32,20 +31,7 @@ const MARKET_PROFILE_ICON_STYLES = {
   // 倍率で解こうとせず、顔クロップを作るのが正解だった(tools/image/make-face-icons.js)。
   // なお見た目を変えるときは **実機と同じ40pxで描いて確かめる**こと。
   // 190pxの大きな丸で見ると、40pxでは潰れて消える耳や髪が「入っている」ように見える。
-  mia_icon: { scale: 3.2, x: 0, y: 94 },
-  // パンドラ。1.8では顔が小さく、ほかのアイコンより引いて見えた
-  // (2026-09-05・ユーザー指摘「少し遠い」)。角と光輪が切れない範囲で寄せた。
-  pandora_icon: { scale: 2.4, x: 0, y: 72 },
-  // プラント。ほかのアイコンが枠の8〜10割を埋めているのに、ここだけ7割ほどしか
-  // 埋まっておらず、1つだけ引いて見えた(2026-09-05・ユーザー指摘「全部見直して統一して」)。
-  // 花の先が切れない範囲で寄せた。
-  plant_icon: { scale: 1.25, x: 0, y: -3 },
-  // ユグドラシル・メルホイップ(2026-09-29 ユーザー指示「少しアイコンが小さめだから顔を基準にもう少し近づけて」)。
-  // 顔アイコン(256px)の顔の真ん中を枠の中心へ持ってきて寄せる。4案を見比べてユーザーが選んだ倍率
-  // (ユグドラシル ×1.2 は角と耳を残す案。メルホイップ ×1.35)。移動量は「-(顔の位置-128)/256×100×倍率」%
-  // ユグドラシルの顔の真ん中は (128,147)、メルホイップは (131,148)
-  yggdrasil_icon: { scale: 1.2, x: 0, y: -8.9 },
-  mel_whip_icon: { scale: 1.35, x: -1.6, y: -10.5 },
+  // ミーア(mia_icon)はここで寄せない。社長が選んだ寄り方(A を左へ寄せた案2)で顔アイコンを作ったので、どの画面でも同じ絵のまま出す(2026-10-27)
   // みゅあ(アシストカードのアイコン)。顔が枠の中央より左に寄っていた。
   // 寄せたぶんを覆えるよう倍率も少しだけ上げている(x=2 なら s>=1.04)。
   mua: { scale: 1.06, x: 2, y: 4 },
@@ -379,10 +365,11 @@ const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.c
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
+// 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
 const MarketBalanceBar = ({ balances }) => (
   <div data-market-balances className={`mb-2 shrink-0 grid gap-2 ${balances.length>=3?'grid-cols-3':balances.length===2?'grid-cols-2':'grid-cols-1'}`}>
-    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];return(
-      <div key={currency} data-market-balance={currency} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`}>
+    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];const one=balances.length===1;return(
+      <div key={currency} data-market-balance={currency} className={`flex items-center justify-center rounded-2xl border ${one?'flex-row-reverse gap-2 py-1.5':'flex-col py-2'} ${meta.bar}`}>
         <div className="flex items-baseline gap-1">
           <span aria-hidden="true" className="text-[11px]">{meta.emoji}</span>
           <span className="font-mono text-base font-black">{Math.max(0, Math.floor(Number(value)||0)).toLocaleString()}</span>
@@ -393,8 +380,9 @@ const MarketBalanceBar = ({ balances }) => (
   </div>
 );
 // 売り場の中に出す知らせ(失敗したとき・キャンペーン中など)。どの売り場も同じ場所・同じ形
+// 文を言葉の切れ目で折る指定(JA_WRAP_STYLE)を付ける。jaWrap を通した文が「演奏のク/イック」と途中で折れていた(2026-10-27 横画面)
 const MarketNotice = ({ tone='error', children, ...rest }) => (
-  <div {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
+  <div style={typeof JA_WRAP_STYLE!=='undefined'?JA_WRAP_STYLE:undefined} {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
 );
 
 // マーケットで開く窓の枠と閉じるボタン。中身は画面共通の ModalFrame / ModalCloseButton(41-screen-ui.jsx)。

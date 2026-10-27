@@ -18,7 +18,7 @@ const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
-// マーケットのアイコン商品だけで使う立ち絵。
+// スネグーラチカの高解像度の立ち絵。顔アイコン(make-face-icons.js)の元絵で、覚醒のほうはマーケットのアイコン商品で使う。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
 const SNEGUROCHKA_AWAKENED_MARKET_ICON = "images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=52c8eda68793";
@@ -51,6 +51,9 @@ const KUROMY_DISC_ICON = "images/disc-icons/kuromy-disc.PNG?v=c7c5ba3d8031";
 // イルミネ・ドリーミィ(2026-10-22・案の段階)。円盤石アイコン。商品はこのファイルの下の BREEDER_MARKET_ITEMS(近日追加)
 const ILLUMINE_DISC_ICON = "images/disc-icons/illumine-disc.PNG?v=8368da2a70b6";
 const DREAMY_DISC_ICON = "images/disc-icons/dreamy-disc.PNG?v=3f5815550d74";
+// キュービ・オリヒメ(2026-10-27・案の段階)。マーケットの「近日追加」の商品は開発部が作る
+const KYUBI_DISC_ICON = "images/disc-icons/kyubi-disc.PNG?v=3ba6c9096afd";
+const ORIHIME_DISC_ICON = "images/disc-icons/orihime-disc.PNG?v=2463cbd1dd9e";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
@@ -364,7 +367,7 @@ const kyukoCardOnSale = () => {
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
-  { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:150000, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
+  { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:150000, desc:"次ターンから使えるカード+1枚・バトル中永続で全体連撃を強化" },
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:150000, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
   { id:'momosuke', name:"アシストカード「ももすけ」", type:'assist', icon:MOMOSUKE_FACE_ICON, cost:150000, desc:"ガッツ回復・ライフ/ガッツ上限と丈夫さが永続アップ" },
   { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:150000, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
@@ -392,7 +395,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:150000 },
   { id:'iblis_icon', name:"イブリースのアイコン", type:'icon', icon:IBLIS_FACE_ICON, cost:1 },
   { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:150000 },
-  { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:SNEGUROCHKA_MARKET_ICON, cost:1 },
+  { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:SNEGUROCHKA_FACE_ICON, cost:1 },
   { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:SNEGUROCHKA_AWAKENED_MARKET_ICON, cost:1 },
   { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:150000 },
   // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
@@ -410,15 +413,15 @@ const BREEDER_MARKET_ITEMS = [
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
   { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:150000 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
-  { id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1 },
+  { id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_FACE_ICON, cost:1 },
   { id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1 },
   { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000 },
   // ミーア。正式な本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
-  { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_IMG, cost:1 },
+  { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_FACE_ICON, cost:1 },
   { id:'mia_disc_icon', name:"ミーアの円盤石アイコン", type:'icon', icon:MIA_DISC_ICON, cost:1 },
   { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:150000 },
   // パンドラ。保存済みの本体・円盤石画像を各商品で共用する。
-  { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_IMG, cost:1 },
+  { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_FACE_ICON, cost:1 },
   { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:PANDORA_DISC_ICON, cost:1 },
   { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:PANDORA_DISC_ICON, cost:300000 },
   // エイキ。ザン・ミタラシ・アーク・イブリースと同じく専用の顔クロップ(EIKI_FACE_ICON)を

@@ -27,7 +27,7 @@ const has = (needle) => source.includes(needle);
 
 // --- 対象の定義と挙動 ---
 check('縦長の立ち絵を持つ対象がcontainに定義されている',
-  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy']);"));
+  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki', 'Yggdrasil', 'MelWhip', 'Ghost', 'Spooky', 'Melody', 'Kuromy', 'Illumine', 'Dreamy', 'Kyubi', 'Orihime']);"));
 // 味方の立ち絵が正方形でないのに contain に入っていない子がいないか(イルミネ・ドリーミィの足し忘れ。2026-10-26)
 {
   // PNG の幅と高さは先頭の IHDR(16〜24バイト目)にある
@@ -98,7 +98,8 @@ check('DyedMonsterImageは表示のたびにmonsterArtFitStyleを通す',
 // --- ベース種(マスモン化していない個体)を出す箇所は、DyedMonsterImageを使わないぶん
 //     各所で明示的にmonsterArtFitStyleを呼ぶ必要がある。ここが漏れていた ---
 check('編成/一覧共通カード(renderMonsterCardBody)のベース種分岐がmonsterArtFitStyleを通す(供モンを選択 画面などで頭が切れる不具合の修正箇所)',
-  has('<img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>'));
+  // 2026-10-27 から 48px の枠には小さい版(smallIconSrc・monsterSmallIconUrl)を出す。収め方を通すことは変わらない
+  has('<img src={smallIconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>'));
 check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyleを通す',
   // 見た目のクラス(大きさ・枠)は作り替えで変わるので、monsterArtFitStyle(ownerMon.id) を通していることだけを見る
   has('<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className='));

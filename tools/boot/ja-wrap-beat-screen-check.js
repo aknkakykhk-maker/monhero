@@ -7,15 +7,30 @@
 //
 // ja-wrap-check.js は短い札(16字まで・題名・タブ)だけを数え、長い文は数えない。ここではモンヒロビートの画面に限って、長い文も数える。
 // 画面の字を1文字ずつの位置で見て行の変わり目を出し、その変わり目が Intl.Segmenter の1語の中か、句読点・閉じかっこ・長音が行の頭に落ちたら数える。
+//   片仮名の続き(10字未満)の途中・最後の行が仮名2字以下だけ(「演奏しま／した」)も数える(2026-10-27)
 //   ・空白・<wbr> で折れたのは数えない(作り手が決めた折り目)。英数字だけの語・10字以上の語(1行に入らない)も数えない
 //   ・見る画面: モードえらび・曲えらび・マスモン設定・遊びかた・ビートLv・オプションの4つのタブ・ランキング・記録
 // 直し方: その文を jaWrap(…) で包み、style に JA_WRAP_STYLE を付ける(41-screen-ui.jsx)。字が決まっている札は <wbr> と break-keep でもよい
+//
+// 同じ巡りで、字の「切れ」も数える(2026-10-26 ビート部・部長テンポくんの依頼。フリーマッチの待ち人数が札の下の端で切れていた):
+//   ・「…」切れ: text-overflow: ellipsis で、中身が箱より広い
+//   ・横切れ・下の端で切れ: 字の位置が、外側の overflow hidden/clip の箱の左右・下の端の外へ出ている(動かせる箱の中は数えない)
+//   ※箱の幅(scrollWidth)では見ない。札の後ろの飾りの大きな英字がはみ出していても、字そのものは切れていないため
+//   ・画面の外: 字が画面の左右の外へ出ている
+//   わざと「…」にしている所(長い曲名など)は CLIP_ALLOW に書く。切れの数は BEAT_SCREEN_CLIP_LIMIT 以下
+//   node tools/boot/ja-wrap-beat-screen-check.js --list   # 切れた所も全部出す
 'use strict';
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8971;
 const LIST = process.argv.includes('--list');
 // 言葉の途中で折れてよい数。2026-10-26 に0まで直した
 const BEAT_SCREEN_WRAP_LIMIT = 0;
+// 字の切れてよい数(わざと切っている所は CLIP_ALLOW で外す)
+const BEAT_SCREEN_CLIP_LIMIT = 0;
+// わざと「…」で切っている所。[種類, 場所(要素の印), 理由]。字は回ごとに変わる(イベント名など)ので、場所で書く
+const CLIP_ALLOW = [
+  ['「…」切れ', '[data-rhythm-beat-point-campaign]', 'ビートPキャンペーンの帯。倍率(「周回 5倍」)を必ず見せるため、イベント名のほうだけ縮める(58-screen-rhythm.jsx・2026-10-26)'],
+];
 let failed = 0;
 const check = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!cond) failed++; };
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
@@ -70,18 +85,63 @@ const SCAN = () => {
       for (const { segment } of seg.segment(full)) { if (i > p && i < p + segment.length) { word = segment; break; } p += segment.length; if (p >= i) break; }
       const mid = !!word && /[ぁ-んァ-ヶ一-龯]/.test(word) && word.length < 10;
       const head = /^[、。，．！？!?」』）)】…ー]/.test(full.slice(i));
-      if (mid || head) out.push(`${full.slice(Math.max(0, i - 8), i)}／${full.slice(i, i + 8)}`);
+      // Intl.Segmenter が2語に分ける片仮名の続き(「ライブ|ログ」)も、10字未満なら1語として数える(2026-10-27 リザルトで見つけた)
+      const kana = (full.slice(0, i).match(/[ァ-ヶー]+$/) || [''])[0], kanaTail = (full.slice(i).match(/^[ァ-ヶー]+/) || [''])[0];
+      const kataMid = !!kana && !!kanaTail && kana.length + kanaTail.length < 10;
+      // 最後の行が仮名2字以下だけ(「演奏しま／した」)。Segmenter は「しま|した」と分けるが、読むと言葉の途中で折れている
+      const tail = full.slice(i), lastLine = !chars.slice(i + 1).some((c) => c[1] > chars[i][1] + 3);
+      const orphan = lastLine && /^[ぁ-んァ-ヶー]{1,2}[。、！？!?]?$/.test(tail) && /[ぁ-んァ-ヶー]$/.test(full.slice(0, i));
+      if (mid || head || kataMid || orphan) out.push(`${full.slice(Math.max(0, i - 8), i)}／${full.slice(i, i + 8)}`);
     }
   }
   return [...new Set(out)];
 };
 
-(async () => {
+const CLIP = (allow) => {
+  // 箱の幅(scrollWidth)ではなく、その字の位置で見る(札の後ろの飾りの大きな英字がはみ出しても、字そのものは切れていない)
+  const out = []; const W = innerWidth;
+  const hidden = (v) => v === 'hidden' || v === 'clip';
+  const shown = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const st = getComputedStyle(e); if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) === 0) return false; } return true; };
+  const range = document.createRange();
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    if (!n.data.trim()) continue;
+    const el = n.parentElement; if (!el) continue;
+    if (el.closest('script,style,svg,[aria-hidden="true"],[data-rhythm-play-area]')) continue;
+    range.selectNodeContents(n); const tr = range.getBoundingClientRect();
+    if (!tr.width || !tr.height || tr.bottom < 0 || tr.top > innerHeight) continue;
+    if (!shown(el)) continue;
+    const t = n.data.replace(/\s+/g, ' ').trim().slice(0, 24);
+    let cut = '';
+    // 「…」で切っている(text-overflow: ellipsis で、中身が箱より広い)
+    for (let e = el, k = 0; e && k < 3 && !cut; e = e.parentElement, k++) {
+      const st = getComputedStyle(e);
+      if (st.textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth + 1) cut = '「…」切れ';
+    }
+    // 外側の切る箱(overflow hidden/clip)の外へ、字が出ている。動かせる箱(auto/scroll)の中は、動かせば見えるので数えない
+    if (!cut) for (let e = el; e && e !== document.body; e = e.parentElement) {
+      const st = getComputedStyle(e);
+      const scrollX = st.overflowX === 'auto' || st.overflowX === 'scroll', scrollY = st.overflowY === 'auto' || st.overflowY === 'scroll';
+      const br = e.getBoundingClientRect();
+      if (hidden(st.overflowX) && !scrollX && (tr.right > br.right + 1 || tr.left < br.left - 1)) { cut = '横切れ'; break; }
+      if (hidden(st.overflowY) && !scrollY && tr.bottom > br.bottom + 2 && tr.top < br.bottom) { cut = '下の端で切れ'; break; }
+      if (scrollX || scrollY) break;
+    }
+    if (!cut && (tr.right > W + 1 || tr.left < -1)) cut = '画面の外';
+    if (cut && !allow.some(([k, sel]) => k === cut && el.closest(sel))) out.push([cut, t]);
+  }
+  return out;
+};
+
+// リザルトの検査(ja-wrap-beat-result-check.js)が同じ数え方を使う
+module.exports = { SCAN, CLIP, CLIP_ALLOW };
+if (require.main === module) (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools/node_modules/playwright'))); } catch { console.log('SKIP: playwright が入っていないので確認できません'); process.exit(0); }
   const server = await serve();
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const found = [];
+  const clipped = [];
   try {
     for (const [W, H] of SIZES) {
       const page = await browser.newPage({ viewport: { width: W, height: H } });
@@ -113,6 +173,7 @@ const SCAN = () => {
           }
           await page.waitForTimeout(800);
           for (const x of await page.evaluate(SCAN)) found.push(`${name} ${W}×${H}: ${x}`);
+          for (const [kind, t] of await page.evaluate(CLIP, CLIP_ALLOW.map(([k, sel]) => [k, sel]))) clipped.push(`${name} ${W}×${H}: ${kind}「${t}」`);
         } catch (e) { check(`${name} ${W}×${H} を開けた`, false, e.message.split('\n')[0].slice(0, 120)); }
       }
       await page.close();
@@ -122,6 +183,10 @@ const SCAN = () => {
   if (LIST) for (const x of uniq) console.log('  ', x);
   check('モンヒロビートの画面で、言葉の途中で折れた所が上限(BEAT_SCREEN_WRAP_LIMIT)以下', uniq.length <= BEAT_SCREEN_WRAP_LIMIT,
     `${uniq.length}件(上限 ${BEAT_SCREEN_WRAP_LIMIT})${uniq.length ? ' — ' + uniq.slice(0, 6).join(' / ') : ''}`);
+  const clipUniq = [...new Set(clipped)];
+  if (LIST) for (const x of clipUniq) console.log('  ', x);
+  check('モンヒロビートの画面で、字が切れた・はみ出した所が上限(BEAT_SCREEN_CLIP_LIMIT)以下', clipUniq.length <= BEAT_SCREEN_CLIP_LIMIT,
+    `${clipUniq.length}件(上限 ${BEAT_SCREEN_CLIP_LIMIT})${clipUniq.length ? ' — ' + clipUniq.slice(0, 6).join(' / ') : ''}`);
   console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })();

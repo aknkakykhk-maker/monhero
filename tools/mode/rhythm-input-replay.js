@@ -123,6 +123,8 @@ if (require.main !== module) { module.exports = { readRecord, songStartAt, occur
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => { window.__mhSupabaseStubbed = true; });
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    // 助手のおしゃべりの中継(Edge Function)も本物へ届けない。差し替えが無いと本物の中継が AI を呼ぶ(2026-10-27)
+    await page.route('**/functions/v1/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
     const { quietBootSeed } = require('../boot/quiet-boot-seed');
     await page.addInitScript(quietBootSeed());
     await page.addInitScript((settings) => {
