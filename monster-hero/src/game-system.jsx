@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 478f63aa2f827bdc
+// generated-sha256: a8f144b11311d78c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -33082,6 +33082,28 @@ function WaitForOverlayClose({ children }) {
   return blocked ? null : children;
 }
 
+// 中身が入りきらず窓の中を送れるときだけ、下に「続きがあります」を出す一覧(2026-10-27 ダメダシくんの指摘 f02
+// 「横持ちで5件目が窓の外に隠れ、送れることも分からない」)。件数ではなく実際にあふれているかで決め、いちばん下まで送ったら消す
+function ScrollMoreList({ className = '', moreText, children, ...rest }) {
+  const ref = useRef(null);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setMore(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
+    measure();
+    el.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    return () => { el.removeEventListener('scroll', measure); window.removeEventListener('resize', measure); };
+  }, []);
+  return (
+    <>
+      <div ref={ref} className={className} {...rest}>{children}</div>
+      {more && <div data-scroll-more className="mt-1.5 text-center text-[10px] font-black text-amber-200">{moreText}</div>}
+    </>
+  );
+}
+
 // ---- part: 42-picker-sheet.jsx ----
 // ==== 共通部品: 一覧から選ぶ窓(PickerSheet) ====
 //
@@ -34679,7 +34701,9 @@ function ProfileScreen({
                           <AssistantFace who={who} size={30} accent={who.accent} expression={active?'happy':'normal'}/>
                           <span className="min-w-0 flex-1">
                             <b className="block text-[12px] font-black leading-tight text-white break-words [text-wrap:balance]">{who.name}{active&&'（選択中）'}</b>
-                            <small className="block text-[10px] text-slate-400 truncate">Lv.{lv} {t?t.title:''}</small>
+                            {/* 幅320で「Lv.1 はじめま…」と切れていた(2026-10-27 ダメダシくんの指摘 e02)。切らずに出す。
+                                「はじめまし/て」と言葉の途中で折れないよう、Lv と名前をそれぞれ折れない塊にし、折れるのはそのあいだだけ */}
+                            <small className="flex flex-wrap gap-x-1 text-[10px] leading-snug text-slate-400"><span className="whitespace-nowrap">Lv.{lv}</span>{t&&t.title?<span className="whitespace-nowrap">{t.title}</span>:null}</small>
                           </span>
                         </button>
                       );
@@ -40289,7 +40313,7 @@ function KikiIntroOverlay({
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
           <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
-        <p className="mt-2 text-center text-[8px] text-slate-500">
+        <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
           {step+1} / {script.length}
         </p>
         {/* スキップ(2026-10-10・改善部の提案K2「あたらしい助手の紹介が10ページでスキップが無い」とユーザー指示)。
@@ -40336,7 +40360,7 @@ function MomosukeIntroOverlay({
           <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
           <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleWrap(line.t)}</span>
         </div>
-        <p className="mt-2 text-center text-[8px] text-slate-500">{step+1} / {script.length}</p>
+        <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">{step+1} / {script.length}</p>
         {/* スキップ(2026-10-07・モンヒロくんの報告とユーザー指示)。39場面あり、イベントのお話のように飛ばせなかった。
             飛ばしても見たことになり、回想(EVENT_REPLAYS の momosuke_intro)からいつでも見直せる */}
         <div className={`relative mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto'}}>
@@ -57167,12 +57191,12 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <div className="text-[13px] font-black text-white">トップの助手</div>
             <div className="mt-1.5 flex justify-end"><ModeSelectAssistToggles assistant={topAssistant} showArt={assist.modeSelectArt} showComment={assist.modeSelectComment} onToggle={toggleAssist} cls="" withLabel/></div>
           </div>
-          {/* 項目の目次(横画面だけ)。押すと右の一覧のその項目へ移る */}
+          {/* 項目の目次(横画面だけ)。押すと右の一覧の箱だけをその項目へ動かす(scrollIntoView は画面ごと動かすことがあるので使わない。viewport-height-check) */}
           <div data-card-options-toc className={`${SCREEN_PANEL_CLASS} hidden landscape:block`}>
             <div className="text-[11px] font-bold text-slate-400">項目</div>
             <div className="mt-1 grid grid-cols-3 gap-1">
               {[...(cardTalkOpen() ? [['おしゃべり', '[data-card-ai-talk-panel]']] : []), ...CARD_SETTING_GROUPS.map((g) => [g.title, `[data-card-setting-group="${g.title}"]`]), ['音', '[data-card-options-bgm]']].map(([label, sel]) => (
-                <button key={label} type="button" data-card-options-jump={label} onClick={() => { Audio_.fgSe.tap(); const el = document.querySelector(`[data-card-options] ${sel}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                <button key={label} type="button" data-card-options-jump={label} onClick={() => { Audio_.fgSe.tap(); const box = document.querySelector('[data-card-options] .mh-scroll'); const el = box && box.querySelector(sel); if (el) box.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 4), behavior: 'smooth' }); }}
                   className="min-h-[34px] min-w-0 rounded-lg border border-white/15 bg-slate-800/80 px-1 text-[11px] font-black text-slate-100">{jaWrap(label)}</button>
               ))}
             </div>
@@ -82212,15 +82236,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             return first&&last&&first!==last?`${first} 〜 ${last}`:(first||last);
           };
           const seenOf=(group)=>group.events.filter(isEventReplayUnlocked).length;
+          // 話の名前は、空白で区切った言葉(「ハロウィン・ナイト」「第1部」「～ようこそ、夜祭へ～」)ごとに折らずに置く。
+          // jaWrap だけだと「第1／部」「～よう／こそ」と言葉の中で折れた(2026-10-26 ダメダシの見回り)。12字を超える言葉は jaWrap に任せる
+          const titleWrap=(t)=>String(t||'').split(/(\s+)/).map((x,i)=>!x||/^\s+$/.test(x)?x:([...x].length<=12?<span key={i} data-ja-keep style={{whiteSpace:'nowrap'}}>{x}</span>:<React.Fragment key={i}>{jaWrap(x)}</React.Fragment>));
           return (
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div data-event-replay-page={activeGroup?'episodes':'panels'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+          <div className="fixed inset-0 flex flex-col items-center justify-center p-5 [@media(max-height:500px)]:p-2" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            {/* 横向き(背の低い画面)では窓が低く、話が3つしか見えなかった(2026-10-26 ダメダシの見回り)。窓を広げて余白を詰め、2列に並べる */}
+            <div data-event-replay-page={activeGroup?'episodes':'panels'} className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col [@media(max-height:500px)]:max-w-2xl [@media(max-height:500px)]:p-3">
               {!activeGroup&&(
                 <>
                   {/* 1ページ目: イベント単位のパネル */}
                   <h3 className="shrink-0 text-base font-black text-white mb-1 text-center">イベント回想</h3>
                   <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">見たいイベントを選んでください。<br/>見たことのある会話を、何度でも見返せます。</p>
-                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3">
+                  <div data-event-replay-groups className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2.5 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2">
                     {groups.map(group=>{
                       const seen=seenOf(group),total=group.events.length;
                       return (
@@ -82229,7 +82257,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           style={{border:`1.5px solid ${group.color}66`,backgroundColor:`${group.color}14`}}>
                           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl" aria-hidden="true" style={{backgroundColor:`${group.color}26`}}>{group.emoji}</span>
                           <span className="min-w-0 flex-1">
-                            <b className="block text-[13px] font-black text-white leading-tight">{group.label}</b>
+                            <b className="block text-[13px] font-black text-white leading-tight" style={JA_LABEL_STYLE}>{jaWrap(group.label)}</b>
                             <small className="block text-[9px] text-slate-400 leading-tight">{group.note}</small>
                             {rangeText(group)&&<small data-event-replay-date className="block text-[9px] tabular-nums text-slate-500">{rangeText(group)}</small>}
                             <span className="mt-1 flex items-center gap-1.5">
@@ -82251,13 +82279,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="shrink-0 mb-1 flex items-center gap-2">
                     <button type="button" data-event-replay-back aria-label="イベントの一覧へ戻る" onClick={()=>setEventReplayGroupId(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 active:scale-95"><ArrowLeft size={18}/></button>
                     <span className="min-w-0 flex-1 text-center">
-                      <b className="block text-[14px] font-black text-white leading-tight"><span aria-hidden="true">{activeGroup.emoji} </span>{activeGroup.label}</b>
+                      <b className="block text-[14px] font-black text-white leading-tight" style={JA_LABEL_STYLE}><span aria-hidden="true">{activeGroup.emoji} </span>{jaWrap(activeGroup.label)}</b>
                       <small className="block text-[10px] font-black tabular-nums" style={{color:activeGroup.color}}>見たお話 {seenOf(activeGroup)}/{activeGroup.events.length}</small>
                     </span>
                     <span className="w-11 shrink-0" aria-hidden="true"/>
                   </div>
-                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight">お話の順に並んでいます。</p>
-                  <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3">
+                  <p className="shrink-0 text-[9px] text-slate-500 text-center mb-3 leading-tight [@media(max-height:500px)]:mb-1.5">お話の順に並んでいます。</p>
+                  <div data-event-replay-episodes className="min-h-0 flex-1 overflow-y-auto mh-scroll space-y-2 mb-3 [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:space-y-0 [@media(max-height:500px)]:content-start [@media(max-height:500px)]:mb-2">
                     {activeGroup.events.map(event=>{
                       const eventUnlocked=isEventReplayUnlocked(event);
                       if(!eventUnlocked){
@@ -82276,7 +82304,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
                           <Play size={16} className="text-fuchsia-300 shrink-0"/>
                           <span className="min-w-0 flex-1">
-                            <b className="block text-[12px] font-black text-white">{event.title}</b>
+                            <b className="block text-[12px] font-black text-white" style={JA_LABEL_STYLE}>{titleWrap(event.title)}</b>
                             <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
                           </span>
                         </button>
@@ -82896,9 +82924,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="text-[11px] font-black text-amber-300">{rewardReceipt.title}</div>
             <h3 className="mt-0.5 text-lg font-black text-white">手に入れたもの</h3>
           </div>
-          <div className="mt-3 max-h-[46vh] space-y-1.5 overflow-y-auto">
-            {rewardReceipt.rewards.map((reward,idx)=><div key={idx} data-reward-receipt-row className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white">{giftRewardText(reward)}</div>)}
-          </div>
+          {/* 横持ち(高さ 390 など)では1件の行が高く、5件目が窓の外に隠れて「送れること」も分からなかった
+              (2026-10-27 ダメダシくんの指摘 f02)。横持ちは2列・低めの行にして、それでもあふれるときだけ続きがあると書く(ScrollMoreList) */}
+          <ScrollMoreList data-reward-receipt-list moreText={`全${rewardReceipt.rewards.length}件・窓の中を下へ送ると続きが見られます`} className="mt-3 max-h-[46vh] grid grid-cols-1 gap-1.5 overflow-y-auto landscape:grid-cols-2">
+            {rewardReceipt.rewards.map((reward,idx)=><div key={idx} data-reward-receipt-row className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-center text-[14px] font-black text-white landscape:px-2 landscape:py-1.5 landscape:text-[11px] landscape:leading-tight">{giftRewardText(reward)}</div>)}
+          </ScrollMoreList>
           {rewardReceipt.count>1&&<div className="mt-2 text-center text-[10px] font-bold text-slate-400">{rewardReceipt.count}件をまとめて受け取りました</div>}
           <div className="mt-3"><ModalCloseButton onClick={()=>setRewardReceipt(null)}/></div>
         </ModalFrame>
@@ -83306,7 +83336,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   呼び方も絆Lvも助手ごとに違うので、選んでいる助手ではなく「話している助手」から引く */}
               <span className="block text-[13px] font-bold leading-relaxed text-white mt-1" style={bubbleWrapStyle()}>{bubbleLines(speakText(bottomLine,bottomSpeaker))}</span>
             </div>:<div className="rounded-2xl border-2 border-slate-700 bg-slate-900 px-3 py-3 text-center text-[11px] font-bold text-slate-400">▲ 上のことばを読んでね</div>}
-            <p className="mt-2 text-center text-[8px] text-slate-500">
+            <p className="mt-2 text-center text-[11px] font-bold tabular-nums text-slate-300">
               {step+1} / {script.length}
               {/* 「○○は「…」と呼び合います」の案内は出さない(2026-10-22 社長「ストーリー上に出さないでほしい」)。呼び方の表(EVENT_REPLAYS の calls)は台本を書く人の控えとしてデータに残す */}
             </p>
