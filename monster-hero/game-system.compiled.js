@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8db4bb81fced76f9
+// source-sha256: 1c7ccee0085f74f9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -74248,6 +74248,224 @@ const monsterCheckStatRows = mon => {
     };
   });
 };
+const monsterCheckPct = v => `${Math.round(Number(v || 0) * 1000) / 10}%`;
+const MonsterCheckLabButton = ({
+  onClick,
+  children,
+  tone = 'slate',
+  active = false
+}) => React.createElement("button", {
+  type: "button",
+  onClick: onClick,
+  className: `min-h-[44px] rounded-xl px-2 text-[11px] font-black active:scale-95 ${active ? 'bg-fuchsia-600 text-white' : tone === 'amber' ? 'bg-amber-700/70 text-white' : 'bg-slate-800 text-slate-100'}`
+}, children);
+const MonsterCheckLabLines = ({
+  lines
+}) => React.createElement("div", {
+  className: "rounded-lg bg-black/40 p-2 text-[10px] font-bold leading-relaxed text-cyan-100"
+}, lines.filter(Boolean).map((t, i) => React.createElement("div", {
+  key: i
+}, t)));
+function KyubiTraitLab() {
+  const [phaseId, setPhaseId] = useState('sakuretsu');
+  const [guts, setGuts] = useState(56);
+  const [rengoku, setRengoku] = useState(0);
+  const [kagero, setKagero] = useState(kageroOf(null));
+  const [fox, setFox] = useState(kitsunebiOf(null));
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setRengoku(0);
+    setKagero(kageroOf(null));
+    setFox(kitsunebiOf(null));
+    setTurn(1);
+    setLog('');
+  };
+  const eff = kyubiPhaseEffectOf(phaseId, {
+    rengoku,
+    skillGuts: guts
+  });
+  const card = kind => {
+    if (phaseId === 'rengoku') setRengoku(n => kyubiRengokuOf(n + 1));
+    if (kind === 'attack' && phaseId === 'kagero') setKagero(k => kageroAfterAttack(k));
+    const f = kitsunebiEffectOf(fox, kind);
+    setLog(kind === 'attack' ? `攻撃: 与ダメ×${(eff.dmgMult * (1 + f.buffDmg)).toFixed(3)}${eff.combo ? `・${eff.combo.label}の連撃${monsterCheckPct(eff.combo.rate)}` : ''}${f.extraHit ? `・狐火の追加${monsterCheckPct(f.extraHit)}` : ''}` : kind === 'guard' ? `ガード: 狐火で被ダメ−${monsterCheckPct(f.guardCut)}` : `助け: 狐火でガッツ+${monsterCheckPct(f.assistGuts)}`);
+  };
+  const hit = () => {
+    if (phaseId === 'kagero' && kagero.ready) {
+      setKagero(k => kageroUseEvade(k));
+      setLog('攻撃を受けた: 陽炎ノ相で完全回避(狐火は減らない)');
+      return;
+    }
+    const r = kitsunebiOnHit(fox),
+      f = kitsunebiEffectOf(fox);
+    setFox(r.next);
+    setLog(`攻撃を受けた: 被ダメ×${(r.takenMult * (1 - f.buffTaken)).toFixed(3)}${r.takenMult < 1 ? '(狐火が1つ盾になって消えた)' : ''}`);
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setKagero(k => tickKagero(k));
+    setFox(k => tickKitsunebi(k));
+    setLog('ターンを進めた');
+  };
+  const ex = () => {
+    setFox(k => useKitsunebi(k));
+    setLog(fox.active ? '九尾幻灯(2回目): 狐火満タン・強化かけ直し' : '九尾幻灯: 狐火5個・幻灯強化3ターン');
+  };
+  const f = kitsunebiEffectOf(fox);
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Kyubi",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, KYUBI_PHASES.map(p => React.createElement(MonsterCheckLabButton, {
+    key: p.id,
+    active: p.id === phaseId,
+    onClick: () => {
+      setPhaseId(p.id);
+      reset();
+    }
+  }, RANGE_LABELS[p.slot], React.createElement("br", null), p.name))), phaseId === 'rengoku' && React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, [20, 40, 56].map(g => React.createElement(MonsterCheckLabButton, {
+    key: g,
+    active: g === guts,
+    onClick: () => setGuts(g)
+  }, "消費ガッツ", g))), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('attack')
+  }, "攻撃のカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('guard')
+  }, "ガードのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('assist')
+  }, "助けのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: hit
+  }, "攻撃を受ける"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: ex
+  }, "EX 九尾幻灯")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
+function OrihimeTraitLab() {
+  const [diff, setDiff] = useState(3);
+  const [partnerUp, setPartnerUp] = useState(true);
+  const [ouse, setOuse] = useState(0);
+  const [hoshiai, setHoshiai] = useState(null);
+  const [kogare, setKogare] = useState({
+    turns: 0,
+    rollsLeft: 0
+  });
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setOuse(0);
+    setHoshiai(null);
+    setKogare({
+      turns: 0,
+      rollsLeft: 0
+    });
+    setTurn(1);
+    setLog('');
+  };
+  const bond = orihimeBondEffectOf(diff, ouse, partnerUp);
+  const max = ORIHIME_BOND_TIERS[diff]?.max || 0;
+  const move = same => {
+    setOuse(n => addOuse(n, diff, same, partnerUp));
+    setLog(same ? partnerUp ? '同じ種類の動き: 逢瀬+1' : '相方が倒れているので逢瀬は増えない' : '違う種類の動き: 逢瀬はそのまま');
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setHoshiai(h => h && h.turns > 1 ? {
+      ...h,
+      turns: h.turns - 1
+    } : null);
+    setKogare(k => k.turns > 1 ? {
+      turns: k.turns - 1,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    } : {
+      turns: 0,
+      rollsLeft: 0
+    });
+    setLog('ターンを進めた');
+  };
+  const star = () => {
+    const h = startHoshiai(ouse, diff);
+    setHoshiai(h);
+    setOuse(0);
+    setLog(`星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(h.rate)}・1ターン${h.perTurn}回まで(逢瀬は0へ)`);
+  };
+  const longing = () => {
+    setKogare({
+      turns: KOGARE_TURNS,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    });
+    setLog(`焦がれ待つ天ノ河: ${KOGARE_TURNS}ターン`);
+  };
+  const attack = () => {
+    if (kogare.turns <= 0) {
+      setLog('攻撃が当たった(焦がれ待つ天ノ河は効いていない)');
+      return;
+    }
+    const r = rollKogare(kogare.rollsLeft);
+    setKogare(k => ({
+      ...k,
+      rollsLeft: r.rollsLeft
+    }));
+    setLog(kogare.rollsLeft <= 0 ? 'このターンはもう振れない' : r.confused ? '攻撃が当たった: 敵が「意味不明」になった' : '攻撃が当たった: 意味不明にはならなかった');
+  };
+  const share = () => {
+    const [a, b] = bond.share ? shareOrihimeDamage(100) : [100, 0];
+    setLog(bond.share ? `100のダメージを分け合う: 受けた子${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ');
+  };
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Orihime",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, [1, 2, 3].map(d => React.createElement(MonsterCheckLabButton, {
+    key: d,
+    active: d === diff,
+    onClick: () => {
+      setDiff(d);
+      reset();
+    }
+  }, "間合いの差", d)), React.createElement(MonsterCheckLabButton, {
+    active: !partnerUp,
+    onClick: () => setPartnerUp(v => !v)
+  }, partnerUp ? '相方 立っている' : '相方 倒れた')), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(true)
+  }, "2体が同じ動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(false)
+  }, "違う動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    onClick: attack
+  }, "攻撃が当たる"), React.createElement(MonsterCheckLabButton, {
+    onClick: share
+  }, "100のダメージを受ける"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: star
+  }, "勇者EX 星合の刻"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: longing
+  }, "共モンEX 焦がれ待つ天ノ河")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / 間合いの差${diff} / 逢瀬 ${ouse}/${max}`, `つながり: ${bond.dmgAdd ? `与ダメ+${monsterCheckPct(bond.dmgAdd)} ` : ''}${bond.takenCut ? `被ダメ−${monsterCheckPct(bond.takenCut)} ` : ''}${bond.share ? 'ダメージを分け合う' : ''}${!bond.dmgAdd && !bond.takenCut && !bond.share ? 'なし' : ''}`, hoshiai ? `星合: あと${hoshiai.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(hoshiai.rate)}・1ターン${hoshiai.perTurn}回まで` : '星合: なし', kogare.turns ? `焦がれ待つ天ノ河: あと${kogare.turns}ターン・このターン振れる残り${kogare.rollsLeft}回(${monsterCheckPct(KOGARE_CHANCE)})` : '焦がれ待つ天ノ河: なし', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
 function MonsterCheckDebugScreen({
   masuMons = [],
   unlockedMonsterIds = [],
@@ -74840,7 +75058,7 @@ function MonsterCheckDebugScreen({
     className: "space-y-2"
   }, row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
     block: true
-  }), React.createElement("div", null, React.createElement("div", {
+  }), mon.id === KYUBI_MONSTER_ID && React.createElement(KyubiTraitLab, null), mon.id === ORIHIME_MONSTER_ID && React.createElement(OrihimeTraitLab, null), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
   }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? mon.draft ? draftNamePills(HERO_ATK_NAMES[mon.id], 'border-red-500/30 bg-red-950/25') : skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
     className: "text-center text-[11px] font-bold text-rose-300"
