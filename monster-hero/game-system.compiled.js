@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1344924b7de489a5
+// source-sha256: f1021f0a45caac76
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19184,6 +19184,39 @@ const rollKogare = (rollsLeft, rand) => {
     rollsLeft: left - 1
   };
 };
+const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
+const REIKON_TURNS = 3,
+  REIKON_GUTS_MULT = 0.7,
+  REIKON_HIT_DOWN = 10;
+const hasReikon = id => !!id && REIKON_MONSTER_IDS.includes(id);
+const reikonOf = v => ({
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
+  turns: Math.max(0, Math.floor(Number(v?.turns) || 0))
+});
+const startReikon = () => ({
+  wait: 1,
+  turns: REIKON_TURNS
+});
+const tickReikon = v => {
+  const r = reikonOf(v);
+  if (r.wait > 0) return {
+    ...r,
+    wait: r.wait - 1
+  };
+  return r.turns > 1 ? {
+    ...r,
+    turns: r.turns - 1
+  } : {
+    wait: 0,
+    turns: 0
+  };
+};
+const reikonActive = v => {
+  const r = reikonOf(v);
+  return r.wait === 0 && r.turns > 0;
+};
+const reikonGutsMult = v => reikonActive(v) ? REIKON_GUTS_MULT : 1;
+const reikonHitDown = v => reikonActive(v) ? REIKON_HIT_DOWN : 0;
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
   if (!trait) return '';
@@ -42618,6 +42651,14 @@ const MONSTER_TYPE_OF = {
   Dreamy: {
     main: 'supporter',
     sub: 'shadow'
+  },
+  Kyubi: {
+    main: 'attacker',
+    sub: 'shadow'
+  },
+  Orihime: {
+    main: 'supporter',
+    sub: 'tank'
   }
 };
 const monsterTypeOf = monId => {
@@ -74362,18 +74403,24 @@ const MonsterCheckLabLines = ({
 }, lines.filter(Boolean).map((t, i) => React.createElement("div", {
   key: i
 }, t)));
+const monsterCheckReikonLine = v => {
+  const r = reikonOf(v);
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし';
+};
 function KyubiTraitLab() {
   const [phaseId, setPhaseId] = useState('sakuretsu');
   const [guts, setGuts] = useState(56);
   const [rengoku, setRengoku] = useState(0);
   const [kagero, setKagero] = useState(kageroOf(null));
   const [fox, setFox] = useState(kitsunebiOf(null));
+  const [reikon, setReikon] = useState(reikonOf(null));
   const [turn, setTurn] = useState(1);
   const [log, setLog] = useState('');
   const reset = () => {
     setRengoku(0);
     setKagero(kageroOf(null));
     setFox(kitsunebiOf(null));
+    setReikon(reikonOf(null));
     setTurn(1);
     setLog('');
   };
@@ -74402,7 +74449,13 @@ function KyubiTraitLab() {
     setTurn(t => t + 1);
     setKagero(k => tickKagero(k));
     setFox(k => tickKitsunebi(k));
+    setReikon(r => tickReikon(r));
     setLog('ターンを進めた');
+  };
+  const unique = () => {
+    card('attack');
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
   };
   const ex = () => {
     setFox(k => useKitsunebi(k));
@@ -74444,8 +74497,11 @@ function KyubiTraitLab() {
   }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
     tone: "amber",
     onClick: ex
-  }, "EX 九尾幻灯")), React.createElement(MonsterCheckLabLines, {
-    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+  }, "EX 九尾幻灯"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
   }), React.createElement(MonsterCheckLabButton, {
     onClick: reset
   }, "はじめに戻す"));
@@ -74459,6 +74515,7 @@ function OrihimeTraitLab() {
     turns: 0,
     rollsLeft: 0
   });
+  const [reikon, setReikon] = useState(reikonOf(null));
   const [turn, setTurn] = useState(1);
   const [log, setLog] = useState('');
   const reset = () => {
@@ -74468,6 +74525,7 @@ function OrihimeTraitLab() {
       turns: 0,
       rollsLeft: 0
     });
+    setReikon(reikonOf(null));
     setTurn(1);
     setLog('');
   };
@@ -74490,7 +74548,12 @@ function OrihimeTraitLab() {
       turns: 0,
       rollsLeft: 0
     });
+    setReikon(r => tickReikon(r));
     setLog('ターンを進めた');
+  };
+  const unique = () => {
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
   };
   const star = () => {
     const h = startHoshiai(ouse, diff);
@@ -74556,8 +74619,11 @@ function OrihimeTraitLab() {
   }, "勇者EX 星合の刻"), React.createElement(MonsterCheckLabButton, {
     tone: "amber",
     onClick: longing
-  }, "共モンEX 焦がれ待つ天ノ河")), React.createElement(MonsterCheckLabLines, {
-    lines: [`${turn}ターン目 / 間合いの差${diff} / 逢瀬 ${ouse}/${max}`, `つながり: ${bond.dmgAdd ? `与ダメ+${monsterCheckPct(bond.dmgAdd)} ` : ''}${bond.takenCut ? `被ダメ−${monsterCheckPct(bond.takenCut)} ` : ''}${bond.share ? 'ダメージを分け合う' : ''}${!bond.dmgAdd && !bond.takenCut && !bond.share ? 'なし' : ''}`, hoshiai ? `星合: あと${hoshiai.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(hoshiai.rate)}・1ターン${hoshiai.perTurn}回まで` : '星合: なし', kogare.turns ? `焦がれ待つ天ノ河: あと${kogare.turns}ターン・このターン振れる残り${kogare.rollsLeft}回(${monsterCheckPct(KOGARE_CHANCE)})` : '焦がれ待つ天ノ河: なし', log && `→ ${log}`]
+  }, "共モンEX 焦がれ待つ天ノ河"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / 間合いの差${diff} / 逢瀬 ${ouse}/${max}`, `つながり: ${bond.dmgAdd ? `与ダメ+${monsterCheckPct(bond.dmgAdd)} ` : ''}${bond.takenCut ? `被ダメ−${monsterCheckPct(bond.takenCut)} ` : ''}${bond.share ? 'ダメージを分け合う' : ''}${!bond.dmgAdd && !bond.takenCut && !bond.share ? 'なし' : ''}`, hoshiai ? `星合: あと${hoshiai.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(hoshiai.rate)}・1ターン${hoshiai.perTurn}回まで` : '星合: なし', monsterCheckReikonLine(reikon), kogare.turns ? `焦がれ待つ天ノ河: あと${kogare.turns}ターン・このターン振れる残り${kogare.rollsLeft}回(${monsterCheckPct(KOGARE_CHANCE)})` : '焦がれ待つ天ノ河: なし', log && `→ ${log}`]
   }), React.createElement(MonsterCheckLabButton, {
     onClick: reset
   }, "はじめに戻す"));

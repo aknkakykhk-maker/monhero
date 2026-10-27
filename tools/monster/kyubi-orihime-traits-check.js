@@ -18,7 +18,7 @@ const near = (a, b) => Math.abs(a - b) < 1e-9;
 
 const bond = read('monster-hero/src/parts/22-enemy-and-bond-entries.jsx');
 const start = bond.indexOf("const KYUBI_MONSTER_ID = 'Kyubi'");
-const end = bond.indexOf('const rollKogare');
+const end = bond.indexOf('const reikonHitDown');
 check('2体の決めごとを抜き出せる', start > 0 && end > start);
 const endLine = bond.indexOf('\n// ', bond.indexOf('\n', end + 1));
 const k = {};
@@ -26,7 +26,7 @@ vm.createContext(k);
 vm.runInContext(`${bond.slice(start, endLine > end ? endLine : undefined)}
 globalThis.x={KYUBI_PHASES,kyubiPhaseOfSlot,kyubiRengokuOf,kyubiPhaseEffectOf,kageroAfterAttack,kageroUseEvade,tickKagero,
   useKitsunebi,tickKitsunebi,kitsunebiOnHit,kitsunebiEffectOf,orihimeDiffOf,addOuse,orihimeBondEffectOf,shareOrihimeDamage,
-  startHoshiai,rollKogare,KOGARE_TURNS,KOGARE_CHANCE,KOGARE_ROLLS_PER_TURN};`, k);
+  startHoshiai,rollKogare,KOGARE_TURNS,KOGARE_CHANCE,KOGARE_ROLLS_PER_TURN,hasReikon,startReikon,tickReikon,reikonGutsMult,reikonHitDown};`, k);
 const x = k.x;
 
 // ---------- キュービ 九尾四相 ----------
@@ -101,8 +101,30 @@ check('焦がれ待つ天ノ河: 振れる回数を使い切ったら振らな�
   x.rollKogare(2, 0.1).confused === true && x.rollKogare(2, 0.3).confused === false && x.rollKogare(0, 0).confused === false
   && x.rollKogare(2, 0.1).rollsLeft === 1);
 
+// ---------- 固有技の効果「霊魂」(2体共通) ----------
+check('霊魂は2体とも持つ', x.hasReikon('Kyubi') && x.hasReikon('Orihime') && !x.hasReikon('Dreamy'));
+{
+  let r = x.startReikon();
+  const seq = [[x.reikonGutsMult(r), x.reikonHitDown(r)]];
+  for (let i = 0; i < 4; i++) { r = x.tickReikon(r); seq.push([x.reikonGutsMult(r), x.reikonHitDown(r)]); }
+  check('霊魂: 使ったターンは効かず、次のターンから3ターン 消費ガッツ×0.7・敵の命中−10%',
+    JSON.stringify(seq) === '[[1,0],[0.7,10],[0.7,10],[0.7,10],[1,0]]', JSON.stringify(seq));
+  const again = x.startReikon();
+  check('霊魂: 使い直したらかけ直し(重ならない)', again.turns === 3 && again.wait === 1);
+}
+check('煉獄ノ相のダメージは、軽くなる前の消費で数える(元の消費ガッツを渡す)',
+  /煉獄ノ相のダメージは、軽くなる前の消費で数える/.test(bond));
+const tactics = read('monster-hero/src/parts/32-tactics-units.jsx');
+check('タイプ(キュービ アタッカー/シャドウ・オリヒメ サポーター/タンク)',
+  /Kyubi: \{ main: 'attacker', sub: 'shadow' \}/.test(tactics) && /Orihime: \{ main: 'supporter', sub: 'tank' \}/.test(tactics));
+const rhythm = read('monster-hero/data/rhythm-mode.js');
+check('モンヒロビートの能力(キュービ 必死・オリヒメ 根性)', /Kyubi:'HISSHI', Orihime:'KONJO'/.test(rhythm));
+
 // ---------- 下書きのあいだは本体に出さない ----------
 const ally = read('monster-hero/data/ally-monsters.js');
+check('基礎能力は社長が決めた値(キュービ 420/150/160/70・オリヒメ 440/140/145/85)',
+  /baseHp:420, baseGuts:150, baseAtk:160, baseDef:70, plusStats:\{hp:120,atk:40,def:10,guts:45\}/.test(ally)
+  && /baseHp:440, baseGuts:140, baseAtk:145, baseDef:85, plusStats:\{hp:140,atk:30,def:15,guts:40\}/.test(ally));
 check('2体はまだ下書き(draft:true)のまま',
   /Kyubi: Object\.freeze\(\{[^\n]*\n[^\n]*draft:true/.test(ally) && /Orihime: Object\.freeze\(\{[^\n]*\n[^\n]*draft:true/.test(ally));
 
@@ -111,7 +133,7 @@ const lab = read('monster-hero/src/parts/74-screen-monster-check-debug.jsx');
 check('確認画面の技タブに、2体の「動かして見る」欄がある',
   /mon\.id === KYUBI_MONSTER_ID && <KyubiTraitLab\/>/.test(lab) && /mon\.id === ORIHIME_MONSTER_ID && <OrihimeTraitLab\/>/.test(lab));
 check('欄は決めごとの関数をそのまま呼ぶ(数字を画面側で持たない)',
-  ['kyubiPhaseEffectOf', 'kageroAfterAttack', 'useKitsunebi', 'kitsunebiOnHit', 'tickKitsunebi', 'addOuse', 'orihimeBondEffectOf', 'startHoshiai', 'rollKogare', 'shareOrihimeDamage']
+  ['kyubiPhaseEffectOf', 'kageroAfterAttack', 'useKitsunebi', 'kitsunebiOnHit', 'tickKitsunebi', 'addOuse', 'orihimeBondEffectOf', 'startHoshiai', 'rollKogare', 'shareOrihimeDamage', 'startReikon', 'tickReikon', 'reikonGutsMult', 'reikonHitDown']
     .every((f) => lab.includes(`${f}(`)));
 
 console.log(failed ? `\nNG: ${failed}件` : '\nすべてOK');

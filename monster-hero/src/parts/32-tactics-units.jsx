@@ -657,6 +657,8 @@ const MONSTER_TYPE_OF = {
   Tiger: { main: 'shadow', sub: 'attacker' }, Zan: { main: 'shadow', sub: 'attacker' }, Ghost: { main: 'shadow', sub: 'attacker' },
   // イルミネ・ドリーミィ(2026-10-22・案の段階。社長の決定)
   Illumine: { main: 'shadow', sub: 'attacker' }, Dreamy: { main: 'supporter', sub: 'shadow' },
+  // キュービ・オリヒメ(2026-10-27 社長の決定。下書きのあいだはだれも持っていないので効かない)
+  Kyubi: { main: 'attacker', sub: 'shadow' }, Orihime: { main: 'supporter', sub: 'tank' },
 };
 // その子のタイプ({ main, sub } の形。表に無い子はアタッカー・サブなし)
 const monsterTypeOf = (monId) => {

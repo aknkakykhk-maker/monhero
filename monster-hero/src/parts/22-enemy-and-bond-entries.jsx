@@ -678,6 +678,23 @@ const rollKogare = (rollsLeft, rand) => { const left = Math.max(0, Math.floor(Nu
   if (left <= 0) return { confused: false, rollsLeft: 0 };
   const r = Number.isFinite(rand) ? rand : Math.random();
   return { confused: r < KOGARE_CHANCE, rollsLeft: left - 1 }; };
+// 固有技の効果「霊魂」(キュービ・オリヒメ共通。2026-10-27 社長が「推奨」の段を選んだ)
+//   使った次のターンから3ターン、カードの消費ガッツ−30%(5つの遊びは味方のカード全部・タクティクスは使った子のカードだけ)。
+//   さらに敵に幻惑: 同じ3ターン、敵の命中−10%。使い直したらかけ直し(重ならない)。幻惑は敵1体ぶんなのでWAVEが変わると消える。
+//   煉獄ノ相のダメージは、軽くなる前の消費で数える(kyubiPhaseEffectOf へは元の消費ガッツを渡す)
+const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
+const REIKON_TURNS = 3, REIKON_GUTS_MULT = 0.7, REIKON_HIT_DOWN = 10;
+const hasReikon = (id) => !!id && REIKON_MONSTER_IDS.includes(id);
+// { wait: 効きはじめるまでのターン, turns: 効く残りターン }。ドリームペインと同じ数え方
+const reikonOf = (v) => ({ wait: Math.max(0, Math.floor(Number(v?.wait) || 0)), turns: Math.max(0, Math.floor(Number(v?.turns) || 0)) });
+const startReikon = () => ({ wait: 1, turns: REIKON_TURNS });
+const tickReikon = (v) => { const r = reikonOf(v); if (r.wait > 0) return { ...r, wait: r.wait - 1 };
+  return r.turns > 1 ? { ...r, turns: r.turns - 1 } : { wait: 0, turns: 0 }; };
+const reikonActive = (v) => { const r = reikonOf(v); return r.wait === 0 && r.turns > 0; };
+// 消費ガッツに掛ける倍率(既存の gutsCostMult と同じく、掛けたあと切り捨てる)
+const reikonGutsMult = (v) => (reikonActive(v) ? REIKON_GUTS_MULT : 1);
+// 敵の命中から引く量(%)
+const reikonHitDown = (v) => (reikonActive(v) ? REIKON_HIT_DOWN : 0);
 // いま効いている段階を短い文にする(バフの札・ヘルプの説明に出す)
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);

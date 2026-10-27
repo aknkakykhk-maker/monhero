@@ -191,15 +191,20 @@ const MonsterCheckLabButton = ({ onClick, children, tone = 'slate', active = fal
 const MonsterCheckLabLines = ({ lines }) => (
   <div className="rounded-lg bg-black/40 p-2 text-[10px] font-bold leading-relaxed text-cyan-100">{lines.filter(Boolean).map((t, i) => <div key={i}>{t}</div>)}</div>
 );
+// 固有技の効果「霊魂」(2体共通)の今の状態を1行にする
+const monsterCheckReikonLine = (v) => { const r = reikonOf(v);
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r)
+    ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし'; };
 function KyubiTraitLab() {
   const [phaseId, setPhaseId] = useState('sakuretsu');
   const [guts, setGuts] = useState(56);
   const [rengoku, setRengoku] = useState(0);
   const [kagero, setKagero] = useState(kageroOf(null));
   const [fox, setFox] = useState(kitsunebiOf(null));
+  const [reikon, setReikon] = useState(reikonOf(null));
   const [turn, setTurn] = useState(1);
   const [log, setLog] = useState('');
-  const reset = () => { setRengoku(0); setKagero(kageroOf(null)); setFox(kitsunebiOf(null)); setTurn(1); setLog(''); };
+  const reset = () => { setRengoku(0); setKagero(kageroOf(null)); setFox(kitsunebiOf(null)); setReikon(reikonOf(null)); setTurn(1); setLog(''); };
   const eff = kyubiPhaseEffectOf(phaseId, { rengoku, skillGuts: guts });
   const card = (kind) => {
     if (phaseId === 'rengoku') setRengoku((n) => kyubiRengokuOf(n + 1));
@@ -214,7 +219,8 @@ function KyubiTraitLab() {
     setFox(r.next);
     setLog(`攻撃を受けた: 被ダメ×${(r.takenMult * (1 - f.buffTaken)).toFixed(3)}${r.takenMult < 1 ? '(狐火が1つ盾になって消えた)' : ''}`);
   };
-  const next = () => { setTurn((t) => t + 1); setKagero((k) => tickKagero(k)); setFox((k) => tickKitsunebi(k)); setLog('ターンを進めた'); };
+  const next = () => { setTurn((t) => t + 1); setKagero((k) => tickKagero(k)); setFox((k) => tickKitsunebi(k)); setReikon((r) => tickReikon(r)); setLog('ターンを進めた'); };
+  const unique = () => { card('attack'); setReikon(startReikon()); setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`); };
   const ex = () => { setFox((k) => useKitsunebi(k)); setLog(fox.active ? '九尾幻灯(2回目): 狐火満タン・強化かけ直し' : '九尾幻灯: 狐火5個・幻灯強化3ターン'); };
   const f = kitsunebiEffectOf(fox);
   return (
@@ -231,12 +237,14 @@ function KyubiTraitLab() {
         <MonsterCheckLabButton onClick={hit}>攻撃を受ける</MonsterCheckLabButton>
         <MonsterCheckLabButton onClick={next}>ターンを進める</MonsterCheckLabButton>
         <MonsterCheckLabButton tone="amber" onClick={ex}>EX 九尾幻灯</MonsterCheckLabButton>
+        <MonsterCheckLabButton tone="amber" onClick={unique}>固有技 霊魂</MonsterCheckLabButton>
       </div>
       <MonsterCheckLabLines lines={[
         `${turn}ターン目 / ${KYUBI_PHASES.find((p) => p.id === phaseId)?.name}`,
         `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`,
-        phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}`,
+        phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`,
         phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`,
+        monsterCheckReikonLine(reikon),
         fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない',
         log && `→ ${log}`,
       ]}/>
@@ -250,15 +258,17 @@ function OrihimeTraitLab() {
   const [ouse, setOuse] = useState(0);
   const [hoshiai, setHoshiai] = useState(null);
   const [kogare, setKogare] = useState({ turns: 0, rollsLeft: 0 });
+  const [reikon, setReikon] = useState(reikonOf(null));
   const [turn, setTurn] = useState(1);
   const [log, setLog] = useState('');
-  const reset = () => { setOuse(0); setHoshiai(null); setKogare({ turns: 0, rollsLeft: 0 }); setTurn(1); setLog(''); };
+  const reset = () => { setOuse(0); setHoshiai(null); setKogare({ turns: 0, rollsLeft: 0 }); setReikon(reikonOf(null)); setTurn(1); setLog(''); };
   const bond = orihimeBondEffectOf(diff, ouse, partnerUp);
   const max = ORIHIME_BOND_TIERS[diff]?.max || 0;
   const move = (same) => { setOuse((n) => addOuse(n, diff, same, partnerUp)); setLog(same ? (partnerUp ? '同じ種類の動き: 逢瀬+1' : '相方が倒れているので逢瀬は増えない') : '違う種類の動き: 逢瀬はそのまま'); };
   const next = () => { setTurn((t) => t + 1);
     setHoshiai((h) => (h && h.turns > 1 ? { ...h, turns: h.turns - 1 } : null));
-    setKogare((k) => (k.turns > 1 ? { turns: k.turns - 1, rollsLeft: KOGARE_ROLLS_PER_TURN } : { turns: 0, rollsLeft: 0 })); setLog('ターンを進めた'); };
+    setKogare((k) => (k.turns > 1 ? { turns: k.turns - 1, rollsLeft: KOGARE_ROLLS_PER_TURN } : { turns: 0, rollsLeft: 0 })); setReikon((r) => tickReikon(r)); setLog('ターンを進めた'); };
+  const unique = () => { setReikon(startReikon()); setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`); };
   const star = () => { const h = startHoshiai(ouse, diff); setHoshiai(h); setOuse(0);
     setLog(`星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(h.rate)}・1ターン${h.perTurn}回まで(逢瀬は0へ)`); };
   const longing = () => { setKogare({ turns: KOGARE_TURNS, rollsLeft: KOGARE_ROLLS_PER_TURN }); setLog(`焦がれ待つ天ノ河: ${KOGARE_TURNS}ターン`); };
@@ -284,11 +294,13 @@ function OrihimeTraitLab() {
         <MonsterCheckLabButton onClick={share}>100のダメージを受ける</MonsterCheckLabButton>
         <MonsterCheckLabButton tone="amber" onClick={star}>勇者EX 星合の刻</MonsterCheckLabButton>
         <MonsterCheckLabButton tone="amber" onClick={longing}>共モンEX 焦がれ待つ天ノ河</MonsterCheckLabButton>
+        <MonsterCheckLabButton tone="amber" onClick={unique}>固有技 霊魂</MonsterCheckLabButton>
       </div>
       <MonsterCheckLabLines lines={[
         `${turn}ターン目 / 間合いの差${diff} / 逢瀬 ${ouse}/${max}`,
         `つながり: ${bond.dmgAdd ? `与ダメ+${monsterCheckPct(bond.dmgAdd)} ` : ''}${bond.takenCut ? `被ダメ−${monsterCheckPct(bond.takenCut)} ` : ''}${bond.share ? 'ダメージを分け合う' : ''}${!bond.dmgAdd && !bond.takenCut && !bond.share ? 'なし' : ''}`,
         hoshiai ? `星合: あと${hoshiai.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(hoshiai.rate)}・1ターン${hoshiai.perTurn}回まで` : '星合: なし',
+        monsterCheckReikonLine(reikon),
         kogare.turns ? `焦がれ待つ天ノ河: あと${kogare.turns}ターン・このターン振れる残り${kogare.rollsLeft}回(${monsterCheckPct(KOGARE_CHANCE)})` : '焦がれ待つ天ノ河: なし',
         log && `→ ${log}`,
       ]}/>
