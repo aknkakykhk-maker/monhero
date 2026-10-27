@@ -86,16 +86,17 @@ check('絵は全身の絵(KYUBI_IMG・ORIHIME_IMG)、待機アニメは withMons
   && app.includes("m.pose==='idle'?withMonsterIdleArt(m.id,art,{fill:true,own:true}):art"));
 
 // ---- 呼び方(社長の決定・ASSISTANT_PEER_CALLS と同じ) ----
-const callOf = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラ', dra: 'ソラさん', atsu: 'ソラシド', kyuko: 'ソラ' };
+// 2026-10-27 社長が呼び方を全部決めた(もも「ソラちゃん」・ドラ「ソラシド」・あつ「ばこっちゃん」・きゅうこ「ばこちゃん」)
+const callOf = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん' };
 check('ほかの助手からの呼び方が ASSISTANT_PEER_CALLS と同じ', Object.entries(callOf).every(([id, c]) => PEER[id] && PEER[id].sorashido === c && CALLS[id] === c));
 const usesCall = Object.entries(callOf).filter(([id, c]) => !rows.some((r) => r.who === id && r.t.includes(c)));
 check('ほかの助手は、台本の中でその呼び方でソラシドを呼んでいる', usesCall.length === 0, usesCall.map(([id]) => id).join(','));
-check('ソラシドのあいさつは、みゅあ・きき・もも・ドラちゃん・あっくん・きゅうこ の呼び方', sora.some((r) => r.atsu === 'with' && /みゅあ、きき、もも、ドラちゃん、あっくん、きゅうこ/.test(r.t))
-  && sora.some((r) => r.atsu === 'without' && /みゅあ、きき、もも、ドラちゃん、きゅうこ/.test(r.t) && !/あっくん/.test(r.t)));
+check('ソラシドのあいさつは、みゅあさん・ききさん・ももさん・ドラさん・あつさん・きゅうこちゃん の呼び方', sora.some((r) => r.atsu === 'with' && /みゅあさん、ききさん、ももさん、ドラさん、あつさん、きゅうこちゃん/.test(r.t))
+  && sora.some((r) => r.atsu === 'without' && /みゅあさん、ききさん、ももさん、ドラさん、きゅうこちゃん/.test(r.t) && !/あつさん/.test(r.t)));
 // ---- あつの出し分け(きゅうこのお話と同じ) ----
 check('あつの行はすべて「あつを解放している人だけ」(atsu:\'with\')', rows.filter((r) => r.who === 'atsu').every((r) => r.atsu === 'with'));
 check('あつの出し分けは with と without が同じ数', rows.filter((r) => r.atsu === 'with').length === rows.filter((r) => r.atsu === 'without').length);
-check('解放していない人へは、あつの名前を出さない', rows.filter((r) => r.atsu === 'without').every((r) => !/あつ|あっくん/.test(r.t)));
+check('解放していない人へは、あつの名前を出さない', rows.filter((r) => r.atsu === 'without').every((r) => !/あつ|あっくん|ばこっちゃん/.test(r.t)));
 
 console.log(failed ? `\n${failed}件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

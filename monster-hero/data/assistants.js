@@ -9858,12 +9858,12 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'dra',       e:'troubled', t:'9割って言ってなかったか。くさ' },
   { who:'sorashido', e:'surprise', t:'なに！？ ちょっと待って、データ見直す！' },
   { who:'sorashido', e:'troubled', t:'月の出……潮の満ち引き……風の向き……あ、風の向き入れ忘れてる笑 いちばん大事なとこ抜けてた笑' },
-  { who:'momosuke',  e:'troubled', t:'ソラ、画面に顔くっつきそうだよ〜' },
+  { who:'momosuke',  e:'troubled', t:'ソラちゃん、画面に顔くっつきそうだよ〜' },
   { who:'sorashido', e:'normal',   t:'風鈴は、風がないと鳴らない。鳴らないと、オリヒメは来ない……そういうことか……' },
   { who:'kiki',      e:'happy',    t:'ふふ、すっかり夢中でつね。ソラシドさん、お茶ここに置いときまつよ (´ー`*)' },
-  { who:'kyuko',     e:'wink',     t:'わかるぅ、データの洗い直しって止まんないよねぇ。俺も譜面でよくやるw ソラ、がんばれ〜' },
-  { who:'atsu',      e:'happy',    atsu:'with',    t:'ソラシド、完全に徹夜する顔になってる笑' },
-  { who:'dra',       e:'happy',    atsu:'without', t:'ソラさん、完全に自分の世界に入ってるな' },
+  { who:'kyuko',     e:'wink',     t:'わかるぅ、データの洗い直しって止まんないよねぇ。俺も譜面でよくやるw ばこちゃん、がんばれ〜' },
+  { who:'atsu',      e:'happy',    atsu:'with',    t:'ばこっちゃん、完全に徹夜する顔になってる笑' },
+  { who:'dra',       e:'happy',    atsu:'without', t:'ソラシド、完全に自分の世界に入ってるな' },
   { who:'mua',       e:'wink',     t:'みんな、あきれてるのに誰も帰らないの、ウケるｗ' },
   { who:'sorashido', e:'excited',  t:'……出た！ 風が変わるの、あと少し！ 今度こそ来るぜ・・・！' },
   { who:'dra',       e:'normal',   t:'ふむ。じゃあ、もう少しだけ付き合ってやるか' },
@@ -9885,7 +9885,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'mua',       e:'troubled', t:'どうしよ……近づいたら、逃げちゃいそう……' },
   // ---- ④ 山場。語るのをやめて、好きな音を鳴らす(シリアス。「笑」や顔文字を入れない) ----
   { who:'sorashido', e:'normal',   t:'……みんな、ちょっとだけ下がってて' },
-  { who:'momosuke',  e:'surprise', t:'ソラ……？' },
+  { who:'momosuke',  e:'surprise', t:'ソラちゃん……？' },
   { who:'sorashido', e:'normal',   t:'語りたいことは、いっぱいある。でも今は、言葉じゃないと思う' },
   { who:'sorashido', e:'normal',   monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'idle' }], t:'(三線を取り出して、風鈴の音に合わせて、そっと弦をはじく)' },
   { who:'orihime',   e:'normal',   t:'……りん……りん……' },
@@ -9897,27 +9897,27 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'mua',       e:'surprise', t:'今……袖、ひっぱった……！' },
   { who:'sorashido', e:'crying',   t:'う……うぉぉぉ……！' },
   { who:'sorashido', e:'crying',   t:'ずっと好きだった。会える日を調べてたのも、ただ会いたかったからなんだ……' },
-  { who:'atsu',      e:'normal',   atsu:'with',    t:'……よかったな、ソラシド' },
-  { who:'dra',       e:'normal',   atsu:'without', t:'……よかったな、ソラさん' },
+  { who:'atsu',      e:'normal',   atsu:'with',    t:'……よかったな、ばこっちゃん' },
+  { who:'dra',       e:'normal',   atsu:'without', t:'……よかったな、ソラシド' },
   { who:'kiki',      e:'happy',    t:'好きって気持ちが、ちゃんと届いたんでつね' },
   // ---- ⑤ 2体は仲間に。ソラシドは助手になる。打ち上げ ----
   { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、ソラちんから離れないんだけど〜' },
   { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'hop' }, { id:'Kyubi', pose:'hop' }], t:'コン♪(ぴょんと跳ねて、しっぽをふる)' },
   { who:'orihime',   e:'normal',   t:'りん♪(ふわりと寄って、羽衣をソラシドの肩にかける)' },
   { who:'dra',       e:'happy',    monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'idle' }], t:'いっしょにいたいってことだな。えへへ' },
-  { who:'momosuke',  e:'wink',     t:'ねえソラ、2体といっしょに、ここで助手やればいいじゃん♡' },
+  { who:'momosuke',  e:'wink',     t:'ねえソラちゃん、2体といっしょに、ここで助手やればいいじゃん♡' },
   { who:'sorashido', e:'excited',  t:'なに！？ ……やる！ 推しのそばにいたいから！ 理由はそれだけだぜ・・・！' },
   { who:'mua',       e:'wink',     t:'理由が正直すぎｗ でも、そういうの好きぢゃん' },
-  { who:'sorashido', e:'happy',    atsu:'with',    t:'改めて、よろしく！ みゅあ、きき、もも、ドラちゃん、あっくん、きゅうこ！' },
-  { who:'sorashido', e:'happy',    atsu:'without', t:'改めて、よろしく！ みゅあ、きき、もも、ドラちゃん、きゅうこ！' },
+  { who:'sorashido', e:'happy',    atsu:'with',    t:'改めて、よろしく！ みゅあさん、ききさん、ももさん、ドラさん、あつさん、きゅうこちゃん！' },
+  { who:'sorashido', e:'happy',    atsu:'without', t:'改めて、よろしく！ みゅあさん、ききさん、ももさん、ドラさん、きゅうこちゃん！' },
   // ★アシカの名前は決まっていない(2026-10-27)。決まったら、この行に「」で名前を差し込む
   { who:'sorashido', e:'wink',     t:'あと、アシカも持ってきたよ。俺のとっておき、マーケットに置いとくね笑' },
-  { who:'kyuko',     e:'happy',    t:'じゃ、浜で打ち上げしよぉ。ソラ、なに飲むの？' },
+  { who:'kyuko',     e:'happy',    t:'じゃ、浜で打ち上げしよぉ。ばこちゃん、なに飲むの？' },
   { who:'sorashido', e:'happy',    t:'泡盛！ ……これくらい、なんくるないさ〜笑' },
   { who:'kiki',      e:'surprise', t:'あれま……顔色ひとつ変わりませんね……！' },
   { who:'sorashido', e:'happy',    t:'{name}、これからよろしく！ 推しの話なら、いつでも聞くぜ・・・！笑' },
 ];
-const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラ', dra: 'ソラさん', atsu: 'ソラシド', kyuko: 'ソラ', sorashido: 'みゅあ／きき／もも／ドラちゃん／あっくん／きゅうこ' };
+const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん', sorashido: 'みゅあさん／ききさん／ももさん／ドラさん／あつさん／きゅうこちゃん' };
 
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
