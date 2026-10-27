@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55f7771ec7ade5ca
+// source-sha256: a43fe275246fa3c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18721,6 +18721,38 @@ const BATTLE_STACK_MARKS = Object.freeze({
     mark: '💤',
     img: '',
     label: 'ドリームペイン',
+    unit: 'T'
+  }),
+  rengoku: Object.freeze({
+    mark: '♨️',
+    img: '',
+    label: '煉獄'
+  }),
+  kagero: Object.freeze({
+    mark: '🌫️',
+    img: '',
+    label: '陽炎の完全回避'
+  }),
+  kitsunebi: Object.freeze({
+    mark: '🦊',
+    img: '',
+    label: '狐火'
+  }),
+  ouse: Object.freeze({
+    mark: '🎐',
+    img: '',
+    label: '逢瀬'
+  }),
+  hoshiai: Object.freeze({
+    mark: '🌌',
+    img: '',
+    label: '星合の刻',
+    unit: 'T'
+  }),
+  reikon: Object.freeze({
+    mark: '🕯️',
+    img: '',
+    label: '霊魂',
     unit: 'T'
   })
 });
@@ -45972,13 +46004,6 @@ const classicAiCopySrc = ({
   };
 };
 const classicAiCopyIsAttack = card => !!card && !['guard', 'draw', 'buff', 'debuff', 'heal', 'weak_guard'].includes(card.type);
-const classicAiCopyScore = card => {
-  if (!card) return 0;
-  if (card.type === 'unique') return 3;
-  if (classicAiCopyIsAttack(card)) return 2;
-  if (card.type === 'guard' || card.type === 'heal') return 0;
-  return 1;
-};
 const classicAiCopyDamage = (partyDmg, copyAtk, partyAtk) => {
   const d = Math.max(0, aiCopySafeNum(partyDmg));
   const p = Math.max(0, aiCopySafeNum(partyAtk));
@@ -45997,19 +46022,6 @@ const classicAiCopyRegenGuts = (aiCopy, rate) => {
     ...aiCopy,
     guts: Math.min(max, Math.max(0, aiCopySafeNum(aiCopy.guts)) + add)
   };
-};
-const CLASSIC_AI_COPY_UNIQUE_IN_DECK = false;
-const classicAiCopyZones = (zones, copy, inDeck = CLASSIC_AI_COPY_UNIQUE_IN_DECK) => {
-  const z = zones || {};
-  const keepUid = inDeck && copy && copy.uniqueCard ? copy.uniqueCard.uid : null;
-  const clean = list => (Array.isArray(list) ? list : []).filter(c => !(c && c.sorashidoCopyOf != null && (keepUid == null || c.uid !== keepUid)));
-  const out = {
-    deck: clean(z.deck),
-    hand: clean(z.hand),
-    discard: clean(z.discard)
-  };
-  if (keepUid != null && ![...out.deck, ...out.hand, ...out.discard].some(c => c && c.uid === keepUid)) out.deck = [...out.deck, copy.uniqueCard];
-  return out;
 };
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
@@ -70664,6 +70676,7 @@ function BattleScreen({
   dismissTacticsExIntro,
   tacticsPandoraForms,
   trickStartView,
+  kyubiOrihimeStackMarks,
   sweetStackView,
   bowStackView,
   fateWheelView,
@@ -70913,6 +70926,7 @@ function BattleScreen({
       put(i, 'avoid', c.avoid);
       put(i, 'konjo', c.konjo);
     });
+    Object.entries(kyubiOrihimeStackMarks || {}).forEach(([i, c]) => Object.entries(c || {}).forEach(([kind, n]) => put(Number(i), kind, n)));
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => {
       out[Number(i)] = {
         ...(c || {})
@@ -106447,6 +106461,32 @@ function MonsterHeroGame() {
     reikonRef.current = next;
     setReikonView(next);
   };
+  const kyubiOrihimeStackMarks = (() => {
+    const out = {},
+      slotOf = key => key === 'party' ? initialBattleDistanceRef.current : Number(key);
+    const put = (key, kind, n) => {
+      const i = slotOf(key),
+        c = Math.max(0, Math.floor(Number(n) || 0));
+      if (!Number.isInteger(i) || c <= 0) return;
+      out[i] = {
+        ...(out[i] || {}),
+        [kind]: c
+      };
+    };
+    Object.entries(kyubiView.rengoku || {}).forEach(([k, n]) => put(k, 'rengoku', n));
+    Object.entries(kyubiView.kagero || {}).forEach(([k, v]) => put(k, 'kagero', kageroOf(v).ready ? 1 : 0));
+    Object.entries(kyubiView.kitsunebi || {}).forEach(([k, v]) => {
+      const f = kitsunebiOf(v);
+      if (f.active) put(k, 'kitsunebi', f.fires);
+    });
+    Object.entries(orihimeView.ouse || {}).forEach(([k, n]) => put(k, 'ouse', n));
+    Object.entries(orihimeView.hoshiai || {}).forEach(([k, v]) => put(k, 'hoshiai', v && v.turns));
+    Object.entries(reikonView || {}).forEach(([k, v]) => {
+      const r = reikonOf(v);
+      put(k, 'reikon', r.wait > 0 ? 0 : r.turns);
+    });
+    return out;
+  })();
   const tickKyubiKagero = () => {
     const cur = kyubiRef.current;
     const kagero = Object.fromEntries(Object.entries(cur.kagero).map(([k, v]) => [k, tickKagero(v)]));
@@ -106742,13 +106782,12 @@ function MonsterHeroGame() {
       }
     });
     const piles = handPileRef.current;
-    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])].find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
     const res = summonAiCopy({
       aiCopy: aiCopyRef.current,
       zones: {
-        deck: [],
-        hand: [],
-        discard: []
+        deck: piles.deck || [],
+        hand: piles.hand || [],
+        discard: piles.graveyard || []
       }
     }, {
       srcSlot: slotIdx,
@@ -106756,24 +106795,29 @@ function MonsterHeroGame() {
       name: mon.masuName || mon.name || '',
       level,
       src,
-      uniqueCard,
       turn: turnCount,
       mode: 'classic',
       effMul
     });
-    const next = res.plan.kind === 'refresh' ? res.aiCopy : {
-      ...res.aiCopy,
-      uniqueCard: res.zones.deck[0] || null
-    };
+    const next = res.aiCopy;
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
   };
   const planClassicAiCopy = copy => {
     if (!copy) return copy;
-    const deckNow = Array.isArray(handPileRef.current.deck) ? handPileRef.current.deck : [];
+    const handSize = Math.max(1, Array.isArray(handPileRef.current.hand) && handPileRef.current.hand.length > 0 ? handPileRef.current.hand.length : 5);
+    const mon = slots[copy.srcSlot] || mainHero;
+    const dmgOf = c => classicAiCopyDamage(getDmg(c, copy.srcSlot, mon, 0, 0, false, enemyDist), copy.atk, atk);
+    const isGuardC = c => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const score = c => aiCopyAutoScore(c, {
+      strategy: autoSettings.strategy,
+      isAttack: isAttackCard,
+      isGuard: isGuardC,
+      dmgOf
+    });
     return planAiCopyTurn(copy, {
-      deck: copy.uniqueCard ? [...deckNow, copy.uniqueCard] : deckNow,
-      score: classicAiCopyScore
+      count: handSize,
+      score
     });
   };
   const tacticsAiCopyTools = (copy, dist) => {
@@ -120883,6 +120927,19 @@ function MonsterHeroGame() {
     };
     const aiCopyEntries = (() => {
       const c = aiCopyRef.current;
+      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && !isTacticsMode(runMode) && isAiCopyOut(c, turnCount)) {
+        let left = Math.max(0, Number(c.guts) || 0);
+        return (c.picks || []).filter(card => {
+          const cost = Math.max(0, Number(card?.guts ?? card?.cost) || 0);
+          if (!card || cost > left) return false;
+          left -= cost;
+          return !classicAiCopyIsAttack(card) && card.type !== 'guard' && card.type !== 'weak_guard';
+        }).map(card => ({
+          card,
+          slotIdx: c.srcSlot,
+          aiCopy: true
+        }));
+      }
       if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
       const cp = c.plannedTurn === turnCount ? c : planTacticsAiCopy(turnCount) || c;
       const tools = tacticsAiCopyTools(cp, enemyDist);
@@ -121562,7 +121619,7 @@ function MonsterHeroGame() {
         copy = classicAiCopySpendGuts(copy, cost);
         const skill = pick.name || pick.baseName || '攻撃';
         if (classicAiCopyIsAttack(pick)) {
-          const d = classicAiCopyDamage(getDmg(pick, copy.srcSlot, copyMon, 0, 0, false, attackDistance), copy.atk, atk);
+          const d = classicAiCopyDamage(getDmg(pick, copy.srcSlot, copyMon, localOryoAdd, localDmgModAdd, false, attackDistance), copy.atk, atk);
           if (d > 0) {
             totalDmg += d;
             attackHits.push({
@@ -121574,7 +121631,11 @@ function MonsterHeroGame() {
               noAnim: true
             });
           }
-        }
+        } else if (pick.type === 'guard' || pick.type === 'weak_guard') {
+          const g = GUARD_EVOLUTION[guardLevel] || GUARD_EVOLUTION[0];
+          currentTurnGuardFlat += (g.flat + Math.max(0, Number(copy.def) || 0) * g.mult) * (pick.type === 'weak_guard' ? 0.5 : 1);
+          if (pick.type === 'guard') guardTypeInTurn = 'guard';else if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
+        } else continue;
         pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${skill}を使った`, 'ally');
       }
       commitAiCopy({
@@ -121876,16 +121937,6 @@ function MonsterHeroGame() {
       ...p,
       kikiCardBonusTurns: Math.max(0, p.kikiCardBonusTurns - 1)
     } : p);
-    if (!isTacticsMode(runMode)) {
-      const z = classicAiCopyZones({
-        deck: nextDeck,
-        hand: nextHand,
-        discard: nextGraveyard
-      }, aiCopyRef.current);
-      nextDeck = z.deck;
-      nextHand = z.hand;
-      nextGraveyard = z.discard;
-    }
     setHand(nextHand);
     setDeck(nextDeck);
     setGraveyard(nextGraveyard);
@@ -136534,6 +136585,7 @@ function MonsterHeroGame() {
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsPandoraForms: tacticsPandoraForms,
       trickStartView: trickStartView,
+      kyubiOrihimeStackMarks: kyubiOrihimeStackMarks,
       tacticsShields: isTacticsMode(runMode) && tacticsExEnabled ? [0, 1, 2, 3].map(i => tacticsExShieldAt(tacticsExState, i, tacticsExNow)) : null,
       sweetStackView: sweetStackView,
       bowStackView: bowStackView,
