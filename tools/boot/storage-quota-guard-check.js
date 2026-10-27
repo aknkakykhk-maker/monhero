@@ -123,6 +123,23 @@ const makeStorage = (localStorage) => new Function('window', `${storageSource}
     check('①-11 書けずにメモリへ控えた新しい値があれば、そちらを読む', !!fresh && fresh.list.length === 2, JSON.stringify(fresh));
   }
   {
+    // 保存の JSON が壊れていたら、壊れた元の文字列を mh_corrupt_<キー>_v1 へ退避してから既定値を返す(2026-10-27)。
+    //   読んでから作り直して書く所で元のキーは上書きされるので、消える前の中身を残す。元のキーには触らない
+    const ls = fakeLocalStorage();
+    ls.setItem('mh_gifts', '[{"id":"g1"');
+    const store = makeStorage(ls);
+    const got = await store.storeGet('mh_gifts', [], false);
+    check('①-13 壊れた保存は既定値で読む', Array.isArray(got) && got.length === 0, JSON.stringify(got));
+    check('①-14 壊れた元の文字列を mh_corrupt_<キー>_v1 へ退避する(元のキーはそのまま)',
+      ls.getItem('mh_corrupt_mh_gifts_v1') === '[{"id":"g1"' && ls.getItem('mh_gifts') === '[{"id":"g1"');
+    ls.setItem('mh_gifts', '{other broken');
+    await store.storeGet('mh_gifts', [], false);
+    check('①-15 退避は最初の1回だけ(すでにあれば書き換えない)', ls.getItem('mh_corrupt_mh_gifts_v1') === '[{"id":"g1"');
+    ls.setItem('mh_fine_v1', '[1]');
+    await store.storeGet('mh_fine_v1', null, false);
+    check('①-16 読める保存は退避しない', ls.getItem('mh_corrupt_mh_fine_v1_v1') === null);
+  }
+  {
     // 「読んでから作り直して書く」所を、いっぱいの端末でまねる。書けなくても、読み込み直したあとに元の値が残る
     //   (カードの持ち札・デッキ・ギフト・ビートP・見返し・マスモン)
     const saved = {

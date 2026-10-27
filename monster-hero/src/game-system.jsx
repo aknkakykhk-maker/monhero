@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8149280bee1f9093
+// generated-sha256: 48748eee8017355c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -16458,6 +16458,23 @@ const hasLocalStorage = () => {
   } catch { return false; }
 };
 
+// 保存の JSON が壊れていて読めなかったときは、壊れた元の文字列を別のキー(mh_corrupt_<元のキー>_v1)へ退避してから既定値を返す(2026-10-27)。
+// ★読んでから作り直して書く所(ギフト・持ち物・ポイントなど)は、既定値から作り直して元のキーへ書くので、壊れた中身はそこで消える。
+//   あとから手で直せるよう、消える前の文字列を残しておく。最初に見つけた壊れ方を残す(すでにあれば書かない)。足すだけで、元のキーには触らない
+const CORRUPT_STORE_PREFIX = 'mh_corrupt_';
+const stashCorruptStoreValue = (key, raw) => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage || typeof raw !== 'string') return;
+    if (String(key).startsWith(CORRUPT_STORE_PREFIX)) return;
+    const backupKey = `${CORRUPT_STORE_PREFIX}${key}_v1`;
+    if (window.localStorage.getItem(backupKey) !== null) return;
+    window.localStorage.setItem(backupKey, raw);
+  } catch { /* 退避できなくても読み込みは止めない */ }
+};
+// 読めなかったときは退避してから、今までどおり投げる(呼ぶ側の流れ=メモリの控え→既定値は変えない)
+const parseStoredOrStash = (key, raw) => {
+  try { return JSON.parse(raw); } catch (error) { stashCorruptStoreValue(key, raw); throw error; }
+};
 const storeGet = async (key, def, shared=false) => {
   try {
     if (hasWinStorage()) {
@@ -16468,7 +16485,7 @@ const storeGet = async (key, def, shared=false) => {
   try {
     if (hasLocalStorage()) {
       const raw = window.localStorage.getItem(key);
-      return raw !== null ? JSON.parse(raw) : def;
+      return raw !== null ? parseStoredOrStash(key, raw) : def;
     }
   } catch { /* fall through to memory */ }
   if (key in _memStore) return _memStore[key];
@@ -16479,7 +16496,7 @@ const storeGet = async (key, def, shared=false) => {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const raw = window.localStorage.getItem(key);
-      if (raw !== null) return JSON.parse(raw);
+      if (raw !== null) return parseStoredOrStash(key, raw);
     }
   } catch { /* 読めなければ既定値 */ }
   return def;
@@ -62844,11 +62861,13 @@ const cardWatchNewGame = (db, meta) => cardCreateGame(db, {
 const cardWatchSideEntry = (e, side) => (side === 1 ? { ...e, by: 1 - e.by, act: cardPvpFlip(e.act), d: Array.isArray(e.d) ? [e.d[1], e.d[0]] : e.d } : e);
 const cardWatchSideMeta = (meta, side) => (side === 1 ? { ...meta, p: [meta.p[1], meta.p[0]], first: 1 - meta.first } : meta);
 const cardWatchSideWinner = (w, side) => (w === 0 || w === 1 ? (side === 1 ? 1 - w : w) : null);
-// 捨て札の仮の札を、届いた並びで本物にする(数が合わない・食い違うときは、その人のぶんはそのまま)
+// 捨て札の仮の札を、届いた並びで本物にする(数が合わない・知らない札があるときは、その人のぶんはそのまま)。
+//   見る人の場と食い違う札は、ホストの並びを正とする(2026-10-27。途中から見る人は、ホストがあとで知った相手の捨て札の本物を
+//   なぞれないので、「後は頼んだ」(捨て札の新しいほうからガッツへ)のあとに違う札を捨て札へ出していた。card-pvp-watch-check ④)
 const cardWatchPatchOne = (db, pl, list) => {
   if (!Array.isArray(list) || list.length !== pl.discard.length) return false;
-  if (list.some((no, i) => (no !== CARD_PVP_HIDDEN && !cardOf(db, no)) || (pl.discard[i] !== CARD_PVP_HIDDEN && no !== CARD_PVP_HIDDEN && pl.discard[i] !== no))) return false;
-  pl.discard = pl.discard.map((no, i) => (no === CARD_PVP_HIDDEN ? list[i] : no));
+  if (list.some((no) => no !== CARD_PVP_HIDDEN && !cardOf(db, no))) return false;
+  pl.discard = pl.discard.map((no, i) => (list[i] !== CARD_PVP_HIDDEN ? list[i] : no));
   return true;
 };
 const cardWatchPatchDiscards = (db, st, d) => {
@@ -65216,6 +65235,69 @@ function MonsterHeroGame() {
     const count = (handPileRef.current.hand || []).length || 5;
     const planned = planAiCopyTurn(copy, { count, score: tools.scoreC, costOf: tools.costC, usable: tools.usableC });
     return commitAiCopy({ ...planned, plannedTurn: turn });
+  };
+  // ===== AIコピーの1手(ソラシドのアシカ)。タクティクスだけ =====
+  // カードの流れ(processTurn)・「ターンを進める」(passTacticsTurn)・緊急回復(useEmergency)の3か所から呼ぶ。
+  //   ★2026-10-27 本番の不具合: EX だけのターン・緊急回復のターンは processTurn を通らないので、コピーが予定を出したまま打たなかった
+  // 使う札はターンの始めに決めてある(planTacticsAiCopy・枠の札に先に出す)。決まっていなければここで決める。
+  // 返すのは { hits, total }(敵へのダメージはまだ当てていない。呼ぶ側が当てる)。コピーの状態(ガッツ・ガード・🔥)はここで進める
+  const runTacticsAiCopyAction = (dist) => {
+    const hits=[]; let total=0;
+    {
+      const copy0=aiCopyRef.current;
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy0,turnCount)&&isTacticsAiCopyStanding(copy0)){
+        const copy=copy0.plannedTurn===turnCount?copy0:(planTacticsAiCopy(turnCount)||copy0);
+        const tools=tacticsAiCopyTools(copy,dist);
+        if(tools){
+          let dealtC=0, gainC=0, gutsC=Math.max(0,Number(copy.guts)||0), guardC=0, guardCards=0;
+          (copy.picks||[]).forEach((card,k)=>{
+            const cost=Math.max(0,Number(tools.costC(card))||0);
+            if(cost>gutsC) return; // 決めたあとにガッツが減っていれば使わない
+            gutsC-=cost;
+            gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
+            if(tools.isGuardC(card)){
+              const m=card.type==='weak_guard'?0.5:1, g=GUARD_EVOLUTION[guardLevel];
+              guardC+=Math.floor(g.flat*m+Math.max(0,Number(copy.def)||0)*g.mult*m); guardCards++;
+              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name||card.baseName||'ガード'}(ガード${guardC})`,'ally');
+              return;
+            }
+            const d=tools.dmgOf(card); if(!(d>0)) return;
+            total+=d; dealtC+=d;
+            // ★コピーの行動として出す(2026-10-27 社長「本体の方の行動の表示になってるのかも」)。動き・技名はコピーの立つマス(pos)、ログと数字はコピーの名前で
+            hits.push({dmg:d,isCrit:false,slotIdx:copy.pos,aiCopy:true,actorName:tacticsAiCopyName(copy),srcMonsterId:copy.srcMonsterId,isSpecial:card.type==='unique',skillName:card.name||card.baseName||'攻撃',isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
+          });
+          commitAiCopy(c=>c&&({...c,picks:[],nextCard:null,guts:gutsC,guardNow:guardC,guardCardsNow:guardCards,hateGainNow:(Number(c.hateGainNow)||0)+gainC,dealtNow:(Number(c.dealtNow)||0)+dealtC}));
+          if(!(copy.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
+        }
+      }
+    }
+    return { hits, total };
+  };
+  // コピーのヒットを1つ見せて当てる。元の子は動かさず、コピーの立つマスに技名と攻撃の印(attackAnim.aiCopy)を出す。
+  //   ログと数字はコピーの名前。元の子の与ダメの記録(tacticsProLogDamage)には入れない
+  const playAiCopyHit = async (h) => {
+    setSlotSkill({ slotIndex: h.slotIdx, name: h.skillName, type: h.isUnique ? 'unique' : 'normal', ownerId: h.srcMonsterId, aiCopy: true });
+    setAttackAnim({ slotIndex: h.slotIdx, aiCopy: true, motion: 'default', skillName: h.skillName });
+    if (h.isUnique) Audio_.se.special(); else Audio_.se.attack();
+    await battleWait(450);
+    setAttackAnim(null); setSlotSkill(null);
+    addPopup(`${h.dmg}`, 'enemy', 'text-sky-200 drop-shadow-[0_0_20px_rgba(125,211,252,0.9)] text-5xl font-black animate-bounce',
+      `🤖 ${h.actorName}の ${h.skillName} → 敵に ${h.dmg.toLocaleString()} ダメージ`);
+    setEnemy(prev => prev ? { ...prev, hp: Math.max(0, prev.hp - h.dmg) } : prev);
+    await battleWait(550);
+  };
+  // カードを使わないターン(「ターンを進める」・緊急回復)のコピーの1手。敵へ当てて、倒したかを返す
+  //   返す enemyHp は、敵の番へ渡す「味方の攻撃のあとの敵のライフ」(processTurn の enemyHpAfterOurAttacks と同じ役)
+  const tacticsAiCopySoloStrike = async () => {
+    const startHp = enemy?.hp ?? 0;
+    const ca = runTacticsAiCopyAction(enemyDist);
+    if (!(ca.total > 0)) return { defeated: false, enemyHp: startHp };
+    for (const h of ca.hits) await playAiCopyHit(h);
+    setCurrentWaveDamage(p => p + ca.total); raidJackDamageRef.current += Number(ca.total) || 0;
+    const remaining = Math.max(0, startHp - ca.total);
+    enemyRevivedHpRef.current = null;
+    if (enemy && await resolveEnemyDefeat({ remainingHp: remaining, damage: ca.total })) return { defeated: true, enemyHp: 0 };
+    return { defeated: false, enemyHp: enemyRevivedHpRef.current != null ? enemyRevivedHpRef.current : remaining };
   };
   // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。プレイヤーの山札は触らない(コピーの山札ごと消える)
   const clearAiCopy = (why = '') => {
@@ -77084,7 +77166,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const scenario=battleScenarioRef.current;
     const acting=enemyIntent;
     const hpAfterRecovery=emergencyHp!==null?emergencyHp:Math.min(liveEffectiveMaxHp(),hp+recoverHp);
-    await handleEnemyTurn('none',{},acting,hpAfterRecovery);
+    // AIコピーは緊急回復のターンも打つ(タクティクスだけ。敵を倒したら敵の番へ進まない)
+    const solo=isTacticsMode(runMode)?await tacticsAiCopySoloStrike():{defeated:false,enemyHp:enemy?.hp??0};
+    if(solo.defeated) return;
+    await handleEnemyTurn('none',{},acting,hpAfterRecovery,solo.enemyHp);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
@@ -77454,8 +77539,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setIsBusy(true);
     setFocusedCard(null); setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
+    // AIコピーはカードを使わないターンも打つ(敵を倒したら敵の番へ進まない)
+    const solo=isTacticsMode(runMode)?await tacticsAiCopySoloStrike():{defeated:false,enemyHp:enemy?.hp??0};
+    if(solo.defeated) return;
     const acting=enemyIntent;
-    await handleEnemyTurn('none',{},acting,hp);
+    await handleEnemyTurn('none',{},acting,hp,solo.enemyHp);
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); if(!tacticsExFrozenRef.current) advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
@@ -77966,33 +78054,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ===== AIコピーの1手(ソラシドのアシカ)。味方のカードのあと、敵へのダメージをまとめて当てる前 =====
     // 使う札はターンの始めに決めてある(planTacticsAiCopy・枠の札に先に出す)。決まっていなければここで決める
     //   与ダメは attackHits に aiCopy の印で足す(敵のライフには入る・枠ごとの与ダメと元の子の🔥には入れない)
-    {
-      const copy0=aiCopyRef.current;
-      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy0,turnCount)&&isTacticsAiCopyStanding(copy0)){
-        const copy=copy0.plannedTurn===turnCount?copy0:(planTacticsAiCopy(turnCount)||copy0);
-        const tools=tacticsAiCopyTools(copy,attackDistance);
-        if(tools){
-          let dealtC=0, gainC=0, gutsC=Math.max(0,Number(copy.guts)||0), guardC=0, guardCards=0;
-          (copy.picks||[]).forEach((card,k)=>{
-            const cost=Math.max(0,Number(tools.costC(card))||0);
-            if(cost>gutsC) return; // 決めたあとにガッツが減っていれば使わない
-            gutsC-=cost;
-            gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
-            if(tools.isGuardC(card)){
-              const m=card.type==='weak_guard'?0.5:1, g=GUARD_EVOLUTION[guardLevel];
-              guardC+=Math.floor(g.flat*m+Math.max(0,Number(copy.def)||0)*g.mult*m); guardCards++;
-              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name||card.baseName||'ガード'}(ガード${guardC})`,'ally');
-              return;
-            }
-            const d=tools.dmgOf(card); if(!(d>0)) return;
-            totalDmg+=d; dealtC+=d;
-            attackHits.push({dmg:d,isCrit:false,slotIdx:copy.srcSlot,aiCopy:true,isSpecial:card.type==='unique',skillName:`${tacticsAiCopyName(copy)}の${card.name||card.baseName||'攻撃'}`,isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
-          });
-          commitAiCopy(c=>c&&({...c,picks:[],nextCard:null,guts:gutsC,guardNow:guardC,guardCardsNow:guardCards,hateGainNow:(Number(c.hateGainNow)||0)+gainC,dealtNow:(Number(c.dealtNow)||0)+dealtC}));
-          if(!(copy.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
-        }
-      }
-    }
+    { const ca=runTacticsAiCopyAction(attackDistance); ca.hits.forEach(h=>attackHits.push(h)); totalDmg+=ca.total; }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
     if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].actorName==null) attackHits[k].actorName=copyName; }
@@ -78022,6 +78084,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let hitIdx=0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          // AIコピーのヒットは、元の子の動き・連撃のまとめを通さず、コピーとして見せる(playAiCopyHit)
+          if (hit && hit.aiCopy) { await playAiCopyHit(hit); hitIdx++; continue; }
           // パンドラの箱: このヒットを出したカードの姿(悪魔/天使)の1体だけを動かす
           setTacticsPandoraForms(hit&&hit.pandoraForm&&hit.slotIdx!=null?{[hit.slotIdx]:hit.pandoraForm}:{});
           // 専用モーションはモンスターの atkMotion フィールドで判定する(勇者モン選択時のみ発生する
