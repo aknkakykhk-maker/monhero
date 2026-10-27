@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0bf57ad1b32dba3f
+// source-sha256: b7dbcaa740a024ad
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -105333,6 +105333,14 @@ function MonsterHeroGame() {
     deck,
     graveyard
   };
+  const [aiCopy, setAiCopy] = useState(null);
+  const aiCopyRef = useRef(null);
+  const commitAiCopy = next => {
+    const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    aiCopyRef.current = v;
+    setAiCopy(v);
+    return v;
+  };
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
   const initialBattleDistanceRef = useRef(2);
@@ -106285,7 +106293,68 @@ function MonsterHeroGame() {
       gains: tacticsHatePendingRef.current,
       dealt: tacticsHateDealtRef.current
     }, units, units.map(u => u && u.id)));
+    const copy = aiCopyRef.current;
+    if (copy && isTacticsAiCopyStanding(copy)) {
+      const hate = tacticsAiCopyHateStep(copy, {
+        gain: copy.hateGainNow || 0
+      }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
+      commitAiCopy({
+        ...copy,
+        hate,
+        hateGainNow: 0
+      });
+    }
     clearTacticsHateTurn();
+  };
+  const summonTacticsAiCopy = (slotIdx, level, effMul = 1) => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    const unit = tacticsUnitsRef.current[slotIdx];
+    if (!unit) return;
+    const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
+    const piles = handPileRef.current;
+    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])].find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
+    const {
+      pos,
+      stacked
+    } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
+    const rules = aiCopyRules(level);
+    const before = aiCopyRef.current;
+    const res = summonAiCopy({
+      aiCopy: before,
+      zones: {
+        deck: [],
+        hand: [],
+        discard: []
+      }
+    }, {
+      srcSlot: slotIdx,
+      srcMonsterId: unit.id,
+      name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '',
+      level,
+      src,
+      uniqueCard,
+      turn: turnCount,
+      mode: 'tactics',
+      effMul
+    });
+    const next = res.plan.kind === 'refresh' ? res.aiCopy : {
+      ...res.aiCopy,
+      pos,
+      stacked,
+      hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart),
+      uniqueCard: res.zones.deck[0] || null
+    };
+    commitAiCopy(next);
+    pushBattleLog(res.plan.kind === 'refresh' ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った` : `🤖 ${tacticsAiCopyName(next)}が次のターンから一緒に戦う(${next.turnsLeft}ターン)`, 'ally');
+  };
+  const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+  };
+  const clearAiCopy = (why = '') => {
+    const copy = aiCopyRef.current;
+    if (!copy) return;
+    commitAiCopy(null);
+    if (why) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${why}`, 'ally');
   };
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
@@ -106410,7 +106479,11 @@ function MonsterHeroGame() {
     commitTacticsUnits(recoverTacticsGutsAt(tacticsUnitsRef.current, slotIdx, amount));
   };
   const tacticsCanAssign = (card, cardIndex, slotIdx) => isTacticsMode(runMode) ? tacticsUsableSlots(card, cardIndex).includes(slotIdx) : null;
-  const tacticsWipe = () => isTacticsMode(runMode) ? commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current)) : null;
+  const tacticsWipe = () => {
+    if (!isTacticsMode(runMode)) return null;
+    clearAiCopy();
+    return commitTacticsUnits(wipeTacticsBoard(tacticsUnitsRef.current));
+  };
   const enemyRevivalUsedRef = useRef(0);
   const [enemyRevivalUsed, setEnemyRevivalUsed] = useState(0);
   const enemyRevivedHpRef = useRef(null);
@@ -119598,6 +119671,17 @@ function MonsterHeroGame() {
       if (boxStep) await settleTacticsExPandoraBox(boxStep);
     }
     if (timeStopSlot != null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    if (timeStopSlot == null && aiCopyRef.current) {
+      const ticked = tickAiCopy({
+        aiCopy: aiCopyRef.current,
+        zones: {
+          deck: [],
+          hand: [],
+          discard: []
+        }
+      }, turnCount);
+      if (ticked.expired) clearAiCopy('消えた(時間切れ)');else commitAiCopy(ticked.aiCopy);
+    }
     const nextTurn = timeStopSlot != null ? turnCount : turnCount + 1;
     setTurnCount(nextTurn);
     if (raidJackRunRef.current) {
@@ -120451,6 +120535,10 @@ function MonsterHeroGame() {
             poltzCharges: conf.charges
           }));
           addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tier]} ×${conf.charges}`, 'hero', 'text-lime-300 font-black text-xl drop-shadow-md');
+        } else if (card.subType === 'copy_sorashido') {
+          const owned = ownedTeachings.find(ot => ot.id === card.id);
+          const level = Math.min(owned ? owned.evoLevel : 0, 2);
+          if (isTacticsMode(runMode)) summonTacticsAiCopy(slotIdx, level, effMul);else summonClassicAiCopy(slotIdx, level, effMul);
         } else if (card.subType === 'cover_kyuko') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const tier = Math.min(owned ? owned.evoLevel : 0, KYUKO_TIERS.length - 1);
@@ -122012,6 +122100,7 @@ function MonsterHeroGame() {
       setBattleLog([]);
       battleLogSeqRef.current = 0;
     }
+    commitAiCopy(null);
     pushBattleLog(isRaidJackMode(runMode) ? `── ${battleModeInfo(runMode).short}：${newEnemy.name} ──` : `── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1);
     setSelectedCards([]);
