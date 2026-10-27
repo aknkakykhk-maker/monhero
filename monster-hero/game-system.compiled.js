@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 98d50c45c5e7829b
+// source-sha256: 765dd5edbf720abf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -22885,6 +22885,142 @@ const SKM_DREAMY = Object.freeze({
     form: 'bloom'
   })]
 });
+const SKM_KYUBI = Object.freeze({
+  normal: [skm('slash', {
+    c: 'fire',
+    over: 'claw',
+    burst: 'dust'
+  }), skm('cast', {
+    c: 'fire',
+    fx: skmFx('shot', 'spark', 4),
+    burst: 'spark'
+  }), skm('cast', {
+    c: 'blue',
+    fx: skmFx('orbit', 'fire', 5),
+    burst: 'star',
+    form: 'fire'
+  }), skm('kick', {
+    c: 'red',
+    over: 'fist',
+    burst: 'dust'
+  }), skm('toss', {
+    c: 'fire',
+    fx: skmFx('lob', 'orb', 1, {
+      s: 1.4
+    }),
+    over: 'boom',
+    burst: 'spark'
+  }), skm('jump', {
+    c: 'gold',
+    fx: skmFx('fall', 'orb', 1, {
+      s: 1.6
+    }),
+    over: 'boom',
+    burst: 'star'
+  }), skm('roll', {
+    c: 'fire',
+    fx: skmFx('orbit', 'flame', 8),
+    over: 'boom',
+    burst: 'spark',
+    form: 'fire'
+  }), skm('dash', {
+    c: 'holy',
+    line: 'ray',
+    over: 'xslash',
+    burst: 'star',
+    form: 'light'
+  }), skm('gather', {
+    c: 'psy',
+    fx: skmFx('orbit', 'orb', 9),
+    over: 'eye',
+    burst: 'star'
+  })],
+  unique: [skm('hop', {
+    c: 'pink',
+    fx: skmFx('shot', 'heart', 4),
+    burst: 'heart'
+  }), skm('lick', {
+    c: 'pink',
+    line: 'tongue',
+    burst: 'heart'
+  }), skm('cast', {
+    c: 'blue',
+    fx: skmFx('orbit', 'fire', 9),
+    over: 'pillar',
+    burst: 'star',
+    form: 'fire'
+  }), skm('warp', {
+    c: 'fire',
+    over: 'shadow',
+    burst: 'dust'
+  }), skm('gather', {
+    c: 'blue',
+    fx: skmFx('fall', 'flame', 10),
+    over: 'pillar',
+    burst: 'spark',
+    form: 'fire'
+  }), skm('spin', {
+    c: 'wind',
+    over: 'tornado',
+    burst: 'leaf'
+  }), skm('cast', {
+    c: 'sky',
+    fx: skmFx('orbit', 'bubble', 10),
+    over: 'boom',
+    burst: 'bubble'
+  }), skm('float', {
+    c: 'cosmic',
+    fx: skmFx('fall', 'star', 12),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  }), skm('gather', {
+    c: 'blood',
+    fx: skmFx('orbit', 'flame', 9),
+    over: 'eclipse',
+    burst: 'spark',
+    form: 'fire'
+  })]
+});
+const SKM_ORIHIME = Object.freeze({
+  normal: SKM_KYUBI.normal.map((m, i) => ({
+    ...m,
+    c: ['sky', 'pink', 'cosmic', 'pink', 'gold', 'gold', 'pink', 'cosmic', 'psy'][i]
+  })),
+  unique: [skm('hop', {
+    c: 'pink',
+    fx: skmFx('shot', 'heart', 6),
+    over: 'bloom',
+    burst: 'heart'
+  }), {
+    ...SKM_KYUBI.unique[1],
+    c: 'sakura'
+  }, skm('cast', {
+    c: 'cosmic',
+    fx: skmFx('orbit', 'star', 9),
+    over: 'pillar',
+    burst: 'star',
+    form: 'light'
+  }), {
+    ...SKM_KYUBI.unique[3],
+    c: 'cosmic'
+  }, {
+    ...SKM_KYUBI.unique[4],
+    c: 'sky'
+  }, {
+    ...SKM_KYUBI.unique[5],
+    c: 'sky'
+  }, {
+    ...SKM_KYUBI.unique[6],
+    c: 'pink'
+  }, {
+    ...SKM_KYUBI.unique[8],
+    c: 'psy'
+  }, {
+    ...SKM_KYUBI.unique[7],
+    c: 'sky'
+  }]
+});
 const SKILL_MOTION_SETS = Object.freeze({
   ...SKILL_MOTION_SETS_MAIN,
   Yaobikuni: skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'),
@@ -22893,7 +23029,9 @@ const SKILL_MOTION_SETS = Object.freeze({
   Melody: SKM_MELODY,
   Kuromy: SKM_KUROMY,
   Illumine: SKM_ILLUMINE,
-  Dreamy: SKM_DREAMY
+  Dreamy: SKM_DREAMY,
+  Kyubi: SKM_KYUBI,
+  Orihime: SKM_ORIHIME
 });
 const SKM_BODY_TIMING = Object.freeze({
   bash: [.48, 560],
