@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2c0f259efae6734
+// source-sha256: 2bdbfd1e419033a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18974,8 +18974,7 @@ const KYUBI_KAGERO_WAIT = 3;
 const KYUBI_TENSHO = Object.freeze({
   combo: 0.2,
   dmg: 0.15,
-  hit: 10,
-  crit: 0.1
+  crit: 0.2
 });
 const KYUBI_RENGOKU_MAX = 10,
   KYUBI_RENGOKU_PER = 0.05;
@@ -18986,7 +18985,6 @@ const kyubiRengokuOf = n => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(N
 const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
   const none = {
     dmgMult: 1,
-    hitAdd: 0,
     critAdd: 0,
     combo: null,
     evadeAfterAttack: false
@@ -19006,7 +19004,6 @@ const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
   if (phaseId === 'tensho') return {
     ...none,
     dmgMult: 1 + KYUBI_TENSHO.dmg,
-    hitAdd: KYUBI_TENSHO.hit,
     critAdd: KYUBI_TENSHO.crit,
     combo: {
       count: 1,
@@ -19187,7 +19184,7 @@ const rollKogare = (rollsLeft, rand) => {
 const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
 const REIKON_TURNS = 3,
   REIKON_GUTS_MULT = 0.7,
-  REIKON_HIT_DOWN = 10;
+  REIKON_EVASION_UP = 10;
 const hasReikon = id => !!id && REIKON_MONSTER_IDS.includes(id);
 const reikonOf = v => ({
   wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
@@ -19216,7 +19213,7 @@ const reikonActive = v => {
   return r.wait === 0 && r.turns > 0;
 };
 const reikonGutsMult = v => reikonActive(v) ? REIKON_GUTS_MULT : 1;
-const reikonHitDown = v => reikonActive(v) ? REIKON_HIT_DOWN : 0;
+const reikonEvasionUp = v => reikonActive(v) ? REIKON_EVASION_UP : 0;
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
   if (!trait) return '';
@@ -74413,7 +74410,7 @@ const MonsterCheckLabLines = ({
 }, t)));
 const monsterCheckReikonLine = v => {
   const r = reikonOf(v);
-  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし';
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・味方の回避率+${reikonEvasionUp(r)}%` : '霊魂: なし';
 };
 function KyubiTraitLab() {
   const [phaseId, setPhaseId] = useState('sakuretsu');
@@ -74463,7 +74460,7 @@ function KyubiTraitLab() {
   const unique = () => {
     card('attack');
     setReikon(startReikon());
-    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
   };
   const ex = () => {
     setFox(k => useKitsunebi(k));
@@ -74509,7 +74506,7 @@ function KyubiTraitLab() {
     tone: "amber",
     onClick: unique
   }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
-    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
   }), React.createElement(MonsterCheckLabButton, {
     onClick: reset
   }, "はじめに戻す"));
@@ -74561,7 +74558,7 @@ function OrihimeTraitLab() {
   };
   const unique = () => {
     setReikon(startReikon());
-    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
   };
   const star = () => {
     const h = startHoshiai(ouse, diff);

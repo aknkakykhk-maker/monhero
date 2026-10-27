@@ -18,7 +18,7 @@ const near = (a, b) => Math.abs(a - b) < 1e-9;
 
 const bond = read('monster-hero/src/parts/22-enemy-and-bond-entries.jsx');
 const start = bond.indexOf("const KYUBI_MONSTER_ID = 'Kyubi'");
-const end = bond.indexOf('const reikonHitDown');
+const end = bond.indexOf('const reikonEvasionUp');
 check('2体の決めごとを抜き出せる', start > 0 && end > start);
 const endLine = bond.indexOf('\n// ', bond.indexOf('\n', end + 1));
 const k = {};
@@ -26,7 +26,7 @@ vm.createContext(k);
 vm.runInContext(`${bond.slice(start, endLine > end ? endLine : undefined)}
 globalThis.x={KYUBI_PHASES,kyubiPhaseOfSlot,kyubiRengokuOf,kyubiPhaseEffectOf,kageroAfterAttack,kageroUseEvade,tickKagero,
   useKitsunebi,tickKitsunebi,kitsunebiOnHit,kitsunebiEffectOf,orihimeDiffOf,addOuse,orihimeBondEffectOf,shareOrihimeDamage,
-  startHoshiai,rollKogare,KOGARE_TURNS,KOGARE_CHANCE,KOGARE_ROLLS_PER_TURN,hasReikon,startReikon,tickReikon,reikonGutsMult,reikonHitDown};`, k);
+  startHoshiai,rollKogare,KOGARE_TURNS,KOGARE_CHANCE,KOGARE_ROLLS_PER_TURN,hasReikon,startReikon,tickReikon,reikonGutsMult,reikonEvasionUp};`, k);
 const x = k.x;
 
 // ---------- キュービ 九尾四相 ----------
@@ -35,8 +35,8 @@ check('相は距離で決まる(零=煉獄・近=天翔・中=陽炎・遠=炸�
 const sak = x.kyubiPhaseEffectOf('sakuretsu');
 check('遠=炸裂ノ相: 与ダメ40%の連撃×1', sak.combo?.count === 1 && near(sak.combo.rate, 0.4) && sak.dmgMult === 1);
 const ten = x.kyubiPhaseEffectOf('tensho');
-check('近=天翔ノ相: 連撃20%×1・与ダメ+15%・命中+10%・会心率+10%',
-  ten.combo?.count === 1 && near(ten.combo.rate, 0.2) && near(ten.dmgMult, 1.15) && ten.hitAdd === 10 && near(ten.critAdd, 0.1));
+check('近=天翔ノ相: 連撃20%×1・与ダメ+15%・会心率+20%(命中の分を会心率へ)',
+  ten.combo?.count === 1 && near(ten.combo.rate, 0.2) && near(ten.dmgMult, 1.15) && near(ten.critAdd, 0.2) && !('hitAdd' in ten));
 check('中=陽炎ノ相: 攻撃したあと完全回避を持つ', x.kyubiPhaseEffectOf('kagero').evadeAfterAttack === true);
 {
   let s = x.kageroAfterAttack(null);
@@ -105,9 +105,9 @@ check('焦がれ待つ天ノ河: 振れる回数を使い切ったら振らな�
 check('霊魂は2体とも持つ', x.hasReikon('Kyubi') && x.hasReikon('Orihime') && !x.hasReikon('Dreamy'));
 {
   let r = x.startReikon();
-  const seq = [[x.reikonGutsMult(r), x.reikonHitDown(r)]];
-  for (let i = 0; i < 4; i++) { r = x.tickReikon(r); seq.push([x.reikonGutsMult(r), x.reikonHitDown(r)]); }
-  check('霊魂: 使ったターンは効かず、次のターンから3ターン 消費ガッツ×0.7・敵の命中−10%',
+  const seq = [[x.reikonGutsMult(r), x.reikonEvasionUp(r)]];
+  for (let i = 0; i < 4; i++) { r = x.tickReikon(r); seq.push([x.reikonGutsMult(r), x.reikonEvasionUp(r)]); }
+  check('霊魂: 使ったターンは効かず、次のターンから3ターン 消費ガッツ×0.7・味方の回避率+10%',
     JSON.stringify(seq) === '[[1,0],[0.7,10],[0.7,10],[0.7,10],[1,0]]', JSON.stringify(seq));
   const again = x.startReikon();
   check('霊魂: 使い直したらかけ直し(重ならない)', again.turns === 3 && again.wait === 1);
@@ -170,7 +170,7 @@ const lab = read('monster-hero/src/parts/74-screen-monster-check-debug.jsx');
 check('確認画面の技タブに、2体の「動かして見る」欄がある',
   /mon\.id === KYUBI_MONSTER_ID && <KyubiTraitLab\/>/.test(lab) && /mon\.id === ORIHIME_MONSTER_ID && <OrihimeTraitLab\/>/.test(lab));
 check('欄は決めごとの関数をそのまま呼ぶ(数字を画面側で持たない)',
-  ['kyubiPhaseEffectOf', 'kageroAfterAttack', 'useKitsunebi', 'kitsunebiOnHit', 'tickKitsunebi', 'addOuse', 'orihimeBondEffectOf', 'startHoshiai', 'rollKogare', 'shareOrihimeDamage', 'startReikon', 'tickReikon', 'reikonGutsMult', 'reikonHitDown']
+  ['kyubiPhaseEffectOf', 'kageroAfterAttack', 'useKitsunebi', 'kitsunebiOnHit', 'tickKitsunebi', 'addOuse', 'orihimeBondEffectOf', 'startHoshiai', 'rollKogare', 'shareOrihimeDamage', 'startReikon', 'tickReikon', 'reikonGutsMult', 'reikonEvasionUp']
     .every((f) => lab.includes(`${f}(`)));
 
 console.log(failed ? `\nNG: ${failed}件` : '\nすべてOK');
