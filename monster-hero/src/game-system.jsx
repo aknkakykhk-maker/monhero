@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4b9a83f9abbe7e4
+// generated-sha256: a890e9a40611098c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -35680,7 +35680,7 @@ function RhythmSongSelectScreen({
                 <span aria-hidden="true">⚔</span><span className="min-w-0 flex-1 truncate">裏でクイックの∞周回を回すには？</span>
                 <span aria-hidden="true" className="shrink-0 text-slate-500 group-open:rotate-180">▾</span>
               </summary>
-              <p className="pb-1">クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>
+              <p className="pb-1" style={JA_WRAP_STYLE}>{jaWrap('クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。')}</p>
             </details>)
         : null;
       // ===== 💬でまとめて畳む(2026-10-10・改善部の提案 K3・社長の選択「💬で3つまとめて畳む」) =====
@@ -36011,7 +36011,7 @@ function RhythmNoteDexScreen({onBack,onPlay}){
         </div>
       </header>
       <div data-rhythm-note-dex-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
-        <p className="text-[11px] leading-relaxed text-slate-300">ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。</p>
+        <p className="text-[11px] leading-relaxed text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。')}</p>
         <div data-rhythm-note-dex-list className="mt-3 grid gap-2" style={{gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,300px),1fr))'}}>
           {RHYTHM_NOTE_DEX.map(entry=>{const row=rhythmNoteDexHelpRow(entry);return (
             <div key={entry.id} data-rhythm-note-dex-item={entry.id} className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
@@ -36440,7 +36440,7 @@ function RhythmRankingScreen({
           {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
-            {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">総合ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
+            {total.status==='notReady'&&<p data-rhythm-total-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('総合ランキングはただいま準備中です。もうしばらくお待ちください。')}</p>}
             {total.status==='error'&&<p data-rhythm-total-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200" style={JA_WRAP_STYLE}>{jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')}</p>}
             {total.status==='ready'&&(<>
               {/* ★自分の行を上に固定しない(2026-09-11・ユーザー指示
@@ -36453,7 +36453,7 @@ function RhythmRankingScreen({
                   まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲を選ぶ
                 </button>
               )}
-              {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">まだあなたの記録がありません。1曲でも遊ぶとここに載ります。</p>}
+              {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだあなたの記録がありません。1曲でも遊ぶとここに載ります。')}</p>}
               {total.entries.length===0&&<p data-rhythm-total-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
               {total.entries.length>0&&<ol data-rhythm-total-list className="space-y-2">
                 {total.entries.map((entry,index)=>(
@@ -36492,7 +36492,7 @@ function RhythmRankingScreen({
           {boardTab&&(<>
             {event.status==='loading'&&<p data-rhythm-event-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
-            {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">週間ランキングはただいま準備中です。もうしばらくお待ちください。</p>}
+            {event.status==='notReady'&&<p data-rhythm-event-not-ready className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('週間ランキングはただいま準備中です。もうしばらくお待ちください。')}</p>}
             {event.status==='closed'&&<p data-rhythm-event-closed className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">いま開催しているイベントはありません。次の開催をお待ちください。</p>}
             {event.status==='error'&&<p data-rhythm-event-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200" style={JA_WRAP_STYLE}>{jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')}</p>}
             {event.status==='ready'&&eventDefinition&&(<>
@@ -36537,7 +36537,7 @@ function RhythmRankingScreen({
                 {!eventBoard.self&&<div className="mb-3">
                   {/* ★「対象曲をえらぶ」ボタンは外した(2026-09-11・ユーザー指摘「対象曲を選ぶはいらない」)。
                       この画面は曲えらびから来るので、戻る道はもう上にある */}
-                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">{eventPrev?'このイベントに、あなたの記録はありませんでした。':eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'}</p>
+                  <p data-rhythm-event-self-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(eventPrev?'このイベントに、あなたの記録はありませんでした。':eventLimited?'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。':'今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')}</p>
                 </div>}
                 {eventBoard.entries.length===0&&<p data-rhythm-event-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">{eventPrev?'このイベントの記録はありませんでした。':eventLimited?'まだ記録がありません。最初の1件になってみましょう。':'今週はまだ記録がありません。最初の1件になってみましょう。'}</p>}
                 {eventBoard.entries.length>0&&<ol data-rhythm-event-list className="space-y-2">
@@ -56273,7 +56273,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   };
   const footer = (() => {
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
-    if (st.winner !== null && !tutorial) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
+    // 勝ち負けの演出が出ているあいだは、下の字を出さない(演出の「タップで次へ」と重なった。2026-10-27 ソランドくん)。高さは残す
+    if (st.winner !== null && !tutorial) return <div className="flex-1 text-center text-[15px] font-black text-amber-200">{endFx ? '\u00a0' : st.winner === CARD_ME ? '勝ち！' : '負け…'}</div>;
     if (tutorial && (st.winner !== null || tutStage.next)) return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">ドラの説明を読んで「次へ」</div>;
     // 自分の番に相手が守りを選んでいるあいだは「◯◯の番」と言わない(上のヘッダーと食い違っていた。案A)
     if (mode === 'wait') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">{st.active === CARD_ME ? `${who.name}が守りを考えています…` : `${who.name}の番…`}</div>;
@@ -56293,9 +56294,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}>攻撃おわり → ガッツへ</button>
     </>);
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ')
-    : mode === 'guard' ? (guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません')
-    : mode === 'guts' ? (gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)')
+  // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
+    : mode === 'guard' ? (guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません')
+    : mode === 'guts' ? (gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)')
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
     : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
 
@@ -56432,7 +56434,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           </button>
         )}
         {/* 番の帯・カードの大写しが出ているあいだは、記録の字を消す(後ろに透けて読みにくかった・大写しのカードの両はしからはみ出して見えた。QA 7・見回り2回目の新4) */}
-        <div data-card-log className={`relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
+        <div data-card-log className={`relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
             ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
@@ -56568,7 +56570,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
           {st.winner === CARD_ME && <CardConfetti/>}
           <b data-card-end-title className={`mh-card-end-title relative block font-black italic leading-none ${st.winner === CARD_ME ? 'text-amber-200 [-webkit-text-stroke:2px_#7c2d12] [text-shadow:0_6px_0_#7c2d12,0_0_40px_rgba(251,191,36,.9)]' : 'text-slate-300 [text-shadow:0_4px_0_#0f172a]'}`}
             style={{ fontSize: st.winner === CARD_ME ? 'clamp(64px, 22vw, 96px)' : 'clamp(44px, 15vw, 64px)' }}>{st.winner === CARD_ME ? 'WIN!' : 'LOSE'}</b>
-          <span className={`relative mt-2 px-4 text-center text-[15px] font-black ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`} style={JA_LABEL_STYLE}>{st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'}</span>
+          <span className={`relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`} style={JA_LABEL_STYLE}>{st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'}</span>
           <span className="absolute bottom-5 text-[12px] font-bold text-white/70">タップで次へ</span>
         </div>
       )}
@@ -84517,8 +84519,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 「MARVELOUS→EXCELLENT→…」のように区切りの無い長い連なりは、
                     ふつうの折り返しでは切れる場所が無く、そのまま吹き出しの外へはみ出す。
                     どこでも折り返せるようにして、画面の外へ出ないようにする。 */}
-                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{page.title}</span>}
-                <span className="block text-[13px] text-white leading-relaxed mt-1" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{String(page.t).replace('{name}', breederName || 'あなた')}</span>
+                {/* 案内の文は言葉の切れ目で折る(320幅で「モンヒロビー／ト」「配置距／離」と折れていた・2026-10-27) */}
+                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5" style={JA_WRAP_STYLE}>{jaWrap(String(page.title))}</span>}
+                <span className="block text-[13px] text-white leading-relaxed mt-1" style={JA_WRAP_STYLE}>{jaWrap(String(page.t).replace('{name}', breederName || 'あなた'))}</span>
               </div>
             </div>
             {topicRef&&(

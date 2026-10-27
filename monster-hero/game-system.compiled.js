@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a2ba74b6a12c79fe
+// source-sha256: 3312ed45976a9692
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57013,8 +57013,9 @@ function RhythmSongSelectScreen({
     "aria-hidden": "true",
     className: "shrink-0 text-slate-500 group-open:rotate-180"
   }, "▾")), React.createElement("p", {
-    className: "pb-1"
-  }, "クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。")) : null;
+    className: "pb-1",
+    style: JA_WRAP_STYLE
+  }, jaWrap('クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。'))) : null;
   const selectNoticeShort = useRhythmShortPortrait();
   const selectNoticesOpen = rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView), rhythmPlayedSongCount(rhythmBestRecords), selectNoticeShort);
   const quickRunStartRowVisible = !debugAll && !quickRunProgress && !runStage;
@@ -57481,8 +57482,9 @@ function RhythmNoteDexScreen({
       paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
-    className: "text-[11px] leading-relaxed text-slate-300"
-  }, "ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。"), React.createElement("div", {
+    className: "text-[11px] leading-relaxed text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。')), React.createElement("div", {
     "data-rhythm-note-dex-list": true,
     className: "mt-3 grid gap-2",
     style: {
@@ -57997,8 +57999,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), total.status === 'notReady' && React.createElement("p", {
     "data-rhythm-total-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "総合ランキングはただいま準備中です。もうしばらくお待ちください。"), total.status === 'error' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('総合ランキングはただいま準備中です。もうしばらくお待ちください。')), total.status === 'error' && React.createElement("p", {
     "data-rhythm-total-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
@@ -58008,8 +58011,9 @@ function RhythmRankingScreen({
     className: "mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
   }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲を選ぶ"), !total.self && React.createElement("p", {
     "data-rhythm-total-self-empty": true,
-    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, "まだあなたの記録がありません。1曲でも遊ぶとここに載ります。"), total.entries.length === 0 && React.createElement("p", {
+    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだあなたの記録がありません。1曲でも遊ぶとここに載ります。')), total.entries.length === 0 && React.createElement("p", {
     "data-rhythm-total-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "まだ記録がありません。最初の1件になってみましょう。"), total.entries.length > 0 && React.createElement("ol", {
@@ -58044,8 +58048,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), event.status === 'notReady' && React.createElement("p", {
     "data-rhythm-event-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "週間ランキングはただいま準備中です。もうしばらくお待ちください。"), event.status === 'closed' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('週間ランキングはただいま準備中です。もうしばらくお待ちください。')), event.status === 'closed' && React.createElement("p", {
     "data-rhythm-event-closed": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "いま開催しているイベントはありません。次の開催をお待ちください。"), event.status === 'error' && React.createElement("p", {
@@ -58098,8 +58103,9 @@ function RhythmRankingScreen({
     className: "mb-3"
   }, React.createElement("p", {
     "data-rhythm-event-self-empty": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'))), eventBoard.entries.length === 0 && React.createElement("p", {
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, eventPrev ? 'このイベントの記録はありませんでした。' : eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && React.createElement("ol", {
@@ -92446,7 +92452,7 @@ const CardBattleBoard = ({
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (st.winner !== null && !tutorial) return React.createElement("div", {
       className: "flex-1 text-center text-[15px] font-black text-amber-200"
-    }, st.winner === CARD_ME ? '勝ち！' : '負け…');
+    }, endFx ? '\u00a0' : st.winner === CARD_ME ? '勝ち！' : '負け…');
     if (tutorial && (st.winner !== null || tutStage.next)) return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
     }, "ドラの説明を読んで「次へ」");
@@ -92524,7 +92530,7 @@ const CardBattleBoard = ({
       })
     }, "攻撃おわり → ガッツへ"));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
@@ -92822,7 +92828,7 @@ const CardBattleBoard = ({
     className: "shrink-0 text-rose-300"
   }, "▸ 見る")), React.createElement("div", {
     "data-card-log": true,
-    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
+    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && (guardAtk ? React.createElement("button", _extends({
     type: "button",
@@ -93091,7 +93097,7 @@ const CardBattleBoard = ({
       fontSize: st.winner === CARD_ME ? 'clamp(64px, 22vw, 96px)' : 'clamp(44px, 15vw, 64px)'
     }
   }, st.winner === CARD_ME ? 'WIN!' : 'LOSE'), React.createElement("span", {
-    className: `relative mt-2 px-4 text-center text-[15px] font-black ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`,
+    className: `relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`,
     style: JA_LABEL_STYLE
   }, st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'), React.createElement("span", {
     className: "absolute bottom-5 text-[12px] font-bold text-white/70"
@@ -135923,17 +135929,11 @@ function MonsterHeroGame() {
         }
       }, who.name), page.title && React.createElement("span", {
         className: "block text-[11px] font-black text-white mt-0.5",
-        style: {
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word'
-        }
-      }, page.title), React.createElement("span", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(String(page.title))), React.createElement("span", {
         className: "block text-[13px] text-white leading-relaxed mt-1",
-        style: {
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word'
-        }
-      }, String(page.t).replace('{name}', breederName || 'あなた')))), topicRef && React.createElement("button", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(String(page.t).replace('{name}', breederName || 'あなた'))))), topicRef && React.createElement("button", {
         onClick: () => {
           setHelpCatId(page.help.split('/')[0]);
           setHelpTopicId(page.help.split('/')[1]);
