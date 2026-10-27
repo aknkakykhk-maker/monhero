@@ -530,11 +530,13 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Dreamy', name:"ドリーミィの円盤石", type:'disc', icon:DREAMY_DISC_ICON, cost:150000, available:false },
   // キュービ・オリヒメ(2026-10-27 社長「キュービの円盤石を近日追加で並べる」)。予告中なので6件とも available:false(「近日追加」)。
   // 値段はほかの新モンスターと同じ(円盤石150,000ダイヤ・アイコンは各1)。ビートP交換所・MFバトルカードのショップにも近日追加で並ぶ(data/rhythm-event.js)
-  { id:'kyubi_icon', name:"キュービのアイコン", type:'icon', icon:KYUBI_FACE_ICON, cost:1, available:false },
-  { id:'kyubi_disc_icon', name:"キュービの円盤石アイコン", type:'icon', icon:KYUBI_DISC_ICON, cost:1, available:false },
+  // キュービ・オリヒメはソラシドのお話「推しに会える夜」と同時に公開する(2026-10-27 社長)。お話を見たら顔アイコン・円盤石アイコンが並ぶ。
+  //   円盤石(ダイヤ)はイルミネ・ドリーミィと同じく、お話を見たあとも近日追加のまま(先にビートP交換所で 1,500P。rhythm-event.js)
+  { id:'kyubi_icon', name:"キュービのアイコン", type:'icon', icon:KYUBI_FACE_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
+  { id:'kyubi_disc_icon', name:"キュービの円盤石アイコン", type:'icon', icon:KYUBI_DISC_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
   { id:'Kyubi', name:"キュービの円盤石", type:'disc', icon:KYUBI_DISC_ICON, cost:150000, available:false },
-  { id:'orihime_icon', name:"オリヒメのアイコン", type:'icon', icon:ORIHIME_FACE_ICON, cost:1, available:false },
-  { id:'orihime_disc_icon', name:"オリヒメの円盤石アイコン", type:'icon', icon:ORIHIME_DISC_ICON, cost:1, available:false },
+  { id:'orihime_icon', name:"オリヒメのアイコン", type:'icon', icon:ORIHIME_FACE_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
+  { id:'orihime_disc_icon', name:"オリヒメの円盤石アイコン", type:'icon', icon:ORIHIME_DISC_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
   { id:'Orihime', name:"オリヒメの円盤石", type:'disc', icon:ORIHIME_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },

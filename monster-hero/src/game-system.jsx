@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fff234c404c52c02
+// generated-sha256: f8954caee7025cdd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -8917,7 +8917,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
   //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)。
   //   MFバトルカードの相手えらび・マルチ・観戦・記録・曲の並びにも出ない(82 の cardFoeReleased)
-  assistantSorashido: false,
+  assistantSorashido: true,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -9192,7 +9192,7 @@ const LOGIN_BONUS_REWARDS = [
   // 7日目にセッション券(2026-10-07・docs/spec/RHYTHM_BUDDY.md)。アイテムのidをそのまま持つ報酬(gameItem)で配る
   [{ type:'bondPointReset', amount:1 }, { type:'trainingTicketLarge', amount:1 }, { type:'skipTicketJo', amount:1 }, { type:'gameItem', itemId:'session_ticket', amount:2 }],
 ];
-const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーP', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットの書', uniqueSkillResetTicket:'スキルポイントリセット券', rainbowPsyche:'虹のプシュケー', rainbowTranscendFruit:'虹の超越の実', trainingTicket:'トレーニングチケット', trainingTicketLarge:'重トレーニングチケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急' };
+const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーP', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットの書', uniqueSkillResetTicket:'スキルポイントリセット券', rainbowPsyche:'虹のプシュケー', rainbowTranscendFruit:'虹の超越の実', trainingTicket:'トレーニングチケット', trainingTicketLarge:'重トレーニングチケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急', beatPoint:'ビートP' };
 const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDays:0 };
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
@@ -9245,6 +9245,17 @@ const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
 // ソラシドの加入のお話(2026-10-27)。id は data/assistants.js の EVENT_REPLAYS と同じ
 const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
+// ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
+// ★届けたかは新しいキー mh_sorashido_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない・CLAUDE.md ⑦)。
+// ★イベント回想で見直しても届かない(見た印は最初の1回だけ立ち、届けた印もある)
+const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
+const SORASHIDO_GIFT_BEAT_POINTS = 10000;
+const sorashidoJoinGift = () => ({
+  id: 'sorashido_join_gift_2026_10_27',
+  title: 'ソラシドの沖縄のおみやげ',
+  source: 'assistantStory',
+  rewards: [{ type: 'beatPoint', amount: SORASHIDO_GIFT_BEAT_POINTS }],
+});
 // 助手4人がタイプを教えるお話「タクティクスバトル ～4人のタイプ～」(2026-10-18・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
 // ヘイトとタイプの公開(RELEASE_FLAGS.tacticsHate)のあと、タクティクスバトルの導入のお話を見た人にだけ、最初の HOME で1回流す。デバッグから見たぶんは立てない
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
@@ -9746,10 +9757,12 @@ const buildGiftClaim = (gift, balances, now=Date.now()) => {
   if (!rewards) return { ok:false, reason:'invalidReward' };
   const next = { gold:Math.max(0,Number(balances?.gold)||0), breederPoints:Math.max(0,Number(balances?.breederPoints)||0), breederXp:Math.max(0,Number(balances?.breederXp)||0), ownedItems:{...(balances?.ownedItems||{})},
     // フレームの報酬があるときだけ使う(持っていなければ足す。持っていれば何もしない)
-    ownedProfileFrames:Array.isArray(balances?.ownedProfileFrames)?[...balances.ownedProfileFrames]:[] };
+    ownedProfileFrames:Array.isArray(balances?.ownedProfileFrames)?[...balances.ownedProfileFrames]:[],
+    // ビートP(2026-10-27 ソラシドのおみやげ)。受け取る側が保存から読んだ残高を渡す
+    beatPoints:Math.max(0,Math.floor(Number(balances?.beatPoints))||0) };
   // 虹の超越の実は既存の RAINBOW_TRANSCEND_FRUIT_ITEM_ID と同じ保存ID。
   const itemIds = { dyeMock:'dye_mock', bondPointReset:'bond_reset_scroll', uniqueSkillResetTicket:'unique_skill_reset_ticket', rainbowPsyche:'rainbow_psyche', rainbowTranscendFruit:'transcend_fruit_rainbow', trainingTicket:'training_ticket', trainingTicketLarge:'training_ticket_l', skipTicketJo:'skip_ticket_jo', skipTicketHa:'skip_ticket_ha', skipTicketKyu:'skip_ticket_kyu' };
-  rewards.forEach(({type,itemId,frameId,amount})=>{ if(type===GIFT_FRAME_REWARD_TYPE){ if(!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId); return; } if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else { const id=type===GIFT_ITEM_REWARD_TYPE?itemId:itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
+  rewards.forEach(({type,itemId,frameId,amount})=>{ if(type===GIFT_FRAME_REWARD_TYPE){ if(!next.ownedProfileFrames.includes(frameId)) next.ownedProfileFrames.push(frameId); return; } if(type==='diamond') next.gold+=amount; else if(type==='breederPoint') next.breederPoints+=amount; else if(type==='breederXp') next.breederXp+=amount; else if(type==='beatPoint') next.beatPoints+=amount; else { const id=type===GIFT_ITEM_REWARD_TYPE?itemId:itemIds[type]; next.ownedItems[id]=(next.ownedItems[id]||0)+amount; } });
   return { ok:true, balances:next, gift:{...gift,claimedAt:new Date(now).toISOString()} };
 };
 const giftRewardText = (reward) => {
@@ -9775,6 +9788,8 @@ const giftTitleDisplay = (gift) => {
   if (gift?.source === 'raidJack') return { label:'ジャック報酬', title };
   // 助手の仲良し度の節目のごほうび(2026-10-21)
   if (gift?.source === 'assistantBond') return { label:'仲良し度', title };
+  // 助手のお話のおみやげ(2026-10-27 ソラシド)
+  if (gift?.source === 'assistantStory') return { label:'おみやげ', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
@@ -68237,6 +68252,34 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
+  // ソラシドの加入のお話を見終えたら、沖縄のおみやげ(10,000ビートP)をギフトで1回だけ届ける(2026-10-27 社長)。
+  // ★ギフトと「届けた」印(mh_sorashido_gift_v1)を同じ取引で保存する。どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)
+  // ★公開の印 assistantSorashido が偽なら届けない。回想で見直しても、印があるので二度は届かない
+  const sorashidoGiftRef = useRef(false);
+  const grantSorashidoGift = async () => {
+    if (RELEASE_FLAGS.assistantSorashido !== true) return false;
+    if (sorashidoGiftRef.current) return false;
+    sorashidoGiftRef.current = true;
+    try {
+      const mark = await storeGet(SORASHIDO_GIFT_KEY, null, false);
+      if (mark) return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, sorashidoJoinGift());
+      const saved = await saveStoredValuesOrRollback([
+        ...(grant.granted ? [{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }] : []),
+        { key:SORASHIDO_GIFT_KEY, before:mark, next:{ at:new Date().toISOString(), beatPoints:SORASHIDO_GIFT_BEAT_POINTS } },
+      ], storeGet, storeSet);
+      if (!saved) { console.error('[sorashido-gift] save failed'); return false; }
+      if (grant.granted) setGifts(grant.gifts);
+      return grant.granted;
+    } catch (error) { return false; }
+    finally { sorashidoGiftRef.current = false; }
+  };
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    void grantSorashidoGift();
+  }, [rhythmEventStorySeen]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
   useEffect(() => {
@@ -74308,7 +74351,10 @@ function MonsterHeroGame() {
       // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る。
       // プロフィールフレームの報酬(2026-10-20・ハロウィン・妖)もあるので、持っている枠も一緒に持って回る(保存から読み直した値)
       const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
-      let balances = { gold, breederPoints, ownedItems, breederXp, ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]) };
+      // ビートPの報酬(2026-10-27 ソラシドのおみやげ)もあるので、ビートPの残高も保存から読み直して持って回る
+      const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
+      let balances = { gold, breederPoints, ownedItems, breederXp, ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]), beatPoints: beatBefore };
       let claimedCount = 0;
       const now = Date.now();
       const nextGifts = sourceGifts.map(gift => {
@@ -74346,6 +74392,9 @@ function MonsterHeroGame() {
       // フレームが増えたときだけ、同じ取引で枠の持ち物も保存する(どれか失敗したら全部元へ戻る)
       const framesAfter = normalizeOwnedProfileFrames(balances.ownedProfileFrames);
       if (framesAfter.length !== storedFramesBefore.length) entries.push({ key:PROFILE_FRAME_OWNED_KEY, before:storedFramesBefore, next:framesAfter });
+      // ビートPが増えたときだけ、同じ取引でビートPも保存する
+      const beatAfter = normalizeRhythmEventPoints(balances.beatPoints);
+      if (beatAfter !== beatBefore) entries.push({ key:RHYTHM_EVENT_POINTS_KEY, before:storedBeatBefore, next:beatAfter });
       // 受け取ったぶんだけ「受取済み」が増えるので、ここでも古い控えを落とす
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({ key:'mh_gifts', before:sourceGifts, next:keptGifts });
@@ -74355,6 +74404,7 @@ function MonsterHeroGame() {
       if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
       setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(keptGifts);
       if (framesAfter.length !== ownedProfileFramesRef.current.length) { ownedProfileFramesRef.current = framesAfter; setOwnedProfileFrames(framesAfter); }
+      if (beatAfter !== beatBefore) setRhythmEventPoints(beatAfter);
       // 何をいくつ手に入れたかを見せる(保存に成功したあとだけ。失敗して巻き戻したときは出さない)
       const rewards = summarizeClaimedGiftRewards(claimedGifts);
       setRewardReceipt({ title, rewards, count:claimedCount });

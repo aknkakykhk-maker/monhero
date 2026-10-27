@@ -5244,6 +5244,34 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
+  // ソラシドの加入のお話を見終えたら、沖縄のおみやげ(10,000ビートP)をギフトで1回だけ届ける(2026-10-27 社長)。
+  // ★ギフトと「届けた」印(mh_sorashido_gift_v1)を同じ取引で保存する。どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)
+  // ★公開の印 assistantSorashido が偽なら届けない。回想で見直しても、印があるので二度は届かない
+  const sorashidoGiftRef = useRef(false);
+  const grantSorashidoGift = async () => {
+    if (RELEASE_FLAGS.assistantSorashido !== true) return false;
+    if (sorashidoGiftRef.current) return false;
+    sorashidoGiftRef.current = true;
+    try {
+      const mark = await storeGet(SORASHIDO_GIFT_KEY, null, false);
+      if (mark) return false;
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+      const grant = grantGiftOnce(beforeGifts, sorashidoJoinGift());
+      const saved = await saveStoredValuesOrRollback([
+        ...(grant.granted ? [{ key:'mh_gifts', before:beforeGifts, next:grant.gifts }] : []),
+        { key:SORASHIDO_GIFT_KEY, before:mark, next:{ at:new Date().toISOString(), beatPoints:SORASHIDO_GIFT_BEAT_POINTS } },
+      ], storeGet, storeSet);
+      if (!saved) { console.error('[sorashido-gift] save failed'); return false; }
+      if (grant.granted) setGifts(grant.gifts);
+      return grant.granted;
+    } catch (error) { return false; }
+    finally { sorashidoGiftRef.current = false; }
+  };
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    void grantSorashidoGift();
+  }, [rhythmEventStorySeen]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
   useEffect(() => {
@@ -11315,7 +11343,10 @@ function MonsterHeroGame() {
       // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る。
       // プロフィールフレームの報酬(2026-10-20・ハロウィン・妖)もあるので、持っている枠も一緒に持って回る(保存から読み直した値)
       const storedFramesBefore = normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_OWNED_KEY, [], false));
-      let balances = { gold, breederPoints, ownedItems, breederXp, ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]) };
+      // ビートPの報酬(2026-10-27 ソラシドのおみやげ)もあるので、ビートPの残高も保存から読み直して持って回る
+      const storedBeatBefore = await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false);
+      const beatBefore = normalizeRhythmEventPoints(storedBeatBefore);
+      let balances = { gold, breederPoints, ownedItems, breederXp, ownedProfileFrames: normalizeOwnedProfileFrames([...storedFramesBefore, ...ownedProfileFramesRef.current]), beatPoints: beatBefore };
       let claimedCount = 0;
       const now = Date.now();
       const nextGifts = sourceGifts.map(gift => {
@@ -11353,6 +11384,9 @@ function MonsterHeroGame() {
       // フレームが増えたときだけ、同じ取引で枠の持ち物も保存する(どれか失敗したら全部元へ戻る)
       const framesAfter = normalizeOwnedProfileFrames(balances.ownedProfileFrames);
       if (framesAfter.length !== storedFramesBefore.length) entries.push({ key:PROFILE_FRAME_OWNED_KEY, before:storedFramesBefore, next:framesAfter });
+      // ビートPが増えたときだけ、同じ取引でビートPも保存する
+      const beatAfter = normalizeRhythmEventPoints(balances.beatPoints);
+      if (beatAfter !== beatBefore) entries.push({ key:RHYTHM_EVENT_POINTS_KEY, before:storedBeatBefore, next:beatAfter });
       // 受け取ったぶんだけ「受取済み」が増えるので、ここでも古い控えを落とす
       const keptGifts = pruneGiftHistory(nextGifts);
       entries.push({ key:'mh_gifts', before:sourceGifts, next:keptGifts });
@@ -11362,6 +11396,7 @@ function MonsterHeroGame() {
       if (balances.breederXp !== breederXp) setBreederXp(balances.breederXp);
       setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(keptGifts);
       if (framesAfter.length !== ownedProfileFramesRef.current.length) { ownedProfileFramesRef.current = framesAfter; setOwnedProfileFrames(framesAfter); }
+      if (beatAfter !== beatBefore) setRhythmEventPoints(beatAfter);
       // 何をいくつ手に入れたかを見せる(保存に成功したあとだけ。失敗して巻き戻したときは出さない)
       const rewards = summarizeClaimedGiftRewards(claimedGifts);
       setRewardReceipt({ title, rewards, count:claimedCount });
