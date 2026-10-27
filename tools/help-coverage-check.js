@@ -85,7 +85,10 @@ check('使っているデータ表のidがすべて実在する', dataIds.every(
 // --- ③ 件数が実データと一致する ---
 const rowCount = (id) => g.helpDataRows(id).length;
 check('難易度は9段階すべて出る', rowCount('difficulties') === Object.keys(g.DIFFICULTY_SETTINGS).length, `${rowCount('difficulties')}件 / 実データ${Object.keys(g.DIFFICULTY_SETTINGS).length}件`);
-check('ブリーダーの教えは全種類出る', rowCount('teachings') === g.TEACHING_CARDS.length, `${rowCount('teachings')}件`);
+// 公開の印(releaseFlag)が付いたアシカ(ソラシド・2026-10-27)は、印が立つまで表に出さない。この検査の中では印は立っていない
+const releasedTeachings = g.TEACHING_CARDS.filter(c => !c.releaseFlag);
+check('ブリーダーの教えは全種類出る(公開前のアシカは除く)', rowCount('teachings') === releasedTeachings.length, `${rowCount('teachings')}件 / 公開済み${releasedTeachings.length}件`);
+check('公開前のアシカは表に出ない', g.TEACHING_CARDS.filter(c => c.releaseFlag).every(c => !g.helpDataRows('teachings').some(r => r[0] === c.baseName)));
 check('スキップチケットは3種すべて出る', rowCount('skipTickets') === Object.keys(g.SKIP_TICKET_BY_DIFFICULTY).length, `${rowCount('skipTickets')}件`);
 const plainItems = g.BREEDER_MARKET_ITEMS.filter(i => i.type === 'item' && !Object.values(g.SKIP_TICKET_BY_DIFFICULTY).includes(i.id));
 check('スキップ以外のアイテムも全種類出る', rowCount('items') === plainItems.length, `${rowCount('items')}件 / 実データ${plainItems.length}件`);

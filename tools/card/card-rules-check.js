@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { cardFoeOpenInRepo } = require('./card-released-foes');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const GAME = path.join(ROOT, 'monster-hero');
@@ -183,7 +184,8 @@ const decksAndSaves = () => {
       Object.keys(db.starters).forEach((k) => { for (let g = 0; g < per; g++) { const d = E.cardAiBuildDeck(db, w, lv, E.cardAiSeededRand(`${w}:${lv}:${k}:${g}`), { playerDeck: E.cardAiBuildDeck(db, k) }); const st = E.cardSimulate(db, { decks: [d, E.cardAiBuildDeck(db, k)], policies: [E.cardAiPolicy(w, lv, { sameBlood: !!d.sameBlood }), E.cardAiPolicy('kyuko', lv, { playerRole: true })], seed: 7000 + sd++, first: g % 2 }); if (st.winner === 0) win += 1; n += 1; } });
       return win / n;
     };
-    const rates = Object.keys(E.CARD_AI_HABITS).map((w) => {
+    // 公開の印が立っていない助手(仮の値で表に足した子)は、強さをまだそろえないので測らない(card-released-foes.js)
+    const rates = Object.keys(E.CARD_AI_HABITS).filter(cardFoeOpenInRepo).map((w) => {
       const r90 = rateOf(w, 30);
       if ((r90 >= 0.34 && r90 < 0.42) || (r90 > 0.61 && r90 <= 0.69)) {
         const r450 = rateOf(w, 150);
@@ -199,7 +201,7 @@ const decksAndSaves = () => {
   Object.keys(db.starters).forEach((k) => { const p = E.cardDeckProblems(db, E.cardAiBuildDeck(db, k)); ok(!p.length, `スターター ${k}: ${p.join('・')}`); });
   // 好きなモンスター(1体・主血統で決める。2026-10-25 社長): どの強さでも必ず1体入る(後の弾の子も EASY から)。
   //   候補はその種族の通常・キラ・別絵キラと、主血統がその種族の混血。毎試合少し変わり、残り2体は別々の種族。EASY はたまに気まぐれ
-  const WANT_FAV = { mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon' };
+  const WANT_FAV = { mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'hare' };
   ok(JSON.stringify(E.CARD_AI_FAVORITE) === JSON.stringify(WANT_FAV), `好きなモンスターが社長の決めと違う: ${JSON.stringify(E.CARD_AI_FAVORITE)}`);
   const hf = E.cardAiFavoriteCandidates(db, 'mua').map((no) => db.monsters[no].name);
   ok(hf.includes('ヘルファット') && hf.filter((n) => n === 'モッチー').length >= 2, `みゅあの好きなモンスターの候補に、モッチーのキラや派生(ヘルファット)が入っていない: ${hf.join('・')}`);
