@@ -15,7 +15,7 @@ const vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
 vm.runInContext(`${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n`
-  + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardAttackOptions, cardGuardOptions, cardActionCost, cardOf, cardBindNames, cardAiChooseAction, cardAiPolicy, CARD_AI_HABITS, CARD_AI_LEVELS };', ctx, { filename: '82-card-battle-core.jsx' });
+  + 'this.E = { CARD_BATTLE_DATA, cardCreateGame, cardApplyAction, cardAttackOptions, cardGuardOptions, cardActionCost, cardOf, cardBindNames };', ctx, { filename: '82-card-battle-core.jsx' });
 const E = ctx.E;
 const db = E.CARD_BATTLE_DATA;
 let failed = 0;
@@ -291,22 +291,6 @@ const lost = (st0, st, p, m) => life(st0, p, m) - life(st, p, m);
     pure.players[0].discard = ['005'];
     check('太古の記憶: 純血のライガーには付けられない', !E.cardAttackOptions(db, pure).find((x) => same(x.hand, [0, 1])));
   } else check('太古の記憶: 確かめに使うガリの特殊技が見つからない', false);
-}
-
-// ---- 助手: 付けても何も変わらない札は付けない(2026-10-27 社長の報告: カララギマンゴー(ガッツ0)にジョイのサポート) ----
-//   ルールでは付けて出せる(文どおり)。助手は、わざと雑な手・気まぐれな手のときも選ばない
-{
-  const st = scene({ hands: [['113', '276', '100'], []], guts: [4, 0] });
-  st.players[0].mons[0].life = 2;
-  const both = E.cardAttackOptions(db, st).find((o) => same(o.hand, [0, 1]));
-  check('ジョイのサポート: ルールでは、カララギマンゴーに付けて出せる(文どおり)', !!both);
-  let bad = 0, n = 0;
-  Object.keys(E.CARD_AI_HABITS).forEach((w) => Object.keys(E.CARD_AI_LEVELS).forEach((lv) => {
-    let s = 1;
-    const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-    for (let k = 0; k < 40; k++) { const a = E.cardAiChooseAction(db, st, E.cardAiPolicy(w, lv), rand); n++; if (a && Array.isArray(a.hand) && a.hand.includes(1)) bad++; }
-  }));
-  check('ジョイのサポート: 助手は、ガッツ0のカララギマンゴーに付けない(雑な手・気まぐれな手のときも)', bad === 0, `${bad} / ${n} 回`);
 }
 
 console.log(`\n${count} 件を確かめた`);

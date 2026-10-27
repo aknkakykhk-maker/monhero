@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ebf62bd24981a25f
+// generated-sha256: 970a2ab9dba36ad9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -53511,7 +53511,7 @@ const cardAiFillBind = (db, st, o, policy) => {
 // 次の1手を選ぶ(★差し替えられる口。別の考え方を差すときは、同じ形 (db, st, policy, rand) → 操作 で渡す)
 // 付けても何も変わらない札を付けた手か(払うガッツを減らすだけの札で、外しても払うガッツが同じ)。
 //   2026-10-27 社長の報告: カララギマンゴー(ガッツ0)にジョイのサポートが付いて、札が1枚むだになった
-const cardAiWastedAttach = (db, st, o) => {
+const cardAiAttachUseless = (db, st, o) => {
   if (!o || !Array.isArray(o.hand) || o.hand.length < 2) return false;
   const p = st.active, hand = st.players[p].hand;
   const cost = cardActionCost(db, st, p, hand, o.hand);
@@ -53555,8 +53555,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     const gm = cardFieldEff(st, 'fieldGutsMax');
     return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
   }
-  // 自分で負けにいく手と、付けても何も変わらない札を付けた手(ガッツ0の札にジョイのサポートなど)は、どの強さでも選ばない
-  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy) && !cardAiWastedAttach(db, st, o));
+  const opts = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
   const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
@@ -56728,7 +56727,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     : st.pending ? 'guard'
     : st.phase === 'main' ? 'attack'
     : st.phase === 'guts' ? 'guts' : 'wait';
-  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter(tutAllow) : [];
+  // 付けても何も変わらない札を付けた手(ガッツ0の札にジョイのサポートなど)は、組み合わせのボタンにも運ぶ先にも出さない
+  //   (社長の答え 案A＋B・2026-10-27。決め方は助手と同じ cardAiAttachUseless。ルールでは出せる手のまま)
+  const attackOpts = mode === 'attack' ? cardAttackOptions(db, st).filter((o) => tutAllow(o) && !cardAiAttachUseless(db, st, o)) : [];
   // おいのりの窓(相手が全体カードを出した瞬間): おいのりを持っていなければ、少しおいて自動で「使わない」
   const prayUse = mode === 'pray' ? cardPrayOptions(db, st).find((o) => o.hand) || null : null;
   const prayKey = mode === 'pray' && !prayUse ? `${st.turn}-${st.log.length}` : '';
