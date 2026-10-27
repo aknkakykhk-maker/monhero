@@ -78,7 +78,8 @@ const f = (n) => ({ type:'rainbowTranscendFruit', amount:n }), h = (n) => ({ typ
     30:[{ type:'gameItem', itemId:'soul_crystal', amount:3 },h(2),d(200000)] }));
   // 2026-10-22 にあつが加わって5人(ごほうびは助手ごとに各Lv1回。あつは仲良し度が上がったときに受け取る)
   // 2026-10-22 にきゅうこが加わって6人(公開の印が立つまでは一覧に出ないので、仲良し度もごほうびも動かない)
-  check('助手は6人', ids.join() === 'mua,kiki,momosuke,dra,atsu,kyuko', ids.join());
+  // 7人目のソラシド(2026-10-27)は公開の印 assistantSorashido が立つまで選べないが、仲良し度のごほうびの計算には並ぶ(解放するまで Lv0 扱い)
+  check('助手は7人', ids.join() === 'mua,kiki,momosuke,dra,atsu,kyuko,sorashido', ids.join());
   // 節目の説明が表とずれていないか(改善部 N4「Lv10・15・20・25 は特に豪華」)
   const ms = [...A.ASSISTANT_BOND_REWARD_MILESTONES];
   check('節目は Lv5・10・15・20・22・25・28・30', ms.join() === '5,10,15,20,22,25,28,30', ms.join());

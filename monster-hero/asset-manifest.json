@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "ac3b6e212362",
-  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":115958159,"count":708},"card":{"bytes":32186349,"count":934},"all":{"bytes":255531954,"count":1735},"core":{"bytes":14442426,"count":22}},
+  "id": "3e7a6c718194",
+  "packs": {"beat":{"bytes":107387446,"count":93},"battle":{"bytes":115975325,"count":716},"card":{"bytes":32186349,"count":934},"all":{"bytes":255549120,"count":1743},"core":{"bytes":14513086,"count":22}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"ddce743e94fa","size":1416528,"pack":"beat"},
@@ -234,6 +234,14 @@
     "images/assistant/myua_surprise.PNG": {"v":"53428416ad17","size":403218,"pack":"battle"},
     "images/assistant/myua_troubled.PNG": {"v":"144cc0a197da","size":416255,"pack":"battle"},
     "images/assistant/myua_wink.PNG": {"v":"caf1ca4e5b93","size":352919,"pack":"battle"},
+    "images/assistant/temp/sorashido_angry.png": {"v":"fbc860630f1d","size":2159,"pack":"battle"},
+    "images/assistant/temp/sorashido_crying.png": {"v":"6584a4819b32","size":2125,"pack":"battle"},
+    "images/assistant/temp/sorashido_excited.png": {"v":"7c7dba1f4434","size":2225,"pack":"battle"},
+    "images/assistant/temp/sorashido_happy.png": {"v":"f86cb2b8852a","size":2107,"pack":"battle"},
+    "images/assistant/temp/sorashido_normal.png": {"v":"08e34e02733c","size":2116,"pack":"battle"},
+    "images/assistant/temp/sorashido_surprise.png": {"v":"1ab9f64bacc1","size":2185,"pack":"battle"},
+    "images/assistant/temp/sorashido_troubled.png": {"v":"5a7ca540987d","size":2155,"pack":"battle"},
+    "images/assistant/temp/sorashido_wink.png": {"v":"eaf65b20238b","size":2094,"pack":"battle"},
     "images/breeder-icons/atsu.png": {"v":"3df879752dee","size":8330,"pack":"battle"},
     "images/breeder-icons/atsu_angry.png": {"v":"781bf0aca262","size":35519,"pack":"battle"},
     "images/breeder-icons/atsu_crying.png": {"v":"23e2be3f83f9","size":37614,"pack":"battle"},
@@ -1740,7 +1748,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"d8908b3aebad","size":255323,"pack":"core"},
+    "tailwind.css": {"v":"f932f0b2040c","size":255323,"pack":"core"},
     "data/images/images-ally.js": {"v":"ae0a49eeea6f","size":58471,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"02429b21b01b","size":60450,"pack":"core"},
@@ -1757,8 +1765,8 @@
     "data/help.js": {"v":"8b411be68a84","size":651989,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":9047,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
-    "data/assistants.js": {"v":"a215ef37cc0a","size":844584,"pack":"core"},
+    "data/assistants.js": {"v":"0e1832982739","size":908780,"pack":"core"},
     "data/card-battle-cards.js": {"v":"a22bbee23b63","size":112716,"pack":"core"},
-    "game-system.compiled.js": {"v":"e27dfa41c3c5","size":6661158,"pack":"core"}
+    "game-system.compiled.js": {"v":"6eb47ae1292e","size":6667622,"pack":"core"}
   }
 }

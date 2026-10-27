@@ -49,7 +49,10 @@ function MasuFusionScreen({
       };
       // 320幅で右の札が切れて、続きがあると気づけなかった(2026-10-27)。札の余白を詰め、右端をぼかして続きを知らせる。
       // 最後の札がぼけないよう、末尾に小さい余白を置く
+      // 横に送る札の列にも mh-scroll が付くので、画面の直下に置くと横持ちの2列の仕組み(index.html の [data-mh-screen]:has(> .mh-scroll))が
+      // 一覧と取り違えて右の列の全高へ置き、一覧のカードと重なっていた(2026-10-27 ジン部長の見回り)。ひと包みして直下から外す
       const fusionSortBar = (
+        <div className="shrink-0">
         <div className="flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5" role="group" aria-label="合体一覧の並べ替え" style={{WebkitMaskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)',maskImage:'linear-gradient(to right,#000 calc(100% - 18px),transparent)'}}>
           <span className="shrink-0 text-[10px] font-black text-slate-400">並べ替え</span>
           {FUSION_SORT_OPTIONS.map(o=>{
@@ -62,6 +65,7 @@ function MasuFusionScreen({
             );
           })}
           <span aria-hidden="true" className="shrink-0 w-3"/>
+        </div>
         </div>
       );
       // ルールは5行あって画面の3分の1を占めていた。主役はモンスターの一覧なので、

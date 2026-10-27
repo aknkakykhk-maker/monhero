@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0120101c5c87395c
+// source-sha256: 021c2766cf328e69
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -404,6 +404,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantKyuko() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
+  },
+  get assistantSorashido() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true;
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
@@ -12612,6 +12615,7 @@ const RELEASE_FLAGS = {
   assistantDailyLines: true,
   assistantAtsu: true,
   assistantKyuko: true,
+  assistantSorashido: false,
   cardBattle: true,
   cardAssistantTalk: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -12966,6 +12970,7 @@ const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
+const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
@@ -17180,7 +17185,7 @@ const helpDataRows = id => {
     case 'assistantBond':
       {
         const callUnlockLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
-        const list = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length ? ASSISTANT_LIST : [];
+        const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
         const base = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || [];
         return base.map(s => {
           const per = list.map(who => {
@@ -18974,8 +18979,7 @@ const KYUBI_KAGERO_WAIT = 3;
 const KYUBI_TENSHO = Object.freeze({
   combo: 0.2,
   dmg: 0.15,
-  hit: 10,
-  crit: 0.1
+  crit: 0.2
 });
 const KYUBI_RENGOKU_MAX = 10,
   KYUBI_RENGOKU_PER = 0.05;
@@ -18986,7 +18990,6 @@ const kyubiRengokuOf = n => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(N
 const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
   const none = {
     dmgMult: 1,
-    hitAdd: 0,
     critAdd: 0,
     combo: null,
     evadeAfterAttack: false
@@ -19006,7 +19009,6 @@ const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
   if (phaseId === 'tensho') return {
     ...none,
     dmgMult: 1 + KYUBI_TENSHO.dmg,
-    hitAdd: KYUBI_TENSHO.hit,
     critAdd: KYUBI_TENSHO.crit,
     combo: {
       count: 1,
@@ -19187,7 +19189,7 @@ const rollKogare = (rollsLeft, rand) => {
 const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
 const REIKON_TURNS = 3,
   REIKON_GUTS_MULT = 0.7,
-  REIKON_HIT_DOWN = 10;
+  REIKON_EVASION_UP = 10;
 const hasReikon = id => !!id && REIKON_MONSTER_IDS.includes(id);
 const reikonOf = v => ({
   wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
@@ -19216,7 +19218,7 @@ const reikonActive = v => {
   return r.wait === 0 && r.turns > 0;
 };
 const reikonGutsMult = v => reikonActive(v) ? REIKON_GUTS_MULT : 1;
-const reikonHitDown = v => reikonActive(v) ? REIKON_HIT_DOWN : 0;
+const reikonEvasionUp = v => reikonActive(v) ? REIKON_EVASION_UP : 0;
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
   if (!trait) return '';
@@ -37734,6 +37736,7 @@ const RhythmTapTest = ({
   }, [stageGl, stageArtSrc, renderQualityStill]);
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
+  const hudSongLong = !isLandscape && rhythmSongFullName(song).length > 30;
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(orientation: landscape)');
@@ -41196,6 +41199,11 @@ const RhythmTapTest = ({
           em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
         return Math.max(13, Math.min(20, Math.floor(avail / Math.max(1, em))));
       })(),
+      introTitlePortraitFont = (() => {
+        const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 390) - 40, 400),
+          em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
+        return Math.max(16, Math.min(24, Math.floor(avail * 2 * .9 / Math.max(1, em))));
+      })(),
       introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
       introCredit = rhythmSongIntroCredit(song),
       introLevel = Number(chart?.level),
@@ -41281,7 +41289,7 @@ const RhythmTapTest = ({
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           overflowWrap: 'anywhere',
-          fontSize: '24px'
+          fontSize: `${introTitlePortraitFont}px`
         }),
         padding: '0 8px 3px',
         margin: isLandscape ? '1px -8px 0' : '4px -8px 0',
@@ -41394,11 +41402,12 @@ const RhythmTapTest = ({
     style: {
       maxWidth: hudArtSrc && !isLandscape ? 'calc(31cqw - 34px)' : undefined,
       display: '-webkit-box',
-      WebkitLineClamp: isLandscape ? '2' : '3',
+      WebkitLineClamp: isLandscape ? '2' : hudSongLong ? '5' : '3',
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden',
       lineHeight: '1.25',
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+      textShadow: '0 1px 4px rgba(2,6,23,.92)',
+      fontSize: hudSongLong ? '9px' : undefined
     }
   }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
@@ -58906,6 +58915,8 @@ function MasuDonationScreen({
   })), React.createElement("p", {
     className: "shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "寄付一覧の並べ替え",
@@ -58934,7 +58945,7 @@ function MasuDonationScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  })), donationError && React.createElement("div", {
+  }))), donationError && React.createElement("div", {
     className: "shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"
   }, React.createElement(AlertCircle, {
     size: 12,
@@ -62855,6 +62866,8 @@ function MasuFusionScreen({
     });
   };
   const fusionSortBar = React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "合体一覧の並べ替え",
@@ -62882,7 +62895,7 @@ function MasuFusionScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  }));
+  })));
   const fusionGuide = renderScreenNote('fusion', '主が残り、副は消えます。副の絆経験値はそのまま主へ加わります。', ['上がった絆レベルの数だけ、主が強化ポイントを獲得します。', '主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます（副の強化は引き継がれません）。', '技を引き継がない合体は0ダイヤ、引き継ぐ合体は3000ダイヤです。', '固有技の引き継ぎは、副が絆Lv.30以上のときだけ選べます。条件を満たすと副の固有技が主に記録されます。']);
   if (fusionStep === 'main') {
     return React.createElement("div", {
@@ -64442,18 +64455,20 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
-      className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
+      className: "-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5"
     }, React.createElement("span", {
       className: "mh-ph-plate"
-    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement(PhaseSteps, {
+    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement("div", {
+      className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+    }, React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "ally",
       nextWave: wave > 0 ? wave + 1 : null
-    })), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
+    }))), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
       className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}${pickMode === 'hero' && !battleTutorial ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(AssistantBubble, {
       key: pickMode,
@@ -67519,7 +67534,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   momosuke: who => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
-  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`
+  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: who => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`
 });
 function HomeFriendRequestNotice({
   activeAssistant,
@@ -74724,7 +74740,7 @@ const MonsterCheckLabLines = ({
 }, t)));
 const monsterCheckReikonLine = v => {
   const r = reikonOf(v);
-  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・敵の命中−${reikonHitDown(r)}%` : '霊魂: なし';
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・味方の回避率+${reikonEvasionUp(r)}%` : '霊魂: なし';
 };
 function KyubiTraitLab() {
   const [phaseId, setPhaseId] = useState('sakuretsu');
@@ -74774,7 +74790,7 @@ function KyubiTraitLab() {
   const unique = () => {
     card('attack');
     setReikon(startReikon());
-    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
   };
   const ex = () => {
     setFox(k => useKitsunebi(k));
@@ -74820,7 +74836,7 @@ function KyubiTraitLab() {
     tone: "amber",
     onClick: unique
   }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
-    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.hitAdd ? `・命中+${eff.hitAdd}%` : ''}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
   }), React.createElement(MonsterCheckLabButton, {
     onClick: reset
   }, "はじめに戻す"));
@@ -74872,7 +74888,7 @@ function OrihimeTraitLab() {
   };
   const unique = () => {
     setReikon(startReikon());
-    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・敵に幻惑(命中−${REIKON_HIT_DOWN}%)`);
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
   };
   const star = () => {
     const h = startHoshiai(ouse, diff);
@@ -81029,8 +81045,9 @@ function RhythmMultiScreen({
     notice: React.createElement("div", {
       className: "flex items-center gap-1.5"
     }, React.createElement("p", {
-      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
-    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。", !room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'), isHost && selectTimeButton('min-[481px]:hidden', true)),
+      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {
@@ -105036,6 +105053,7 @@ function MonsterHeroGame() {
     resetSweetStack();
     resetKusabi();
     resetDreamPain();
+    resetKyubi();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -105276,6 +105294,84 @@ function MonsterHeroGame() {
     return d;
   };
   const resetDreamPain = () => writeDreamPain(null);
+  const kyubiRef = useRef({
+    phase: {},
+    rengoku: {},
+    kagero: {}
+  });
+  const [kyubiView, setKyubiView] = useState(kyubiRef.current);
+  const writeKyubi = (part, key, value) => {
+    if (!key) return;
+    const next = {
+      ...kyubiRef.current,
+      [part]: {
+        ...kyubiRef.current[part],
+        [key]: value
+      }
+    };
+    kyubiRef.current = next;
+    setKyubiView(next);
+  };
+  const resetKyubi = () => {
+    kyubiRef.current = {
+      phase: {},
+      rengoku: {},
+      kagero: {}
+    };
+    setKyubiView(kyubiRef.current);
+  };
+  const kyubiPhaseAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    if (sweetOwnerAt(slotIdx) !== KYUBI_MONSTER_ID || !key) return null;
+    if (!kyubiRef.current.phase[key]) {
+      const p = kyubiPhaseOfSlot(isTacticsMode(runMode) ? slotIdx : initialBattleDistanceRef.current);
+      if (!p) return null;
+      kyubiRef.current = {
+        ...kyubiRef.current,
+        phase: {
+          ...kyubiRef.current.phase,
+          [key]: p.id
+        }
+      };
+    }
+    return kyubiRef.current.phase[key];
+  };
+  const kyubiAttackAt = (slotIdx, actorId, card) => {
+    const phase = actorId === KYUBI_MONSTER_ID ? kyubiPhaseAt(slotIdx) : null;
+    if (!phase) return kyubiPhaseEffectOf(null);
+    return kyubiPhaseEffectOf(phase, {
+      rengoku: kyubiRef.current.rengoku[trickStartKeyOf(slotIdx)],
+      skillGuts: card ? getCardBaseGuts(card) : 0
+    });
+  };
+  const gainKyubiCard = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID || !card) return;
+    const phase = kyubiPhaseAt(slotIdx),
+      key = trickStartKeyOf(slotIdx);
+    if (phase === 'rengoku') {
+      const before = kyubiRengokuOf(kyubiRef.current.rengoku[key]),
+        after = kyubiRengokuOf(before + 1);
+      if (after === before) return;
+      writeKyubi('rengoku', key, after);
+      addPopup(`🔥 煉獄 ${after}/${KYUBI_RENGOKU_MAX}`, 'hero', 'text-orange-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    } else if (phase === 'kagero' && ['atk', 'range_atk', 'unique'].includes(card.type)) {
+      const before = kageroOf(kyubiRef.current.kagero[key]),
+        after = kageroAfterAttack(before);
+      if (after.ready === before.ready) return;
+      writeKyubi('kagero', key, after);
+      addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
+    }
+  };
+  const tickKyubiKagero = () => {
+    const entries = Object.entries(kyubiRef.current.kagero);
+    if (!entries.some(([, v]) => kageroOf(v).wait > 0)) return;
+    const next = {
+      ...kyubiRef.current,
+      kagero: Object.fromEntries(entries.map(([k, v]) => [k, tickKagero(v)]))
+    };
+    kyubiRef.current = next;
+    setKyubiView(next);
+  };
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   const nextTurnBuffsRef = useRef({});
@@ -106423,12 +106519,18 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   const monsterCardName = (node, className = 'text-white', band = false) => {
     const long = band && typeof node === 'string' && node.length >= 9;
+    const fit = !band && typeof node === 'string';
     return React.createElement("div", {
-      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : 'h-[16px] truncate leading-tight'} ${className}`,
+      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : fit ? 'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]' : 'h-[16px] truncate leading-tight'} ${className}`,
       style: band ? {
         textShadow: '0 1px 2px rgba(0,0,0,.95)'
       } : undefined
-    }, node);
+    }, fit ? React.createElement("span", {
+      className: "block",
+      style: {
+        fontSize: `min(11px, calc(100cqw / ${[...node].length + 0.3}))`
+      }
+    }, node) : node);
   };
   const monsterCardInfo = (node, sub) => node || sub ? React.createElement("div", {
     className: "w-full flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 leading-none",
@@ -108691,7 +108793,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -108931,7 +109033,14 @@ function MonsterHeroGame() {
     setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
-    if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes('sorashido_join_2026_10_27'));
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
@@ -110467,7 +110576,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []), ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -111886,6 +111995,7 @@ function MonsterHeroGame() {
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
+    sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -115302,7 +115412,7 @@ function MonsterHeroGame() {
     const base = bonusOwner || kikiCardBonus > 0 ? baseCardLimit : 1;
     return Math.min(cardLimit, base + (coordinationHolder ? soulCoordinationCardBonus : 0));
   };
-  const getCardGuts = (card, slotIdx = null) => {
+  const getCardBaseGuts = card => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : ['buff', 'debuff', 'heal', 'draw'].includes(card.type) ? card.guts || 20 : 20;
     if (cost > 0 && ['atk', 'range_atk', 'unique'].includes(card.type)) {
@@ -115326,6 +115436,11 @@ function MonsterHeroGame() {
       if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) cost = Math.floor(cost * (1 + 0.1 * getPermaBuff('chuuniUniqueStack')));
       if (card.type === 'unique' && card.monId === FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks', null)));
     }
+    return cost;
+  };
+  const getCardGuts = (card, slotIdx = null) => {
+    if (!card) return 0;
+    let cost = getCardBaseGuts(card);
     const slotBuffs = isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null;
     if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts')) && ['atk', 'range_atk', 'unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0));
@@ -117878,7 +117993,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -117912,7 +118027,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, kusabiCombosAt(slotIdx, mon?.id, card)),
+      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, [...kusabiCombosAt(slotIdx, mon?.id, card), kyubiAttackAt(slotIdx, mon?.id, card).combo]),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -118239,7 +118354,12 @@ function MonsterHeroGame() {
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
         }
         const forcedReflect = getTurnBuff('reflect', false);
-        const soulDefenseResult = forcedReflect ? 'reflect' : rollUnifiedSpecialDefense(defenseTable, Math.random(), Math.random());
+        const kageroEvade = !forcedReflect && defenseHeroId === KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
+        if (kageroEvade) {
+          writeKyubi('kagero', kusabiDefenseKey, kageroUseEvade(kyubiRef.current.kagero[kusabiDefenseKey]));
+          addPopup('🔥 陽炎ノ相 完全回避！', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md');
+        }
+        const soulDefenseResult = forcedReflect ? 'reflect' : kageroEvade ? 'evasion' : rollUnifiedSpecialDefense(defenseTable, Math.random(), Math.random());
         const isReflect = soulDefenseResult === 'reflect';
         const isAbsorb = soulDefenseResult === 'absorb';
         const isEvasion = soulDefenseResult === 'evasion';
@@ -118638,6 +118758,7 @@ function MonsterHeroGame() {
     }
     if (timeStopSlot == null && (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     if (timeStopSlot == null && (dreamPainRef.current.wait > 0 || dreamPainRef.current.turns > 0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
+    if (timeStopSlot == null) tickKyubiKagero();
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -119491,6 +119612,7 @@ function MonsterHeroGame() {
       const cardCost = getCardGuts(card, slotIdx);
       if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
+      if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
@@ -119768,12 +119890,12 @@ function MonsterHeroGame() {
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
-          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
+          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd + kyubiAttackAt(slotIdx, activeMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, kusabiCombosAt(slotIdx, activeMon?.id, card)),
+          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, [...kusabiCombosAt(slotIdx, activeMon?.id, card), kyubiAttackAt(slotIdx, activeMon?.id, card).combo]),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
@@ -142373,6 +142495,12 @@ const createAnimationStyle = () => {
       .mh-phase-card-nums { font-size: 9px !important; }
       /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
       .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+    }
+    /* 幅も狭い(320 など)と1枚が66px前後になり、名前が「走り/込み」「ドミノ/倒し」と語の途中で折れた。
+       余白を詰めて名前を1行に収める(2026-10-27 ジン・WAVE の合間の見回り) */
+    @container (max-height: 560px) and (max-width: 340px) {
+      .mh-phase-card { padding: 6px 5px !important; }
+      .mh-phase-card-name { font-size: 11px !important; white-space: nowrap; letter-spacing: -0.03em; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
