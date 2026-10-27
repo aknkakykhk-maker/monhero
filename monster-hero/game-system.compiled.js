@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 397e5fe82ec6ac63
+// source-sha256: 16e9f7b0aceb1230
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91691,7 +91691,7 @@ const CardBattleBoard = ({
       });
     }
     if (mode === 'guard') guardOpts.filter(o => o.hand === i).forEach(o => {
-      out[`${CARD_ME}-${o.mon}`] = o;
+      out[`${CARD_ME}-${o.to !== undefined ? o.to : o.mon}`] = o;
     });
     if ((mode === 'guts' || mode === 'setup') && !picks.includes(i)) {
       const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : gutsMax;
@@ -91734,6 +91734,32 @@ const CardBattleBoard = ({
       }
     };
     tapHand(i);
+  };
+  const dropUse = t => {
+    const monKey = o => o.mon === undefined ? -1 : o.mon;
+    const users = [...new Set(attackOpts.filter(o => o.hand[0] === t.hand[0]).map(monKey))];
+    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
+      setSel({
+        hand: t.hand[0]
+      });
+      setHint('使う子をタップしてください');
+      return;
+    }
+    const same = attackOpts.filter(o => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
+    if (t.split || t.fuse) {
+      setSplitAsk(same.filter(o => o.split || o.fuse));
+      return;
+    }
+    if (t.form) {
+      setSel({
+        hand: t.hand[0],
+        mon: monKey(t),
+        set: JSON.stringify(t.hand)
+      });
+      setHint('空中か地上かを選んでください');
+      return;
+    }
+    askUse(t);
   };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
@@ -91797,7 +91823,7 @@ const CardBattleBoard = ({
         if (t === 'pick') {
           Audio_.fgSe.tap();
           setPicks(cur => cur.includes(i) ? cur : [...cur, i]);
-        } else if (t && mode === 'attack') askUse(t);else if (t) step(t);
+        } else if (t && mode === 'attack') dropUse(t);else if (t) step(t);
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;

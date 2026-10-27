@@ -1233,7 +1233,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         keys.forEach((k) => { if (!out[k] || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
       });
     }
-    if (mode === 'guard') guardOpts.filter((o) => o.hand === i).forEach((o) => { out[`${CARD_ME}-${o.mon}`] = o; });
+    // 隠れる(移す先 to がある守り)は、移す先の味方が置き先(タップで移す先を選ぶのとそろえる。前は狙われた子へ置くと、移す先を選べなかった。2026-10-27 総点検)
+    if (mode === 'guard') guardOpts.filter((o) => o.hand === i).forEach((o) => { out[`${CARD_ME}-${o.to !== undefined ? o.to : o.mon}`] = o; });
     if ((mode === 'guts' || mode === 'setup') && !picks.includes(i)) {
       const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : gutsMax;
       if (picks.length < max && (!tutorial || cardTutorialHandOk(tutStage.id, st, i))) out.guts = 'pick';
@@ -1262,6 +1263,18 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     }
     h.last = { i, no, at: now, before: { sel, picks, hint } };
     tapHand(i);
+  };
+  // 運んで出した手でも、タップと同じく「選ぶ」段を飛ばさない(2026-10-27 総点検。前は最初の候補のまま出ていた)
+  //   使う子が2体以上 … 使う子を選ぶ案内 / ショットガンの割り振り・合体の2体 … 選ぶ画面 / 変形 … 空中・地上のボタン(その札を選んだ形にする)
+  const dropUse = (t) => {
+    const monKey = (o) => (o.mon === undefined ? -1 : o.mon);
+    // 使える子が2体以上いる札を、使う子を選ばずに運んだら、出さずにその札を選んだ形で止める(社長の答え・ソランド判断 案B。思った子と違う子で出ないように)
+    const users = [...new Set(attackOpts.filter((o) => o.hand[0] === t.hand[0]).map(monKey))];
+    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) { setSel({ hand: t.hand[0] }); setHint('使う子をタップしてください'); return; }
+    const same = attackOpts.filter((o) => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
+    if (t.split || t.fuse) { setSplitAsk(same.filter((o) => o.split || o.fuse)); return; }
+    if (t.form) { setSel({ hand: t.hand[0], mon: monKey(t), set: JSON.stringify(t.hand) }); setHint('空中か地上かを選んでください'); return; }
+    askUse(t);
   };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
@@ -1295,7 +1308,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         const t = k ? d.targets[k] : null;
         setDrag(null); setDropOver(null);
         if (t === 'pick') { Audio_.fgSe.tap(); setPicks((cur) => (cur.includes(i) ? cur : [...cur, i])); }
-        else if (t && mode === 'attack') askUse(t);
+        else if (t && mode === 'attack') dropUse(t);
         else if (t) step(t);
         return;
       }
