@@ -18,6 +18,9 @@ const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
+// ソラシド(2026-10-27)。顔の絵は社長があとで送る。届くまでは字のアイコン(公開の印 assistantSorashido が偽のあいだは出ない)。
+//   届いたら images/assistant/face/sorashido_happy.PNG にする
+const SORASHIDO_FACE_ICON = "🤖";
 // スネグーラチカの高解像度の立ち絵。顔アイコン(make-face-icons.js)の元絵で、覚醒のほうはマーケットのアイコン商品で使う。
 // 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
 const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
@@ -66,7 +69,8 @@ const BREEDER_EVO_NAMES = {
   meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"],
   poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
   momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"],
-  kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"]
+  kyuko: ["きゅうこの譜面", "きゅうこの編曲", "きゅうこの交響曲"],
+  sorashido: ["ソラシドの自動化", "ソラシドの全自動", "ソラシドの無人運転"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -103,6 +107,19 @@ const KYUKO_TIERS = [
   { cut:0.30, turns:2 },
   { cut:0.45, turns:3 },
   { cut:0.60, turns:4 },
+];
+
+// ソラシドの自動化(copy_sorashido・2026-10-27 社長の決定)。効果の計算も説明文もこの表だけを見る(計算の部品は 32-sorashido-copy.jsx)。
+//   使った子の「AIコピー」が、使った次のターンの始まりに5人目の味方として現れ、turns ターンのあいだ戦う。
+//   rates     : 元の子に対する強さ(ライフ・ちから・丈夫さ・ガッツ)。ライフはタクティクスだけ(5つの遊びはパーティのライフを使う)
+//   turns     : コピーが戦うターン数。出ているあいだにもう一度使うと、ここへ戻る
+//   pick      : コピーが「いちばん点の高いカード」を選ぶ見込み。外れたら2番目以降から選ぶ
+//   maxCards  : 1ターンに使う枚数の上限。2枚は、コピーのガッツの上限が gutsFor2 以上で、今のガッツが2枚ぶん足りるときだけ
+//   hateStart : タクティクスで、出たときの🔥(元の子の🔥に対する割合)。hateGain : 🔥のたまり方の倍率
+const SORASHIDO_TIERS = [
+  { rates:{ hp:0.5, atk:0.6, def:0.5, guts:0.6 }, turns:2, pick:0.5,  maxCards:1, hateStart:0.5,  hateGain:1.0 },
+  { rates:{ hp:0.7, atk:0.8, def:0.7, guts:0.8 }, turns:3, pick:0.65, maxCards:1, hateStart:0.75, hateGain:1.25 },
+  { rates:{ hp:0.8, atk:0.9, def:0.8, guts:0.9 }, turns:4, pick:0.8,  maxCards:2, hateStart:1.0,  hateGain:1.5, gutsFor2:120 },
 ];
 
 // 行動カードの絵(2026-10-15 社長「バトルカードの変更も進めて」。原本は tools/art-sources/card-frames・skill-icons)。
@@ -157,7 +174,10 @@ const TEACHING_CARDS = [
   // getDynamicDescの2か所に同じ表がある。攻撃アップの代わりに丈夫さ(defPct)を上げる
   { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 },
   // きゅうこ(2026-10-22)。加入のお話を見たあとマーケットで買える(BREEDER_MARKET_ITEMS の shop)。効果量は KYUKO_TIERS
-  { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 }
+  { id:'kyuko', baseName:"きゅうこの譜面", icon:KYUKO_FACE_ICON, type:'buff', subType:'cover_kyuko', baseValue:0.3, step:0.15, desc:"このターン敵の単体攻撃を引き受け・受けるダメージダウン", evoLevel:0, guts:20 },
+  // ソラシド(2026-10-27)。公開の印 assistantSorashido が立つまでは、マーケット・ヘルプに出ない(releaseFlag)。効果量は SORASHIDO_TIERS。
+  //   baseValue は Lv0 のライフの割合(表示・検査用)。増え方は表が持つので step は 0
+  { id:'sorashido', baseName:"ソラシドの自動化", icon:SORASHIDO_FACE_ICON, type:'buff', subType:'copy_sorashido', baseValue:0.5, step:0, desc:"使った子のAIコピーが、次のターンから5人目の味方として戦う", evoLevel:0, guts:20, releaseFlag:'assistantSorashido' }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -280,6 +300,17 @@ const KYUKO_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true ? undefined : false; } catch { return false; } },
 }));
 
+// 助手ソラシドの顔アイコンも同じ仕様(8表情・各1pt)。画像は吹き出しの face/sorashido_*.PNG をそのまま使う(2026-10-27)。
+// きゅうこと同じく、公開の印 assistantSorashido が立つまでは交換所に並べない(見るたびに読む)
+const SORASHIDO_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `sorashido_${key}`,
+  name: `ソラシド（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/sorashido_${key}.PNG`,
+  cost: 1,
+  get shop() { try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true ? undefined : false; } catch { return false; } },
+}));
+
 // あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
 // 顔アイコン(256px)は images/breeder-icons/atsu_<表情>.png に直接置いている。
 // 2026-10-22 あつが助手になり、絵を助手あつの大きい絵から作った顔(images/assistant/face/atsu_*.PNG と同じ絵)へ差し替えた
@@ -364,6 +395,17 @@ const setKyukoJoinSeenForShop = (seen) => { kyukoJoinSeenForShop = seen === true
 const kyukoCardOnSale = () => {
   try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true && kyukoJoinSeenForShop; } catch { return false; }
 };
+// ソラシドのカードが交換所に並ぶか(きゅうこと同じ形)。加入のお話(sorashido_join_2026_10_27)を見たかは、ゲーム側が setSorashidoJoinSeenForShop で知らせる
+let sorashidoJoinSeenForShop = false;
+const setSorashidoJoinSeenForShop = (seen) => { sorashidoJoinSeenForShop = seen === true; };
+const sorashidoCardOnSale = () => {
+  try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true && sorashidoJoinSeenForShop; } catch { return false; }
+};
+// 公開の印(releaseFlag)が付いたアシカは、印が立つまでヘルプの表などに出さない
+const teachingCardReleased = (card) => {
+  if (!card || !card.releaseFlag) return true;
+  try { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS[card.releaseFlag] === true; } catch { return false; }
+};
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -374,6 +416,9 @@ const BREEDER_MARKET_ITEMS = [
   // きゅうこ(2026-10-22 社長の決定)。公開の印 assistantKyuko が立ち、加入のお話(kyuko_join_2026_10_22)を見たら並ぶ(kyukoCardOnSale)。150000(ももすけ・ポルツと同じ)
   { id:'kyuko', name:"アシストカード「きゅうこ」", type:'assist', icon:KYUKO_FACE_ICON, cost:150000, desc:"このターン敵の単体攻撃を引き受け、数ターン受けるダメージダウン",
     get shop() { return kyukoCardOnSale() ? undefined : false; } },
+  // ソラシド(2026-10-27)。きゅうこと同じく、公開の印が立ち、加入のお話を見たら並ぶ。150000
+  { id:'sorashido', name:"アシストカード「ソラシド」", type:'assist', icon:SORASHIDO_FACE_ICON, cost:150000, desc:"使った子のAIコピーが、次のターンから5人目の味方として数ターン戦う",
+    get shop() { return sorashidoCardOnSale() ? undefined : false; } },
 
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
@@ -532,6 +577,7 @@ const BREEDER_MARKET_ITEMS = [
   ...DRA_MARKET_ICONS,
   ...ATSU_MARKET_ICONS,
   ...KYUKO_MARKET_ICONS,
+  ...SORASHIDO_MARKET_ICONS,
   ...HALLOWEEN_MARKET_ICONS
 ];
 // ==================== アイコンのまとめ売り(2026-10-03・ユーザー指示) ====================

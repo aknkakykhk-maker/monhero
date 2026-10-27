@@ -62,7 +62,7 @@ check('連打のセリフ・おしゃべりの見本がある', a.assistantSpamL
 
 // ---- 呼び方 ----
 const pc = a.ASSISTANT_PEER_CALLS;
-check('呼び方の表(きゅうこ→ほか)', JSON.stringify(pc.kyuko) === JSON.stringify({ mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ' }), JSON.stringify(pc.kyuko));
+check('呼び方の表(きゅうこ→ほか)', JSON.stringify(pc.kyuko) === JSON.stringify({ mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ばこちゃん' }), JSON.stringify(pc.kyuko));
 check('呼び方の表(ほか→きゅうこ)', pc.mua.kyuko === 'きゅきゅ' && pc.kiki.kyuko === 'きゅうこさん' && pc.momosuke.kyuko === 'きゅうちゃん' && pc.dra.kyuko === 'きゅうこちゃん' && pc.atsu.kyuko === 'きゅうこちゃん');
 const callBad = storyLines.filter(l => {
   const t = String(l.t).replace(/きゅうこの譜面/g, '');
@@ -114,7 +114,7 @@ const on = load('var RELEASE_FLAGS = { assistantKyuko: true };');
 check('印が真なら、お話を見ていなくても選べる', on.assistantUnlockedBy('kyuko', []) === true);
 check('ゲーム側のお話の id がデータと同じ', rel.includes("const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';"));
 check('見たかどうかは既存の「見終えたお話の id」の並びで持つ(新しい保存キーを作らない)',
-  /RHYTHM_EVENT_STORY_IDS = \[[^\]]*KYUKO_JOIN_STORY_ID\]/.test(app) && /kyukoJoinSeen: Array\.isArray\(rhythmEventStorySeen\) && rhythmEventStorySeen\.includes\(KYUKO_JOIN_STORY_ID\)/.test(app)
+  /RHYTHM_EVENT_STORY_IDS = \[[^\]]*KYUKO_JOIN_STORY_ID[,\]]/.test(app) && /kyukoJoinSeen: Array\.isArray\(rhythmEventStorySeen\) && rhythmEventStorySeen\.includes\(KYUKO_JOIN_STORY_ID\)/.test(app)
   && !/mh_[a-z_]*kyuko/.test(app + rel + read('monster-hero/data/breeder.js')));
 check('お話を流すのは公開の印が立ったときだけ(だれにでも1回)',
   /setKyukoJoinSeenForShop\([\s\S]{0,200}EVENT_REPLAY_RELEASE_FLAGS\.assistantKyuko\) return;[\s\S]{0,200}rhythmEventStorySeen\.includes\(KYUKO_JOIN_STORY_ID\)\) return;/.test(app));
@@ -154,7 +154,7 @@ check('単体攻撃だけ使った子へ向く(全体攻撃・倒れた子・使
   JSON.stringify(r([0], { targetSlot: 0 }, 3, units)) === '[3]' && JSON.stringify(r([0, 1, 3], { targetsAll: true }, 3, units)) === '[0,1,3]'
   && JSON.stringify(r([0], { targetSlot: 0 }, 2, units)) === '[0]' && JSON.stringify(r([0], { targetSlot: 0 }, null, units)) === '[0]');
 check('ゲーム側: カードの処理・被ダメの倍率・残りターンの減り・説明文がある',
-  /card\.subType==='cover_kyuko'/.test(app) && /\*kyukoTakenMultAt\(slotIdx\)\)/.test(app) && /kyukoCutTurns:Math\.max\(0,p\.kyukoCutTurns-1\)/.test(app) && /if\(t\.id==='kyuko'\)\{/.test(app));
+  /card\.subType==='cover_kyuko'/.test(app) && /\*kyukoTakenMultAt\(slotIdx\)(?:[^\n]*\n\s*\*orihimeTakenMultAt\(slotIdx\))?\)/.test(app) /* 2026-10-27 オリヒメの天河の契りの軽減が後ろに付いてよい */ && /kyukoCutTurns:Math\.max\(0,p\.kyukoCutTurns-1\)/.test(app) && /if\(t\.id==='kyuko'\)\{/.test(app));
 
 // ---- 絵 ----
 const exps = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'];

@@ -412,7 +412,8 @@ const browser = async (core) => {
       localStorage.setItem('mh_assistant_chat_memo_v1', JSON.stringify({ mua: 'モッチーが好き' }));
       window.__mhSupabaseStubbed = true;
     });
-    await page.addInitScript(eventStorySeed());
+    // このお話「話せるようになった日」そのものを確かめるので、これだけは「見た」にしない
+    await page.addInitScript(eventStorySeed({ except: ['assistant_chat_story'] }));
     await page.route('**/rest/v1/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     // 中継役を偽物の Claude で動かす(本番の API は叩かない)
     await page.route('**/functions/v1/assistant-chat', async (route) => {

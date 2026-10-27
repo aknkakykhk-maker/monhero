@@ -454,7 +454,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     extra.length === 4 && extra.every(h => h.kind === 'combo' && h.dmg === 300 && h.skillName === 'スイーツパラダイス') && burst[0].dmg === plain[0].dmg,
     JSON.stringify(extra));
   check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
-    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken:1\)/.test(app)
+    // ★2026-10-27 キュービの九尾幻灯の被ダメ(kyubiTakenMultAt)が、タクティクスの掛け算の最後に付いてよい
+    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken(\*kyubiTakenMultAt\(slotIdx\))?:1\)/.test(app)
     && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\)( \+ tacticsExPartyBoostRegenRate\(tacticsExStateRef\.current, live\.now, 'hp'\))? : 0;/.test(app)
     // ★2026-10-08 クロミーの黒音符の連撃(withBlackNoteCombo)で包んだ2か所も数える
     && (app.match(/exCombos:(withBlackNoteCombo\()?withFateCombo\(tacticsExCombosAt\(slotIdx(,halved,card|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3);
@@ -646,8 +647,10 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('本体: 与ダメ(getDmg)・会心率・会心ダメ(3か所)・被ダメ(applyTurnDamageReduction)へ結線してある',
     // ★2026-10-08 メロディーのクッキー・クロミーの黒音符(勇者特性)の倍率と会心率が、間に入ってよい
     // ★2026-10-09 弓の勇者特性の倍率(bowAtkMultAt)も間に入ってよい(EXの倍率の結線はそのまま)
-    /const totalBuffMult=traitMult\*(cookieEffectNow\(\)\.dmgMult\*blackNoteEffectAt\(slotIdx,mon\?\.id\)\.dmgMult\*)?(bowAtkMultAt\(slotIdx\)\*)?tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
-    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus(\+\(tacticsExMultiBuffNow\(slotIdx\)\.critAdd\|\|0\))?(\+blackNoteEffectAt\(slotIdx,activeMon\?\.id\)\.critAdd)?\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
+    // ★2026-10-27 キュービの勇者特性「九尾四相」の与ダメ・会心率(kyubiAttackAt)、オリヒメの「天河の契り」の与ダメ(orihimeDmgMultAt)も
+    //   間に入ってよい(EXの倍率の結線はそのまま)
+    /const totalBuffMult=traitMult\*(cookieEffectNow\(\)\.dmgMult\*blackNoteEffectAt\(slotIdx,mon\?\.id\)\.dmgMult\*)?(kyubiAttackAt\(slotIdx,mon\?\.id,card\)\.dmgMult\*)?(orihimeDmgMultAt\(slotIdx\)\*)?(bowAtkMultAt\(slotIdx\)\*)?tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
+    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus(\+\(tacticsExMultiBuffNow\(slotIdx\)\.critAdd\|\|0\))?(\+blackNoteEffectAt\(slotIdx,activeMon\?\.id\)\.critAdd)?(\+kyubiAttackAt\(slotIdx,activeMon\?\.id,card\)\.critAdd)?\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
     && (app.match(/critDmgMult:tacticsExMultiBuffNow\(slotIdx\)\.critDmg/g) || []).length === 3);
 }
 
