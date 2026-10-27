@@ -53,6 +53,16 @@
 | C 固有技・EXの説明文の言い換え | 一覧と代表5件の案を窓口へ送った(docs/progress/battle-c-skill-wording.md) |
 | J5 横画面のバトル | 案を窓口へ送る |
 
+## 2026-10-27 夜の追加
+
+| # | 何が | 状態 |
+| --- | --- | --- |
+| J12 | レイド: 横844×390で挑戦のボタンが画面の外 | 済 #3875 |
+| J13 | A・B(この子の得意な距離・合流すると +◯%) | 済 #3893(写真 docs/progress/battle-ab/before-after.jpg) |
+| J14 | 見出し「勇者モンを選択」→「えらぶ」 | 済 #3905 |
+| J15 | C 固有技・EX の説明の言い換え | 済 #3929・#3978 |
+| J16 | タクティクス新(2×2)の表示で EX×数・🍪n/10 が出ない(melody-kuromy・unit-detail の検査が落ちる) | 窓口に案1/案2を聞いている |
+
 ## マージのこつ(2026-10-27)
 
 main が30秒ほどで次々に進むので、`node tools/merge-main.js` のあと「手元の origin/main と `git ls-remote origin refs/heads/main` が同じか」を見て、
