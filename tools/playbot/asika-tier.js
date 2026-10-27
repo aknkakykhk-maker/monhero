@@ -42,15 +42,17 @@ const PLAYS = ['bot', 'best'];
 const ev = require('./evidence');
 // 回すシミュレーターの版(sim/battle.js)。キャッシュに残し、版が違うマスは回し直す。
 // 3 = アシカまで(トレーニング・間合いボーナス・固有技の強化・緊急回復は無し) / 7 = 全部入り(緊急回復は AUTO と同じ条件) / 8 = 緊急回復はボットと同じ・上手な EX はボス戦のぶんを残す
-const SIM_VER = 14; // 14 = 13 版目+上手な遊び方の緊急回復(ガッツの平均 40% 未満で押す)・剣士モッチーの初期スタイル(2026-10-27 ダイスくん) / 13 = WAVE の始めのヘイトをタイプで決める・ガードを下げた(2026-10-22) / 11 = 10 版目+ヘイト(2026-10-22。ゲームと同じヘイトで敵が狙う) / 12 = ヘイトで狙われる確率を強めた(2026-10-22 社長「最大40%じゃ…」)
-const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)', 8: '8 版目(7 版目+緊急回復はボットと同じ「AUTO の条件 → 全滅の手前」・上手な EX はボス戦のぶんを残す)', 10: '10 版目(8 版目+上手な遊び方のトレーニングはドミノ倒し+走り込み)', 11: '11 版目(10 版目+ヘイト。敵はゲームと同じく目立った子を狙いやすい)', 12: '12 版目(11 版目のヘイトを強めた。タンクがガードすると約65%・上限で約90%狙われる)', 13: '13 版目(WAVE の始めのヘイトをタイプで決める・勇者の下地なし・ガードのヘイトを下げた)', 14: '14 版目(13 版目+上手な遊び方の緊急回復はガッツの平均 40% 未満で押す・剣士モッチーは強い難易度でずっと片手盾)' };
+// 組み合わせ(勇者×供モン)は上手な遊び方で測る。アシカのカードの比べは「いまのボットの選び方との差」のまま(基準 'bot')
+const COMBO_ASSIST = 'auto';
+const SIM_VER = 15; // 15 = 14 版目+組み合わせの上手な遊び方はアシカも上手に選ぶ(強い難易度だけアシカの Tier の上から。2026-10-27 ジン部長の OK) / 14 = 13 版目+上手な遊び方の緊急回復(ガッツの平均 40% 未満で押す)・剣士モッチーの初期スタイル(2026-10-27 ダイスくん) / 13 = WAVE の始めのヘイトをタイプで決める・ガードを下げた(2026-10-22) / 11 = 10 版目+ヘイト(2026-10-22。ゲームと同じヘイトで敵が狙う) / 12 = ヘイトで狙われる確率を強めた(2026-10-22 社長「最大40%じゃ…」)
+const SIM_VER_TEXT = { 3: '3 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復を入れる前)', 7: '7 版目(トレーニング・間合いボーナス・固有技の強化・緊急回復入り)', 8: '8 版目(7 版目+緊急回復はボットと同じ「AUTO の条件 → 全滅の手前」・上手な EX はボス戦のぶんを残す)', 10: '10 版目(8 版目+上手な遊び方のトレーニングはドミノ倒し+走り込み)', 11: '11 版目(10 版目+ヘイト。敵はゲームと同じく目立った子を狙いやすい)', 12: '12 版目(11 版目のヘイトを強めた。タンクがガードすると約65%・上限で約90%狙われる)', 13: '13 版目(WAVE の始めのヘイトをタイプで決める・勇者の下地なし・ガードのヘイトを下げた)', 14: '14 版目(13 版目+上手な遊び方の緊急回復はガッツの平均 40% 未満で押す・剣士モッチーは強い難易度でずっと片手盾)', 15: '15 版目(14 版目+組み合わせはアシカも上手に選ぶ。Expert・Master はアシカの Tier の上から)' };
 // 緊急回復をどの条件で測ったか(md の頭に1行。2026-10-10 ハカセくん)
 const EMERGENCY_TEXT = { 3: '緊急回復は入れていない(使わない)', 7: '緊急回復は AUTO と同じ条件(出せるカードが無く、ガッツさえあれば出せるとき)で測った。ガッツの少ない子は押す回数が多く、伸びやすい', 8: '緊急回復は直したボットと同じ条件(AUTO の条件 → だめなら全滅の手前。EX を使ったターンは押さない)で測った。ガッツの少ない子は押す回数が多く、伸びやすい' };
 EMERGENCY_TEXT[10] = EMERGENCY_TEXT[8];
 EMERGENCY_TEXT[11] = EMERGENCY_TEXT[8];
 EMERGENCY_TEXT[12] = EMERGENCY_TEXT[8];
 EMERGENCY_TEXT[13] = EMERGENCY_TEXT[8];
-EMERGENCY_TEXT[14] = '緊急回復は上手な使い方(ボットと同じ2つに加え、立っている子のガッツの平均が 40% 未満ならカードの前に押す。倒し切れそう・残り3ターン以内は押さない)で測った';
+EMERGENCY_TEXT[15] = EMERGENCY_TEXT[14] = '緊急回復は上手な使い方(ボットと同じ2つに加え、立っている子のガッツの平均が 40% 未満ならカードの前に押す。倒し切れそう・残り3ターン以内は押さない)で測った';
 const emergencyText = (sec) => EMERGENCY_TEXT[(sec && sec.simVer) || 3] || '';
 const simVerText = (sec) => SIM_VER_TEXT[(sec && sec.simVer) || 3] || `${sec.simVer} 版目`;
 
@@ -155,7 +157,7 @@ async function compute(cache) {
       if (!(runs > 0)) continue;
       for (const h of MONS) for (const a of MONS) {
         if (a.id === h.id) continue;
-        tasks.push({ key: `${h.id}|${a.id}|${diff}`, hero: h.id, ally: a.id, diff, assist: 'bot', play: 'best', exMode: 'best', runs, seed: SEED });
+        tasks.push({ key: `${h.id}|${a.id}|${diff}`, hero: h.id, ally: a.id, diff, assist: COMBO_ASSIST, play: 'best', exMode: 'best', runs, seed: SEED });
       }
     }
     await go('combo', { runs: { Expert: CRUNS, Master: CMRUNS }, seed: SEED, simVer: SIM_VER }, tasks);
@@ -174,8 +176,8 @@ async function compute(cache) {
     const tasks = [];
     const heroes = [...new Set(rows.map((x) => x.h.id))];
     for (const d of ['Expert', 'Master']) {
-      for (const x of rows) tasks.push({ key: `${x.h.id}|${x.a.id}|${d}`, hero: x.h.id, ally: x.a.id, diff: d, assist: 'bot', play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
-      for (const h of heroes) tasks.push({ key: `${h}|*|${d}`, hero: h, ally: '*', diff: d, assist: 'bot', play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
+      for (const x of rows) tasks.push({ key: `${x.h.id}|${x.a.id}|${d}`, hero: x.h.id, ally: x.a.id, diff: d, assist: COMBO_ASSIST, play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
+      for (const h of heroes) tasks.push({ key: `${h}|*|${d}`, hero: h, ally: '*', diff: d, assist: COMBO_ASSIST, play: 'best', exMode: 'best', runs: VRUNS, seed: VSEED });
     }
     await go('verify', { runs: VRUNS, seed: VSEED, simVer: SIM_VER }, tasks);
     cache.verify.pairs = top.map((x) => `${x.h.id}|${x.a.id}`);
