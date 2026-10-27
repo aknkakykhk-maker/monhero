@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 61b291d34c3967ce
+// source-sha256: cdd276adf99aef3c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -64945,7 +64945,7 @@ function PickHeroAllyScreen({
               key: stat.key,
               className: "min-w-0 block"
             }, React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none break-all"
+              className: "block text-slate-500 font-black leading-none whitespace-nowrap max-[359px]:text-[6.5px] max-[359px]:tracking-[-0.04em]"
             }, stat.label), preview.tactics ? stat.diff > 0 ? React.createElement("span", {
               className: "block leading-none text-slate-500"
             }, stat.before, " →") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? React.createElement("span", {
@@ -64962,15 +64962,17 @@ function PickHeroAllyScreen({
               "data-tactics-join-turns": preview.catchUpTurns,
               className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
               style: {
-                fontSize: '8px'
+                fontSize: '8px',
+                ...JA_LABEL_STYLE
               }
-            }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）'), preview.tactics && React.createElement("div", {
+            }, jaWrap(preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）')), preview.tactics && React.createElement("div", {
               "data-tactics-join-dist-catchup": Math.round((preview.distCatchUp || 0) * 1000) / 10,
               className: `w-full text-center leading-none font-black ${preview.distCatchUp > 0 ? 'text-cyan-300' : 'text-slate-500'}`,
               style: {
-                fontSize: '8px'
+                fontSize: '8px',
+                ...JA_LABEL_STYLE
               }
-            }, preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし'), React.createElement("div", {
+            }, jaWrap(preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし')), React.createElement("div", {
               className: "mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
               style: {
                 fontSize: '8px'
@@ -66136,8 +66138,9 @@ function RewardPickScreen({
     }, "いま強化する子"), React.createElement("span", {
       className: "text-[9px] font-black text-slate-400"
     }, RANGE_LABELS[currentSlot], "距離")), React.createElement("div", {
-      className: "mt-0.5 truncate text-[17px] font-black leading-tight text-white"
-    }, `${currentName || '全員'}のトレーニング`)), React.createElement("div", {
+      className: "mt-0.5 line-clamp-2 text-[17px] max-[359px]:text-[15px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, jaWrap(`${currentName || '全員'}のトレーニング`))), React.createElement("div", {
       className: "shrink-0 text-center font-mono leading-none"
     }, React.createElement("span", {
       className: "block text-[8px] font-black text-slate-400"
