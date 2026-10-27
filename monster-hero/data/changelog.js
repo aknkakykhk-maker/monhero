@@ -36,7 +36,7 @@
 const CHANGELOG = [
   {
     // マルチ対戦の報酬(ビートP・クイック周回)を2倍(82 の CARD_PVP_REWARD.x・91)。文は社長「この文で」2026-10-27
-    date: "2026-10-28 00:24", type:'update', group:'cardBattle', title:'マルチ対戦でもらえるビートPとクイック周回が2倍になりました', status:'new',
+    date: "2026-10-28 01:12", type:'update', group:'cardBattle', title:'マルチ対戦でもらえるビートPとクイック周回が2倍になりました', status:'new',
     items:[
       '勝つと、ビートP 800・クイック周回 88周ぶんがもらえます(これまでは400・44周ぶん)',
       '負けたとき・投了したときにもらえる数も、これまでの2倍です',
