@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3f365e7cd5af2151
+// generated-sha256: f935499c010a6d91
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -63146,6 +63146,7 @@ function MonsterHeroGame() {
     setTacticsHeroStyle(null);
     resetSweetStack(); // メロディー・クロミーのスタックもランごと(WAVEでは消さない)
   resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
+  resetKyubi(); // 九尾四相(相・煉獄・陽炎)はランのあいだ持つ
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -63367,6 +63368,59 @@ function MonsterHeroGame() {
   const [dreamPainView, setDreamPainView] = useState(dreamPainOf(null));
   const writeDreamPain = (v) => { const d = dreamPainOf(v); dreamPainRef.current = d; setDreamPainView(d); return d; };
   const resetDreamPain = () => writeDreamPain(null);
+  // ★キュービの勇者特性「九尾四相」(2026-10-27 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の KYUBI_*・kagero*。
+  //   相はバトルが始まったときに立っていた距離で決まり、ランのあいだ続く(5つの遊びは勇者モンを置いた距離、タクティクスはその子の枠)。
+  //   煉獄(カード1枚で+1・上限10)と陽炎の完全回避(持っているか・待ち)もランのあいだ持つ。キーはトリックスタートと同じ。
+  //   片付けは resetTacticsJoinCatchUp。ダメージ計算はターンの途中でも読むので ref が正本、画面のために state にも置く
+  const kyubiRef = useRef({ phase: {}, rengoku: {}, kagero: {} });
+  const [kyubiView, setKyubiView] = useState(kyubiRef.current);
+  const writeKyubi = (part, key, value) => {
+    if (!key) return;
+    const next = { ...kyubiRef.current, [part]: { ...kyubiRef.current[part], [key]: value } };
+    kyubiRef.current = next; setKyubiView(next);
+  };
+  const resetKyubi = () => { kyubiRef.current = { phase: {}, rengoku: {}, kagero: {} }; setKyubiView(kyubiRef.current); };
+  // その枠の相の id(持ち主がキュービでなければ null)。初めて読んだときに始まりの距離で決めて ref に覚える
+  //   (描画の途中でも呼ばれるので、ここでは state を書かない)
+  const kyubiPhaseAt = (slotIdx) => {
+    const key = trickStartKeyOf(slotIdx);
+    if (sweetOwnerAt(slotIdx) !== KYUBI_MONSTER_ID || !key) return null;
+    if (!kyubiRef.current.phase[key]) {
+      const p = kyubiPhaseOfSlot(isTacticsMode(runMode) ? slotIdx : initialBattleDistanceRef.current);
+      if (!p) return null;
+      kyubiRef.current = { ...kyubiRef.current, phase: { ...kyubiRef.current.phase, [key]: p.id } };
+    }
+    return kyubiRef.current.phase[key];
+  };
+  // キュービ本人の攻撃にだけ効く相の効き目。煉獄ノ相のダメージは、軽くなる前の消費(getCardBaseGuts)で数える
+  const kyubiAttackAt = (slotIdx, actorId, card) => {
+    const phase = actorId === KYUBI_MONSTER_ID ? kyubiPhaseAt(slotIdx) : null;
+    if (!phase) return kyubiPhaseEffectOf(null);
+    return kyubiPhaseEffectOf(phase, { rengoku: kyubiRef.current.rengoku[trickStartKeyOf(slotIdx)], skillGuts: card ? getCardBaseGuts(card) : 0 });
+  };
+  // キュービ本人がカードを使ったとき: 煉獄ノ相は煉獄+1、陽炎ノ相は攻撃なら完全回避を持つ(待ちのあいだは持てない)
+  const gainKyubiCard = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID || !card) return;
+    const phase = kyubiPhaseAt(slotIdx), key = trickStartKeyOf(slotIdx);
+    if (phase === 'rengoku') {
+      const before = kyubiRengokuOf(kyubiRef.current.rengoku[key]), after = kyubiRengokuOf(before + 1);
+      if (after === before) return;
+      writeKyubi('rengoku', key, after);
+      addPopup(`🔥 煉獄 ${after}/${KYUBI_RENGOKU_MAX}`, 'hero', 'text-orange-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    } else if (phase === 'kagero' && ['atk','range_atk','unique'].includes(card.type)) {
+      const before = kageroOf(kyubiRef.current.kagero[key]), after = kageroAfterAttack(before);
+      if (after.ready === before.ready) return;
+      writeKyubi('kagero', key, after);
+      addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
+    }
+  };
+  // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
+  const tickKyubiKagero = () => {
+    const entries = Object.entries(kyubiRef.current.kagero);
+    if (!entries.some(([, v]) => kageroOf(v).wait > 0)) return;
+    const next = { ...kyubiRef.current, kagero: Object.fromEntries(entries.map(([k, v]) => [k, tickKagero(v)])) };
+    kyubiRef.current = next; setKyubiView(next);
+  };
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
@@ -72279,7 +72333,9 @@ function MonsterHeroGame() {
     return Math.min(cardLimit,base+(coordinationHolder?soulCoordinationCardBonus:0));
   };
 
-  const getCardGuts = (card, slotIdx=null) => {
+  // 技ごとの基本の消費ガッツ(進化の倍率・中二病・運命のコインまで)。ターンの割引(消費0・半分・霊魂など)はかける前。
+  //   煉獄ノ相(キュービ)の「消費ガッツが大きいほどダメージ↑」はこの値で数える(2026-10-27 社長「軽くなる前の消費で」)
+  const getCardBaseGuts = (card) => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : (['buff','debuff','heal','draw'].includes(card.type) ? (card.guts || 20) : 20);
     if (cost>0 && ['atk','range_atk','unique'].includes(card.type)) {
@@ -72292,6 +72348,11 @@ function MonsterHeroGame() {
       // 運命のコイン(ゴースト): 裏が出るたびに、ゴーストの固有技の消費ガッツ+20%(重複可・ランが終わるまで)
       if (card.type === 'unique' && card.monId===FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks',null)));
     }
+    return cost;
+  };
+  const getCardGuts = (card, slotIdx=null) => {
+    if (!card) return 0;
+    let cost = getCardBaseGuts(card);
     // ★タクティクスは「その子だけ」のぶんも見る(2026-09-22 ユーザー選択)。
     //   ピクシー/ミーアの消費0・アーク/イブリースの消費+15%・パンドラの共鳴は、
     //   どれも使った子だけに効く。既存5モードは bySlot が空なので今までどおり
@@ -74380,7 +74441,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     // ★クッキー10個(メロディー)の与ダメアップは味方全体、黒音符(クロミー)は本人の攻撃だけ
-    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*kyubiAttackAt(slotIdx,mon?.id,card).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「ちから+20%」を、攻撃した子のちからへ掛ける
     //   (既存5モードはパーティ共通のちから。積んでいなければ1倍)
@@ -74417,7 +74478,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,kusabiCombosAt(slotIdx,mon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,[...kusabiCombosAt(slotIdx,mon?.id,card),kyubiAttackAt(slotIdx,mon?.id,card).combo]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
@@ -74733,8 +74794,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   確定反射(モノリスの固有技)＝**味方全体**。発動したターンは誰も受けない。
         //   確率で出る反射・回避・吸収＝**狙われた子だけ**。抽選で出るものは個別にそろえる
         const forcedReflect = getTurnBuff('reflect',false);
+        // ★陽炎ノ相(キュービ): 受ける子がキュービで完全回避を持っていれば、抽選なしで回避して使い切る(使ったら3ターン待ち)
+        const kageroEvade = !forcedReflect && defenseHeroId===KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
+        if (kageroEvade) {
+          writeKyubi('kagero', kusabiDefenseKey, kageroUseEvade(kyubiRef.current.kagero[kusabiDefenseKey]));
+          addPopup('🔥 陽炎ノ相 完全回避！','hero','text-orange-200 text-sm font-bold drop-shadow-md');
+        }
         const soulDefenseResult = forcedReflect
           ? 'reflect'
+          : kageroEvade ? 'evasion'
           : rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random());
         const isReflect = soulDefenseResult==='reflect';
         const isAbsorb = soulDefenseResult==='absorb';
@@ -75126,6 +75194,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (timeStopSlot==null&&(fateWheelRef.current.atkDown>0||fateWheelRef.current.takenUp>0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     // ドリームペイン(ドリーミィ)は使ったターンは効かず、次のターンから3ターン。次のターンへ進むここで1つ進める
     if (timeStopSlot==null&&(dreamPainRef.current.wait>0||dreamPainRef.current.turns>0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
+    if (timeStopSlot==null) tickKyubiKagero(); // ★陽炎ノ相(キュービ)の完全回避の待ちも1つ進める
     // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
     // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
     {
@@ -75795,6 +75864,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       else setGuts(p=>Math.max(0,p-cardCost));
       // メロディの手作りクッキー: メロディー本人がカードを1枚使うたびに+1(枠を決めて使ったカードだけ。アシストカードは数えない)
       if(!isBreeder&&entry.slotIdx!=null) gainSweetStack(slotIdx,slots[slotIdx]?.id,card);
+      if(!isBreeder&&entry.slotIdx!=null) gainKyubiCard(slotIdx,slots[slotIdx]?.id,card); // ★九尾四相: 煉獄+1・陽炎の完全回避
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type==='draw') continue;
@@ -75972,10 +76042,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd+kyubiAttackAt(slotIdx,activeMon?.id,card).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,kusabiCombosAt(slotIdx,activeMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,[...kusabiCombosAt(slotIdx,activeMon?.id,card),kyubiAttackAt(slotIdx,activeMon?.id,card).combo]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         if(aquaStackFromCard(slotIdx,card)==='finale'){ immediateStun=true; setImmediateTurnBuff('stunEnemy',true); } // ★アクアフィールドの水牢・氷結(ウンディーネ種の攻撃カード)
         // ★ハムのカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)。クロスは文字と揺れ、フル・リベンジはカットインを待つ(タップで飛ばせる)

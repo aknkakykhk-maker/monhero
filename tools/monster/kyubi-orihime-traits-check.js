@@ -140,6 +140,23 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
     borrowed.length === 7 && borrowed.every(([i, n]) => KYUBI_UNIQUE[i] === n), JSON.stringify(borrowed));
 }
 
+// ---------- 本体へのつなぎ込み(②キュービ「九尾四相」) ----------
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  check('相は始まりの距離で決まる(5つの遊びは勇者モンを置いた距離・タクティクスはその枠)',
+    /kyubiPhaseOfSlot\(isTacticsMode\(runMode\) \? slotIdx : initialBattleDistanceRef\.current\)/.test(app));
+  check('攻撃の与ダメ・連撃(2か所)・会心率に、キュービ本人の相の効き目が乗る',
+    app.includes('blackNoteEffectAt(slotIdx,mon?.id).dmgMult*kyubiAttackAt(slotIdx,mon?.id,card).dmgMult*')
+    && app.includes('kyubiAttackAt(slotIdx,mon?.id,card).combo])') && app.includes('kyubiAttackAt(slotIdx,activeMon?.id,card).combo])')
+    && app.includes('+kyubiAttackAt(slotIdx,activeMon?.id,card).critAdd)'));
+  check('煉獄ノ相のダメージは、軽くなる前の消費(getCardBaseGuts)で数える',
+    /skillGuts: card \? getCardBaseGuts\(card\) : 0/.test(app) && /let cost = getCardBaseGuts\(card\);/.test(app));
+  check('カードを使うと煉獄+1・陽炎の完全回避を持つ', /gainKyubiCard\(slotIdx,slots\[slotIdx\]\?\.id,card\)/.test(app));
+  check('陽炎の完全回避は、抽選なしで回避して使い切る', /: kageroEvade \? 'evasion'/.test(app) && /kageroUseEvade\(kyubiRef\.current\.kagero/.test(app));
+  check('陽炎の待ちはターンが進むと減り、相・煉獄・陽炎はランの片付けで消す',
+    /tickKyubiKagero\(\); \/\/ ★陽炎ノ相/.test(app) && /resetKyubi\(\); \/\/ 九尾四相/.test(app));
+}
+
 // ---------- 下書きのあいだは本体に出さない ----------
 const ally = read('monster-hero/data/ally-monsters.js');
 check('基礎能力は社長が決めた値(キュービ 420/150/160/70・オリヒメ 440/140/145/85)',
