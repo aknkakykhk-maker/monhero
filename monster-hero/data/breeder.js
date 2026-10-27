@@ -1073,6 +1073,8 @@ const ASSISTANT_COSTUMES = Object.freeze([
 // 解放しているとみなすのは、次のどちらか:
 //   ① 新しいキーに id が入っている
 //   ② MFバトルカードの記録 mh_card_record_detail_v1 の foes[相手].levels[難易度] が1以上(前から勝っている人のため。このキーは読むだけ)
+//   ③ もとの記録 mh_card_record_v1 の最近の30戦(recent)に { who:相手, level:難易度, outcome:'win' } がある
+//      (②は 10/27 の #4034 からのキーで、それより前の勝ちは最近の30戦から起こした分しか無い。カード部リプレイくんの指摘。読むだけ)
 // 勝った瞬間に覚えるのはカード部の精算(84 の助手と対戦の記録を足す所)。そこで assistantCostumeUnlockEntry を呼んで
 // 保存の1件({ key, before, next })を足し、保存できたら setAssistantCostumeUnlockedNow で今の画面へも伝える。
 const ASSISTANT_COSTUME_UNLOCKED_KEY = 'mh_assistant_costume_unlocked_v1';
@@ -1089,11 +1091,19 @@ const assistantCostumeUnlockedByCardRecord = (costume, cardRecordDetail) => {
   const wins = Number(levels[rule.cardLevel]);
   return Number.isFinite(wins) && wins >= 1;
 };
-// 解放されている服のidの一覧(新しいキーの値と、カードの記録から起こしたものを合わせる)
-const resolveUnlockedAssistantCostumes = (storedUnlocked, cardRecordDetail) => {
+// その服を、もとの記録(mh_card_record_v1 の生の値)の最近の30戦だけで解放しているか
+const assistantCostumeUnlockedByCardRecent = (costume, cardRecord) => {
+  const rule = costume && costume.unlock;
+  if (!rule || typeof rule.cardFoe !== 'string' || typeof rule.cardLevel !== 'string') return false;
+  const recent = (cardRecord && typeof cardRecord === 'object' && Array.isArray(cardRecord.recent)) ? cardRecord.recent : [];
+  return recent.some(x => x && typeof x === 'object' && x.who === rule.cardFoe && x.level === rule.cardLevel && x.outcome === 'win');
+};
+// 解放されている服のidの一覧(新しいキーの値と、カードの記録2つから起こしたものを合わせる)
+const resolveUnlockedAssistantCostumes = (storedUnlocked, cardRecordDetail, cardRecord) => {
   const list = normalizeUnlockedAssistantCostumes(storedUnlocked);
   ASSISTANT_COSTUMES.forEach(costume => {
-    if (costume && costume.unlock && !list.includes(costume.id) && assistantCostumeUnlockedByCardRecord(costume, cardRecordDetail)) list.push(costume.id);
+    if (costume && costume.unlock && !list.includes(costume.id)
+      && (assistantCostumeUnlockedByCardRecord(costume, cardRecordDetail) || assistantCostumeUnlockedByCardRecent(costume, cardRecord))) list.push(costume.id);
   });
   return list;
 };

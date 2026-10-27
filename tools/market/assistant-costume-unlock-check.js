@@ -9,7 +9,7 @@
 // 見るもの
 //   ① 絵が届くまでは公開の印が偽で、解放していても並ばない
 //   ② (印を真にしたつもりで)勝つ前は並ばない/勝ったら並ぶ(ダイヤショップ・仮の 100,000 ダイヤ)
-//   ③ 前からの記録で MASTER に勝っている人は並ぶ。0勝なら並ばない
+//   ③ 前からの記録(詳しい記録・もとの記録の最近の30戦)で MASTER に勝っている人は並ぶ。0勝なら並ばない
 //   ④ 勝ち以外・ほかの相手・ほかの難易度では解放しない。足すだけで前の id を消さない
 //   ⑤ 壊れた値でも落ちない(配列に落とす)
 //   ⑥ アプリの読み込みが2つのキーを読み、カードの記録は書き換えない。保存の一覧に新しいキーがある
@@ -66,6 +66,11 @@ check('勝ったら並ぶ(ダイヤショップの着替え・仮の 100,000 ダ
 // ③ 前からの記録
 check('前からの記録で MASTER に勝っている人は解放', load(true).resolveUnlockedAssistantCostumes([], { foes: { mua: { win: 5, levels: { master: 2 } } } }).includes(ID));
 check('MASTER が0勝なら解放しない', !load(true).resolveUnlockedAssistantCostumes([], { foes: { mua: { win: 5, levels: { master: 0, expert: 3 } } } }).includes(ID));
+check('もとの記録(mh_card_record_v1)の最近の30戦に みゅあ MASTER の勝ちがあれば解放(詳しい記録が無い人)',
+  load(true).resolveUnlockedAssistantCostumes([], null, { recent: [{ who: 'kiki', level: 'master', outcome: 'win' }, { who: 'mua', level: 'master', outcome: 'win' }] }).includes(ID));
+check('最近の30戦でも、負け・投了・ほかの難易度・ほかの助手では解放しない',
+  !load(true).resolveUnlockedAssistantCostumes([], null, { recent: [{ who: 'mua', level: 'master', outcome: 'lose' }, { who: 'mua', level: 'master', outcome: 'surrender' }, { who: 'mua', level: 'expert', outcome: 'win' }, { who: 'kiki', level: 'master', outcome: 'win' }] }).includes(ID));
+check('もとの記録が壊れていても落ちない', [null, 'x', { recent: 'x' }, { recent: [null, 1, 'a'] }].every(r => Array.isArray(load(true).resolveUnlockedAssistantCostumes([], null, r))));
 check('ほかの助手の MASTER では解放しない', !load(true).resolveUnlockedAssistantCostumes([], { foes: { kiki: { levels: { master: 4 } } } }).includes(ID));
 const seeded = load(true);
 seeded.setAssistantCostumeUnlockedNow(seeded.resolveUnlockedAssistantCostumes(null, { foes: { mua: { levels: { master: 1 } } } }));
@@ -96,8 +101,9 @@ check('壊れた保存値の上でも1件を作れる(前の値は before にそ
 check('引数が無くても止まらない', safe(() => broken.assistantCostumeUnlockEntry()) === null);
 
 // ⑥ つなぎ
-check('アプリの読み込みが、新しいキーとカードの記録の両方から解放を起こす',
-  /setAssistantCostumeUnlockedNow\(resolveUnlockedAssistantCostumes\(await storeGet\(ASSISTANT_COSTUME_UNLOCKED_KEY, \[\], false\), await storeGet\(CARD_RECORD_DETAIL_KEY, null, false\)\)\)/.test(app));
+check('アプリの読み込みが、新しいキーとカードの記録2つから解放を起こす',
+  /setAssistantCostumeUnlockedNow\(resolveUnlockedAssistantCostumes\(await storeGet\(ASSISTANT_COSTUME_UNLOCKED_KEY, \[\], false\), await storeGet\(CARD_RECORD_DETAIL_KEY, null, false\), await storeGet\(CARD_SAVE_KEYS\.record, null, false\)\)\)/.test(app));
+check('アプリはもとの記録(mh_card_record_v1)も書き換えない(この読み込みは storeGet だけ)', !/storeSet\(CARD_SAVE_KEYS\.record/.test(app));
 check('アプリはカードの記録を書き換えない(この PR で storeSet(CARD_RECORD_DETAIL_KEY) を足していない)', !/storeSet\(CARD_RECORD_DETAIL_KEY/.test(app));
 check('マーケットの商品は、解放するまで shop と available を偽にする',
   breeder.includes("get shop() { return costume.released === true && assistantCostumeUnlockedNow(costume) ? undefined : false; }")

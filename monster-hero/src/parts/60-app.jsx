@@ -6425,8 +6425,8 @@ function MonsterHeroGame() {
       ownedAssistantCostumesRef.current = loadedCostumes;
       setOwnedAssistantCostumes(loadedCostumes);
       setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
-      // 解放が要る服(みゅあの MASTER に勝つと並ぶ服など)。新しいキーと、カードの記録(読むだけ)の両方から起こす(2026-10-27)
-      setAssistantCostumeUnlockedNow(resolveUnlockedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, [], false), await storeGet(CARD_RECORD_DETAIL_KEY, null, false)));
+      // 解放が要る服(みゅあの MASTER に勝つと並ぶ服など)。新しいキーと、カードの記録2つ(読むだけ)から起こす(2026-10-27)
+      setAssistantCostumeUnlockedNow(resolveUnlockedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_UNLOCKED_KEY, [], false), await storeGet(CARD_RECORD_DETAIL_KEY, null, false), await storeGet(CARD_SAVE_KEYS.record, null, false)));
       setRhythmClearTotal(await loadRhythmClearTotal());
       // 大王が倒された印があれば、マーケットを開く前から鍵を外しておく(無ければマーケットに入ったときに確かめる)
       if (await storeGet(RAID_JACK_BOSS_DOWN_KEY, null, false)) setRaidJackBossDownNow(true);

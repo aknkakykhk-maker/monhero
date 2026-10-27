@@ -269,7 +269,7 @@
 | `mh_profile_frame_owned_v1` | string[] / `[]` | 手に入れたプロフィールフレームのid。**一度もらったら外さない**(条件を変えても取り上げにならないよう、「いまのLv」ではなく「もらった記録」を持つ)。`normalizeOwnedProfileFrames` を通す |
 | `mh_assistant_costume_owned_v1` | string[] / `[]` | 買った助手の着替え(服)のid。**一度買ったら外さない**。`normalizeOwnedAssistantCostumes` を通す。マーケット(ダイヤショップ・ビートP交換所)で買うたびに、保存を読み直して足す |
 | `mh_assistant_costume_worn_v1` | object / `{}` | 助手ごとに今着ている服 `{ 助手id: 服id }`。無い助手は元の服。`normalizeWornAssistantCostumes` を通し、持っていない服・その助手の服ではないもの・消えた服は読み捨てて元の服へ戻す |
-| `mh_assistant_costume_unlocked_v1` | string[] / `[]` | 解放が要る服(MFバトルカードでみゅあの MASTER に勝つと並ぶ服など。2026-10-27)のうち、解放したもののid。**足すだけで消さない**。`normalizeUnlockedAssistantCostumes` を通す。書くのは MFバトルカードの助手と対戦の精算(`assistantCostumeUnlockEntry`)だけ。読むときは、このキーに入っているか、`mh_card_record_detail_v1` の `foes[相手].levels[難易度]` が1以上なら解放とみなす(前から勝っている人のため。カードの記録は読むだけで書き換えない) |
+| `mh_assistant_costume_unlocked_v1` | string[] / `[]` | 解放が要る服(MFバトルカードでみゅあの MASTER に勝つと並ぶ服など。2026-10-27)のうち、解放したもののid。**足すだけで消さない**。`normalizeUnlockedAssistantCostumes` を通す。書くのは MFバトルカードの助手と対戦の精算(`assistantCostumeUnlockEntry`)だけ。読むときは、このキーに入っているか、`mh_card_record_detail_v1` の `foes[相手].levels[難易度]` が1以上、または `mh_card_record_v1` の最近の30戦(`recent`)にその相手・難易度の勝ちがあれば解放とみなす(前から勝っている人のため。カードの記録は2つとも読むだけで書き換えない) |
 | `mh_profile_frame_notice_v1` | string[] / `[]` | フレームをもらったことを知らせ終えたid。枠ごとに覚える(1つのidで既読にすると2枚目以降が知らされない) |
 | `mh_rhythm_clear_total_v1` | number / `0` | モンヒロビートの通算クリア回数(2026-10-03・スエゾービートのフレームを買える条件「10回クリア」に使う)。**この更新から数えはじめる**(既存の `mh_rhythm_best_v1` は曲×難易度ごとのクリア有無しか持たず、回数が分からないため。過去の分は入れない)。ライフを残して終えた演奏だけ+1(練習・アシストモード・失敗は数えない)。`normalizeRhythmClearTotal` を通す。減らさない・消さない |
 | `mh_update_notice_style_v1` | `'FULL'` / `'MINI'` / `'OFF'` / 既定 `'FULL'` | 更新のお知らせの出し方(`normalizeUpdateNoticeStyle` で既定へ倒す) |
