@@ -182,7 +182,12 @@ const seed = ({ conditions }) => {
     await page.evaluate(() => document.querySelector('[data-profile-tile="costume"]')?.click());
     await page.waitForTimeout(1000);
     const opts = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-costume-option]')].map(b => `${b.getAttribute('data-assistant-costume-option')}:${b.getAttribute('data-assistant-costume-locked')}`));
-    check('② 着替えの窓に「元の服」と魔女が並ぶ(魔女は持っているので鍵なし)', opts.join() === 'original:no,mua_halloween_2026:no', opts.join());
+    // 10/27 から、みゅあの「デュエルマスター」も並ぶ(持っていないので鍵つき。MFバトルカードでみゅあの MASTER に勝つとマーケットに並ぶ)
+    check('② 着替えの窓に「元の服」と魔女とデュエルマスターが並ぶ(魔女は持っているので鍵なし・デュエルマスターは鍵つき)', opts.join() === 'original:no,mua_halloween_2026:no,mua_card_master_v1:yes', opts.join());
+    await page.evaluate(() => document.querySelector('[data-assistant-costume-option="mua_card_master_v1"]')?.click());
+    await page.waitForTimeout(800);
+    const lockedText = await page.evaluate(() => document.querySelector('[data-assistant-costume-locked-info]')?.textContent || '');
+    check('② まだ解放していないデュエルマスターを押すと、買える場所ではなく解放の条件が出る', /まだマーケットに並んでいません/.test(lockedText) && /MASTER/.test(lockedText) && !/100,000ダイヤ/.test(lockedText), lockedText.slice(0, 80));
     await page.evaluate(() => document.querySelector('[data-assistant-costume-option="mua_halloween_2026"]')?.click());
     await page.waitForTimeout(1200);
     check('② 魔女を着ると mh_assistant_costume_worn_v1 に残る', (await store(page, 'mh_assistant_costume_worn_v1'))?.mua === 'mua_halloween_2026', JSON.stringify(await store(page, 'mh_assistant_costume_worn_v1')));

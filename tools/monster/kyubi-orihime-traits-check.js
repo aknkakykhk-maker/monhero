@@ -181,13 +181,41 @@ check('オリヒメの固有技は×2.3・消費46、名前は社長が選んだ
   const help = read('monster-hero/src/parts/20-market-notices-help.jsx');
   check('定義: 1ラン3回・カードと併用できる・3ターン・効果 kitsunebi',
     /Kyubi: Object\.freeze\(\{\n    id: 'kyubi_kyubi_gento',\n    name: '九尾幻灯',[\s\S]*?maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,\n    effect: 'kitsunebi',/.test(units)
-    && /'millefeuille', 'kitsunebi'\]/.test(units));
+    && /'millefeuille', 'kitsunebi'[,\]]/.test(units));
   check('使うと狐火を満タンに・幻灯強化をかけ直す', /if\(def\.effect==='kitsunebi'\)\{\n      writeKyubi\('kitsunebi',String\(slotIdx\),useKitsunebi\(/.test(app));
-  check('攻撃に狐火の追加の一撃(ヒット列2か所)・与ダメ、被ダメに強化とガード', app.includes('kyubiAttackAt(slotIdx,mon?.id,card).foxCombo])')
-    && app.includes('kyubiAttackAt(slotIdx,activeMon?.id,card).foxCombo])') && app.includes('*tacticsExPartyBuffNow().taken*kyubiTakenMultAt(slotIdx):1)'));
+  check('攻撃に狐火の追加の一撃(ヒット列2か所)・与ダメ、被ダメに強化とガード', app.includes('kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,')
+    && app.includes('kyubiAttackAt(slotIdx,activeMon?.id,card).foxCombo,') && app.includes('*tacticsExPartyBuffNow().taken*kyubiTakenMultAt(slotIdx):1)'));
   check('受けたときは狐火1つが盾(当てる直前)・ターンで戻る・ランの片付けまで残る',
     /kitsunebiShieldParts\(orihimeShareTargets/.test(app) && /const next = tickKitsunebi\(v\);/.test(app) && /kitsunebi: \{\}, guard: \{\} \}; setKyubiView/.test(app));
   check('公開前の子のEXはヘルプの表に出さない', /\.filter\(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' \|\| !!ALL_PLAYER_MONSTERS\[monId\]\)/.test(help));
+}
+
+// ---------- ④-2 オリヒメの星合の刻(勇者)・焦がれ待つ天ノ河(共モン) ----------
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  const units = read('monster-hero/src/parts/32-tactics-units.jsx');
+  check('定義: 勇者は星合の刻(1ラン3回・併用)、共モンは焦がれ待つ天ノ河(1ラン3回・併用・3ターン)',
+    /Orihime: Object\.freeze\(\{\n    id: 'orihime_hoshiai',\n    name: '星合の刻',[\s\S]*?maxUses: 3, unlimited: false, withCards: true,[\s\S]*?supportKey: 'OrihimeSupport',\n    effect: 'hoshiai',/.test(units)
+    && /OrihimeSupport: Object\.freeze\(\{\n    id: 'orihime_kogare',\n    name: '焦がれ待つ天ノ河',[\s\S]*?maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,\n    effect: 'kogare',/.test(units)
+    && /'kitsunebi', 'hoshiai', 'kogare'\]/.test(units));
+  check('勇者でない子は supportKey の定義へ引き替える', /const def = tacticsExRoleDefOf\(monId, mainHero\?\.id === monId\);/.test(app)
+    && /return def && def\.supportKey && !isHero \? tacticsExDefOf\(def\.supportKey, table\) : def;/.test(units));
+  check('星合: 逢瀬を全部使って始め、2体の攻撃に続く攻撃(実際は回数を使い、予測は使わない)',
+    /if\(def\.effect==='hoshiai'\)\{[\s\S]*?startHoshiai\(b\?b\.ouse:0, b\?b\.diff:0\)[\s\S]*?writeOrihime\('ouse',key,0\);/.test(app)
+    && app.includes('hoshiaiComboAt(slotIdx,false)])') && app.includes('hoshiaiComboAt(slotIdx,true)])'));
+  check('焦がれ: 当たると振り(1ターン2回まで)、当たりなら次の予告を意味不明に', /const r=rollKogare\(kg\.rolls\);/.test(app)
+    && /if \(confusion\.intent\?\.type !== 'CONFUSED'\) confusion\.intent = confusedEnemyIntent\(aimed\);/.test(app));
+  check('どちらも次のターンへ進むところで残りを減らす', /tickOrihimeEx\(\); \/\/ ★星合の刻/.test(app));
+}
+
+// ---------- ⑤ 霊魂(固有技の効果)のつなぎ込み ----------
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  check('固有技を使うと霊魂(技の出自で判定・かけ直し)', /if\(hasReikon\(card\.monId\)\)\{writeReikonKey\(trickStartKeyOf\(slotIdx\),startReikon\(\)\);/.test(app));
+  check('消費ガッツ×0.7(5つの遊びはパーティ・タクティクスは使った子の枠)', /cost = Math\.floor\(cost \* reikonGutsMultAt\(slotIdx\)\);/.test(app));
+  check('味方全員の回避率+10%(楔の回避と同じ値に足して同じ表へ。5つの遊びでも表を作り直す)',
+    /const kusabiEvasion = \(hasKusabiTrait\(defenseHeroId\) && kusabiDefenseKey \? kusabiEvasionOf\(kusabiAt\(defenseSlot\)\) : 0\) \+ reikonEvasionNow\(\);/.test(app));
+  check('残りは次のターンへ進むところで減らし、ランの片付けで消す', /tickReikonAll\(\); \/\/ ★霊魂/.test(app) && /resetReikon\(\); \/\/ 霊魂/.test(app));
 }
 
 // ---------- 下書きのあいだは本体に出さない ----------
