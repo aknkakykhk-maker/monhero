@@ -13,6 +13,7 @@
 // ② 1曲は繰り返し(1回だけの印を付けない) / 2曲は交互 / 3〜5曲は1周で全部1回・周の境目で同じ曲が続かない
 // ③ 対戦を始め直すと順を作り直す・前の曲を1曲目にしない / 止めたあと・始め直したあとの古い知らせでは進まない
 // ④ 読めない曲は飛ばす・全部だめなら止める(何度も読み直さない) / 先に読むのは次の1曲だけ
+// ⑥ 7人目のソラシド: 6人分しかない前の保存を読んでも崩れない・ソラシドは既定の曲で補う
 // ⑤ 画面と音の側のつなぎ(84 は前の1曲えらびを使わない・前の保存は書き換えない / 14-audio は流れ終わったときだけ次へ)
 const fs = require('fs');
 const path = require('path');
@@ -32,6 +33,16 @@ const TRACKS = ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 'melo_toriko', 'eiki_b
 const isTrack = (id) => TRACKS.includes(id);
 const seeded = (k) => () => ((k = (k * 9301 + 49297) % 233280) / 233280);
 
+// ⑥ 7人目のソラシド(2026-10-27 公開): 6人分しかない前の保存を読んでも、6人の並びはそのまま・ソラシドは既定の曲(Monster Hero)で補う(⑦ 消さない・足すだけ)
+{
+  const T6 = (id) => isTrack(id) || id === 'monster_hero_theme';
+  const old6 = { v: 1, assistants: { mua: ['t1', 't2'], kiki: ['t3'], momosuke: ['t4', 't5', 't6'], kyuko: ['t7'], dra: ['eiki_boss'], atsu: ['melo_toriko', 't1'] } };
+  const got = plain(P.cardNormalizeCpuPlaylist(old6, T6));
+  check('⑥ 6人分の前の保存を読んでも、6人の並びはそのまま', WHO.every((w) => JSON.stringify(got.assistants[w]) === JSON.stringify(old6.assistants[w])), JSON.stringify(got));
+  check('⑥ ソラシドは既定の曲(Monster Hero)で補う', JSON.stringify(got.assistants.sorashido) === '["monster_hero_theme"]' && JSON.stringify(P.CARD_CPU_PLAYLIST_DEFAULT.sorashido) === '["monster_hero_theme"]', JSON.stringify(got.assistants.sorashido));
+  const mine = plain(P.cardNormalizeCpuPlaylist({ v: 1, assistants: { ...old6.assistants, sorashido: ['t2', 't3'] } }, T6));
+  check('⑥ ソラシドの並びを保存した人は、その並びのまま読める', JSON.stringify(mine.assistants.sorashido) === '["t2","t3"]');
+}
 // ① 保存の読み方
 check('保存先は新しいキー mh_card_cpu_playlist_v1 で、前の mh_card_bgm_v1 はそのまま', P.CARD_SAVE_KEYS.cpuPlaylist === 'mh_card_cpu_playlist_v1' && P.CARD_SAVE_KEYS.bgm === 'mh_card_bgm_v1');
 const def = plain(P.cardNormalizeCpuPlaylist(null, isTrack));
