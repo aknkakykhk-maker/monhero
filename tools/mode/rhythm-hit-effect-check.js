@@ -77,13 +77,14 @@ check('音量・ON/OFF・全体ミュートは既存のタップ音の設定を�
   monsterSe.includes('readSettings()')&&monsterSe.includes('rhythmAudioGloballyEnabled()')
   &&!/mh_/.test(monsterSe));
 check('モンスターノーツを取ったときにその音を鳴らす',
+  // 2026-10-27: デバッグの犯人さがし(#3825)が止める印 monAbOff('se') が付いてよい。ふだんのプレイでは常に偽
   // 鳴らした印をフレームの記録へ残す(RHYTHM_FRAME_DIAG.cue)。鳴らすのは同じ1か所
-  /if\(monsterHit\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
+  /if\(monsterHit(?:&&!monAbOff\('se'\))?\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
 // ★monsterHit は 2026-09-13 に「演出量のブロックの外」へ出した(振動をそこへまとめたため)。
 //   MISSでは false になるので、鳴らす・光らせるところへは入らない。
 check('MISSでは鳴らさない・光らせない',
   game.includes("const monsterHit=judgment!=='MISS'&&!!monsterForNote(note);")
-  &&/if\(judgment!=='MISS'\)\{\s*if\(monsterHit\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
+  &&/if\(judgment!=='MISS'\)\{\s*if\(monsterHit(?:&&!monAbOff\('se'\))?\)\{?RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);/.test(game));
 
 // --- 重くならない作り ---
 check('使い回す枚数が決まっている',Number.isInteger(RHYTHM_HIT_EFFECT_POOL)&&RHYTHM_HIT_EFFECT_POOL>=6&&RHYTHM_HIT_EFFECT_POOL<=24,
@@ -272,7 +273,7 @@ check('演出量MINIMAL・軽量モードでは出さない(音は鳴る)',
   &&hitCss.includes('display:none!important')
   // 音は演出量の外で鳴らす
   // 間に空中のノーツの「きらっ」の音(playSky・演出量の外)が入ってよい
-  &&/if\(monsterHit\)(?:RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);|\{RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);RHYTHM_FRAME_DIAG\.cue\('se'\);\})\s*\n(?:\s*\/\/[^\n]*\n\s*if\(rhythmNoteSkyHeight\(note\)>0\)RHYTHM_NOTE_SE_RUNTIME\.playSky\(judgment\);\s*\n)?\s*if\(!settings\.lightweightMode/.test(game));
+  &&/if\(monsterHit(?:&&!monAbOff\('se'\))?\)(?:RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);|\{RHYTHM_NOTE_SE_RUNTIME\.playMonster\(\);RHYTHM_FRAME_DIAG\.cue\('se'\);\})\s*\n(?:\s*\/\/[^\n]*\n\s*if\(rhythmNoteSkyHeight\(note\)>0\)RHYTHM_NOTE_SE_RUNTIME\.playSky\(judgment\);\s*\n)?\s*if\(!settings\.lightweightMode/.test(game));
 // 設定「押したときの光」(2026-10-15)。既定は「おまかせ」(これまでどおり)で、新しい項目は正規化で補う。
 // 「いつも出す」の枝は判定ラインの光だけを出す(判定文字・コンボ数・フラッシュ・マスモンの跳ねには触らない)
 {const i=game.indexOf('}else if(rhythmTapLightOnly(settings)){'),branch=i>=0?game.slice(i,game.indexOf('\n}\n',i)):'';
@@ -338,7 +339,8 @@ check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
   &&game.includes('monster:bigMonsterEffect,precise:preciseHit,defer:true')
   // 段は順位でくらべる(2026-09-13。名前を並べてくらべていたせいで、あとから足した
   // 「最小」が素通りし、いちばん軽い段でモンスターノーツの大きな光が出ていた)
-  &&game.includes("const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost(monsterEffect,'OFF');"));
+  // 2026-10-27: デバッグの犯人さがし(#3825)が止める印 monAbOff('spark') が後ろに付いてよい。ふだんのプレイでは常に偽
+  &&/const bigMonsterEffect=monsterHit&&!rhythmMonsterEffectAtMost\(monsterEffect,'OFF'\)(?:&&!monAbOff\('spark'\))?;/.test(game));
 
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',
