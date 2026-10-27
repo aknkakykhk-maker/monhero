@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 30bfb19016bee01f
+// source-sha256: 30415f0016ea88a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -42380,9 +42380,9 @@ const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_EN
   return Math.min(TACTICS_ENEMY_POWER_MAX, Math.max(1, raw));
 };
 const TACTICS_TARGET_LOW_HP_BIAS = 2;
-const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
-  return tacticsAliveSlots(units).map(index => {
+  const list = tacticsAliveSlots(units).map(index => {
     const unit = normalizeTacticsUnit(units[index]);
     const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
     return {
@@ -42390,12 +42390,24 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
       weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index)
     };
   });
+  if (isTacticsAiCopyStanding(copy)) {
+    const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
+    list.push({
+      index: TACTICS_AI_COPY_TARGET,
+      weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0)
+    });
+  }
+  return list;
 };
-const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
-  const out = [null, null, null, null];
-  const weights = tacticsTargetWeights(units, bias, hate);
+const tacticsTargetChancesWithCopy = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS, copy = null) => {
+  const out = {
+    slots: [null, null, null, null],
+    copy: null
+  };
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!weights.length || !(total > 0)) return out;
+  const order = index => index === TACTICS_AI_COPY_TARGET ? 99 : index;
   const parts = weights.map(entry => {
     const v = entry.weight / total * 100;
     return {
@@ -42405,19 +42417,20 @@ const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_B
     };
   });
   let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
-  [...parts].sort((a, b) => b.rest - a.rest || a.index - b.index).forEach(p => {
+  [...parts].sort((a, b) => b.rest - a.rest || order(a.index) - order(b.index)).forEach(p => {
     if (left > 0) {
       p.pct += 1;
       left -= 1;
     }
   });
   parts.forEach(p => {
-    out[p.index] = p.pct;
+    if (p.index === TACTICS_AI_COPY_TARGET) out.copy = p.pct;else out.slots[p.index] = p.pct;
   });
   return out;
 };
-const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
-  const weights = tacticsTargetWeights(units, bias, hate);
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => tacticsTargetChancesWithCopy(units, hate, bias, null).slots;
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   if (!weights.length) return null;
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!(total > 0)) return weights[0].index;
@@ -42435,14 +42448,19 @@ const tacticsTargetName = (units, slotIndex) => {
   return unit && String(unit.name || '').trim() || `${slotIndex + 1}番目の子`;
 };
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
-const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return {
     ...intent,
     targetName: TACTICS_ALL_TARGET_LABEL
   };
   const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
-  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate);
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate, copy);
+  if (targetSlot === TACTICS_AI_COPY_TARGET) return {
+    ...intent,
+    targetCopy: true,
+    targetName: tacticsAiCopyName(copy)
+  };
   return targetSlot == null ? intent : {
     ...intent,
     targetSlot,
@@ -42800,6 +42818,55 @@ const tacticsHateHelpRows = id => {
     return rows;
   }
   return [];
+};
+const TACTICS_AI_COPY_TARGET = 'copy';
+const isTacticsAiCopyStanding = copy => !!copy && tacticsHateNum(copy.hp) > 0 && tacticsHateNum(copy.maxHp) > 0;
+const tacticsAiCopyName = copy => `${copy && String(copy.name || '').trim() || '仲間'}のコピー`;
+const tacticsAiCopyPos = (units, srcSlot) => {
+  const list = Array.isArray(units) ? units : [];
+  const src = Number.isInteger(srcSlot) ? tacticsClamp(srcSlot, 0, 3) : 0;
+  for (const p of [src + 1, src - 1]) if (p >= 0 && p <= 3 && !list[p]) return {
+    pos: p,
+    stacked: false
+  };
+  return {
+    pos: src,
+    stacked: true
+  };
+};
+const tacticsAiCopyStartHate = (hate, srcSlot, rate = 0.5) => {
+  const r = tacticsClamp(tacticsHateNum(rate), 0, 1);
+  return Math.min(TACTICS_HATE.cap, Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] * r));
+};
+const tacticsAiCopyHateStep = (copy, {
+  gain = 0,
+  dealt = 0,
+  teamDealt = 0
+} = {}, monId = null, gainMult = 1) => {
+  if (!isTacticsAiCopyStanding(copy)) return 0;
+  const base = tacticsHateProfile(monId);
+  const p = {
+    ...base,
+    mult: base.mult * Math.max(0, tacticsHateNum(gainMult) || 1)
+  };
+  const team = Math.max(0, tacticsHateNum(teamDealt));
+  const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt)) / team : 0;
+  return Math.min(TACTICS_HATE.cap, tacticsHateNum(copy.hate) * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gain)) + share));
+};
+const tacticsIntentHitsAiCopy = (intent, copy) => {
+  if (!intent || !isTacticsAiCopyStanding(copy)) return false;
+  if (intent.targetsAll) return true;
+  if (intent.targetCopy) return true;
+  if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot) && Number.isInteger(intent.sweepDist)) return copy.pos === intent.sweepDist;
+  return false;
+};
+const damageTacticsAiCopy = (copy, amount) => {
+  if (!copy) return null;
+  const hp = Math.max(0, tacticsHateNum(copy.hp) - Math.max(0, Math.floor(tacticsHateNum(amount))));
+  return hp > 0 ? {
+    ...copy,
+    hp
+  } : null;
 };
 const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
   if (!intent || intent.variant !== 'sweep') return true;
