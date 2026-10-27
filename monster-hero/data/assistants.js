@@ -232,14 +232,14 @@ const ASSISTANTS = [
 const ASSISTANT_PEER_CALLS = Object.freeze({
   mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン', atsu: 'あつくん', kyuko: 'きゅきゅ', sorashido: 'ソラちん' },
   kiki:     { mua: 'みゅあちん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あっくん', kyuko: 'きゅうこさん', sorashido: 'ソラシドさん' },
-  momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん', atsu: 'あつ', kyuko: 'きゅうちゃん', sorashido: 'ソラ' },
-  dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラさん' },
+  momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん', atsu: 'あつ', kyuko: 'きゅうちゃん', sorashido: 'ソラちゃん' },
+  dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラシド' },
   // あつ(2026-10-22 社長の決定)
-  atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん', sorashido: 'ソラシド' },
+  atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん', sorashido: 'ばこっちゃん' },
   // きゅうこ(2026-10-22 社長の決定)
-  kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ソラ' },
-  // ソラシド(2026-10-27 社長の決定)。ほかの助手からの呼び方も各行の sorashido に足した(みゅあ「ソラちん」・きき「ソラシドさん」・もも「ソラ」・ドラ「ソラさん」・あつ「ソラシド」・きゅうこ「ソラ」)
-  sorashido: { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', atsu: 'あっくん', kyuko: 'きゅうこ' },
+  kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ばこちゃん' },
+  // ソラシド(2026-10-27 社長が全部決めた)。ほかの助手からの呼び方も各行の sorashido に足した(みゅあ「ソラちん」・きき「ソラシドさん」・もも「ソラちゃん」・ドラ「ソラシド」・あつ「ばこっちゃん」・きゅうこ「ばこちゃん」)
+  sorashido: { mua: 'みゅあさん', kiki: 'ききさん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あつさん', kyuko: 'きゅうこちゃん' },
 });
 // おしゃべりの受け答えの見本(2026-10-14 社長「キャラごとの喋り方の特徴がちゃんと反映されてない気がする」)。
 // 台本の実際のセリフの言い回し・くせを元に書いた。答えはどれも1〜3行・ゲームの数字や仕組みは書かない。
