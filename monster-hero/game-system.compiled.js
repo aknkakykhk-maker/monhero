@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b2e5fcc05164622e
+// source-sha256: dd857a3a5347a8d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -112791,6 +112791,11 @@ function MonsterHeroGame() {
     distAptitude: ['M', 'M', 'M', 'M'],
     debugOnly: true
   });
+  const draftPreviewMonsterList = () => (typeof UPCOMING_MONSTER_DRAFTS === 'undefined' || !UPCOMING_MONSTER_DRAFTS ? [] : Object.values(UPCOMING_MONSTER_DRAFTS)).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id] && Number.isFinite(mon.baseHp) && mon.unique && Number.isFinite(mon.unique.baseMult)).map(mon => ({
+    atkMotion: 'default',
+    ...mon,
+    debugOnly: true
+  }));
   const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon => mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = list => {
@@ -112798,7 +112803,7 @@ function MonsterHeroGame() {
     if (debugUnlockAllRef.current) return list;
     if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon = makeDebugStrongestMonster();
-    const preview = debugOnlyMonsterList();
+    const preview = [...debugOnlyMonsterList(), ...draftPreviewMonsterList()];
     const previewIds = new Set(preview.map(mon => mon.id));
     return [debugMon, ...preview, ...list.filter(mon => mon?.id !== debugMon.id && !previewIds.has(mon?.id))];
   };
@@ -120923,7 +120928,7 @@ function MonsterHeroGame() {
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
             comboFinalMultiplier: soulAttack.comboFinalMultiplier,
-            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, kusabiCombosAt(slotIdx, stunMon?.id, card)),
+            exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, true), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, stunMon?.id).combo, [...kusabiCombosAt(slotIdx, stunMon?.id, card), kyubiAttackAt(slotIdx, stunMon?.id, card).combo, kyubiAttackAt(slotIdx, stunMon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, true)]),
             critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
           });
           totalDmg += d;
@@ -123855,7 +123860,7 @@ function MonsterHeroGame() {
       ...m
     };
     applySlots(nextSlots);
-    if (!isHero && orihimePartnerPick && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+    if (!isHero && (orihimePartnerPick || autoBattleRef.current) && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
       setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
       addPopup(`🎐 ${m.masuName || m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
     }
