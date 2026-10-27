@@ -1003,6 +1003,9 @@ function MonsterHeroGame() {
     setTacticsHeroStyle(null);
     resetSweetStack(); // メロディー・クロミーのスタックもランごと(WAVEでは消さない)
   resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
+  resetKyubi(); // 九尾四相(相・煉獄・陽炎)はランのあいだ持つ
+  resetOrihime(); // 天河の契り(相方・逢瀬)もランのあいだ持つ
+  resetReikon(); // 霊魂(キュービ・オリヒメの固有技)の残り
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -1224,6 +1227,218 @@ function MonsterHeroGame() {
   const [dreamPainView, setDreamPainView] = useState(dreamPainOf(null));
   const writeDreamPain = (v) => { const d = dreamPainOf(v); dreamPainRef.current = d; setDreamPainView(d); return d; };
   const resetDreamPain = () => writeDreamPain(null);
+  // ★キュービの勇者特性「九尾四相」(2026-10-27 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の KYUBI_*・kagero*。
+  //   相はバトルが始まったときに立っていた距離で決まり、ランのあいだ続く(5つの遊びは勇者モンを置いた距離、タクティクスはその子の枠)。
+  //   煉獄(カード1枚で+1・上限10)と陽炎の完全回避(持っているか・待ち)もランのあいだ持つ。キーはトリックスタートと同じ。
+  //   片付けは resetTacticsJoinCatchUp。ダメージ計算はターンの途中でも読むので ref が正本、画面のために state にも置く
+  const kyubiRef = useRef({ phase: {}, rengoku: {}, kagero: {}, kitsunebi: {}, guard: {} });
+  const [kyubiView, setKyubiView] = useState(kyubiRef.current);
+  const writeKyubi = (part, key, value) => {
+    if (!key) return;
+    const next = { ...kyubiRef.current, [part]: { ...kyubiRef.current[part], [key]: value } };
+    kyubiRef.current = next; setKyubiView(next);
+  };
+  //   九尾幻灯(タクティクスのEX)の狐火 kitsunebi[枠] もバトルの終わりまで残る(WAVE では消さない)。guard[枠] はそのターンにガードしたか
+  const resetKyubi = () => { kyubiRef.current = { phase: {}, rengoku: {}, kagero: {}, kitsunebi: {}, guard: {} }; setKyubiView(kyubiRef.current); };
+  // その枠の相の id(持ち主がキュービでなければ null)。初めて読んだときに始まりの距離で決めて ref に覚える
+  //   (描画の途中でも呼ばれるので、ここでは state を書かない)
+  const kyubiPhaseAt = (slotIdx) => {
+    const key = trickStartKeyOf(slotIdx);
+    if (sweetOwnerAt(slotIdx) !== KYUBI_MONSTER_ID || !key) return null;
+    if (!kyubiRef.current.phase[key]) {
+      const p = kyubiPhaseOfSlot(isTacticsMode(runMode) ? slotIdx : initialBattleDistanceRef.current);
+      if (!p) return null;
+      kyubiRef.current = { ...kyubiRef.current, phase: { ...kyubiRef.current.phase, [key]: p.id } };
+    }
+    return kyubiRef.current.phase[key];
+  };
+  // キュービ本人の攻撃にだけ効く相の効き目。煉獄ノ相のダメージは、軽くなる前の消費(getCardBaseGuts)で数える
+  const kyubiAttackAt = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID) return { ...kyubiPhaseEffectOf(null), foxCombo: null };
+    const phase = kyubiPhaseAt(slotIdx);
+    const base = phase ? kyubiPhaseEffectOf(phase, { rengoku: kyubiRef.current.rengoku[trickStartKeyOf(slotIdx)], skillGuts: card ? getCardBaseGuts(card) : 0 }) : kyubiPhaseEffectOf(null);
+    // 九尾幻灯(タクティクスのEX): 狐火があれば与ダメ10%の追加の一撃、幻灯強化のあいだは与ダメ+狐火×4%
+    const fox = isTacticsMode(runMode) && Number.isInteger(slotIdx) ? kitsunebiEffectOf(kyubiRef.current.kitsunebi[String(slotIdx)], 'attack') : null;
+    return { ...base, dmgMult: base.dmgMult * (1 + (fox ? fox.buffDmg : 0)),
+      foxCombo: fox && fox.extraHit > 0 ? { count: 1, rate: fox.extraHit, label: '狐火' } : null };
+  };
+  // 九尾幻灯の被ダメ: 幻灯強化のあいだ −狐火×3%、狐火があるターンにガードしていれば −20%(タクティクスだけ)
+  const kyubiTakenMultAt = (slotIdx) => {
+    if (!isTacticsMode(runMode) || !Number.isInteger(slotIdx)) return 1;
+    const k = String(slotIdx), fox = kitsunebiOf(kyubiRef.current.kitsunebi[k]);
+    if (!fox.active) return 1;
+    const e = kitsunebiEffectOf(fox, kyubiRef.current.guard[k] ? 'guard' : 'attack');
+    return (1 - e.buffTaken) * (1 - e.guardCut);
+  };
+  // 九尾幻灯: 攻撃を受けたとき、狐火が1つあれば盾になって被ダメ−50%、その狐火は消える(当たったときだけ呼ぶ。完全回避では減らない)。
+  //   tacticsDamage の当て方(parts)のうち、狐火のある子だけを半分にして別に当てる
+  const kitsunebiShieldParts = (parts) => parts.flatMap(part => {
+    const keep = [], out = [];
+    (part.slots || []).forEach(i => {
+      const k = String(i), hit = kitsunebiOnHit(kyubiRef.current.kitsunebi[k]);
+      if (tacticsUnitsRef.current[i]?.id === KYUBI_MONSTER_ID && hit.takenMult < 1) {
+        writeKyubi('kitsunebi', k, hit.next);
+        addPopup(`🦊 狐火の盾！ 被ダメ−${Math.round((1 - hit.takenMult) * 100)}%(残り${hit.next.fires})`, 'hero', 'text-blue-200 text-sm font-bold drop-shadow-md', undefined, i);
+        out.push({ slots: [i], damage: Math.floor(part.damage * hit.takenMult) });
+      } else keep.push(i);
+    });
+    return [{ ...part, slots: keep }, ...out];
+  });
+  // キュービ本人がカードを使ったとき: 煉獄ノ相は煉獄+1、陽炎ノ相は攻撃なら完全回避を持つ(待ちのあいだは持てない)
+  const gainKyubiCard = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID || !card) return;
+    // 九尾幻灯(タクティクス): 狐火があるとき、ガードのカードはそのターンの被ダメ−20%、助けのカードはガッツが上限の5%戻る
+    if (isTacticsMode(runMode) && Number.isInteger(slotIdx)) {
+      const k = String(slotIdx), kind = orihimeCardKindOf(card), e = kitsunebiEffectOf(kyubiRef.current.kitsunebi[k], kind);
+      if (e.guardCut > 0) writeKyubi('guard', k, true);
+      if (e.assistGuts > 0) {
+        const u = normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+        const g = u ? Math.max(0, Math.min(u.maxGuts - u.guts, Math.floor(u.maxGuts * e.assistGuts))) : 0;
+        if (g > 0) { commitTacticsUnits(recoverTacticsGutsAt(tacticsUnitsRef.current, slotIdx, g)); mergeTacticsSlotFx({}, { [slotIdx]: g }); }
+      }
+    }
+    const phase = kyubiPhaseAt(slotIdx), key = trickStartKeyOf(slotIdx);
+    if (phase === 'rengoku') {
+      const before = kyubiRengokuOf(kyubiRef.current.rengoku[key]), after = kyubiRengokuOf(before + 1);
+      if (after === before) return;
+      writeKyubi('rengoku', key, after);
+      addPopup(`🔥 煉獄 ${after}/${KYUBI_RENGOKU_MAX}`, 'hero', 'text-orange-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    } else if (phase === 'kagero' && ['atk','range_atk','unique'].includes(card.type)) {
+      const before = kageroOf(kyubiRef.current.kagero[key]), after = kageroAfterAttack(before);
+      if (after.ready === before.ready) return;
+      writeKyubi('kagero', key, after);
+      addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
+    }
+  };
+  // ★オリヒメの勇者特性「天河の契り」(2026-10-27 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の ORIHIME_*・*Ouse*。
+  //   相方を1体決める(setOrihimePartner。決まるまでは何も起きない)。逢瀬はランのあいだ持つ。片付けは resetTacticsJoinCatchUp。
+  //   キーはトリックスタートと同じ(5つの遊びは 'party'、タクティクスはオリヒメの枠)。partner[key] は相方の枠の番号
+  const orihimeRef = useRef({ partner: {}, ouse: {}, hoshiai: {}, kogare: {} });
+  const [orihimeView, setOrihimeView] = useState(orihimeRef.current);
+  const writeOrihime = (part, key, value) => {
+    if (!key) return;
+    const next = { ...orihimeRef.current, [part]: { ...orihimeRef.current[part], [key]: value } };
+    orihimeRef.current = next; setOrihimeView(next);
+  };
+  //   hoshiai[オリヒメの枠] = { turns, rate, perTurn, used }(星合の刻)、kogare[オリヒメの枠] = { turns, rolls }(焦がれ待つ天ノ河)。どちらもタクティクスのEX
+  const resetOrihime = () => { orihimeRef.current = { partner: {}, ouse: {}, hoshiai: {}, kogare: {} }; orihimeTurnKindsRef.current = {}; orihimeForceConfuseRef.current = false; setOrihimeView(orihimeRef.current); };
+  // 焦がれ待つ天ノ河で当たりが出たら、敵の次の予告を必ず「意味不明」にする(次の予告を決めるときに1度だけ使う)
+  const orihimeForceConfuseRef = useRef(false);
+  // 星合の刻: 星合のあいだ、オリヒメか相方が攻撃すると、もう片方が続けて攻撃する(ヒット列に1本・1ターン2回まで)。
+  //   consume … 実際の攻撃は回数を使う。予測表示は使わない
+  const hoshiaiComboAt = (slotIdx, consume) => {
+    if (!isTacticsMode(runMode) || !Number.isInteger(slotIdx)) return null;
+    const b = orihimeBondOfSlot(slotIdx), h = b ? orihimeRef.current.hoshiai[b.key] : null;
+    if (!b || !b.up || !h || h.turns <= 0 || h.used >= h.perTurn) return null;
+    if (consume) writeOrihime('hoshiai', b.key, { ...h, used: h.used + 1 });
+    return { count: 1, rate: h.rate, label: '星合の刻' };
+  };
+  // 相方を決める(オリヒメの枠 selfSlot、相方の枠 partnerSlot)。5つの遊びは selfSlot を見ない(勇者モンを置いた距離)
+  const setOrihimePartner = (selfSlot, partnerSlot) => {
+    if (!Number.isInteger(partnerSlot)) return;
+    writeOrihime('partner', isTacticsMode(runMode) ? String(selfSlot) : 'party', partnerSlot);
+  };
+  // 相方が決まっているか。配置の画面の「この子を相方にする」は、決まるまでだけ出す(2026-10-27 社長: 案ア)
+  const orihimeHasPartner = () => Number.isInteger(orihimeRef.current.partner[isTacticsMode(runMode) ? String(initialBattleDistanceRef.current) : 'party']);
+  const [orihimePartnerPick, setOrihimePartnerPick] = useState(false);
+  const tacticsUnitUp = (slotIdx) => { const u = tacticsUnitsRef.current[slotIdx]; return !!u && Number(u.hp) > 0; };
+  // その絆のいまの形。{ key, selfSlot, partnerSlot, diff, ouse, up, effect }。オリヒメがいない・相方が決まっていなければ null
+  const orihimeBondAt = (key) => {
+    const partnerSlot = orihimeRef.current.partner[key];
+    if (!Number.isInteger(partnerSlot)) return null;
+    const tactics = isTacticsMode(runMode);
+    const selfSlot = tactics ? Number(key) : initialBattleDistanceRef.current;
+    const selfId = tactics ? tacticsUnitsRef.current[selfSlot]?.id : mainHero?.id;
+    if (selfId !== ORIHIME_MONSTER_ID) return null;
+    const diff = orihimeDiffOf(selfSlot, partnerSlot);
+    // 相方(とオリヒメ)が倒れたら、つながりは止まる。溜まった逢瀬は残る。5つの遊びはライフが1つなので倒れない
+    const up = tactics ? tacticsUnitUp(selfSlot) && tacticsUnitUp(partnerSlot) : !!slots[partnerSlot];
+    const ouse = ouseOf(orihimeRef.current.ouse[key], diff);
+    return { key, selfSlot, partnerSlot, diff, ouse, up, effect: orihimeBondEffectOf(diff, ouse, up) };
+  };
+  const orihimeBonds = () => (isTacticsMode(runMode) ? Object.keys(orihimeRef.current.partner) : ['party']).map(orihimeBondAt).filter(Boolean);
+  // その枠の子が絆の2体のどちらかなら、その絆
+  const orihimeBondOfSlot = (slotIdx) => orihimeBonds().find(b => b.selfSlot === slotIdx || b.partnerSlot === slotIdx) || null;
+  // 与ダメ: 2体のどちらかの攻撃
+  const orihimeDmgMultAt = (slotIdx) => { const b = Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null; return b ? 1 + b.effect.dmgAdd : 1; };
+  // 被ダメ: タクティクスは2体のどちらか。5つの遊びはライフが1つなので、パーティが受けるダメージ
+  const orihimeTakenMultAt = (slotIdx) => {
+    const b = isTacticsMode(runMode) ? (Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null) : orihimeBondAt('party');
+    return b ? 1 - b.effect.takenCut : 1;
+  };
+  // 逢瀬: そのターンに2体が使ったカードの種類(攻撃/ガード/助け)を枠ごとに覚え、次のターンへ進むところでまとめて見る
+  const orihimeTurnKindsRef = useRef({});
+  const orihimeCardKindOf = (card) => (!card ? null : ['atk','range_atk','unique'].includes(card.type) ? 'attack' : card.type === 'guard' ? 'guard' : 'assist');
+  const noteOrihimeCard = (slotIdx, card) => {
+    const kind = orihimeCardKindOf(card);
+    if (!kind || !Number.isInteger(slotIdx) || !orihimeBondOfSlot(slotIdx)) return;
+    const k = String(slotIdx), cur = orihimeTurnKindsRef.current[k] || [];
+    if (!cur.includes(kind)) orihimeTurnKindsRef.current = { ...orihimeTurnKindsRef.current, [k]: [...cur, kind] };
+  };
+  const settleOrihimeOuse = () => {
+    const kinds = orihimeTurnKindsRef.current; orihimeTurnKindsRef.current = {};
+    orihimeBonds().forEach(b => {
+      const a = kinds[String(b.selfSlot)] || [], c = kinds[String(b.partnerSlot)] || [];
+      const after = addOuse(b.ouse, b.diff, a.some(x => c.includes(x)), b.up);
+      if (after === b.ouse) return;
+      writeOrihime('ouse', b.key, after);
+      addPopup(`🎐 逢瀬 ${after}/${ORIHIME_BOND_TIERS[b.diff].max}`, 'hero', 'text-sky-200 text-base font-bold drop-shadow-md', undefined, b.selfSlot);
+    });
+  };
+  // 星合の刻・焦がれ待つ天ノ河の残りを1つ減らし、1ターンの回数を戻す。星合が終わったら逢瀬は0へ(使ったときに0にしてあるので、そのまま)
+  const tickOrihimeEx = () => {
+    const cur = orihimeRef.current;
+    if (!Object.keys(cur.hoshiai).length && !Object.keys(cur.kogare).length) return;
+    const tickOne = (table, reset) => Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.turns > 1 ? { ...v, turns: v.turns - 1, ...reset } : null]).filter(([, v]) => v));
+    const next = { ...cur, hoshiai: tickOne(cur.hoshiai, { used: 0 }), kogare: tickOne(cur.kogare, { rolls: KOGARE_ROLLS_PER_TURN }) };
+    orihimeRef.current = next; setOrihimeView(next);
+  };
+  // 間合いの差3(タクティクス): 2体のどちらかだけが当たったら、ダメージを2体で半分ずつ(合計は増やさない)。
+  //   返り値は [{ slots, damage }] の並び。分け合わない子は元のダメージのまま
+  const orihimeShareTargets = (targets, damage) => {
+    let rest = (Array.isArray(targets) ? targets : []).filter(Number.isInteger);
+    const parts = [];
+    orihimeBonds().filter(b => b.up && b.effect.share).forEach(b => {
+      [[b.selfSlot, b.partnerSlot], [b.partnerSlot, b.selfSlot]].forEach(([from, to]) => {
+        if (!rest.includes(from) || rest.includes(to)) return;
+        const [mine, theirs] = shareOrihimeDamage(damage);
+        rest = rest.filter(i => i !== from);
+        parts.push({ slots: [from], damage: mine }, { slots: [to], damage: theirs });
+      });
+    });
+    return [{ slots: rest, damage }, ...parts];
+  };
+  // ★固有技の効果「霊魂」(キュービ・オリヒメ共通。2026-10-27 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の REIKON_*・*Reikon*。
+  //   使った次のターンから3ターン、カードの消費ガッツ×0.7(5つの遊びは味方のカード全部・タクティクスは使った子のカードだけ)と、
+  //   味方全員の回避率+10%(どの敵の攻撃にも)。キーはトリックスタートと同じ。片付けは resetTacticsJoinCatchUp
+  const reikonRef = useRef({});
+  const [reikonView, setReikonView] = useState({});
+  const writeReikonKey = (key, v) => { if (!key) return; const next = { ...reikonRef.current, [key]: reikonOf(v) }; reikonRef.current = next; setReikonView(next); };
+  const resetReikon = () => { reikonRef.current = {}; setReikonView({}); };
+  const reikonGutsMultAt = (slotIdx) => { const key = trickStartKeyOf(slotIdx); return key ? reikonGutsMult(reikonRef.current[key]) : 1; };
+  // 味方全員の回避率に足す量(%)。だれかの霊魂が効いていれば足す(重ならない)
+  const reikonEvasionNow = () => Object.values(reikonRef.current).reduce((most, v) => Math.max(most, reikonEvasionUp(v)), 0);
+  const tickReikonAll = () => {
+    const entries = Object.entries(reikonRef.current);
+    if (!entries.length) return;
+    const next = Object.fromEntries(entries.map(([k, v]) => [k, tickReikon(v)]).filter(([, v]) => v.wait > 0 || v.turns > 0));
+    reikonRef.current = next; setReikonView(next);
+  };
+  // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
+  const tickKyubiKagero = () => {
+    const cur = kyubiRef.current;
+    const kagero = Object.fromEntries(Object.entries(cur.kagero).map(([k, v]) => [k, tickKagero(v)]));
+    // 九尾幻灯: 幻灯強化の残りを1つ減らし、3ターンごとに狐火が1つ戻る。ガードしたかは毎ターン消す
+    const kitsunebi = Object.fromEntries(Object.entries(cur.kitsunebi).map(([k, v]) => {
+      const next = tickKitsunebi(v);
+      if (next.fires > kitsunebiOf(v).fires) addPopup(`🦊 狐火が戻った ${next.fires}/${KITSUNEBI_MAX}`, 'hero', 'text-blue-200 text-sm font-bold drop-shadow-md', undefined, Number(k));
+      return [k, next];
+    }));
+    if (!Object.keys(cur.kagero).length && !Object.keys(cur.kitsunebi).length && !Object.keys(cur.guard).length) return;
+    const next = { ...cur, kagero, kitsunebi, guard: {} };
+    kyubiRef.current = next; setKyubiView(next);
+  };
+
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
@@ -1486,7 +1701,10 @@ function MonsterHeroGame() {
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
     const targets = tacticsTargetsNow(intent, actingDist);
-    return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
+    // ★天河の契り(オリヒメ・間合いの差3)はダメージを2体で分け合う。分け合いが無ければ1回で今までどおり
+    // ★九尾幻灯(キュービ): 狐火のある子は、狐火1つを盾にして半分だけ受ける
+    const parts = kitsunebiShieldParts(orihimeShareTargets(targets, damage));
+    return commitTacticsUnits(parts.reduce((units, part) => damageTacticsTargets(units, part.slots, part.damage), tacticsUnitsRef.current));
   };
   const tacticsHeal = (amount) => isTacticsMode(runMode)
     ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
@@ -2486,7 +2704,9 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   // 名前帯(band)は名前を切らずに折り返す。名前は12字まで付けられるので、9字以上は字を1段小さくし、左右の余白も詰めて
   // 320幅でも2行(1行6字)に収める(2026-10-27・部長「切らずに全部出す・2行まで」。11pxだと12字で3行になっていた)
-  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div> };
+  // 帯の無い形は1行。名前(字)は「…」で切らず、カードの幅に合わせて字を縮めて全部出す(320 の神殿で「オボロゲソ…」と切れていた。
+  // 2026-10-27 ジン部長の見回り。編成の枠の名前 #3857 と同じ形)。字でないもの(部品)は今までどおり
+  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; const fit=!band&&typeof node==='string'; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:fit?'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]':'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{fit?<span className="block" style={{fontSize:`min(11px, calc(100cqw / ${[...node].length+0.3}))`}}>{node}</span>:node}</div> };
   // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた。
   // ★ただし**入りきらなければ折り返す**(2026-09-18)。字を読める大きさへ上げたら、
   //   「絆 397/400」と「+456P」がカード幅(約96px)を超え、ハートが枠の外へはみ出した。
@@ -2722,8 +2942,9 @@ function MonsterHeroGame() {
   // レイドバトル(A)のEXスキルは、EXを持つ味方ごとに2回まで(専用ルール。2026-10-04 ユーザー指示で1回から変更)。ほかの戦いは今までどおり
   // レイドバトルのプレゼントの豪華さ(段階): WAVEが無いので、戦闘ターンが進むほど上がる(2ターンごとに1段階。2026-10-06 ユーザー指示)
   const tacticsRaidPresentLevel = (turn) => Math.max(0, Math.floor((Number(turn)||0)/2));
+  // ★勇者モンでない子は、共モンのときの定義へ引き替える(tacticsExRoleDefOf。オリヒメ: 星合の刻 → 焦がれ待つ天ノ河)
   const raidExDefOf = (monId) => {
-    const def = tacticsExDefOf(monId);
+    const def = tacticsExRoleDefOf(monId, mainHero?.id === monId);
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? { ...def, unlimited:false, maxUses:RAID_JACK_A_EX_MAX_USES } : def;
   };
   const [raidJackResult, setRaidJackResult] = useState(null);
@@ -4660,7 +4881,7 @@ function MonsterHeroGame() {
   // 時刻で出すのは第1部だけ(data/rhythm-event.js の HALLOWEEN_NIGHT_STORIES)。第2部以降はジャックのストーリー(RAID_JACK_STORY_IDS)で、
   // レイドの進み具合で出る。見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -4883,6 +5104,20 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // ソラシドの加入のお話(2026-10-27)。きゅうこと同じく、公開のあとの最初の HOME でだれにでも1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
+  // 公開の印 assistantSorashido が偽なら何もしない
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // ソラシドの加入のお話を見たら、マーケットにカード「ソラシド」が並ぶ(data/breeder.js の sorashidoCardOnSale。公開の印 assistantSorashido も要る)。
+  // お話を流すのは上の加入のお話の所
+  useEffect(() => {
+    if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
+  }, [rhythmEventStorySeen]);
   // 助手4人がタイプを教えるお話を、ヘイトとタイプの公開のあとの最初の HOME で1回だけ流す(2026-10-18)。
   // タクティクスバトルの導入のお話をまだ見ていない人には流さない(何の話か分からないので。回想からは見られる)
   useEffect(() => {
@@ -6539,6 +6774,8 @@ function MonsterHeroGame() {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
         // きゅうこの加入(2026-10-27 社長「開催中のイベントだけ出す」)。見た扱いにすると、マーケットのカード「きゅうこ」もふつうに並ぶ
         const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID,
+          // ソラシドのお話は公開してからだけ(公開前に始めた人を見た扱いにすると、公開の日に流れなくなる)
+          ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []),
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -7837,6 +8074,7 @@ function MonsterHeroGame() {
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
+    sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -8118,9 +8356,9 @@ function MonsterHeroGame() {
 
   // ビートP交換所。残高・ダイヤ・所持アイテムを1取引で保存し、どれか1つでも失敗したら全部戻す。
   const exchangeRhythmEventPoints = async (offer, quantity=1) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない。画面でも「近日追加」で押せないが、ここでも止める
     if (offer?.available === false) return { ok:false, reason:'soon' };
-    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -8301,9 +8539,9 @@ function MonsterHeroGame() {
   };
   // 円盤石・アシストカード(ビートP交換所と同じ物・同じ1,500)。確かめは rhythmEventPointExchangePreview をそのまま使い、引くのはビートP
   const exchangeCardPoints = async (offer) => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     // 予告中(まだ仲間にできない)の子の円盤石は交換しない(ビートP交換所と同じ)
     if (offer?.available === false) return { ok:false, reason:'soon' };
-    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -10136,7 +10374,9 @@ function MonsterHeroGame() {
     return Math.min(cardLimit,base+(coordinationHolder?soulCoordinationCardBonus:0));
   };
 
-  const getCardGuts = (card, slotIdx=null) => {
+  // 技ごとの基本の消費ガッツ(進化の倍率・中二病・運命のコインまで)。ターンの割引(消費0・半分・霊魂など)はかける前。
+  //   煉獄ノ相(キュービ)の「消費ガッツが大きいほどダメージ↑」はこの値で数える(2026-10-27 社長「軽くなる前の消費で」)
+  const getCardBaseGuts = (card) => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : (['buff','debuff','heal','draw'].includes(card.type) ? (card.guts || 20) : 20);
     if (cost>0 && ['atk','range_atk','unique'].includes(card.type)) {
@@ -10149,6 +10389,11 @@ function MonsterHeroGame() {
       // 運命のコイン(ゴースト): 裏が出るたびに、ゴーストの固有技の消費ガッツ+20%(重複可・ランが終わるまで)
       if (card.type === 'unique' && card.monId===FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks',null)));
     }
+    return cost;
+  };
+  const getCardGuts = (card, slotIdx=null) => {
+    if (!card) return 0;
+    let cost = getCardBaseGuts(card);
     // ★タクティクスは「その子だけ」のぶんも見る(2026-09-22 ユーザー選択)。
     //   ピクシー/ミーアの消費0・アーク/イブリースの消費+15%・パンドラの共鳴は、
     //   どれも使った子だけに効く。既存5モードは bySlot が空なので今までどおり
@@ -10156,6 +10401,8 @@ function MonsterHeroGame() {
     if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts'))
       && ['atk','range_atk','unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0));
+    // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ消費ガッツ×0.7(5つの遊びはパーティ、タクティクスは使った子の枠)
+    cost = Math.floor(cost * reikonGutsMultAt(slotIdx));
     if (cost>0 && (getTurnBuff('pandoraResonanceTurns',0)>0
       || tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns')>0)) cost=Math.floor(cost*0.5);
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
@@ -11285,6 +11532,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const confuseBefore = enemyConfuseRef.current;
     const confusion = rollEnemyConfusion(aimed, confuseBefore);
     if (confusion.turns !== confuseBefore) writeEnemyConfuse(confusion.turns);
+    // ★焦がれ待つ天ノ河(オリヒメ)で当たりが出ていれば、乱心とは別に、この予告を必ず意味不明にする(1度だけ)
+    if (aimed && orihimeForceConfuseRef.current) {
+      orihimeForceConfuseRef.current = false;
+      if (confusion.intent?.type !== 'CONFUSED') confusion.intent = confusedEnemyIntent(aimed);
+    }
     const upcoming = confusion.intent;
     // 乱心の抽選をしたときは、どちらになったかを帯で見せる(意味不明は「次の行動」の札にも出る)
     if (aimed && confuseBefore > 0) {
@@ -11435,9 +11687,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0
     ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)
       *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)
-      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow()*tacticsExMultiBuffNow(slotIdx).taken*tacticsExPartyBuffNow().taken:1)
+      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow()*tacticsExMultiBuffNow(slotIdx).taken*tacticsExPartyBuffNow().taken*kyubiTakenMultAt(slotIdx):1)
       *cookieEffectNow().takenMult) // クッキー7個から(メロディー): 味方全体の被ダメ軽減
-      *kyukoTakenMultAt(slotIdx)) // きゅうこの譜面: 使った子(タクティクス以外はパーティ)の被ダメ軽減。残りターンは permaBuffs
+      *kyukoTakenMultAt(slotIdx) // きゅうこの譜面: 使った子(タクティクス以外はパーティ)の被ダメ軽減。残りターンは permaBuffs
+      *orihimeTakenMultAt(slotIdx)) // 天河の契り(オリヒメ): 2体(5つの遊びはパーティ)の被ダメ軽減
     : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
     getIncomingDamageBeforeTurnReduction(intent)
@@ -12237,7 +12490,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     // ★クッキー10個(メロディー)の与ダメアップは味方全体、黒音符(クロミー)は本人の攻撃だけ
-    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*kyubiAttackAt(slotIdx,mon?.id,card).dmgMult*orihimeDmgMultAt(slotIdx)*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「ちから+20%」を、攻撃した子のちからへ掛ける
     //   (既存5モードはパーティ共通のちから。積んでいなければ1倍)
@@ -12274,7 +12527,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,kusabiCombosAt(slotIdx,mon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),getPermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,mon?.id).combo,[...kusabiCombosAt(slotIdx,mon?.id,card),kyubiAttackAt(slotIdx,mon?.id,card).combo,kyubiAttackAt(slotIdx,mon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,false)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs, enemyIntent]);
@@ -12567,7 +12820,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : (defenseSlot!=null ? (tacticsUnitsRef.current[defenseSlot]?.id || null) : null);
         // ★影潜(イルミネ・ドリーミィ): 受ける子が持ち主なら、楔1つごとに回避率+15%。キーは既存5モード 'party'・タクティクスは受ける子の枠
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : (defenseSlot!=null ? String(defenseSlot) : null);
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
+        // ★霊魂(キュービ・オリヒメの固有技): 効いているあいだ、味方全員の回避率+10%。楔の回避と同じ値に足して、同じ表へ入れる
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
         const defenseTable = (!isTacticsMode(runMode) && kusabiEvasion<=0) ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion:soulBattleParty.evasion,
           soulReflect:soulBattleParty.reflect,
@@ -12590,8 +12844,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   確定反射(モノリスの固有技)＝**味方全体**。発動したターンは誰も受けない。
         //   確率で出る反射・回避・吸収＝**狙われた子だけ**。抽選で出るものは個別にそろえる
         const forcedReflect = getTurnBuff('reflect',false);
+        // ★陽炎ノ相(キュービ): 受ける子がキュービで完全回避を持っていれば、抽選なしで回避して使い切る(使ったら3ターン待ち)
+        const kageroEvade = !forcedReflect && defenseHeroId===KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
+        if (kageroEvade) {
+          writeKyubi('kagero', kusabiDefenseKey, kageroUseEvade(kyubiRef.current.kagero[kusabiDefenseKey]));
+          addPopup('🔥 陽炎ノ相 完全回避！','hero','text-orange-200 text-sm font-bold drop-shadow-md');
+        }
         const soulDefenseResult = forcedReflect
           ? 'reflect'
+          : kageroEvade ? 'evasion'
           : rollUnifiedSpecialDefense(defenseTable,Math.random(),Math.random());
         const isReflect = soulDefenseResult==='reflect';
         const isAbsorb = soulDefenseResult==='absorb';
@@ -12983,6 +13244,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (timeStopSlot==null&&(fateWheelRef.current.atkDown>0||fateWheelRef.current.takenUp>0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     // ドリームペイン(ドリーミィ)は使ったターンは効かず、次のターンから3ターン。次のターンへ進むここで1つ進める
     if (timeStopSlot==null&&(dreamPainRef.current.wait>0||dreamPainRef.current.turns>0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
+    if (timeStopSlot==null) tickKyubiKagero(); // ★陽炎ノ相(キュービ)の完全回避の待ちも1つ進める
+    if (timeStopSlot==null) settleOrihimeOuse(); // ★天河の契り(オリヒメ): 2体が同じ種類の動きをしたら逢瀬+1
+    if (timeStopSlot==null) tickOrihimeEx(); // ★星合の刻・焦がれ待つ天ノ河(オリヒメ)の残りを1つ減らす
+    if (timeStopSlot==null) tickReikonAll(); // ★霊魂(キュービ・オリヒメの固有技)の残りを1つ減らす
     // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
     // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
     {
@@ -13409,6 +13674,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 九尾幻灯(キュービ): 狐火を満タン(5個)にして、幻灯強化をかけ直す(重ならない)。狐火はバトルの終わりまで残る(kyubiRef.kitsunebi)
+    // 星合の刻(オリヒメ・勇者): 逢瀬を全部使って星合を始める(続くターン・続く攻撃の強さは逢瀬と間合いの差で決まる)。逢瀬は0へ
+    if(def.effect==='hoshiai'){
+      const key=String(slotIdx), b=orihimeBondAt(key), h=startHoshiai(b?b.ouse:0, b?b.diff:0);
+      writeOrihime('hoshiai',key,{ ...h, used:0 }); writeOrihime('ouse',key,0);
+      pushBattleLog(`🌌 星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${Math.round(h.rate*100)}%${b?'':'(相方がいないので、続く攻撃は出ない)'}`,'ally');
+    }
+    // 焦がれ待つ天ノ河(オリヒメ・共モン): 3ターン、当たると25%で敵が意味不明(振るのは1ターン2回まで)
+    if(def.effect==='kogare') writeOrihime('kogare',String(slotIdx),{ turns:KOGARE_TURNS, rolls:KOGARE_ROLLS_PER_TURN });
+    if(def.effect==='kitsunebi'){
+      writeKyubi('kitsunebi',String(slotIdx),useKitsunebi(kyubiRef.current.kitsunebi[String(slotIdx)]));
+      addPopup(`🦊 狐火 ${KITSUNEBI_MAX}/${KITSUNEBI_MAX}`,'hero','text-blue-200 text-base font-bold drop-shadow-md',undefined,slotIdx);
+    }
     // 生命の泉(ウンディーネ): 選んだ味方へ。ダウン中なら立たせて満タン、立っていればライフ上限を上げてから満タン。どちらもガッツが戻る
     if(def.lifeSpring&&Number.isInteger(choice)){
       let units=tacticsUnitsRef.current;
@@ -13652,6 +13930,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       else setGuts(p=>Math.max(0,p-cardCost));
       // メロディの手作りクッキー: メロディー本人がカードを1枚使うたびに+1(枠を決めて使ったカードだけ。アシストカードは数えない)
       if(!isBreeder&&entry.slotIdx!=null) gainSweetStack(slotIdx,slots[slotIdx]?.id,card);
+      if(!isBreeder&&entry.slotIdx!=null) gainKyubiCard(slotIdx,slots[slotIdx]?.id,card); // ★九尾四相: 煉獄+1・陽炎の完全回避
+      if(!isBreeder&&entry.slotIdx!=null) noteOrihimeCard(slotIdx,card); // ★天河の契り: そのターンに使ったカードの種類
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type==='draw') continue;
@@ -13829,10 +14109,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit')||tacticsCritFixedNow(slotIdx,card), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus+(tacticsExMultiBuffNow(slotIdx).critAdd||0)+blackNoteEffectAt(slotIdx,activeMon?.id).critAdd+kyubiAttackAt(slotIdx,activeMon?.id,card).critAdd)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,kusabiCombosAt(slotIdx,activeMon?.id,card)), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx,halved,card),livePermaBuff('fateStacks',null),slotIdx),blackNoteEffectAt(slotIdx,activeMon?.id).combo,[...kusabiCombosAt(slotIdx,activeMon?.id,card),kyubiAttackAt(slotIdx,activeMon?.id,card).combo,kyubiAttackAt(slotIdx,activeMon?.id,card).foxCombo,hoshiaiComboAt(slotIdx,true)]), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         if(aquaStackFromCard(slotIdx,card)==='finale'){ immediateStun=true; setImmediateTurnBuff('stunEnemy',true); } // ★アクアフィールドの水牢・氷結(ウンディーネ種の攻撃カード)
         // ★ハムのカウンター(狙われたハムが攻撃したら、攻撃のタイミングで名前を出す)。クロスは文字と揺れ、フル・リベンジはカットインを待つ(タップで飛ばせる)
@@ -13858,6 +14138,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (finalD>0) gainSweetStack(slotIdx,activeMon?.id,card,true);
         // ★影潜(イルミネ・ドリーミィ): 本人の攻撃が当たったら敵に楔を1つ(上限6)。この攻撃の楔の連撃は、付ける前の数で出ている
         if (finalD>0) gainKusabi(slotIdx,activeMon?.id);
+        // ★焦がれ待つ天ノ河(オリヒメ・共モン): 効いているあいだに本人の攻撃が当たったら25%を振る(1ターン2回まで)。当たりなら敵の次の行動が意味不明
+        { const kg=isTacticsMode(runMode)&&finalD>0?orihimeRef.current.kogare[String(slotIdx)]:null;
+          if(kg&&kg.turns>0&&kg.rolls>0){ const r=rollKogare(kg.rolls); writeOrihime('kogare',String(slotIdx),{ ...kg, rolls:r.rollsLeft });
+            if(r.confused){ orihimeForceConfuseRef.current=true; showLuckBanner({ icon:'❓', title:`${battleActorName(slotIdx)}の焦がれ待つ天ノ河`, result:'敵の次の行動が「意味不明」に！', tone:'enemy' }); } } }
         // ★トリックコンフューズ(スプーキー): 効いているあいだに本人の攻撃が当たったら、敵を3ターン乱心にする(当て直すと3へ数え直す)
         if (finalD>0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled
           && tacticsExConfusesOnHit(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,tacticsExLiveRef.current.now)) {
@@ -13868,6 +14152,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+40%(楔1つごとに+40%)。数は使ったときの楔(増える前)で決める
           if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
+          // 霊魂(キュービ・オリヒメ): 次のターンから3ターン、消費ガッツ×0.7・味方全員の回避率+10%。使い直したらかけ直し(重ならない)
+          if(hasReikon(card.monId)){writeReikonKey(trickStartKeyOf(slotIdx),startReikon()); addPopup(`👻 霊魂 次のターンから${REIKON_TURNS}ターン 消費ガッツ−${Math.round((1-REIKON_GUTS_MULT)*100)}%・回避+${REIKON_EVASION_UP}%`,'hero','text-violet-200 text-base font-bold drop-shadow-md',undefined,slotIdx);}
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
           // ★タクティクスは「使った子だけ」に効く(2026-09-22 ユーザー選択)。ステータスが
@@ -15877,6 +16163,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
     const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
+    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない
+    if (!isHero && orihimePartnerPick && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+      setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
+      addPopup(`🎐 ${m.masuName||m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
+    }
+    setOrihimePartnerPick(false);
     // 置いた瞬間に、そのスロットの古い一時選択を捨てる。
     // 未選択に戻すことで、そのマスモンに保存された初期技がそのまま初期選択になる
     clearSlotUniqueSelection(slotIdx);
@@ -16474,6 +16766,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
     if(t.id==='kiki') return `次の${level+2}ターン 使えるカード +1枚・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
+    if(t.id==='sorashido') return sorashidoCopyDesc(level);
     if(t.id==='kyuko'){
       const tier=KYUKO_TIERS[Math.min(level,KYUKO_TIERS.length-1)];
       return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
@@ -18340,8 +18633,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                  チャレンジの極限タブへ入れ込んだとき(2026-09-19)に入口ごと無くなっていたので、ここへ置き直す。
                  説明の中身は EXTREME_MODE の points。モードの説明モーダルをそのまま使う */}
             <BattleScreenHead eyebrow="EXTREME CHALLENGE ・ SELECT LEVEL" title="極限チャレンジ" accent="text-fuchsia-300" onBack={()=>setGameState('BATTLE_MODE_SELECT')}
-              right={<button data-extreme-mode-info aria-label="極限チャレンジの説明を開く" onClick={()=>setModeInfoId(EXTREME_MODE.id)} className="shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95">このモードの説明</button>}/>
-            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
+              right={<button data-extreme-mode-info aria-label="極限チャレンジの説明を開く" onClick={()=>setModeInfoId(EXTREME_MODE.id)} className="shrink-0 min-h-[38px] px-3 max-[359px]:px-2.5 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95">{/* 幅の狭い画面では「説明」だけにして、見出しの「極限チャレンジ」を切らない(320 で「極限チャレ…」。2026-10-27 ジン部長の見回り) */}<span className="max-[359px]:hidden">このモードの</span>説明</button>}/>
+            {/* 横向きの背の低い画面(844×390 など)では、札を左右2列(左=記録・倍率/右=説明・特殊ルール・ボタン)にして、
+                「この難易度で挑戦」まで最初から見えるようにする(画面の下へ出て押せなかった。難易度えらび #3790 と同じ形。2026-10-27 ジン部長の見回り) */}
+            <div className="w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 {/* チャレンジの難易度選択と同じ「通常 / 極限」タブ。
                     極限チャレンジはチャレンジの極限タブとして入れ込んだので、
@@ -18522,7 +18817,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <small>{species?'この種族での自己ベスト':ranked?'自己ベストスコア':'最高到達WAVE'} ・ {species?`クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns!==null?` ／ 最短 ${speciesRecord(key).bestTurns}T`:''}`:ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</small>
                         </div>
                         <div className="mhbt-cells">{rateCells(setting).map(([label,value,boosted])=><div key={label}>{label}<b className={boosted?'underline decoration-2':''}>{value}</b></div>)}</div>
-                        <div className="mhbt-note"><span className="truncate">{noteText}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
+                        {/* 横向きの背の低い画面では札が2列になり、この行が狭くなって「初回クリアで超越の実／難易度は種族ごと…」と切れていた。その画面だけ言葉の切れ目で折る(2026-10-27 ジン部長の見回り) */}<div className="mhbt-note"><span className="truncate [@media(orientation:landscape)_and_(max-height:520px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible" style={JA_LABEL_STYLE}>{jaWrap(noteText)}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
                         <div className={`mhbt-reward min-h-[54px] flex items-center gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start ${species&&speciesRewardClaimed(key)?'opacity-70':''}`} data-psyche-reward={key} data-species-reward-claimed={species?String(speciesRewardClaimed(key)):undefined}>
                           <span className={`shrink-0 whitespace-nowrap text-[10px] leading-tight font-black text-center ${species&&speciesRewardClaimed(key)?'text-slate-500':'text-fuchsia-200'}`}>クリア<br/>報酬</span>
@@ -21862,6 +22157,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             return d&&d.heroInitialStyle?d:null;
           })()}
           heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
+          partnerOffer={mainHero?.id===ORIHIME_MONSTER_ID&&!orihimeHasPartner()?{ heroName:mainHero.masuName||mainHero.name }:null}
+          partnerPick={orihimePartnerPick} onPartnerPick={setOrihimePartnerPick}
           onRepick={()=>{
             if(!mainHero&&speciesChallengeBattleRunRef.current){
               setCurrentPickingMon(null);
@@ -22020,6 +22317,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const bottomLine=speakingGuest?(assistIdx>=0?script[assistIdx]:null):line;
         const bottomSpeaker=bottomLine?assistantById(bottomLine.who):speaker;
         const fx=line.fx||null;
+        // ★お話の真ん中に出すモンスター(2026-10-27 社長「推しに会える夜」)。台本の行の monsters:[{ id, pose }] は、次に monsters を書いた行まで続く(monsters:[] で消す)。
+        //   pose: in(ふわっと現れる)/idle(待機アニメ)/back(後ずさって揺れる)/front(前に出て大きくなる)/approach(下のソラシドの側へ寄る)/hop(跳ねる)/hide(出さない)。
+        //   上のステージ(ゲストの顔)とは別の層。縦の画面はステージと下の窓のあいだ、横の低い画面は窓の左右の空きに出す(70-bootstrap.jsx の [data-story-monsters])
+        let monstersIdx=-1;
+        for(let i=step;i>=0;i--){if(Array.isArray(script[i].monsters)){monstersIdx=i;break;}}
+        const storyMonsters=monstersIdx>=0?script[monstersIdx].monsters.filter(m=>m&&m.pose!=='hide'&&STORY_MONSTER_ART[m.id]):[];
         const fxColors={transform:'255,237,180',rankup:['251,146,60','251,191,36','192,132,252','248,113,113','250,204,21'][Math.max(0,stageTier-1)],shrink:'186,230,253'};
         const speakText=(l,w)=>{
           // ★呼び方は normalizeAssistantBond には入っていない(別の入れ物 assistantCallStyles)。話している助手ごとのぶんを引く
@@ -22089,7 +22392,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setEventReplay(null);
         };
         return(
-        <div data-event-story={eventReplay.id} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+        <div data-event-story={eventReplay.id} data-story-has-stage={stageGuest?'1':undefined} className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           {/* ★会話の紙は「タップを受け取る側」にしておく(2026-09-17・ユーザー報告
                 「イベント中のスキップを押してもスキップ出来ない／次のセリフへ進むだけ」)。
@@ -22101,7 +22404,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ボタンは stopPropagation で二重に動かないようにする。
               ついでに紙が指でスクロールできるようになる(pointerEvents:'none' では出来なかった) */}
           {stageGuest&&(
-            <div data-story-stage className="pointer-events-none" data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 13vh)',left:0,right:0,zIndex:3}}>
+            <div ref={storyMeasureRef('--story-stage-bottom','bottom')} data-story-stage className="pointer-events-none" data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} style={{position:'absolute',top:'calc(env(safe-area-inset-top) + 13vh)',left:0,right:0,zIndex:3}}>
               <div className="mx-auto flex w-full max-w-md items-start gap-2 px-3">
                 <div key={`${stageGuest.id}:${stageName}`} data-story-guest={stageGuest.id} data-story-fx={fx||undefined} className="shrink-0 text-center" style={{animation:fx==='shrink'?'storyShrink .9s ease-out both':fx==='transform'||fx==='rankup'?'storyGrow .9s ease-out both':'storyStageIn .45s ease-out both'}}>
                   <span data-jack-aura={stageTier||undefined} style={{position:'relative',display:'block',width:96,height:96,filter:(stageTier>0&&typeof raidJackAuraGlowFilter==='function')?raidJackAuraGlowFilter(stageTier,.4):undefined}}>
@@ -22121,6 +22424,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             </div>
           )}
+          {storyMonsters.length>0&&(
+            <div data-story-monsters={storyMonsters.length} aria-hidden="true" className="pointer-events-none" style={{top:stageGuest?'calc(var(--story-stage-bottom, 30vh) + 6px)':'calc(env(safe-area-inset-top) + 6vh)'}}>
+              {storyMonsters.map(m=>{
+                const art=<img src={STORY_MONSTER_ART[m.id]} alt="" draggable={false} className="block h-full w-full object-contain"/>;
+                return(
+                  <span key={`${m.id}:${m.pose}`} data-story-monster={m.id} data-story-pose={m.pose}>
+                    {m.pose==='idle'?withMonsterIdleArt(m.id,art,{fill:true,own:true}):art}
+                  </span>
+                );
+              })}
+            </div>
+          )}
           {fx&&(
             <div key={`fx${step}`} aria-hidden="true" className="pointer-events-none" style={{position:'absolute',inset:0,zIndex:4}}>
               <div data-story-fx-flash={fx} style={{position:'absolute',inset:0,background:`radial-gradient(circle at 50% 22%, rgba(${fxColors[fx]||'255,255,255'},.95), rgba(${fxColors[fx]||'255,255,255'},.35) 45%, rgba(0,0,0,0) 75%)`,animation:'storyFlash 1s ease-out both'}}/>
@@ -22129,7 +22444,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
               窓を縦に積み、題・顔・台詞の部分(data-story-body)だけを中で流す。ボタンの列は縮めない */}
-          <div onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
+          <div ref={storyMeasureRef('--story-sheet-h','height')} onClick={next} data-story-sheet data-story-shake={(fx==='transform'||fx==='rankup')?step%2:undefined} className="relative flex w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] flex-col overflow-hidden rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'auto',zIndex:1}}>
             <div data-story-body className="min-h-0 flex-1 overflow-y-auto mh-scroll">
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">{eventReplay.live?'':'回想・'}{event?.title||''}</p>
             {/* 話し手の顔の列。5人以上のお話では1段4人ずつに折り返し、顔も少し小さくする
@@ -22436,8 +22751,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 「MARVELOUS→EXCELLENT→…」のように区切りの無い長い連なりは、
                     ふつうの折り返しでは切れる場所が無く、そのまま吹き出しの外へはみ出す。
                     どこでも折り返せるようにして、画面の外へ出ないようにする。 */}
-                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{page.title}</span>}
-                <span className="block text-[13px] text-white leading-relaxed mt-1" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{String(page.t).replace('{name}', breederName || 'あなた')}</span>
+                {/* 案内の文は言葉の切れ目で折る(320幅で「モンヒロビー／ト」「配置距／離」と折れていた・2026-10-27) */}
+                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5" style={JA_WRAP_STYLE}>{jaWrap(String(page.title))}</span>}
+                <span className="block text-[13px] text-white leading-relaxed mt-1" style={JA_WRAP_STYLE}>{jaWrap(String(page.t).replace('{name}', breederName || 'あなた'))}</span>
               </div>
             </div>
             {topicRef&&(

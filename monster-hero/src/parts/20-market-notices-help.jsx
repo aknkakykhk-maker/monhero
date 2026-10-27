@@ -662,7 +662,9 @@ const helpDataRows = (id) => {
     // タクティクスのEXスキル(2026-09-23)。持っている子・名前・回数・カードとの併用・効果時間を定義から作る。
     // ★EXを足したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
     case 'tacticsExSkills':
-      return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {}).map(monId => {
+      // ★公開前の子(下書き。2026-10-27 キュービの九尾幻灯)のEXは出さない。遊べる子(ALL_PLAYER_MONSTERS)のEXだけを並べる
+      return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {})
+        .filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).map(monId => {
         const def = tacticsExDefOf(monId);
         const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
         const duration = def.duration === 'turns' ? `${def.turns}ターン` : ({ turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[def.duration] || '');
@@ -759,7 +761,8 @@ const helpDataRows = (id) => {
       ];
     }
     case 'teachings':
-      return ((typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS) || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
+      // 公開の印が立つまでのアシカ(ソラシド)は出さない(teachingCardReleased・data/breeder.js)
+      return ((typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS) || []).filter(card => typeof teachingCardReleased !== 'function' || teachingCardReleased(card)).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
     case 'skipTickets':
       return marketItems.filter(item => skipIds.has(item.id))
         .map(item => [item.name, `${DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty} で使える ／ マーケット ${item.cost.toLocaleString()}ダイヤ`]);
@@ -791,7 +794,8 @@ const helpDataRows = (id) => {
     // 必要な仲良し度(need)はどの助手も同じなので、Lvを1行にまとめられる
     case 'assistantBond': {
       const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
-      const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length) ? ASSISTANT_LIST : [];
+      // 公開の印が立つまでの助手(ソラシドなど)は並べない(assistantReleased・data/assistants.js)
+      const list = ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
       const base = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [];
       return base.map(s => {
         const per = list.map(who => {

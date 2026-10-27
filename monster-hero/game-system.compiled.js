@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11fae08faab8124d
+// source-sha256: 0244566698a16a1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -404,6 +404,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantKyuko() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
+  },
+  get assistantSorashido() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true;
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
@@ -12612,6 +12615,7 @@ const RELEASE_FLAGS = {
   assistantDailyLines: true,
   assistantAtsu: true,
   assistantKyuko: true,
+  assistantSorashido: false,
   cardBattle: true,
   cardAssistantTalk: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -12966,6 +12970,7 @@ const ASSISTANT_CHAT_STORY_SEEN_KEY = 'mh_story_assistant_chat_seen_v1';
 const ASSISTANT_CHAT_STORY_ID = 'assistant_chat_story';
 const ATSU_JOIN_STORY_ID = 'atsu_join_2026_10_22';
 const KYUKO_JOIN_STORY_ID = 'kyuko_join_2026_10_22';
+const SORASHIDO_JOIN_STORY_ID = 'sorashido_join_2026_10_27';
 const TACTICS_TYPES_STORY_SEEN_KEY = 'mh_story_tactics_types_seen_v1';
 const TACTICS_TYPES_STORY_ID = 'tactics_types';
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
@@ -17095,7 +17100,7 @@ const helpDataRows = id => {
     case 'tacticsEnemyActions':
       return (typeof TACTICS_ACTION_DEFINITIONS !== 'undefined' ? TACTICS_ACTION_DEFINITIONS : []).filter(action => action.type !== 'WAIT' && action.type !== 'MOVE').map(action => [action.category, action.multiplier > 0 ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}` : 'ダメージなし']);
     case 'tacticsExSkills':
-      return Object.keys(typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS || {}).map(monId => {
+      return Object.keys(typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS || {}).filter(monId => typeof ALL_PLAYER_MONSTERS === 'undefined' || !!ALL_PLAYER_MONSTERS[monId]).map(monId => {
         const def = tacticsExDefOf(monId);
         const monName = (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId] || {}).name || monId;
         const duration = def.duration === 'turns' ? `${def.turns}ターン` : {
@@ -17166,7 +17171,7 @@ const helpDataRows = id => {
         return [[`Lv.1 → ${ENHANCE_POINT_DOUBLE_LEVEL}`, 'レベルアップ1回につき 強化ポイント 1'], [`Lv.${ENHANCE_POINT_DOUBLE_LEVEL} → ${ENHANCE_POINT_TRIPLE_LEVEL}（虹★4）`, 'レベルアップ1回につき 強化ポイント 2'], [`Lv.${ENHANCE_POINT_TRIPLE_LEVEL} → ${MAX_MASU_LEVEL_CAP}（虹★5）`, 'レベルアップ1回につき 強化ポイント 3']];
       }
     case 'teachings':
-      return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
+      return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).filter(card => typeof teachingCardReleased !== 'function' || teachingCardReleased(card)).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
     case 'skipTickets':
       return marketItems.filter(item => skipIds.has(item.id)).map(item => [item.name, `${DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty} で使える ／ マーケット ${item.cost.toLocaleString()}ダイヤ`]);
     case 'items':
@@ -17180,7 +17185,7 @@ const helpDataRows = id => {
     case 'assistantBond':
       {
         const callUnlockLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
-        const list = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length ? ASSISTANT_LIST : [];
+        const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
         const base = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || [];
         return base.map(s => {
           const per = list.map(who => {
@@ -17385,6 +17390,21 @@ const ASSISTANT_FALLBACK = {
 const STORY_GUEST_LIST = typeof STORY_GUEST_SPEAKERS !== 'undefined' && Array.isArray(STORY_GUEST_SPEAKERS) ? STORY_GUEST_SPEAKERS : [];
 const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || STORY_GUEST_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
 const storyCastOf = script => [...ASSISTANT_LIST, ...STORY_GUEST_LIST].filter(who => (script || []).some(l => l.who === who.id));
+const STORY_MONSTER_ART = Object.freeze({
+  Kyubi: typeof KYUBI_IMG !== 'undefined' ? KYUBI_IMG : null,
+  Orihime: typeof ORIHIME_IMG !== 'undefined' ? ORIHIME_IMG : null
+});
+const storyMeasureRef = (name, kind) => el => {
+  if (!el) return;
+  const root = el.closest('[data-event-story]');
+  if (!root) return;
+  const put = () => root.style.setProperty(name, `${Math.round(kind === 'bottom' ? el.offsetTop + el.offsetHeight : el.offsetHeight)}px`);
+  put();
+  if (!el.__mhStoryRo && typeof ResizeObserver === 'function') {
+    el.__mhStoryRo = new ResizeObserver(put);
+    el.__mhStoryRo.observe(el);
+  }
+};
 const assistantSceneById = key => key && ASSISTANT_SCENE_MAP[key] || null;
 const ASSISTANT_BOND_FALLBACK = {
   points: 0,
@@ -18950,6 +18970,270 @@ const kusabiEffectText = (n, max = KUSABI_MAX) => {
   const c = kusabiCountOf(n, max);
   return c > 0 ? `楔${c}/${max} 連撃15%×${c}・回避+${kusabiEvasionOf(c)}%` : '';
 };
+const KYUBI_MONSTER_ID = 'Kyubi',
+  ORIHIME_MONSTER_ID = 'Orihime';
+const KYUBI_PHASES = Object.freeze([Object.freeze({
+  id: 'rengoku',
+  slot: 0,
+  name: '煉獄ノ相'
+}), Object.freeze({
+  id: 'tensho',
+  slot: 1,
+  name: '天翔ノ相'
+}), Object.freeze({
+  id: 'kagero',
+  slot: 2,
+  name: '陽炎ノ相'
+}), Object.freeze({
+  id: 'sakuretsu',
+  slot: 3,
+  name: '炸裂ノ相'
+})]);
+const KYUBI_SAKURETSU_COMBO = 0.4;
+const KYUBI_KAGERO_WAIT = 3;
+const KYUBI_TENSHO = Object.freeze({
+  combo: 0.2,
+  dmg: 0.15,
+  crit: 0.2
+});
+const KYUBI_RENGOKU_MAX = 10,
+  KYUBI_RENGOKU_PER = 0.05;
+const KYUBI_RENGOKU_GUTS_PER = 0.003,
+  KYUBI_RENGOKU_GUTS_CAP = 0.2;
+const kyubiPhaseOfSlot = slot => KYUBI_PHASES.find(p => p.slot === Math.floor(Number(slot))) || null;
+const kyubiRengokuOf = n => Math.min(KYUBI_RENGOKU_MAX, Math.max(0, Math.floor(Number(n) || 0)));
+const kyubiPhaseEffectOf = (phaseId, opts = {}) => {
+  const none = {
+    dmgMult: 1,
+    critAdd: 0,
+    combo: null,
+    evadeAfterAttack: false
+  };
+  if (phaseId === 'sakuretsu') return {
+    ...none,
+    combo: {
+      count: 1,
+      rate: KYUBI_SAKURETSU_COMBO,
+      label: '炸裂ノ相'
+    }
+  };
+  if (phaseId === 'kagero') return {
+    ...none,
+    evadeAfterAttack: true
+  };
+  if (phaseId === 'tensho') return {
+    ...none,
+    dmgMult: 1 + KYUBI_TENSHO.dmg,
+    critAdd: KYUBI_TENSHO.crit,
+    combo: {
+      count: 1,
+      rate: KYUBI_TENSHO.combo,
+      label: '天翔ノ相'
+    }
+  };
+  if (phaseId === 'rengoku') {
+    const r = kyubiRengokuOf(opts.rengoku),
+      guts = Math.max(0, Number(opts.skillGuts) || 0);
+    return {
+      ...none,
+      dmgMult: 1 + Math.min(KYUBI_RENGOKU_GUTS_CAP, KYUBI_RENGOKU_GUTS_PER * guts),
+      combo: r > 0 ? {
+        count: 1,
+        rate: KYUBI_RENGOKU_PER * r,
+        label: '煉獄ノ相'
+      } : null
+    };
+  }
+  return none;
+};
+const kageroOf = v => ({
+  ready: !!v?.ready,
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0))
+});
+const kageroAfterAttack = v => {
+  const k = kageroOf(v);
+  return k.wait === 0 ? {
+    ...k,
+    ready: true
+  } : k;
+};
+const kageroUseEvade = v => {
+  const k = kageroOf(v);
+  return k.ready ? {
+    ready: false,
+    wait: KYUBI_KAGERO_WAIT
+  } : k;
+};
+const tickKagero = v => {
+  const k = kageroOf(v);
+  return {
+    ...k,
+    wait: Math.max(0, k.wait - 1)
+  };
+};
+const KITSUNEBI_MAX = 5,
+  KITSUNEBI_REGEN_TURNS = 3,
+  KITSUNEBI_BUFF_TURNS = 3;
+const KITSUNEBI_ATTACK_EXTRA = 0.1,
+  KITSUNEBI_GUARD_CUT = 0.2,
+  KITSUNEBI_ASSIST_GUTS = 0.05,
+  KITSUNEBI_SHIELD_CUT = 0.5;
+const KITSUNEBI_BUFF_DMG_PER = 0.04,
+  KITSUNEBI_BUFF_TAKEN_PER = 0.03;
+const kitsunebiOf = v => ({
+  active: !!v?.active,
+  fires: Math.min(KITSUNEBI_MAX, Math.max(0, Math.floor(Number(v?.fires) || 0))),
+  regen: Math.max(0, Math.floor(Number(v?.regen) || 0)),
+  buffTurns: Math.max(0, Math.floor(Number(v?.buffTurns) || 0))
+});
+const useKitsunebi = v => ({
+  ...kitsunebiOf(v),
+  active: true,
+  fires: KITSUNEBI_MAX,
+  regen: 0,
+  buffTurns: KITSUNEBI_BUFF_TURNS
+});
+const tickKitsunebi = v => {
+  const k = kitsunebiOf(v);
+  if (!k.active) return k;
+  const regen = k.fires < KITSUNEBI_MAX ? k.regen + 1 : 0,
+    back = regen >= KITSUNEBI_REGEN_TURNS;
+  return {
+    ...k,
+    fires: back ? k.fires + 1 : k.fires,
+    regen: back ? 0 : regen,
+    buffTurns: Math.max(0, k.buffTurns - 1)
+  };
+};
+const kitsunebiOnHit = v => {
+  const k = kitsunebiOf(v);
+  return k.active && k.fires > 0 ? {
+    next: {
+      ...k,
+      fires: k.fires - 1
+    },
+    takenMult: 1 - KITSUNEBI_SHIELD_CUT
+  } : {
+    next: k,
+    takenMult: 1
+  };
+};
+const kitsunebiEffectOf = (v, kind = 'attack') => {
+  const k = kitsunebiOf(v),
+    on = k.active && k.fires > 0,
+    buff = k.active && k.buffTurns > 0;
+  return {
+    extraHit: on && kind === 'attack' ? KITSUNEBI_ATTACK_EXTRA : 0,
+    guardCut: on && kind === 'guard' ? KITSUNEBI_GUARD_CUT : 0,
+    assistGuts: on && kind === 'assist' ? KITSUNEBI_ASSIST_GUTS : 0,
+    buffDmg: buff ? KITSUNEBI_BUFF_DMG_PER * k.fires : 0,
+    buffTaken: buff ? KITSUNEBI_BUFF_TAKEN_PER * k.fires : 0
+  };
+};
+const ORIHIME_BOND_TIERS = Object.freeze({
+  1: Object.freeze({
+    max: 5
+  }),
+  2: Object.freeze({
+    max: 8
+  }),
+  3: Object.freeze({
+    max: 12
+  })
+});
+const orihimeDiffOf = (a, b) => {
+  const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b)));
+  return d >= 1 && d <= 3 ? d : 0;
+};
+const ouseOf = (n, diff) => {
+  const t = ORIHIME_BOND_TIERS[diff];
+  return t ? Math.min(t.max, Math.max(0, Math.floor(Number(n) || 0))) : Math.max(0, Math.floor(Number(n) || 0));
+};
+const addOuse = (n, diff, sameKind, partnerUp = true) => sameKind && partnerUp && ORIHIME_BOND_TIERS[diff] ? ouseOf(Number(n) + 1, diff) : ouseOf(n, diff);
+const orihimeBondEffectOf = (diff, n, partnerUp = true) => {
+  const none = {
+    dmgAdd: 0,
+    takenCut: 0,
+    share: false
+  };
+  if (!partnerUp || !ORIHIME_BOND_TIERS[diff]) return none;
+  const c = ouseOf(n, diff);
+  if (diff === 1) return {
+    ...none,
+    dmgAdd: 0.10 + 0.02 * c
+  };
+  if (diff === 2) return {
+    ...none,
+    takenCut: 0.10,
+    dmgAdd: c >= 4 ? 0.02 * c : 0
+  };
+  return {
+    dmgAdd: c >= 12 ? 0.40 : 0,
+    takenCut: c >= 6 ? 0.15 : 0,
+    share: true
+  };
+};
+const shareOrihimeDamage = dmg => {
+  const d = Math.max(0, Math.floor(Number(dmg) || 0));
+  return [Math.ceil(d / 2), Math.floor(d / 2)];
+};
+const HOSHIAI_PER_TURN = 2;
+const startHoshiai = (n, diff) => {
+  const c = ouseOf(n, diff);
+  return {
+    turns: Math.min(5, 2 + Math.floor(c / 4)),
+    rate: Math.min(0.5, 0.30 + 0.015 * c + (diff === 2 ? 0.05 : diff === 3 ? 0.10 : 0)),
+    perTurn: HOSHIAI_PER_TURN
+  };
+};
+const KOGARE_TURNS = 3,
+  KOGARE_CHANCE = 0.25,
+  KOGARE_ROLLS_PER_TURN = 2;
+const rollKogare = (rollsLeft, rand) => {
+  const left = Math.max(0, Math.floor(Number(rollsLeft) || 0));
+  if (left <= 0) return {
+    confused: false,
+    rollsLeft: 0
+  };
+  const r = Number.isFinite(rand) ? rand : Math.random();
+  return {
+    confused: r < KOGARE_CHANCE,
+    rollsLeft: left - 1
+  };
+};
+const REIKON_MONSTER_IDS = Object.freeze([KYUBI_MONSTER_ID, ORIHIME_MONSTER_ID]);
+const REIKON_TURNS = 3,
+  REIKON_GUTS_MULT = 0.7,
+  REIKON_EVASION_UP = 10;
+const hasReikon = id => !!id && REIKON_MONSTER_IDS.includes(id);
+const reikonOf = v => ({
+  wait: Math.max(0, Math.floor(Number(v?.wait) || 0)),
+  turns: Math.max(0, Math.floor(Number(v?.turns) || 0))
+});
+const startReikon = () => ({
+  wait: 1,
+  turns: REIKON_TURNS
+});
+const tickReikon = v => {
+  const r = reikonOf(v);
+  if (r.wait > 0) return {
+    ...r,
+    wait: r.wait - 1
+  };
+  return r.turns > 1 ? {
+    ...r,
+    turns: r.turns - 1
+  } : {
+    wait: 0,
+    turns: 0
+  };
+};
+const reikonActive = v => {
+  const r = reikonOf(v);
+  return r.wait === 0 && r.turns > 0;
+};
+const reikonGutsMult = v => reikonActive(v) ? REIKON_GUTS_MULT : 1;
+const reikonEvasionUp = v => reikonActive(v) ? REIKON_EVASION_UP : 0;
 const sweetStackEffectText = (id, n) => {
   const trait = sweetStackTraitOf(id);
   if (!trait) return '';
@@ -23043,10 +23327,6 @@ const SKM_KYUBI = Object.freeze({
     over: 'pillar',
     burst: 'star',
     form: 'fire'
-  }), skm('warp', {
-    c: 'fire',
-    over: 'shadow',
-    burst: 'dust'
   }), skm('gather', {
     c: 'blue',
     fx: skmFx('fall', 'flame', 10),
@@ -23057,23 +23337,27 @@ const SKM_KYUBI = Object.freeze({
     c: 'wind',
     over: 'tornado',
     burst: 'leaf'
-  }), skm('cast', {
-    c: 'sky',
-    fx: skmFx('orbit', 'bubble', 10),
-    over: 'boom',
-    burst: 'bubble'
-  }), skm('float', {
-    c: 'cosmic',
-    fx: skmFx('fall', 'star', 12),
-    over: 'aurora',
-    burst: 'star',
-    form: 'light'
+  }), skm('warp', {
+    c: 'fire',
+    over: 'shadow',
+    burst: 'dust'
   }), skm('gather', {
     c: 'blood',
     fx: skmFx('orbit', 'flame', 9),
     over: 'eclipse',
     burst: 'spark',
     form: 'fire'
+  }), skm('float', {
+    c: 'cosmic',
+    fx: skmFx('fall', 'star', 12),
+    over: 'aurora',
+    burst: 'star',
+    form: 'light'
+  }), skm('cast', {
+    c: 'sky',
+    fx: skmFx('orbit', 'bubble', 10),
+    over: 'boom',
+    burst: 'bubble'
   })]
 });
 const SKM_ORIHIME = Object.freeze({
@@ -23096,19 +23380,19 @@ const SKM_ORIHIME = Object.freeze({
     burst: 'star',
     form: 'light'
   }), {
-    ...SKM_KYUBI.unique[3],
+    ...SKM_KYUBI.unique[5],
     c: 'cosmic'
+  }, {
+    ...SKM_KYUBI.unique[3],
+    c: 'sky'
   }, {
     ...SKM_KYUBI.unique[4],
     c: 'sky'
   }, {
-    ...SKM_KYUBI.unique[5],
-    c: 'sky'
-  }, {
-    ...SKM_KYUBI.unique[6],
+    ...SKM_KYUBI.unique[8],
     c: 'pink'
   }, {
-    ...SKM_KYUBI.unique[8],
+    ...SKM_KYUBI.unique[6],
     c: 'psy'
   }, {
     ...SKM_KYUBI.unique[7],
@@ -24016,6 +24300,21 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   trickConfuse: {
     c1: '#fed7aa',
     c2: '#9333ea',
+    motif: 'rise'
+  },
+  kitsunebi: {
+    c1: '#93c5fd',
+    c2: '#1d4ed8',
+    motif: 'rise'
+  },
+  hoshiai: {
+    c1: '#e0f2fe',
+    c2: '#6366f1',
+    motif: 'rise'
+  },
+  kogare: {
+    c1: '#fbcfe8',
+    c2: '#7c3aed',
     motif: 'rise'
   },
   cookieBox: {
@@ -26916,6 +27215,150 @@ const TapRippleLayer = ({
     }
   })));
 };
+const SORASHIDO_GREEN = '#34d399';
+const SORASHIDO_COPY_CSS = `
+[data-sorashido-fx]{position:relative;display:inline-block;isolation:isolate}
+[data-sorashido-fx] > [data-sorashido-body]{position:relative;z-index:1}
+[data-sorashido-fx="idle"] > [data-sorashido-body],[data-sorashido-fx="thinking"] > [data-sorashido-body]{opacity:.78;filter:drop-shadow(0 0 1px ${SORASHIDO_GREEN}) drop-shadow(0 0 3px rgba(52,211,153,.75))}
+[data-sorashido-fx="appear"] > [data-sorashido-body]{animation:mhSoraBuild 1.1s steps(11,end) both;filter:drop-shadow(0 0 3px rgba(52,211,153,.9))}
+@keyframes mhSoraBuild{0%{opacity:0;clip-path:inset(100% 0 0 0)}15%{opacity:.35}100%{opacity:.78;clip-path:inset(0 0 0 0)}}
+[data-sorashido-code]{position:absolute;inset:-6% -4%;z-index:2;pointer-events:none;overflow:hidden}
+[data-sorashido-code] i{position:absolute;top:-30%;width:1.5px;height:60%;background:linear-gradient(180deg,transparent,${SORASHIDO_GREEN},transparent);opacity:.85;animation:mhSoraRain .9s linear infinite}
+@keyframes mhSoraRain{from{transform:translateY(0)}to{transform:translateY(220%)}}
+[data-sorashido-gear]{position:absolute;right:-4px;top:-4px;z-index:3;width:16px;height:16px;line-height:16px;font-size:13px;text-align:center;color:${SORASHIDO_GREEN};text-shadow:0 0 3px rgba(0,0,0,.9);animation:mhSoraGear 1.2s linear infinite}
+@keyframes mhSoraGear{to{transform:rotate(360deg)}}
+[data-sorashido-fx="vanish"] > [data-sorashido-body]{animation:mhSoraNoise .7s steps(7,end) forwards}
+@keyframes mhSoraNoise{0%{opacity:.78;transform:translateX(0)}20%{transform:translateX(-2px);clip-path:inset(10% 0 55% 0)}40%{transform:translateX(2px);clip-path:inset(45% 0 20% 0)}60%{opacity:.5;transform:translateX(-1px);clip-path:inset(0 0 70% 0)}100%{opacity:0;clip-path:inset(50% 0 50% 0)}}
+[data-sorashido-spark]{position:absolute;left:50%;top:50%;z-index:3;width:4px;height:4px;border-radius:9999px;background:#d1fae5;box-shadow:0 0 6px ${SORASHIDO_GREEN};opacity:0;animation:mhSoraSpark .9s ease-out .35s forwards}
+@keyframes mhSoraSpark{0%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.4)}}
+[data-sorashido-next]{display:flex;flex-direction:column;align-items:center;width:100%;max-width:100%;min-width:0;padding:2px 3px;border-radius:8px;border:1px solid rgba(52,211,153,.75);background:rgba(2,44,34,.9);color:#d1fae5;font-weight:900;box-shadow:0 0 6px rgba(52,211,153,.45);text-align:center}
+[data-sorashido-next] > b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%;font-size:10px;line-height:12px;word-break:keep-all;overflow-wrap:anywhere}
+[data-sorashido-next][data-sorashido-layout="landscape"] > b{font-size:9px;line-height:11px}
+[data-sorashido-next] > small{font-size:8px;line-height:10px;color:#6ee7b7}
+@media (prefers-reduced-motion: reduce){[data-sorashido-fx] *,[data-sorashido-fx] > [data-sorashido-body]{animation:none!important}[data-sorashido-fx="vanish"] > [data-sorashido-body]{opacity:0}}
+`;
+const SORASHIDO_CODE_LINES = [6, 17, 29, 41, 52, 63, 74, 86, 95];
+const SORASHIDO_SPARKS = [[-26, -22], [24, -26], [-30, 8], [30, 6], [-12, 28], [14, 30], [0, -34], [-34, -6], [34, -10], [6, 34]];
+function SorashidoCopyFx({
+  phase = 'idle',
+  children
+}) {
+  const p = ['appear', 'idle', 'thinking', 'vanish'].includes(phase) ? phase : 'idle';
+  return React.createElement("span", {
+    "data-sorashido-fx": p
+  }, React.createElement("style", null, SORASHIDO_COPY_CSS), React.createElement("span", {
+    "data-sorashido-body": true
+  }, children), p === 'appear' && React.createElement("span", {
+    "data-sorashido-code": true,
+    "aria-hidden": "true"
+  }, SORASHIDO_CODE_LINES.map((x, i) => React.createElement("i", {
+    key: i,
+    style: {
+      left: `${x}%`,
+      animationDelay: `${i % 4 * 0.12}s`
+    }
+  }))), p === 'thinking' && React.createElement("span", {
+    "data-sorashido-gear": true,
+    "aria-hidden": "true"
+  }, "⚙"), p === 'vanish' && SORASHIDO_SPARKS.map(([dx, dy], i) => React.createElement("span", {
+    key: i,
+    "data-sorashido-spark": true,
+    "aria-hidden": "true",
+    style: {
+      '--dx': `${dx}px`,
+      '--dy': `${dy}px`
+    }
+  })));
+}
+function SorashidoNextCardBadge({
+  card,
+  layout = 'portrait',
+  turnsLeft = null
+}) {
+  const name = card ? card.name || card.baseName || '' : '';
+  return React.createElement("span", {
+    "data-sorashido-next": card ? 'card' : 'thinking',
+    "data-sorashido-layout": layout,
+    "aria-label": card ? `コピーが次に使うカード: ${name}` : 'コピーが次に使うカードを考え中'
+  }, React.createElement("b", null, card ? jaWrap(name) : '⚙ 考え中'), Number.isFinite(turnsLeft) && turnsLeft > 0 && React.createElement("small", {
+    "data-sorashido-turns": true,
+    className: "whitespace-nowrap tabular-nums"
+  }, layout === 'landscape' ? `あと${turnsLeft}` : `あと${turnsLeft}ターン`));
+}
+function SorashidoCopyHandSheet({
+  open,
+  copyName = '',
+  turnsLeft = null,
+  cards = [],
+  nextCard = null,
+  guts = null,
+  maxGuts = null,
+  onClose,
+  renderCard
+}) {
+  if (!open) return null;
+  const list = Array.isArray(cards) ? cards : [];
+  return React.createElement("div", {
+    "data-sorashido-hand-sheet": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "AIコピーの手札",
+    className: "fixed inset-0 flex items-end justify-center sm:items-center",
+    style: {
+      zIndex: 95000,
+      background: 'rgba(0,0,0,.6)'
+    },
+    onClick: () => onClose && onClose()
+  }, React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-2 bg-slate-950 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:rounded-3xl [@media(max-height:500px)]:max-h-[94dvh] [@media(max-height:500px)]:overflow-y-auto",
+    style: {
+      borderColor: SORASHIDO_GREEN
+    },
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "flex items-start gap-2"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-emerald-200",
+    style: JA_LABEL_STYLE
+  }, jaWrap(`${copyName || 'コピー'}のAIコピー`)), React.createElement("small", {
+    className: "block text-[10px] font-bold text-emerald-100/75"
+  }, Number.isFinite(turnsLeft) ? `あと${turnsLeft}ターン` : '', Number.isFinite(guts) && Number.isFinite(maxGuts) ? `・ガッツ ${guts}/${maxGuts}` : '')), React.createElement("button", {
+    type: "button",
+    "data-sorashido-hand-close": true,
+    onClick: () => onClose && onClose(),
+    className: "min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95"
+  }, "閉じる")), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('コピーは毎ターン、この中から自分で1枚だけ選んで使います。光っているのが次に使うカードです。')), React.createElement("div", {
+    "data-sorashido-hand": true,
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, list.map((card, i) => {
+    const next = !!nextCard && (card === nextCard || card.uid && card.uid === nextCard.uid || !card.uid && card.id === nextCard.id && card.name === nextCard.name);
+    return React.createElement("div", {
+      key: card.uid || `${card.id}-${i}`,
+      "data-sorashido-hand-card": i,
+      "data-sorashido-hand-next": next ? '1' : undefined,
+      className: "relative rounded-xl border p-1.5 text-center",
+      style: {
+        borderColor: next ? SORASHIDO_GREEN : 'rgba(255,255,255,.15)',
+        boxShadow: next ? '0 0 10px rgba(52,211,153,.6)' : 'none'
+      }
+    }, typeof renderCard === 'function' ? renderCard(card) : React.createElement(React.Fragment, null, React.createElement("b", {
+      className: "block text-[11px] font-black text-white",
+      style: JA_LABEL_STYLE
+    }, jaWrap(card.name || card.baseName || '')), Number.isFinite(Number(card.guts ?? card.cost)) && React.createElement("small", {
+      className: "block text-[9px] font-bold tabular-nums text-slate-400"
+    }, "ガッツ ", Number(card.guts ?? card.cost))), next && React.createElement("small", {
+      "data-sorashido-hand-next-label": true,
+      className: "mt-0.5 block text-[9px] font-black text-emerald-300"
+    }, "次に使う"));
+  }), list.length === 0 && React.createElement("p", {
+    className: "col-span-3 py-3 text-center text-[11px] font-bold text-slate-400"
+  }, "使えるカードがありません"))));
+}
 const _memStore = {};
 const hasWinStorage = () => typeof window !== 'undefined' && !!window.storage;
 const hasLocalStorage = () => {
@@ -27808,6 +28251,7 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -27816,10 +28260,11 @@ const sbAutomationWriteBlocked = (url, method) => {
     const m = String(method || 'GET').toUpperCase();
     if (m === 'GET' || m === 'HEAD') return false;
     const u = String(url || '');
-    if (!u.startsWith(SUPABASE_URL) || u.includes('/rest/v1/rpc/')) return false;
+    if (!u.startsWith(SUPABASE_URL)) return false;
+    const path = u.slice(SUPABASE_URL.length).split('?')[0];
+    if (path.startsWith('/rest/v1/rpc/') && !SB_WRITE_RPCS.includes(path.slice('/rest/v1/rpc/'.length))) return false;
     if (Array.isArray(stubbed)) {
-      const path = u.slice(SUPABASE_URL.length).split('?')[0];
-      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
+      if (stubbed.some(t => typeof t === 'string' && t && (path.startsWith('/rest/v1/' + t) || path.startsWith('/rest/v1/rpc/' + t) || path.startsWith('/functions/v1/' + t)))) return false;
     }
     return true;
   } catch {
@@ -32068,8 +32513,9 @@ const RhythmOptions = ({
   }, React.createElement("p", null, React.createElement("b", {
     className: "tabular-nums"
   }, calibrationResult.offsetMs > 0 ? '+' : '', calibrationResult.offsetMs, "ms"), " にしました。叩いた", calibrationResult.usedCount, "回の平均は ", calibrationResult.rawMeanMs > 0 ? '+' : '', calibrationResult.rawMeanMs, "ms（ばらつき±", calibrationResult.spreadMs, "ms", calibrationResult.droppedCount > 0 ? `／${calibrationResult.droppedCount}回は外れ値として除外` : '', "）でした。"), !calibrationResult.stable && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 font-black text-rose-300"
-  }, "ばらつきが大きめです。もう一度合わせると、より合った値になります。"), React.createElement("button", {
+  }, jaWrap('ばらつきが大きめです。もう一度合わせると、より合った値になります。')), React.createElement("button", {
     type: "button",
     "data-rhythm-calibrator-dismiss": true,
     onClick: () => onClearCalibration && onClearCalibration(),
@@ -32293,9 +32739,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
     full: true
-  }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('道の奥行き', segments('roadDepth', RHYTHM_ROAD_DEPTH_LABELS), '「深い」にすると、カメラを寝かせたように道が奥へ長く伸びます。遠くのノーツは小さくゆっくり、手前で速く近づきます。押す場所も見た目と一緒に変わるので、ずれません。判定のタイミング・スコアは変わりません。次の演奏から効きます。', {
-    full: true
-  }), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), hellReleased && field('空中の道の見え方', hellSegments('lane', [['em', 'はっきり'], ['el', '控えめ'], ['none', 'なし']]), 'HELL で、空中のノーツが流れてくる空中の道をどれくらいはっきり出すかです。既定は「はっきり」です。「なし」にすると、空中の判定線だけになります。判定・スコアは変わりません。', {
     full: true
@@ -32438,14 +32882,18 @@ const RhythmOptions = ({
   }, React.createElement("summary", {
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
   }, "▸ 音量について詳しく"), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-1 ${note}`
-  }, "この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。"), React.createElement("p", {
+  }, jaWrap('この音量はメインゲームの音量設定と別に、モンヒロビートだけで使います。タイトル画面の全体ミュートのみ共通です。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-2 ${note}`
-  }, "2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。"), React.createElement("p", {
+  }, jaWrap('2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-2 ${note}`
-  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
+  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, jaWrap('より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: `mt-2 ${note}`
-  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。")))), tab === 'system' && React.createElement("div", {
+  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, jaWrap('まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。'))))), tab === 'system' && React.createElement("div", {
     "data-rhythm-options-panel": "system",
     className: wide ? 'space-y-2' : 'space-y-4'
   }, React.createElement("section", {
@@ -32486,9 +32934,10 @@ const RhythmOptions = ({
       className: `block px-0.5 ${wide ? 'py-2.5' : 'py-1.5'}`
     }, preset.label));
   })), !rhythmLookPresetOf(draft) && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-look-custom": true,
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
-  }, "いまは自分で選んだ組み合わせです")), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
+  }, jaWrap('いまは自分で選んだ組み合わせです'))), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -32540,15 +32989,18 @@ const RhythmOptions = ({
     "data-rhythm-option-help": true,
     className: "mt-3"
   }, React.createElement("summary", {
+    style: JA_WRAP_STYLE,
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
-  }, "▸ この端末で通知をどこまで止められるか"), React.createElement("p", {
+  }, jaWrap('▸ この端末で通知をどこまで止められるか')), React.createElement("p", {
     className: `mt-1 ${note}`
   }, helpWrap(rhythmQuietModeSupportText()))), !RHYTHM_HAPTICS.supported() && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-vibration-unsupported": true,
     className: "mt-2 text-[10px] font-bold leading-relaxed text-amber-200"
-  }, "この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。"))), !wide && React.createElement("p", {
+  }, jaWrap('この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。')))), !wide && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "rounded-xl border border-cyan-400/25 bg-cyan-950/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100"
-  }, "判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。"))), React.createElement("footer", {
+  }, jaWrap('判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。')))), React.createElement("footer", {
     "data-rhythm-options-actions": true,
     className: `z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide ? 'pt-1.5' : 'pt-2'}`,
     style: {
@@ -32580,10 +33032,12 @@ const RhythmOptions = ({
     className: "w-full max-w-xs rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center shadow-[0_0_24px_rgba(251,191,36,.15)]",
     onClick: e => e.stopPropagation()
   }, React.createElement("b", {
+    style: JA_WRAP_STYLE,
     className: "block text-[15px] font-black text-amber-200"
-  }, "変更が保存されていません"), React.createElement("p", {
+  }, jaWrap('変更が保存されていません')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300"
-  }, "このまま戻ると、いま変えた設定は元に戻ります。"), React.createElement("div", {
+  }, jaWrap('このまま戻ると、いま変えた設定は元に戻ります。')), React.createElement("div", {
     className: "mt-3 grid grid-cols-1 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -33176,9 +33630,10 @@ const RhythmSongSelect = ({
     "data-rhythm-song-loop": loopEnabled ? '1' : '0',
     className: `min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`
   }, list.length === 0 ? React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-song-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
-  }, genre && genre.favorite ? 'お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。' : genre && genre.id !== 'all' ? 'このジャンルの曲はまだありません。' : emptyText) : React.createElement("ul", {
+  }, genre && genre.favorite ? jaWrap('お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。') : genre && genre.id !== 'all' ? jaWrap('このジャンルの曲はまだありません。') : emptyText) : React.createElement("ul", {
     className: "space-y-0.5"
   }, blocks.map(copy => rows.map(row => {
     const entry = row.entry;
@@ -33565,8 +34020,9 @@ const RhythmSongSelect = ({
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
   }, "ジャンル"), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[10px] font-bold text-slate-400"
-  }, "選んだジャンルの曲だけを一覧に出します。"), React.createElement("div", {
+  }, jaWrap('選んだジャンルの曲だけを一覧に出します。')), React.createElement("div", {
     "data-rhythm-genre-tabs": true,
     className: "mt-3 space-y-1.5"
   }, genres.map(item => {
@@ -33593,8 +34049,9 @@ const RhythmSongSelect = ({
     }, React.createElement("b", {
       className: "block text-xs font-black text-white"
     }, on ? '● ' : '', item.favorite ? '♥ ' : '', item.label), React.createElement("small", {
+      style: JA_WRAP_STYLE,
       className: "block text-[10px] font-bold text-slate-400"
-    }, usable ? item.note : 'いまはイベントを開催していません')), React.createElement("small", {
+    }, usable ? item.note : jaWrap('いまはイベントを開催していません'))), React.createElement("small", {
       className: "shrink-0 text-[11px] font-black tabular-nums text-slate-300"
     }, usable ? `${count}曲` : '開催なし'));
   })), React.createElement("button", {
@@ -33621,8 +34078,9 @@ const RhythmSongSelect = ({
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
   }, "曲の並べ替え"), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[10px] font-bold text-slate-400"
-  }, "並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。"), React.createElement("div", {
+  }, jaWrap('並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。')), React.createElement("div", {
     className: "mt-3 space-y-1.5"
   }, RHYTHM_SORT_ORDERS.map(item => {
     const on = item.id === state.sort;
@@ -33845,6 +34303,7 @@ const RhythmHellGuide = ({
   }, helpWrap(page.text)), last && typeof rhythmHellEntryText === 'function' && rhythmHellEntryText() && React.createElement("p", {
     "data-rhythm-hell-guide-entry": true,
     style: {
+      ...JA_WRAP_STYLE,
       margin: '12px 0 0',
       padding: '8px 10px',
       borderRadius: '12px',
@@ -33855,7 +34314,7 @@ const RhythmHellGuide = ({
       lineHeight: 1.6,
       color: '#fecdd3'
     }
-  }, "🔥 ", rhythmHellEntryText(), "。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。"))), nextVideo && React.createElement("video", {
+  }, "🔥 ", rhythmHellEntryText(), jaWrap('。曲によって HELL の Lv. は大きく違います。曲えらびの HELL のボタンの数字を見て選んでください。')))), nextVideo && React.createElement("video", {
     key: nextVideo.src,
     muted: true,
     playsInline: true,
@@ -36498,7 +36957,7 @@ const RhythmTapTest = ({
   };
   const skyChart = useMemo(() => rhythmChartHasSky(chart?.notes), [chart]);
   RHYTHM_ROAD_WIDTH.set(orientationIsLandscape() ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1);
-  const cameraDeep = useState(() => settings.roadDepth === 'DEEP' || rhythmCameraDeepActive())[0];
+  const cameraDeep = useState(() => rhythmCameraDeepActive())[0];
   RHYTHM_PROJECTION_CAMERA.set(cameraDeep);
   const [skyLineTick, setSkyLineTick] = useState(0);
   if (skyChart) RHYTHM_SKY_LIFT.set(orientationIsLandscape());
@@ -37321,6 +37780,7 @@ const RhythmTapTest = ({
   }, [stageGl, stageArtSrc, renderQualityStill]);
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
+  const hudSongLong = !isLandscape && rhythmSongFullName(song).length > 30;
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(orientation: landscape)');
@@ -40783,6 +41243,11 @@ const RhythmTapTest = ({
           em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
         return Math.max(13, Math.min(20, Math.floor(avail / Math.max(1, em))));
       })(),
+      introTitlePortraitFont = (() => {
+        const avail = Math.min((typeof window !== 'undefined' ? window.innerWidth : 390) - 40, 400),
+          em = [...String(introTitle)].reduce((n, ch) => n + (/[\x20-\x7e]/.test(ch) ? .6 : 1), 0);
+        return Math.max(16, Math.min(24, Math.floor(avail * 2 * .9 / Math.max(1, em))));
+      })(),
       introHint = songIntro.skipped ? 'まもなく はじまります' : songIntro.skippable && !songIntro.short ? 'タップでとばす' : '',
       introCredit = rhythmSongIntroCredit(song),
       introLevel = Number(chart?.level),
@@ -40868,7 +41333,7 @@ const RhythmTapTest = ({
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           overflowWrap: 'anywhere',
-          fontSize: '24px'
+          fontSize: `${introTitlePortraitFont}px`
         }),
         padding: '0 8px 3px',
         margin: isLandscape ? '1px -8px 0' : '4px -8px 0',
@@ -40981,11 +41446,12 @@ const RhythmTapTest = ({
     style: {
       maxWidth: hudArtSrc && !isLandscape ? 'calc(31cqw - 34px)' : undefined,
       display: '-webkit-box',
-      WebkitLineClamp: isLandscape ? '2' : '3',
+      WebkitLineClamp: isLandscape ? '2' : hudSongLong ? '5' : '3',
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden',
       lineHeight: '1.25',
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+      textShadow: '0 1px 4px rgba(2,6,23,.92)',
+      fontSize: hudSongLong ? '9px' : undefined
     }
   }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
@@ -42097,9 +42563,9 @@ const tacticsEnemyPowerMultiplier = (startPower, nowPower, exponent = TACTICS_EN
   return Math.min(TACTICS_ENEMY_POWER_MAX, Math.max(1, raw));
 };
 const TACTICS_TARGET_LOW_HP_BIAS = 2;
-const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   const safeBias = Number.isFinite(Number(bias)) ? Math.max(0, Number(bias)) : TACTICS_TARGET_LOW_HP_BIAS;
-  return tacticsAliveSlots(units).map(index => {
+  const list = tacticsAliveSlots(units).map(index => {
     const unit = normalizeTacticsUnit(units[index]);
     const remain = unit.maxHp > 0 ? tacticsClamp(unit.hp / unit.maxHp, 0, 1) : 1;
     return {
@@ -42107,12 +42573,24 @@ const tacticsTargetWeights = (units, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = n
       weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult(hate, index)
     };
   });
+  if (isTacticsAiCopyStanding(copy)) {
+    const remain = copy.maxHp > 0 ? tacticsClamp(copy.hp / copy.maxHp, 0, 1) : 1;
+    list.push({
+      index: TACTICS_AI_COPY_TARGET,
+      weight: (1 + safeBias * (1 - remain)) * tacticsHateWeightMult([tacticsHateNum(copy.hate)], 0)
+    });
+  }
+  return list;
 };
-const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => {
-  const out = [null, null, null, null];
-  const weights = tacticsTargetWeights(units, bias, hate);
+const tacticsTargetChancesWithCopy = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS, copy = null) => {
+  const out = {
+    slots: [null, null, null, null],
+    copy: null
+  };
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!weights.length || !(total > 0)) return out;
+  const order = index => index === TACTICS_AI_COPY_TARGET ? 99 : index;
   const parts = weights.map(entry => {
     const v = entry.weight / total * 100;
     return {
@@ -42122,19 +42600,20 @@ const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_B
     };
   });
   let left = 100 - parts.reduce((sum, p) => sum + p.pct, 0);
-  [...parts].sort((a, b) => b.rest - a.rest || a.index - b.index).forEach(p => {
+  [...parts].sort((a, b) => b.rest - a.rest || order(a.index) - order(b.index)).forEach(p => {
     if (left > 0) {
       p.pct += 1;
       left -= 1;
     }
   });
   parts.forEach(p => {
-    out[p.index] = p.pct;
+    if (p.index === TACTICS_AI_COPY_TARGET) out.copy = p.pct;else out.slots[p.index] = p.pct;
   });
   return out;
 };
-const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
-  const weights = tacticsTargetWeights(units, bias, hate);
+const tacticsTargetChances = (units, hate = null, bias = TACTICS_TARGET_LOW_HP_BIAS) => tacticsTargetChancesWithCopy(units, hate, bias, null).slots;
+const chooseTacticsTarget = (units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
+  const weights = tacticsTargetWeights(units, bias, hate, copy);
   if (!weights.length) return null;
   const total = weights.reduce((sum, entry) => sum + entry.weight, 0);
   if (!(total > 0)) return weights[0].index;
@@ -42152,14 +42631,19 @@ const tacticsTargetName = (units, slotIndex) => {
   return unit && String(unit.name || '').trim() || `${slotIndex + 1}番目の子`;
 };
 const TACTICS_TARGETED_TYPES = ['ATTACK', 'SPECIAL'];
-const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null) => {
+const withTacticsTarget = (intent, units, random = Math.random, bias = TACTICS_TARGET_LOW_HP_BIAS, hate = null, copy = null) => {
   if (!intent || !TACTICS_TARGETED_TYPES.includes(intent.type)) return intent;
   if (intent.targetsAll) return {
     ...intent,
     targetName: TACTICS_ALL_TARGET_LABEL
   };
   const sweepSlot = intent.variant === 'sweep' && Number.isInteger(intent.sweepDist) && tacticsAliveSlots(units).includes(intent.sweepDist) ? intent.sweepDist : null;
-  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate);
+  const targetSlot = sweepSlot != null ? sweepSlot : chooseTacticsTarget(units, random, bias, hate, copy);
+  if (targetSlot === TACTICS_AI_COPY_TARGET) return {
+    ...intent,
+    targetCopy: true,
+    targetName: tacticsAiCopyName(copy)
+  };
   return targetSlot == null ? intent : {
     ...intent,
     targetSlot,
@@ -42211,6 +42695,7 @@ const TACTICS_HATE = {
   assist: {
     atsu: 'taunt',
     kyuko: 'cover',
+    sorashido: 'buff',
     mua: 'heal',
     momosuke: 'heal',
     meloso: 'heal',
@@ -42384,6 +42869,14 @@ const MONSTER_TYPE_OF = {
   Dreamy: {
     main: 'supporter',
     sub: 'shadow'
+  },
+  Kyubi: {
+    main: 'attacker',
+    sub: 'shadow'
+  },
+  Orihime: {
+    main: 'supporter',
+    sub: 'tank'
   }
 };
 const monsterTypeOf = monId => {
@@ -42509,6 +43002,55 @@ const tacticsHateHelpRows = id => {
     return rows;
   }
   return [];
+};
+const TACTICS_AI_COPY_TARGET = 'copy';
+const isTacticsAiCopyStanding = copy => !!copy && tacticsHateNum(copy.hp) > 0 && tacticsHateNum(copy.maxHp) > 0;
+const tacticsAiCopyName = copy => `${copy && String(copy.name || '').trim() || '仲間'}のコピー`;
+const tacticsAiCopyPos = (units, srcSlot) => {
+  const list = Array.isArray(units) ? units : [];
+  const src = Number.isInteger(srcSlot) ? tacticsClamp(srcSlot, 0, 3) : 0;
+  for (const p of [src + 1, src - 1]) if (p >= 0 && p <= 3 && !list[p]) return {
+    pos: p,
+    stacked: false
+  };
+  return {
+    pos: src,
+    stacked: true
+  };
+};
+const tacticsAiCopyStartHate = (hate, srcSlot, rate = 0.5) => {
+  const r = tacticsClamp(tacticsHateNum(rate), 0, 1);
+  return Math.min(TACTICS_HATE.cap, Math.floor(normalizeTacticsHate(hate)[Number.isInteger(srcSlot) ? srcSlot : 0] * r));
+};
+const tacticsAiCopyHateStep = (copy, {
+  gain = 0,
+  dealt = 0,
+  teamDealt = 0
+} = {}, monId = null, gainMult = 1) => {
+  if (!isTacticsAiCopyStanding(copy)) return 0;
+  const base = tacticsHateProfile(monId);
+  const p = {
+    ...base,
+    mult: base.mult * Math.max(0, tacticsHateNum(gainMult) || 1)
+  };
+  const team = Math.max(0, tacticsHateNum(teamDealt));
+  const share = team > 0 ? TACTICS_HATE.action.dmgShare * Math.max(0, tacticsHateNum(dealt)) / team : 0;
+  return Math.min(TACTICS_HATE.cap, tacticsHateNum(copy.hate) * TACTICS_HATE.decay + p.mult * (Math.max(0, tacticsHateNum(gain)) + share));
+};
+const tacticsIntentHitsAiCopy = (intent, copy) => {
+  if (!intent || !isTacticsAiCopyStanding(copy)) return false;
+  if (intent.targetsAll) return true;
+  if (intent.targetCopy) return true;
+  if (intent.variant === 'sweep' && !Number.isInteger(intent.targetSlot) && Number.isInteger(intent.sweepDist)) return copy.pos === intent.sweepDist;
+  return false;
+};
+const damageTacticsAiCopy = (copy, amount) => {
+  if (!copy) return null;
+  const hp = Math.max(0, tacticsHateNum(copy.hp) - Math.max(0, Math.floor(tacticsHateNum(amount))));
+  return hp > 0 ? {
+    ...copy,
+    hp
+  } : null;
 };
 const isTacticsSweepOnSpot = (intent, units, enemyDist) => {
   if (!intent || intent.variant !== 'sweep') return true;
@@ -43262,6 +43804,42 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     effect: 'avoidCharge'
   }),
+  Kyubi: Object.freeze({
+    id: 'kyubi_kyubi_gento',
+    name: '九尾幻灯',
+    useNote: '狐火5個(バトルの終わりまで残る)・3ターン 狐火1つにつき与ダメ+4%・被ダメ−3%',
+    desc: '狐火を呼ぶ。狐火はバトルの終わりまで残る。\n・使うと狐火が5個(最大5)。3ターンごとに1つ戻る\n・攻撃したとき: 与ダメ10%の追加の一撃\n・ガードのカードで守るとき: 被ダメ−20%\n・助けのカードを使ったとき: ガッツを上限の5%ぶん回復\n・攻撃を受けたとき: 狐火1つが盾になって被ダメ−50%、その狐火は消える(完全回避したときは減らない)\n・幻灯強化(3ターン): 狐火1つにつき与ダメ+4%・被ダメ−3%\n・2回目に使うと、狐火が満タンに戻り、強化がかけ直される(重ならない)',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    effect: 'kitsunebi'
+  }),
+  Orihime: Object.freeze({
+    id: 'orihime_hoshiai',
+    name: '星合の刻',
+    useNote: '逢瀬を全部使う・相方と続けて攻撃(逢瀬と間合いの差で強く長く)',
+    desc: '逢瀬を全部使い、数ターン「星合」になる。\n・星合のあいだ、オリヒメか相方が攻撃すると、もう片方が続けて攻撃する(続く攻撃は与ダメ30%＋逢瀬1つにつき1.5%、間合いの差2なら+5%・差3なら+10%。上限50%)\n・続く攻撃は1ターンに2回まで。続く攻撃から、また続く攻撃は出ない\n・続くターン: 2ターン＋逢瀬4つごとに1ターン(最大5ターン)\n・終わると逢瀬は0に戻る',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turn',
+    supportKey: 'OrihimeSupport',
+    effect: 'hoshiai'
+  }),
+  OrihimeSupport: Object.freeze({
+    id: 'orihime_kogare',
+    name: '焦がれ待つ天ノ河',
+    useNote: '3ターン 攻撃が当たると25%で敵が「意味不明」(1ターン2回まで)',
+    desc: '3ターンのあいだ、オリヒメの攻撃が当たると、25%で敵の次の行動が「意味不明」になる。\n・確率を振るのは1ターンに2回まで\n・逢瀬は使わない\n・意味不明のターン、敵は動けず、味方の攻撃は会心確定(スプーキーの乱心と同じ)',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    effect: 'kogare'
+  }),
   Spooky: Object.freeze({
     id: 'spooky_trick_confuse',
     name: 'トリックコンフューズ',
@@ -43354,7 +43932,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null,
   hasStack: ctx => ctx && Number(ctx.stacks) > 0 ? null : `${ctx && ctx.stackLabel || 'スタック'}が1つも無いと使えない`
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop', 'pandoraBox', 'thunder', 'partyBoost', 'damageBack', 'psychoLock', 'counter', 'avoidCharge', 'trickConfuse', 'cookieBox', 'nightmareKey', 'kusabiDouble', 'millefeuille', 'kitsunebi', 'hoshiai', 'kogare']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -43539,6 +44117,10 @@ const normalizeTacticsExDef = raw => {
 };
 const tacticsExDurationText = def => !def ? null : def.duration === 'turns' ? `使ったターンから${def.turns}ターンのあいだ（WAVEが変わると切れる）` : TACTICS_EX_DURATION_TEXT[def.duration] || null;
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) => monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null;
+const tacticsExRoleDefOf = (monId, isHero, table = TACTICS_EX_SKILLS) => {
+  const def = tacticsExDefOf(monId, table);
+  return def && def.supportKey && !isHero ? tacticsExDefOf(def.supportKey, table) : def;
+};
 const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_EFFECTS) => !!(def && def.effect && implemented.includes(def.effect));
 const createTacticsExState = () => ({
   uses: {},
@@ -44974,6 +45556,302 @@ const redirectTacticsSingleTarget = (targets, intent, slot, units) => {
   return tacticsAliveSlots(units).includes(slot) ? [slot] : list;
 };
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
+const SORASHIDO_CARD_ID = 'sorashido';
+const SORASHIDO_COPY_SLOT = 4;
+const SORASHIDO_COPY_UNIQUE_COUNT = 1;
+const SORASHIDO_COPY_HAND_DRAW = 2;
+const aiCopySafeNum = (value, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+const aiCopyRules = level => {
+  const tiers = typeof SORASHIDO_TIERS !== 'undefined' && Array.isArray(SORASHIDO_TIERS) ? SORASHIDO_TIERS : [];
+  const lv = Math.max(0, Math.min(tiers.length - 1, Math.floor(aiCopySafeNum(level)) || 0));
+  const t = tiers[lv] || {
+    rates: {
+      hp: 0.5,
+      atk: 0.6,
+      def: 0.5,
+      guts: 0.6
+    },
+    turns: 2,
+    pick: 0.5,
+    maxCards: 1,
+    hateStart: 0.5,
+    hateGain: 1
+  };
+  return {
+    ...t,
+    maxCards: Math.max(1, Math.floor(aiCopySafeNum(t.maxCards, 1))),
+    gutsFor2: aiCopySafeNum(t.gutsFor2, Infinity)
+  };
+};
+const aiCopyTurns = level => aiCopyRules(level).turns;
+const aiCopyStats = (src, level, {
+  mode = 'tactics',
+  effMul = 1,
+  permaAtkPct = 0
+} = {}) => {
+  const m = Math.max(0, aiCopySafeNum(effMul, 1));
+  const r = aiCopyRules(level).rates;
+  const of = (key, rate, min = 0) => Math.max(min, Math.floor(Math.max(0, aiCopySafeNum(src && src[key])) * rate * m));
+  const maxGuts = of('maxGuts', r.guts);
+  const out = {
+    atk: of('atk', r.atk),
+    def: of('def', r.def),
+    maxGuts,
+    guts: maxGuts,
+    permaAtkPct: Math.max(0, aiCopySafeNum(permaAtkPct))
+  };
+  if (mode === 'tactics') {
+    const maxHp = of('maxHp', r.hp, 1);
+    out.maxHp = maxHp;
+    out.hp = maxHp;
+  }
+  return out;
+};
+const aiCopyStartHate = (srcHate, level) => Math.max(0, Math.min(100, Math.floor(aiCopySafeNum(srcHate) * aiCopyRules(level).hateStart)));
+const aiCopyHateGainMult = level => aiCopyRules(level).hateGain;
+const aiCopySummonPlan = (aiCopy, {
+  srcSlot,
+  srcMonsterId,
+  level
+}) => {
+  const turnsLeft = aiCopyTurns(level);
+  if (!aiCopy) return {
+    kind: 'new',
+    turnsLeft,
+    removeCopy: false,
+    removeUniqueOf: null,
+    addUniqueOf: srcMonsterId
+  };
+  if (aiCopy.srcSlot === srcSlot && aiCopy.srcMonsterId === srcMonsterId) return {
+    kind: 'refresh',
+    turnsLeft,
+    removeCopy: false,
+    removeUniqueOf: null,
+    addUniqueOf: null
+  };
+  return {
+    kind: 'switch',
+    turnsLeft,
+    removeCopy: true,
+    removeUniqueOf: aiCopy.srcMonsterId,
+    addUniqueOf: srcMonsterId
+  };
+};
+const aiCopyTurnEnd = aiCopy => {
+  if (!aiCopy) return {
+    turnsLeft: 0,
+    expired: false,
+    removeUniqueOf: null
+  };
+  const turnsLeft = Math.max(0, Math.floor(aiCopySafeNum(aiCopy.turnsLeft)) - 1);
+  return {
+    turnsLeft,
+    expired: turnsLeft <= 0,
+    removeUniqueOf: turnsLeft <= 0 ? aiCopy.srcMonsterId : null
+  };
+};
+const aiCopyUniqueCard = (card, srcMonsterId) => card ? {
+  ...card,
+  sorashidoCopyOf: srcMonsterId,
+  uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}`
+} : null;
+const aiCopyIsUnique = (card, {
+  uid = null,
+  srcMonsterId = null
+} = {}) => !!card && card.sorashidoCopyOf != null && (uid == null || card.uid === uid) && (srcMonsterId == null || card.sorashidoCopyOf === srcMonsterId);
+const aiCopyRemoveUnique = (zones, match) => {
+  const strip = list => Array.isArray(list) ? list.filter(c => !aiCopyIsUnique(c, match)) : [];
+  return {
+    ...zones,
+    deck: strip(zones && zones.deck),
+    hand: strip(zones && zones.hand),
+    discard: strip(zones && zones.discard)
+  };
+};
+const aiCopyCanPick = card => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
+const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
+  const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
+  const picked = [];
+  for (let i = 0; i < draw && rest.length > 0; i++) {
+    const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
+    picked.push(rest.splice(at, 1)[0]);
+  }
+  if (uniqueCard && aiCopyCanPick(uniqueCard)) picked.push(uniqueCard);
+  return picked;
+};
+const aiCopyPickOne = (cards, score, rng, pick) => {
+  if (cards.length === 0) return null;
+  const ranked = cards.map((c, i) => ({
+    c,
+    i,
+    s: aiCopySafeNum(typeof score === 'function' ? score(c) : 0)
+  })).sort((a, b) => b.s - a.s || a.i - b.i);
+  if (ranked.length === 1 || aiCopySafeNum(rng && rng()) < pick) return ranked[0].c;
+  const others = ranked.slice(1);
+  return others[Math.min(others.length - 1, Math.floor(Math.max(0, aiCopySafeNum(rng && rng())) * others.length))].c;
+};
+const aiCopyPickCards = (hand, {
+  score,
+  costOf,
+  guts,
+  maxGuts,
+  rng,
+  level
+}) => {
+  const rules = aiCopyRules(level);
+  const cost = c => Math.max(0, aiCopySafeNum(typeof costOf === 'function' ? costOf(c) : c && (c.guts ?? c.cost), 0));
+  let left = Math.max(0, aiCopySafeNum(guts));
+  const pool = (Array.isArray(hand) ? hand : []).filter(aiCopyCanPick);
+  const first = aiCopyPickOne(pool.filter(c => cost(c) <= left), score, rng, rules.pick);
+  if (!first) return [];
+  const out = [first];
+  left -= cost(first);
+  if (rules.maxCards >= 2 && aiCopySafeNum(maxGuts) >= rules.gutsFor2) {
+    const second = aiCopyPickOne(pool.filter(c => c !== first && cost(c) <= left), score, rng, rules.pick);
+    if (second) out.push(second);
+  }
+  return out;
+};
+const sorashidoCopyDesc = level => {
+  const t = aiCopyRules(level),
+    p = v => Math.round(v * 100);
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+};
+const isAiCopyOut = (aiCopy, turn) => !!aiCopy && aiCopySafeNum(turn) >= aiCopySafeNum(aiCopy.spawnTurn);
+const summonAiCopy = (state, {
+  srcSlot,
+  srcMonsterId,
+  name = '',
+  level = 0,
+  src = null,
+  uniqueCard = null,
+  turn = 0,
+  mode = 'tactics',
+  effMul = 1,
+  permaAtkPct = 0,
+  extra = null
+} = {}) => {
+  const now = state && state.aiCopy || null;
+  let zones = state && state.zones || {
+    deck: [],
+    hand: [],
+    discard: []
+  };
+  const plan = aiCopySummonPlan(now, {
+    srcSlot,
+    srcMonsterId,
+    level
+  });
+  if (plan.kind === 'refresh') {
+    return {
+      aiCopy: {
+        ...now,
+        level,
+        turnsLeft: plan.turnsLeft,
+        ...(extra || {})
+      },
+      zones,
+      plan
+    };
+  }
+  if (plan.removeUniqueOf != null) zones = aiCopyRemoveUnique(zones, {
+    srcMonsterId: plan.removeUniqueOf
+  });
+  const uniq = plan.addUniqueOf != null ? aiCopyUniqueCard(uniqueCard, plan.addUniqueOf) : null;
+  if (uniq) zones = {
+    ...zones,
+    deck: [...(Array.isArray(zones.deck) ? zones.deck : []), uniq]
+  };
+  const stats = aiCopyStats(src, level, {
+    mode,
+    effMul,
+    permaAtkPct
+  });
+  const aiCopy = {
+    srcSlot,
+    srcMonsterId,
+    name: String(name || ''),
+    level,
+    spawnTurn: aiCopySafeNum(turn) + 1,
+    turnsLeft: plan.turnsLeft,
+    ...stats,
+    hand: [],
+    nextCard: null,
+    picks: [],
+    uniqueCardUid: uniq ? uniq.uid : null,
+    ...(extra || {})
+  };
+  return {
+    aiCopy,
+    zones,
+    plan
+  };
+};
+const dismissAiCopy = state => {
+  const now = state && state.aiCopy || null;
+  const zones = state && state.zones || {
+    deck: [],
+    hand: [],
+    discard: []
+  };
+  if (!now) return {
+    aiCopy: null,
+    zones
+  };
+  const match = now.uniqueCardUid ? {
+    uid: now.uniqueCardUid
+  } : {
+    srcMonsterId: now.srcMonsterId
+  };
+  return {
+    aiCopy: null,
+    zones: aiCopyRemoveUnique(zones, match)
+  };
+};
+const tickAiCopy = (state, turn) => {
+  const now = state && state.aiCopy || null;
+  if (!isAiCopyOut(now, turn)) return state;
+  const end = aiCopyTurnEnd(now);
+  if (end.expired) return {
+    ...dismissAiCopy(state),
+    expired: true
+  };
+  return {
+    ...state,
+    aiCopy: {
+      ...now,
+      turnsLeft: end.turnsLeft
+    }
+  };
+};
+const planAiCopyTurn = (aiCopy, {
+  deck = [],
+  score = null,
+  costOf = null,
+  rng = Math.random
+} = {}) => {
+  if (!aiCopy) return aiCopy;
+  const uniq = (Array.isArray(deck) ? deck : []).find(c => c && aiCopy.uniqueCardUid && c.uid === aiCopy.uniqueCardUid) || null;
+  const rest = (Array.isArray(deck) ? deck : []).filter(c => c !== uniq);
+  const hand = aiCopyHand(rest, uniq, rng);
+  const picks = aiCopyPickCards(hand, {
+    score,
+    costOf,
+    guts: aiCopy.guts,
+    maxGuts: aiCopy.maxGuts,
+    rng,
+    level: aiCopy.level
+  });
+  return {
+    ...aiCopy,
+    hand,
+    picks,
+    nextCard: picks[0] || null
+  };
+};
 const RHYTHM_BUDDY_KEY = 'mh_rhythm_buddy_v1';
 const RHYTHM_BUDDY_TICKET_ITEM_ID = 'session_ticket';
 const RHYTHM_BUDDY_SEEN_KEY = 'mh_rhythm_buddy_seen_v1';
@@ -56572,18 +57450,22 @@ function RhythmInfoScreen({
   }, React.createElement("div", {
     className: "my-6 text-center text-6xl"
   }, "🎵"), React.createElement("h3", {
+    style: JA_WRAP_STYLE,
     className: "text-center text-xl font-black text-cyan-200"
-  }, "モンヒロビートは準備中です"), React.createElement("p", {
+  }, jaWrap('モンヒロビートは準備中です')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-3 text-[11px] leading-relaxed text-slate-300"
-  }, "曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
+  }, jaWrap('曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。')), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-2 text-[11px] leading-relaxed text-slate-300"
-  }, "設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。"), React.createElement("div", {
+  }, jaWrap('設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。')), React.createElement("div", {
     className: "mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3"
   }, React.createElement("b", {
     className: "text-[11px] font-black text-amber-200"
   }, "正式実装前のお知らせ"), React.createElement("small", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 block text-[10px] leading-relaxed text-amber-100/90"
-  }, "いまは譜面を制作している段階です。通常プレイからは開始できません。ハイスコアの記録や報酬の付与も行いません。")), React.createElement("button", {
+  }, jaWrap('いまは譜面を制作している段階です。通常プレイからは開始できません。ハイスコアの記録や報酬の付与も行いません。'))), React.createElement("button", {
     onClick: returnToHome,
     className: "mt-5 min-h-[48px] w-full rounded-xl bg-slate-700 text-sm font-black"
   }, "HOMEへ戻る")));
@@ -56690,8 +57572,9 @@ function RhythmSongSelectScreen({
   }, React.createElement("span", {
     className: "block"
   }, "🎟️ ビートP獲得期間中"), React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "mt-0.5 block text-violet-200/80"
-  }, beatPointTargetSong ? '選択中のイベント対象曲は1.5倍' : '公開曲なら獲得できます')) : null;
+  }, beatPointTargetSong ? jaWrap('選択中のイベント対象曲は1.5倍') : '公開曲なら獲得できます')) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
@@ -56719,13 +57602,14 @@ function RhythmSongSelectScreen({
     className: "shrink-0 text-[9px] font-black text-slate-400"
   }, quickRunDetailOpen ? '▲' : '▼')) : null;
   const quickRunStartNode = !debugAll && !quickRunProgress && !runStage ? repeatTemplateForNewRun() ? React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-quick-run-start-button": true,
     onClick: () => {
       if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
     },
     className: "flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
-  }, "⚔ 裏でクイックの∞周回を始める") : React.createElement("details", {
+  }, jaWrap('⚔ 裏でクイックの∞周回を始める')) : React.createElement("details", {
     "data-quick-run-start-hint": true,
     className: "group px-1 py-0.5 text-[9px] leading-relaxed text-slate-500"
   }, React.createElement("summary", {
@@ -56733,13 +57617,15 @@ function RhythmSongSelectScreen({
   }, React.createElement("span", {
     "aria-hidden": "true"
   }, "⚔"), React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "min-w-0 flex-1 truncate"
-  }, "裏でクイックの∞周回を回すには？"), React.createElement("span", {
+  }, jaWrap('裏でクイックの∞周回を回すには？')), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 text-slate-500 group-open:rotate-180"
   }, "▾")), React.createElement("p", {
-    className: "pb-1"
-  }, "クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。")) : null;
+    className: "pb-1",
+    style: JA_WRAP_STYLE
+  }, jaWrap('クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。'))) : null;
   const selectNoticeShort = useRhythmShortPortrait();
   const selectNoticesOpen = rhythmSelectNoticeOpen(normalizeRhythmSelectView(rhythmSelectView), rhythmPlayedSongCount(rhythmBestRecords), selectNoticeShort);
   const quickRunStartRowVisible = !debugAll && !quickRunProgress && !runStage;
@@ -56851,10 +57737,11 @@ function RhythmSongSelectScreen({
       }, label);
     }));
   })(), raidChallenge && React.createElement("div", {
+    style: JA_WRAP_STYLE,
     "data-raid-challenge-banner": true,
     role: "status",
     className: "shrink-0 border-b border-orange-300/40 bg-orange-950/80 px-3 py-1.5 text-center text-[10px] font-black leading-snug text-orange-100"
-  }, "🎃 レイドバトル「", raidChallenge.tierName, "」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)"), quickRunProgress && React.createElement("div", {
+  }, "🎃 レイドバトル「", raidChallenge.tierName, jaWrap('」に挑戦中。好きな曲と難易度を選んで、最後まで遊んでください。スコアがダメージになります(決定すると挑戦回数を1回使います)')), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
   }, React.createElement("div", {
@@ -56891,8 +57778,9 @@ function RhythmSongSelectScreen({
     }, "ダイヤ"), React.createElement("dd", {
       className: "font-black text-amber-200"
     }, "+", Math.floor(quickRunProgress.gold + pending.gold).toLocaleString())), (pending.xp > 0 || pending.gold > 0) && React.createElement("div", {
+      style: JA_WRAP_STYLE,
       className: "col-span-2 text-[9px] text-slate-500"
-    }, "うち今の周のぶん（経験値 +", Math.floor(pending.xp).toLocaleString(), " ／ ダイヤ +", Math.floor(pending.gold).toLocaleString(), "）は、この周が終わったときに入ります（負けても、途中でやめても、ここまでのぶんは入ります）。"));
+    }, jaWrap('うち今の周のぶん（経験値 +'), Math.floor(pending.xp).toLocaleString(), " ／ ダイヤ +", Math.floor(pending.gold).toLocaleString(), jaWrap('）は、この周が終わったときに入ります（負けても、途中でやめても、ここまでのぶんは入ります）。')));
   })(), React.createElement("div", {
     className: "col-span-2 flex justify-between gap-2"
   }, React.createElement("dt", {
@@ -56900,8 +57788,9 @@ function RhythmSongSelectScreen({
   }, "勇者モン"), React.createElement("dd", {
     className: "truncate font-black text-white"
   }, mainHero?.masuName || mainHero?.name || '—'))), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-  }, quickRunProgress.finished ? quickRunResumable ? `${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。` : `${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。` : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。' : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? 'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。' : 'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'), quickRunProgress.finished && quickRunResumable && React.createElement("button", {
+  }, quickRunProgress.finished ? quickRunResumable ? jaWrap(`${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。`) : jaWrap(`${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。`) : catchingUp ? jaWrap('演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。') : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? jaWrap('ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは4周・3分台は6周…）。イベント開催中は、その対象曲だけ3倍（2分台6周・3分台9周）になります。') : jaWrap('ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。')), quickRunProgress.finished && quickRunResumable && React.createElement("button", {
     type: "button",
     "data-quick-run-resume": true,
     onClick: () => {
@@ -56909,6 +57798,7 @@ function RhythmSongSelectScreen({
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-emerald-300/60 bg-emerald-800/70 text-[11px] font-black text-emerald-50 active:scale-[.98]"
   }, "▶ 周回を再開する"), quickRunProgress.finished && !quickRunResumable && repeatTemplateForNewRun() && React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-quick-run-restart": true,
     disabled: resultProcessing,
@@ -56916,21 +57806,24 @@ function RhythmSongSelectScreen({
       if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98] disabled:opacity-50"
-  }, resultProcessing ? '結果を記録しています…' : '⚔ 1周目から新しく始める'), quickRunStartError && React.createElement("p", {
+  }, resultProcessing ? '結果を記録しています…' : jaWrap('⚔ 1周目から新しく始める')), quickRunStartError && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] font-black text-red-300"
-  }, "いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。"), React.createElement("button", {
+  }, jaWrap('いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。')), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-quick-run-progress-back": true,
     onClick: () => {
       if (runStageRef.current) returnToBackgroundRun();
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-  }, quickRunProgress.finished && !quickRunResumable ? '⚔ バトルへ戻って結果を見る' : '⚔ バトルへ戻る'), !quickRunProgress.finished && quickRunResumable && (quickRunStopConfirm ? React.createElement("div", {
+  }, quickRunProgress.finished && !quickRunResumable ? jaWrap('⚔ バトルへ戻って結果を見る') : '⚔ バトルへ戻る'), !quickRunProgress.finished && quickRunResumable && (quickRunStopConfirm ? React.createElement("div", {
     "data-quick-run-stop-confirm": true,
     className: "mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[9px] leading-relaxed text-amber-100"
-  }, "周回をやめますか？ いまの周もここで終わり、クリアしたWAVEぶんの報酬が入ります。"), React.createElement("div", {
+  }, jaWrap('周回をやめますか？ いまの周もここで終わり、クリアしたWAVEぶんの報酬が入ります。')), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-2 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -56968,11 +57861,12 @@ function RhythmSongSelectScreen({
   }, "🏆 ", rhythmEventNotice.name, " 開催中！"), React.createElement("p", {
     className: "mt-1 text-[10px] font-black leading-tight text-fuchsia-100"
   }, rhythmEventSongsLabel(rhythmEventNotice), "：", eventSongTitles.join(' ／ ')), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     type: "button",
     "data-rhythm-event-notice-open": true,
     onClick: onOpenEventRanking,
     className: "mt-1 min-h-[44px] w-full rounded-xl border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
-  }, "🏆 ", rhythmEventNotice.kind === 'limited' ? 'イベントランキングを見る' : '週間ランキングを見る')), React.createElement("button", {
+  }, "🏆 ", rhythmEventNotice.kind === 'limited' ? jaWrap('イベントランキングを見る') : '週間ランキングを見る')), React.createElement("button", {
     type: "button",
     "data-rhythm-event-notice-close": true,
     onClick: dismissRhythmEventNotice,
@@ -56995,10 +57889,11 @@ function RhythmSongSelectScreen({
   }, Number(beatPointCampaign.loopBoost) > 0 ? `・周回 ${beatPointCampaign.loopBoost}倍` : '中')), React.createElement("span", {
     className: "ml-auto shrink-0 text-amber-200/80"
   }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.displayEndAt || beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます')), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? jaWrap('・選択中のイベント対象曲は1.5倍') : jaWrap('・公開曲なら獲得できます'))), selectNoticesOpen && rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -57021,8 +57916,9 @@ function RhythmSongSelectScreen({
   }, React.createElement("div", {
     className: "flex items-start gap-1"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "min-w-0 flex-1 pt-1 text-[11px] font-black leading-snug text-cyan-100"
-  }, "✨ モンヒロビートの見た目を、もっと華やかにできるようになりました"), React.createElement("button", {
+  }, jaWrap('✨ モンヒロビートの見た目を、もっと華やかにできるようになりました')), React.createElement("button", {
     type: "button",
     onClick: dismissRhythmLookIntro,
     "aria-label": "この案内を閉じる",
@@ -57082,8 +57978,9 @@ function RhythmSongSelectScreen({
     "data-quick-run-start-portrait": true,
     className: "shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1"
   }, quickRunStartNode, quickRunStartError && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-[9px] font-black text-red-300"
-  }, "いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。")), React.createElement(RhythmSongSelect, {
+  }, jaWrap('いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。'))), React.createElement(RhythmSongSelect, {
     songs: songs,
     difficulties: difficulties,
     bestRecords: rhythmBestRecords,
@@ -57153,9 +58050,10 @@ function RhythmSongSelectScreen({
     }, "🏆"), React.createElement("span", {
       className: "landscape:hidden"
     }, "ランキング"))), rhythmSettings && rhythmSettings.assistMode && React.createElement("p", {
+      style: JA_WRAP_STYLE,
       "data-rhythm-assist-note": true,
       className: "mt-1 text-[9px] font-bold leading-snug text-emerald-200"
-    }, "アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。"))
+    }, jaWrap('アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。')))
   }));
 }
 const rhythmNoteDexHelpRow = entry => {
@@ -57206,8 +58104,9 @@ function RhythmNoteDexScreen({
       paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
-    className: "text-[11px] leading-relaxed text-slate-300"
-  }, "ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。"), React.createElement("div", {
+    className: "text-[11px] leading-relaxed text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ノーツを選ぶと、実際のプレイ画面でそのノーツが流れてきます。叩いて、判定がどう出るか試せます。記録やランキング・ビートP・ミッションには数えません。')), React.createElement("div", {
     "data-rhythm-note-dex-list": true,
     className: "mt-3 grid gap-2",
     style: {
@@ -57305,10 +58204,11 @@ function RhythmHelpScreen({
     className: "mt-2 text-[10px] leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('ノーツを1種類ずつ選んで、実際のプレイ画面で流して試せます。HELL の空のノーツも見られます。記録には残りません。'))), React.createElement("button", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-demo-help-tutorial": true,
     onClick: startRhythmTutorial,
     className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
-  }, "🎓 もう一度チュートリアルを見る"), React.createElement("p", {
+  }, jaWrap('🎓 もう一度チュートリアルを見る')), React.createElement("p", {
     className: "mt-2 text-[10px] leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('曲えらびへ戻って、助手が最初から説明します。何度でも見られます。')), React.createElement("div", {
@@ -57431,8 +58331,9 @@ function RhythmEventRewardModal({
   }, React.createElement("p", {
     className: "text-center text-[10px] font-black tracking-widest text-amber-300"
   }, "RESULT"), React.createElement("h3", {
+    style: JA_WRAP_STYLE,
     className: "mt-1 text-center text-base font-black text-amber-100"
-  }, won ? '入賞おめでとうございます！' : 'ご参加ありがとうございました！'), React.createElement("p", {
+  }, won ? jaWrap('入賞おめでとうございます！') : jaWrap('ご参加ありがとうございました！')), React.createElement("p", {
     className: "mt-1 text-center text-[10px] font-bold text-slate-300"
   }, event.name), React.createElement("ul", {
     className: "mt-3 space-y-2"
@@ -57462,8 +58363,9 @@ function RhythmEventRewardModal({
     onClick: onClaim,
     className: "mt-4 min-h-[52px] w-full rounded-2xl border-2 border-amber-300 bg-amber-500/20 text-sm font-black text-amber-50 active:scale-[.98] disabled:opacity-50"
   }, claiming ? '受け取っています…' : '🎁 ギフトで受け取る'), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "mt-2 text-center text-[9px] leading-relaxed text-slate-400"
-  }, "報酬はHOMEの「ギフト」へ届きます。ギフトボックスで「受け取る」を押すと、アイテムとダイヤが入ります。", weekly && '勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。')));
+  }, jaWrap('報酬はHOMEの「ギフト」へ届きます。ギフトボックスで「受け取る」を押すと、アイテムとダイヤが入ります。'), weekly && jaWrap('勇者の証片はマーケットで20個ごとに「勇者の証」1個と交換できます。'))));
 }
 function RhythmRankingScreen({
   loadRhythmEventRanking,
@@ -57703,8 +58605,9 @@ function RhythmRankingScreen({
   }, React.createElement("p", {
     className: "min-w-0 flex-1 text-[10px] font-black leading-tight text-amber-100"
   }, "まだ届いていない記録が", rhythmRankingPending.count, "件あります", React.createElement("span", {
+    style: JA_WRAP_STYLE,
     className: "block text-[9px] font-bold text-amber-200/70"
-  }, "つながると自動で送ります", rhythmRankingPending.status ? `（エラー ${rhythmRankingPending.status}）` : '（通信がつながらなかったようです）')), React.createElement("button", {
+  }, jaWrap('つながると自動で送ります'), rhythmRankingPending.status ? `（エラー ${rhythmRankingPending.status}）` : jaWrap('（通信がつながらなかったようです）'))), React.createElement("button", {
     type: "button",
     "data-rhythm-ranking-pending-send": true,
     onClick: async () => {
@@ -57722,8 +58625,9 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), total.status === 'notReady' && React.createElement("p", {
     "data-rhythm-total-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "総合ランキングはただいま準備中です。もうしばらくお待ちください。"), total.status === 'error' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('総合ランキングはただいま準備中です。もうしばらくお待ちください。')), total.status === 'error' && React.createElement("p", {
     "data-rhythm-total-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
@@ -57733,11 +58637,13 @@ function RhythmRankingScreen({
     className: "mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
   }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲を選ぶ"), !total.self && React.createElement("p", {
     "data-rhythm-total-self-empty": true,
-    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, "まだあなたの記録がありません。1曲でも遊ぶとここに載ります。"), total.entries.length === 0 && React.createElement("p", {
+    className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだあなたの記録がありません。1曲でも遊ぶとここに載ります。')), total.entries.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-total-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "まだ記録がありません。最初の1件になってみましょう。"), total.entries.length > 0 && React.createElement("ol", {
+  }, jaWrap('まだ記録がありません。最初の1件になってみましょう。')), total.entries.length > 0 && React.createElement("ol", {
     "data-rhythm-total-list": true,
     className: "space-y-2"
   }, total.entries.map((entry, index) => React.createElement("li", {
@@ -57759,21 +58665,25 @@ function RhythmRankingScreen({
     onClick: () => openEventPhase(phase.id),
     className: `min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${eventPhase === phase.id ? 'border-fuchsia-300/60 bg-fuchsia-500/15 text-fuchsia-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
   }, phase.label))), eventPhase === 'now' && !limitedEvent && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-none-now": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300"
-  }, "いま開催しているイベントはありません。", nextEventEntry ? React.createElement(React.Fragment, null, React.createElement("br", null), "次回は ", rhythmEventJstText(nextEventEntry.startMs), " から「", nextEventEntry.event.name, "」を開催します。") : React.createElement(React.Fragment, null, React.createElement("br", null), "次の開催をお待ちください。", prevEventEntry && '「前回」から、前のイベントの結果を見られます。')), eventPhase === 'prev' && !prevEventEntry && React.createElement("p", {
+  }, jaWrap('いま開催しているイベントはありません。'), nextEventEntry ? React.createElement(React.Fragment, null, React.createElement("br", null), "次回は ", rhythmEventJstText(nextEventEntry.startMs), " から「", nextEventEntry.event.name, "」を開催します。") : React.createElement(React.Fragment, null, React.createElement("br", null), jaWrap('次の開催をお待ちください。'), prevEventEntry && jaWrap('「前回」から、前のイベントの結果を見られます。'))), eventPhase === 'prev' && !prevEventEntry && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-none-prev": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs leading-relaxed text-slate-300"
-  }, "まだ終わったイベントがありません。", React.createElement("br", null), "イベントが1回終わると、ここで結果を見られるようになります。")), boardTab && React.createElement(React.Fragment, null, event.status === 'loading' && React.createElement("p", {
+  }, jaWrap('まだ終わったイベントがありません。'), React.createElement("br", null), jaWrap('イベントが1回終わると、ここで結果を見られるようになります。'))), boardTab && React.createElement(React.Fragment, null, event.status === 'loading' && React.createElement("p", {
     "data-rhythm-event-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), event.status === 'notReady' && React.createElement("p", {
     "data-rhythm-event-not-ready": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "週間ランキングはただいま準備中です。もうしばらくお待ちください。"), event.status === 'closed' && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('週間ランキングはただいま準備中です。もうしばらくお待ちください。')), event.status === 'closed' && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-closed": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "いま開催しているイベントはありません。次の開催をお待ちください。"), event.status === 'error' && React.createElement("p", {
+  }, jaWrap('いま開催しているイベントはありません。次の開催をお待ちください。')), event.status === 'error' && React.createElement("p", {
     "data-rhythm-event-error": true,
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
@@ -57823,11 +58733,13 @@ function RhythmRankingScreen({
     className: "mb-3"
   }, React.createElement("p", {
     "data-rhythm-event-self-empty": true,
-    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
-  }, eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。')), eventBoard.entries.length === 0 && React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(eventPrev ? 'このイベントに、あなたの記録はありませんでした。' : eventLimited ? 'まだあなたの記録がありません。対象曲を1曲でも遊ぶとここに載ります。' : '今週はまだあなたの記録がありません。どの曲でも1曲遊ぶとここに載ります。'))), eventBoard.entries.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, eventPrev ? 'このイベントの記録はありませんでした。' : eventLimited ? 'まだ記録がありません。最初の1件になってみましょう。' : '今週はまだ記録がありません。最初の1件になってみましょう。'), eventBoard.entries.length > 0 && React.createElement("ol", {
+  }, eventPrev ? jaWrap('このイベントの記録はありませんでした。') : eventLimited ? jaWrap('まだ記録がありません。最初の1件になってみましょう。') : jaWrap('今週はまだ記録がありません。最初の1件になってみましょう。')), eventBoard.entries.length > 0 && React.createElement("ol", {
     "data-rhythm-event-list": true,
     className: "space-y-2"
   }, eventBoard.entries.map((entry, index) => React.createElement("li", {
@@ -57860,9 +58772,10 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200",
     style: JA_WRAP_STYLE
   }, jaWrap('読み込めませんでした。電波の良い場所で「更新」をお試しください。')), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-ranking-empty": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-  }, "まだ記録がありません。最初の1件になってみましょう。"), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && React.createElement("ol", {
+  }, jaWrap('まだ記録がありません。最初の1件になってみましょう。')), songTab && rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && React.createElement("ol", {
     "data-rhythm-ranking-list": true,
     className: "space-y-2"
   }, rhythmRanking.entries.map((entry, index) => React.createElement("li", {
@@ -57986,9 +58899,10 @@ function RhythmRankingScreen({
       "data-rhythm-judgment-row": id,
       className: "text-right font-mono"
     }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), !Number.isFinite(Number(rhythmRankingDetail.detail?.precise)) && React.createElement("p", {
+      style: JA_WRAP_STYLE,
       "data-rhythm-ranking-precise-missing": true,
       className: "mt-1 text-[8px] text-slate-500"
-    }, "JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。"), React.createElement("p", {
+    }, jaWrap('JUST MARVELOUSの「—」は、この記録を出したときはまだ数えていなかったことを示します。')), React.createElement("p", {
       className: "mt-2 text-[9px] font-black text-amber-200"
     }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
   })(), boardTab && eventDetailOpen && React.createElement("div", {
@@ -58025,8 +58939,9 @@ function RhythmRankingScreen({
     "data-rhythm-event-rewards": true,
     className: "space-y-2"
   }, React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[10px] font-black text-amber-200"
-  }, "部門別の報酬（終わったあとに受け取れます）"), eventRewardsByDivision.map(({
+  }, jaWrap('部門別の報酬（終わったあとに受け取れます）')), eventRewardsByDivision.map(({
     division,
     ranks
   }) => React.createElement("div", {
@@ -58053,25 +58968,28 @@ function RhythmRankingScreen({
   }, React.createElement("b", {
     className: "text-fuchsia-200"
   }, "参加報酬"), "\u3000", eventWeekly ? `その週に${eventParticipation.plays}回遊ぶと` : `対象曲を${eventParticipation.songs}曲すべて遊ぶと`, " ", rhythmEventParticipationText(eventParticipation)), eventWeekly && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-week-score-rule": true,
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, React.createElement("b", {
     className: "text-fuchsia-200"
   }, "スコアの数え方"), "\u3000その週に遊んだぶんを", React.createElement("b", {
     className: "text-white"
-  }, "すべて足します"), "。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは", React.createElement("b", {
+  }, "すべて足します"), jaWrap('。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは'), React.createElement("b", {
     className: "text-white"
   }, "遊んだ量"), "で競います。"), !eventWeekly && React.createElement("p", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-loop-bonus": true,
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, React.createElement("b", {
     className: "text-amber-200"
-  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります"), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
+  }, "∞周回 ×", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE), "\u3000", jaWrap('クイックの∞周回を裏で回しながら対象曲を演奏すると、入る周回数がふだん（×'), RHYTHM_PLAY_RUN_LOOP_SCALE, "）の", RHYTHM_PLAY_RUN_LOOP_EVENT_SCALE, "倍になります"), rhythmEventPlayBonusRates(eventDefinition) && React.createElement("div", {
+    style: JA_WRAP_STYLE,
     "data-rhythm-event-play-bonus": true,
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, React.createElement("b", {
     className: "text-fuchsia-200"
-  }, "回数ボーナス"), "\u3000対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。", React.createElement("ul", {
+  }, "回数ボーナス"), "\u3000", jaWrap('対象曲を遊んだ回数ぶん、自分のベストスコアに加点されます（上限なし）。ランキングに出ている点は加点込みで、「詳細」「内訳」から素点との内訳を見られます。'), React.createElement("ul", {
     className: "mt-1 space-y-0.5"
   }, rhythmScoredDifficultyIds().map(id => React.createElement("li", {
     key: id,
@@ -58081,8 +58999,9 @@ function RhythmRankingScreen({
   }, RHYTHM_DEMO_DIFFICULTY_LABELS[id]?.name || id), React.createElement("span", {
     className: "min-w-0 flex-1 text-slate-200"
   }, rhythmEventPlayBonusPercentText(id)))))), React.createElement("p", {
+    style: JA_WRAP_STYLE,
     className: "text-[9px] leading-relaxed text-slate-400"
-  }, "報酬は", eventWeekly ? 'その週が終わったあと' : 'イベントが終わったあと', "、ゲームを開いたときに受け取れます。受け取れるのは", eventWeekly ? '切り替わりから' : '終了から', "2週間までです。順位は", eventWeekly ? '切り替わった' : '終了した', "時点で決まるので、遅れて受け取っても内容は変わりません。")), React.createElement("button", {
+  }, "報酬は", eventWeekly ? 'その週が終わったあと' : 'イベントが終わったあと', jaWrap('、ゲームを開いたときに受け取れます。受け取れるのは'), eventWeekly ? '切り替わりから' : '終了から', "2週間までです。順位は", eventWeekly ? '切り替わった' : '終了した', jaWrap('時点で決まるので、遅れて受け取っても内容は変わりません。'))), React.createElement("button", {
     type: "button",
     "data-rhythm-event-detail-close": true,
     onClick: () => setEventDetailOpen(false),
@@ -58314,6 +59233,8 @@ function MasuDonationScreen({
   })), React.createElement("p", {
     className: "shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "寄付一覧の並べ替え",
@@ -58342,7 +59263,7 @@ function MasuDonationScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  })), donationError && React.createElement("div", {
+  }))), donationError && React.createElement("div", {
     className: "shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"
   }, React.createElement(AlertCircle, {
     size: 12,
@@ -60069,15 +60990,21 @@ function MasuOfferingScreen({
       compact: true
     })), introVisible && React.createElement("div", {
       "data-offering-intro": true,
-      className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3"
+      className: "shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1.5"
+    }, React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
     }, React.createElement("div", {
       className: "text-[11px] font-black text-violet-200"
-    }, "お布施の使い方"), React.createElement("ol", {
-      className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300"
+    }, "お布施の使い方"), React.createElement("button", {
+      type: "button",
+      onClick: onDismissIntro,
+      className: "mh-button mh-button-secondary hidden [@media(orientation:landscape)_and_(max-height:520px)]:block min-h-[32px] shrink-0 rounded-lg border border-white/20 bg-slate-900 px-3 text-[11px] font-black active:scale-[.98]"
+    }, "わかった")), React.createElement("ol", {
+      className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:leading-snug"
     }, React.createElement("li", null, "お布施をするマスモンを選びます。"), React.createElement("li", null, "「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。"), React.createElement("li", null, "見積もりを見て「お布施する」を押します。")), React.createElement("button", {
       type: "button",
       onClick: onDismissIntro,
-      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98]"
+      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98] [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
     }, "わかった")), renderScreenNote('offering', 'ダイヤを払って、マスモンへ直接絆経験値を与えられます。', ['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。', '上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。']), renderMonsterSortFilterBar({
       singleType: true
     }), React.createElement("div", {
@@ -62263,6 +63190,8 @@ function MasuFusionScreen({
     });
   };
   const fusionSortBar = React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "合体一覧の並べ替え",
@@ -62290,7 +63219,7 @@ function MasuFusionScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  }));
+  })));
   const fusionGuide = renderScreenNote('fusion', '主が残り、副は消えます。副の絆経験値はそのまま主へ加わります。', ['上がった絆レベルの数だけ、主が強化ポイントを獲得します。', '主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます（副の強化は引き継がれません）。', '技を引き継がない合体は0ダイヤ、引き継ぐ合体は3000ダイヤです。', '固有技の引き継ぎは、副が絆Lv.30以上のときだけ選べます。条件を満たすと副の固有技が主に記録されます。']);
   if (fusionStep === 'main') {
     return React.createElement("div", {
@@ -63496,11 +64425,11 @@ function ProMonsterGridPicker({
   }, activeTab === 'all' ? 'すべて' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-3"
   }, shownList.map(m => tile(m, 'all-')))), React.createElement("div", {
-    className: "shrink-0 pt-1.5"
+    className: "shrink-0 pt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1"
   }, React.createElement("div", {
     key: focus ? focus.id : 'none',
     "data-pro-pick-detail": true,
-    className: "rounded-2xl border border-white/15 bg-slate-950 p-2"
+    className: "rounded-2xl border border-white/15 bg-slate-950 p-2 [@media(orientation:landscape)_and_(max-height:520px)]:p-1.5"
   }, !focus ? React.createElement("div", {
     className: "py-3 text-center text-[10px] font-black text-slate-400"
   }, "モンスターをタップすると、ここに詳しい情報が出ます") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -63534,7 +64463,7 @@ function ProMonsterGridPicker({
     className: "shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95"
   }, detailFolded ? '▲ ひらく' : '▼ たたむ')), !detailFolded && React.createElement(React.Fragment, null, monsterTypeProtoOn() && React.createElement("div", {
     "data-pick-type-row": true,
-    className: "flex"
+    className: `flex${header ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
   }, React.createElement(MonsterTypeBadge, {
     monId: focus.id
   })), React.createElement("div", {
@@ -63569,20 +64498,20 @@ function ProMonsterGridPicker({
   }, label), React.createElement("div", {
     className: `text-[11px] font-black leading-tight rounded ${DIST_APTITUDE_COLOR[apt(focus, i)]}`
   }, apt(focus, i))))), React.createElement("div", {
-    className: "mt-1.5 flex gap-1.5"
+    className: "mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 flex gap-1.5"
   }, React.createElement("button", {
     onClick: () => toggleFav(focus.id),
     "aria-pressed": prefs.fav.includes(focus.id),
     "aria-label": prefs.fav.includes(focus.id) ? 'お気に入りを外す' : 'お気に入りに入れる',
-    className: `shrink-0 w-11 min-h-[40px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
+    className: `shrink-0 w-11 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
   }, "★"), React.createElement("button", {
     onClick: () => onDetail && onDetail(focus),
-    className: "shrink-0 px-3 min-h-[40px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
+    className: "shrink-0 px-3 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
   }, "詳しく"), React.createElement("button", {
     disabled: disabled(focus),
     onClick: () => onSelect(focus),
     "aria-label": confirmAria ? confirmAria(focus) : undefined,
-    className: `flex-1 min-h-[40px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
+    className: `flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
   }, typeof confirmLabel === 'function' ? confirmLabel(focus) : confirmLabel))))));
 }
 function ProPartyPicker({
@@ -63702,7 +64631,7 @@ function ProPartyPicker({
     "data-pro-party": true,
     className: "mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5"
   }, React.createElement("div", {
-    className: "mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200"
+    className: "mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"
   }, React.createElement("span", null, step === 'hero' ? '② 勇者モンをえらぶ' : '① 編成する子をえらぶ'), React.createElement("span", {
     className: "text-[9px] text-slate-400"
   }, filled, " / ", need)), React.createElement("div", {
@@ -63757,7 +64686,7 @@ function ProPartyPicker({
     "data-pro-party-next": true,
     disabled: !full,
     onClick: () => setStep('hero'),
-    className: "mt-1.5 shrink-0 min-h-[44px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
+    className: "mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
   }, full ? '次へ(勇者モンをえらぶ)' : `あと${need - filled}体えらんでください`));
 }
 function PickHeroAllyScreen({
@@ -63835,7 +64764,7 @@ function PickHeroAllyScreen({
       },
       className: `absolute inset-0 p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase mh-ph-bg' : ''}`
     }, React.createElement("div", {
-      className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
+      className: "mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"
     }, React.createElement("button", {
       type: "button",
       "aria-label": "戻る",
@@ -63850,19 +64779,21 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
-      className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
+      className: "-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5"
     }, React.createElement("span", {
       className: "mh-ph-plate"
-    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement(PhaseSteps, {
+    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement("div", {
+      className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+    }, React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "ally",
       nextWave: wave > 0 ? wave + 1 : null
-    })), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
-      className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}`
+    }))), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
+      className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}${pickMode === 'hero' && !battleTutorial ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(AssistantBubble, {
       key: pickMode,
       scene: pickMode === 'hero' ? 'pickHero' : 'pickAlly',
@@ -63961,7 +64892,7 @@ function PickHeroAllyScreen({
         className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
       }, formatAptPct(cur)));
     })))), pickMode === 'hero' && React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+      className: "shrink-0 w-full max-w-md mx-auto mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1"
     }, !isProMode(runMode) && React.createElement("div", {
       className: "flex gap-1.5"
     }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => React.createElement("button", {
@@ -63971,9 +64902,9 @@ function PickHeroAllyScreen({
         setCurrentPickingMon(null);
       },
       "aria-pressed": heroPickTab === key,
-      className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+      className: `flex-1 min-h-[40px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[32px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
     }, label))), React.createElement("div", {
-      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}`
+      className: `text-[9px] text-slate-500 font-bold mt-1 px-1 text-center${isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${battleTutorial ? '' : ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden'}`
     }, isProMode(runMode) ? 'プロモードはベースモンだけ(育てたマスモンは連れていけません)' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
       className: `flex-1 ${pickMode === 'hero' && isProMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
     }, React.createElement("div", {
@@ -64052,7 +64983,7 @@ function PickHeroAllyScreen({
           });
           if (best !== allyCardIndex) setAllyCardIndex(best);
         } : undefined,
-        className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
+        className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : `grid grid-cols-2 gap-2.5${pickMode === 'hero' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-3 [@media(orientation:landscape)_and_(max-height:520px)]:gap-2' : ''}`,
         style: allyCarousel ? {
           paddingLeft: '18%',
           paddingRight: '18%',
@@ -64107,32 +65038,32 @@ function PickHeroAllyScreen({
           }, React.createElement(Zap, {
             size: 9
           }), " ", m.unique.name), pickMode === 'hero' ? React.createElement("div", {
-            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
+            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-1 [@media(orientation:landscape)_and_(max-height:520px)]:px-0 font-mono",
             style: {
               fontSize: '9px'
             }
           }, React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "ライフ"), React.createElement("span", {
             className: "text-pink-400 font-bold"
           }, m.baseHp)), React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "ちから"), React.createElement("span", {
             className: "text-red-400 font-bold"
           }, m.baseAtk)), React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "丈夫さ"), React.createElement("span", {
             className: "text-emerald-400 font-bold"
           }, m.baseDef)), React.createElement("div", {
-            className: "flex justify-between"
+            className: "flex justify-between gap-0.5"
           }, React.createElement("span", {
-            className: "text-slate-500"
+            className: "text-slate-500 whitespace-nowrap"
           }, "ガッツ"), React.createElement("span", {
             className: "text-amber-400 font-bold"
           }, m.baseGuts))) : (() => {
@@ -64146,7 +65077,7 @@ function PickHeroAllyScreen({
               key: stat.key,
               className: "min-w-0 block"
             }, React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none break-all"
+              className: "block text-slate-500 font-black leading-none whitespace-nowrap max-[359px]:text-[6.5px] max-[359px]:tracking-[-0.04em]"
             }, stat.label), preview.tactics ? stat.diff > 0 ? React.createElement("span", {
               className: "block leading-none text-slate-500"
             }, stat.before, " →") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? React.createElement("span", {
@@ -64163,15 +65094,17 @@ function PickHeroAllyScreen({
               "data-tactics-join-turns": preview.catchUpTurns,
               className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
               style: {
-                fontSize: '8px'
+                fontSize: '8px',
+                ...JA_LABEL_STYLE
               }
-            }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）'), preview.tactics && React.createElement("div", {
+            }, jaWrap(preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）')), preview.tactics && React.createElement("div", {
               "data-tactics-join-dist-catchup": Math.round((preview.distCatchUp || 0) * 1000) / 10,
               className: `w-full text-center leading-none font-black ${preview.distCatchUp > 0 ? 'text-cyan-300' : 'text-slate-500'}`,
               style: {
-                fontSize: '8px'
+                fontSize: '8px',
+                ...JA_LABEL_STYLE
               }
-            }, preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし'), React.createElement("div", {
+            }, jaWrap(preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし')), React.createElement("div", {
               className: "mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
               style: {
                 fontSize: '8px'
@@ -64451,7 +65384,10 @@ function PickSlotScreen({
   heroStyleDef = null,
   heroStyle = null,
   onHeroStyle = null,
-  perSlotApt = false
+  perSlotApt = false,
+  partnerOffer = null,
+  partnerPick = false,
+  onPartnerPick = null
 }) {
   const mon = currentPickingMon;
   const pickedStyle = heroStyleDef ? heroStyleDef.styles.some(st => st.id === heroStyle) ? heroStyle : heroStyleDef.defaultStyle : null;
@@ -64536,7 +65472,18 @@ function PickSlotScreen({
       className: `min-h-[40px] rounded-lg border-2 px-1 text-[11px] font-black active:scale-95 ${pickedStyle === st.id ? 'border-fuchsia-300 bg-fuchsia-700 text-white' : 'border-white/20 bg-black/40 text-slate-300'}`
     }, st.label))), React.createElement("div", {
       className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
-    }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), React.createElement("div", {
+    }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), partnerOffer && React.createElement("div", {
+      "data-orihime-partner": true,
+      className: "mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5 text-left"
+    }, React.createElement("button", {
+      type: "button",
+      "data-orihime-partner-pick": true,
+      "aria-pressed": !!partnerPick,
+      onClick: () => onPartnerPick && onPartnerPick(!partnerPick),
+      className: `min-h-[44px] w-full rounded-lg border-2 px-2 text-[12px] font-black active:scale-95 ${partnerPick ? 'border-sky-300 bg-sky-700 text-white' : 'border-white/20 bg-black/40 text-slate-200'}`
+    }, "🎐 ", partnerPick ? '相方にする(このまま置く)' : 'この子を相方にする'), React.createElement("div", {
+      className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
+    }, partnerOffer.heroName, "の「天河の契り」の相方になります。相方は1体だけで、置いた距離とのへだたりで効き目が変わります。")), React.createElement("div", {
       className: "mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2"
     }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、その子の適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
       className: "grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll"
@@ -64968,22 +65915,24 @@ function WaveResultScreen({
         zIndex: 30000,
         '--ph': '251,191,36'
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden"
+      "data-wave-result": true,
+      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden [@media(orientation:landscape)_and_(max-height:520px)]:!fixed [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:px-6"
     }, React.createElement("div", {
-      className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll"
+      className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:contents"
     }, React.createElement("div", {
-      className: "mb-2 shrink-0 flex flex-col items-center gap-1"
+      className: "mb-2 shrink-0 flex flex-col items-center gap-1 [@media(max-height:700px)]:mb-1 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-end [@media(orientation:landscape)_and_(max-height:520px)]:mb-3"
     }, React.createElement("span", {
       className: "mh-ph-plate mh-train-sub"
     }, "WAVE ", waveResult.wave, " CLEAR"), React.createElement(Trophy, {
-      className: "mh-train-title text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.8)]",
+      className: "mh-train-title text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.8)] [@media(max-height:700px)]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:block",
       size: 34
     }), React.createElement("div", {
       className: "mh-ph-heading"
     }, React.createElement("h2", {
       className: "mh-ph-title mh-train-title text-xl font-black italic uppercase tracking-tighter"
     }, "WAVE ", waveResult.wave, " リザルト"))), React.createElement("div", {
-      className: "mh-wave-rows mh-ph-panel w-full max-w-sm p-3 space-y-1.5 mb-3 shrink-0"
+      "data-wave-result-rows": true,
+      className: "mh-wave-rows mh-ph-panel w-full max-w-sm p-3 space-y-1.5 mb-3 shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:max-h-full [@media(orientation:landscape)_and_(max-height:520px)]:overflow-y-auto [@media(orientation:landscape)_and_(max-height:520px)]:mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:self-stretch"
     }, React.createElement("div", {
       className: "grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1"
     }, React.createElement("span", {
@@ -65164,7 +66113,7 @@ function WaveResultScreen({
       onClick: handleNextWave,
       disabled: runFinalizing,
       "aria-busy": runFinalizing,
-      className: `w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0${battleTutorialSpotClass('waveNext')} ${runFinalizing ? 'bg-slate-500 text-slate-300 cursor-not-allowed' : 'bg-white text-indigo-900 active:scale-95'}`
+      className: `w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:self-start${battleTutorialSpotClass('waveNext')} ${runFinalizing ? 'bg-slate-500 text-slate-300 cursor-not-allowed' : 'bg-white text-indigo-900 active:scale-95'}`
     }, runFinalizing ? '処理中…' : React.createElement(React.Fragment, null, "次へ進む ", React.createElement(ChevronRight, {
       className: "inline",
       size: 20
@@ -65321,8 +66270,9 @@ function RewardPickScreen({
     }, "いま強化する子"), React.createElement("span", {
       className: "text-[9px] font-black text-slate-400"
     }, RANGE_LABELS[currentSlot], "距離")), React.createElement("div", {
-      className: "mt-0.5 truncate text-[17px] font-black leading-tight text-white"
-    }, `${currentName || '全員'}のトレーニング`)), React.createElement("div", {
+      className: "mt-0.5 line-clamp-2 text-[17px] max-[359px]:text-[15px] font-black leading-tight text-white",
+      style: JA_LABEL_STYLE
+    }, jaWrap(`${currentName || '全員'}のトレーニング`))), React.createElement("div", {
       className: "shrink-0 text-center font-mono leading-none"
     }, React.createElement("span", {
       className: "block text-[8px] font-black text-slate-400"
@@ -65624,9 +66574,9 @@ function ChampionScreen({
   }), React.createElement("h1", {
     className: "mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl"
   }, "CHAMPION"), !isQuickMode(runMode) && React.createElement("div", {
-    className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"
+    className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"
   }, React.createElement("div", {
-    className: "text-5xl font-mono font-black text-white"
+    className: "text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
@@ -66925,7 +67875,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   momosuke: who => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
-  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`
+  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: who => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`
 });
 function HomeFriendRequestNotice({
   activeAssistant,
@@ -74110,6 +75061,249 @@ const monsterCheckStatRows = mon => {
     };
   });
 };
+const monsterCheckPct = v => `${Math.round(Number(v || 0) * 1000) / 10}%`;
+const MonsterCheckLabButton = ({
+  onClick,
+  children,
+  tone = 'slate',
+  active = false
+}) => React.createElement("button", {
+  type: "button",
+  onClick: onClick,
+  className: `min-h-[44px] rounded-xl px-2 text-[11px] font-black active:scale-95 ${active ? 'bg-fuchsia-600 text-white' : tone === 'amber' ? 'bg-amber-700/70 text-white' : 'bg-slate-800 text-slate-100'}`
+}, children);
+const MonsterCheckLabLines = ({
+  lines
+}) => React.createElement("div", {
+  className: "rounded-lg bg-black/40 p-2 text-[10px] font-bold leading-relaxed text-cyan-100"
+}, lines.filter(Boolean).map((t, i) => React.createElement("div", {
+  key: i
+}, t)));
+const monsterCheckReikonLine = v => {
+  const r = reikonOf(v);
+  return r.wait > 0 ? `霊魂: 次のターンから${REIKON_TURNS}ターン` : reikonActive(r) ? `霊魂: あと${r.turns}ターン 消費ガッツ×${reikonGutsMult(r)}・味方の回避率+${reikonEvasionUp(r)}%` : '霊魂: なし';
+};
+function KyubiTraitLab() {
+  const [phaseId, setPhaseId] = useState('sakuretsu');
+  const [guts, setGuts] = useState(56);
+  const [rengoku, setRengoku] = useState(0);
+  const [kagero, setKagero] = useState(kageroOf(null));
+  const [fox, setFox] = useState(kitsunebiOf(null));
+  const [reikon, setReikon] = useState(reikonOf(null));
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setRengoku(0);
+    setKagero(kageroOf(null));
+    setFox(kitsunebiOf(null));
+    setReikon(reikonOf(null));
+    setTurn(1);
+    setLog('');
+  };
+  const eff = kyubiPhaseEffectOf(phaseId, {
+    rengoku,
+    skillGuts: guts
+  });
+  const card = kind => {
+    if (phaseId === 'rengoku') setRengoku(n => kyubiRengokuOf(n + 1));
+    if (kind === 'attack' && phaseId === 'kagero') setKagero(k => kageroAfterAttack(k));
+    const f = kitsunebiEffectOf(fox, kind);
+    setLog(kind === 'attack' ? `攻撃: 与ダメ×${(eff.dmgMult * (1 + f.buffDmg)).toFixed(3)}${eff.combo ? `・${eff.combo.label}の連撃${monsterCheckPct(eff.combo.rate)}` : ''}${f.extraHit ? `・狐火の追加${monsterCheckPct(f.extraHit)}` : ''}` : kind === 'guard' ? `ガード: 狐火で被ダメ−${monsterCheckPct(f.guardCut)}` : `助け: 狐火でガッツ+${monsterCheckPct(f.assistGuts)}`);
+  };
+  const hit = () => {
+    if (phaseId === 'kagero' && kagero.ready) {
+      setKagero(k => kageroUseEvade(k));
+      setLog('攻撃を受けた: 陽炎ノ相で完全回避(狐火は減らない)');
+      return;
+    }
+    const r = kitsunebiOnHit(fox),
+      f = kitsunebiEffectOf(fox);
+    setFox(r.next);
+    setLog(`攻撃を受けた: 被ダメ×${(r.takenMult * (1 - f.buffTaken)).toFixed(3)}${r.takenMult < 1 ? '(狐火が1つ盾になって消えた)' : ''}`);
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setKagero(k => tickKagero(k));
+    setFox(k => tickKitsunebi(k));
+    setReikon(r => tickReikon(r));
+    setLog('ターンを進めた');
+  };
+  const unique = () => {
+    card('attack');
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
+  };
+  const ex = () => {
+    setFox(k => useKitsunebi(k));
+    setLog(fox.active ? '九尾幻灯(2回目): 狐火満タン・強化かけ直し' : '九尾幻灯: 狐火5個・幻灯強化3ターン');
+  };
+  const f = kitsunebiEffectOf(fox);
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Kyubi",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, KYUBI_PHASES.map(p => React.createElement(MonsterCheckLabButton, {
+    key: p.id,
+    active: p.id === phaseId,
+    onClick: () => {
+      setPhaseId(p.id);
+      reset();
+    }
+  }, RANGE_LABELS[p.slot], React.createElement("br", null), p.name))), phaseId === 'rengoku' && React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, [20, 40, 56].map(g => React.createElement(MonsterCheckLabButton, {
+    key: g,
+    active: g === guts,
+    onClick: () => setGuts(g)
+  }, "消費ガッツ", g))), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('attack')
+  }, "攻撃のカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('guard')
+  }, "ガードのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => card('assist')
+  }, "助けのカード"), React.createElement(MonsterCheckLabButton, {
+    onClick: hit
+  }, "攻撃を受ける"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: ex
+  }, "EX 九尾幻灯"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / ${KYUBI_PHASES.find(p => p.id === phaseId)?.name}`, `相: 与ダメ×${eff.dmgMult.toFixed(3)}${eff.critAdd ? `・会心率+${monsterCheckPct(eff.critAdd)}` : ''}${eff.combo ? `・連撃${monsterCheckPct(eff.combo.rate)}×${eff.combo.count}` : ''}`, phaseId === 'rengoku' && `煉獄 ${rengoku}/${KYUBI_RENGOKU_MAX}・消費ガッツ${guts}→${Math.floor(guts * reikonGutsMult(reikon))}(ダメージは元の${guts}で数える)`, phaseId === 'kagero' && `完全回避 ${kagero.ready ? 'あり' : 'なし'}${kagero.wait ? `(あと${kagero.wait}ターン待ち)` : ''}`, monsterCheckReikonLine(reikon), fox.active ? `狐火 ${fox.fires}/${KITSUNEBI_MAX}(戻るまで ${KITSUNEBI_REGEN_TURNS - fox.regen}ターン)・幻灯強化 ${fox.buffTurns ? `あと${fox.buffTurns}ターン 与ダメ+${monsterCheckPct(f.buffDmg)}・被ダメ−${monsterCheckPct(f.buffTaken)}` : 'なし'}` : '九尾幻灯: まだ使っていない', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
+function OrihimeTraitLab() {
+  const [diff, setDiff] = useState(3);
+  const [partnerUp, setPartnerUp] = useState(true);
+  const [ouse, setOuse] = useState(0);
+  const [hoshiai, setHoshiai] = useState(null);
+  const [kogare, setKogare] = useState({
+    turns: 0,
+    rollsLeft: 0
+  });
+  const [reikon, setReikon] = useState(reikonOf(null));
+  const [turn, setTurn] = useState(1);
+  const [log, setLog] = useState('');
+  const reset = () => {
+    setOuse(0);
+    setHoshiai(null);
+    setKogare({
+      turns: 0,
+      rollsLeft: 0
+    });
+    setReikon(reikonOf(null));
+    setTurn(1);
+    setLog('');
+  };
+  const bond = orihimeBondEffectOf(diff, ouse, partnerUp);
+  const max = ORIHIME_BOND_TIERS[diff]?.max || 0;
+  const move = same => {
+    setOuse(n => addOuse(n, diff, same, partnerUp));
+    setLog(same ? partnerUp ? '同じ種類の動き: 逢瀬+1' : '相方が倒れているので逢瀬は増えない' : '違う種類の動き: 逢瀬はそのまま');
+  };
+  const next = () => {
+    setTurn(t => t + 1);
+    setHoshiai(h => h && h.turns > 1 ? {
+      ...h,
+      turns: h.turns - 1
+    } : null);
+    setKogare(k => k.turns > 1 ? {
+      turns: k.turns - 1,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    } : {
+      turns: 0,
+      rollsLeft: 0
+    });
+    setReikon(r => tickReikon(r));
+    setLog('ターンを進めた');
+  };
+  const unique = () => {
+    setReikon(startReikon());
+    setLog(`固有技 霊魂: 次のターンから${REIKON_TURNS}ターン 消費ガッツ×${REIKON_GUTS_MULT}・幻惑(味方の回避率+${REIKON_EVASION_UP}%)`);
+  };
+  const star = () => {
+    const h = startHoshiai(ouse, diff);
+    setHoshiai(h);
+    setOuse(0);
+    setLog(`星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(h.rate)}・1ターン${h.perTurn}回まで(逢瀬は0へ)`);
+  };
+  const longing = () => {
+    setKogare({
+      turns: KOGARE_TURNS,
+      rollsLeft: KOGARE_ROLLS_PER_TURN
+    });
+    setLog(`焦がれ待つ天ノ河: ${KOGARE_TURNS}ターン`);
+  };
+  const attack = () => {
+    if (kogare.turns <= 0) {
+      setLog('攻撃が当たった(焦がれ待つ天ノ河は効いていない)');
+      return;
+    }
+    const r = rollKogare(kogare.rollsLeft);
+    setKogare(k => ({
+      ...k,
+      rollsLeft: r.rollsLeft
+    }));
+    setLog(kogare.rollsLeft <= 0 ? 'このターンはもう振れない' : r.confused ? '攻撃が当たった: 敵が「意味不明」になった' : '攻撃が当たった: 意味不明にはならなかった');
+  };
+  const share = () => {
+    const [a, b] = bond.share ? shareOrihimeDamage(100) : [100, 0];
+    setLog(bond.share ? `100のダメージを分け合う: 受けた子${a}・相方${b}(被ダメ−${monsterCheckPct(bond.takenCut)}の前)` : '分け合いは間合いの差3のときだけ');
+  };
+  return React.createElement("div", {
+    "data-monster-check-trait-lab": "Orihime",
+    className: "space-y-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-2"
+  }, React.createElement("div", {
+    className: "text-center text-[10px] font-black text-fuchsia-200"
+  }, "勇者特性・EXを動かして見る(バトルには出ない)"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, [1, 2, 3].map(d => React.createElement(MonsterCheckLabButton, {
+    key: d,
+    active: d === diff,
+    onClick: () => {
+      setDiff(d);
+      reset();
+    }
+  }, "間合いの差", d)), React.createElement(MonsterCheckLabButton, {
+    active: !partnerUp,
+    onClick: () => setPartnerUp(v => !v)
+  }, partnerUp ? '相方 立っている' : '相方 倒れた')), React.createElement("div", {
+    className: "grid grid-cols-3 gap-1"
+  }, React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(true)
+  }, "2体が同じ動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: () => move(false)
+  }, "違う動き"), React.createElement(MonsterCheckLabButton, {
+    onClick: next
+  }, "ターンを進める"), React.createElement(MonsterCheckLabButton, {
+    onClick: attack
+  }, "攻撃が当たる"), React.createElement(MonsterCheckLabButton, {
+    onClick: share
+  }, "100のダメージを受ける"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: star
+  }, "勇者EX 星合の刻"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: longing
+  }, "共モンEX 焦がれ待つ天ノ河"), React.createElement(MonsterCheckLabButton, {
+    tone: "amber",
+    onClick: unique
+  }, "固有技 霊魂")), React.createElement(MonsterCheckLabLines, {
+    lines: [`${turn}ターン目 / 間合いの差${diff} / 逢瀬 ${ouse}/${max}`, `つながり: ${bond.dmgAdd ? `与ダメ+${monsterCheckPct(bond.dmgAdd)} ` : ''}${bond.takenCut ? `被ダメ−${monsterCheckPct(bond.takenCut)} ` : ''}${bond.share ? 'ダメージを分け合う' : ''}${!bond.dmgAdd && !bond.takenCut && !bond.share ? 'なし' : ''}`, hoshiai ? `星合: あと${hoshiai.turns}ターン・続く攻撃 与ダメ${monsterCheckPct(hoshiai.rate)}・1ターン${hoshiai.perTurn}回まで` : '星合: なし', monsterCheckReikonLine(reikon), kogare.turns ? `焦がれ待つ天ノ河: あと${kogare.turns}ターン・このターン振れる残り${kogare.rollsLeft}回(${monsterCheckPct(KOGARE_CHANCE)})` : '焦がれ待つ天ノ河: なし', log && `→ ${log}`]
+  }), React.createElement(MonsterCheckLabButton, {
+    onClick: reset
+  }, "はじめに戻す"));
+}
 function MonsterCheckDebugScreen({
   masuMons = [],
   unlockedMonsterIds = [],
@@ -74702,7 +75896,7 @@ function MonsterCheckDebugScreen({
     className: "space-y-2"
   }, row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
     block: true
-  }), React.createElement("div", null, React.createElement("div", {
+  }), mon.id === KYUBI_MONSTER_ID && React.createElement(KyubiTraitLab, null), mon.id === ORIHIME_MONSTER_ID && React.createElement(OrihimeTraitLab, null), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
   }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? mon.draft ? draftNamePills(HERO_ATK_NAMES[mon.id], 'border-red-500/30 bg-red-950/25') : skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
     className: "text-center text-[11px] font-bold text-rose-300"
@@ -80192,8 +81386,9 @@ function RhythmMultiScreen({
     notice: React.createElement("div", {
       className: "flex items-center gap-1.5"
     }, React.createElement("p", {
-      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
-    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。", !room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'), isHost && selectTimeButton('min-[481px]:hidden', true)),
+      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {
@@ -86055,8 +87250,18 @@ const CARD_AI_HABITS = Object.freeze({
     disrupt: 0.8,
     area: 1.8,
     finish: 1.5
+  },
+  sorashido: {
+    attack: 1.1,
+    keepGuard: 0.9,
+    saveGuts: 1.0,
+    big: 0.9,
+    disrupt: 1.5,
+    area: 1.0,
+    finish: 1.3
   }
 });
+const cardFoeReleased = who => typeof assistantReleased !== 'function' || assistantReleased(who);
 const CARD_AI_DECK_HABIT = Object.freeze({
   dra: {
     master: {
@@ -86078,7 +87283,8 @@ const CARD_AI_TUNE = Object.freeze({
   kiki: 1.3,
   kyuko: 1,
   dra: 1.15,
-  atsu: 1
+  atsu: 1,
+  sorashido: 1
 });
 const CARD_AI_HABIT_BLEND = Object.freeze({
   expert: {
@@ -86713,6 +87919,9 @@ const CARD_AI_DECKS = Object.freeze({
   atsu: {
     monsters: ['C-003', 'C-001', 'C-002'],
     prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード']
+  },
+  sorashido: {
+    monsters: ['C-008', 'C-001', 'C-003']
   }
 });
 const CARD_AI_FAVORITE = Object.freeze({
@@ -86721,7 +87930,8 @@ const CARD_AI_FAVORITE = Object.freeze({
   kiki: 'golem',
   kyuko: 'mew',
   dra: 'zilla',
-  atsu: 'dragon'
+  atsu: 'dragon',
+  sorashido: 'hare'
 });
 const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
@@ -86818,6 +88028,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
     easy: -1.5,
     normal: -3,
     hard: -2.1
+  },
+  sorashido: {
+    easy: -1.5,
+    normal: -1.5,
+    hard: -1.5,
+    master: -0.05
   }
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
@@ -86825,7 +88041,8 @@ const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
   dra: 0.8,
   kyuko: 2.0,
-  atsu: 1.5
+  atsu: 1.5,
+  sorashido: 1.5
 });
 const CARD_DECK_COPY_MAX = 3;
 const CARD_AI_ATTACH_MAX = 6;
@@ -87356,7 +88573,8 @@ const CARD_CPU_PLAYLIST_DEFAULT = Object.freeze({
   momosuke: Object.freeze(['melo_crossing_field']),
   kyuko: Object.freeze(['melo_toward_the_stars_short']),
   dra: Object.freeze(['melo_mou_hitotsu_no_sekai_e']),
-  atsu: Object.freeze(['melo_against_my_own_shadow'])
+  atsu: Object.freeze(['melo_against_my_own_shadow']),
+  sorashido: Object.freeze(['monster_hero_theme'])
 });
 const cardNormalizePlaylistList = (v, isTrack = () => true) => {
   const out = [];
@@ -87371,6 +88589,10 @@ const cardNormalizeCpuPlaylist = (v, isTrack = () => true) => {
   const assistants = {};
   for (const who of Object.keys(CARD_CPU_PLAYLIST_DEFAULT)) {
     const list = cardNormalizePlaylistList(src[who], isTrack);
+    if (!cardFoeReleased(who)) {
+      if (list.length) assistants[who] = list;
+      continue;
+    }
     assistants[who] = list.length ? list : [...CARD_CPU_PLAYLIST_DEFAULT[who]];
   }
   return {
@@ -88177,6 +89399,22 @@ const CARD_BATTLE_LINES = Object.freeze({
     deckTheirs: ['山札、もう少ないじゃん…焦ってる？笑', 'そろそろ山札が尽きるな！ 押し込むぞ！'],
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
     lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']]
+  },
+  sorashido: {
+    challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
+    start: [['デッキは組み直してきた。今日の俺は強いぜ・・・！', 'happy'], ['よろしく！ 様子見…と見せかけて攻める笑', 'wink'], ['いくぜ・・・！ 最初の1手が大事なんだよな', 'excited'], ['三線みたいに、気持ちよく勝ちたいね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいぜ・・・！', 'happy']],
+    big: [['うぉぉぉ！ ここで大技いくぜ・・・！', 'excited'], ['ガッツためといた甲斐があった笑', 'happy'], ['この流れ、攻略まとめに書いとこ笑', 'wink'], ['読みどおり！ 一気に押し込むぜ・・・！', 'excited']],
+    bigHit: [['なに！？ 今のは効いた…笑', 'surprise'], ['うわ、それ持ってたの！？ やられた笑', 'surprise'], ['痛っ…でも次の手はもう考えてあるぜ・・・！', 'troubled'], ['なんくるないさ〜。まだ巻き返せる笑', 'normal']],
+    guardMine: [['その手、読めてたぜ・・・！', 'happy'], ['守り、残しといて正解だった笑', 'wink'], ['はい、よけた！ 計算どおり笑', 'excited']],
+    guardTheirs: [['なに！？ そこで守るの！？', 'surprise'], ['読みが深いな…やるじゃん笑', 'troubled'], ['次は守りにくい手でいくぜ・・・！', 'normal']],
+    myKo: [['ごめんな…あとは俺が取り返すぜ・・・！', 'crying'], ['なに！？ ここで倒れるのかよ…笑', 'surprise'], ['まだまだ！ 作戦はここからだぜ・・・！', 'angry']],
+    theirKo: [['うぉぉぉ！ 1体いただき！', 'excited'], ['弱ってたの、見逃さないぜ・・・！', 'wink'], ['よし！ 計算どおり笑', 'happy']],
+    lastMine: [['残り1体…ここからひっくり返すのが楽しいんだよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託すぜ・・・！', 'troubled']],
+    lastTheirs: [['あと1体！ 最後まで読み切るぜ・・・！', 'excited'], ['詰めの手順、もう見えてる笑', 'wink']],
+    deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
+    deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
+    win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
+    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -88424,7 +89662,8 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kiki: ['ため撃ち砲台', 'どっかん計画', '大技まつり', 'じっくり砲'],
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
-  atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団']
+  atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
+  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊']
 });
 const CARD_DECK_NAME_MAX = 18;
 const CARD_DECK_STYLE = Object.freeze({
@@ -88565,6 +89804,28 @@ const CARD_VS_LINES = Object.freeze({
     master: {
       e: 'wink',
       t: '本気のあつだ。一気に終わらせるぞ！'
+    }
+  },
+  sorashido: {
+    easy: {
+      e: 'happy',
+      t: 'ゆるっといこ！ でも読みは手を抜かないぜ・・・！'
+    },
+    normal: {
+      e: 'wink',
+      t: '浜の風みたいに、さらっと勝たせてもらう笑'
+    },
+    hard: {
+      e: 'excited',
+      t: 'ここからは本気の読み合いだぜ・・・！'
+    },
+    expert: {
+      e: 'excited',
+      t: '攻略班の作戦、ぜんぶ試させてもらう笑'
+    },
+    master: {
+      e: 'angry',
+      t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！'
     }
   }
 });
@@ -91009,7 +92270,7 @@ const CardBattleBoard = ({
     if (!tutorial) say('start');
   }, []);
   useEffect(() => {
-    if (!bubble || tutorial || bigCard || turnBanner || guarding) return undefined;
+    if (!bubble || tutorial || bigCard || turnBanner || downBand || guarding) return undefined;
     const key = bubble.key;
     const ms = bubbleLeft.current[key] ?? cardBubbleMs(bubble.text);
     const at = Date.now();
@@ -91020,7 +92281,7 @@ const CardBattleBoard = ({
         [key]: Math.max(800, ms - (Date.now() - at))
       };
     };
-  }, [bubble && bubble.key, !!bigCard, !!turnBanner, guarding]);
+  }, [bubble && bubble.key, !!bigCard, !!turnBanner, !!downBand, guarding]);
   useEffect(() => {
     if (tutorial && tutStage) setTutQ(tutStage.lines.slice());
   }, [tutI]);
@@ -91321,6 +92582,7 @@ const CardBattleBoard = ({
   }, [st, paused, tutI]);
   const turnSeen = useRef(null);
   useEffect(() => {
+    if (replay) return undefined;
     if (st.phase === 'setup' || st.winner !== null || st.turn < 1) return undefined;
     const id = `${st.turn}-${st.active}`;
     if (turnSeen.current === id) return undefined;
@@ -91684,7 +92946,7 @@ const CardBattleBoard = ({
       });
     }
     if (mode === 'guard') guardOpts.filter(o => o.hand === i).forEach(o => {
-      out[`${CARD_ME}-${o.mon}`] = o;
+      out[`${CARD_ME}-${o.to !== undefined ? o.to : o.mon}`] = o;
     });
     if ((mode === 'guts' || mode === 'setup') && !picks.includes(i)) {
       const max = mode === 'setup' ? CARD_BATTLE_SETUP_GUTS_MAX : gutsMax;
@@ -91727,6 +92989,32 @@ const CardBattleBoard = ({
       }
     };
     tapHand(i);
+  };
+  const dropUse = t => {
+    const monKey = o => o.mon === undefined ? -1 : o.mon;
+    const users = [...new Set(attackOpts.filter(o => o.hand[0] === t.hand[0]).map(monKey))];
+    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
+      setSel({
+        hand: t.hand[0]
+      });
+      setHint('使う子をタップしてください');
+      return;
+    }
+    const same = attackOpts.filter(o => JSON.stringify(o.hand) === JSON.stringify(t.hand) && monKey(o) === monKey(t));
+    if (t.split || t.fuse) {
+      setSplitAsk(same.filter(o => o.split || o.fuse));
+      return;
+    }
+    if (t.form) {
+      setSel({
+        hand: t.hand[0],
+        mon: monKey(t),
+        set: JSON.stringify(t.hand)
+      });
+      setHint('空中か地上かを選んでください');
+      return;
+    }
+    askUse(t);
   };
   const handDown = (e, i, no) => {
     if (e.button !== undefined && e.button !== 0) return;
@@ -91790,7 +93078,7 @@ const CardBattleBoard = ({
         if (t === 'pick') {
           Audio_.fgSe.tap();
           setPicks(cur => cur.includes(i) ? cur : [...cur, i]);
-        } else if (t && mode === 'attack') askUse(t);else if (t) step(t);
+        } else if (t && mode === 'attack') dropUse(t);else if (t) step(t);
         return;
       }
       if (d.long || ev.type === 'pointercancel') return;
@@ -91819,6 +93107,9 @@ const CardBattleBoard = ({
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
+  const bubbleHidden = !!(bigCard || turnBanner || downBand || guarding || endFx);
+  const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
+  const bubbleOverAction = !!(tiny && !wide && bubble && !bubble.cut && !replay && !tutorial);
   const stageKey = `${bubble ? bubble.key : ''}|${action ? action.key : ''}|${st.log.length}|${pendingText || ''}|${tutorial ? 1 : 0}`;
   React.useLayoutEffect(() => {
     setStageFit(0);
@@ -91928,7 +93219,7 @@ const CardBattleBoard = ({
     const btn = 'mh-button min-h-[44px] flex-1 rounded-xl text-[14px] font-black active:scale-[.98] disabled:opacity-40';
     if (st.winner !== null && !tutorial) return React.createElement("div", {
       className: "flex-1 text-center text-[15px] font-black text-amber-200"
-    }, st.winner === CARD_ME ? '勝ち！' : '負け…');
+    }, endFx ? '\u00a0' : st.winner === CARD_ME ? '勝ち！' : '負け…');
     if (tutorial && (st.winner !== null || tutStage.next)) return React.createElement("div", {
       className: "flex-1 text-center text-[13px] font-bold text-slate-300"
     }, "ドラの説明を読んで「次へ」");
@@ -92006,7 +93297,7 @@ const CardBattleBoard = ({
       })
     }, "攻撃おわり → ガッツへ"));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ(相手まで運んでもOK)' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '使える回避・防御だけが明るくなっています' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(ガッツへ運んでもOK・何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
@@ -92196,7 +93487,7 @@ const CardBattleBoard = ({
     ref: stageRef,
     "data-card-stage": true,
     "data-card-stage-fit": stageFit,
-    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden px-3 py-1`,
+    className: `relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`,
     style: {
       justifyContent: 'safe center'
     }
@@ -92207,7 +93498,7 @@ const CardBattleBoard = ({
     "data-card-bubble-ms": tutorial ? undefined : cardBubbleMs(bubble.text),
     onClick: tutorial ? undefined : nextBubble,
     "data-card-bubble-cut": bubble.cut ? '1' : undefined,
-    className: `${bigCard || turnBanner || guarding || endFx ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubble.cut ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
+    className: `${bubbleHidden ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubbleInFlow ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]` : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`,
     style: {
       borderColor: who.accent,
       ...JA_WRAP_STYLE
@@ -92222,7 +93513,7 @@ const CardBattleBoard = ({
   })) : React.createElement("img", {
     src: assistantFaceImage(who, bubble.face || face),
     alt: "",
-    className: `${bubble.cut ? (tiny ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
+    className: `${bubble.cut ? (tiny || stageFit >= 2 ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`
   }), React.createElement("span", {
     className: "min-w-0 flex-1"
   }, React.createElement("span", {
@@ -92233,12 +93524,14 @@ const CardBattleBoard = ({
   }, who.name, bubble.cut ? ' ★' : ''), React.createElement("span", {
     style: JA_WRAP_STYLE
   }, cardJaWrap(bubble.text)))), React.createElement("div", {
-    className: "pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
-  }), React.createElement("span", {
     "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0 overflow-hidden"
+  }, React.createElement("div", {
+    className: "absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-violet-300/40 to-transparent"
+  }), React.createElement("span", {
     "data-card-vs-mark": true,
-    className: "pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]"
-  }, "VS"), breederFx && React.createElement("div", {
+    className: "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[56px] font-black italic leading-none text-white/[.06]"
+  }, "VS")), breederFx && React.createElement("div", {
     key: breederFx.key,
     "data-card-breeder-fx": breederFx.p === CARD_ME ? 'me' : 'foe',
     "aria-hidden": "true",
@@ -92256,7 +93549,7 @@ const CardBattleBoard = ({
     src: assistantFaceImage(who, 'happy'),
     alt: "",
     className: "h-full w-full object-cover object-top"
-  })), action && !endFx && stageFit < 3 && !(turnSummary && sumOpen) && !guardAtk && React.createElement("div", {
+  })), action && !endFx && stageFit < 3 && !bubbleOverAction && !(turnSummary && sumOpen) && !guardAtk && React.createElement("div", {
     key: action.key,
     "data-card-action": true,
     "data-card-action-side": action.side,
@@ -92273,9 +93566,9 @@ const CardBattleBoard = ({
       className: `${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`
     }) : null;
   }), React.createElement("div", {
-    className: `${tiny ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
+    className: `${tiny || wide ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`
   }, action.who, React.createElement("span", {
-    className: tiny ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
+    className: tiny || wide ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'
   }, "「", action.cards.map(n => (cardOf(db, n) || {}).name).join('＋'), "」"))), st.field && cardOf(db, st.field.no) && React.createElement("button", {
     type: "button",
     "data-card-env": st.field.no,
@@ -92302,9 +93595,9 @@ const CardBattleBoard = ({
     className: "min-w-0 truncate"
   }, `${who.name}のターンにしたこと(${turnSummary.lines.length})`), React.createElement("span", {
     className: "shrink-0 text-rose-300"
-  }, "▸ 見る")), React.createElement("div", {
+  }, "▸ 見る")), !(stageFit >= 3 && bubbleInFlow) && React.createElement("div", {
     "data-card-log": true,
-    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center text-[13px] font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
+    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && (guardAtk ? React.createElement("button", _extends({
     type: "button",
@@ -92573,7 +93866,7 @@ const CardBattleBoard = ({
       fontSize: st.winner === CARD_ME ? 'clamp(64px, 22vw, 96px)' : 'clamp(44px, 15vw, 64px)'
     }
   }, st.winner === CARD_ME ? 'WIN!' : 'LOSE'), React.createElement("span", {
-    className: `relative mt-2 px-4 text-center text-[15px] font-black ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`,
+    className: `relative mt-2 rounded-xl bg-slate-950/70 px-4 py-1 text-center text-[15px] font-black [text-shadow:0_2px_4px_rgba(0,0,0,.8)] ${st.winner === CARD_ME ? 'text-white' : 'text-slate-300'}`,
     style: JA_LABEL_STYLE
   }, st.winner === CARD_ME ? `${who.name}に勝った！` : 'おしかった！ もう一回いってみよう'), React.createElement("span", {
     className: "absolute bottom-5 text-[12px] font-bold text-white/70"
@@ -93797,7 +95090,7 @@ const CardBattleScreen = ({
     });
   }
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
-  const foes = (debug ? allAssistants : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
+  const foes = (debug ? allAssistants.filter(a => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
   const activeDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
@@ -94151,7 +95444,8 @@ const CardBattleScreen = ({
     }), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
     }, React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5 landscape:grid-cols-6"
+      "data-card-foe-grid": foes.length >= 7 ? 7 : 6,
+      className: `grid ${foes.length >= 7 ? 'grid-cols-4 gap-1.5 landscape:grid-cols-7 landscape:gap-1' : 'grid-cols-3 gap-1.5 landscape:grid-cols-6'}`
     }, foes.map(x => React.createElement("button", {
       key: x.id,
       type: "button",
@@ -94163,7 +95457,7 @@ const CardBattleScreen = ({
           who: x.id
         }));
       },
-      className: `relative flex flex-col items-center rounded-xl border-2 p-1 ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
+      className: `relative flex flex-col items-center rounded-xl border-2 ${foes.length >= 7 ? 'p-1 landscape:p-0.5' : 'p-1'} ${foe.who === x.id ? 'bg-white/10' : 'border-white/10 bg-slate-900/70'}`,
       style: foe.who === x.id ? {
         borderColor: x.accent
       } : undefined
@@ -94563,7 +95857,7 @@ const CardBattleScreen = ({
     onOpenPvpHistory: typeof CardPvpHistory === 'function' ? () => setView('pvpHistory') : null
   });
   if (view === 'options') {
-    const plWhoList = foes.length ? foes : allAssistants.filter(a => CARD_CPU_PLAYLIST_DEFAULT[a.id]);
+    const plWhoList = foes.length ? foes : allAssistants.filter(a => CARD_CPU_PLAYLIST_DEFAULT[a.id] && cardFoeReleased(a.id));
     const plCur = plWhoList.some(a => a.id === plWho) ? plWho : plWhoList[0] && plWhoList[0].id;
     const plSave = assistants => {
       void persist({
@@ -94667,7 +95961,7 @@ const CardBattleScreen = ({
       "data-card-playlist-copy-ok": true,
       onClick: () => {
         const list = [...plCopy.list];
-        plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).map(who => [who, list])));
+        plSave(Object.fromEntries(Object.keys(CARD_CPU_PLAYLIST_DEFAULT).filter(who => cardFoeReleased(who)).map(who => [who, list])));
         setPlCopy(null);
       },
       className: "min-h-[44px] rounded-xl bg-amber-500 text-[12px] font-black text-slate-900"
@@ -95152,7 +96446,7 @@ const CardBattleScreen = ({
     value: demoWho,
     onChange: e => setDemoWho(e.target.value),
     className: "w-full rounded-lg border border-white/20 bg-slate-800 px-2 py-1 text-[12px] font-bold text-white"
-  }, allAssistants.filter(x => CARD_AI_HABITS[x.id]).map(x => React.createElement("option", {
+  }, allAssistants.filter(x => CARD_AI_HABITS[x.id] && cardFoeReleased(x.id)).map(x => React.createElement("option", {
     key: x.id,
     value: x.id
   }, "見本の相手: ", x.name))), React.createElement("div", {
@@ -98108,6 +99402,25 @@ const CardRecordScreen = ({
     },
     className: `min-h-[40px] rounded-xl border text-[12px] font-black ${tab === t.id ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`
   }, t.label))), React.createElement("div", {
+    "data-card-record-side": true,
+    className: "mb-2 hidden shrink-0 space-y-2 landscape:block"
+  }, onOpenReplays && React.createElement("button", {
+    type: "button",
+    "data-card-replays-open-side": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpenReplays();
+    },
+    className: "mh-button mh-button-secondary flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+  }, React.createElement("span", null, React.createElement("b", {
+    className: "block text-[13px] font-black text-sky-100"
+  }, "▶ 過去の対戦"), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, "遊んだ試合を、はじめから見返せます")), React.createElement("span", {
+    className: "text-[18px] text-slate-400"
+  }, "›")), React.createElement("div", {
+    className: `${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`
+  }, cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu'), cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp'), cell('いまの連勝', r.streak.now, '連勝', 'side-now'), cell('最高の連勝', r.streak.best, '連勝', 'side-best'))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
   }, tab === 'all' && React.createElement(React.Fragment, null, onOpenReplays && React.createElement("button", {
     type: "button",
@@ -98116,7 +99429,7 @@ const CardRecordScreen = ({
       Audio_.fgSe.tap();
       onOpenReplays();
     },
-    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left"
+    className: "mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left landscape:hidden"
   }, React.createElement("span", null, React.createElement("b", {
     className: "block text-[14px] font-black text-sky-100"
   }, "▶ 過去の対戦"), React.createElement("small", {
@@ -98759,6 +100072,11 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     win: [['ほい、勝ち！ 組み方がはまってたねぇ笑', 'happy'], ['おけ〜、計算どおりって顔してるよぉw', 'wink'], ['いい勝ち方だったねぇ。ガッツの使い方、上手くなってる🫂', 'excited']],
     lose: [['ぐぬぬぬ…惜しかったねぇ。組み方、いっしょに見直そっかぁ', 'angry'], ['まあ、なんとかなるっしょ笑 次は勝てるよぉ', 'normal'], ['負けたけど、見立ては悪くなかったよ。あと一手だったねぇw', 'troubled']],
     left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']]
+  },
+  sorashido: {
+    win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
+    lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
+    left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']]
   }
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {
@@ -100321,7 +101639,7 @@ const CardPvpLobby = ({
   if (room.phase === 'over' && r) {
     const noAgain = room.foeGone || r.reason === '相手が抜けた' || r.reason === '相手の時間切れ';
     const win = r.outcome === 'win';
-    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id) || null : null;
+    const a = assistant && typeof ASSISTANTS !== 'undefined' ? ASSISTANTS.find(x => x.id === assistant.id && cardFoeReleased(x.id)) || null : null;
     const got = r.got && !r.got.pending ? r.got : null;
     const foeName = room.foe ? room.foe.name : 'あいて';
     const scene = r.reason === '相手が抜けた' ? 'left' : win ? 'win' : 'lose';
@@ -102856,19 +104174,52 @@ const CardPvpWatchList = ({
     style: JA_WRAP_STYLE
   }, jaWrap('見るだけで、操作やスタンプはできません。手札は見えません')));
 };
+const CardWatchMonMini = ({
+  db,
+  st,
+  p,
+  m
+}) => {
+  const mon = st.players[p].mons[m];
+  const pct = Math.max(0, Math.round(mon.life / mon.max * 100));
+  return React.createElement("div", {
+    "data-card-watch-mon": `${p}-${m}`,
+    className: `flex w-[32%] min-w-0 items-center gap-1 ${mon.ko ? 'opacity-50' : ''}`
+  }, React.createElement("img", {
+    src: mon.ko ? CARD_BACK_IMG() : CARD_IMG(cardMonsterOf(db, mon.no).img),
+    alt: mon.name,
+    className: "h-[40px] w-[28px] shrink-0 rounded-[3px] object-cover shadow"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "truncate text-[11px] font-black leading-tight text-white"
+  }, mon.name), React.createElement("div", {
+    className: "text-[12px] font-black leading-tight tabular-nums text-white"
+  }, mon.ko ? 'KO' : mon.life, React.createElement("span", {
+    className: "text-[10px] text-slate-400"
+  }, " / ", mon.max)), React.createElement("div", {
+    className: "h-[5px] overflow-hidden rounded bg-slate-700"
+  }, React.createElement("div", {
+    className: `h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`,
+    style: {
+      width: `${pct}%`
+    }
+  }))));
+};
 const CardWatchSide = ({
   db,
   st,
   p,
   person,
-  top = false
+  top = false,
+  low = false
 }) => {
   const pl = st.players[p];
   const active = st.winner === null && cardPvpDecider(st) === p;
   const row = React.createElement("div", {
     className: "flex items-center gap-2 px-1"
   }, React.createElement("span", {
-    className: "block h-[34px] w-[34px] shrink-0"
+    className: `block ${low ? 'h-[24px] w-[24px]' : 'h-[34px] w-[34px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
     icon: person && person.icon,
     frame: person && person.fr,
@@ -102888,11 +104239,17 @@ const CardWatchSide = ({
     key: i,
     src: CARD_BACK_IMG(),
     alt: "",
-    className: "h-[30px] w-[21px] rounded-[2px] shadow"
+    className: `${low ? 'h-[22px] w-[15px]' : 'h-[30px] w-[21px]'} rounded-[2px] shadow`
   }))));
   const mons = React.createElement("div", {
     className: "flex justify-between"
-  }, pl.mons.map((_, m) => React.createElement(CardMonSlot, {
+  }, pl.mons.map((_, m) => low ? React.createElement(CardWatchMonMini, {
+    key: m,
+    db: db,
+    st: st,
+    p: p,
+    m: m
+  }) : React.createElement(CardMonSlot, {
     key: m,
     db: db,
     st: st,
@@ -102902,7 +104259,7 @@ const CardWatchSide = ({
   })));
   return React.createElement("div", {
     "data-card-watch-side": p,
-    className: `rounded-2xl border p-1.5 ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`
+    className: `rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`
   }, top ? React.createElement(React.Fragment, null, row, mons) : React.createElement(React.Fragment, null, mons, row));
 };
 const CardPvpWatchScreen = ({
@@ -102921,7 +104278,21 @@ const CardPvpWatchScreen = ({
   const st = w.st;
   const winner = w.end ? cardWatchSideWinner(w.end.winner, w.side) : st && st.winner !== null ? st.winner : null;
   const nameOf = p => meta && meta.p[p] ? meta.p[p].name : p === 0 ? 'ブリーダー' : 'あいて';
-  const lines = st ? st.log.slice(-3).map(l => l.text) : [];
+  const [low, setLow] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
+  useEffect(() => {
+    const on = () => setLow(window.innerHeight < 520);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const lines = st ? st.log.slice(low ? -2 : -3).map(l => l.text) : [];
+  const overBox = st && meta && (w.phase === 'over' || winner !== null) && React.createElement("div", {
+    "data-card-watch-over": winner === null ? 'none' : winner,
+    className: `rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`
+  }, React.createElement("div", {
+    className: `${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`
+  }, winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`, low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''), !low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && React.createElement("div", {
+    className: "mt-0.5 text-[12px] font-bold text-slate-300"
+  }, "(", w.end.reason, ")"));
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-watch": w.phase,
@@ -102932,7 +104303,7 @@ const CardPvpWatchScreen = ({
     onBack: back,
     note: meta ? `${nameOf(0)} vs ${nameOf(1)}` : 'つないでいます…'
   }), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} space-y-2 pb-3`
+    className: `${SCREEN_LIST_CLASS} ${low ? 'space-y-1' : 'space-y-2'} pb-3`
   }, w.phase === 'full' && React.createElement("p", {
     "data-card-watch-full": true,
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100",
@@ -102951,15 +104322,16 @@ const CardPvpWatchScreen = ({
   }, st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'), React.createElement("span", {
     "data-card-watch-eyes": w.eyes,
     className: "tabular-nums"
-  }, "👀 ", w.eyes, "人が見ています")), React.createElement(CardWatchSide, {
+  }, "👀 ", w.eyes, "人が見ています")), low && overBox, React.createElement(CardWatchSide, {
     db: db,
     st: st,
     p: 1,
     person: meta.p[1],
-    top: true
+    top: true,
+    low: low
   }), React.createElement("div", {
     "data-card-watch-center": true,
-    className: "flex min-h-[100px] items-center gap-2 rounded-2xl border border-white/10 bg-black/30 p-2"
+    className: `flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`
   }, w.last ? React.createElement("div", {
     key: w.last.key,
     "data-card-watch-last": w.last.cards.join(','),
@@ -102974,10 +104346,10 @@ const CardPvpWatchScreen = ({
     }, React.createElement("img", {
       src: CARD_IMG(c.img),
       alt: c.name,
-      className: "h-[88px] w-[63px] rounded-md object-cover shadow-lg"
+      className: `${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} rounded-md object-cover shadow-lg`
     })) : null;
   })) : React.createElement("div", {
-    className: "h-[88px] w-[63px] shrink-0 rounded-md border border-dashed border-white/15"
+    className: `${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`
   }), React.createElement("div", {
     className: "min-w-0 flex-1 space-y-0.5"
   }, w.last && React.createElement("div", {
@@ -102990,15 +104362,9 @@ const CardPvpWatchScreen = ({
     db: db,
     st: st,
     p: 0,
-    person: meta.p[0]
-  }), (w.phase === 'over' || winner !== null) && React.createElement("div", {
-    "data-card-watch-over": winner === null ? 'none' : winner,
-    className: "rounded-2xl border border-amber-300/50 bg-amber-500/10 p-3 text-center"
-  }, React.createElement("div", {
-    className: "text-[16px] font-black text-amber-100"
-  }, winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`), w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) && React.createElement("div", {
-    className: "mt-0.5 text-[12px] font-bold text-slate-300"
-  }, "(", w.end.reason, ")")))), React.createElement("div", {
+    person: meta.p[0],
+    low: low
+  }), !low && overBox)), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
     className: "flex gap-2"
@@ -103091,6 +104457,24 @@ const DEBUG_TRIALS = [{
   on: 'on3',
   title: '🎵 床と空中の見た目(試作3・立体)',
   note: '空中の層を道と同じ遠近のガラスの床として見せ、道の両端に床と空中をつなぐ柱を立てます。空中のノーツは厚い立方体、空中スライドは厚みのある管に。床にはっきりした影。色・判定は変わりません',
+  when: '次の演奏から'
+}, {
+  id: 'rhythm_floor3d_c3b',
+  added: '2026-10-16',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_floor3d_proto_v1',
+  on: 'c3b',
+  title: '🎵 空中の見た目(案3+カメラを寝かせる)',
+  note: '案3の見た目に加えて、カメラを寝かせて道を奥へ深くします(遠くのノーツは小さく、手前で速く近づきます)。押す場所も同じ計算でそろって変わるので、見た目と押す場所はずれません。判定の時刻・色は変わりません',
+  when: '次の演奏から'
+}, {
+  id: 'rhythm_floor3d_c3',
+  added: '2026-10-16',
+  area: 'モンヒロビート',
+  key: 'mh_rhythm_floor3d_proto_v1',
+  on: 'c3',
+  title: '🎵 空中の見た目(案3・明るい板と光の帯)',
+  note: '空中のタップを明るく薄い板と光る縁に、空中スライドを白い芯から手の色がにじむ半透明の光の帯にします(参考動画の見やすさに寄せた見た目)。地上と道は今のまま。色・判定は変わりません',
   when: '次の演奏から'
 }];
 const DEBUG_TRIALS_SEEN_KEY = 'mh_debug_trials_seen_v1';
@@ -104105,6 +105489,9 @@ function MonsterHeroGame() {
     resetSweetStack();
     resetKusabi();
     resetDreamPain();
+    resetKyubi();
+    resetOrihime();
+    resetReikon();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -104345,6 +105732,332 @@ function MonsterHeroGame() {
     return d;
   };
   const resetDreamPain = () => writeDreamPain(null);
+  const kyubiRef = useRef({
+    phase: {},
+    rengoku: {},
+    kagero: {},
+    kitsunebi: {},
+    guard: {}
+  });
+  const [kyubiView, setKyubiView] = useState(kyubiRef.current);
+  const writeKyubi = (part, key, value) => {
+    if (!key) return;
+    const next = {
+      ...kyubiRef.current,
+      [part]: {
+        ...kyubiRef.current[part],
+        [key]: value
+      }
+    };
+    kyubiRef.current = next;
+    setKyubiView(next);
+  };
+  const resetKyubi = () => {
+    kyubiRef.current = {
+      phase: {},
+      rengoku: {},
+      kagero: {},
+      kitsunebi: {},
+      guard: {}
+    };
+    setKyubiView(kyubiRef.current);
+  };
+  const kyubiPhaseAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    if (sweetOwnerAt(slotIdx) !== KYUBI_MONSTER_ID || !key) return null;
+    if (!kyubiRef.current.phase[key]) {
+      const p = kyubiPhaseOfSlot(isTacticsMode(runMode) ? slotIdx : initialBattleDistanceRef.current);
+      if (!p) return null;
+      kyubiRef.current = {
+        ...kyubiRef.current,
+        phase: {
+          ...kyubiRef.current.phase,
+          [key]: p.id
+        }
+      };
+    }
+    return kyubiRef.current.phase[key];
+  };
+  const kyubiAttackAt = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID) return {
+      ...kyubiPhaseEffectOf(null),
+      foxCombo: null
+    };
+    const phase = kyubiPhaseAt(slotIdx);
+    const base = phase ? kyubiPhaseEffectOf(phase, {
+      rengoku: kyubiRef.current.rengoku[trickStartKeyOf(slotIdx)],
+      skillGuts: card ? getCardBaseGuts(card) : 0
+    }) : kyubiPhaseEffectOf(null);
+    const fox = isTacticsMode(runMode) && Number.isInteger(slotIdx) ? kitsunebiEffectOf(kyubiRef.current.kitsunebi[String(slotIdx)], 'attack') : null;
+    return {
+      ...base,
+      dmgMult: base.dmgMult * (1 + (fox ? fox.buffDmg : 0)),
+      foxCombo: fox && fox.extraHit > 0 ? {
+        count: 1,
+        rate: fox.extraHit,
+        label: '狐火'
+      } : null
+    };
+  };
+  const kyubiTakenMultAt = slotIdx => {
+    if (!isTacticsMode(runMode) || !Number.isInteger(slotIdx)) return 1;
+    const k = String(slotIdx),
+      fox = kitsunebiOf(kyubiRef.current.kitsunebi[k]);
+    if (!fox.active) return 1;
+    const e = kitsunebiEffectOf(fox, kyubiRef.current.guard[k] ? 'guard' : 'attack');
+    return (1 - e.buffTaken) * (1 - e.guardCut);
+  };
+  const kitsunebiShieldParts = parts => parts.flatMap(part => {
+    const keep = [],
+      out = [];
+    (part.slots || []).forEach(i => {
+      const k = String(i),
+        hit = kitsunebiOnHit(kyubiRef.current.kitsunebi[k]);
+      if (tacticsUnitsRef.current[i]?.id === KYUBI_MONSTER_ID && hit.takenMult < 1) {
+        writeKyubi('kitsunebi', k, hit.next);
+        addPopup(`🦊 狐火の盾！ 被ダメ−${Math.round((1 - hit.takenMult) * 100)}%(残り${hit.next.fires})`, 'hero', 'text-blue-200 text-sm font-bold drop-shadow-md', undefined, i);
+        out.push({
+          slots: [i],
+          damage: Math.floor(part.damage * hit.takenMult)
+        });
+      } else keep.push(i);
+    });
+    return [{
+      ...part,
+      slots: keep
+    }, ...out];
+  });
+  const gainKyubiCard = (slotIdx, actorId, card) => {
+    if (actorId !== KYUBI_MONSTER_ID || !card) return;
+    if (isTacticsMode(runMode) && Number.isInteger(slotIdx)) {
+      const k = String(slotIdx),
+        kind = orihimeCardKindOf(card),
+        e = kitsunebiEffectOf(kyubiRef.current.kitsunebi[k], kind);
+      if (e.guardCut > 0) writeKyubi('guard', k, true);
+      if (e.assistGuts > 0) {
+        const u = normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+        const g = u ? Math.max(0, Math.min(u.maxGuts - u.guts, Math.floor(u.maxGuts * e.assistGuts))) : 0;
+        if (g > 0) {
+          commitTacticsUnits(recoverTacticsGutsAt(tacticsUnitsRef.current, slotIdx, g));
+          mergeTacticsSlotFx({}, {
+            [slotIdx]: g
+          });
+        }
+      }
+    }
+    const phase = kyubiPhaseAt(slotIdx),
+      key = trickStartKeyOf(slotIdx);
+    if (phase === 'rengoku') {
+      const before = kyubiRengokuOf(kyubiRef.current.rengoku[key]),
+        after = kyubiRengokuOf(before + 1);
+      if (after === before) return;
+      writeKyubi('rengoku', key, after);
+      addPopup(`🔥 煉獄 ${after}/${KYUBI_RENGOKU_MAX}`, 'hero', 'text-orange-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    } else if (phase === 'kagero' && ['atk', 'range_atk', 'unique'].includes(card.type)) {
+      const before = kageroOf(kyubiRef.current.kagero[key]),
+        after = kageroAfterAttack(before);
+      if (after.ready === before.ready) return;
+      writeKyubi('kagero', key, after);
+      addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
+    }
+  };
+  const orihimeRef = useRef({
+    partner: {},
+    ouse: {},
+    hoshiai: {},
+    kogare: {}
+  });
+  const [orihimeView, setOrihimeView] = useState(orihimeRef.current);
+  const writeOrihime = (part, key, value) => {
+    if (!key) return;
+    const next = {
+      ...orihimeRef.current,
+      [part]: {
+        ...orihimeRef.current[part],
+        [key]: value
+      }
+    };
+    orihimeRef.current = next;
+    setOrihimeView(next);
+  };
+  const resetOrihime = () => {
+    orihimeRef.current = {
+      partner: {},
+      ouse: {},
+      hoshiai: {},
+      kogare: {}
+    };
+    orihimeTurnKindsRef.current = {};
+    orihimeForceConfuseRef.current = false;
+    setOrihimeView(orihimeRef.current);
+  };
+  const orihimeForceConfuseRef = useRef(false);
+  const hoshiaiComboAt = (slotIdx, consume) => {
+    if (!isTacticsMode(runMode) || !Number.isInteger(slotIdx)) return null;
+    const b = orihimeBondOfSlot(slotIdx),
+      h = b ? orihimeRef.current.hoshiai[b.key] : null;
+    if (!b || !b.up || !h || h.turns <= 0 || h.used >= h.perTurn) return null;
+    if (consume) writeOrihime('hoshiai', b.key, {
+      ...h,
+      used: h.used + 1
+    });
+    return {
+      count: 1,
+      rate: h.rate,
+      label: '星合の刻'
+    };
+  };
+  const setOrihimePartner = (selfSlot, partnerSlot) => {
+    if (!Number.isInteger(partnerSlot)) return;
+    writeOrihime('partner', isTacticsMode(runMode) ? String(selfSlot) : 'party', partnerSlot);
+  };
+  const orihimeHasPartner = () => Number.isInteger(orihimeRef.current.partner[isTacticsMode(runMode) ? String(initialBattleDistanceRef.current) : 'party']);
+  const [orihimePartnerPick, setOrihimePartnerPick] = useState(false);
+  const tacticsUnitUp = slotIdx => {
+    const u = tacticsUnitsRef.current[slotIdx];
+    return !!u && Number(u.hp) > 0;
+  };
+  const orihimeBondAt = key => {
+    const partnerSlot = orihimeRef.current.partner[key];
+    if (!Number.isInteger(partnerSlot)) return null;
+    const tactics = isTacticsMode(runMode);
+    const selfSlot = tactics ? Number(key) : initialBattleDistanceRef.current;
+    const selfId = tactics ? tacticsUnitsRef.current[selfSlot]?.id : mainHero?.id;
+    if (selfId !== ORIHIME_MONSTER_ID) return null;
+    const diff = orihimeDiffOf(selfSlot, partnerSlot);
+    const up = tactics ? tacticsUnitUp(selfSlot) && tacticsUnitUp(partnerSlot) : !!slots[partnerSlot];
+    const ouse = ouseOf(orihimeRef.current.ouse[key], diff);
+    return {
+      key,
+      selfSlot,
+      partnerSlot,
+      diff,
+      ouse,
+      up,
+      effect: orihimeBondEffectOf(diff, ouse, up)
+    };
+  };
+  const orihimeBonds = () => (isTacticsMode(runMode) ? Object.keys(orihimeRef.current.partner) : ['party']).map(orihimeBondAt).filter(Boolean);
+  const orihimeBondOfSlot = slotIdx => orihimeBonds().find(b => b.selfSlot === slotIdx || b.partnerSlot === slotIdx) || null;
+  const orihimeDmgMultAt = slotIdx => {
+    const b = Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null;
+    return b ? 1 + b.effect.dmgAdd : 1;
+  };
+  const orihimeTakenMultAt = slotIdx => {
+    const b = isTacticsMode(runMode) ? Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null : orihimeBondAt('party');
+    return b ? 1 - b.effect.takenCut : 1;
+  };
+  const orihimeTurnKindsRef = useRef({});
+  const orihimeCardKindOf = card => !card ? null : ['atk', 'range_atk', 'unique'].includes(card.type) ? 'attack' : card.type === 'guard' ? 'guard' : 'assist';
+  const noteOrihimeCard = (slotIdx, card) => {
+    const kind = orihimeCardKindOf(card);
+    if (!kind || !Number.isInteger(slotIdx) || !orihimeBondOfSlot(slotIdx)) return;
+    const k = String(slotIdx),
+      cur = orihimeTurnKindsRef.current[k] || [];
+    if (!cur.includes(kind)) orihimeTurnKindsRef.current = {
+      ...orihimeTurnKindsRef.current,
+      [k]: [...cur, kind]
+    };
+  };
+  const settleOrihimeOuse = () => {
+    const kinds = orihimeTurnKindsRef.current;
+    orihimeTurnKindsRef.current = {};
+    orihimeBonds().forEach(b => {
+      const a = kinds[String(b.selfSlot)] || [],
+        c = kinds[String(b.partnerSlot)] || [];
+      const after = addOuse(b.ouse, b.diff, a.some(x => c.includes(x)), b.up);
+      if (after === b.ouse) return;
+      writeOrihime('ouse', b.key, after);
+      addPopup(`🎐 逢瀬 ${after}/${ORIHIME_BOND_TIERS[b.diff].max}`, 'hero', 'text-sky-200 text-base font-bold drop-shadow-md', undefined, b.selfSlot);
+    });
+  };
+  const tickOrihimeEx = () => {
+    const cur = orihimeRef.current;
+    if (!Object.keys(cur.hoshiai).length && !Object.keys(cur.kogare).length) return;
+    const tickOne = (table, reset) => Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.turns > 1 ? {
+      ...v,
+      turns: v.turns - 1,
+      ...reset
+    } : null]).filter(([, v]) => v));
+    const next = {
+      ...cur,
+      hoshiai: tickOne(cur.hoshiai, {
+        used: 0
+      }),
+      kogare: tickOne(cur.kogare, {
+        rolls: KOGARE_ROLLS_PER_TURN
+      })
+    };
+    orihimeRef.current = next;
+    setOrihimeView(next);
+  };
+  const orihimeShareTargets = (targets, damage) => {
+    let rest = (Array.isArray(targets) ? targets : []).filter(Number.isInteger);
+    const parts = [];
+    orihimeBonds().filter(b => b.up && b.effect.share).forEach(b => {
+      [[b.selfSlot, b.partnerSlot], [b.partnerSlot, b.selfSlot]].forEach(([from, to]) => {
+        if (!rest.includes(from) || rest.includes(to)) return;
+        const [mine, theirs] = shareOrihimeDamage(damage);
+        rest = rest.filter(i => i !== from);
+        parts.push({
+          slots: [from],
+          damage: mine
+        }, {
+          slots: [to],
+          damage: theirs
+        });
+      });
+    });
+    return [{
+      slots: rest,
+      damage
+    }, ...parts];
+  };
+  const reikonRef = useRef({});
+  const [reikonView, setReikonView] = useState({});
+  const writeReikonKey = (key, v) => {
+    if (!key) return;
+    const next = {
+      ...reikonRef.current,
+      [key]: reikonOf(v)
+    };
+    reikonRef.current = next;
+    setReikonView(next);
+  };
+  const resetReikon = () => {
+    reikonRef.current = {};
+    setReikonView({});
+  };
+  const reikonGutsMultAt = slotIdx => {
+    const key = trickStartKeyOf(slotIdx);
+    return key ? reikonGutsMult(reikonRef.current[key]) : 1;
+  };
+  const reikonEvasionNow = () => Object.values(reikonRef.current).reduce((most, v) => Math.max(most, reikonEvasionUp(v)), 0);
+  const tickReikonAll = () => {
+    const entries = Object.entries(reikonRef.current);
+    if (!entries.length) return;
+    const next = Object.fromEntries(entries.map(([k, v]) => [k, tickReikon(v)]).filter(([, v]) => v.wait > 0 || v.turns > 0));
+    reikonRef.current = next;
+    setReikonView(next);
+  };
+  const tickKyubiKagero = () => {
+    const cur = kyubiRef.current;
+    const kagero = Object.fromEntries(Object.entries(cur.kagero).map(([k, v]) => [k, tickKagero(v)]));
+    const kitsunebi = Object.fromEntries(Object.entries(cur.kitsunebi).map(([k, v]) => {
+      const next = tickKitsunebi(v);
+      if (next.fires > kitsunebiOf(v).fires) addPopup(`🦊 狐火が戻った ${next.fires}/${KITSUNEBI_MAX}`, 'hero', 'text-blue-200 text-sm font-bold drop-shadow-md', undefined, Number(k));
+      return [k, next];
+    }));
+    if (!Object.keys(cur.kagero).length && !Object.keys(cur.kitsunebi).length && !Object.keys(cur.guard).length) return;
+    const next = {
+      ...cur,
+      kagero,
+      kitsunebi,
+      guard: {}
+    };
+    kyubiRef.current = next;
+    setKyubiView(next);
+  };
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   const nextTurnBuffsRef = useRef({});
@@ -104553,7 +106266,8 @@ function MonsterHeroGame() {
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
     const targets = tacticsTargetsNow(intent, actingDist);
-    return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
+    const parts = kitsunebiShieldParts(orihimeShareTargets(targets, damage));
+    return commitTacticsUnits(parts.reduce((units, part) => damageTacticsTargets(units, part.slots, part.damage), tacticsUnitsRef.current));
   };
   const tacticsHeal = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
   const tacticsRateHeal = (hpRate, gutsRate, includeDowned = true) => {
@@ -105492,12 +107206,18 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   const monsterCardName = (node, className = 'text-white', band = false) => {
     const long = band && typeof node === 'string' && node.length >= 9;
+    const fit = !band && typeof node === 'string';
     return React.createElement("div", {
-      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : 'h-[16px] truncate leading-tight'} ${className}`,
+      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : fit ? 'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]' : 'h-[16px] truncate leading-tight'} ${className}`,
       style: band ? {
         textShadow: '0 1px 2px rgba(0,0,0,.95)'
       } : undefined
-    }, node);
+    }, fit ? React.createElement("span", {
+      className: "block",
+      style: {
+        fontSize: `min(11px, calc(100cqw / ${[...node].length + 0.3}))`
+      }
+    }, node) : node);
   };
   const monsterCardInfo = (node, sub) => node || sub ? React.createElement("div", {
     className: "w-full flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 leading-none",
@@ -105778,7 +107498,7 @@ function MonsterHeroGame() {
   const raidJackDamageRef = useRef(0);
   const tacticsRaidPresentLevel = turn => Math.max(0, Math.floor((Number(turn) || 0) / 2));
   const raidExDefOf = monId => {
-    const def = tacticsExDefOf(monId);
+    const def = tacticsExRoleDefOf(monId, mainHero?.id === monId);
     return def && raidJackRunRef.current && raidJackRunRef.current.kind === 'a' ? {
       ...def,
       unlimited: false,
@@ -107760,7 +109480,7 @@ function MonsterHeroGame() {
   const RAID_JACK_HOWTO_AFTER_STORY_ID = 'halloween_night_2026_part1';
   const RAID_JACK_RHYTHM_STORY_ID = 'raid_jack_rhythm_story_2026_10_06';
   const HALLOWEEN_NIGHT_STORY_IDS = HALLOWEEN_NIGHT_STORIES.map(story => story.id);
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -107999,6 +109719,16 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(KYUKO_JOIN_STORY_ID)) return;
     setRhythmEventStoryPending(KYUKO_JOIN_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(SORASHIDO_JOIN_STORY_ID)) return;
+    setRhythmEventStoryPending(SORASHIDO_JOIN_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
+  }, [rhythmEventStorySeen]);
   useEffect(() => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.tacticsTypes || !EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) return;
     if (!tacticsTypesStorySeenLoaded || tacticsTypesStorySeenFlag || !tacticsIntroSeenFlag) return;
@@ -109533,7 +111263,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, KYUKO_JOIN_STORY_ID, ...(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? [SORASHIDO_JOIN_STORY_ID] : []), ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -110952,6 +112682,7 @@ function MonsterHeroGame() {
     raidJackRhythmStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RAID_JACK_RHYTHM_STORY_ID),
     atsuJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(ATSU_JOIN_STORY_ID),
     kyukoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_JOIN_STORY_ID),
+    sorashidoJoinSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -111320,13 +113051,13 @@ function MonsterHeroGame() {
     }
   };
   const exchangeRhythmEventPoints = async (offer, quantity = 1) => {
-    if (offer?.available === false) return {
-      ok: false,
-      reason: 'soon'
-    };
     if (marketPurchaseProcessingRef.current) return {
       ok: false,
       reason: 'busy'
+    };
+    if (offer?.available === false) return {
+      ok: false,
+      reason: 'soon'
     };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -111655,13 +113386,13 @@ function MonsterHeroGame() {
     }
   };
   const exchangeCardPoints = async offer => {
-    if (offer?.available === false) return {
-      ok: false,
-      reason: 'soon'
-    };
     if (marketPurchaseProcessingRef.current) return {
       ok: false,
       reason: 'busy'
+    };
+    if (offer?.available === false) return {
+      ok: false,
+      reason: 'soon'
     };
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -114368,7 +116099,7 @@ function MonsterHeroGame() {
     const base = bonusOwner || kikiCardBonus > 0 ? baseCardLimit : 1;
     return Math.min(cardLimit, base + (coordinationHolder ? soulCoordinationCardBonus : 0));
   };
-  const getCardGuts = (card, slotIdx = null) => {
+  const getCardBaseGuts = card => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : ['buff', 'debuff', 'heal', 'draw'].includes(card.type) ? card.guts || 20 : 20;
     if (cost > 0 && ['atk', 'range_atk', 'unique'].includes(card.type)) {
@@ -114392,9 +116123,15 @@ function MonsterHeroGame() {
       if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) cost = Math.floor(cost * (1 + 0.1 * getPermaBuff('chuuniUniqueStack')));
       if (card.type === 'unique' && card.monId === FATE_COIN_MONSTER_ID) cost = Math.floor(cost * fateCoinGutsMult(livePermaBuff('fateStacks', null)));
     }
+    return cost;
+  };
+  const getCardGuts = (card, slotIdx = null) => {
+    if (!card) return 0;
+    let cost = getCardBaseGuts(card);
     const slotBuffs = isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null;
     if ((getTurnBuff('zeroGuts', false) || tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts')) && ['atk', 'range_atk', 'unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0) * tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0));
+    cost = Math.floor(cost * reikonGutsMultAt(slotIdx));
     if (cost > 0 && (getTurnBuff('pandoraResonanceTurns', 0) > 0 || tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns') > 0)) cost = Math.floor(cost * 0.5);
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * getPermaBuff('snegurochkaGutsDiscountStacks')));
     const soulOwner = Number.isInteger(slotIdx) && slots[slotIdx]?.masuId ? getMasuMon(slots[slotIdx].masuId) : null;
@@ -115895,6 +117632,10 @@ function MonsterHeroGame() {
     const confuseBefore = enemyConfuseRef.current;
     const confusion = rollEnemyConfusion(aimed, confuseBefore);
     if (confusion.turns !== confuseBefore) writeEnemyConfuse(confusion.turns);
+    if (aimed && orihimeForceConfuseRef.current) {
+      orihimeForceConfuseRef.current = false;
+      if (confusion.intent?.type !== 'CONFUSED') confusion.intent = confusedEnemyIntent(aimed);
+    }
     const upcoming = confusion.intent;
     if (aimed && confuseBefore > 0) {
       if (upcoming?.type === 'CONFUSED') showLuckBanner({
@@ -116018,7 +117759,7 @@ function MonsterHeroGame() {
     if (isTacticsMode(runMode) && Number.isInteger(slot) && slot >= 0 && slot !== slotIdx) return 1;
     return Math.max(0.1, 1 - Math.min(0.9, rate));
   };
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken * kyubiTakenMultAt(slotIdx) : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx) * orihimeTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -116944,7 +118685,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * orihimeDmgMultAt(slotIdx) * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -116978,7 +118719,7 @@ function MonsterHeroGame() {
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
       hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, kusabiCombosAt(slotIdx, mon?.id, card)),
+      exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), getPermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, mon?.id).combo, [...kusabiCombosAt(slotIdx, mon?.id, card), kyubiAttackAt(slotIdx, mon?.id, card).combo, kyubiAttackAt(slotIdx, mon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, false)]),
       critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
@@ -117286,7 +119027,7 @@ function MonsterHeroGame() {
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
         const kusabiDefenseKey = !isTacticsMode(runMode) ? 'party' : defenseSlot != null ? String(defenseSlot) : null;
-        const kusabiEvasion = hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0;
+        const kusabiEvasion = (hasKusabiTrait(defenseHeroId) && kusabiDefenseKey ? kusabiEvasionOf(kusabiAt(defenseSlot)) : 0) + reikonEvasionNow();
         const defenseTable = !isTacticsMode(runMode) && kusabiEvasion <= 0 ? unifiedSpecialDefense : buildUnifiedSpecialDefense({
           soulEvasion: soulBattleParty.evasion,
           soulReflect: soulBattleParty.reflect,
@@ -117305,7 +119046,12 @@ function MonsterHeroGame() {
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
         }
         const forcedReflect = getTurnBuff('reflect', false);
-        const soulDefenseResult = forcedReflect ? 'reflect' : rollUnifiedSpecialDefense(defenseTable, Math.random(), Math.random());
+        const kageroEvade = !forcedReflect && defenseHeroId === KYUBI_MONSTER_ID && kusabiDefenseKey && kageroOf(kyubiRef.current.kagero[kusabiDefenseKey]).ready;
+        if (kageroEvade) {
+          writeKyubi('kagero', kusabiDefenseKey, kageroUseEvade(kyubiRef.current.kagero[kusabiDefenseKey]));
+          addPopup('🔥 陽炎ノ相 完全回避！', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md');
+        }
+        const soulDefenseResult = forcedReflect ? 'reflect' : kageroEvade ? 'evasion' : rollUnifiedSpecialDefense(defenseTable, Math.random(), Math.random());
         const isReflect = soulDefenseResult === 'reflect';
         const isAbsorb = soulDefenseResult === 'absorb';
         const isEvasion = soulDefenseResult === 'evasion';
@@ -117704,6 +119450,10 @@ function MonsterHeroGame() {
     }
     if (timeStopSlot == null && (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     if (timeStopSlot == null && (dreamPainRef.current.wait > 0 || dreamPainRef.current.turns > 0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
+    if (timeStopSlot == null) tickKyubiKagero();
+    if (timeStopSlot == null) settleOrihimeOuse();
+    if (timeStopSlot == null) tickOrihimeEx();
+    if (timeStopSlot == null) tickReikonAll();
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -118273,6 +120023,25 @@ function MonsterHeroGame() {
     Audio_.se.card();
     const toggled = def.duration === 'style' ? `（${tacticsExStyleLabel(def, next, slotIdx, mon.id)}）` : '';
     pushBattleLog(`EX ${mon.masuName || mon.name}「${def.name}」${toggled}`, 'ally');
+    if (def.effect === 'hoshiai') {
+      const key = String(slotIdx),
+        b = orihimeBondAt(key),
+        h = startHoshiai(b ? b.ouse : 0, b ? b.diff : 0);
+      writeOrihime('hoshiai', key, {
+        ...h,
+        used: 0
+      });
+      writeOrihime('ouse', key, 0);
+      pushBattleLog(`🌌 星合の刻: ${h.turns}ターン・続く攻撃 与ダメ${Math.round(h.rate * 100)}%${b ? '' : '(相方がいないので、続く攻撃は出ない)'}`, 'ally');
+    }
+    if (def.effect === 'kogare') writeOrihime('kogare', String(slotIdx), {
+      turns: KOGARE_TURNS,
+      rolls: KOGARE_ROLLS_PER_TURN
+    });
+    if (def.effect === 'kitsunebi') {
+      writeKyubi('kitsunebi', String(slotIdx), useKitsunebi(kyubiRef.current.kitsunebi[String(slotIdx)]));
+      addPopup(`🦊 狐火 ${KITSUNEBI_MAX}/${KITSUNEBI_MAX}`, 'hero', 'text-blue-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
+    }
     if (def.lifeSpring && Number.isInteger(choice)) {
       let units = tacticsUnitsRef.current;
       const before = normalizeTacticsUnit(units[choice]);
@@ -118557,6 +120326,8 @@ function MonsterHeroGame() {
       const cardCost = getCardGuts(card, slotIdx);
       if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
+      if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
+      if (!isBreeder && entry.slotIdx != null) noteOrihimeCard(slotIdx, card);
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
@@ -118834,12 +120605,12 @@ function MonsterHeroGame() {
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit: getTurnBuff('guaranteedCrit', false) || tacticsSlotFlag(getTurnBuff('bySlot', null), slotIdx, 'guaranteedCrit') || tacticsCritFixedNow(slotIdx, card),
-          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
+          rollCrit: () => Math.random() < Math.min(1, ((card.crit || 0.1) + critRateBonus + (tacticsExMultiBuffNow(slotIdx).critAdd || 0) + blackNoteEffectAt(slotIdx, activeMon?.id).critAdd + kyubiAttackAt(slotIdx, activeMon?.id, card).critAdd) * tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
           hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
-          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, kusabiCombosAt(slotIdx, activeMon?.id, card)),
+          exCombos: withBlackNoteCombo(withFateCombo(tacticsExCombosAt(slotIdx, halved, card), livePermaBuff('fateStacks', null), slotIdx), blackNoteEffectAt(slotIdx, activeMon?.id).combo, [...kusabiCombosAt(slotIdx, activeMon?.id, card), kyubiAttackAt(slotIdx, activeMon?.id, card).combo, kyubiAttackAt(slotIdx, activeMon?.id, card).foxCombo, hoshiaiComboAt(slotIdx, true)]),
           critDmgMult: tacticsExMultiBuffNow(slotIdx).critDmg
         });
         const isCrit = hits[0].crit;
@@ -118902,6 +120673,25 @@ function MonsterHeroGame() {
         }
         if (finalD > 0) gainSweetStack(slotIdx, activeMon?.id, card, true);
         if (finalD > 0) gainKusabi(slotIdx, activeMon?.id);
+        {
+          const kg = isTacticsMode(runMode) && finalD > 0 ? orihimeRef.current.kogare[String(slotIdx)] : null;
+          if (kg && kg.turns > 0 && kg.rolls > 0) {
+            const r = rollKogare(kg.rolls);
+            writeOrihime('kogare', String(slotIdx), {
+              ...kg,
+              rolls: r.rollsLeft
+            });
+            if (r.confused) {
+              orihimeForceConfuseRef.current = true;
+              showLuckBanner({
+                icon: '❓',
+                title: `${battleActorName(slotIdx)}の焦がれ待つ天ノ河`,
+                result: '敵の次の行動が「意味不明」に！',
+                tone: 'enemy'
+              });
+            }
+          }
+        }
         if (finalD > 0 && isTacticsMode(runMode) && tacticsExLiveRef.current.enabled && tacticsExConfusesOnHit(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now)) {
           writeEnemyConfuse(ENEMY_CONFUSE_TURNS);
           showLuckBanner({
@@ -118918,6 +120708,10 @@ function MonsterHeroGame() {
               bonus: dreamPainTakenOf(kusabiBeforeAttack) * effMul
             });
             addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus * 100)}%`, 'enemy', 'text-fuchsia-300 text-lg font-bold');
+          }
+          if (hasReikon(card.monId)) {
+            writeReikonKey(trickStartKeyOf(slotIdx), startReikon());
+            addPopup(`👻 霊魂 次のターンから${REIKON_TURNS}ターン 消費ガッツ−${Math.round((1 - REIKON_GUTS_MULT) * 100)}%・回避+${REIKON_EVASION_UP}%`, 'hero', 'text-violet-200 text-base font-bold drop-shadow-md', undefined, slotIdx);
           }
           if (card.monId === 'Ham') {
             immediateStun = true;
@@ -121415,6 +123209,11 @@ function MonsterHeroGame() {
       ...m
     };
     applySlots(nextSlots);
+    if (!isHero && orihimePartnerPick && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+      setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
+      addPopup(`🎐 ${m.masuName || m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
+    }
+    setOrihimePartnerPick(false);
     clearSlotUniqueSelection(slotIdx);
     if (isHero) stopAllAuto();
     if (!isHero) Audio_.se.join();
@@ -122273,6 +124072,7 @@ function MonsterHeroGame() {
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
     if (t.id === 'kiki') return `次の${level + 2}ターン 使えるカード +1枚・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
+    if (t.id === 'sorashido') return sorashidoCopyDesc(level);
     if (t.id === 'kyuko') {
       const tier = KYUKO_TIERS[Math.min(level, KYUKO_TIERS.length - 1)];
       return `このターン敵の単体攻撃を引き受ける（タクティクス）・受けるダメージ ${pct(tier.cut)}%ダウン（${tier.turns}ターン・タクティクス以外はパーティ全体）`;
@@ -126614,10 +128414,12 @@ function MonsterHeroGame() {
           "data-extreme-mode-info": true,
           "aria-label": "極限チャレンジの説明を開く",
           onClick: () => setModeInfoId(EXTREME_MODE.id),
-          className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
-        }, "このモードの説明")
+          className: "shrink-0 min-h-[38px] px-3 max-[359px]:px-2.5 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
+        }, React.createElement("span", {
+          className: "max-[359px]:hidden"
+        }, "このモードの"), "説明")
       }), React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
+        className: "w-full max-w-md [@media(orientation:landscape)_and_(max-height:520px)]:max-w-2xl mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("div", {
@@ -126991,8 +128793,9 @@ function MonsterHeroGame() {
         }, value)))), React.createElement("div", {
           className: "mhbt-note"
         }, React.createElement("span", {
-          className: "truncate"
-        }, noteText), quick && hasExtremeSpecialRules(key) && React.createElement("span", {
+          className: "truncate [@media(orientation:landscape)_and_(max-height:520px)]:whitespace-normal [@media(orientation:landscape)_and_(max-height:520px)]:overflow-visible",
+          style: JA_LABEL_STYLE
+        }, jaWrap(noteText)), quick && hasExtremeSpecialRules(key) && React.createElement("span", {
           className: "shrink-0 rounded bg-slate-900 px-1 text-[8px] text-amber-300"
         }, "特殊ルールあり")), React.createElement("div", {
           className: `mhbt-reward min-h-[54px] flex items-center gap-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:self-start ${species && speciesRewardClaimed(key) ? 'opacity-70' : ''}`,
@@ -134428,6 +136231,11 @@ function MonsterHeroGame() {
       })(),
       heroStyle: tacticsHeroStyle,
       onHeroStyle: setTacticsHeroStyle,
+      partnerOffer: mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner() ? {
+        heroName: mainHero.masuName || mainHero.name
+      } : null,
+      partnerPick: orihimePartnerPick,
+      onPartnerPick: setOrihimePartnerPick,
       onRepick: () => {
         if (!mainHero && speciesChallengeBattleRunRef.current) {
           setCurrentPickingMon(null);
@@ -134604,6 +136412,14 @@ function MonsterHeroGame() {
       const bottomLine = speakingGuest ? assistIdx >= 0 ? script[assistIdx] : null : line;
       const bottomSpeaker = bottomLine ? assistantById(bottomLine.who) : speaker;
       const fx = line.fx || null;
+      let monstersIdx = -1;
+      for (let i = step; i >= 0; i--) {
+        if (Array.isArray(script[i].monsters)) {
+          monstersIdx = i;
+          break;
+        }
+      }
+      const storyMonsters = monstersIdx >= 0 ? script[monstersIdx].monsters.filter(m => m && m.pose !== 'hide' && STORY_MONSTER_ART[m.id]) : [];
       const fxColors = {
         transform: '255,237,180',
         rankup: ['251,146,60', '251,191,36', '192,132,252', '248,113,113', '250,204,21'][Math.max(0, stageTier - 1)],
@@ -134676,6 +136492,7 @@ function MonsterHeroGame() {
       };
       return React.createElement("div", {
         "data-event-story": eventReplay.id,
+        "data-story-has-stage": stageGuest ? '1' : undefined,
         className: "fixed inset-0 flex items-end justify-center",
         style: {
           position: 'fixed',
@@ -134695,6 +136512,7 @@ function MonsterHeroGame() {
           background: 'transparent'
         }
       }), stageGuest && React.createElement("div", {
+        ref: storyMeasureRef('--story-stage-bottom', 'bottom'),
         "data-story-stage": true,
         className: "pointer-events-none",
         "data-story-shake": fx === 'transform' || fx === 'rankup' ? step % 2 : undefined,
@@ -134781,7 +136599,29 @@ function MonsterHeroGame() {
       }, bubbleLine.name || stageGuest.name), React.createElement("span", {
         className: "mt-1 block text-[14px] font-bold leading-relaxed text-white",
         style: bubbleWrapStyle()
-      }, bubbleLines(speakText(bubbleLine, stageGuest)))))), fx && React.createElement("div", {
+      }, bubbleLines(speakText(bubbleLine, stageGuest)))))), storyMonsters.length > 0 && React.createElement("div", {
+        "data-story-monsters": storyMonsters.length,
+        "aria-hidden": "true",
+        className: "pointer-events-none",
+        style: {
+          top: stageGuest ? 'calc(var(--story-stage-bottom, 30vh) + 6px)' : 'calc(env(safe-area-inset-top) + 6vh)'
+        }
+      }, storyMonsters.map(m => {
+        const art = React.createElement("img", {
+          src: STORY_MONSTER_ART[m.id],
+          alt: "",
+          draggable: false,
+          className: "block h-full w-full object-contain"
+        });
+        return React.createElement("span", {
+          key: `${m.id}:${m.pose}`,
+          "data-story-monster": m.id,
+          "data-story-pose": m.pose
+        }, m.pose === 'idle' ? withMonsterIdleArt(m.id, art, {
+          fill: true,
+          own: true
+        }) : art);
+      })), fx && React.createElement("div", {
         key: `fx${step}`,
         "aria-hidden": "true",
         className: "pointer-events-none",
@@ -134812,6 +136652,7 @@ function MonsterHeroGame() {
           animation: 'storyBanner 2.2s ease-out both'
         }
       }, line.fxText)), React.createElement("div", {
+        ref: storyMeasureRef('--story-sheet-h', 'height'),
         onClick: next,
         "data-story-sheet": true,
         "data-story-shake": fx === 'transform' || fx === 'rankup' ? step % 2 : undefined,
@@ -135405,17 +137246,11 @@ function MonsterHeroGame() {
         }
       }, who.name), page.title && React.createElement("span", {
         className: "block text-[11px] font-black text-white mt-0.5",
-        style: {
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word'
-        }
-      }, page.title), React.createElement("span", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(String(page.title))), React.createElement("span", {
         className: "block text-[13px] text-white leading-relaxed mt-1",
-        style: {
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word'
-        }
-      }, String(page.t).replace('{name}', breederName || 'あなた')))), topicRef && React.createElement("button", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(String(page.t).replace('{name}', breederName || 'あなた'))))), topicRef && React.createElement("button", {
         onClick: () => {
           setHelpCatId(page.help.split('/')[0]);
           setHelpTopicId(page.help.split('/')[1]);
@@ -140516,6 +142351,38 @@ const createAnimationStyle = () => {
       [data-story-sheet] [data-story-buttons] { margin-top: .5rem; }
       [data-story-sheet] [data-story-buttons] > button { min-height: 44px; }
     }
+    /* お話の上のステージ(ゲストの顔と吹き出し)は、横の低い画面では窓と重なって読めなかった(2026-10-27 クラフトくん)。
+       ステージを画面の上の端へ寄せて顔を小さくし、ステージが出ているあいだは窓の高さを「ステージの下端から下」までに縮める
+       (台詞の部分は窓の中で流れ、ボタンはいつも見える。ステージの下端は 60-app.jsx の storyMeasureRef が測る) */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-story-stage][data-story-stage] { top: calc(env(safe-area-inset-top) + 6px) !important; }
+      [data-story-stage] [data-story-guest] { zoom: .6; }
+      [data-story-stage] [data-story-guest-bubble] { margin-top: 2px !important; padding: 4px 10px; }
+      [data-story-stage] [data-story-guest-bubble] > span.block { font-size: 12px; line-height: 1.45; margin-top: 2px; }
+      [data-event-story][data-story-has-stage] [data-story-sheet] { max-height: calc(var(--mh-vh) - var(--story-stage-bottom, 120px) - 6px) !important; }
+    }
+    /* お話の真ん中に出すモンスター(2026-10-27「推しに会える夜」)。縦の画面は上のステージ(top は 60-app.jsx で決める)と下の窓のあいだ。
+       大きさは置き場の高さと画面の幅の小さいほうに合わせた正方形(待機アニメは正方形の箱で軸を合わせる) */
+    [data-story-monsters] { position: absolute; left: 0; right: 0; bottom: calc(var(--story-sheet-h, 50vh) + 18px); z-index: 2; display: flex; align-items: flex-end; justify-content: center; gap: 4%; padding: 0 4%; }
+    /* いちばん大きくなる「前に出る」(1.14倍)でも置き場からはみ出さないよう、ふだんの大きさは置き場の 1/1.14。大きくなるときは足元を軸に上へ伸びる */
+    [data-story-monster] { position: relative; display: block; height: min(calc(100% / 1.14), 37vw, 210px); aspect-ratio: 1 / 1; transform-origin: 50% 100%; }
+    [data-story-pose="in"] { animation: storyMonIn .7s ease-out both; }
+    [data-story-pose="back"] { animation: storyMonBack 1s ease-out both; }
+    [data-story-pose="front"] { animation: storyMonFront .5s ease-out both; }
+    [data-story-pose="approach"] { animation: storyMonApproach .8s ease-out both; }
+    [data-story-pose="hop"] { animation: storyMonHop 1.1s ease-out both; }
+    @keyframes storyMonIn { 0% { opacity: 0; transform: translateY(14px) scale(.85); } 100% { opacity: 1; transform: none; } }
+    @keyframes storyMonBack { 0% { transform: none; } 30% { transform: translateY(-8%) scale(.86); } 45% { transform: translate(-4%, -8%) scale(.86); } 60% { transform: translate(4%, -8%) scale(.86); } 75% { transform: translate(-2%, -8%) scale(.86); } 100% { transform: translateY(-8%) scale(.86); } }
+    @keyframes storyMonFront { 0% { transform: none; } 100% { transform: scale(1.14); } }
+    /* 寄るのは足元のすき間(18px)の中まで。大きさの上限 210px の 7% ≒ 15px */
+    @keyframes storyMonApproach { 0% { transform: none; } 100% { transform: translateY(7%) scale(1.06); } }
+    @keyframes storyMonHop { 0%, 100% { transform: none; } 18% { transform: translateY(-16%); } 36% { transform: none; } 56% { transform: translateY(-10%); } 74% { transform: none; } }
+    /* 横の低い画面は、窓(幅 28rem)の左右の空きに小さく出す。窓・顔の列・ボタンには重ねない */
+    @media (orientation: landscape) and (max-height: 500px) {
+      [data-story-monsters][data-story-monsters] { top: calc(env(safe-area-inset-top) + 8px) !important; bottom: calc(env(safe-area-inset-bottom) + 8px); align-items: center; justify-content: space-between; gap: 0; padding: 0 14px; }
+      [data-story-monster] { height: min(70%, calc(((100vw - 28rem) / 2 - 30px) / 1.14), 176px); }
+    }
+    @media (prefers-reduced-motion: reduce) { [data-story-monster] { animation: none !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
     @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
@@ -141444,6 +143311,12 @@ const createAnimationStyle = () => {
       .mh-phase-card-nums { font-size: 9px !important; }
       /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
       .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+    }
+    /* 幅も狭い(320 など)と1枚が66px前後になり、名前が「走り/込み」「ドミノ/倒し」と語の途中で折れた。
+       余白を詰めて名前を1行に収める(2026-10-27 ジン・WAVE の合間の見回り) */
+    @container (max-height: 560px) and (max-width: 340px) {
+      .mh-phase-card { padding: 6px 5px !important; }
+      .mh-phase-card-name { font-size: 11px !important; white-space: nowrap; letter-spacing: -0.03em; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、

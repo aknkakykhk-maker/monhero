@@ -725,26 +725,26 @@ const SKM_KYUBI = Object.freeze({
     skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 4), burst:'heart' }),                                   // ゆうわく
     skm('lick', { c:'pink', line:'tongue', burst:'heart' }),                                                 // なめろう
     skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 9), over:'pillar', burst:'star', form:'fire' }),      // 超狐火
-    skm('warp', { c:'fire', over:'shadow', burst:'dust' }),                                                  // 陽炎
     skm('gather', { c:'blue', fx:skmFx('fall', 'flame', 10), over:'pillar', burst:'spark', form:'fire' }),  // 神狐蒼火
     skm('spin', { c:'wind', over:'tornado', burst:'leaf' }),                                                 // 八嵐天衝
-    skm('cast', { c:'sky', fx:skmFx('orbit', 'bubble', 10), over:'boom', burst:'bubble' }),                 // 炸裂気泡陣
+    skm('warp', { c:'fire', over:'shadow', burst:'dust' }),                                                  // 陽炎
+    skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 9), over:'eclipse', burst:'spark', form:'fire' }),  // 煉獄九尾陣
     skm('float', { c:'cosmic', fx:skmFx('fall', 'star', 12), over:'aurora', burst:'star', form:'light' }),  // 天河天翔
-    skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 9), over:'eclipse', burst:'spark', form:'fire' })], // 煉獄九尾陣
+    skm('cast', { c:'sky', fx:skmFx('orbit', 'bubble', 10), over:'boom', burst:'bubble' })],                // 炸裂気泡陣
 });
 // オリヒメ(2026-10-27・案の段階): 星の海から来たキュービ種。キュービと同じ名前の技は同じ動きで、星空の色にする。
-// 固有技は専用技(求愛・超狐火・星)が入り、いちばん上が天河天翔(キュービは煉獄九尾陣)なので、8段目と9段目が入れ替わる
+// 固有技は専用技(求愛・超狐火・星)が入り、並びはキュービと違う(2026-10-27 社長がキュービの段だけ並べ替えた)。同じ名前の技はキュービの同じ技の動きを借りる
 const SKM_ORIHIME = Object.freeze({
   normal:SKM_KYUBI.normal.map((m, i) => ({ ...m, c:['sky', 'pink', 'cosmic', 'pink', 'gold', 'gold', 'pink', 'cosmic', 'psy'][i] })),
   unique:[
     skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 6), over:'bloom', burst:'heart' }),                    // 求愛
-    { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // なめろう
+    { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // 織姫のくちづけ(キュービのなめろうの動き)
     skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 9), over:'pillar', burst:'star', form:'light' }),   // 超狐火・星
-    { ...SKM_KYUBI.unique[3], c:'cosmic' },                                                                   // 陽炎
-    { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 神狐蒼火
-    { ...SKM_KYUBI.unique[5], c:'sky' },                                                                      // 八嵐天衝
-    { ...SKM_KYUBI.unique[6], c:'pink' },                                                                     // 炸裂気泡陣
-    { ...SKM_KYUBI.unique[8], c:'psy' },                                                                      // 煉獄九尾陣
+    { ...SKM_KYUBI.unique[5], c:'cosmic' },                                                                   // 陽炎
+    { ...SKM_KYUBI.unique[3], c:'sky' },                                                                      // 神狐星火(キュービの神狐蒼火の動き)
+    { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 八鈴天衝(キュービの八嵐天衝の動き)
+    { ...SKM_KYUBI.unique[8], c:'pink' },                                                                     // 炸裂気泡陣
+    { ...SKM_KYUBI.unique[6], c:'psy' },                                                                      // 煉獄九尾陣
     { ...SKM_KYUBI.unique[7], c:'sky' }],                                                                     // 天河天翔
 });
 const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY,
@@ -1006,6 +1006,9 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   counter:      { c1:'#fed7aa', c2:'#ea580c', motif:'fist' },    // ハムボクシング: 拳の衝撃
   avoidCharge:  { c1:'#e9d5ff', c2:'#6d28d9', motif:'blade' },   // オフリィアボイド: 紫の残像(すり抜ける)
   trickConfuse: { c1:'#fed7aa', c2:'#9333ea', motif:'rise' },   // トリックコンフューズ: かぼちゃ色と紫の光
+  kitsunebi: { c1:'#93c5fd', c2:'#1d4ed8', motif:'rise' },      // 九尾幻灯(キュービ): 青い狐火
+  hoshiai: { c1:'#e0f2fe', c2:'#6366f1', motif:'rise' },        // 星合の刻(オリヒメ): 天の川の光
+  kogare: { c1:'#fbcfe8', c2:'#7c3aed', motif:'rise' },         // 焦がれ待つ天ノ河(オリヒメ): 星と桜色
   cookieBox:    { c1:'#fce7f3', c2:'#ec4899', motif:'rise' },    // おねがい♪メロディボックス: ピンクのクッキーが舞う
   nightmareKey: { c1:'#f5d0fe', c2:'#3b0764', motif:'blade' },   // 悪夢全開！メロディ・キー: 黒紫の悪夢
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },

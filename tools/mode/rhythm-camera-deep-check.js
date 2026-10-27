@@ -12,7 +12,6 @@
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'../..');
 const {rhythmProjectionSource}=require('./rhythm-projection-source.js');
-const settingsSrc=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'),'utf8');
 const data=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
 const play=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/30-rhythm-play.jsx'),'utf8');
 let failed=0;const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
@@ -47,10 +46,8 @@ check('戻すと既定の値に戻る',ys.every(y=>api.rhythmProjectionDepth(y)=
 const uses=name=>[...data.matchAll(new RegExp(name,'g'))].length;
 check('奥の幅の値は入れ物を通して読む',uses('RHYTHM_PROJECTION_TOP_SCALE[^_]')===3,`${uses('RHYTHM_PROJECTION_TOP_SCALE[^_]')}か所(宣言と入れ物の既定の2か所だけ)`);
 check('GPU の帯も入れ物から読む(uTop・uFar)',/gl\.uniform1f\(U\.uTop,RHYTHM_PROJECTION_CAMERA\.top\)/.test(data)&&/gl\.uniform1f\(U\.uFar,RHYTHM_PROJECTION_CAMERA\.far\|\|RHYTHM_TRAVEL_FAR_SCALE\)/.test(data));
-check('演奏画面が演奏を始めるときに入れ、離れるときに戻す',/RHYTHM_PROJECTION_CAMERA\.set\(cameraDeep\)/.test(play)&&/RHYTHM_PROJECTION_CAMERA\.reset\(\)/.test(play)&&/const cameraDeep=useState\(\(\)=>settings\.roadDepth==='DEEP'\|\|rhythmCameraDeepActive\(\)\)\[0\]/.test(play));
-// 2026-10-27 社長の選択「案A」: カメラはオプション「道の奥行き」(roadDepth)で選べる。既定は「いまの」で、保存値に無い人もいまのまま
-check('オプション「道の奥行き」は既定が「いまの」で、知らない値も「いまの」に戻す',/roadDepth:'NORMAL'/.test(settingsSrc)&&/roadDepth:RHYTHM_ROAD_DEPTH_LEVELS\.includes\(source\.roadDepth\)\?source\.roadDepth:DEFAULT_RHYTHM_SETTINGS\.roadDepth/.test(settingsSrc));
-check('試作の値 c3b でも寝かせる(デバッグ)',/const rhythmCameraDeepActive=\(\)=>rhythmFloor3dPreference\(\)==='c3b';/.test(data));
+check('演奏画面が演奏を始めるときに入れ、離れるときに戻す',/RHYTHM_PROJECTION_CAMERA\.set\(cameraDeep\)/.test(play)&&/RHYTHM_PROJECTION_CAMERA\.reset\(\)/.test(play)&&/const cameraDeep=useState\(\(\)=>rhythmCameraDeepActive\(\)\)\[0\]/.test(play));
+check('試作の値 c3b のときだけ寝かせる',/const rhythmCameraDeepActive=\(\)=>rhythmFloor3dPreference\(\)==='c3b';/.test(data));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
