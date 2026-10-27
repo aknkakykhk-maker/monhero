@@ -791,7 +791,8 @@ const helpDataRows = (id) => {
     // 必要な仲良し度(need)はどの助手も同じなので、Lvを1行にまとめられる
     case 'assistantBond': {
       const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
-      const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length) ? ASSISTANT_LIST : [];
+      // 公開の印が立つまでの助手(ソラシドなど)は並べない(assistantReleased・data/assistants.js)
+      const list = ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
       const base = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [];
       return base.map(s => {
         const per = list.map(who => {

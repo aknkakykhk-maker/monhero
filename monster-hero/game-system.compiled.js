@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a646f6b897eb36bd
+// source-sha256: c7762293c1074c4c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -404,6 +404,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get assistantKyuko() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true;
+  },
+  get assistantSorashido() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true;
   },
   get cardBattle() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true;
@@ -12612,6 +12615,7 @@ const RELEASE_FLAGS = {
   assistantDailyLines: true,
   assistantAtsu: true,
   assistantKyuko: true,
+  assistantSorashido: false,
   cardBattle: true,
   cardAssistantTalk: true,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
@@ -17180,7 +17184,7 @@ const helpDataRows = id => {
     case 'assistantBond':
       {
         const callUnlockLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
-        const list = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length ? ASSISTANT_LIST : [];
+        const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
         const base = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || [];
         return base.map(s => {
           const per = list.map(who => {
@@ -66933,7 +66937,8 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   momosuke: who => `${who}からフレンド申請が来てるよw 見にいこ？`,
   dra: who => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: who => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
-  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`
+  kyuko: who => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: who => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`
 });
 function HomeFriendRequestNotice({
   activeAssistant,

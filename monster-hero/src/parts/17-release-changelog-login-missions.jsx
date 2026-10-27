@@ -98,6 +98,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
   //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
   assistantKyuko: true,
+  // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
+  //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantSorashido: false,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」

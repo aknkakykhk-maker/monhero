@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 35288fb717fc4573
+// generated-sha256: dedc96a40ad9bb14
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -313,6 +313,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get assistantAtsu() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantAtsu === true; },
   // きゅうこの加入のお話(kyuko_join_2026_10_22・2026-10-22)。きゅうこの公開と一緒に出る
   get assistantKyuko() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantKyuko === true; },
+  // ソラシドのお話(2026-10-27〜台本を書いている途中)。ソラシドの公開と一緒に出る
+  get assistantSorashido() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantSorashido === true; },
   // MFバトルカードのはじまり(card_battle_intro_2026・2026-10-24)。MFバトルカードの公開と一緒に出る
   get cardBattle() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.cardBattle === true; },
 });
@@ -8910,6 +8912,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // 6人目の助手きゅうこ(2026-10-22 社長の決定)。新モンスターのイルミネ・ドリーミィも出る加入のお話を社長が全文読んで OK を出したら、3つ同時に真にする。
   //   偽のあいだは、助手の一覧・加入のお話・回想・マーケットのカード「きゅうこ」に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS・data/breeder.js の kyukoCardOnSale)
   assistantKyuko: true,
+  // 7人目の助手ソラシド(2026-10-27 社長の決定)。絵・お話・お知らせがそろって、社長が「公開」と言ったら真にする。
+  //   偽のあいだは、助手の一覧・おしゃべり・選ぶ画面に出ない(data/assistants.js の ASSISTANT_RELEASE_FLAGS)
+  assistantSorashido: false,
   // MFバトルカード(2026-10-24〜作っている途中。設計 docs/spec/CARD_BATTLE.md 7-3)。社長がお話と画面を見て「公開」と言ったら真にする。
   //   偽のあいだは、公開のお話(card_battle_intro_2026)・HOME の入口・マーケットのMFバトルカードの欄・更新履歴・ヘルプに出ない(デバッグ設定からだけ入れる)
   cardBattle: true, // 2026-10-26 社長「公開する」
@@ -12173,7 +12178,8 @@ const helpDataRows = (id) => {
     // 必要な仲良し度(need)はどの助手も同じなので、Lvを1行にまとめられる
     case 'assistantBond': {
       const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
-      const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length) ? ASSISTANT_LIST : [];
+      // 公開の印が立つまでの助手(ソラシドなど)は並べない(assistantReleased・data/assistants.js)
+      const list = ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || []).filter(who => typeof assistantReleased !== 'function' || assistantReleased(who.id));
       const base = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [];
       return base.map(s => {
         const per = list.map(who => {
@@ -40486,6 +40492,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
+  sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
 });
 function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
   const who = activeAssistant;
