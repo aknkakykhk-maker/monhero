@@ -22,10 +22,11 @@
 そこで、コピーは `slots` の外に、別の state で持つのがよい:
 
 ```
-aiCopy = { srcSlot, mon(元の子の写し), level, turnsLeft, hp, maxHp, guts, maxGuts, hand, uniqueUid } | null
+aiCopy = { srcSlot, srcMonsterId, level, spawnTurn, turnsLeft, hp, maxHp, atk, def, guts, maxGuts, hand, nextCard, uniqueCardUid } | null
 ```
+(2026-10-27 開発部と決めた形。保存しない。出すのはアシカの効果から呼ぶ `summonAiCopy(slotIdx, level)`。強さ・ターン数・手札・1枚の選び方・固有技の出し入れは開発部の純粋な関数を呼ぶ。印は `RELEASE_FLAGS.assistantSorashido`)
 
-- 立つ間合いは元の子と同じ `srcSlot`(5つ目の間合いは作らない)。画面では元の子の横に並べる
+- 立つ間合いは元の子と同じ `srcSlot`(5つ目の間合いは作らない)。画面の置き場は、縦は4人の列の右はし・横向きは列の下(部長の決め)
 - `slots` に入れないので、⑤「4人まで」「倒れたら負け」・ランキング・報酬・セーブからは**何もしなくても外れる**。逆に、コピーを入れたい所(下の表の ①〜④)だけ足す
 - コピーのライフ・ガッツは `aiCopy` が持つ(②。社長の答えが「別のライフ」なら、この形のまま)。パーティの `hp` は触らないので、負けの判定は変わらない
 
@@ -33,9 +34,9 @@ aiCopy = { srcSlot, mon(元の子の写し), level, turnsLeft, hp, maxHp, guts, 
 
 | # | ファイル | 関数(行) | いまの前提 | 変えること |
 | --- | --- | --- | --- | --- |
-| ① 枠 | 71-screen-battle.jsx | 味方の枠 2441 `slots.map`(`grid-cols-4`。タクティクスの新配置は `2x2`) | 4列 | 元の子の枠の中か横に、小さいコピーの札(ライフ・ガッツ・残りターン)を出す。5列目は作らない(間合いの軸と列がずれる) |
-| ① 枠 | 71-screen-battle.jsx | 横向き(#3953 の2列)の CSS 12〜30 行 `.grid.grid-cols-4 … height:112px` | 4列で高さ固定 | 札を枠の中に入れれば高さは変わらない。外に出すなら横向きの高さを測り直す |
-| ① 枠 | 71-screen-battle.jsx | 極限の小さい枠 1633 `data-ultra-ally-slots grid-cols-4` | 4列 | 同じく元の子の枠に札 |
+| ① 枠 | 71-screen-battle.jsx | 味方の枠 2441 `slots.map`(`grid-cols-4`。タクティクスの新配置は `2x2`) | 4列 | 4人の列の右はしに、コピーの札(ライフ・ガッツ・残りターン・元の子の間合い)を足す。間合いの軸(4列)とは別に置き、5つ目の間合いに見えないようにする |
+| ① 枠 | 71-screen-battle.jsx | 横向き(#3953 の2列)の CSS 12〜30 行 `.grid.grid-cols-4 … height:112px` | 4列で高さ固定 | 横向きは列の下にコピーの札を置くので、左の列の高さの割り振り(grid-template-rows)に1段足して測り直す |
+| ① 枠 | 71-screen-battle.jsx | 極限の小さい枠 1633 `data-ultra-ally-slots grid-cols-4` | 4列 | 同じく右はし(横向きは下)に小さい札 |
 | ② ライフ・ガッツ | 60-app.jsx | 新しい state `aiCopy`(696 の近く)・`resetAllState` 10171・`returnToHome` 10871・`handleGiveUp` 11149・`initBattle` 15045 | — | ランの始め・終わり・やめたときに `null` へ戻す。WAVE をまたいでも残る(ターン数で消える) |
 | ③ 敵の狙い | 60-app.jsx | `handleEnemyTurn` 12410〜(クラシックの攻撃は 12914〜12920) | 攻撃は全部パーティの `hp` へ | コピーがいる間は、1発ごとに「コピーに当たる」くじを引き、当たればコピーの `hp` から引く。0 で `aiCopy = null`(倒れた数・負けに入れない)。全体攻撃は両方へ。くじの率は社長の決め(案: 頭割りで 1/(立っている子+1)) |
 | ④ 山札 | 60-app.jsx | `buildDeck` 14816 | 固有技は4枠ぶん | コピーがいれば固有技を1枚足す(`ownerSlotIdx: 'copy'` のような印)。消えたら手札・山札・捨て札から抜く(タクティクスの `ensureTacticsExUniqueInHand` と同じ抜き方) |
@@ -56,3 +57,8 @@ aiCopy = { srcSlot, mon(元の子の写し), level, turnsLeft, hp, maxHp, guts, 
 - 敵がコピーを狙う率(③)・全体攻撃の当たり方
 - コピーのガッツの自動回復(ターン終わり)
 - タクティクス側(別の人の受け持ち)と、`aiCopy` の形・コピーの AI(1枚の選び方)をそろえるか
+
+## 分担(2026-10-27 ジン部長)
+
+- 開発部(ドライバーくん・枝 claude/sorashido-assist): アシカの札・ルールの部品(コピーの強さ・ターン数・切りかえ・固有技の出し入れ・手札と「次に使うカード」の決め方)・見せ方の部品
+- バトル部: バトルの状態に5人目を持たせる・敵の狙い・ターンの順番(プレイヤーのカードのあと1枚)・ダメージとガード・負けの判定から外す・枠の置き場。クラシック系 = ダイスくん、タクティクス = セコンドくん。出す・消す・狙いへの入れ方は2人で1つの部品にする
