@@ -8,6 +8,7 @@
 //   ② タクティクスの倒れた数: コピーが倒されても(その場で消える)盤面は1つも変わらず、倒れた数にも入らない
 //   ③ タクティクスの狙い: コピーがいるときの抽選は「枠の番号」か「コピー」だけ。コピーがいないときは今までと同じ
 //   ④ 山札の枚数: 出す +1 / もう一度 +0 / 切りかえ ±0 / ターン切れ・WAVE の終わり・20ターン経過で外す → 元の山札・手札・捨て札にぴったり戻る。
+//      (本体では、みんなの山札の枚数が変わるのは5つの遊びだけ。タクティクスは写しをコピーが持つ — ダイスくん。部品は同じなので両方で見る)
 //      コピーの手札を作っても、みんなの山札は減らない
 //   ⑤ 5つの遊び・保存: コピーはライフを持たない。負けの判定・ランキング・報酬はパーティの hp と slots だけを見る。
 //      部品は保存に触らず、新しい mh_* の鍵を足していない
@@ -157,20 +158,21 @@ const downed = (b) => T.tacticsDownedSlots(b).length;
   // 本体につながったあとも、コピーの state が保存・ランキング・報酬・負けの判定に入らないこと
   const app = read('monster-hero/src/parts/60-app.jsx');
   const linesWith = (re) => app.split('\n').filter((l) => re.test(l));
-  const copyLines = linesWith(/\b(aiCopy|tacticsCopy)\b/);
+  const copyLines = linesWith(/\b(aiCopy|aiCopyRef|commitAiCopy|clearAiCopy|tacticsCopy)\b/);
   check('保存: コピーの state を保存へ書く行が無い', copyLines.every((l) => !/storeSet\(|localStorage\./.test(l)), `${copyLines.length}行を見た`);
   const fn = (name) => { const i = app.indexOf(`const ${name} = `); if (i < 0) return ''; const j = app.indexOf('\n  const ', i + 10); return app.slice(i, j < 0 ? i + 20000 : j); };
   for (const name of ['submitLocalScore', 'awardRunRewards']) {
     const body = fn(name);
-    check(`ランキング・報酬: ${name} はコピーを読まない(送る数・配る数が変わらない)`, !!body && !/\b(aiCopy|tacticsCopy)\b/.test(body), body ? '' : '関数が見つからない');
+    check(`ランキング・報酬: ${name} はコピーを読まない(送る数・配る数が変わらない)`, !!body && !/\b(aiCopy|aiCopyRef|tacticsCopy)\b/.test(body), body ? '' : '関数が見つからない');
   }
   const loseLines = linesWith(/\bhp\s*<=\s*0\b/);
-  check('5つの遊び: 負けの判定(hp <= 0)はコピーを見ない', loseLines.length > 0 && loseLines.every((l) => !/\b(aiCopy|tacticsCopy)\b/.test(l)), `${loseLines.length}行`);
+  check('5つの遊び: 負けの判定(hp <= 0)はコピーを見ない', loseLines.length > 0 && loseLines.every((l) => !/\b(aiCopy|aiCopyRef|tacticsCopy)\b/.test(l)), `${loseLines.length}行`);
 }
 
 // ---- ⑥ ブラウザで1戦(本体につながってから) ----
 {
   const app = read('monster-hero/src/parts/60-app.jsx');
+  // 本体につながった目印: 5つの遊びの summonClassicAiCopy・共通の commitAiCopy(ダイスくん・セコンドくんの名前)の中で summonAiCopy が呼ばれる
   if (!/\bsummonAiCopy\(/.test(app)) {
     console.log('SKIP: ブラウザで1戦流す形 — 本体(60-app.jsx)にまだ summonAiCopy が呼ばれていない。つながったら、公開の印を検査の中でだけ真にして1戦流す形をここへ足す');
   } else {
