@@ -12,7 +12,7 @@
 //      コピーの手札を作っても、みんなの山札は減らない
 //   ⑤ 5つの遊び・保存: コピーはライフを持たない。負けの判定・ランキング・報酬はパーティの hp と slots だけを見る。
 //      部品は保存に触らず、新しい mh_* の鍵を足していない
-//   ⑥ ブラウザで1戦(本体に summonAiCopy が呼ばれたら): いまは「本体にまだ入っていない」と出して飛ばす
+//   ⑥ ブラウザで1戦: 本体につながったら tools/battle/ai-copy-invariants-browser-check.js(公開の印をその中でだけ真にして1戦流す)
 //
 // 部品の名前は 33-ai-copy.jsx(共通)・32-tactics-units.jsx(タクティクスだけ)・32-sorashido-copy.jsx(開発部の計算)。
 // 本体から切り出して動かす(検査へ書き写さない)。乱数は決まった値を渡す。
@@ -176,8 +176,9 @@ const downed = (b) => T.tacticsDownedSlots(b).length;
   if (!/\bsummonAiCopy\(/.test(app)) {
     console.log('SKIP: ブラウザで1戦流す形 — 本体(60-app.jsx)にまだ summonAiCopy が呼ばれていない。つながったら、公開の印を検査の中でだけ真にして1戦流す形をここへ足す');
   } else {
-    console.log('NG: 本体に summonAiCopy が入った。ブラウザで1戦流す形をこの検査へ足すこと(バトル部アリーナくん)');
-    failed++;
+    // 本体につながった(#4108)。ブラウザで1戦流す分は別の検査にした(重いので分けて回す)
+    const browser = path.join(ROOT, 'tools/battle/ai-copy-invariants-browser-check.js');
+    check('本体につながったので、ブラウザで1戦流す検査がある(ai-copy-invariants-browser-check.js)', fs.existsSync(browser));
   }
 }
 
