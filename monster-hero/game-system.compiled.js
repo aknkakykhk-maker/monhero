@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abe54b7b830d72cd
+// source-sha256: 159bebcfa430f1d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86031,17 +86031,19 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
     playerRole: !!(opts && opts.playerRole)
   };
 };
-const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}) => {
+const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = null) => {
   if (cardHasEff(card, 'noEvade') || card.kind === 'spe') return 0;
   if (flags.attachNoEvade || flags.attachNoGuard) return 0;
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
   if (flags.attachNoEvadeHybrid && cardIsHybridMon(tmon)) return 0;
+  if (cardFieldEff(st, 'fieldPurePride') && atkMon && !cardIsHybridMon(atkMon) && cardIsHybridMon(tmon)) return 0;
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
-    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && c.guts <= opp.guts.length && (!ev.minGuts || card.guts >= ev.minGuts);
+    const cost = c ? cardGuardCost(st, c) : 99;
+    return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts);
   };
   if ((st.forbid[q] || []).includes('dge')) return 0;
   if (level.readHand) return opp.hand.some(fits) ? 0.85 : 0;
@@ -86182,6 +86184,7 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
       p: cardOther(p),
       m: j
     } : null).filter(Boolean) : cardHasEff(main, 'area') ? cardAreaTargets(st, p, opt.mon, main) : [opt.target];
+    let drained = 0;
     let kills = 0;
     const per = dmg / Math.max(1, main.damage || 1);
     targets.forEach(t => {
@@ -86195,11 +86198,16 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
         return;
       }
       if (t.p !== p && d >= tm.life) kills += 1;
-      const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags) * (opt.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
+      const ev = cardAiEvadeChance(db, st, p, main, t, level, mods.flags, mon) * (opt.hand.some(i => cardHasEff(cardOf(db, me.hand[i]), 'attachBind')) ? 0.5 : 1);
       const half = cardHasEff(main, 'halfOnEvade') ? Math.ceil(d / 2) : 0;
       const exp = d * (1 - ev) + half * ev;
       const sign = t.p === p ? -1.3 : 1;
       score += sign * Math.min(exp, tm.life) * habit.attack;
+      if (cardHasEff(main, 'drain') && mon && t.p !== p) {
+        const heal = Math.min(Math.min(exp, tm.life), Math.max(0, mon.max - mon.life - drained));
+        drained += heal;
+        score += heal * 0.5;
+      }
       if (t.p !== p && d >= tm.life) score += (1 - ev) * 4 * habit.finish;
       const gl = cardEff(main, 'gutsLossOnHit');
       if (gl && t.p !== p) score += (1 - ev) * (gl.n === 'all' ? st.players[t.p].guts.length : Math.min(gl.n, st.players[t.p].guts.length)) * 0.8 * habit.disrupt;
@@ -86224,6 +86232,106 @@ const cardAiScoreAttack = (db, st, opt, policy) => {
     score += (tm.max - tm.life) * 0.15 + (tm.life <= 3 ? 0.8 : 0);
   }
   return score;
+};
+const cardAiFinalDamage = (db, st, add = {}) => {
+  const pd = st.pending;
+  const main = cardOf(db, pd.main);
+  const tgt = pd.targets[pd.ti];
+  const target = st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m];
+  let dmg = (pd.shares ? pd.shares[tgt.m] : pd.base) * pd.mult;
+  const mv = cardEff(main, 'multVs');
+  if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
+  if (pd.takeMult) dmg *= pd.takeMult;
+  if (pd.evaded || add.evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
+  if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
+    if (pd.reduceAll || add.reduceAll) dmg = 0;
+    if (pd.reduceHalf || add.reduceHalf) dmg -= Math.floor(dmg / 2);
+    dmg = Math.max(0, dmg - pd.reduce - (add.reduce || 0));
+  }
+  if (dmg > 0) dmg = Math.max(0, dmg + cardFieldDmgAdd(st, main));
+  let back = 0;
+  const rf = add.reflect || pd.reflect;
+  if (rf) {
+    if (rf.keep) {
+      back = Math.floor(dmg * rf.frac);
+      dmg -= back;
+    } else {
+      back = dmg;
+      dmg = 0;
+    }
+  }
+  if (cardHasEff(main, 'nonLethal')) dmg = Math.max(0, Math.min(dmg, target.life - 1));
+  if ((pd.endure || add.endure) && dmg >= target.life && target.life > 0) dmg = target.life - 1;
+  if (target.safeUntil >= st.turn) dmg = 0;
+  return {
+    dmg,
+    back
+  };
+};
+const cardAiIncomingDamage = (db, st) => cardAiFinalDamage(db, st).dmg;
+const cardAiGuardEstimate = (db, st, o, dmg) => {
+  const pd = st.pending;
+  const me = st.players[pd.defender];
+  const main = cardOf(db, pd.main);
+  const tgt = pd.targets[pd.ti];
+  const target = st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m];
+  const c = cardOf(db, me.hand[o.hand]);
+  let after = dmg;
+  const re = cardEff(c, 'reduce');
+  const rf = cardEff(c, 'reflect');
+  const add = {
+    evaded: cardHasEff(c, 'evade') || cardHasEff(c, 'evadeAll'),
+    reduce: re ? re.n : 0,
+    reduceHalf: cardHasEff(c, 'reduceHalf'),
+    reduceAll: cardHasEff(c, 'reduceAll'),
+    reflect: rf ? {
+      frac: rf.frac,
+      keep: !!rf.keep
+    } : null,
+    endure: cardHasEff(c, 'endure')
+  };
+  const fin = add.evaded || add.reduce || add.reduceHalf || add.reduceAll || add.reflect || add.endure ? cardAiFinalDamage(db, st, add) : null;
+  if (fin) after = fin.dmg;
+  if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
+    const cm = me.mons[o.mon];
+    after = target.life <= dmg && cm.life > dmg ? 0 : dmg;
+  }
+  let extra = 0;
+  if (cardHasEff(c, 'redirect')) {
+    const am = me.mons[o.to];
+    after = 0;
+    extra -= Math.min(dmg, am.life) * 0.9 + (am.life <= dmg ? 5 : 0);
+  }
+  if (cardHasEff(c, 'evadeAll')) {
+    extra += cardAiEvadeAllCovers(st, pd) * Math.min(3, dmg) * 0.6;
+  }
+  if (cardHasEff(c, 'noGutsLoss')) {
+    const gl = cardEff(main, 'gutsLossOnHit');
+    extra += (gl ? gl.n === 'all' ? me.guts.length : Math.min(gl.n, me.guts.length) : 0) * 0.6;
+  }
+  if (cardHasEff(c, 'takeMult')) {
+    after = dmg * 2;
+    extra += 1.2;
+  }
+  if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
+    const tmp = JSON.parse(JSON.stringify(target));
+    if (cardHasEff(c, 'waterAll')) tmp.waterUntil = st.turn;else if (o.mon !== tgt.m) tmp.airUntil = st.turn + 1;
+    const ar = cardEff(main, 'area');
+    after = !cardCanTarget(main, tmp, st.turn) || ar && ar.only && cardMonType(tmp, st.turn) !== ar.only ? 0 : dmg;
+  }
+  const back = fin ? fin.back : 0;
+  return {
+    after,
+    extra,
+    back,
+    cost: cardGuardCost(st, c),
+    c
+  };
+};
+const cardAiEvadeAllCovers = (st, pd) => {
+  const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
+  const noHybrid = !!cardFieldEff(st, 'fieldPurePride') && atk && !cardIsHybridMon(atk) || !!(pd.flags || {}).attachNoEvadeHybrid;
+  return pd.targets.slice(pd.ti + 1).filter(t => t.p !== pd.attacker && !(noHybrid && cardIsHybridMon(st.players[t.p].mons[t.m]))).length;
 };
 const cardAiChooseGuard = (db, st, policy, rand) => {
   const pd = st.pending;
@@ -86251,61 +86359,23 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const main = cardOf(db, pd.main);
   const tgt = pd.targets[pd.ti];
   const target = st.players[tgt.p].mons[pd.cover !== null && pd.cover !== undefined ? pd.cover : tgt.m];
-  let dmg = pd.base * pd.mult;
-  const mv = cardEff(main, 'multVs');
-  if (mv && cardMonType(target, st.turn) === mv.type) dmg *= mv.n;
-  if (pd.evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-  dmg = Math.max(0, dmg - pd.reduce);
-  if (pd.reflect && !pd.reflect.keep) dmg = 0;
-  if (cardHasEff(main, 'nonLethal')) dmg = Math.min(dmg, Math.max(0, target.life - 1));
+  const dmg = cardAiIncomingDamage(db, st);
   if (dmg <= 0) return {
     type: 'pass'
   };
   let best = null;
   opts.forEach(o => {
-    const c = cardOf(db, me.hand[o.hand]);
-    let after = dmg;
-    if (cardHasEff(c, 'evade')) after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-    const noReduce = cardHasEff(main, 'noBlockReduce') || !!(pd.flags || {}).attachNoBlockReduce;
-    const re = cardEff(c, 'reduce');
-    if (re && !noReduce) after = Math.max(0, dmg - re.n);
-    if (cardHasEff(c, 'reduceHalf') && !noReduce) after = dmg - Math.floor(dmg / 2);
-    if (cardHasEff(c, 'reduceAll') && !noReduce) after = 0;
-    const rf = cardEff(c, 'reflect');
-    if (rf) after = rf.keep ? dmg - Math.floor(dmg * rf.frac) : 0;
-    if (cardHasEff(c, 'cover') || cardHasEff(c, 'shield')) {
-      const cm = me.mons[o.mon];
-      after = target.life <= dmg && cm.life > dmg ? 0 : dmg;
-    }
-    let extra = 0;
-    if (cardHasEff(c, 'redirect')) {
-      const am = me.mons[o.to];
-      after = 0;
-      extra -= Math.min(dmg, am.life) * 0.9 + (am.life <= dmg ? 5 : 0);
-    }
-    if (cardHasEff(c, 'endure')) after = dmg >= target.life ? target.life - 1 : dmg;
-    if (cardHasEff(c, 'evadeAll')) {
-      after = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
-      extra += (pd.targets.length - pd.ti - 1) * Math.min(3, dmg) * 0.6;
-    }
-    if (cardHasEff(c, 'noGutsLoss')) {
-      const gl = cardEff(main, 'gutsLossOnHit');
-      extra += (gl ? gl.n === 'all' ? me.guts.length : Math.min(gl.n, me.guts.length) : 0) * 0.6;
-    }
-    if (cardHasEff(c, 'takeMult')) {
-      after = dmg * 2;
-      extra += 1.2;
-    }
-    if (cardHasEff(c, 'liftAllies') || cardHasEff(c, 'waterAll')) {
-      const tmp = JSON.parse(JSON.stringify(target));
-      if (cardHasEff(c, 'waterAll')) tmp.waterUntil = st.turn;else if (o.mon !== tgt.m) tmp.airUntil = st.turn + 1;
-      const ar = cardEff(main, 'area');
-      after = !cardCanTarget(main, tmp, st.turn) || ar && ar.only && cardMonType(tmp, st.turn) !== ar.only ? 0 : dmg;
-    }
+    const {
+      after,
+      extra,
+      back,
+      cost,
+      c
+    } = cardAiGuardEstimate(db, st, o, dmg);
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
-    const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - c.guts : 0;
-    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (c.guts + lostAll) * 0.35 * habit.saveGuts + (rf ? (rf.keep ? Math.floor(dmg * rf.frac) : dmg) * 0.6 : 0);
+    const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0;
+    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
     if (!best || v > best.v) best = {
       v,
       o
