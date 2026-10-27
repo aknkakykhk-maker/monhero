@@ -147,7 +147,7 @@ const keyVisual = async () => {
     x.font = '36px MPB'; x.fillStyle = '#fde68a'; x.fillText(sub, cx, cy + 44); x.restore();
   };
   plate(W * .285, 1452, 'キュービ', '純血', '#1d4ed8', '立つ距離で4つの相に変わる');
-  plate(W * .715, 1452, 'オリヒメ', '派生', '#db2777', '相方と絆を紡いで強くなる');
+  plate(W * .715, 1452, 'オリヒメ', 'レア', '#c2410c', '相方と絆を紡いで強くなる');
 
   const bg = x.createLinearGradient(0, 1540, 0, H); bg.addColorStop(0, 'rgba(20,14,50,0)'); bg.addColorStop(.22, 'rgba(18,12,46,.92)'); bg.addColorStop(1, 'rgba(10,8,30,.96)');
   x.fillStyle = bg; x.fillRect(0, 1540, W, H - 1540);
@@ -265,7 +265,7 @@ const profileCard = async (id, file, theme) => {
     bg: [[0, '#1a1240'], [.45, '#5b3d99'], [1, '#120c2e']],
     glow: 'rgba(251,207,232,.75)', frame: '#f5c2e7', head: '#fbcfe8', sub: '#fdf2f8', flavor: '#fff1f8',
     ribbon: ['#fff1f8', '#f0a6d8', '#4a0a35'], title: ['#fff1f8', '#f0a6d8', '#4a0a35'],
-    chip: '派生', chipCol: '#db2777', lineage: 'キュービ × ？？？', type: '近・遠が得意・支え役',
+    chip: 'レア', chipCol: '#7c3aed', lineage: 'キュービ × ？？？', type: '近・遠が得意・支え役',
     deco: (x, W, H) => { milkyWay(x, W, 1300, .7); for (let i = 0; i < 8; i++) heart(x, rnd() * 860, 300 + rnd() * 1000, 20 + rnd() * 16, '#f9a8d4', .4); },
   });
 })();
