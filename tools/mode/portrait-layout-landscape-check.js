@@ -149,8 +149,10 @@ const seed = () => {
     if (reached) {
       const battle = await shell();
       check('バトルに縦向きの目印が付く', !!battle && battle.portraitLayout === 'true', battle ? `目印=${battle.portraitLayout}` : 'なし');
-      check('バトルが横いっぱいに広がらない',
-        !!battle && battle.width <= battle.viewport * 0.7,
+      // ★2026-10-26 社長が案A「横向きで背の低い画面(高さ520px以下)のバトルは、左右2列に広げる」を選んだ(#3953)。
+      //   この検査の 844×390 はその画面なので、間延び防ぎの「縦向きの幅のまま」ではなく、横いっぱいの2列が正しい
+      check('横向きの背の低い画面では、バトルが横いっぱいの2列に広がる',
+        !!battle && battle.width >= battle.viewport * 0.95,
         battle ? `器 ${battle.width}px / 画面 ${battle.viewport}px（max-width:${battle.maxWidth}）` : 'なし');
       check('バトルが真ん中に置かれる',
         !!battle && Math.abs(battle.left - (battle.viewport - battle.width) / 2) <= 2,
