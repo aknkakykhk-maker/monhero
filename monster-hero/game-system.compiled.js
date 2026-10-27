@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6df745b154ba2c56
+// source-sha256: 861e7016a241f4ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -24393,7 +24393,10 @@ const TacticsExCutin = ({
     }
   }, cutin.exName), React.createElement("div", {
     className: "ex-cutin__sub"
-  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''), cutin.note ? React.createElement("div", {
+  }, (() => {
+    const t = `${cutin.monName}${cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}`;
+    return typeof jaWrap === 'function' ? jaWrap(t) : t;
+  })()), cutin.note ? React.createElement("div", {
     "data-ex-cutin-note": true,
     className: "ex-cutin__note"
   }, cutin.note) : null)), React.createElement("div", {
@@ -45853,6 +45856,19 @@ const planAiCopyTurn = (aiCopy, {
     picks,
     nextCard: picks[0] || null
   };
+};
+const aiCopyAutoScore = (card, {
+  strategy = 'random',
+  isAttack = null,
+  isGuard = null,
+  dmgOf = null
+} = {}) => {
+  if (!card) return -Infinity;
+  const attack = typeof isAttack === 'function' ? !!isAttack(card) : card.type === 'atk' || card.type === 'unique';
+  const guard = typeof isGuard === 'function' ? !!isGuard(card) : card.type === 'guard' || card.type === 'weak_guard';
+  const prio = strategy === 'offense' ? card.type === 'unique' ? 0 : attack ? 1 : guard || card.type === 'heal' ? 3 : 2 : strategy === 'defense' ? card.type === 'heal' ? 0 : card.type === 'guard' ? 1 : attack ? 3 : 2 : 0;
+  const dmg = attack && typeof dmgOf === 'function' ? Math.max(0, aiCopySafeNum(dmgOf(card))) : 0;
+  return -prio * 1e7 + dmg;
 };
 const CLASSIC_AI_COPY_ALLY_BASE = 'base';
 const classicAiCopyShareOf = (mon, isHero) => {
@@ -72776,17 +72792,37 @@ function BattleScreen({
     const copyStanding = !!aiCopy && isTacticsAiCopyStanding(aiCopy) && aiCopy.spawnTurn <= turnCount;
     const chancesNow = s && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, copyStanding ? aiCopy : null) : null;
     const hatePct = chancesNow ? chancesNow.slots[i] : null;
-    const copyChip = tacticsNewLayout && aiCopy && aiCopy.pos === i ? React.createElement("div", {
+    const copySrc = aiCopy && aiCopy.pos === i ? slots[aiCopy.srcSlot] : null;
+    const copyChip = tacticsNewLayout && aiCopy && aiCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !s && !aiCopy.stacked && React.createElement("div", {
+      "data-tactics-ai-copy-art": i,
+      className: "absolute inset-0 z-[24] flex items-center justify-center pointer-events-none"
+    }, React.createElement(SorashidoCopyFx, {
+      phase: copyStanding ? 'idle' : 'appear'
+    }, React.createElement(DyedMonsterImage, {
+      baseId: copySrc.id,
+      src: copySrc.imgUrl,
+      alt: `${copySrc.name}のコピー`,
+      masuColors: copySrc.colors,
+      style: {
+        width: '52px',
+        height: '52px'
+      },
+      className: "object-contain drop-shadow-md"
+    }))), React.createElement("div", {
+      "data-tactics-ai-copy-next": i,
+      className: "absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none"
+    }, React.createElement(SorashidoNextCardBadge, {
+      card: copyStanding ? aiCopy.nextCard : null,
+      turnsLeft: aiCopy.turnsLeft
+    })), React.createElement("div", {
       "data-tactics-ai-copy": i,
       "data-tactics-ai-copy-out": copyStanding ? '1' : '0',
-      className: "absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap"
+      className: "absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap"
     }, React.createElement("span", {
       className: "min-w-0 truncate"
-    }, "🤖", aiCopy.stacked ? '重なる ' : '', copyStanding ? `ライフ${aiCopy.hp}` : '次のターンから'), copyStanding && React.createElement("span", {
-      className: "shrink-0 tabular-nums text-sky-200/90"
-    }, "あと", aiCopy.turnsLeft), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+    }, "🤖", aiCopy.stacked ? '重なる ' : '', copyStanding ? `ライフ${aiCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
       className: "shrink-0 tabular-nums text-rose-200"
-    }, "狙", chancesNow.copy, "%")) : null;
+    }, "狙", chancesNow.copy, "%"))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
@@ -106482,7 +106518,9 @@ function MonsterHeroGame() {
         ...copy,
         hate,
         hateGainNow: 0,
-        dealtNow: 0
+        dealtNow: 0,
+        guardNow: 0,
+        guardCardsNow: 0
       });
     }
     clearTacticsHateTurn();
@@ -106575,6 +106613,52 @@ function MonsterHeroGame() {
     return planAiCopyTurn(copy, {
       deck: copy.uniqueCard ? [...deckNow, copy.uniqueCard] : deckNow,
       score: classicAiCopyScore
+    });
+  };
+  const tacticsAiCopyTools = (copy, dist) => {
+    if (!copy) return null;
+    const srcMon = slots[copy.srcSlot];
+    const srcUnit = tacticsBattleUnit(copy.srcSlot);
+    if (!srcMon || !srcUnit || !(srcUnit.atk > 0)) return null;
+    const distFrom = copy.srcSlot + ((Number.isInteger(dist) ? dist : enemyDist) - copy.pos);
+    const atkRate = copy.atk / srcUnit.atk;
+    const dmgOf = c => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
+    const isGuardC = c => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const usableC = c => !!c && (!isAttackCard(c) || dmgOf(c) > 0);
+    const scoreC = c => aiCopyAutoScore(c, {
+      strategy: autoSettings.strategy,
+      isAttack: isAttackCard,
+      isGuard: isGuardC,
+      dmgOf
+    });
+    const costC = c => getCardGuts(c, copy.srcSlot);
+    return {
+      dmgOf,
+      isGuardC,
+      usableC,
+      scoreC,
+      costC
+    };
+  };
+  const planTacticsAiCopy = turn => {
+    const copy = aiCopyRef.current;
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
+    const tools = tacticsAiCopyTools(copy, enemyDist);
+    if (!tools) return null;
+    const piles = handPileRef.current;
+    const pool = [...(piles.deck || []), ...(piles.graveyard || []), ...(piles.hand || [])].filter(c => c && c.type !== 'unique' && tools.usableC(c));
+    const uniq = copy.uniqueCard && tools.usableC(copy.uniqueCard) ? copy.uniqueCard : null;
+    const planned = planAiCopyTurn({
+      ...copy,
+      uniqueCardUid: uniq ? uniq.uid : null
+    }, {
+      deck: uniq ? [...pool, uniq] : pool,
+      score: tools.scoreC,
+      costOf: tools.costC
+    });
+    return commitAiCopy({
+      ...planned,
+      plannedTurn: turn
     });
   };
   const clearAiCopy = (why = '') => {
@@ -119485,7 +119569,8 @@ function MonsterHeroGame() {
           const copyHit = EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isAiCopyOut(copyNow, turnCount) && tacticsIntentHitsAiCopy(intent, copyNow);
           if (copyHit) {
             const rushN = intent.variant === 'rush' ? Math.max(1, Math.floor(Number(intent.hits) || 1)) : 1;
-            const hitC = resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent, copyNow.srcSlot, copyNow.def), rushN, 0, 0);
+            const guardNowC = intent.variant === 'pierce' ? 0 : Math.max(0, Number(copyNow.guardNow) || 0);
+            const hitC = resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent, copyNow.srcSlot, copyNow.def), rushN, guardNowC, tacticsGuardHits(copyNow.guardCardsNow || 0, rushN));
             const fdC = applyImmediateTakenReduction(hitC.taken);
             const afterC = damageTacticsAiCopy(copyNow, fdC);
             addPopup(`🤖 ${tacticsAiCopyName(copyNow)} −${fdC}`, 'hero', 'text-sky-200 font-black text-lg drop-shadow-md');
@@ -119750,6 +119835,13 @@ function MonsterHeroGame() {
     const regen = tacticsRegen(autoHpRecoveryRate + (isTacticsMode(runMode) ? tacticsExPartyBuffNow().hpAdd : 0), isTacticsMode(runMode) ? baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd : soulAdjustedGutsRecoveryRate);
     let gutsRegen = 0,
       autoHealVal = 0;
+    if (isTacticsMode(runMode) && EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isAiCopyOut(aiCopyRef.current, turnCount)) {
+      const copyGutsRate = Math.max(0, baseGutsRecoveryRate + tacticsExPartyBuffNow().gutsAdd);
+      commitAiCopy(c => c ? {
+        ...c,
+        guts: Math.min(c.maxGuts, (Number(c.guts) || 0) + Math.floor((Number(c.maxGuts) || 0) * copyGutsRate))
+      } : c);
+    }
     if (regen) {
       currentHp = regen.total;
       autoHealVal = regen.hp;
@@ -119920,7 +120012,10 @@ function MonsterHeroGame() {
           discard: []
         }
       }, turnCount);
-      if (ticked.expired) clearAiCopy('消えた(時間切れ)');else commitAiCopy(ticked.aiCopy);
+      if (ticked.expired) clearAiCopy('消えた(時間切れ)');else {
+        commitAiCopy(ticked.aiCopy);
+        planTacticsAiCopy(turnCount + 1);
+      }
     }
     const nextTurn = timeStopSlot != null ? turnCount : turnCount + 1;
     setTurnCount(nextTurn);
@@ -120624,21 +120719,41 @@ function MonsterHeroGame() {
       if (pdTagForm) for (let k = pdTagFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].pandoraForm == null) attackHits[k].pandoraForm = pdTagForm;
       pdTagFrom = attackHits.length;
     };
-    for (const entry of usedCardEntries) {
+    const aiCopyEntries = (() => {
+      const c = aiCopyRef.current;
+      if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isAiCopyOut(c, turnCount) || !isTacticsAiCopyStanding(c)) return [];
+      const cp = c.plannedTurn === turnCount ? c : planTacticsAiCopy(turnCount) || c;
+      const tools = tacticsAiCopyTools(cp, enemyDist);
+      if (!tools) return [];
+      let left = Math.max(0, Number(cp.guts) || 0);
+      return (cp.picks || []).filter(card => {
+        const cost = Math.max(0, Number(tools.costC(card)) || 0);
+        if (cost > left) return false;
+        left -= cost;
+        return !isAttackCard(card) && !tools.isGuardC(card);
+      }).map(card => ({
+        card,
+        slotIdx: cp.srcSlot,
+        aiCopy: true
+      }));
+    })();
+    for (const entry of [...usedCardEntries, ...aiCopyEntries]) {
       const card = entry.card;
       popupSlotRef.current = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       const totalHealBeforeCard = totalHeal,
         totalHealRateBeforeCard = totalHealRate;
       const isBreeder = isAssistCard(card);
-      if (isBreeder && !debugBattleRef.current) {
-        const cardAssistant = assistantIdOfAssistCard(card.id);
-        if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
+      if (!entry.aiCopy) {
+        if (isBreeder && !debugBattleRef.current) {
+          const cardAssistant = assistantIdOfAssistCard(card.id);
+          if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
+        }
       }
       if (!isAttackCard(card)) {
         const usedBy = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
-        pushBattleLog(isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
+        pushBattleLog(entry.aiCopy ? `🤖 ${tacticsAiCopyName(aiCopyRef.current)}の ${card.name}` : isBreeder ? `${card.name} を使った` : `${battleActorName(usedBy)}の ${card.name}`, 'card');
       }
-      const halved = halveCounter.take(card, entry.slotIdx);
+      const halved = entry.aiCopy ? false : halveCounter.take(card, entry.slotIdx);
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
       if (halved) addPopup(isTacticsMode(runMode) ? '同じ子の2枚目 効果半減' : '2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
@@ -120674,7 +120789,7 @@ function MonsterHeroGame() {
         addGuardForSlot(slotIdx, GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul, GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul, guardCardWeight(card));
       }
       const cardCost = getCardGuts(card, slotIdx);
-      if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
+      if (entry.aiCopy) {} else if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) noteOrihimeCard(slotIdx, card);
@@ -121223,34 +121338,33 @@ function MonsterHeroGame() {
     }
     popupSlotRef.current = null;
     {
-      const copy = aiCopyRef.current;
-      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) && isAiCopyOut(copy, turnCount) && isTacticsAiCopyStanding(copy)) {
-        const srcMon = slots[copy.srcSlot];
-        const srcUnit = tacticsBattleUnit(copy.srcSlot);
-        if (srcMon && srcUnit && srcUnit.atk > 0) {
-          const distFrom = copy.srcSlot + (attackDistance - copy.pos);
-          const atkRate = copy.atk / srcUnit.atk;
-          const dmgOf = c => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
-          const piles = handPileRef.current;
-          const pool = [...(piles.deck || []), ...(piles.graveyard || [])].filter(c => c && c.type !== 'unique' && dmgOf(c) > 0);
-          const uniq = copy.uniqueCard && dmgOf(copy.uniqueCard) > 0 ? copy.uniqueCard : null;
-          const planned = planAiCopyTurn({
-            ...copy,
-            guts: copy.maxGuts,
-            uniqueCardUid: uniq ? uniq.uid : null
-          }, {
-            deck: uniq ? [...pool, uniq] : pool,
-            score: dmgOf,
-            costOf: c => getCardGuts(c, copy.srcSlot)
-          });
+      const copy0 = aiCopyRef.current;
+      if (EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido && isTacticsMode(runMode) && isAiCopyOut(copy0, turnCount) && isTacticsAiCopyStanding(copy0)) {
+        const copy = copy0.plannedTurn === turnCount ? copy0 : planTacticsAiCopy(turnCount) || copy0;
+        const tools = tacticsAiCopyTools(copy, attackDistance);
+        if (tools) {
           let dealtC = 0,
-            gainC = 0;
-          (planned.picks || []).forEach((card, k) => {
-            const d = dmgOf(card);
+            gainC = 0,
+            gutsC = Math.max(0, Number(copy.guts) || 0),
+            guardC = 0,
+            guardCards = 0;
+          (copy.picks || []).forEach((card, k) => {
+            const cost = Math.max(0, Number(tools.costC(card)) || 0);
+            if (cost > gutsC) return;
+            gutsC -= cost;
+            gainC += tacticsHateOnFor(runMode) ? tacticsHateCardGain(card, copy.srcMonsterId, k > 0 ? 0.5 : 1) : 0;
+            if (tools.isGuardC(card)) {
+              const m = card.type === 'weak_guard' ? 0.5 : 1,
+                g = GUARD_EVOLUTION[guardLevel];
+              guardC += Math.floor(g.flat * m + Math.max(0, Number(copy.def) || 0) * g.mult * m);
+              guardCards++;
+              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name || card.baseName || 'ガード'}(ガード${guardC})`, 'ally');
+              return;
+            }
+            const d = tools.dmgOf(card);
             if (!(d > 0)) return;
             totalDmg += d;
             dealtC += d;
-            gainC += tacticsHateOnFor(runMode) ? tacticsHateCardGain(card, copy.srcMonsterId, k > 0 ? 0.5 : 1) : 0;
             attackHits.push({
               dmg: d,
               isCrit: false,
@@ -121262,12 +121376,17 @@ function MonsterHeroGame() {
               monId: card.type === 'unique' ? card.monId : undefined
             });
           });
-          commitAiCopy({
-            ...planned,
-            hateGainNow: (Number(copy.hateGainNow) || 0) + gainC,
-            dealtNow: (Number(copy.dealtNow) || 0) + dealtC
+          commitAiCopy(c => c && {
+            ...c,
+            picks: [],
+            nextCard: null,
+            guts: gutsC,
+            guardNow: guardC,
+            guardCardsNow: guardCards,
+            hateGainNow: (Number(c.hateGainNow) || 0) + gainC,
+            dealtNow: (Number(c.dealtNow) || 0) + dealtC
           });
-          if (!(planned.picks || []).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`, 'ally');
+          if (!(copy.picks || []).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`, 'ally');
         }
       }
     }
@@ -138435,8 +138554,18 @@ function MonsterHeroGame() {
       }, cardIconNode(c.icon, 32, c.id)), React.createElement("div", {
         className: "w-full text-center flex flex-col justify-end gap-0.5"
       }, React.createElement("div", {
-        className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5"
-      }, c.name), React.createElement("div", {
+        className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 [container-type:inline-size]",
+        style: JA_LABEL_STYLE
+      }, (() => {
+        const pts = jaWrapPoints(c.name);
+        const longest = Math.max(1, ...String(typeof pts === 'string' ? pts : c.name).split('\u200B').map(t => [...t].length));
+        return React.createElement("span", {
+          className: "block w-full",
+          style: {
+            fontSize: `min(9px, calc(100cqw / ${longest + 0.3}))`
+          }
+        }, jaWrap(c.name));
+      })()), React.createElement("div", {
         className: "text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
       }, React.createElement(Zap, {
         size: 9
@@ -138446,26 +138575,17 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2"
       }, "手札 (", hand.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, hand.map(c => renderCard(c, false)))), deck.length > 0 && React.createElement("div", {
         className: "mb-4"
       }, React.createElement("div", {
         className: "text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2"
       }, "山札 (", deck.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, deck.map(c => renderCard(c, false)))), graveyard.length > 0 && React.createElement("div", null, React.createElement("div", {
         className: "text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"
       }, "捨て札 (", graveyard.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, graveyard.map(c => renderCard(c, true)))));
     })())), skillPicker && (() => {
       const card = hand[skillPicker.handIndex];
@@ -138801,9 +138921,9 @@ function MonsterHeroGame() {
       }, "戻る")), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8"
+        className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[200px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:pt-2"
       }, scanEnemy.imgUrl ? React.createElement("div", {
-        className: `${isMooBoss(scanEnemy.id) ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`
+        className: `${isMooBoss(scanEnemy.id) ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center [@media(orientation:landscape)_and_(max-height:520px)]:h-[150px] [@media(orientation:landscape)_and_(max-height:520px)]:w-[180px] flex shrink-0 items-center justify-center overflow-hidden`
       }, React.createElement("img", {
         src: scanEnemy.imgUrl,
         alt: scanEnemy.name,
@@ -138815,9 +138935,9 @@ function MonsterHeroGame() {
         },
         className: "my-4"
       }, scanEnemy.emoji), React.createElement("h4", {
-        className: "text-2xl font-black italic mb-4 uppercase shrink-0"
+        className: "text-2xl font-black italic mb-4 uppercase shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:text-center [@media(orientation:landscape)_and_(max-height:520px)]:text-xl"
       }, scanEnemy.name), React.createElement("section", {
-        className: "w-full space-y-3"
+        className: "w-full space-y-3 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3"
       }, React.createElement("div", {
         className: "grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"
       }, React.createElement("div", null, React.createElement("div", {
@@ -138886,7 +139006,7 @@ function MonsterHeroGame() {
       onClick: () => setShowHeroInfo(false),
       className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
     }, "戻る")), React.createElement("div", {
-      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll",
+      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[180px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:content-start",
       style: {
         justifyContent: 'safe center'
       }
@@ -138899,16 +139019,16 @@ function MonsterHeroGame() {
         width: '140px',
         height: '140px'
       },
-      className: "mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
+      className: "mx-auto mb-6 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:mb-2 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
     }) : React.createElement("div", {
       style: {
         fontSize: '112px'
       },
       className: "mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
     }, mainHero.emoji), React.createElement("h4", {
-      className: "text-2xl font-black italic mb-6 uppercase"
+      className: "text-2xl font-black italic mb-6 uppercase [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-xl"
     }, mainHero.name), React.createElement("div", {
-      className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"
+      className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:max-w-none [@media(orientation:landscape)_and_(max-height:520px)]:p-4"
     }, isTacticsMode(runMode) && React.createElement("div", {
       "data-tactics-status": true,
       className: "space-y-1.5 text-left"
@@ -142061,6 +142181,8 @@ const createAnimationStyle = () => {
     .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
     .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
     .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    /* 緊急回復の文「味方のライフとガッツを30%ずつ回復」は 320 で「味方のライフとガッツ…」と切れた。2行まで折る(2026-10-27 バトル中の窓の見回り) */
+    .ex-cutin--emergency .ex-cutin__sub { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; text-wrap:wrap; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
     .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
     .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }

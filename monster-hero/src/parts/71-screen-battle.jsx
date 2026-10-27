@@ -2627,13 +2627,25 @@ function BattleScreen({
               const copyStanding=!!aiCopy&&isTacticsAiCopyStanding(aiCopy)&&aiCopy.spawnTurn<=turnCount;
               const chancesNow=s&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,copyStanding?aiCopy:null):null;
               const hatePct=chancesNow?chancesNow.slots[i]:null;
-              // コピーの札は、コピーが立つマス(pos)の枠に出す。名前・ライフ・残りターン・狙われる%
-              const copyChip=tacticsNewLayout&&aiCopy&&aiCopy.pos===i?(<div data-tactics-ai-copy={i} data-tactics-ai-copy-out={copyStanding?'1':'0'}
-                className="absolute left-1 top-[34px] z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap">
-                <span className="min-w-0 truncate">🤖{aiCopy.stacked?'重なる ':''}{copyStanding?`ライフ${aiCopy.hp}`:'次のターンから'}</span>
-                {copyStanding&&<span className="shrink-0 tabular-nums text-sky-200/90">あと{aiCopy.turnsLeft}</span>}
-                {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
-              </div>):null;
+              // コピーは、コピーが立つマス(pos)の枠に出す(2026-10-27 部長: 見せ方は開発部の部品 24-sorashido-copy-view.jsx)。
+              //   空いたマスなら元の子の絵を SorashidoCopyFx で包んで置く(出る前は appear・出たら idle)。重なるときは絵を出さず札だけ
+              //   上に次に使う札(SorashidoNextCardBadge)、下にライフ・狙われる%の小さな札
+              const copySrc=aiCopy&&aiCopy.pos===i?slots[aiCopy.srcSlot]:null;
+              const copyChip=tacticsNewLayout&&aiCopy&&aiCopy.pos===i?(<>
+                {copySrc&&!s&&!aiCopy.stacked&&<div data-tactics-ai-copy-art={i} className="absolute inset-0 z-[24] flex items-center justify-center pointer-events-none">
+                  <SorashidoCopyFx phase={copyStanding?'idle':'appear'}>
+                    <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
+                  </SorashidoCopyFx>
+                </div>}
+                <div data-tactics-ai-copy-next={i} className="absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none">
+                  <SorashidoNextCardBadge card={copyStanding?aiCopy.nextCard:null} turnsLeft={aiCopy.turnsLeft}/>
+                </div>
+                <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={copyStanding?'1':'0'}
+                  className="absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 pointer-events-none whitespace-nowrap">
+                  <span className="min-w-0 truncate">🤖{aiCopy.stacked?'重なる ':''}{copyStanding?`ライフ${aiCopy.hp}`:'次のターンから'}</span>
+                  {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums text-rose-200">狙{chancesNow.copy}%</span>}
+                </div>
+              </>):null;
               const hateFlame=Number.isInteger(hatePct)?<span data-tactics-hate={i} data-tactics-hate-pct={hatePct} title="狙われる確率" className={`ml-0.5 shrink-0 rounded px-[2px] py-px text-[8px] font-black leading-none tracking-tighter tabular-nums ${hatePct>=50?'bg-red-950/80 text-red-200':hatePct>=30?'bg-orange-950/70 text-orange-200':'bg-black/50 text-slate-300'}`}><span className="text-[6px] opacity-80">狙</span>{hatePct}%</span>:null;
               // パンドラの箱: 効いているあいだは、悪魔と天使の2体を1つの枠に並べて出す(ライフ・ガッツ・距離・狙われ方は1体のまま)。
               // 待機アニメ(MonsterIdleArt)は本体の絵のパーツ用なので、2体のときは通さない。カードを切る間は、そのカードの側(1枚目=悪魔・2枚目以降=天使)が前に出て、もう片方は暗くなる。染色は本体用なので2体には掛けない

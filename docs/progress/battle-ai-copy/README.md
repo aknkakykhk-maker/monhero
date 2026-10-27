@@ -41,3 +41,10 @@ MFバトルカードには入れない。保存データは増やさない。
 
 - タクティクス: [tactics.md](tactics.md)(セコンドくん)
 - 5つの遊び: [classic.md](classic.md)(ダイスくん)
+
+## 最後に通す検査(アリーナくん・2026-10-27)
+
+`node tools/battle/ai-copy-invariants-check.js` — 5人目が「いる/いない」で、勝ち負けの判定・倒れた数・山札の枚数・保存が変わらないこと。
+いまは部品(33-ai-copy.jsx・32-tactics-units.jsx の tacticsAiCopy*・32-sorashido-copy.jsx)を直接呼ぶ形。
+本体(60-app.jsx)につながった(#4108)ので、ブラウザで1戦流す分は `node tools/battle/ai-copy-invariants-browser-check.js`。公開の印を検査の中でだけ真にし、ソラシドだけを持たせてタクティクスプロを始め、勇者に使って「一緒に戦う」→「消えた(時間切れ)」・負けにならない・コピーの鍵が増えない・ランキングへ書かない、を見る。
+5つの遊び(summonClassicAiCopy)とコピーの攻撃・狙われる処理が入ったら、それぞれ1戦ずつ足す。
