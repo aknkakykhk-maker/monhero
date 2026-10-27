@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e6ac8922001dbe6c
+// generated-sha256: 5bfef2cbfc0742c9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65088,6 +65088,16 @@ function MonsterHeroGame() {
   useEffect(()=>()=>{if(trainingEffectTimerRef.current)clearTimeout(trainingEffectTimerRef.current);},[]);
   useEffect(()=>{if(gameState!=='TRAINING_BOARD'||trainingMapOverview)return;requestAnimationFrame(()=>{const viewport=trainingMapRef.current,current=TRAINING_NODE_BY_ID[trainingSession?.position],next=TRAINING_NODE_BY_ID[trainingSession?.routePreview?.[0]];if(!viewport||!current)return;const focus=next?{x:current.x+(next.x-current.x)*.7,y:current.y+(next.y-current.y)*.7}:current;viewport.scrollTo({left:720*focus.x/100-viewport.clientWidth*.42,top:520*focus.y/100-viewport.clientHeight*.5,behavior:'smooth'});});},[gameState,trainingSession?.position,trainingSession?.routePreview?.[0],trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
+  // ギフトの一覧(mh_gifts)へ書き足す処理を、1本ずつ順番に走らせる(2026-10-27)。
+  // ★起動したときやお話を見終えたとき、ソラシドのおみやげと仲良し度のごほうびが同じときに mh_gifts を読み書きして、
+  //   saveStoredValuesOrRollback の読み戻しが食い違い、片方の保存が巻き戻っていた(assistant-bond-reward-browser-check が見つけた)。
+  //   前の処理が終わってから次を始める。前の処理が失敗しても、次は走る
+  const giftWriteChainRef = useRef(Promise.resolve());
+  const runGiftWrite = (task) => {
+    const run = giftWriteChainRef.current.then(task, task);
+    giftWriteChainRef.current = run.catch(() => {});
+    return run;
+  };
   const [giftTab, setGiftTab] = useState('unclaimed');
   // 受け取った直後に出す「手に入れたもの」の窓。{ title, rewards:[{type,itemId?,amount}], count } / null
   const [rewardReceipt, setRewardReceipt] = useState(null);
@@ -68257,7 +68267,7 @@ function MonsterHeroGame() {
   // ★ギフトと「届けた」印(mh_sorashido_gift_v1)を同じ取引で保存する。どちらか失敗したら両方元へ戻る(CLAUDE.md ⑦)
   // ★公開の印 assistantSorashido が偽なら届けない。回想で見直しても、印があるので二度は届かない
   const sorashidoGiftRef = useRef(false);
-  const grantSorashidoGift = async () => {
+  const grantSorashidoGift = () => runGiftWrite(async () => {
     if (RELEASE_FLAGS.assistantSorashido !== true) return false;
     if (sorashidoGiftRef.current) return false;
     sorashidoGiftRef.current = true;
@@ -68276,7 +68286,7 @@ function MonsterHeroGame() {
       return grant.granted;
     } catch (error) { return false; }
     finally { sorashidoGiftRef.current = false; }
-  };
+  });
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
     void grantSorashidoGift();
@@ -70947,7 +70957,8 @@ function MonsterHeroGame() {
     if (assistantBondRewardRunningRef.current) { assistantBondRewardAgainRef.current = true; return; }
     assistantBondRewardRunningRef.current = true;
     try {
-      do {
+      // ほかのギフトの書き足し(ソラシドのおみやげなど)と重ならないよう、順番に走らせる(runGiftWrite)
+      await runGiftWrite(async () => { do {
         assistantBondRewardAgainRef.current = false;
         // ★まだ解放していない助手(あつ・ドラ)のごほうびは、解放するまで届けない(届ける計算のときだけLv0とみなす。
         //   保存してある仲良し度はそのまま残すので、加入のお話を見たら、その時点のLvまでのごほうびがまとめて届く)
@@ -70967,7 +70978,7 @@ function MonsterHeroGame() {
         ], storeGet, storeSet);
         if (!saved) { console.error('[assistant-bond-reward] save failed'); break; }
         if (grant.granted.length) setGifts(grant.gifts);
-      } while (assistantBondRewardAgainRef.current);
+      } while (assistantBondRewardAgainRef.current); });
     } catch (error) {
       console.error('[assistant-bond-reward] failed:', error && error.message ? error.message : error);
     } finally { assistantBondRewardRunningRef.current = false; }

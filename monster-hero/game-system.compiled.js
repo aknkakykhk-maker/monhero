@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 40eaaab8a433d63d
+// source-sha256: 65e29f94dd89a3bd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107221,6 +107221,12 @@ function MonsterHeroGame() {
     });
   }, [gameState, trainingSession?.position, trainingSession?.routePreview?.[0], trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
+  const giftWriteChainRef = useRef(Promise.resolve());
+  const runGiftWrite = task => {
+    const run = giftWriteChainRef.current.then(task, task);
+    giftWriteChainRef.current = run.catch(() => {});
+    return run;
+  };
   const [giftTab, setGiftTab] = useState('unclaimed');
   const [rewardReceipt, setRewardReceipt] = useState(null);
   const [missions, setMissions] = useState(() => normalizeMissions(null));
@@ -110422,7 +110428,7 @@ function MonsterHeroGame() {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
   const sorashidoGiftRef = useRef(false);
-  const grantSorashidoGift = async () => {
+  const grantSorashidoGift = () => runGiftWrite(async () => {
     if (RELEASE_FLAGS.assistantSorashido !== true) return false;
     if (sorashidoGiftRef.current) return false;
     sorashidoGiftRef.current = true;
@@ -110455,7 +110461,7 @@ function MonsterHeroGame() {
     } finally {
       sorashidoGiftRef.current = false;
     }
-  };
+  });
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || !rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID)) return;
     void grantSorashidoGift();
@@ -113077,35 +113083,37 @@ function MonsterHeroGame() {
     }
     assistantBondRewardRunningRef.current = true;
     try {
-      do {
-        assistantBondRewardAgainRef.current = false;
-        const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current) ? 0 : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
-        const savedGifts = await storeGet('mh_gifts', [], false);
-        const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
-        const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
-        const mark = await storeGet(ASSISTANT_BOND_REWARDS_V2_KEY, null, false);
-        const grant = buildAssistantBondRewardGrant({
-          gifts: beforeGifts,
-          delivered: markV1,
-          deliveredV2: mark,
-          levels
-        });
-        if (!grant.changed) continue;
-        const saved = await saveStoredValuesOrRollback([...(grant.granted.length ? [{
-          key: 'mh_gifts',
-          before: beforeGifts,
-          next: grant.gifts
-        }] : []), {
-          key: ASSISTANT_BOND_REWARDS_V2_KEY,
-          before: mark,
-          next: grant.deliveredV2
-        }], storeGet, storeSet);
-        if (!saved) {
-          console.error('[assistant-bond-reward] save failed');
-          break;
-        }
-        if (grant.granted.length) setGifts(grant.gifts);
-      } while (assistantBondRewardAgainRef.current);
+      await runGiftWrite(async () => {
+        do {
+          assistantBondRewardAgainRef.current = false;
+          const levels = Object.fromEntries(ASSISTANT_LIST.map(who => [who.id, typeof assistantUnlockedBy === 'function' && !assistantUnlockedBy(who.id, rhythmEventStorySeenRef.current) ? 0 : assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[who.id]).points)]));
+          const savedGifts = await storeGet('mh_gifts', [], false);
+          const beforeGifts = Array.isArray(savedGifts) ? savedGifts : [];
+          const markV1 = await storeGet(ASSISTANT_BOND_REWARDS_KEY, null, false);
+          const mark = await storeGet(ASSISTANT_BOND_REWARDS_V2_KEY, null, false);
+          const grant = buildAssistantBondRewardGrant({
+            gifts: beforeGifts,
+            delivered: markV1,
+            deliveredV2: mark,
+            levels
+          });
+          if (!grant.changed) continue;
+          const saved = await saveStoredValuesOrRollback([...(grant.granted.length ? [{
+            key: 'mh_gifts',
+            before: beforeGifts,
+            next: grant.gifts
+          }] : []), {
+            key: ASSISTANT_BOND_REWARDS_V2_KEY,
+            before: mark,
+            next: grant.deliveredV2
+          }], storeGet, storeSet);
+          if (!saved) {
+            console.error('[assistant-bond-reward] save failed');
+            break;
+          }
+          if (grant.granted.length) setGifts(grant.gifts);
+        } while (assistantBondRewardAgainRef.current);
+      });
     } catch (error) {
       console.error('[assistant-bond-reward] failed:', error && error.message ? error.message : error);
     } finally {
