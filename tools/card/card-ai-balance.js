@@ -4,10 +4,12 @@
 //   --vs starter(既定)… プレイヤー役(スターター3つを順に・くせの無い考え方 kyuko・同じ難易度)と戦う。カードポイントの稼ぎやすさはこちらで見る
 //   --vs each … 助手どうしの総当たり
 //   --games … 1組あたりの試合数(先攻・後攻を半分ずつ入れかえる)。組は 6人 × 5人 / 2 = 15組
+//   --with-pending … 公開の印が立っていない助手(仮の値で表に足した子)も測る。ふだんは公開済みの助手だけ(card-released-foes.js)
 // 読み方: 「勝率」は、その助手がほかの5人と戦ったときの勝ちの割合(50% がちょうど真ん中)
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { cardFoeOpenInRepo } = require('./card-released-foes');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const GAME = path.join(ROOT, 'monster-hero');
@@ -28,8 +30,8 @@ const vs = opt('--vs', 'starter');
 
 const E = load();
 const db = E.CARD_BATTLE_DATA;
-const who = Object.keys(E.CARD_AI_HABITS);
-const NAME = { mua: 'みゅあ', momosuke: 'ももすけ', kiki: 'きき', kyuko: 'きゅうこ', dra: 'ドラ', atsu: 'あつ' };
+const who = Object.keys(E.CARD_AI_HABITS).filter((w) => args.includes('--with-pending') || cardFoeOpenInRepo(w));
+const NAME = { mua: 'みゅあ', momosuke: 'ももすけ', kiki: 'きき', kyuko: 'きゅうこ', dra: 'ドラ', atsu: 'あつ', sorashido: 'ソラシド' };
 const out = {};
 levels.forEach((lv) => {
   const decks = Object.fromEntries(who.map((w) => [w, E.cardAiBuildDeck(db, w, lv)]));

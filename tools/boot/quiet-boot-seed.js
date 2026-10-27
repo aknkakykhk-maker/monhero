@@ -41,7 +41,11 @@ const eventStoryIds = () => {
   const ids = names.split(',').map(s => s.trim()).filter(Boolean)
     .flatMap(name => name.startsWith('...') ? halloween.map(h => h.slice(5, -1)) : [idOf(source, name) || idOf(release, name)]).filter(Boolean);
   if (!ids.length) throw new Error('RHYTHM_EVENT_STORY_IDS を読めませんでした(本体の書き方が変わった可能性)');
-  return ids;
+  // イベント回想に並ぶお話(data/assistants.js の EVENT_REPLAYS)も全部見たことにする。HOME で自動で流れるお話が増えるたびに
+  // ここへ足し忘れ、育成の検査2本が窓の下で押せずに落ちていた(2026-10-27。話せるようになった日・4人のタイプ・ジャック1.5部)
+  const replays = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/data/assistants.js'), 'utf8')
+    .match(/\{ id: '[a-z0-9_]+', date:/g) || [];
+  return [...new Set([...ids, ...replays.map(h => h.slice(7, h.indexOf("'", 7)))])];
 };
 
 // 会話の既読を入れる保存キー。本体から引く(名前を変えられても検査が気づく)
@@ -55,14 +59,25 @@ const eventStoryKey = () => {
 // 公開の日に HOME で一度だけ流れるお話(タクティクスバトルの導入・HELL の「空まで届くビート」)の既読キー。
 // どちらも起動直後に画面いっぱいへ出て、ショップ・バトルへ進む検査を止めた(2026-10-15・着替えの検査がタクティクスの導入で止まった)。
 // ★キーは本体(17-release-changelog-login-missions.jsx)から読む。お話そのものを確かめる検査はこの種を使わない
-const introStoryKeys = () => {
-  const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
+// 既読キーと、そのキーが表すお話の id(except で外すため)
+const INTRO_STORY_KEY_IDS = Object.freeze({
+  TACTICS_INTRO_SEEN_KEY: 'tactics_intro',
+  RHYTHM_HELL_STORY_SEEN_KEY: 'rhythm_hell_story',
   // MFバトルカードの公開のお話(2026-10-26 公開)も同じ置き方で HOME に出るので、ここで見たことにする
-  return ['TACTICS_INTRO_SEEN_KEY', 'RHYTHM_HELL_STORY_SEEN_KEY', 'CARD_BATTLE_INTRO_STORY_SEEN_KEY']
-    .map((name) => (src.match(new RegExp(`const ${name} = '([^']+)'`)) || [])[1]).filter(Boolean);
+  CARD_BATTLE_INTRO_STORY_SEEN_KEY: 'card_battle_intro_2026',
+  // 助手とおしゃべりのお話「話せるようになった日」(2026-10-14 公開)・タクティクスの「4人のタイプ」も同じ。入っていなかったので、
+  // 育成の検査2本がこの窓の下で押せずに落ちていた(2026-10-27)
+  ASSISTANT_CHAT_STORY_SEEN_KEY: 'assistant_chat_story',
+  TACTICS_TYPES_STORY_SEEN_KEY: 'tactics_types',
+});
+const introStoryKeys = (except = []) => {
+  const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'monster-hero/src/parts/17-release-changelog-login-missions.jsx'), 'utf8');
+  return Object.entries(INTRO_STORY_KEY_IDS).filter(([, id]) => !except.includes(id))
+    .map(([name]) => (src.match(new RegExp(`const ${name} = '([^']+)'`)) || [])[1]).filter(Boolean);
 };
-const eventStorySeed = () => ({
-  content: `(() => { try { localStorage.setItem(${JSON.stringify(eventStoryKey())}, ${JSON.stringify(JSON.stringify(eventStoryIds()))}); ${introStoryKeys().map((k) => `localStorage.setItem(${JSON.stringify(k)}, 'true');`).join(' ')} } catch (e) {} })();`,
+// except … そのお話を確かめる検査が、自分のお話だけは「見た」にしないための id の一覧(例 ['assistant_chat_story'])
+const eventStorySeed = ({ except = [] } = {}) => ({
+  content: `(() => { try { localStorage.setItem(${JSON.stringify(eventStoryKey())}, ${JSON.stringify(JSON.stringify(eventStoryIds().filter((id) => !except.includes(id))))}); ${introStoryKeys(except).map((k) => `localStorage.setItem(${JSON.stringify(k)}, 'true');`).join(' ')} } catch (e) {} })();`,
 });
 
 // 起動直後に画面いっぱいへ出る「一度きりの案内」。押さずに進めないので、検査では出さない。
