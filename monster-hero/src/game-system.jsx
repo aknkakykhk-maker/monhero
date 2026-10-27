@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a27beb8422de56e
+// generated-sha256: 690276333f942837
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13281,7 +13281,7 @@ const withBlackNoteCombo = (exCombos, combo, extra = null) => {
 //   持ち主が回避すると楔は0へ戻り、連撃と回避率アップも消える。
 //   既存5モードは勇者モンが持っているとき(キー 'party')、タクティクスは持っている子それぞれ(枠ごと)。持ち方は 60-app の kusabiRef
 // セレーネチェイサー(イルミネの固有技) … 与ダメ5%の連撃と、連撃ダメージ+1%(バトル中ずっと・重なる)。どちらも(楔の数+1)倍
-// ドリームペイン(ドリーミィの固有技) … 次のターンから3ターン、敵の被ダメージ+20%。楔1つごとにさらに+20%
+// ドリームペイン(ドリーミィの固有技) … 次のターンから3ターン、敵の被ダメージ+40%。楔1つごとにさらに+40%
 //   (楔3つで+80%・6つで+140%)。数は使ったときの楔で決まる。敵1体ぶんなのでWAVEが変わると消える
 const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
 const KUSABI_MAX = 6;
@@ -13294,7 +13294,7 @@ const SELENE_CHASER_COMBO_RATE = 0.05;
 const SELENE_CHASER_COMBO_DMG = 0.01;
 const DREAM_PAIN_MONSTER_ID = 'Dreamy';
 const DREAM_PAIN_TURNS = 3;
-const DREAM_PAIN_BASE = 0.2, DREAM_PAIN_PER = 0.2;
+const DREAM_PAIN_BASE = 0.4, DREAM_PAIN_PER = 0.4; // 2026-10-27 社長「楔1つごとも40%」(それまでは20%・20%)
 const hasKusabiTrait = (id) => !!id && KUSABI_TRAIT_MONSTER_IDS.includes(id);
 // max … その子のいまの上限(ふだん6・ジエンドのあいだ12)。効き目の計算は上限で切ったあとの数を受け取る(12まで数える)
 const kusabiCountOf = (n, max = KUSABI_MAX) => Math.min(max, Math.max(0, Math.floor(Number(n) || 0)));
@@ -75605,7 +75605,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
-          // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+20%(楔1つごとに+20%)。数は使ったときの楔(増える前)で決める
+          // ドリームペイン(ドリーミィ): 次のターンから3ターン、敵の被ダメージ+40%(楔1つごとに+40%)。数は使ったときの楔(増える前)で決める
           if(card.monId===DREAM_PAIN_MONSTER_ID){const dp=writeDreamPain({...startDreamPain(kusabiBeforeAttack),bonus:dreamPainTakenOf(kusabiBeforeAttack)*effMul}); addPopup(`💤 ドリームペイン 被ダメ+${Math.round(dp.bonus*100)}%`,'enemy','text-fuchsia-300 text-lg font-bold');}
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul); if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}

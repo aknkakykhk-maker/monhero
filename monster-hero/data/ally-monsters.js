@@ -133,7 +133,7 @@ const ALL_PLAYER_MONSTERS = {
     baseHp:360, baseGuts:130, baseAtk:115, baseDef:60, plusStats:{hp:120,atk:35,def:15,guts:40}, distAptitude:['B','D','D','A'],
     unique:{ name:"おもちゃの爆弾", icon:DREAMY_ICON, monId:"Dreamy", baseMult:2.6, baseGuts:52, evoLevel:0,
       names:["おもちゃの爆弾","エーテルアイス","アルカナフレア","アルスマグナ","ララバイノクターン","ミラージュクロウ","クリムゾンノヴァ","スウィートドリーム","ドリーミィパレード"],
-      effectDesc:"ドリームペイン：次のターンから3ターン、敵が受けるダメージ+20%。楔1つごとにさらに+20%(楔3つで+80%・6つで+140%)" } },
+      effectDesc:"ドリームペイン：次のターンから3ターン、敵が受けるダメージ+40%。楔1つごとにさらに+40%(楔3つで+160%・6つで+280%)" } },
 };
 
 // 初期から無料で使えるモンスターのid一覧(固定)。
