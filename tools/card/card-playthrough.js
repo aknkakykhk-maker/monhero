@@ -192,10 +192,13 @@ const playTutorial = async (page, label, errors) => {
       await page.locator('[data-card-top="result"]').waitFor({ timeout: 20000 }).catch(() => {});
       await clickText(page, /トップへ/);
       for (const lv of LEVELS) {
-        await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
-        await page.locator('[data-card-cpu]').click();
-        await page.locator('[data-card-mode-assistant]').click();
-        await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
+        // 結果の画面の「相手をえらぶ」から来たときは、もう相手えらびの画面にいる
+        await page.locator('[data-card-top="top"], [data-card-top="foe"]').first().waitFor({ timeout: 20000 });
+        if (!(await page.locator('[data-card-top="foe"]').count())) {
+          await page.locator('[data-card-cpu]').click();
+          await page.locator('[data-card-mode-assistant]').click();
+          await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
+        }
         await page.locator(`[data-card-foe="${FOES[lv]}"]`).click();
         await page.locator(`[data-card-level="${lv}"]`).click().catch(() => {});
         await page.locator('[data-card-start]').click();
@@ -215,7 +218,7 @@ const playTutorial = async (page, label, errors) => {
           note(`${opened && back ? 'OK' : 'NG'}: ${tag} 見返しを開いて戻る`); if (!(opened && back)) bad++;
           await page.locator('[data-card-top="result"]').waitFor({ timeout: 15000 }).catch(() => {});
         }
-        await clickText(page, /トップへ/);
+        if (!(await clickText(page, /相手をえらぶ/))) await clickText(page, /トップへ/);
       }
       const uniq = [...new Set(errors)];
       note(`${uniq.length ? 'NG' : 'OK'}: ${tag} 実行時エラー ${uniq.length}件${uniq.length ? ` — ${uniq.slice(0, 3).join(' / ')}` : ''}`); if (uniq.length) bad++;
