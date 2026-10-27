@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 869df0b3a2e30d80
+// source-sha256: b4fb548ee3281d85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94575,6 +94575,135 @@ const cardNormalizeCpuOpen = v => {
     }
   };
 };
+const CardBattleDeckPick = ({
+  db,
+  decks,
+  collection,
+  current,
+  issues,
+  firstWinNote,
+  open,
+  onOpen,
+  onClose,
+  onPick
+}) => {
+  const style = typeof window !== 'undefined' && window.__mhDeckPickStyle || 'sheet';
+  const list = decks.decks;
+  const thumbs = (d, cls) => React.createElement("span", {
+    "aria-hidden": "true",
+    className: "flex shrink-0 -space-x-2"
+  }, d.monsters.map(no => {
+    const m = cardMonsterOf(db, no);
+    return m ? React.createElement("img", {
+      key: no,
+      src: CARD_IMG(m.img),
+      alt: "",
+      className: `${cls} rounded-[3px] border border-white/40 object-cover`
+    }) : null;
+  }));
+  const why = d => [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)];
+  const row = d => {
+    const bad = why(d);
+    const on = current && d.id === current.id;
+    const saved = d.id === decks.active;
+    return React.createElement("button", {
+      key: d.id,
+      type: "button",
+      "data-card-battle-deck": d.id,
+      disabled: bad.length > 0,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        onPick(d.id);
+      },
+      className: `flex w-full min-w-0 items-center gap-2 rounded-xl border-2 px-2.5 py-2 text-left active:scale-[.98] disabled:opacity-45 ${on ? 'border-amber-300 bg-amber-900/40' : 'border-white/10 bg-slate-900/70'}`
+    }, thumbs(d, 'h-10 w-[30px]'), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[13px] font-black text-white"
+    }, d.name, saved && React.createElement("small", {
+      className: "ml-1.5 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] text-slate-200"
+    }, "いつもの")), React.createElement("small", {
+      className: `block text-[11px] font-bold ${bad.length ? 'text-rose-300' : 'text-emerald-300'}`,
+      style: JA_WRAP_STYLE
+    }, bad.length ? jaWrap(bad.join('・')) : `${d.cards.length}/50枚・対戦に使えます`)), on && React.createElement("span", {
+      className: "shrink-0 text-[18px] text-amber-300"
+    }, "✓"));
+  };
+  const note = firstWinNote && React.createElement("span", {
+    className: "text-[11px] text-slate-400",
+    style: JA_LABEL_STYLE
+  }, cardRuleLine('《今日はじめての勝ちで +50》'));
+  if (style === 'strip') {
+    return React.createElement("div", {
+      "data-card-foe-mydeck": true,
+      className: "mb-1.5 px-0.5"
+    }, React.createElement("div", {
+      className: "flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"
+    }, React.createElement("span", null, "使うデッキ"), note), React.createElement("div", {
+      "data-card-battle-deck-strip": true,
+      className: "mt-1 flex gap-1.5 overflow-x-auto pb-1"
+    }, list.map(d => {
+      const bad = why(d);
+      const on = current && d.id === current.id;
+      return React.createElement("button", {
+        key: d.id,
+        type: "button",
+        "data-card-battle-deck": d.id,
+        disabled: bad.length > 0,
+        onClick: () => {
+          Audio_.fgSe.tap();
+          onPick(d.id);
+        },
+        className: `flex w-[104px] shrink-0 flex-col items-center gap-1 rounded-xl border-2 px-1.5 py-1.5 active:scale-[.97] disabled:opacity-40 ${on ? 'border-amber-300 bg-amber-900/40' : 'border-white/10 bg-slate-900/70'}`
+      }, thumbs(d, 'h-9 w-[27px]'), React.createElement("b", {
+        className: "w-full truncate text-center text-[11px] font-black text-white"
+      }, d.name), React.createElement("small", {
+        className: `text-[10px] font-bold ${bad.length ? 'text-rose-300' : on ? 'text-amber-200' : 'text-slate-400'}`
+      }, bad.length ? '使えない' : on ? 'これで戦う' : `${d.cards.length}/50枚`));
+    })), issues.length > 0 && React.createElement("div", {
+      className: "mt-0.5 text-[12px] font-bold text-rose-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap(issues.join('・'))));
+  }
+  return React.createElement("div", {
+    "data-card-foe-mydeck": true,
+    className: "mb-1.5 px-0.5"
+  }, React.createElement("div", {
+    className: "mb-1 flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"
+  }, React.createElement("span", null, "使うデッキ"), note), React.createElement("button", {
+    type: "button",
+    "data-card-battle-deck-open": true,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      onOpen();
+    },
+    className: "mhms-glass flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]"
+  }, current && thumbs(current, 'h-9 w-[27px]'), React.createElement("b", {
+    className: "min-w-0 flex-1 truncate text-[13px] font-black text-white"
+  }, current ? current.name : 'なし'), React.createElement("span", {
+    className: "shrink-0 rounded-full border border-amber-300/60 px-2 py-0.5 text-[11px] font-black text-amber-200"
+  }, "かえる ▸")), issues.length > 0 && React.createElement("div", {
+    className: "mt-0.5 text-[12px] font-bold text-rose-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(issues.join('・'))), open && React.createElement("div", {
+    "data-card-battle-deck-sheet": true,
+    className: "fixed inset-0 z-[60] flex items-end justify-center bg-black/60",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "max-h-[80%] w-full max-w-[520px] overflow-y-auto rounded-t-2xl border-t-2 border-amber-300/50 bg-slate-950 p-3 pb-[calc(12px+env(safe-area-inset-bottom))]",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "mb-2 flex items-center"
+  }, React.createElement("b", {
+    className: "flex-1 text-[15px] font-black text-amber-200"
+  }, "この対戦で使うデッキ"), React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "px-2 text-[13px] font-bold text-slate-300"
+  }, "とじる")), React.createElement("div", {
+    className: "space-y-1.5"
+  }, list.map(row)))));
+};
 const CardBattleScreen = ({
   screen,
   onNavigate,
@@ -94625,6 +94754,8 @@ const CardBattleScreen = ({
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
+  const [battleDeckId, setBattleDeckId] = useState(null);
+  const [deckSheet, setDeckSheet] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
   const [demoWho, setDemoWho] = useState('mua');
@@ -95142,7 +95273,8 @@ const CardBattleScreen = ({
   }
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   const foes = (debug ? allAssistants.filter(a => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter(a => CARD_AI_HABITS[a.id]);
-  const activeDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
+  const savedDeck = save.decks.decks.find(d => d.id === save.decks.active) || save.decks.decks[0] || null;
+  const activeDeck = battleDeckId && save.decks.decks.find(d => d.id === battleDeckId) || savedDeck;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   const myName = rank && rank.profile && rank.profile.name || 'あなた';
@@ -95596,22 +95728,21 @@ const CardBattleScreen = ({
       style: JA_LABEL_STYLE
     }, jaWrap(notice))), React.createElement("div", {
       className: SCREEN_FOOTER_CLASS
-    }, React.createElement("div", {
-      "data-card-foe-mydeck": true,
-      className: "mb-1.5 px-0.5"
-    }, React.createElement("div", {
-      className: "flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"
-    }, React.createElement("span", {
-      style: JA_LABEL_STYLE
-    }, "あなたのデッキ: ", React.createElement("b", {
-      className: "text-white"
-    }, activeDeck ? activeDeck.name : 'なし')), !save.daily.firstWin && React.createElement("span", {
-      className: "text-[11px] text-slate-400",
-      style: JA_LABEL_STYLE
-    }, cardRuleLine('《今日はじめての勝ちで +50》'))), deckIssues.length > 0 && React.createElement("div", {
-      className: "mt-0.5 text-[12px] font-bold text-rose-300",
-      style: JA_WRAP_STYLE
-    }, jaWrap(deckIssues.join('・')))), React.createElement("button", {
+    }, React.createElement(CardBattleDeckPick, {
+      db: db,
+      decks: save.decks,
+      collection: save.collection,
+      current: activeDeck,
+      issues: deckIssues,
+      firstWinNote: !save.daily.firstWin,
+      open: deckSheet,
+      onOpen: () => setDeckSheet(true),
+      onClose: () => setDeckSheet(false),
+      onPick: id => {
+        setBattleDeckId(id === save.decks.active ? null : id);
+        setDeckSheet(false);
+      }
+    }), React.createElement("button", {
       type: "button",
       "data-card-start": true,
       className: `${btn} mh-button-primary`,

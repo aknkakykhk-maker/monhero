@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a05b3a1db7d05c0a
+// generated-sha256: 7a8c21b3330b2fc7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57519,6 +57519,67 @@ const cardNormalizeCpuOpen = (v) => {
   const f = v.facts && typeof v.facts === 'object' ? v.facts : {};
   return { id: v.id, who: v.who, level: v.level, rankable: v.rankable === true, at: n(v.at), beat: n(v.beat), facts: { ownTurns: n(f.ownTurns), kos: n(f.kos) } };
 };
+// 対戦の直前に使うデッキを選ぶ(2026-10-27 社長「事前にデッキ設定できるけどバトル前に選べるようにもしてほしい」)。
+//   見せ方 sheet … 「あなたのデッキ」の行を押すと、下から一覧が開く / strip … 対戦するボタンの上に、デッキを横に並べて直接選ぶ(試作: window.__mhDeckPickStyle で切りかえ)
+//   ルールに合わないデッキ(枚数が足りない・持っていないカードがある など)は選べない(理由を出す)
+const CardBattleDeckPick = ({ db, decks, collection, current, issues, firstWinNote, open, onOpen, onClose, onPick }) => {
+  const style = (typeof window !== 'undefined' && window.__mhDeckPickStyle) || 'sheet';
+  const list = decks.decks;
+  const thumbs = (d, cls) => <span aria-hidden="true" className="flex shrink-0 -space-x-2">{d.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt="" className={`${cls} rounded-[3px] border border-white/40 object-cover`}/> : null; })}</span>;
+  const why = (d) => [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)];
+  const row = (d) => {
+    const bad = why(d); const on = current && d.id === current.id; const saved = d.id === decks.active;
+    return (
+      <button key={d.id} type="button" data-card-battle-deck={d.id} disabled={bad.length > 0} onClick={() => { Audio_.fgSe.tap(); onPick(d.id); }}
+        className={`flex w-full min-w-0 items-center gap-2 rounded-xl border-2 px-2.5 py-2 text-left active:scale-[.98] disabled:opacity-45 ${on ? 'border-amber-300 bg-amber-900/40' : 'border-white/10 bg-slate-900/70'}`}>
+        {thumbs(d, 'h-10 w-[30px]')}
+        <span className="min-w-0 flex-1">
+          <b className="block truncate text-[13px] font-black text-white">{d.name}{saved && <small className="ml-1.5 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] text-slate-200">いつもの</small>}</b>
+          <small className={`block text-[11px] font-bold ${bad.length ? 'text-rose-300' : 'text-emerald-300'}`} style={JA_WRAP_STYLE}>{bad.length ? jaWrap(bad.join('・')) : `${d.cards.length}/50枚・対戦に使えます`}</small>
+        </span>
+        {on && <span className="shrink-0 text-[18px] text-amber-300">✓</span>}
+      </button>
+    );
+  };
+  const note = firstWinNote && <span className="text-[11px] text-slate-400" style={JA_LABEL_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</span>;
+  if (style === 'strip') {
+    return (
+      <div data-card-foe-mydeck className="mb-1.5 px-0.5">
+        <div className="flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"><span>使うデッキ</span>{note}</div>
+        <div data-card-battle-deck-strip className="mt-1 flex gap-1.5 overflow-x-auto pb-1">
+          {list.map((d) => { const bad = why(d); const on = current && d.id === current.id; return (
+            <button key={d.id} type="button" data-card-battle-deck={d.id} disabled={bad.length > 0} onClick={() => { Audio_.fgSe.tap(); onPick(d.id); }}
+              className={`flex w-[104px] shrink-0 flex-col items-center gap-1 rounded-xl border-2 px-1.5 py-1.5 active:scale-[.97] disabled:opacity-40 ${on ? 'border-amber-300 bg-amber-900/40' : 'border-white/10 bg-slate-900/70'}`}>
+              {thumbs(d, 'h-9 w-[27px]')}
+              <b className="w-full truncate text-center text-[11px] font-black text-white">{d.name}</b>
+              <small className={`text-[10px] font-bold ${bad.length ? 'text-rose-300' : on ? 'text-amber-200' : 'text-slate-400'}`}>{bad.length ? '使えない' : on ? 'これで戦う' : `${d.cards.length}/50枚`}</small>
+            </button>
+          ); })}
+        </div>
+        {issues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(issues.join('・'))}</div>}
+      </div>
+    );
+  }
+  return (
+    <div data-card-foe-mydeck className="mb-1.5 px-0.5">
+      <div className="mb-1 flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300"><span>使うデッキ</span>{note}</div>
+      <button type="button" data-card-battle-deck-open onClick={() => { Audio_.fgSe.tap(); onOpen(); }} className="mhms-glass flex w-full min-w-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left active:scale-[.98]">
+        {current && thumbs(current, 'h-9 w-[27px]')}
+        <b className="min-w-0 flex-1 truncate text-[13px] font-black text-white">{current ? current.name : 'なし'}</b>
+        <span className="shrink-0 rounded-full border border-amber-300/60 px-2 py-0.5 text-[11px] font-black text-amber-200">かえる ▸</span>
+      </button>
+      {issues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(issues.join('・'))}</div>}
+      {open && (
+        <div data-card-battle-deck-sheet className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={onClose}>
+          <div className="max-h-[80%] w-full max-w-[520px] overflow-y-auto rounded-t-2xl border-t-2 border-amber-300/50 bg-slate-950 p-3 pb-[calc(12px+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center"><b className="flex-1 text-[15px] font-black text-amber-200">この対戦で使うデッキ</b><button type="button" onClick={onClose} className="px-2 text-[13px] font-bold text-slate-300">とじる</button></div>
+            <div className="space-y-1.5">{list.map(row)}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', seenStoryIds = [], debug = false, onBgm, onQuickLoops, onOpenMarket, topAssistant = null, rank = null, bgmPreview = null, quickRun = null, quickAutoReady = false, onSettings = null }) => {
   const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
   const [save, setSave] = useState(null);
@@ -57539,6 +57600,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const [game, setGame] = useState(null);
   const [result, setResult] = useState(null);
   const [notice, setNotice] = useState('');
+  // 対戦の直前に選んだデッキ(この対戦だけ・保存しない。案2)と、デッキを選ぶ一覧を開いているか(2026-10-27 社長「バトル前に選べるように」)
+  const [battleDeckId, setBattleDeckId] = useState(null);
+  const [deckSheet, setDeckSheet] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [detail, setDetail] = useState(null);
   const [demoWho, setDemoWho] = useState('mua');
@@ -57817,7 +57881,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
 
   const allAssistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   const foes = (debug ? allAssistants.filter((a) => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter((a) => CARD_AI_HABITS[a.id]);
-  const activeDeck = save.decks.decks.find((d) => d.id === save.decks.active) || save.decks.decks[0] || null;
+  const savedDeck = save.decks.decks.find((d) => d.id === save.decks.active) || save.decks.decks[0] || null;
+  const activeDeck = (battleDeckId && save.decks.decks.find((d) => d.id === battleDeckId)) || savedDeck;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   // 対戦開始の画面に出す、こちらの名前と、場の3体(0=こちら・1=相手)
@@ -58012,13 +58077,9 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={SCREEN_FOOTER_CLASS}>
           {/* プレイヤーが対戦に使うデッキ。「使うデッキ」だと相手の助手のデッキと読まれた(2026-10-26 社長)ので「あなたの」と書く。助手のデッキは上の欄(好きな子・よく使うカード)
               「対戦する」のすぐ上に固定する。上の一覧の終わりに置いていたら、375×667 で「対戦する」の帯の下に隠れ、だれのデッキで戦うか見ないまま押せた(2026-10-26 ソランドくん) */}
-          <div data-card-foe-mydeck className="mb-1.5 px-0.5">
-            <div className="flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300">
-              <span style={JA_LABEL_STYLE}>あなたのデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></span>
-              {!save.daily.firstWin && <span className="text-[11px] text-slate-400" style={JA_LABEL_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</span>}
-            </div>
-            {deckIssues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
-          </div>
+          <CardBattleDeckPick db={db} decks={save.decks} collection={save.collection} current={activeDeck} issues={deckIssues} firstWinNote={!save.daily.firstWin}
+            open={deckSheet} onOpen={() => setDeckSheet(true)} onClose={() => setDeckSheet(false)}
+            onPick={(id) => { setBattleDeckId(id === save.decks.active ? null : id); setDeckSheet(false); }}/>
           <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || deckIssues.length > 0} onClick={() => startBattle(foe)}>対戦する</button>
         </div>
       </div>
