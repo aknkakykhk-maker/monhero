@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ac9639a689933c6f
+// generated-sha256: 26f4efdc2fd9c237
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -62315,9 +62315,17 @@ const cardPvpHistoryRoomLeft = () => {
   try { window.localStorage.setItem(CARD_PVP_HISTORY_PROBE_KEY, 'x'.repeat(CARD_PVP_HISTORY_ROOM)); return true; } catch (_) { return false; } finally { try { window.localStorage.removeItem(CARD_PVP_HISTORY_PROBE_KEY); } catch (_) { /* 消せなくても続ける */ } }
 };
 // 書けない・書いたあと空きが無いときは、古い試合から減らして書き直す(いちばん新しい試合は残す)。それでも入らなければあきらめる(ゲームは止めない)
+// 端末に履歴があるのに、読んだ値が配列でない(読めない・形が壊れている)ときは、書かない(93 の見返しと同じ守り・2026-10-27 案1)。
+//   読み違えた空の一覧から作り直して書くと、今までの対戦が消える
+const cardPvpHistoryReadLost = (raw) => {
+  if (Array.isArray(raw)) return false;
+  try { return typeof window !== 'undefined' && !!window.localStorage && window.localStorage.getItem(CARD_PVP_HISTORY_KEY) !== null; } catch (_) { return false; }
+};
 const cardPvpHistoryWrite = async (fn) => {
   try {
-    const list = fn(await cardPvpHistoryLoad()).slice();
+    const raw = await storeGet(CARD_PVP_HISTORY_KEY, null, false);
+    if (cardPvpHistoryReadLost(raw)) return null;
+    const list = fn(cardPvpNormalizeHistory(raw)).slice();
     for (;;) {
       const ok = await cardPvpHistoryPut(list);
       if (ok && cardPvpHistoryRoomLeft()) return list;
