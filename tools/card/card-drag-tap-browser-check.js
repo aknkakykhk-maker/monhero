@@ -14,6 +14,9 @@
 //   C 加勢(使う子が3体): 子を選んでから運ぶと、選んだ子で出る / 選ばずに運ぶと、出さずに「使う子をタップ」(案B)/ 使う子が1体だけの技はそのまま出る
 //   D 隠れる(守りの移す先): タップは移す先の味方を選ぶ / 運んで置いた味方へ移す(置き先と移す先がそろう)
 //   E 友をかばう(かばう子): 運んで置いた子がかばう(タップとそろう)
+//   F 組み合わせを選ばずに札を押すと、その札1枚だけ / 付けても何も変わらない組み合わせ(ガッツ0のマンゴー＋ジョイのサポート)はボタンにも出ない /
+//     意味のある組み合わせ(突進＋ジョイのサポート)はボタンに出る
+//   G ガッツの段の「攻撃に戻る」: 押すと攻撃の段へ / 灼熱の地でダメージが出た番は出さない
 //   どれも実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -51,6 +54,7 @@ const sceneScript = (spec) => `(() => {
     me.hand = spec.hand.slice(); me.guts = Array(9).fill('100');
     opp.hand = ['100', '100', '100', '100', '100']; opp.guts = Array(9).fill('100');
     [me, opp].forEach((pl) => pl.mons.forEach((x) => { x.max = 20; x.life = 20; x.attacks = 0; }));
+    if (spec.hurt) me.mons[0].life = 5; // 回復の札(カララギマンゴー)は、ライフの減った子にだけ使える
     st.phase = 'main'; st.pending = null; st.pendingDiscard = null; st.turn = 2; st.first = 0;
     me.breederUsed = false; opp.breederUsed = false;
     if (spec.attackMe !== undefined) {
@@ -61,6 +65,7 @@ const sceneScript = (spec) => `(() => {
       const o = cardAttackOptions(db, st).find((x) => x.hand.length === 1 && x.hand[0] === 0 && x.mon === 0 && x.target && x.target.p === 0 && x.target.m === spec.attackMe);
       st = cardApplyAction(db, st, o) || st;
     } else st.active = 0;
+    if (spec.guts) { st.phase = 'guts'; if (spec.noBack) st.noBackTurn = st.turn; } // ガッツの段から始める(noBack … 灼熱の地が効いた番の形)
     return st;
   };
 })();`;
@@ -119,7 +124,7 @@ const sceneScript = (spec) => `(() => {
     await page.locator('[data-card-foe="momosuke"]').click();
     await page.locator('[data-card-start]').click();
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
-    const want = spec.attackMe !== undefined ? 'guard' : 'attack';
+    const want = spec.attackMe !== undefined ? 'guard' : spec.guts ? 'guts' : 'attack';
     await page.waitForFunction((w) => { const b = document.querySelector('[data-card-battle]'); return b && b.getAttribute('data-card-mode') === w; }, want, { timeout: 20000 });
     // 始まりの演出(番の帯・配る動き)が終わってから操作する(途中だと運ぶ操作を受け付けないことがあった)
     await page.waitForFunction(() => !document.querySelector('[data-card-turn-banner]'), null, { timeout: 15000 }).catch(() => {});
@@ -253,6 +258,52 @@ const sceneScript = (spec) => `(() => {
     await page.waitForTimeout(1500);
     log = await lastLog(page);
     check('E 運ぶ: 友をかばうをゴーレムへ運ぶと、ゴーレムがかばう', n1 !== n0 && /ゴーレム/.test(log), `手札 ${n0}→${n1}・${log.slice(-160)}`);
+    await page.close();
+
+    // ---- F カララギマンゴー(ガッツ0)とジョイのサポート(社長の報告・社長の答え 案A＋B) ----
+    //   前は、いちばん枚数の多い組み合わせ(マンゴー＋ジョイのサポート)が先に選ばれていて、そのまま味方を押すとジョイのサポートも出た。
+    //   いまは、付けても何も変わらない組み合わせはボタンにも出さず、押した札1枚だけで出す
+    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['113', '276', '100', '100', '100'], hurt: true });
+    await page.locator('[data-card-hand-card="0"]').click();
+    await page.waitForTimeout(400);
+    const fSets = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
+    check('F タップ: マンゴーを押しても、「マンゴー＋ジョイのサポート」のボタンは出ない(付けても何も変わらない)', !fSets.includes('[0,1]'), fSets.join(' / ') || 'ボタン無し');
+    n0 = await handCount(page);
+    await page.locator('[data-card-mon="0-0"]').click();
+    await settle(page, n0);
+    let fHand = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].map((e) => e.innerText.split('\n')[0]));
+    log = await lastLog(page);
+    check('F タップ: そのまま味方を押すと、マンゴーだけが出る(ジョイのサポートは手札に残る)', (await handCount(page)) === n0 - 1 && fHand.includes('ジョイのサポート'), `${n0}→${await handCount(page)}枚・${log.slice(-100)}`);
+    await page.close();
+    // 運んでも同じ(マンゴーを味方へ運ぶ)
+    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['113', '276', '100', '100', '100'], hurt: true });
+    n0 = await handCount(page);
+    await mouseDrag(page, '[data-card-hand-card="0"]', '[data-card-mon="0-0"]');
+    await settle(page, n0);
+    fHand = await page.evaluate(() => [...document.querySelectorAll('[data-card-hand-card]')].map((e) => e.innerText.split('\n')[0]));
+    check('F 運ぶ: マンゴーを味方へ運ぶと、マンゴーだけが出る', (await handCount(page)) === n0 - 1 && fHand.includes('ジョイのサポート'), `${n0}→${await handCount(page)}枚`);
+    await page.close();
+    // 付けて意味のある組み合わせは、今までどおりボタンに出て選べる(突進(ガッツ3)にジョイのサポート → ガッツ0で出せる)
+    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['114', '276', '100', '100', '100'] });
+    await page.locator('[data-card-hand-card="0"]').click();
+    await page.waitForTimeout(400);
+    const rSets = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => `${e.getAttribute('data-card-set')}${/amber-300/.test(e.className) ? '*' : ''}`));
+    check('F 意味のある組み合わせ(突進＋ジョイのサポート)はボタンに出て、既定は突進1枚だけ', rSets.includes('[0,1]') && rSets.includes('[0]*'), rSets.join(' / '));
+    await page.close();
+
+    // ---- G 攻撃に戻る(社長の答え 2026-10-27): ガッツの段で押すと攻撃の段へ戻る / 灼熱の地でダメージが出た番は出さない ----
+    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['100', '100', '100', '100', '100'], guts: true });
+    const gBtn = await page.locator('[data-card-back-attack]').count();
+    check('G ガッツの段に「攻撃に戻る」が出る', gBtn === 1, `${gBtn} 個`);
+    if (gBtn) {
+      await page.locator('[data-card-back-attack]').click();
+      await page.waitForTimeout(600);
+      const m = await page.locator('[data-card-battle]').getAttribute('data-card-mode');
+      check('G 押すと攻撃の段へ戻る', m === 'attack', m);
+    }
+    await page.close();
+    page = await open({ mons: ['golem', 'tiger', 'pixie'], hand: ['100', '100', '100', '100', '100'], guts: true, noBack: true });
+    check('G 灼熱の地でダメージが出た番は「攻撃に戻る」を出さない', await page.locator('[data-card-back-attack]').count() === 0);
     await page.close();
 
     check('どこでも実行時エラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));

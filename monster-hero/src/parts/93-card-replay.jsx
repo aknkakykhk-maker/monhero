@@ -20,7 +20,9 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   5 → 6: カウンターは半分を返して残りを受ける・歌うで飛ばした番では「攻撃できない」を使い切らない(2026-10-27 社長)
 //   6 → 7: 挑発・レロレロのあと、挑発した子に当たらない全員攻撃は出せない・冬虫散と灼熱の地のダメージでも溜めが終わる(総点検D・2026-10-27)
 //   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
-const CARD_REPLAY_RULES = 8; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ
+//   8 → 9: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A)
+//   9 → 10: ガッツの段から攻撃に戻る手(backToAttack)を足した(2026-10-27 社長)
+const CARD_REPLAY_RULES = 10; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
@@ -193,6 +195,7 @@ const cardReplayCaption = (states, i) => {
 // ログに一言が無い手(攻撃おわり・ガッツにしない・守らない など)の文
 const cardReplayActText = (type, name) => {
   if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'backToAttack') return `${name}は攻撃に戻った`;
   if (type === 'pass') return `${name}は守らなかった`;
   if (type === 'reveal') return `${name}は手札を見せた`;
   if (type === 'pray') return `${name}はおいのりをした`;
@@ -266,10 +269,18 @@ const cardReplayStore = async (box, keepId = null) => {
   return null;
 };
 // 書く直前に読み直して足す(同じ端末でゲームを2つ開いていても、片方の記録を消さない)
+// 端末に見返しの保存が「ある」のに、読んだ値が null か形が壊れているときは、書かない(2026-10-27 案1)。
+//   読み違えた空の箱から作り直して書くと、今までの試合と★が消える(保存の場所がいっぱいのときに起きた)
+const cardReplayReadLost = (raw) => {
+  if (raw && typeof raw === 'object' && Array.isArray(raw.list)) return false;
+  try { return typeof window !== 'undefined' && !!window.localStorage && window.localStorage.getItem(CARD_REPLAY_KEY) !== null; } catch (_) { return false; }
+};
 const cardReplaySave = async (rec) => {
   if (!rec) return false;
   try {
-    const box = cardReplayAdd(await storeGet(CARD_REPLAY_KEY, null), rec);
+    const raw = await storeGet(CARD_REPLAY_KEY, null);
+    if (cardReplayReadLost(raw)) return false;
+    const box = cardReplayAdd(raw, rec);
     if (!box.list.some((r) => r.id === rec.id)) return false;
     const done = await cardReplayStore(box, rec.id);
     if (!done) return false;
@@ -310,7 +321,7 @@ const cardReplayGameOf = (db, rec) => {
 // at … いまの手の番号(0 = はじめ)。onSeek(n) で場を差し替える
 const CARD_REPLAY_SPEEDS = Object.freeze([{ id: 1, label: '×1', ms: 1400 }, { id: 2, label: '×2', ms: 650 }]);
 // とじるのは上の帯の「とじる」だけ(2つ並んでいた。2026-10-27 言葉の見直し7)
-const CardReplayBar = ({ replay, at, onSeek }) => {
+const CardReplayBar = ({ replay, at, onSeek, tight }) => {
   const [auto, setAuto] = useState(false);
   const [speed, setSpeed] = useState(1);
   const last = replay.states.length - 1;
@@ -330,7 +341,8 @@ const CardReplayBar = ({ replay, at, onSeek }) => {
   // その手を打ったときの番(動いたあとの場ではなく、手を打つ前の場で数える)
   const label = at === 0 ? 'はじまり' : `${at}手目・${prev && prev.turn >= 1 ? `${prev.turn}番目の番` : 'はじまり'}・${byName}`;
   const caption = cardReplayCaption(replay.states, at) || (at > 0 && replay.types ? cardReplayActText(replay.types[at - 1], byName) : '');
-  const btn = 'mh-button mh-button-secondary min-h-[40px] flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40';
+  // tight … 縦の画面で入り切らないとき(84 の boardFit)。ボタンを低く・説明を1行にする(2026-10-27 社長の実機で下が切れた)
+  const btn = `mh-button mh-button-secondary ${tight ? 'min-h-[34px]' : 'min-h-[40px]'} flex-1 rounded-lg border border-white/20 bg-slate-800 px-1 text-[12px] font-black text-white disabled:opacity-40`;
   const go = (n) => { Audio_.fgSe.tap(); onSeek(Math.max(0, Math.min(last, n))); };
   return (
     <div data-card-replay-bar className="pointer-events-auto w-full rounded-xl border border-sky-300/40 bg-slate-950/90 px-2 py-1.5 shadow-lg">
@@ -338,7 +350,7 @@ const CardReplayBar = ({ replay, at, onSeek }) => {
         <span data-card-replay-turn data-card-replay-by={by === null ? undefined : by}>{label}</span>
         <span data-card-replay-step className="text-slate-300">{at}/{replay.total}手</span>
       </div>
-      <div data-card-replay-caption className="mt-0.5 min-h-[16px] break-words text-[11px] font-bold leading-snug text-white">{caption || ' '}</div>
+      <div data-card-replay-caption className={`mt-0.5 min-h-[16px] ${tight ? 'line-clamp-1' : ''} break-words text-[11px] font-bold leading-snug text-white`}>{caption || ' '}</div>
       {replay.stop !== null && at >= last && (
         <div data-card-replay-stop className="mt-0.5 text-[11px] font-black text-amber-300">ルールが変わる前の試合なので、ここまでしか見られません</div>
       )}

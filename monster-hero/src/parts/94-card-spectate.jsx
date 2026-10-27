@@ -36,11 +36,27 @@ const cardWatchNewGame = (db, meta) => cardCreateGame(db, {
 const cardWatchSideEntry = (e, side) => (side === 1 ? { ...e, by: 1 - e.by, act: cardPvpFlip(e.act), d: Array.isArray(e.d) ? [e.d[1], e.d[0]] : e.d } : e);
 const cardWatchSideMeta = (meta, side) => (side === 1 ? { ...meta, p: [meta.p[1], meta.p[0]], first: 1 - meta.first } : meta);
 const cardWatchSideWinner = (w, side) => (w === 0 || w === 1 ? (side === 1 ? 1 - w : w) : null);
-// 捨て札の仮の札を、届いた並びで本物にする(数が合わない・食い違うときは、その人のぶんはそのまま)
+// 決着の帯の言葉(見る人の見方で。2026-10-27 社長「観戦だと投了したら終わったのがわからない」「どちらがいつ投了したか」)。
+//   ホストが送る理由(reason)はホストから見た言葉(91 の finish の label)なので、勝った側から負けた側を決めて言い直す。送る知らせの形は変えない
+//   end … 届いた決着 { winner(ホストの見え方), reason } / side … 下に出す人 / nameOf(見え方の番号) … 名前 / turn … 決着が届いたときのターン(無ければ出さない)
+//   返り値 { winner(見え方の番号か null), how: 'surrender'|'timeout'|'left'|'' , head, sub }
+const CARD_WATCH_END_HOW = Object.freeze({ '投了': 'surrender', '相手の投了': 'surrender', '時間切れ': 'timeout', '相手の時間切れ': 'timeout', '相手が抜けた': 'left', '通信が切れた': 'left', '抜けた': 'left' });
+const cardWatchEndText = (end, side, nameOf, turn = 0) => {
+  const winner = end ? cardWatchSideWinner(end.winner, side) : null;
+  const how = (end && CARD_WATCH_END_HOW[end.reason]) || '';
+  if (winner === null) return { winner, how, head: '対戦が終わりました', sub: '' };
+  const loser = nameOf(1 - winner);
+  const when = Number.isInteger(turn) && turn > 0 ? `ターン${turn}で ` : '';
+  const sub = how === 'surrender' ? `${when}${loser}さんが投了しました` : how === 'timeout' ? `${when}${loser}さんの時間切れ(${CARD_PVP_TIMEOUT_LOSE}回)` : how === 'left' ? `${when}${loser}さんが対戦から抜けました` : '決着がつきました';
+  return { winner, how, head: `${nameOf(winner)}さんの勝ち！`, sub };
+};
+// 捨て札の仮の札を、届いた並びで本物にする(数が合わない・知らない札があるときは、その人のぶんはそのまま)。
+//   見る人の場と食い違う札は、ホストの並びを正とする(2026-10-27。途中から見る人は、ホストがあとで知った相手の捨て札の本物を
+//   なぞれないので、「後は頼んだ」(捨て札の新しいほうからガッツへ)のあとに違う札を捨て札へ出していた。card-pvp-watch-check ④)
 const cardWatchPatchOne = (db, pl, list) => {
   if (!Array.isArray(list) || list.length !== pl.discard.length) return false;
-  if (list.some((no, i) => (no !== CARD_PVP_HIDDEN && !cardOf(db, no)) || (pl.discard[i] !== CARD_PVP_HIDDEN && no !== CARD_PVP_HIDDEN && pl.discard[i] !== no))) return false;
-  pl.discard = pl.discard.map((no, i) => (no === CARD_PVP_HIDDEN ? list[i] : no));
+  if (list.some((no) => no !== CARD_PVP_HIDDEN && !cardOf(db, no))) return false;
+  pl.discard = pl.discard.map((no, i) => (list[i] !== CARD_PVP_HIDDEN ? list[i] : no));
   return true;
 };
 const cardWatchPatchDiscards = (db, st, d) => {
@@ -213,7 +229,12 @@ const CARD_WATCH_HOST = (() => {
       }
     },
     end: (winner, reason) => { if (h && !h.end) { h.end = { winner: winner === 0 || winner === 1 ? winner : null, reason: String(reason || '').slice(0, 20) }; sendWatch(hbMsg()); } },
-    stop: () => { closeAll(); h = null; },
+    // 部屋を出たとき。決着の知らせは1回しか送らないと、届かなかったときに見る人が終わりを知れないので、出る前にもう一度送る。
+    //   試合の途中で出たときは、ホストが抜けた負け(相手の端末でも「相手が抜けた」の勝ちになる)として終わりを送る(2026-10-27)
+    stop: () => {
+      if (h && h.log.length) { if (!h.end) h.end = { winner: 1, reason: '抜けた' }; sendWatch(hbMsg()); }
+      closeAll(); h = null;
+    },
     eyes,
   };
 })();
@@ -226,9 +247,17 @@ const CARD_WATCH = (() => {
   let alive = false;
   let tick = null;
   let retry = null;
-  const blank = () => ({ phase: 'idle', match: '', side: 0, id: '', meta: null, st: null, n: 0, buf: {}, hostN: 0, eyes: 0, end: null, d: null, last: null, lastAt: 0, needAt: 0, error: '', seenAt: 0, counted: false });
+  const blank = () => ({ phase: 'idle', match: '', side: 0, id: '', meta: null, st: null, n: 0, buf: {}, hostN: 0, eyes: 0, end: null, d: null, last: null, hits: null, lastAt: 0, needAt: 0, error: '', seenAt: 0, counted: false });
   const emit = () => listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても続ける */ } });
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
+  // 盤面の受け口(84 の game.watch.attach から)。{ onState(場, quiet), onPatch(場), onEnd(決着, ターン), onEyes(人数) }
+  let boardH = null;
+  let boardEnd = null;
+  const toBoard = () => {
+    if (!boardH || !s) return;
+    boardH.onEyes(s.eyes);
+    if (s.end && s.st && s.n >= s.hostN && boardEnd !== s.end) { boardEnd = s.end; boardH.onEnd(s.end, s.st.turn); }
+  };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.id, match: s.match }); };
   const stop = () => {
     if (tick) clearInterval(tick); tick = null;
@@ -241,6 +270,7 @@ const CARD_WATCH = (() => {
     if (!s.st) return;
     let { st, n, buf } = s;
     let last = s.last;
+    let hits = s.hits;
     buf = { ...buf };
     while (buf[n + 1]) {
       const e = cardWatchSideEntry(buf[n + 1], s.side);
@@ -248,13 +278,19 @@ const CARD_WATCH = (() => {
       const next = cardWatchApply(CARD_BATTLE_DATA, st, e);
       if (!next) { set({ buf, st, n, phase: 'broken', error: 'この試合は、ここから先を見られませんでした' }); return; }
       st = next; n += 1;
+      // 盤面(84 の観戦の形)へ1手ずつ流す。まだ届いていない手が続く(途中から見始めた・まとめて届いた)ときは、動きを出さずに飛ぶ
+      if (boardH) boardH.onState(next, !!buf[n + 1] || n < s.hostN - 1);
       // まんなかに出す「いま使った札」(使った・守ったカード)
       const used = (next.events || []).filter((x) => x.t === 'use' || x.t === 'guard').map((x) => ({ p: x.p, cards: x.t === 'use' ? x.cards : [x.card] })).filter((x) => x.cards.every((no) => cardOf(CARD_BATTLE_DATA, no)));
       if (used.length) last = { key: `${n}`, p: used[used.length - 1].p, cards: used[used.length - 1].cards };
+      // 当たりの結果(「防御！ 5 → 2」・ダメージの数字。対戦の画面と同じ部品で出す。2026-10-27 社長・案A)
+      const hitNow = (next.events || []).filter((x) => x.t === 'hit').map((x, i) => ({ ...x, key: `${n}-${i}` }));
+      if (hitNow.length) hits = hitNow;
     }
-    if (s.d) st = cardWatchPatchDiscards(CARD_BATTLE_DATA, st, s.side === 1 ? [s.d[1], s.d[0]] : s.d);
-    s = { ...s, st, n, buf, last, lastAt: last !== s.last ? Date.now() : s.lastAt };
+    if (s.d) { const pd = cardWatchPatchDiscards(CARD_BATTLE_DATA, st, s.side === 1 ? [s.d[1], s.d[0]] : s.d); if (boardH && pd !== st) boardH.onPatch(pd); st = pd; }
+    s = { ...s, st, n, buf, last, hits, lastAt: last !== s.last ? Date.now() : s.lastAt };
     if (s.end && n >= s.hostN && s.phase === 'watching') s = { ...s, phase: 'over' };
+    toBoard();
     emit();
   };
   const onMessage = (raw) => {
@@ -315,6 +351,13 @@ const CARD_WATCH = (() => {
       }, CARD_WATCH_EYE_MS);
     },
     leave: () => { stop(); s = blank(); emit(); },
+    // 盤面をつなぐ。つないだときは、いまの場へ動きなしで合わせる。はずす関数を返す
+    attachBoard: (h) => {
+      boardH = h; boardEnd = null;
+      if (s && s.st) h.onState(s.st, true);
+      toBoard();
+      return () => { if (boardH === h) boardH = null; };
+    },
   };
 })();
 
@@ -392,8 +435,15 @@ const CardWatchMonMini = ({ db, st, p, m }) => {
     </div>
   );
 };
+// 守りの番のあいだ、守った子の上に使った守りを出す(対戦の画面の guardTagOf と同じ。84 の cardGuardShort)
+const cardWatchGuardTag = (db, st, p, m) => {
+  const pv = st && st.pending ? cardGuardPreview(db, st) : null;
+  if (!pv || !pv.cards.length) return '';
+  const t = st.pending.targets[st.pending.ti];
+  return t && t.p === p && t.m === m ? pv.cards.map((no) => cardGuardShort(cardOf(db, no))).join('・') : '';
+};
 // low … 背の低い画面(横向き)。絵と行を小さくして、両方の場と決着の帯が下へ送らずに見えるようにする(2026-10-27 844×390 で下の場が画面の外に出た)
-const CardWatchSide = ({ db, st, p, person, top = false, low = false }) => {
+const CardWatchSide = ({ db, st, p, person, top = false, low = false, hits = null }) => {
   const pl = st.players[p];
   const active = st.winner === null && cardPvpDecider(st) === p;
   const row = (
@@ -410,7 +460,7 @@ const CardWatchSide = ({ db, st, p, person, top = false, low = false }) => {
       </div>
     </div>
   );
-  const mons = <div className="flex justify-between">{pl.mons.map((_, m) => (low ? <CardWatchMonMini key={m} db={db} st={st} p={p} m={m}/> : <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact/>))}</div>;
+  const mons = <div className="flex justify-between">{pl.mons.map((_, m) => (low ? <CardWatchMonMini key={m} db={db} st={st} p={p} m={m}/> : <CardMonSlot key={m} db={db} st={st} p={p} m={m} compact guardTag={cardWatchGuardTag(db, st, p, m)} fx={(hits || []).filter((f) => f.p === p && f.m === m)}/>))}</div>;
   return <div data-card-watch-side={p} className={`rounded-2xl border ${low ? 'space-y-1 p-1' : 'p-1.5'} ${active ? 'border-amber-300/60 bg-amber-500/5' : 'border-white/10 bg-slate-900/60'}`}>{top ? <>{row}{mons}</> : <>{mons}{row}</>}</div>;
 };
 const CardPvpWatchScreen = ({ onBack }) => {
@@ -426,7 +476,25 @@ const CardPvpWatchScreen = ({ onBack }) => {
   const nameOf = (p) => (meta && meta.p[p] ? meta.p[p].name : p === 0 ? 'ブリーダー' : 'あいて');
   const [low, setLow] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
   useEffect(() => { const on = () => setLow(window.innerHeight < 520); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
-  const lines = st ? st.log.slice(low ? -2 : -3).map((l) => l.text) : [];
+  // 観戦の画面は、対戦の盤面(84 CardBattleBoard の観戦の形)で出す(2026-10-27 社長「観戦画面が見づらい → 対戦と同じ見た目に」)。
+  //   つなぐまで・満員・見られなくなったときは、下の今までの形で知らせる
+  const boardGame = useMemo(() => {
+    if (!meta || !w.match) return null;
+    const top = meta.p[1] || {}; const bottom = meta.p[0] || {};
+    return {
+      key: `watch-${w.match}-${w.side}`, st: w.st || cardWatchNewGame(CARD_BATTLE_DATA, meta),
+      watch: {
+        top: { name: top.name || 'あいて', icon: top.icon, frame: top.fr }, bottom: { name: bottom.name || 'ブリーダー' },
+        attach: (h) => CARD_WATCH.attachBoard({ ...h, onEnd: (end, turn) => h.onEnd(cardWatchEndText(end, w.side, nameOf, turn)) }),
+      },
+    };
+  }, [w.match, w.side, !!meta]);
+  if (boardGame && st && (w.phase === 'watching' || w.phase === 'over') && typeof CardBattleBoard === 'function') {
+    const bottom = meta.p[0] || {};
+    return <CardBattleBoard key={boardGame.key} db={db} game={boardGame} onFinish={() => back()} meProfile={{ name: bottom.name || 'ブリーダー' }}
+      meIcon={<CardPvpAvatar icon={bottom.icon} frame={bottom.fr} className="h-8 w-8"/>}/>;
+  }
+  const lines = st ? st.log.slice(low ? -2 : -3).map((l) => cardLogText(l)) : [];
   const overBox = st && meta && (w.phase === 'over' || winner !== null) && (
     <div data-card-watch-over={winner === null ? 'none' : winner} className={`rounded-2xl border border-amber-300/50 bg-amber-500/10 text-center ${low ? 'p-1.5' : 'p-3'}`}>
       <div className={`${low ? 'text-[14px]' : 'text-[16px]'} font-black text-amber-100`}>{winner === null ? '対戦が終わりました' : `${nameOf(winner)}さんの勝ち！`}{low && w.end && w.end.reason && !['勝ち', '負け'].includes(w.end.reason) ? `(${w.end.reason})` : ''}</div>
@@ -447,7 +515,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
           </div>
           {/* 背の低い画面では、決着の帯をいちばん上に(下に置くと画面の外に出た) */}
           {low && overBox}
-          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low}/>
+          <CardWatchSide db={db} st={st} p={1} person={meta.p[1]} top low={low} hits={w.hits}/>
           {/* まんなか: いま使われた札と、場の記録の新しい3行 */}
           <div data-card-watch-center className={`flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 ${low ? 'p-1' : 'min-h-[100px] p-2'}`}>
             {w.last
@@ -457,10 +525,11 @@ const CardPvpWatchScreen = ({ onBack }) => {
               : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
             <div className="min-w-0 flex-1 space-y-0.5">
               {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
+              {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
               {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
             </div>
           </div>
-          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low}/>
+          <CardWatchSide db={db} st={st} p={0} person={meta.p[0]} low={low} hits={w.hits}/>
           {!low && overBox}
         </>)}
       </div>

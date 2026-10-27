@@ -245,6 +245,16 @@ check('血統: キュービは純血・オリヒメはキュービ×？？？',
   /Kyubi: +\{ main:'kyubi', sub:'kyubi' \}/.test(read('monster-hero/data/lineages.js'))
   && /Orihime: +\{ main:'kyubi', sub:'unknown' \}/.test(read('monster-hero/data/lineages.js')));
 
+// ---------- オリヒメの共モンのときのEXも見える(2026-10-28 社長「オリヒメの共モンの時のEXスキルの内容がちが〜う」) ----------
+{
+  const dex = read('monster-hero/src/parts/57-screen-monster-dex.jsx');
+  const appSrc = read('monster-hero/src/parts/60-app.jsx');
+  const twoRows = /\[\[\w+,'勇者のとき'\],\[supportExDef,'共モンのとき'\]\]/;
+  check('図鑑のEX欄は supportKey の子を「勇者のとき」「共モンのとき」の2段で出す', /heroExDef\.supportKey\?tacticsExDefOf\(heroExDef\.supportKey\)/.test(dex) && twoRows.test(dex));
+  check('マスモン詳細のEX欄も同じ2段', /const roleSupportDef=tacticsExRoleDefOf\(mon\.id,false\);/.test(appSrc) && twoRows.test(appSrc));
+  check('ターン終わりのEXの残りのログは、共モンのときの定義で数える', /const dLog=m\?raidExDefOf\(m\.id\):null;/.test(appSrc));
+}
+
 // ---------- 新モンスター確認(デバッグ)で動かして見られる ----------
 const lab = read('monster-hero/src/parts/74-screen-monster-check-debug.jsx');
 check('確認画面の技タブに、2体の「動かして見る」欄がある',

@@ -1461,6 +1461,16 @@ function MonsterHeroGame() {
     kyubiRef.current = next; setKyubiView(next);
   };
 
+  // ★陽炎ノ相の「使ったら3ターン待ち」は WAVE が変わると無くなる(2026-10-27 社長の決定)。
+  //   持っている回避(ready)・煉獄・相・狐火はランのあいだ持つので、ここでは待ちの数だけ 0 に戻す
+  const clearKyubiKageroWait = () => {
+    const cur = kyubiRef.current;
+    if (!Object.values(cur.kagero).some(v => kageroOf(v).wait > 0)) return;
+    const kagero = Object.fromEntries(Object.entries(cur.kagero).map(([k, v]) => [k, { ...kageroOf(v), wait: 0 }]));
+    const next = { ...cur, kagero };
+    kyubiRef.current = next; setKyubiView(next);
+  };
+
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
   // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
@@ -1809,6 +1819,69 @@ function MonsterHeroGame() {
     const count = (handPileRef.current.hand || []).length || 5;
     const planned = planAiCopyTurn(copy, { count, score: tools.scoreC, costOf: tools.costC, usable: tools.usableC });
     return commitAiCopy({ ...planned, plannedTurn: turn });
+  };
+  // ===== AIコピーの1手(ソラシドのアシカ)。タクティクスだけ =====
+  // カードの流れ(processTurn)・「ターンを進める」(passTacticsTurn)・緊急回復(useEmergency)の3か所から呼ぶ。
+  //   ★2026-10-27 本番の不具合: EX だけのターン・緊急回復のターンは processTurn を通らないので、コピーが予定を出したまま打たなかった
+  // 使う札はターンの始めに決めてある(planTacticsAiCopy・枠の札に先に出す)。決まっていなければここで決める。
+  // 返すのは { hits, total }(敵へのダメージはまだ当てていない。呼ぶ側が当てる)。コピーの状態(ガッツ・ガード・🔥)はここで進める
+  const runTacticsAiCopyAction = (dist) => {
+    const hits=[]; let total=0;
+    {
+      const copy0=aiCopyRef.current;
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy0,turnCount)&&isTacticsAiCopyStanding(copy0)){
+        const copy=copy0.plannedTurn===turnCount?copy0:(planTacticsAiCopy(turnCount)||copy0);
+        const tools=tacticsAiCopyTools(copy,dist);
+        if(tools){
+          let dealtC=0, gainC=0, gutsC=Math.max(0,Number(copy.guts)||0), guardC=0, guardCards=0;
+          (copy.picks||[]).forEach((card,k)=>{
+            const cost=Math.max(0,Number(tools.costC(card))||0);
+            if(cost>gutsC) return; // 決めたあとにガッツが減っていれば使わない
+            gutsC-=cost;
+            gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
+            if(tools.isGuardC(card)){
+              const m=card.type==='weak_guard'?0.5:1, g=GUARD_EVOLUTION[guardLevel];
+              guardC+=Math.floor(g.flat*m+Math.max(0,Number(copy.def)||0)*g.mult*m); guardCards++;
+              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name||card.baseName||'ガード'}(ガード${guardC})`,'ally');
+              return;
+            }
+            const d=tools.dmgOf(card); if(!(d>0)) return;
+            total+=d; dealtC+=d;
+            // ★コピーの行動として出す(2026-10-27 社長「本体の方の行動の表示になってるのかも」)。動き・技名はコピーの立つマス(pos)、ログと数字はコピーの名前で
+            hits.push({dmg:d,isCrit:false,slotIdx:copy.pos,aiCopy:true,actorName:tacticsAiCopyName(copy),srcMonsterId:copy.srcMonsterId,isSpecial:card.type==='unique',skillName:card.name||card.baseName||'攻撃',isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
+          });
+          commitAiCopy(c=>c&&({...c,picks:[],nextCard:null,guts:gutsC,guardNow:guardC,guardCardsNow:guardCards,hateGainNow:(Number(c.hateGainNow)||0)+gainC,dealtNow:(Number(c.dealtNow)||0)+dealtC}));
+          if(!(copy.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
+        }
+      }
+    }
+    return { hits, total };
+  };
+  // コピーのヒットを1つ見せて当てる。元の子は動かさず、コピーの立つマスに技名と攻撃の印(attackAnim.aiCopy)を出す。
+  //   ログと数字はコピーの名前。元の子の与ダメの記録(tacticsProLogDamage)には入れない
+  const playAiCopyHit = async (h) => {
+    setSlotSkill({ slotIndex: h.slotIdx, name: h.skillName, type: h.isUnique ? 'unique' : 'normal', ownerId: h.srcMonsterId, aiCopy: true });
+    setAttackAnim({ slotIndex: h.slotIdx, aiCopy: true, motion: 'default', skillName: h.skillName });
+    if (h.isUnique) Audio_.se.special(); else Audio_.se.attack();
+    await battleWait(450);
+    setAttackAnim(null); setSlotSkill(null);
+    addPopup(`${h.dmg}`, 'enemy', 'text-sky-200 drop-shadow-[0_0_20px_rgba(125,211,252,0.9)] text-5xl font-black animate-bounce',
+      `🤖 ${h.actorName}の ${h.skillName} → 敵に ${h.dmg.toLocaleString()} ダメージ`);
+    setEnemy(prev => prev ? { ...prev, hp: Math.max(0, prev.hp - h.dmg) } : prev);
+    await battleWait(550);
+  };
+  // カードを使わないターン(「ターンを進める」・緊急回復)のコピーの1手。敵へ当てて、倒したかを返す
+  //   返す enemyHp は、敵の番へ渡す「味方の攻撃のあとの敵のライフ」(processTurn の enemyHpAfterOurAttacks と同じ役)
+  const tacticsAiCopySoloStrike = async () => {
+    const startHp = enemy?.hp ?? 0;
+    const ca = runTacticsAiCopyAction(enemyDist);
+    if (!(ca.total > 0)) return { defeated: false, enemyHp: startHp };
+    for (const h of ca.hits) await playAiCopyHit(h);
+    setCurrentWaveDamage(p => p + ca.total); raidJackDamageRef.current += Number(ca.total) || 0;
+    const remaining = Math.max(0, startHp - ca.total);
+    enemyRevivedHpRef.current = null;
+    if (enemy && await resolveEnemyDefeat({ remainingHp: remaining, damage: ca.total })) return { defeated: true, enemyHp: 0 };
+    return { defeated: false, enemyHp: enemyRevivedHpRef.current != null ? enemyRevivedHpRef.current : remaining };
   };
   // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。プレイヤーの山札は触らない(コピーの山札ごと消える)
   const clearAiCopy = (why = '') => {
@@ -8629,9 +8702,10 @@ function MonsterHeroGame() {
   const loadCardShop = async () => {
     const K = CARD_SAVE_KEYS;
     try { await cardMigratePointsOnce(storeGet, storeSet, saveStoredValuesOrRollback); } catch (_) { /* 前のカードポイントの移しかえ(1回だけ)。次に開いたときにやり直す */ }
-    const [point, starter, shop, collection] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null)]);
+    const [point, starter, shop, collection, gacha, catalogs] = await Promise.all([storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.starter, null), storeGet(K.shop, null), storeGet(K.collection, null), storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]);
     // collection … パックの中身・提供割合に「未取得」と、いまの持ち物で決まる出やすさを出すため(読むだけ)
-    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection) };
+    // gacha・catalogs … ガチャポイントと持っているカタログの冊数(パックの札の上の帯に出す。2026-10-27 社長 案A)
+    const next = { point: cardNormalizePoint(point), starter: cardNormalizeStarter(starter), shop: cardNormalizeShop(shop), collection: cardNormalizeCollection(collection), gacha: cardNormalizeGacha(gacha), catalogs: cardNormalizeCatalogs(catalogs) };
     setCardShopState(next);
     setRhythmEventPoints(next.point);
     return next;
@@ -8656,30 +8730,75 @@ function MonsterHeroGame() {
     setMarketExchangeError('');
     try {
       const K = CARD_SAVE_KEYS;
-      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null)]), ([rawCol, rawPity, rawPoint, rawSplit]) => {
+      const res = await cardShopTry(() => Promise.all([storeGet(K.collection, null), storeGet(K.pity, null), storeGet(CARD_POINT_STORE_KEY, 0, false), storeGet(K.pitySplit, null), storeGet(K.gacha, 0, false)]), ([rawCol, rawPity, rawPoint, rawSplit, rawGacha]) => {
         const point = cardNormalizePoint(rawPoint);
         // 以前の4弾の天井の数は、新しい8弾へ1回だけ写す(印 mh_card_pack_pity_split_v1。以前の数は消さない)
         const split = rawSplit !== true;
         const pity0 = split ? cardSplitPity(cardNormalizePity(rawPity)) : cardNormalizePity(rawPity);
         const r = cardBuyPacks(CARD_BATTLE_DATA, packId, count, { collection: cardNormalizeCollection(rawCol), pity: pity0, point }, Math.random);
         if (!r) return { fail: 'points' };
-        return { r, entries: [
+        // ガチャポイントは、買うのと同じ保存のまとまりで1回だけ足す(1パック10。開ける画面を開き直しても増えない)
+        const gacha = cardNormalizeGacha(rawGacha) + r.packs.length * CARD_GACHA_PER_PACK;
+        return { r, gacha, entries: [
           { key: K.collection, before: rawCol, next: r.collection },
           { key: K.pity, before: rawPity, next: r.pity },
           { key: CARD_POINT_STORE_KEY, before: rawPoint, next: r.point },
+          { key: K.gacha, before: rawGacha, next: gacha },
           ...(split ? [{ key: K.pitySplit, before: rawSplit, next: true }] : []),
         ] };
       });
       if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; } // 別のタブで使ったあとなど、表示が古いことがあるので読み直す
       if (res.fail) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
       const r = res.r;
-      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection }));
+      setCardShopState((cur) => ({ ...(cur || {}), point: r.point, collection: r.collection, gacha: res.gacha }));
       setRhythmEventPoints(r.point); // ビートPと同じ財布なので、ビートP交換所の残高もそろえる
-      setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost });
+      setCardPackOpen({ packId, packs: r.packs, dupPoint: r.dupPoint, cost: r.cost, gacha: { add: r.packs.length * CARD_GACHA_PER_PACK, now: res.gacha } });
       setGameState('CARD_PACK_OPEN');
       return { ok:true };
     } catch {
       setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // ガチャポイント500でバトルカードカタログ1冊(2026-10-27 社長)。パックと同じく、読み直して確かめてから保存する(押しっぱなし・ほかのタブでも二重にならない)
+  const exchangeCardCatalog = async () => {
+    if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.gacha, 0, false), storeGet(K.catalogs, 0, false)]), ([rawGacha, rawCat]) => {
+        const r = cardExchangeCatalog({ gacha: rawGacha, catalogs: rawCat });
+        if (!r) return { fail: 'points' };
+        return { r, entries: [{ key: K.gacha, before: rawGacha, next: r.gacha }, { key: K.catalogs, before: rawCat, next: r.catalogs }] };
+      });
+      if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ガチャポイントが足りません。'); return { ok:false, reason:'points' }; }
+      if (res.fail) { setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), gacha: res.r.gacha, catalogs: res.r.catalogs }));
+      return { ok:true };
+    } catch {
+      setMarketExchangeError('保存できませんでした。ガチャポイントは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  // カタログを1冊使って、選んだカードを1枚もらう(二重にもらえないよう、読み直して確かめてから保存する)
+  const spendCardCatalog = async (no) => {
+    if (marketPurchaseProcessingRef.current || typeof CARD_BATTLE_DATA === 'undefined') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const K = CARD_SAVE_KEYS;
+      const res = await cardShopTry(() => Promise.all([storeGet(K.catalogs, 0, false), storeGet(K.collection, null)]), ([rawCat, rawCol]) => {
+        const r = cardUseCatalog(CARD_BATTLE_DATA, no, { catalogs: rawCat, collection: cardNormalizeCollection(rawCol) });
+        if (!r) return { fail: 'catalog' };
+        return { r, entries: [{ key: K.catalogs, before: rawCat, next: r.catalogs }, { key: K.collection, before: rawCol, next: r.collection }] };
+      });
+      if (res.fail === 'catalog') { void loadCardShop(); setMarketExchangeError('カタログが無いか、そのカードはもう持てる数いっぱいです。'); return { ok:false, reason:'catalog' }; }
+      if (res.fail) { setMarketExchangeError('保存できませんでした。カタログは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), catalogs: res.r.catalogs, collection: res.r.collection }));
+      return { ok:true };
+    } catch {
+      setMarketExchangeError('保存できませんでした。カタログは変わっていません。');
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
@@ -13549,7 +13668,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(timeStopSlot==null&&isTacticsMode(runMode)&&tacticsExEnabled){
       const stLog=tacticsExStateRef.current, unitsLog=tacticsUnitsRef.current, nowLog=tacticsExLiveRef.current.now;
       slots.forEach((m,i)=>{
-        const dLog=m?tacticsExDefOf(m.id):null;
+        // 勇者モンでない子は共モンのときの定義で数える(オリヒメの焦がれ待つ天ノ河。2026-10-28)
+        const dLog=m?raidExDefOf(m.id):null;
         if(!dLog||dLog.duration!=='turns') return;
         const who=`EX ${battleActorName(i)}「${dLog.name}」`;
         if(dLog.effect==='thunder'){
@@ -13631,7 +13751,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const scenario=battleScenarioRef.current;
     const acting=enemyIntent;
     const hpAfterRecovery=emergencyHp!==null?emergencyHp:Math.min(liveEffectiveMaxHp(),hp+recoverHp);
-    await handleEnemyTurn('none',{},acting,hpAfterRecovery);
+    // AIコピーは緊急回復のターンも打つ(タクティクスだけ。敵を倒したら敵の番へ進まない)
+    const solo=isTacticsMode(runMode)?await tacticsAiCopySoloStrike():{defeated:false,enemyHp:enemy?.hp??0};
+    if(solo.defeated) return;
+    await handleEnemyTurn('none',{},acting,hpAfterRecovery,solo.enemyHp);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
@@ -14001,8 +14124,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setIsBusy(true);
     setFocusedCard(null); setPendingCard(null);
     pushBattleLog(`── ${turnCount}ターン目 ──`, 'turn');
+    // AIコピーはカードを使わないターンも打つ(敵を倒したら敵の番へ進まない)
+    const solo=isTacticsMode(runMode)?await tacticsAiCopySoloStrike():{defeated:false,enemyHp:enemy?.hp??0};
+    if(solo.defeated) return;
     const acting=enemyIntent;
-    await handleEnemyTurn('none',{},acting,hp);
+    await handleEnemyTurn('none',{},acting,hp,solo.enemyHp);
     const moveWasFrozen=acting&&acting.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||tacticsExPsychoLockNow().active);
     const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); if(!tacticsExFrozenRef.current) advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
@@ -14513,33 +14639,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ===== AIコピーの1手(ソラシドのアシカ)。味方のカードのあと、敵へのダメージをまとめて当てる前 =====
     // 使う札はターンの始めに決めてある(planTacticsAiCopy・枠の札に先に出す)。決まっていなければここで決める
     //   与ダメは attackHits に aiCopy の印で足す(敵のライフには入る・枠ごとの与ダメと元の子の🔥には入れない)
-    {
-      const copy0=aiCopyRef.current;
-      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy0,turnCount)&&isTacticsAiCopyStanding(copy0)){
-        const copy=copy0.plannedTurn===turnCount?copy0:(planTacticsAiCopy(turnCount)||copy0);
-        const tools=tacticsAiCopyTools(copy,attackDistance);
-        if(tools){
-          let dealtC=0, gainC=0, gutsC=Math.max(0,Number(copy.guts)||0), guardC=0, guardCards=0;
-          (copy.picks||[]).forEach((card,k)=>{
-            const cost=Math.max(0,Number(tools.costC(card))||0);
-            if(cost>gutsC) return; // 決めたあとにガッツが減っていれば使わない
-            gutsC-=cost;
-            gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
-            if(tools.isGuardC(card)){
-              const m=card.type==='weak_guard'?0.5:1, g=GUARD_EVOLUTION[guardLevel];
-              guardC+=Math.floor(g.flat*m+Math.max(0,Number(copy.def)||0)*g.mult*m); guardCards++;
-              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name||card.baseName||'ガード'}(ガード${guardC})`,'ally');
-              return;
-            }
-            const d=tools.dmgOf(card); if(!(d>0)) return;
-            totalDmg+=d; dealtC+=d;
-            attackHits.push({dmg:d,isCrit:false,slotIdx:copy.srcSlot,aiCopy:true,isSpecial:card.type==='unique',skillName:`${tacticsAiCopyName(copy)}の${card.name||card.baseName||'攻撃'}`,isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
-          });
-          commitAiCopy(c=>c&&({...c,picks:[],nextCard:null,guts:gutsC,guardNow:guardC,guardCardsNow:guardCards,hateGainNow:(Number(c.hateGainNow)||0)+gainC,dealtNow:(Number(c.dealtNow)||0)+dealtC}));
-          if(!(copy.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
-        }
-      }
-    }
+    { const ca=runTacticsAiCopyAction(attackDistance); ca.hits.forEach(h=>attackHits.push(h)); totalDmg+=ca.total; }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
     if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].actorName==null) attackHits[k].actorName=copyName; }
@@ -14569,6 +14669,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let hitIdx=0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          // AIコピーのヒットは、元の子の動き・連撃のまとめを通さず、コピーとして見せる(playAiCopyHit)
+          if (hit && hit.aiCopy) { await playAiCopyHit(hit); hitIdx++; continue; }
           // パンドラの箱: このヒットを出したカードの姿(悪魔/天使)の1体だけを動かす
           setTacticsPandoraForms(hit&&hit.pandoraForm&&hit.slotIdx!=null?{[hit.slotIdx]:hit.pandoraForm}:{});
           // 専用モーションはモンスターの atkMotion フィールドで判定する(勇者モン選択時のみ発生する
@@ -15598,7 +15700,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // AIコピーは WAVE の終わりで消える(2026-10-27 窓口: WAVE をまたぐかは社長に確認中。それまでは消す)
     commitAiCopy(null);
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
-    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); clearKyubiKageroWait(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   // 勇者特性「トリックスタート」(ゴースト・スプーキー)の抽選。WAVEの1ターン目と、そこから3ターンごと。
@@ -17226,11 +17328,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div className="text-[10px] text-slate-500 font-bold mt-1 leading-tight" style={JA_WRAP_STYLE}>{jaWrap('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます')}</div></div>
       {renderSkillSection(mon)}
       {(()=>{
-        const exDef=typeof tacticsExDefOf==='function'?raidExDefOf(mon.id):null;
-        if(!exDef)return null;
+        const heroExDef=typeof tacticsExRoleDefOf==='function'?tacticsExRoleDefOf(mon.id,true):null;
+        if(!heroExDef)return null;
+        // 勇者モンでないときに別のEXになる子(オリヒメ)は「勇者のとき」「共モンのとき」の2段で並べる(2026-10-28。図鑑と同じ)。
+        // ほかの子は今までどおり raidExDefOf(mon.id)(レイドの回数の上書きを含む)
+        const roleSupportDef=tacticsExRoleDefOf(mon.id,false);
+        const supportExDef=roleSupportDef&&roleSupportDef.id!==heroExDef.id?roleSupportDef:null;
+        const exRows=supportExDef?[[heroExDef,'勇者のとき'],[supportExDef,'共モンのとき']]:[[raidExDefOf(mon.id),'']];
+        return <div className="flex flex-col gap-2 min-w-0">{exRows.map(([exDef,roleLabel])=>{
         const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
-        return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
-          <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
+        return <div key={exDef.id||exDef.name} data-monster-detail-ex data-monster-detail-ex-role={roleLabel||undefined} className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
+          <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル{roleLabel&&<span className="ml-1.5 rounded-full bg-violet-800/60 px-1.5 py-0.5 text-[9px] normal-case text-violet-100 tracking-normal">{roleLabel}</span>}</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
           <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
           <div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{helpWrap(exDef.desc)}</div>
           <div className="mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black">
@@ -17239,6 +17347,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">通常カード<span className="block text-white">{exDef.withCards?'併用可':'併用不可'}</span></div>
           </div>
         </div>;
+        })}</div>;
       })()}
       {/* ② 選び方で決まる効果。個体そのものの強さ(総合力)とは別物なので見出しで分ける */}
       {renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません')}
@@ -20671,7 +20780,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
-            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints }:null}
+            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog }:null}
             initialSection={cardMarketEntry?'card':null}
           />
         )}

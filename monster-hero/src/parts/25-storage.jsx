@@ -8,6 +8,23 @@ const hasLocalStorage = () => {
   } catch { return false; }
 };
 
+// 保存の JSON が壊れていて読めなかったときは、壊れた元の文字列を別のキー(mh_corrupt_<元のキー>_v1)へ退避してから既定値を返す(2026-10-27)。
+// ★読んでから作り直して書く所(ギフト・持ち物・ポイントなど)は、既定値から作り直して元のキーへ書くので、壊れた中身はそこで消える。
+//   あとから手で直せるよう、消える前の文字列を残しておく。最初に見つけた壊れ方を残す(すでにあれば書かない)。足すだけで、元のキーには触らない
+const CORRUPT_STORE_PREFIX = 'mh_corrupt_';
+const stashCorruptStoreValue = (key, raw) => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage || typeof raw !== 'string') return;
+    if (String(key).startsWith(CORRUPT_STORE_PREFIX)) return;
+    const backupKey = `${CORRUPT_STORE_PREFIX}${key}_v1`;
+    if (window.localStorage.getItem(backupKey) !== null) return;
+    window.localStorage.setItem(backupKey, raw);
+  } catch { /* 退避できなくても読み込みは止めない */ }
+};
+// 読めなかったときは退避してから、今までどおり投げる(呼ぶ側の流れ=メモリの控え→既定値は変えない)
+const parseStoredOrStash = (key, raw) => {
+  try { return JSON.parse(raw); } catch (error) { stashCorruptStoreValue(key, raw); throw error; }
+};
 const storeGet = async (key, def, shared=false) => {
   try {
     if (hasWinStorage()) {
@@ -18,10 +35,21 @@ const storeGet = async (key, def, shared=false) => {
   try {
     if (hasLocalStorage()) {
       const raw = window.localStorage.getItem(key);
-      return raw !== null ? JSON.parse(raw) : def;
+      return raw !== null ? parseStoredOrStash(key, raw) : def;
     }
   } catch { /* fall through to memory */ }
-  return key in _memStore ? _memStore[key] : def;
+  if (key in _memStore) return _memStore[key];
+  // ★保存の場所がいっぱいだと hasLocalStorage() のためし書きが失敗する。そのときも読むだけはできるので、
+  //   書かずに読む(ここで既定値を返すと「保存が無い」と読み違え、読んだ値から作り直して書く所で消える。
+  //   2026-10-27 カードの見返しで、★の試合ごと49試合が消えるのを検査で見つけた)。
+  //   書けずにメモリへ控えた値があれば、そちらが新しいので上で先に返す
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(key);
+      if (raw !== null) return parseStoredOrStash(key, raw);
+    }
+  } catch { /* 読めなければ既定値 */ }
+  return def;
 };
 // 初回プレイのプレビュー中だけ、保存を丸ごと止めるための鍵。★重要
 // 画面ごとに「プレビューなら保存しない」を書き分ける方式だと、必ず書き忘れが出る

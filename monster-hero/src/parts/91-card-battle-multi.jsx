@@ -137,7 +137,13 @@ const cardPvpTimeoutAct = (st) => (st.pendingPray ? { type: 'pray' } : st.pendin
   : st.phase === 'setup' ? { type: 'setupGuts', hand: [] } : st.pending ? { type: 'pass' } : st.phase === 'main' ? { type: 'endAttacks' } : { type: 'guts', hand: [] });
 // 1戦でもらえる数(台帳 #119 の対人戦: 勝ち24周・200/負け12周・50/抜けた0。1日の上限は無し・同じ相手の制限も無し(社長の決め直し))
 // 負けの周回は、自分の番の数が10回で満額(助手と対戦と同じ)。投了は倒した数で決める。自分の番が3回より前に終わった試合は0
+// 2026-10-27 社長: マルチの報酬は、下の数で出したあと CARD_PVP_REWARD.x 倍(2倍)。助手と対戦は変えない
 const cardPvpReward = (outcome, facts) => {
+  const r = cardPvpRewardBase(outcome, facts);
+  const x = Number.isInteger(CARD_PVP_REWARD.x) && CARD_PVP_REWARD.x > 0 ? CARD_PVP_REWARD.x : 1;
+  return { ...r, point: r.point * x, loops: r.loops * x };
+};
+const cardPvpRewardBase = (outcome, facts) => {
   const f = facts || { ownTurns: 0, kos: 0 };
   if (f.ownTurns < CARD_MIN_OWN_TURNS || outcome === 'left') return { point: 0, loops: 0, short: f.ownTurns < CARD_MIN_OWN_TURNS };
   const W = CARD_PVP_REWARD.win, L = CARD_PVP_REWARD.lose;
@@ -189,7 +195,8 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
 const cardPvpInt = (v, max) => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
 const cardPvpCleanAct = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray'];
+  // backToAttack … ガッツの段から攻撃の段へ戻る(項目なし。2026-10-27 社長。マルチ・観戦・見返しがこの掃除を通る)
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray', 'backToAttack'];
   if (!types.includes(raw.type)) return null;
   const act = { type: raw.type };
   if (raw.type === 'guard') {
@@ -197,7 +204,7 @@ const cardPvpCleanAct = (raw) => {
     if (raw.to !== undefined) { act.to = cardPvpInt(raw.to, 2); if (act.to === null) return null; } // 隠れるの移す先
     return act;
   }
-  if (raw.type === 'reveal') return act;
+  if (raw.type === 'reveal' || raw.type === 'backToAttack') return act; // 項目なしの手(余計な項目は捨てる)
   // 選ぶ段: 手札か捨て札の番号(捨て札は50枚を超えない)
   if (raw.type === 'choose') { act.pick = cardPvpInt(raw.pick, 60); return act.pick === null ? null : act; }
   if (Array.isArray(raw.hand)) { act.hand = raw.hand.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.hand.some((i) => i === null)) return null; }
@@ -236,7 +243,9 @@ const cardPvpCleanMessage = (raw) => {
       // 観戦している人の数(ホストが数えて相手へ渡す。2026-10-27 で足した項目。古い版は送らないので 0)
       w: cardPvpInt(raw.w, 999) || 0,
       // この試合は終わった、の印(終わった試合の番号。2026-10-27 で足した項目。古い版は送らないので null)
-      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null };
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null,
+      // ルールの版(2026-10-27 で足した項目。古い版は送らないので null)
+      rv: cardPvpRv(raw.rv) };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -268,7 +277,7 @@ const cardPvpCleanMessage = (raw) => {
       name: typeof raw.name === 'string' ? (rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null) : null,
       icon: typeof raw.icon === 'string' ? (rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null) : null,
       fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
-      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null };
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null, rv: cardPvpRv(raw.rv) };
   }
   if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
   // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
@@ -326,8 +335,13 @@ const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => (
 // いま「だれとでも」で待っている人の一覧(入口に出す)。新しく届いた知らせだけ・先に待っている人が上。合言葉(code)は画面に出さない(入るときにだけ使う)
 //   古い版の人(18:08 の公開より前)は名前もアイコンも送らず、だれか分からないので、一覧に出さない(2026-10-27 社長 案ア)。
 //   新しい版は、プロフィールが無い人でも名前とアイコンを必ず送る。古い版の人とも、「だれとでも(自分も待つ)」なら、これまでどおり自動で組む(s.seekers には残す)
+// ルールの版(見返しの CARD_REPLAY_RULES と同じ値・93)。ルールを変えたら、そちらを1つ上げる。版がちがう人どうしは組まない
+//   (同じ手でも結果が変わり、封のなぞり直しが合わなくなる。2026-10-27 社長: 文は「ゲームを更新してください」)。古い版は送らないので null
+const cardPvpRulesVersion = () => (typeof CARD_REPLAY_RULES === 'number' ? CARD_REPLAY_RULES : 0);
+const CARD_PVP_UPDATE_TEXT = 'ゲームを更新してください';
+const cardPvpRv = (v) => (Number.isInteger(v) && v >= 0 && v <= 100000 ? v : null);
 const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {})
-  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon))
+  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon) && x.rv === cardPvpRulesVersion())
   .sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1))
   .map(([id, x]) => ({ id, code: x.code, name: x.name || 'ブリーダー', icon: x.icon || null, fr: x.fr || null, rt: Number.isInteger(x.rt) ? x.rt : null, waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000))) })); // 待っている秒数は相手の端末の時計なので、ずれても0〜999に収める
 
@@ -595,7 +609,7 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null, rv: cardPvpRulesVersion() });
   // 観戦(94-card-spectate.jsx)。ホストだけが観戦の通り道へ流す。部品が無い環境では何もしない
   const watchPush = (by, act, reveal, st) => { if (isHost()) cardPvpWatchHost().push({ by, act, reveal, turn: st.turn, d: [st.players[0].discard, st.players[1].discard] }); };
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
@@ -693,6 +707,11 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
+      // 相手が決まる前に、ルールの版を比べる。だれとでもは知らん顔で待ち続け(相手は自分の部屋へ戻ってさがし直す)、合言葉・フレンドの部屋は案内を出して閉じる
+      if (!s.foe && msg.rv !== cardPvpRulesVersion()) {
+        if (s.mode === 'free') return;
+        stop(); set({ phase: 'error', error: CARD_PVP_UPDATE_TEXT }); return;
+      }
       // もう1戦: 相手がもう次の回へ進んでいる(こちらの「もう1戦」が届いて、相手が先に切りかえた)なら、その hb を相手の同意として追いつく
       if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); return; }
       const sameRound = (msg.rd || 0) === (s.round || 0); // 前の回の hb(届くのが遅れた分)の封は使わない
@@ -756,7 +775,7 @@ const CARD_PVP = (() => {
   const onLobby = (raw) => {
     const msg = cardPvpCleanMessage(raw);
     if (!s || !msg || msg.t !== 'seek' || (s.me && msg.from === s.me.id)) return;
-    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now(), name: msg.name, icon: msg.icon, fr: msg.fr, rt: msg.rt } } };
+    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now(), name: msg.name, icon: msg.icon, fr: msg.fr, rt: msg.rt, rv: msg.rv } } };
     if (s.phase === 'idle') emit(); // 入口の「いま相手を待っている人」の一覧(聞くだけ)
   };
   const openLobby = () => {
@@ -784,9 +803,9 @@ const CARD_PVP = (() => {
       emit();
       return;
     }
-    const older = fresh.filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
+    const older = fresh.filter(([, x]) => x.rv === cardPvpRulesVersion()).filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
     if (older) { s = { ...s, joining: older[1].code, joinAt: now, code: older[1].code }; connect(); emit(); return; }
-    lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null });
+    lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null, rv: cardPvpRulesVersion() });
     emit();
   };
   const open = async (code, profile, deck, mode = 'private', pick = false) => {
@@ -1310,6 +1329,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
   const t = setTimeout(() => {
+    // 検査のときだけ: ガッツの段で、window.__mhCardPvpAutoBack の回数だけ「攻撃に戻る」を打つ(打てた回数を __mhCardPvpBackDone に数える)
+    if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({ type: 'backToAttack' })) {
+      window.__mhCardPvpAutoBack = Number(window.__mhCardPvpAutoBack) - 1; window.__mhCardPvpBackDone = (Number(window.__mhCardPvpBackDone) || 0) + 1; return;
+    }
     const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
     if (act && step(act)) return;
     step(cardPvpTimeoutAct(st));
@@ -1362,11 +1385,11 @@ const useCardPvpClock = (pvp, st, step) => {
 // 上の帯のまんなか: 持ち時間
 const CardPvpStatus = ({ clock }) => (
   <>
-    <span data-card-pvp-clock={clock.mine ? 'mine' : 'foe'} className={`rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? (clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100') : 'bg-white/10 text-slate-200'}`}>
+    <span data-card-pvp-clock={clock.mine ? 'mine' : 'foe'} className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[13px] font-black tabular-nums ${clock.mine ? (clock.left <= 10 ? 'bg-rose-500/30 text-rose-100' : 'bg-amber-400/20 text-amber-100') : 'bg-white/10 text-slate-200'}`}>
       {clock.mine ? `残り ${clock.left}秒` : `相手 ${clock.left}秒`}{clock.mine && clock.timeouts > 0 ? `(時間切れ ${clock.timeouts}/${CARD_PVP_TIMEOUT_LOSE})` : ''}
     </span>
     {/* 観戦している人の数(94-card-spectate.jsx)。いないときは出さない */}
-    {clock.eyes > 0 && <span data-card-pvp-eyes={clock.eyes} className="ml-1 rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums" aria-label={`${clock.eyes}人が観戦しています`}>👀 {clock.eyes}</span>}
+    {clock.eyes > 0 && <span data-card-pvp-eyes={clock.eyes} className="ml-1 shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums" aria-label={`${clock.eyes}人が観戦しています`}>👀 {clock.eyes}</span>}
   </>
 );
 // 電波が途切れたときの知らせ。上の帯のすぐ下に1行で出し、場を少し下げる(重ねると、相手の帯や記録の文字を隠す。カゲあつくん)
