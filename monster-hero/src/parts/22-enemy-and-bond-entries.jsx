@@ -554,7 +554,7 @@ const withBlackNoteCombo = (exCombos, combo, extra = null) => {
 //   持ち主が回避すると楔は0へ戻り、連撃と回避率アップも消える。
 //   既存5モードは勇者モンが持っているとき(キー 'party')、タクティクスは持っている子それぞれ(枠ごと)。持ち方は 60-app の kusabiRef
 // セレーネチェイサー(イルミネの固有技) … 与ダメ5%の連撃と、連撃ダメージ+1%(バトル中ずっと・重なる)。どちらも(楔の数+1)倍
-// ドリームペイン(ドリーミィの固有技) … 次のターンから3ターン、敵の被ダメージ+20%。楔1つごとにさらに+20%
+// ドリームペイン(ドリーミィの固有技) … 次のターンから3ターン、敵の被ダメージ+40%。楔1つごとにさらに+40%
 //   (楔3つで+80%・6つで+140%)。数は使ったときの楔で決まる。敵1体ぶんなのでWAVEが変わると消える
 const KUSABI_TRAIT_MONSTER_IDS = Object.freeze(['Illumine', 'Dreamy']);
 const KUSABI_MAX = 6;
@@ -567,7 +567,7 @@ const SELENE_CHASER_COMBO_RATE = 0.05;
 const SELENE_CHASER_COMBO_DMG = 0.01;
 const DREAM_PAIN_MONSTER_ID = 'Dreamy';
 const DREAM_PAIN_TURNS = 3;
-const DREAM_PAIN_BASE = 0.2, DREAM_PAIN_PER = 0.2;
+const DREAM_PAIN_BASE = 0.4, DREAM_PAIN_PER = 0.4; // 2026-10-27 社長「楔1つごとも40%」(それまでは20%・20%)
 const hasKusabiTrait = (id) => !!id && KUSABI_TRAIT_MONSTER_IDS.includes(id);
 // max … その子のいまの上限(ふだん6・ジエンドのあいだ12)。効き目の計算は上限で切ったあとの数を受け取る(12まで数える)
 const kusabiCountOf = (n, max = KUSABI_MAX) => Math.min(max, Math.max(0, Math.floor(Number(n) || 0)));
