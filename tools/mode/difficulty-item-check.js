@@ -124,7 +124,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
 
   const used = await clickText('使う');
   await page.waitForTimeout(800);
-  check('「使う」から対象選択へ進める', used && (await bodyText()).includes('使う対象を選択'));
+  check('「使う」から対象選択へ進める', used && (await bodyText()).includes('を使う相手を選ぶ'));
 
   await clickText('チケ検証');
   await page.waitForTimeout(800);

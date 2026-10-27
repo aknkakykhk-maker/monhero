@@ -430,6 +430,9 @@ const TACTICS_TYPES_STORY_ID = 'tactics_types';
 // MFバトルカードのはじまり(2026-10-24・新しいキー。既存のキーには触らない・CLAUDE.md ⑦)。
 // 公開(RELEASE_FLAGS.cardBattle)のあとの最初の HOME で1回だけ流す。見た(飛ばしても)ら HOME の入口が出る。デバッグ・回想から見たぶんは立てない
 const CARD_BATTLE_INTRO_STORY_SEEN_KEY = 'mh_story_card_battle_seen_v1';
+// はじめて遊ぶ人の印(2026-10-27 社長「はじめて遊ぶ人のお話は、続けて流すのを1本まで」)。はじめての案内を通る人にだけ true を書く。
+// true の人は、HOME に着くたびにお話を1本だけ流す(残りは HOME を離れて戻ったときに1本ずつ)。前から遊んでいる人には付けない
+const STORY_ONE_AT_A_TIME_KEY = 'mh_story_one_at_a_time_v1';
 const CARD_BATTLE_INTRO_STORY_ID = 'card_battle_intro_2026';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
