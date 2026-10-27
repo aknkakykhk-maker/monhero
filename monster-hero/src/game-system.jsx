@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a8f144b11311d78c
+// generated-sha256: 90645de226edc23d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -11706,8 +11706,9 @@ const MarketBalanceBar = ({ balances }) => (
   </div>
 );
 // 売り場の中に出す知らせ(失敗したとき・キャンペーン中など)。どの売り場も同じ場所・同じ形
+// 文を言葉の切れ目で折る指定(JA_WRAP_STYLE)を付ける。jaWrap を通した文が「演奏のク/イック」と途中で折れていた(2026-10-27 横画面)
 const MarketNotice = ({ tone='error', children, ...rest }) => (
-  <div {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
+  <div style={typeof JA_WRAP_STYLE!=='undefined'?JA_WRAP_STYLE:undefined} {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
 );
 
 // マーケットで開く窓の枠と閉じるボタン。中身は画面共通の ModalFrame / ModalCloseButton(41-screen-ui.jsx)。
@@ -14989,8 +14990,46 @@ const SKM_DREAMY = Object.freeze({
     skm('gather', { c:'pink', fx:skmFx('orbit', 'heart', 10), over:'rainbow', burst:'heart', form:'bloom' })], // ドリーミィパレード
 });
 // ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
+// キュービ(2026-10-27・案の段階): 九尾の狐。青い狐火・提灯・下駄・まどわし寄り。技の名前は元のゲームのまま(社長が案1を選んだ)
+const SKM_KYUBI = Object.freeze({
+  normal:[
+    skm('slash', { c:'fire', over:'claw', burst:'dust' }),                                                   // ひっかき
+    skm('cast', { c:'fire', fx:skmFx('shot', 'spark', 4), burst:'spark' }),                                 // ひのこ
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 5), burst:'star', form:'fire' }),                     // 狐火
+    skm('kick', { c:'red', over:'fist', burst:'dust' }),                                                     // 下駄蹴り
+    skm('toss', { c:'fire', fx:skmFx('lob', 'orb', 1, { s:1.4 }), over:'boom', burst:'spark' }),            // 提灯投げ
+    skm('jump', { c:'gold', fx:skmFx('fall', 'orb', 1, { s:1.6 }), over:'boom', burst:'star' }),            // 提灯落とし
+    skm('roll', { c:'fire', fx:skmFx('orbit', 'flame', 8), over:'boom', burst:'spark', form:'fire' }),      // 火炎車
+    skm('dash', { c:'holy', line:'ray', over:'xslash', burst:'star', form:'light' }),                       // 神光石火
+    skm('gather', { c:'psy', fx:skmFx('orbit', 'orb', 9), over:'eye', burst:'star' })],                     // 九重神眼
+  unique:[
+    skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 4), burst:'heart' }),                                   // ゆうわく
+    skm('lick', { c:'pink', line:'tongue', burst:'heart' }),                                                 // なめろう
+    skm('cast', { c:'blue', fx:skmFx('orbit', 'fire', 9), over:'pillar', burst:'star', form:'fire' }),      // 超狐火
+    skm('warp', { c:'fire', over:'shadow', burst:'dust' }),                                                  // 陽炎
+    skm('gather', { c:'blue', fx:skmFx('fall', 'flame', 10), over:'pillar', burst:'spark', form:'fire' }),  // 神狐蒼火
+    skm('spin', { c:'wind', over:'tornado', burst:'leaf' }),                                                 // 八嵐天衝
+    skm('cast', { c:'sky', fx:skmFx('orbit', 'bubble', 10), over:'boom', burst:'bubble' }),                 // 炸裂気泡陣
+    skm('float', { c:'cosmic', fx:skmFx('fall', 'star', 12), over:'aurora', burst:'star', form:'light' }),  // 天河天翔
+    skm('gather', { c:'blood', fx:skmFx('orbit', 'flame', 9), over:'eclipse', burst:'spark', form:'fire' })], // 煉獄九尾陣
+});
+// オリヒメ(2026-10-27・案の段階): 星の海から来たキュービ種。キュービと同じ名前の技は同じ動きで、星空の色にする。
+// 固有技は専用技(求愛・超狐火・星)が入り、いちばん上が天河天翔(キュービは煉獄九尾陣)なので、8段目と9段目が入れ替わる
+const SKM_ORIHIME = Object.freeze({
+  normal:SKM_KYUBI.normal.map((m, i) => ({ ...m, c:['sky', 'pink', 'cosmic', 'pink', 'gold', 'gold', 'pink', 'cosmic', 'psy'][i] })),
+  unique:[
+    skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 6), over:'bloom', burst:'heart' }),                    // 求愛
+    { ...SKM_KYUBI.unique[1], c:'sakura' },                                                                   // なめろう
+    skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 9), over:'pillar', burst:'star', form:'light' }),   // 超狐火・星
+    { ...SKM_KYUBI.unique[3], c:'cosmic' },                                                                   // 陽炎
+    { ...SKM_KYUBI.unique[4], c:'sky' },                                                                      // 神狐蒼火
+    { ...SKM_KYUBI.unique[5], c:'sky' },                                                                      // 八嵐天衝
+    { ...SKM_KYUBI.unique[6], c:'pink' },                                                                     // 炸裂気泡陣
+    { ...SKM_KYUBI.unique[8], c:'psy' },                                                                      // 煉獄九尾陣
+    { ...SKM_KYUBI.unique[7], c:'sky' }],                                                                     // 天河天翔
+});
 const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red'), Ghost:SKM_GHOST, Spooky:SKM_SPOOKY, Melody:SKM_MELODY, Kuromy:SKM_KUROMY,
-  Illumine:SKM_ILLUMINE, Dreamy:SKM_DREAMY });
+  Illumine:SKM_ILLUMINE, Dreamy:SKM_DREAMY, Kyubi:SKM_KYUBI, Orihime:SKM_ORIHIME });
 
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
@@ -33609,7 +33648,8 @@ function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onC
         {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック)。
             shrink-0 … 窓は縦に並べる作りなので、中身が窓より高いと札が縮められ、2行目「いまは〜を出しています」が下の枠にかかっていた(320。2026-10-26 ダメダシの見回り s04) */}
         <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`shrink-0 w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
-        <div className="shrink-0 grid grid-cols-2 gap-3">{options.map(option=>{
+        {/* 横向きの低い画面は、見本の幅を絞って真ん中へ寄せる。縦長の絵(9:16)が2列だと1枚が約530pxになり、絵の全体が見えなかった(2026-10-27) */}
+        <div className="shrink-0 grid grid-cols-2 gap-3 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[repeat(2,minmax(0,150px))] [@media(orientation:landscape)_and_(max-height:520px)]:justify-center">{options.map(option=>{
           const selected=value===option.id;
           return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>onChange(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}>
             <img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>
@@ -33946,11 +33986,12 @@ function BreederMarketScreen({
   const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
+  //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
   const renderSectionTabs = (section, scroll=false) => {
     const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
     const value=activeSectionTab(section);
     if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
-    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto mh-scroll pb-0.5">
+    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5">
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
         className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
         style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
@@ -83828,7 +83869,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {titleModal}
 
       {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">やめる</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
-      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3">最新のゲームデータを読み込み直します。<br/>セーブデータは消えません。</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
+      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3" style={JA_WRAP_STYLE}>{jaWrap('最新のゲームデータを読み込み直します。')}<br/>{jaWrap('セーブデータは消えません。')}</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">やめる</button></div></div></div>)}
 
       {/* ランキングの編成をくわしく見る。一覧は軽さ優先で素の絵のままにしてあるので、
           染色(実際にその人が染めた色)を見せるのはこの画面だけ。ここなら1件ぶん
@@ -89469,6 +89510,8 @@ const createAnimationStyle = () => {
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
     @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:2.4%;top:max(calc(146px + env(safe-area-inset-top)),calc(var(--mh-home-assistant-bottom,0px) + 6px))}.mh-home-facility.rhythm{left:2.4%;top:64.8%}.mh-home-facility.temple{right:2.4%;top:35.76%}.mh-home-facility.market{right:2.4%;top:59.76%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
+    /* 横画面でも幅が 760px までの端末(667×375 など)では、ミッションがモンヒロバトルの札に33px重なっていた。ミッション・ギフトを細く、バトルの札を小さくして、すき間をあける(2026-10-27) */
+    @media(orientation:landscape) and (max-height:600px) and (max-width:760px){.mh-home-mission{width:104px;padding:7px 5px;right:calc(3% + 104px);white-space:nowrap}.mh-home-gift{width:96px;padding:7px 5px;right:3%}.mh-home-facility.battle>span{min-width:120px;padding:8px 8px;font-size:15px}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
