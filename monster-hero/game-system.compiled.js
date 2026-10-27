@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fcc097a2306dbf04
+// source-sha256: 5fb4f28104719d16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10966,25 +10966,117 @@ const MonsterArtFrame = ({
     style: fit
   }), children);
 };
+const DYE_REGION_LABELS = ['①', '②', '③', '④', '⑤', '⑥'];
+const DyeTabbedSheet = ({
+  baseId,
+  src,
+  name,
+  colors,
+  onChange,
+  onCustom,
+  title,
+  onClose,
+  footer,
+  note
+}) => {
+  const [region, setRegion] = useState(0);
+  const regionCount = dyeRegionCount(baseId);
+  const current = Math.min(region, Math.max(0, regionCount - 1));
+  return React.createElement("div", {
+    "data-dye-sheet": true,
+    className: "fixed inset-0 flex flex-col gap-2 bg-slate-950 px-3",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 31500,
+      paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": title
+  }, React.createElement("div", {
+    className: "w-full max-w-md [@media(orientation:landscape)_and_(max-height:500px)]:max-w-3xl mx-auto flex-1 min-h-0 flex flex-col gap-2"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between shrink-0"
+  }, React.createElement("h3", {
+    className: "text-sm font-black text-white"
+  }, "🎨 ", title), React.createElement("button", {
+    type: "button",
+    "aria-label": "染色を閉じる",
+    onClick: onClose,
+    className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-white flex items-center justify-center active:scale-90"
+  }, React.createElement(X, {
+    size: 16
+  }))), React.createElement("div", {
+    className: "flex-1 min-h-0 flex flex-col gap-2 [@media(orientation:landscape)_and_(max-height:500px)]:flex-row"
+  }, React.createElement("div", {
+    className: "shrink-0 h-[42%] flex flex-col gap-1 [@media(orientation:landscape)_and_(max-height:500px)]:h-full [@media(orientation:landscape)_and_(max-height:500px)]:w-[42%]"
+  }, React.createElement("div", {
+    "data-dye-stage": true,
+    className: "relative flex-1 min-h-0 rounded-2xl bg-gradient-to-b from-fuchsia-950/60 to-slate-950 border border-fuchsia-400/30 flex items-center justify-center p-2"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: baseId,
+    src: src,
+    alt: name,
+    masuColors: colors,
+    draggable: false,
+    className: "w-full h-full object-contain"
+  })), note), React.createElement("div", {
+    className: "flex-1 min-h-0 flex flex-col gap-2"
+  }, regionCount > 1 && React.createElement("div", {
+    "data-dye-tabs": true,
+    role: "tablist",
+    "aria-label": "染める部位",
+    className: "flex gap-1 shrink-0"
+  }, Array.from({
+    length: regionCount
+  }, (_, i) => React.createElement("button", {
+    key: i,
+    type: "button",
+    role: "tab",
+    "aria-selected": current === i,
+    "aria-label": `染色${DYE_REGION_LABELS[i] || i + 1}`,
+    onClick: () => setRegion(i),
+    className: `flex-1 min-w-0 min-h-[44px] rounded-xl border font-black text-[15px] flex items-center justify-center gap-1 active:scale-95 ${current === i ? 'bg-fuchsia-600 border-fuchsia-300 text-white' : 'bg-slate-800 border-white/10 text-fuchsia-200'}`
+  }, React.createElement("span", null, DYE_REGION_LABELS[i] || i + 1), colors[i] && React.createElement("span", {
+    "data-dye-tab-swatch": true,
+    className: "inline-block w-2.5 h-2.5 shrink-0 rounded-full border border-white/50",
+    style: {
+      background: getColorSwatchHex(colors[i])
+    }
+  })))), React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, React.createElement(DyeRegionColorControls, {
+    baseId: baseId,
+    colors: colors,
+    onChange: onChange,
+    onCustom: onCustom,
+    only: current,
+    big: true
+  })))), footer));
+};
 const DyeRegionColorControls = ({
   baseId,
   colors,
   onChange,
-  onCustom
+  onCustom,
+  only = null,
+  big = false
 }) => {
   const regionCount = dyeRegionCount(baseId);
-  const regionLabels = ['①', '②', '③', '④', '⑤'];
+  const regionLabels = DYE_REGION_LABELS;
   return React.createElement("div", {
     className: "space-y-2"
   }, Array.from({
     length: regionCount
-  }).map((_, idx) => React.createElement("div", {
+  }, (_, i) => i).filter(i => only == null || i === only).map(idx => React.createElement("div", {
     key: idx,
     className: "bg-black/30 rounded-xl p-2 border border-white/5"
   }, React.createElement("div", {
     className: "text-[8px] text-fuchsia-300 font-black uppercase mb-1"
   }, regionCount > 1 ? `染色${regionLabels[idx] || idx + 1}` : '染色'), React.createElement("div", {
-    className: "grid grid-cols-6 gap-0.5"
+    className: big ? 'grid grid-cols-5 gap-1 [&>button]:min-h-[48px] [&>button>span:last-child]:text-[10px] [&>button>span:first-child]:w-5 [&>button>span:first-child]:h-5' : 'grid grid-cols-6 gap-0.5'
   }, React.createElement("button", {
     onClick: () => onChange(idx, null),
     className: `flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx] ? 'border-fuchsia-400 ring-2 ring-fuchsia-400' : 'border-white/10'}`
@@ -131673,49 +131765,13 @@ function MonsterHeroGame() {
         length: regionCount
       }, (_, i) => (dyePreviewColors[i] || null) === (curColors[i] || null)).every(Boolean);
       const hasAnyColor = dyePreviewColors.some(Boolean);
-      return React.createElement("div", {
-        className: "fixed inset-0 flex items-center justify-center p-4",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.92)',
-          zIndex: 31500,
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": `${masu.name}の染色`
-      }, React.createElement("div", {
-        className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-3 shadow-2xl max-h-full overflow-hidden"
-      }, React.createElement("div", {
-        className: "flex items-center justify-between shrink-0"
-      }, React.createElement("h3", {
-        className: "text-sm font-black text-white"
-      }, "🎨 ", masu.name, "の色をプレビュー"), React.createElement("button", {
-        type: "button",
-        "aria-label": "染色を閉じる",
-        onClick: closeDyePicker,
-        className: "p-2 bg-white/5 rounded-full active:scale-90"
-      }, React.createElement(X, {
-        size: 16
-      }))), React.createElement("div", {
-        className: "w-24 h-24 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"
-      }, React.createElement(DyedMonsterImage, {
+      return React.createElement(DyeTabbedSheet, {
         baseId: masu.baseId,
-        src: base.iconUrl,
-        alt: masu.name,
-        masuColors: dyePreviewColors,
-        className: "w-full h-full object-cover"
-      })), React.createElement("div", {
-        className: "text-[9px] text-fuchsia-300 font-black text-center -mt-1 shrink-0"
-      }, hasAnyColor ? 'プレビュー中(合成後の見た目です)' : '現在の色のまま'), regionCount === 1 && React.createElement("div", {
-        className: "text-[8px] text-slate-500 font-bold text-center px-2 -mt-1 shrink-0"
-      }, "このモンスターは全身一括の染色のみ対応しています"), React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-      }, React.createElement(DyeRegionColorControls, {
-        baseId: masu.baseId,
+        src: base.imgUrl || base.iconUrl,
+        name: masu.name,
         colors: dyePreviewColors,
+        title: `${masu.name}を染める`,
+        onClose: closeDyePicker,
         onChange: (idx, colorId) => setDyePreviewColors(prev => {
           const next = [...prev];
           next[idx] = colorId;
@@ -131730,20 +131786,28 @@ function MonsterHeroGame() {
             s: parsed?.s ?? .7,
             v: parsed?.v ?? .7
           });
-        }
-      })), React.createElement("div", {
-        className: "flex gap-2 mt-1 shrink-0"
-      }, React.createElement("button", {
-        onClick: closeDyePicker,
-        className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase"
-      }, "やめる"), React.createElement("button", {
-        onClick: () => {
-          useDyeItem(masu.id, dyePreviewColors);
-          closeDyePicker();
         },
-        disabled: noChange,
-        className: `flex-1 py-3 rounded-xl font-black text-xs uppercase ${noChange ? 'bg-slate-800 text-slate-600' : 'bg-fuchsia-600 text-white active:scale-95'}`
-      }, "この色に染める"))));
+        note: React.createElement("div", {
+          className: "shrink-0 -mt-1 text-center"
+        }, React.createElement("div", {
+          className: "text-[10px] text-fuchsia-300 font-black"
+        }, hasAnyColor ? 'プレビュー中(合成後の見た目です)' : '現在の色のまま'), regionCount === 1 && React.createElement("div", {
+          className: "text-[9px] text-slate-400 font-bold px-2"
+        }, "このモンスターは全身一括の染色のみ対応しています")),
+        footer: React.createElement("div", {
+          className: "flex gap-2 shrink-0"
+        }, React.createElement("button", {
+          onClick: closeDyePicker,
+          className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs"
+        }, "やめる"), React.createElement("button", {
+          onClick: () => {
+            useDyeItem(masu.id, dyePreviewColors);
+            closeDyePicker();
+          },
+          disabled: noChange,
+          className: `flex-1 min-h-[44px] rounded-xl font-black text-xs ${noChange ? 'bg-slate-800 text-slate-600' : 'bg-fuchsia-600 text-white active:scale-95'}`
+        }, "この色に染める"))
+      });
     })(), customColorPicker && (() => {
       const {
         mode,
