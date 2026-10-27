@@ -323,14 +323,40 @@ const closeExPanel = (s) => s.page.evaluate(() => { const b = document.querySele
 const BACKWARD = /^(キャンセル|やめる|閉じる|とじる|戻る|もどる|×)$|話しかける|説明を開く|詳しいルール|あきらめる|降参|取り消す|下げる|選び直す|やり直す|変更せず戻る/;
 // 進むボタン。上にあるものほど先に押す(選ぶ画面で1つ選んだあと、確定 → 次の画面へ)
 const FORWARD = [/^(この供モンを選ぶ|勇者モンに選ぶ|この子で挑む|供モン\d*にする)/, /^(習得する|強化する|決定する|決定|確定)$/, /^(次へ進む|次のWAVEへ|次へ|進む|バトルへ|出撃|出発|OK|受け取る)/, /^アシストカードへ$/];
+// PLAYBOT_SHOT_DIR=<フォルダ> で、WAVE のリザルトと CHAMPION を、背の低い縦・横持ち・ふつうの縦の3つの大きさで写す(見た目の見回り用)。
+//   写したら元の大きさへ戻す。同じ画面は1回だけ
+const shotDone = new Set();
+async function shotAtSizes(s, tag) {
+  const dir = process.env.PLAYBOT_SHOT_DIR || '';
+  if (!dir || shotDone.has(tag)) return;
+  shotDone.add(tag);
+  const keep = s.page.viewportSize();
+  for (const [w, h] of [[320, 568], [844, 390], [390, 844]]) {
+    await s.page.setViewportSize({ width: w, height: h });
+    await s.wait(900);
+    await s.page.screenshot({ path: require('path').join(dir, `${tag}-${w}x${h}.png`) }).catch(() => {});
+  }
+  if (keep) await s.page.setViewportSize(keep);
+  await s.wait(400);
+}
+async function shotIfResult(s) {
+  if (!process.env.PLAYBOT_SHOT_DIR) return;
+  const t = await s.page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '));
+  // CHAMPION の画面の裏にも「WAVE 10 リザルト」の字が残っているので、CHAMPION を先に見る
+  const m = t.match(/WAVE\s*(\d+)\s*リザルト/);
+  if (/CHAMPION/.test(t)) { await s.wait(3000); await shotAtSizes(s, 'champion'); }
+  else if (m) { await s.wait(1500); await shotAtSizes(s, `wave${m[1]}-result`); }
+}
+
 async function betweenWaves(s, ctx) {
   const pressed = new Map(); // 押しても画面が変わらなかった進むボタン → 回数
   const avoid = new Set();   // 選んでも先へ進めなかった選択肢(人も別のものを選び直す)
   let lastPick = '';
   for (let i = 0; i < 60; i++) {
+    if (i === 0) await shotIfResult(s);
     const st = await readTactics(s);
     if (st.inBattle) return 'battle';
-    if (st.over) return 'over';
+    if (st.over) { await shotIfResult(s); return 'over'; }
     await s.inspect();
     // 選ぶ画面(トレーニング・置き場所・供モン・固有技・アシストカード)は、戦い方の判断で1手選ぶ
     if (ctx && await brain.chooseBetween(s, ctx.mem, ctx.log)) { s.state.step += 1; await s.wait(700); continue; }
@@ -437,7 +463,7 @@ async function tacticsScenario(s, { maxMs = 360000, modes = ['tactics', 'tactics
   await fightTactics(s, stats, { maxMs, speedUp: true, brainCtx: { mem, log } });
   const end = await readTactics(s);
   const endText = await s.page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 300));
-  if (end.over) { stats.finished = true; await s.shot('tactics-result'); }
+  if (end.over) { stats.finished = true; await shotIfResult(s); await s.shot('tactics-result'); }
   // 勝ち負け: 最後の WAVE まで着いて決着した=クリア / 途中で決着=負け(ターン切れか全員倒れた) / 時間切れ=打ち切り
   const lastWave = log.data.waves[log.data.waves.length - 1];
   if (stats.finished) {
