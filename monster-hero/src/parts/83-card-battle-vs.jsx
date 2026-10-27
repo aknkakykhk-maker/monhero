@@ -16,7 +16,7 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
   atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
-  sorashido: ['ソラシド隊'],   // 仮(2026-10-27)
+  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊'],   // 2026-10-27 社長の決め
 });
 // 長すぎるときは MASTER の「本気の」を省く(320幅の札で2行に収まる長さ)
 const CARD_DECK_NAME_MAX = 18;
@@ -67,12 +67,12 @@ const CARD_VS_LINES = Object.freeze({
     expert: { e: 'excited', t: '全部の弾から全体攻撃を集めてきた！' },
     master: { e: 'wink', t: '本気のあつだ。一気に終わらせるぞ！' },
   },
-  sorashido: {   // 仮(2026-10-27)
-    easy: { e: 'happy', t: 'よろしくね' },
-    normal: { e: 'happy', t: 'よろしくね' },
-    hard: { e: 'excited', t: 'よろしくね' },
-    expert: { e: 'excited', t: 'よろしくね' },
-    master: { e: 'wink', t: 'よろしくね' },
+  sorashido: {   // 2026-10-27 社長「この形で入れる」(フキダシくんの案 v3)
+    easy: { e: 'happy', t: 'ゆるっといこ！ でも読みは手を抜かないぜ・・・！' },
+    normal: { e: 'wink', t: '浜の風みたいに、さらっと勝たせてもらう笑' },
+    hard: { e: 'excited', t: 'ここからは本気の読み合いだぜ・・・！' },
+    expert: { e: 'excited', t: '攻略班の作戦、ぜんぶ試させてもらう笑' },
+    master: { e: 'angry', t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！' },
   },
 });
 // 練習試合のひとこと(みゅあ)

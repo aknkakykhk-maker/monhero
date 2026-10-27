@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1681c655babb75b4
+// generated-sha256: 078c0a2bd6cddc78
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52173,7 +52173,7 @@ const CARD_AI_HABITS = Object.freeze({
   kyuko:    { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.2 },
   dra:      { attack: 0.7, keepGuard: 1.5, saveGuts: 1.0, big: 0.6, disrupt: 0.8, area: 0.8, finish: 0.8 },
   atsu:     { attack: 1.2, keepGuard: 0.6, saveGuts: 0.8, big: 1.0, disrupt: 0.8, area: 1.8, finish: 1.5 },
-  sorashido: { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.0 },   // 仮(2026-10-27。打ち方はルールくんが決める)
+  sorashido: { attack: 1.1, keepGuard: 0.9, saveGuts: 1.0, big: 0.9, disrupt: 1.5, area: 1.0, finish: 1.3 },   // 相手の手を崩す(2026-10-27 ルールくんの S2。好きな子ハムで5段×450試合を測った)
 });
 // 公開の印(RELEASE_FLAGS・data/assistants.js の ASSISTANT_RELEASE_FLAGS)が立つまで、カードの相手えらび・マルチ・観戦・記録・曲の並びに出さない(2026-10-27。ソラシド)。
 //   カードだけの一覧は作らず、助手の一覧と同じ assistantReleased で見る。デバッグからも出さない
@@ -52637,7 +52637,7 @@ const CARD_AI_DECKS = Object.freeze({
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
 // その種族を主血統に持つ混血・派生がみな候補になり、カードが増えれば自動で候補に入る。どの強さでも必ず1体入れる
-const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'mocchi' });   // ソラシドは仮(2026-10-27)
+const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', sorashido: 'hare' });   // ソラシドはハム(2026-10-27 社長の決め)
 // 強さごとの組み方(社長の決め)。maxWave … 技などのカードの弾(好きな子の技は、その子の弾まで使える) / noise … カードの選び方の雑さ /
 // temp … 残り2体の選び方のゆらぎ(大きいほど型に合わない子も入る) / stray … 気まぐれな子(型と関係なく)が1体混ざる割合 /
 // best … いちばん強い組み合わせ(相手のデッキも見る)
@@ -52687,11 +52687,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
   kyuko: { easy: -1.5, normal: -1.5, hard: -1.5, expert: 0, master: -0.05 },   // MASTER は派生25枚(ママニャーなど)で好きな子の幅が広がり強くなったので 0.1 → 1(2026-10-25)
   dra: { easy: -1.5, normal: -1.5, expert: 0.5, master: 0.5 },   // EXPERT はカウンターの直し(半分返して残りを受ける・2026-10-27)で 38% を下回ったので揺らぎを足した(57%)。MASTER は混血のメイン・サブの直し(2026-10-27)のあと、card-rules-check の強さの範囲に入るように 0.5
   atsu: { easy: -1.5, normal: -3, hard: -2.1 },
+  sorashido: { easy: -1.5, normal: -1.5, hard: -1.5, master: -0.05 },   // 2026-10-27 ルールくん(プレイヤー役への勝率 EASY 42.7・NORMAL 48.7・HARD 50.2・EXPERT 47.6・MASTER 47.8%)
 });
 // 組み直すデッキで、順番の枠に入れてよい「入れたい度」の下限(cardAiCardValue の値)。助手ごとの違いは、
 //   EXPERT・MASTER でプレイヤー役との勝率がそろうように tools/card/card-ai-balance.js で決めた
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
-const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
+const CARD_AI_LANE_MIN = Object.freeze({ momosuke: 1.5, dra: 0.8, kyuko: 2.0, atsu: 1.5, sorashido: 1.5 });   // きゅうこは混血のメイン・サブの直し(2026-10-27)で弱くなったぶん 1.5。ドラは不自然な手の直し(2026-10-27)で MASTER が 38% を割ったので 0.3 → 0.8(1 より上だと好きな子の技が入らないことがある)
 const CARD_DECK_COPY_MAX = 3; // 同じ名前の技・全体・ブリーダーカードは3枚まで
 const CARD_AI_ATTACH_MAX = 6;
 
@@ -53604,22 +53605,22 @@ const CARD_BATTLE_LINES = Object.freeze({
     win: ['俺の勝ち！ いい勝負だった笑', '楽しかった！ 次は上の難易度でやろうぜ笑', 'いいね、また相手してな！'],
     lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']],
   },
-  // ソラシドは仮(2026-10-27)。人物像が決まったら、統括部長が渡す台詞に入れ替える。公開の印が立つまで画面には出ない
+  // ソラシド(2026-10-27 社長「この形で入れる」。案はフキダシくん docs/progress/card-sorashido-lines.md v3)。公開の印が立つまで画面には出ない
   sorashido: {
-    challenge: ['カード勝負だね。よろしく'],
-    start: ['よろしくね'],
-    big: ['いくよ'],
-    bigHit: ['効いたな…'],
-    guardMine: ['守れた'],
-    guardTheirs: ['よけられたか'],
-    myKo: ['ありがとう'],
-    theirKo: ['1体'],
-    lastMine: ['残り1体'],
-    lastTheirs: ['あと1体'],
-    deckMine: ['山札が少ない'],
-    deckTheirs: ['そっちの山札、少ないね'],
-    win: ['勝ち'],
-    lose: [['負けた', 'troubled']],
+    challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
+    start: [['デッキは組み直してきた。今日の俺は強いぜ・・・！', 'happy'], ['よろしく！ 様子見…と見せかけて攻める笑', 'wink'], ['いくぜ・・・！ 最初の1手が大事なんだよな', 'excited'], ['三線みたいに、気持ちよく勝ちたいね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいぜ・・・！', 'happy']],
+    big: [['うぉぉぉ！ ここで大技いくぜ・・・！', 'excited'], ['ガッツためといた甲斐があった笑', 'happy'], ['この流れ、攻略まとめに書いとこ笑', 'wink'], ['読みどおり！ 一気に押し込むぜ・・・！', 'excited']],
+    bigHit: [['なに！？ 今のは効いた…笑', 'surprise'], ['うわ、それ持ってたの！？ やられた笑', 'surprise'], ['痛っ…でも次の手はもう考えてあるぜ・・・！', 'troubled'], ['なんくるないさ〜。まだ巻き返せる笑', 'normal']],
+    guardMine: [['その手、読めてたぜ・・・！', 'happy'], ['守り、残しといて正解だった笑', 'wink'], ['はい、よけた！ 計算どおり笑', 'excited']],
+    guardTheirs: [['なに！？ そこで守るの！？', 'surprise'], ['読みが深いな…やるじゃん笑', 'troubled'], ['次は守りにくい手でいくぜ・・・！', 'normal']],
+    myKo: [['ごめんな…あとは俺が取り返すぜ・・・！', 'crying'], ['なに！？ ここで倒れるのかよ…笑', 'surprise'], ['まだまだ！ 作戦はここからだぜ・・・！', 'angry']],
+    theirKo: [['うぉぉぉ！ 1体いただき！', 'excited'], ['弱ってたの、見逃さないぜ・・・！', 'wink'], ['よし！ 計算どおり笑', 'happy']],
+    lastMine: [['残り1体…ここからひっくり返すのが楽しいんだよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託すぜ・・・！', 'troubled']],
+    lastTheirs: [['あと1体！ 最後まで読み切るぜ・・・！', 'excited'], ['詰めの手順、もう見えてる笑', 'wink']],
+    deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
+    deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
+    win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
+    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']],
   },
 });
 // 1ターンにしゃべるのは2回まで。同じ場面では、直近に出した台詞を続けて出さない
@@ -53808,7 +53809,7 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
   atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
-  sorashido: ['ソラシド隊'],   // 仮(2026-10-27)
+  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊'],   // 2026-10-27 社長の決め
 });
 // 長すぎるときは MASTER の「本気の」を省く(320幅の札で2行に収まる長さ)
 const CARD_DECK_NAME_MAX = 18;
@@ -53859,12 +53860,12 @@ const CARD_VS_LINES = Object.freeze({
     expert: { e: 'excited', t: '全部の弾から全体攻撃を集めてきた！' },
     master: { e: 'wink', t: '本気のあつだ。一気に終わらせるぞ！' },
   },
-  sorashido: {   // 仮(2026-10-27)
-    easy: { e: 'happy', t: 'よろしくね' },
-    normal: { e: 'happy', t: 'よろしくね' },
-    hard: { e: 'excited', t: 'よろしくね' },
-    expert: { e: 'excited', t: 'よろしくね' },
-    master: { e: 'wink', t: 'よろしくね' },
+  sorashido: {   // 2026-10-27 社長「この形で入れる」(フキダシくんの案 v3)
+    easy: { e: 'happy', t: 'ゆるっといこ！ でも読みは手を抜かないぜ・・・！' },
+    normal: { e: 'wink', t: '浜の風みたいに、さらっと勝たせてもらう笑' },
+    hard: { e: 'excited', t: 'ここからは本気の読み合いだぜ・・・！' },
+    expert: { e: 'excited', t: '攻略班の作戦、ぜんぶ試させてもらう笑' },
+    master: { e: 'angry', t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！' },
   },
 });
 // 練習試合のひとこと(みゅあ)
@@ -59567,10 +59568,10 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     lose: [['ぐぬぬぬ…惜しかったねぇ。組み方、いっしょに見直そっかぁ', 'angry'], ['まあ、なんとかなるっしょ笑 次は勝てるよぉ', 'normal'], ['負けたけど、見立ては悪くなかったよ。あと一手だったねぇw', 'troubled']],
     left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']],
   },
-  sorashido: {   // 仮(2026-10-27)。公開の印が立つまで、自分の助手に選べないので出ない
-    win: [['勝ったね', 'happy']],
-    lose: [['負けたね', 'troubled']],
-    left: [['相手が抜けたみたい', 'surprise']],
+  sorashido: {   // 2026-10-27 社長「この形で入れる」(フキダシくんの案 v3)。公開の印が立つまで、自分の助手に選べないので出ない
+    win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
+    lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
+    left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']],
   },
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {

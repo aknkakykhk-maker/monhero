@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1d803cbb914f22d
+// source-sha256: e8e3092ac57d4c8e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86064,13 +86064,13 @@ const CARD_AI_HABITS = Object.freeze({
     finish: 1.5
   },
   sorashido: {
-    attack: 1.0,
-    keepGuard: 1.0,
+    attack: 1.1,
+    keepGuard: 0.9,
     saveGuts: 1.0,
-    big: 1.0,
-    disrupt: 1.0,
+    big: 0.9,
+    disrupt: 1.5,
     area: 1.0,
-    finish: 1.0
+    finish: 1.3
   }
 });
 const cardFoeReleased = who => typeof assistantReleased !== 'function' || assistantReleased(who);
@@ -86743,7 +86743,7 @@ const CARD_AI_FAVORITE = Object.freeze({
   kyuko: 'mew',
   dra: 'zilla',
   atsu: 'dragon',
-  sorashido: 'mocchi'
+  sorashido: 'hare'
 });
 const CARD_AI_SAME_BLOOD = Object.freeze({
   easy: 0.3,
@@ -86840,6 +86840,12 @@ const CARD_AI_DECK_TUNE = Object.freeze({
     easy: -1.5,
     normal: -3,
     hard: -2.1
+  },
+  sorashido: {
+    easy: -1.5,
+    normal: -1.5,
+    hard: -1.5,
+    master: -0.05
   }
 });
 const CARD_AI_LANE_MIN_DEFAULT = 0.8;
@@ -86847,7 +86853,8 @@ const CARD_AI_LANE_MIN = Object.freeze({
   momosuke: 1.5,
   dra: 0.8,
   kyuko: 2.0,
-  atsu: 1.5
+  atsu: 1.5,
+  sorashido: 1.5
 });
 const CARD_DECK_COPY_MAX = 3;
 const CARD_AI_ATTACH_MAX = 6;
@@ -88206,20 +88213,20 @@ const CARD_BATTLE_LINES = Object.freeze({
     lose: [['負けた…まじで強いじゃん笑', 'happy'], ['やるね！ 次は俺が勝つからな笑', 'excited'], ['しゃあない、俺の負け！ もう1回やろ！', 'wink']]
   },
   sorashido: {
-    challenge: ['カード勝負だね。よろしく'],
-    start: ['よろしくね'],
-    big: ['いくよ'],
-    bigHit: ['効いたな…'],
-    guardMine: ['守れた'],
-    guardTheirs: ['よけられたか'],
-    myKo: ['ありがとう'],
-    theirKo: ['1体'],
-    lastMine: ['残り1体'],
-    lastTheirs: ['あと1体'],
-    deckMine: ['山札が少ない'],
-    deckTheirs: ['そっちの山札、少ないね'],
-    win: ['勝ち'],
-    lose: [['負けた', 'troubled']]
+    challenge: [['カード勝負か。受けて立つぜ・・・！', 'wink'], ['対戦しよ！ 攻略まとめ、もう頭に入ってる笑', 'happy'], ['手加減なしでいくぜ・・・！ 勝ち負けは本気笑', 'excited'], ['どんなデッキでくるか、楽しみすぎる笑', 'wink']],
+    start: [['デッキは組み直してきた。今日の俺は強いぜ・・・！', 'happy'], ['よろしく！ 様子見…と見せかけて攻める笑', 'wink'], ['いくぜ・・・！ 最初の1手が大事なんだよな', 'excited'], ['三線みたいに、気持ちよく勝ちたいね笑', 'happy'], ['オリヒメみたいに、きれいに勝ちたいぜ・・・！', 'happy']],
+    big: [['うぉぉぉ！ ここで大技いくぜ・・・！', 'excited'], ['ガッツためといた甲斐があった笑', 'happy'], ['この流れ、攻略まとめに書いとこ笑', 'wink'], ['読みどおり！ 一気に押し込むぜ・・・！', 'excited']],
+    bigHit: [['なに！？ 今のは効いた…笑', 'surprise'], ['うわ、それ持ってたの！？ やられた笑', 'surprise'], ['痛っ…でも次の手はもう考えてあるぜ・・・！', 'troubled'], ['なんくるないさ〜。まだ巻き返せる笑', 'normal']],
+    guardMine: [['その手、読めてたぜ・・・！', 'happy'], ['守り、残しといて正解だった笑', 'wink'], ['はい、よけた！ 計算どおり笑', 'excited']],
+    guardTheirs: [['なに！？ そこで守るの！？', 'surprise'], ['読みが深いな…やるじゃん笑', 'troubled'], ['次は守りにくい手でいくぜ・・・！', 'normal']],
+    myKo: [['ごめんな…あとは俺が取り返すぜ・・・！', 'crying'], ['なに！？ ここで倒れるのかよ…笑', 'surprise'], ['まだまだ！ 作戦はここからだぜ・・・！', 'angry']],
+    theirKo: [['うぉぉぉ！ 1体いただき！', 'excited'], ['弱ってたの、見逃さないぜ・・・！', 'wink'], ['よし！ 計算どおり笑', 'happy']],
+    lastMine: [['残り1体…ここからひっくり返すのが楽しいんだよ笑', 'troubled'], ['なんくるないさ〜。最後の1体に託すぜ・・・！', 'troubled']],
+    lastTheirs: [['あと1体！ 最後まで読み切るぜ・・・！', 'excited'], ['詰めの手順、もう見えてる笑', 'wink']],
+    deckMine: [['なに！？ 山札やば…急がないと笑', 'surprise'], ['ガッツにしすぎた…計算ミス笑', 'troubled']],
+    deckTheirs: [['そっちの山札、もう少ないな？ 笑', 'wink'], ['山札切れも勝ち筋のひとつだぜ・・・！', 'happy']],
+    win: [['うぉぉぉ！ 読み通り！ いい勝負だった笑', 'happy'], ['作戦がきれいにはまった！ もう1戦だけやろ笑', 'excited'], ['楽しかった！ 気づいたら朝になりそう笑', 'wink'], ['うぉぉぉ！ オリヒメにも見せたかった笑', 'excited']],
+    lose: [['なに！？ そこでそれ！？…悔しいけど、今のはうまいぜ・・・！', 'crying'], ['完敗！ 今の対戦、攻略まとめにして研究する笑', 'troubled'], ['なんくるないさ〜。次はデッキ組み直してくる笑', 'happy']]
   }
 });
 const CARD_LINE_PER_TURN = 2;
@@ -88468,7 +88475,7 @@ const CARD_DECK_NAME_TAILS = Object.freeze({
   kyuko: ['先読みの陣', 'お見通し作戦', '読み筋デッキ', 'ガッツ勘定隊'],
   dra: ['カウンター要塞', 'はね返し城', '鉄壁ガード団', 'ねばり腰の砦'],
   atsu: ['まとめてドーン組', '一掃カーニバル', '全体ぶっぱ隊', '総なめ軍団'],
-  sorashido: ['ソラシド隊']
+  sorashido: ['攻略まとめ組', '最適解デッキ', '計算どおり団', 'なんくるない隊']
 });
 const CARD_DECK_NAME_MAX = 18;
 const CARD_DECK_STYLE = Object.freeze({
@@ -88614,23 +88621,23 @@ const CARD_VS_LINES = Object.freeze({
   sorashido: {
     easy: {
       e: 'happy',
-      t: 'よろしくね'
+      t: 'ゆるっといこ！ でも読みは手を抜かないぜ・・・！'
     },
     normal: {
-      e: 'happy',
-      t: 'よろしくね'
+      e: 'wink',
+      t: '浜の風みたいに、さらっと勝たせてもらう笑'
     },
     hard: {
       e: 'excited',
-      t: 'よろしくね'
+      t: 'ここからは本気の読み合いだぜ・・・！'
     },
     expert: {
       e: 'excited',
-      t: 'よろしくね'
+      t: '攻略班の作戦、ぜんぶ試させてもらう笑'
     },
     master: {
-      e: 'wink',
-      t: 'よろしくね'
+      e: 'angry',
+      t: 'うぉぉぉ！ 俺の全力、受けてみな・・・！'
     }
   }
 });
@@ -98848,9 +98855,9 @@ const CARD_PVP_RESULT_LINES = Object.freeze({
     left: [['あら、相手いなくなっちゃったぁ。不戦勝はノーカンにしとこ笑', 'surprise'], ['まあ、こういう日もあるっしょ。次いこw', 'normal'], ['ほい、ちょっと物足りないかぁ。次はちゃんと最後までやりたいねぇ', 'wink']]
   },
   sorashido: {
-    win: [['勝ったね', 'happy']],
-    lose: [['負けたね', 'troubled']],
-    left: [['相手が抜けたみたい', 'surprise']]
+    win: [['うぉぉぉ！ 勝った！ 今の組み方、最高だった笑', 'happy'], ['ナイス！ 読み合い、完全に勝ってたぜ・・・！', 'excited'], ['いい勝ち方！ 攻略まとめに残したいくらい笑', 'wink']],
+    lose: [['なに！？ 惜しい…次はどう組むか考えよ', 'troubled'], ['なんくるないさ〜。今の対戦、すごく参考になった笑', 'normal'], ['相手も強かった！ もう1戦いっとく？笑', 'happy']],
+    left: [['あれ、相手いなくなった？ 決着つけたかったな笑', 'surprise'], ['電波かな？ 次の相手さがそ！', 'normal'], ['勝ちは勝ちだけど…ちょっと物足りないぜ・・・', 'troubled']]
   }
 });
 const cardPvpResultLine = (who, scene, seed = 0) => {
