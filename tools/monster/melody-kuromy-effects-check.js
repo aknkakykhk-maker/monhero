@@ -56,9 +56,11 @@ check('血統はユグドラシル×？？？(レア)と図鑑の文',
   /Melody:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages) && /Kuromy:\s*\{ main:'yggdrasil', sub:'unknown' \}/.test(lineages)
   && /Melody: 'マイメロディとぞうさんの力を宿した/.test(lineages) && /Kuromy: 'クロミとバクの力を宿した/.test(lineages));
 // ★2026-10-08 いったん取り下げたあと、ユーザー指示「公開して」で再公開した(アイコン2種は販売、ダイヤの円盤石は近日追加のまま)
-check('アイコン2種ずつは販売中、ダイヤの円盤石は近日追加のまま',
+// ★2026-10-27 社長「キュービ達が実装のときにメロディとクロミーがダイヤショップに追加解放」「一緒に出す」で、ダイヤの円盤石も 150,000 で販売する
+check('アイコン2種ずつは販売中、ダイヤの円盤石も 150,000 で販売中',
   /id:'melody_icon',[^\n]*cost:1 \}/.test(breeder) && /id:'kuromy_disc_icon',[^\n]*cost:1 \}/.test(breeder)
-  && /id:'Melody',[^\n]*available:false/.test(breeder) && /id:'Kuromy',[^\n]*available:false/.test(breeder));
+  && /id:'Melody',[^\n]*cost:150000 \}/.test(breeder) && /id:'Kuromy',[^\n]*cost:150000 \}/.test(breeder)
+  && !/id:'Melody',[^\n]*available:false/.test(breeder) && !/id:'Kuromy',[^\n]*available:false/.test(breeder));
 check('ビートP交換所で円盤石を先行公開', /rhythmEventDiscOffer\('Melody', 'メロディー'\)/.test(event) && /rhythmEventDiscOffer\('Kuromy', 'クロミー'\)/.test(event));
 check('内部の印(collab:sanrio)が2体にだけ付いている', M.Melody?.collab === 'sanrio' && M.Kuromy?.collab === 'sanrio'
   && Object.values(M).filter(m => m.collab).length === 2);
