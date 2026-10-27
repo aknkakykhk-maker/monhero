@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f8954caee7025cdd
+// generated-sha256: 55cd8bc19e4631fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42351,7 +42351,7 @@ function ClassicAiCopyCell({ copy, turnCount, onOpen }) {
       role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
       onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
       <style>{CLASSIC_AI_COPY_CSS}</style>
-      <SorashidoCopyFx phase={phase}><span className="text-2xl leading-none">{SORASHIDO_FACE_ICON}</span></SorashidoCopyFx>
+      <SorashidoCopyFx phase={phase}><img src={SORASHIDO_FACE_ICON} alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-cover bg-black/30" draggable="false"/></SorashidoCopyFx>
       <span className="w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200">{copy.name || '仲間'}<br/>のコピー</span>
       {out
         ? <><span className="whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200">G {guts}/{maxGuts}</span>

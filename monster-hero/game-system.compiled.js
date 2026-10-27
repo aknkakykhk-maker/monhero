@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c310575a4bd6062b
+// source-sha256: abca1602b850d252
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70493,9 +70493,13 @@ function ClassicAiCopyCell({
     } : undefined
   }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement(SorashidoCopyFx, {
     phase: phase
-  }, React.createElement("span", {
-    className: "text-2xl leading-none"
-  }, SORASHIDO_FACE_ICON)), React.createElement("span", {
+  }, React.createElement("img", {
+    src: SORASHIDO_FACE_ICON,
+    alt: "",
+    "aria-hidden": "true",
+    className: "h-7 w-7 rounded-full object-cover bg-black/30",
+    draggable: "false"
+  })), React.createElement("span", {
     className: "w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200"
   }, copy.name || '仲間', React.createElement("br", null), "のコピー"), out ? React.createElement(React.Fragment, null, React.createElement("span", {
     className: "whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200"
