@@ -1715,24 +1715,22 @@ function MonsterHeroGame() {
   };
   // ===== AIコピー(ソラシドのアシカ) =====
   // タクティクス: 使った子のとなりの空いたマス(無ければ同じマス)に、次のターンから出す。🔥は元の子の🔥 × Lv の割合から。
-  //   ★固有技の写しは、みんなの山札へは入れずコピー自身が持つ(uniqueCard)。カードを使う途中で山札を書き換えると、
-  //   ターンの終わりの山札の作り直しで消えるため。コピーの手札を作るときだけ足す(planAiCopyTurn)
+  //   ★コピーは自分の山札を持つ(出たとき・切りかえたときにプレイヤーの山札・手札・捨て札の写しから作る。33-ai-copy.jsx)。
+  //   プレイヤーの山札には何も足さない・抜かない(2026-10-27 社長)
   const summonTacticsAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
     const unit = tacticsUnitsRef.current[slotIdx];
     if (!unit) return;
     const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
     const piles = handPileRef.current;
-    const uniqueCard = [...(piles.hand || []), ...(piles.deck || []), ...(piles.graveyard || [])]
-      .find(c => c && c.type === 'unique' && c.ownerSlotIdx === slotIdx && c.sorashidoCopyOf == null) || null;
     const { pos, stacked } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
     const rules = aiCopyRules(level);
     const before = aiCopyRef.current;
-    const res = summonAiCopy({ aiCopy: before, zones: { deck: [], hand: [], discard: [] } },
-      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, uniqueCard, turn: turnCount, mode: 'tactics', effMul });
+    const res = summonAiCopy({ aiCopy: before, zones: { deck: piles.deck || [], hand: piles.hand || [], discard: piles.graveyard || [] } },
+      { srcSlot: slotIdx, srcMonsterId: unit.id, name: slots[slotIdx]?.masuName || slots[slotIdx]?.name || '', level, src, turn: turnCount, mode: 'tactics', effMul });
     const next = res.plan.kind === 'refresh'
       ? res.aiCopy
-      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart), uniqueCard: res.zones.deck[0] || null };
+      : { ...res.aiCopy, pos, stacked, hate: tacticsAiCopyStartHate(tacticsHateRef.current, slotIdx, rules.hateStart) };
     commitAiCopy(next);
     pushBattleLog(res.plan.kind === 'refresh'
       ? `🤖 ${tacticsAiCopyName(next)}の残りが${next.turnsLeft}ターンに戻った`
@@ -1781,19 +1779,18 @@ function MonsterHeroGame() {
     const costC = (c) => getCardGuts(c, copy.srcSlot);
     return { dmgOf, isGuardC, usableC, scoreC, costC };
   };
-  // そのターンに使う札を決めて持たせる(手札・次に使う札)。みんなの山札・捨て札の写しから選ぶ(減らさない)
+  // そのターンに使う札を決めて持たせる(手札・次に使う札)。コピー自身の山札から引く
   const planTacticsAiCopy = (turn) => {
     const copy = aiCopyRef.current;
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
     const tools = tacticsAiCopyTools(copy, enemyDist);
     if (!tools) return null;
-    const piles = handPileRef.current;
-    const pool = [...(piles.deck || []), ...(piles.graveyard || []), ...(piles.hand || [])].filter(c => c && c.type !== 'unique' && tools.usableC(c));
-    const uniq = copy.uniqueCard && tools.usableC(copy.uniqueCard) ? copy.uniqueCard : null;
-    const planned = planAiCopyTurn({ ...copy, uniqueCardUid: uniq ? uniq.uid : null }, { deck: uniq ? [...pool, uniq] : pool, score: tools.scoreC, costOf: tools.costC });
+    // 引く枚数はプレイヤーの手札と同じ(社長「普通に山札の枚数で自分たちと同じような確率」)
+    const count = (handPileRef.current.hand || []).length || 5;
+    const planned = planAiCopyTurn(copy, { count, score: tools.scoreC, costOf: tools.costC, usable: tools.usableC });
     return commitAiCopy({ ...planned, plannedTurn: turn });
   };
-  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。タクティクスは写しを山札に入れていないので、山札は触らない
+  // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。プレイヤーの山札は触らない(コピーの山札ごと消える)
   const clearAiCopy = (why = '') => {
     const copy = aiCopyRef.current;
     if (!copy) return;
@@ -13500,7 +13497,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // AIコピー: 出ているときだけ、ターンの終わりに1つ数える。0 で消える(時間停止のターンは数えない)
     if(timeStopSlot==null&&aiCopyRef.current){
       const ticked=tickAiCopy({ aiCopy:aiCopyRef.current, zones:{ deck:[], hand:[], discard:[] } },turnCount);
-      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else { commitAiCopy(ticked.aiCopy); planTacticsAiCopy(turnCount+1); }
+      // 残ったら手札を捨て札へ回してから(endAiCopyTurn)、次のターンの札を決める
+      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else { commitAiCopy(endAiCopyTurn(ticked.aiCopy)); planTacticsAiCopy(turnCount+1); }
     }
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
     // AIコピー(5つの遊び): 次のターンに出ているなら、使うカードを決めておく
