@@ -1709,7 +1709,7 @@ function MonsterHeroGame() {
       const dealt = Math.max(0, Number(copy.dealtNow) || 0);
       const teamDealt = tacticsHateDealtRef.current.reduce((a, v) => a + (Number(v) || 0), 0) + dealt;
       const hate = tacticsAiCopyHateStep(copy, { gain: copy.hateGainNow || 0, dealt, teamDealt }, copy.srcMonsterId, aiCopyHateGainMult(copy.level));
-      commitAiCopy({ ...copy, hate, hateGainNow: 0, dealtNow: 0 });
+      commitAiCopy({ ...copy, hate, hateGainNow: 0, dealtNow: 0, guardNow: 0, guardCardsNow: 0 });
     }
     clearTacticsHateTurn();
   };
@@ -1741,6 +1741,38 @@ function MonsterHeroGame() {
   // 5つの遊びの分はダイスくんが書く(パーティのライフを使う・狙われない・倒されない)。それまでは何もしない
   const summonClassicAiCopy = (slotIdx, level, effMul = 1) => {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
+  };
+  // コピーの札の見方。dist は敵の間合い(コピーの立つマス pos との差で距離補正を数える)。元の子がいなければ null
+  // ★選び方は AUTO と同じ見方(作戦 autoSettings.strategy の優先 → 同じ優先なら与ダメの大きい順)。
+  //   段1は攻撃とガードの札(回復・強化・ほかのアシカは次の段・2026-10-27 部長)。
+  //   強さは「元の子の今の攻撃 × (コピーの攻撃 ÷ 元の子の攻撃)」。ガードはコピー自身を守る(丈夫さはコピーの値)
+  const tacticsAiCopyTools = (copy, dist) => {
+    if (!copy) return null;
+    const srcMon = slots[copy.srcSlot]; const srcUnit = tacticsBattleUnit(copy.srcSlot);
+    if (!srcMon || !srcUnit || !(srcUnit.atk > 0)) return null;
+    const distFrom = copy.srcSlot + ((Number.isInteger(dist) ? dist : enemyDist) - copy.pos);
+    const atkRate = copy.atk / srcUnit.atk;
+    const dmgOf = (c) => Math.floor(getDmg(c, copy.srcSlot, srcMon, 0, 0, false, distFrom) * atkRate);
+    const isGuardC = (c) => !!c && (c.type === 'guard' || c.type === 'weak_guard');
+    const usableC = (c) => !!c && (isGuardC(c) || dmgOf(c) > 0);
+    const strategy = autoSettings.strategy;
+    const prioC = (c) => strategy === 'offense' ? (c.type === 'unique' ? 0 : isAttackCard(c) ? 1 : isGuardC(c) ? 3 : 2)
+      : strategy === 'defense' ? (c.type === 'guard' ? 1 : isAttackCard(c) ? 3 : 2) : 0;
+    const scoreC = (c) => -prioC(c) * 1e7 + (isGuardC(c) ? 0 : dmgOf(c));
+    const costC = (c) => getCardGuts(c, copy.srcSlot);
+    return { dmgOf, isGuardC, usableC, scoreC, costC };
+  };
+  // そのターンに使う札を決めて持たせる(手札・次に使う札)。みんなの山札・捨て札の写しから選ぶ(減らさない)
+  const planTacticsAiCopy = (turn) => {
+    const copy = aiCopyRef.current;
+    if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido || !isTacticsMode(runMode) || !isTacticsAiCopyStanding(copy) || !isAiCopyOut(copy, turn)) return null;
+    const tools = tacticsAiCopyTools(copy, enemyDist);
+    if (!tools) return null;
+    const piles = handPileRef.current;
+    const pool = [...(piles.deck || []), ...(piles.graveyard || []), ...(piles.hand || [])].filter(c => c && c.type !== 'unique' && tools.usableC(c));
+    const uniq = copy.uniqueCard && tools.usableC(copy.uniqueCard) ? copy.uniqueCard : null;
+    const planned = planAiCopyTurn({ ...copy, uniqueCardUid: uniq ? uniq.uid : null }, { deck: uniq ? [...pool, uniq] : pool, score: tools.scoreC, costOf: tools.costC });
+    return commitAiCopy({ ...planned, plannedTurn: turn });
   };
   // 外す(ターン切れ・倒された・WAVE の終わり・20ターン経過)。タクティクスは写しを山札に入れていないので、山札は触らない
   const clearAiCopy = (why = '') => {
@@ -13041,12 +13073,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
           tookEnemyAttack=true;
           const targets=tacticsTargetsNow(intent,actingEnemyDist);
-          // ★AIコピー(5人目)が当たるか。当たればコピー自身の丈夫さで受ける(ガード・回避は無し)。0 になったら消える(倒れた数・全滅には入らない)
+          // ★AIコピー(5人目)が当たるか。当たればコピー自身の丈夫さとコピーが構えたガードで受ける(回避は無し・余ったガードは戻らない)。0 になったら消える(倒れた数・全滅には入らない)
           const copyNow=aiCopyRef.current;
           const copyHit=EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isAiCopyOut(copyNow,turnCount)&&tacticsIntentHitsAiCopy(intent,copyNow);
           if(copyHit){
             const rushN=intent.variant==='rush'?Math.max(1,Math.floor(Number(intent.hits)||1)):1;
-            const hitC=resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent,copyNow.srcSlot,copyNow.def),rushN,0,0);
+            const guardNowC=intent.variant==='pierce'?0:Math.max(0,Number(copyNow.guardNow)||0);
+            const hitC=resolveTacticsGuardedHit(getIncomingDamageBeforeTurnReduction(actingIntent,copyNow.srcSlot,copyNow.def),rushN,guardNowC,tacticsGuardHits(copyNow.guardCardsNow||0,rushN));
             const fdC=applyImmediateTakenReduction(hitC.taken);
             const afterC=damageTacticsAiCopy(copyNow,fdC);
             addPopup(`🤖 ${tacticsAiCopyName(copyNow)} −${fdC}`,'hero','text-sky-200 font-black text-lg drop-shadow-md');
@@ -13293,6 +13326,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ミーアのボルテージで、ターン終わりのライフ・ガッツ自動回復の率が上がる(2026-10-03。ボルテージ1段階ごとに足す。ライフ分は同日に追加)
     const regen=tacticsRegen(autoHpRecoveryRate+(isTacticsMode(runMode)?tacticsExPartyBuffNow().hpAdd:0),isTacticsMode(runMode)?baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd:soulAdjustedGutsRecoveryRate);
     let gutsRegen=0, autoHealVal=0;
+    // AIコピーのガッツも、ふつうの子と同じ率で戻す(出たときは上限まで・2026-10-27 部長。5つの遊びの分とそろえる)
+    if(isTacticsMode(runMode)&&EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isAiCopyOut(aiCopyRef.current,turnCount)){
+      const copyGutsRate=Math.max(0,baseGutsRecoveryRate+tacticsExPartyBuffNow().gutsAdd);
+      commitAiCopy(c=>c?{...c,guts:Math.min(c.maxGuts,(Number(c.guts)||0)+Math.floor((Number(c.maxGuts)||0)*copyGutsRate))}:c);
+    }
     if (regen) {
       currentHp=regen.total; autoHealVal=regen.hp; gutsRegen=regen.guts;
       // ★倒れている子が毎ターン戻るぶんは、その枠へ出す。合計の「自動再生 +◯」に混ぜると、
@@ -13447,7 +13485,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // AIコピー: 出ているときだけ、ターンの終わりに1つ数える。0 で消える(時間停止のターンは数えない)
     if(timeStopSlot==null&&aiCopyRef.current){
       const ticked=tickAiCopy({ aiCopy:aiCopyRef.current, zones:{ deck:[], hand:[], discard:[] } },turnCount);
-      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else commitAiCopy(ticked.aiCopy);
+      if(ticked.expired) clearAiCopy('消えた(時間切れ)'); else { commitAiCopy(ticked.aiCopy); planTacticsAiCopy(turnCount+1); }
     }
     const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn);
     // ★ジャック戦は RAID_JACK_TURNS(20)ターンで終わる(使い切っても戦闘は終了。全滅にはしない)。通常のタクティクスも20ターン
@@ -14350,31 +14388,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     popupSlotRef.current=null;
     // ===== AIコピーの1手(ソラシドのアシカ)。味方のカードのあと、敵へのダメージをまとめて当てる前 =====
-    // ★攻撃のカードだけを使う(ガード・回復などは使わない・暫定)。ガッツは毎ターン満タンから。
-    //   強さは「元の子の今の攻撃 × (コピーの攻撃 ÷ 元の子の攻撃)」、間合いはコピーの立つマス(pos)で数える。
+    // 使う札はターンの始めに決めてある(planTacticsAiCopy・枠の札に先に出す)。決まっていなければここで決める
     //   与ダメは attackHits に aiCopy の印で足す(敵のライフには入る・枠ごとの与ダメと元の子の🔥には入れない)
     {
-      const copy=aiCopyRef.current;
-      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy,turnCount)&&isTacticsAiCopyStanding(copy)){
-        const srcMon=slots[copy.srcSlot]; const srcUnit=tacticsBattleUnit(copy.srcSlot);
-        if(srcMon&&srcUnit&&srcUnit.atk>0){
-          const distFrom=copy.srcSlot+(attackDistance-copy.pos);
-          const atkRate=copy.atk/srcUnit.atk;
-          const dmgOf=(c)=>Math.floor(getDmg(c,copy.srcSlot,srcMon,0,0,false,distFrom)*atkRate);
-          const piles=handPileRef.current;
-          const pool=[...(piles.deck||[]),...(piles.graveyard||[])].filter(c=>c&&c.type!=='unique'&&dmgOf(c)>0);
-          const uniq=copy.uniqueCard&&dmgOf(copy.uniqueCard)>0?copy.uniqueCard:null;
-          const planned=planAiCopyTurn({...copy,guts:copy.maxGuts,uniqueCardUid:uniq?uniq.uid:null},
-            { deck:uniq?[...pool,uniq]:pool, score:dmgOf, costOf:(c)=>getCardGuts(c,copy.srcSlot) });
-          let dealtC=0, gainC=0;
-          (planned.picks||[]).forEach((card,k)=>{
-            const d=dmgOf(card); if(!(d>0)) return;
-            totalDmg+=d; dealtC+=d;
+      const copy0=aiCopyRef.current;
+      if(EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido&&isTacticsMode(runMode)&&isAiCopyOut(copy0,turnCount)&&isTacticsAiCopyStanding(copy0)){
+        const copy=copy0.plannedTurn===turnCount?copy0:(planTacticsAiCopy(turnCount)||copy0);
+        const tools=tacticsAiCopyTools(copy,attackDistance);
+        if(tools){
+          let dealtC=0, gainC=0, gutsC=Math.max(0,Number(copy.guts)||0), guardC=0, guardCards=0;
+          (copy.picks||[]).forEach((card,k)=>{
+            const cost=Math.max(0,Number(tools.costC(card))||0);
+            if(cost>gutsC) return; // 決めたあとにガッツが減っていれば使わない
+            gutsC-=cost;
             gainC+=tacticsHateOnFor(runMode)?tacticsHateCardGain(card,copy.srcMonsterId,k>0?0.5:1):0;
+            if(tools.isGuardC(card)){
+              const m=card.type==='weak_guard'?0.5:1, g=GUARD_EVOLUTION[guardLevel];
+              guardC+=Math.floor(g.flat*m+Math.max(0,Number(copy.def)||0)*g.mult*m); guardCards++;
+              pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}の${card.name||card.baseName||'ガード'}(ガード${guardC})`,'ally');
+              return;
+            }
+            const d=tools.dmgOf(card); if(!(d>0)) return;
+            totalDmg+=d; dealtC+=d;
             attackHits.push({dmg:d,isCrit:false,slotIdx:copy.srcSlot,aiCopy:true,isSpecial:card.type==='unique',skillName:`${tacticsAiCopyName(copy)}の${card.name||card.baseName||'攻撃'}`,isUnique:card.type==='unique',monId:card.type==='unique'?card.monId:undefined});
           });
-          commitAiCopy({...planned,hateGainNow:(Number(copy.hateGainNow)||0)+gainC,dealtNow:(Number(copy.dealtNow)||0)+dealtC});
-          if(!(planned.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
+          commitAiCopy(c=>c&&({...c,picks:[],nextCard:null,guts:gutsC,guardNow:guardC,guardCardsNow:guardCards,hateGainNow:(Number(c.hateGainNow)||0)+gainC,dealtNow:(Number(c.dealtNow)||0)+dealtC}));
+          if(!(copy.picks||[]).length) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}は様子を見ている`,'ally');
         }
       }
     }
