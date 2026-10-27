@@ -62,3 +62,18 @@ const planAiCopyTurn = (aiCopy, { deck = [], score = null, costOf = null, rng = 
   const picks = aiCopyPickCards(hand, { score, costOf, guts: aiCopy.guts, maxGuts: aiCopy.maxGuts, rng, level: aiCopy.level });
   return { ...aiCopy, hand, picks, nextCard: picks[0] || null };
 };
+
+// コピーが札を選ぶときの点(高いほど良い・2026-10-27 部長「AUTO の見方で選ぶ」)。タクティクスも5つの遊びもこれを通す。
+//   並びは AUTO(18-points-and-auto.jsx の chooseAutoTurn の priorityOf)と同じ:
+//     offense … 固有技0・攻撃1・ほか2・ガード/回復3 / defense … 回復0・ガード1・ほか2・攻撃3 / それ以外(random) … みな0
+//   同じ優先なら dmgOf(card) の大きい順(攻撃でない札は0)。isAttack・isGuard・dmgOf は呼ぶ側の見方を渡す
+const aiCopyAutoScore = (card, { strategy = 'random', isAttack = null, isGuard = null, dmgOf = null } = {}) => {
+  if (!card) return -Infinity;
+  const attack = typeof isAttack === 'function' ? !!isAttack(card) : (card.type === 'atk' || card.type === 'unique');
+  const guard = typeof isGuard === 'function' ? !!isGuard(card) : (card.type === 'guard' || card.type === 'weak_guard');
+  const prio = strategy === 'offense' ? (card.type === 'unique' ? 0 : attack ? 1 : (guard || card.type === 'heal') ? 3 : 2)
+    : strategy === 'defense' ? (card.type === 'heal' ? 0 : card.type === 'guard' ? 1 : attack ? 3 : 2)
+    : 0;
+  const dmg = attack && typeof dmgOf === 'function' ? Math.max(0, aiCopySafeNum(dmgOf(card))) : 0;
+  return -prio * 1e7 + dmg;
+};

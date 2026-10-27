@@ -56,7 +56,8 @@ check('アシストカードを挟んでも攻撃の順番は変わらない', h
 // 画面側の結線
 check('processTurnで2枚目以降を判定している',
   has('const halveCounter=makeHalveCounter();')
-    && has('const halved=halveCounter.take(card,entry.slotIdx);')
+    // AIコピーの札は2枚目に数えない(entry.aiCopy・2026-10-27)
+    && (has('const halved=halveCounter.take(card,entry.slotIdx);') || has('const halved=entry.aiCopy?false:halveCounter.take(card,entry.slotIdx);'))
     && has("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);"));
 // アシストカードを枚数に数えないのは器(makeCardHalveCounter)の中。上の halveFlags が実際に確かめる
 check('数え方は1か所(cardHalveGroup)で決めている',
