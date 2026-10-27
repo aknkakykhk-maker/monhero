@@ -41,6 +41,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-10-27 09:39", type:'update', group:'masu', title:'染色の画面を見やすく作り直しました', status:'new',
+    items:[
+      '部位ごとのタブで切り替え、色のボタンを大きくしています',
+      '横向きでは左に全身、右に色が並びます',
+    ],
+  },
+  {
     date: "2026-10-27 09:28", type:'update', group:'cardBattle', title:'記録で、助手ごとの勝ち負けや、よく使う技を見られるようになりました', status:'new',
     items:[
       'トップの「記録」が「全体」「助手ごと」「マルチ」に分かれました',
@@ -152,8 +159,8 @@ const CHANGELOG = [
       '染め方：HOMEの「M/B管理」→「マスモン一覧(バトル)」で染めたい子を選び、「育成・カスタム」の「🎨 染色」を押します(マーケットの「染色もどき」を1つ使います)。①〜⑤の部位ごとに色と濃さを選び、「この色に染める」で決まります。',
     ],
     gallery: [
-      { caption:'キュービ 染色イメージ「月夜ぎつね」(①髪 ②しっぽ・耳の毛 ③服の白・胸元の毛・首の襟 ④胸の紫・下駄・提灯の紫の房 ⑤手袋・脚)', image:'images/events/kyubi-dye-preview.jpg?v=8703a8f86ce2' },
-      { caption:'オリヒメ 染色イメージ「桜」(①髪・耳 ②しっぽ・羽衣 ③上の着物・帯 ④外の羽織 ⑤手袋・靴下)', image:'images/events/orihime-dye-preview.jpg?v=74577cf2f16a' },
+      { caption:'キュービ 染色イメージ「月夜ぎつね」(①髪 ②しっぽ・耳の毛 ③服の白・胸元の毛・首の襟 ④胸の紫・下駄・提灯の紫の房 ⑤手袋・脚)', image:'images/events/kyubi-dye-preview.jpg?v=0db8cc51559e' },
+      { caption:'オリヒメ 染色イメージ「桜」(①髪・耳 ②しっぽ・羽衣 ③上の着物・帯 ④外の羽織 ⑤手袋・靴下)', image:'images/events/orihime-dye-preview.jpg?v=fee8c692d78b' },
     ],
   },
   {

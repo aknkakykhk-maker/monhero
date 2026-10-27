@@ -15,6 +15,30 @@
 - 2026-10-27 はじめての人には開催中のイベントのお話だけを流す(昔のお話4本は見た扱い・ログインボーナスの窓と重ねない)。見張り `tools/boot/new-player-stories-browser-check.js` … #3981
 - 2026-10-27 更新履歴の題の頭から遊びの名前を外す(240件。元の題は `idTitle` に残して既読を保つ)。見張り `tools/changelog/title-prefix-check.js` … #3996
 - 2026-10-27 検査: ムーの札の置き方が、目印 `data-battle-float-right` が足されて読めなくなっていた … #3996
+- 2026-10-27 お話の窓: 横向きの低い画面でも「次へ」「スキップ」がいつも画面の中に出るように。見張り `tools/boot/story-sheet-buttons-browser-check.js` … #4023
+- 2026-10-27 はじめて遊ぶ人のお話は、続けて流すのを1本まで(新しいキー `mh_story_one_at_a_time_v1`) … #4029
+
+## 全部の検査の見回り(2026-10-27 朝・main 3ce26097 ごろ)
+
+752本のうち 671本を回した(598本 → 2時間の上限で止まる → 残り145本のうち前半73本)。後半の72本は、社長の「動く作業を絞る」で回していない
+(残りの一覧は half2: 752本から回した物を除いた後ろ半分。`node tools/run-checks.js --list` から作れる)。
+main で NG だった物(各部へはクラフトくん経由で回した):
+
+| 検査 | 落ち方 | 場所 |
+| --- | --- | --- |
+| viewport-height-check.js | オプションの目次ボタンが scrollIntoView を使う(84-screen-card-battle.jsx) | カード部 0f04d7f6 |
+| card/card-battle-browser-check.js | locator.click が30秒で時間切れ | カード部 |
+| card/card-battle-settings-browser-check.js | 技を使う前の確認の窓が出ない | カード部 |
+| card/card-bind-browser-check.js | 技で相手を狙っても名指しの窓が開かない | カード部 |
+| battle/stack-marks-overlap-browser-check.js | 横向きでマーク4つと7桁の予測ダメージが重なる | バトル |
+| battle/unit-detail-browser-check.js | 途中で目印が見つからない(getBoundingClientRect of null) | バトル |
+| mode/difficulty-item-check.js | 「使う」から対象選択へ進めない(19項目中18 OK) | バトル・アイテム |
+| mode/rhythm-gpu-band-check.js | (前半73本で NG・369秒) | ビート部 |
+| mode/rhythm-hit-effect-check.js | (前半73本で NG) | ビート部 |
+| mode/rhythm-judgment-line-height-check.js | (前半73本で NG) | ビート部 |
+| masu/soul-rank-step2-check.js | 魂格画面の吹き出しが専用の scene になったのに検査が古い | 直した … #4010 |
+
+- 見回りの途中で、検査が `tools/mode/authoring/monster-hero-theme-v3-audio.json` を書き換えていた(中身の差は0行・ファイルの形だけ)。元に戻した
 
 ## 答え待ち
 
