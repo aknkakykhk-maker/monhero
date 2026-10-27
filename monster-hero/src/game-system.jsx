@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cc6693ba4892f003
+// generated-sha256: 790cc9ab08cd5e16
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57273,6 +57273,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
+  sorashido_angry: [384, 512, 0, 0, 384, 512],
+  sorashido_crying: [384, 512, 0, 0, 384, 512],
+  sorashido_excited: [384, 512, 0, 3, 384, 509],
+  sorashido_happy: [384, 512, 0, 0, 384, 512],
+  sorashido_normal: [384, 512, 0, 0, 384, 512],
+  sorashido_surprise: [384, 512, 0, 2, 384, 510],
+  sorashido_troubled: [384, 512, 0, 0, 384, 512],
+  sorashido_wink: [384, 512, 0, 2, 384, 510],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
