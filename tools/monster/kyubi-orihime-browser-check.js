@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// キュービ・オリヒメ(公開前・下書き)を、デバッグのバトルモードで勇者モンにして、実際のタクティクスプロで戦わせて確かめる。
+// キュービ・オリヒメを、デバッグのバトルモードで勇者モンにして、実際のタクティクスプロで戦わせて確かめる。
 //
 //   node tools/monster/kyubi-orihime-browser-check.js        (OUT=<フォルダ> を付けると写真も撮る)
 //
 // 【なぜ道具にするか】2体の勇者特性・EX・固有技の効果は、本体の分岐へ足してある(#4065 #4075 #4090 #4099 #4102)。
-// 下書きのあいだは通常プレイに出ないので、壊れても誰も気づかない。デバッグの「試す用の写し」で実際に戦わせて、
+// 下書きのあいだはデバッグの「試す用の写し」で、2026-10-27 の正式公開からは持っている子として実際に戦わせて、
 // 九尾幻灯・煉獄・星合の刻・霊魂が出て、実行時エラーが出ないことを見る。
 // 進め方(難易度→勇者モン→配置→アシスト→バトル)は tools/mode/tactics-ex-skills-browser-check.js から借りた。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
@@ -64,8 +64,8 @@ const check = (name, ok, detail = '') => {
       // HELL の公開(#2931)で、HOME に来た人へ1回だけお話と遊び方の説明が出る。画面全体を覆う窓なので、ほかの紹介と同じく見たことにしてから始める
       //   (2026-10-13: 下準備に無く、説明が開いたままバトルへ進んで、説明の動画が枠を押す邪魔をしていた。プレイヤーは閉じないと進めないので起きない)
       localStorage.setItem('mh_rhythm_hell_story_seen_v1', JSON.stringify(true));
-      // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
-      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora','Plant']));
+      // 剣士モッチー(円盤石で解放するレア)と、キュービ・オリヒメ(2026-10-27 正式公開。円盤石で解放)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni','Pandora','Plant','Kyubi','Orihime']));
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     // 通信を差し替えたので、ゲーム側の「自動操作では書き込まない」止めを外す(26-supabase.jsx)
