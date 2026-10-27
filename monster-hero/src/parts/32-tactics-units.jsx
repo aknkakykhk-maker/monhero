@@ -635,7 +635,8 @@ const TACTICS_HATE = {
   action: { atk: 2, unique: 4, dmgShare: 15, heal: 30, buff: 5, debuff: 8, guard: 5, taunt: 40, cover: 0, ex: 10 },
   exByEffect: { coverAll: 60, partyGuard: 20, lifeSpring: 20, cookieBox: 15, partyBoost: 15, present: 10 },
   // 助手のカード(id)がどの行動か
-  assist: { atsu: 'taunt', kyuko: 'cover', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
+  // sorashido はソラシドの自動化(2026-10-27 社長「強めると同じ5」)
+  assist: { atsu: 'taunt', kyuko: 'cover', sorashido: 'buff', mua: 'heal', momosuke: 'heal', meloso: 'heal', oryo: 'buff', dra: 'buff', cadmium: 'buff', myaru: 'buff', kiki: 'buff', poltz: 'buff' },
   // 回復の量(ライフの回復率 + ガッツの回復率 × 0.5)。段 0〜2
   healAmount: { mua: [0.5, 1.05, 1.35], momosuke: [0.25, 1.05, 1.35], meloso: [0.45, 0.45, 0.45] },
   // 子ごとの上書き(タイプの既定値より強く/弱くしたい子だけ)。mult … 増え方の倍率 / add … 行動ごとの上乗せ / always … 行動のたびの上乗せ
