@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 79b8f78ddc0a3e7a
+// source-sha256: 3f4c196fbef109db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -24393,7 +24393,10 @@ const TacticsExCutin = ({
     }
   }, cutin.exName), React.createElement("div", {
     className: "ex-cutin__sub"
-  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''), cutin.note ? React.createElement("div", {
+  }, (() => {
+    const t = `${cutin.monName}${cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}`;
+    return typeof jaWrap === 'function' ? jaWrap(t) : t;
+  })()), cutin.note ? React.createElement("div", {
     "data-ex-cutin-note": true,
     className: "ex-cutin__note"
   }, cutin.note) : null)), React.createElement("div", {
@@ -138276,8 +138279,18 @@ function MonsterHeroGame() {
       }, cardIconNode(c.icon, 32, c.id)), React.createElement("div", {
         className: "w-full text-center flex flex-col justify-end gap-0.5"
       }, React.createElement("div", {
-        className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5"
-      }, c.name), React.createElement("div", {
+        className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 [container-type:inline-size]",
+        style: JA_LABEL_STYLE
+      }, (() => {
+        const pts = jaWrapPoints(c.name);
+        const longest = Math.max(1, ...String(typeof pts === 'string' ? pts : c.name).split('\u200B').map(t => [...t].length));
+        return React.createElement("span", {
+          className: "block w-full",
+          style: {
+            fontSize: `min(9px, calc(100cqw / ${longest + 0.3}))`
+          }
+        }, jaWrap(c.name));
+      })()), React.createElement("div", {
         className: "text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"
       }, React.createElement(Zap, {
         size: 9
@@ -138287,26 +138300,17 @@ function MonsterHeroGame() {
       }, React.createElement("div", {
         className: "text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2"
       }, "手札 (", hand.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, hand.map(c => renderCard(c, false)))), deck.length > 0 && React.createElement("div", {
         className: "mb-4"
       }, React.createElement("div", {
         className: "text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2"
       }, "山札 (", deck.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, deck.map(c => renderCard(c, false)))), graveyard.length > 0 && React.createElement("div", null, React.createElement("div", {
         className: "text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"
       }, "捨て札 (", graveyard.length, ")"), React.createElement("div", {
-        className: "grid gap-1.5",
-        style: {
-          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
-        }
+        className: "grid gap-1.5 grid-cols-5 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-10"
       }, graveyard.map(c => renderCard(c, true)))));
     })())), skillPicker && (() => {
       const card = hand[skillPicker.handIndex];
@@ -138642,9 +138646,9 @@ function MonsterHeroGame() {
       }, "戻る")), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8"
+        className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8 [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[200px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:pt-2"
       }, scanEnemy.imgUrl ? React.createElement("div", {
-        className: `${isMooBoss(scanEnemy.id) ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`
+        className: `${isMooBoss(scanEnemy.id) ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:justify-self-center [@media(orientation:landscape)_and_(max-height:520px)]:h-[150px] [@media(orientation:landscape)_and_(max-height:520px)]:w-[180px] flex shrink-0 items-center justify-center overflow-hidden`
       }, React.createElement("img", {
         src: scanEnemy.imgUrl,
         alt: scanEnemy.name,
@@ -138656,9 +138660,9 @@ function MonsterHeroGame() {
         },
         className: "my-4"
       }, scanEnemy.emoji), React.createElement("h4", {
-        className: "text-2xl font-black italic mb-4 uppercase shrink-0"
+        className: "text-2xl font-black italic mb-4 uppercase shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:text-center [@media(orientation:landscape)_and_(max-height:520px)]:text-xl"
       }, scanEnemy.name), React.createElement("section", {
-        className: "w-full space-y-3"
+        className: "w-full space-y-3 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3"
       }, React.createElement("div", {
         className: "grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"
       }, React.createElement("div", null, React.createElement("div", {
@@ -138727,7 +138731,7 @@ function MonsterHeroGame() {
       onClick: () => setShowHeroInfo(false),
       className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
     }, "戻る")), React.createElement("div", {
-      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll",
+      className: "flex-1 min-h-0 flex flex-col items-center text-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-[180px_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-6 [@media(orientation:landscape)_and_(max-height:520px)]:items-start [@media(orientation:landscape)_and_(max-height:520px)]:content-start",
       style: {
         justifyContent: 'safe center'
       }
@@ -138740,16 +138744,16 @@ function MonsterHeroGame() {
         width: '140px',
         height: '140px'
       },
-      className: "mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
+      className: "mx-auto mb-6 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:mb-2 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
     }) : React.createElement("div", {
       style: {
         fontSize: '112px'
       },
       className: "mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"
     }, mainHero.emoji), React.createElement("h4", {
-      className: "text-2xl font-black italic mb-6 uppercase"
+      className: "text-2xl font-black italic mb-6 uppercase [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-xl"
     }, mainHero.name), React.createElement("div", {
-      className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"
+      className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:520px)]:max-w-none [@media(orientation:landscape)_and_(max-height:520px)]:p-4"
     }, isTacticsMode(runMode) && React.createElement("div", {
       "data-tactics-status": true,
       className: "space-y-1.5 text-left"
@@ -141902,6 +141906,8 @@ const createAnimationStyle = () => {
     .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
     .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
     .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    /* 緊急回復の文「味方のライフとガッツを30%ずつ回復」は 320 で「味方のライフとガッツ…」と切れた。2行まで折る(2026-10-27 バトル中の窓の見回り) */
+    .ex-cutin--emergency .ex-cutin__sub { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; text-wrap:wrap; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
     .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
     .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }
