@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3fe5cb5198cdb6aa
+// source-sha256: 07b5a342f76715b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100388,7 +100388,7 @@ const cardPvpVerify = (db, {
 const cardPvpInt = (v, max) => Number.isInteger(v) && v >= 0 && v <= max ? v : null;
 const cardPvpCleanAct = raw => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray'];
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray', 'backToAttack'];
   if (!types.includes(raw.type)) return null;
   const act = {
     type: raw.type
@@ -100403,7 +100403,7 @@ const cardPvpCleanAct = raw => {
     }
     return act;
   }
-  if (raw.type === 'reveal') return act;
+  if (raw.type === 'reveal' || raw.type === 'backToAttack') return act;
   if (raw.type === 'choose') {
     act.pick = cardPvpInt(raw.pick, 60);
     return act.pick === null ? null : act;
@@ -102671,6 +102671,13 @@ const CardPvpLobby = ({
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
   const t = setTimeout(() => {
+    if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({
+      type: 'backToAttack'
+    })) {
+      window.__mhCardPvpAutoBack = Number(window.__mhCardPvpAutoBack) - 1;
+      window.__mhCardPvpBackDone = (Number(window.__mhCardPvpBackDone) || 0) + 1;
+      return;
+    }
     const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
     if (act && step(act)) return;
     step(cardPvpTimeoutAct(st));
@@ -103599,6 +103606,7 @@ const cardReplayCaption = (states, i) => {
 };
 const cardReplayActText = (type, name) => {
   if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'backToAttack') return `${name}は攻撃に戻った`;
   if (type === 'pass') return `${name}は守らなかった`;
   if (type === 'reveal') return `${name}は手札を見せた`;
   if (type === 'pray') return `${name}はおいのりをした`;

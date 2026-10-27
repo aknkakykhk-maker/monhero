@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dbcd4c75f5008101
+// generated-sha256: d4dcd04c0f38cc9b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60549,7 +60549,8 @@ const cardPvpVerify = (db, { myDeck, mySeed, foeDeck, foeSeed, first, names, his
 const cardPvpInt = (v, max) => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
 const cardPvpCleanAct = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
-  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray'];
+  // backToAttack … ガッツの段から攻撃の段へ戻る(項目なし。2026-10-27 社長。マルチ・観戦・見返しがこの掃除を通る)
+  const types = ['setupGuts', 'guts', 'attack', 'breeder', 'guard', 'pass', 'endAttacks', 'discard', 'reveal', 'choose', 'pray', 'backToAttack'];
   if (!types.includes(raw.type)) return null;
   const act = { type: raw.type };
   if (raw.type === 'guard') {
@@ -60557,7 +60558,7 @@ const cardPvpCleanAct = (raw) => {
     if (raw.to !== undefined) { act.to = cardPvpInt(raw.to, 2); if (act.to === null) return null; } // 隠れるの移す先
     return act;
   }
-  if (raw.type === 'reveal') return act;
+  if (raw.type === 'reveal' || raw.type === 'backToAttack') return act; // 項目なしの手(余計な項目は捨てる)
   // 選ぶ段: 手札か捨て札の番号(捨て札は50枚を超えない)
   if (raw.type === 'choose') { act.pick = cardPvpInt(raw.pick, 60); return act.pick === null ? null : act; }
   if (Array.isArray(raw.hand)) { act.hand = raw.hand.slice(0, 20).map((i) => cardPvpInt(i, 20)); if (act.hand.some((i) => i === null)) return null; }
@@ -61682,6 +61683,10 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
 const useCardPvpAuto = (db, pvp, st, step, paused) => useEffect(() => {
   if (!pvp || paused || typeof window === 'undefined' || !window.__mhCardPvpAuto || st.winner !== null || cardPvpDecider(st) !== 0) return undefined;
   const t = setTimeout(() => {
+    // 検査のときだけ: ガッツの段で、window.__mhCardPvpAutoBack の回数だけ「攻撃に戻る」を打つ(打てた回数を __mhCardPvpBackDone に数える)
+    if (st.phase === 'guts' && !st.pending && Number(window.__mhCardPvpAutoBack) > 0 && step({ type: 'backToAttack' })) {
+      window.__mhCardPvpAutoBack = Number(window.__mhCardPvpAutoBack) - 1; window.__mhCardPvpBackDone = (Number(window.__mhCardPvpBackDone) || 0) + 1; return;
+    }
     const act = cardAiChooseAction(db, st, cardAiPolicy('kyuko', 'easy'));
     if (act && step(act)) return;
     step(cardPvpTimeoutAct(st));
@@ -62310,6 +62315,7 @@ const cardReplayCaption = (states, i) => {
 // ログに一言が無い手(攻撃おわり・ガッツにしない・守らない など)の文
 const cardReplayActText = (type, name) => {
   if (type === 'endAttacks') return `${name}は攻撃を終えた`;
+  if (type === 'backToAttack') return `${name}は攻撃に戻った`;
   if (type === 'pass') return `${name}は守らなかった`;
   if (type === 'reveal') return `${name}は手札を見せた`;
   if (type === 'pray') return `${name}はおいのりをした`;
