@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b31411ab0bf5370
+// source-sha256: 0b4cab18a3f721dc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -72880,10 +72880,11 @@ function BattleScreen({
     const tCopyPhase = aiCopyViewPhase(tCopy, copyStanding ? 'idle' : 'appear');
     const tCopyOut = copyStanding || tCopyPhase === 'vanish';
     const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
-    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !s && !tCopy.stacked && React.createElement("div", {
+    const tCopyOnMon = !!s || !!(tCopy && tCopy.stacked);
+    const copyChip = tacticsNewLayout && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-art": i,
       "data-ai-copy-phase": tCopyPhase,
-      className: "absolute inset-0 z-[24] flex items-center justify-center pointer-events-none"
+      className: "absolute left-1 top-[26px] bottom-[16px] z-[24] flex w-[58px] items-center justify-center pointer-events-none"
     }, React.createElement(SorashidoCopyFx, {
       phase: tCopyPhase
     }, React.createElement(DyedMonsterImage, {
@@ -72896,9 +72897,9 @@ function BattleScreen({
         height: '52px'
       },
       className: "object-contain drop-shadow-md"
-    }))), React.createElement("div", {
+    }))), !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-next": i,
-      className: "absolute left-1 right-1 top-[34px] z-[64] flex justify-center pointer-events-none"
+      className: `absolute ${copySrc ? 'left-[62px]' : 'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none`
     }, React.createElement(SorashidoNextCardBadge, {
       card: tCopyOut ? tCopy.nextCard : null,
       turnsLeft: tCopy.turnsLeft
@@ -72911,12 +72912,27 @@ function BattleScreen({
         e.stopPropagation();
         setCopyHandOpen(true);
       } : undefined,
-      className: `absolute left-1 bottom-1 z-[64] flex max-w-[calc(100%-8px)] items-center gap-0.5 rounded bg-sky-900/85 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter' : 'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+    }, React.createElement("span", {
+      className: "flex max-w-full min-w-0 items-center gap-0.5"
     }, React.createElement("span", {
       className: "min-w-0 truncate"
-    }, "🤖", tCopy.stacked ? '重なる ' : '', tCopyOut ? `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
-      className: "shrink-0 tabular-nums text-rose-200"
-    }, "狙", chancesNow.copy, "%"))) : null;
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'max-[359px]:hidden' : ''
+    }, "🤖"), tCopyOut ? tCopyOnMon ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "text-rose-300"
+    }, "♥"), React.createElement("span", {
+      className: "tabular-nums"
+    }, tCopy.hp)) : `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+      className: "shrink-0 tabular-nums tracking-tighter text-rose-200"
+    }, React.createElement("span", {
+      className: tCopyOnMon ? 'text-[6px] opacity-80' : ''
+    }, "狙"), chancesNow.copy, "%")), tCopyOnMon && tCopyOut && React.createElement("span", {
+      "data-tactics-ai-copy-next": i,
+      className: "block max-w-full min-w-0 truncate text-emerald-200"
+    }, tCopy.nextCard ? tCopy.nextCard.name || tCopy.nextCard.baseName || '考え中' : '考え中', React.createElement("span", {
+      className: "tabular-nums text-sky-200/90"
+    }, " あと", tCopy.turnsLeft)))) : null;
     const hateFlame = Number.isInteger(hatePct) ? React.createElement("span", {
       "data-tactics-hate": i,
       "data-tactics-hate-pct": hatePct,
