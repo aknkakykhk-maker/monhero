@@ -385,7 +385,14 @@ function RhythmBuddyScoreChart({ recent, songName }) {
 }
 
 // 1体の詳しい画面
-function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
+// 「呼び方」の欄は、型(「◯◯ちゃん」)ではなく持ち主の名前を入れて出す(「テストちゃん」。2026-10-27 ダメダシ e01)。名前が無いときは型のまま
+const rhythmBuddyCallText = (call, name) => {
+  if (!call) return '';
+  if (call.call) return call.call;
+  const n = String(name || '').trim();
+  return n && typeof call.suf === 'string' ? `${n}${call.suf}` : call.label;
+};
+function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = '' }) {
   const m = rhythmBuddyNormalizeMon(mon);
   const info = rhythmBuddyLevelInfo(m.exp);
   const mood = rhythmBuddyMood(masu.id, dayKey, m);
@@ -404,7 +411,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack }) {
     // 性別は決まっている種(ウンディーネ種・ピクシー種)だけ出す(2026-10-16)
     ...(persona.gender === 'female' ? [['gender', '性別', '女の子']] : []),
     ['self', '一人称', persona.self],
-    ['call', '呼び方', persona.call.label],
+    ['call', '呼び方', rhythmBuddyCallText(persona.call, ownerName)],
     ['quirk', '口ぐせ', persona.quirk.label],
     ['food', '好物', persona.food],
     ['hobby', '趣味', persona.hobby],
@@ -748,7 +755,7 @@ function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy 
 }
 
 // 部屋の中の「マスモンを呼ぶ」(下から出る選択の画面)
-function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [] }) {
+function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets = 0, pick, onClose, calledIds = [], breederName = '' }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -775,14 +782,15 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
           <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
         </header>
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="mb-1 text-slate-200" />
-        <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400">
-          マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日{RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。
+        {/* 言葉の切れ目で折る(320幅で「呼べま／す」「あ／と」と折れていた・2026-10-26) */}
+        <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
+          {jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)}
         </p>
         </div>
         <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {detail
-            ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
+            ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} ownerName={breederName} onBack={() => setDetailId('')} />
             : masuPicker
               ? <div data-rhythm-buddy-picker>
                 {masuPicker.renderSortFilterBar({ singleType: true })}
@@ -832,7 +840,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
 }
 
 // 画面: マスモン一覧(モンヒロビート)。M/B管理と、モンヒロビートのモードえらびから開く
-function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLabel = 'M/B管理へ戻る' }) {
+function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLabel = 'M/B管理へ戻る', breederName = '' }) {
   const state = useRhythmBuddyState();
   const dayKey = useRhythmBuddyDayKey();
   const [detailId, setDetailId] = React.useState('');
@@ -855,7 +863,7 @@ function MasuBeatScreen({ masuMons = [], songs = [], tickets = 0, onBack, backLa
       {!detail && <div className="mb-2 shrink-0">{listControls.bar}</div>}
       <div className={`w-full ${SCREEN_LIST_CLASS}`}>
         {detail
-          ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} onBack={() => setDetailId('')} />
+          ? <RhythmBuddyDetail masu={detail} mon={state.mons[detail.id]} dayKey={dayKey} songName={songName} ownerName={breederName} onBack={() => setDetailId('')} />
           : <RhythmBuddyList masuMons={masuMons} state={state} dayKey={dayKey} onOpen={setDetailId} settings={listControls.settings} />}
       </div>
       {listControls.sheet}
