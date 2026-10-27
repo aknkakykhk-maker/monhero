@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d64f628efcc09e5c
+// source-sha256: 5cd5fe50c99dca0f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -58606,6 +58606,8 @@ function MasuDonationScreen({
   })), React.createElement("p", {
     className: "shrink-0 mb-2 rounded-xl border border-violet-500/60 bg-violet-950/40 px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "寄付一覧の並べ替え",
@@ -58634,7 +58636,7 @@ function MasuDonationScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  })), donationError && React.createElement("div", {
+  }))), donationError && React.createElement("div", {
     className: "shrink-0 mb-2 rounded-xl border border-amber-500/60 bg-amber-950/40 p-2 text-[10px] font-bold text-amber-200"
   }, React.createElement(AlertCircle, {
     size: 12,
@@ -62555,6 +62557,8 @@ function MasuFusionScreen({
     });
   };
   const fusionSortBar = React.createElement("div", {
+    className: "shrink-0"
+  }, React.createElement("div", {
     className: "flex items-center gap-1.5 mb-2 shrink-0 overflow-x-auto mh-scroll pb-0.5",
     role: "group",
     "aria-label": "合体一覧の並べ替え",
@@ -62582,7 +62586,7 @@ function MasuFusionScreen({
   }), React.createElement("span", {
     "aria-hidden": "true",
     className: "shrink-0 w-3"
-  }));
+  })));
   const fusionGuide = renderScreenNote('fusion', '主が残り、副は消えます。副の絆経験値はそのまま主へ加わります。', ['上がった絆レベルの数だけ、主が強化ポイントを獲得します。', '主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます（副の強化は引き継がれません）。', '技を引き継がない合体は0ダイヤ、引き継ぐ合体は3000ダイヤです。', '固有技の引き継ぎは、副が絆Lv.30以上のときだけ選べます。条件を満たすと副の固有技が主に記録されます。']);
   if (fusionStep === 'main') {
     return React.createElement("div", {
@@ -64142,18 +64146,20 @@ function PickHeroAllyScreen({
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
     }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
       "data-pick-term-note": true,
-      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+      className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。この子の勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
       className: "w-10"
     })), pickMode === 'ally' && React.createElement("div", {
-      className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
+      className: "-mt-1 mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 flex shrink-0 flex-col items-center gap-1.5"
     }, React.createElement("span", {
       className: "mh-ph-plate"
-    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement(PhaseSteps, {
+    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "新しい仲間が合流"), phasePlan && React.createElement("div", {
+      className: "[@media(orientation:landscape)_and_(max-height:520px)]:hidden"
+    }, React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "ally",
       nextWave: wave > 0 ? wave + 1 : null
-    })), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
+    }))), !(pickMode === 'hero' && isProMode(runMode) && !battleTutorial) && React.createElement("div", {
       className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}${pickMode === 'hero' && !battleTutorial ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, React.createElement(AssistantBubble, {
       key: pickMode,
@@ -64743,7 +64749,10 @@ function PickSlotScreen({
   heroStyleDef = null,
   heroStyle = null,
   onHeroStyle = null,
-  perSlotApt = false
+  perSlotApt = false,
+  partnerOffer = null,
+  partnerPick = false,
+  onPartnerPick = null
 }) {
   const mon = currentPickingMon;
   const pickedStyle = heroStyleDef ? heroStyleDef.styles.some(st => st.id === heroStyle) ? heroStyle : heroStyleDef.defaultStyle : null;
@@ -64828,7 +64837,18 @@ function PickSlotScreen({
       className: `min-h-[40px] rounded-lg border-2 px-1 text-[11px] font-black active:scale-95 ${pickedStyle === st.id ? 'border-fuchsia-300 bg-fuchsia-700 text-white' : 'border-white/20 bg-black/40 text-slate-300'}`
     }, st.label))), React.createElement("div", {
       className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
-    }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), React.createElement("div", {
+    }, (heroStyleDef.styles.find(st => st.id === pickedStyle) || {}).desc)), partnerOffer && React.createElement("div", {
+      "data-orihime-partner": true,
+      className: "mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5 text-left"
+    }, React.createElement("button", {
+      type: "button",
+      "data-orihime-partner-pick": true,
+      "aria-pressed": !!partnerPick,
+      onClick: () => onPartnerPick && onPartnerPick(!partnerPick),
+      className: `min-h-[44px] w-full rounded-lg border-2 px-2 text-[12px] font-black active:scale-95 ${partnerPick ? 'border-sky-300 bg-sky-700 text-white' : 'border-white/20 bg-black/40 text-slate-200'}`
+    }, "🎐 ", partnerPick ? '相方にする(このまま置く)' : 'この子を相方にする'), React.createElement("div", {
+      className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
+    }, partnerOffer.heroName, "の「天河の契り」の相方になります。相方は1体だけで、置いた距離とのへだたりで効き目が変わります。")), React.createElement("div", {
       className: "mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2"
     }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいる子のぶんだけが、その子の攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、その子の適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
       className: "grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll"
@@ -80730,8 +80750,9 @@ function RhythmMultiScreen({
     notice: React.createElement("div", {
       className: "flex items-center gap-1.5"
     }, React.createElement("p", {
-      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
-    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。", !room.deadline && 'いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。'), isHost && selectTimeButton('min-[481px]:hidden', true)),
+      className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {
@@ -104738,6 +104759,7 @@ function MonsterHeroGame() {
     resetKusabi();
     resetDreamPain();
     resetKyubi();
+    resetOrihime();
   };
   const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
   const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
@@ -105046,6 +105068,117 @@ function MonsterHeroGame() {
       addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
     }
   };
+  const orihimeRef = useRef({
+    partner: {},
+    ouse: {}
+  });
+  const [orihimeView, setOrihimeView] = useState(orihimeRef.current);
+  const writeOrihime = (part, key, value) => {
+    if (!key) return;
+    const next = {
+      ...orihimeRef.current,
+      [part]: {
+        ...orihimeRef.current[part],
+        [key]: value
+      }
+    };
+    orihimeRef.current = next;
+    setOrihimeView(next);
+  };
+  const resetOrihime = () => {
+    orihimeRef.current = {
+      partner: {},
+      ouse: {}
+    };
+    orihimeTurnKindsRef.current = {};
+    setOrihimeView(orihimeRef.current);
+  };
+  const setOrihimePartner = (selfSlot, partnerSlot) => {
+    if (!Number.isInteger(partnerSlot)) return;
+    writeOrihime('partner', isTacticsMode(runMode) ? String(selfSlot) : 'party', partnerSlot);
+  };
+  const orihimeHasPartner = () => Number.isInteger(orihimeRef.current.partner[isTacticsMode(runMode) ? String(initialBattleDistanceRef.current) : 'party']);
+  const [orihimePartnerPick, setOrihimePartnerPick] = useState(false);
+  const tacticsUnitUp = slotIdx => {
+    const u = tacticsUnitsRef.current[slotIdx];
+    return !!u && Number(u.hp) > 0;
+  };
+  const orihimeBondAt = key => {
+    const partnerSlot = orihimeRef.current.partner[key];
+    if (!Number.isInteger(partnerSlot)) return null;
+    const tactics = isTacticsMode(runMode);
+    const selfSlot = tactics ? Number(key) : initialBattleDistanceRef.current;
+    const selfId = tactics ? tacticsUnitsRef.current[selfSlot]?.id : mainHero?.id;
+    if (selfId !== ORIHIME_MONSTER_ID) return null;
+    const diff = orihimeDiffOf(selfSlot, partnerSlot);
+    const up = tactics ? tacticsUnitUp(selfSlot) && tacticsUnitUp(partnerSlot) : !!slots[partnerSlot];
+    const ouse = ouseOf(orihimeRef.current.ouse[key], diff);
+    return {
+      key,
+      selfSlot,
+      partnerSlot,
+      diff,
+      ouse,
+      up,
+      effect: orihimeBondEffectOf(diff, ouse, up)
+    };
+  };
+  const orihimeBonds = () => (isTacticsMode(runMode) ? Object.keys(orihimeRef.current.partner) : ['party']).map(orihimeBondAt).filter(Boolean);
+  const orihimeBondOfSlot = slotIdx => orihimeBonds().find(b => b.selfSlot === slotIdx || b.partnerSlot === slotIdx) || null;
+  const orihimeDmgMultAt = slotIdx => {
+    const b = Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null;
+    return b ? 1 + b.effect.dmgAdd : 1;
+  };
+  const orihimeTakenMultAt = slotIdx => {
+    const b = isTacticsMode(runMode) ? Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null : orihimeBondAt('party');
+    return b ? 1 - b.effect.takenCut : 1;
+  };
+  const orihimeTurnKindsRef = useRef({});
+  const orihimeCardKindOf = card => !card ? null : ['atk', 'range_atk', 'unique'].includes(card.type) ? 'attack' : card.type === 'guard' ? 'guard' : 'assist';
+  const noteOrihimeCard = (slotIdx, card) => {
+    const kind = orihimeCardKindOf(card);
+    if (!kind || !Number.isInteger(slotIdx) || !orihimeBondOfSlot(slotIdx)) return;
+    const k = String(slotIdx),
+      cur = orihimeTurnKindsRef.current[k] || [];
+    if (!cur.includes(kind)) orihimeTurnKindsRef.current = {
+      ...orihimeTurnKindsRef.current,
+      [k]: [...cur, kind]
+    };
+  };
+  const settleOrihimeOuse = () => {
+    const kinds = orihimeTurnKindsRef.current;
+    orihimeTurnKindsRef.current = {};
+    orihimeBonds().forEach(b => {
+      const a = kinds[String(b.selfSlot)] || [],
+        c = kinds[String(b.partnerSlot)] || [];
+      const after = addOuse(b.ouse, b.diff, a.some(x => c.includes(x)), b.up);
+      if (after === b.ouse) return;
+      writeOrihime('ouse', b.key, after);
+      addPopup(`🎐 逢瀬 ${after}/${ORIHIME_BOND_TIERS[b.diff].max}`, 'hero', 'text-sky-200 text-base font-bold drop-shadow-md', undefined, b.selfSlot);
+    });
+  };
+  const orihimeShareTargets = (targets, damage) => {
+    let rest = (Array.isArray(targets) ? targets : []).filter(Number.isInteger);
+    const parts = [];
+    orihimeBonds().filter(b => b.up && b.effect.share).forEach(b => {
+      [[b.selfSlot, b.partnerSlot], [b.partnerSlot, b.selfSlot]].forEach(([from, to]) => {
+        if (!rest.includes(from) || rest.includes(to)) return;
+        const [mine, theirs] = shareOrihimeDamage(damage);
+        rest = rest.filter(i => i !== from);
+        parts.push({
+          slots: [from],
+          damage: mine
+        }, {
+          slots: [to],
+          damage: theirs
+        });
+      });
+    });
+    return [{
+      slots: rest,
+      damage
+    }, ...parts];
+  };
   const tickKyubiKagero = () => {
     const entries = Object.entries(kyubiRef.current.kagero);
     if (!entries.some(([, v]) => kageroOf(v).wait > 0)) return;
@@ -105264,7 +105397,8 @@ function MonsterHeroGame() {
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
     const targets = tacticsTargetsNow(intent, actingDist);
-    return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
+    const parts = orihimeShareTargets(targets, damage);
+    return commitTacticsUnits(parts.reduce((units, part) => damageTacticsTargets(units, part.slots, part.damage), tacticsUnitsRef.current));
   };
   const tacticsHeal = amount => isTacticsMode(runMode) ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
   const tacticsRateHeal = (hpRate, gutsRate, includeDowned = true) => {
@@ -106203,12 +106337,18 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   const monsterCardName = (node, className = 'text-white', band = false) => {
     const long = band && typeof node === 'string' && node.length >= 9;
+    const fit = !band && typeof node === 'string';
     return React.createElement("div", {
-      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : 'h-[16px] truncate leading-tight'} ${className}`,
+      className: `mh-monster-card-name ${long ? 'text-[10px]' : 'text-[11px]'} font-black w-full text-center ${band ? `min-h-[28px] ${long ? 'px-0.5' : 'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center` : fit ? 'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]' : 'h-[16px] truncate leading-tight'} ${className}`,
       style: band ? {
         textShadow: '0 1px 2px rgba(0,0,0,.95)'
       } : undefined
-    }, node);
+    }, fit ? React.createElement("span", {
+      className: "block",
+      style: {
+        fontSize: `min(11px, calc(100cqw / ${[...node].length + 0.3}))`
+      }
+    }, node) : node);
   };
   const monsterCardInfo = (node, sub) => node || sub ? React.createElement("div", {
     className: "w-full flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 leading-none",
@@ -116742,7 +116882,7 @@ function MonsterHeroGame() {
     if (isTacticsMode(runMode) && Number.isInteger(slot) && slot >= 0 && slot !== slotIdx) return 1;
     return Math.max(0.1, 1 - Math.min(0.9, rate));
   };
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() * tacticsExMultiBuffNow(slotIdx).taken * tacticsExPartyBuffNow().taken : 1) * cookieEffectNow().takenMult) * kyukoTakenMultAt(slotIdx) * orihimeTakenMultAt(slotIdx)) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -117668,7 +117808,7 @@ function MonsterHeroGame() {
     const aptForSlot = isTacticsMode(runMode) && mon ? getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty), wave) : distAptPct;
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (aptForSlot[slotIdx] || 0);
     const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
-    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
+    const totalBuffMult = traitMult * cookieEffectNow().dmgMult * blackNoteEffectAt(slotIdx, mon?.id).dmgMult * kyubiAttackAt(slotIdx, mon?.id, card).dmgMult * orihimeDmgMultAt(slotIdx) * bowAtkMultAt(slotIdx) * tacticsExMultiBuffNow(slotIdx).dmg * (card.type === 'unique' ? tacticsExPandoraDevilNow(slotIdx, false).dmg : 1) * getTurnBuff('atkMult', 1.0) * tacticsSlotAtkMult(slotIdx) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     const attackerAtk = (isTacticsMode(runMode) && tacticsUnitsRef.current[slotIdx] ? Math.max(0, normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk) * trickStartAtkMult(trickStartStacksAt(slotIdx)) * fateAtkMult(livePermaBuff('fateStacks', null), slotIdx);
     let finalDmg = Math.floor(attackerAtk * distMult * baseDmgMult * (Number(skillDmgMult) > 0 ? Number(skillDmgMult) : 1) * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + fateWheelEnemyTakenBonus(fateWheelRef.current) + tacticsExPsychoLockNow().enemyTakenBonus + additionalDmgMod + dreamPainTakenBonus(dreamPainRef.current)));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
@@ -118434,6 +118574,7 @@ function MonsterHeroGame() {
     if (timeStopSlot == null && (fateWheelRef.current.atkDown > 0 || fateWheelRef.current.takenUp > 0)) writeFateWheel(tickFateWheelDebuff(fateWheelRef.current));
     if (timeStopSlot == null && (dreamPainRef.current.wait > 0 || dreamPainRef.current.turns > 0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
     if (timeStopSlot == null) tickKyubiKagero();
+    if (timeStopSlot == null) settleOrihimeOuse();
     {
       const lifeSourceTurn = turnCount + 1;
       let lifeSourceGain = 0;
@@ -119288,6 +119429,7 @@ function MonsterHeroGame() {
       if (isTacticsMode(runMode)) tacticsPayGuts(slotIdx, cardCost);else setGuts(p => Math.max(0, p - cardCost));
       if (!isBreeder && entry.slotIdx != null) gainSweetStack(slotIdx, slots[slotIdx]?.id, card);
       if (!isBreeder && entry.slotIdx != null) gainKyubiCard(slotIdx, slots[slotIdx]?.id, card);
+      if (!isBreeder && entry.slotIdx != null) noteOrihimeCard(slotIdx, card);
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
@@ -122146,6 +122288,11 @@ function MonsterHeroGame() {
       ...m
     };
     applySlots(nextSlots);
+    if (!isHero && orihimePartnerPick && mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+      setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
+      addPopup(`🎐 ${m.masuName || m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
+    }
+    setOrihimePartnerPick(false);
     clearSlotUniqueSelection(slotIdx);
     if (isHero) stopAllAuto();
     if (!isHero) Audio_.se.join();
@@ -135159,6 +135306,11 @@ function MonsterHeroGame() {
       })(),
       heroStyle: tacticsHeroStyle,
       onHeroStyle: setTacticsHeroStyle,
+      partnerOffer: mainHero?.id === ORIHIME_MONSTER_ID && !orihimeHasPartner() ? {
+        heroName: mainHero.masuName || mainHero.name
+      } : null,
+      partnerPick: orihimePartnerPick,
+      onPartnerPick: setOrihimePartnerPick,
       onRepick: () => {
         if (!mainHero && speciesChallengeBattleRunRef.current) {
           setCurrentPickingMon(null);
@@ -142169,6 +142321,12 @@ const createAnimationStyle = () => {
       .mh-phase-card-nums { font-size: 9px !important; }
       /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
       .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+    }
+    /* 幅も狭い(320 など)と1枚が66px前後になり、名前が「走り/込み」「ドミノ/倒し」と語の途中で折れた。
+       余白を詰めて名前を1行に収める(2026-10-27 ジン・WAVE の合間の見回り) */
+    @container (max-height: 560px) and (max-width: 340px) {
+      .mh-phase-card { padding: 6px 5px !important; }
+      .mh-phase-card-name { font-size: 11px !important; white-space: nowrap; letter-spacing: -0.03em; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、

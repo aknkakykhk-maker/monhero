@@ -1004,6 +1004,7 @@ function MonsterHeroGame() {
     resetSweetStack(); // メロディー・クロミーのスタックもランごと(WAVEでは消さない)
   resetKusabi(); resetDreamPain(); // 楔・ドリームペインは敵に付くのでWAVEでも消すが、ランの片付けでも念のため
   resetKyubi(); // 九尾四相(相・煉獄・陽炎)はランのあいだ持つ
+  resetOrihime(); // 天河の契り(相方・逢瀬)もランのあいだ持つ
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -1270,6 +1271,84 @@ function MonsterHeroGame() {
       writeKyubi('kagero', key, after);
       addPopup('🔥 陽炎ノ相 完全回避を得た', 'hero', 'text-orange-200 text-sm font-bold drop-shadow-md', undefined, slotIdx);
     }
+  };
+  // ★オリヒメの勇者特性「天河の契り」(2026-10-27 社長の決定)。決めごとは 22-enemy-and-bond-entries.jsx の ORIHIME_*・*Ouse*。
+  //   相方を1体決める(setOrihimePartner。決まるまでは何も起きない)。逢瀬はランのあいだ持つ。片付けは resetTacticsJoinCatchUp。
+  //   キーはトリックスタートと同じ(5つの遊びは 'party'、タクティクスはオリヒメの枠)。partner[key] は相方の枠の番号
+  const orihimeRef = useRef({ partner: {}, ouse: {} });
+  const [orihimeView, setOrihimeView] = useState(orihimeRef.current);
+  const writeOrihime = (part, key, value) => {
+    if (!key) return;
+    const next = { ...orihimeRef.current, [part]: { ...orihimeRef.current[part], [key]: value } };
+    orihimeRef.current = next; setOrihimeView(next);
+  };
+  const resetOrihime = () => { orihimeRef.current = { partner: {}, ouse: {} }; orihimeTurnKindsRef.current = {}; setOrihimeView(orihimeRef.current); };
+  // 相方を決める(オリヒメの枠 selfSlot、相方の枠 partnerSlot)。5つの遊びは selfSlot を見ない(勇者モンを置いた距離)
+  const setOrihimePartner = (selfSlot, partnerSlot) => {
+    if (!Number.isInteger(partnerSlot)) return;
+    writeOrihime('partner', isTacticsMode(runMode) ? String(selfSlot) : 'party', partnerSlot);
+  };
+  // 相方が決まっているか。配置の画面の「この子を相方にする」は、決まるまでだけ出す(2026-10-27 社長: 案ア)
+  const orihimeHasPartner = () => Number.isInteger(orihimeRef.current.partner[isTacticsMode(runMode) ? String(initialBattleDistanceRef.current) : 'party']);
+  const [orihimePartnerPick, setOrihimePartnerPick] = useState(false);
+  const tacticsUnitUp = (slotIdx) => { const u = tacticsUnitsRef.current[slotIdx]; return !!u && Number(u.hp) > 0; };
+  // その絆のいまの形。{ key, selfSlot, partnerSlot, diff, ouse, up, effect }。オリヒメがいない・相方が決まっていなければ null
+  const orihimeBondAt = (key) => {
+    const partnerSlot = orihimeRef.current.partner[key];
+    if (!Number.isInteger(partnerSlot)) return null;
+    const tactics = isTacticsMode(runMode);
+    const selfSlot = tactics ? Number(key) : initialBattleDistanceRef.current;
+    const selfId = tactics ? tacticsUnitsRef.current[selfSlot]?.id : mainHero?.id;
+    if (selfId !== ORIHIME_MONSTER_ID) return null;
+    const diff = orihimeDiffOf(selfSlot, partnerSlot);
+    // 相方(とオリヒメ)が倒れたら、つながりは止まる。溜まった逢瀬は残る。5つの遊びはライフが1つなので倒れない
+    const up = tactics ? tacticsUnitUp(selfSlot) && tacticsUnitUp(partnerSlot) : !!slots[partnerSlot];
+    const ouse = ouseOf(orihimeRef.current.ouse[key], diff);
+    return { key, selfSlot, partnerSlot, diff, ouse, up, effect: orihimeBondEffectOf(diff, ouse, up) };
+  };
+  const orihimeBonds = () => (isTacticsMode(runMode) ? Object.keys(orihimeRef.current.partner) : ['party']).map(orihimeBondAt).filter(Boolean);
+  // その枠の子が絆の2体のどちらかなら、その絆
+  const orihimeBondOfSlot = (slotIdx) => orihimeBonds().find(b => b.selfSlot === slotIdx || b.partnerSlot === slotIdx) || null;
+  // 与ダメ: 2体のどちらかの攻撃
+  const orihimeDmgMultAt = (slotIdx) => { const b = Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null; return b ? 1 + b.effect.dmgAdd : 1; };
+  // 被ダメ: タクティクスは2体のどちらか。5つの遊びはライフが1つなので、パーティが受けるダメージ
+  const orihimeTakenMultAt = (slotIdx) => {
+    const b = isTacticsMode(runMode) ? (Number.isInteger(slotIdx) ? orihimeBondOfSlot(slotIdx) : null) : orihimeBondAt('party');
+    return b ? 1 - b.effect.takenCut : 1;
+  };
+  // 逢瀬: そのターンに2体が使ったカードの種類(攻撃/ガード/助け)を枠ごとに覚え、次のターンへ進むところでまとめて見る
+  const orihimeTurnKindsRef = useRef({});
+  const orihimeCardKindOf = (card) => (!card ? null : ['atk','range_atk','unique'].includes(card.type) ? 'attack' : card.type === 'guard' ? 'guard' : 'assist');
+  const noteOrihimeCard = (slotIdx, card) => {
+    const kind = orihimeCardKindOf(card);
+    if (!kind || !Number.isInteger(slotIdx) || !orihimeBondOfSlot(slotIdx)) return;
+    const k = String(slotIdx), cur = orihimeTurnKindsRef.current[k] || [];
+    if (!cur.includes(kind)) orihimeTurnKindsRef.current = { ...orihimeTurnKindsRef.current, [k]: [...cur, kind] };
+  };
+  const settleOrihimeOuse = () => {
+    const kinds = orihimeTurnKindsRef.current; orihimeTurnKindsRef.current = {};
+    orihimeBonds().forEach(b => {
+      const a = kinds[String(b.selfSlot)] || [], c = kinds[String(b.partnerSlot)] || [];
+      const after = addOuse(b.ouse, b.diff, a.some(x => c.includes(x)), b.up);
+      if (after === b.ouse) return;
+      writeOrihime('ouse', b.key, after);
+      addPopup(`🎐 逢瀬 ${after}/${ORIHIME_BOND_TIERS[b.diff].max}`, 'hero', 'text-sky-200 text-base font-bold drop-shadow-md', undefined, b.selfSlot);
+    });
+  };
+  // 間合いの差3(タクティクス): 2体のどちらかだけが当たったら、ダメージを2体で半分ずつ(合計は増やさない)。
+  //   返り値は [{ slots, damage }] の並び。分け合わない子は元のダメージのまま
+  const orihimeShareTargets = (targets, damage) => {
+    let rest = (Array.isArray(targets) ? targets : []).filter(Number.isInteger);
+    const parts = [];
+    orihimeBonds().filter(b => b.up && b.effect.share).forEach(b => {
+      [[b.selfSlot, b.partnerSlot], [b.partnerSlot, b.selfSlot]].forEach(([from, to]) => {
+        if (!rest.includes(from) || rest.includes(to)) return;
+        const [mine, theirs] = shareOrihimeDamage(damage);
+        rest = rest.filter(i => i !== from);
+        parts.push({ slots: [from], damage: mine }, { slots: [to], damage: theirs });
+      });
+    });
+    return [{ slots: rest, damage }, ...parts];
   };
   // 陽炎の待ちを1つ進める(次のターンへ進むところで呼ぶ)
   const tickKyubiKagero = () => {
@@ -1540,7 +1619,9 @@ function MonsterHeroGame() {
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
     const targets = tacticsTargetsNow(intent, actingDist);
-    return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
+    // ★天河の契り(オリヒメ・間合いの差3)はダメージを2体で分け合う。分け合いが無ければ1回で今までどおり
+    const parts = orihimeShareTargets(targets, damage);
+    return commitTacticsUnits(parts.reduce((units, part) => damageTacticsTargets(units, part.slots, part.damage), tacticsUnitsRef.current));
   };
   const tacticsHeal = (amount) => isTacticsMode(runMode)
     ? commitTacticsUnits(healTacticsBoard(tacticsUnitsRef.current, amount)) : null;
@@ -2540,7 +2621,9 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   // 名前帯(band)は名前を切らずに折り返す。名前は12字まで付けられるので、9字以上は字を1段小さくし、左右の余白も詰めて
   // 320幅でも2行(1行6字)に収める(2026-10-27・部長「切らずに全部出す・2行まで」。11pxだと12字で3行になっていた)
-  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div> };
+  // 帯の無い形は1行。名前(字)は「…」で切らず、カードの幅に合わせて字を縮めて全部出す(320 の神殿で「オボロゲソ…」と切れていた。
+  // 2026-10-27 ジン部長の見回り。編成の枠の名前 #3857 と同じ形)。字でないもの(部品)は今までどおり
+  const monsterCardName = (node, className='text-white', band=false) => { const long=band&&typeof node==='string'&&node.length>=9; const fit=!band&&typeof node==='string'; return <div className={`mh-monster-card-name ${long?'text-[10px]':'text-[11px]'} font-black w-full text-center ${band?`min-h-[28px] ${long?'px-0.5':'px-1'} py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words leading-[13px] flex items-center justify-center`:fit?'h-[16px] overflow-hidden whitespace-nowrap leading-tight [container-type:inline-size]':'h-[16px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{fit?<span className="block" style={{fontSize:`min(11px, calc(100cqw / ${[...node].length+0.3}))`}}>{node}</span>:node}</div> };
   // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた。
   // ★ただし**入りきらなければ折り返す**(2026-09-18)。字を読める大きさへ上げたら、
   //   「絆 397/400」と「+456P」がカード幅(約96px)を超え、ハートが枠の外へはみ出した。
@@ -11510,7 +11593,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)
       *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow()*tacticsExMultiBuffNow(slotIdx).taken*tacticsExPartyBuffNow().taken:1)
       *cookieEffectNow().takenMult) // クッキー7個から(メロディー): 味方全体の被ダメ軽減
-      *kyukoTakenMultAt(slotIdx)) // きゅうこの譜面: 使った子(タクティクス以外はパーティ)の被ダメ軽減。残りターンは permaBuffs
+      *kyukoTakenMultAt(slotIdx) // きゅうこの譜面: 使った子(タクティクス以外はパーティ)の被ダメ軽減。残りターンは permaBuffs
+      *orihimeTakenMultAt(slotIdx)) // 天河の契り(オリヒメ): 2体(5つの遊びはパーティ)の被ダメ軽減
     : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
     getIncomingDamageBeforeTurnReduction(intent)
@@ -12310,7 +12394,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
     // ★クッキー10個(メロディー)の与ダメアップは味方全体、黒音符(クロミー)は本人の攻撃だけ
-    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*kyubiAttackAt(slotIdx,mon?.id,card).dmgMult*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*cookieEffectNow().dmgMult*blackNoteEffectAt(slotIdx,mon?.id).dmgMult*kyubiAttackAt(slotIdx,mon?.id,card).dmgMult*orihimeDmgMultAt(slotIdx)*bowAtkMultAt(slotIdx)*tacticsExMultiBuffNow(slotIdx).dmg*(card.type==='unique'?tacticsExPandoraDevilNow(slotIdx,false).dmg:1)*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     // ★トリックスタート(ゴースト・スプーキー)で積んだ「ちから+20%」を、攻撃した子のちからへ掛ける
     //   (既存5モードはパーティ共通のちから。積んでいなければ1倍)
@@ -13064,6 +13148,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ドリームペイン(ドリーミィ)は使ったターンは効かず、次のターンから3ターン。次のターンへ進むここで1つ進める
     if (timeStopSlot==null&&(dreamPainRef.current.wait>0||dreamPainRef.current.turns>0)) writeDreamPain(tickDreamPain(dreamPainRef.current));
     if (timeStopSlot==null) tickKyubiKagero(); // ★陽炎ノ相(キュービ)の完全回避の待ちも1つ進める
+    if (timeStopSlot==null) settleOrihimeOuse(); // ★天河の契り(オリヒメ): 2体が同じ種類の動きをしたら逢瀬+1
     // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
     // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
     {
@@ -13734,6 +13819,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // メロディの手作りクッキー: メロディー本人がカードを1枚使うたびに+1(枠を決めて使ったカードだけ。アシストカードは数えない)
       if(!isBreeder&&entry.slotIdx!=null) gainSweetStack(slotIdx,slots[slotIdx]?.id,card);
       if(!isBreeder&&entry.slotIdx!=null) gainKyubiCard(slotIdx,slots[slotIdx]?.id,card); // ★九尾四相: 煉獄+1・陽炎の完全回避
+      if(!isBreeder&&entry.slotIdx!=null) noteOrihimeCard(slotIdx,card); // ★天河の契り: そのターンに使ったカードの種類
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type==='draw') continue;
@@ -15959,6 +16045,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       :null;
     if(speciesJoin&&!speciesJoin.joinedAllyId)return;
     const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; applySlots(nextSlots);
+    // ★天河の契り(オリヒメが勇者モン): 「この子を相方にする」を押してから置いた子が相方になる。勇者モンを置くときは選ばない
+    if (!isHero && orihimePartnerPick && mainHero?.id===ORIHIME_MONSTER_ID && !orihimeHasPartner()) {
+      setOrihimePartner(initialBattleDistanceRef.current, slotIdx);
+      addPopup(`🎐 ${m.masuName||m.name}が相方になった`, 'hero', 'text-sky-200 text-sm font-bold drop-shadow-md');
+    }
+    setOrihimePartnerPick(false);
     // 置いた瞬間に、そのスロットの古い一時選択を捨てる。
     // 未選択に戻すことで、そのマスモンに保存された初期技がそのまま初期選択になる
     clearSlotUniqueSelection(slotIdx);
@@ -21944,6 +22036,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             return d&&d.heroInitialStyle?d:null;
           })()}
           heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
+          partnerOffer={mainHero?.id===ORIHIME_MONSTER_ID&&!orihimeHasPartner()?{ heroName:mainHero.masuName||mainHero.name }:null}
+          partnerPick={orihimePartnerPick} onPartnerPick={setOrihimePartnerPick}
           onRepick={()=>{
             if(!mainHero&&speciesChallengeBattleRunRef.current){
               setCurrentPickingMon(null);
