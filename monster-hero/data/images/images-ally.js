@@ -107,7 +107,7 @@ const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3bacac1187f6";
 const PANDORA_DEVIL_IMG = "images/monsters/pandora-devil.PNG?v=5ce010729f00";
 const PANDORA_ANGEL_IMG = "images/monsters/pandora-angel.PNG?v=d3dedf0b3d90";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
-const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=ce9b0ee85836";
+const SUEZO_DYE_MASK = "images/monsters/suezo-dye-mask.PNG?v=045ffba27997";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
 const GOLEM_DYE_MASK = "images/monsters/golem-dye-mask.PNG?v=b6b1cf1c4bf0";
 const MONOL_IMG = "images/monsters/monol.png?v=64e141b7fbb1";
@@ -122,14 +122,14 @@ const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=9843be5ed231";
 // 2026年8月に追加した人魚2体。いただいた立ち絵をそのまま使い、丸いアイコンでの見え方は
 // 画像を作り直さず MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せている
 const UNDINE_IMG = "images/monsters/undine.PNG?v=bf5593ae061a";
-const UNDINE_DYE_MASK = "images/monsters/undine-dye-mask.PNG?v=6c4f4f4c6f53";
+const UNDINE_DYE_MASK = "images/monsters/undine-dye-mask.PNG?v=6c4ff9bb420e";
 const YAOBIKUNI_IMG = "images/monsters/yaobikuni.PNG?v=e23821f9d695";
-const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=c4c739ed5b60";
+const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=58c55ee046db";
 // 2026年8月に追加準備中のレア「エイキ」(ザン×？？？)。正式実装まではデバッグ専用。
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
 const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
-const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=72185954c1f9";
+const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=ac9437c67580";
 // 2026年9月に追加準備中のレア「剣士モッチー」(モッチー×？？？)。正式実装まではデバッグ専用。
 // 染色は5部位で、承認済みマスクの色分けがそのままリポジトリ仕様に合っている
 // (赤=①肌 / 緑=②コート・ブーツ / 青=③髪 / 黄=④左手の剣 / マゼンタ=⑤右手の剣)。
