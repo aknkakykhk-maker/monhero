@@ -454,7 +454,8 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     extra.length === 4 && extra.every(h => h.kind === 'combo' && h.dmg === 300 && h.skillName === 'スイーツパラダイス') && burst[0].dmg === plain[0].dmg,
     JSON.stringify(extra));
   check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
-    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken:1\)/.test(app)
+    // ★2026-10-27 キュービの九尾幻灯の被ダメ(kyubiTakenMultAt)が、タクティクスの掛け算の最後に付いてよい
+    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken\*tacticsExPartyBuffNow\(\)\.taken(\*kyubiTakenMultAt\(slotIdx\))?:1\)/.test(app)
     && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\)( \+ tacticsExPartyBoostRegenRate\(tacticsExStateRef\.current, live\.now, 'hp'\))? : 0;/.test(app)
     // ★2026-10-08 クロミーの黒音符の連撃(withBlackNoteCombo)で包んだ2か所も数える
     && (app.match(/exCombos:(withBlackNoteCombo\()?withFateCombo\(tacticsExCombosAt\(slotIdx(,halved,card|,true)?\),(getPermaBuff|livePermaBuff)\('fateStacks',null\),slotIdx\)/g) || []).length === 3);
