@@ -36,7 +36,7 @@
 | `aiCopyHateGainMult(level)` | タクティクスで🔥が増えるとき | ×1.0 / ×1.25 / ×1.5 |
 | `aiCopyUniqueCard(card, srcMonsterId)` | 固有技を1枚足すとき | 印 `sorashidoCopyOf` と `uid` を付けた写し(`uniqueCardUid` に持つ) |
 | `aiCopyRemoveUnique({ deck, hand, discard }, { uid } または { srcMonsterId })` | 抜くとき | 3か所から印の付いた分だけを抜いた新しい配列 |
-| `aiCopyHand(deck, uniqueCard, rng)` | コピーの番の前 | 山札の写しから2枚+固有技(山札は減らさない・距離技とソラシドは選ばない) |
+| `aiCopyHand(deck, uniqueCard, rng, draw, uniqueRate)` | コピーの番の前 | 山札の写しから2枚+固有技(入る見込み `aiCopyRules(level).uniqueRate`: 30/40/50%。渡さなければいつも入る)。山札は減らさない・距離技とソラシドは選ばない |
 | `aiCopyPickCards(hand, { score, costOf, guts, maxGuts, rng, level })` | 手札を作ったあと | 使うカードの配列(0〜2枚)。先頭が `nextCard`。`score` には AUTO の点を渡す |
 
 `aiCopySummonPlan` の `kind` ごとに、バトル側がやること:
@@ -66,6 +66,16 @@
 
 検査は `tools/battle/sorashido-copy-view-check.js` です(320・390・844×390 で、はみ出し・押せる大きさ・札の読みやすさを見ます)。
 報告の写真と動画は `docs/playbot/reports/2026-10-27/sorashido-assist/` に置きました。
+
+## 2026-10-27 の変更: 固有技はプレイヤーの山札に入れない
+
+社長の答えで、AIコピーの固有技は「コピーの手札に入ることがある(いつもあるとは限らない)。プレイヤーの山札は変えない」になりました。
+
+- `SORASHIDO_TIERS` の各段に `uniqueRate`(Lv1 0.3・Lv2 0.4・Lv3 0.5)を足しました。EXTREME の効果倍率は掛けません。
+- `aiCopyHand` に、5つ目の引数 `uniqueRate` を足しました。毎ターン手札を作るとき、2枚を引いたあと `rng() < uniqueRate` なら固有技を足します。
+- 山札へ入れる・抜く部品は呼ばなくなりました(`aiCopyUniqueCard`・`aiCopyRemoveUnique`)。`aiCopyUniqueCard` は、手札に入れる1枚の印付けにだけ使ってかまいません。
+- `aiCopySummonPlan` の `addUniqueOf`・`removeUniqueOf` は、「どの子の固有技か」の知らせとして残しています。
+- 説明文とヘルプに「固有技が手札に入る見込み」を足しました。
 
 ## まだ決めていないこと
 

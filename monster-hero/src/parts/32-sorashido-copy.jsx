@@ -10,14 +10,14 @@
 const SORASHIDO_CARD_ID = 'sorashido';
 // 5人目の枠の番号(タクティクスの4枠 0〜3 の次)
 const SORASHIDO_COPY_SLOT = 4;
-// 山札に足すコピーの子の固有技は、どの Lv でもいつも1枚
+// コピーの手札に入る固有技は、入るときはいつも1枚(入るかどうかは SORASHIDO_TIERS の uniqueRate)
 const SORASHIDO_COPY_UNIQUE_COUNT = 1;
 // コピーが毎ターン山札の写しから見るカードの枚数(これに足した固有技を加える)
 const SORASHIDO_COPY_HAND_DRAW = 2;
 
 const aiCopySafeNum = (value, fallback = 0) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
 
-// Lv(0〜2)ごとの決まり。{ rates, turns, pick, maxCards, hateStart, hateGain, gutsFor2 }
+// Lv(0〜2)ごとの決まり。{ rates, turns, pick, maxCards, hateStart, hateGain, gutsFor2, uniqueRate }
 const aiCopyRules = (level) => {
   const tiers = (typeof SORASHIDO_TIERS !== 'undefined' && Array.isArray(SORASHIDO_TIERS)) ? SORASHIDO_TIERS : [];
   const lv = Math.max(0, Math.min(tiers.length - 1, Math.floor(aiCopySafeNum(level)) || 0));
@@ -48,6 +48,8 @@ const aiCopyHateGainMult = (level) => aiCopyRules(level).hateGain;
 //   'new'     … コピーを作る(次のターンの始まりに出す)。addUniqueOf の固有技を1枚足す
 //   'refresh' … 同じ子でもう一度。turnsLeft を最初へ戻すだけ(固有技は足さない・1枚のまま)
 //   'switch'  … 別の子へ切りかえ。いまのコピーを外し(removeCopy)、removeUniqueOf の固有技を抜き、addUniqueOf を1枚足す
+//   ★2026-10-27 から固有技はプレイヤーの山札へ入れない(コピーの手札に入ることがある形)。addUniqueOf・removeUniqueOf は
+//     「どの子の固有技か」の知らせとして残すだけで、山札への出し入れには使わない
 const aiCopySummonPlan = (aiCopy, { srcSlot, srcMonsterId, level }) => {
   const turnsLeft = aiCopyTurns(level);
   if (!aiCopy) return { kind: 'new', turnsLeft, removeCopy: false, removeUniqueOf: null, addUniqueOf: srcMonsterId };
@@ -63,6 +65,8 @@ const aiCopyTurnEnd = (aiCopy) => {
 };
 
 // ---- 固有技の出し入れ ----
+// ★2026-10-27 社長の答えで、固有技はプレイヤーの山札へ入れず、コピーの手札に「入ることがある」形になった(aiCopyHand の uniqueRate)。
+//   下の3つは山札へ入れていたころの部品で、いまのバトルからは呼ばない(aiCopyUniqueCard は手札に入れる1枚の印付けにだけ使ってよい)。
 // 足す1枚。元の固有技のカードに印(sorashidoCopyOf・uid)を付けた写し。抜くときは uid か印で探す
 const aiCopyUniqueCard = (card, srcMonsterId) => (card ? { ...card, sorashidoCopyOf: srcMonsterId, uid: `${card.uid || card.id || 'unique'}-aicopy-${srcMonsterId}` } : null);
 const aiCopyIsUnique = (card, { uid = null, srcMonsterId = null } = {}) => !!card && card.sorashidoCopyOf != null
@@ -77,15 +81,19 @@ const aiCopyRemoveUnique = (zones, match) => {
 // コピーは選ばない: 距離技(青い枠 range_atk)と、ソラシドのアシカそのもの。固有技とほかのアシカは選べる
 const aiCopyCanPick = (card) => !!card && card.type !== 'range_atk' && card.id !== SORASHIDO_CARD_ID;
 
-// 毎ターンの手札: みんなの山札は減らさず、山札の写しから2枚(選べるものから)+コピーの子の固有技1枚
-const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW) => {
+// 毎ターンの手札: みんなの山札は減らさず、山札の写しから2枚(選べるものから)+コピーの子の固有技(入る見込み uniqueRate)。
+//   uniqueRate を渡さなければ、固有技はいつも入る(前の形)。乱数は「2枚を引く分」のあとに「固有技が入るか」の1回を使う
+const aiCopyHand = (deck, uniqueCard, rng, draw = SORASHIDO_COPY_HAND_DRAW, uniqueRate = null) => {
   const rest = (Array.isArray(deck) ? deck : []).filter(aiCopyCanPick);
   const picked = [];
   for (let i = 0; i < draw && rest.length > 0; i++) {
     const at = Math.min(rest.length - 1, Math.floor(Math.max(0, Math.min(0.999999, aiCopySafeNum(rng && rng()))) * rest.length));
     picked.push(rest.splice(at, 1)[0]);
   }
-  if (uniqueCard && aiCopyCanPick(uniqueCard)) picked.push(uniqueCard);
+  if (uniqueCard && aiCopyCanPick(uniqueCard)) {
+    const rate = uniqueRate == null ? 1 : Math.max(0, Math.min(1, aiCopySafeNum(uniqueRate, 1)));
+    if (rate >= 1 || aiCopySafeNum(rng && rng(), 1) < rate) picked.push(uniqueCard);
+  }
   return picked;
 };
 
@@ -121,5 +129,5 @@ const aiCopyPickCards = (hand, { score, costOf, guts, maxGuts, rng, level }) => 
 // ---- 説明文(ブリーダーの教え・マーケット・カードの詳しい画面) ----
 const sorashidoCopyDesc = (level) => {
   const t = aiCopyRules(level), p = (v) => Math.round(v * 100);
-  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
+  return `使った子のAIコピーが、次のターンから5人目の味方として ${t.turns}ターン戦う（ちから${p(t.rates.atk)}%・丈夫さ${p(t.rates.def)}%・ガッツ${p(t.rates.guts)}%。タクティクスはライフ${p(t.rates.hp)}%も）。いちばん良いカードを選ぶ見込み ${p(t.pick)}%・固有技が手札に入る見込み ${p(aiCopySafeNum(t.uniqueRate, 1))}%${t.maxCards >= 2 ? `・ガッツの上限${t.gutsFor2}以上なら1ターンに2枚まで` : ''}`;
 };
