@@ -342,9 +342,10 @@ async function shotAtSizes(s, tag) {
 async function shotIfResult(s) {
   if (!process.env.PLAYBOT_SHOT_DIR) return;
   const t = await s.page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '));
+  // CHAMPION の画面の裏にも「WAVE 10 リザルト」の字が残っているので、CHAMPION を先に見る
   const m = t.match(/WAVE\s*(\d+)\s*リザルト/);
-  if (m) { await s.wait(1500); await shotAtSizes(s, `wave${m[1]}-result`); }
-  else if (/CHAMPION/.test(t)) { await s.wait(3000); await shotAtSizes(s, 'champion'); }
+  if (/CHAMPION/.test(t)) { await s.wait(3000); await shotAtSizes(s, 'champion'); }
+  else if (m) { await s.wait(1500); await shotAtSizes(s, `wave${m[1]}-result`); }
 }
 
 async function betweenWaves(s, ctx) {
