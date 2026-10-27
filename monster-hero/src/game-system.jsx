@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31930533f0d704ae
+// generated-sha256: 3e8c49ad87fff6bc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -47823,11 +47823,12 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   ) : null);
   // 本家の左上の題字(MULTI LIVE)と、その下の小さな段の名前。右に残り時間とチャット
   const header = (step, onBackClick, opts = {}) => (
-    <header className="z-10 flex shrink-0 items-center gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
+    <header className="z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
       <button data-rhythm-multi-back type="button" aria-label="戻る" className="min-h-[44px] min-w-[44px] max-[380px]:min-w-[36px] shrink-0 rounded-xl text-lg font-black text-slate-300" onClick={onBackClick}>←</button>
-      <div className="min-w-0 flex-1 leading-none">
-        <b className="block truncate text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
-        <small className="mt-0.5 block truncate text-[10px] font-black text-fuchsia-200">▶ {step}{view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : ''}</small>
+      {/* 題字には最低の幅を残す。右のボタンが入りきらない細い画面では、ボタンのほうを2段目へ回す(「…」で切らない) */}
+      <div className="min-w-[7.5rem] flex-1 leading-none">
+        <b className="block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
+        <small className="mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200">▶ {step}{view ? <> ・ <span className="whitespace-nowrap">{view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} {view.code}</span></> : ''}</small>
       </div>
       {/* クイック∞周回を裏で回しているときの進み具合(曲えらびの帯と同じ中身)。対戦の待ち時間も周回は進む */}
       {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[38%] max-[480px]:max-w-[24%]" />}
@@ -47889,7 +47890,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <span aria-hidden="true" className="text-xl leading-none">💬</span>
         <span className="min-w-0 flex-1 leading-tight">
           <small className="block text-[9px] font-black text-cyan-200">{last ? last.name : 'チャット'}</small>
-          <b data-rhythm-multi-chat-latest className="block truncate text-[12px] font-black text-white">{last ? last.text : 'タップで開く'}</b>
+          {/* 発言は1行に詰める。まだ発言が無いときの「タップで開く」は折り返す(幅30%の札で「タップで開…」と切れていた・2026-10-26) */}
+          {last
+            ? <b data-rhythm-multi-chat-latest className="block truncate text-[12px] font-black text-white">{last.text}</b>
+            : <b data-rhythm-multi-chat-latest className="block text-[11px] font-black leading-tight text-white" ><span className="whitespace-nowrap">タップで</span><wbr /><span className="whitespace-nowrap">開く</span></b>}
         </span>
         {chatUnread > 0 && <b data-rhythm-multi-chat-unread className="absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white">{chatUnread > 9 ? '9+' : chatUnread}</b>}
       </button>
@@ -47992,7 +47996,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             {ms.multi && !buddyIntroSeen && masuMons.length > 0 && (
               <section data-rhythm-buddy-intro className="mhms-in flex items-center gap-2 rounded-2xl border border-lime-300/60 bg-lime-950/80 p-2.5">
                 <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
-                <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100">マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります</p>
+                <p className="min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100" style={JA_WRAP_STYLE}>{jaWrap('マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります')}</p>
                 <button type="button" onClick={() => closeBuddyIntro(true)} className="min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950">育ち具合を見る</button>
                 <button type="button" aria-label="閉じる" onClick={() => closeBuddyIntro(false)} className="min-h-[44px] min-w-[36px] shrink-0 rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </section>
@@ -48051,7 +48055,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               </div>
               <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
                 <b className="block text-[13px] font-black text-white">部屋をつくる</b>
-                <p className="text-[11px] font-bold leading-snug text-slate-300">合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう</p>
+                <p className="text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう')}</p>
                 <button data-rhythm-multi-create type="button" onClick={createPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">＋ 部屋をつくる</button>
               </section>
               <section className="space-y-1.5 rounded-2xl border border-violet-300/25 bg-slate-950/50 p-3">
@@ -48199,7 +48203,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <section data-rhythm-multi-results className="relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2 [@media(max-height:440px)]:py-1 [[data-mh-view-rotation=true]_&]:py-1" style={{ marginTop: 'calc(.4rem + var(--mh-sa-top))' }}>
           {drawnSong && <span className="h-12 w-12 shrink-0 landscape:h-14 landscape:w-14"><RhythmSongArt song={drawnSong} marked={false} /></span>}
           <div className="min-w-0 flex-1 landscape:max-w-[34%]">
-            <b className="block truncate text-sm font-black">{drawnSong ? rhythmSongFullName(drawnSong) : ''}</b>
+            {/* 曲名は「…」で切らずに、言葉の切れ目で折る(320幅で「… MF × ICHIKA MIX」が切れて、どの曲か分からなかった・2026-10-26) */}
+            <b className="block text-sm font-black leading-tight" style={JA_WRAP_STYLE}>{drawnSong ? jaWrap(rhythmSongFullName(drawnSong)) : ''}</b>
             <small className="block text-[10px] font-black text-slate-400">{team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`}</small>
             {/* 同じメンバーで続けたライブ(連続ボーナス・2026-10-03) */}
             {view.streak >= 2 && <small data-rhythm-multi-streak className="mt-0.5 inline-block rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-2 text-[10px] font-black text-white">🔥 連続{view.streak}曲目 ・ ごほうび+{Math.round(rhythmMultiStreakBonus(view.streak) * 100)}%</small>}
@@ -49283,8 +49288,9 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
           <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[40px] min-w-[40px] rounded-full bg-slate-800 text-lg font-black">✕</button>
         </header>
         <RhythmBuddyAllowance freeLeft={freeLeft} tickets={tickets} className="mb-1 text-slate-200" />
-        <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400">
-          マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日{RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。
+        {/* 言葉の切れ目で折る(320幅で「呼べま／す」「あ／と」と折れていた・2026-10-26) */}
+        <p className="mb-2 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>
+          {jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`)}
         </p>
         </div>
         <div className="flex min-h-0 flex-1 flex-col">
@@ -55809,10 +55815,16 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const dropTargetsOf = (i) => {
     const out = {};
     if (mode === 'attack') {
-      const os = attackOpts.filter((o) => o.hand[0] === i).concat(attackOpts.filter((o) => o.hand[0] !== i && o.hand.includes(i)));
+      // 選んでいる組み合わせ(画面の札で選んだパターン)にこの札が入っていれば、運んだときもその組み合わせだけで出す。
+      //   前は、置き先ごとにいちばん枚数の多い組み合わせを選んでいて、パターンを選んでも運ぶと全部付いて出ていた(2026-10-27 ソラシドさんの報告)
+      const chosen = sel && setChosen && JSON.parse(setChosen).includes(i) ? finalOpts : null;
+      const os = chosen || attackOpts.filter((o) => o.hand[0] === i).concat(attackOpts.filter((o) => o.hand[0] !== i && o.hand.includes(i)));
       os.forEach((o) => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => (x.ko ? null : `${CARD_CPU}-${m}`)).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
-        keys.forEach((k) => { if (!out[k] || o.hand.length > out[k].hand.length) out[k] = o; });
+        // 選んでいないときは、運んだ札1枚だけで出せればそれ(組み合わせの札は見えていないので、付けたつもりが無いのに付かないように)。
+        //   1枚では出せない札(付ける札・組で出す札)は、いちばん枚数の多い組み合わせ(前からの既定)。2026-10-27 部長と決めた
+        const alone = (x) => !chosen && x.hand.length === 1 && x.hand[0] === i;
+        keys.forEach((k) => { if (!out[k] || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
       });
     }
     if (mode === 'guard') guardOpts.filter((o) => o.hand === i).forEach((o) => { out[`${CARD_ME}-${o.mon}`] = o; });
@@ -56176,7 +56188,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
       {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
-          {sets.map((s) => <button key={s} type="button" onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
+          {sets.map((s) => <button key={s} type="button" data-card-set={s} onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
         </div>
       )}
       {/* 選んだ手札は上へ少し持ち上がる。その分の高さ(pt-2)を手札の箱の中に取っておき、上の案内の帯に重ならないようにする(2026-10-24 改善部の点検 V3) */}
@@ -58028,6 +58040,20 @@ const CardPackOpen = ({ db, result, onDone }) => {
   const [seLog, setSeLog] = useState([]);
   const se = (name) => { try { Audio_.fgSe[name](); } catch (e) {} setSeLog((l) => [...l.slice(-40), name]); };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  // カードを並べる所の高さ。背の低い画面(横画面 844×390 など)では、2段とまとめの字が収まる幅までカードを小さくする
+  //   (前は上の段の上が切れて「NEW」が見えなかった。2026-10-27 パックの見回り)
+  const listRef = useRef(null);
+  const [listH, setListH] = useState(0);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return undefined;
+    const on = () => setListH(el.clientHeight);
+    on();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(on) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', on);
+    return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', on); };
+  }, []);
   const later = (fn, ms) => { timers.current.push(setTimeout(fn, ms)); };
   const press = useCardLongPress((no) => setDetail(no));
   const pack = cardPackOf(result.packId) || CARD_PACKS[0];
@@ -58070,10 +58096,17 @@ const CardPackOpen = ({ db, result, onDone }) => {
   };
   const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase('closed'); setFlipped([]); setSpot(null); };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
+  // 背の高い画面では3列にしてカードを大きく見せる(4列だと小さく、下が大きく空いた。V7)。背の低い画面は4列のまま
+  const cols = cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
+  const rows = Math.ceil(cards.length / cols);
+  // 1段ぶんの高さ = カード(幅×7/5) + 名前と隙間(24px)。下のまとめ(2行ぶん 44px)と下の余白(8px)も取っておく
+  const gridMaxW = listH > 0 ? Math.max(200, Math.floor((((listH - 52) / rows - 24) * 5) / 7 * cols + 8 * (cols - 1) + 8)) : null;
+  // 真ん中に大きく出すキラ以上: 背の低い画面では、カードと「キラ!」の札が画面に収まる大きさにする(横画面ではみ出していた)
+  const spotW = `min(62vw, 260px, ${Math.max(140, Math.floor((((typeof window !== 'undefined' ? window.innerHeight : 844) - 120) * 5) / 7))}px)`;
   return (
     <div data-mh-screen data-card-pack-open data-card-pack-phase={phase} data-card-pack-se={seLog.join(',')} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title={pack.name} accent="text-amber-200" note={result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''}/>
-      <div className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
+      <div ref={listRef} className={`${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`}>
         {phase !== 'open' ? (
           <button type="button" data-card-pack-tear onClick={tear} className={`relative ${phase === 'closed' ? 'mh-pack-idle' : 'mh-pack-shake'}`} aria-label="パックを開ける">
             <div className={phase === 'tearing' ? 'mh-pack-drop' : ''}><CardPackArt db={db} pack={pack} width={210} torn={phase === 'tearing'}/></div>
@@ -58083,8 +58116,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
             {phase === 'closed' && <span className="absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white">タップで開ける</span>}
           </button>
         ) : (
-          // 背の高い画面では3列にしてカードを大きく見せる(4列だと小さく、下が大きく空いた。V7)。背の低い画面は4列のまま
-          <div className={`grid w-full gap-2 ${cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 'grid-cols-4' : 'grid-cols-3'} px-1`}>
+          <div data-card-pack-grid className={`grid w-full gap-2 ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`} style={gridMaxW ? { maxWidth: gridMaxW } : undefined}>
             {cards.map((c, i) => {
               const on = flipped.includes(i);
               const card = cardOf(db, c.no); const m = card ? null : cardMonsterOf(db, c.no);
@@ -58104,10 +58136,16 @@ const CardPackOpen = ({ db, result, onDone }) => {
                       </div>
                     </div>
                     {on && rare && <div aria-hidden="true" className={`mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`}/>}
-                    {on && c.dup && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
-                    {/* NEW は、その種類をはじめて手に入れた1枚だけ(前から持っている・同じパックの2枚目には付けない。89 の fresh。2026-10-26 巡回)。fresh が無い札(見本)は前のまま */}
-                    {on && !c.dup && (c.fresh === undefined || c.fresh) && <span className="absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
-                    {on && rare && <span className={`absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
+                    {/* 左上にレア度・右上に NEW か +ビートP。カードが細い画面(320×568)では2つが重なって「別絵キラ EW」と読めたので、
+                        1つの行に並べ、入りきらないときは右の札を次の行へ送る(2026-10-27 パックの見回り) */}
+                    {on && (rare || c.dup || c.fresh === undefined || c.fresh) && (
+                      <span data-card-pack-badges className="absolute inset-x-0.5 top-0.5 z-[2] flex flex-wrap items-start gap-0.5">
+                        {rare && <span className={`rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`}>{CARD_RARITY_LABEL[c.rarity]}</span>}
+                        {c.dup && <span className="ml-auto rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200">+{c.point}</span>}
+                        {/* NEW は、その種類をはじめて手に入れた1枚だけ(前から持っている・同じパックの2枚目には付けない。89 の fresh。2026-10-26 巡回)。fresh が無い札(見本)は前のまま */}
+                        {!c.dup && (c.fresh === undefined || c.fresh) && <span className="ml-auto rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950">NEW</span>}
+                      </span>
+                    )}
                   </button>
                   <CardNameFit name={on ? name : '\u00a0'} className="mt-0.5 font-bold leading-tight text-slate-100"/>
                 </div>
@@ -58131,7 +58169,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
         return (
           <button type="button" data-card-pack-spot={spot.rarity} aria-label="並びへ戻す" onClick={spotOff} className="fixed inset-0 z-[72] flex flex-col items-center justify-center bg-slate-950/70">
             <div aria-hidden="true" className={`mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`}/>
-            <div className={`relative w-[62vw] max-w-[260px] ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`}>
+            <div className={`relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`} style={{ width: spotW }}>
               <div className={`relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`}>
                 <img src={CARD_IMG(card ? card.img : m ? m.img : c.no)} alt={card ? card.name : m ? m.name : c.no} draggable={false} className="h-full w-full rounded-[8px] object-cover"/>
               </div>
@@ -60025,6 +60063,14 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   // フレンドから招待: 自分のブリーダーid・名簿(承認済みのフレンド)・届いている招待
   const [selfBid, setSelfBid] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false); // マルチの履歴(92-card-pvp-history.jsx)
+  // 自分の強さの点数(横画面の左の列に出す。表が無い・読めないときは出さない)
+  const [myRating, setMyRating] = useState(null);
+  useEffect(() => {
+    if (!selfBid || typeof sbFetchMyCardPvpRating !== 'function') return undefined;
+    let alive = true;
+    void sbFetchMyCardPvpRating(selfBid).then((x) => { if (alive && x) setMyRating(x); });
+    return () => { alive = false; };
+  }, [selfBid]);
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -60198,6 +60244,17 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
   return (
     <div data-mh-screen data-card-pvp={room.phase} className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="マルチ対戦" accent="text-sky-200" onBack={back} note={cardPvpOpen() ? 'ほかのブリーダーと1対1で戦えます' : 'ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)'}/>
+      {/* 横画面だけ: 自分のデッキと強さの点数(一覧の外に置くと左の列に積まれる。縦画面では入口のボタンが下がらないよう出さない。2026-10-27 部長) */}
+      {room.phase === 'idle' && deck && (
+        <div data-card-pvp-me-summary className="hidden landscape:block rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-white">
+          <p className="text-[12px] font-bold text-slate-300">使うデッキ</p>
+          <p className="truncate text-[14px] font-black">{deck.name || 'デッキ'}</p>
+          <div className="mt-1 grid grid-cols-3 gap-1.5">
+            {(deck.monsters || []).map((no, i) => { const m = cardMonsterOf(CARD_BATTLE_DATA, no); return <img key={`${no}-${i}`} src={CARD_IMG(m ? m.img : no)} alt={m ? m.name : no} className="aspect-[5/7] w-full rounded-[5px] object-cover"/>; })}
+          </div>
+          {myRating && <p data-card-pvp-me-rating className="mt-2 text-[13px] font-black text-sky-200 tabular-nums">強さ {myRating.rating}{myRating.games > 0 ? `(${myRating.games}試合)` : ''}</p>}
+        </div>
+      )}
       <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
         {room.phase === 'idle' && (<>
           {penaltyMin > 0 && <p data-card-pvp-penalty className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[13px] font-bold text-rose-100">試合の途中で抜けたので、あと{penaltyMin}分は部屋に入れません</p>}
@@ -60572,8 +60629,30 @@ const cardPvpHistoryWhen = (at) => {
 const cardPvpHistoryLoad = async () => {
   try { return cardPvpNormalizeHistory(await storeGet(CARD_PVP_HISTORY_KEY, [], false)); } catch (_) { return []; }
 };
+// 書く。localStorage へは直に書き、いっぱいでも、ゲーム全体の「保存できない」の数に入れない(知らせやクイック周回の停止を巻き込まない)。
+//   過去の対戦(93 の cardReplayWrite・cardReplayRoomLeft・cardReplayStore)と同じ作り。2026-10-27 保存の見回り(ミカエシくん・部長)
+const CARD_PVP_HISTORY_PROBE_KEY = '__mh_card_pvp_history_probe__'; // mh_ で始めない(バックアップに混ぜない)
+const CARD_PVP_HISTORY_ROOM = 131072;                                // 書いたあとに残す空き(ほかのセーブが書けるように)
+const cardPvpHistoryPut = async (list) => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true; // はじめてのプレビュー中は書かない(storeSet と同じ)
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_PVP_HISTORY_KEY, list, false);
+  try { window.localStorage.setItem(CARD_PVP_HISTORY_KEY, JSON.stringify(list)); return true; } catch (_) { return false; }
+};
+const cardPvpHistoryRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try { window.localStorage.setItem(CARD_PVP_HISTORY_PROBE_KEY, 'x'.repeat(CARD_PVP_HISTORY_ROOM)); return true; } catch (_) { return false; } finally { try { window.localStorage.removeItem(CARD_PVP_HISTORY_PROBE_KEY); } catch (_) { /* 消せなくても続ける */ } }
+};
+// 書けない・書いたあと空きが無いときは、古い試合から減らして書き直す(いちばん新しい試合は残す)。それでも入らなければあきらめる(ゲームは止めない)
 const cardPvpHistoryWrite = async (fn) => {
-  try { const next = fn(await cardPvpHistoryLoad()); await storeSet(CARD_PVP_HISTORY_KEY, next, false); return next; } catch (_) { return null; }
+  try {
+    const list = fn(await cardPvpHistoryLoad()).slice();
+    for (;;) {
+      const ok = await cardPvpHistoryPut(list);
+      if (ok && cardPvpHistoryRoomLeft()) return list;
+      if (list.length <= 1) return ok ? list : null;
+      list.pop();
+    }
+  } catch (_) { return null; }
 };
 
 // ---- 強さの点数の増減(自分の行だけ読む。表が無い・読めないときは null) ----
@@ -60688,6 +60767,17 @@ const CardPvpHistory = ({ db = CARD_BATTLE_DATA, onBack, onOpenReplay = null, re
   return (
     <div data-mh-screen data-card-pvp-history="list" className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="マルチの履歴" accent="text-sky-200" onBack={onBack} note={`新しい${CARD_PVP_HISTORY_MAX}試合まで・押すと相手のデッキ`}/>
+      {/* 勝ち負けの合計(一覧の外。横画面では左の列に積まれ、縦画面では一覧の上に出る。2026-10-27 横画面の左の列の空き・部長) */}
+      {list && list.length > 0 && (() => {
+        const w = list.filter((x) => x.outcome === 'win').length;
+        const latest = list.find((x) => x.rating);
+        return (
+          <div data-card-pvp-history-total className="mb-2 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2 text-[13px] font-black text-white tabular-nums landscape:flex-col landscape:gap-1">
+            <span>{list.length}試合 <span className="text-amber-300">{w}勝</span> <span className="text-slate-300">{list.length - w}敗</span></span>
+            {latest && <span className="text-sky-200">強さ {latest.rating.after}</span>}
+          </div>
+        );
+      })()}
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
         {list && list.length === 0 && <p className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-[13px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('まだマルチ対戦の記録はありません')}</p>}
         {(list || []).map((x) => {

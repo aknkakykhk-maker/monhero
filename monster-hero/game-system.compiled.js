@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38497c7ad5fc9c07
+// source-sha256: f07dbdf4a3582430
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -78883,7 +78883,7 @@ function RhythmMultiScreen({
     className: "absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-slate-950 px-1 text-[10px] font-black leading-[18px] text-lime-200"
   }, view.myCpus.length)) : null;
   const header = (step, onBackClick, opts = {}) => React.createElement("header", {
-    className: "z-10 flex shrink-0 items-center gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
+    className: "z-10 flex shrink-0 flex-wrap items-center justify-end gap-2 max-[480px]:gap-1.5 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
       paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
@@ -78894,12 +78894,14 @@ function RhythmMultiScreen({
     className: "min-h-[44px] min-w-[44px] max-[380px]:min-w-[36px] shrink-0 rounded-xl text-lg font-black text-slate-300",
     onClick: onBackClick
   }, "←"), React.createElement("div", {
-    className: "min-w-0 flex-1 leading-none"
+    className: "min-w-[7.5rem] flex-1 leading-none"
   }, React.createElement("b", {
-    className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
+    className: "block whitespace-nowrap text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
-    className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    className: "mt-0.5 block break-keep text-[10px] font-black leading-tight text-fuchsia-200"
+  }, "▶ ", step, view ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, view.mode === 'private' ? 'フレンド' : RHYTHM_MULTI_MODE_LABELS[view.mode], " ", view.code)) : '')), quickRunInfo && React.createElement(RhythmQuickRunPill, {
     info: quickRunInfo,
     onRestart: onRestartQuickRun,
     onResume: onResumeQuickRun,
@@ -78966,10 +78968,17 @@ function RhythmMultiScreen({
       className: "min-w-0 flex-1 leading-tight"
     }, React.createElement("small", {
       className: "block text-[9px] font-black text-cyan-200"
-    }, last ? last.name : 'チャット'), React.createElement("b", {
+    }, last ? last.name : 'チャット'), last ? React.createElement("b", {
       "data-rhythm-multi-chat-latest": true,
       className: "block truncate text-[12px] font-black text-white"
-    }, last ? last.text : 'タップで開く')), chatUnread > 0 && React.createElement("b", {
+    }, last.text) : React.createElement("b", {
+      "data-rhythm-multi-chat-latest": true,
+      className: "block text-[11px] font-black leading-tight text-white"
+    }, React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "タップで"), React.createElement("wbr", null), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "開く"))), chatUnread > 0 && React.createElement("b", {
       "data-rhythm-multi-chat-unread": true,
       className: "absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white"
     }, chatUnread > 9 ? '9+' : chatUnread));
@@ -79177,8 +79186,9 @@ function RhythmMultiScreen({
       "aria-hidden": "true",
       className: "text-2xl leading-none"
     }, "🎵"), React.createElement("p", {
-      className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100"
-    }, "マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります"), React.createElement("button", {
+      className: "min-w-0 flex-1 text-[11px] font-black leading-snug text-lime-100",
+      style: JA_WRAP_STYLE
+    }, jaWrap('マスモンを、マルチの部屋に呼べるようになりました。部屋の中の「マスモンを呼ぶ」から呼べて、一緒に遊ぶほどビートLvが上がります')), React.createElement("button", {
       type: "button",
       onClick: () => closeBuddyIntro(true),
       className: "min-h-[44px] shrink-0 rounded-xl bg-lime-400 px-2.5 text-xs font-black text-slate-950"
@@ -79337,8 +79347,9 @@ function RhythmMultiScreen({
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-white"
     }, "部屋をつくる"), React.createElement("p", {
-      className: "text-[11px] font-bold leading-snug text-slate-300"
-    }, "合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう"), React.createElement("button", {
+      className: "text-[11px] font-bold leading-snug text-slate-300",
+      style: JA_WRAP_STYLE
+    }, jaWrap('合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう')), React.createElement("button", {
       "data-rhythm-multi-create": true,
       type: "button",
       onClick: createPrivate,
@@ -79586,8 +79597,9 @@ function RhythmMultiScreen({
     })), React.createElement("div", {
       className: "min-w-0 flex-1 landscape:max-w-[34%]"
     }, React.createElement("b", {
-      className: "block truncate text-sm font-black"
-    }, drawnSong ? rhythmSongFullName(drawnSong) : ''), React.createElement("small", {
+      className: "block text-sm font-black leading-tight",
+      style: JA_WRAP_STYLE
+    }, drawnSong ? jaWrap(rhythmSongFullName(drawnSong)) : ''), React.createElement("small", {
       className: "block text-[10px] font-black text-slate-400"
     }, team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`), view.streak >= 2 && React.createElement("small", {
       "data-rhythm-multi-streak": true,
@@ -81418,8 +81430,9 @@ function RhythmBuddySheet({
     tickets: tickets,
     className: "mb-1 text-slate-200"
   }), React.createElement("p", {
-    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日", RHYTHM_BUDDY_FREE_PER_DAY, "回までは無料、そのあとはセッション券を1枚使います。")), React.createElement("div", {
+    className: "mb-2 text-[10px] font-bold leading-relaxed text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`マスモンをえらんで、CPUとしてこの部屋に呼べます。部屋に空きがあるだけ、何体でも呼べます(1体につき1回)。部屋にいるあいだは何曲でも一緒に遊びます。1日${RHYTHM_BUDDY_FREE_PER_DAY}回までは無料、そのあとはセッション券を1枚使います。`))), React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col"
   }, React.createElement("div", {
     className: "min-h-0 flex-1 overflow-y-auto"
@@ -91564,11 +91577,13 @@ const CardBattleBoard = ({
   const dropTargetsOf = i => {
     const out = {};
     if (mode === 'attack') {
-      const os = attackOpts.filter(o => o.hand[0] === i).concat(attackOpts.filter(o => o.hand[0] !== i && o.hand.includes(i)));
+      const chosen = sel && setChosen && JSON.parse(setChosen).includes(i) ? finalOpts : null;
+      const os = chosen || attackOpts.filter(o => o.hand[0] === i).concat(attackOpts.filter(o => o.hand[0] !== i && o.hand.includes(i)));
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
+        const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
         keys.forEach(k => {
-          if (!out[k] || o.hand.length > out[k].hand.length) out[k] = o;
+          if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
         });
       });
     }
@@ -92290,6 +92305,7 @@ const CardBattleBoard = ({
   }, sets.map(s => React.createElement("button", {
     key: s,
     type: "button",
+    "data-card-set": s,
     onClick: () => setSel({
       ...sel,
       mon: monChosen,
@@ -96221,6 +96237,21 @@ const CardPackOpen = ({
     setSeLog(l => [...l.slice(-40), name]);
   };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const listRef = useRef(null);
+  const [listH, setListH] = useState(0);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return undefined;
+    const on = () => setListH(el.clientHeight);
+    on();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(on) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', on);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', on);
+    };
+  }, []);
   const later = (fn, ms) => {
     timers.current.push(setTimeout(fn, ms));
   };
@@ -96286,6 +96317,10 @@ const CardPackOpen = ({
     setSpot(null);
   };
   const packPoint = cards.reduce((a, c) => a + (c.point || 0), 0);
+  const cols = cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
+  const rows = Math.ceil(cards.length / cols);
+  const gridMaxW = listH > 0 ? Math.max(200, Math.floor(((listH - 52) / rows - 24) * 5 / 7 * cols + 8 * (cols - 1) + 8)) : null;
+  const spotW = `min(62vw, 260px, ${Math.max(140, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 844) - 120) * 5 / 7))}px)`;
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-pack-open": true,
@@ -96297,6 +96332,7 @@ const CardPackOpen = ({
     accent: "text-amber-200",
     note: result.packs.length > 1 ? `${pi + 1} / ${result.packs.length}パック` : ''
   }), React.createElement("div", {
+    ref: listRef,
     className: `${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`
   }, phase !== 'open' ? React.createElement("button", {
     type: "button",
@@ -96326,7 +96362,11 @@ const CardPackOpen = ({
   }), phase === 'closed' && React.createElement("span", {
     className: "absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white"
   }, "タップで開ける")) : React.createElement("div", {
-    className: `grid w-full gap-2 ${cards.length > 4 && !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 'grid-cols-4' : 'grid-cols-3'} px-1`
+    "data-card-pack-grid": true,
+    className: `grid w-full gap-2 ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`,
+    style: gridMaxW ? {
+      maxWidth: gridMaxW
+    } : undefined
   }, cards.map((c, i) => {
     const on = flipped.includes(i);
     const card = cardOf(db, c.no);
@@ -96381,13 +96421,16 @@ const CardPackOpen = ({
     }))), on && rare && React.createElement("div", {
       "aria-hidden": "true",
       className: `mh-pack-rays ${c.rarity === 'alt' ? 'mh-pack-rays-alt' : ''}`
-    }), on && c.dup && React.createElement("span", {
-      className: "absolute right-0.5 top-0.5 z-[2] rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200"
-    }, "+", c.point), on && !c.dup && (c.fresh === undefined || c.fresh) && React.createElement("span", {
-      className: "absolute right-0.5 top-0.5 z-[2] rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950"
-    }, "NEW"), on && rare && React.createElement("span", {
-      className: `absolute left-0.5 top-0.5 z-[2] rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`
-    }, CARD_RARITY_LABEL[c.rarity])), React.createElement(CardNameFit, {
+    }), on && (rare || c.dup || c.fresh === undefined || c.fresh) && React.createElement("span", {
+      "data-card-pack-badges": true,
+      className: "absolute inset-x-0.5 top-0.5 z-[2] flex flex-wrap items-start gap-0.5"
+    }, rare && React.createElement("span", {
+      className: `rounded-md px-1 text-[9px] font-black text-slate-950 ${c.rarity === 'alt' ? 'mh-pack-alt-label' : 'bg-amber-300'}`
+    }, CARD_RARITY_LABEL[c.rarity]), c.dup && React.createElement("span", {
+      className: "ml-auto rounded-md bg-slate-950/90 px-1 text-[10px] font-black text-amber-200"
+    }, "+", c.point), !c.dup && (c.fresh === undefined || c.fresh) && React.createElement("span", {
+      className: "ml-auto rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950"
+    }, "NEW"))), React.createElement(CardNameFit, {
       name: on ? name : '\u00a0',
       className: "mt-0.5 font-bold leading-tight text-slate-100"
     }));
@@ -96420,7 +96463,10 @@ const CardPackOpen = ({
       "aria-hidden": "true",
       className: `mh-pack-spot-rays ${alt ? 'mh-pack-spot-rays-alt' : ''}`
     }), React.createElement("div", {
-      className: `relative w-[62vw] max-w-[260px] ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`
+      className: `relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`,
+      style: {
+        width: spotW
+      }
     }, React.createElement("div", {
       className: `relative aspect-[5/7] w-full ${alt ? 'mh-pack-alt-front' : 'mh-pack-kira-front'}`
     }, React.createElement("img", {
@@ -100007,6 +100053,17 @@ const CardPvpLobby = ({
   const penaltyMin = penaltyUntil > now ? Math.ceil((penaltyUntil - now) / 60000) : 0;
   const [selfBid, setSelfBid] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [myRating, setMyRating] = useState(null);
+  useEffect(() => {
+    if (!selfBid || typeof sbFetchMyCardPvpRating !== 'function') return undefined;
+    let alive = true;
+    void sbFetchMyCardPvpRating(selfBid).then(x => {
+      if (alive && x) setMyRating(x);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [selfBid]);
   const [roster, setRoster] = useState(null);
   const [invites, setInvites] = useState([]);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -100291,7 +100348,27 @@ const CardPvpLobby = ({
     accent: "text-sky-200",
     onBack: back,
     note: cardPvpOpen() ? 'ほかのブリーダーと1対1で戦えます' : 'ほかのブリーダーと1対1で戦えます(デバッグ専用・つくっている途中)'
-  }), React.createElement("div", {
+  }), room.phase === 'idle' && deck && React.createElement("div", {
+    "data-card-pvp-me-summary": true,
+    className: "hidden landscape:block rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-white"
+  }, React.createElement("p", {
+    className: "text-[12px] font-bold text-slate-300"
+  }, "使うデッキ"), React.createElement("p", {
+    className: "truncate text-[14px] font-black"
+  }, deck.name || 'デッキ'), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1.5"
+  }, (deck.monsters || []).map((no, i) => {
+    const m = cardMonsterOf(CARD_BATTLE_DATA, no);
+    return React.createElement("img", {
+      key: `${no}-${i}`,
+      src: CARD_IMG(m ? m.img : no),
+      alt: m ? m.name : no,
+      className: "aspect-[5/7] w-full rounded-[5px] object-cover"
+    });
+  })), myRating && React.createElement("p", {
+    "data-card-pvp-me-rating": true,
+    className: "mt-2 text-[13px] font-black text-sky-200 tabular-nums"
+  }, "強さ ", myRating.rating, myRating.games > 0 ? `(${myRating.games}試合)` : '')), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
   }, room.phase === 'idle' && React.createElement(React.Fragment, null, penaltyMin > 0 && React.createElement("p", {
     "data-card-pvp-penalty": true,
@@ -100893,11 +100970,40 @@ const cardPvpHistoryLoad = async () => {
     return [];
   }
 };
+const CARD_PVP_HISTORY_PROBE_KEY = '__mh_card_pvp_history_probe__';
+const CARD_PVP_HISTORY_ROOM = 131072;
+const cardPvpHistoryPut = async list => {
+  if (typeof isStorageWriteBlocked === 'function' && isStorageWriteBlocked()) return true;
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return storeSet(CARD_PVP_HISTORY_KEY, list, false);
+  try {
+    window.localStorage.setItem(CARD_PVP_HISTORY_KEY, JSON.stringify(list));
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+const cardPvpHistoryRoomLeft = () => {
+  if (typeof hasWinStorage === 'function' && hasWinStorage()) return true;
+  try {
+    window.localStorage.setItem(CARD_PVP_HISTORY_PROBE_KEY, 'x'.repeat(CARD_PVP_HISTORY_ROOM));
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    try {
+      window.localStorage.removeItem(CARD_PVP_HISTORY_PROBE_KEY);
+    } catch (_) {}
+  }
+};
 const cardPvpHistoryWrite = async fn => {
   try {
-    const next = fn(await cardPvpHistoryLoad());
-    await storeSet(CARD_PVP_HISTORY_KEY, next, false);
-    return next;
+    const list = fn(await cardPvpHistoryLoad()).slice();
+    for (;;) {
+      const ok = await cardPvpHistoryPut(list);
+      if (ok && cardPvpHistoryRoomLeft()) return list;
+      if (list.length <= 1) return ok ? list : null;
+      list.pop();
+    }
   } catch (_) {
     return null;
   }
@@ -101128,7 +101234,20 @@ const CardPvpHistory = ({
     accent: "text-sky-200",
     onBack: onBack,
     note: `新しい${CARD_PVP_HISTORY_MAX}試合まで・押すと相手のデッキ`
-  }), React.createElement("div", {
+  }), list && list.length > 0 && (() => {
+    const w = list.filter(x => x.outcome === 'win').length;
+    const latest = list.find(x => x.rating);
+    return React.createElement("div", {
+      "data-card-pvp-history-total": true,
+      className: "mb-2 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2 text-[13px] font-black text-white tabular-nums landscape:flex-col landscape:gap-1"
+    }, React.createElement("span", null, list.length, "試合 ", React.createElement("span", {
+      className: "text-amber-300"
+    }, w, "勝"), " ", React.createElement("span", {
+      className: "text-slate-300"
+    }, list.length - w, "敗")), latest && React.createElement("span", {
+      className: "text-sky-200"
+    }, "強さ ", latest.rating.after));
+  })(), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
   }, list && list.length === 0 && React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-[13px] font-bold text-slate-300",
