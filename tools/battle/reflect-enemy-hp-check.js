@@ -53,9 +53,11 @@ check('このターンに削ったぶんを1か所で出して使い回す(撃�
 // 起き上がったあとも同じ値を使い回す(0のままだと、反射でHP0の敵をもう一度倒すことになる)
 check('不死で起き上がったら、その値へ復活後のライフを入れ直す',
   has('if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;'));
-// 何もしなかったターン(緊急回復)は、こちらのダメージが無いので既定値のままでよい
-check('緊急回復から敵が動くときは既定値のまま(こちらの与ダメが無いため)',
-  has("await handleEnemyTurn('none',{},acting,hpAfterRecovery);"));
+// 何もしなかったターン(緊急回復)は、こちらのダメージが無いので既定値のままでよい。
+// ★ただしタクティクスの AIコピー(ソラシドのアシカ)は緊急回復のターンにも打つ(2026-10-27)ので、コピーが当てたあとの敵のライフを渡す
+check('緊急回復から敵が動くときは、AIコピーが当てたあとの敵のライフを渡す(コピーがいなければ今までの値)',
+  has("await handleEnemyTurn('none',{},acting,hpAfterRecovery,solo.enemyHp);")
+    && has("const solo=isTacticsMode(runMode)?await tacticsAiCopySoloStrike():{defeated:false,enemyHp:enemy?.hp??0};"));
 // こちらの攻撃は関数型更新のまま(絶対値で書き戻すと同じ不具合が起きる)。
 // ★敵がいない瞬間に prev を掘ると画面が落ちるので prev? の番をしている。
 //   数だけでなく「絶対値で書き戻していないか」も見る
