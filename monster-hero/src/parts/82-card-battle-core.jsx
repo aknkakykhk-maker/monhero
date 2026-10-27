@@ -1134,6 +1134,8 @@ const CARD_AI_HABITS = Object.freeze({
   kyuko:    { attack: 1.0, keepGuard: 1.0, saveGuts: 1.0, big: 1.0, disrupt: 1.0, area: 1.0, finish: 1.2 },
   dra:      { attack: 0.7, keepGuard: 1.5, saveGuts: 1.0, big: 0.6, disrupt: 0.8, area: 0.8, finish: 0.8 },
   atsu:     { attack: 1.2, keepGuard: 0.6, saveGuts: 0.8, big: 1.0, disrupt: 0.8, area: 1.8, finish: 1.5 },
+  soraA:    { attack: 1.0, keepGuard: 0.9, saveGuts: 1.0, big: 0.8, disrupt: 1.3, area: 0.8, finish: 1.0 },
+  soraB:    { attack: 1.1, keepGuard: 0.8, saveGuts: 1.2, big: 0.9, disrupt: 1.5, area: 0.9, finish: 1.1 },
 });
 // デッキを組むときだけ、くせの値を強さごとに上書きする(打ち方のくせは CARD_AI_HABITS のまま)
 //   ドラ MASTER: 大技を軽く見るくせ(big 0.6)でデッキが弱く、プレイヤー役への勝率が目安(38〜65%)の下の境目だった。
@@ -1142,7 +1144,7 @@ const CARD_AI_DECK_HABIT = Object.freeze({ dra: { master: { big: 1.0 } } });
 const cardAiDeckHabit = (who, levelId) => { const h = CARD_AI_HABITS[who] || CARD_AI_HABITS.kyuko; const o = ((CARD_AI_DECK_HABIT[who] || {})[levelId]) || null; return o ? { ...h, ...o } : h; };
 // 助手どうしの強さをそろえる数(雑な手の割合に掛ける)。くせとデッキの違いで、同じ難易度でも勝率に差が出るため。
 // tools/card/card-rules-check.js の試算で、どの助手もスターター相手に同じくらいの勝率になるように決めた
-const CARD_AI_TUNE = Object.freeze({ mua: 0.6, momosuke: 0.5, kiki: 1.3, kyuko: 1, dra: 1.15, atsu: 1 });
+const CARD_AI_TUNE = Object.freeze({ mua: 0.6, momosuke: 0.5, kiki: 1.3, kyuko: 1, dra: 1.15, atsu: 1, soraA: 1, soraB: 1 });
 // 深く読む難易度で、くせの重みを「真ん中(1.0)」へ寄せる割合(1 = そのまま・0.5 = 半分だけ寄せる)。くせの向きは変えない。
 //   みゅあ(攻める 1.5・守りを残す 0.2・ガッツをためる 0.2)は、深く読む相手には極端なくせが裏目に出て、
 //   EXPERT・MASTER でプレイヤー役に 29〜32% しか勝てなかった(公開の条件。tools/card/card-ai-balance.js で測る)
@@ -1588,12 +1590,14 @@ const CARD_AI_DECKS = Object.freeze({
   kiki:     { kit: 'powerful' },
   dra:      { kit: 'powerful' },
   kyuko:    { monsters: ['C-007', 'C-005', 'C-009'] },  // ナーガ・ピクシー・モッチー
+  soraA:    { monsters: ['C-026', 'C-060', 'C-039'] },
+  soraB:    { monsters: ['C-026', 'C-060', 'C-039'] },
   atsu:     { monsters: ['C-003', 'C-001', 'C-002'], prefer: ['竜巻アタック', '地震', '炎のカベ', 'ブリザード'] },  // ゴーレム・ライガー・ガリ。全体攻撃を集める
 });
 // 助手の好きなモンスター(1体。2026-10-25 社長「1体だけ好きなモンスターを決めて、あとは好みのバランスでデッキ組む」)。
 // 名前ではなく主血統(種族)で決める(「モッチーだけどジェントル使うとかはあり」)。その種族の通常・キラ・別絵キラと、
 // その種族を主血統に持つ混血・派生がみな候補になり、カードが増えれば自動で候補に入る。どの強さでも必ず1体入れる
-const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon' });
+const CARD_AI_FAVORITE = Object.freeze({ mua: 'mocchi', momosuke: 'metalner', kiki: 'golem', kyuko: 'mew', dra: 'zilla', atsu: 'dragon', soraA: 'mew', soraB: 'mew' });
 // 強さごとの組み方(社長の決め)。maxWave … 技などのカードの弾(好きな子の技は、その子の弾まで使える) / noise … カードの選び方の雑さ /
 // temp … 残り2体の選び方のゆらぎ(大きいほど型に合わない子も入る) / stray … 気まぐれな子(型と関係なく)が1体混ざる割合 /
 // best … いちばん強い組み合わせ(相手のデッキも見る)
@@ -1604,6 +1608,9 @@ const CARD_AI_SAME_BLOOD = Object.freeze({ easy: 0.3, normal: 0.28 });
 // HARD から上でも、1試合ごとにこの割合 × 仲間の多さで、同じ血統で組む試合にする(2026-10-26 社長「マスターでもたまに同じ血統や3体全部同じが出るでいい」)。
 //   その試合では、2体目を仲間の中でいちばん強い子(数え直した点数 cardAiTeamValue)にし、3体目も半分は仲間から(3体とも同じ血統)
 const CARD_AI_SAME_BLOOD_HI = Object.freeze({ hard: 0.2, expert: 0.12, master: 0.1 });
+// 試し: 助手ごとに同じ血統で組む割合を決め打つ(ソラシド案A)
+const CARD_AI_SAME_BLOOD_WHO = { soraA: { easy: 1, normal: 1, hard: 1, expert: 1, master: 1 }, soraB: { easy: 1, normal: 1, hard: 1, expert: 1, master: 1 } };
+const CARD_AI_SAME_BLOOD_MAX = { soraB: 1 };   // 仲間から取るのは2体目まで(3体目は型に合う子)
 // HARD から上は割合でなく点数でえらぶ(2026-10-26 社長「同じメインのメリットは同じ攻撃カードを入れられること、同じサブのメリットは同じ防御カードを使えること。
 //   だからといってその組み方が強いわけではないと思う」)。仲間(同じ血統の子)の点数は、チームとして数え直す(cardAiTeamValue)
 //   ・ふつうの点数(cardAiMonScore)は子ごとに「使える良い技の上位10枚」を数えるので、同じ血統の子どうしでは同じ技を2回・3回数えてしまう。
@@ -1793,8 +1800,9 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
   // EASY・NORMAL は割合(くせとしてときどき)。HARD から上は、仲間も候補に入れて、チームとして数え直した点数(cardAiTeamValue)でくらべる
   //   ★数え直すのは仲間だけ(ほかの子の点数は今のまま。強さのそろえを動かさないため)。
   //    数え直さずに仲間をくらべると、あつがドラゴンの仲間ばかりえらび、MASTER の勝率が 44%→19%・EXPERT の同じ血統の組みは 21% に下がった(2026-10-26 測定)
-  const byScore = !CARD_AI_SAME_BLOOD[levelId];
-  const sameRate = byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
+  const whoRate = (CARD_AI_SAME_BLOOD_WHO[who] || {})[levelId];
+  const byScore = whoRate === undefined && !CARD_AI_SAME_BLOOD[levelId];
+  const sameRate = whoRate !== undefined ? whoRate : byScore ? 0 : (CARD_AI_SAME_BLOOD[levelId] || 0) * cardAiSameBloodScale(familySize);
   const isFamily = new Set(family.map((m) => m.no));
   const pool = byScore ? [...cands, ...family.filter((m) => !m.variant)] : cands;
   const scored = pool.map((m) => ({ m, v: cardAiMonScore(db, who, m, cfg.maxWave, levelId) + counter(m) }));
@@ -1818,7 +1826,7 @@ const cardAiPickTrio = (db, who, levelId, rand, playerDeck) => {
     }
     // 同じ血統の仲間からえらぶ(割合は sameRate)
     const famLeft = family.filter((m) => !usedNos.has(m.species));
-    if (sameRate > 0 && famLeft.length && rand() < sameRate) {
+    if (sameRate > 0 && famLeft.length && k < (CARD_AI_SAME_BLOOD_MAX[who] || 2) && rand() < sameRate) {
       const w = famLeft.map((m) => (String(m.wave) === 'hybrid' ? 1.5 : !m.variant ? 3 : /別絵/.test(m.variant) ? 1 : 2));
       const m = famLeft[cardAiPickIndex(w, rand)];
       out.push(m.no);

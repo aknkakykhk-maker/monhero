@@ -29,7 +29,7 @@ const vs = opt('--vs', 'starter');
 const E = load();
 const db = E.CARD_BATTLE_DATA;
 const who = Object.keys(E.CARD_AI_HABITS);
-const NAME = { mua: 'みゅあ', momosuke: 'ももすけ', kiki: 'きき', kyuko: 'きゅうこ', dra: 'ドラ', atsu: 'あつ' };
+const NAME = { mua: 'みゅあ', momosuke: 'ももすけ', kiki: 'きき', kyuko: 'きゅうこ', dra: 'ドラ', atsu: 'あつ', soraA: 'ソラA', soraB: 'ソラB' };
 const out = {};
 levels.forEach((lv) => {
   const decks = Object.fromEntries(who.map((w) => [w, E.cardAiBuildDeck(db, w, lv)]));
