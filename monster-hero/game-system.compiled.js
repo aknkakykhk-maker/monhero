@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3a89ad38e4045f76
+// source-sha256: c373ea99a6cf8495
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -85773,6 +85773,7 @@ const cardFieldDmgAdd = (st, main) => (st && st.field && Array.isArray(st.field.
 const cardClone = st => JSON.parse(JSON.stringify(st));
 const cardOther = p => 1 - p;
 const cardIsHybridMon = mon => !!(mon && mon.main && mon.sub && mon.sub !== 'unknown');
+const cardIsPureMon = mon => !!mon && !mon.main;
 const cardUsableBy = (card, mon) => {
   if (!card || !mon || mon.ko) return false;
   if (card.user === 'any') return true;
@@ -86100,7 +86101,7 @@ const cardAttachOk = (db, st, p, mon, main, c) => {
   if (w.area && !cardHasEff(main, 'area')) return false;
   if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
   if (w.deckEmpty && me.deck.length) return false;
-  if (w.pure && cardIsHybridMon(mon)) return false;
+  if (w.pure && !cardIsPureMon(mon)) return false;
   if (w.subSpe && !(cardIsHybridMon(mon) && main.user === mon.sub)) return false;
   return c.user === 'breeder' ? !me.breederUsed || cardBreederFree(st, p) : cardUsableBy(c, mon);
 };
@@ -86472,7 +86473,7 @@ const cardGuardOptions = (db, st) => {
   if (pd.redirected) return [];
   const isArea = cardHasEff(atkCard, 'area');
   const atkMon0 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !cardIsHybridMon(atkMon0) && cardIsHybridMon(target);
+  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && cardIsPureMon(atkMon0) && !cardIsPureMon(target);
   const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
@@ -86519,7 +86520,7 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     if (cardHasEff(c, 'evadeAll')) {
-      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && cardIsHybridMon(target)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
+      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && !cardIsPureMon(target)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({
         type: 'guard',
         hand: hi,
         mon: tgt.m
@@ -86559,7 +86560,7 @@ const cardGuardOptions = (db, st) => {
     if (ev) {
       if (pd.evaded) return;
       if (cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade) return;
-      if (fl.attachNoEvadeHybrid && cardIsHybridMon(target)) return;
+      if (fl.attachNoEvadeHybrid && !cardIsPureMon(target)) return;
       if (!ev.kinds.includes(atkCard.kind)) return;
       if (ev.minGuts && pd.cost < ev.minGuts) return;
       out.push({
@@ -86812,7 +86813,7 @@ const cardResolveTarget = (db, st) => {
   const missed = t.p !== pd.attacker && (!cardCanTarget(main, target, st.turn) || ar && ar.only && cardMonType(target, st.turn) !== ar.only);
   if (missed) dmg = 0;
   const atkMon1 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const noEvadeHere = cardIsHybridMon(target) && (!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && !cardIsHybridMon(atkMon1) || !!(pd.flags || {}).attachNoEvadeHybrid);
+  const noEvadeHere = !cardIsPureMon(target) && (!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && cardIsPureMon(atkMon1) || !!(pd.flags || {}).attachNoEvadeHybrid);
   const evaded = pd.evaded || pd.evadeAll && t.p !== pd.attacker && !noEvadeHere;
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
@@ -87712,8 +87713,8 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
-  if (flags.attachNoEvadeHybrid && cardIsHybridMon(tmon)) return 0;
-  if (cardFieldEff(st, 'fieldPurePride') && atkMon && !cardIsHybridMon(atkMon) && cardIsHybridMon(tmon)) return 0;
+  if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0;
+  if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0;
   const fits = no => {
     const c = cardOf(db, no);
     const ev = cardEff(c, 'evade');
@@ -87745,7 +87746,7 @@ const cardAiScoreField = (db, st, p, card, cost) => {
       v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
     }
     if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
-    if (e.t === 'fieldPurePride') v += (alive(op).filter(cardIsHybridMon).length - alive(me).filter(cardIsHybridMon).length) * 0.6;
+    if (e.t === 'fieldPurePride') v += (alive(op).filter(m => !cardIsPureMon(m)).length - alive(me).filter(m => !cardIsPureMon(m)).length) * 0.6;
     if (e.t === 'fieldBanKind') v += (share(theirs, c => e.kinds.includes(c.kind), 0.2) - share(mine, c => e.kinds.includes(c.kind), 0.2)) * 4;
     if (e.t === 'fieldType') v += (alive(me).filter(m => m.type === e.type).length - alive(op).filter(m => m.type === e.type).length) * 0.2;
     if (e.t === 'fieldBurn') v += (alive(me).length - alive(op).length) * 0.5 - 0.4;
@@ -88005,8 +88006,8 @@ const cardAiGuardEstimate = (db, st, o, dmg) => {
 };
 const cardAiEvadeAllCovers = (st, pd) => {
   const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const noHybrid = !!cardFieldEff(st, 'fieldPurePride') && atk && !cardIsHybridMon(atk) || !!(pd.flags || {}).attachNoEvadeHybrid;
-  return pd.targets.slice(pd.ti + 1).filter(t => t.p !== pd.attacker && !(noHybrid && cardIsHybridMon(st.players[t.p].mons[t.m]))).length;
+  const noHybrid = !!cardFieldEff(st, 'fieldPurePride') && atk && cardIsPureMon(atk) || !!(pd.flags || {}).attachNoEvadeHybrid;
+  return pd.targets.slice(pd.ti + 1).filter(t => t.p !== pd.attacker && !(noHybrid && !cardIsPureMon(st.players[t.p].mons[t.m]))).length;
 };
 const cardAiChooseGuard = (db, st, policy, rand) => {
   const pd = st.pending;
@@ -88176,7 +88177,7 @@ const cardAttachUseless = (db, st, o) => {
     if (!c) return false;
     const effs = (c.effects || []).map(e => e.t);
     if (effs.length && effs.every(t => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter(x => x !== i)) <= cost;
-    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some(t => cardIsHybridMon(st.players[t.p].mons[t.m]))) return true;
+    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some(t => !cardIsPureMon(st.players[t.p].mons[t.m]))) return true;
     return false;
   });
 };
@@ -100472,7 +100473,8 @@ const cardPvpCleanMessage = raw => {
       dn: typeof raw.dn === 'string' ? rhythmMultiText(raw.dn, 30) || null : null,
       rd: cardPvpInt(raw.rd, 1000) || 0,
       w: cardPvpInt(raw.w, 999) || 0,
-      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null,
+      rv: cardPvpRv(raw.rv)
     };
   }
   if (raw.t === 'start') return {
@@ -100538,7 +100540,8 @@ const cardPvpCleanMessage = raw => {
       name: typeof raw.name === 'string' ? rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null : null,
       icon: typeof raw.icon === 'string' ? rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null : null,
       fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
-      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null,
+      rv: cardPvpRv(raw.rv)
     };
   }
   if (raw.t === 'chat') {
@@ -100612,7 +100615,10 @@ const cardPvpResultLine = (who, scene, seed = 0) => {
   };
 };
 const cardPvpSeedOf = text => String(text || '').split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
-const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon)).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
+const cardPvpRulesVersion = () => typeof CARD_REPLAY_RULES === 'number' ? CARD_REPLAY_RULES : 0;
+const CARD_PVP_UPDATE_TEXT = 'ゲームを更新してください';
+const cardPvpRv = v => Number.isInteger(v) && v >= 0 && v <= 100000 ? v : null;
+const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {}).filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon) && x.rv === cardPvpRulesVersion()).sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1)).map(([id, x]) => ({
   id,
   code: x.code,
   name: x.name || 'ブリーダー',
@@ -101129,7 +101135,8 @@ const CARD_PVP = (() => {
     dn: s.me.dn || null,
     rd: s.round || 0,
     w: isHost() ? cardPvpWatchHost().eyes() : 0,
-    ov: s.phase === 'over' && s.match ? s.match : null
+    ov: s.phase === 'over' && s.match ? s.match : null,
+    rv: cardPvpRulesVersion()
   });
   const watchPush = (by, act, reveal, st) => {
     if (isHost()) cardPvpWatchHost().push({
@@ -101406,6 +101413,15 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
+      if (!s.foe && msg.rv !== cardPvpRulesVersion()) {
+        if (s.mode === 'free') return;
+        stop();
+        set({
+          phase: 'error',
+          error: CARD_PVP_UPDATE_TEXT
+        });
+        return;
+      }
       if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) {
         s = {
           ...s,
@@ -101596,7 +101612,8 @@ const CARD_PVP = (() => {
           name: msg.name,
           icon: msg.icon,
           fr: msg.fr,
-          rt: msg.rt
+          rt: msg.rt,
+          rv: msg.rv
         }
       }
     };
@@ -101657,7 +101674,7 @@ const CARD_PVP = (() => {
       emit();
       return;
     }
-    const older = fresh.filter(([id, x]) => x.at < s.seekAt || x.at === s.seekAt && id < s.me.id).sort((a, b) => a[1].at - b[1].at)[0];
+    const older = fresh.filter(([, x]) => x.rv === cardPvpRulesVersion()).filter(([id, x]) => x.at < s.seekAt || x.at === s.seekAt && id < s.me.id).sort((a, b) => a[1].at - b[1].at)[0];
     if (older) {
       s = {
         ...s,
@@ -101676,7 +101693,8 @@ const CARD_PVP = (() => {
       name: s.me.name,
       icon: s.me.icon,
       fr: s.me.fr || null,
-      rt: Number.isInteger(s.me.rt) ? s.me.rt : null
+      rt: Number.isInteger(s.me.rt) ? s.me.rt : null,
+      rv: cardPvpRulesVersion()
     });
     emit();
   };
@@ -103345,7 +103363,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 8;
+const CARD_REPLAY_RULES = 9;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;

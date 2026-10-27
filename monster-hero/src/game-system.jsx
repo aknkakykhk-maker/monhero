@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 85f32fad50f727a6
+// generated-sha256: 00ba7e21cc5450ac
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52083,6 +52083,9 @@ const cardOther = (p) => 1 - p;
 
 // 混血(派生)の子か。サブが「？？？」(unknown)の子(剣士モッチー・パンドラなど・レア)は純血と同じに扱う(2026-10-27 社長「サブが？？？は純血扱い」)
 const cardIsHybridMon = (mon) => !!(mon && mon.main && mon.sub && mon.sub !== 'unknown');
+// 純血かどうか(純血のスピード・純血のプライドで見る)。メインの種族が無い子だけが純血。サブが「？？？」の子は純血ではない
+//   (2026-10-27 社長 案A「サブレアは純血扱いじゃなくす。ただ防御回避カードは純血と同じ扱いはルールのまま」)。守りの札をどの種族で使うかは cardIsHybridMon のまま
+const cardIsPureMon = (mon) => !!mon && !mon.main;
 // その子が、そのカードを使えるか(専用の技は書いてある種族だけ。全モンスターは誰でも)
 //   混血: 攻撃・特殊はメインの種族の札だけ、防御・回避はサブの種族の札だけ(2026-10-27 社長「ヘルファットがモッチーの守備技使ってきます」。
 //   前は「サブの守りも使える」と読み、メインの守りまで使えていた)。サブが？？？の子は純血と同じで、メインの種族の札を全部使える
@@ -52304,7 +52307,7 @@ const cardAttachOk = (db, st, p, mon, main, c) => {
   if (w.area && !cardHasEff(main, 'area')) return false;
   if (w.lifeMax !== undefined && mon.life > w.lifeMax) return false;
   if (w.deckEmpty && me.deck.length) return false;
-  if (w.pure && cardIsHybridMon(mon)) return false;
+  if (w.pure && !cardIsPureMon(mon)) return false;
   if (w.subSpe && !(cardIsHybridMon(mon) && main.user === mon.sub)) return false; // 太古の記憶: サブの種族の特殊技にだけ
   return c.user === 'breeder' ? (!me.breederUsed || cardBreederFree(st, p)) : cardUsableBy(c, mon);
 };
@@ -52534,7 +52537,7 @@ const cardGuardOptions = (db, st) => {
   const isArea = cardHasEff(atkCard, 'area');
   // 純血のプライド(全体カード): 純血の子の攻撃に、派生の子は回避を出せない
   const atkMon0 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && !cardIsHybridMon(atkMon0) && cardIsHybridMon(target);
+  const pride = !!cardFieldEff(st, 'fieldPurePride') && atkMon0 && cardIsPureMon(atkMon0) && !cardIsPureMon(target);
   const evadeBlocked = cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade;
   const guts = me.guts.length;
   const out = [];
@@ -52567,7 +52570,7 @@ const cardGuardOptions = (db, st) => {
       return;
     }
     if (cardHasEff(c, 'evadeAll')) {
-      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && cardIsHybridMon(target)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({ type: 'guard', hand: hi, mon: tgt.m });
+      if (tgt.p === q && isArea && !pd.evadeAll && !evadeBlocked && !(fl.attachNoEvadeHybrid && !cardIsPureMon(target)) && cardUsableBy(c, target) && !guardedNow(target)) out.push({ type: 'guard', hand: hi, mon: tgt.m });
       return;
     }
     const en = cardEff(c, 'endure') || cardEff(c, 'takeMult');
@@ -52584,7 +52587,7 @@ const cardGuardOptions = (db, st) => {
     if (ev) {
       if (pd.evaded) return;
       if (cardHasEff(atkCard, 'noEvade') || pd.noEvade || fl.attachNoEvade) return;
-      if (fl.attachNoEvadeHybrid && cardIsHybridMon(target)) return; // 純血のスピード
+      if (fl.attachNoEvadeHybrid && !cardIsPureMon(target)) return; // 純血のスピード
       if (!ev.kinds.includes(atkCard.kind)) return;
       if (ev.minGuts && pd.cost < ev.minGuts) return;
       out.push({ type: 'guard', hand: hi, mon: tgt.m });
@@ -52736,7 +52739,7 @@ const cardResolveTarget = (db, st) => {
   if (missed) dmg = 0;
   // みんな下がれ: 純血のプライド(純血の子の攻撃)と純血のスピードのときは、派生の味方は一緒に回避できない(かばう回避も止める。2026-10-27 社長・案A)
   const atkMon1 = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const noEvadeHere = cardIsHybridMon(target) && ((!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && !cardIsHybridMon(atkMon1)) || !!(pd.flags || {}).attachNoEvadeHybrid);
+  const noEvadeHere = !cardIsPureMon(target) && ((!!cardFieldEff(st, 'fieldPurePride') && atkMon1 && cardIsPureMon(atkMon1)) || !!(pd.flags || {}).attachNoEvadeHybrid);
   const evaded = pd.evaded || (pd.evadeAll && t.p !== pd.attacker && !noEvadeHere);
   if (evaded) dmg = cardHasEff(main, 'halfOnEvade') ? Math.ceil(dmg / 2) : 0;
   if (!cardHasEff(main, 'noBlockReduce') && !(pd.flags || {}).attachNoBlockReduce) {
@@ -53162,8 +53165,8 @@ const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = 
   const q = cardOther(p);
   const opp = st.players[q];
   const tmon = opp.mons[target.m];
-  if (flags.attachNoEvadeHybrid && cardIsHybridMon(tmon)) return 0; // 純血のスピード
-  if (cardFieldEff(st, 'fieldPurePride') && atkMon && !cardIsHybridMon(atkMon) && cardIsHybridMon(tmon)) return 0; // 純血のプライド: 派生の子は回避を出せない
+  if (flags.attachNoEvadeHybrid && !cardIsPureMon(tmon)) return 0; // 純血のスピード
+  if (cardFieldEff(st, 'fieldPurePride') && atkMon && cardIsPureMon(atkMon) && !cardIsPureMon(tmon)) return 0; // 純血のプライド: 派生の子は回避を出せない
   // 払うのは「そのとき払うガッツ」(全体カードで変わる)。集中を付けた技には、払うガッツが0の守りは出せない
   const fits = (no) => { const c = cardOf(db, no); const ev = cardEff(c, 'evade'); const cost = c ? cardGuardCost(st, c) : 99; return c && ev && ev.kinds.includes(card.kind) && cardUsableBy(c, tmon) && cost <= opp.guts.length && !(flags.attachNoZeroGuard && cost === 0) && (!ev.minGuts || card.guts >= ev.minGuts); };
   if ((st.forbid[q] || []).includes('dge')) return 0;
@@ -53193,7 +53196,7 @@ const cardAiScoreField = (db, st, p, card, cost) => {
       v += (share(theirs, hit, 0.3) - share(mine, hit, 0.3)) * 4;
     }
     if (e.t === 'fieldMill') v += me.deck.length > op.deck.length + 5 ? 1 : -1.5;
-    if (e.t === 'fieldPurePride') v += (alive(op).filter(cardIsHybridMon).length - alive(me).filter(cardIsHybridMon).length) * 0.6;
+    if (e.t === 'fieldPurePride') v += (alive(op).filter((m) => !cardIsPureMon(m)).length - alive(me).filter((m) => !cardIsPureMon(m)).length) * 0.6;
     if (e.t === 'fieldBanKind') v += (share(theirs, (c) => e.kinds.includes(c.kind), 0.2) - share(mine, (c) => e.kinds.includes(c.kind), 0.2)) * 4;
     if (e.t === 'fieldType') v += (alive(me).filter((m) => m.type === e.type).length - alive(op).filter((m) => m.type === e.type).length) * 0.2;
     if (e.t === 'fieldBurn') v += (alive(me).length - alive(op).length) * 0.5 - 0.4;
@@ -53394,8 +53397,8 @@ const cardAiGuardEstimate = (db, st, o, dmg) => {
 // みんな下がれで、このあと狙われる子のうち一緒に回避できる子の数(純血のプライド・純血のスピードのとき、派生の子は外す)
 const cardAiEvadeAllCovers = (st, pd) => {
   const atk = pd.mon >= 0 ? st.players[pd.attacker].mons[pd.mon] : null;
-  const noHybrid = (!!cardFieldEff(st, 'fieldPurePride') && atk && !cardIsHybridMon(atk)) || !!(pd.flags || {}).attachNoEvadeHybrid;
-  return pd.targets.slice(pd.ti + 1).filter((t) => t.p !== pd.attacker && !(noHybrid && cardIsHybridMon(st.players[t.p].mons[t.m]))).length;
+  const noHybrid = (!!cardFieldEff(st, 'fieldPurePride') && atk && cardIsPureMon(atk)) || !!(pd.flags || {}).attachNoEvadeHybrid;
+  return pd.targets.slice(pd.ti + 1).filter((t) => t.p !== pd.attacker && !(noHybrid && !cardIsPureMon(st.players[t.p].mons[t.m]))).length;
 };
 // 守りの1枚に点を付ける(出さないなら pass)
 const cardAiChooseGuard = (db, st, policy, rand) => {
@@ -53528,7 +53531,7 @@ const cardAttachUseless = (db, st, o) => {
     if (!c) return false;
     const effs = (c.effects || []).map((e) => e.t);
     if (effs.length && effs.every((t) => CARD_COST_ONLY_EFFS.includes(t))) return cardActionCost(db, st, p, me.hand, o.hand.filter((x) => x !== i)) <= cost;
-    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some((t) => cardIsHybridMon(st.players[t.p].mons[t.m]))) return true;
+    if (cardHasEff(c, 'attachNoEvadeHybrid') && targets.length && !targets.some((t) => !cardIsPureMon(st.players[t.p].mons[t.m]))) return true;
     return false;
   });
 };
@@ -60589,7 +60592,9 @@ const cardPvpCleanMessage = (raw) => {
       // 観戦している人の数(ホストが数えて相手へ渡す。2026-10-27 で足した項目。古い版は送らないので 0)
       w: cardPvpInt(raw.w, 999) || 0,
       // この試合は終わった、の印(終わった試合の番号。2026-10-27 で足した項目。古い版は送らないので null)
-      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null };
+      ov: typeof raw.ov === 'string' ? raw.ov.slice(0, 40) : null,
+      // ルールの版(2026-10-27 で足した項目。古い版は送らないので null)
+      rv: cardPvpRv(raw.rv) };
   }
   if (raw.t === 'start') return { t: 'start', from, match: typeof raw.match === 'string' ? raw.match.slice(0, 40) : '', hostFirst: raw.hostFirst === true, guest: typeof raw.guest === 'string' ? raw.guest.slice(0, 40) : '' };
   if (raw.t === 'act') {
@@ -60621,7 +60626,7 @@ const cardPvpCleanMessage = (raw) => {
       name: typeof raw.name === 'string' ? (rhythmMultiText(raw.name, CARD_PVP_NAME_MAX) || null) : null,
       icon: typeof raw.icon === 'string' ? (rhythmMultiText(raw.icon, CARD_PVP_ICON_MAX) || null) : null,
       fr: typeof raw.fr === 'string' && raw.fr ? raw.fr.slice(0, 40) : null,
-      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null };
+      rt: Number.isInteger(raw.rt) && raw.rt >= 0 && raw.rt <= 10000 ? raw.rt : null, rv: cardPvpRv(raw.rv) };
   }
   if (raw.t === 'chat') { const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i }; }
   // もう1戦(同じ相手と同じ部屋で。rd … 次の試合の回の番号・seal … 次の試合の山札の封)
@@ -60679,8 +60684,13 @@ const cardPvpSeedOf = (text) => String(text || '').split('').reduce((a, ch) => (
 // いま「だれとでも」で待っている人の一覧(入口に出す)。新しく届いた知らせだけ・先に待っている人が上。合言葉(code)は画面に出さない(入るときにだけ使う)
 //   古い版の人(18:08 の公開より前)は名前もアイコンも送らず、だれか分からないので、一覧に出さない(2026-10-27 社長 案ア)。
 //   新しい版は、プロフィールが無い人でも名前とアイコンを必ず送る。古い版の人とも、「だれとでも(自分も待つ)」なら、これまでどおり自動で組む(s.seekers には残す)
+// ルールの版(見返しの CARD_REPLAY_RULES と同じ値・93)。ルールを変えたら、そちらを1つ上げる。版がちがう人どうしは組まない
+//   (同じ手でも結果が変わり、封のなぞり直しが合わなくなる。2026-10-27 社長: 文は「ゲームを更新してください」)。古い版は送らないので null
+const cardPvpRulesVersion = () => (typeof CARD_REPLAY_RULES === 'number' ? CARD_REPLAY_RULES : 0);
+const CARD_PVP_UPDATE_TEXT = 'ゲームを更新してください';
+const cardPvpRv = (v) => (Number.isInteger(v) && v >= 0 && v <= 100000 ? v : null);
 const cardPvpSeekerList = (seekers, now, freshMs = CARD_PVP_LOBBY_FRESH_MS) => Object.entries(seekers && typeof seekers === 'object' ? seekers : {})
-  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon))
+  .filter(([, x]) => x && Number.isFinite(x.seen) && now - x.seen <= freshMs && typeof x.code === 'string' && (x.name || x.icon) && x.rv === cardPvpRulesVersion())
   .sort((a, b) => a[1].at - b[1].at || (a[0] < b[0] ? -1 : 1))
   .map(([id, x]) => ({ id, code: x.code, name: x.name || 'ブリーダー', icon: x.icon || null, fr: x.fr || null, rt: Number.isInteger(x.rt) ? x.rt : null, waitSec: Math.max(0, Math.min(999, Math.floor((now - x.at) / 1000))) })); // 待っている秒数は相手の端末の時計なので、ずれても0〜999に収める
 
@@ -60948,7 +60958,7 @@ const CARD_PVP = (() => {
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
   const send = (payload) => { if (socket && alive) socket.send({ ...payload, from: s.me.id }); };
   const isHost = () => !!(s.foe && (s.me.at < s.foe.at || (s.me.at === s.foe.at && s.me.id < s.foe.id)));
-  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null });
+  const hb = () => send({ t: 'hb', name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, at: s.me.at, mons: s.deck.monsters, count: s.deck.cards.length, seal: s.seal, match: s.match || null, bid: s.me.bid || null, dn: s.me.dn || null, rd: s.round || 0, w: isHost() ? cardPvpWatchHost().eyes() : 0, ov: s.phase === 'over' && s.match ? s.match : null, rv: cardPvpRulesVersion() });
   // 観戦(94-card-spectate.jsx)。ホストだけが観戦の通り道へ流す。部品が無い環境では何もしない
   const watchPush = (by, act, reveal, st) => { if (isHost()) cardPvpWatchHost().push({ by, act, reveal, turn: st.turn, d: [st.players[0].discard, st.players[1].discard] }); };
   const closeLobby = () => { lobbyAlive = false; if (lobby) { try { lobby.close(); } catch (_) { /* 閉じている */ } } lobby = null; };
@@ -61046,6 +61056,11 @@ const CARD_PVP = (() => {
     const now = Date.now();
     if (msg.t === 'hb') {
       if (!s.foe && s.phase !== 'waiting') return;
+      // 相手が決まる前に、ルールの版を比べる。だれとでもは知らん顔で待ち続け(相手は自分の部屋へ戻ってさがし直す)、合言葉・フレンドの部屋は案内を出して閉じる
+      if (!s.foe && msg.rv !== cardPvpRulesVersion()) {
+        if (s.mode === 'free') return;
+        stop(); set({ phase: 'error', error: CARD_PVP_UPDATE_TEXT }); return;
+      }
       // もう1戦: 相手がもう次の回へ進んでいる(こちらの「もう1戦」が届いて、相手が先に切りかえた)なら、その hb を相手の同意として追いつく
       if (s.phase === 'over' && s.again && msg.rd === s.again.rd && msg.seal) { s = { ...s, foeAgain: { rd: msg.rd, seal: msg.seal } }; tryAgain(); return; }
       const sameRound = (msg.rd || 0) === (s.round || 0); // 前の回の hb(届くのが遅れた分)の封は使わない
@@ -61109,7 +61124,7 @@ const CARD_PVP = (() => {
   const onLobby = (raw) => {
     const msg = cardPvpCleanMessage(raw);
     if (!s || !msg || msg.t !== 'seek' || (s.me && msg.from === s.me.id)) return;
-    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now(), name: msg.name, icon: msg.icon, fr: msg.fr, rt: msg.rt } } };
+    s = { ...s, seekers: { ...s.seekers, [msg.from]: { code: msg.code, at: msg.at, seen: Date.now(), name: msg.name, icon: msg.icon, fr: msg.fr, rt: msg.rt, rv: msg.rv } } };
     if (s.phase === 'idle') emit(); // 入口の「いま相手を待っている人」の一覧(聞くだけ)
   };
   const openLobby = () => {
@@ -61137,9 +61152,9 @@ const CARD_PVP = (() => {
       emit();
       return;
     }
-    const older = fresh.filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
+    const older = fresh.filter(([, x]) => x.rv === cardPvpRulesVersion()).filter(([id, x]) => x.at < s.seekAt || (x.at === s.seekAt && id < s.me.id)).sort((a, b) => a[1].at - b[1].at)[0];
     if (older) { s = { ...s, joining: older[1].code, joinAt: now, code: older[1].code }; connect(); emit(); return; }
-    lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null });
+    lobbySend({ t: 'seek', code: s.code, at: s.seekAt, name: s.me.name, icon: s.me.icon, fr: s.me.fr || null, rt: Number.isInteger(s.me.rt) ? s.me.rt : null, rv: cardPvpRulesVersion() });
     emit();
   };
   const open = async (code, profile, deck, mode = 'private', pick = false) => {
@@ -62116,7 +62131,8 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   5 → 6: カウンターは半分を返して残りを受ける・歌うで飛ばした番では「攻撃できない」を使い切らない(2026-10-27 社長)
 //   6 → 7: 挑発・レロレロのあと、挑発した子に当たらない全員攻撃は出せない・冬虫散と灼熱の地のダメージでも溜めが終わる(総点検D・2026-10-27)
 //   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
-const CARD_REPLAY_RULES = 8; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ
+//   8 → 9: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A)
+const CARD_REPLAY_RULES = 9; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
