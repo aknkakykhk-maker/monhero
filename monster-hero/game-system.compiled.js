@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3f85d8ab6c7ba709
+// source-sha256: 3fe5cb5198cdb6aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -86617,6 +86617,7 @@ const cardLegalActions = (db, st) => {
   }];
   return [];
 };
+const cardCanBackToAttack = st => !!st && st.winner === null && st.phase === 'guts' && !st.pending && !st.pendingDiscard && !st.pendingChoice && !st.pendingPray && !st.pendingReveal && st.noBackTurn !== st.turn;
 const cardDecider = st => st.pendingPray ? st.pendingPray.p : st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active;
 const cardUseWho = (db, st, p, mi, cardNo) => {
   const c = cardOf(db, cardNo);
@@ -87467,6 +87468,7 @@ const cardApplyAction = (db, st0, act) => {
           cardGameOver(st, cardOther(p), '全員KO');
           return st;
         }
+        st.noBackTurn = st.turn;
       }
       st.phase = 'guts';
       return st;
@@ -87480,6 +87482,12 @@ const cardApplyAction = (db, st0, act) => {
     return st;
   }
   if (st.phase === 'guts') {
+    if (act.type === 'backToAttack') {
+      if (!cardCanBackToAttack(st0)) return null;
+      st.phase = 'main';
+      cardLog(st, `${st.players[p].name}は攻撃に戻った`);
+      return st;
+    }
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax');
     if (gm && (act.hand || []).length > gm.n) return null;
@@ -103362,7 +103370,7 @@ const CardPvpHistory = ({
   })));
 };
 const CARD_REPLAY_KEY = 'mh_card_replays_v1';
-const CARD_REPLAY_RULES = 9;
+const CARD_REPLAY_RULES = 10;
 const CARD_REPLAY_MAX = 50;
 const CARD_REPLAY_FAV_MAX = 10;
 const CARD_REPLAY_BYTES_MAX = 750000;

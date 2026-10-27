@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 355deb4484ce0099
+// generated-sha256: dbcd4c75f5008101
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52614,6 +52614,8 @@ const cardLegalActions = (db, st) => {
   return [];
 };
 // いま決める番の人(守りの途中なら守る側)
+// 攻撃に戻れるか。ガッツの段で、守り・選ぶ・捨てるの途中でなく、灼熱の地が効いた番でないときだけ(助手は使わない)
+const cardCanBackToAttack = (st) => !!st && st.winner === null && st.phase === 'guts' && !st.pending && !st.pendingDiscard && !st.pendingChoice && !st.pendingPray && !st.pendingReveal && st.noBackTurn !== st.turn;
 const cardDecider = (st) => (st.pendingPray ? st.pendingPray.p : st.pendingReveal ? st.pendingReveal.p : st.pendingChoice ? st.pendingChoice.p : st.pending ? st.pending.defender : st.active);
 
 // ---- 攻撃を出す ----
@@ -53054,6 +53056,7 @@ const cardApplyAction = (db, st0, act) => {
           if (m.life <= 0) cardKo(st, p, mi);
         });
         if (st.players[p].mons.every((m) => m.ko)) { cardGameOver(st, cardOther(p), '全員KO'); return st; }
+        st.noBackTurn = st.turn; // 灼熱の地が効いた番は、攻撃に戻れない(案A)
       }
       st.phase = 'guts'; return st;
     }
@@ -53068,6 +53071,13 @@ const cardApplyAction = (db, st0, act) => {
     return st;
   }
   if (st.phase === 'guts') {
+    // 攻撃に戻る: ガッツにする前なら、攻撃の番へ戻れる。その番に攻撃した印などはそのまま(2026-10-27 社長)
+    if (act.type === 'backToAttack') {
+      if (!cardCanBackToAttack(st0)) return null;
+      st.phase = 'main';
+      cardLog(st, `${st.players[p].name}は攻撃に戻った`);
+      return st;
+    }
     if (act.type !== 'guts') return null;
     const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感: ガッツの段で n 枚まで
     if (gm && (act.hand || []).length > gm.n) return null;
@@ -62126,7 +62136,8 @@ const CARD_REPLAY_KEY = 'mh_card_replays_v1';
 //   6 → 7: 挑発・レロレロのあと、挑発した子に当たらない全員攻撃は出せない・冬虫散と灼熱の地のダメージでも溜めが終わる(総点検D・2026-10-27)
 //   7 → 8: 純血のプライドのとき、みんな下がれで派生の味方は回避できない(2026-10-27 社長)
 //   8 → 9: サブが「？？？」の子は、純血のスピード・純血のプライドで純血ではない(2026-10-27 社長 案A)
-const CARD_REPLAY_RULES = 9; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない
+//   9 → 10: ガッツの段から攻撃に戻る手(backToAttack)を足した(2026-10-27 社長)
+const CARD_REPLAY_RULES = 10; // 2: 集中(274)を「そのとき払うガッツ」で数える(2026-10-27)/ 3: #3821 / 4: ドレイン / 5: 防御でマイナスされない技に防御の札を出せない / 6: カウンター・歌う / 8: プライドとみんな下がれ / 9: サブ？？？は純血ではない / 10: 攻撃に戻る
 const CARD_REPLAY_MAX = 50;               // 取っておく試合の数(お気に入りを含む)
 const CARD_REPLAY_FAV_MAX = 10;           // お気に入りの数
 const CARD_REPLAY_BYTES_MAX = 750000;     // 合わせた大きさの上限(文字数)。超えたら古い試合(お気に入りでない物)から消す
