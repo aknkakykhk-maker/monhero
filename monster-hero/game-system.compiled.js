@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 63ad143ff9125014
+// source-sha256: 664b5a0f293fa493
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -100930,7 +100930,7 @@ const CardRecordScreen = ({
   const foeList = foes.filter(a => a && a.id);
   const pvpGames = rec.pvp.win + rec.pvp.lose;
   const hist = multi ? multi.history : [];
-  const chart = hist.filter(h => h.rating).slice(0, 20).reverse();
+  const chart = typeof cardPvpRatingChart === 'function' ? cardPvpRatingChart(hist, typeof CARD_PVP_RERATE_AT === 'number' ? CARD_PVP_RERATE_AT : 0) : hist.filter(h => h.rating).slice(0, 20).reverse();
   const chartMin = chart.length ? Math.min(...chart.map(h => Math.min(h.rating.before, h.rating.after))) : 0;
   const chartMax = chart.length ? Math.max(...chart.map(h => Math.max(h.rating.before, h.rating.after))) : 0;
   return React.createElement("div", {
@@ -101185,6 +101185,7 @@ const CARD_PVP_LOBBY_FRESH_MS = 6000;
 const CARD_PVP_LOBBY_JOIN_MS = 8000;
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
+const CARD_PVP_RERATE_AT = Date.parse('2026-10-28T11:06:19+09:00');
 const cardPvpFlip = act => {
   if (!act || typeof act !== 'object') return act;
   const out = JSON.parse(JSON.stringify(act));
@@ -104094,6 +104095,7 @@ const cardPvpRatingDelta = rating => {
   const d = rating.after - rating.before;
   return d > 0 ? `+${d}` : d < 0 ? `${d}` : '±0';
 };
+const cardPvpRatingChart = (history, rerateAt = 0, n = 20) => (Array.isArray(history) ? history : []).filter(h => h && h.rating && !(Number.isFinite(rerateAt) && rerateAt > 0 && !(Number.isFinite(h.at) && h.at >= rerateAt))).slice(0, n).reverse();
 const cardPvpHistoryWhen = at => {
   const d = new Date(at + 9 * 3600 * 1000);
   const p = n => String(n).padStart(2, '0');

@@ -52,7 +52,7 @@ create or replace function public.card_battle_pvp_report(
   p_match_id text, p_me text, p_foe text, p_winner text, p_reason text, p_turns integer,
   p_name text, p_icon text, p_frame text)
 returns text language plpgsql security definer set search_path = public as $$
-declare m public.card_battle_pvp_matches; ra integer; rb integer; ea numeric; k integer := 32; w text; l text;
+declare m public.card_battle_pvp_matches; ra integer; rb integer; ea numeric; k integer := 96; w text; l text;
 begin
   if p_me is null or p_foe is null or p_me = p_foe or p_winner not in (p_me, p_foe) then return 'bad'; end if;
   insert into public.card_battle_pvp_matches (match_id, a_id, b_id) values (p_match_id, least(p_me, p_foe), greatest(p_me, p_foe))
@@ -68,11 +68,12 @@ begin
   if m.a_winner <> m.b_winner then update public.card_battle_pvp_matches set applied = true where match_id = p_match_id; return 'mismatch'; end if;
   w := m.a_winner; l := case when w = m.a_id then m.b_id else m.a_id end;
   -- 3つの部屋(だれとでも・合言葉・フレンド招待)のどれでも点数を動かす(2026-10-24 社長「マルチは全部動くようにして」)。
-  -- 同じ2人が続けて対戦しても小さくしない(いつも最大32点。社長「同じ相手と続けて当たったときも小さくしないで」)
+  -- 同じ2人が続けて対戦しても小さくしない(社長「同じ相手と続けて当たったときも小さくしないで」)
+  -- 増え方(2026-10-28 社長): k 32→96・勝つ見込みの式 400.0→800.0。同じくらいの相手で ±48・差200 で上が勝つと +35/負けると −61・差400 で +23/−73
   insert into public.card_battle_pvp_ratings (breeder_id, user_name) values (l, '') on conflict (breeder_id) do nothing;
   select rating into ra from public.card_battle_pvp_ratings where breeder_id = w;
   select rating into rb from public.card_battle_pvp_ratings where breeder_id = l;
-  ea := 1 / (1 + power(10, (rb - ra) / 400.0));
+  ea := 1 / (1 + power(10, (rb - ra) / 800.0));
   update public.card_battle_pvp_ratings set rating = least(10000, ra + round(k * (1 - ea))), best_rating = greatest(best_rating, least(10000, ra + round(k * (1 - ea)))), wins = wins + 1, updated_at = now() where breeder_id = w;
   update public.card_battle_pvp_ratings set rating = greatest(0, rb - round(k * (1 - ea))), loses = loses + 1, updated_at = now() where breeder_id = l;
   update public.card_battle_pvp_matches set applied = true where match_id = p_match_id;

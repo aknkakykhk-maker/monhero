@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a344e50033291d65
+// generated-sha256: 890ee2bcbb8be5a6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60764,7 +60764,8 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
   const foeList = foes.filter((a) => a && a.id);
   const pvpGames = rec.pvp.win + rec.pvp.lose;
   const hist = multi ? multi.history : [];
-  const chart = hist.filter((h) => h.rating).slice(0, 20).reverse();
+  // 強さの点数を付け直す前の試合はグラフに入れない(92 の cardPvpRatingChart・91 の CARD_PVP_RERATE_AT。2026-10-28)
+  const chart = typeof cardPvpRatingChart === 'function' ? cardPvpRatingChart(hist, typeof CARD_PVP_RERATE_AT === 'number' ? CARD_PVP_RERATE_AT : 0) : hist.filter((h) => h.rating).slice(0, 20).reverse();
   const chartMin = chart.length ? Math.min(...chart.map((h) => Math.min(h.rating.before, h.rating.after))) : 0;
   const chartMax = chart.length ? Math.max(...chart.map((h) => Math.max(h.rating.before, h.rating.after))) : 0;
   return (
@@ -60966,6 +60967,9 @@ const CARD_PVP_LOBBY_JOIN_MS = 8000;      // 入った部屋で、これだけ�
 // 強さの点数(勝つと上がる・はじめ1500)。表と関数は docs/sql/card-battle-pvp/CARD_BATTLE_PVP_APPLY.sql(窓口が流す)
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
+// 強さの点数を付け直した時刻(ms・2026-10-28 社長: 1500+48×(勝ち−負け)・k=96)。0 … まだ付け直していない。
+//   付け直しより前の試合は、記録の「強さの移り」のグラフに入れない(点数の物差しが変わり、段差に見えるため。92 の cardPvpRatingChart)
+const CARD_PVP_RERATE_AT = Date.parse('2026-10-28T11:06:19+09:00'); // 統括部長が付け直しを流したと知らせた時刻
 
 // ---- 純粋な計算(ここから下の UI と通信を使わない。tools/card/card-pvp-check.js が node で確かめる) ----
 
@@ -62499,6 +62503,11 @@ const cardPvpRatingDelta = (rating) => {
   const d = rating.after - rating.before;
   return d > 0 ? `+${d}` : d < 0 ? `${d}` : '±0';
 };
+// 記録の「強さの移り」のグラフに出す試合(新しい順の履歴から、点数の分かる試合を n 試合・古い順に)。
+//   rerateAt より前に終わった試合は入れない(強さの点数を付け直した前後で物差しが変わり、段差に見えるため・2026-10-28)
+const cardPvpRatingChart = (history, rerateAt = 0, n = 20) => (Array.isArray(history) ? history : [])
+  .filter((h) => h && h.rating && !(Number.isFinite(rerateAt) && rerateAt > 0 && !(Number.isFinite(h.at) && h.at >= rerateAt)))
+  .slice(0, n).reverse();
 // 日時(JST・「10/27 21:05」)
 const cardPvpHistoryWhen = (at) => {
   const d = new Date(at + 9 * 3600 * 1000);
