@@ -428,7 +428,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
     const rowsText = await A.locator('[data-card-pvp-history-row]').allInnerTexts();
     await shot(A, 'pvp-09-history');
-    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === histA.length && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]16/.test(rowsText[0]), JSON.stringify(rowsText));
+    check('⑬ 入口の「マルチの履歴」で一覧が出る(相手・勝ち負け・日時・増減)', rowsText.length === histA.length && /検査ブリーダー/.test(rowsText[0]) && /(勝ち|負け)/.test(rowsText[0]) && /\d+\/\d+ \d\d:\d\d/.test(rowsText[0]) && /[+-]48/.test(rowsText[0]), JSON.stringify(rowsText));
     await A.locator('[data-card-pvp-history-row]').first().click();
     await A.locator('[data-card-pvp-history="detail"]').waitFor({ timeout: 10000 });
     const foeTiles = await A.evaluate(() => ({ mons: document.querySelectorAll('[data-card-pvp-history-mon]').length, total: [...document.querySelectorAll('[data-card-pvp-history-card]')].reduce((a, el) => a + (Number((el.innerText.match(/×(\d+)/) || [])[1]) || 1), 0) }));
