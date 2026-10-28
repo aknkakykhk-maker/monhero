@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 59a99ba9250e51a5
+// source-sha256: 15db51a2b61222ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -73167,32 +73167,33 @@ function BattleScreen({
       "data-tactics-ai-copy-art": i,
       "data-ai-copy-phase": tCopyPhase,
       "data-tactics-ai-copy-hit": tCopyHit ? '1' : undefined,
-      className: `absolute left-1 top-[26px] bottom-[16px] ${tCopyHit ? 'z-[80]' : 'z-[24]'} flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]`
+      className: `absolute left-1 top-[26px] bottom-[18px] ${tCopyHit ? 'z-[80]' : 'z-[24]'} flex w-[60px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[17px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:h-[27px]`
     }, React.createElement("div", {
       style: tCopyHit ? {
         position: 'relative',
         animation: attackMotionAnimation(attackAnim),
         ...(attackAimStyle || {})
       } : undefined
-    }, React.createElement(SorashidoCopyFx, {
-      phase: tCopyPhase
-    }, React.createElement(DyedMonsterImage, {
-      baseId: copySrc.id,
-      src: copySrc.imgUrl,
-      alt: `${copySrc.name}のコピー`,
-      masuColors: copySrc.colors,
-      style: {
-        width: '52px',
-        height: '52px'
-      },
-      className: "object-contain drop-shadow-md"
-    })))), !tCopyOnMon && React.createElement("div", {
+    }, React.createElement(AiCopyBody, {
+      src: copySrc,
+      phase: tCopyPhase,
+      size: classicAiCopyLandscape() ? 34 : 50
+    }))), !tCopyOnMon && React.createElement("div", {
+      "data-tactics-ai-copy-stats": i,
+      className: `absolute ${copySrc ? 'left-[66px]' : 'left-1'} right-1.5 top-[26px] bottom-[3px] z-[64] flex min-w-0 flex-col justify-between gap-0.5 pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[21px] [@media(orientation:landscape)_and_(max-height:520px)]:gap-0`
+    }, React.createElement("div", {
       "data-tactics-ai-copy-next": i,
-      className: `absolute ${copySrc ? 'left-[62px]' : 'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`
+      className: "flex min-w-0 justify-center"
     }, React.createElement(SorashidoNextCardBadge, {
       card: tCopyOut ? tCopy.nextCard : null,
-      turnsLeft: tCopy.turnsLeft,
-      layout: classicAiCopyLandscape() ? 'landscape' : 'portrait'
+      turnsLeft: null,
+      layout: "landscape"
+    })), React.createElement(AiCopyLifeBar, {
+      hp: tCopy.hp,
+      maxHp: tCopy.maxHp
+    }), React.createElement(AiCopyGutsMeter, {
+      guts: tCopy.guts,
+      maxGuts: tCopy.maxGuts
     })), React.createElement("div", {
       "data-tactics-ai-copy": i,
       "data-tactics-ai-copy-out": tCopyOut ? '1' : '0',
@@ -73202,7 +73203,7 @@ function BattleScreen({
         e.stopPropagation();
         setCopyHandOpen(true);
       } : undefined,
-      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'w-[62px] max-w-[62px] items-center gap-0.5 tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:py-[2px]'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
     }, React.createElement("span", {
       className: "flex max-w-full min-w-0 items-center gap-0.5"
     }, React.createElement("span", {
@@ -73213,7 +73214,7 @@ function BattleScreen({
       className: "text-rose-300"
     }, "♥"), React.createElement("span", {
       className: "tabular-nums"
-    }, tCopy.hp)) : `ライフ${tCopy.hp}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
+    }, tCopy.hp)) : `あと${tCopy.turnsLeft}` : '次のターンから'), copyStanding && chancesNow && Number.isInteger(chancesNow.copy) && React.createElement("span", {
       className: "shrink-0 tabular-nums tracking-tighter text-rose-200"
     }, React.createElement("span", {
       className: tCopyOnMon ? 'text-[6px] opacity-80' : ''
