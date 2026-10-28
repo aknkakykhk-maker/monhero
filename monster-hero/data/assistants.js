@@ -10265,7 +10265,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'dra',       e:'normal',   atsu:'without', t:'……よかったな、ソラシド' },
   { who:'kiki',      e:'happy',    t:'好きって気持ちが、ちゃんと届いたんでつね' },
   // ---- ⑤ 2体は仲間に。ソラシドは助手になる。打ち上げ ----
-  { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、どれみふぁソラシド～♪から離れないんだけど〜' },
+  { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、どれみふぁソラシドから離れないんだけど〜' },
   { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'hop' }, { id:'Kyubi', pose:'hop' }], t:'コン♪(ぴょんと跳ねて、しっぽをふる)' },
   { who:'orihime',   e:'normal',   t:'りん♪(ふわりと寄って、羽衣をソラシドの肩にかける)' },
   { who:'dra',       e:'happy',    monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'idle' }], t:'いっしょにいたいってことだな。えへへ' },
