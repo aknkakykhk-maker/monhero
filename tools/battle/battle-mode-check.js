@@ -406,8 +406,8 @@ check('モードカードの最高スコアは全難易度の自己ベスト最�
 check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div data-battle-score'));
 // スコアの数字は TrainingCountUp でカウントアップする形になった。枠は mh-end-score(クリア・敗北・リタイアの3画面)
 check('最終リザルト3画面のスコア枠をクイックでは出さない',
-  (source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length === 3,
-  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length}か所`);
+  (source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white(?: [^"]*)?"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length === 3,
+  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white(?: [^"]*)?"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length}か所`);
 check('WAVEリザルトのスコア内訳をクイックでは出さない',
   has('{/* スコアの内訳。クイックモードはスコアを競わないので出さない */}') && has('{!isQuickMode(runMode)&&(<>'));
 check('WAVE別ログのスコア列もクイックでは出さない',
@@ -444,7 +444,8 @@ check('記録の枠の見出し・値・補足がすべて1行ずつある',
     && has('<span className="block text-right text-[9px] text-amber-300">{rec.sub}</span>'));
 check('倍率の下の補足行はどちらのモードでも出す',
   has("const noteText=quick?'経験値・ダイヤのみ1.5倍':'スコアがランキングに登録される';")
-    && has('<span className="truncate">{noteText}</span>')
+    // 2026-10-27: 横向きの背の低い画面だけ言葉の切れ目で折るクラスが後ろへ付いた(truncate は残す)
+    && (/<span className="truncate(?: [^"]*)?">\{noteText\}<\/span>/.test(source) || /<div className="mt-1 rounded-xl border [^"]*"[^>]*>\{noteText\}<\/div>/.test(source))
     && !has('{quick&&<div className="mt-1 rounded-xl border'));
 check('ランキングの導線は助手コメントより前にある', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 // ランキングを見ているときの戻るは、ホームではなく難易度の画面へ戻す
@@ -717,7 +718,8 @@ check('供モンの一覧に編成中の子を出さない',
 check('プロの供モン合流は横スライドで出す',
   has("const allyCarousel=pickMode==='ally'&&isProMode(runMode);")
     && has('aria-label="前の供モン"') && has('aria-label="次の供モン"')
-    && has("'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':'grid grid-cols-2 gap-2.5'"));
+    // 2026-10-27: 縦並びの側(勇者モン)に横向き用のクラスが付き、文字列からテンプレートになった。横スライドの側はそのまま
+    && has("allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':`grid grid-cols-2 gap-2.5"));
 check('横スライドは開くたびに先頭から見せる',
   has("if(gameState!=='PICK_ALLY')return;") && has('setAllyCardIndex(0);'));
 // 勇者モンを置いたあと、開いていた詳細を必ず閉じる。
@@ -731,7 +733,8 @@ check('供モン合流を開くときも開いていた詳細を閉じる',
 check('setupMon はどの道でも詳細を片付ける',
   (grab(source, 'const setupMon = (m, slotIdx) => {', '// バトルチュートリアル用の台本').match(/setCurrentPickingMon\(null\)/g) || []).length >= 2);
 check('チャレンジ・クイックの供モン一覧はこれまでどおり2列',
-  has("allyCarousel?'flex items-start gap-2.5") && has(":'grid grid-cols-2 gap-2.5'"));
+  // 2026-10-27: 横向きで勇者モンを選ぶときだけ3列になる(供モンは2列のまま)
+  has("allyCarousel?'flex items-start gap-2.5") && has(":`grid grid-cols-2 gap-2.5${pickMode==='hero'?' [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-3"));
 // 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) {") && has("advanceRunStage('PICK_PRO_ALLIES');")
