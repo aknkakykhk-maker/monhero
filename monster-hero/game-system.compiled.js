@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a229a55ee04ba0b
+// source-sha256: 5bfc72856f5fe13f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -107340,7 +107340,15 @@ function MonsterHeroGame() {
   const aiCopyRef = useRef(null);
   const aiCopyHitRef = useRef(false);
   const commitAiCopy = next => {
-    const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    let v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    if (v && Number.isFinite(v.maxHp) && Number(v.hp) > v.maxHp) v = {
+      ...v,
+      hp: v.maxHp
+    };
+    if (v && Number.isFinite(v.maxGuts) && Number(v.guts) > v.maxGuts) v = {
+      ...v,
+      guts: v.maxGuts
+    };
     aiCopyRef.current = v;
     setAiCopy(v);
     return v;
@@ -108362,7 +108370,12 @@ function MonsterHeroGame() {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
     const unit = tacticsUnitsRef.current[slotIdx];
     if (!unit) return;
-    const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
+    const board = normalizeTacticsUnit(unit);
+    const src = {
+      ...normalizeTacticsUnit(tacticsBattleUnit(slotIdx)),
+      maxHp: board.maxHp,
+      maxGuts: board.maxGuts
+    };
     const piles = handPileRef.current;
     const {
       pos,
@@ -108607,6 +108620,11 @@ function MonsterHeroGame() {
     const copy = aiCopyRef.current;
     if (!copy) return;
     commitAiCopy(null);
+    setEnemyIntent(prev => prev && prev.targetCopy ? aimTacticsIntent({
+      ...prev,
+      targetCopy: undefined,
+      targetName: undefined
+    }, runMode) : prev);
     if (why) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${why}`, 'ally');
   };
   const tacticsDamage = (damage, intent, actingDist) => {
@@ -124669,6 +124687,7 @@ function MonsterHeroGame() {
       roarStacks: tacticsRoarStacksRef.current
     });
     resetTacticsHate(runMode);
+    commitAiCopy(null);
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy, dist, null, {
       unannounced: true,
       ...actionState()
@@ -124679,7 +124698,6 @@ function MonsterHeroGame() {
       setBattleLog([]);
       battleLogSeqRef.current = 0;
     }
-    commitAiCopy(null);
     pushBattleLog(isRaidJackMode(runMode) ? `── ${battleModeInfo(runMode).short}：${newEnemy.name} ──` : `── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1);
     setSelectedCards([]);
