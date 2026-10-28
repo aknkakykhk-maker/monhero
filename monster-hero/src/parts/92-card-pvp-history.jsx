@@ -91,6 +91,11 @@ const cardPvpRatingDelta = (rating) => {
   const d = rating.after - rating.before;
   return d > 0 ? `+${d}` : d < 0 ? `${d}` : '±0';
 };
+// 記録の「強さの移り」のグラフに出す試合(新しい順の履歴から、点数の分かる試合を n 試合・古い順に)。
+//   rerateAt より前に終わった試合は入れない(強さの点数を付け直した前後で物差しが変わり、段差に見えるため・2026-10-28)
+const cardPvpRatingChart = (history, rerateAt = 0, n = 20) => (Array.isArray(history) ? history : [])
+  .filter((h) => h && h.rating && !(Number.isFinite(rerateAt) && rerateAt > 0 && !(Number.isFinite(h.at) && h.at >= rerateAt)))
+  .slice(0, n).reverse();
 // 日時(JST・「10/27 21:05」)
 const cardPvpHistoryWhen = (at) => {
   const d = new Date(at + 9 * 3600 * 1000);

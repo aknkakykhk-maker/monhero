@@ -633,7 +633,8 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
   const foeList = foes.filter((a) => a && a.id);
   const pvpGames = rec.pvp.win + rec.pvp.lose;
   const hist = multi ? multi.history : [];
-  const chart = hist.filter((h) => h.rating).slice(0, 20).reverse();
+  // 強さの点数を付け直す前の試合はグラフに入れない(92 の cardPvpRatingChart・91 の CARD_PVP_RERATE_AT。2026-10-28)
+  const chart = typeof cardPvpRatingChart === 'function' ? cardPvpRatingChart(hist, typeof CARD_PVP_RERATE_AT === 'number' ? CARD_PVP_RERATE_AT : 0) : hist.filter((h) => h.rating).slice(0, 20).reverse();
   const chartMin = chart.length ? Math.min(...chart.map((h) => Math.min(h.rating.before, h.rating.after))) : 0;
   const chartMax = chart.length ? Math.max(...chart.map((h) => Math.max(h.rating.before, h.rating.after))) : 0;
   return (
