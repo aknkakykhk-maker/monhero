@@ -124,14 +124,14 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(invites.map((x) => ({ sender_id: 'friend-x', room_code: x.room_code, created_at: x.created_at }))) });
       }
       if (/\/rpc\/card_battle_pvp_report/.test(req.url())) { try { reports.push(JSON.parse(req.postData() || '{}')); } catch (_) { /* 中身が読めない */ } return route.fulfill({ status: 200, contentType: 'application/json', body: '"wait"' }); }
-      // 強さの点数の表の自分の行(マルチの履歴の増減・92)。2人が届けた試合だけを数えた偽の点数(勝ち +16・負け -16)
+      // 強さの点数の表の自分の行(マルチの履歴の増減・92)。2人が届けた試合だけを数えた偽の点数(勝ち +48・負け -48。同じくらいの相手のときの数・2026-10-28 社長 k=96・800)
       const ratingOf = /card_battle_pvp_ratings\?.*breeder_id=eq\.([^&]+)/.exec(req.url());
       if (ratingOf) {
         const bid = decodeURIComponent(ratingOf[1]);
         const done = [...new Set(reports.map((x) => x.p_match_id))].filter((m) => reports.filter((x) => x.p_match_id === m).length >= 2).map((m) => reports.find((x) => x.p_match_id === m));
         const mineDone = done.filter((x) => x.p_me === bid || x.p_foe === bid);
         const wins = mineDone.filter((x) => x.p_winner === bid).length, loses = mineDone.length - wins;
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mineDone.length ? [{ rating: 1500 + 16 * (wins - loses), wins, loses }] : []) });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mineDone.length ? [{ rating: 1500 + 48 * (wins - loses), wins, loses }] : []) });
       }
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
@@ -422,7 +422,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       !!histA && histA.length >= 2 && !!histB && histB.length === histA.length && histA[0].match === mine[0].p_match_id && histA.every((x) => x.foeDeck && x.foeDeck.monsters.length === 3 && x.foeDeck.cards.length === 50 && x.myDeck && x.myDeck.cards.length === 50 && x.foe.name === '検査ブリーダー'),
       JSON.stringify((histA || []).map((x) => [x.match, x.outcome, x.verify, x.foeDeck && x.foeDeck.cards.length, x.rating])));
     const deltaA = histA && histA[0].rating ? histA[0].rating.after - histA[0].rating.before : null;
-    check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +16・負け -16。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 16 : -16), JSON.stringify(histA && histA[0].rating));
+    check('⑬ だれとでもの試合に、強さの点数の増減が書かれる(勝ち +48・負け -48。点数の表は偽物)', deltaA === (histA && histA[0].outcome === 'win' ? 48 : -48), JSON.stringify(histA && histA[0].rating));
     for (const page of [A, B]) { await page.locator('[data-card-pvp-leave]').click(); await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 }); }
     await A.locator('[data-card-pvp-history-open]').click();
     await A.locator('[data-card-pvp-history="list"]').waitFor({ timeout: 10000 });
