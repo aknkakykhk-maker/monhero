@@ -141,10 +141,10 @@
    "kind_en": "SPE",
    "category": "ブリーダー",
    "guts": 0,
-   "text": "消費ガッツが3以下の技の「ブリーダーカード」と同時に使用する。その技はガッツを消費せずに使用できる。",
+   "text": "消費ガッツが3以下の技の「ブリーダーカード」(全体カードは除く)と同時に使用する。その技はガッツを消費せずに使用できる。",
    "text_en": "Play with a Breeder card that costs 3 or less GUTS. Ignore its cost.",
    "name_source": "元",
-   "text_source": "元"
+   "text_source": "元(言い回しをそろえた)"
   },
   {
    "no": "277",
