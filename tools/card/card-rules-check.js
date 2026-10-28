@@ -442,7 +442,7 @@ const packs = () => {
   const PLAN = { p1: ['dino', 'hare', 'mocchi'], p2: ['golem', 'pixie', 'naga'], p3: ['suezo', 'gali', 'tiger'], p4: ['phoenix', 'monol', 'henger', 'ghost'], p5: ['plant', 'dragon', 'jell'], p6: ['mew', 'worm', 'durahan'], p7: ['zilla', 'metalner', 'joker'], p8: ['arrowhead', 'centaur', 'colorpandora'] };
   // 混血・派生は主の種族の弾へ(#3575)。2026-10-25 の派生25枚も同じ決め(立ち絵の無かった5枚も 2026-10-27 からパックに出る)
   // 剣士モッチー(2026-10-26)はふつう・キラ・別絵キラの3枚。名前は1つとして数える
-  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス', '剣士モッチー'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル', 'パンドラ'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
+  const HYBRID = { p1: ['ダークハム', 'ヘルファット', 'ヴァージアハピ', 'カッチュウサウル', 'ジェントル', 'ヨロイモッチー', 'アンキロックス', '剣士モッチー'], p2: ['ストライクリパー', 'ラベンダーキール', 'エンジェル', 'バズラ', 'ナハトファルター', 'ブルーマウンテン', 'マグナビートル', 'パンドラ'], p3: ['バロン', 'アクアリウス', 'プラムラー', 'ハムライガー', 'メロンボ', 'ヒトツメオウジ', 'ツノマル', 'ギンギライガー'], p4: ['ワカクサケンザイ', 'ガーラント', 'ダークヘンガー', 'ソボロベント'], p5: ['オボロゲソウ', 'ベニヒメソウ', 'アーマードラゴン', 'ウロコゲル', 'パー・プリン', 'ヒネクレソウ', 'ジハード', 'ムー'], p6: ['ミミニャー', 'ムラサキチュウ', 'ケルマディクス', 'ママニャー', 'コロネ', 'ベスビオス'], p7: ['ギガロン'], p8: [] };
   // 図鑑だけ(dexOnly)にしていた5枚は、2026-10-27 に立ち絵がそろったのでパックへ入れた(社長「絵がある子は入れる」)。いまは図鑑だけの子はいない。
   //   これから立ち絵の無い子を図鑑だけにするときは DEX_ONLY に足す
   const DEX_ONLY = [];
@@ -494,7 +494,7 @@ const packs = () => {
     ok(pack.pity && maxDry <= 7, `${pack.name}の天井が効いていない(キラなしが${maxDry}パック続いた)`);
     const kiraRate = (rar.kira + rar.alt) / N;
     ok(kiraRate > 0.13 && kiraRate < 0.24, `${pack.name}のキラの出る割合がおかしい(${kiraRate.toFixed(3)})`);
-    ok((pack.no <= 3) === (rar.alt > 0), `${pack.name}の別絵キラの出かたが違う(第1〜3弾だけに出る)`);
+    ok((pack.no <= 3 || pack.no === 5) === (rar.alt > 0), `${pack.name}の別絵キラの出かたが違う(第1〜3・5弾だけに出る)`);
     const pool = Object.values(db.cards).filter((c) => c.ready && E.cardPackIdOf(db, c.no) === pack.id).length + Object.values(db.monsters).filter((m) => m.ready !== false && !m.dexOnly && E.cardPackIdOf(db, m.no) === pack.id).length;
     ok(seen.size === pool, `${pack.name}で出ないカードがある(${seen.size}/${pool})`);
     ok(Object.entries(col).every(([no, n]) => (db.cards[no] ? n <= 3 : n <= 1)), `${pack.name}で持てる枚数を超えた`);
@@ -506,7 +506,7 @@ const packs = () => {
   ok(again.cards.every((c) => c.dup) && again.point === 7 * 5 + (again.cards[7].rarity === 'normal' ? 50 : again.cards[7].rarity === 'kira' ? 100 : 200), `だぶりのカードポイントが違う(${again.point})`);
   // 値段(2026-10-25 社長): どの弾も 1パック300・8枚(技など7・モンスター1)・5パックまとめて1,350 / スターターキット 1,500。混血パックは無い
   ok(E.CARD_PACKS.every((p) => p.price === 300 && p.bundle && p.bundle.n === 5 && p.bundle.price === 1350 && p.tech === 7 && p.mon === 1), 'どの弾も1パック300・8枚・5パック1,350になっていない');
-  ok(E.CARD_PACKS.every((p) => JSON.stringify(p.rarity) === JSON.stringify(p.no <= 3 ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 })), 'レア度の割合が違う(第1〜3弾 85/12/3・第4〜8弾 85/15)');
+  ok(E.CARD_PACKS.every((p) => JSON.stringify(p.rarity) === JSON.stringify((p.no <= 3 || p.no === 5) ? { normal: 85, kira: 12, alt: 3 } : { normal: 85, kira: 15, alt: 0 })), 'レア度の割合が違う(第1〜3・5弾 85/12/3・第4・6〜8弾 85/15)');
   const b5 = E.cardBuyPacks(db, 'p2', 5, { collection: {}, pity: {}, point: 1400 }, rand);
   ok(b5 && b5.cost === 1350 && b5.packs.length === 5 && b5.point === 50 + b5.dupPoint, '5パックまとめて1,350にならない');
   ok(E.cardBuyPacks(db, 'p2', 1, { collection: {}, pity: {}, point: 299 }, rand) === null, 'カードポイントが足りないのに買えた');

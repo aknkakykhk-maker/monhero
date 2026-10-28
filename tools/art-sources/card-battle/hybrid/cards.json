@@ -673,6 +673,52 @@
    "variant": "別絵キラ",
    "base": "C-067",
    "name_source": "C-067 のキラ・別絵キラ(同じ子。デッキには1体まで)"
+  },
+  {
+   "no": "C-208",
+   "name": "オボロゲソウ",
+   "name_en": "OBOROGESOU",
+   "type": "地上",
+   "type_en": "G",
+   "life": 10,
+   "main": "プラント",
+   "sub": "ゲル",
+   "main_en": "PLANT",
+   "sub_en": "JELL",
+   "img": "C208.jpg",
+   "name_source": "社長提供 oborogesou_cards_corrected(1).zip。画像の C-208 は最新mainで未使用。ライフ10・地上・プラント×ゲル。2026-10-28"
+  },
+  {
+   "no": "C-208S",
+   "name": "オボロゲソウ",
+   "name_en": "OBOROGESOU",
+   "type": "地上",
+   "type_en": "G",
+   "life": 10,
+   "main": "プラント",
+   "sub": "ゲル",
+   "main_en": "PLANT",
+   "sub_en": "JELL",
+   "img": "C208S.jpg",
+   "name_source": "社長提供 oborogesou_cards_corrected(1).zip。画像の C-208 は最新mainで未使用。ライフ10・地上・プラント×ゲル。2026-10-28",
+   "variant": "キラ",
+   "base": "C-208"
+  },
+  {
+   "no": "C-208V",
+   "name": "オボロゲソウ",
+   "name_en": "OBOROGESOU",
+   "type": "地上",
+   "type_en": "G",
+   "life": 10,
+   "main": "プラント",
+   "sub": "ゲル",
+   "main_en": "PLANT",
+   "sub_en": "JELL",
+   "img": "C208V.jpg",
+   "name_source": "社長提供 oborogesou_cards_corrected(1).zip。画像の C-208 は最新mainで未使用。ライフ10・地上・プラント×ゲル。2026-10-28",
+   "variant": "別絵キラ",
+   "base": "C-208"
   }
  ],
  "skills": []

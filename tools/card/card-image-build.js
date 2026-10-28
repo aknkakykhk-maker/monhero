@@ -82,9 +82,10 @@ const copyRect = (px, ch, r) => {
   }
 };
 
+// オボロゲソウ C-208 も提供済み完成画像なので帯を塗らない。--build --only=C208.jpg,C208S.jpg,C208V.jpg で追加分だけ配信画像を作れる
 // © と URL の字が無い絵(2026-10-26 社長が送った剣士モッチー C-066・パンドラ C-067 の3枚ずつ)。
 // 前は帯を塗っていて、パンドラは赤い帯・別絵キラは縞の四角が出ていた(2026-10-27 カード追加部パックくんの見回り)
-const NO_COPYRIGHT = ['C066.jpg', 'C066S.jpg', 'C066V.jpg', 'C067.jpg', 'C067S.jpg', 'C067V.jpg'];
+const NO_COPYRIGHT = ['C066.jpg', 'C066S.jpg', 'C066V.jpg', 'C067.jpg', 'C067S.jpg', 'C067V.jpg', 'C208.jpg', 'C208S.jpg', 'C208V.jpg'];
 
 // 日本語にした絵に残った英語の字の欠片。ヨロイモッチー(C-035)のサブの札で「デュラハン」の左に白い欠片が残っていた
 // (英語の DURAHAN が札の左端近くまであり、札の丸い角を守る所に重なっていた。2026-10-27 カード追加部パックくんの見回り)
@@ -199,7 +200,10 @@ const sample = async (out, files, opts) => {
 };
 
 const build = async (opts) => {
-  const files = allCards();
+  const only = process.argv.find((a) => a.startsWith('--only='));
+  const names = only ? new Set(only.slice(7).split(',')) : null;
+  const files = allCards().filter((f) => !names || names.has(path.basename(f)));
+  if (names && files.length !== names.size) throw new Error('--only の画像が見つからない、または重複しています');
   for (const [key, [w, h]] of Object.entries(SIZES)) fs.mkdirSync(path.join(OUT, key), { recursive: true });
   for (const f of files) {
     const img = await erase(jaOf(f), { ...opts, breeder: ['breeder', 'breeder-field'].includes(path.basename(path.dirname(f))) });
