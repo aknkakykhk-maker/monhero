@@ -71,7 +71,8 @@ const traitOwnerOfFor = (mainHero) => () => (mainHero && mainHero.id) || null;
 const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `${fateSrc}\n${laterSrc}\nconst tacticsExEffectAt = () => null; const tacticsExStyleAt = () => null; const tacticsExCombosAt = () => null; const tacticsCritFixedNow = () => false; /* 完全回避・乱心の会心確定はタクティクスだけ */ const tacticsExMultiBuffNow = () => ({ dmg:1, taken:1, critRate:1, critDmg:1, distMult:0 }); const TACTICS_EX_DUAL_HIT_REPEAT = 2; // タクティクスのEX(片手盾・二刀流・スイーツパラダイス)は既存5モードでは効かない\nreturn (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg, soulTraitAttackProfile, getMasuMon, tacticsSlotFlag, traitOwnerOfFor(mainHero));
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
-const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult)");
+// ★AIコピーの札はダメージの倍率に copyDmgScale を掛けて渡す(2026-10-27 #4140)。閉じかっこまでは見ない
+const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult");
 if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つからない');
 const act = slice("const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);", 'if (rangeMoveTarget!=null)', anchor);
 // 2026-10-21(#3309)からハムのカウンターの演出(await で演出を待つ1行)がこの区間に入った。ダメージには関わらず、
@@ -144,6 +145,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
   const makeStun = () => Function('d0', 'card', 'stunMon0', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', 'soulTraitAttackProfile', 'getMasuMon', 'tacticsSlotFlag', 'traitOwnerOf', `
     let totalDmg = 0, hasCrit = false, attackCount = 0; const attackHits = [];
     const slots = { [slotIdx]: stunMon0 }; const effMul = 1; const localOryoAdd = 0, localDmgModAdd = 0;
+    const copyDmgScale = 1; // AIコピーの札だけ縮める倍率(ふつうの札は1倍)
     const getDmg = () => d0; const setImmediateTurnBuff = () => {};
     ${fateSrc}
     ${laterSrc}

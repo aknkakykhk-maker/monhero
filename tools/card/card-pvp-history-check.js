@@ -9,12 +9,13 @@
 //   ③ 30試合まで・同じ試合は上書き・新しい試合が先頭
 //   ④ 強さの点数の増減(+16・-14・±0)と、同じ札のまとめ
 //   ⑤ 日時は日本の時刻
+//   ⑧ 記録の「強さの移り」のグラフ: 点数の分かる試合を古い順に20まで・付け直しの時刻より前の試合は入れない(2026-10-28)
 //   ⑥ 書けないときの守り: いっぱいなら古い試合から減らして書く・ゲーム全体の保存(storeSet)は使わない・まったく入らなければあきらめる
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const GAME = path.resolve(__dirname, '..', '..', 'monster-hero');
 const src = fs.readFileSync(path.join(GAME, 'src/parts/92-card-pvp-history.jsx'), 'utf8').split('// ---- 保存(')[0];
 const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Date });
-vm.runInContext(`${src}\n;this.E = { cardPvpNormalizeHistory, cardPvpHistoryEntryOf, cardPvpHistoryAdd, cardPvpHistorySetRating, cardPvpDeckGroups, cardPvpRatingDelta, cardPvpHistoryWhen, CARD_PVP_HISTORY_MAX };`, ctx);
+vm.runInContext(`${src}\n;this.E = { cardPvpNormalizeHistory, cardPvpHistoryEntryOf, cardPvpHistoryAdd, cardPvpHistorySetRating, cardPvpDeckGroups, cardPvpRatingDelta, cardPvpHistoryWhen, cardPvpRatingChart, CARD_PVP_HISTORY_MAX };`, ctx);
 const E = ctx.E;
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -65,6 +66,14 @@ check('④ 50枚の合計は崩れない', E.cardPvpDeckGroups(foeDeck.cards).re
 check('⑤ 日時は日本の時刻', E.cardPvpHistoryWhen(Date.UTC(2026, 9, 26, 15, 5)) === '10/27 00:05', E.cardPvpHistoryWhen(Date.UTC(2026, 9, 26, 15, 5)));
 
 // ⑦ 履歴があるのに読めないときは書かない(案1)
+// ⑧
+const ch = Array.from({ length: 25 }, (_, i) => ({ match: `c${i}`, at: 1000 - i * 10, rating: i === 3 ? null : { before: 1500, after: 1500 + i } })); // 新しい順
+const c0 = E.cardPvpRatingChart(ch, 0);
+check('⑧ グラフは点数の分かる試合を20まで・古い順(付け直し前)', c0.length === 20 && c0[19].match === 'c0' && !c0.some((x) => x.match === 'c3'));
+const c1 = E.cardPvpRatingChart(ch, 955);
+check('⑧ 付け直しの時刻より前に終わった試合は、グラフに入れない', c1.length === 4 && c1.every((x) => x.at >= 955) && c1[3].match === 'c0', c1.map((x) => x.match).join(','));
+check('⑧ 時刻の無い試合は、付け直しのあとは入れない・壊れた履歴でも落ちない', E.cardPvpRatingChart([{ match: 'x', rating: { before: 1, after: 2 } }], 5).length === 0 && E.cardPvpRatingChart(null, 5).length === 0);
+
 // ⑥ 書けないときの守り(保存の見回り 2026-10-27): localStorage がいっぱいなら古い試合から減らして書く・ゲーム全体の保存(storeSet)は使わない
 (async () => {
   const full = fs.readFileSync(path.join(GAME, 'src/parts/92-card-pvp-history.jsx'), 'utf8');

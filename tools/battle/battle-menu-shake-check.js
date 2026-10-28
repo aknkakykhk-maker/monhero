@@ -63,7 +63,8 @@ const seed = () => {
         const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|OK|スキップ)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         const d = document.querySelector('[role="dialog"]');
-        if (d) { (d.querySelector('button') || d).click(); return true; }
+        // ★知らせの窓は最初のボタンが「マーケットへ」などの寄り道のことがある(2026-10-27 ソラシドの公開から)。閉じる側の最後のボタンを押す
+        if (d) { const bs = [...d.querySelectorAll('button')]; (bs[bs.length - 1] || d).click(); return true; }
         return false;
       });
       if (!closed) break;

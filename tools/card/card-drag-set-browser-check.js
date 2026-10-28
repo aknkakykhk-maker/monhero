@@ -12,7 +12,8 @@
 //   A 技を押して組み合わせ「技だけ」を選び、マウスで相手まで運ぶ → 技だけが出る(クリティカル・集中は手札に残る)
 //   B 技を押して組み合わせ「技だけ」を選び、相手を押す → 技だけが出る(タップとそろう)
 //   C 何も選ばずに、マウスで相手まで運ぶ → 運んだ技1枚だけで出る(組み合わせの札は見えていないので、付けたつもりが無いのに付かないように。2026-10-27 部長と決めた)
-//   D 付ける札(集中)だけを運ぶ → 1枚では出せないので、いちばん枚数の多い組み合わせで出る
+//   D 付ける札(集中)だけを、組み合わせを選ばずに運ぶ → 出さない(1枚では出せない札は、組み合わせのボタンを押すまで何も付けない。2026-10-28 社長・案C)
+//   E 集中を押すと「組み合わせを選んでね」と出て、組み合わせのボタン(技＋集中)を押してから運ぶと、その2枚で出る
 //   どれも実行時エラーが無い
 const http = require('http');
 const path = require('path');
@@ -161,13 +162,28 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     check('C 何も選ばずに運ぶと、運んだ技1枚だけで出る(クリティカル・集中は付かない)', (await handCount(page)) === n0 - 1 && names.includes('クリティカル') && names.includes('集中'), `${n0}→${await handCount(page)}枚`);
     if (SHOT) await page.screenshot({ path: path.join(SHOT, 'drag-set-default.png') });
     await page.close();
-    // ---- D 付ける札(集中)を運ぶ: 1枚では出せないので、いちばん枚数の多い組み合わせ ----
+    // ---- D 付ける札(集中)を、組み合わせを選ばずに運ぶ: 出さない(案C。前はいちばん枚数の多い組で出て、付けたつもりの無い札まで付いた) ----
     page = await open();
     n0 = await handCount(page);
     await mouseDrag(page, '[data-card-hand-card="2"]', '[data-card-mon="1-0"]');
+    await page.waitForTimeout(1500);
+    names = await handNames(page);
+    check('D 付ける札(集中)を、組み合わせを選ばずに運んでも出さない', (await handCount(page)) === n0, `${n0}→${await handCount(page)}枚・${names.join(',')}`);
+    await page.close();
+    // ---- E 集中を押す → 「組み合わせを選んでね」→ いちばん少ない組(技＋集中)のボタンを押してから運ぶ → その2枚で出る ----
+    page = await open();
+    n0 = await handCount(page);
+    await page.locator('[data-card-hand-card="2"]').click();
+    await page.waitForTimeout(300);
+    const askSet = await page.getByText('組み合わせを選んでね').count();
+    const setKeys = await page.locator('[data-card-set]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-set')));
+    const fewest = setKeys.slice().sort((a, b) => JSON.parse(a).length - JSON.parse(b).length)[0];
+    if (fewest) await page.locator(`[data-card-set="${fewest}"]`).click();
+    await page.waitForTimeout(200);
+    await mouseDrag(page, '[data-card-hand-card="2"]', '[data-card-mon="1-0"]');
     await settle(page, n0);
     names = await handNames(page);
-    check('D 付ける札(集中)を運ぶと、いちばん枚数の多い組み合わせで出る', (await handCount(page)) === n0 - 3, `${n0}→${await handCount(page)}枚・${names.join(',')}`);
+    check('E 集中を押すと「組み合わせを選んでね」と出て、選んだ組(技＋集中)で運ぶとその2枚で出る(クリティカルは残る)', askSet > 0 && fewest === '[0,2]' && (await handCount(page)) === n0 - 2 && names.includes('クリティカル'), `案内 ${askSet}・ボタン ${setKeys.join(' / ')}・${n0}→${await handCount(page)}枚・${names.join(',')}`);
     check('実行時エラーが無い', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }
   console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');

@@ -88,7 +88,7 @@ check('毎ターン終わりに、積んだ数ぶんライフを回復する',
   /const rate=trickStartRegenRate\(trickStartRef\.current\.bySlot\[String\(slotIdx\)\]\);/.test(app)
   && /const rate=trickStartRegenRate\(trickStartRef\.current\.bySlot\.party\);/.test(app));
 check('攻撃が当たったら、払った消費ガッツの半分を攻撃した子へ戻す',
-  /if \(hasTrickStartTrait\(trickOwnerId\) && finalD>0\) \{\s*const refund=trickStartGutsRefund\(cardCost\);/.test(app));
+  /if \((?:!entry\.aiCopy && )?hasTrickStartTrait\(trickOwnerId\) && finalD>0\) \{\s*const refund=trickStartGutsRefund\(cardCost\);/.test(app));
 
 // --- ② 運命のコイン・運命の輪 ---
 const fateSrc = slice(bond, '// ==== 固有技「運命のコイン」', '// ★タクティクスバトルは敵の並びが別');
@@ -130,7 +130,7 @@ check('コインは0.5未満で表(4倍)・それ以外は裏(0.5倍)', f.rollFa
     && Math.abs(f.fateWheelEnemyTakenBonus({ takenUp: 1 }) - 0.3) < 1e-9 && f.fateWheelEnemyTakenBonus(null) === 0);
 }
 {
-  const pre = slice(app, "let fateDmgMult=1, fateWheelPick=null;", 'const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult);');
+  const pre = slice(app, "let fateDmgMult=1, fateWheelPick=null;", 'const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,fateDmgMult');
   check('コインは使うたびに投げ、この技のダメージへ倍率を渡す', /else if\(card\.monId===FATE_COIN_MONSTER_ID\)\{\s*const side=rollFateCoin\(\);\s*fateDmgMult=fateCoinDmgMult\(side\);/.test(pre)
     && /withFateSlotStack\(p\.fateStacks,slotIdx,'combo'\)/.test(pre) && /withFateCoinGuts\(p\.fateStacks\)/.test(pre));
   check('運命の輪は使う前に出目を決め、3倍・2倍だけこの技へ掛ける', /fateWheelPick=rollFateWheel\(\);\s*if\(fateWheelPick\.dmgMult\) fateDmgMult=fateWheelPick\.dmgMult;/.test(pre));

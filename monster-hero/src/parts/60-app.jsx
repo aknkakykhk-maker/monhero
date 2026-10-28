@@ -718,9 +718,15 @@ function MonsterHeroGame() {
   //   形は 33-ai-copy.jsx の冒頭。公開の印 assistantSorashido が偽のあいだは null のまま(今までと同じ)
   const [aiCopy, setAiCopy] = useState(null);
   const aiCopyRef = useRef(null);
+  // 本編(5つの遊び)で、いま見せているヒットが AIコピーのものか。攻撃の動き(attackAnim)の書き方は変えずに、
+  //   バトル画面へ「コピーが打っている」と別に渡す(元の子の枠ではなく5人目の札のコピーの絵を動かすため)
+  const aiCopyHitRef = useRef(false);
   // 値か (prev)=>next を受ける(ダイスくんの5つの遊びの分でも使う)
   const commitAiCopy = (next) => {
-    const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    let v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    // ライフ・ガッツは上限を超えない(タクティクスのコピーだけ maxHp を持つ)
+    if (v && Number.isFinite(v.maxHp) && Number(v.hp) > v.maxHp) v = { ...v, hp: v.maxHp };
+    if (v && Number.isFinite(v.maxGuts) && Number(v.guts) > v.maxGuts) v = { ...v, guts: v.maxGuts };
     aiCopyRef.current = v; setAiCopy(v); return v;
   };
   const [enemy, setEnemy] = useState(null);
@@ -1744,7 +1750,10 @@ function MonsterHeroGame() {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
     const unit = tacticsUnitsRef.current[slotIdx];
     if (!unit) return;
-    const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
+    // ちから・丈夫さはいまの強化込み(tacticsBattleUnit)、ライフ・ガッツの上限は枠に出ている盤面の値から取る
+    //   (2026-10-28 本番の報告: 元の子のライフ 724 に対しコピーが 7506。上限は枠と同じ値にそろえ、コピーが元の子より大きくならないようにする)
+    const board = normalizeTacticsUnit(unit);
+    const src = { ...normalizeTacticsUnit(tacticsBattleUnit(slotIdx)), maxHp: board.maxHp, maxGuts: board.maxGuts };
     const piles = handPileRef.current;
     const { pos, stacked } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
     const rules = aiCopyRules(level);
@@ -1888,6 +1897,8 @@ function MonsterHeroGame() {
     const copy = aiCopyRef.current;
     if (!copy) return;
     commitAiCopy(null);
+    // 敵の予告がコピーを狙ったままなら、いる子から狙い直す(倒された・時間切れ・20ターン経過のどれでも)
+    setEnemyIntent(prev => (prev && prev.targetCopy) ? aimTacticsIntent({ ...prev, targetCopy: undefined, targetName: undefined }, runMode) : prev);
     if (why) pushBattleLog(`🤖 ${tacticsAiCopyName(copy)}が${why}`, 'ally');
   };
   // ===== ライフの増減(新モードだけ盤面へ) =====
@@ -14642,7 +14653,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     { const ca=runTacticsAiCopyAction(attackDistance); ca.hits.forEach(h=>attackHits.push(h)); totalDmg+=ca.total; }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
-    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].actorName==null) attackHits[k].actorName=copyName; }
+    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]){ if(attackHits[k].actorName==null) attackHits[k].actorName=copyName; attackHits[k].aiCopy=true; } }
     // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前。使う札はターンの始めに決めてある(planClassicAiCopy)。
     //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。攻撃・固有技・回復・強化・アシカは上の aiCopyEntries で
     //   味方のカードと同じ流れに通し済み(ダメージはコピーのちからへ縮める)。ここではガッツを払い、ガードだけを構える
@@ -14669,6 +14680,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let hitIdx=0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          aiCopyHitRef.current = !!hit.aiCopy;
           // AIコピーのヒットは、元の子の動き・連撃のまとめを通さず、コピーとして見せる(playAiCopyHit)
           if (hit && hit.aiCopy) { await playAiCopyHit(hit); hitIdx++; continue; }
           // パンドラの箱: このヒットを出したカードの姿(悪魔/天使)の1体だけを動かす
@@ -14816,6 +14828,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           hitIdx++;
         }
+        aiCopyHitRef.current = false;
         setCurrentWaveDamage(p=>p+totalDmg); raidJackDamageRef.current+=Number(totalDmg)||0;
         const turnDistDmg=[0,0,0,0];
         for(const h of attackHits){ if(h.aiCopy) continue; const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
@@ -15692,13 +15705,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 行動表はモードと敵で決まる。新モード以外では今までどおりの1つの表が返る
     const actionState=()=>({definitions:enemyActionDefinitionsFor(runMode,newEnemy?.id,newEnemy?.difficulty,newEnemy?.actionCount),roarStacks:tacticsRoarStacksRef.current});
     resetTacticsHate(runMode); // ヘイト(試作)は WAVE ごとに0から
+    // AIコピーは WAVE の終わりで消える(2026-10-27 社長の答え)。★最初の狙いを決める前に消す
+    //   (あとで消すと、新しい WAVE の1ターン目の予告が前の WAVE のコピーを狙ったまま出る・2026-10-28 本番の報告)
+    commitAiCopy(null);
     const firstIntent = aimTacticsIntent(getNextEnemyAction(newEnemy,dist,null,{unannounced:true,...actionState()}),runMode);
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent,actionState()));
     // バトルの記録もWAVEの区切りを入れる。ランの1WAVE目では前のランのぶんを消す
     if (w === 1) { setBattleLog([]); battleLogSeqRef.current = 0; }
-    // AIコピーは WAVE の終わりで消える(2026-10-27 窓口: WAVE をまたぐかは社長に確認中。それまでは消す)
-    commitAiCopy(null);
     pushBattleLog(isRaidJackMode(runMode)?`── ${battleModeInfo(runMode).short}：${newEnemy.name} ──`:`── WAVE ${w}：${newEnemy.name} ──`, 'turn');
     setTurnCount(1); setSelectedCards([]); setDiscardCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); resetKusabi(); resetDreamPain(); clearKyubiKageroWait(); setWaveBuffs({}); resetFateWheel(); resetEnemyConfuse(); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
@@ -16133,6 +16147,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection();
     setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
+    // ★天河の契り(オリヒメが勇者モン): レイドは配置の画面を通らないので、編成画面で選んだ相方(無ければいちばん近い子)をここで決める(2026-10-28 社長「案イ」)
+    if(hero.id===ORIHIME_MONSTER_ID){
+      const pick=Number.isInteger(req.partnerSlot)&&req.partnerSlot!==heroSlot&&raidSlots[req.partnerSlot]?req.partnerSlot:orihimeAutoPartnerSlot(raidSlots,heroSlot);
+      if(Number.isInteger(pick)) setOrihimePartner(heroSlot,pick);
+    }
     setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
     const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
     // ★距離適性は合算しない。タクティクスバトルは「その距離に立っている子の適性だけ」がその子の攻撃に効く(tacticsSlotApt)。
@@ -16526,7 +16545,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 距離(立ち位置)は、編成画面(RaidJackPrepScreen)で子を選ぶときに一緒に決める(2026-10-19 社長「パーティー選ぶときにそのまま同時に距離適性も選択できるように」)。
   // 以前の別の配置画面(RAID_JACK_PLACE)は無くした。勇者モンを置いた距離が、最初の間合い(initialBattleDistanceRef)になる
   // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
-  const startRaidJackFromPrep = async ({ party, teachingIds, slots = null, heroSlot = 0 }) => {
+  const startRaidJackFromPrep = async ({ party, teachingIds, slots = null, heroSlot = 0, partnerSlot = null }) => {
     const prep = raidJackPrep;
     if (!prep || !Array.isArray(party) || party.length === 0) return;
     const key = prep.kind === 'b' ? 'b' : 'a';
@@ -16555,7 +16574,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } catch (e) { startLife = null; }
     }
     setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
-    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, slots, heroSlot, eventId:raidJackEventId, startLife, pumpkin });
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, slots, heroSlot, partnerSlot, eventId:raidJackEventId, startLife, pumpkin });
   };
 
   const setupMon = (m, slotIdx) => {
@@ -22353,7 +22372,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} kyubiOrihimeStackMarks={kyubiOrihimeStackMarks} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} aiCopyHitting={!!(attackAnim&&aiCopyHitRef.current&&!isTacticsMode(runMode))} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}

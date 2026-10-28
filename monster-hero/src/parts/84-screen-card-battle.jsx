@@ -211,6 +211,8 @@ const CardStatusSheet = ({ name, list, onClose }) => (
     </div>
   </div>
 );
+// 手札の番号の並びを、カードの名前(番号)の並びにする(同じ名前の組み合わせを1つにまとめる)
+const cardHandNameKey = (hand, idx) => idx.map((i) => hand[i]).sort().join(',');
 // 記録の1行の文。守り・回避で減った当たりは「(5 → 2)」を添える(82 が from・to を持たせる。古い記録には無いので、そのままの文)
 const cardLogText = (l) => (!l ? '' : Number.isFinite(l.from) && Number.isFinite(l.to) ? `${l.text}(${l.from} → ${l.to})` : l.text);
 // 守りの札を短く(守った子の上の印・「◯◯を使った」に出す。2026-10-27 社長・案A)
@@ -1245,12 +1247,18 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const selMons = [...new Set(selOpts.map((o) => (o.mon === undefined ? -1 : o.mon)))];
   const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
   const byMon = monChosen === undefined ? [] : selOpts.filter((o) => (o.mon === undefined ? -1 : o.mon) === monChosen);
-  const sets = [...new Set(byMon.map((o) => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length);
+  // 同じ名前の並びになる組み合わせは1つにまとめる(急襲が2枚あると、同じボタンが2つ並んで見分けがつかなかった。2026-10-28 社長)。
+  //   同じ名前の札は、手札の番号の小さいほうを使う
+  const setsAll = [...new Set(byMon.map((o) => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length || JSON.parse(a).reduce((x, y) => x + y, 0) - JSON.parse(b).reduce((x, y) => x + y, 0));
+  const sets = setsAll.filter((s0, k) => setsAll.findIndex((s1) => cardHandNameKey(me.hand, JSON.parse(s1)) === cardHandNameKey(me.hand, JSON.parse(s0))) === k);
   // 組み合わせを選んでいないときは、押した札1枚だけ(付ける札は、組み合わせのボタンを押したときだけ付く。運ぶときとそろえる)。
   //   前はいちばん枚数の多い組み合わせが先に選ばれ、付けたつもりが無いのに付いた(2026-10-27 社長の報告: カララギマンゴーにジョイのサポート)。
-  //   1枚では出せない札(付ける札を押したとき・組で出す札)は、いちばん枚数の多い組み合わせ
+  //   1枚では出せない札(付ける札を押したとき・組で出す札)は、組み合わせのボタンを押すまで何も選ばない(「組み合わせを選んでね」)。
+  //   前はいちばん枚数の多い組が選ばれて「＋急襲」まで勝手に付いた(2026-10-28 社長「組み合わせる系が勝手に選ばれるのが使いにくい」・案C)。
+  //   選べる組が1つしかないときは、迷いが無いのでそれを選ぶ
   const setAlone = sel ? JSON.stringify([sel.hand]) : null;
-  const setChosen = sel && sets.length ? (sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets[0]) : null;
+  const setChosen = sel && sets.length ? (sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null) : null;
+  const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
   const finalOpts = byMon.filter((o) => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some((o) => o.target);
 
@@ -1372,6 +1380,12 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 指が CARD_DRAG_THRESHOLD 動いたら運ぶ。動かさずに長押ししたときだけ詳しい画面。動かさずに離したらタップ(いままでどおり)
   //   技 … 狙う相手のモンスターへ / ガッツにする(と始める前のガッツ)… ガッツの置き場へ / 守り … 狙われた自分のモンスターへ
   // 運んでいるカードは body 直下の箱に1枚だけ出し、位置は直接動かす(手札の欄の中で動かすと iPhone でずれて2枚に見えた・60-app.jsx の注意)
+  // 運んだ札 i が1枚では出せないとき、その子で出せる組み合わせ(名前の並び)が1つだけなら運んで出せる
+  const cardDropComboOk = (o, i) => {
+    const mo = (x) => (x.mon === undefined ? -1 : x.mon);
+    if (attackOpts.some((x) => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
+    return new Set(attackOpts.filter((x) => mo(x) === mo(o) && x.hand.includes(i)).map((x) => cardHandNameKey(me.hand, x.hand))).size <= 1;
+  };
   const dropTargetsOf = (i) => {
     const out = {};
     if (mode === 'attack') {
@@ -1384,6 +1398,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         // 選んでいないときは、運んだ札1枚だけで出せればそれ(組み合わせの札は見えていないので、付けたつもりが無いのに付かないように)。
         //   1枚では出せない札(付ける札・組で出す札)は、いちばん枚数の多い組み合わせ(前からの既定)。2026-10-27 部長と決めた
         const alone = (x) => !chosen && x.hand.length === 1 && x.hand[0] === i;
+        // 1枚では出せない札は、名前の違う組み合わせが2つ以上あれば、運んでも出さない(画面で組み合わせを選んでから。タップとそろえる。案C)
+        if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
         keys.forEach((k) => { if (!out[k] || (!alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length))) out[k] = o; });
       });
     }
@@ -1640,7 +1656,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使う子をタップ' : setPending ? '組み合わせを選んでね' : needTarget ? '狙う相手をタップ' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
     : mode === 'guard' ? (guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません')
     : mode === 'guts' ? (gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)')
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
@@ -1837,7 +1853,8 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {!guide && !tutorial && hint && <div className="mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900" style={JA_LABEL_STYLE}>{jaWrap(hint)}</div>}
       {mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && (
         <div className="mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2">
-          {sets.map((s) => <button key={s} type="button" data-card-set={s} onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).map((i) => cardOf(db, me.hand[i]).name).join('＋')}</button>)}
+          {/* 押した札は省いて、付ける札だけを「＋◯◯」で出す。少ない組から並べ、1行に収める(320×568 で2行に折れて「使う」が画面の下で切れた。2026-10-28 案C) */}
+          {sets.slice().reverse().map((s) => <button key={s} type="button" data-card-set={s} onClick={() => setSel({ ...sel, mon: monChosen, set: s })} className={`whitespace-nowrap rounded-lg border font-black ${tiny ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-[12px]'} ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`}>{JSON.parse(s).filter((i) => i !== sel.hand).length ? JSON.parse(s).filter((i) => i !== sel.hand).map((i) => `＋${cardOf(db, me.hand[i]).name}`).join('') : `${cardOf(db, me.hand[sel.hand]).name}だけ`}</button>)}
         </div>
       )}
       {/* 選んだ手札は上へ少し持ち上がる。その分の高さ(pt-2)を手札の箱の中に取っておき、上の案内の帯に重ならないようにする(2026-10-24 改善部の点検 V3) */}

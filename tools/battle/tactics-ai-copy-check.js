@@ -92,5 +92,14 @@ const hpUnits = board.filter(Boolean).reduce((sum, u) => sum + u.hp, 0);
 check('盤面のライフの合計は枠の子だけの合計(コピーは盤面の外)', hpBefore === hpUnits, `${hpBefore} / 枠の子の合計 ${hpUnits}`);
 check('全滅の判定はコピーがいても枠の子だけで決まる', A.isTacticsWipedOut([null, null, null, null]) === false && A.isTacticsWipedOut(board) === false);
 
+// ⑦ 本体の順番(2026-10-28 本番の報告): WAVE の始めは、敵の最初の狙いを決める前にコピーを消す。消えたら予告の狙いを付け直す
+{
+  const app = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+  const clearAt = app.indexOf('commitAiCopy(null);\n    const firstIntent = aimTacticsIntent(');
+  check('WAVE の始めは、最初の狙い(firstIntent)を決める前にコピーを消す', clearAt >= 0);
+  check('コピーが消えたとき、予告がコピーを狙ったままなら狙い直す',
+    /setEnemyIntent\(prev => \(prev && prev\.targetCopy\) \? aimTacticsIntent\(/.test(app));
+}
+
 if (failed) { console.log(`\n${failed}件のNGがあります`); process.exit(1); }
 console.log('\nすべてOK');
