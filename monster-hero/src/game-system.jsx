@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8b1cdf41929dfe1a
+// generated-sha256: 0e141aabe2534959
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13898,6 +13898,8 @@ const TEACHING_FX_STYLE = {
   poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53", c1:'#d9f99d', c2:'#84cc16', motif:'rise' },
   // メロソ(回復＋ガード)。2026-09-29 まで演出が無かった
   meloso:  { icon:"🔍", label:"解析完了!",   text:"text-teal-300",    ring:"border-teal-300",    rgb:"20,184,166", c1:'#99f6e4', c2:'#14b8a6', motif:'shield' },
+  // ソラシド(AIコピー)。2026-10-28 社長「アシカを使ったときの演出がソラシドはない」で足した(きゅうこは上の kyuko で出ている)
+  sorashido:{ icon:"🤖", label:"自動化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"52,211,153", c1:'#a7f3d0', c2:'#34d399', motif:'rise' },
 };
 
 // ---- part: 23-rpg-debug.jsx ----
@@ -42443,7 +42445,7 @@ function AiCopyLifeBar({ hp, maxHp }) {
   );
 }
 // タクティクス/レイドの5列目。縦=盤の右の列(layout 'portrait')、横向きの背の低い画面=盤の下の帯(layout 'landscape')
-function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen }) {
+function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null }) {
   if (!copy) return null;
   const land = layout === 'landscape';
   const name = tacticsAiCopyName(copy);
@@ -42463,7 +42465,11 @@ function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, lay
         </span>
       </span>
       <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : 46}/>
-      <span className={land ? 'w-[96px] shrink-0' : 'w-full'}><AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp}/></span>
+      <span className={`flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`}>
+        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp}/>
+        <AiCopyGutsMeter guts={copy.guts} maxGuts={copy.maxGuts}/>
+      </span>
+      {Number.isInteger(hatePct) && <span data-tactics-ai-copy-hate={hatePct} className="shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200">狙われ {hatePct}%</span>}
       {/* 幅320の画面は列を60pxに詰める(4人の枠のライフの字が枠からはみ出さないように)。次に使う札もその幅に縮める */}
       <span className={land ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center max-[359px]:[&>*]:max-w-full max-[359px]:[&>*]:w-full'}>{next}</span>
     </div>
@@ -44072,6 +44078,8 @@ function BattleScreen({
               const tCopyOut=copyStanding||tCopyPhase==='vanish';
               const copySrc=tCopy&&tCopy.pos===i?slots[tCopy.srcSlot]:null;
               const tCopyOnMon=!!s||!!(tCopy&&tCopy.stacked);
+              // コピーが狙われる確率(%)。枠の子の%(chancesNow)は子がいる枠でしか数えないので、コピーの分はここで数える
+              const tCopyHatePct=(()=>{ if(!(tCopy&&tCopy.pos===i&&copyStanding&&tacticsHateOn&&Array.isArray(tacticsHate))) return null; const ch=tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,aiCopy); return ch&&Number.isInteger(ch.copy)?ch.copy:null; })();
               const tCopyHit=!!(isAnimating&&attackAnim.aiCopy&&copySrc&&!tCopyOnMon);
               const copyChip=tacticsNewLayout&&!tacticsCopyOutside&&tCopy&&tCopy.pos===i?(<>
                 {/* 枠は横に広い(縦の画面で約176×95)。空いたマスは「左に絵・右に次に使う札・下にライフ」と横に分けて、札で絵を隠さない。
@@ -44080,24 +44088,33 @@ function BattleScreen({
                     横向きの背の低い画面は枠が縦長(約88×112)なので、空いたマスは「上に絵・下に次の札」、重なるときの札は右上(名前の段の下)へ移す。2026-10-27 セコンドくんの実画面の見回り */}
                 {/* コピーが打つとき(60 の playAiCopyHit が attackAnim.aiCopy を約0.45秒出す)は、空いたマスのコピーの絵を元の子と同じ攻撃の動きで敵へ向けて動かす。
                     技名は下の枠の中の吹き出し(data-tactics-slot-skill)がそのまま出す。重なるときは元の子の絵が動くのでここでは動かさない */}
-                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} data-tactics-ai-copy-hit={tCopyHit?'1':undefined} className={`absolute left-1 top-[26px] bottom-[16px] ${tCopyHit?'z-[80]':'z-[24]'} flex w-[58px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[20px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[40px]`}>
+                {/* 2026-10-28 社長「AIにガッツはないの？ステータスがわかりにくい」: 空いたマスのコピーも、5列目と同じく
+                    ライフ・ガッツを数と棒で、元の子の枠と同じくらい読める形にする(共通の部品 AiCopyLifeBar・AiCopyGutsMeter)。
+                    縦(約176×95)は「左に薄い絵・右に次の札/ライフ/ガッツ」、横向きの背の低い画面(約88×112)は「上に絵・下に次の札/ライフ/ガッツ」 */}
+                {copySrc&&!tCopyOnMon&&<div data-tactics-ai-copy-art={i} data-ai-copy-phase={tCopyPhase} data-tactics-ai-copy-hit={tCopyHit?'1':undefined} className={`absolute left-1 top-[26px] bottom-[18px] ${tCopyHit?'z-[80]':'z-[24]'} flex w-[60px] items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:w-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[17px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:h-[27px]`}>
                   <div style={tCopyHit?{position:'relative',animation:attackMotionAnimation(attackAnim),...(attackAimStyle||{})}:undefined}>
-                    <SorashidoCopyFx phase={tCopyPhase}>
-                      <DyedMonsterImage baseId={copySrc.id} src={copySrc.imgUrl} alt={`${copySrc.name}のコピー`} masuColors={copySrc.colors} style={{width:'52px',height:'52px'}} className="object-contain drop-shadow-md"/>
-                    </SorashidoCopyFx>
+                    <AiCopyBody src={copySrc} phase={tCopyPhase} size={classicAiCopyLandscape()?34:50}/>
                   </div>
                 </div>}
-                {!tCopyOnMon&&<div data-tactics-ai-copy-next={i} className={`absolute ${copySrc?'left-[62px]':'left-1'} right-1 top-[26px] bottom-[16px] z-[64] flex items-center justify-center pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-auto [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[18px]`}>
-                  <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={tCopy.turnsLeft} layout={classicAiCopyLandscape()?'landscape':'portrait'}/>
+                {!tCopyOnMon&&<div data-tactics-ai-copy-stats={i} className={`absolute ${copySrc?'left-[66px]':'left-1'} right-1.5 top-[26px] bottom-[3px] z-[64] flex min-w-0 flex-col justify-between gap-0.5 pointer-events-none [@media(orientation:landscape)_and_(max-height:520px)]:left-1 [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:top-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-[21px] [@media(orientation:landscape)_and_(max-height:520px)]:gap-0`}>
+                  <div data-tactics-ai-copy-next={i} className="flex min-w-0 justify-center">
+                    <SorashidoNextCardBadge card={tCopyOut?tCopy.nextCard:null} turnsLeft={null} layout="landscape"/>
+                  </div>
+                  <AiCopyLifeBar hp={tCopy.hp} maxHp={tCopy.maxHp}/>
+                  <AiCopyGutsMeter guts={tCopy.guts} maxGuts={tCopy.maxGuts}/>
                 </div>}
                 {/* 押すとコピーの手札の窓(BattleScreen の copyHandOpen)。枠のボタンへは伝えない */}
                 <div data-tactics-ai-copy={i} data-tactics-ai-copy-out={tCopyOut?'1':'0'} role={aiCopy?'button':undefined} aria-label={aiCopy?'コピーの手札を見る':undefined}
                   onClick={aiCopy?(e)=>{e.stopPropagation();setCopyHandOpen(true);}:undefined}
-                  className={`absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon?'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]':'max-w-[calc(100%-8px)] items-center gap-0.5'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
-                  <span className="flex max-w-full min-w-0 items-center gap-0.5">
-                    <span className="min-w-0 truncate"><span className={tCopyOnMon?'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}>🤖</span>{tCopyOut?(tCopyOnMon?<><span className="text-rose-300">♥</span><span className="tabular-nums">{tCopy.hp}</span></>:`ライフ${tCopy.hp}`):'次のターンから'}</span>
+                  className={`absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon?'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]':'w-[62px] max-w-[62px] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:flex-row [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:gap-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:py-[2px]'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy?'pointer-events-auto cursor-pointer':'pointer-events-none'}`}>
+                  {/* 空いたマスは「🤖あとN」と「狙われ N%」を行を分けて出す(2026-10-28 部長: 数字が並ぶと「ライフ750 狙6%」が「7506」に見えた) */}
+                  {!tCopyOnMon?<>
+                    <span className="min-w-0 truncate">🤖{tCopyOut?`あと${tCopy.turnsLeft}ターン`:'次のターンから'}</span>
+                    {Number.isInteger(tCopyHatePct)&&<span data-tactics-ai-copy-hate={tCopyHatePct} className="shrink-0 whitespace-nowrap tabular-nums text-rose-200">狙われ {tCopyHatePct}%</span>}
+                  </>:<span className="flex max-w-full min-w-0 items-center gap-0.5">
+                    <span className="min-w-0 truncate"><span className={tCopyOnMon?'max-[359px]:hidden [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}>🤖</span>{tCopyOut?(tCopyOnMon?<><span className="text-rose-300">♥</span><span className="tabular-nums">{tCopy.hp}</span></>:`あと${tCopy.turnsLeft}`):'次のターンから'}</span>
                     {copyStanding&&chancesNow&&Number.isInteger(chancesNow.copy)&&<span className="shrink-0 tabular-nums tracking-tighter text-rose-200"><span className={tCopyOnMon?'text-[6px] opacity-80':''}>狙</span>{chancesNow.copy}%</span>}
-                  </span>
+                  </span>}
                   {tCopyOnMon&&tCopyOut&&<span data-tactics-ai-copy-next={i} className="block max-w-full min-w-0 truncate text-emerald-200">{tCopy.nextCard?(tCopy.nextCard.name||tCopy.nextCard.baseName||'考え中'):'考え中'}<span className="tabular-nums text-sky-200/90"> あと{tCopy.turnsLeft}</span></span>}
                 </div>
               </>):null;
@@ -44462,7 +44479,8 @@ function BattleScreen({
             const phase=aiCopyViewPhase(c,standing?'idle':'appear');
             const hit=!!(aiCopy&&!ecoBattleView&&attackAnim&&attackAnim.aiCopy);
             const skill=aiCopy&&slotSkill&&slotSkill.aiCopy?slotSkill.name:null;
-            const props={copy:c,src:aiCopySrcOf(c,slots),phase,hit,anim:attackAnim,skill,standing:standing||phase==='vanish',onOpen:aiCopy?()=>setCopyHandOpen(true):null};
+            const hc=standing&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,aiCopy):null;
+            const props={copy:c,src:aiCopySrcOf(c,slots),phase,hit,anim:attackAnim,skill,standing:standing||phase==='vanish',onOpen:aiCopy?()=>setCopyHandOpen(true):null,hatePct:hc&&Number.isInteger(hc.copy)?hc.copy:null};
             return (<>
               {/* タクティクス旧は枠が縦に長く盤の高さからはみ出すので、横向きでも盤の右に置く(下に置くと距離の札に重なった) */}
               <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait"/></div>
