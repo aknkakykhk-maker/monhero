@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 342515d1ffe468fe
+// source-sha256: 1f0736129a565c1d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -101061,7 +101061,7 @@ const CARD_PVP_LOBBY_FRESH_MS = 6000;
 const CARD_PVP_LOBBY_JOIN_MS = 8000;
 const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
-const CARD_PVP_RERATE_AT = 0;
+const CARD_PVP_RERATE_AT = Date.parse('2026-10-28T11:06:19+09:00');
 const cardPvpFlip = act => {
   if (!act || typeof act !== 'object') return act;
   const out = JSON.parse(JSON.stringify(act));

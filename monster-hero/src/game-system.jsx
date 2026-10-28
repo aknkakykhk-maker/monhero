@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31392bb1e7d23c60
+// generated-sha256: dcbdcd4fd7d330e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -60918,7 +60918,7 @@ const CARD_PVP_RATING_TABLE = 'card_battle_pvp_ratings';
 const CARD_PVP_RATING_START = 1500;
 // 強さの点数を付け直した時刻(ms・2026-10-28 社長: 1500+48×(勝ち−負け)・k=96)。0 … まだ付け直していない。
 //   付け直しより前の試合は、記録の「強さの移り」のグラフに入れない(点数の物差しが変わり、段差に見えるため。92 の cardPvpRatingChart)
-const CARD_PVP_RERATE_AT = 0;
+const CARD_PVP_RERATE_AT = Date.parse('2026-10-28T11:06:19+09:00'); // 統括部長が付け直しを流したと知らせた時刻
 
 // ---- 純粋な計算(ここから下の UI と通信を使わない。tools/card/card-pvp-check.js が node で確かめる) ----
 
