@@ -14642,7 +14642,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     { const ca=runTacticsAiCopyAction(attackDistance); ca.hits.forEach(h=>attackHits.push(h)); totalDmg+=ca.total; }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
-    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].actorName==null) attackHits[k].actorName=copyName; }
+    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]){ if(attackHits[k].actorName==null) attackHits[k].actorName=copyName; attackHits[k].aiCopy=true; } }
     // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前。使う札はターンの始めに決めてある(planClassicAiCopy)。
     //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。攻撃・固有技・回復・強化・アシカは上の aiCopyEntries で
     //   味方のカードと同じ流れに通し済み(ダメージはコピーのちからへ縮める)。ここではガッツを払い、ガードだけを構える
@@ -14701,7 +14701,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if (hit.isUnique) {
                 // 固有技は他のモンスターと同じタメ(charge)を先に見せてから、連撃らしい残像ダッシュへ移る
                 Audio_.se.special();
-                setAttackAnim({slotIndex: animSlot, charge:true});
+                setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:true});
                 await battleWait(650);
               }
               // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない。
@@ -14709,11 +14709,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const isTwinBlade = hitMotion==='kenshiTwinBlade';
               if(hitSkillKind){
                 // 技ごとの動き。固有技は型の動きでも「タメのあとの本番」の扱い(charge:false)で出す
-                setAttackAnim({slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
+                setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
                 if(hit.isUnique) { Audio_.se.special(); specialMoveImpact(); } else Audio_.se.zanSlash();
                 await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
               }else{
-              setAttackAnim({slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
               if(hit.isUnique) specialMoveImpact();
               if(isTwinBlade){
                 // 1撃目＼→2撃目／へSEを合わせ、X字完成時だけ短い画面シェイクを入れる。
@@ -14769,11 +14769,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const motion = hitSkillKind ? 'default' : ((themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
-              setAttackAnim({slotIndex: animSlot, charge:true});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:true});
               Audio_.se.special();
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
               specialMoveImpact();
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
@@ -14785,7 +14785,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d40e530600c1e8d6
+// generated-sha256: ff0757df00713c57
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42365,14 +42365,17 @@ const kindOfTacticsSlotFx = (fx) => {
 const CLASSIC_AI_COPY_CSS = `
 [data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
 [data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
-[data-ai-copy-cell]{width:58px;flex:0 0 58px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55)}
+[data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
+[data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
+[data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
 @media (orientation: landscape) and (max-height: 520px){
   [data-ai-copy-row]{flex-direction:column;gap:3px}
   [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
-  [data-ai-copy-cell]{width:100%;flex:0 0 21px;height:21px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:hidden}
-  [data-ai-copy-cell] [data-sorashido-fx] .text-2xl{font-size:14px}
-  [data-ai-copy-cell] br{display:none}
-  [data-ai-copy-cell] > span{width:auto;flex:0 0 auto}
+  [data-ai-copy-cell]{width:100%;flex:0 0 30px;height:30px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:visible}
+  [data-ai-copy-cell] [data-ai-copy-head]{width:auto;flex:0 0 auto;flex-direction:row;gap:4px}
+  [data-ai-copy-cell] [data-ai-copy-name]{width:auto;flex:0 1 auto;max-width:110px;text-align:left;-webkit-line-clamp:1}
+  [data-ai-copy-cell] [data-ai-copy-art]{flex:0 0 26px;width:26px;height:26px}
+  [data-ai-copy-cell] [data-ai-copy-guts]{flex:0 0 92px;width:92px}
   [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
   [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
 }`;
@@ -42382,7 +42385,52 @@ const classicAiCopyLandscape = () => {
   try { return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches; }
   catch (e) { return false; }
 };
-function ClassicAiCopyCell({ copy, turnCount, onOpen }) {
+// ===== AIコピーの5人目の札で、本編(5つの遊び)とタクティクス/レイドの5列目が共通に使う部品(2026-10-28 社長の決め) =====
+// 名前と形はレフェリーくんと決めた(AiCopyFace・AiCopyBody。ライフの AiCopyLifeBar はタクティクス側でレフェリーくんが足す)。
+// src は元の子(slots[copy.srcSlot] か ALL_PLAYER_MONSTERS[copy.srcMonsterId])
+// 元の子の顔に「🤖」の印。顔の絵が無ければ立ち絵、それも無ければ 🤖 だけ
+function AiCopyFace({ src, size = 22 }) {
+  const url = (src && (src.faceIconUrl || src.iconUrl || src.imgUrl)) || '';
+  return (
+    <span data-ai-copy-face className="relative inline-block shrink-0" style={{ width: size, height: size }}>
+      {url ? <img src={url} alt="" aria-hidden="true" draggable="false" className="h-full w-full rounded-full object-cover bg-black/30 ring-1 ring-emerald-300/70"/>
+        : <span className="flex h-full w-full items-center justify-center rounded-full bg-black/30 text-[12px]">🤖</span>}
+      {url && <span aria-hidden="true" className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-emerald-900 ring-1 ring-emerald-300 leading-none"
+        style={{ width: Math.round(size * 0.62), height: Math.round(size * 0.62), fontSize: Math.round(size * 0.45) }}>🤖</span>}
+    </span>
+  );
+}
+// 元の子の立ち絵を少し薄くしたコピーの絵。phase は SorashidoCopyFx の段階。hit のとき anim(attackAnim)の技モーションで動く
+function AiCopyBody({ src, phase = 'idle', hit = false, anim = null, size = 44 }) {
+  if (!src) return null;
+  const mon = src;
+  const hitStyle = hit && anim ? { animation: attackMotionAnimation(anim) } : null;
+  return (
+    <span data-ai-copy-art data-ai-copy-hit={hitStyle ? '1' : undefined} className="relative flex shrink-0 items-center justify-center" style={{ width: size, height: size, zIndex: hitStyle ? 80 : undefined }}>
+      <span style={hitStyle ? { position: 'relative', display: 'block', ...hitStyle } : { display: 'block' }}>
+        <SorashidoCopyFx phase={phase}>
+          <span style={{ display: 'block', opacity: 0.6, filter: 'drop-shadow(0 0 2px rgba(52,211,153,.95))' }}>
+            <DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt={`${mon.masuName || mon.name || ''}のコピー`} masuColors={mon.colors} style={{ width: `${size}px`, height: `${size}px` }} className="object-contain"/>
+          </span>
+        </SorashidoCopyFx>
+      </span>
+    </span>
+  );
+}
+// コピーのガッツ。数(G 今/上限)と横棒。色と字はパーティの「Ally Guts」と同じ(本編はライフをパーティで持つので、コピーが出しているのはガッツだけ)
+function AiCopyGutsMeter({ guts, maxGuts }) {
+  const g = Math.max(0, Math.floor(Number(guts) || 0)), m = Math.max(0, Math.floor(Number(maxGuts) || 0));
+  const pct = m > 0 ? Math.max(0, Math.min(100, (g / m) * 100)) : 0;
+  return (
+    <span data-ai-copy-guts={`${g}/${m}`} className="flex w-full min-w-0 flex-col gap-[2px]">
+      <span className="flex items-end justify-between gap-1 leading-none"><span className="text-[9px] font-black text-amber-400">G</span>
+        <span className="font-mono text-[11px] font-black tabular-nums leading-none text-amber-200">{g}/{m}</span></span>
+      <span className="block h-[6px] w-full overflow-hidden rounded-full border border-white/5 bg-slate-900"><span className="block h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{ width: `${pct}%` }}/></span>
+    </span>
+  );
+}
+// hitAnim … コピーが打っているあいだの attackAnim(attackAnim.aiCopy のとき。無ければ null)
+function ClassicAiCopyCell({ copy, turnCount, onOpen, mon = null, hitAnim = null }) {
   if (!copy) return null;
   const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
   // 消えていく0.7秒(phase==='vanish')は、ターン切れで数え上は「出ていない」になっても出ていたときの札のまま描く
@@ -42395,10 +42443,11 @@ function ClassicAiCopyCell({ copy, turnCount, onOpen }) {
       role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
       onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
       <style>{CLASSIC_AI_COPY_CSS}</style>
-      <SorashidoCopyFx phase={phase}><img src={SORASHIDO_FACE_ICON} alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-cover bg-black/30" draggable="false"/></SorashidoCopyFx>
-      <span className="w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200">{copy.name || '仲間'}<br/>のコピー</span>
+      <span data-ai-copy-head><AiCopyFace src={mon} size={20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
+      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 26 : 40}/>
+        : <SorashidoCopyFx phase={phase}><img src={SORASHIDO_FACE_ICON} alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-cover bg-black/30" draggable="false"/></SorashidoCopyFx>}
       {out
-        ? <><span className="whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200">G {guts}/{maxGuts}</span>
+        ? <><AiCopyGutsMeter guts={guts} maxGuts={maxGuts}/>
             <SorashidoNextCardBadge card={copy.nextCard || null} layout={layout} turnsLeft={copy.turnsLeft}/></>
         : <span className="text-center text-[9px] font-black leading-tight text-emerald-300">次のターン<br/>から</span>}
     </div>
@@ -43913,7 +43962,8 @@ function BattleScreen({
                   }
                 });
               }
-              const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
+              // ★本編のAIコピーが打つあいだ(attackAnim.aiCopy)は、元の子ではなく5人目の札のコピーの絵が動く
+              const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i && !(classicAiCopy && attackAnim.aiCopy);
               // 敵の位置へ向けるためのCSS変数。測れなかったときは :root の既定値(真上)で動く
               // 新しい盤面は枠が2段に並ぶ。攻撃中の子の枠だけ前へ出さないと、沈み込み・横滑りのときに
               // あとから描かれる隣や下の枠の裏へ絵が回る(古い盤面は枠ごと z-index:9999 で前へ出している)
@@ -44346,7 +44396,8 @@ function BattleScreen({
               </button>);
             })}
           </div>
-          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount} onOpen={()=>setCopyHandOpen(true)}/>}
+          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount} onOpen={()=>setCopyHandOpen(true)} mon={slots[classicAiCopy.srcSlot]||null}
+            hitAnim={!ecoBattleView&&attackAnim&&attackAnim.aiCopy?attackAnim:null}/>}
           {/* 手札の窓は body へ出す(横向きでは敵の段の札が枠の並びより上の重なりにあり、窓の上へ出てしまったため) */}
           {aiCopy&&copyHandOpen&&typeof document!=='undefined'&&ReactDOM.createPortal(<SorashidoCopyHandSheet open copyName={aiCopy.name||'仲間'} turnsLeft={aiCopy.turnsLeft}
             cards={Array.isArray(aiCopy.hand)?aiCopy.hand:[]} nextCard={aiCopy.nextCard||null} guts={aiCopy.guts} maxGuts={aiCopy.maxGuts} onClose={()=>setCopyHandOpen(false)}/>,document.body)}
@@ -78376,7 +78427,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     { const ca=runTacticsAiCopyAction(attackDistance); ca.hits.forEach(h=>attackHits.push(h)); totalDmg+=ca.total; }
 
     pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
-    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].actorName==null) attackHits[k].actorName=copyName; }
+    if(copyHitFrom!=null){ const copyName=tacticsAiCopyName(aiCopyRef.current); for(let k=copyHitFrom;k<attackHits.length;k++) if(attackHits[k]){ if(attackHits[k].actorName==null) attackHits[k].actorName=copyName; attackHits[k].aiCopy=true; } }
     // ★AIコピー(5つの遊び): プレイヤーのカードのあと・敵の番の前。使う札はターンの始めに決めてある(planClassicAiCopy)。
     //   ガッツはコピーの分を使い、プレイヤーの使える枚数には数えない。攻撃・固有技・回復・強化・アシカは上の aiCopyEntries で
     //   味方のカードと同じ流れに通し済み(ダメージはコピーのちからへ縮める)。ここではガッツを払い、ガードだけを構える
@@ -78435,7 +78486,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if (hit.isUnique) {
                 // 固有技は他のモンスターと同じタメ(charge)を先に見せてから、連撃らしい残像ダッシュへ移る
                 Audio_.se.special();
-                setAttackAnim({slotIndex: animSlot, charge:true});
+                setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:true});
                 await battleWait(650);
               }
               // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない。
@@ -78443,11 +78494,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const isTwinBlade = hitMotion==='kenshiTwinBlade';
               if(hitSkillKind){
                 // 技ごとの動き。固有技は型の動きでも「タメのあとの本番」の扱い(charge:false)で出す
-                setAttackAnim({slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
+                setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
                 if(hit.isUnique) { Audio_.se.special(); specialMoveImpact(); } else Audio_.se.zanSlash();
                 await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
               }else{
-              setAttackAnim({slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
               if(hit.isUnique) specialMoveImpact();
               if(isTwinBlade){
                 // 1撃目＼→2撃目／へSEを合わせ、X字完成時だけ短い画面シェイクを入れる。
@@ -78503,11 +78554,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const motion = hitSkillKind ? 'default' : ((themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
-              setAttackAnim({slotIndex: animSlot, charge:true});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:true});
               Audio_.se.special();
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
               specialMoveImpact();
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
@@ -78519,7 +78570,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
+              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();
