@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2de67da2279e568
+// source-sha256: 63ad143ff9125014
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70835,6 +70835,7 @@ function BattleScreen({
   tacticsHate,
   tacticsHateOn,
   aiCopy,
+  aiCopyHitting = false,
   tacticsExIntroVisible,
   dismissTacticsExIntro,
   tacticsPandoraForms,
@@ -73021,7 +73022,7 @@ function BattleScreen({
         }
       });
     }
-    const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i && !(classicAiCopy && attackAnim.aiCopy);
+    const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i && !(classicAiCopy && aiCopyHitting);
     const attackAimStyle = isAnimating && attackAim && attackAim.slotIndex === i ? attackAimVars(attackAim.dx, attackAim.dy) : null;
     const slotArt = img => !ecoBattleView && !idleMotionOff ? React.createElement(MonsterIdleArt, {
       baseId: s?.id,
@@ -73798,7 +73799,7 @@ function BattleScreen({
     turnCount: turnCount,
     onOpen: () => setCopyHandOpen(true),
     mon: slots[classicAiCopy.srcSlot] || null,
-    hitAnim: !ecoBattleView && attackAnim && attackAnim.aiCopy ? attackAnim : null
+    hitAnim: !ecoBattleView && attackAnim && aiCopyHitting ? attackAnim : null
   }), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
     open: true,
     copyName: aiCopy.name || '仲間',
@@ -107177,6 +107178,7 @@ function MonsterHeroGame() {
   };
   const [aiCopy, setAiCopy] = useState(null);
   const aiCopyRef = useRef(null);
+  const aiCopyHitRef = useRef(false);
   const commitAiCopy = next => {
     const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
     aiCopyRef.current = v;
@@ -123397,6 +123399,7 @@ function MonsterHeroGame() {
         let hitIdx = 0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          aiCopyHitRef.current = !!hit.aiCopy;
           if (hit && hit.aiCopy) {
             await playAiCopyHit(hit);
             hitIdx++;
@@ -123429,9 +123432,6 @@ function MonsterHeroGame() {
               if (hit.isUnique) {
                 Audio_.se.special();
                 setAttackAnim({
-                  ...(hit.aiCopy ? {
-                    aiCopy: true
-                  } : {}),
                   slotIndex: animSlot,
                   charge: true
                 });
@@ -123440,9 +123440,6 @@ function MonsterHeroGame() {
               const isTwinBlade = hitMotion === 'kenshiTwinBlade';
               if (hitSkillKind) {
                 setAttackAnim({
-                  ...(hit.aiCopy ? {
-                    aiCopy: true
-                  } : {}),
                   slotIndex: animSlot,
                   motion: 'default',
                   skillName: hit.skillName,
@@ -123457,9 +123454,6 @@ function MonsterHeroGame() {
                 await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
               } else {
                 setAttackAnim({
-                  ...(hit.aiCopy ? {
-                    aiCopy: true
-                  } : {}),
                   slotIndex: animSlot,
                   zanCombo: !isTwinBlade,
                   twinBlade: isTwinBlade,
@@ -123518,9 +123512,6 @@ function MonsterHeroGame() {
             const motion = hitSkillKind ? 'default' : themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
             if (hit.isUnique) {
               setAttackAnim({
-                ...(hit.aiCopy ? {
-                  aiCopy: true
-                } : {}),
                 slotIndex: animSlot,
                 charge: true
               });
@@ -123528,9 +123519,6 @@ function MonsterHeroGame() {
               await battleWait(650);
               const isKenshiTwin = motion === 'kenshiTwinBlade';
               setAttackAnim({
-                ...(hit.aiCopy ? {
-                  aiCopy: true
-                } : {}),
                 slotIndex: animSlot,
                 charge: false,
                 motion,
@@ -123553,9 +123541,6 @@ function MonsterHeroGame() {
             } else {
               const isKenshiTwin = motion === 'kenshiTwinBlade';
               setAttackAnim({
-                ...(hit.aiCopy ? {
-                  aiCopy: true
-                } : {}),
                 slotIndex: animSlot,
                 motion,
                 twinBlade: isKenshiTwin,
@@ -123602,6 +123587,7 @@ function MonsterHeroGame() {
           }
           hitIdx++;
         }
+        aiCopyHitRef.current = false;
         setCurrentWaveDamage(p => p + totalDmg);
         raidJackDamageRef.current += Number(totalDmg) || 0;
         const turnDistDmg = [0, 0, 0, 0];
@@ -138387,6 +138373,7 @@ function MonsterHeroGame() {
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
       aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
+      aiCopyHitting: !!(attackAnim && aiCopyHitRef.current && !isTacticsMode(runMode)),
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,

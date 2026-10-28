@@ -718,6 +718,9 @@ function MonsterHeroGame() {
   //   形は 33-ai-copy.jsx の冒頭。公開の印 assistantSorashido が偽のあいだは null のまま(今までと同じ)
   const [aiCopy, setAiCopy] = useState(null);
   const aiCopyRef = useRef(null);
+  // 本編(5つの遊び)で、いま見せているヒットが AIコピーのものか。攻撃の動き(attackAnim)の書き方は変えずに、
+  //   バトル画面へ「コピーが打っている」と別に渡す(元の子の枠ではなく5人目の札のコピーの絵を動かすため)
+  const aiCopyHitRef = useRef(false);
   // 値か (prev)=>next を受ける(ダイスくんの5つの遊びの分でも使う)
   const commitAiCopy = (next) => {
     const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
@@ -14669,6 +14672,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let hitIdx=0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          aiCopyHitRef.current = !!hit.aiCopy;
           // AIコピーのヒットは、元の子の動き・連撃のまとめを通さず、コピーとして見せる(playAiCopyHit)
           if (hit && hit.aiCopy) { await playAiCopyHit(hit); hitIdx++; continue; }
           // パンドラの箱: このヒットを出したカードの姿(悪魔/天使)の1体だけを動かす
@@ -14701,7 +14705,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if (hit.isUnique) {
                 // 固有技は他のモンスターと同じタメ(charge)を先に見せてから、連撃らしい残像ダッシュへ移る
                 Audio_.se.special();
-                setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:true});
+                setAttackAnim({slotIndex: animSlot, charge:true});
                 await battleWait(650);
               }
               // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない。
@@ -14709,11 +14713,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const isTwinBlade = hitMotion==='kenshiTwinBlade';
               if(hitSkillKind){
                 // 技ごとの動き。固有技は型の動きでも「タメのあとの本番」の扱い(charge:false)で出す
-                setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
+                setAttackAnim({slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
                 if(hit.isUnique) { Audio_.se.special(); specialMoveImpact(); } else Audio_.se.zanSlash();
                 await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
               }else{
-              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
+              setAttackAnim({slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
               if(hit.isUnique) specialMoveImpact();
               if(isTwinBlade){
                 // 1撃目＼→2撃目／へSEを合わせ、X字完成時だけ短い画面シェイクを入れる。
@@ -14769,11 +14773,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const motion = hitSkillKind ? 'default' : ((themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
-              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:true});
+              setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
+              setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
               specialMoveImpact();
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
@@ -14785,7 +14789,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({...(hit.aiCopy?{aiCopy:true}:{}),slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
+              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();
@@ -14816,6 +14820,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           hitIdx++;
         }
+        aiCopyHitRef.current = false;
         setCurrentWaveDamage(p=>p+totalDmg); raidJackDamageRef.current+=Number(totalDmg)||0;
         const turnDistDmg=[0,0,0,0];
         for(const h of attackHits){ if(h.aiCopy) continue; const si=(h.slotIdx!=null)?h.slotIdx:fallbackSlot; if(si>=0&&si<4) turnDistDmg[si]+=h.dmg; }
@@ -22358,7 +22363,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin} hamCounterFx={hamCounterFx} skipHamCounterFx={skipHamCounterFx}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro} tacticsPandoraForms={tacticsPandoraForms} trickStartView={trickStartView} kyubiOrihimeStackMarks={kyubiOrihimeStackMarks} tacticsShields={isTacticsMode(runMode)&&tacticsExEnabled?[0,1,2,3].map(i=>tacticsExShieldAt(tacticsExState,i,tacticsExNow)):null} sweetStackView={sweetStackView} bowStackView={bowStackView} fateWheelView={fateWheelView} enemyConfuseTurns={enemyConfuseTurns} luckBanners={luckBanners}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsHate={tacticsHate} tacticsHateOn={tacticsHateOnFor(runMode)} aiCopy={EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido?aiCopy:null} aiCopyHitting={!!(attackAnim&&aiCopyHitRef.current&&!isTacticsMode(runMode))} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}
