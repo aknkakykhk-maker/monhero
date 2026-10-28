@@ -660,6 +660,15 @@ const kitsunebiEffectOf = (v, kind = 'attack') => { const k = kitsunebiOf(v), on
 // 天河の契り: 相方との間合いの差(1〜3)で決まる。逢瀬は同じターンに2体が同じ種類の動きをすると+1
 const ORIHIME_BOND_TIERS = Object.freeze({ 1: Object.freeze({ max: 5 }), 2: Object.freeze({ max: 8 }), 3: Object.freeze({ max: 12 }) });
 const orihimeDiffOf = (a, b) => { const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b))); return d >= 1 && d <= 3 ? d : 0; };
+// 相方を選ばずに始めたときの相方(2026-10-28 社長「案イ」・レイドの編成画面で選ばなかったとき)。
+// 子のいる枠のうち、オリヒメにいちばん近い枠(同じ近さなら近い距離の側)。だれもいなければ null
+const orihimeAutoPartnerSlot = (slots, selfSlot) => {
+  const self = Math.floor(Number(selfSlot));
+  if (!Array.isArray(slots) || !Number.isInteger(self)) return null;
+  const cands = [0, 1, 2, 3].filter((r) => r !== self && slots[r]);
+  cands.sort((x, y) => (Math.abs(x - self) - Math.abs(y - self)) || (x - y));
+  return cands.length ? cands[0] : null;
+};
 const ouseOf = (n, diff) => { const t = ORIHIME_BOND_TIERS[diff]; return t ? Math.min(t.max, Math.max(0, Math.floor(Number(n) || 0))) : Math.max(0, Math.floor(Number(n) || 0)); };
 // 逢瀬を足す。partnerUp … 相方が立っているか(倒れたらつながりは止まり、溜まった数は残る)
 const addOuse = (n, diff, sameKind, partnerUp = true) => (sameKind && partnerUp && ORIHIME_BOND_TIERS[diff] ? ouseOf(Number(n) + 1, diff) : ouseOf(n, diff));

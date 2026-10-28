@@ -535,6 +535,14 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : (slotMons.filter(Boolean).length === 1 ? slotMons.findIndex(Boolean) : -1);
   const hero = heroIdx >= 0 ? slotMons[heroIdx] : null;
   const placedCount = slotMons.filter(Boolean).length;
+  // ★オリヒメを勇者モンにしたら、勇者特性「天河の契り」の相方を、置いたほかの子から1体選ぶ(2026-10-28 社長「案イ 編成画面で選ぶ」)。
+  //   レイドは配置の画面を通らないので、ここで選ばないと相方が決まらなかった。選ばなければ orihimeAutoPartnerSlot(いちばん近い子)
+  const [partnerRange, setPartnerRange] = useState(() => (restore && Number.isInteger(restore.partnerRange) ? restore.partnerRange : null));
+  const heroIsOrihime = !!hero && (hero.baseId || hero.id) === ORIHIME_MONSTER_ID;
+  const partnerIdx = heroIsOrihime
+    ? (Number.isInteger(partnerRange) && partnerRange !== heroIdx && slotMons[partnerRange] ? partnerRange : orihimeAutoPartnerSlot(slotMons, heroIdx))
+    : null;
+  const partnerChosen = heroIsOrihime && Number.isInteger(partnerRange) && partnerRange === partnerIdx;
   const nextEmpty = (keys, from) => { for (let n = 1; n <= 4; n++) { const r = (from + n) % 4; if (!keys[r]) return r; } return null; };
   const removeAt = (r) => {
     const next = [...slotKeys]; next[r] = null;
@@ -655,6 +663,25 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           <div>戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。</div>
         </section>
         )}
+        {step === 'hero' && heroIsOrihime && (
+        <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200" data-raid-orihime-partner>
+          <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方をえらぶ(天河の契り)</div>
+          <div className="mb-1.5">{hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。</div>
+          {Number.isInteger(partnerIdx) ? (
+          <div className="grid grid-cols-3 gap-1.5">
+            {ranges.filter((r) => r !== heroIdx && slotMons[r]).map((r) => (
+              <button key={r} type="button" data-raid-orihime-partner-pick={r} aria-pressed={partnerIdx === r} onClick={() => setPartnerRange(r)}
+                className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border-2 px-1 py-1 text-[10px] font-black active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/60 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`}>
+                {rangeChip(r)}<span className="min-w-0 truncate">{slotMons[r].masuName || slotMons[r].name}</span>
+              </button>
+            ))}
+          </div>
+          ) : (
+          <div className="text-slate-300">ほかの距離にも子を置くと、相方をえらべます。</div>
+          )}
+          {Number.isInteger(partnerIdx) && <div className="mt-1 text-[9px] text-sky-100">{partnerChosen ? '相方' : '相方(自動)'}: {slotMons[partnerIdx].masuName || slotMons[partnerIdx].name}・距離の差 {Math.abs(partnerIdx - heroIdx)}</div>}
+        </section>
+        )}
         {step === 'teach' && (
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3" data-raid-teach-step>
           <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span>{typeof onOpenTeachingDetail === 'function' && <span className="ml-1 text-[9px] font-normal text-slate-300">右上の <b className="text-sky-200">i</b> で効果が見られます</span>}</div>
@@ -699,7 +726,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
               </button>
             ) : (
               <button type="button" data-raid-prep-start disabled={!hero}
-                onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, restore: { slotKeys, heroRange: heroIdx, teachIds } })}
+                onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, partnerSlot: partnerIdx, restore: { slotKeys, heroRange: heroIdx, teachIds, partnerRange } })}
                 className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
                 この編成で挑戦する
               </button>

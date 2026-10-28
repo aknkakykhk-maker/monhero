@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 15ea1cd95e1601ab
+// generated-sha256: 3cf99159df5abbbf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13495,6 +13495,15 @@ const kitsunebiEffectOf = (v, kind = 'attack') => { const k = kitsunebiOf(v), on
 // 天河の契り: 相方との間合いの差(1〜3)で決まる。逢瀬は同じターンに2体が同じ種類の動きをすると+1
 const ORIHIME_BOND_TIERS = Object.freeze({ 1: Object.freeze({ max: 5 }), 2: Object.freeze({ max: 8 }), 3: Object.freeze({ max: 12 }) });
 const orihimeDiffOf = (a, b) => { const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b))); return d >= 1 && d <= 3 ? d : 0; };
+// 相方を選ばずに始めたときの相方(2026-10-28 社長「案イ」・レイドの編成画面で選ばなかったとき)。
+// 子のいる枠のうち、オリヒメにいちばん近い枠(同じ近さなら近い距離の側)。だれもいなければ null
+const orihimeAutoPartnerSlot = (slots, selfSlot) => {
+  const self = Math.floor(Number(selfSlot));
+  if (!Array.isArray(slots) || !Number.isInteger(self)) return null;
+  const cands = [0, 1, 2, 3].filter((r) => r !== self && slots[r]);
+  cands.sort((x, y) => (Math.abs(x - self) - Math.abs(y - self)) || (x - y));
+  return cands.length ? cands[0] : null;
+};
 const ouseOf = (n, diff) => { const t = ORIHIME_BOND_TIERS[diff]; return t ? Math.min(t.max, Math.max(0, Math.floor(Number(n) || 0))) : Math.max(0, Math.floor(Number(n) || 0)); };
 // 逢瀬を足す。partnerUp … 相方が立っているか(倒れたらつながりは止まり、溜まった数は残る)
 const addOuse = (n, diff, sameKind, partnerUp = true) => (sameKind && partnerUp && ORIHIME_BOND_TIERS[diff] ? ouseOf(Number(n) + 1, diff) : ouseOf(n, diff));
@@ -51316,6 +51325,14 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : (slotMons.filter(Boolean).length === 1 ? slotMons.findIndex(Boolean) : -1);
   const hero = heroIdx >= 0 ? slotMons[heroIdx] : null;
   const placedCount = slotMons.filter(Boolean).length;
+  // ★オリヒメを勇者モンにしたら、勇者特性「天河の契り」の相方を、置いたほかの子から1体選ぶ(2026-10-28 社長「案イ 編成画面で選ぶ」)。
+  //   レイドは配置の画面を通らないので、ここで選ばないと相方が決まらなかった。選ばなければ orihimeAutoPartnerSlot(いちばん近い子)
+  const [partnerRange, setPartnerRange] = useState(() => (restore && Number.isInteger(restore.partnerRange) ? restore.partnerRange : null));
+  const heroIsOrihime = !!hero && (hero.baseId || hero.id) === ORIHIME_MONSTER_ID;
+  const partnerIdx = heroIsOrihime
+    ? (Number.isInteger(partnerRange) && partnerRange !== heroIdx && slotMons[partnerRange] ? partnerRange : orihimeAutoPartnerSlot(slotMons, heroIdx))
+    : null;
+  const partnerChosen = heroIsOrihime && Number.isInteger(partnerRange) && partnerRange === partnerIdx;
   const nextEmpty = (keys, from) => { for (let n = 1; n <= 4; n++) { const r = (from + n) % 4; if (!keys[r]) return r; } return null; };
   const removeAt = (r) => {
     const next = [...slotKeys]; next[r] = null;
@@ -51436,6 +51453,25 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           <div>戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。</div>
         </section>
         )}
+        {step === 'hero' && heroIsOrihime && (
+        <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200" data-raid-orihime-partner>
+          <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方をえらぶ(天河の契り)</div>
+          <div className="mb-1.5">{hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。</div>
+          {Number.isInteger(partnerIdx) ? (
+          <div className="grid grid-cols-3 gap-1.5">
+            {ranges.filter((r) => r !== heroIdx && slotMons[r]).map((r) => (
+              <button key={r} type="button" data-raid-orihime-partner-pick={r} aria-pressed={partnerIdx === r} onClick={() => setPartnerRange(r)}
+                className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border-2 px-1 py-1 text-[10px] font-black active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/60 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`}>
+                {rangeChip(r)}<span className="min-w-0 truncate">{slotMons[r].masuName || slotMons[r].name}</span>
+              </button>
+            ))}
+          </div>
+          ) : (
+          <div className="text-slate-300">ほかの距離にも子を置くと、相方をえらべます。</div>
+          )}
+          {Number.isInteger(partnerIdx) && <div className="mt-1 text-[9px] text-sky-100">{partnerChosen ? '相方' : '相方(自動)'}: {slotMons[partnerIdx].masuName || slotMons[partnerIdx].name}・距離の差 {Math.abs(partnerIdx - heroIdx)}</div>}
+        </section>
+        )}
         {step === 'teach' && (
         <section className="rounded-2xl border border-white/10 bg-black/30 p-3" data-raid-teach-step>
           <div className="mb-1 text-[11px] font-black text-orange-200">アシカ({maxTeach}つまで)<span className="ml-1 text-[9px] text-slate-300">{teachIds.length} / {maxTeach}</span>{typeof onOpenTeachingDetail === 'function' && <span className="ml-1 text-[9px] font-normal text-slate-300">右上の <b className="text-sky-200">i</b> で効果が見られます</span>}</div>
@@ -51480,7 +51516,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
               </button>
             ) : (
               <button type="button" data-raid-prep-start disabled={!hero}
-                onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, restore: { slotKeys, heroRange: heroIdx, teachIds } })}
+                onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, partnerSlot: partnerIdx, restore: { slotKeys, heroRange: heroIdx, teachIds, partnerRange } })}
                 className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
                 この編成で挑戦する
               </button>
@@ -79793,6 +79829,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     clearSlotUniqueSelection();
     setMainHero(hero); applySlots(raidSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
+    // ★天河の契り(オリヒメが勇者モン): レイドは配置の画面を通らないので、編成画面で選んだ相方(無ければいちばん近い子)をここで決める(2026-10-28 社長「案イ」)
+    if(hero.id===ORIHIME_MONSTER_ID){
+      const pick=Number.isInteger(req.partnerSlot)&&req.partnerSlot!==heroSlot&&raidSlots[req.partnerSlot]?req.partnerSlot:orihimeAutoPartnerSlot(raidSlots,heroSlot);
+      if(Number.isInteger(pick)) setOrihimePartner(heroSlot,pick);
+    }
     setAtk(total('atk',hero.baseAtk)); setDef(raidDef);
     const raidRuleDifficulty=specialRuleDifficultyForRun(runMode,'Normal',false,extremeDifficulty);
     // ★距離適性は合算しない。タクティクスバトルは「その距離に立っている子の適性だけ」がその子の攻撃に効く(tacticsSlotApt)。
@@ -80186,7 +80227,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 距離(立ち位置)は、編成画面(RaidJackPrepScreen)で子を選ぶときに一緒に決める(2026-10-19 社長「パーティー選ぶときにそのまま同時に距離適性も選択できるように」)。
   // 以前の別の配置画面(RAID_JACK_PLACE)は無くした。勇者モンを置いた距離が、最初の間合い(initialBattleDistanceRef)になる
   // 編成が決まったら、今日の回数を1回使ってから戦闘を始める(途中でやめても・アプリを閉じても回数は戻さない)
-  const startRaidJackFromPrep = async ({ party, teachingIds, slots = null, heroSlot = 0 }) => {
+  const startRaidJackFromPrep = async ({ party, teachingIds, slots = null, heroSlot = 0, partnerSlot = null }) => {
     const prep = raidJackPrep;
     if (!prep || !Array.isArray(party) || party.length === 0) return;
     const key = prep.kind === 'b' ? 'b' : 'a';
@@ -80215,7 +80256,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } catch (e) { startLife = null; }
     }
     setRunMode(mode); setDifficulty('Normal'); setExtremeRun(false);
-    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, slots, heroSlot, eventId:raidJackEventId, startLife, pumpkin });
+    setRaidJackStartRequest({ mode, kind:key, tierIndex:prep.tierIndex, party, teachingIds, slots, heroSlot, partnerSlot, eventId:raidJackEventId, startLife, pumpkin });
   };
 
   const setupMon = (m, slotIdx) => {
