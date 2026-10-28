@@ -535,11 +535,20 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : (slotMons.filter(Boolean).length === 1 ? slotMons.findIndex(Boolean) : -1);
   const hero = heroIdx >= 0 ? slotMons[heroIdx] : null;
   const placedCount = slotMons.filter(Boolean).length;
+  // ★オリヒメを勇者モンにしたら、勇者特性「天河の契り」の相方を、置いたほかの子から1体選ぶ(2026-10-28 社長「案イ 編成画面で選ぶ」)。
+  //   レイドは配置の画面を通らないので、ここで選ばないと相方が決まらなかった。選ばなければ orihimeAutoPartnerSlot(いちばん近い子)
+  const [partnerRange, setPartnerRange] = useState(() => (restore && Number.isInteger(restore.partnerRange) ? restore.partnerRange : null));
+  const heroIsOrihime = !!hero && (hero.baseId || hero.id) === ORIHIME_MONSTER_ID;
+  const partnerIdx = heroIsOrihime
+    ? (Number.isInteger(partnerRange) && partnerRange !== heroIdx && slotMons[partnerRange] ? partnerRange : orihimeAutoPartnerSlot(slotMons, heroIdx))
+    : null;
+  const partnerChosen = heroIsOrihime && Number.isInteger(partnerRange) && partnerRange === partnerIdx;
   const nextEmpty = (keys, from) => { for (let n = 1; n <= 4; n++) { const r = (from + n) % 4; if (!keys[r]) return r; } return null; };
   const removeAt = (r) => {
     const next = [...slotKeys]; next[r] = null;
     setSlotKeys(next);
     if (heroRange === r) setHeroRange(null);
+    if (partnerRange === r) setPartnerRange(null);   // 相方にした子を外したら、自動に戻す
     setPickRange(r);
   };
   const pickMon = (mon) => {
@@ -605,7 +614,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     const pct = mon ? raidJackAptPct(mon, r) : null;
     return (
       <div key={r} className="relative min-w-0">
-        <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step === 'hero') { if (mon) setHeroRange(r); return; } if (step === 'teach') { setStep('hero'); return; } pickSlot(r); }}
+        <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step === 'hero') { if (mon) { if (r !== heroRange) setPartnerRange(null); setHeroRange(r); } return; } if (step === 'teach') { setStep('hero'); return; } pickSlot(r); }}
           data-raid-slot-hero={isHero ? 'true' : undefined} disabled={step === 'hero' && !mon}
           aria-label={step === 'party' ? (mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ`) : (mon ? `${mon.name}を勇者モンにする` : `${RANGE_LABELS[r]}距離は空き`)}
           className={`flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? (isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : heroPick ? 'border-amber-200/50 bg-sky-950/40' : 'border-sky-300/60 bg-sky-950/40') : 'border-dashed border-white/20 bg-slate-900/40'}`}>
@@ -632,6 +641,18 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       <div className="grid grid-cols-4 gap-1.5 pb-1.5 pt-1">{ranges.map((r) => slot(r))}</div>
       {/* 背の低い端末は2行まで(1行だと 320 で「…置く子をえ…」と切れた。2026-10-27 カゲあつくん) */}
       {step !== 'teach' && <div data-raid-guide title={guide} className="mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug" style={JA_LABEL_STYLE}>{jaWrap(guide)}</div>}
+      {/* 天河の契りの相方(オリヒメが勇者モンのとき)。背の低い横向きでも高さを足しすぎないよう、案内の下に1行で並べる(2026-10-28) */}
+      {step === 'hero' && heroIsOrihime && Number.isInteger(partnerIdx) && (
+        <div data-raid-orihime-partner-row className="mt-1 flex items-center gap-1 text-[10px] font-black text-sky-100">
+          <span className="shrink-0">🎐相方{partnerChosen ? '' : '(自動)'}</span>
+          {ranges.filter((r) => r !== heroIdx && slotMons[r]).map((r) => (
+            <button key={r} type="button" data-raid-orihime-partner-pick={r} aria-pressed={partnerIdx === r} onClick={() => setPartnerRange(r)}
+              className={`flex min-h-[32px] min-w-0 flex-1 items-center justify-center gap-1 rounded-lg border-2 px-1 active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/70 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`}>
+              {rangeChip(r)}<span className="min-w-0 truncate">{slotMons[r].masuName || slotMons[r].name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
   return (
@@ -653,6 +674,14 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         <section className="rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200" data-raid-hero-step>
           <div className="mb-1 text-[11px] font-black text-amber-200">👑 勇者モンとは</div>
           <div>戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。</div>
+        </section>
+        )}
+        {step === 'hero' && heroIsOrihime && (
+        <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden" data-raid-orihime-partner>
+          <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方をえらぶ(天河の契り)</div>
+          <div className="mb-1.5" style={JA_WRAP_STYLE}>{jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。`)}</div>
+          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にも子を置くと、相方をえらべます。')}</div>}
+          {Number.isInteger(partnerIdx) && <div className="mt-1 text-[9px] text-sky-100">{partnerChosen ? '相方' : '相方(自動)'}: {slotMons[partnerIdx].masuName || slotMons[partnerIdx].name}・距離の差 {Math.abs(partnerIdx - heroIdx)}</div>}
         </section>
         )}
         {step === 'teach' && (
@@ -699,7 +728,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
               </button>
             ) : (
               <button type="button" data-raid-prep-start disabled={!hero}
-                onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, restore: { slotKeys, heroRange: heroIdx, teachIds } })}
+                onClick={() => onStart({ party, teachingIds: teachIds, slots: slotMons, heroSlot: heroIdx, partnerSlot: partnerIdx, restore: { slotKeys, heroRange: heroIdx, teachIds, partnerRange } })}
                 className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
                 この編成で挑戦する
               </button>

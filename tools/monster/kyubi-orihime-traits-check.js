@@ -26,7 +26,7 @@ vm.createContext(k);
 vm.runInContext(`${bond.slice(start, endLine > end ? endLine : undefined)}
 globalThis.x={KYUBI_PHASES,kyubiPhaseOfSlot,kyubiRengokuOf,kyubiPhaseEffectOf,kageroAfterAttack,kageroUseEvade,tickKagero,
   useKitsunebi,tickKitsunebi,kitsunebiOnHit,kitsunebiEffectOf,orihimeDiffOf,addOuse,orihimeBondEffectOf,shareOrihimeDamage,
-  startHoshiai,rollKogare,KOGARE_TURNS,KOGARE_CHANCE,KOGARE_ROLLS_PER_TURN,hasReikon,startReikon,tickReikon,reikonGutsMult,reikonEvasionUp};`, k);
+  startHoshiai,rollKogare,orihimeAutoPartnerSlot,KOGARE_TURNS,KOGARE_CHANCE,KOGARE_ROLLS_PER_TURN,hasReikon,startReikon,tickReikon,reikonGutsMult,reikonEvasionUp};`, k);
 const x = k.x;
 
 // ---------- キュービ 九尾四相 ----------
@@ -253,6 +253,20 @@ check('血統: キュービは純血・オリヒメはキュービ×？？？',
   check('図鑑のEX欄は supportKey の子を「勇者のとき」「共モンのとき」の2段で出す', /heroExDef\.supportKey\?tacticsExDefOf\(heroExDef\.supportKey\)/.test(dex) && twoRows.test(dex));
   check('マスモン詳細のEX欄も同じ2段', /const roleSupportDef=tacticsExRoleDefOf\(mon\.id,false\);/.test(appSrc) && twoRows.test(appSrc));
   check('ターン終わりのEXの残りのログは、共モンのときの定義で数える', /const dLog=m\?raidExDefOf\(m\.id\):null;/.test(appSrc));
+}
+
+// ---------- レイドでも相方が決まる(2026-10-28 社長「案イ 編成画面で選ぶ」。いちかさんの報告) ----------
+{
+  const A = x.orihimeAutoPartnerSlot;
+  check('選ばなかったときの相方は、いちばん近い子(同じ近さなら近い距離の側)',
+    A(['a', 'b', 'c', 'd'], 1) === 0 && A(['a', null, 'c', 'd'], 1) === 0 && A([null, 'o', null, 'd'], 1) === 3 && A(['o', null, null, null], 0) === null && A(null, 0) === null);
+  const raid = read('monster-hero/src/parts/79-screen-raid-jack.jsx');
+  const appSrc = read('monster-hero/src/parts/60-app.jsx');
+  check('レイドの編成画面で、オリヒメを勇者にしたら相方をえらべて、開始に partnerSlot を渡す',
+    /data-raid-orihime-partner-pick=\{r\}/.test(raid) && /heroSlot: heroIdx, partnerSlot: partnerIdx/.test(raid));
+  check('レイドの開始で相方を決める(選ばなければいちばん近い子)',
+    /if\(hero\.id===ORIHIME_MONSTER_ID\)\{\n\s*const pick=[^\n]*orihimeAutoPartnerSlot\(raidSlots,heroSlot\);\n\s*if\(Number\.isInteger\(pick\)\) setOrihimePartner\(heroSlot,pick\);/.test(appSrc)
+    && /resetTacticsJoinCatchUp\(\);[\s\S]{0,2500}setOrihimePartner\(heroSlot,pick\)/.test(appSrc));
 }
 
 // ---------- 新モンスター確認(デバッグ)で動かして見られる ----------

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f629e86d4b20256
+// source-sha256: dbd7393281764cc3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19201,6 +19201,13 @@ const ORIHIME_BOND_TIERS = Object.freeze({
 const orihimeDiffOf = (a, b) => {
   const d = Math.abs(Math.floor(Number(a)) - Math.floor(Number(b)));
   return d >= 1 && d <= 3 ? d : 0;
+};
+const orihimeAutoPartnerSlot = (slots, selfSlot) => {
+  const self = Math.floor(Number(selfSlot));
+  if (!Array.isArray(slots) || !Number.isInteger(self)) return null;
+  const cands = [0, 1, 2, 3].filter(r => r !== self && slots[r]);
+  cands.sort((x, y) => Math.abs(x - self) - Math.abs(y - self) || x - y);
+  return cands.length ? cands[0] : null;
 };
 const ouseOf = (n, diff) => {
   const t = ORIHIME_BOND_TIERS[diff];
@@ -84806,6 +84813,10 @@ const RaidJackPrepScreen = ({
   const heroIdx = Number.isInteger(heroRange) && slotMons[heroRange] ? heroRange : slotMons.filter(Boolean).length === 1 ? slotMons.findIndex(Boolean) : -1;
   const hero = heroIdx >= 0 ? slotMons[heroIdx] : null;
   const placedCount = slotMons.filter(Boolean).length;
+  const [partnerRange, setPartnerRange] = useState(() => restore && Number.isInteger(restore.partnerRange) ? restore.partnerRange : null);
+  const heroIsOrihime = !!hero && (hero.baseId || hero.id) === ORIHIME_MONSTER_ID;
+  const partnerIdx = heroIsOrihime ? Number.isInteger(partnerRange) && partnerRange !== heroIdx && slotMons[partnerRange] ? partnerRange : orihimeAutoPartnerSlot(slotMons, heroIdx) : null;
+  const partnerChosen = heroIsOrihime && Number.isInteger(partnerRange) && partnerRange === partnerIdx;
   const nextEmpty = (keys, from) => {
     for (let n = 1; n <= 4; n++) {
       const r = (from + n) % 4;
@@ -84818,6 +84829,7 @@ const RaidJackPrepScreen = ({
     next[r] = null;
     setSlotKeys(next);
     if (heroRange === r) setHeroRange(null);
+    if (partnerRange === r) setPartnerRange(null);
     setPickRange(r);
   };
   const pickMon = mon => {
@@ -84924,7 +84936,10 @@ const RaidJackPrepScreen = ({
       "data-raid-slot-active": active ? 'true' : undefined,
       onClick: () => {
         if (step === 'hero') {
-          if (mon) setHeroRange(r);
+          if (mon) {
+            if (r !== heroRange) setPartnerRange(null);
+            setHeroRange(r);
+          }
           return;
         }
         if (step === 'teach') {
@@ -84974,7 +84989,21 @@ const RaidJackPrepScreen = ({
     title: guide,
     className: "mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug",
     style: JA_LABEL_STYLE
-  }, jaWrap(guide)));
+  }, jaWrap(guide)), step === 'hero' && heroIsOrihime && Number.isInteger(partnerIdx) && React.createElement("div", {
+    "data-raid-orihime-partner-row": true,
+    className: "mt-1 flex items-center gap-1 text-[10px] font-black text-sky-100"
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, "🎐相方", partnerChosen ? '' : '(自動)'), ranges.filter(r => r !== heroIdx && slotMons[r]).map(r => React.createElement("button", {
+    key: r,
+    type: "button",
+    "data-raid-orihime-partner-pick": r,
+    "aria-pressed": partnerIdx === r,
+    onClick: () => setPartnerRange(r),
+    className: `flex min-h-[32px] min-w-0 flex-1 items-center justify-center gap-1 rounded-lg border-2 px-1 active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/70 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`
+  }, rangeChip(r), React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, slotMons[r].masuName || slotMons[r].name)))));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
     "data-raid-jack-prep": true,
@@ -85005,7 +85034,20 @@ const RaidJackPrepScreen = ({
     "data-raid-hero-step": true
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-amber-200"
-  }, "👑 勇者モンとは"), React.createElement("div", null, "戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。")), step === 'teach' && React.createElement("section", {
+  }, "👑 勇者モンとは"), React.createElement("div", null, "戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。")), step === 'hero' && heroIsOrihime && React.createElement("section", {
+    className: "rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden",
+    "data-raid-orihime-partner": true
+  }, React.createElement("div", {
+    className: "mb-1 text-[11px] font-black text-sky-200"
+  }, "🎐 相方をえらぶ(天河の契り)"), React.createElement("div", {
+    className: "mb-1.5",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。`)), !Number.isInteger(partnerIdx) && React.createElement("div", {
+    className: "text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ほかの距離にも子を置くと、相方をえらべます。')), Number.isInteger(partnerIdx) && React.createElement("div", {
+    className: "mt-1 text-[9px] text-sky-100"
+  }, partnerChosen ? '相方' : '相方(自動)', ": ", slotMons[partnerIdx].masuName || slotMons[partnerIdx].name, "・距離の差 ", Math.abs(partnerIdx - heroIdx))), step === 'teach' && React.createElement("section", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3",
     "data-raid-teach-step": true
   }, React.createElement("div", {
@@ -85071,10 +85113,12 @@ const RaidJackPrepScreen = ({
       teachingIds: teachIds,
       slots: slotMons,
       heroSlot: heroIdx,
+      partnerSlot: partnerIdx,
       restore: {
         slotKeys,
         heroRange: heroIdx,
-        teachIds
+        teachIds,
+        partnerRange
       }
     }),
     className: "min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
@@ -124888,6 +124932,10 @@ function MonsterHeroGame() {
     applySlots(raidSlots);
     setOwnedUniques(uniques);
     setOwnedTeachings(teachings);
+    if (hero.id === ORIHIME_MONSTER_ID) {
+      const pick = Number.isInteger(req.partnerSlot) && req.partnerSlot !== heroSlot && raidSlots[req.partnerSlot] ? req.partnerSlot : orihimeAutoPartnerSlot(raidSlots, heroSlot);
+      if (Number.isInteger(pick)) setOrihimePartner(heroSlot, pick);
+    }
     setAtk(total('atk', hero.baseAtk));
     setDef(raidDef);
     const raidRuleDifficulty = specialRuleDifficultyForRun(runMode, 'Normal', false, extremeDifficulty);
@@ -125493,7 +125541,8 @@ function MonsterHeroGame() {
     party,
     teachingIds,
     slots = null,
-    heroSlot = 0
+    heroSlot = 0,
+    partnerSlot = null
   }) => {
     const prep = raidJackPrep;
     if (!prep || !Array.isArray(party) || party.length === 0) return;
@@ -125540,6 +125589,7 @@ function MonsterHeroGame() {
       teachingIds,
       slots,
       heroSlot,
+      partnerSlot,
       eventId: raidJackEventId,
       startLife,
       pumpkin
