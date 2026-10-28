@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 698e683e59025c75
+// source-sha256: dbd7393281764cc3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99074,10 +99074,38 @@ const cardShopImg = (db, no) => {
   return CARD_IMG(c ? c.img : m ? m.img : no);
 };
 const CARD_RARITY_ORDER = Object.freeze({
-  alt: 0,
+  normal: 0,
   kira: 1,
-  normal: 2
+  alt: 2
 });
+const cardPackDisplayRows = (db, pack, rows) => {
+  const users = [...pack.species, 'any', 'breeder'];
+  const kinds = ['pow', 'int', 'spe', 'blk', 'dge', 'fld'];
+  const orderOf = (list, key) => {
+    const i = list.indexOf(key);
+    return i < 0 ? list.length : i;
+  };
+  const numberOrder = (a, b) => String(a).localeCompare(String(b), 'en', {
+    numeric: true
+  });
+  const keyed = rows.map(row => {
+    const m = db.monsters[row.no];
+    if (m) return {
+      row,
+      group: orderOf(users, m.main || m.species),
+      hybrid: m.main ? 1 : 0,
+      family: String(m.no).replace(/[SV]$/, ''),
+      rarity: CARD_RARITY_ORDER[cardMonRarity(m)] ?? 3
+    };
+    const c = db.cards[row.no];
+    return {
+      row,
+      group: orderOf(users, c && c.user),
+      kind: orderOf(kinds, c && c.kind)
+    };
+  });
+  return keyed.sort((a, b) => a.group - b.group || (a.hybrid ?? 0) - (b.hybrid ?? 0) || numberOrder(a.family || '', b.family || '') || (a.rarity ?? 0) - (b.rarity ?? 0) || (a.kind ?? 0) - (b.kind ?? 0) || numberOrder(a.row.no, b.row.no)).map(x => x.row);
+};
 const CardShopSheet = ({
   title,
   onClose,
@@ -99169,7 +99197,8 @@ const CardPackContents = ({
 }) => {
   const [detail, setDetail] = useState(null);
   const r = cardPackCardRates(db, pack.id);
-  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || String(a.no).localeCompare(String(b.no)));
+  const mons = cardPackDisplayRows(db, pack, r.mon);
+  const techs = cardPackDisplayRows(db, pack, r.tech);
   const missing = [...mons, ...r.tech].filter(x => !((collection || {})[x.no] > 0)).length;
   return React.createElement(CardShopSheet, {
     tag: "contents",
@@ -99188,7 +99217,7 @@ const CardPackContents = ({
     onTap: setDetail
   }), r.tech.length > 0 && React.createElement(React.Fragment, null, React.createElement(CardShopHead, null, "技など(", pack.tech, "枚の枠・", r.tech.length, "種類)"), React.createElement(CardShopGrid, {
     db: db,
-    rows: r.tech,
+    rows: techs,
     collection: collection,
     onTap: setDetail
   })));
@@ -99201,7 +99230,8 @@ const CardPackRateSheet = ({
 }) => {
   const [detail, setDetail] = useState(null);
   const r = cardPackCardRates(db, pack.id);
-  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || b.p - a.p || String(a.no).localeCompare(String(b.no)));
+  const mons = cardPackDisplayRows(db, pack, r.mon);
+  const techs = cardPackDisplayRows(db, pack, r.tech);
   const th = 'border border-white/15 bg-amber-200/15 px-1 py-0.5 text-[11px] font-black text-amber-100';
   const td = 'border border-white/10 px-1 py-0.5 text-[11px] font-bold';
   const rarLabel = k => CARD_RARITY_LABEL[k] || '通常';
@@ -99280,7 +99310,7 @@ const CardPackRateSheet = ({
     className: th
   }, "カード"), React.createElement("th", {
     className: th
-  }, "割合"))), React.createElement("tbody", null, rows(r.tech)))));
+  }, "割合"))), React.createElement("tbody", null, rows(techs)))));
 };
 const CardStarterContents = ({
   db,

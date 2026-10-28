@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c0872a52b9d05557
+// generated-sha256: f05e4d6fa74fc830
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59763,7 +59763,29 @@ const CardPackOpen = ({ db, result, onDone }) => {
 // どれもカードを押すと詳しい画面(CardDetailModal)。持っていないカードには「未取得」の印
 const cardShopName = (db, no) => { const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no); return c ? c.name : m ? m.name : no; };
 const cardShopImg = (db, no) => { const c = cardOf(db, no); const m = c ? null : cardMonsterOf(db, no); return CARD_IMG(c ? c.img : m ? m.img : no); };
-const CARD_RARITY_ORDER = Object.freeze({ alt: 0, kira: 1, normal: 2 });
+const CARD_RARITY_ORDER = Object.freeze({ normal: 0, kira: 1, alt: 2 });
+// 売り場の表示だけを並べる。抽選プール・デッキ・保存値の並びは触らない。
+// パックに書かれた血統順 → 純血/混血 → 同じ子(グジラの地上/水中は別) → 通常/キラ/別絵キラ。
+// 技は同じ血統順 → ちから/かしこさ/特殊/防御/回避/全体。全モンスター・ブリーダーは血統の後。
+const cardPackDisplayRows = (db, pack, rows) => {
+  const users = [...pack.species, 'any', 'breeder'];
+  const kinds = ['pow', 'int', 'spe', 'blk', 'dge', 'fld'];
+  const orderOf = (list, key) => { const i = list.indexOf(key); return i < 0 ? list.length : i; };
+  const numberOrder = (a, b) => String(a).localeCompare(String(b), 'en', { numeric: true });
+  const keyed = rows.map((row) => {
+    const m = db.monsters[row.no];
+    if (m) return { row, group: orderOf(users, m.main || m.species), hybrid: m.main ? 1 : 0,
+      family: String(m.no).replace(/[SV]$/, ''), rarity: CARD_RARITY_ORDER[cardMonRarity(m)] ?? 3 };
+    const c = db.cards[row.no];
+    return { row, group: orderOf(users, c && c.user), kind: orderOf(kinds, c && c.kind) };
+  });
+  return keyed.sort((a, b) => a.group - b.group
+    || (a.hybrid ?? 0) - (b.hybrid ?? 0)
+    || numberOrder(a.family || '', b.family || '')
+    || (a.rarity ?? 0) - (b.rarity ?? 0)
+    || (a.kind ?? 0) - (b.kind ?? 0)
+    || numberOrder(a.row.no, b.row.no)).map((x) => x.row);
+};
 // 詳しい画面は一覧の外に置く(中に置くと、詳しい画面を閉じるタップが一覧の背景まで届いて、一覧も閉じた)
 const CardShopSheet = ({ title, onClose, children, detail, setDetail, db, tag }) => (
   <>
@@ -59802,21 +59824,23 @@ const cardShopPct = (x) => `${(x * 100).toFixed(3)}%`;
 const CardPackContents = ({ db, pack, collection, onClose }) => {
   const [detail, setDetail] = useState(null);
   const r = cardPackCardRates(db, pack.id);
-  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || String(a.no).localeCompare(String(b.no)));
+  const mons = cardPackDisplayRows(db, pack, r.mon);
+  const techs = cardPackDisplayRows(db, pack, r.tech);
   const missing = [...mons, ...r.tech].filter((x) => !((collection || {})[x.no] > 0)).length;
   return (
     <CardShopSheet tag="contents" title={`${pack.name}の中身`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>
       <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`このパックで出るカードです(${mons.length + r.tech.length}種類・まだ持っていないもの ${missing}種類)。押すとくわしく見られます。`)}</p>
       <CardShopHead>モンスター({pack.mon}枚の枠・{mons.length}種類)</CardShopHead>
       <CardShopGrid db={db} rows={mons} collection={collection} onTap={setDetail}/>
-      {r.tech.length > 0 && <><CardShopHead>技など({pack.tech}枚の枠・{r.tech.length}種類)</CardShopHead><CardShopGrid db={db} rows={r.tech} collection={collection} onTap={setDetail}/></>}
+      {r.tech.length > 0 && <><CardShopHead>技など({pack.tech}枚の枠・{r.tech.length}種類)</CardShopHead><CardShopGrid db={db} rows={techs} collection={collection} onTap={setDetail}/></>}
     </CardShopSheet>
   );
 };
 const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
   const [detail, setDetail] = useState(null);
   const r = cardPackCardRates(db, pack.id);
-  const mons = r.mon.slice().sort((a, b) => CARD_RARITY_ORDER[a.rarity] - CARD_RARITY_ORDER[b.rarity] || b.p - a.p || String(a.no).localeCompare(String(b.no)));
+  const mons = cardPackDisplayRows(db, pack, r.mon);
+  const techs = cardPackDisplayRows(db, pack, r.tech);
   const th = 'border border-white/15 bg-amber-200/15 px-1 py-0.5 text-[11px] font-black text-amber-100';
   const td = 'border border-white/10 px-1 py-0.5 text-[11px] font-bold';
   const rarLabel = (k) => CARD_RARITY_LABEL[k] || '通常';
@@ -59856,7 +59880,7 @@ const CardPackRateSheet = ({ db, pack, collection, onClose }) => {
         <table data-card-rate-tech className="w-full table-fixed border-collapse text-slate-100">
           <colgroup><col className="w-[4.2em]"/><col/><col className="w-[5.6em]"/></colgroup>
           <thead><tr><th className={th}>種類</th><th className={th}>カード</th><th className={th}>割合</th></tr></thead>
-          <tbody>{rows(r.tech)}</tbody>
+          <tbody>{rows(techs)}</tbody>
         </table>
       </>}
     </CardShopSheet>
