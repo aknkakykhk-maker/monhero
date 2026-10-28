@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f05e4d6fa74fc830
+// generated-sha256: d40e530600c1e8d6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51423,14 +51423,18 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置く子をえらんでください(どの順でもOK)'
     : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで`
     : '置けました。枠を押すとその子を外せます。勇者モンは次でえらびます';
+  // ②の説明と、挑戦回数の説明。横向きの背の低い画面では、下の「詳しく」にたたんで出す(2026-10-28・844×390 で
+  //   オリヒメの相方の行が増えたぶん、下の欄の高さがほぼ0になって読めなかった。ジン部長)
+  const heroAboutText = '戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。';
+  const raidRuleText = `ライフ ${tier.hp.toLocaleString()} / 技 ${tier.actionCount}本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。`;
   const partyRow = (
     // 一覧の流れる枠の外に置いて、画面の上に固定する(2026-10-19 社長「編成のとこは固定にしたほうが見やすいんじゃない？」)。
     // 背の低い端末(高さ640以下)は、説明の行を畳み・案内を1行にして、下の一覧が2行以上見える高さを残す
     <section className="mb-2 shrink-0 rounded-2xl border border-orange-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5" data-raid-party>
-      <div className="mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200">いまの編成と距離<span className="text-[9px] font-normal text-slate-300 [@media(max-height:640px)]:hidden">%はその距離での適性(その距離に立つ子のぶんだけ効きます)</span></div>
+      <div className={`mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200 ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>いまの編成と距離<span className="text-[9px] font-normal text-slate-300 [@media(max-height:640px)]:hidden">%はその距離での適性(その距離に立つ子のぶんだけ効きます)</span></div>
       <div className="grid grid-cols-4 gap-1.5 pb-1.5 pt-1">{ranges.map((r) => slot(r))}</div>
       {/* 背の低い端末は2行まで(1行だと 320 で「…置く子をえ…」と切れた。2026-10-27 カゲあつくん) */}
-      {step !== 'teach' && <div data-raid-guide title={guide} className="mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug" style={JA_LABEL_STYLE}>{jaWrap(guide)}</div>}
+      {step !== 'teach' && <div data-raid-guide title={guide} className={`mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`} style={JA_LABEL_STYLE}>{jaWrap(guide)}</div>}
       {/* 天河の契りの相方(オリヒメが勇者モンのとき)。背の低い横向きでも高さを足しすぎないよう、案内の下に1行で並べる(2026-10-28) */}
       {step === 'hero' && heroIsOrihime && Number.isInteger(partnerIdx) && (
         <div data-raid-orihime-partner-row className="mt-1 flex items-center gap-1 text-[10px] font-black text-sky-100">
@@ -51461,10 +51465,18 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         </section>
         )}
         {step === 'hero' && (
-        <section className="rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200" data-raid-hero-step>
+        <section className="rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden" data-raid-hero-step>
           <div className="mb-1 text-[11px] font-black text-amber-200">👑 勇者モンとは</div>
-          <div>戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。</div>
+          <div>{heroAboutText}</div>
         </section>
+        )}
+        {/* 横向きの背の低い画面だけ: 上の説明と下の挑戦回数の説明を、1行の「詳しく」にたたむ。縦向きは今のまま */}
+        {step === 'hero' && (
+        <details className="hidden rounded-2xl border border-amber-300/30 bg-black/30 px-3 py-0 text-[10px] leading-relaxed text-slate-200 [@media(orientation:landscape)_and_(max-height:520px)]:block" data-raid-hero-step-compact>
+          <summary className="flex min-h-[30px] cursor-pointer list-none items-center gap-1 text-[11px] font-black text-amber-200">👑 勇者モンとは・挑戦回数<span className="ml-auto text-[10px] font-bold text-slate-300">詳しく ▾</span></summary>
+          <div className="mt-1">{heroAboutText}</div>
+          <div className="mt-1 pb-1 text-slate-300">{raidRuleText}</div>
+        </details>
         )}
         {step === 'hero' && heroIsOrihime && (
         <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden" data-raid-orihime-partner>
@@ -51497,8 +51509,8 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
           </div>
         </section>
         )}
-        <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300">
-          ライフ {tier.hp.toLocaleString()} / 技 {tier.actionCount}本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。
+        <div className={`rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300 ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`}>
+          {raidRuleText}
         </div>
       </div>
       <div className={SCREEN_FOOTER_CLASS}>
