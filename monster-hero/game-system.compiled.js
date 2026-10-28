@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 15db51a2b61222ba
+// source-sha256: 3cf4160e60312ca6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -19748,6 +19748,16 @@ const TEACHING_FX_STYLE = {
     c1: '#99f6e4',
     c2: '#14b8a6',
     motif: 'shield'
+  },
+  sorashido: {
+    icon: "🤖",
+    label: "自動化!",
+    text: "text-emerald-300",
+    ring: "border-emerald-300",
+    rgb: "52,211,153",
+    c1: '#a7f3d0',
+    c2: '#34d399',
+    motif: 'rise'
   }
 };
 const RPG_MAX_LEVEL = 50;

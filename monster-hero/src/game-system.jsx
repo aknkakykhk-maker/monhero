@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cd66e90a83a8e582
+// generated-sha256: 8947b264b5bb7074
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -13898,6 +13898,8 @@ const TEACHING_FX_STYLE = {
   poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53", c1:'#d9f99d', c2:'#84cc16', motif:'rise' },
   // メロソ(回復＋ガード)。2026-09-29 まで演出が無かった
   meloso:  { icon:"🔍", label:"解析完了!",   text:"text-teal-300",    ring:"border-teal-300",    rgb:"20,184,166", c1:'#99f6e4', c2:'#14b8a6', motif:'shield' },
+  // ソラシド(AIコピー)。2026-10-28 社長「アシカを使ったときの演出がソラシドはない」で足した(きゅうこは上の kyuko で出ている)
+  sorashido:{ icon:"🤖", label:"自動化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"52,211,153", c1:'#a7f3d0', c2:'#34d399', motif:'rise' },
 };
 
 // ---- part: 23-rpg-debug.jsx ----
