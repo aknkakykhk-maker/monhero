@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5bfc72856f5fe13f
+// source-sha256: 33c126dd37109fd5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -92402,6 +92402,7 @@ const CardStatusSheet = ({
 }), React.createElement("div", {
   className: "mt-2 text-right text-[10px] font-bold text-slate-400"
 }, "タップで閉じる")));
+const cardHandNameKey = (hand, idx) => idx.map(i => hand[i]).sort().join(',');
 const cardLogText = l => !l ? '' : Number.isFinite(l.from) && Number.isFinite(l.to) ? `${l.text}(${l.from} → ${l.to})` : l.text;
 const cardGuardShort = c => {
   if (!c) return '';
@@ -93967,9 +93968,11 @@ const CardBattleBoard = ({
   const selMons = [...new Set(selOpts.map(o => o.mon === undefined ? -1 : o.mon))];
   const monChosen = sel && (sel.mon !== undefined ? sel.mon : selMons.length === 1 ? selMons[0] : undefined);
   const byMon = monChosen === undefined ? [] : selOpts.filter(o => (o.mon === undefined ? -1 : o.mon) === monChosen);
-  const sets = [...new Set(byMon.map(o => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length);
+  const setsAll = [...new Set(byMon.map(o => JSON.stringify(o.hand)))].sort((a, b) => JSON.parse(b).length - JSON.parse(a).length || JSON.parse(a).reduce((x, y) => x + y, 0) - JSON.parse(b).reduce((x, y) => x + y, 0));
+  const sets = setsAll.filter((s0, k) => setsAll.findIndex(s1 => cardHandNameKey(me.hand, JSON.parse(s1)) === cardHandNameKey(me.hand, JSON.parse(s0))) === k);
   const setAlone = sel ? JSON.stringify([sel.hand]) : null;
-  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets[0] : null;
+  const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null : null;
+  const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
@@ -94142,6 +94145,11 @@ const CardBattleBoard = ({
     if (mode === 'guard') return guardOpts.some(o => o.hand === i);
     return mode === 'guts' || mode === 'setup' || mode === 'discard';
   };
+  const cardDropComboOk = (o, i) => {
+    const mo = x => x.mon === undefined ? -1 : x.mon;
+    if (attackOpts.some(x => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
+    return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size <= 1;
+  };
   const dropTargetsOf = i => {
     const out = {};
     if (mode === 'attack') {
@@ -94150,6 +94158,7 @@ const CardBattleBoard = ({
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
         const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
+        if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
         keys.forEach(k => {
           if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
         });
@@ -94586,7 +94595,7 @@ const CardBattleBoard = ({
       })
     }, "攻撃おわり → ガッツへ"));
   })();
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? sel ? monChosen === undefined ? '使う子をタップ' : setPending ? '組み合わせを選んでね' : needTarget ? '狙う相手をタップ' : '「使う」をタップ' : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ' : mode === 'guard' ? guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません' : mode === 'guts' ? gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)' : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます' : mode === 'discard' ? `捨てるカードを${st.pendingDiscard ? st.pendingDiscard.n : 0}枚タップ` : '';
   const tutorBox = tutorial && tutSay ? (() => {
     const dra = ASSISTANTS.find(a => a.id === 'dra');
     const head = tutQ[0];
@@ -95001,7 +95010,7 @@ const CardBattleBoard = ({
     style: JA_LABEL_STYLE
   }, jaWrap(hint)), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
     className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
-  }, sets.map(s => React.createElement("button", {
+  }, sets.slice().reverse().map(s => React.createElement("button", {
     key: s,
     type: "button",
     "data-card-set": s,
@@ -95010,8 +95019,8 @@ const CardBattleBoard = ({
       mon: monChosen,
       set: s
     }),
-    className: `rounded-lg border px-2 py-1 text-[12px] font-black ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`
-  }, JSON.parse(s).map(i => cardOf(db, me.hand[i]).name).join('＋')))), watch ? React.createElement("div", {
+    className: `whitespace-nowrap rounded-lg border font-black ${tiny ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-[12px]'} ${s === setChosen ? 'border-amber-300 bg-amber-500/25' : 'border-white/20 bg-slate-800'}`
+  }, JSON.parse(s).filter(i => i !== sel.hand).length ? JSON.parse(s).filter(i => i !== sel.hand).map(i => `＋${cardOf(db, me.hand[i]).name}`).join('') : `${cardOf(db, me.hand[sel.hand]).name}だけ`))), watch ? React.createElement("div", {
     "data-card-hand": true,
     "data-card-watch-hand": CARD_ME,
     className: "flex shrink-0 items-center justify-center gap-2 px-1 pb-1 pt-1",
