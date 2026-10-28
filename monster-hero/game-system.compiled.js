@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3cf4160e60312ca6
+// source-sha256: 1a229a55ee04ba0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70653,7 +70653,8 @@ function TacticsAiCopyColumn({
   skill,
   standing,
   layout,
-  onOpen
+  onOpen,
+  hatePct = null
 }) {
   if (!copy) return null;
   const land = layout === 'landscape';
@@ -70702,11 +70703,17 @@ function TacticsAiCopyColumn({
     anim: anim,
     size: land ? 40 : 46
   }), React.createElement("span", {
-    className: land ? 'w-[96px] shrink-0' : 'w-full'
+    className: `flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`
   }, React.createElement(AiCopyLifeBar, {
     hp: copy.hp,
     maxHp: copy.maxHp
-  })), React.createElement("span", {
+  }), React.createElement(AiCopyGutsMeter, {
+    guts: copy.guts,
+    maxGuts: copy.maxGuts
+  })), Number.isInteger(hatePct) && React.createElement("span", {
+    "data-tactics-ai-copy-hate": hatePct,
+    className: "shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200"
+  }, "狙われ ", hatePct, "%"), React.createElement("span", {
     className: land ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center max-[359px]:[&>*]:max-w-full max-[359px]:[&>*]:w-full'
   }, next));
 }
@@ -73172,6 +73179,11 @@ function BattleScreen({
     const tCopyOut = copyStanding || tCopyPhase === 'vanish';
     const copySrc = tCopy && tCopy.pos === i ? slots[tCopy.srcSlot] : null;
     const tCopyOnMon = !!s || !!(tCopy && tCopy.stacked);
+    const tCopyHatePct = (() => {
+      if (!(tCopy && tCopy.pos === i && copyStanding && tacticsHateOn && Array.isArray(tacticsHate))) return null;
+      const ch = tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy);
+      return ch && Number.isInteger(ch.copy) ? ch.copy : null;
+    })();
     const tCopyHit = !!(isAnimating && attackAnim.aiCopy && copySrc && !tCopyOnMon);
     const copyChip = tacticsNewLayout && !tacticsCopyOutside && tCopy && tCopy.pos === i ? React.createElement(React.Fragment, null, copySrc && !tCopyOnMon && React.createElement("div", {
       "data-tactics-ai-copy-art": i,
@@ -73213,8 +73225,13 @@ function BattleScreen({
         e.stopPropagation();
         setCopyHandOpen(true);
       } : undefined,
-      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'w-[62px] max-w-[62px] items-center gap-0.5 tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:py-[2px]'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
-    }, React.createElement("span", {
+      className: `absolute left-1 bottom-1 z-[64] flex ${tCopyOnMon ? 'max-w-[40%] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:left-auto [@media(orientation:landscape)_and_(max-height:520px)]:right-1 [@media(orientation:landscape)_and_(max-height:520px)]:bottom-auto [@media(orientation:landscape)_and_(max-height:520px)]:top-[38px] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[76%]' : 'w-[62px] max-w-[62px] flex-col items-start gap-px tracking-tighter [@media(orientation:landscape)_and_(max-height:520px)]:flex-row [@media(orientation:landscape)_and_(max-height:520px)]:items-center [@media(orientation:landscape)_and_(max-height:520px)]:gap-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:max-w-[calc(100%-8px)] [@media(orientation:landscape)_and_(max-height:520px)]:bottom-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:py-[2px]'} rounded bg-sky-900/90 px-1 py-px text-[8px] font-black leading-none text-sky-100 ring-1 ring-sky-300/70 whitespace-nowrap ${aiCopy ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`
+    }, !tCopyOnMon ? React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "min-w-0 truncate"
+    }, "🤖", tCopyOut ? `あと${tCopy.turnsLeft}ターン` : '次のターンから'), Number.isInteger(tCopyHatePct) && React.createElement("span", {
+      "data-tactics-ai-copy-hate": tCopyHatePct,
+      className: "shrink-0 whitespace-nowrap tabular-nums text-rose-200"
+    }, "狙われ ", tCopyHatePct, "%")) : React.createElement("span", {
       className: "flex max-w-full min-w-0 items-center gap-0.5"
     }, React.createElement("span", {
       className: "min-w-0 truncate"
@@ -73920,6 +73937,7 @@ function BattleScreen({
     const phase = aiCopyViewPhase(c, standing ? 'idle' : 'appear');
     const hit = !!(aiCopy && !ecoBattleView && attackAnim && attackAnim.aiCopy);
     const skill = aiCopy && slotSkill && slotSkill.aiCopy ? slotSkill.name : null;
+    const hc = standing && tacticsHateOn && Array.isArray(tacticsHate) ? tacticsTargetChancesWithCopy(tacticsUnits, tacticsHate, TACTICS_TARGET_LOW_HP_BIAS, aiCopy) : null;
     const props = {
       copy: c,
       src: aiCopySrcOf(c, slots),
@@ -73928,7 +73946,8 @@ function BattleScreen({
       anim: attackAnim,
       skill,
       standing: standing || phase === 'vanish',
-      onOpen: aiCopy ? () => setCopyHandOpen(true) : null
+      onOpen: aiCopy ? () => setCopyHandOpen(true) : null,
+      hatePct: hc && Number.isInteger(hc.copy) ? hc.copy : null
     };
     return React.createElement(React.Fragment, null, React.createElement("div", {
       className: `flex shrink-0 ${tacticsNewLayout ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
