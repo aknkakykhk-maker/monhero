@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 152dbf70181be498
+// generated-sha256: 8b1cdf41929dfe1a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64588,7 +64588,10 @@ function MonsterHeroGame() {
   const aiCopyHitRef = useRef(false);
   // 値か (prev)=>next を受ける(ダイスくんの5つの遊びの分でも使う)
   const commitAiCopy = (next) => {
-    const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    let v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
+    // ライフ・ガッツは上限を超えない(タクティクスのコピーだけ maxHp を持つ)
+    if (v && Number.isFinite(v.maxHp) && Number(v.hp) > v.maxHp) v = { ...v, hp: v.maxHp };
+    if (v && Number.isFinite(v.maxGuts) && Number(v.guts) > v.maxGuts) v = { ...v, guts: v.maxGuts };
     aiCopyRef.current = v; setAiCopy(v); return v;
   };
   const [enemy, setEnemy] = useState(null);
@@ -65612,7 +65615,10 @@ function MonsterHeroGame() {
     if (!EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido) return;
     const unit = tacticsUnitsRef.current[slotIdx];
     if (!unit) return;
-    const src = normalizeTacticsUnit(tacticsBattleUnit(slotIdx));
+    // ちから・丈夫さはいまの強化込み(tacticsBattleUnit)、ライフ・ガッツの上限は枠に出ている盤面の値から取る
+    //   (2026-10-28 本番の報告: 元の子のライフ 724 に対しコピーが 7506。上限は枠と同じ値にそろえ、コピーが元の子より大きくならないようにする)
+    const board = normalizeTacticsUnit(unit);
+    const src = { ...normalizeTacticsUnit(tacticsBattleUnit(slotIdx)), maxHp: board.maxHp, maxGuts: board.maxGuts };
     const piles = handPileRef.current;
     const { pos, stacked } = tacticsAiCopyPos(tacticsUnitsRef.current, slotIdx);
     const rules = aiCopyRules(level);
