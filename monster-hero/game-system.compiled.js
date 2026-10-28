@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7cecbcb80c1c2141
+// source-sha256: 698e683e59025c75
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84829,6 +84829,7 @@ const RaidJackPrepScreen = ({
     next[r] = null;
     setSlotKeys(next);
     if (heroRange === r) setHeroRange(null);
+    if (partnerRange === r) setPartnerRange(null);
     setPickRange(r);
   };
   const pickMon = mon => {
@@ -84935,7 +84936,10 @@ const RaidJackPrepScreen = ({
       "data-raid-slot-active": active ? 'true' : undefined,
       onClick: () => {
         if (step === 'hero') {
-          if (mon) setHeroRange(r);
+          if (mon) {
+            if (r !== heroRange) setPartnerRange(null);
+            setHeroRange(r);
+          }
           return;
         }
         if (step === 'teach') {
@@ -84985,7 +84989,21 @@ const RaidJackPrepScreen = ({
     title: guide,
     className: "mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug",
     style: JA_LABEL_STYLE
-  }, jaWrap(guide)));
+  }, jaWrap(guide)), step === 'hero' && heroIsOrihime && Number.isInteger(partnerIdx) && React.createElement("div", {
+    "data-raid-orihime-partner-row": true,
+    className: "mt-1 flex items-center gap-1 text-[10px] font-black text-sky-100"
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, "🎐相方", partnerChosen ? '' : '(自動)'), ranges.filter(r => r !== heroIdx && slotMons[r]).map(r => React.createElement("button", {
+    key: r,
+    type: "button",
+    "data-raid-orihime-partner-pick": r,
+    "aria-pressed": partnerIdx === r,
+    onClick: () => setPartnerRange(r),
+    className: `flex min-h-[32px] min-w-0 flex-1 items-center justify-center gap-1 rounded-lg border-2 px-1 active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/70 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`
+  }, rangeChip(r), React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, slotMons[r].masuName || slotMons[r].name)))));
   return React.createElement("div", {
     className: `${SCREEN_SHELL_CLASS} overflow-hidden`,
     "data-raid-jack-prep": true,
@@ -85017,26 +85035,17 @@ const RaidJackPrepScreen = ({
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-amber-200"
   }, "👑 勇者モンとは"), React.createElement("div", null, "戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。")), step === 'hero' && heroIsOrihime && React.createElement("section", {
-    className: "rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200",
+    className: "rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden",
     "data-raid-orihime-partner": true
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-sky-200"
   }, "🎐 相方をえらぶ(天河の契り)"), React.createElement("div", {
-    className: "mb-1.5"
-  }, hero.masuName || hero.name, "の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。"), Number.isInteger(partnerIdx) ? React.createElement("div", {
-    className: "grid grid-cols-3 gap-1.5"
-  }, ranges.filter(r => r !== heroIdx && slotMons[r]).map(r => React.createElement("button", {
-    key: r,
-    type: "button",
-    "data-raid-orihime-partner-pick": r,
-    "aria-pressed": partnerIdx === r,
-    onClick: () => setPartnerRange(r),
-    className: `flex min-h-[44px] items-center justify-center gap-1 rounded-xl border-2 px-1 py-1 text-[10px] font-black active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/60 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`
-  }, rangeChip(r), React.createElement("span", {
-    className: "min-w-0 truncate"
-  }, slotMons[r].masuName || slotMons[r].name)))) : React.createElement("div", {
-    className: "text-slate-300"
-  }, "ほかの距離にも子を置くと、相方をえらべます。"), Number.isInteger(partnerIdx) && React.createElement("div", {
+    className: "mb-1.5",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。`)), !Number.isInteger(partnerIdx) && React.createElement("div", {
+    className: "text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ほかの距離にも子を置くと、相方をえらべます。')), Number.isInteger(partnerIdx) && React.createElement("div", {
     className: "mt-1 text-[9px] text-sky-100"
   }, partnerChosen ? '相方' : '相方(自動)', ": ", slotMons[partnerIdx].masuName || slotMons[partnerIdx].name, "・距離の差 ", Math.abs(partnerIdx - heroIdx))), step === 'teach' && React.createElement("section", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3",

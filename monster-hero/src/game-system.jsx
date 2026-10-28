@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3cf99159df5abbbf
+// generated-sha256: c0872a52b9d05557
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -51338,6 +51338,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     const next = [...slotKeys]; next[r] = null;
     setSlotKeys(next);
     if (heroRange === r) setHeroRange(null);
+    if (partnerRange === r) setPartnerRange(null);   // 相方にした子を外したら、自動に戻す
     setPickRange(r);
   };
   const pickMon = (mon) => {
@@ -51403,7 +51404,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
     const pct = mon ? raidJackAptPct(mon, r) : null;
     return (
       <div key={r} className="relative min-w-0">
-        <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step === 'hero') { if (mon) setHeroRange(r); return; } if (step === 'teach') { setStep('hero'); return; } pickSlot(r); }}
+        <button type="button" data-raid-slot={r} data-raid-slot-active={active ? 'true' : undefined} onClick={() => { if (step === 'hero') { if (mon) { if (r !== heroRange) setPartnerRange(null); setHeroRange(r); } return; } if (step === 'teach') { setStep('hero'); return; } pickSlot(r); }}
           data-raid-slot-hero={isHero ? 'true' : undefined} disabled={step === 'hero' && !mon}
           aria-label={step === 'party' ? (mon ? `${RANGE_LABELS[r]}距離の${mon.name}を外す` : `${RANGE_LABELS[r]}距離に置く子を選ぶ`) : (mon ? `${mon.name}を勇者モンにする` : `${RANGE_LABELS[r]}距離は空き`)}
           className={`flex w-full min-w-0 flex-col items-center rounded-xl border-2 p-1 ${mon ? 'pb-2.5' : ''} text-center active:scale-95 ${active ? 'border-orange-300 bg-orange-900/40 shadow-[0_0_10px_rgba(253,186,116,.55)]' : mon ? (isHero ? 'border-amber-300 bg-amber-900/50 shadow-[0_0_10px_rgba(252,211,77,.55)]' : heroPick ? 'border-amber-200/50 bg-sky-950/40' : 'border-sky-300/60 bg-sky-950/40') : 'border-dashed border-white/20 bg-slate-900/40'}`}>
@@ -51430,6 +51431,18 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       <div className="grid grid-cols-4 gap-1.5 pb-1.5 pt-1">{ranges.map((r) => slot(r))}</div>
       {/* 背の低い端末は2行まで(1行だと 320 で「…置く子をえ…」と切れた。2026-10-27 カゲあつくん) */}
       {step !== 'teach' && <div data-raid-guide title={guide} className="mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug" style={JA_LABEL_STYLE}>{jaWrap(guide)}</div>}
+      {/* 天河の契りの相方(オリヒメが勇者モンのとき)。背の低い横向きでも高さを足しすぎないよう、案内の下に1行で並べる(2026-10-28) */}
+      {step === 'hero' && heroIsOrihime && Number.isInteger(partnerIdx) && (
+        <div data-raid-orihime-partner-row className="mt-1 flex items-center gap-1 text-[10px] font-black text-sky-100">
+          <span className="shrink-0">🎐相方{partnerChosen ? '' : '(自動)'}</span>
+          {ranges.filter((r) => r !== heroIdx && slotMons[r]).map((r) => (
+            <button key={r} type="button" data-raid-orihime-partner-pick={r} aria-pressed={partnerIdx === r} onClick={() => setPartnerRange(r)}
+              className={`flex min-h-[32px] min-w-0 flex-1 items-center justify-center gap-1 rounded-lg border-2 px-1 active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/70 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`}>
+              {rangeChip(r)}<span className="min-w-0 truncate">{slotMons[r].masuName || slotMons[r].name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
   return (
@@ -51454,21 +51467,10 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         </section>
         )}
         {step === 'hero' && heroIsOrihime && (
-        <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200" data-raid-orihime-partner>
+        <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden" data-raid-orihime-partner>
           <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方をえらぶ(天河の契り)</div>
-          <div className="mb-1.5">{hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。</div>
-          {Number.isInteger(partnerIdx) ? (
-          <div className="grid grid-cols-3 gap-1.5">
-            {ranges.filter((r) => r !== heroIdx && slotMons[r]).map((r) => (
-              <button key={r} type="button" data-raid-orihime-partner-pick={r} aria-pressed={partnerIdx === r} onClick={() => setPartnerRange(r)}
-                className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border-2 px-1 py-1 text-[10px] font-black active:scale-95 ${partnerIdx === r ? 'border-sky-300 bg-sky-800/60 text-white' : 'border-white/10 bg-slate-900/60 text-slate-200'}`}>
-                {rangeChip(r)}<span className="min-w-0 truncate">{slotMons[r].masuName || slotMons[r].name}</span>
-              </button>
-            ))}
-          </div>
-          ) : (
-          <div className="text-slate-300">ほかの距離にも子を置くと、相方をえらべます。</div>
-          )}
+          <div className="mb-1.5" style={JA_WRAP_STYLE}>{jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近い子が相方になります。`)}</div>
+          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にも子を置くと、相方をえらべます。')}</div>}
           {Number.isInteger(partnerIdx) && <div className="mt-1 text-[9px] text-sky-100">{partnerChosen ? '相方' : '相方(自動)'}: {slotMons[partnerIdx].masuName || slotMons[partnerIdx].name}・距離の差 {Math.abs(partnerIdx - heroIdx)}</div>}
         </section>
         )}
