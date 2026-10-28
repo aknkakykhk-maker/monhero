@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f0736129a565c1d
+// source-sha256: 664b5a0f293fa493
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70498,14 +70498,17 @@ const kindOfTacticsSlotFx = fx => {
 const CLASSIC_AI_COPY_CSS = `
 [data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
 [data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
-[data-ai-copy-cell]{width:58px;flex:0 0 58px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55)}
+[data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
+[data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
+[data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
 @media (orientation: landscape) and (max-height: 520px){
   [data-ai-copy-row]{flex-direction:column;gap:3px}
   [data-ai-copy-row] > .grid{flex:0 0 auto;width:100%}
-  [data-ai-copy-cell]{width:100%;flex:0 0 21px;height:21px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:hidden}
-  [data-ai-copy-cell] [data-sorashido-fx] .text-2xl{font-size:14px}
-  [data-ai-copy-cell] br{display:none}
-  [data-ai-copy-cell] > span{width:auto;flex:0 0 auto}
+  [data-ai-copy-cell]{width:100%;flex:0 0 30px;height:30px;flex-direction:row;justify-content:flex-start;gap:6px;padding:0 6px;border-radius:8px;overflow:visible}
+  [data-ai-copy-cell] [data-ai-copy-head]{width:auto;flex:0 0 auto;flex-direction:row;gap:4px}
+  [data-ai-copy-cell] [data-ai-copy-name]{width:auto;flex:0 1 auto;max-width:110px;text-align:left;-webkit-line-clamp:1}
+  [data-ai-copy-cell] [data-ai-copy-art]{flex:0 0 26px;width:26px;height:26px}
+  [data-ai-copy-cell] [data-ai-copy-guts]{flex:0 0 92px;width:92px}
   [data-ai-copy-cell] [data-sorashido-next]{flex-direction:row;gap:6px;width:auto;flex:1 1 0;padding:0 6px;border-radius:6px}
   [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:1}
 }`;
@@ -70517,10 +70520,116 @@ const classicAiCopyLandscape = () => {
     return false;
   }
 };
+function AiCopyFace({
+  src,
+  size = 22
+}) {
+  const url = src && (src.faceIconUrl || src.iconUrl || src.imgUrl) || '';
+  return React.createElement("span", {
+    "data-ai-copy-face": true,
+    className: "relative inline-block shrink-0",
+    style: {
+      width: size,
+      height: size
+    }
+  }, url ? React.createElement("img", {
+    src: url,
+    alt: "",
+    "aria-hidden": "true",
+    draggable: "false",
+    className: "h-full w-full rounded-full object-cover bg-black/30 ring-1 ring-emerald-300/70"
+  }) : React.createElement("span", {
+    className: "flex h-full w-full items-center justify-center rounded-full bg-black/30 text-[12px]"
+  }, "🤖"), url && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-emerald-900 ring-1 ring-emerald-300 leading-none",
+    style: {
+      width: Math.round(size * 0.62),
+      height: Math.round(size * 0.62),
+      fontSize: Math.round(size * 0.45)
+    }
+  }, "🤖"));
+}
+function AiCopyBody({
+  src,
+  phase = 'idle',
+  hit = false,
+  anim = null,
+  size = 44
+}) {
+  if (!src) return null;
+  const mon = src;
+  const hitStyle = hit && anim ? {
+    animation: attackMotionAnimation(anim)
+  } : null;
+  return React.createElement("span", {
+    "data-ai-copy-art": true,
+    "data-ai-copy-hit": hitStyle ? '1' : undefined,
+    className: "relative flex shrink-0 items-center justify-center",
+    style: {
+      width: size,
+      height: size,
+      zIndex: hitStyle ? 80 : undefined
+    }
+  }, React.createElement("span", {
+    style: hitStyle ? {
+      position: 'relative',
+      display: 'block',
+      ...hitStyle
+    } : {
+      display: 'block'
+    }
+  }, React.createElement(SorashidoCopyFx, {
+    phase: phase
+  }, React.createElement("span", {
+    style: {
+      display: 'block',
+      opacity: 0.6,
+      filter: 'drop-shadow(0 0 2px rgba(52,211,153,.95))'
+    }
+  }, React.createElement(DyedMonsterImage, {
+    baseId: mon.id,
+    src: mon.imgUrl,
+    alt: `${mon.masuName || mon.name || ''}のコピー`,
+    masuColors: mon.colors,
+    style: {
+      width: `${size}px`,
+      height: `${size}px`
+    },
+    className: "object-contain"
+  })))));
+}
+function AiCopyGutsMeter({
+  guts,
+  maxGuts
+}) {
+  const g = Math.max(0, Math.floor(Number(guts) || 0)),
+    m = Math.max(0, Math.floor(Number(maxGuts) || 0));
+  const pct = m > 0 ? Math.max(0, Math.min(100, g / m * 100)) : 0;
+  return React.createElement("span", {
+    "data-ai-copy-guts": `${g}/${m}`,
+    className: "flex w-full min-w-0 flex-col gap-[2px]"
+  }, React.createElement("span", {
+    className: "flex items-end justify-between gap-1 leading-none"
+  }, React.createElement("span", {
+    className: "text-[9px] font-black text-amber-400"
+  }, "G"), React.createElement("span", {
+    className: "font-mono text-[11px] font-black tabular-nums leading-none text-amber-200"
+  }, g, "/", m)), React.createElement("span", {
+    className: "block h-[6px] w-full overflow-hidden rounded-full border border-white/5 bg-slate-900"
+  }, React.createElement("span", {
+    className: "block h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500",
+    style: {
+      width: `${pct}%`
+    }
+  })));
+}
 function ClassicAiCopyCell({
   copy,
   turnCount,
-  onOpen
+  onOpen,
+  mon = null,
+  hitAnim = null
 }) {
   if (!copy) return null;
   const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
@@ -70545,7 +70654,20 @@ function ClassicAiCopyCell({
         onOpen();
       }
     } : undefined
-  }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement(SorashidoCopyFx, {
+  }, React.createElement("style", null, CLASSIC_AI_COPY_CSS), React.createElement("span", {
+    "data-ai-copy-head": true
+  }, React.createElement(AiCopyFace, {
+    src: mon,
+    size: 20
+  }), React.createElement("span", {
+    "data-ai-copy-name": true
+  }, copy.name || '仲間', React.createElement("wbr", null), "のコピー")), mon ? React.createElement(AiCopyBody, {
+    src: mon,
+    phase: phase,
+    hit: !!hitAnim,
+    anim: hitAnim,
+    size: layout === 'landscape' ? 26 : 40
+  }) : React.createElement(SorashidoCopyFx, {
     phase: phase
   }, React.createElement("img", {
     src: SORASHIDO_FACE_ICON,
@@ -70553,11 +70675,10 @@ function ClassicAiCopyCell({
     "aria-hidden": "true",
     className: "h-7 w-7 rounded-full object-cover bg-black/30",
     draggable: "false"
-  })), React.createElement("span", {
-    className: "w-full min-w-0 truncate text-center text-[9px] font-black leading-tight text-emerald-200"
-  }, copy.name || '仲間', React.createElement("br", null), "のコピー"), out ? React.createElement(React.Fragment, null, React.createElement("span", {
-    className: "whitespace-nowrap text-[9px] font-black tabular-nums text-cyan-200"
-  }, "G ", guts, "/", maxGuts), React.createElement(SorashidoNextCardBadge, {
+  })), out ? React.createElement(React.Fragment, null, React.createElement(AiCopyGutsMeter, {
+    guts: guts,
+    maxGuts: maxGuts
+  }), React.createElement(SorashidoNextCardBadge, {
     card: copy.nextCard || null,
     layout: layout,
     turnsLeft: copy.turnsLeft
@@ -70714,6 +70835,7 @@ function BattleScreen({
   tacticsHate,
   tacticsHateOn,
   aiCopy,
+  aiCopyHitting = false,
   tacticsExIntroVisible,
   dismissTacticsExIntro,
   tacticsPandoraForms,
@@ -72900,7 +73022,7 @@ function BattleScreen({
         }
       });
     }
-    const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
+    const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i && !(classicAiCopy && aiCopyHitting);
     const attackAimStyle = isAnimating && attackAim && attackAim.slotIndex === i ? attackAimVars(attackAim.dx, attackAim.dy) : null;
     const slotArt = img => !ecoBattleView && !idleMotionOff ? React.createElement(MonsterIdleArt, {
       baseId: s?.id,
@@ -73675,7 +73797,9 @@ function BattleScreen({
   })), classicAiCopy && !tacticsNewLayout && React.createElement(ClassicAiCopyCell, {
     copy: classicAiCopy,
     turnCount: turnCount,
-    onOpen: () => setCopyHandOpen(true)
+    onOpen: () => setCopyHandOpen(true),
+    mon: slots[classicAiCopy.srcSlot] || null,
+    hitAnim: !ecoBattleView && attackAnim && aiCopyHitting ? attackAnim : null
   }), aiCopy && copyHandOpen && typeof document !== 'undefined' && ReactDOM.createPortal(React.createElement(SorashidoCopyHandSheet, {
     open: true,
     copyName: aiCopy.name || '仲間',
@@ -107056,6 +107180,7 @@ function MonsterHeroGame() {
   };
   const [aiCopy, setAiCopy] = useState(null);
   const aiCopyRef = useRef(null);
+  const aiCopyHitRef = useRef(false);
   const commitAiCopy = next => {
     const v = (typeof next === 'function' ? next(aiCopyRef.current) : next) || null;
     aiCopyRef.current = v;
@@ -123246,7 +123371,10 @@ function MonsterHeroGame() {
     pdTag();
     if (copyHitFrom != null) {
       const copyName = tacticsAiCopyName(aiCopyRef.current);
-      for (let k = copyHitFrom; k < attackHits.length; k++) if (attackHits[k] && attackHits[k].actorName == null) attackHits[k].actorName = copyName;
+      for (let k = copyHitFrom; k < attackHits.length; k++) if (attackHits[k]) {
+        if (attackHits[k].actorName == null) attackHits[k].actorName = copyName;
+        attackHits[k].aiCopy = true;
+      }
     }
     if (!isTacticsMode(runMode) && aiCopyRef.current && isAiCopyOut(aiCopyRef.current, turnCount)) {
       let copy = aiCopyRef.current;
@@ -123273,6 +123401,7 @@ function MonsterHeroGame() {
         let hitIdx = 0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          aiCopyHitRef.current = !!hit.aiCopy;
           if (hit && hit.aiCopy) {
             await playAiCopyHit(hit);
             hitIdx++;
@@ -123460,6 +123589,7 @@ function MonsterHeroGame() {
           }
           hitIdx++;
         }
+        aiCopyHitRef.current = false;
         setCurrentWaveDamage(p => p + totalDmg);
         raidJackDamageRef.current += Number(totalDmg) || 0;
         const turnDistDmg = [0, 0, 0, 0];
@@ -138245,6 +138375,7 @@ function MonsterHeroGame() {
       tacticsHate: tacticsHate,
       tacticsHateOn: tacticsHateOnFor(runMode),
       aiCopy: EVENT_REPLAY_RELEASE_FLAGS.assistantSorashido ? aiCopy : null,
+      aiCopyHitting: !!(attackAnim && aiCopyHitRef.current && !isTacticsMode(runMode)),
       tacticsCoverSlot: tacticsExEnabled ? tacticsExCoverSlot(tacticsExState, tacticsUnits, tacticsExNow) : null,
       guts: guts,
       hand: hand,

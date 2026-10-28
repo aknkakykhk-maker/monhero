@@ -49,6 +49,8 @@ const run = async (monId, isUnique, opts) => {
     pushBattleLog: ()=>{}, battleActorName: ()=>'テスト',
     // タクティクスプロの記録(2026-10-21・印が偽のあいだは何もしない)。この検査では見ない
     tacticsProLogRef: { current: null }, tacticsProLogDamage: ()=>{}, tacticsProLogSkill: ()=>{}, turnCount: 1,
+    // 本編のAIコピーが打っているかの控え(2026-10-28・コピーのヒットのときだけ true)。この検査では見ない
+    aiCopyHitRef: { current: false },
     Audio_: { se: new Proxy({}, { get: () => () => {} }) },
     RANGE_LABELS: ['零','近','中','遠'],
     WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760,
