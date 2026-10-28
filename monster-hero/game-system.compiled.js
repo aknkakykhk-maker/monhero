@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dbd7393281764cc3
+// source-sha256: cc4b601ce68db646
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -84975,11 +84975,13 @@ const RaidJackPrepScreen = ({
     }, "押して👑"));
   };
   const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかの子を押すと替えられます` : '勇者モンにする子を、上の枠から1体えらんでください' : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置く子をえらんでください(どの順でもOK)' : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで` : '置けました。枠を押すとその子を外せます。勇者モンは次でえらびます';
+  const heroAboutText = '戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。';
+  const raidRuleText = `ライフ ${tier.hp.toLocaleString()} / 技 ${tier.actionCount}本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。`;
   const partyRow = React.createElement("section", {
     className: "mb-2 shrink-0 rounded-2xl border border-orange-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5",
     "data-raid-party": true
   }, React.createElement("div", {
-    className: "mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200"
+    className: `mb-1 flex flex-wrap items-baseline gap-x-1 text-[11px] font-black text-orange-200 ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
   }, "いまの編成と距離", React.createElement("span", {
     className: "text-[9px] font-normal text-slate-300 [@media(max-height:640px)]:hidden"
   }, "%はその距離での適性(その距離に立つ子のぶんだけ効きます)")), React.createElement("div", {
@@ -84987,7 +84989,7 @@ const RaidJackPrepScreen = ({
   }, ranges.map(r => slot(r))), step !== 'teach' && React.createElement("div", {
     "data-raid-guide": true,
     title: guide,
-    className: "mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug",
+    className: `mt-1.5 rounded-lg bg-orange-950/40 px-2 py-1 text-[10px] font-bold text-orange-100 [@media(max-height:640px)]:mt-1 [@media(max-height:640px)]:line-clamp-2 [@media(max-height:640px)]:py-0.5 [@media(max-height:640px)]:leading-snug ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`,
     style: JA_LABEL_STYLE
   }, jaWrap(guide)), step === 'hero' && heroIsOrihime && Number.isInteger(partnerIdx) && React.createElement("div", {
     "data-raid-orihime-partner-row": true,
@@ -85030,11 +85032,22 @@ const RaidJackPrepScreen = ({
   }, list.map(mon => tile(mon))), list.length === 0 && React.createElement("div", {
     className: "py-2 text-center text-[10px] text-slate-400"
   }, "編成できるモンスターがいません")), step === 'hero' && React.createElement("section", {
-    className: "rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200",
+    className: "rounded-2xl border border-amber-300/30 bg-black/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(orientation:landscape)_and_(max-height:520px)]:hidden",
     "data-raid-hero-step": true
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-amber-200"
-  }, "👑 勇者モンとは"), React.createElement("div", null, "戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。")), step === 'hero' && heroIsOrihime && React.createElement("section", {
+  }, "👑 勇者モンとは"), React.createElement("div", null, heroAboutText)), step === 'hero' && React.createElement("details", {
+    className: "hidden rounded-2xl border border-amber-300/30 bg-black/30 px-3 py-0 text-[10px] leading-relaxed text-slate-200 [@media(orientation:landscape)_and_(max-height:520px)]:block",
+    "data-raid-hero-step-compact": true
+  }, React.createElement("summary", {
+    className: "flex min-h-[30px] cursor-pointer list-none items-center gap-1 text-[11px] font-black text-amber-200"
+  }, "👑 勇者モンとは・挑戦回数", React.createElement("span", {
+    className: "ml-auto text-[10px] font-bold text-slate-300"
+  }, "詳しく ▾")), React.createElement("div", {
+    className: "mt-1"
+  }, heroAboutText), React.createElement("div", {
+    className: "mt-1 pb-1 text-slate-300"
+  }, raidRuleText)), step === 'hero' && heroIsOrihime && React.createElement("section", {
     className: "rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden",
     "data-raid-orihime-partner": true
   }, React.createElement("div", {
@@ -85082,8 +85095,8 @@ const RaidJackPrepScreen = ({
     },
     className: "mh-hit-expand absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/60 bg-slate-800 text-[11px] font-black leading-none text-sky-200 shadow active:scale-90"
   }, "i"))))), React.createElement("div", {
-    className: "rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300"
-  }, "ライフ ", tier.hp.toLocaleString(), " / 技 ", tier.actionCount, "本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。")), React.createElement("div", {
+    className: `rounded-2xl border border-white/10 bg-black/30 p-3 text-[10px] text-slate-300 ${step === 'hero' ? '[@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
+  }, raidRuleText)), React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, step === 'party' ? React.createElement("button", {
     type: "button",
