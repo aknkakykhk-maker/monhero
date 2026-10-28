@@ -228,7 +228,7 @@ const ASSISTANTS = [
 // おしゃべりの人柄(tools/build-assistant-chat-digest.js)はここから作る。台本で実際に使っているかは
 // tools/assistant/assistant-chat-check.js が突き合わせる。台本を書くときもこの表に合わせる
 const ASSISTANT_PEER_CALLS = Object.freeze({
-  mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン', atsu: 'あつくん', kyuko: 'きゅきゅ', sorashido: 'ソラちん' },
+  mua:      { kiki: 'ひめちん', momosuke: 'もも', dra: 'ドラケン', atsu: 'あつくん', kyuko: 'きゅきゅ', sorashido: 'どれみふぁソラシド～♪' },
   kiki:     { mua: 'みゅあちん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あっくん', kyuko: 'きゅうこさん', sorashido: 'ソラシドさん' },
   momosuke: { mua: 'みゅあねぇ', kiki: 'ききちゃん', dra: 'ドラちゃん', atsu: 'あつ', kyuko: 'きゅうちゃん', sorashido: 'ソラちゃん' },
   dra:      { mua: 'みゅあ', kiki: '靴下さん', momosuke: 'もも(好意が暴走すると「ももぉ〜」)', atsu: 'あっくん', kyuko: 'きゅうこちゃん', sorashido: 'ソラシド' },
@@ -236,7 +236,7 @@ const ASSISTANT_PEER_CALLS = Object.freeze({
   atsu:     { mua: 'みゅあ', kiki: 'きき', momosuke: 'もも', dra: 'ドラちゃん', kyuko: 'きゅうこちゃん', sorashido: 'ばこっちゃん' },
   // きゅうこ(2026-10-22 社長の決定)
   kyuko:    { mua: 'みゅあねぇ', kiki: 'ききさん', momosuke: 'ももすけ', dra: 'ドラちゃん', atsu: 'あつニキ', sorashido: 'ばこちゃん' },
-  // ソラシド(2026-10-27 社長が全部決めた)。ほかの助手からの呼び方も各行の sorashido に足した(みゅあ「ソラちん」・きき「ソラシドさん」・もも「ソラちゃん」・ドラ「ソラシド」・あつ「ばこっちゃん」・きゅうこ「ばこちゃん」)
+  // ソラシド(2026-10-27 社長が全部決めた)。ほかの助手からの呼び方も各行の sorashido に足した(みゅあ「ソラちん」→2026-10-28 みゅあ本人の要望で「どれみふぁソラシド～♪」・きき「ソラシドさん」・もも「ソラちゃん」・ドラ「ソラシド」・あつ「ばこっちゃん」・きゅうこ「ばこちゃん」)
   sorashido: { mua: 'みゅあさん', kiki: 'ききさん', momosuke: 'ももさん', dra: 'ドラさん', atsu: 'あつさん', kyuko: 'きゅうこちゃん' },
 });
 // おしゃべりの受け答えの見本(2026-10-14 社長「キャラごとの喋り方の特徴がちゃんと反映されてない気がする」)。
@@ -10215,7 +10215,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'atsu',      e:'excited',  atsu:'with',    t:'で、その夜っていつ？ 俺も見たいんだけど笑' },
   { who:'mua',       e:'surprise', atsu:'without', t:'で、その夜っていつなの〜？' },
   { who:'sorashido', e:'excited',  t:'今夜！！ 星の見える浜で、9割の確率で会える……はずだぜ・・・！' },
-  { who:'mua',       e:'happy',    t:'ソラちん、おもしろ〜！ もうあだ名つけちゃったｗ みんなで行ってみよ！' },
+  { who:'mua',       e:'happy',    t:'どれみふぁソラシド～♪、おもしろ〜！ もうあだ名つけちゃったｗ みんなで行ってみよ！' },
   { who:'kiki',      e:'happy',    t:'オリヒメは、私もまだ見たことがないんでつ。ご一緒しまつね♪♪' },
   // ---- ② 予測の夜、星の見える浜。来ない ----
   { who:'mua',       e:'troubled', t:'……来ないね〜。もう波の音しか聞こえないんだけど' },
@@ -10265,7 +10265,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'dra',       e:'normal',   atsu:'without', t:'……よかったな、ソラシド' },
   { who:'kiki',      e:'happy',    t:'好きって気持ちが、ちゃんと届いたんでつね' },
   // ---- ⑤ 2体は仲間に。ソラシドは助手になる。打ち上げ ----
-  { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、ソラちんから離れないんだけど〜' },
+  { who:'mua',       e:'happy',    t:'ねえ見て、2体とも、どれみふぁソラシドから離れないんだけど〜' },
   { who:'kyubi',     e:'normal',   monsters:[{ id:'Orihime', pose:'hop' }, { id:'Kyubi', pose:'hop' }], t:'コン♪(ぴょんと跳ねて、しっぽをふる)' },
   { who:'orihime',   e:'normal',   t:'りん♪(ふわりと寄って、羽衣をソラシドの肩にかける)' },
   { who:'dra',       e:'happy',    monsters:[{ id:'Orihime', pose:'idle' }, { id:'Kyubi', pose:'idle' }], t:'いっしょにいたいってことだな。えへへ' },
@@ -10278,7 +10278,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'sorashido', e:'wink',     t:'あと、アシカも持ってきたよ。俺のとっておき、マーケットに置いとくね笑' },
   // おみやげ(2026-10-27 社長「この文で」)。10,000ビートPはお話を見終えたらギフトで届く(mh_sorashido_gift_v1・60-app の grantSorashidoGift)
   { who:'sorashido', e:'excited',  t:'それと、沖縄のおみやげ！ {name}に10,000ビートP、ギフトに入れといたぜ・・・！' },
-  { who:'mua',       e:'surprise', t:'え、おみやげがビートPなの！？ ソラちん、太っ腹すぎぢゃん！' },
+  { who:'mua',       e:'surprise', t:'え、おみやげがビートPなの！？ どれみふぁソラシド～♪、太っ腹すぎぢゃん！' },
   { who:'sorashido', e:'happy',    t:'それでMFバトルカードのパック開けて！ 10,000あれば30パックはいけるから笑' },
   { who:'dra',       e:'happy',    t:'ふむ。ソラシドもMFバトルカードやるのか' },
   { who:'sorashido', e:'excited',  t:'やるやる！ 推しはハム！ ハムのデッキで、計算どおりに勝つのが最高なんだよね笑' },
@@ -10290,7 +10290,7 @@ const ASSISTANT_SORASHIDO_JOIN_STORY = [
   { who:'kiki',      e:'surprise', t:'あれま……顔色ひとつ変わりませんね……！' },
   { who:'sorashido', e:'happy',    t:'{name}、これからよろしく！ 推しの話なら、いつでも聞くぜ・・・！笑' },
 ];
-const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん', sorashido: 'みゅあさん／ききさん／ももさん／ドラさん／あつさん／きゅうこちゃん' };
+const ASSISTANT_SORASHIDO_JOIN_STORY_CALLS = { mua: 'どれみふぁソラシド～♪', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん', sorashido: 'みゅあさん／ききさん／ももさん／ドラさん／あつさん／きゅうこちゃん' };
 
 const EVENT_REPLAYS = [
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。

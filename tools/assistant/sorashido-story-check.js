@@ -87,7 +87,7 @@ check('絵は全身の絵(KYUBI_IMG・ORIHIME_IMG)、待機アニメは withMons
 
 // ---- 呼び方(社長の決定・ASSISTANT_PEER_CALLS と同じ) ----
 // 2026-10-27 社長が呼び方を全部決めた(もも「ソラちゃん」・ドラ「ソラシド」・あつ「ばこっちゃん」・きゅうこ「ばこちゃん」)
-const callOf = { mua: 'ソラちん', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん' };
+const callOf = { mua: 'どれみふぁソラシド～♪', kiki: 'ソラシドさん', momosuke: 'ソラちゃん', dra: 'ソラシド', atsu: 'ばこっちゃん', kyuko: 'ばこちゃん' };
 check('ほかの助手からの呼び方が ASSISTANT_PEER_CALLS と同じ', Object.entries(callOf).every(([id, c]) => PEER[id] && PEER[id].sorashido === c && CALLS[id] === c));
 const usesCall = Object.entries(callOf).filter(([id, c]) => !rows.some((r) => r.who === id && r.t.includes(c)));
 check('ほかの助手は、台本の中でその呼び方でソラシドを呼んでいる', usesCall.length === 0, usesCall.map(([id]) => id).join(','));
