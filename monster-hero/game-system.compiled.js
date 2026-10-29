@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b81708d6755bd901
+// source-sha256: 47d5efb36f32af97
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15477,7 +15477,7 @@ const ETERNAL_SETTING = Object.freeze({
   japanese: 'エターナル',
   available: true,
   debugAvailable: true,
-  power: 220,
+  power: 300,
   score: 20,
   xp: 120,
   gold: 100,
@@ -92027,11 +92027,41 @@ const cardTacticFilled = frames => {
   return f.base.filter(Boolean).length + f.breeder.filter(x => x.on).length + f.mons.reduce((a, rows) => a + rows.filter(x => x.on).length, 0);
 };
 const CARD_TACTIC_SMART = Object.freeze(['easy', 'normal', 'hard', 'expert', 'master']);
+const CARD_TACTIC_GUARD_ONLY_CONDS = Object.freeze(['incoming', 'incomingKo', 'incomingArea']);
+const CARD_TACTIC_SELF_CONDS = Object.freeze(['selfLife', 'selfFresh', 'selfType', 'selfStun', 'selfAdv']);
+const CARD_TACTIC_RARE_CONDS = Object.freeze(['turnGe.15', 'myLife.10', 'foeLife.10', 'selfLife.10', 'selfStun', 'myStun', 'foeStun', 'foeCharge', 'foeAir', 'incomingArea']);
+const cardTacticUncounted = frames => {
+  const f = cardTacticNormalizeFrames(frames);
+  const seen = new Set();
+  const why = (row, where) => {
+    if (!row.on) return null;
+    const c = cardTacticOf(row.c),
+      a = cardTacticOf(row.a);
+    if (!c || !a) return '場面が合わない';
+    if (CARD_TACTIC_GUARD_ONLY_CONDS.includes(c.g) && a.phase !== 'guard') return '場面が合わない';
+    if (where === 'breeder' && CARD_TACTIC_SELF_CONDS.includes(c.g)) return '場面が合わない';
+    if (CARD_TACTIC_RARE_CONDS.includes(c.id)) return 'ほとんど当たらない';
+    const key = `${row.c}|${row.a}|${row.sp || ''}`;
+    if (seen.has(key)) return '同じものが入っている';
+    seen.add(key);
+    return null;
+  };
+  return {
+    breeder: f.breeder.map(r => why(r, 'breeder')),
+    mons: f.mons.map(rows => rows.map(r => why(r, 'mon')))
+  };
+};
+const cardTacticCountedRows = frames => {
+  const f = cardTacticNormalizeFrames(frames);
+  const u = cardTacticUncounted(f);
+  return f.breeder.filter((r, i) => r.on && !u.breeder[i]).length + f.mons.reduce((a, rows, mi) => a + rows.filter((r, i) => r.on && !u.mons[mi][i]).length, 0);
+};
 const cardTacticSmartLevel = frames => {
   const f = cardTacticNormalizeFrames(frames);
   const base = f.base.filter(Boolean).length;
-  const rows = f.breeder.filter(x => x.on).length + f.mons.reduce((a, r) => a + r.filter(x => x.on).length, 0);
-  if (!base && !rows) return 'random';
+  const rows = cardTacticCountedRows(f);
+  const any = f.breeder.some(x => x.on) || f.mons.some(r => r.some(x => x.on));
+  if (!base && !any) return 'random';
   if (!base) return 'easy';
   return CARD_TACTIC_SMART[base - 1 + (rows >= 10 ? 2 : rows >= 4 ? 1 : 0)];
 };
@@ -95240,7 +95270,7 @@ const CardHitResult = ({
   if (!r) return null;
   if (r.kind === 'none') return React.createElement("span", {
     "data-card-hit-result": "none",
-    className: "mh-card-guard-result pointer-events-none absolute left-1/2 top-[58%] z-[51] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-1.5 text-[10px] font-bold text-slate-200"
+    className: `mh-card-guard-result pointer-events-none absolute left-1/2 ${tiny ? 'top-[62%] text-[9px]' : 'top-[82%] text-[10px]'} z-[51] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-1.5 font-bold text-slate-200`
   }, "守らなかった");
   return React.createElement("span", {
     "data-card-hit-result": r.kind,
@@ -95919,7 +95949,7 @@ const CardMonSlot = ({
     className: `inline-block whitespace-nowrap rounded bg-rose-900 font-bold ${tiny ? 'px-0.5 text-[9px] leading-tight' : 'ml-0.5 px-1 text-[10px]'}`
   }, "攻撃できない")));
   const wideArtH = 'clamp(40px, calc((var(--mh-vh, 100svh) - 262px) / 2), 64px)';
-  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : 'max-h-[78px] max-w-[96px]';
+  const artSize = wide ? 'max-w-[88px]' : tiny ? 'max-h-[44px] max-w-[60px]' : compact ? 'max-h-[56px] max-w-[72px]' : opp ? 'max-h-[78px] max-w-[96px]' : 'max-h-[106px] max-w-[126px]';
   const imgEl = art ? React.createElement("img", {
     src: art,
     alt: "",
@@ -95936,7 +95966,7 @@ const CardMonSlot = ({
   const poseClass = mon.ko ? 'mh-card-ko' : mv && mv.type === 'hit' ? calm ? 'mh-card-hit-calm' : 'mh-card-hit' : mv && mv.type === 'dodge' ? 'mh-card-dodge' : mv && mv.type === 'jump' ? 'mh-card-jump' : mv && mv.type === 'guard' ? 'mh-card-guard' : '';
   const artEl = React.createElement("div", {
     "data-card-art": `${p}-${m}`,
-    className: `relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : 'h-[78px]'} w-full items-end justify-center`,
+    className: `relative flex ${wide ? '' : tiny ? 'h-[44px]' : compact ? 'h-[56px]' : opp ? 'h-[78px]' : 'h-[106px]'} w-full items-end justify-center`,
     style: {
       ...(wide ? {
         height: wideArtH
@@ -95984,7 +96014,7 @@ const CardMonSlot = ({
   }, "KO"), fx.map(f => React.createElement("span", {
     key: f.key,
     "data-card-dmg-num": f.dmg > 0 ? f.dmg : undefined,
-    className: `pointer-events-none absolute top-0 z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[34px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`,
+    className: `pointer-events-none absolute ${tiny ? 'top-0' : 'top-[26%]'} z-[50] font-black ${f.dmg > 0 ? `mh-card-dmg-pop ${tiny ? 'text-[28px]' : 'text-[42px]'} leading-none text-rose-500` : 'text-[30px] text-sky-200'}`,
     style: {
       WebkitTextStroke: f.dmg > 0 ? '2px #fff' : '1px #0369a1',
       textShadow: f.dmg > 0 ? '0 4px 0 #7f1d1d, 0 0 18px rgba(239,68,68,.8)' : '0 0 10px rgba(248,113,113,.8)'
@@ -97888,7 +97918,7 @@ const CardBattleBoard = ({
     }
   }, meProfile && meProfile.name || 'あなた')), strip(CARD_ME))), React.createElement("div", {
     "data-card-side": true,
-    className: wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-end overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'
+    className: wide ? 'flex min-h-0 w-[42%] max-w-[420px] shrink-0 flex-col justify-center overflow-y-auto border-l border-white/10 bg-black/20' : 'contents'
   }, wide && tutorBox, wide && replayFoeHand, tutorial && tutFocus.hand.length > 0 && React.createElement("div", {
     "data-card-tutor-arrow": true,
     className: "mx-auto mb-1 shrink-0 animate-bounce rounded-lg bg-emerald-300 px-2 py-0.5 text-[12px] font-black text-slate-900",
