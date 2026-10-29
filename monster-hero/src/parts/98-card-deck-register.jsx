@@ -9,13 +9,13 @@
 // おすすめの戦い方。基本カードは持っている物の先頭、セットは持っている物だけを、開いている枚数まで入れる
 const CARD_REG_STYLES = Object.freeze([
   { id: 'attack', icon: '⚔️', name: 'どんどん攻める', desc: '倒せる相手から倒す・ガッツがたまったら大技・ピンチのときだけ守る', base: ['tAttack', 'tRush', 'tBalance'],
-    mons: [['ko', 'atk'], ['myGuts.5', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie'], ['foeLife.50', 'atk'], ['any', 'atk']], breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard']] },
+    mons: [['ko', 'atk'], ['myGuts.5', 'cost.大技(4以上)'], ['foeLife.50', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie'], ['foeLife.30', 'atk'], ['any', 'atk'], ['incoming.7', 'guard'], ['turnLe.3', 'atk']], breeder: [['any', 'save'], ['foeAlive.3', 'fieldCard']] },
   { id: 'guard', icon: '🛡️', name: '守りを固める', desc: '守り札を残して堅く守り、相手が弱ったら倒しに行く', base: ['tGuard', 'tSteady', 'tBalance'],
-    mons: [['selfLife.50', 'guard'], ['ko', 'atk'], ['incoming.5', 'guard'], ['foeLife.30', 'atk'], ['any', 'guard']], breeder: [['any', 'keepGuard'], ['any', 'save']] },
+    mons: [['selfLife.50', 'guard'], ['ko', 'atk'], ['any', 'guard'], ['incoming.5', 'guard'], ['foeLife.50', 'atk'], ['foeLife.30', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['selfLife.30', 'guardDie']], breeder: [['any', 'keepGuard'], ['any', 'save']] },
   { id: 'save', icon: '🔋', name: 'ためて大技', desc: 'はじめはガッツをため、たまったら大技で一気に削る', base: ['tSave', 'tBig', 'tBalance'],
-    mons: [['myGuts.5', 'cost.大技(4以上)'], ['ko', 'atk'], ['selfLife.30', 'guardDie'], ['myGuts.3', 'cost.大技(4以上)']], breeder: [['turnLe.3', 'save'], ['any', 'save']] },
+    mons: [['myGuts.5', 'cost.大技(4以上)'], ['myGuts.3', 'cost.大技(4以上)'], ['ko', 'atk'], ['selfLife.30', 'guardDie'], ['foeLife.50', 'atk'], ['any', 'guard']], breeder: [['turnLe.3', 'save'], ['any', 'save']] },
   { id: 'disrupt', icon: '🌀', name: '相手を崩す', desc: '相手の手札とガッツを減らしてから攻める', base: ['tDisrupt', 'tJam', 'tBalance'],
-    mons: [['foeHandGe.4', 'disrupt.手札を捨てさせる'], ['ko', 'atk'], ['foeGutsGe.4', 'disrupt.ガッツを減らす'], ['any', 'atk']], breeder: [['any', 'save']] },
+    mons: [['foeHandGe.4', 'disrupt.手札を捨てさせる'], ['foeGutsGe.4', 'disrupt.ガッツを減らす'], ['ko', 'atk'], ['foeLife.50', 'atk'], ['myGuts.3', 'cost.大技(4以上)'], ['any', 'atk']], breeder: [['any', 'save']] },
 ]);
 // 組み合わせの札(条件と行動を1枚にした物)。where … 'mon'(3体の枠)/ 'breeder'(ブリーダーの枠)
 const CARD_REG_COMBOS = Object.freeze([
@@ -45,14 +45,20 @@ const cardRegRowText = (row) => {
   const combo = CARD_REG_COMBOS.find((x) => x.c === row.c && x.a === row.a);
   if (combo) return `${combo.icon} ${combo.name}`;
   const c = cardTacticOf(row.c), a = cardTacticOf(row.a);
+  if (row.c === 'any') return `いつでも → ${a ? a.name : '?'}`;
   return `${c ? c.name : '?'} なら → ${a ? a.name : '?'}`;
 };
-// おすすめの戦い方を、持っているカード・開いている枚数で入れる
+// おすすめの戦い方を、持っているカード・開いている枚数で入れる。
+//   3体に同じカードを入れると賢さに1枚としか数えない(82 の cardTacticUncounted)ので、候補を上から順に3体へ配る(左・真ん中・右・左…)。
+//   候補が足りなければ、同じ物を重ねずに空けておく
 const cardRegApplyStyle = (style, tactics, open) => {
   const owns = (id) => cardTacticsOwns(tactics, id);
-  const rows = (list, max) => list.filter(([c, a]) => owns(c) && owns(a)).slice(0, max).map(([c, a]) => ({ c, a, on: true }));
+  const cands = (list) => list.filter(([c, a]) => owns(c) && owns(a)).map(([c, a]) => ({ c, a, on: true }));
+  const monC = cands(style.mons);
+  const mons = [[], [], []];
+  for (let j = 0; j < open.mon; j++) for (let i = 0; i < 3; i++) { const x = monC[j * 3 + i]; if (x) mons[i].push(x); }
   const base = style.base.find(owns) || 'tBalance';
-  return cardTacticNormalizeFrames({ base: [base, null, null], breeder: rows(style.breeder, open.breeder), mons: [0, 1, 2].map(() => rows(style.mons, open.mon)) });
+  return cardTacticNormalizeFrames({ base: [base, null, null], breeder: cands(style.breeder).slice(0, open.breeder), mons });
 };
 // 切り札「おまかせ」: デッキの攻撃の技からダメージの大きい3種類
 const cardRegAutoAces = (db, deck) => {
@@ -192,7 +198,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
         note={step === 'custom' ? '上から順に見て、当てはまった物を使います' : `バトルカード Lv${lv}`}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
         {step !== 'custom' && step !== 'done' && <CardRegSteps step={step}/>}
-        {msg && <p data-card-reg-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
+        {msg && step !== 'done' && <p data-card-reg-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
         {step === 'deck' && (<>
           {mineBox}
           <p className="text-[16px] font-black text-white">登録するデッキをえらんでください</p>
