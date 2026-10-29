@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa8f507efe50aa2d
+// source-sha256: 5a915a26a62e613a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94816,6 +94816,11 @@ const CARD_TYPE_LABEL = Object.freeze({
   air: '空中',
   water: '水中'
 });
+const CARD_TYPE_TONE = Object.freeze({
+  ground: 'bg-indigo-900 text-white',
+  air: 'bg-sky-300 text-sky-950',
+  water: 'bg-blue-600 text-white'
+});
 const CARD_LEVEL_LABEL = Object.freeze({
   easy: 'EASY',
   normal: 'NORMAL',
@@ -95803,9 +95808,18 @@ const cardJaWrap = text => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i) 
 }, jaWrap(t)));
 const CardMonName = ({
   name,
-  w
+  w,
+  two = false
 }) => {
   const len = Math.max(1, String(name || '').length);
+  if (two && len * 11 > w) return React.createElement("div", {
+    "data-card-mon-name": true,
+    "data-card-mon-name-two": true,
+    className: "line-clamp-2 break-all font-black leading-[1.1]",
+    style: {
+      fontSize: 11
+    }
+  }, name);
   const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
   const k = Math.min(1, w / (len * fs));
   return React.createElement("div", {
@@ -95884,13 +95898,15 @@ const CardMonSlot = ({
     className: `${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`
   }, React.createElement(CardMonName, {
     name: mon.name,
-    w: tiny ? 56 : 62
+    w: tiny ? 56 : 62,
+    two: !tiny
   }), React.createElement("div", {
-    className: "flex items-center gap-1 whitespace-nowrap text-[13px] font-black leading-tight"
+    className: `flex items-center gap-1 whitespace-nowrap ${tiny ? 'text-[13px]' : 'text-[14px]'} font-black leading-tight`
   }, mon.life, React.createElement("span", {
-    className: "text-[10px] text-slate-400"
-  }, " / ", mon.max), tiny && React.createElement("span", {
-    className: `ml-auto rounded px-0.5 text-[9px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`
+    className: `${tiny ? 'text-[10px]' : 'text-[11px]'} text-slate-300`
+  }, " / ", mon.max), React.createElement("span", {
+    "data-card-mon-type": ty,
+    className: `ml-auto rounded ${tiny ? 'px-0.5 text-[9px]' : 'px-1 text-[10px]'} font-bold ${CARD_TYPE_TONE[ty] || CARD_TYPE_TONE.ground}`
   }, CARD_TYPE_LABEL[ty])), React.createElement("div", {
     className: "h-[6px] overflow-hidden rounded bg-slate-700"
   }, React.createElement("div", {
@@ -95898,9 +95914,7 @@ const CardMonSlot = ({
     style: {
       width: `${pct}%`
     }
-  })), !tiny && React.createElement("span", {
-    className: `mt-0.5 inline-block rounded px-1 text-[10px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`
-  }, CARD_TYPE_LABEL[ty]), stunned && React.createElement("span", {
+  })), stunned && React.createElement("span", {
     "data-card-stunned": true,
     className: `inline-block whitespace-nowrap rounded bg-rose-900 font-bold ${tiny ? 'px-0.5 text-[9px] leading-tight' : 'ml-0.5 px-1 text-[10px]'}`
   }, "攻撃できない")));
@@ -97758,7 +97772,8 @@ const CardBattleBoard = ({
     className: "shrink-0 text-rose-300"
   }, "▸ 見る")), !(stageFit >= 3 && bubbleInFlow) && React.createElement("div", {
     "data-card-log": true,
-    className: `relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
+    "data-card-log-empty": !pendingText && !liveLine ? '1' : undefined,
+    className: `${!pendingText && !liveLine ? 'invisible ' : ''}relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`,
     style: JA_WRAP_STYLE
   }, pendingText && (guardAtk ? React.createElement("button", _extends({
     type: "button",
