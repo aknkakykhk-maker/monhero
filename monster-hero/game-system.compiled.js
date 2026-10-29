@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ccc29c2d3fe8c86
+// source-sha256: 87f5115c8e111b9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93280,12 +93280,19 @@ const CardBattleBoard = ({
   const [watchEyes, setWatchEyes] = useState(0);
   const [watchEndHide, setWatchEndHide] = useState(false);
   const [replayAt, setReplayAt] = useState(0);
+  const share = game.share || null;
   const who = pvp ? {
     id: 'pvp',
     name: pvp.name,
     accent: '#38bdf8'
+  } : share ? {
+    id: 'share',
+    name: share.name,
+    accent: '#34d399'
   } : ASSISTANTS.find(a => a.id === game.who) || ASSISTANTS[0];
-  const policy = useMemo(() => cardAiPolicy(game.who, game.level, {
+  const policy = useMemo(() => share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, {
+    sameBlood: !!game.cpuSameBlood
+  }) : cardAiPolicy(game.who, game.level, {
     sameBlood: !!game.cpuSameBlood
   }), [game.who, game.level, game.cpuSameBlood]);
   const [st, setSt] = useState(game.st);
@@ -93399,7 +93406,7 @@ const CardBattleBoard = ({
   const press = useCardLongPress(no => setDetail(no), pressMs);
   const paused = !!detail || !!discard || quit;
   const say = (scene, ai = null) => {
-    if (!scene || pvp || settings.bubble === 'OFF') return;
+    if (!scene || pvp || share || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = {
       turn,
@@ -94725,12 +94732,12 @@ const CardBattleBoard = ({
     clock: pvpClock
   }), React.createElement("div", {
     className: `flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`
-  }, pvp ? React.createElement("span", {
+  }, pvp || share ? React.createElement("span", {
     "data-card-pvp-foe": true,
     className: `block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`
   }, React.createElement(CardPvpAvatar, {
-    icon: pvp.icon,
-    frame: pvp.frame,
+    icon: (pvp || share).icon,
+    frame: (pvp || share).frame,
     className: "h-full w-full"
   })) : React.createElement("img", {
     src: assistantFaceImage(who, face),
@@ -96335,6 +96342,60 @@ const CardBattleScreen = ({
           setView('result');
           return;
         }
+        if (game.share) {
+          const facts = cardResultFacts(st, CARD_ME);
+          const fresh = await freshCardSave();
+          const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
+          const loops = cardCpuLoops(game.level, outcome, facts);
+          const ok = await persist({
+            point: save.point + reward.total,
+            daily: reward.daily
+          }, fresh.raw);
+          let quick = null;
+          if (ok && loops > 0 && onQuickLoops) {
+            try {
+              quick = await onQuickLoops(loops);
+            } catch (_) {
+              quick = null;
+            }
+          }
+          if (ok && quick) await persist({
+            daily: {
+              ...reward.daily,
+              quickLoops: (reward.daily.quickLoops || 0) + loops
+            }
+          }, {
+            daily: reward.daily
+          });
+          if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
+          const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+          if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') void cardShareReportUse({
+            match: `share-${game.key}-${Date.now().toString(36)}`,
+            ownerId: game.share.ownerId,
+            userId: selfId,
+            kind: 'battle',
+            deckWon: outcome !== 'win',
+            version: game.share.version
+          });
+          setResult({
+            outcome,
+            reward,
+            opened: null,
+            saved: ok,
+            who: null,
+            level: game.level,
+            loops,
+            quick,
+            facts,
+            talk: null,
+            replay: null,
+            share: game.share
+          });
+          onBgm && onBgm(save.bgm.top);
+          onNavigate('CARD_TOP');
+          setView('result');
+          return;
+        }
         const openExtra = [];
         if (openIdRef.current === game.key) {
           let raw = null;
@@ -96518,18 +96579,23 @@ const CardBattleScreen = ({
       setNotice(deckIssues.join('・'));
       return;
     }
-    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
+    const share = pick.share || null;
+    const cpuDeck = share ? {
+      monsters: share.deck.monsters.slice(),
+      cards: share.deck.cards.slice(),
+      sameBlood: cardShareSameBlood(db, share.deck)
+    } : cardAiBuildDeck(db, pick.who, pick.level, Math.random, {
       playerDeck: activeDeck
     });
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
-    const assistant = allAssistants.find(a => a.id === pick.who);
+    const assistant = share ? null : allAssistants.find(a => a.id === pick.who);
     let st = cardCreateGame(db, {
       decks: [{
         monsters: activeDeck.monsters,
         cards: activeDeck.cards
       }, cpuDeck],
-      names: ['あなた', assistant ? assistant.name : 'あいて'],
+      names: ['あなた', share ? share.name : assistant ? assistant.name : 'あいて'],
       seed,
       first
     });
@@ -96539,7 +96605,23 @@ const CardBattleScreen = ({
       } catch (_) {}
     }
     setResult(null);
-    const intro = {
+    const intro = share ? {
+      mode: 'assistant',
+      foe: {
+        who: null,
+        name: share.name,
+        icon: share.icon,
+        frame: share.frame,
+        line: null,
+        deckName: share.tactics.name || null,
+        monsters: vsMons(st, CARD_CPU)
+      },
+      me: {
+        name: myName,
+        deckName: activeDeck.name || null,
+        monsters: vsMons(st, CARD_ME)
+      }
+    } : {
       mode: 'assistant',
       foe: {
         who: pick.who,
@@ -96561,7 +96643,10 @@ const CardBattleScreen = ({
       level: pick.level,
       settings: save.settings,
       intro,
-      cpuSameBlood: !!cpuDeck.sameBlood
+      cpuSameBlood: !!cpuDeck.sameBlood,
+      ...(share ? {
+        share
+      } : {})
     });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : {
@@ -96576,7 +96661,7 @@ const CardBattleScreen = ({
       deckName: intro.foe.deckName || null,
       acts: []
     };
-    void writeCpuOpen({
+    if (!share) void writeCpuOpen({
       id: `${seed}`,
       who: pick.who,
       level: pick.level,
@@ -96775,7 +96860,14 @@ const CardBattleScreen = ({
       decks: save.decks,
       collection: save.collection,
       frame: rank && rank.profile && rank.profile.frame || null,
-      onBack: () => setView('mode')
+      onBack: () => setView('mode'),
+      unlocked: save.unlocked,
+      debug: debug,
+      onFight: (e, lv) => startBattle({
+        who: e.tactics.habit,
+        level: lv,
+        share: e
+      })
     });
   }
   if (view === 'pvp') {
@@ -97201,7 +97293,10 @@ const CardBattleScreen = ({
       a: a,
       lineScene: win ? 'lose' : 'win',
       talkFacts: result.talk
-    }), a && React.createElement(CardResultVsRow, {
+    }), result.share && React.createElement("p", {
+      "data-card-result-share": true,
+      className: "text-center text-[13px] font-black text-emerald-200"
+    }, result.share.name, "さんのデッキと対戦しました"), a && React.createElement(CardResultVsRow, {
       meIcon: rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null,
       meName: rank && rank.profile && rank.profile.name || 'あなた',
       foeNode: React.createElement("img", {
@@ -97270,6 +97365,14 @@ const CardBattleScreen = ({
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => {
+        if (result.share) {
+          startBattle({
+            who: result.share.tactics.habit,
+            level: result.level,
+            share: result.share
+          });
+          return;
+        }
         const again = {
           who: result.who,
           level: result.level
@@ -97280,7 +97383,7 @@ const CardBattleScreen = ({
     }, "もう一度"), React.createElement("button", {
       type: "button",
       className: `${btn} mh-button-secondary border border-white/20 bg-slate-800`,
-      onClick: () => setView('foe')
+      onClick: () => setView(result.share ? 'share' : 'foe')
     }, "相手をえらぶ")));
   }
   if (view === 'replays') return React.createElement(CardReplayList, {
@@ -106512,9 +106615,9 @@ const cardShareNormalizeTactics = (v, deck = null) => {
     name
   };
 };
-const cardSharePolicy = (tactics, levelId) => {
+const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
-  const base = cardAiPolicy(t.habit, levelId);
+  const base = cardAiPolicy(t.habit, levelId, opts);
   const habit = {
     ...base.habit
   };
@@ -106652,13 +106755,74 @@ const cardShareUnregister = async ownerId => {
   });
   return r === 'ok' || r === 'locked' || r === 'none' ? r : 'off';
 };
+const cardShareFetchList = async ({
+  sort = 'new',
+  ids = null,
+  limit = 30
+} = {}) => {
+  if (_cardShareUnavailable) return [];
+  const safeIds = Array.isArray(ids) ? ids.filter(x => typeof x === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(x)).slice(0, 100) : null;
+  if (safeIds && !safeIds.length) return [];
+  const order = sort === 'popular' ? 'battles.desc,updated_at.desc' : 'updated_at.desc';
+  const where = safeIds ? `&owner_id=in.(${safeIds.join(',')})` : '';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_SHARE_TABLE}?select=${CARD_SHARE_COLS}&active=eq.true${where}&order=${order}&limit=${Math.max(1, Math.min(60, limit))}`, {
+      headers: SB_HEADERS
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareUnavailable = true;
+      return [];
+    }
+    const rows = JSON.parse(text);
+    return (Array.isArray(rows) ? rows : []).map(cardShareRow).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+};
+const cardSharePickSome = (list, selfId, n = 3, rand = Math.random) => {
+  const pool = (Array.isArray(list) ? list : []).filter(e => e && e.ownerId !== selfId);
+  const weighted = pool.map(e => ({
+    e,
+    w: rand() / (1 + Math.min(50, e.battles) / 10)
+  })).sort((a, b) => b.w - a.w);
+  return weighted.slice(0, n).map(x => x.e);
+};
+const cardShareReportUse = async ({
+  match,
+  ownerId,
+  userId,
+  kind,
+  deckWon = false,
+  version = 1
+}) => {
+  if (typeof match !== 'string' || !/^[A-Za-z0-9_-]{8,64}$/.test(match) || ownerId === userId) return null;
+  return cardShareRpc('card_deck_use', {
+    p_match_id: match,
+    p_owner: ownerId,
+    p_user: userId,
+    p_kind: kind === 'rent' ? 'rent' : 'battle',
+    p_deck_won: !!deckWon,
+    p_version: Number.isInteger(version) ? version : 1
+  });
+};
+const cardShareSameBlood = (db, deck) => {
+  const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map(no => cardMonsterOf(db, no)).filter(Boolean);
+  return ms.length > 0 && ms.filter(m => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
+};
 const CardDeckShare = ({
   db,
   decks,
   collection,
   frame = null,
-  onBack
+  onBack,
+  unlocked = null,
+  debug = false,
+  onFight = null
 }) => {
+  const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
+  const [foes, setFoes] = useState(null);
+  const [level, setLevel] = useState('normal');
   const [selfId, setSelfId] = useState(null);
   const [mine, setMine] = useState(undefined);
   const [off, setOff] = useState(false);
@@ -106750,6 +106914,67 @@ const CardDeckShare = ({
     setBusy(false);
   };
   const chip = on => `rounded-lg px-2 py-1 text-[12px] font-black ${on ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`;
+  const loadFoes = async () => {
+    setFoes(null);
+    const [fresh, popular, roster] = await Promise.all([cardShareFetchList({
+      sort: 'new',
+      limit: 40
+    }), cardShareFetchList({
+      sort: 'popular',
+      limit: 10
+    }), selfId && typeof sbFetchFriendRoster === 'function' ? sbFetchFriendRoster(selfId).catch(() => []) : Promise.resolve([])]);
+    const friendIds = (Array.isArray(roster) ? roster : []).map(f => f && f.otherId).filter(Boolean);
+    const friends = friendIds.length ? await cardShareFetchList({
+      ids: friendIds,
+      limit: 30
+    }) : [];
+    setFoes({
+      picks: cardSharePickSome(fresh, selfId, 3),
+      friends: friends.filter(e => e.ownerId !== selfId),
+      popular: popular.filter(e => e.ownerId !== selfId)
+    });
+  };
+  useEffect(() => {
+    if (tab === 'fight' && selfId && !off && foes === null) void loadFoes();
+  }, [tab, selfId, off]);
+  const levels = CARD_LEVEL_ORDER.filter(lv => debug || cardLevelOpen(unlocked, lv));
+  const fightIssues = issuesOf(list.find(d => d.id === (decks && decks.active)) || list[0] || null);
+  const foeRow = e => React.createElement("li", {
+    key: e.ownerId,
+    "data-card-share-foe": e.ownerId,
+    className: "flex items-center gap-2 rounded-xl bg-black/30 px-2 py-2"
+  }, typeof CardPvpAvatar === 'function' && React.createElement(CardPvpAvatar, {
+    icon: e.icon,
+    frame: e.frame,
+    className: "h-9 w-9"
+  }), React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "block truncate text-[13px] font-black text-white"
+  }, e.name), React.createElement("small", {
+    className: "block truncate text-[11px] font-bold text-slate-300"
+  }, e.tactics.name || 'デッキ', "・", e.deck.monsters.map(no => (cardMonsterOf(db, no) || {}).name || no).join('・')), React.createElement("small", {
+    className: "block text-[10px] font-bold text-sky-200 tabular-nums"
+  }, e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round(e.deckWins / e.battles * 100)}%` : 'まだ戦われていません')), React.createElement("button", {
+    type: "button",
+    "data-card-share-fight": e.ownerId,
+    disabled: !onFight || fightIssues.length > 0,
+    className: "mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      if (onFight) onFight(e, level);
+    }
+  }, "戦う"));
+  const foeList = (title, rows, key) => React.createElement("div", {
+    className: SCREEN_PANEL_CLASS,
+    "data-card-share-list": key
+  }, React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, title), rows.length ? React.createElement("ul", {
+    className: "mt-1 space-y-1"
+  }, rows.map(foeRow)) : React.createElement("p", {
+    className: "mt-1 text-[12px] font-bold text-slate-400"
+  }, key === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません'));
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-share": true,
@@ -106767,7 +106992,46 @@ const CardDeckShare = ({
     "data-card-share-off": true,
     className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')), mine !== undefined && !off && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')), mine !== undefined && !off && onFight && React.createElement("div", {
+    className: "flex gap-1.5",
+    role: "tablist"
+  }, [['fight', '戦う'], ['mine', '自分のデッキを登録']].map(([id, label]) => React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === id,
+    "data-card-share-tab": id,
+    className: `flex-1 ${chip(tab === id)} py-2`,
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTab(id);
+    }
+  }, label))), mine !== undefined && !off && tab === 'fight' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "強さ(読みの深さ。もらえるビートPは助手と対戦と同じ)"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, levels.map(lv => React.createElement("button", {
+    key: lv,
+    type: "button",
+    "data-card-share-level": lv,
+    className: chip(level === lv),
+    onClick: () => setLevel(lv)
+  }, typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase()))), fightIssues.length > 0 && React.createElement("p", {
+    className: "mt-1 text-[12px] font-bold text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`使うデッキ: ${fightIssues[0]}`))), foes === null ? React.createElement("p", {
+    className: "text-[13px] font-bold text-slate-300"
+  }, "読み込み中…") : React.createElement(React.Fragment, null, foeList('おすすめ', foes.picks, 'picks'), React.createElement("button", {
+    type: "button",
+    "data-card-share-reload": true,
+    className: "w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void loadFoes();
+    }
+  }, "ほかの人をさがす"), foeList('フレンドのデッキ', foes.friends, 'friends'), foeList('よく戦われているデッキ', foes.popular, 'popular'))), mine !== undefined && !off && tab === 'mine' && React.createElement(React.Fragment, null, React.createElement("div", {
     "data-card-share-mine": true,
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
@@ -106861,7 +107125,7 @@ const CardDeckShare = ({
     "data-card-share-msg": true,
     className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
     style: JA_WRAP_STYLE
-  }, jaWrap(msg)))), mine !== undefined && !off && React.createElement("div", {
+  }, jaWrap(msg)))), mine !== undefined && !off && tab === 'mine' && React.createElement("div", {
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("button", {
     type: "button",
