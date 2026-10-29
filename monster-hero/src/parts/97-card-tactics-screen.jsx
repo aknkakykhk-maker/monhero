@@ -32,16 +32,16 @@ const CardTacticFace = ({ card, owned = true, count = 0, onClick = null, small =
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag type={onClick ? 'button' : undefined} data-card-tactic={card.id} data-card-tactic-owned={owned ? '1' : '0'} onClick={onClick || undefined}
-      className={`relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[78px]' : 'min-h-[106px]'} ${onClick ? 'active:scale-[.97]' : ''}`}
+      className={`relative flex flex-col rounded-xl border-2 p-1.5 text-left ${owned ? 'border-white/60' : 'border-white/15 opacity-40 grayscale'} ${small ? 'min-h-[86px]' : 'min-h-[106px]'} ${onClick ? 'active:scale-[.97]' : ''}`}
       style={{ background: st.bg }}>
       <span className="flex items-center gap-1">
-        <span className="rounded px-1 text-[10px] font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
-        {!small && <span className="whitespace-nowrap text-[10px] font-bold text-white/70">{st.label}</span>}
+        <span className="rounded px-1 text-[11px] font-black text-white" style={{ background: CARD_TACTIC_RARE_COLOR[card.r] }}>{card.r}</span>
+        {!small && <span className="whitespace-nowrap text-[11px] font-bold text-white/80">{st.label}</span>}
         {count > 1 && <span className="ml-auto text-[10px] font-black text-amber-200">×{count}</span>}
         {mark && <span className="ml-auto rounded bg-emerald-500 px-1 text-[10px] font-black text-white">{mark}</span>}
       </span>
-      <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[11px]' : 'text-[13px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
-      {!small && <small className="mt-0.5 block text-[10px] leading-snug text-white/80" style={JA_WRAP_STYLE}>{card.desc}</small>}
+      <b className={`mt-1 block font-black leading-tight text-white ${small ? 'text-[12.5px]' : 'text-[14px]'}`} style={JA_WRAP_STYLE}>{card.name}</b>
+      {!small && <small className="mt-0.5 block text-[11.5px] font-bold leading-snug text-white/90" style={JA_WRAP_STYLE}>{card.desc}</small>}
     </Tag>
   );
 };
@@ -178,8 +178,8 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
               return (
                 <button key={i} type="button" data-card-tactic-open-card={i} data-card-tactic-open-flipped={open ? '1' : '0'} onClick={() => flip(i)} className="relative">
                   {open && card ? <CardTacticFace card={card} small mark={c.dup ? '' : 'NEW'}/> : (
-                    <span className={`flex min-h-[78px] items-center justify-center rounded-xl border-2 border-white/50 text-[22px] ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`}
-                      style={{ background: 'linear-gradient(160deg,#334155,#0f172a)' }}>🧠</span>
+                    <span data-card-tactic-back className={`block h-[86px] overflow-hidden rounded-xl border-2 border-white/50 bg-slate-900 ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`}>
+                      <img src={CARD_BACK_IMG()} alt="" draggable={false} className="h-full w-full object-cover"/></span>
                   )}
                   {open && c.dup && <span className="absolute bottom-0.5 right-0.5 rounded bg-slate-900/80 px-1 text-[9px] font-black text-amber-200">かけら+1</span>}
                 </button>
@@ -206,10 +206,11 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
 // ---- 戦術カードの画面 ----
 // onPay(cost, entries) … ビートPを払って entries(戦術カードの保存)を1つの取引で書く(84 の persist)。成功なら true
 // share … デッキ登録の「登録」タブに出す 95 の CardDeckShare の props(collection・frame・unlocked・debug)。あれば題は「デッキ登録」(2026-10-29 社長の作り直し)
-const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }) => {
+// listOnly … 持っている戦術カードの一覧だけ(98 のデッキ登録の右上から。引くのはマーケット・2026-10-29 社長)
+const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, listOnly = false }) => {
   const [data, setData] = useState(null);   // cardTacticsLoad の中身
-  const [tab, setTab] = useState(share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
-  const screenTitle = share ? 'デッキ登録' : '戦術カード';
+  const [tab, setTab] = useState(listOnly ? 'list' : share ? 'register' : 'build');   // register(デッキ登録だけ) / build / pull / list
+  const screenTitle = listOnly ? '持っている戦術カード' : share ? 'デッキ登録' : '戦術カード';
   const [frame, setFrame] = useState('base'); // base / breeder / 0 / 1 / 2
   const [pick, setPick] = useState(null);     // { cat, title, onPick, allowNone }
   const [opening, setOpening] = useState(null);
@@ -289,7 +290,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
           {nextF && <p className="mt-1 text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{`次は Lv${nextF.at} で${[nextF.base ? `基本${nextF.base}枚目` : '', nextF.breeder ? `ブリーダーに${nextF.breeder}枚目` : '', nextF.mon ? `各モンスターに${nextF.mon}枚目` : ''].filter(Boolean).join('・')}が開く`}</p>}
         </div>
         <div className="flex gap-1">
-          {[...(share ? [['register', '登録']] : []), ['build', '組む'], ['pull', '引く'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
+          {!listOnly && [...(share ? [['register', '登録']] : []), ['build', '組む'], ['list', `持っている ${ownCount}/${CARD_TACTIC_CARDS.length}`]].map(([k, l]) => (
             <button key={k} type="button" data-card-tactics-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }}
               className={`flex-1 rounded-xl border-2 py-1.5 text-[12px] font-black ${tab === k ? 'border-amber-300 bg-amber-900/50 text-amber-100' : 'border-slate-700 bg-slate-900 text-slate-300'}`}>{l}</button>
           ))}
@@ -396,4 +397,59 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
 const CARD_FRAME_MAX_TEXT = (kind, n) => {
   const nx = CARD_LEVEL_FRAMES.find((x) => (kind === 'breeder' ? x.breeder : x.mon) > n);
   return nx ? `${(kind === 'breeder' ? nx.breeder : nx.mon)}枚目は Lv${nx.at} で開く` : '';
+};
+
+// ==================== マーケットの「戦術カード」(2026-10-29 社長「戦術カードはマーケットで買えるようにして」) ====================
+// 55 の MFバトルカードの売り場のタブ。1回300ビートPで8枚・5回まとめて1,350・引く券・かけらで1枚。開け方は 87 のパックと同じ(CardTacticPackOpen)
+// onBuy(count, payWith) / onExchange(id) … 60-app の buyTacticsPacks / exchangeTacticsShard(ビートPと持ち物を1つの取引で書く)
+const CardTacticsShop = ({ point = 0, busy = false, onBuy, onExchange }) => {
+  const [t, setT] = useState(null);
+  const [opening, setOpening] = useState(null);
+  const [picking, setPicking] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { void cardTacticsLoad().then((d) => setT(d.tactics)); }, []);
+  if (!t) return <p className="text-[13px] font-bold text-slate-300">読み込み中…</p>;
+  const buy = async (count, payWith) => {
+    if (busy || !onBuy) return;
+    setMsg('');
+    const r = await onBuy(count, payWith);
+    if (r && r.ok) { setT(r.tactics); setOpening(r.packs); return; }
+    setMsg(r && r.reason === 'tickets' ? '引く券が足りません' : r && r.reason === 'points' ? 'ビートPが足りません' : '保存できませんでした。ビートPは変わっていません');
+  };
+  const exchange = async (id) => {
+    setPicking(false);
+    const r = onExchange ? await onExchange(id) : null;
+    if (r && r.ok) { setT(r.tactics); setOpening([[{ id, r: (cardTacticOf(id) || {}).r || 'N', dup: false }]]); } else setMsg('かけらが足りません');
+  };
+  const owned = CARD_TACTIC_CARDS.filter((c) => cardTacticsOwns(t, c.id)).length;
+  return (
+    <div data-card-tactics-shop className="space-y-2 pb-2">
+      <div className="rounded-2xl border-2 border-amber-500/60 bg-gradient-to-br from-orange-900 via-amber-800 to-indigo-950 p-3">
+        <div className="flex items-center gap-3">
+          <span className="text-[44px] leading-none">🧠</span>
+          <span className="min-w-0 flex-1"><b className="block text-[17px] font-black text-white">戦術カードパック</b>
+            <small className="block text-[11px] font-bold text-amber-100" style={JA_WRAP_STYLE}>1パック8枚。デッキ登録で、登録したデッキの戦い方に使います</small></span>
+        </div>
+        <div className="mt-2 text-[11px] font-bold leading-relaxed text-amber-50" style={JA_WRAP_STYLE}>
+          N 70%・R 25%・SR 5%。SR が出ないまま7パック開けると、8パック目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚えらべます。
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"><span>{`持っている ${owned}/${CARD_TACTIC_CARDS.length}`}</span><span data-card-tactics-tickets>{`引く券 ${t.tickets}枚`}</span><span data-card-tactics-shards>{`かけら ${t.shards}個`}</span></div>
+      </div>
+      {msg && <p data-card-tactics-shop-msg className="rounded-xl bg-amber-500/15 p-2 text-[12px] font-bold text-amber-100">{msg}</p>}
+      <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1パック 300ビートP</button>
+      <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { Audio_.fgSe.tap(); void buy(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black text-white disabled:opacity-40">5パック 1,350ビートP(150おトク)</button>
+      <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { Audio_.fgSe.tap(); void buy(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`引く券で1パック(のこり${t.tickets}枚)`}</button>
+      <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40">{`かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`}</button>
+      <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>引く券は、バトルカードのレベルが上がるともらえます。</p>
+      {picking && (
+        <div data-card-tactic-picker="missing" className="fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3">
+          <ScreenHead title="かけら10個で1枚えらぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
+          <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
+            {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); void exchange(c.id); }}/>)}
+          </div>
+        </div>
+      )}
+      {opening && <div className="fixed inset-0 z-[85] flex flex-col bg-slate-950"><CardTacticPackOpen packs={opening} onDone={() => setOpening(null)}/></div>}
+    </div>
+  );
 };

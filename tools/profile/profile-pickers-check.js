@@ -7,7 +7,7 @@
 // 今の状態だと数が増えれば増えるほど分かりにくくなる」「好きなモンスター設定も見やすく」。
 // 見張ること:
 //  ① プロフィール: 名刺・設定タイル(アイコン/フレーム/ひとこと/好きなモンスター)・持ちもの・フレンドとアイテムの入口が並ぶ。
-//     フレンドの入口は、バトル記録より前(開いてすぐ見える)。バトル記録は2列。横にはみ出さない
+//     フレンドの入口は、バトル記録より前(開いてすぐ見える)。バトル記録は1行ずつ(2026-10-29 案B)。横にはみ出さない
 //  ② アイコン選択: いまの選択が上に固定され、名前で探せて、「はじめから/購入ずみ」で絞れて、一覧だけスクロールする。選ぶと保存して閉じる
 //  ③ フレーム選択: 全フレームが並び(検査が前提にしている data 属性・「閉じる」も保つ)、色の枠と助手の枠が見出しで分かれ、
 //     鍵の説明が一覧の下に出て(スクロールしなくても見える)、選ぶと保存される
@@ -86,8 +86,9 @@ const serve = () => new Promise(resolve => {
       const q = (s) => document.querySelector(s);
       const pos = (s) => { const e = q(s); return e ? e.getBoundingClientRect().top : null; };
       const records = q('[data-profile-battle-records]');
-      const grid = records && records.querySelector('.grid');
-      const cols = grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0;
+      // 2026-10-29 案B: モードは1行ずつ(左端が全部そろう=1列)
+      const modeLefts = records ? [...records.querySelectorAll('[data-profile-mode]')].map(b => Math.round(b.getBoundingClientRect().left)) : [];
+      const cols = modeLefts.length ? new Set(modeLefts).size : 0;
       return {
         card: !!q('[data-profile-card]'), tiles: [...document.querySelectorAll('[data-profile-settings] > button')].length,
         icon: !!q('[data-profile-tile=icon]'), frame: !!q('[data-profile-tile=frame]'), message: !!q('[data-profile-message]'), fav: !!q('[data-profile-favorite-masu]'),
@@ -99,7 +100,7 @@ const serve = () => new Promise(resolve => {
     });
     ok('プロフィールに名刺・設定タイル4つ・持ちもの・入口が並ぶ', layout.card && layout.tiles >= 4 && layout.icon && layout.frame && layout.message && layout.fav && layout.stats && layout.links, JSON.stringify(layout));
     ok('フレンドの入口は、開いてすぐ見える位置(画面の中)で、バトル記録より前にある', layout.friends && layout.friendsTop < layout.vh && layout.friendsTop < layout.recordsTop, `${layout.friendsTop} / ${layout.recordsTop} / ${layout.vh}`);
-    ok('バトル記録は2列で並ぶ', layout.cols === 2, `${layout.cols}列`);
+    ok('バトル記録はモードごとに1行ずつ並ぶ(2026-10-29 案B)', layout.cols === 1, `${layout.cols}列`);
     // 2026-10-05 から「フレーム」の見出しの下に名前だけを出す(「フレーム：」の重複をやめ、検査は data-profile-tile で探す)
     ok('フレームのタイルに、いまのフレーム名が出る', /フレーム/.test(layout.frameText) && /フレームなし/.test(layout.frameText), layout.frameText);
     ok('プレイ時間のくわしい記録(今日・遊んだ日・数え始めた日)は残っている', layout.playtime);

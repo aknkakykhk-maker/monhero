@@ -8835,6 +8835,41 @@ function MonsterHeroGame() {
       return { ok:false, reason:'save' };
     } finally { marketPurchaseProcessingRef.current = false; }
   };
+  // 戦術カードのパック(96。2026-10-29 社長「戦術カードはマーケットで買えるようにして」)。1回300ビートPで8枚・5回1,350・引く券・かけらで1枚。
+  //   ビートPと戦術カードの持ち物(mh_card_tactics_v1)を1つの取引で書く(バトルカードのパックと同じく、読み直して確かめてから)
+  const buyTacticsPacks = async (count, payWith = 'point') => {
+    if (marketPurchaseProcessingRef.current || typeof cardTacticsPull !== 'function') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const res = await cardShopTry(() => Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_POINT_STORE_KEY, 0, false)]), ([rawT, rawPoint]) => {
+        const point = cardNormalizePoint(rawPoint);
+        const r = cardTacticsPull(cardNormalizeTactics(rawT), count, { payWith, point }, Math.random);
+        if (!r) return { fail: payWith === 'ticket' ? 'tickets' : 'points' };
+        return { r, point: point - r.cost, entries: [{ key: CARD_TACTICS_KEY, before: rawT, next: r.next }, ...(r.cost ? [{ key: CARD_POINT_STORE_KEY, before: rawPoint, next: point - r.cost }] : [])] };
+      });
+      if (res.fail === 'points') { void loadCardShop(); setMarketExchangeError('ビートPが足りません。'); return { ok:false, reason:'points' }; }
+      if (res.fail === 'tickets') return { ok:false, reason:'tickets' };
+      if (res.fail) { setMarketExchangeError('保存できませんでした。ビートPは変わっていません。'); return { ok:false, reason:'save' }; }
+      setCardShopState((cur) => ({ ...(cur || {}), point: res.point }));
+      setRhythmEventPoints(res.point);
+      return { ok:true, packs: res.r.packs, tactics: res.r.next };
+    } catch {
+      setMarketExchangeError('保存できませんでした。ビートPは変わっていません。');
+      return { ok:false, reason:'save' };
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
+  const exchangeTacticsShard = async (id) => {
+    if (marketPurchaseProcessingRef.current || typeof cardTacticsExchange !== 'function') return { ok:false, reason:'busy' };
+    marketPurchaseProcessingRef.current = true;
+    try {
+      const res = await cardShopTry(() => storeGet(CARD_TACTICS_KEY, null), (rawT) => {
+        const next = cardTacticsExchange(cardNormalizeTactics(rawT), id);
+        return next ? { next, entries: [{ key: CARD_TACTICS_KEY, before: rawT, next }] } : { fail: 'shards' };
+      });
+      return res.fail ? { ok:false, reason:res.fail } : { ok:true, tactics: res.next };
+    } catch { return { ok:false, reason:'save' }; } finally { marketPurchaseProcessingRef.current = false; }
+  };
   // ガチャポイント500でバトルカードカタログ1冊(2026-10-27 社長)。パックと同じく、読み直して確かめてから保存する(押しっぱなし・ほかのタブでも二重にならない)
   const exchangeCardCatalog = async () => {
     if (marketPurchaseProcessingRef.current) return { ok:false, reason:'busy' };
@@ -20916,7 +20951,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
             onOpenUpcomingDetail={setUpcomingMonsterDetail}
-            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog }:null}
+            cardShop={cardMarketEntry&&cardShopState?{ ...cardShopState, busy:false, onBuyPack:buyCardPacks, onBuyStarter:buyCardStarter, onExchange:exchangeCardPoints, onExchangeCatalog:exchangeCardCatalog, onUseCatalog:spendCardCatalog, onBuyTactics:buyTacticsPacks, onExchangeTactics:exchangeTacticsShard }:null}
             initialSection={cardMarketEntry?'card':null}
           />
         )}
