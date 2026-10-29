@@ -118,7 +118,7 @@ const AssistantBondRewardList = ({ who, level, breederIcon, resolveIconUrl, onCl
   );
 };
 function ProfileScreen({
-  onCardShareGo = null, // 自分の登録デッキ(95 の CardShareProfileDeck)の「デッキ登録で直す」→ MFバトルカードへ(60-app)
+  onCardShareGo = null, // 見せる札の「バトルカードのデッキ」(95 の CardShareDeckTile)を押したとき → デッキ登録の画面へ(60-app)
   activeAssistant, assistantBond, assistantBondLevelNow, assistantBonds, assistantCallStyle, attemptCounts,
   breederIcon, breederLevel, breederName, breederPoints, extremeBestScores, extremeClearCounts,
   finishOnboarding, gold, highScores, isEventReplayUnlocked, modeRecordFor, onboarded,
@@ -206,13 +206,10 @@ function ProfileScreen({
               </div>
             </div>
           </div>
-          {/* ② 設定のタイル。入口が散らばらないよう、アイコン・フレーム・ひとこと・好きなモンスターを同じ形でまとめる。
+          {/* ② 着せかえのタイル(アイコン・フレーム・図鑑・着替え)。ひとことと好きなモンスターは、下の「見せる札」へ移した(2026-10-29 案B)。
               増えても、ここへ同じ形で足していく */}
           {(()=>{
             const frameName=(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし';
-            const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
-            const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
-            const showFriendTiles=onboarded&&!onboardingPreview&&friendsEnabled;
             // 幅360未満は、余白と絵を詰めて値の字を1段小さくし、「書いていません」「えらびなおす」が言葉の途中で折れずに入るようにする(2026-10-21)
             const tile='flex min-h-[56px] items-center gap-2 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-left active:scale-95 max-[359px]:gap-1.5 max-[359px]:px-2';
             return (
@@ -240,21 +237,33 @@ function ProfileScreen({
                   <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
                 </button>
               )}
-              {showFriendTiles&&(
-                <button type="button" data-profile-message onClick={onOpenMessageEditor} className={tile}>
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💬</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{profileMessage||<>まだ<wbr/>書いていません</>}</b></span>
-                </button>
-              )}
-              {showFriendTiles&&(
-                <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className={tile}>
-                  {face?<ProfileAvatar src={face.src} id={face.id} className="h-8 w-8 shrink-0 max-[359px]:h-6 max-[359px]:w-6"/>:<span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">💗</span>}
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:<>まだ<wbr/>選んでいません</>}</b></span>
-                </button>
-              )}
             </div>);
           })()}
         </div>
+        {/* ①-2 見せる札(2026-10-29 社長が案Bを選んだ)。フレンドにも同じ形で見える物を、名刺のすぐ下に並べる。
+            ひとことは名刺の下の1行、好きなモンスターとバトルカードのデッキは同じ形の札で横に2枚(デッキの札は 95 の CardShareDeckTile) */}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
+          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
+          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
+          return (
+          <section className="mb-3" data-profile-showcase>
+            <button type="button" data-profile-message onClick={onOpenMessageEditor} className="mb-2 flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-pink-400/30 bg-black/30 px-3 py-2 text-left active:scale-[.98]">
+              <span className="text-lg" aria-hidden="true">💬</span>
+              <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[12px] font-black leading-snug text-white" style={JA_LABEL_STYLE}>{profileMessage?`「${profileMessage}」`:<>まだ<wbr/>書いていません</>}</b></span>
+              <Edit3 size={13} className="shrink-0 text-slate-400"/>
+            </button>
+            <div className="mb-1"><ScreenSectionLabel>見せる札（フレンドにもこう見えます）</ScreenSectionLabel></div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]">
+                <small className="text-[10px] font-black text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small>
+                {face?<ProfileAvatar src={face.src} id={face.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
+                <b className="block w-full break-words text-[13px] font-black leading-tight text-white">{base?base.name:<>まだ<wbr/>選んでいません</>}</b>
+                {base&&<small className="text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(favoriteMasu).level}</small>}
+              </button>
+              {typeof CardShareDeckTile==='function'&&<CardShareDeckTile mode="self" onOpen={()=>{ if(typeof onCardShareGo==='function') onCardShareGo({ kind:'register' }); }}/>}
+            </div>
+          </section>);
+        })()}
         {/* ③ 持ちもの。ダイヤ・ブリーダーP・プレイ時間を1行に。プレイ時間は下の「くわしい記録」を開くと、今日・遊んだ日・いちばん長かった日・数え始めた日が出る
             (これまで数えていなかったので、既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
         <div className="mb-3 grid grid-cols-3 gap-2" data-profile-stats>
@@ -421,12 +430,13 @@ function ProfileScreen({
             const best=highestModeScore(scores,ids);
             return best>0?`最高スコア ${best.toLocaleString()} pt`:'未記録';
           };
-          return <>{typeof CardShareProfileDeck === 'function' && <CardShareProfileDeck self onGo={onCardShareGo}/>}<section className="mb-4" data-profile-battle-records>
+          return <><section className="mb-4" data-profile-battle-records>
             <ScreenSectionLabel>バトル記録</ScreenSectionLabel>
             <ScreenLead>モードをタップすると詳しい記録を確認できます</ScreenLead>
             {!selected?(
-              <div className="grid grid-cols-2 gap-2">
-                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className={`w-full min-h-[72px] rounded-2xl border bg-slate-900/70 px-2.5 py-2.5 text-left active:scale-[.98] ${species?'col-span-2':''}`} style={{borderColor:`${mode.color}66`}}>
+              <div className="flex flex-col gap-1.5">
+                {/* 1モード1行(2026-10-29 案B)。押すと今までどおり詳しい記録が開く */}
+                {modes.map(mode=>{const species=isSpeciesChallengeMode(mode.id);return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?onOpenSpeciesRecords(mode.id):onSelectBattleMode(mode.id)} className="w-full min-h-[52px] rounded-xl border bg-slate-900/70 px-2.5 py-2 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
                   <span className="flex items-center gap-1.5"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block whitespace-nowrap text-[12px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[10px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[10px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span></span>
                 </button>})}
               </div>
