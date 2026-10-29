@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f0890443a2532d3
+// source-sha256: aa430aa7f205942f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -111285,127 +111285,6 @@ const cardShareIntentTake = () => {
   const v = _cardShareIntent;
   _cardShareIntent = null;
   return v;
-};
-const CardShareProfileDeck = ({
-  ownerId,
-  self = false,
-  onGo = null
-}) => {
-  const [entry, setEntry] = useState(undefined);
-  const [open, setOpen] = useState(false);
-  const [msg, setMsg] = useState('');
-  const visible = cardShareVisible();
-  useEffect(() => {
-    if (!visible) {
-      setEntry(null);
-      return undefined;
-    }
-    let alive = true;
-    void (async () => {
-      const id = typeof ownerId === 'string' && ownerId ? ownerId : self && typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
-      if (typeof id !== 'string' || !id) {
-        if (alive) setEntry(null);
-        return;
-      }
-      const r = await cardShareFetchMine(id).catch(() => null);
-      if (alive) setEntry(r || null);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [ownerId, visible]);
-  if (!visible || !entry) return null;
-  const db = typeof CARD_BATTLE_DATA !== 'undefined' ? CARD_BATTLE_DATA : null;
-  const t = cardShareNormalizeTactics(entry.tactics);
-  const f = t.f ? cardTacticUnpackFrames(t.f) : null;
-  const rowText = r => `${(cardTacticOf(r.c) || {}).name || '?'} ▶ ${(cardTacticOf(r.a) || {}).name || '?'}${r.on ? '' : '(休み)'}`;
-  const monName = i => (db && cardMonsterOf(db, entry.deck.monsters[i]) || {}).name || ['左の子', '真ん中の子', '右の子'][i];
-  const rent = async () => {
-    if (typeof cardRentedDeckSet !== 'function') return;
-    setMsg((await cardRentedDeckSet(entry)) ? 'このデッキを借りました。フリー対戦の前のデッキ選びで使えます' : 'この端末に保存できなかったため、借りられませんでした');
-  };
-  return React.createElement("section", {
-    "data-profile-card-deck": self ? 'self' : 'friend',
-    className: "mb-4 rounded-2xl border border-amber-300/50 bg-slate-900/80 p-3"
-  }, React.createElement("div", {
-    className: "text-[12px] font-black text-amber-200"
-  }, "🃏 MFバトルカードの登録デッキ"), React.createElement("div", {
-    className: "mt-2 flex items-center gap-2"
-  }, React.createElement("span", {
-    className: "flex shrink-0 gap-0.5"
-  }, [0, 1, 2].map(i => {
-    const m = db && cardMonsterOf(db, entry.deck.monsters[i]);
-    return m ? React.createElement("img", {
-      key: i,
-      src: CARD_IMG(m.img),
-      alt: m.name,
-      className: "h-[52px] w-[37px] rounded-[4px] object-cover"
-    }) : React.createElement("span", {
-      key: i,
-      className: "block h-[52px] w-[37px] rounded-[4px] bg-slate-700"
-    });
-  })), React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("b", {
-    className: "block truncate text-[14px] font-black text-white"
-  }, t.name || 'デッキ'), React.createElement("small", {
-    className: "block text-[11px] font-black text-amber-200"
-  }, `賢さ ${cardShareSmartText(t)}`), React.createElement("small", {
-    className: "block text-[11px] font-bold text-sky-100 tabular-nums"
-  }, entry.battles ? `戦われた ${entry.battles}回・デッキの勝ち ${Math.round(entry.deckWins / entry.battles * 100)}%` : 'まだ戦われていません'))), f && React.createElement("div", {
-    className: "mt-2 text-[12px] font-bold leading-relaxed text-slate-200",
-    style: JA_WRAP_STYLE
-  }, React.createElement("div", null, `基本カード: ${f.base.filter(Boolean).map(id => (cardTacticOf(id) || {}).name).join('・') || 'なし'}`), React.createElement("div", null, `セットした戦術カード: ${cardShareRowsCount(f)}枚`), t.aces.length > 0 && React.createElement("div", null, `切り札: ${t.aces.map(no => (db && cardOf(db, no) || {}).name || no).join('・')}`), React.createElement("button", {
-    type: "button",
-    "data-profile-card-deck-rows": true,
-    onClick: () => setOpen(x => !x),
-    className: "mt-1 text-[11px] font-black text-slate-300"
-  }, open ? '▲ セットした戦術カードをとじる' : '▼ セットした戦術カードを見る'), open && React.createElement("div", {
-    className: "mt-1 space-y-1 rounded-lg bg-black/30 p-2 text-[11px]"
-  }, [...f.mons.map((rows, i) => [monName(i), rows]), ['ブリーダー', f.breeder]].map(([label, rows]) => React.createElement("div", {
-    key: label
-  }, React.createElement("b", {
-    className: "text-amber-100"
-  }, label), rows.length ? rows.map((r, j) => React.createElement("div", {
-    key: j
-  }, `${j + 1}. ${rowText(r)}`)) : React.createElement("div", {
-    className: "text-slate-400"
-  }, "(なし)"))))), msg && React.createElement("p", {
-    "data-profile-card-deck-msg": true,
-    className: "mt-2 rounded-lg bg-slate-950 p-1.5 text-[12px] font-bold text-amber-100",
-    style: JA_WRAP_STYLE
-  }, msg), React.createElement("div", {
-    className: "mt-2 flex gap-2"
-  }, self ? onGo && React.createElement("button", {
-    type: "button",
-    "data-profile-card-deck-edit": true,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      onGo({
-        kind: 'register'
-      });
-    },
-    className: "mh-button mh-button-primary min-h-[40px] flex-1 rounded-xl text-[13px] font-black"
-  }, "デッキ登録で直す") : React.createElement(React.Fragment, null, onGo && React.createElement("button", {
-    type: "button",
-    "data-profile-card-deck-fight": true,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      onGo({
-        kind: 'fight',
-        entry
-      });
-    },
-    className: "mh-button mh-button-primary min-h-[40px] flex-1 rounded-xl text-[13px] font-black"
-  }, "このデッキと戦う"), React.createElement("button", {
-    type: "button",
-    "data-profile-card-deck-rent": true,
-    onClick: () => {
-      Audio_.fgSe.tap();
-      void rent();
-    },
-    className: "min-h-[40px] flex-1 rounded-xl border border-emerald-300/60 bg-slate-950 text-[13px] font-black text-emerald-200"
-  }, "借りる"))));
 };
 const useCardShareEntry = (breederId, self = false) => {
   const [state, setState] = useState({
