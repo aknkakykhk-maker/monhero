@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad178c0821c27dd1
+// source-sha256: 4916421270c2bbd7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57051,6 +57051,11 @@ function BreederMarketScreen({
       busy: busy || cardShop.busy,
       onExchangeCatalog: cardShop.onExchangeCatalog,
       onUseCatalog: cardShop.onUseCatalog
+    }) : tab === 'tactics' && typeof CardTacticsBand === 'function' ? React.createElement(CardTacticsBand, {
+      point: cp,
+      busy: busy || cardShop.busy,
+      onBuy: cardShop.onBuyTactics,
+      onExchange: cardShop.onExchangeTactics
     }) : React.createElement(MarketBalanceBar, {
       balances: [{
         currency: 'cardPoint',
@@ -57069,8 +57074,7 @@ function BreederMarketScreen({
     }), tab === 'tactics' && typeof CardTacticsShop === 'function' && React.createElement(CardTacticsShop, {
       point: cp,
       busy: busy || cardShop.busy,
-      onBuy: cardShop.onBuyTactics,
-      onExchange: cardShop.onExchangeTactics
+      onBuy: cardShop.onBuyTactics
     }), tab === 'starter' && React.createElement(CardShopStarters, {
       db: CARD_BATTLE_DATA,
       point: cp,
@@ -112819,6 +112823,116 @@ const cardTacticAutoFill = (t, rows, cat, max) => {
   });
   return out;
 };
+const CARD_TACTIC_PACK_COLOR = '#0f766e';
+const CardTacticPackArt = ({
+  width = 200,
+  torn = false,
+  className = ''
+}) => {
+  const h = Math.round(width * 1.48);
+  return React.createElement("div", {
+    "data-card-tactic-pack-art": true,
+    className: `relative overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${className}`,
+    style: {
+      width,
+      height: h,
+      background: `linear-gradient(165deg, ${CARD_TACTIC_PACK_COLOR} 0%, #7c3aed 42%, #0b1020 100%)`
+    }
+  }, React.createElement("div", {
+    "aria-hidden": "true",
+    className: "absolute inset-0 opacity-35",
+    style: {
+      background: 'repeating-conic-gradient(from 0deg at 50% 62%, rgba(255,255,255,.55) 0 6deg, transparent 6deg 18deg)'
+    }
+  }), React.createElement("div", {
+    "aria-hidden": "true",
+    className: "absolute inset-0",
+    style: {
+      background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,.28) 45%, transparent 60%)'
+    }
+  }), !torn && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "absolute inset-x-0 top-0 h-[7%]",
+    style: {
+      background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)'
+    }
+  }), [[-16, '-30%', 1], [16, '30%', 1], [0, '0%', 2]].map(([deg, dx, z], k) => React.createElement("img", {
+    key: k,
+    src: CARD_BACK_IMG(),
+    alt: "",
+    "aria-hidden": "true",
+    draggable: false,
+    className: "absolute rounded-[6%] border-2 border-white/80 object-cover drop-shadow-[0_6px_8px_rgba(0,0,0,.6)]",
+    style: {
+      width: '46%',
+      aspectRatio: '5 / 7',
+      left: '50%',
+      bottom: '13%',
+      zIndex: z,
+      transform: `translateX(calc(-50% + ${dx})) rotate(${deg}deg)`,
+      transformOrigin: '50% 100%'
+    }
+  })), React.createElement("div", {
+    className: "absolute inset-x-0 top-[9%] z-[5] text-center"
+  }, React.createElement("div", {
+    className: "font-black leading-none text-white",
+    style: {
+      fontSize: Math.round(width * 0.2),
+      WebkitTextStroke: `${Math.max(2, Math.round(width / 50))}px #111`,
+      paintOrder: 'stroke fill',
+      textShadow: '0 4px 0 rgba(0,0,0,.45)'
+    }
+  }, "戦術"), React.createElement("div", {
+    className: "mt-1 font-black tracking-wider text-white/90",
+    style: {
+      fontSize: Math.round(width * 0.075),
+      textShadow: '0 2px 2px rgba(0,0,0,.7)'
+    }
+  }, "MFバトルカード")), React.createElement("div", {
+    className: "absolute inset-x-[12%] bottom-[3%] z-[6] rounded-full bg-black/55 py-0.5 text-center font-black text-white",
+    style: {
+      fontSize: Math.round(width * 0.07)
+    }
+  }, "戦術カードパック"));
+};
+const CardTacticFront = ({
+  card,
+  big = false
+}) => {
+  const st = CARD_TACTIC_CAT_STYLE[card.cat] || CARD_TACTIC_CAT_STYLE.cond;
+  return React.createElement("div", {
+    className: "flex h-full w-full flex-col rounded-[5px] border-2 border-white/70 p-[6%] text-left",
+    style: {
+      background: st.bg,
+      containerType: 'inline-size'
+    }
+  }, React.createElement("span", {
+    className: "flex items-center gap-1"
+  }, React.createElement("span", {
+    className: "rounded px-1 font-black text-white",
+    style: {
+      background: CARD_TACTIC_RARE_COLOR[card.r],
+      fontSize: big ? 14 : 'max(9px, 9cqw)'
+    }
+  }, card.r), React.createElement("span", {
+    className: "truncate font-bold text-white/80",
+    style: {
+      fontSize: big ? 13 : 'max(8px, 8cqw)'
+    }
+  }, st.label)), React.createElement("b", {
+    className: "mt-[6%] block font-black leading-tight text-white",
+    style: {
+      fontSize: big ? 22 : 'max(11px, 13cqw)',
+      ...JA_WRAP_STYLE
+    }
+  }, card.name), React.createElement("small", {
+    className: "mt-auto block font-bold leading-snug text-white/90",
+    style: {
+      fontSize: big ? 14 : 'max(8px, 9cqw)',
+      ...JA_WRAP_STYLE
+    }
+  }, card.desc));
+};
 const CARD_TACTIC_TEAR_MS = 1150;
 const CARD_TACTIC_SPOT_MS = 1500;
 const CARD_TACTIC_SPOT_BACK_MS = 320;
@@ -112830,8 +112944,24 @@ const CardTacticPackOpen = ({
   const [phase, setPhase] = useState('closed');
   const [flipped, setFlipped] = useState([]);
   const [spot, setSpot] = useState(null);
+  const [flash, setFlash] = useState(0);
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const listRef = useRef(null);
+  const [listH, setListH] = useState(0);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return undefined;
+    const on = () => setListH(el.clientHeight);
+    on();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(on) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', on);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', on);
+    };
+  }, []);
   const later = (fn, ms) => {
     timers.current.push(setTimeout(fn, ms));
   };
@@ -112862,6 +112992,7 @@ const CardTacticPackOpen = ({
     setFlipped(f => f.includes(i) ? f : [...f, i]);
     if (cards[i] && cards[i].r === 'SR') {
       later(() => {
+        setFlash(n => n + 1);
         setSpot({
           i,
           leaving: false
@@ -112893,114 +113024,153 @@ const CardTacticPackOpen = ({
     setFlipped([]);
     setSpot(null);
   };
+  const cols = !(typeof window !== 'undefined' && window.innerHeight >= 760) ? 4 : 3;
+  const rows = Math.ceil(cards.length / cols);
+  const gridMaxW = listH > 0 ? Math.max(200, Math.floor(((listH - 52) / rows - 24) * 5 / 7 * cols + 8 * (cols - 1) + 8)) : null;
+  const spotW = `min(62vw, 260px, ${Math.max(140, Math.floor(((typeof window !== 'undefined' ? window.innerHeight : 844) - 120) * 5 / 7))}px)`;
   const spotCard = spot ? cardTacticOf(cards[spot.i].id) : null;
+  const shards = cards.filter(c => c.dup).length;
   return React.createElement("div", {
     "data-mh-screen": true,
     "data-card-tactic-open": true,
     "data-card-tactic-open-phase": phase,
     className: SCREEN_SHELL_CLASS
   }, React.createElement(ScreenHead, {
-    title: "戦術カード",
+    title: "戦術カードパック",
     accent: "text-amber-200",
-    note: packs.length > 1 ? `${pi + 1} / ${packs.length}回` : ''
+    note: packs.length > 1 ? `${pi + 1} / ${packs.length}パック` : ''
   }), React.createElement("div", {
+    ref: listRef,
     className: `${SCREEN_LIST_CLASS} relative flex flex-col items-center justify-center overflow-hidden pb-2`
   }, phase !== 'open' ? React.createElement("button", {
     type: "button",
     "data-card-tactic-pack": true,
     onClick: tear,
-    "aria-label": "パックを開ける",
-    className: `relative h-[320px] w-[216px] overflow-hidden rounded-[14px] border-[3px] border-white/85 shadow-2xl ${phase === 'tearing' ? 'animate-pulse' : ''}`,
-    style: {
-      background: 'linear-gradient(165deg,#7c2d12 0%,#b45309 45%,#1e1b4b 100%)'
-    }
-  }, React.createElement("span", {
+    className: `relative ${phase === 'closed' ? 'mh-pack-idle' : 'mh-pack-shake'}`,
+    "aria-label": "パックを開ける"
+  }, React.createElement("div", {
+    className: phase === 'tearing' ? 'mh-pack-drop' : ''
+  }, React.createElement(CardTacticPackArt, {
+    width: 210,
+    torn: phase === 'tearing'
+  })), phase === 'tearing' && React.createElement("div", {
     "aria-hidden": "true",
-    className: "absolute inset-0 opacity-35",
+    className: "mh-pack-strip absolute inset-x-0 top-0 h-[7%] rounded-t-[14px]",
     style: {
-      background: 'repeating-conic-gradient(from 0deg at 50% 62%, rgba(255,255,255,.55) 0 6deg, transparent 6deg 18deg)'
+      background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.95) 0 6px, rgba(255,255,255,.5) 6px 12px)'
     }
+  }), phase === 'tearing' && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-pillar"
+  }), phase === 'tearing' && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-burst"
   }), phase === 'closed' && React.createElement("span", {
-    "aria-hidden": "true",
-    className: "absolute inset-x-0 top-0 h-[7%]",
-    style: {
-      background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.45) 6px 12px)'
-    }
-  }), phase === 'tearing' && React.createElement("span", {
-    "aria-hidden": "true",
-    className: "absolute inset-x-[30%] -top-4 bottom-0 bg-gradient-to-b from-white via-amber-100/80 to-transparent blur-md"
-  }), React.createElement("span", {
-    className: "absolute inset-x-0 top-[18%] block text-center text-[40px] font-black leading-none text-white",
-    style: {
-      WebkitTextStroke: '3px #111',
-      paintOrder: 'stroke fill'
-    }
-  }, "戦術"), React.createElement("span", {
-    className: "absolute inset-x-0 top-[34%] block text-center text-[15px] font-black tracking-wider text-white/90"
-  }, "MFバトルカード"), React.createElement("span", {
-    className: "absolute inset-x-0 top-[48%] block text-center text-[52px]"
-  }, "🧠"), React.createElement("span", {
-    className: "absolute inset-x-[18%] bottom-[3%] rounded-full bg-black/55 py-0.5 text-center text-[14px] font-black text-white"
-  }, "戦術カード 8枚"), phase === 'closed' && React.createElement("span", {
-    className: "absolute inset-x-0 bottom-[14%] block text-center text-[12px] font-black text-amber-100"
+    className: "absolute inset-x-0 -bottom-9 animate-pulse text-center text-[14px] font-black text-white"
   }, "タップで開ける")) : React.createElement("div", {
-    className: "grid w-full max-w-[420px] grid-cols-4 gap-1.5 px-1"
+    "data-card-tactic-open-grid": true,
+    className: `grid w-full gap-2 ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'} px-1`,
+    style: gridMaxW ? {
+      maxWidth: gridMaxW
+    } : undefined
   }, cards.map((c, i) => {
     const card = cardTacticOf(c.id);
-    const open = flipped.includes(i);
-    return React.createElement("button", {
-      key: i,
+    const on = flipped.includes(i);
+    const sr = c.r === 'SR';
+    return React.createElement("div", {
+      key: `${pi}-${i}`,
+      className: "mh-pack-deal flex flex-col items-center",
+      style: {
+        animationDelay: `${i * 70}ms`
+      }
+    }, React.createElement("button", {
       type: "button",
       "data-card-tactic-open-card": i,
-      "data-card-tactic-open-flipped": open ? '1' : '0',
+      "data-card-tactic-open-flipped": on ? '1' : '0',
       onClick: () => flip(i),
-      className: "relative"
-    }, open && card ? React.createElement(CardTacticFace, {
-      card: card,
-      small: true,
-      mark: c.dup ? '' : 'NEW'
-    }) : React.createElement("span", {
+      className: "mh-pack-card relative w-full active:scale-95"
+    }, React.createElement("div", {
+      className: `mh-pack-card-in aspect-[5/7] w-full ${on ? 'flipped' : ''}`
+    }, React.createElement("div", {
       "data-card-tactic-back": true,
-      className: `block h-[86px] overflow-hidden rounded-xl border-2 border-white/50 bg-slate-900 ${c.r === 'SR' ? 'animate-pulse shadow-[0_0_14px_#f59e0b]' : ''}`
+      className: `mh-pack-face flex items-center justify-center overflow-hidden rounded-[5px] ${sr && !on ? 'mh-pack-kira-back' : ''}`
     }, React.createElement("img", {
       src: CARD_BACK_IMG(),
       alt: "",
       draggable: false,
-      className: "h-full w-full object-cover"
-    })), open && c.dup && React.createElement("span", {
-      className: "absolute bottom-0.5 right-0.5 rounded bg-slate-900/80 px-1 text-[9px] font-black text-amber-200"
-    }, "かけら+1"));
-  })), spotCard && React.createElement("button", {
+      className: "absolute inset-0 h-full w-full rounded-[5px] object-cover"
+    })), React.createElement("div", {
+      className: `mh-pack-face mh-pack-front ${sr ? 'mh-pack-kira-front' : ''}`
+    }, card && React.createElement(CardTacticFront, {
+      card: card
+    }))), on && sr && React.createElement("div", {
+      "aria-hidden": "true",
+      className: "mh-pack-rays"
+    }), on && React.createElement("span", {
+      className: "absolute inset-x-0.5 top-0.5 z-[2] flex flex-wrap items-start justify-end gap-0.5"
+    }, c.dup ? React.createElement("span", {
+      className: "rounded-md bg-slate-950/90 px-1 text-[9px] font-black text-amber-200"
+    }, "かけら+1") : React.createElement("span", {
+      className: "rounded-md bg-emerald-400 px-1 text-[9px] font-black text-slate-950"
+    }, "NEW"))), React.createElement(CardNameFit, {
+      name: on && card ? card.name : ' ',
+      className: "mt-0.5 font-bold leading-tight text-slate-100"
+    }));
+  })), phase === 'open' && allOpen && React.createElement("div", {
+    "data-card-tactic-open-summary": true,
+    className: "mt-3 text-center text-[12px] font-bold text-slate-300"
+  }, shards > 0 ? React.createElement(React.Fragment, null, "持っていたカードは ", React.createElement("b", {
+    className: "text-amber-200"
+  }, "かけら +", shards), " になりました(10個でまだ持っていないカードを1枚えらべます)") : 'ぜんぶ新しいカードです')), phase === 'tearing' && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-whiteout"
+  }), flash > 0 && spot && React.createElement("div", {
+    key: flash,
+    "aria-hidden": "true",
+    className: "mh-pack-flash"
+  }), spotCard && React.createElement("button", {
     type: "button",
     "data-card-tactic-spot": true,
+    "aria-label": "並びへ戻す",
     onClick: spotOff,
-    className: `absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 transition-opacity ${spot.leaving ? 'opacity-0' : 'opacity-100'}`
-  }, React.createElement("span", {
-    className: "mb-2 rounded-full bg-amber-500 px-3 py-0.5 text-[16px] font-black text-white"
-  }, "SR!"), React.createElement("span", {
-    className: "w-[200px]"
-  }, React.createElement(CardTacticFace, {
-    card: spotCard
-  })))), React.createElement("div", {
-    className: `${SCREEN_FOOTER_CLASS} flex gap-2`
-  }, phase === 'open' && !allOpen && React.createElement("button", {
+    className: "fixed inset-0 z-[90] flex flex-col items-center justify-center bg-slate-950/70"
+  }, React.createElement("div", {
+    "aria-hidden": "true",
+    className: "mh-pack-spot-rays"
+  }), React.createElement("div", {
+    className: `relative ${spot.leaving ? 'mh-pack-spot-out' : 'mh-pack-spot-in'}`,
+    style: {
+      width: spotW
+    }
+  }, React.createElement("div", {
+    className: "mh-pack-kira-front relative aspect-[5/7] w-full"
+  }, React.createElement(CardTacticFront, {
+    card: spotCard,
+    big: true
+  }))), React.createElement("span", {
+    className: `relative mt-4 rounded-full bg-amber-300 px-4 py-1 text-[18px] font-black text-slate-950 ${spot.leaving ? 'opacity-0' : ''}`
+  }, "SR!")), React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, phase !== 'open' ? React.createElement("div", {
+    className: "text-center text-[12px] font-bold text-slate-400"
+  }, "パックをタップしてください") : !allOpen ? React.createElement("button", {
     type: "button",
     "data-card-tactic-open-all": true,
-    onClick: flipAll,
-    className: "mh-button min-h-[48px] flex-1 rounded-2xl font-black"
-  }, "全部めくる"), phase === 'open' && allOpen && !last && React.createElement("button", {
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    onClick: flipAll
+  }, "全部めくる") : !last ? React.createElement("button", {
     type: "button",
     "data-card-tactic-open-next": true,
-    onClick: next,
-    className: "mh-button mh-button-primary min-h-[48px] flex-1 rounded-2xl font-black"
-  }, "次へ"), phase === 'open' && allOpen && last && React.createElement("button", {
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
+    onClick: next
+  }, "つぎのパック") : React.createElement("button", {
     type: "button",
     "data-card-tactic-open-done": true,
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]",
     onClick: () => {
       Audio_.fgSe.tap();
       onDone();
-    },
-    className: "mh-button mh-button-primary min-h-[48px] flex-1 rounded-2xl font-black"
+    }
   }, "とじる")));
 };
 const CardTacticsScreen = ({
@@ -113464,38 +113634,58 @@ const CARD_FRAME_MAX_TEXT = (kind, n) => {
   const nx = CARD_LEVEL_FRAMES.find(x => (kind === 'breeder' ? x.breeder : x.mon) > n);
   return nx ? `${kind === 'breeder' ? nx.breeder : nx.mon}枚目は Lv${nx.at} で開く` : '';
 };
-const CardTacticsShop = ({
+const CARD_TACTICS_SHOP_EVENT = 'mh-card-tactics-shop';
+const cardTacticsShopChanged = () => {
+  try {
+    window.dispatchEvent(new Event(CARD_TACTICS_SHOP_EVENT));
+  } catch (_) {}
+};
+const useCardTacticsSave = () => {
+  const [t, setT] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      void cardTacticsLoad().then(d => {
+        if (alive) setT(d.tactics);
+      }).catch(() => {});
+    };
+    load();
+    window.addEventListener(CARD_TACTICS_SHOP_EVENT, load);
+    return () => {
+      alive = false;
+      window.removeEventListener(CARD_TACTICS_SHOP_EVENT, load);
+    };
+  }, []);
+  return t;
+};
+const CardTacticsBand = ({
   point = 0,
   busy = false,
   onBuy,
   onExchange
 }) => {
-  const [t, setT] = useState(null);
-  const [opening, setOpening] = useState(null);
+  const t = useCardTacticsSave();
+  const [confirm, setConfirm] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [opening, setOpening] = useState(null);
   const [msg, setMsg] = useState('');
-  useEffect(() => {
-    void cardTacticsLoad().then(d => setT(d.tactics));
-  }, []);
-  if (!t) return React.createElement("p", {
-    className: "text-[13px] font-bold text-slate-300"
-  }, "読み込み中…");
-  const buy = async (count, payWith) => {
-    if (busy || !onBuy) return;
+  const tickets = t ? t.tickets : 0,
+    shards = t ? t.shards : 0;
+  const canPick = shards >= CARD_TACTICS_SHARD_COST;
+  const useTicket = async () => {
+    setConfirm(false);
     setMsg('');
-    const r = await onBuy(count, payWith);
+    const r = onBuy ? await onBuy(1, 'ticket') : null;
     if (r && r.ok) {
-      setT(r.tactics);
+      cardTacticsShopChanged();
       setOpening(r.packs);
-      return;
-    }
-    setMsg(r && r.reason === 'tickets' ? '引く券が足りません' : r && r.reason === 'points' ? 'ビートPが足りません' : '保存できませんでした。ビートPは変わっていません');
+    } else setMsg('カードパック券が足りません');
   };
   const exchange = async id => {
     setPicking(false);
     const r = onExchange ? await onExchange(id) : null;
     if (r && r.ok) {
-      setT(r.tactics);
+      cardTacticsShopChanged();
       setOpening([[{
         id,
         r: (cardTacticOf(id) || {}).r || 'N',
@@ -113503,77 +113693,71 @@ const CardTacticsShop = ({
       }]]);
     } else setMsg('かけらが足りません');
   };
-  const owned = CARD_TACTIC_CARDS.filter(c => cardTacticsOwns(t, c.id)).length;
-  return React.createElement("div", {
-    "data-card-tactics-shop": true,
-    className: "space-y-2 pb-2"
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-tactics-band": true,
+    className: "mb-2 shrink-0 rounded-2xl border-2 border-teal-300/70 px-2.5 py-1.5 text-white",
+    style: {
+      background: 'linear-gradient(135deg,#134e4aee,#1e1b4bee)'
+    }
   }, React.createElement("div", {
-    className: "rounded-2xl border-2 border-amber-500/60 bg-gradient-to-br from-orange-900 via-amber-800 to-indigo-950 p-3"
-  }, React.createElement("div", {
-    className: "flex items-center gap-3"
+    className: "flex items-baseline gap-1 border-b border-white/15 pb-1 text-[12px] font-black text-violet-200"
   }, React.createElement("span", {
-    className: "text-[44px] leading-none"
-  }, "🧠"), React.createElement("span", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("b", {
-    className: "block text-[17px] font-black text-white"
-  }, "戦術カードパック"), React.createElement("small", {
-    className: "block text-[11px] font-bold text-amber-100",
-    style: JA_WRAP_STYLE
-  }, "1パック8枚。デッキ登録で、登録したデッキの戦い方に使います"))), React.createElement("div", {
-    className: "mt-2 text-[11px] font-bold leading-relaxed text-amber-50",
-    style: JA_WRAP_STYLE
-  }, "N 70%・R 25%・SR 5%。SR が出ないまま7パック開けると、8パック目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚えらべます。"), React.createElement("div", {
-    className: "mt-1.5 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"
-  }, React.createElement("span", null, `持っている ${owned}/${CARD_TACTIC_CARDS.length}`), React.createElement("span", {
-    "data-card-tactics-tickets": true
-  }, `引く券 ${t.tickets}枚`), React.createElement("span", {
-    "data-card-tactics-shards": true
-  }, `かけら ${t.shards}個`))), msg && React.createElement("p", {
-    "data-card-tactics-shop-msg": true,
-    className: "rounded-xl bg-amber-500/15 p-2 text-[12px] font-bold text-amber-100"
-  }, msg), React.createElement("button", {
-    type: "button",
-    "data-card-tactics-buy": "1",
-    disabled: busy || point < cardTacticsPrice(1),
-    onClick: () => {
-      Audio_.fgSe.tap();
-      void buy(1, 'point');
-    },
-    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40"
-  }, "1パック 300ビートP"), React.createElement("button", {
-    type: "button",
-    "data-card-tactics-buy": "5",
-    disabled: busy || point < cardTacticsPrice(5),
-    onClick: () => {
-      Audio_.fgSe.tap();
-      void buy(5, 'point');
-    },
-    className: "mh-button min-h-[52px] w-full rounded-2xl font-black text-white disabled:opacity-40"
-  }, "5パック 1,350ビートP(150おトク)"), React.createElement("button", {
+    className: "whitespace-nowrap"
+  }, "🎟️ 所持ビートP"), React.createElement("span", {
+    "data-card-tactics-point": true,
+    className: "ml-auto font-mono text-[16px] text-white"
+  }, Math.max(0, Math.floor(Number(point) || 0)).toLocaleString())), React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-1.5"
+  }, React.createElement("div", {
+    "data-card-tactics-tickets": tickets,
+    className: `flex min-h-[36px] items-center gap-1 rounded-xl px-2 ${tickets > 0 ? 'bg-amber-400/20 ring-1 ring-amber-300' : 'bg-white/5'}`
+  }, React.createElement("span", {
+    className: `min-w-0 flex-1 text-[11px] font-black leading-tight ${tickets > 0 ? 'text-amber-100' : 'text-slate-400'}`
+  }, "カードパック券", React.createElement("b", {
+    className: "ml-1 text-[14px] text-white"
+  }, "×", tickets)), tickets > 0 && React.createElement("button", {
     type: "button",
     "data-card-tactics-ticket": true,
-    disabled: busy || t.tickets < 1,
+    disabled: busy,
     onClick: () => {
       Audio_.fgSe.tap();
-      void buy(1, 'ticket');
+      setConfirm(true);
     },
-    className: "mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40"
-  }, `引く券で1パック(のこり${t.tickets}枚)`), React.createElement("button", {
+    className: "mh-button min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-stone-900 active:scale-95 disabled:opacity-40"
+  }, "使う")), React.createElement("div", {
+    "data-card-tactics-shards": shards,
+    className: `flex min-h-[36px] items-center gap-1 rounded-xl px-2 ${canPick ? 'bg-sky-400/20 ring-1 ring-sky-300' : 'bg-white/5'}`
+  }, React.createElement("span", {
+    className: `min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`
+  }, "かけら", React.createElement("b", {
+    className: "ml-1 text-[14px] text-white tabular-nums"
+  }, shards, "/", CARD_TACTICS_SHARD_COST)), canPick && React.createElement("button", {
     type: "button",
     "data-card-tactics-exchange": true,
-    disabled: t.shards < CARD_TACTICS_SHARD_COST,
+    disabled: busy,
     onClick: () => {
       Audio_.fgSe.tap();
       setPicking(true);
     },
-    className: "mh-button min-h-[48px] w-full rounded-2xl font-black text-white disabled:opacity-40"
-  }, `かけらで1枚えらぶ(${t.shards}/${CARD_TACTICS_SHARD_COST})`), React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-400",
-    style: JA_WRAP_STYLE
-  }, "引く券は、バトルカードのレベルが上がるともらえます。"), picking && React.createElement("div", {
+    className: "mh-button min-h-[30px] shrink-0 rounded-lg bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-95 disabled:opacity-40"
+  }, "えらぶ"))), msg && React.createElement("p", {
+    "data-card-tactics-shop-msg": true,
+    className: "mt-1 text-[11px] font-bold text-amber-100"
+  }, msg)), confirm && React.createElement(ConfirmSheet, {
+    title: "戦術カードパックを1パック開けますか？",
+    message: `カードパック券を1枚使います(いま ${tickets}枚)`,
+    confirmLabel: "券で開ける",
+    onCancel: () => setConfirm(false),
+    onConfirm: () => {
+      void useTicket();
+    }
+  }), picking && t && React.createElement("div", {
     "data-card-tactic-picker": "missing",
-    className: "fixed inset-0 z-[80] flex flex-col bg-slate-950/95 p-3"
+    className: "fixed inset-0 z-[85] flex flex-col bg-slate-950/95 p-3",
+    style: {
+      paddingTop: 'max(.75rem, env(safe-area-inset-top))',
+      paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))'
+    }
   }, React.createElement(ScreenHead, {
     title: "かけら10個で1枚えらぶ",
     accent: "text-amber-200",
@@ -113588,12 +113772,174 @@ const CardTacticsShop = ({
       Audio_.fgSe.tap();
       void exchange(c.id);
     }
-  })))), opening && React.createElement("div", {
-    className: "fixed inset-0 z-[85] flex flex-col bg-slate-950"
-  }, React.createElement(CardTacticPackOpen, {
+  })))), opening && React.createElement(CardTacticPackOverlay, {
     packs: opening,
     onDone: () => setOpening(null)
-  })));
+  }));
+};
+const CardTacticPackOverlay = ({
+  packs,
+  onDone
+}) => React.createElement("div", {
+  "data-card-tactic-open-overlay": true,
+  className: "fixed inset-0 z-[85] flex flex-col bg-slate-950",
+  style: {
+    paddingTop: 'env(safe-area-inset-top)',
+    paddingBottom: 'env(safe-area-inset-bottom)'
+  }
+}, React.createElement(CardTacticPackOpen, {
+  packs: packs,
+  onDone: onDone
+}));
+const CardTacticPackContents = ({
+  t,
+  onClose
+}) => React.createElement(CardShopSheet, {
+  title: "戦術カードパックの中身",
+  onClose: onClose,
+  tag: "tactics-contents"
+}, React.createElement("p", {
+  className: "mb-1 text-[11px] font-bold text-slate-300",
+  style: JA_WRAP_STYLE
+}, jaWrap(`全${CARD_TACTIC_CARDS.length}枚(はじめに持っている${CARD_TACTIC_START.length}枚は出ません)`)), ['SR', 'R', 'N'].map(r => React.createElement("div", {
+  key: r
+}, React.createElement(CardShopHead, null, `${r}(${CARD_TACTIC_CARDS.filter(c => c.r === r && !c.start).length}枚)`), React.createElement("div", {
+  className: "grid grid-cols-3 gap-1.5"
+}, CARD_TACTIC_CARDS.filter(c => c.r === r && !c.start).map(c => React.createElement("div", {
+  key: c.id,
+  className: "relative"
+}, React.createElement(CardTacticFace, {
+  card: c,
+  small: true,
+  owned: cardTacticsOwns(t, c.id)
+}), !cardTacticsOwns(t, c.id) && React.createElement("span", {
+  className: "absolute right-0.5 top-0.5 rounded-md bg-rose-600 px-1 text-[9px] font-black text-white"
+}, "未取得")))))));
+const CardTacticPackRates = ({
+  onClose
+}) => React.createElement(CardShopSheet, {
+  title: "戦術カードパックの提供割合",
+  onClose: onClose,
+  tag: "tactics-rates"
+}, React.createElement("div", {
+  className: "space-y-2 text-[12px] font-bold text-slate-200",
+  style: JA_WRAP_STYLE
+}, React.createElement("table", {
+  className: "w-full text-left"
+}, React.createElement("tbody", null, CARD_TACTICS_RATE.map(([r, p]) => {
+  const n = cardTacticsPool(r).length;
+  return React.createElement("tr", {
+    key: r,
+    className: "border-b border-white/10"
+  }, React.createElement("td", {
+    className: "py-1 font-black",
+    style: {
+      color: CARD_TACTIC_RARE_COLOR[r] === '#64748b' ? '#cbd5e1' : CARD_TACTIC_RARE_COLOR[r]
+    }
+  }, r), React.createElement("td", {
+    className: "py-1 text-right"
+  }, `${Math.round(p * 100)}%`), React.createElement("td", {
+    className: "py-1 text-right text-slate-400"
+  }, `${n}種類・1枚あたり ${(p / n * 100).toFixed(3)}%`));
+}))), React.createElement("p", null, jaWrap(`1パック${CARD_TACTICS_PULL.n}枚。1枚ずつ、上の割合で出ます。`)), React.createElement("p", null, jaWrap(`SR が出ないまま${CARD_TACTICS_PULL.pityAt}パック開けると、${CARD_TACTICS_PULL.pityAt + 1}パック目の最後の1枚は SR です。`)), React.createElement("p", null, jaWrap(`もう持っているカードが出たときは「かけら」1個になります。かけら${CARD_TACTICS_SHARD_COST}個で、まだ持っていないカードを1枚えらべます。`)), React.createElement("p", null, jaWrap('カードパック券(カードランクのごほうび)1枚でも、1パック開けられます。'))));
+const CardTacticsShop = ({
+  point = 0,
+  busy = false,
+  onBuy
+}) => {
+  const t = useCardTacticsSave();
+  const [sheet, setSheet] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const [opening, setOpening] = useState(null);
+  const [msg, setMsg] = useState('');
+  if (!t) return React.createElement("p", {
+    className: "text-[13px] font-bold text-slate-300"
+  }, "読み込み中…");
+  const P = CARD_TACTICS_PULL;
+  const owned = CARD_TACTIC_CARDS.filter(c => cardTacticsOwns(t, c.id)).length;
+  const buy = async count => {
+    if (busy || !onBuy) return;
+    setMsg('');
+    const r = await onBuy(count, 'point');
+    if (r && r.ok) {
+      cardTacticsShopChanged();
+      setOpening(r.packs);
+      return;
+    }
+    setMsg(r && r.reason === 'points' ? 'ビートPが足りません' : '保存できませんでした。ビートPは変わっていません');
+  };
+  return React.createElement("div", {
+    "data-card-tactics-shop": true,
+    className: "space-y-2 pb-2"
+  }, React.createElement("div", {
+    "data-card-shop-pack": "tactics",
+    className: SCREEN_PANEL_CLASS,
+    style: {
+      borderColor: `${CARD_TACTIC_PACK_COLOR}cc`
+    }
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(CardTacticPackArt, {
+    width: 58,
+    className: "shrink-0 !rounded-[8px] !border-2"
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-white"
+  }, "戦術カードパック"), React.createElement("div", {
+    className: "text-[11px] font-black text-amber-100"
+  }, `登録したデッキの戦い方に使う・持っている ${owned}/${CARD_TACTIC_CARDS.length}`), React.createElement("div", {
+    className: "text-[11px] font-bold text-slate-300"
+  }, `${P.n}枚入り(N・R・SR)`), React.createElement("div", {
+    className: "mt-1 flex gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-tactics-contents": true,
+    onClick: () => setSheet('contents'),
+    className: "min-h-[30px] rounded-lg border border-sky-300/60 bg-sky-900/50 px-2 text-[11px] font-black text-sky-100 active:scale-95"
+  }, "中身を見る"), React.createElement("button", {
+    type: "button",
+    "data-card-tactics-rates": true,
+    onClick: () => setSheet('rates'),
+    className: "min-h-[30px] rounded-lg border border-amber-300/60 bg-amber-900/40 px-2 text-[11px] font-black text-amber-100 active:scale-95"
+  }, "提供割合")))), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-tactics-buy": "1",
+    disabled: busy || point < cardTacticsPrice(1),
+    onClick: () => setConfirm(1),
+    className: "mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+  }, `1パック ${P.price.toLocaleString()}`), React.createElement("button", {
+    type: "button",
+    "data-card-tactics-buy": P.bundle.n,
+    disabled: busy || point < cardTacticsPrice(P.bundle.n),
+    onClick: () => setConfirm(P.bundle.n),
+    className: "mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40"
+  }, `${P.bundle.n}パック ${P.bundle.price.toLocaleString()}`, React.createElement("span", {
+    className: "block text-[9px] font-bold"
+  }, `(${(P.price * P.bundle.n - P.bundle.price).toLocaleString()}おトク)`)))), msg && React.createElement("p", {
+    "data-card-tactics-shop-msg": true,
+    className: "rounded-xl bg-amber-500/15 p-2 text-[12px] font-bold text-amber-100"
+  }, msg), sheet === 'contents' && React.createElement(CardTacticPackContents, {
+    t: t,
+    onClose: () => setSheet(null)
+  }), sheet === 'rates' && React.createElement(CardTacticPackRates, {
+    onClose: () => setSheet(null)
+  }), confirm && React.createElement(ConfirmSheet, {
+    title: `戦術カードパックを${confirm}パック買いますか？`,
+    message: `ビートP ${cardTacticsPrice(confirm).toLocaleString()} を使います(いま ${point.toLocaleString()})`,
+    confirmLabel: "買って開ける",
+    onCancel: () => setConfirm(null),
+    onConfirm: () => {
+      const n = confirm;
+      setConfirm(null);
+      void buy(n);
+    }
+  }), opening && React.createElement(CardTacticPackOverlay, {
+    packs: opening,
+    onDone: () => setOpening(null)
+  }));
 };
 const CARD_REG_STYLES = Object.freeze([{
   id: 'attack',
