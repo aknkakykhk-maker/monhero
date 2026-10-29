@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 386a52cf1bba740a
+// source-sha256: 34919e421d580bfd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -88871,15 +88871,19 @@ const cardAiChooseGuts = (db, st, policy) => {
   const keep = no => {
     const c = cardOf(db, no);
     if (!c) return -9;
-    const usable = c.user === 'breeder' || me.mons.some(m => cardUsableBy(c, m));
+    const usable = c.user === 'breeder' || me.mons.some(m => !m.ko && cardUsableBy(c, m));
     if (!usable) return -10;
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
     return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
   };
-  const order = me.hand.map((no, i) => ({
+  const ks = me.hand.map((no, i) => ({
     i,
-    k: keep(no)
-  })).sort((a, b) => a.k - b.k);
+    k: keep(no),
+    g: cardIsGuardKind((cardOf(db, no) || {}).kind)
+  }));
+  const guardKeep = ks.filter(x => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
+  if (guardKeep) guardKeep.k += 3 + habit.keepGuard;
+  const order = ks.sort((a, b) => a.k - b.k);
   const pick = [];
   order.forEach(o => {
     if (o.k <= -9) pick.push(o.i);
