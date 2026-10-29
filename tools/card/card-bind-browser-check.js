@@ -117,6 +117,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       const user = page.locator('[data-card-mon].ring-amber-300').first();
       // 使う子・狙う相手は、1回目のタップを CARD_DOUBLE_TAP_MS(350ms)待ってから決まる(#3873)。待つ前に次を押すと1回目が取り消されるので、その間より長く待つ
       if (await user.count()) { await user.click(); await page.waitForTimeout(450); }
+      // 影縛りを付ける組を選ぶ(#4196 から、押した技は1枚だけが先に選ばれる)
+      const bindSet = page.locator('[data-card-set]').filter({ hasText: '影縛り' }).first();
+      if (await bindSet.count()) { await bindSet.click(); await page.waitForTimeout(200); }
       await page.locator('[data-card-mon="1-0"]').click();
       await page.waitForTimeout(450);
     };
