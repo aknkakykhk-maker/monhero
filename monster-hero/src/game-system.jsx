@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a787f75afaa36089
+// generated-sha256: 37647e609a5b9791
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -66355,6 +66355,26 @@ const cardShareFetchMine = async (ownerId) => {
   } catch (_) { return null; }
 };
 // 登録・登録し直し。返り値: 'ok' | 'locked'(鍵がちがう) | 'bad' | 'nokey' | 'off'(表が無い・通信できない)
+// サーバが 'bad' を返したときの理由(2026-10-30 社長「このデッキは登録できませんでした」で登録できない → 理由を出す)。
+//   サーバ(card_deck_register)と同じ決まりで、送る前の中身を確かめる。はじめのサーバはモンスターを C-数字3桁・カードを数字3桁だけ通していた
+//   (色ちがい C-029S・場のカード F115 などが通らない)。サーバを広げたあとは、ここに当たらず、ほかの理由か「サーバが受け付けませんでした」
+const cardShareBadReason = (db, deck, tactics) => {
+  const d = deck || {};
+  const mons = Array.isArray(d.monsters) ? d.monsters.slice(0, 3) : [];
+  const cards = Array.isArray(d.cards) ? d.cards.slice(0, 50) : [];
+  const packed = cardShareNormalizeTactics(tactics, d);
+  if (new TextEncoder().encode(JSON.stringify(packed)).length > 2000) return '戦術カードの中身が大きすぎます';
+  if (cards.length !== 50) return 'デッキが50枚ではありません';
+  const count = {};
+  cards.forEach((n) => { count[n] = (count[n] || 0) + 1; });
+  const over = Object.keys(count).find((n) => count[n] > 3);
+  if (over) return `「${((db && cardOf(db, over)) || {}).name || over}」が4枚以上あります`;
+  const oldMons = mons.filter((n) => !/^C-[0-9]{3}$/.test(String(n)));
+  const oldCards = [...new Set(cards.filter((n) => !/^[0-9]{3}$/.test(String(n))))];
+  const names = [...oldMons.map((n) => `${((db && cardMonsterOf(db, n)) || {}).name || ''}(${n})`), ...oldCards.map((n) => ((db && cardOf(db, n)) || {}).name || n)];
+  if (names.length) return `「${names.slice(0, 3).join('」「')}」${names.length > 3 ? 'など' : ''}を、まだ登録で受け付けていません。直るまでお待ちください`;
+  return 'サーバが受け付けませんでした';
+};
 const cardShareRegister = async ({ ownerId, name, icon, frame, deck, tactics }) => {
   const key = await cardShareOwnerKey(true);
   if (!key) return 'nokey';
@@ -66512,7 +66532,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
     setBusy(true); setMsg('');
     const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck: picked, tactics: { ...cardShareNormalizeTactics(tactics, picked), name: picked.name, habit: cardShareMainHabit(framesNow, tactics.habit), ...(framesNow ? { f: cardTacticPackFrames(framesNow) } : {}) } });
     if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、このデッキと戦えます'); }
-    else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
+    else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, picked, tactics)})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
     setBusy(false);
   };
   const unregister = async () => {
@@ -67548,7 +67568,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
       const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck,
         tactics: { name: deck.name, habit: cardShareMainHabit(cardTacticUnpackFrames(f), 'kyuko'), aces: acesNow, f } });
       if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、フリー対戦でこのデッキと戦えます'); setStep('done'); }
-      else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
+      else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? `このデッキは登録できませんでした(${cardShareBadReason(db, deck, { aces: acesNow, f })})` : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。もう一度お試しください');
     } finally { setBusy(false); }
   };
   const unregister = async () => {
