@@ -111,10 +111,12 @@ function BreederMarketScreen({
   const renderSectionTabs = (section, scroll=false) => {
     const items=SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}));
     const value=activeSectionTab(section);
-    if(!scroll||items.length<6) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
-    return <div role="tablist" data-market-tabs-scroll={section} className="mb-2 flex shrink-0 gap-2 overflow-x-auto pb-0.5">
+    // カード売り場は5つ(戦術カードが増えた)で等分すると「戦術カー/ド」「スター/ター」と言葉の途中で折れるので、5つから1行にして詰める(2026-10-29)
+    const tight=section==='card';
+    if(!scroll||items.length<(tight?5:6)) return <ScreenTabs value={value} onChange={(key)=>selectSectionTab(section,key)} items={items}/>;
+    return <div role="tablist" data-market-tabs-scroll={section} className={`mb-2 flex shrink-0 overflow-x-auto pb-0.5 ${tight?'gap-1.5':'gap-2'}`}>
       {items.map(tab=>{const on=tab.id===value;return <button key={tab.id} type="button" role="tab" aria-selected={on} onClick={()=>selectSectionTab(section,tab.id)}
-        className={`mh-tab relative min-h-[44px] min-w-[68px] shrink-0 rounded-xl px-2.5 text-[11px] font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
+        className={`mh-tab relative min-h-[44px] shrink-0 rounded-xl text-[11px] ${tight?'min-w-[56px] flex-auto whitespace-nowrap px-1.5':'min-w-[68px] px-2.5'} font-black leading-tight active:scale-95 ${on?'text-white':'border border-white/10 bg-slate-900 text-slate-400'}`}
         style={on?{background:tab.color}:undefined}>{tab.label}</button>;})}
     </div>;
   };
@@ -295,7 +297,7 @@ function BreederMarketScreen({
         const tab=activeSectionTab('card');
         const cp=cardShop.point;
         return <>
-          {renderSectionTabs('card')}
+          {renderSectionTabs('card', true)}
           {/* 一覧(mh-scroll)の外に置くので、横の画面では左の列(タブの下)に入る */}
           {tab==='pack'&&cardShop.onExchangeCatalog&&typeof CardShopGachaBand==='function'
             ?<CardShopGachaBand db={CARD_BATTLE_DATA} point={cp} gacha={cardShop.gacha} catalogs={cardShop.catalogs} collection={cardShop.collection} busy={busy||cardShop.busy} onExchangeCatalog={cardShop.onExchangeCatalog} onUseCatalog={cardShop.onUseCatalog}/>
