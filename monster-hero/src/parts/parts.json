@@ -373,6 +373,10 @@
       "role": "MFバトルカードのマルチ対戦の観戦。観戦の通り道(mhc-watch-<試合>・Broadcast だけ)・対戦中の一覧(mhc-live)・両方の手札を仮の札にした場で手をなぞる計算・観戦の画面。手札・山札・封は流さない。保存は無し"
     },
     {
+      "file": "95-card-deck-share.jsx",
+      "role": "MFバトルカードのみんなのデッキ(デッキ登録の対戦・デッキのレンタル)。表 card_deck_entries などとの通信・持ち主の鍵(mh_card_deck_owner_key_v1)・戦い方(助手の打ち方に乗せる)・登録の画面"
+    },
+    {
       "file": "81-debug-trials.jsx",
       "role": "デバッグ設定のいちばん上の「確認待ちの試作」(DEBUG_TRIALS に1行足すと出る)。デバッグ専用"
     },

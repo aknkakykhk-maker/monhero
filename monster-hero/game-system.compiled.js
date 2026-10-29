@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33c126dd37109fd5
+// source-sha256: 4ccc29c2d3fe8c86
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96745,7 +96745,38 @@ const CardBattleScreen = ({
       className: "block text-[11px] font-black text-slate-900/80"
     }, "ブリーダーどうしで戦う"))), !cardPvpOpen() && React.createElement("span", {
       className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
-    }, debug ? 'つくっている途中(デバッグ)' : '準備中'))));
+    }, debug ? 'つくっている途中(デバッグ)' : '準備中')), typeof CardDeckShare === 'function' && (debug || cardShareOpen()) && React.createElement("button", {
+      type: "button",
+      "data-card-mode-share": true,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setView('share');
+      },
+      className: "mhms-card mhms-in flex min-h-[110px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-emerald-200 via-emerald-400 to-teal-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mhms-mark"
+    }, "DECKS"), React.createElement("span", {
+      className: "relative flex items-center gap-2"
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-3xl leading-none"
+    }, "🗂️"), React.createElement("span", null, React.createElement("b", {
+      className: "block text-[22px] font-black italic leading-tight"
+    }, "みんなのデッキ"), React.createElement("small", {
+      className: "block text-[11px] font-black text-slate-900/80"
+    }, "デッキを登録する・ほかの人のデッキと戦う"))), !cardShareOpen() && React.createElement("span", {
+      className: "relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white"
+    }, "つくっている途中(デバッグ)"))));
+  }
+  if (view === 'share' && typeof CardDeckShare === 'function') {
+    return React.createElement(CardDeckShare, {
+      db: db,
+      decks: save.decks,
+      collection: save.collection,
+      frame: rank && rank.profile && rank.profile.frame || null,
+      onBack: () => setView('mode')
+    });
   }
   if (view === 'pvp') {
     const pvpReward = async r => {
@@ -106430,6 +106461,418 @@ const CardPvpWatchScreen = ({
     no: detail,
     onClose: () => setDetail(null)
   }));
+};
+const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';
+const CARD_SHARE_TABLE = 'card_deck_entries';
+const CARD_SHARE_TILTS = Object.freeze([{
+  id: 'attack',
+  label: '攻める'
+}, {
+  id: 'keepGuard',
+  label: '守りを残す'
+}, {
+  id: 'saveGuts',
+  label: 'ガッツをためる'
+}, {
+  id: 'big',
+  label: '大技'
+}, {
+  id: 'disrupt',
+  label: '相手を崩す'
+}, {
+  id: 'area',
+  label: '全体技'
+}, {
+  id: 'finish',
+  label: 'とどめ'
+}]);
+const CARD_SHARE_TILT_MUL = Object.freeze({
+  '-1': 0.6,
+  0: 1,
+  1: 1.6
+});
+const CARD_SHARE_ACES_MAX = 3;
+let _cardShareUnavailable = false;
+const cardShareOpen = () => false;
+const cardShareNormalizeTactics = (v, deck = null) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
+  const tilt = {};
+  CARD_SHARE_TILTS.forEach(t => {
+    const n = r.tilt && r.tilt[t.id];
+    tilt[t.id] = n === -1 || n === 1 ? n : 0;
+  });
+  const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
+  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter(x => typeof x === 'string' && /^[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
+  const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
+  return {
+    habit,
+    tilt,
+    aces,
+    name
+  };
+};
+const cardSharePolicy = (tactics, levelId) => {
+  const t = cardShareNormalizeTactics(tactics);
+  const base = cardAiPolicy(t.habit, levelId);
+  const habit = {
+    ...base.habit
+  };
+  CARD_SHARE_TILTS.forEach(x => {
+    if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]];
+  });
+  return {
+    ...base,
+    habit,
+    aces: t.aces.slice()
+  };
+};
+const cardShareOwnerKey = async (create = false) => {
+  let key = null;
+  try {
+    key = await storeGet(CARD_SHARE_KEY, null, false);
+  } catch (_) {
+    key = null;
+  }
+  if (typeof key === 'string' && /^[0-9a-f]{48}$/.test(key)) return key;
+  if (!create) return null;
+  try {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const made = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    if (!(await storeSet(CARD_SHARE_KEY, made, false))) return null;
+    return made;
+  } catch (_) {
+    return null;
+  }
+};
+const cardShareRpc = async (fn, body) => {
+  if (_cardShareUnavailable) return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => {
+    if (controller) controller.abort();
+  }, 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      signal: controller ? controller.signal : undefined,
+      body: JSON.stringify(body)
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareUnavailable = true;
+      return null;
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_) {
+      return text;
+    }
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const CARD_SHARE_COLS = 'owner_id,user_name,icon,profile_frame,deck,tactics,version,active,battles,deck_wins,rents,updated_at';
+const cardShareRow = row => {
+  if (!row || typeof row.owner_id !== 'string') return null;
+  const deck = row.deck && typeof row.deck === 'object' ? row.deck : {};
+  const monsters = Array.isArray(deck.monsters) ? deck.monsters.filter(x => typeof x === 'string').slice(0, 3) : [];
+  const cards = Array.isArray(deck.cards) ? deck.cards.filter(x => typeof x === 'string').slice(0, 50) : [];
+  if (monsters.length !== 3 || cards.length !== 50) return null;
+  const n = v => Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.floor(Number(v)) : 0;
+  return {
+    ownerId: row.owner_id,
+    name: typeof row.user_name === 'string' && row.user_name ? row.user_name.slice(0, 40) : 'ブリーダー',
+    icon: typeof row.icon === 'string' ? row.icon : null,
+    frame: typeof row.profile_frame === 'string' ? row.profile_frame : null,
+    deck: {
+      monsters,
+      cards
+    },
+    tactics: cardShareNormalizeTactics(row.tactics, {
+      cards
+    }),
+    version: n(row.version) || 1,
+    battles: n(row.battles),
+    deckWins: n(row.deck_wins),
+    rents: n(row.rents),
+    at: Date.parse(row.updated_at) || 0
+  };
+};
+const cardShareFetchMine = async ownerId => {
+  if (_cardShareUnavailable || typeof ownerId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(ownerId)) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_SHARE_TABLE}?select=${CARD_SHARE_COLS}&owner_id=eq.${ownerId}&limit=1`, {
+      headers: SB_HEADERS
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareUnavailable = true;
+      return null;
+    }
+    const rows = JSON.parse(text);
+    return Array.isArray(rows) && rows[0] ? cardShareRow(rows[0]) : null;
+  } catch (_) {
+    return null;
+  }
+};
+const cardShareRegister = async ({
+  ownerId,
+  name,
+  icon,
+  frame,
+  deck,
+  tactics
+}) => {
+  const key = await cardShareOwnerKey(true);
+  if (!key) return 'nokey';
+  const r = await cardShareRpc('card_deck_register', {
+    p_owner: ownerId,
+    p_key: key,
+    p_name: String(name || '').slice(0, 40),
+    p_icon: icon || null,
+    p_frame: frame || null,
+    p_deck: {
+      monsters: deck.monsters.slice(0, 3),
+      cards: deck.cards.slice(0, 50)
+    },
+    p_tactics: cardShareNormalizeTactics(tactics, deck)
+  });
+  return r === 'ok' || r === 'locked' || r === 'bad' ? r : 'off';
+};
+const cardShareUnregister = async ownerId => {
+  const key = await cardShareOwnerKey(false);
+  if (!key) return 'nokey';
+  const r = await cardShareRpc('card_deck_unregister', {
+    p_owner: ownerId,
+    p_key: key
+  });
+  return r === 'ok' || r === 'locked' || r === 'none' ? r : 'off';
+};
+const CardDeckShare = ({
+  db,
+  decks,
+  collection,
+  frame = null,
+  onBack
+}) => {
+  const [selfId, setSelfId] = useState(null);
+  const [mine, setMine] = useState(undefined);
+  const [off, setOff] = useState(false);
+  const [pick, setPick] = useState(null);
+  const [tactics, setTactics] = useState(() => cardShareNormalizeTactics(null));
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [profile, setProfile] = useState({
+    name: 'ブリーダー',
+    icon: '🙂'
+  });
+  const list = decks && Array.isArray(decks.decks) ? decks.decks : [];
+  const deckOf = id => list.find(d => d.id === id) || null;
+  const issuesOf = d => d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません'];
+  const picked = deckOf(pick);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
+      if (alive) setProfile({
+        name: typeof name === 'string' && name ? name : 'ブリーダー',
+        icon: typeof icon === 'string' && icon ? icon : '🙂'
+      });
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (!alive) return;
+      setSelfId(typeof id === 'string' ? id : null);
+      const row = typeof id === 'string' ? await cardShareFetchMine(id) : null;
+      if (!alive) return;
+      setOff(_cardShareUnavailable || typeof id !== 'string');
+      setMine(row);
+      if (row) setTactics(row.tactics);
+      const same = row ? list.find(d => JSON.stringify(d.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(d.cards) === JSON.stringify(row.deck.cards)) : null;
+      const firstOk = list.find(d => issuesOf(d).length === 0);
+      setPick((same || firstOk || list[0] || {}).id || null);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const habits = Object.keys(CARD_AI_HABITS).filter(id => cardFoeReleased(id));
+  const habitName = id => (typeof ASSISTANTS !== 'undefined' && ASSISTANTS.find(a => a.id === id) || {}).name || id;
+  const uniqueCards = picked ? [...new Set(picked.cards)] : [];
+  const cardName = no => (cardOf(db, no) || {}).name || no;
+  const setTilt = (id, n) => setTactics(t => ({
+    ...t,
+    tilt: {
+      ...t.tilt,
+      [id]: n
+    }
+  }));
+  const toggleAce = no => setTactics(t => t.aces.includes(no) ? {
+    ...t,
+    aces: t.aces.filter(x => x !== no)
+  } : t.aces.length >= CARD_SHARE_ACES_MAX ? t : {
+    ...t,
+    aces: [...t.aces, no]
+  });
+  const issues = issuesOf(picked);
+  const register = async () => {
+    if (!picked || issues.length || !selfId || busy) return;
+    setBusy(true);
+    setMsg('');
+    const r = await cardShareRegister({
+      ownerId: selfId,
+      name: profile.name,
+      icon: profile.icon,
+      frame,
+      deck: picked,
+      tactics: {
+        ...cardShareNormalizeTactics(tactics, picked),
+        name: picked.name
+      }
+    });
+    if (r === 'ok') {
+      setMine(await cardShareFetchMine(selfId));
+      setMsg('登録しました。ほかのブリーダーが、このデッキと戦えます');
+    } else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
+    setBusy(false);
+  };
+  const unregister = async () => {
+    if (!selfId || busy) return;
+    setBusy(true);
+    setMsg('');
+    const r = await cardShareUnregister(selfId);
+    if (r === 'ok' || r === 'none') {
+      setMine(null);
+      setMsg('登録をやめました');
+    } else setMsg(r === 'locked' || r === 'nokey' ? 'この端末では登録をやめられません(登録した端末で操作してください)' : '通信できませんでした。もう一度お試しください');
+    setBusy(false);
+  };
+  const chip = on => `rounded-lg px-2 py-1 text-[12px] font-black ${on ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`;
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-card-share": true,
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "みんなのデッキ",
+    accent: "text-amber-200",
+    onBack: onBack,
+    note: "自分のデッキを1組登録すると、ほかのブリーダーが戦えます"
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} space-y-3 pb-4`
+  }, mine === undefined && React.createElement("p", {
+    className: "text-[13px] font-bold text-slate-300"
+  }, "読み込み中…"), mine !== undefined && off && React.createElement("p", {
+    "data-card-share-off": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')), mine !== undefined && !off && React.createElement(React.Fragment, null, React.createElement("div", {
+    "data-card-share-mine": true,
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "登録中のデッキ"), mine ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "text-[15px] font-black text-white"
+  }, mine.tactics.name || 'デッキ', React.createElement("small", {
+    className: "ml-2 text-[11px] text-slate-300"
+  }, habitName(mine.tactics.habit), "の打ち方")), React.createElement("p", {
+    "data-card-share-counts": true,
+    className: "mt-1 text-[12px] font-bold text-sky-100 tabular-nums"
+  }, "戦われた ", mine.battles, "回・そのうち勝った ", mine.deckWins, "回・借りられた ", mine.rents, "回"), React.createElement("button", {
+    type: "button",
+    "data-card-share-unregister": true,
+    disabled: busy,
+    className: "mt-2 rounded-lg border border-white/15 bg-slate-900 px-3 py-1.5 text-[12px] font-black text-slate-200 disabled:opacity-50",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void unregister();
+    }
+  }, "登録をやめる")) : React.createElement("p", {
+    className: "text-[13px] font-bold text-slate-300"
+  }, "まだ登録していません")), React.createElement("div", {
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "登録するデッキ"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, list.map(d => React.createElement("button", {
+    key: d.id,
+    type: "button",
+    "data-card-share-pick": d.id,
+    className: chip(pick === d.id),
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setPick(d.id);
+      setTactics(t => cardShareNormalizeTactics(t, d));
+    }
+  }, d.name))), picked && issues.length > 0 && React.createElement("p", {
+    "data-card-share-issues": true,
+    className: "mt-1 text-[12px] font-bold text-rose-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(issues[0]))), React.createElement("div", {
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement("div", {
+    className: "text-[12px] font-bold text-slate-400"
+  }, "戦い方(コンピューターが、この打ち方であなたのデッキを動かします)"), React.createElement("div", {
+    className: "mt-1 text-[12px] font-bold text-slate-300"
+  }, "土台の打ち方"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1.5"
+  }, habits.map(id => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-card-share-habit": id,
+    className: chip(tactics.habit === id),
+    onClick: () => {
+      Audio_.fgSe.tap();
+      setTactics(t => ({
+        ...t,
+        habit: id
+      }));
+    }
+  }, habitName(id)))), React.createElement("div", {
+    className: "mt-2 space-y-1"
+  }, CARD_SHARE_TILTS.map(x => React.createElement("div", {
+    key: x.id,
+    "data-card-share-tilt": x.id,
+    className: "flex items-center gap-2"
+  }, React.createElement("span", {
+    className: "w-[6.5em] shrink-0 text-[12px] font-bold text-slate-200"
+  }, x.label), [[-1, '控えめ'], [0, 'ふつう'], [1, '強め']].map(([n, label]) => React.createElement("button", {
+    key: n,
+    type: "button",
+    className: chip(tactics.tilt[x.id] === n),
+    onClick: () => setTilt(x.id, n)
+  }, label))))), React.createElement("div", {
+    className: "mt-2 text-[12px] font-bold text-slate-300"
+  }, "切り札(出せるときは優先して使う・", CARD_SHARE_ACES_MAX, "枚まで)"), React.createElement("div", {
+    "data-card-share-aces": true,
+    className: "mt-1 flex max-h-[30vh] flex-wrap gap-1.5 overflow-y-auto"
+  }, uniqueCards.map(no => React.createElement("button", {
+    key: no,
+    type: "button",
+    "data-card-share-ace": no,
+    className: chip(tactics.aces.includes(no)),
+    onClick: () => toggleAce(no)
+  }, cardName(no))))), React.createElement("p", {
+    className: "px-1 text-[11px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('登録できるのは1組だけです。登録し直すと、前の登録と入れかわります。登録した端末でだけ、書きかえ・やめる・報酬の受け取りができます(端末を変えるときは、バックアップで引き継げます)')), msg && React.createElement("p", {
+    "data-card-share-msg": true,
+    className: "rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100",
+    style: JA_WRAP_STYLE
+  }, jaWrap(msg)))), mine !== undefined && !off && React.createElement("div", {
+    className: SCREEN_FOOTER_CLASS
+  }, React.createElement("button", {
+    type: "button",
+    "data-card-share-register": true,
+    disabled: busy || !picked || issues.length > 0 || !selfId,
+    className: "mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40",
+    onClick: () => {
+      Audio_.fgSe.tap();
+      void register();
+    }
+  }, mine ? 'このデッキで登録し直す' : 'このデッキを登録する')));
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',
