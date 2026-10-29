@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fe7f284400cc944f
+// generated-sha256: 474715ebc8f77d29
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57970,6 +57970,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [picks, setPicks] = useState([]);    // ガッツへ・捨てる・始める前のガッツで選んだ手札
   const [fx, setFx] = useState([]);          // ダメージの数字
   const [bubble, setBubble] = useState(null);
+  // 吹き出しは相手の帯のすぐ下に1行の札。押すと全文、もう1回押すと次の台詞(2026-10-29 まんなか案A)。台詞が替わったら1行に戻す
+  const [bubbleOpen, setBubbleOpen] = useState(false);
+  useEffect(() => { setBubbleOpen(false); }, [bubble && bubble.key]);
   const [face, setFace] = useState('normal');
   const [detail, setDetail] = useState(null);
   const [statusSheet, setStatusSheet] = useState(null); // 「+2」を押して開いた効果の窓 { p, m }
@@ -58739,6 +58742,20 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   // 自分が守る番に受けている攻撃カード(相手が守る番・練習試合は出さない)
   const guardAtk = pd && pd.defender === CARD_ME && !tutorial ? cardOf(db, pd.main) : null;
   const logLines = st.log.filter((l) => l.kind !== 'turn').slice(-3);
+  // まんなかの1行の実況: いちばん新しい1つ(番の替わり目・始めの「先攻・後攻」は除く。2026-10-29 まんなか案A)
+  //   技の行(use)のすぐあとに当たりの行(hit)が続くときは「ゴーレムの「でこぴん」→ ナーガに5ダメージ」と1行にまとめる(だれの何の技かが抜けないように)
+  const liveLine = (() => {
+    const L = st.log.filter((l) => l.kind !== 'turn' && !/が先攻、.*が後攻$/.test(String(l.text || '')));
+    const last = L[L.length - 1];
+    if (!last || last.kind !== 'hit') return last || null;
+    let k = L.length - 1;
+    while (k > 0 && L[k - 1].kind === 'hit') k -= 1;
+    const use = L[k - 1];
+    if (!use || use.kind !== 'use') return last;
+    const hits = L.slice(k).slice(-3).map(cardLogText);
+    return { kind: 'hit', text: `${cardLogText(use)} → ${hits.join('・')}`, cards: use.cards };
+  })();
+  const liveCards = liveLine && Array.isArray(liveLine.cards) ? liveLine.cards.slice(0, 3) : [];
   // まんなかに入り切らないときの詰め方(2026-10-25 社長の実機「コメントが切れてる」。iPhone の字は行が高く、上下が切れた)。
   //   0 … ふつう / 1 … 記録は新しい1行だけ / 2 … 技の帯の絵を省く / 3 … 技の帯を隠す。吹き出しと記録の最後の1行は必ず残す。
   //   中身が変わるたびに 0 から測り直す(描く前に測るので、ちらつかない)
@@ -58757,7 +58774,9 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const bubbleInFlow = !!(bubble && !replay && bubble.cut && !bubbleHidden);
   // 小さい縦の画面と横の画面では、上に重ねたふつうの吹き出しが技の札を隠す(320×568 は上半分・844×390 は丸ごと。2026-10-27 フキダシくん)。
   //   吹き出しが出ているあいだは技の札を出さない(何の技かは記録の1行に出ている。台詞が消えれば札が出る)
-  const bubbleOverAction = !!((tiny || wide) && bubble && !bubble.cut && !replay && !tutorial);
+  // 1行の吹き出しの札がまんなかの上にあるあいだは、実況を下へ寄せて重ならないようにする(320 で実況の上の行が隠れた)
+  const bubbleChip = !!(bubble && !bubble.cut && !replay && !bubbleHidden);
+  const bubbleOverAction = false; // 吹き出しは1行の札になり、実況と重ならない(2026-10-29 まんなか案A)
   // 吹き出しで隠れたまま消えた技の札は、吹き出しが消えたあと1.2秒だけ出し直す(横の画面では台詞の間がほとんど無く、
   //   相手の技の1行が一度も見えなかった。2026-10-27 フキダシくんの測り直し・ソランドくん「相手が何をしたか分かるのは大事」)。
   //   番の帯・ダウンの帯・守りを選ぶ間・決着のときは出し直さない。次の技が来たら、そちらに替わる
@@ -58984,20 +59003,21 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {/* まんなか: 技の動き(アクション)と、起きたことの記録(ログ)の場所。相手の場と自分の場をここで上下に分ける(社長 2026-10-24)
           ★次の区切りの技ごとの動きも、この data-card-stage の中で見せる */}
       {/* 入り切らないときも上から並べる(safe center)。吹き出しの上が切れないように */}
-      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center justify-center ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`} style={{ justifyContent: 'safe center' }}>
+      <div ref={stageRef} data-card-stage data-card-stage-fit={stageFit} className={`relative flex ${boardFit >= 1 ? 'min-h-[40px]' : 'min-h-[64px]'} flex-1 flex-col items-center ${bubbleChip ? 'justify-end' : 'justify-center'} ${wide ? 'gap-1 py-0.5' : 'gap-1.5 py-1'} overflow-hidden px-3`} style={{ justifyContent: 'safe center' }}>
         {/* 案A: 番が替わったときの帯は、盤全体の真ん中へ移した(下の data-card-turn-banner。2026-10-26 ソラシドさん) */}
         {/* 相手の助手の吹き出し。出ているあいだは、まんなかの上に重ねて出す(場を押し下げない。2026-10-26 社長)。押すと次の台詞へ進む(練習試合は指の操作を下へ通す)。
             カードの大写しのあいだは隠す(大写しの両はしから字がはみ出して見えた。見回り2回目の新4。閉じればまた見える)
             番の知らせ(「あなたの番」の大きな札)のあいだも隠す(横画面で札が台詞に重なって読めなかった。2026-10-26 カゲあつくんの見回り。札が消えたら出る)
             顔は台詞の表情(data/assistants.js の8つの表情の顔の絵) */}
         {bubble && !replay && (
-          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : nextBubble} data-card-bubble-cut={bubble.cut ? '1' : undefined} className={`${bubbleHidden ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubbleInFlow ? 'relative shrink-0' : 'absolute inset-x-2 top-0.5'} z-[8] mx-auto flex items-center gap-1.5 ${bubble.cut
+          <div key={bubble.key} data-card-bubble data-card-bubble-face={bubble.face || face} data-card-bubble-ms={tutorial ? undefined : cardBubbleMs(bubble.text)} onClick={tutorial ? undefined : bubble.cut || bubbleOpen ? nextBubble : () => setBubbleOpen(true)} data-card-bubble-cut={bubble.cut ? '1' : undefined} data-card-bubble-open={!bubble.cut && bubbleOpen ? '1' : undefined} className={`${bubbleHidden ? 'invisible ' : ''}${tutorial ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'} ${bubbleInFlow ? 'relative shrink-0 mx-auto' : bubble.cut ? 'absolute inset-x-2 top-0.5 mx-auto' : 'absolute left-2 top-0.5'} z-[8] flex items-center gap-1.5 ${bubble.cut
               ? `mh-card-cutin w-full max-w-[calc(100%-16px)] flex-row-reverse rounded-2xl border-[3px] bg-slate-950/95 ${tiny ? 'px-1.5 py-0.5 text-[12px] leading-tight' : 'px-2 py-1 text-[15px] leading-snug'} font-black text-white shadow-[0_6px_18px_rgba(0,0,0,.6)]`
-              : `w-fit max-w-[calc(100%-16px)] rounded-2xl border-[3px] bg-white px-1.5 py-0.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-extrabold leading-snug text-[#1f1333] shadow-lg`}`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
+              : `w-fit max-w-[calc(100%-16px)] ${bubbleOpen ? 'rounded-2xl' : 'rounded-full'} border-2 bg-white px-1.5 py-0.5 text-[12px] font-extrabold leading-snug text-[#1f1333] shadow-lg`}`} style={{ borderColor: who.accent, ...JA_WRAP_STYLE }}>
             {/* マルチの相手は人なので、助手の顔ではなく相手のアイコン(助手の顔の絵を引いて、空の白い枠が出ていた) */}
-            {pvp ? <span data-card-bubble-pvp-icon className={`block ${tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
-              : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${bubble.cut ? (tiny || stageFit >= 2 ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]'} shrink-0 rounded-lg object-cover object-top`}/>}
-            <span className="min-w-0 flex-1"><span className={bubble.cut ? 'block text-[11px] tracking-wider' : 'mr-1 text-[11px]'} style={{ color: who.accent }}>{who.name}{bubble.cut ? ' ★' : ''}</span><span style={JA_WRAP_STYLE}>{cardJaWrap(bubble.text)}</span></span>
+            {pvp ? <span data-card-bubble-pvp-icon className={`block ${bubble.cut ? (tiny ? 'h-[26px] w-[26px]' : 'h-[32px] w-[32px]') : 'h-[22px] w-[22px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
+              : <img src={assistantFaceImage(who, bubble.face || face)} alt="" className={`${bubble.cut ? (tiny || stageFit >= 2 ? 'h-[38px] w-[38px] border-2' : compact ? 'h-[54px] w-[54px] border-[3px]' : 'h-[68px] w-[68px] border-[3px]') + ' border-white bg-black' : 'h-[22px] w-[22px]'} shrink-0 rounded-lg object-cover object-top`}/>}
+            <span className={`min-w-0 flex-1 ${!bubble.cut && !bubbleOpen ? 'truncate whitespace-nowrap' : ''}`}><span className={bubble.cut ? 'block text-[11px] tracking-wider' : 'mr-1 text-[11px]'} style={{ color: who.accent }}>{who.name}{bubble.cut ? ' ★' : ''}</span><span style={!bubble.cut && !bubbleOpen ? undefined : JA_WRAP_STYLE}>{!bubble.cut && !bubbleOpen ? bubble.text : cardJaWrap(bubble.text)}</span></span>
+            {!bubble.cut && !bubbleOpen && <span aria-hidden="true" className="shrink-0 text-[11px] text-slate-400">▸</span>}
           </div>
         )}
         {/* まんなかの線とうすい「VS」は、まんなかと同じ大きさの枠に入れる。はみ出した分がまんなかの高さに数えられて、
@@ -59016,16 +59036,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
               : pvp ? <CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/> : <img src={assistantFaceImage(who, 'happy')} alt="" className="h-full w-full object-cover object-top"/>}
           </div>
         )}
-        {action && !endFx && !turnBanner && stageFit < 3 && !bubbleOverAction && !(turnSummary && sumOpen) && !guardAtk && (   /* 守りを選ぶあいだは、下の攻撃カードの箱1つにまとめる(同じ技を2回出さない) */
-          <div key={action.key} data-card-action data-card-action-side={action.side} className={`relative z-[1] flex items-center gap-2 rounded-2xl border-2 bg-black/55 px-2 ${action.side === 'foe' ? 'border-rose-400/80' : 'border-amber-300/70'} ${compact ? "py-0.5" : "py-1"} shadow-lg`}>
-            {/* 案A: どちらが使った技か(相手=赤・自分=金) */}
-            <span data-card-fit className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? (watch ? who.name : '相手') : (watch ? meName : '自分')}</span>
-            {!compact && stageFit < 2 && action.cards.slice(0, 3).map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} src={CARD_IMG(c.img)} alt={c.name} className={`${compact ? 'h-[40px] w-[29px]' : 'h-[64px] w-[46px]'} rounded-[4px] object-cover shadow`}/> : null; })}
-            {/* 小さい段は1行(だれ「技」)にして、まんなかの高さに収める(2段だと上が切れた。カゲあつくんの確認 2026-10-25)。
-                横の画面もまんなかが 72px ほどしかなく、2行だと記録と合わせて入らず札が毎回消えていた(2026-10-27 ⑲)ので1行 */}
-            <div className={`${tiny || wide ? 'whitespace-nowrap text-[12px]' : 'text-[13px]'} font-black leading-tight`}>{action.who}<span className={tiny || wide ? 'text-[13px] text-amber-200' : 'block text-[15px] text-amber-200'}>「{action.cards.map((n) => (cardOf(db, n) || {}).name).join('＋')}」</span></div>
-          </div>
-        )}
+        {/* 技の帯は、下の1行の実況(data-card-log)にまとめた(2026-10-29 社長・まんなか案A: 技の帯と記録の文が同じ中身を2回言っていた) */}
         {/* 場の全体カード(両方に効く)。タップで詳しい画面。名前は切らずに折り返す */}
         {st.field && cardOf(db, st.field.no) && (
           <button type="button" data-card-env={st.field.no} data-card-env-side={st.field.p === CARD_ME ? 'me' : 'foe'} onClick={() => setDetail(st.field.no)}
@@ -59058,7 +59069,22 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             </button>
             : <div className="text-rose-200">{pendingText}</div>)}
           {pendingText && <CardGuardPreview db={db} pv={guardPv} compact={compact || stageFit >= 1} tight={tiny || stageFit >= 2}/>}
-          {(pendingText ? [] : (compact || tutorial || stageFit >= 1) ? logLines.slice(stageFit >= 1 || action || bubble || tutorial ? -1 : -2) : logLines.slice(bubble && action ? -2 : -3)).map((l, i, arr) => <div key={i} data-card-log-kind={l.kind || undefined} className={`${i === arr.length - 1 && !pendingText ? '' : 'text-[11px] text-violet-200'} ${l.kind === 'ko' ? '!text-rose-300 font-black' : l.kind === 'hit' && /ダメージ/.test(l.text) ? '!text-rose-200' : ''}`}>{cardLogText(l)}</div>)}
+          {/* 1行の実況(2026-10-29 まんなか案A): いちばん新しい1つだけを、まんなかの同じ所に出す。技なら頭に「自分」「相手」の札。
+              2行まで折り返して、どの幅でも切らない(320 で前の行が切れていた)。小さい画面と横の画面は、まんなかが低いので1行にして、字を幅に合わせて縮める。始めの「先攻・後攻」は番の帯が知らせるので残さない */}
+          {!pendingText && liveLine && (
+            <div className="flex items-center justify-center gap-1.5">
+            {/* 使ったカードの小さい絵(カードゲームらしさを残す。2026-10-29 社長)。押すと詳しい画面 */}
+            {liveCards.map((no, i) => { const c = cardOf(db, no); return c ? <img key={i} data-card-live-card={no} src={CARD_IMG(c.img)} alt={c.name} {...press(no, () => setDetail(no))} className={`${tiny || wide ? 'h-[24px]' : 'h-[34px]'} aspect-[5/7] shrink-0 rounded-[3px] object-cover shadow`}/> : null; })}
+            <div data-card-log-kind={liveLine.kind || undefined} style={(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? { whiteSpace: 'nowrap', fontSize: `clamp(9px, ${(84 / ([...cardLogText(liveLine)].length + (action ? 3 : 0) + liveCards.length * 2)).toFixed(1)}vw, 12px)` } : undefined} className={`min-w-0 ${(tiny || wide) && [...cardLogText(liveLine)].length <= 30 ? '' : 'line-clamp-2'} ${liveLine.kind === 'ko' ? 'text-rose-300 font-black' : liveLine.kind === 'hit' && /ダメージ/.test(liveLine.text) ? 'text-rose-100' : ''}`}>
+              {action && !endFx && !turnBanner && (
+                <span data-card-action data-card-action-side={action.side} className="mr-1.5 inline-block align-[1px]">
+                  <span data-card-fit className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black ${action.side === 'foe' ? 'bg-rose-500 text-white' : 'bg-amber-300 text-slate-950'}`}>{action.side === 'foe' ? (watch ? who.name : '相手') : (watch ? meName : '自分')}</span>
+                </span>
+              )}
+              {cardLogText(liveLine)}
+            </div>
+            </div>
+          )}
         </div>
         )}
       </div>
