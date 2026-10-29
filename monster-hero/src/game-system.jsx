@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aab8fc607b395230
+// generated-sha256: 4c7d4a8de0f607ac
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -61055,6 +61055,9 @@ const CardDeckPickTile = ({ db, no, inDeck, limit, canAdd, press, onAdd, onRemov
 const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor = null }) => {
   const [deck, setDeck] = useState(() => ({ ...deck0, monsters: deck0.monsters.slice(), cards: deck0.cards.slice() }));
   const [view, setView] = useState(deck0.monsters.length < 3 ? 'mon' : 'all');
+  // 縦の画面は、上のデッキの箱を1行の帯にたたむ(押すと開いて名前・3体を直せる)。カードの並ぶ所を広く(2026-10-29 社長・案B)。
+  //   3体そろっていない新しいデッキは、はじめから開いておく
+  const [boxOpen, setBoxOpen] = useState(deck0.monsters.length < 3);
   // 絞り込みの列: 「モンスター」「デッキ」「技など全部」(先頭の3つ)を選んだときは列を左はしへ戻し、種類の札を選んだときはその札が見える所まで動かす
   //   (右はしで切れた札を押すと列が右へ流れ、左はしの「モンスター 3/3」が「ター 3/3」と切れて見えた。2026-10-26 2回目の見回り)
   //   ★scrollIntoView は使わない(縦にも動く。viewport-height-check)。列の横の位置だけを動かす
@@ -61155,6 +61158,16 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           {/* 横の画面は、名前〜絞り込みだけを動かし(スクロール)、「保存する」「やめる」は列の下に止めておく(667×375 で保存が画面の外に出ていた。2026-10-29 見回り) */}
           <div className="contents landscape:flex landscape:min-h-0 landscape:flex-1 landscape:flex-col landscape:overflow-y-auto">
           <div className={`${SCREEN_PANEL_FLAT_CLASS} shrink-0 space-y-1.5`}>
+            {!land && (
+              <button type="button" data-card-deck-bar={boxOpen ? 'open' : 'closed'} onClick={() => { Audio_.fgSe.tap(); setBoxOpen((v) => !v); }} aria-expanded={boxOpen}
+                className="flex w-full items-center gap-1.5 text-left active:scale-[.99]">
+                <span className="min-w-0 flex-1 truncate text-[14px] font-black text-white">{boxOpen ? <span className="text-[12px] text-slate-300">名前と3体をなおす</span> : <>{(deck.name || '').trim() || 'デッキ'} <span className="text-[11px] text-slate-400">✎</span></>}</span>
+                {!boxOpen && deck.monsters.map((no) => { const m = cardMonsterOf(db, no); return m ? <img key={no} src={CARD_IMG(m.img)} alt={m.name} draggable={false} className="h-[30px] rounded-[3px] shadow"/> : null; })}
+                {!boxOpen && <span className={`shrink-0 text-[15px] font-black ${deck.cards.length === CARD_BATTLE_DECK_SIZE ? 'text-emerald-300' : 'text-white'}`}>{deck.cards.length}<span className="text-[11px] text-slate-400">/{CARD_BATTLE_DECK_SIZE}</span></span>}
+                <span aria-hidden="true" className="shrink-0 text-[12px] text-slate-400">{boxOpen ? '▴' : '▾'}</span>
+              </button>
+            )}
+            <div className={!land && !boxOpen ? 'hidden' : 'space-y-1.5'}>
             <input data-card-deck-name value={deck.name} maxLength={20} onChange={(e) => setDeck((d) => ({ ...d, name: e.target.value }))} className="w-full rounded-lg border border-white/20 bg-slate-950 px-2 py-1.5 text-[14px] font-black text-white landscape:py-1 landscape:text-[13px]" aria-label="デッキの名前"/>
             <div className="flex items-end gap-1.5">
               {[0, 1, 2].map((i) => {
@@ -61170,6 +61183,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
                 <div data-card-deck-ready={ready ? 'ok' : 'ng'} className={`text-[11px] font-black ${ready ? 'text-emerald-300' : 'text-amber-200'}`}>{ready ? '対戦に使えます' : 'まだ対戦に使えません'}</div>
               </div>
             </div>
+            </div>
             {!ready && <div data-card-deck-problems className="text-[11px] font-bold leading-snug text-rose-300" style={JA_WRAP_STYLE}>{[...rules, ...own].slice(0, 2).join(' / ')}</div>}
             {unusableCount > 0 && <button type="button" data-card-deck-dead={unusableCount} onClick={() => { Audio_.fgSe.tap(); setView('deck'); setNotice(''); }} className="block w-full text-left text-[11px] font-bold leading-snug text-amber-200 underline decoration-dotted" style={JA_WRAP_STYLE}>{jaWrap(`3体のどの子も使えないカードが${unusableCount}枚入っています(混血の子は、守りのカードはサブの種族のものだけ使えます。押すと先頭に並べます)`)}</button>}
             {notice && <div data-card-deck-notice className="text-[12px] font-black text-amber-200" style={JA_LABEL_STYLE}>{jaWrap(notice)}</div>}
@@ -61177,10 +61191,11 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           {/* 絞り込みは1列(縦は横に流す・横の画面は折り返す) */}
           {/* 縦の画面では右端をぼかして、横に続きがあると分かるようにする(端で札が半分に切れて、壊れて見えた。2026-10-26 見回り) */}
           <div ref={chipsRow} data-card-deck-chips className="mh-scroll relative mt-1.5 flex shrink-0 gap-1 overflow-x-auto pb-1 pr-6 landscape:flex-wrap landscape:overflow-visible landscape:pr-0" style={land ? undefined : { WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)', maskImage: 'linear-gradient(to right, #000 82%, transparent)' }}>
-            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
-            {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
+            {/* よく使う「使える子だけ」「並び」を先頭へ(右はしで見えなかった。2026-10-29 社長・案B) */}
             <button type="button" data-card-deck-usable onClick={() => setUsableOnly((v) => !v)} className={chip(usableOnly)}>{usableOnly ? '✓ ' : ''}使える子だけ</button>
             <button type="button" data-card-deck-sort={sort} onClick={() => setSort((s) => CARD_DECK_SORTS[(CARD_DECK_SORTS.findIndex((x) => x.id === s) + 1) % CARD_DECK_SORTS.length].id)} className={chip(false)}>並び: {sortLabel} ▾</button>
+            {CARD_DECK_VIEWS.map((f) => <button key={f.id} type="button" data-card-deck-filter={f.id} onClick={() => { setView(f.id); setNotice(''); }} className={chip(view === f.id)}>{f.id === 'mon' ? `モンスター ${deck.monsters.length}/3` : f.id === 'deck' ? `デッキ ${deck.cards.length}枚+${deck.monsters.length}体` : f.label}</button>)}
+            {canAsk && <button type="button" data-card-deck-ask onClick={() => { void consult(); }} className={chip(false)}>💬 {advisor.name}に相談</button>}
           </div>
           </div>
           {land && footer}
