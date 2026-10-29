@@ -2477,13 +2477,31 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div className="flex min-h-0 flex-1 flex-col">
               {rankHubTab === 'national'
                 ? (rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null)
+                : rankHubTab === 'beatRank'
+                ? (
+                  // ビートランク(2026-10-29 社長「ビートランクは下のタブのほうがいい」)。中身は共通の PlayerRankBoard(43)
+                  <div data-rhythm-beat-rank-ranking className="flex min-h-0 flex-1 flex-col" style={{ paddingTop: 'var(--mh-sa-top)' }}>
+                    <div className="flex shrink-0 items-center gap-2 px-3 pt-2">
+                      <button type="button" aria-label="戻る" onClick={() => setRankHubOpen(false)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <b className="block truncate text-base font-black text-cyan-100">🎵 ビートランク</b>
+                        <small className="block text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートを遊ぶほど上がる、あなた自身のランクの順位です')}</small>
+                      </div>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      <PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async () => sbFetchBeatRankMine(await ensureBreederId())}
+                        renderIcon={rankingSupport && rankingSupport.breederIcon} selfXp={Number(ms.beatRankXp) || 0} />
+                    </div>
+                  </div>
+                )
                 : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
-              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26) */}
-              {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
+              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26)。
+                  ビートランクを3つ目に足した(2026-10-29)ので、入らないときは言葉の切れ目(全国／ランキング・マスモン／ランキング)でだけ2行に分ける */}
+              {[['national', '🏆', ['全国', 'ランキング']], ['buddy', '🎶', ['マスモン', 'ランキング']], ['beatRank', '🎵', ['ビートランク']]].map(([id, icon, words]) => (
                 <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
-                  className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-1 text-[11px] font-black leading-tight min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}><span className="inline-flex flex-wrap items-center justify-center gap-x-1"><span aria-hidden="true">{icon}</span>{words.map((w) => <span key={w} className="whitespace-nowrap">{w}</span>)}</span></button>
               ))}
             </div>
           </div>

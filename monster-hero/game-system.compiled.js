@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad178c0821c27dd1
+// source-sha256: 38676e7f0cb9d342
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -60170,8 +60170,7 @@ function RhythmRankingScreen({
   onResendRhythmRankingPending = null,
   setRhythmEventDivision,
   setRhythmRankingDetail,
-  setRhythmRankingTab,
-  beatRankXp = 0
+  setRhythmRankingTab
 }) {
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
@@ -60193,9 +60192,7 @@ function RhythmRankingScreen({
   const boardKind = rhythmRankingTab === 'weekly' ? 'weekly' : eventTabOpen ? eventPhase === 'prev' ? prevEventEntry ? 'prevEvent' : null : limitedEvent ? 'limited' : null : null;
   const boardTab = eventReleased && !!boardKind;
   const totalTabOpen = totalTab && !boardTab && !eventTabOpen;
-  const beatRankTabOpen = rhythmRankingTab === 'beatRank' && !boardTab && !eventTabOpen;
-  const [beatRankReload, setBeatRankReload] = useState(0);
-  const songTab = !totalTabOpen && !boardTab && !eventTabOpen && !beatRankTabOpen;
+  const songTab = !totalTabOpen && !boardTab && !eventTabOpen;
   const boards = rhythmEventRanking || {};
   const event = boardKind && boards[boardKind] || {
     status: 'idle',
@@ -60259,10 +60256,7 @@ function RhythmRankingScreen({
   }] : []), ...(eventReleased ? [{
     id: 'event',
     label: 'イベント'
-  }] : []), {
-    id: 'beatRank',
-    label: 'ビートランク'
-  }];
+  }] : [])];
   const openTab = tab => {
     setRhythmRankingTab(tab);
     if (tab === 'total') loadRhythmTotalRanking && loadRhythmTotalRanking();
@@ -60288,7 +60282,7 @@ function RhythmRankingScreen({
     loadRhythmEventRanking && loadRhythmEventRanking(boardKind, divisionId);
   };
   const refresh = () => {
-    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else if (beatRankTabOpen) setBeatRankReload(n => n + 1);else loadRhythmRanking(song, rhythmRanking.difficultyId || 'ALL');
+    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song, rhythmRanking.difficultyId || 'ALL');
   };
   const eventRankScore = entry => entry && entry.baseScore !== null && entry.baseScore !== undefined ? entry.baseScore : entry?.score || 0;
   const totalRow = (entry, rank, mine) => React.createElement("div", {
@@ -60412,14 +60406,7 @@ function RhythmRankingScreen({
     style: {
       paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
-  }, beatRankTabOpen && React.createElement(PlayerRankBoard, {
-    kind: "beat",
-    fetchTop: sbFetchBeatRanks,
-    fetchMine: async () => sbFetchBeatRankMine(await ensureBreederId()),
-    renderIcon: rankingBreederIcon,
-    selfXp: beatRankXp,
-    reloadKey: beatRankReload
-  }), totalTabOpen && React.createElement(React.Fragment, null, total.status === 'loading' && React.createElement("p", {
+  }, totalTabOpen && React.createElement(React.Fragment, null, total.status === 'loading' && React.createElement("p", {
     "data-rhythm-total-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), total.status === 'notReady' && React.createElement("p", {
@@ -83085,7 +83072,35 @@ function RhythmMultiScreen({
       className: "absolute inset-0 z-[88000] flex min-h-0 flex-col bg-slate-950"
     }, React.createElement("div", {
       className: "flex min-h-0 flex-1 flex-col"
-    }, rankHubTab === 'national' ? rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null : React.createElement(RhythmBuddyRankingBoard, {
+    }, rankHubTab === 'national' ? rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null : rankHubTab === 'beatRank' ? React.createElement("div", {
+      "data-rhythm-beat-rank-ranking": true,
+      className: "flex min-h-0 flex-1 flex-col",
+      style: {
+        paddingTop: 'var(--mh-sa-top)'
+      }
+    }, React.createElement("div", {
+      className: "flex shrink-0 items-center gap-2 px-3 pt-2"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": "戻る",
+      onClick: () => setRankHubOpen(false),
+      className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300"
+    }, "←"), React.createElement("div", {
+      className: "min-w-0 flex-1 leading-tight"
+    }, React.createElement("b", {
+      className: "block truncate text-base font-black text-cyan-100"
+    }, "🎵 ビートランク"), React.createElement("small", {
+      className: "block text-[10px] font-bold text-slate-400",
+      style: JA_WRAP_STYLE
+    }, jaWrap('モンヒロビートを遊ぶほど上がる、あなた自身のランクの順位です')))), React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-y-auto"
+    }, React.createElement(PlayerRankBoard, {
+      kind: "beat",
+      fetchTop: sbFetchBeatRanks,
+      fetchMine: async () => sbFetchBeatRankMine(await ensureBreederId()),
+      renderIcon: rankingSupport && rankingSupport.breederIcon,
+      selfXp: Number(ms.beatRankXp) || 0
+    }))) : React.createElement(RhythmBuddyRankingBoard, {
       renderBreederIcon: rankingSupport && rankingSupport.breederIcon,
       selfName: myProfile().name,
       onClose: () => setRankHubOpen(false),
@@ -83096,13 +83111,20 @@ function RhythmMultiScreen({
       style: {
         paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))'
       }
-    }, [['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => React.createElement("button", {
+    }, [['national', '🏆', ['全国', 'ランキング']], ['buddy', '🎶', ['マスモン', 'ランキング']], ['beatRank', '🎵', ['ビートランク']]].map(([id, icon, words]) => React.createElement("button", {
       key: id,
       type: "button",
       "data-rhythm-mode-ranking-tab": id,
       onClick: () => setRankHubTab(id),
-      className: `min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
-    }, label)))));
+      className: `min-h-[44px] min-w-0 flex-1 rounded-xl border px-1 text-[11px] font-black leading-tight min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`
+    }, React.createElement("span", {
+      className: "inline-flex flex-wrap items-center justify-center gap-x-1"
+    }, React.createElement("span", {
+      "aria-hidden": "true"
+    }, icon), words.map(w => React.createElement("span", {
+      key: w,
+      className: "whitespace-nowrap"
+    }, w))))))));
   }
   if (!view && !searching) return React.createElement("main", {
     "data-rhythm-multi": true,
@@ -141592,7 +141614,6 @@ function MonsterHeroGame() {
           loadRhythmRanking(song);
         },
         render: onClose => React.createElement(RhythmRankingScreen, {
-          beatRankXp: beatRank.xp,
           loadRhythmEventRanking: loadRhythmEventRanking,
           loadRhythmRanking: loadRhythmRanking,
           loadRhythmTotalRanking: loadRhythmTotalRanking,
@@ -141804,7 +141825,6 @@ function MonsterHeroGame() {
       setRhythmMonsterMessage: setRhythmMonsterMessage,
       setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen
     }), gameState === 'RHYTHM_RANKING' && React.createElement(RhythmRankingScreen, {
-      beatRankXp: beatRank.xp,
       loadRhythmEventRanking: loadRhythmEventRanking,
       loadRhythmRanking: loadRhythmRanking,
       loadRhythmTotalRanking: loadRhythmTotalRanking,
