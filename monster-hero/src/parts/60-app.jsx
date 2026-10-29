@@ -5758,7 +5758,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); setBeatRankAward(null); stopCatchUp(); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;

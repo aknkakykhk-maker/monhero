@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 50e35d9b1fe028d9
+// generated-sha256: 997bd95c99d74f25
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -73203,7 +73203,7 @@ function MonsterHeroGame() {
   //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
   //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
-    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); setBeatRankAward(null); stopCatchUp(); return; }
+    if (gameState === 'RHYTHM_PLAY') { rhythmPlayStartedAtRef.current = Date.now(); setRhythmPlayRunAward(null); stopCatchUp(); setBeatRankAward(null); return; }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
