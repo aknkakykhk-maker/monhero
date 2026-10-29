@@ -1328,6 +1328,10 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  eternalDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
   // 種族チャレンジの選択画面。種族→勇者→供モン→確認の各段で言うことが変わるので、
   // 画面から condition(いまの段)を渡す。セリフ本体は speciesChallengeGuide の束から合流する
   speciesChallenge: {
@@ -2477,6 +2481,11 @@ addAssistantLinePack({
       { e:'surprise', t:'WAVE3・5・7・9・10のボスは起き上がるし、W10は4回も蘇るって(๑°ロ°๑)‼️' },
       { e:'wink', t:'いちばん奥の難易度。ルール詳細を読んで、覚悟ができたら行こ〜' },
     ],
+    eternalDifficulty: [
+      { e:'surprise', t:'ETERNALはHELHEIMのさらに先…敵はWAVEのはじめに、ライフの半分ぶんの殻をまとってるの' },
+      { e:'troubled', t:'殻を削ったぶんは距離強化にならないし、敵の攻撃は一部が丈夫さを貫いてくるよ〜' },
+      { e:'wink', t:'いちばんきたえたパーティで行こ〜。ルール詳細は先に読んでね' },
+    ],
   },
 });
 
@@ -3260,6 +3269,11 @@ addAssistantLinePack({
       { e:'surprise', t:'WAVE3・5・7・9・10のボスが起き上がりまつ…！ W10は4回でつ。' },
       { e:'wink', t:'報酬は虹のプシュケー160個。短期決着を狙お♪' },
     ],
+    eternalDifficulty: [
+      { e:'surprise', t:'ETERNALは、敵がWAVEのはじめに殻をまといまつ…！' },
+      { e:'troubled', t:'殻を削ったぶんは距離強化になりませんでつ。敵の攻撃は丈夫さを一部貫きまつ。' },
+      { e:'wink', t:'報酬は虹のプシュケー190個。きたえ抜いてから挑も♪' },
+    ],
     // ---- はじめて ----
     onboarding: [
       { e:'happy',   t:'はじめまして。私はきき、このゲームの助手でつ (´ω`)' },
@@ -3889,6 +3903,11 @@ addAssistantLinePack({
       { e:'surprise', t:'まって、WAVE9のデュラハンまで起き上がってくるんだってwww' },
       { e:'excited', t:'報酬は虹のプシュケー160個。……行くんでしょ？♡' },
       { e:'happy', t:'ここまで来たキミなら、ももは止めないよ！' },
+    ],
+    eternalDifficulty: [
+      { e:'surprise', t:'まだ上があったの！？ ETERNAL、敵が殻をまとってくるんだって！' },
+      { e:'troubled', t:'殻を削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ。' },
+      { e:'excited', t:'報酬は虹のプシュケー190個。……キミなら、行くよね？♡' },
     ],
     // ---- はじめての設定 ----
     onboarding: [
@@ -4706,6 +4725,11 @@ addAssistantLinePack({
       { e:'wink', t:'距離強化もだんだん効かなくなる。伸ばす前提の組み方は通らんぞ' },
       { e:'excited', t:'ここを通ったら、おで本気で拝むわ' },
     ],
+    eternalDifficulty: [
+      { e:'normal', t:'エターナル。ヘルヘイムの先があるとはな' },
+      { e:'troubled', t:'敵は殻をかぶってくるし、攻撃は丈夫さを貫いてくる。守りだけじゃ持たんぞ' },
+      { e:'excited', t:'ここを越えたら、おでもう何も言えんわ' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVEな。しばりプレイだよ' },
       { e:'happy',    t:'{name}、育ててる種族から挑むと入りやすいわ' },
@@ -5173,6 +5197,11 @@ addAssistantLinePack({
       { e:'troubled', t:'ライフは10倍で、こっちの最大ライフも削れる。長引かせたら負けや' },
       { e:'happy', t:'無理だと思ったら引いていい。恥ずかしいことちゃうよ' },
     ],
+    eternalDifficulty: [
+      { e:'normal', t:'ヘルヘイムのさらに先や。敵は殻をまとって出てくるで' },
+      { e:'troubled', t:'殻を削ったぶんは距離強化にならん。攻撃も丈夫さを貫いてくる' },
+      { e:'happy', t:'しっかりきたえてからでええ。焦らんでな' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'同じ種族だけで組むと、弱いとこがはっきり出るな' },
       { e:'happy',    t:'初クリアで超越の実。その種族のやつがもらえるよ' },
@@ -5463,6 +5492,11 @@ addAssistantLinePack({
       { e:'troubled', t:'ライフ10倍に、最大ライフ減少。距離強化もしぼむから、長期戦はまぢ厳しいよ💦' },
       { e:'happy', t:'無理だと思ったら引いていいからね(〃´o｀)ﾌｩ…' },
     ],
+    eternalDifficulty: [
+      { e:'normal', t:'ヘルヘイムのさらに先。敵はWAVEのはじめに殻をまとってるよ。' },
+      { e:'troubled', t:'殻を削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるの💦' },
+      { e:'happy', t:'きたえ抜いてからでいいからね(〃´o｀)ﾌｩ…' },
+    ],
     speciesChallenge: [
       { e:'normal',  t:'同じ種族だけで組むと、弱点がはっきり出るよ。' },
       { e:'happy',   t:'超越の実は、その種族のぶんがもらえるよ〜' },
@@ -5576,6 +5610,11 @@ addAssistantLinePack({
       { e:'excited', t:'230倍で、さらにライフ10倍。もう笑うしかないねw' },
       { e:'troubled', t:'ボスは何回も起き上がるし、こっちの最大ライフは削られるしで容赦ないよ。' },
       { e:'happy', t:'ここに立てるだけで、もう十分すごいじゃん♡' },
+    ],
+    eternalDifficulty: [
+      { e:'excited', t:'殻つきで、しかも攻撃が丈夫さを貫通。もう笑うしかないねw' },
+      { e:'troubled', t:'殻を削ったぶんは距離強化にならないんだって。容赦ないよ。' },
+      { e:'happy', t:'ここまで来たなら、とことん付き合うよ♡' },
     ],
     speciesChallenge: [
       { e:'wink',    t:'1種族しばり。縛るの好きだねえw' },
@@ -5893,6 +5932,11 @@ addAssistantLinePack({
       { e:'normal', t:'ラグナロクのさらに先でつ。ここに立てる人は、ごくわずかでつ。' },
       { e:'troubled', t:'ライフ10倍に、最大ライフ減少。距離強化も薄れるので、長期戦は厳しいでつ。' },
       { e:'happy', t:'無理だと思ったら引いていいんでつよ。逃げではありません。' },
+    ],
+    eternalDifficulty: [
+      { e:'normal', t:'ヘルヘイムのさらに先でつ。敵は殻をまとって出てきまつ。' },
+      { e:'troubled', t:'殻を削ったぶんは距離強化になりませんでつ。攻撃は丈夫さを貫いてきまつ。' },
+      { e:'happy', t:'きたえ抜いてから挑めば大丈夫でつよ。' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'同じ種族だけで組むと、弱点がはっきり出まつね。' },
@@ -6369,6 +6413,11 @@ addAssistantLinePack({
       { e:'normal',   t:'ライフ10倍で、こっちの最大ライフも削れる。長引かせたら負けだよ！' },
       { e:'happy',    t:'きついと思ったら引いていいよ。それも作戦！' },
       { e:'normal',   t:'ラグナロクのさらに先。ここまで来る人、ほぼいないと思う！' },
+    ],
+    eternalDifficulty: [
+      { e:'surprise', t:'エターナル！ ヘルヘイムの先とか、まじで燃える！' },
+      { e:'troubled', t:'敵は殻をまとってくるし、攻撃は丈夫さを貫いてくる。えぐいね…' },
+      { e:'excited', t:'ここ通ったら、{name}は伝説の勇者だよ！' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVE。しばりプレイだよ！' },
@@ -7097,6 +7146,11 @@ addAssistantLinePack({
       { e:'normal',   t:'ライフ10倍で、こっちの最大ライフも削れる。長引かせたら負けだよ' },
       { e:'happy',    t:'きついと思ったら引いていいよ。それも作戦' },
       { e:'normal',   t:'ラグナロクのさらに先。ここまで来る人、ほぼいないと思う' },
+    ],
+    eternalDifficulty: [
+      { e:'surprise', t:'エターナルかぁ。ヘルヘイムの先とか、ちょっとわくわくするわ' },
+      { e:'troubled', t:'殻を削っても距離強化は伸びないし、攻撃は丈夫さを貫いてくるよ😭' },
+      { e:'excited', t:'ここ通ったら、{name}は伝説のランカーだよ。ふふん' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVE。しばりの遊びだよぉ' },
@@ -7956,6 +8010,11 @@ addAssistantLinePack({
       { e:'normal',   t:'長引かせたら負け。短く決める計算で組も' },
       { e:'excited',  t:'ここを通ったら、{name}は本物だぜ・・・！' },
       { e:'happy',    t:'きついと思ったら引いていいよ。また来ればいいだけ' },
+    ],
+    eternalDifficulty: [
+      { e:'surprise', t:'エターナル!? ヘルヘイムの先とか、うぉぉぉ……' },
+      { e:'troubled', t:'敵は殻をまとってくるし、攻撃は丈夫さを貫いてくる。殻を削っても距離強化は伸びないよ' },
+      { e:'excited', t:'ここを通ったら、{name}は伝説だぜ・・・！' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVE。しばりの遊びだよ' },
