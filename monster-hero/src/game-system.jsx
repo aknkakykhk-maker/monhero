@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a2408cb0122a948c
+// generated-sha256: 675f6524ad646906
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42481,7 +42481,7 @@ const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
   const more = list.length - shown.length;
   const chip = (e) => (
     <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
-      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-[96px] text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
+      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
       <span className="shrink-0">{exEffectIconOf(e)}</span>
       <span className="min-w-0 truncate">{e.name}</span>
       {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
@@ -42563,7 +42563,7 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
       <div data-unit-stat="apt" className="mt-1 text-[10px] font-black text-cyan-300">この枠の間合い適性 {apt >= 0 ? '+' : ''}{apt}%</div>
       {status.tactics
         ? <>{list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)])}{list('team', '味方全員にかかっている効果', team.map(chipRow))}</>
-        : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)])}
+        : list('team', 'かかっている効果(パーティ全体)', hasEx ? [...exRows, ...lineRows] : [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)])}
     </div>
   );
 };
@@ -42693,32 +42693,6 @@ const kindOfTacticsSlotFx = (fx) => {
 // ・省エネ切替ボタンだけ、バトル画面の中でもういちど gameState==='BATTLE' を見ていた。
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
-// ★AIコピー(ソラシドのアシカ)の5つの遊びの札。縦は4人の列の右はし、横向き(背の低い画面)は列の下に置く(ジン部長の決め)。
-//   4列(=間合い)の外に置いて、5つ目の間合いに見えないようにする。コピーがいないときは列の組み方を変えない(display:contents)
-const CLASSIC_AI_COPY_CSS = `
-[data-ai-copy-row]{display:flex;width:100%;gap:6px;align-items:stretch}
-[data-ai-copy-row] > .grid{flex:1 1 0;min-width:0;width:auto}
-[data-ai-copy-cell]{width:62px;flex:0 0 62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2px;padding:3px 3px;border-radius:12px;border:1px solid rgba(52,211,153,.6);background:rgba(2,44,34,.55);position:relative}
-[data-ai-copy-cell] [data-ai-copy-head]{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
-[data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:3px}
-[data-ai-copy-cell] [data-ai-copy-name]{width:100%;min-width:0;text-align:center;font-size:9px;line-height:10px;font-weight:900;color:#a7f3d0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
-/* コピーが出ると4枠が細くなる(320 幅で約52px)。枠の中の札が枠からはみ出さない・字が切れないように、コピーがいるあいだだけ小さくする
-   (2026-10-29 見回り: 距離補正の札「-10.0%」が枠の外へ、ガードの札が「ガ…」に切れていた) */
-[data-ai-copy-row] [data-dist-chip]{font-size:9px;padding:1px 2px;gap:0;right:1px;max-width:calc(100% - 2px)}
-[data-ai-copy-row] [data-dist-chip] svg{display:none}
-[data-ai-copy-row] [data-tactics-slot-marks] > div{padding-left:1px;padding-right:1px}
-[data-ai-copy-row] [data-tactics-slot-marks] > div > span:first-child{display:none}
-/* 横向き(背の低い画面): 縦と同じく4枠の右に細い5列目として置く。列の下に段を足すと、そのぶん敵の段が縮んで敵の絵が見えなくなる
-   (2026-10-29 見回り 667×375)。枠の高さ(112px)に収まるよう、絵・字を小さくする */
-@media (orientation: landscape) and (max-height: 520px){
-  [data-ai-copy-cell]{width:64px;flex:0 0 64px;gap:0;padding:1px 2px;border-radius:10px}
-  [data-ai-copy-cell] [data-ai-copy-head]{gap:0}
-  [data-ai-copy-cell] [data-ai-copy-face]{margin-bottom:2px}
-  [data-ai-copy-cell] [data-ai-copy-name]{font-size:8px;line-height:9px}
-  [data-ai-copy-cell] [data-sorashido-next]{padding:1px 2px;border-radius:6px}
-  [data-ai-copy-cell] [data-sorashido-next] > b{-webkit-line-clamp:2;font-size:8px;line-height:9px}
-  [data-ai-copy-cell] [data-sorashido-next] > small{display:none}
-}`;
 // 演出の段階。60 から aiCopy.fx('appear'|'thinking'|'vanish')が来ればそれを使い、無ければ fallback(出る前 appear・出たら idle)
 const aiCopyViewPhase = (copy, fallback) => (copy && ['appear', 'thinking', 'vanish'].includes(copy.fx) ? copy.fx : fallback);
 const classicAiCopyLandscape = () => {
@@ -42726,7 +42700,7 @@ const classicAiCopyLandscape = () => {
   catch (e) { return false; }
 };
 // ★AIコピーの5列目の部品(2026-10-28 社長が案アに決めた)。タクティクス/レイドで空いたマスが無いとき・タクティクス旧の盤の外に出す。
-//   5つの遊びの札(ClassicAiCopyCell)もこの部品にそろえる約束(ダイスくん)。src は元の子(枠の子か ALL_PLAYER_MONSTERS の1件)
+//   本編(5つの遊び)とタクティクス/レイドの小窓(AiCopyFloat)で同じ部品を使う。src は元の子(枠の子か ALL_PLAYER_MONSTERS の1件)
 //   AiCopyFace … 元の子の顔の右下に🤖の印 / AiCopyBody … 少し薄くした元の子の絵。コピーが打つ間(hit)は技の動きで動く
 //   AiCopyLifeBar … ライフの数と棒(元の子の枠のライフの行と同じ字の大きさ)。hp が数のときだけ出す(5つの遊びのコピーはライフが無い)
 const aiCopySrcOf = (copy, slots) => {
@@ -42783,35 +42757,40 @@ function AiCopyLifeBar({ hp, maxHp, narrow = false }) {
     </span>
   );
 }
-// タクティクス/レイドの5列目。縦=盤の右の列(layout 'portrait')、横向きの背の低い画面=盤の下の帯(layout 'landscape')
-function TacticsAiCopyColumn({ copy, src, phase, hit, anim, skill, standing, layout, onOpen, hatePct = null, compact = false }) {
+// ★AIコピーの小窓(2026-10-29 社長が「ア 敵の横に小窓」に決めた・「コピー枠が増えることによって、もとの4枠がずれる」)。
+//   本編・タクティクス旧・レイド・タクティクス新(空きマスが無いとき)で、コピーは4枠の並びに足さず、敵の段の中に固定で出す(4枠は1pxも動かない)。
+//   縦の画面は敵の段の左(ログとステータスのボタンのあいだ)、背の低い画面(高さ640以下・横向き)は左下に横長で。中身は顔+🤖・少し薄い元の子の絵・
+//   ライフ(タクティクスだけ)とガッツの数と棒・狙われる%・次に使う札。技を使うあいだは小窓の中の絵が動き、技名も小窓に出す。押すと手札の窓
+function AiCopyFloat({ copy, src, phase, hit, anim, skill, standing, onOpen, hatePct = null, lift = false }) {
   if (!copy) return null;
-  const land = layout === 'landscape';
-  // compact … タクティクス旧の横向き(背の低い画面)。盤の高さ(約152px)に収まるよう、絵と顔を小さくし間を詰める(2026-10-29 見回り)
   const name = tacticsAiCopyName(copy);
+  const short = classicAiCopyLandscape() || (typeof window !== 'undefined' && window.innerHeight <= 640);
   const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
-  const next = standing ? <SorashidoNextCardBadge card={copy.nextCard || null} layout={land ? 'landscape' : 'portrait'} turnsLeft={copy.turnsLeft}/>
+  const next = standing ? <SorashidoNextCardBadge card={copy.nextCard || null} layout="landscape" turnsLeft={short ? null : copy.turnsLeft}/>
     : <span className="text-center text-[9px] font-black leading-tight text-emerald-300">次のターンから</span>;
   return (
-    <div data-tactics-ai-copy-column={layout} data-ai-copy-phase={phase} role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined}
-      aria-label={`${name}${canOpen ? '。押すと手札を見る' : ''}`} onClick={canOpen ? onOpen : undefined}
+    <div data-ai-copy-float={short ? 'short' : 'tall'} data-ai-copy-phase={phase} role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined}
+      aria-label={`${name}${canOpen ? '。押すと手札を見る' : ''}`} onClick={canOpen ? (e) => { e.stopPropagation(); onOpen(); } : undefined}
       onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}
-      className={`relative min-w-0 rounded-xl border border-emerald-400/60 bg-emerald-950/55 text-emerald-50 ${canOpen ? 'cursor-pointer' : ''} ${land ? 'flex h-[46px] w-full items-center gap-2 px-2' : `flex h-full w-[72px] max-[359px]:w-[60px] shrink-0 flex-col items-center justify-between ${compact ? 'gap-0 py-0.5' : 'gap-0.5 py-1'} px-1 max-[359px]:px-0.5`}`}>
-      {skill && <span data-tactics-ai-copy-skill className={`absolute z-[90] max-w-[140px] truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)] ${land ? 'left-1/2 -top-3 -translate-x-1/2' : 'right-1 top-1/3'}`}>{skill}</span>}
-      <span className={`flex min-w-0 items-center gap-1 ${land ? 'w-[92px] shrink-0' : 'w-full flex-col'}`}>
-        <AiCopyFace src={src} size={land ? 20 : compact ? 18 : 22}/>
-        <span className={`min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${land ? 'flex-1' : 'w-full text-center'}`}>
+      className={`absolute z-[24] rounded-xl border border-emerald-400/70 bg-emerald-950/85 text-emerald-50 shadow-[0_4px_14px_rgba(0,0,0,.55)] ${canOpen ? 'cursor-pointer active:scale-[.98]' : ''} ${short
+        ? `left-2 ${lift ? 'bottom-[46px]' : 'bottom-1'} flex w-[min(236px,calc(50%-8px))] items-center gap-1.5 px-1.5 py-1`
+        : 'left-2 top-1/2 flex w-[124px] -translate-y-1/2 flex-col gap-0.5 px-1.5 py-1'}`}>
+      {skill && <span data-ai-copy-float-skill className="absolute -top-3 left-1/2 z-[30] max-w-[120px] -translate-x-1/2 truncate rounded-lg border border-red-200 bg-red-700 px-2 py-0.5 text-[11px] font-black text-white shadow-[0_2px_10px_rgba(0,0,0,.7)]">{skill}</span>}
+      <span className={`flex min-w-0 items-center gap-1 ${short ? 'w-[64px] shrink-0 flex-col' : 'w-full'}`}>
+        <AiCopyFace src={src} size={short ? 18 : 22}/>
+        <span className={`min-w-0 overflow-hidden whitespace-nowrap font-black leading-tight text-emerald-200 [container-type:inline-size] ${short ? 'w-full text-center' : 'flex-1'}`}>
           <span className="block" style={{ fontSize: `min(10px, calc(100cqw / ${[...name].length + 0.3}))` }}>{name}</span>
         </span>
       </span>
-      <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={land ? 40 : compact ? 32 : 46}/>
-      <span className={`flex min-w-0 flex-col gap-0.5 ${land ? 'w-[96px] shrink-0' : 'w-full'}`}>
-        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp} narrow={!land}/>
+      {short
+        ? <AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={32}/>
+        : <span className="flex justify-center"><AiCopyBody src={src} phase={phase} hit={hit} anim={anim} size={44}/></span>}
+      <span className={`flex min-w-0 flex-col gap-0.5 ${short ? 'w-[64px] shrink-0' : 'w-full'}`}>
+        <AiCopyLifeBar hp={copy.hp} maxHp={copy.maxHp} narrow={short}/>
         <AiCopyGutsMeter guts={copy.guts} maxGuts={copy.maxGuts}/>
+        {Number.isInteger(hatePct) && <span data-ai-copy-float-hate={hatePct} className="whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200">狙われ {hatePct}%</span>}
       </span>
-      {Number.isInteger(hatePct) && <span data-tactics-ai-copy-hate={hatePct} className="shrink-0 whitespace-nowrap text-[9px] font-black tabular-nums text-rose-200">狙われ {hatePct}%</span>}
-      {/* 幅320の画面は列を60pxに詰める(4人の枠のライフの字が枠からはみ出さないように)。次に使う札もその幅に縮める */}
-      <span className={land ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center max-[359px]:[&>*]:max-w-full max-[359px]:[&>*]:w-full'}>{next}</span>
+      <span className={short ? 'min-w-0 flex-1' : 'flex w-full min-w-0 justify-center'}>{next}</span>
     </div>
   );
 }
@@ -42825,30 +42804,6 @@ function AiCopyGutsMeter({ guts, maxGuts }) {
         <span className="font-mono text-[11px] font-black tabular-nums leading-none text-amber-200">{g}/{m}</span></span>
       <span className="block h-[6px] w-full overflow-hidden rounded-full border border-white/5 bg-slate-900"><span className="block h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{ width: `${pct}%` }}/></span>
     </span>
-  );
-}
-// hitAnim … コピーが打っているあいだの attackAnim(attackAnim.aiCopy のとき。無ければ null)
-function ClassicAiCopyCell({ copy, turnCount, onOpen, mon = null, hitAnim = null }) {
-  if (!copy) return null;
-  const phase = aiCopyViewPhase(copy, isAiCopyOut(copy, turnCount) ? 'idle' : 'appear');
-  // 消えていく0.7秒(phase==='vanish')は、ターン切れで数え上は「出ていない」になっても出ていたときの札のまま描く
-  const out = phase === 'vanish' || isAiCopyOut(copy, turnCount);
-  const canOpen = typeof onOpen === 'function' && phase !== 'vanish';
-  const layout = classicAiCopyLandscape() ? 'landscape' : 'portrait';
-  const guts = Math.max(0, Math.floor(Number(copy.guts) || 0)), maxGuts = Math.max(0, Math.floor(Number(copy.maxGuts) || 0));
-  return (
-    <div data-ai-copy-cell={out ? 'out' : 'waiting'} data-ai-copy-phase={phase} aria-label={`${tacticsAiCopyName(copy)}(5人目の味方)${canOpen ? '。押すと手札を見る' : ''}`}
-      role={canOpen ? 'button' : undefined} tabIndex={canOpen ? 0 : undefined} style={canOpen ? { cursor: 'pointer' } : undefined}
-      onClick={canOpen ? onOpen : undefined} onKeyDown={canOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
-      <style>{CLASSIC_AI_COPY_CSS}</style>
-      <span data-ai-copy-head><AiCopyFace src={mon} size={layout === 'landscape' ? 16 : 20}/><span data-ai-copy-name>{copy.name || '仲間'}<wbr/>のコピー</span></span>
-      {mon ? <AiCopyBody src={mon} phase={phase} hit={!!hitAnim} anim={hitAnim} size={layout === 'landscape' ? 24 : 40}/>
-        : <SorashidoCopyFx phase={phase}><img src={SORASHIDO_FACE_ICON} alt="" aria-hidden="true" className="h-7 w-7 rounded-full object-cover bg-black/30" draggable="false"/></SorashidoCopyFx>}
-      {out
-        ? <><AiCopyGutsMeter guts={guts} maxGuts={maxGuts}/>
-            <SorashidoNextCardBadge card={copy.nextCard || null} layout={layout} turnsLeft={copy.turnsLeft}/></>
-        : <span className="text-center text-[9px] font-black leading-tight text-emerald-300">次のターン<br/>から</span>}
-    </div>
   );
 }
 function BattleScreen({
@@ -43007,6 +42962,15 @@ function BattleScreen({
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => { out[Number(i)] = { ...(c || {}) }; });
     return out;
   })();
+  // 枠ごとの効果の札(ExEffectChips)と詳細の一覧に出す要素。タクティクス/レイドは EX の効果(tacticsExEffectsAt)、
+  //   本編(5つの遊び)は強化の札を同じ形に直したもの(classicEffectsFromChips・2026-10-29 社長「本編にも足す」)。どちらも溜まる物を含む。
+  //   関数が無いときは null(いままでのマーク×数を出す)
+  const slotEffectsOf = (i) => {
+    if (!Array.isArray(slots) || !slots[i]) return null;
+    if (typeof tacticsExEffectsAt === 'function') return tacticsExEffectsAt(i, allyStackCounts[i]) || [];
+    if (!Array.isArray(tacticsUnits) && typeof classicEffectsFromChips === 'function') return classicEffectsFromChips(battleBuffChips(), i, allyStackCounts[i]) || [];
+    return null;
+  };
   // 敵のデバフの詳細(名前の横の簡易表示を押すと開く)
   const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
@@ -43071,6 +43035,8 @@ function BattleScreen({
   const tacticsCopyOutside = !!(Array.isArray(tacticsUnits) && shownAiCopy && (normalizeBattleScreenStyle(battleScreenStyle) !== 'TACTICS_NEW'
     || shownAiCopy.stacked || (Array.isArray(slots) && slots.length > 0 && slots.every(Boolean))));
   const classicAiCopy = !Array.isArray(tacticsUnits) ? (shownAiCopy || null) : null;
+  // 敵の段の小窓(AiCopyFloat)に出すコピー。本編はいつも、タクティクス/レイドは空きマスに立てないとき(tacticsCopyOutside)
+  const copyFloat = classicAiCopy || (tacticsCopyOutside ? shownAiCopy : null);
   // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
@@ -43593,6 +43559,19 @@ function BattleScreen({
           <button data-battle-log-button type="button" onClick={()=>setShowBattleLog(true)} aria-label="バトルの記録を見る" title="バトルの記録" className="absolute left-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><BookOpen size={17} className="text-amber-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">ログ</span></button>
           <button onClick={()=>setShowHeroInfo(true)} aria-label="勇者モンのステータス" className={`absolute left-2 bottom-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:bottom-auto [@media(max-height:640px)]:top-1 [@media(max-height:640px)]:left-[40px]${battleTutorialSpotClass('heroStatus')}`} style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Crown size={17} className="text-indigo-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">ステータス</span></button>
           <button onClick={()=>setShowEnemyInfo(true)} aria-label="敵を解析する" className="absolute right-2 top-1 z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-[72px]" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Search size={17} className="text-red-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">解析</span></button>
+          {copyFloat&&(()=>{
+            // AIコピーの小窓(AiCopyFloat)。4枠の並びには足さない
+            const c=copyFloat;
+            const tactics=Array.isArray(tacticsUnits);
+            const standing=tactics?(!!aiCopy&&isTacticsAiCopyStanding(aiCopy)&&aiCopy.spawnTurn<=turnCount):isAiCopyOut(c,turnCount);
+            const phase=aiCopyViewPhase(c,standing?'idle':'appear');
+            const hit=!!(aiCopy&&!ecoBattleView&&attackAnim&&(tactics?attackAnim.aiCopy:aiCopyHitting));
+            const skill=aiCopy&&slotSkill&&slotSkill.aiCopy?slotSkill.name:null;
+            const hc=tactics&&standing&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,aiCopy):null;
+            return <AiCopyFloat copy={c} src={aiCopySrcOf(c,slots)} phase={phase} hit={hit} anim={attackAnim} skill={skill} standing={standing||phase==='vanish'}
+              onOpen={aiCopy?()=>setCopyHandOpen(true):null} hatePct={hc&&Number.isInteger(hc.copy)?hc.copy:null}
+              lift={battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)}/>;
+          })()}
           {battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&<button data-soul-battle-effects-button type="button" onClick={()=>setShowSoulBattleEffects(true)} aria-label="魂格効果" className="absolute right-2 top-[56px] z-20 flex w-[62px] flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/20 bg-slate-900/85 py-1.5 active:scale-95 [@media(max-height:640px)]:h-7 [@media(max-height:640px)]:w-7 [@media(max-height:640px)]:rounded-full [@media(max-height:640px)]:p-0 [@media(max-height:640px)]:top-auto [@media(max-height:640px)]:bottom-1 [@media(max-height:640px)]:right-auto [@media(max-height:640px)]:left-2" style={{boxShadow:'0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.16)'}}><Sparkles size={17} className="text-sky-300"/><span className="text-[10px] font-black leading-none text-white [@media(max-height:640px)]:sr-only">魂格効果</span></button>}
           {/* 敵が次に何をしてくるかの札(2026-09-19・ユーザー指摘「敵の行動予測が見えない」)。
               ★置き場所は**敵の絵の右下**(2026-09-22 ユーザー指示「敵の行動予測は右下に出るほうが
@@ -43754,7 +43733,7 @@ function BattleScreen({
                 この固定位置は4列に並んでいた前提で、2×2では別の枠の上に出ていた */}
             {!tacticsNewLayout&&(<>
             {/* AIコピーの技名は、コピーを盤の外の5列目に出しているあいだは5列目のほうに出す(元の子の上に出さない) */}
-            {slotSkill&&ReactDOM.createPortal(slotSkill.aiCopy&&tacticsCopyOutside?null:
+            {slotSkill&&ReactDOM.createPortal(slotSkill.aiCopy&&copyFloat?null:
               <div className="fixed -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{left:`${12.5+slotSkill.slotIndex*25}%`,bottom:'30%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className={`px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type==='unique'?'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]':slotSkill.type==='special'?'bg-amber-600 border-amber-200 text-white':'bg-red-700 border-red-200 text-white'}`}>{slotSkill.name}</div>
               </div>,document.body
@@ -44257,8 +44236,9 @@ function BattleScreen({
           {/* 味方の枠。高さは中身の合計で決まる(名前18 + 絵64 + ライフ/ガッツ + 距離ラベル20)。
               ★枠は overflow-visible なので、足りないと下へはみ出して手札の帯に食い込む。
                 ライフ・ガッツをラベル付きで整列させたとき(2026-09-22)に実際はみ出した */}
-          <div data-ai-copy-row={classicAiCopy&&!tacticsNewLayout?'':undefined} data-tactics-ai-copy-row={tacticsCopyOutside?'':undefined} className={classicAiCopy&&!tacticsNewLayout?'':tacticsCopyOutside?(tacticsNewLayout?'flex w-full items-stretch gap-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:flex-col [@media(orientation:landscape)_and_(max-height:520px)]:gap-1':'flex w-full items-stretch gap-1.5'):'contents'}>
-          <div data-tactics-debug-layout={tacticsNewLayout?'2x2':undefined} className={`grid ${tacticsNewLayout?'grid-cols-2 grid-rows-2 gap-1.5':'grid-cols-4 gap-2'} w-full relative ${tacticsCopyOutside?(tacticsNewLayout?'min-w-0 flex-1 [@media(orientation:landscape)_and_(max-height:520px)]:flex-none':'min-w-0 flex-1'):'shrink-0'}${battleTutorialSpotClass('battleSlots')}`} style={{height:tacticsNewLayout?'clamp(196px,23dvh,214px)':'clamp(152px,18dvh,168px)'}}>
+          {/* AIコピーは4枠の並びに足さない(敵の段の小窓 AiCopyFloat)。4枠の並びはコピーの有無で変わらない */}
+          <div className="contents">
+          <div data-tactics-debug-layout={tacticsNewLayout?'2x2':undefined} className={`grid ${tacticsNewLayout?'grid-cols-2 grid-rows-2 gap-1.5':'grid-cols-4 gap-2'} w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:tacticsNewLayout?'clamp(196px,23dvh,214px)':'clamp(152px,18dvh,168px)'}}>
             {slots.map((s,i)=>{
               // Count how many cards already assigned to this slot
               const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
@@ -44377,8 +44357,8 @@ function BattleScreen({
               // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
               // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
               const slotArt = (img) => (!ecoBattleView&&!idleMotionOff ? <MonsterIdleArt baseId={s?.id} image={img}/> : img);
-              // この枠に効いているEXの効果と溜まる物(タクティクス/レイドだけ。ほかの遊びでは null で、いままでのマーク×数を出す)
-              const slotExEffects=s&&typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(i,allyStackCounts[i])||[]):null;
+              // この枠に効いている効果と溜まる物(タクティクス/レイドはEX・本編は強化の札。関数が無いときは null で、いままでのマーク×数を出す)
+              const slotExEffects=s?slotEffectsOf(i):null;
               // この枠の子の魂格の段階(1〜5)。枠の子とは masuId で結ぶ。出さない設定のときは 0
               const slotSoulStage=(()=>{
                 if(!s||!s.masuId||ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL'||!Array.isArray(battleSoulMasus)) return 0;
@@ -44589,7 +44569,7 @@ function BattleScreen({
                   </div>);
                 })();
                 if(!tacticsNewLayout) return slotFxEl;
-                const skillHere=slotSkill&&slotSkill.slotIndex===i&&!(slotSkill.aiCopy&&tacticsCopyOutside)?slotSkill:null;
+                const skillHere=slotSkill&&slotSkill.slotIndex===i&&!(slotSkill.aiCopy&&copyFloat)?slotSkill:null;
                 // ライフの行より上に収まるのは2段まで。技名やこのターンの出来事が出ているときは
                 // 吹き出しを最新の1つにする(3段にすると上が切れて読めなかった)。残りはログで読める
                 const ownPopups=popups.filter(p=>p.slot===i&&p.side!=='enemy').slice((skillHere||slotFxEl)?-1:-2);
@@ -44664,7 +44644,8 @@ function BattleScreen({
                           「カード×4とかは確かにいらない」)。ガードやアシストカードを足すと1体に5枚まで置けるので、
                           1枚1段ではライフ・ガッツの行まで届いていた。高さはライフの行の上までに切ってある。
                           🎯は枠の横幅をまるごと使う上の段(data-tactics-slot-top-row)へ出す */}
-                      {!tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} className="w-full"/>}
+                      {/* 縦長の枠(本編・タクティクス旧)は縦積みの欄の先頭。枠の高さに収まるよう2つまで+「+N」(全部は枠を押した詳細で見る) */}
+                      {!tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} max={2} className="w-full"/>}
                       {!tacticsNewLayout&&!slotExEffects&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-flow"/>}
                       {!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
@@ -44791,7 +44772,7 @@ function BattleScreen({
                       data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className={`${tacticsNewLayout?`absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm${tacticsCopyOutside?' max-[359px]:px-1 max-[359px]:w-[66%]':''}`:'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`}>
+                      className={`${tacticsNewLayout?`absolute right-0 bottom-[3px] w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm`:'shrink-0 border-t px-1'} z-20 border-white/[.06] bg-[linear-gradient(90deg,rgba(8,15,31,.86),rgba(15,23,42,.72))]${battleTutorialSpotClass('tacticsParty')}`}>
                       {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
@@ -44820,23 +44801,6 @@ function BattleScreen({
               </button>);
             })}
           </div>
-          {classicAiCopy&&!tacticsNewLayout&&<ClassicAiCopyCell copy={classicAiCopy} turnCount={turnCount} onOpen={()=>setCopyHandOpen(true)} mon={slots[classicAiCopy.srcSlot]||null}
-            hitAnim={!ecoBattleView&&attackAnim&&aiCopyHitting?attackAnim:null}/>}
-          {tacticsCopyOutside&&(()=>{
-            // 盤の外の5列目(上の TacticsAiCopyColumn)。縦は盤の右、横向きの背の低い画面は盤の下。向きを変えても出し直さずに済むよう両方置いて CSS で切り替える
-            const c=shownAiCopy;
-            const standing=!!aiCopy&&isTacticsAiCopyStanding(aiCopy)&&aiCopy.spawnTurn<=turnCount;
-            const phase=aiCopyViewPhase(c,standing?'idle':'appear');
-            const hit=!!(aiCopy&&!ecoBattleView&&attackAnim&&attackAnim.aiCopy);
-            const skill=aiCopy&&slotSkill&&slotSkill.aiCopy?slotSkill.name:null;
-            const hc=standing&&tacticsHateOn&&Array.isArray(tacticsHate)?tacticsTargetChancesWithCopy(tacticsUnits,tacticsHate,TACTICS_TARGET_LOW_HP_BIAS,aiCopy):null;
-            const props={copy:c,src:aiCopySrcOf(c,slots),phase,hit,anim:attackAnim,skill,standing:standing||phase==='vanish',onOpen:aiCopy?()=>setCopyHandOpen(true):null,hatePct:hc&&Number.isInteger(hc.copy)?hc.copy:null};
-            return (<>
-              {/* タクティクス旧は枠が縦に長く盤の高さからはみ出すので、横向きでも盤の右に置く(下に置くと距離の札に重なった) */}
-              <div className={`flex shrink-0 ${tacticsNewLayout?'[@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><TacticsAiCopyColumn {...props} layout="portrait" compact={!tacticsNewLayout&&classicAiCopyLandscape()}/></div>
-              {tacticsNewLayout&&<div className="hidden shrink-0 [@media(orientation:landscape)_and_(max-height:520px)]:block"><TacticsAiCopyColumn {...props} layout="landscape"/></div>}
-            </>);
-          })()}
           {/* 手札の窓は body へ出す(横向きでは敵の段の札が枠の並びより上の重なりにあり、窓の上へ出てしまったため) */}
           {aiCopy&&copyHandOpen&&typeof document!=='undefined'&&ReactDOM.createPortal(<SorashidoCopyHandSheet open copyName={aiCopy.name||'仲間'} turnsLeft={aiCopy.turnsLeft}
             cards={Array.isArray(aiCopy.hand)?aiCopy.hand:[]} nextCard={aiCopy.nextCard||null} guts={aiCopy.guts} maxGuts={aiCopy.maxGuts} onClose={()=>setCopyHandOpen(false)}/>,document.body)}
@@ -45043,7 +45007,7 @@ function BattleScreen({
               {exTab==='status'?(
                 <div data-tactics-unit-detail={exPanel.slot}>
                   <div className="mb-2 break-words text-[16px] font-black leading-tight">{exPanel.monName}</div>
-                  {typeof battleUnitStatusOf==='function'&&<BattleUnitDetailBody side="ally" status={battleUnitStatusOf(exPanel.slot)} chips={battleBuffChips()} marks={allyStackCounts[exPanel.slot]} exEffects={typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(exPanel.slot,allyStackCounts[exPanel.slot])||[]):null}/>}
+                  {typeof battleUnitStatusOf==='function'&&<BattleUnitDetailBody side="ally" status={battleUnitStatusOf(exPanel.slot)} chips={battleBuffChips()} marks={allyStackCounts[exPanel.slot]} exEffects={slotEffectsOf(exPanel.slot)}/>}
                   <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
                 </div>
               ):(<>
@@ -45116,7 +45080,7 @@ function BattleScreen({
         ), document.body)}
         {unitDetail&&(unitDetail.side==='enemy'
           ? <BattleUnitDetailPanel side="enemy" status={typeof battleEnemyStatus==='function'?battleEnemyStatus():null} debuffs={enemyDebuffs} onClose={()=>setUnitDetail(null)}/>
-          : <BattleUnitDetailPanel side="ally" status={typeof battleUnitStatusOf==='function'?battleUnitStatusOf(unitDetail.slot):null} chips={battleBuffChips()} marks={allyStackCounts[unitDetail.slot]} exEffects={typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(unitDetail.slot,allyStackCounts[unitDetail.slot])||[]):null} onClose={()=>setUnitDetail(null)}/>)}
+          : <BattleUnitDetailPanel side="ally" status={typeof battleUnitStatusOf==='function'?battleUnitStatusOf(unitDetail.slot):null} chips={battleBuffChips()} marks={allyStackCounts[unitDetail.slot]} exEffects={slotEffectsOf(unitDetail.slot)} onClose={()=>setUnitDetail(null)}/>)}
         {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
@@ -53831,6 +53795,14 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
 // atkMon … 攻める子(純血のプライドを見る)。ルールの守りの候補(cardGuardOptions)と同じ決まりで、出せない回避は見込まない
+// 切り札(みんなのデッキ・95 の cardSharePolicy が policy.aces にカード番号を3つまで入れる)。手に切り札が入っていれば、その手を優先する。
+//   aces が無い・空なら何もしない(助手と対戦・マルチの検査・勝率は変わらない。2026-10-29 社長「戦術カードなどを細かく設定」・ルールくんと相談)
+const cardAiAceHit = (policy, hand, idxs) => {
+  const aces = policy && Array.isArray(policy.aces) ? policy.aces : null;
+  if (!aces || !aces.length || !Array.isArray(hand)) return false;
+  const list = Array.isArray(idxs) ? idxs : Number.isInteger(idxs) ? [idxs] : [];
+  return list.some((i) => aces.includes(hand[i]));
+};
 const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = null) => {
   if (cardHasEff(card, 'noEvade') || card.kind === 'spe') return 0;
   if (flags.attachNoEvade || flags.attachNoGuard) return 0; // 電光石火・瞬殺など
@@ -54110,7 +54082,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
-    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
+    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6 + (cardAiAceHit(policy, me.hand, o.hand) ? 1.5 : 0);
     if (!best || v > best.v) best = { v, o };
   });
   if (!best || best.v < 0.8 + rand() * 0.3) return { type: 'pass' };
@@ -54132,7 +54104,9 @@ const cardAiChooseGuts = (db, st, policy) => {
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
     return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
   };
-  const ks = me.hand.map((no, i) => ({ i, k: keep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
+  // 切り札(policy.aces・みんなのデッキ)はガッツにしない(手札に残す)。aces が無ければ今と同じ
+  const aceKeep = (no) => (policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0);
+  const ks = me.hand.map((no, i) => ({ i, k: keep(no) + aceKeep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
   // 守りの札を1枚は手元に残す(2026-10-29 社長「ガード軽視が目立つ」: 守りの札を全部ガッツにして、次の相手の番に守れない)
   //   いちばん残したい守りの札を、攻めの札より後(ガッツにしない側)へ回す
   const guardKeep = ks.filter((x) => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
@@ -54266,7 +54240,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   const opts = useful.length ? useful : opts0;
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
-  const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
+  const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0) })).sort((a, b) => b.s - a.s);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
   if (rand() < policy.level.whim) {
     const pool = scored.filter((x) => x.s > 0.3).slice(0, 3);
@@ -54711,6 +54685,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
   gacha: 'mh_card_gacha_points_v1',   // ガチャポイント(ブースターパック1つで +10・上限なし。89 の cardNormalizeGacha。2026-10-27 社長)
   catalogs: 'mh_card_catalogs_v1',    // 持っているバトルカードカタログの冊数(ガチャポイント500で1冊。89 の cardExchangeCatalog / cardUseCatalog)
+  weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
 });
 // カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。
@@ -57203,8 +57178,10 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
   const [watchEyes, setWatchEyes] = useState(0);   // 観戦: いま見ている人の数
   const [watchEndHide, setWatchEndHide] = useState(false); // 観戦: 決着の帯を閉じて盤面を見る
   const [replayAt, setReplayAt] = useState(0);
-  const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
-  const policy = useMemo(() => cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood }), [game.who, game.level, game.cpuSameBlood]);
+  // みんなのデッキ(95)の登録デッキが相手: 名前・アイコンは登録した人、打ち方は登録した戦い方(cardSharePolicy)。助手のひとことは出さない
+  const share = game.share || null;
+  const who = pvp ? { id: 'pvp', name: pvp.name, accent: '#38bdf8' } : share ? { id: 'share', name: share.name, accent: '#34d399' } : (ASSISTANTS.find((a) => a.id === game.who) || ASSISTANTS[0]);
+  const policy = useMemo(() => (share && typeof cardSharePolicy === 'function' ? cardSharePolicy(share.tactics, game.level, { sameBlood: !!game.cpuSameBlood }) : cardAiPolicy(game.who, game.level, { sameBlood: !!game.cpuSameBlood })), [game.who, game.level, game.cpuSameBlood]);
   const [st, setSt] = useState(game.st);
   useEffect(() => { if (onProgress) onProgress(st); }, [st]);
   const [sel, setSel] = useState(null);      // 攻撃: { hand, mon, set } / 守り: { hand }
@@ -57301,7 +57278,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
 
   // ai … 山場なら { scene(AIに伝える場面), next(操作のあとの状態) }。決まった台詞を出したまま、間に合ったときだけAIのひとことに差しかえる
   const say = (scene, ai = null) => {
-    if (!scene || pvp || settings.bubble === 'OFF') return;
+    if (!scene || pvp || share || settings.bubble === 'OFF') return;
     const turn = st.turn;
     if (spoke.current.turn !== turn) spoke.current = { turn, n: 0 };
     if (spoke.current.n >= (CARD_BUBBLE_PER_TURN[settings.bubble] ?? CARD_LINE_PER_TURN) && scene !== 'win' && scene !== 'lose') return;
@@ -58250,7 +58227,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
       {pvpLive && <CardPvpSignal clock={pvpClock}/>}
       {/* 相手の帯(隠さない) */}
       <div className={`flex ${tiny ? 'h-[36px]' : compact ? 'h-[42px]' : 'h-[50px]'} shrink-0 items-center gap-2 px-2`}>
-        {pvp ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={pvp.icon} frame={pvp.frame} className="h-full w-full"/></span>
+        {(pvp || share) ? <span data-card-pvp-foe className={`block ${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} shrink-0`}><CardPvpAvatar icon={(pvp || share).icon} frame={(pvp || share).frame} className="h-full w-full"/></span>
           : <img src={assistantFaceImage(who, face)} alt={who.name} className={`${tiny ? 'h-[34px] w-[34px]' : 'h-[42px] w-[42px]'} rounded-xl border-2 bg-black object-cover object-top`} style={{ borderColor: who.accent }}/>}
         <div className={`min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`}>{who.name}<small className="block text-[10px] font-bold text-rose-200">{pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦'}</small></div>
         <div className="ml-auto">{strip(CARD_CPU)}</div>
@@ -58964,7 +58941,21 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   useEffect(() => { if (view !== 'options') { stopBgmPreview(); setPlCopy(null); } }, [view]);
   useEffect(() => () => stopBgmPreview(), []);
   // ほかの画面の招待の知らせで「参加する」を押してきたら、マルチの入口を開く(入口が合言葉の部屋へ入る。91 の CARD_PVP_JOIN)
-  useEffect(() => { const go = (c) => { if (c) setView('pvp'); }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
+  //   入る前にデッキを選ぶ画面を挟む(2026-10-29 社長 案C)。知らせの番号は CARD_PVP_JOIN に残っていて、入口を開いたときに入口が拾う
+  useEffect(() => { const go = (c) => { if (c) { setDeckPick({ next: 'pvp' }); setView('deckPick'); } }; go(CARD_PVP_JOIN.peek()); return CARD_PVP_JOIN.on(go); }, []);
+  // 対戦の前のデッキ選び(87-card-deck-pick.jsx)。next … 'cpu'(助手と対戦。pick は相手と難易度) / 'pvp'(マルチの入口へ)
+  const [deckPick, setDeckPick] = useState(null);
+  // マルチの試合のあと、部屋を出て入口へ戻るとき(over → idle)も、入口の前にデッキ選びを挟む。「もう1戦」は同じ部屋・同じデッキのまま
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(() => {
+    if (typeof CARD_PVP === 'undefined') return undefined;
+    let prev = CARD_PVP.get().phase;
+    return CARD_PVP.subscribe((r) => {
+      if (prev === 'over' && r.phase === 'idle' && viewRef.current === 'pvp') { setDeckPick({ next: 'pvp' }); setView('deckPick'); }
+      prev = r.phase;
+    });
+  }, []);
   const [kitPick, setKitPick] = useState(null);
   const [kitView, setKitView] = useState(null); // スターター選びで「中身を見る」を開いているキット
   const [starterOpen, setStarterOpen] = useState(null); // はじめのスターターを開ける画面に渡す並び(cardStarterOpenResult)
@@ -59145,6 +59136,90 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return () => clearInterval(t);
   }, [save ? 1 : 0, screen]);
 
+  // ---- 週間報酬(2026-10-29 社長。90 の cardWeeksAwaitingReward)。トップを開いたとき、終わった週の分を調べて帯を出す ----
+  //   ランキングに数える人(rank.send)だけ。受け取りは、受け取った週の一覧を読み直して確かめてから、ビートP・ガチャポイントと同じ取引で保存する
+  const [weekly, setWeekly] = useState([]); // [{ id, key, point, place, wins }]
+  const [weeklyBusy, setWeeklyBusy] = useState(false);
+  const weeklyChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || debug || !(rank && rank.send) || screen !== 'CARD_TOP' || weeklyChecked.current) return;
+    weeklyChecked.current = true;
+    void (async () => {
+      try {
+        const claims = cardNormalizeWeeklyClaims(await storeGet(CARD_SAVE_KEYS.weeklyReward, null));
+        const weeks = cardWeeksAwaitingReward(Date.now(), claims);
+        if (!weeks.length) return;
+        const breederId = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        if (!breederId) return;
+        const list = [];
+        for (const w of weeks) {
+          const st = await cardWeekStanding(w.key, breederId); // 読めなかったら例外(今回は出さない。次に開いたときにもう一度)
+          list.push({ id: w.id, key: w.key, ...cardWeeklyRewardOf({ place: st.place, wins: st.wins }) });
+        }
+        // もらえる物が無い週は、受け取ったものとして覚える(次から問い合わせない)
+        const empty = list.filter((x) => !x.point).map((x) => x.id);
+        if (empty.length) {
+          const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+          const now = cardNormalizeWeeklyClaims(raw);
+          if (now) await saveStoredValuesOrRollback([{ key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...now, ...empty.filter((id) => !now.includes(id))].slice(-30) }], storeGet, storeSet);
+        }
+        setWeekly(list.filter((x) => x.point));
+      } catch (_) { /* 通信できないときは出さない */ }
+    })();
+  }, [save ? 1 : 0, screen, rank && rank.send ? 1 : 0]);
+  const claimWeekly = async (w) => {
+    if (weeklyBusy) return;
+    setWeeklyBusy(true);
+    try {
+      const raw = await storeGet(CARD_SAVE_KEYS.weeklyReward, null);
+      const claims = cardNormalizeWeeklyClaims(raw);
+      if (!claims || claims.includes(w.id)) { setWeekly((l) => l.filter((x) => x.id !== w.id)); return; } // もう受け取った(ほかのタブなど)・保存が壊れている
+      const ok = await persist({ point: save.point + w.point }, {}, [
+        { key: CARD_SAVE_KEYS.weeklyReward, before: raw, next: [...claims, w.id].slice(-30) },
+      ]);
+      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      setWeekly((l) => l.filter((x) => x.id !== w.id));
+      setNotice(`週間報酬を受け取りました(ビートP +${w.point.toLocaleString()})`);
+    } finally { setWeeklyBusy(false); }
+  };
+
+  // ---- みんなのデッキの報酬(95・2026-10-29 社長)。登録した端末(持ち主の鍵がある)だけ、トップを開いたときに前の日までの分を調べて帯を出す ----
+  //   サーバで受け取った日のうち、まだ端末に足していない日だけを足す。足した日の一覧(mh_card_deck_reward_v1)を読み直して確かめてから、ビートPと同じ取引で保存する
+  const [deckRewards, setDeckRewards] = useState([]); // [{ day, amount, uses }]
+  const [deckRewardBusy, setDeckRewardBusy] = useState(false);
+  const deckRewardChecked = useRef(false);
+  useEffect(() => {
+    if (!save || !db || screen !== 'CARD_TOP' || deckRewardChecked.current || typeof cardSharePendingRewards !== 'function') return;
+    deckRewardChecked.current = true;
+    void (async () => {
+      try {
+        if (!(await cardShareOwnerKey(false))) return; // 登録したことのない端末は問い合わせない
+        const id = typeof ensureBreederId === 'function' ? await ensureBreederId() : null;
+        const credited = cardShareNormalizeClaims(await storeGet(CARD_SHARE_REWARD_KEY, null));
+        if (!id || !credited) return;
+        setDeckRewards(await cardSharePendingRewards(id, credited));
+      } catch (_) { /* 通信できないときは出さない(次に開いたときにもう一度) */ }
+    })();
+  }, [save ? 1 : 0, screen]);
+  const claimDeckRewards = async () => {
+    if (deckRewardBusy || !deckRewards.length) return;
+    setDeckRewardBusy(true);
+    try {
+      const raw = await storeGet(CARD_SHARE_REWARD_KEY, null);
+      const credited = cardShareNormalizeClaims(raw);
+      if (!credited) return;
+      const todo = deckRewards.filter((r) => !credited.includes(r.day));
+      if (!todo.length) { setDeckRewards([]); return; } // もう足した(ほかのタブなど)
+      const total = todo.reduce((a, r) => a + r.amount, 0);
+      const ok = await persist({ point: save.point + total }, {}, [
+        { key: CARD_SHARE_REWARD_KEY, before: raw, next: [...credited, ...todo.map((r) => r.day)].slice(-60) },
+      ]);
+      if (!ok) { setNotice('保存できませんでした。もう一度お試しください'); return; }
+      setDeckRewards([]);
+      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+    } finally { setDeckRewardBusy(false); }
+  };
+
   // 過去の対戦を見る(93-card-replay.jsx)。id … 試合の番号。back … とじたあとに戻る画面(view)
   const openReplay = async (id, back = 'top') => {
     const rec = await cardReplayGet(id);
@@ -59193,6 +59268,27 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         setView('result');
         return;
       }
+      // みんなのデッキ(95)の登録デッキとの対戦: ビートPとクイック周回(助手と対戦と同じ強さの表)と、表への「戦った」の知らせだけ。
+      //   記録(助手ごとの勝ち数)・ランキング・強さの解放・着替えの解放・助手のひとことは通らない(助手と戦ったのではないため)
+      if (game.share) {
+        const facts = cardResultFacts(st, CARD_ME);
+        const fresh = await freshCardSave();
+        const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
+        const loops = cardCpuLoops(game.level, outcome, facts);
+        const ok = await persist({ point: save.point + reward.total, daily: reward.daily }, fresh.raw);
+        let quick = null;
+        if (ok && loops > 0 && onQuickLoops) { try { quick = await onQuickLoops(loops); } catch (_) { quick = null; } }
+        if (ok && quick) await persist({ daily: { ...reward.daily, quickLoops: (reward.daily.quickLoops || 0) + loops } }, { daily: reward.daily });
+        if (cpuLogRef.current && cpuLogRef.current.id === game.key) cpuLogRef.current = null;
+        // 表へ「戦った」(試合の番号ごとに1回だけ数えられる。登録した人の次の日の報酬になる)。届かなくても結果はそのまま出す
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string' && typeof cardShareReportUse === 'function') void cardShareReportUse({ match: `share-${game.key}-${Date.now().toString(36)}`, ownerId: game.share.ownerId, userId: selfId, kind: 'battle', deckWon: outcome !== 'win', version: game.share.version });
+        setResult({ outcome, reward, opened: null, saved: ok, who: null, level: game.level, loops, quick, facts, talk: null, replay: null, share: game.share });
+        onBgm && onBgm(save.bgm.top);
+        onNavigate('CARD_TOP');
+        setView('result');
+        return;
+      }
       // 途中で閉じた対戦の印(CARD_CPU_OPEN_KEY)。この画面で書いた印なら、結果と同じ取引で消す。
       // もう無い(ほかのタブで投了として数えた)ときは、二重に数えない
       const openExtra = [];
@@ -59216,6 +59312,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
       const loops = cardCpuLoops(game.level, outcome, facts);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
+      //   借りたデッキ(みんなのデッキ・95)で戦った試合も数える(2026-10-29 社長「数える」)
       const rankable = !!(rank && rank.send) && !debug;
       const nextRecord = cardRecordAfter(fresh.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
       const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
@@ -59232,6 +59329,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
+      // 借りたデッキで戦った: 表へ「借りて使った」(試合の番号ごとに1回だけ数えられる。貸した人の次の日の報酬になる)
+      if (ok && game.rented && typeof cardShareReportUse === 'function') {
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string') void cardShareReportUse({ match: `rent-${game.key}-${Date.now().toString(36)}`, ownerId: game.rented.ownerId, userId: selfId, kind: 'rent', version: game.rented.version });
+      }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // 助手の服の解放(data/breeder.js。2026-10-27 社長「バトルカードでみゅあのマスターに勝つと解放」)。どの相手・難易度で解放するかは breeder.js が決める。
       // 勝ちの記録を保存できたあとに、別に保存する(こちらが書けなくても勝ちの記録は落とさない。次に開いたとき、
@@ -59263,6 +59365,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const foes = (debug ? allAssistants.filter((a) => cardFoeReleased(a.id)) : assistantsUnlockedFrom(seenStoryIds)).filter((a) => CARD_AI_HABITS[a.id]);
   const activeDeck = save.decks.decks.find((d) => d.id === save.decks.active) || save.decks.decks[0] || null;
   const deckIssues = activeDeck ? [...cardDeckProblems(db, activeDeck), ...cardDeckOwnProblems(db, activeDeck, save.collection)] : ['デッキがありません'];
+  // 使えるデッキが1つでもあれば「対戦する」を押せる(どれで戦うかは次のデッキ選びで決める)
+  const deckUsable = cardDeckPickChoices(db, save.decks, save.collection).some((c) => c.why.length === 0);
   const btn = 'mh-button min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40';
   // 対戦開始の画面に出す、こちらの名前と、場の3体(0=こちら・1=相手)
   const myName = (rank && rank.profile && rank.profile.name) || 'あなた';
@@ -59279,26 +59383,36 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onBgm && onBgm(CARD_AI_BGM.mua); // 練習試合は、みゅあの曲(#3634 の前と同じ)
     onNavigate('CARD_BATTLE');
   };
-  const startBattle = (pick = foe) => {
-    if (!activeDeck || deckIssues.length) { setNotice(deckIssues.join('・')); return; }
+  // opts.rented … みんなのデッキ(95)で借りたデッキで戦う(デッキ選びの kind:'rent' の行)。借り物なので、持っているかは見ない
+  const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
+    const rented = opts && opts.rented ? opts.rented : null;
+    const issues = deck ? (rented ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
+    if (!deck || issues.length) { setNotice(issues.join('・')); return; }
+    const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
+    // みんなのデッキ(95): 登録デッキがそのまま相手。打ち方は登録した戦い方(盤面の policy)・名前とアイコンは登録した人
+    const share = pick.share || null;
     // 毎試合、好きなモンスター ベスト4から3体を選んで組み直す(MASTER はこちらのデッキも見る)
-    const cpuDeck = cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck });
+    const cpuDeck = share ? { monsters: share.deck.monsters.slice(), cards: share.deck.cards.slice(), sameBlood: cardShareSameBlood(db, share.deck) }
+      : cardAiBuildDeck(db, pick.who, pick.level, Math.random, { playerDeck: activeDeck });
     const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
     const first = Math.random() < 0.5 ? CARD_ME : CARD_CPU;
-    const assistant = allAssistants.find((a) => a.id === pick.who);
-    let st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', assistant ? assistant.name : 'あいて'], seed, first });
+    const assistant = share ? null : allAssistants.find((a) => a.id === pick.who);
+    let st = cardCreateGame(db, { decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], names: ['あなた', share ? share.name : assistant ? assistant.name : 'あいて'], seed, first });
     // 検査のときだけ: 始まりの場を決めた形に差しかえる(window.__mhCardScene が関数のときだけ。ふだんの遊びでは無い)
     if (typeof window !== 'undefined' && typeof window.__mhCardScene === 'function') { try { st = window.__mhCardScene(cardClone(st)) || st; } catch (_) { /* 差しかえに失敗したら、ふつうの始まりのまま */ } }
     setResult(null);
     // 対戦開始の画面: 相手の助手のひとこと(助手ごと・難易度ごと)と、組んだ中身から付けたデッキ名
-    const intro = { mode: 'assistant',
+    const intro = share ? { mode: 'assistant', foe: { who: null, name: share.name, icon: share.icon, frame: share.frame, line: null, deckName: share.tactics.name || null, monsters: vsMons(st, CARD_CPU) },
+      me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood });
+    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}),
+      ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: `${seed}`, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
     // 途中で閉じたときに投了として数えるための印(CARD_CPU_OPEN_KEY)。書けなかったら、終わりにも印を見ない
-    void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
+    //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
+    if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
     onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
     onNavigate('CARD_BATTLE');
@@ -59364,15 +59478,49 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <span aria-hidden="true" className="relative flex -space-x-2">{assistantsUnlockedFrom(seenStoryIds).filter((x) => CARD_AI_HABITS[x.id]).map((x) => <img key={x.id} src={assistantFaceImage(x, 'normal')} alt="" className="h-10 w-10 rounded-full border-2 border-white/80 bg-slate-900 object-cover object-top shadow"/>)}</span>
           </button>
           {/* マルチ対戦(91-card-battle-multi.jsx)。MFバトルカードの公開の印と同じ日に開く(cardPvpOpen・社長 案A)。それまではデバッグ設定から入ったときだけ押せる */}
-          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
+          <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setDeckPick({ next: 'pvp' }); setView('deckPick'); }} className="mhms-card mhms-in flex min-h-[150px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
             <span aria-hidden="true" className="mhms-mark">MULTI</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🎮</span><span><b className="block text-[22px] font-black italic leading-tight">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
             {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
           </button>
+          {/* みんなのデッキ(95-card-deck-share.jsx・2026-10-29 社長)。全部そろうまでは、デバッグ設定から入ったときだけ出す */}
+          {typeof CardDeckShare === 'function' && (debug || cardShareOpen()) && (
+            <button type="button" data-card-mode-share onClick={() => { Audio_.fgSe.tap(); setView('share'); }} className="mhms-card mhms-in flex min-h-[110px] w-full flex-col items-start justify-center gap-2 bg-gradient-to-br from-emerald-200 via-emerald-400 to-teal-600 px-4 py-3 text-left text-slate-950 active:scale-[.98]">
+              <span aria-hidden="true" className="mhms-mark">DECKS</span>
+              <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none">🗂️</span><span><b className="block text-[22px] font-black italic leading-tight">みんなのデッキ</b><small className="block text-[11px] font-black text-slate-900/80">デッキを登録する・ほかの人のデッキと戦う</small></span></span>
+              {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+            </button>
+          )}
         </div>
       </div>
     );
   }
+  if (view === 'share' && typeof CardDeckShare === 'function') {
+    return <CardDeckShare db={db} decks={save.decks} collection={save.collection} frame={(rank && rank.profile && rank.profile.frame) || null} onBack={() => setView('mode')}
+      unlocked={save.unlocked} debug={debug} onFight={(e, lv) => startBattle({ who: e.tactics.habit, level: lv, share: e })}/>;
+  }
+  // ---- 対戦の前のデッキ選び(助手と対戦・マルチ。練習試合には出さない) ----
+  if (view === 'deckPick' && deckPick) {
+    const toPvp = deckPick.next === 'pvp';
+    return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
+      note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
+      onBack={() => { setDeckPick(null); setView(toPvp ? 'mode' : 'foe'); }} allowRented={!toPvp}
+      onPick={async (c) => {
+        // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
+        if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
+        const deck = save.decks.decks.find((d) => d.id === c.id);
+        if (!deck) return;
+        if (save.decks.active !== deck.id) {
+          const ok = await persist({ decks: { ...save.decks, active: deck.id } });
+          if (!ok) { setNotice('保存できませんでした'); return; }
+        }
+        const next = deckPick;
+        setDeckPick(null);
+        if (next.next === 'pvp') { setView('pvp'); return; }
+        startBattle(next.pick, deck);
+      }}/>;
+  }
+
   if (view === 'pvp') {
     // 報酬(区切り2・台帳 #119 の対人戦。1日の上限なし): ビートP・その日の数・記録(pvp の勝ち負け)・クイック周回
     // その日はじめての勝ちの +50 は、助手と対戦と同じ印(daily.firstWin)を使う。どちらで勝っても合わせて1日1回(2026-10-26 社長)
@@ -59477,7 +59625,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             </div>
             {deckIssues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
           </div>
-          <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || deckIssues.length > 0} onClick={() => startBattle(foe)}>対戦する</button>
+          <button type="button" data-card-start className={`${btn} mh-button-primary`} disabled={!a || !deckUsable} onClick={() => { Audio_.fgSe.tap(); setDeckPick({ next: 'cpu', pick: foe }); setView('deckPick'); }}>対戦する</button>
         </div>
       </div>
     );
@@ -59555,6 +59703,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           <CardResultBanner title={win ? '勝ち！' : result.outcome === 'surrender' ? '投了' : '負け…'} sub={win ? 'YOU WIN' : result.outcome === 'surrender' ? 'SURRENDER' : 'YOU LOSE'} tone={win ? 'win' : 'lose'}/>
           {a && <CardResultTalk a={a} lineScene={win ? 'lose' : 'win'} talkFacts={result.talk}/>}
+          {result.share && <p data-card-result-share className="text-center text-[13px] font-black text-emerald-200">{result.share.name}さんのデッキと対戦しました</p>}
           {a && <CardResultVsRow meIcon={rank && typeof rank.renderMeIcon === 'function' ? rank.renderMeIcon() : null} meName={(rank && rank.profile && rank.profile.name) || 'あなた'}
             foeNode={<img src={assistantFaceImage(a, 'normal')} alt="" className="h-8 w-8 rounded-lg border-2 bg-black object-cover object-top" style={{ borderColor: a.accent }}/>} foeName={a.name} outcome={win ? '勝ち' : result.outcome === 'surrender' ? '投了' : '負け'}/>}
           <div className={SCREEN_PANEL_CLASS}>
@@ -59582,8 +59731,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         </div>
         <div className={`${SCREEN_FOOTER_CLASS} grid grid-cols-2 gap-2`}>
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
-          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { const again = { who: result.who, level: result.level }; setFoe(again); startBattle(again); }}>もう一度</button>
-          <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView('foe')}>相手をえらぶ</button>
+          <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
+          <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手をえらぶ</button>
         </div>
       </div>
     );
@@ -59824,6 +59973,15 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             </button>
           )}
           {/* 横の背の低い画面(高さ420まで)では1行に縮める(2行だと下のボタンが画面の外へ押し出される。667×375 の点検) */}
+          {weekly.map((w) => (
+            <CardRewardBand key={w.id} tag="weekly" busy={weeklyBusy} onClaim={() => { void claimWeekly(w); }}
+              title={`${w.key.slice(5).replace('-', '/')}からの週の週間報酬`}
+              lines={[`MASTER の勝ち数 ${w.wins}勝・${w.place}位`, `ビートP +${w.point.toLocaleString()}`]}/>
+          ))}
+          {deckRewards.length > 0 && (
+            <CardRewardBand tag="deck" busy={deckRewardBusy} onClaim={() => { void claimDeckRewards(); }} title="みんなのデッキの報酬"
+              lines={[`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]}/>
+          )}
           {notice && <p data-card-top-notice className={`text-[12px] font-bold text-amber-200 [@media(orientation:landscape)_and_(max-height:420px)]:truncate [@media(orientation:landscape)_and_(max-height:420px)]:text-[11px] [@media(orientation:landscape)_and_(max-height:420px)]:leading-snug`} style={JA_LABEL_STYLE} title={notice}>{jaWrap(notice)}</p>}
           <div data-card-top-cards className="grid grid-cols-2 gap-2">
             {bigCards.map((c, idx) => (
@@ -60866,6 +61024,78 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
   );
 };
 
+// ---- part: 87-card-deck-pick.jsx ----
+// ==================== 対戦の前のデッキ選び ====================
+// 2026-10-29 社長(案C): 助手と対戦・マルチ対戦の前に、使うデッキを選ぶ画面を1枚挟む。練習試合には挟まない。
+//   前に使ったデッキ(mh_card_decks_v1 の active)がはじめから選ばれていて、そのまま「対戦へ」を押せば1手で始まる。
+//   選んだデッキは active を書き換えるだけ(保存の形は変えない。書くのは 84 の CardBattleScreen)。
+//   使えないデッキ(枚数が足りない・持っていないカードがある など)は、理由を出して選べないようにする。
+// 選べるデッキの一覧は cardDeckPickChoices の1か所で作る。借りたデッキ(レンタル)は、ここに kind の違う行を足せば並ぶ
+// opts.rented … みんなのデッキ(95)で借りたデッキ(cardRentedDeckGet の形)。あれば末尾に1行。借り物なので、持っているかは見ない(マルチでは渡さない)
+const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
+  const own = ((decks && decks.decks) || []).map((d) => ({
+    id: d.id, kind: 'own', name: d.name, monsters: d.monsters, count: d.cards.length,
+    why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})],
+  }));
+  const r = opts && opts.rented;
+  if (!r || !r.deck) return own;
+  return [...own, { id: 'rented', kind: 'rent', name: r.deckName || 'デッキ', owner: r.name, icon: r.icon || null, frame: r.frame || null,
+    monsters: r.deck.monsters, count: r.deck.cards.length, deck: r.deck, ownerId: r.ownerId, version: r.version, why: cardDeckProblems(db, r.deck) }];
+};
+
+// allowRented … 借りたデッキも並べる(助手と対戦のとき。マルチでは並べない)
+const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false }) => {
+  const [rented, setRented] = useState(null);
+  useEffect(() => {
+    if (!allowRented || typeof cardRentedDeckGet !== 'function') return undefined;
+    let alive = true;
+    void cardRentedDeckGet().then((r) => { if (alive) setRented(r); });
+    return () => { alive = false; };
+  }, [allowRented]);
+  const choices = cardDeckPickChoices(db, decks, collection, { rented: allowRented ? rented : null });
+  const usable = (c) => c && c.why.length === 0;
+  const first = choices.find((c) => c.id === decks.active && usable(c)) || choices.find(usable) || null;
+  const [sel, setSel] = useState(first ? first.id : null);
+  const [busy, setBusy] = useState(false);
+  const chosen = choices.find((c) => c.id === sel && usable(c)) || null;
+  const go = async () => {
+    if (!chosen || busy) return;
+    Audio_.fgSe.tap();
+    setBusy(true);
+    try { await onPick(chosen); } finally { setBusy(false); }
+  };
+  return (
+    <div data-mh-screen data-card-deck-pick className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title={title} accent="text-amber-200" onBack={onBack}/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
+        {note && <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{note}</p>}
+        {choices.map((c) => {
+          const on = c.id === sel;
+          const ok = usable(c);
+          return (
+            <button key={c.id} type="button" data-card-deck-pick-row={c.id} data-card-deck-pick-on={on ? '1' : undefined} disabled={!ok}
+              onClick={() => { Audio_.fgSe.tap(); setSel(c.id); }}
+              className={`${SCREEN_PANEL_CLASS} flex w-full items-center gap-2 text-left active:scale-[.99] ${on ? '!border-amber-300 ring-2 ring-amber-300/70' : ''} ${ok ? '' : 'opacity-60'}`}>
+              <span className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = cardMonsterOf(db, c.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <span key={i} className="block h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/20"/>; })}</span>
+              <span className="min-w-0 flex-1">
+                {c.kind === 'rent' && <span data-card-deck-pick-rent className="block text-[11px] font-black text-emerald-200">{`借りたデッキ(${c.owner || 'ブリーダー'}さんの)`}</span>}
+                <span className="block text-[14px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{on ? '★ ' : ''}{jaWrap(c.name)}</span>
+                <span className={`block text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-200'}`}>{`${c.count}/${CARD_BATTLE_DECK_SIZE}枚`}</span>
+                {!ok && <span data-card-deck-pick-why={c.id} className="block text-[11px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{c.why.join('・')}</span>}
+              </span>
+            </button>
+          );
+        })}
+        {!first && <p data-card-deck-pick-none className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>対戦に使えるデッキがありません。デッキ編成で組んでください</p>}
+      </div>
+      <div className={SCREEN_FOOTER_CLASS}>
+        <button type="button" data-card-deck-pick-go disabled={!chosen || busy} onClick={() => { void go(); }}
+          className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98] disabled:opacity-40">対戦へ</button>
+      </div>
+    </div>
+  );
+};
+
 // ---- part: 90-card-rank.jsx ----
 // ==================== MFバトルカードのランキング(社長 台帳 #3513) ====================
 // 競うもの: 助手と対戦の勝ち数(難易度ごと・今週と通算)/ 連勝の数 / カード図鑑の集めた数 / マルチ対戦の強さ(マルチができてから。いまは「準備中」の札だけ)
@@ -61015,12 +61245,95 @@ const cardRankSync = async (db, { record, collection, profile }) => {
     const sign = JSON.stringify(row);
     if ((await storeGet(CARD_SAVE_KEYS.rankSync, null)) === sign) return true;
     const ok = await sbUpsertCardRank(row);
-    if (ok) { await storeSet(CARD_SAVE_KEYS.rankSync, sign); cardRankCache.clear(); }
+    // 週ごとの記録(card_battle_week_v1)にも、同じ週の勝ち数を送る(週間報酬の順位を、週が終わったあとに数えるため)。
+    //   送れなかったときは「送った印」を残さず、次の対戦のあとにもう一度送る
+    const weekOk = ok && row.breeder_id ? await cardWeekRowSync(row) : true;
+    if (ok && weekOk) { await storeSet(CARD_SAVE_KEYS.rankSync, sign); cardRankCache.clear(); }
     return ok;
   } catch (err) {
     console.error('[ranking] card_battle_ranks sync failed:', err && err.message ? err.message : err);
     return false;
   }
+};
+
+// ==================== 週間報酬(2026-10-29 社長) ====================
+// ・部門は MASTER の週の勝ち数だけ(社長「難易度はマスターのみ」)
+// ・1〜10位に、ビートP (11−順位)×100(1位 1,000 … 10位 100)だけ(社長「ガチャポイントはなし。ビートポイントは1位で1000で、そこから100ずつ下がる」)
+// ・参加報酬はなし
+// ・終わった週の分を、2週間のうちに、カードのトップの帯で受け取る(モンヒロビートの週間報酬と同じ)
+// ・順位は、週ごとの記録の表 card_battle_week_v1(週+人で1行)で「自分より勝ち数が多い人の数+1」(いまのランキングと同じ数え方・同じ数は同じ順位)
+// ・受け取った週は mh_card_weekly_reward_v1 に覚える。保存が壊れているときは何も配らない(二重に配らないため)
+// ・CARD_WEEKLY_REWARD_FROM_MS より前に始まった週は配らない(表を足したのが 2026-10-29 で、その週の記録はそろっていない)
+const CARD_WEEK_TABLE = 'card_battle_week_v1';
+let _cardWeekUnavailable = false;
+const CARD_WEEKLY_REWARD_RANKS = 10;
+const CARD_WEEKLY_POINT_PER_PLACE = 100;
+const CARD_WEEKLY_REWARD_FROM_MS = Date.UTC(2026, 10, 1, 20, 0, 0); // 2026-11-02 05:00 JST(表を足したあとの、はじめから記録がそろう週)
+const CARD_WEEK_MS = 7 * 24 * 3600 * 1000;
+const CARD_WEEKLY_CLAIM_MS = 14 * 24 * 3600 * 1000;
+const cardWeeklyRewardForPlace = (place) => {
+  const p = Number(place);
+  if (!Number.isInteger(p) || p < 1 || p > CARD_WEEKLY_REWARD_RANKS) return null;
+  const n = CARD_WEEKLY_REWARD_RANKS + 1 - p;
+  return { point: n * CARD_WEEKLY_POINT_PER_PLACE };
+};
+// 受け取った週の一覧。配列でない(壊れている)ときは null(=何も配らない)。無いときは []
+const cardNormalizeWeeklyClaims = (v) => (v === null || v === undefined ? [] : Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : null);
+const cardWeekStartMs = (now) => Date.parse(`${cardWeekKeyJst(now)}T${String(CARD_WEEK_START_HOUR_JST).padStart(2, '0')}:00:00+09:00`);
+const cardWeeklyClaimId = (weekKey) => `card_weekly_${weekKey}`;
+// 終わっていて、まだ受け取っておらず、受け取りの期限の中にある週(先に終わった週から)
+const cardWeeksAwaitingReward = (nowMs, claims) => {
+  if (!Array.isArray(claims)) return [];
+  const now = Number(nowMs) || 0;
+  const thisStart = cardWeekStartMs(now);
+  const out = [];
+  for (let back = 2; back >= 1; back--) {
+    const startMs = thisStart - back * CARD_WEEK_MS;
+    const endMs = startMs + CARD_WEEK_MS;
+    if (startMs < CARD_WEEKLY_REWARD_FROM_MS || now < endMs || now >= endMs + CARD_WEEKLY_CLAIM_MS) continue;
+    const key = cardWeekKeyJst(startMs);
+    const id = cardWeeklyClaimId(key);
+    if (!claims.includes(id)) out.push({ id, key, startMs, endMs });
+  }
+  return out;
+};
+// 週ごとの記録へ1行(週+人で上書き)。表がまだ無いときは送らない(true を返して、ランキングの送りは止めない)
+const cardWeekRowSync = async (row) => {
+  if (_cardWeekUnavailable) return true;
+  try {
+    const weekRow = { week_key: row.week_key, breeder_id: row.breeder_id, user_name: row.user_name, icon: row.icon ?? null, ...(row.profile_frame ? { profile_frame: row.profile_frame } : {}) };
+    CARD_LEVEL_ORDER.forEach((lv) => { weekRow[`week_wins_${lv}`] = row[`week_wins_${lv}`] || 0; });
+    const r = await sbUpsertCardRankTo(CARD_WEEK_TABLE, 'week_key,breeder_id', weekRow);
+    if (r === null) { _cardWeekUnavailable = true; return true; }
+    return !!r;
+  } catch (err) {
+    console.error('[ranking] card_battle_week_v1 sync failed:', err && err.message ? err.message : err);
+    return false;
+  }
+};
+// 終わった週の自分の MASTER の勝ち数と順位。{ wins, place(10位までの順位。それより下・0勝は null) }。読めなかったら例外
+const cardWeekStanding = async (weekKey, breederId) => {
+  const get = async (q) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_WEEK_TABLE}?${q}`, { headers: SB_HEADERS, cache: 'no-store', signal: controller.signal });
+      if (!res.ok) throw new Error(`${CARD_WEEK_TABLE} ${res.status}`);
+      return await res.json();
+    } finally { clearTimeout(timer); }
+  };
+  const key = encodeURIComponent(weekKey);
+  const mine = await get(`select=week_wins_master&week_key=eq.${key}&breeder_id=eq.${encodeURIComponent(breederId)}&limit=1`);
+  const wins = Array.isArray(mine) && mine[0] ? Math.max(0, Math.floor(Number(mine[0].week_wins_master) || 0)) : 0;
+  if (!(wins > 0)) return { wins: 0, place: null };
+  const better = await get(`select=breeder_id&week_key=eq.${key}&week_wins_master=gt.${wins}&limit=${CARD_WEEKLY_REWARD_RANKS}`);
+  const n = Array.isArray(better) ? better.length : CARD_WEEKLY_REWARD_RANKS;
+  return { wins, place: n < CARD_WEEKLY_REWARD_RANKS ? n + 1 : null };
+};
+// 受け取れる中身。{ point, place, wins } / 10位より下・0勝のときは point が 0
+const cardWeeklyRewardOf = ({ place, wins }) => {
+  const byPlace = cardWeeklyRewardForPlace(place) || { point: 0 };
+  return { point: byPlace.point, place: place || null, wins };
 };
 
 // 同じ数は同じ順位(5・5・3 → 1位・1位・3位)。entries は多い順に並んでいる(2026-10-26 社長「全部入れる」の改善)
@@ -61176,6 +61489,19 @@ const CARD_RANK_KINDS = Object.freeze([
   { id: 'dex', label: '図鑑', emoji: '📖' }, { id: 'multi', label: 'マルチ', emoji: '🎮' },
 ]);
 // syncArgs … 送れていない記録を送るための材料({ db, collection, profile })。開いたときに、送れていなければ自動で送る(モンヒロビートのランキングと同じ考え)
+// 受け取りの帯(週間報酬・デッキの報酬など、カードのトップで受け取るものをそろえて出す部品)。
+//   title … 「先週の週間報酬」 / lines … 中身の行(文字) / onClaim … 「受け取る」 / busy … 押している間
+const CardRewardBand = ({ tag, title, lines, onClaim, busy }) => (
+  <div data-card-reward-band={tag} className="mhms-glass mhms-in flex w-full min-w-0 items-center gap-2 rounded-xl border border-amber-300/70 px-2.5 py-2" style={{ background: 'linear-gradient(135deg,#3b2a05dd,#1e1b4bdd)' }}>
+    <span aria-hidden="true" className="shrink-0 text-2xl leading-none">🏆</span>
+    <div className="min-w-0 flex-1">
+      <b className="block text-[12px] font-black text-amber-200">{title}</b>
+      {lines.map((t, i) => <span key={i} className="block text-[11px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{jaWrap(t)}</span>)}
+    </div>
+    <button type="button" data-card-reward-claim={tag} disabled={busy} onClick={onClaim} className="mh-button min-h-[40px] shrink-0 rounded-xl bg-amber-400 px-3 text-[12px] font-black text-stone-900 active:scale-95 disabled:opacity-50">受け取る</button>
+  </div>
+);
+
 const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', record = null, dex = null, sendOn = false, syncArgs = null }) => {
   const [kind, setKind] = useState('wins');
   const [period, setPeriod] = useState('week');
@@ -62264,9 +62590,12 @@ const CARD_PVP = (() => {
     game: null, startMsg: null, foeInMatch: false, mySeq: 0, outbox: [], theirSeq: 0, inbox: {}, history: [], result: null, foeOpen: null, error: '', broken: '',
     offline: false, timeouts: 0, autoActing: false, chatAt: 0, mode: 'private', seekAt: 0, seekers: {}, lobbyCount: 0, joining: '', joinAt: 0, ownCode: '', reported: '', pick: false, notice: '', // pick … 入口の一覧から選んで入った / notice … 入口に出す一言
     round: 0, again: null, foeAgain: null, foeGone: false }); // もう1戦: round … いまの試合の回 / again … 自分が押した次の回 { rd, seed, salt, seal } / foeAgain … 相手が押した次の回 { rd, seal }
+  let roomWaitSet = false; // カードの部屋が「部屋で待ち中」の印を立てているか
   const emit = () => {
     // 部屋で相手を待っているあいだは、フレンドに「部屋で待ち中」と知らせる(34 の friendsSetRoomWaiting。2026-10-29 社長)
-    if (typeof friendsSetRoomWaiting === 'function') friendsSetRoomWaiting(!!s && (s.phase === 'connecting' || s.phase === 'waiting'));
+    //   ビートの部屋も同じ印を使うので、下ろすのはカードが立てたときだけ(2026-10-29 リバースくんと合わせた)
+    const waitingNow = !!s && (s.phase === 'connecting' || s.phase === 'waiting');
+    if (typeof friendsSetRoomWaiting === 'function' && waitingNow !== roomWaitSet) { friendsSetRoomWaiting(waitingNow); roomWaitSet = waitingNow; }
     listeners.forEach((fn) => { try { fn(s); } catch (_) { /* 画面の都合で落ちても部屋は続ける */ } });
   };
   const set = (patch) => { s = { ...s, ...patch }; emit(); };
@@ -64432,6 +64761,384 @@ const CardPvpWatchScreen = ({ onBack }) => {
       </div>
       {logOpen && st && <CardTurnLogSheet st={st} meName={nameOf(0)} foeName={nameOf(1)} onClose={() => setLogOpen(false)}/>}
       {detail && <CardDetailModal db={db} no={detail} onClose={() => setDetail(null)}/>}
+    </div>
+  );
+};
+
+// ---- part: 95-card-deck-share.jsx ----
+// ===== MFバトルカード: みんなのデッキ(デッキ登録の対戦・デッキのレンタル) =====
+// 2026-10-29 社長「デッキを1組登録して戦い方を決められる・ほかの人はそのデッキと戦える(CPU が動かす)・借りて使える・使われた数で次の日に報酬」
+// 決めごと(ソランドくん経由・社長「この形で」): 報酬はビートP(戦われた1回 10・登録デッキが勝った回 +10・借りて使われた1回 15)、
+//   同じ人からは1日3回まで・1人1日300まで、借りたデッキはマルチ対戦では使えない
+//
+// 作り
+//   ・表と関数は docs/sql/card-deck-share/CARD_DECK_SHARE_APPLY.sql(流すのは統括部長)。表が無い間は「準備中」と出して何もしない
+//   ・登録・登録し直し・やめる・報酬の受け取りには、登録した端末が作る「持ち主の鍵」(mh_card_deck_owner_key_v1)が要る
+//     (ブリーダーの番号は人に見えるので、番号だけでは書きかえられない。表には鍵の指紋だけを置く)
+//   ・戦い方(tactics)は、助手の打ち方(82 の cardAiPolicy)に乗せる: 土台のくせ(助手)+7つの向きの強め・控えめ+切り札(3枚まで)
+//   ・この部品が持つ画面は「みんなのデッキ」(84 の view 'share')。区切り② 登録 → ③ 戦う → ④ 借りる → ⑤ 報酬 の順に足す
+
+const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';   // 持ち主の鍵(新しいキー。端末で作り、バックアップで引き継ぐ)
+const CARD_SHARE_TABLE = 'card_deck_entries';
+const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';
+const CARD_SHARE_REWARD_KEY = 'mh_card_deck_reward_v1'; // 報酬を端末のビートPに足した日の一覧(['2026-10-29', …]・新しい60日まで)     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
+// 戦い方の7つの向き(82 の CARD_AI_HABITS の項目と同じ名前)。-1 控えめ / 0 ふつう / 1 強め
+const CARD_SHARE_TILTS = Object.freeze([
+  { id: 'attack', label: '攻める' }, { id: 'keepGuard', label: '守りを残す' }, { id: 'saveGuts', label: 'ガッツをためる' },
+  { id: 'big', label: '大技' }, { id: 'disrupt', label: '相手を崩す' }, { id: 'area', label: '全体技' }, { id: 'finish', label: 'とどめ' },
+]);
+const CARD_SHARE_TILT_MUL = Object.freeze({ '-1': 0.6, 0: 1, 1: 1.6 });
+const CARD_SHARE_ACES_MAX = 3;
+let _cardShareUnavailable = false; // 表がまだ無い(SQL 未適用)と分かったら、その回は読みに行かない
+
+// 公開の印。区切り⑤(報酬)まで入るまでは、デバッグ設定から入ったときだけ押せる
+const cardShareOpen = () => false;
+
+// 戦い方をきれいにする(知らない項目は捨てる・無い人は既定で補う)。deck を渡すと、切り札はそのデッキに入っている札だけ残す
+const cardShareNormalizeTactics = (v, deck = null) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
+  const tilt = {};
+  CARD_SHARE_TILTS.forEach((t) => { const n = r.tilt && r.tilt[t.id]; tilt[t.id] = n === -1 || n === 1 ? n : 0; });
+  const inDeck = deck && Array.isArray(deck.cards) ? new Set(deck.cards) : null;
+  const aces = [...new Set((Array.isArray(r.aces) ? r.aces : []).filter((x) => typeof x === 'string' && /^[0-9]{3}$/.test(x) && (!inDeck || inDeck.has(x))))].slice(0, CARD_SHARE_ACES_MAX);
+  const name = typeof r.name === 'string' ? r.name.slice(0, 20) : '';
+  return { habit, tilt, aces, name };
+};
+// 戦い方から、助手の打ち方(cardAiPolicy の形)を作る。強さは戦う人が選ぶ
+const cardSharePolicy = (tactics, levelId, opts = {}) => {
+  const t = cardShareNormalizeTactics(tactics);
+  const base = cardAiPolicy(t.habit, levelId, opts);
+  const habit = { ...base.habit };
+  CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
+  return { ...base, habit, aces: t.aces.slice() };
+};
+
+// 持ち主の鍵。create … 無ければ作って保存する(登録するときだけ)。作れない・保存できないときは null
+const cardShareOwnerKey = async (create = false) => {
+  let key = null;
+  try { key = await storeGet(CARD_SHARE_KEY, null, false); } catch (_) { key = null; }
+  if (typeof key === 'string' && /^[0-9a-f]{48}$/.test(key)) return key;
+  if (!create) return null;
+  try {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const made = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+    if (!(await storeSet(CARD_SHARE_KEY, made, false))) return null;
+    return made;
+  } catch (_) { return null; }
+};
+
+// ---- 表との通信(表が無い・通信できないときは null。落ちない) ----
+const cardShareRpc = async (fn, body) => {
+  if (_cardShareUnavailable) return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => { if (controller) controller.abort(); }, 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, { method: 'POST', headers: SB_HEADERS, signal: controller ? controller.signal : undefined, body: JSON.stringify(body) });
+    const text = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareUnavailable = true; return null; }
+    try { return JSON.parse(text); } catch (_) { return text; }
+  } catch (_) { return null; } finally { clearTimeout(timer); }
+};
+const CARD_SHARE_COLS = 'owner_id,user_name,icon,profile_frame,deck,tactics,version,active,battles,deck_wins,rents,updated_at';
+// 表の1行を、画面で使う形へ(壊れた行は null)
+const cardShareRow = (row) => {
+  if (!row || typeof row.owner_id !== 'string') return null;
+  const deck = row.deck && typeof row.deck === 'object' ? row.deck : {};
+  const monsters = Array.isArray(deck.monsters) ? deck.monsters.filter((x) => typeof x === 'string').slice(0, 3) : [];
+  const cards = Array.isArray(deck.cards) ? deck.cards.filter((x) => typeof x === 'string').slice(0, 50) : [];
+  if (monsters.length !== 3 || cards.length !== 50) return null;
+  const n = (v) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.floor(Number(v)) : 0);
+  return { ownerId: row.owner_id, name: typeof row.user_name === 'string' && row.user_name ? row.user_name.slice(0, 40) : 'ブリーダー',
+    icon: typeof row.icon === 'string' ? row.icon : null, frame: typeof row.profile_frame === 'string' ? row.profile_frame : null,
+    deck: { monsters, cards }, tactics: cardShareNormalizeTactics(row.tactics, { cards }), version: n(row.version) || 1,
+    battles: n(row.battles), deckWins: n(row.deck_wins), rents: n(row.rents), at: Date.parse(row.updated_at) || 0 };
+};
+// 自分の登録(やめた登録は表から読めないので null)
+const cardShareFetchMine = async (ownerId) => {
+  if (_cardShareUnavailable || typeof ownerId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(ownerId)) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_SHARE_TABLE}?select=${CARD_SHARE_COLS}&owner_id=eq.${ownerId}&limit=1`, { headers: SB_HEADERS });
+    const text = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareUnavailable = true; return null; }
+    const rows = JSON.parse(text);
+    return Array.isArray(rows) && rows[0] ? cardShareRow(rows[0]) : null;
+  } catch (_) { return null; }
+};
+// 登録・登録し直し。返り値: 'ok' | 'locked'(鍵がちがう) | 'bad' | 'nokey' | 'off'(表が無い・通信できない)
+const cardShareRegister = async ({ ownerId, name, icon, frame, deck, tactics }) => {
+  const key = await cardShareOwnerKey(true);
+  if (!key) return 'nokey';
+  const r = await cardShareRpc('card_deck_register', { p_owner: ownerId, p_key: key, p_name: String(name || '').slice(0, 40), p_icon: icon || null, p_frame: frame || null,
+    p_deck: { monsters: deck.monsters.slice(0, 3), cards: deck.cards.slice(0, 50) }, p_tactics: cardShareNormalizeTactics(tactics, deck) });
+  return r === 'ok' || r === 'locked' || r === 'bad' ? r : 'off';
+};
+const cardShareUnregister = async (ownerId) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key) return 'nokey';
+  const r = await cardShareRpc('card_deck_unregister', { p_owner: ownerId, p_key: key });
+  return r === 'ok' || r === 'locked' || r === 'none' ? r : 'off';
+};
+
+// 戦う相手の一覧(区切り③)。sort … 'new'(新しく登録した順)/'popular'(よく戦われた順)/ ids … その人たちだけ(フレンド)
+const cardShareFetchList = async ({ sort = 'new', ids = null, limit = 30 } = {}) => {
+  if (_cardShareUnavailable) return [];
+  const safeIds = Array.isArray(ids) ? ids.filter((x) => typeof x === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(x)).slice(0, 100) : null;
+  if (safeIds && !safeIds.length) return [];
+  const order = sort === 'popular' ? 'battles.desc,updated_at.desc' : 'updated_at.desc';
+  const where = safeIds ? `&owner_id=in.(${safeIds.join(',')})` : '';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${CARD_SHARE_TABLE}?select=${CARD_SHARE_COLS}&active=eq.true${where}&order=${order}&limit=${Math.max(1, Math.min(60, limit))}`, { headers: SB_HEADERS });
+    const text = await res.text();
+    if (!res.ok) { if (_isMissingTableError(res.status, text) || res.status === 404) _cardShareUnavailable = true; return []; }
+    const rows = JSON.parse(text);
+    return (Array.isArray(rows) ? rows : []).map(cardShareRow).filter(Boolean);
+  } catch (_) { return []; }
+};
+// 「おすすめ」: 新しい順の一覧から、自分以外を n 組えらぶ(戦われた数の少ない人を少し出やすく)
+const cardSharePickSome = (list, selfId, n = 3, rand = Math.random) => {
+  const pool = (Array.isArray(list) ? list : []).filter((e) => e && e.ownerId !== selfId);
+  const weighted = pool.map((e) => ({ e, w: rand() / (1 + Math.min(50, e.battles) / 10) })).sort((a, b) => b.w - a.w);
+  return weighted.slice(0, n).map((x) => x.e);
+};
+// 戦った・借りて使ったを表へ知らせる(試合の番号ごとに1回だけ数えられる)。返り値は表の答え('ok' | 'dup' | 'self' | 'none' | 'bad')か null
+const cardShareReportUse = async ({ match, ownerId, userId, kind, deckWon = false, version = 1 }) => {
+  if (typeof match !== 'string' || !/^[A-Za-z0-9_-]{8,64}$/.test(match) || ownerId === userId) return null;
+  return cardShareRpc('card_deck_use', { p_match_id: match, p_owner: ownerId, p_user: userId, p_kind: kind === 'rent' ? 'rent' : 'battle', p_deck_won: !!deckWon, p_version: Number.isInteger(version) ? version : 1 });
+};
+// 登録デッキの相手の、助手と同じ血統の子のまとまり(cardAiPolicy の opts.sameBlood と同じ見方)
+const cardShareSameBlood = (db, deck) => {
+  const ms = (deck && Array.isArray(deck.monsters) ? deck.monsters : []).map((no) => cardMonsterOf(db, no)).filter(Boolean);
+  return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
+};
+
+// ---- 報酬の受け取り(区切り⑤)。前の日までの分を、カードのトップの帯で受け取る ----
+// 端末に足した日の一覧。無ければ空・壊れていたら null(二重に足さないよう、壊れているときは何もしない)
+const cardShareNormalizeClaims = (v) => {
+  if (v === null || v === undefined) return [];
+  if (!Array.isArray(v)) return null;
+  return v.filter((x) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-60);
+};
+// サーバで前の日までの報酬を確かめ(card_deck_claim・(人・日)で1回だけ)、サーバで受け取った日のうち、まだ端末に足していない日を返す。
+//   [{ day, amount, uses }]。サーバで受け取ったあと端末の保存に失敗しても、次に開いたときにここからもう一度出る
+const cardSharePendingRewards = async (ownerId, credited) => {
+  const key = await cardShareOwnerKey(false);
+  if (!key || typeof ownerId !== 'string' || !Array.isArray(credited)) return [];
+  await cardShareRpc('card_deck_claim', { p_owner: ownerId, p_key: key });
+  const rows = await cardShareRpc('card_deck_rewards_of', { p_owner: ownerId, p_key: key });
+  const done = new Set(credited);
+  return (Array.isArray(rows) ? rows : []).filter((r) => r && typeof r.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.day) && Number.isInteger(r.amount) && r.amount > 0 && !done.has(r.day))
+    .map((r) => ({ day: r.day, amount: Math.min(300, r.amount), uses: Number.isInteger(r.uses) && r.uses > 0 ? r.uses : 0 }));
+};
+
+// ---- 借りたデッキ(区切り④)。助手と対戦で使える(マルチでは使えない・社長の決め)。持っているかは見ない(借り物) ----
+const cardRentedNormalize = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+  if (!r || typeof r.ownerId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(r.ownerId)) return null;
+  const d = r.deck && typeof r.deck === 'object' ? r.deck : {};
+  const monsters = Array.isArray(d.monsters) ? d.monsters.filter((x) => typeof x === 'string').slice(0, 3) : [];
+  const cards = Array.isArray(d.cards) ? d.cards.filter((x) => typeof x === 'string').slice(0, 50) : [];
+  if (monsters.length !== 3 || cards.length !== 50) return null;
+  return { ownerId: r.ownerId, name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'ブリーダー', icon: typeof r.icon === 'string' ? r.icon : null,
+    frame: typeof r.frame === 'string' ? r.frame : null, version: Number.isInteger(r.version) && r.version > 0 ? r.version : 1,
+    deckName: typeof r.deckName === 'string' ? r.deckName.slice(0, 20) : '', deck: { monsters, cards }, at: Number.isFinite(r.at) ? r.at : 0 };
+};
+const cardRentedDeckGet = async () => { try { return cardRentedNormalize(await storeGet(CARD_RENTED_KEY, null, false)); } catch (_) { return null; } };
+// entry … 表の1行(cardShareRow の形)・null で返す。保存できたら true
+const cardRentedDeckSet = async (entry) => {
+  const next = entry ? cardRentedNormalize({ ownerId: entry.ownerId, name: entry.name, icon: entry.icon, frame: entry.frame, version: entry.version, deckName: entry.tactics && entry.tactics.name, deck: entry.deck, at: Date.now() }) : null;
+  if (entry && !next) return false;
+  try { return !!(await storeSet(CARD_RENTED_KEY, next, false)); } catch (_) { return false; }
+};
+
+// ---- 画面: みんなのデッキ(区切り② 登録・③ 戦う・④ 借りる) ----
+// db … カードの表 / decks … 自分のデッキ(cardNormalizeDecks の形)/ collection … 持っているカード / frame … プロフィールのフレーム / onBack … 対戦えらびへ
+// unlocked … 助手と対戦で開いた強さ(cardLevelOpen)/ debug … デバッグから入った(強さを全部選べる)/ onFight(entry, level) … 登録デッキと戦う(84 の startBattle へ)
+const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null }) => {
+  const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
+  const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
+  const [level, setLevel] = useState('normal');
+  const [rented, setRented] = useState(null);         // 借りているデッキ(cardRentedDeckGet)
+  useEffect(() => { void cardRentedDeckGet().then(setRented); }, []);
+  const rent = async (e) => {
+    if (busy) return;
+    setBusy(true); setMsg('');
+    if (await cardRentedDeckSet(e)) { setRented(await cardRentedDeckGet()); setMsg(`${e.name}さんのデッキを借りました。助手と対戦のデッキ選びで使えます`); }
+    else setMsg('この端末に保存できなかったため、借りられませんでした');
+    setBusy(false);
+  };
+  const giveBack = async () => {
+    if (busy) return;
+    setBusy(true);
+    if (await cardRentedDeckSet(null)) { setRented(null); setMsg('借りていたデッキを返しました'); }
+    setBusy(false);
+  };
+  const [selfId, setSelfId] = useState(null);
+  const [mine, setMine] = useState(undefined);        // undefined … 読み込み中 / null … 登録なし
+  const [off, setOff] = useState(false);               // 表が無い・通信できない
+  const [pick, setPick] = useState(null);              // 選んだ自分のデッキの id
+  const [tactics, setTactics] = useState(() => cardShareNormalizeTactics(null));
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [profile, setProfile] = useState({ name: 'ブリーダー', icon: '🙂' });
+  const list = decks && Array.isArray(decks.decks) ? decks.decks : [];
+  const deckOf = (id) => list.find((d) => d.id === id) || null;
+  const issuesOf = (d) => (d ? [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection)] : ['デッキがありません']);
+  const picked = deckOf(pick);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [name, icon] = await Promise.all([storeGet('mh_breeder_name', 'ブリーダー', false), storeGet('mh_breeder_icon', '🙂', false)]).catch(() => ['ブリーダー', '🙂']);
+      if (alive) setProfile({ name: typeof name === 'string' && name ? name : 'ブリーダー', icon: typeof icon === 'string' && icon ? icon : '🙂' });
+      const id = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+      if (!alive) return;
+      setSelfId(typeof id === 'string' ? id : null);
+      const row = typeof id === 'string' ? await cardShareFetchMine(id) : null;
+      if (!alive) return;
+      setOff(_cardShareUnavailable || typeof id !== 'string');
+      setMine(row);
+      if (row) setTactics(row.tactics);
+      // はじめは、登録中のデッキと同じ中身の自分のデッキ・無ければ使えるデッキの先頭を選んでおく
+      const same = row ? list.find((d) => JSON.stringify(d.monsters) === JSON.stringify(row.deck.monsters) && JSON.stringify(d.cards) === JSON.stringify(row.deck.cards)) : null;
+      const firstOk = list.find((d) => issuesOf(d).length === 0);
+      setPick((same || firstOk || list[0] || {}).id || null);
+    })();
+    return () => { alive = false; };
+  }, []);
+  const habits = Object.keys(CARD_AI_HABITS).filter((id) => cardFoeReleased(id));
+  const habitName = (id) => ((typeof ASSISTANTS !== 'undefined' && ASSISTANTS.find((a) => a.id === id)) || {}).name || id;
+  const uniqueCards = picked ? [...new Set(picked.cards)] : [];
+  const cardName = (no) => ((cardOf(db, no) || {}).name) || no;
+  const setTilt = (id, n) => setTactics((t) => ({ ...t, tilt: { ...t.tilt, [id]: n } }));
+  const toggleAce = (no) => setTactics((t) => (t.aces.includes(no) ? { ...t, aces: t.aces.filter((x) => x !== no) } : t.aces.length >= CARD_SHARE_ACES_MAX ? t : { ...t, aces: [...t.aces, no] }));
+  const issues = issuesOf(picked);
+  const register = async () => {
+    if (!picked || issues.length || !selfId || busy) return;
+    setBusy(true); setMsg('');
+    const r = await cardShareRegister({ ownerId: selfId, name: profile.name, icon: profile.icon, frame, deck: picked, tactics: { ...cardShareNormalizeTactics(tactics, picked), name: picked.name } });
+    if (r === 'ok') { setMine(await cardShareFetchMine(selfId)); setMsg('登録しました。ほかのブリーダーが、このデッキと戦えます'); }
+    else setMsg(r === 'locked' ? 'この端末では登録を書きかえられません(登録した端末で操作してください)' : r === 'bad' ? 'このデッキは登録できませんでした' : r === 'nokey' ? 'この端末に保存できなかったため、登録できませんでした' : '通信できませんでした。電波のよい所で、もう一度お試しください');
+    setBusy(false);
+  };
+  const unregister = async () => {
+    if (!selfId || busy) return;
+    setBusy(true); setMsg('');
+    const r = await cardShareUnregister(selfId);
+    if (r === 'ok' || r === 'none') { setMine(null); setMsg('登録をやめました'); }
+    else setMsg(r === 'locked' || r === 'nokey' ? 'この端末では登録をやめられません(登録した端末で操作してください)' : '通信できませんでした。もう一度お試しください');
+    setBusy(false);
+  };
+  const chip = (on) => `rounded-lg px-2 py-1 text-[12px] font-black ${on ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`;
+  // 戦う相手を読む(戦うタブを開いたとき・「ほかの人」で読み直す)
+  const loadFoes = async () => {
+    setFoes(null);
+    const [fresh, popular, roster] = await Promise.all([cardShareFetchList({ sort: 'new', limit: 40 }), cardShareFetchList({ sort: 'popular', limit: 10 }),
+      selfId && typeof sbFetchFriendRoster === 'function' ? sbFetchFriendRoster(selfId).catch(() => []) : Promise.resolve([])]);
+    const friendIds = (Array.isArray(roster) ? roster : []).map((f) => f && f.otherId).filter(Boolean);
+    const friends = friendIds.length ? await cardShareFetchList({ ids: friendIds, limit: 30 }) : [];
+    setFoes({ picks: cardSharePickSome(fresh, selfId, 3), friends: friends.filter((e) => e.ownerId !== selfId), popular: popular.filter((e) => e.ownerId !== selfId) });
+  };
+  useEffect(() => { if (tab === 'fight' && selfId && !off && foes === null) void loadFoes(); }, [tab, selfId, off]);
+  const levels = CARD_LEVEL_ORDER.filter((lv) => debug || cardLevelOpen(unlocked, lv));
+  const fightIssues = issuesOf(list.find((d) => d.id === (decks && decks.active)) || list[0] || null);
+  const foeRow = (e) => (
+    <li key={e.ownerId} data-card-share-foe={e.ownerId} className="flex items-center gap-2 rounded-xl bg-black/30 px-2 py-2">
+      {typeof CardPvpAvatar === 'function' && <CardPvpAvatar icon={e.icon} frame={e.frame} className="h-9 w-9"/>}
+      <span className="min-w-0 flex-1">
+        <b className="block truncate text-[13px] font-black text-white">{e.name}</b>
+        <small className="block truncate text-[11px] font-bold text-slate-300">{e.tactics.name || 'デッキ'}・{e.deck.monsters.map((no) => ((cardMonsterOf(db, no) || {}).name) || no).join('・')}</small>
+        <small className="block text-[10px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
+      </span>
+      <span className="flex shrink-0 flex-col gap-1">
+        <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+          onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, level); }}>戦う</button>
+        <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
+          onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>
+      </span>
+    </li>
+  );
+  const foeList = (title, rows, key) => (
+    <div className={SCREEN_PANEL_CLASS} data-card-share-list={key}>
+      <div className="text-[12px] font-bold text-slate-400">{title}</div>
+      {rows.length ? <ul className="mt-1 space-y-1">{rows.map(foeRow)}</ul> : <p className="mt-1 text-[12px] font-bold text-slate-400">{key === 'friends' ? 'デッキを登録しているフレンドはいません' : 'まだだれも登録していません'}</p>}
+    </div>
+  );
+  return (
+    <div data-mh-screen data-card-share className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="みんなのデッキ" accent="text-amber-200" onBack={onBack} note="自分のデッキを1組登録すると、ほかのブリーダーが戦えます"/>
+      <div className={`${SCREEN_LIST_CLASS} space-y-3 pb-4`}>
+        {mine === undefined && <p className="text-[13px] font-bold text-slate-300">読み込み中…</p>}
+        {mine !== undefined && off && <p data-card-share-off className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-3 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap('いまは準備中です。しばらくしてから、もう一度開いてください')}</p>}
+        {mine !== undefined && !off && onFight && (
+          <div className="flex gap-1.5" role="tablist">
+            {[['fight', '戦う'], ['mine', '自分のデッキを登録']].map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} data-card-share-tab={id} className={`flex-1 ${chip(tab === id)} py-2`} onClick={() => { Audio_.fgSe.tap(); setTab(id); }}>{label}</button>)}
+          </div>
+        )}
+        {mine !== undefined && !off && tab === 'fight' && (<>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">強さ(読みの深さ。もらえるビートPは助手と対戦と同じ)</div>
+            <div className="mt-1 flex flex-wrap gap-1.5">{levels.map((lv) => <button key={lv} type="button" data-card-share-level={lv} className={chip(level === lv)} onClick={() => setLevel(lv)}>{(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()}</button>)}</div>
+            {fightIssues.length > 0 && <p className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`使うデッキ: ${fightIssues[0]}`)}</p>}
+          </div>
+          {rented && (
+            <div data-card-share-rented className={`${SCREEN_PANEL_CLASS} flex items-center gap-2`}>
+              <span className="min-w-0 flex-1 text-[12px] font-bold text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(助手と対戦のデッキ選びで使えます。マルチ対戦では使えません)`)}</span>
+              <button type="button" data-card-share-giveback disabled={busy} className="shrink-0 rounded-lg border border-white/15 bg-slate-900 px-2 py-1 text-[11px] font-black text-slate-200 disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); void giveBack(); }}>返す</button>
+            </div>
+          )}
+          {msg && tab === 'fight' && <p className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
+          {foes === null ? <p className="text-[13px] font-bold text-slate-300">読み込み中…</p> : (<>
+            {foeList('おすすめ', foes.picks, 'picks')}
+            <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人をさがす</button>
+            {foeList('フレンドのデッキ', foes.friends, 'friends')}
+            {foeList('よく戦われているデッキ', foes.popular, 'popular')}
+          </>)}
+        </>)}
+        {mine !== undefined && !off && tab === 'mine' && (<>
+          <div data-card-share-mine className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">登録中のデッキ</div>
+            {mine ? (<>
+              <div className="text-[15px] font-black text-white">{mine.tactics.name || 'デッキ'}<small className="ml-2 text-[11px] text-slate-300">{habitName(mine.tactics.habit)}の打ち方</small></div>
+              <p data-card-share-counts className="mt-1 text-[12px] font-bold text-sky-100 tabular-nums">戦われた {mine.battles}回・そのうち勝った {mine.deckWins}回・借りられた {mine.rents}回</p>
+              <button type="button" data-card-share-unregister disabled={busy} className="mt-2 rounded-lg border border-white/15 bg-slate-900 px-3 py-1.5 text-[12px] font-black text-slate-200 disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); void unregister(); }}>登録をやめる</button>
+            </>) : <p className="text-[13px] font-bold text-slate-300">まだ登録していません</p>}
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">登録するデッキ</div>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {list.map((d) => <button key={d.id} type="button" data-card-share-pick={d.id} className={chip(pick === d.id)} onClick={() => { Audio_.fgSe.tap(); setPick(d.id); setTactics((t) => cardShareNormalizeTactics(t, d)); }}>{d.name}</button>)}
+            </div>
+            {picked && issues.length > 0 && <p data-card-share-issues className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(issues[0])}</p>}
+          </div>
+          <div className={SCREEN_PANEL_CLASS}>
+            <div className="text-[12px] font-bold text-slate-400">戦い方(コンピューターが、この打ち方であなたのデッキを動かします)</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-300">土台の打ち方</div>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {habits.map((id) => <button key={id} type="button" data-card-share-habit={id} className={chip(tactics.habit === id)} onClick={() => { Audio_.fgSe.tap(); setTactics((t) => ({ ...t, habit: id })); }}>{habitName(id)}</button>)}
+            </div>
+            <div className="mt-2 space-y-1">
+              {CARD_SHARE_TILTS.map((x) => (
+                <div key={x.id} data-card-share-tilt={x.id} className="flex items-center gap-2">
+                  <span className="w-[6.5em] shrink-0 text-[12px] font-bold text-slate-200">{x.label}</span>
+                  {[[-1, '控えめ'], [0, 'ふつう'], [1, '強め']].map(([n, label]) => <button key={n} type="button" className={chip(tactics.tilt[x.id] === n)} onClick={() => setTilt(x.id, n)}>{label}</button>)}
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 text-[12px] font-bold text-slate-300">切り札(出せるときは優先して使う・{CARD_SHARE_ACES_MAX}枚まで)</div>
+            <div data-card-share-aces className="mt-1 flex max-h-[30vh] flex-wrap gap-1.5 overflow-y-auto">
+              {uniqueCards.map((no) => <button key={no} type="button" data-card-share-ace={no} className={chip(tactics.aces.includes(no))} onClick={() => toggleAce(no)}>{cardName(no)}</button>)}
+            </div>
+          </div>
+          <p className="px-1 text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('登録できるのは1組だけです。登録し直すと、前の登録と入れかわります。登録した端末でだけ、書きかえ・やめる・報酬の受け取りができます(端末を変えるときは、バックアップで引き継げます)')}</p>
+          {msg && <p data-card-share-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
+        </>)}
+      </div>
+      {mine !== undefined && !off && tab === 'mine' && (
+        <div className={SCREEN_FOOTER_CLASS}>
+          <button type="button" data-card-share-register disabled={busy || !picked || issues.length > 0 || !selfId} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40" onClick={() => { Audio_.fgSe.tap(); void register(); }}>{mine ? 'このデッキで登録し直す' : 'このデッキを登録する'}</button>
+        </div>
+      )}
     </div>
   );
 };

@@ -114,7 +114,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
     await page.locator('[data-card-foe="momosuke"]').click();
-    await page.locator('[data-card-start]').click();
+    await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
     return page;
   };
@@ -134,9 +134,9 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     if (SHOT) { fs.mkdirSync(SHOT, { recursive: true }); await page.screenshot({ path: path.join(SHOT, 'focus-attack.png') }); }
     const user = page.locator('[data-card-mon].ring-amber-300').first();
     if (await user.count()) { await user.click(); await page.waitForTimeout(150); }
-    // 組み合わせの窓(2026-10-29 案B)で「＋集中」の行を選ぶ
-    const focusRow = page.locator('[data-card-combo-sheet] [data-card-set]').filter({ hasText: '集中' }).first();
-    if (await focusRow.count()) { await focusRow.click(); await page.waitForTimeout(200); }
+    // 集中を付ける組を選ぶ(#4196 から、押した技は1枚だけが先に選ばれる。付けないと、助手が残した緊急回避でよけられる)。組み合わせの窓(2026-10-29 案B)の行も同じ印
+    const focusSet = page.locator('[data-card-set]').filter({ hasText: '集中' }).first();
+    if (await focusSet.count()) { await focusSet.click(); await page.waitForTimeout(200); }
     await page.locator('[data-card-mon="1-0"]').click();
     let logText = '', life1 = life0;
     for (let i = 0; i < 40; i++) { await page.waitForTimeout(250); logText = await page.locator('[data-card-log]').innerText().catch(() => ''); life1 = await lifeOf(page, '1-0'); if (life1 !== life0 || /回避した/.test(logText)) break; }

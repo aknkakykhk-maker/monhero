@@ -1202,6 +1202,14 @@ const cardAiPolicy = (habitId, levelId, opts = {}) => {
 
 // 相手が回避できそうな見込み(見えない手札は、残りの山札＋手札から平均で見積もる)
 // atkMon … 攻める子(純血のプライドを見る)。ルールの守りの候補(cardGuardOptions)と同じ決まりで、出せない回避は見込まない
+// 切り札(みんなのデッキ・95 の cardSharePolicy が policy.aces にカード番号を3つまで入れる)。手に切り札が入っていれば、その手を優先する。
+//   aces が無い・空なら何もしない(助手と対戦・マルチの検査・勝率は変わらない。2026-10-29 社長「戦術カードなどを細かく設定」・ルールくんと相談)
+const cardAiAceHit = (policy, hand, idxs) => {
+  const aces = policy && Array.isArray(policy.aces) ? policy.aces : null;
+  if (!aces || !aces.length || !Array.isArray(hand)) return false;
+  const list = Array.isArray(idxs) ? idxs : Number.isInteger(idxs) ? [idxs] : [];
+  return list.some((i) => aces.includes(hand[i]));
+};
 const cardAiEvadeChance = (db, st, p, card, target, level, flags = {}, atkMon = null) => {
   if (cardHasEff(card, 'noEvade') || card.kind === 'spe') return 0;
   if (flags.attachNoEvade || flags.attachNoGuard) return 0; // 電光石火・瞬殺など
@@ -1481,7 +1489,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     const saved = Math.min(dmg, target.life) - Math.min(after, target.life);
     const ko = target.life <= dmg && target.life > after ? 5 : 0;
     const lostAll = cardHasEff(c, 'selfGutsAll') ? me.guts.length - cost : 0; // 緊急回避: 残りのガッツも全部なくなる
-    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6;
+    const v = extra + saved * (0.6 + 0.4 * habit.keepGuard) + ko - (cost + lostAll) * 0.35 * habit.saveGuts + back * 0.6 + (cardAiAceHit(policy, me.hand, o.hand) ? 1.5 : 0);
     if (!best || v > best.v) best = { v, o };
   });
   if (!best || best.v < 0.8 + rand() * 0.3) return { type: 'pass' };
@@ -1503,7 +1511,9 @@ const cardAiChooseGuts = (db, st, policy) => {
     if (cardIsGuardKind(c.kind)) return 2 * habit.keepGuard - c.guts * 0.2;
     return (c.damage || 1) * 0.5 - Math.max(0, c.guts - (me.guts.length + 2)) * 0.8;
   };
-  const ks = me.hand.map((no, i) => ({ i, k: keep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
+  // 切り札(policy.aces・みんなのデッキ)はガッツにしない(手札に残す)。aces が無ければ今と同じ
+  const aceKeep = (no) => (policy && Array.isArray(policy.aces) && policy.aces.includes(no) ? 10 : 0);
+  const ks = me.hand.map((no, i) => ({ i, k: keep(no) + aceKeep(no), g: cardIsGuardKind((cardOf(db, no) || {}).kind) }));
   // 守りの札を1枚は手元に残す(2026-10-29 社長「ガード軽視が目立つ」: 守りの札を全部ガッツにして、次の相手の番に守れない)
   //   いちばん残したい守りの札を、攻めの札より後(ガッツにしない側)へ回す
   const guardKeep = ks.filter((x) => x.g && x.k > -9).sort((a, b) => b.k - a.k)[0];
@@ -1637,7 +1647,7 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   const opts = useful.length ? useful : opts0;
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
-  const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) })).sort((a, b) => b.s - a.s);
+  const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0) })).sort((a, b) => b.s - a.s);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
   if (rand() < policy.level.whim) {
     const pool = scored.filter((x) => x.s > 0.3).slice(0, 3);
@@ -2082,6 +2092,7 @@ const CARD_SAVE_KEYS = Object.freeze({
   settings: 'mh_card_settings_v1',    // 演出の速さ・守れないときの自動パス(normalizeCardSettings)
   gacha: 'mh_card_gacha_points_v1',   // ガチャポイント(ブースターパック1つで +10・上限なし。89 の cardNormalizeGacha。2026-10-27 社長)
   catalogs: 'mh_card_catalogs_v1',    // 持っているバトルカードカタログの冊数(ガチャポイント500で1冊。89 の cardExchangeCatalog / cardUseCatalog)
+  weeklyReward: 'mh_card_weekly_reward_v1', // 受け取った週間報酬の週の一覧 ['card_weekly_2026-11-02', …](90 の cardWeeksAwaitingReward。壊れているときは何も配らない)
   aiTalk: 'mh_card_ai_talk_v1',       // 助手のおしゃべり(AI)の入/切 { on }(無ければ入。83-card-battle-talk-ai.jsx の cardNormalizeAiTalk)
 });
 // カードで使う・もらうポイントはビートP(2026-10-26 社長「ビートPを廃止してビートポイントにして」)。

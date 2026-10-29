@@ -358,6 +358,10 @@
       "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)・カード図鑑・ルールの画面。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
     },
     {
+      "file": "87-card-deck-pick.jsx",
+      "role": "画面: MFバトルカードの対戦の前のデッキ選び(助手と対戦・マルチの前に1枚挟む)。選べる一覧は cardDeckPickChoices の1か所(借りたデッキを足す口)。保存は 84 が mh_card_decks_v1 の active を書き換えるだけ"
+    },
+    {
       "file": "90-card-rank.jsx",
       "role": "MFバトルカードのランキング(台帳 #3513)。新しい表 card_battle_ranks の読み書きと、ランキングの画面。送るのは公開後のふつうの対戦の勝ちだけ(SQL: docs/sql/card-battle-ranks/)"
     },
@@ -376,6 +380,10 @@
     {
       "file": "94-card-spectate.jsx",
       "role": "MFバトルカードのマルチ対戦の観戦。観戦の通り道(mhc-watch-<試合>・Broadcast だけ)・対戦中の一覧(mhc-live)・両方の手札を仮の札にした場で手をなぞる計算・観戦の画面。手札・山札・封は流さない。保存は無し"
+    },
+    {
+      "file": "95-card-deck-share.jsx",
+      "role": "MFバトルカードのみんなのデッキ(デッキ登録の対戦・デッキのレンタル)。表 card_deck_entries などとの通信・持ち主の鍵(mh_card_deck_owner_key_v1)・戦い方(助手の打ち方に乗せる)・登録の画面"
     },
     {
       "file": "81-debug-trials.jsx",
