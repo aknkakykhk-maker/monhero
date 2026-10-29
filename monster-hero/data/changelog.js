@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-30 05:29", type:'update', title:'戦術カードの賢さの数え方を見直しました', status:'new', group:'cardBattle',
+    items:[
+      'デッキの賢さは、ちゃんと効く戦術カードだけで数えるようになりました。',
+      '同じ戦術カードを何枚セットしても、賢さは1枚ぶんです。場面に合わない組み合わせや、ほとんど起きない場面の戦術カードも、賢さに数えません。',
+    ],
+  },
+  {
     date: "2026-10-30 03:45", type:'content', title:'フリー対戦とデッキ登録で遊べるようになりました', status:'new', group:'cardBattle',
     assistantNotice:{ id:'update_notice_card_free_and_deck_v1', type:'content' },
     items:[
