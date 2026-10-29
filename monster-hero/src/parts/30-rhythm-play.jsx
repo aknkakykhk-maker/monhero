@@ -1137,7 +1137,7 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
     </div>
   </div>;
 };
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
@@ -3259,6 +3259,9 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
+{/* ビートランク(2026-10-29 社長)。この1曲でたまった経験値と、ランクが上がったときのごほうび。横向きでも縦持ちでも、ここに1か所だけ出す。
+    裏のクイック周回の「経験値」(マスモンの経験値)と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
+<PlayerRankGain kind="beat" award={beatRankAward} next={beatRankAward?`ランク${playerRankInfo(beatRankAward.xp).rank+1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank+1)}`:''}/>
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
