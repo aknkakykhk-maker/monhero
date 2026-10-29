@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1cfe80a649f0469
+// source-sha256: fa8f507efe50aa2d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17343,7 +17343,7 @@ const helpDataRows = id => {
         if (typeof CARD_AI_LEVELS === 'undefined' || typeof CARD_LEVEL_ORDER === 'undefined') return [];
         const label = lv => typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv] || lv.toUpperCase();
         const lose = lv => typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0;
-        const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
+        const rows = CARD_LEVEL_ORDER.map(lv => [`フリー対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
         if (typeof CARD_PVP_REWARD !== 'undefined') {
           const x = CARD_PVP_REWARD.x || 1;
           rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point * x} ／ 負け ${CARD_PVP_REWARD.lose.point * x}`]);
@@ -90661,7 +90661,7 @@ const CARD_SETTING_GROUPS = Object.freeze([{
     key: 'think',
     title: '相手が考える時間',
     only: 'cpu',
-    desc: '助手と対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
+    desc: 'フリー対戦で、相手の助手が技や守りを決めるまでの間です。マルチ対戦では相手が人なので変わりません。',
     options: [{
       id: 'SLOW2',
       label: 'とても\nゆっくり',
@@ -90687,7 +90687,7 @@ const CARD_SETTING_GROUPS = Object.freeze([{
     key: 'resultWait',
     title: '結果までの間',
     only: 'cpu',
-    desc: '助手と対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
+    desc: 'フリー対戦で、勝ち負けが決まってから結果の画面に移るまでの間です。',
     options: [{
       id: 'NORMAL',
       label: 'ふつう',
@@ -90708,7 +90708,7 @@ const CARD_SETTING_GROUPS = Object.freeze([{
     key: 'bubble',
     title: '対戦中のひとこと',
     only: 'cpu',
-    desc: '助手と対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
+    desc: 'フリー対戦で、相手の助手がしゃべる吹き出しの多さです。「出さない」は、勝ち負けのときも出しません。',
     options: [{
       id: 'MANY',
       label: '多め',
@@ -97621,7 +97621,7 @@ const CardBattleBoard = ({
     className: `min-w-0 text-[13px] font-black leading-tight ${pvp ? 'max-w-[34%] truncate whitespace-nowrap' : 'shrink-0 whitespace-nowrap'}`
   }, who.name, React.createElement("small", {
     className: "block text-[10px] font-bold text-rose-200"
-  }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || '助手と対戦')), React.createElement("div", {
+  }, pvp ? 'マルチ対戦' : CARD_LEVEL_LABEL[game.level] || 'フリー対戦')), React.createElement("div", {
     className: "ml-auto"
   }, strip(CARD_CPU))), replay && !wide && replayFoeHand, React.createElement("div", {
     "data-card-side-active": turnLive && !turnMe ? 'foe' : undefined,
@@ -98807,7 +98807,7 @@ const CardQuickRunDetail = ({
   }, row('いまのようす', !quickRun ? 'いまは回していません' : live ? `回しています(WAVE ${wave || 1}/10)` : '止まっています', live ? 'text-fuchsia-100' : !quickRun ? 'text-slate-300' : 'text-rose-200'), quickRun && !live && quickRun.info && quickRun.info.reason && row('止まった理由', quickRun.info.reason, 'text-rose-200'), row('難易度', quickRun && quickRun.difficulty || autoDifficulty || 'AUTO設定でまだ決まっていません', quickRun && quickRun.difficulty || autoDifficulty ? 'text-white' : 'text-amber-200'), quickRun && row('何周目', `${quickRun.loops}周目`), quickRun && row('この周回でふえたダイヤ', `+${(quickRun.gold || 0).toLocaleString()}`, 'text-emerald-200'), quickRun && row('この周回でふえた経験値', `+${(quickRun.xp || 0).toLocaleString()}`, 'text-emerald-200'), row('今日バトルカードで足した周回', `${(todayLoops || 0).toLocaleString()}周ぶん`, 'text-sky-100')), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(autoReady || quickRun ? '助手と対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')), React.createElement("button", {
+  }, jaWrap(autoReady || quickRun ? 'フリー対戦・マルチで戦うと、その分がクイック周回として足されます。裏で回しているときは、いまの周回が進みます。' : 'AUTO設定で、勇者モン・配置距離・難易度の3つを決めると、戦った分がクイック周回として足されます。')), React.createElement("button", {
     type: "button",
     "data-card-quick-detail-close": true,
     onClick: onClose,
@@ -98925,6 +98925,23 @@ const CardBattleScreen = ({
   });
   const shareForm = debug || typeof cardShareOpen === 'function' && cardShareOpen();
   const [foeTab, setFoeTab] = useState('assistant');
+  const CARD_SHARE_GUIDE_KEY = 'mh_card_share_guide_seen_v1';
+  const [shareGuide, setShareGuide] = useState(false);
+  useEffect(() => {
+    if (!shareForm) return undefined;
+    let alive = true;
+    storeGet(CARD_SHARE_GUIDE_KEY, null, false).then(v => {
+      if (alive && v !== true) setShareGuide(true);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [shareForm]);
+  const closeShareGuide = () => {
+    Audio_.fgSe.tap();
+    setShareGuide(false);
+    void storeSet(CARD_SHARE_GUIDE_KEY, true).catch(() => {});
+  };
   const [startLevel, setStartLevel] = useState('last');
   const lastLevelRead = useRef(false);
   useEffect(() => {
@@ -99319,7 +99336,7 @@ const CardBattleScreen = ({
         return;
       }
       setDeckRewards([]);
-      setNotice(`みんなのデッキの報酬を受け取りました(ビートP +${total.toLocaleString()})`);
+      setNotice(`デッキ登録の報酬を受け取りました(ビートP +${total.toLocaleString()})`);
     } finally {
       setDeckRewardBusy(false);
     }
@@ -99912,7 +99929,27 @@ const CardBattleScreen = ({
       accent: "text-amber-200",
       onBack: () => setView('top'),
       note: "だれと戦うかをえらびます"
-    })), React.createElement("div", {
+    })), shareGuide && topAssistant && React.createElement("div", {
+      "data-card-share-guide": true,
+      className: "relative z-10 mb-2 flex items-start gap-2 rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2.5"
+    }, topAssistant.image && React.createElement("img", {
+      src: topAssistant.image,
+      alt: "",
+      "aria-hidden": "true",
+      className: "h-14 w-14 shrink-0 rounded-xl object-cover object-top"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block text-[12px] font-black text-amber-200"
+    }, topAssistant.name), React.createElement("span", {
+      className: "block text-[12px] font-bold leading-snug text-white",
+      style: JA_WRAP_STYLE
+    }, jaWrap('「フリー対戦」では、助手のほかに、ほかのブリーダーが登録したデッキとも戦えるようになったよ。「デッキ登録」で自分のデッキを登録して、戦術カードで戦い方を組んでみてね!')), React.createElement("button", {
+      type: "button",
+      "data-card-share-guide-close": true,
+      onClick: closeShareGuide,
+      className: "mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950"
+    }, "わかった"))), React.createElement("div", {
       className: `${SCREEN_LIST_CLASS} relative z-[1] flex flex-col justify-center space-y-3 pb-4`
     }, React.createElement("button", {
       type: "button",
@@ -100695,7 +100732,7 @@ const CardBattleScreen = ({
       className: "mt-3 border-t border-white/10 pt-2.5"
     }, React.createElement("b", {
       className: "block text-[12px] font-black text-slate-200"
-    }, "助手と対戦"), React.createElement("p", {
+    }, "フリー対戦"), React.createElement("p", {
       className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
     }, jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します')), React.createElement("div", {
@@ -100879,7 +100916,7 @@ const CardBattleScreen = ({
       className: "mt-2.5 border-t border-white/10 pt-2.5"
     }, React.createElement("b", {
       className: "block text-[12px] font-black text-slate-200"
-    }, "助手と対戦の最初の強さ"), React.createElement("p", {
+    }, "フリー対戦の最初の強さ"), React.createElement("p", {
       className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
       style: JA_WRAP_STYLE
     }, cardJaWrap('相手えらびを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中でいちばん近い強さになります。')), React.createElement("div", {
@@ -100986,7 +101023,7 @@ const CardBattleScreen = ({
         className: "block text-[12px] font-black text-slate-200"
       }, item.title, item.only === 'cpu' && React.createElement("small", {
         className: "ml-1 text-[10px] font-bold text-slate-400"
-      }, "(助手と対戦)")), React.createElement("p", {
+      }, "(フリー対戦)")), React.createElement("p", {
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400",
         style: JA_WRAP_STYLE
       }, cardJaWrap(item.desc)), React.createElement("div", {
@@ -101042,7 +101079,7 @@ const CardBattleScreen = ({
       'data-card-cpu': ''
     },
     label: '対戦',
-    sub: '助手と対戦・マルチ対戦',
+    sub: 'フリー対戦・マルチ対戦',
     mark: 'BATTLE',
     ico: '⚔️',
     grad: 'from-orange-200 via-orange-400 to-rose-500',
@@ -101146,7 +101183,7 @@ const CardBattleScreen = ({
     className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
   }, "MFバトルカード"), React.createElement("small", {
     className: "block truncate text-[9px] font-black text-slate-300/90"
-  }, debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手と対戦しよう')), React.createElement("span", {
+  }, debug ? 'デバッグ専用(まだ公開していません)' : 'カードで助手やブリーダーと対戦しよう')), React.createElement("span", {
     "data-card-point-pill": true,
     className: "shrink-0 rounded-full border border-amber-300/50 bg-slate-950/70 px-2.5 py-1 text-[11px] font-black text-amber-100"
   }, React.createElement("span", {
@@ -101205,7 +101242,7 @@ const CardBattleScreen = ({
     onClaim: () => {
       void claimDeckRewards();
     },
-    title: "みんなのデッキの報酬",
+    title: "デッキ登録の報酬",
     lines: [`あなたのデッキが戦われた・借りられた ${deckRewards.reduce((a, r) => a + r.uses, 0)}回ぶん`, `ビートP +${deckRewards.reduce((a, r) => a + r.amount, 0).toLocaleString()}`]
   }), notice && React.createElement("p", {
     "data-card-top-notice": true,
@@ -104214,7 +104251,7 @@ const CardBattleStatsPanel = ({
     className: "block text-[12px] font-black text-amber-100"
   }, "MFバトルカードの戦績"), React.createElement("small", {
     className: "mb-2 block text-[9px] font-bold text-slate-400"
-  }, "助手と対戦の、強さごとの勝ち数"), React.createElement("div", {
+  }, "フリー対戦の、強さごとの勝ち数"), React.createElement("div", {
     className: "grid grid-cols-5 gap-1 text-center"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("div", {
     key: lv,
@@ -104527,7 +104564,7 @@ const CardRankingBoard = ({
     className: chip(period === id)
   }, label)), React.createElement("small", {
     className: "ml-auto self-center text-[10px] font-bold text-slate-400"
-  }, period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数')), React.createElement("div", {
+  }, period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数')), React.createElement("div", {
     className: "grid grid-cols-5 gap-1"
   }, CARD_LEVEL_ORDER.map(lv => React.createElement("button", {
     key: lv,
@@ -104988,7 +105025,7 @@ const CardRecordScreen = ({
     className: "text-[18px] text-slate-400"
   }, "›")), React.createElement("div", {
     className: `${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`
-  }, cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu'), cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp'), cell('いまの連勝', r.streak.now, '連勝', 'side-now'), cell('最高の連勝', r.streak.best, '連勝', 'side-best'))), React.createElement("div", {
+  }, cell('フリー対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu'), cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp'), cell('いまの連勝', r.streak.now, '連勝', 'side-now'), cell('最高の連勝', r.streak.best, '連勝', 'side-best'))), React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-2 pb-4`
   }, tab === 'all' && React.createElement(React.Fragment, null, onOpenReplays && React.createElement("button", {
     type: "button",
@@ -105008,7 +105045,7 @@ const CardRecordScreen = ({
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
     className: "text-[12px] font-bold text-slate-400"
-  }, "助手と対戦"), React.createElement("div", {
+  }, "フリー対戦"), React.createElement("div", {
     "data-card-record": true,
     className: "text-[16px] font-black text-white"
   }, rec.cpu.win, "勝 ", rec.cpu.lose + rec.cpu.surrender, "敗", rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''), React.createElement("table", {
@@ -105040,7 +105077,7 @@ const CardRecordScreen = ({
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
     className: "text-[12px] font-bold text-slate-400"
-  }, "勝ち方(助手と対戦)"), React.createElement("div", {
+  }, "勝ち方(フリー対戦)"), React.createElement("div", {
     className: "mt-1 grid grid-cols-3 gap-1.5 text-center"
   }, cell('勝つまでの平均', winAvg === null ? '—' : winAvg, '番'), cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? '番目' : ''), cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')), React.createElement("p", {
     className: small,
@@ -105050,7 +105087,7 @@ const CardRecordScreen = ({
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
     className: "text-[12px] font-bold text-slate-400"
-  }, "よく使う(助手と対戦)"), row('デッキ', deckTop ? `${deckTop[1].name || 'デッキ'}(${deckTop[1].n}戦)` : 'まだありません', 'deck'), row('モンスター', monTop.length ? monTop.map(([no, n]) => `${nameOf(no)}(${n}戦)`).join('・') : 'まだありません', 'mon'), row('技', moveTop.length ? moveTop.map(([no, n]) => `${nameOf(no)}(${n}回)`).join('・') : 'まだありません', 'move'), React.createElement("p", {
+  }, "よく使う(フリー対戦)"), row('デッキ', deckTop ? `${deckTop[1].name || 'デッキ'}(${deckTop[1].n}戦)` : 'まだありません', 'deck'), row('モンスター', monTop.length ? monTop.map(([no, n]) => `${nameOf(no)}(${n}戦)`).join('・') : 'まだありません', 'mon'), row('技', moveTop.length ? moveTop.map(([no, n]) => `${nameOf(no)}(${n}回)`).join('・') : 'まだありません', 'move'), React.createElement("p", {
     className: small,
     style: JA_WRAP_STYLE
   }, jaWrap('この記録ができてからのぶんです'))), React.createElement("div", {
@@ -105062,7 +105099,7 @@ const CardRecordScreen = ({
   }, cell('今週の勝ち', CARD_LEVEL_ORDER.reduce((a, lv) => a + (r.week.key === weekNow ? r.week.wins[lv] : 0), 0), '勝'), cell('いまの連勝', r.streak.now, '連勝'), cell('最高の連勝', r.streak.best, '連勝')), React.createElement("p", {
     className: small,
     style: JA_WRAP_STYLE
-  }, jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です'))), React.createElement("div", {
+  }, jaWrap('ランキングに数えるのは、フリー対戦の勝ちと連勝です'))), React.createElement("div", {
     "data-card-record-other": true,
     className: SCREEN_PANEL_CLASS
   }, React.createElement("div", {
@@ -109169,7 +109206,7 @@ const CardReplayList = ({
     "data-card-replay-empty": true,
     className: "py-6 text-center text-[13px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap('まだありません。助手と対戦かマルチ対戦を遊ぶと、ここに残ります')), box && box.list.map(r => {
+  }, jaWrap('まだありません。フリー対戦かマルチ対戦を遊ぶと、ここに残ります')), box && box.list.map(r => {
     const a = r.kind === 'cpu' && r.foe.who ? assistants.find(x => x.id === r.foe.who) : null;
     const res = CARD_REPLAY_OUTCOME[r.outcome] || '';
     const win = res === '勝ち';
@@ -109205,7 +109242,7 @@ const CardReplayList = ({
       className: "truncate text-[13px] font-black text-white"
     }, r.foe.name), React.createElement("small", {
       className: `shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`
-    }, r.kind === 'pvp' ? 'マルチ' : '助手と対戦')), React.createElement("span", {
+    }, r.kind === 'pvp' ? 'マルチ' : 'フリー対戦')), React.createElement("span", {
       className: "block text-[11px] font-bold text-slate-400"
     }, cardReplayWhen(r.at), r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`)), React.createElement("span", {
       "data-card-replay-result": r.outcome || '',
@@ -110338,7 +110375,7 @@ const CARD_SHARE_TILT_MUL = Object.freeze({
 });
 const CARD_SHARE_ACES_MAX = 3;
 let _cardShareUnavailable = false;
-const cardShareOpen = () => false;
+const cardShareOpen = () => true;
 const cardShareNormalizeTactics = (v, deck = null) => {
   const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   const habit = typeof r.habit === 'string' && Object.prototype.hasOwnProperty.call(CARD_AI_HABITS, r.habit) ? r.habit : 'kyuko';
@@ -110674,7 +110711,7 @@ const CardDeckShare = ({
   onFight = null,
   onOpenTactics = null,
   part = 'all',
-  title = 'みんなのデッキ',
+  title = 'デッキ登録',
   headExtra = null,
   embedded = false
 }) => {
@@ -110695,7 +110732,7 @@ const CardDeckShare = ({
     setMsg('');
     if (await cardRentedDeckSet(e)) {
       setRented(await cardRentedDeckGet());
-      setMsg(`${e.name}さんのデッキを借りました。助手と対戦のデッキ選びで使えます`);
+      setMsg(`${e.name}さんのデッキを借りました。フリー対戦のデッキ選びで使えます`);
     } else setMsg('この端末に保存できなかったため、借りられませんでした');
     setBusy(false);
   };
@@ -110915,7 +110952,7 @@ const CardDeckShare = ({
   }, React.createElement("span", {
     className: "min-w-0 flex-1 text-[12px] font-bold text-emerald-100",
     style: JA_WRAP_STYLE
-  }, jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(助手と対戦のデッキ選びで使えます。マルチ対戦では使えません)`)), React.createElement("button", {
+  }, jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(フリー対戦のデッキ選びで使えます。マルチ対戦では使えません)`)), React.createElement("button", {
     type: "button",
     "data-card-share-giveback": true,
     disabled: busy,
@@ -111182,7 +111219,7 @@ const CardShareProfileDeck = ({
 };
 const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
 const CARD_LEVEL_KEY = 'mh_card_level_v1';
-const cardTacticsOpen = () => false;
+const cardTacticsOpen = () => true;
 const cardLevelNeed = lv => 20 + 3 * lv;
 const CARD_LEVEL_XP = Object.freeze({
   easy: {

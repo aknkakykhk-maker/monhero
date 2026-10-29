@@ -560,7 +560,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           if (by !== recd.by[k - 1] || cap.startsWith(`${other}は`)) wrong.push(`${k}手目 帯${by}/記録${recd.by[k - 1]} 「${cap}」`);
         }
         check('㉑ 見返しの1手ごとに、その手を打った人と説明の文が記録と同じ', wrong.length === 0, wrong.slice(0, 3).join(' / '));
-        const levelText = await page.locator('[data-card-battle] small').filter({ hasText: /EASY|NORMAL|HARD|EXPERT|MASTER|助手と対戦/ }).first().innerText().catch(() => '');
+        const levelText = await page.locator('[data-card-battle] small').filter({ hasText: /EASY|NORMAL|HARD|EXPERT|MASTER|助手と対戦|フリー対戦/ }).first().innerText().catch(() => '');
         check('㉑ 見返しの相手の名前の下が、遊んだ難易度', !!recd.level && levelText.trim() === ({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' })[recd.level], `${recd.level} / ${levelText}`);
         await page.locator('[data-card-replay-first]').click();
         const startHead = await page.locator('[data-card-head-turn]').innerText();

@@ -121,7 +121,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-replay-row]').first().waitFor({ timeout: 10000 });
     const rows = await page.locator('[data-card-replay-row]').count();
     const firstText = await page.locator('[data-card-replay-row]').first().innerText();
-    check('② 一覧に50試合が並び、日時・相手・種類・勝ち負け・◯番までが出る', rows === 50 && /10\/27 0?0:54/.test(firstText) && /助手と対戦/.test(firstText) && /番まで/.test(firstText) && /勝ち|負け/.test(firstText), `${rows}行 ${firstText.replace(/\n/g, ' ')}`);
+    check('② 一覧に50試合が並び、日時・相手・種類・勝ち負け・◯番までが出る', rows === 50 && /10\/27 0?0:54/.test(firstText) && /フリー対戦/.test(firstText) && /番まで/.test(firstText) && /勝ち|負け/.test(firstText), `${rows}行 ${firstText.replace(/\n/g, ' ')}`);
     await shot(page, 'replay-list');
 
     // ③ ★
