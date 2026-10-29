@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a787f75afaa36089
+// generated-sha256: 6c8f3f1c392f9070
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37605,7 +37605,6 @@ function RhythmRankingScreen({
   rhythmRankingTab, rhythmTotalRanking,
   rhythmRankingPending=null, onResendRhythmRankingPending=null,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
-  beatRankXp=0,
 }) {
       // イベント詳細(告知画像と報酬の表)を開いているか。
       // 一覧の上へ積むとランキングが画面の外へ押し出されるので、別に開く形にした
@@ -37656,10 +37655,7 @@ function RhythmRankingScreen({
       // イベントのタブを開いていて中身が無いとき(今回が未開催・前回がまだ無い)は、
       // 曲別の一覧へ落ちないようにする。文言だけを出す
       const totalTabOpen=totalTab&&!boardTab&&!eventTabOpen;
-      // ビートランクのタブ(2026-10-29 社長)。ランク順(同じなら経験値の合計順)・上位100人とあなた
-      const beatRankTabOpen=rhythmRankingTab==='beatRank'&&!boardTab&&!eventTabOpen;
-      const [beatRankReload,setBeatRankReload]=useState(0);
-      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen&&!beatRankTabOpen;
+      const songTab=!totalTabOpen&&!boardTab&&!eventTabOpen;
       const boards=rhythmEventRanking||{};
       const event=(boardKind&&boards[boardKind])||{status:'idle',window:null,event:null,boards:{}};
       const eventDefinition=event.event||null;
@@ -37723,7 +37719,6 @@ function RhythmRankingScreen({
         // ★開催していないあいだもタブを出す(2026-09-14・ユーザー依頼「イベントタブを常設」)。
         //   中で「今回／前回」を切り替える。どちらも無いときは、その旨の文言を出す
         ...(eventReleased?[{id:'event',label:'イベント'}]:[]),
-        {id:'beatRank',label:'ビートランク'},
       ];
       // ★タブも部門も、押すたびに取り直す(2026-09-11・ユーザー指摘「総合だけ反映が遅い」)。
       //   「初めて開いたときだけ」にしていたため、一度見た部門は古い順位のまま残っていた。
@@ -37760,7 +37755,6 @@ function RhythmRankingScreen({
       const refresh=()=>{
         if(boardTab)loadRhythmEventRanking&&loadRhythmEventRanking(boardKind,eventDivisionId);
         else if(totalTabOpen)loadRhythmTotalRanking&&loadRhythmTotalRanking();
-        else if(beatRankTabOpen)setBeatRankReload(n=>n+1);
         else loadRhythmRanking(song,rhythmRanking.difficultyId||'ALL');
       };
       // ランク(S/SS/…)を決める点数。回数ボーナス込みの点だと満点を超えてしまうので、
@@ -37865,8 +37859,6 @@ function RhythmRankingScreen({
               ・横画面の案内(RhythmLandscapeHint)  … 曲えらび・遊びかたの側にある
               ・タブごとの説明文                   … ヘルプの「全国ランキング」にある
               ・みゅあの吹き出し                   … 曲えらび(イベント開催中)にある */}
-          {beatRankTabOpen&&<PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async()=>sbFetchBeatRankMine(await ensureBreederId())}
-            renderIcon={rankingBreederIcon} selfXp={beatRankXp} reloadKey={beatRankReload}/>}
           {totalTabOpen&&(<>
             {total.status==='loading'&&<p data-rhythm-total-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
             {/* 集計のしたくがまだのとき。エラーではないので、赤い表示にはしない */}
@@ -50214,13 +50206,31 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <div className="flex min-h-0 flex-1 flex-col">
               {rankHubTab === 'national'
                 ? (rankingSupport ? rankingSupport.render(() => setRankHubOpen(false)) : null)
+                : rankHubTab === 'beatRank'
+                ? (
+                  // ビートランク(2026-10-29 社長「ビートランクは下のタブのほうがいい」)。中身は共通の PlayerRankBoard(43)
+                  <div data-rhythm-beat-rank-ranking className="flex min-h-0 flex-1 flex-col" style={{ paddingTop: 'var(--mh-sa-top)' }}>
+                    <div className="flex shrink-0 items-center gap-2 px-3 pt-2">
+                      <button type="button" aria-label="戻る" onClick={() => setRankHubOpen(false)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300">←</button>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <b className="block truncate text-base font-black text-cyan-100">🎵 ビートランク</b>
+                        <small className="block text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('モンヒロビートを遊ぶほど上がる、あなた自身のランクの順位です')}</small>
+                      </div>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      <PlayerRankBoard kind="beat" fetchTop={sbFetchBeatRanks} fetchMine={async () => sbFetchBeatRankMine(await ensureBreederId())}
+                        renderIcon={rankingSupport && rankingSupport.breederIcon} selfXp={Number(ms.beatRankXp) || 0} />
+                    </div>
+                  </div>
+                )
                 : <RhythmBuddyRankingBoard renderBreederIcon={rankingSupport && rankingSupport.breederIcon} selfName={myProfile().name} onClose={() => setRankHubOpen(false)} friendIds={friendsOn ? (roster || []).map((f) => f.otherId) : null} />}
             </div>
             <div data-rhythm-mode-ranking-tabs className="flex shrink-0 gap-2 border-t border-white/10 bg-slate-900 px-3 pt-2" style={{ paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))' }}>
-              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26) */}
-              {[['national', '🏆 全国ランキング'], ['buddy', '🎶 マスモンランキング']].map(([id, label]) => (
+              {/* 320幅で「マスモンランキ／ング」と言葉の途中で折れていた。細い端末では字を11pxにして1行に収める(2026-10-26)。
+                  ビートランクを3つ目に足した(2026-10-29)ので、入らないときは言葉の切れ目(全国／ランキング・マスモン／ランキング)でだけ2行に分ける */}
+              {[['national', '🏆', ['全国', 'ランキング']], ['buddy', '🎶', ['マスモン', 'ランキング']], ['beatRank', '🎵', ['ビートランク']]].map(([id, icon, words]) => (
                 <button key={id} type="button" data-rhythm-mode-ranking-tab={id} onClick={() => setRankHubTab(id)}
-                  className={`min-h-[44px] min-w-0 flex-1 whitespace-nowrap rounded-xl border px-1.5 text-[11px] font-black min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}>{label}</button>
+                  className={`min-h-[44px] min-w-0 flex-1 rounded-xl border px-1 text-[11px] font-black leading-tight min-[360px]:px-2 min-[360px]:text-[12px] ${rankHubTab === id ? 'border-lime-300 bg-lime-500/25 text-lime-100' : 'border-white/10 bg-slate-800 text-slate-300'}`}><span className="inline-flex flex-wrap items-center justify-center gap-x-1"><span aria-hidden="true">{icon}</span>{words.map((w) => <span key={w} className="whitespace-nowrap">{w}</span>)}</span></button>
               ))}
             </div>
           </div>
@@ -87918,7 +87928,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 画面(gameState)は移さず、対戦の画面の上へ重ねる。画面を移すと、ライブ開始の合図を受ける側が外れて取り逃す
             open:(song)=>{loadRhythmRanking(song);},
             render:(onClose)=>(
-              <RhythmRankingScreen beatRankXp={beatRank.xp}
+              <RhythmRankingScreen
                 loadRhythmEventRanking={loadRhythmEventRanking}
                 loadRhythmRanking={loadRhythmRanking}
                 loadRhythmTotalRanking={loadRhythmTotalRanking}
@@ -88075,7 +88085,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             高い難易度で挑むほど上位に近づく(§3.5・RHYTHM_MODE.md参照)。
             自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
         {gameState==='RHYTHM_RANKING'&&(
-          <RhythmRankingScreen beatRankXp={beatRank.xp}
+          <RhythmRankingScreen
             loadRhythmEventRanking={loadRhythmEventRanking}
             loadRhythmRanking={loadRhythmRanking}
             loadRhythmTotalRanking={loadRhythmTotalRanking}
