@@ -66,10 +66,10 @@ const cardSharePolicy = (tactics, levelId, opts = {}) => {
   const t = cardShareNormalizeTactics(tactics);
   if (t.f) {
     const frames = cardTacticUnpackFrames(t.f);
-    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), opts);
+    const base = cardAiPolicy(t.habit, cardShareFightLevel(t), { ...opts, noTactics: true });
     return { ...base, gambit: frames, gambitRandom: true, aces: t.aces.slice() };
   }
-  const base = cardAiPolicy(t.habit, levelId, opts);
+  const base = cardAiPolicy(t.habit, levelId, { ...opts, noTactics: true });
   const habit = { ...base.habit };
   CARD_SHARE_TILTS.forEach((x) => { if (Number.isFinite(habit[x.id])) habit[x.id] = habit[x.id] * CARD_SHARE_TILT_MUL[t.tilt[x.id]]; });
   return { ...base, habit, aces: t.aces.slice() };

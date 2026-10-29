@@ -15,7 +15,10 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const GAME = path.join(ROOT, 'monster-hero');
 const load = () => {
   const ctx = vm.createContext({ console, Math, JSON, Object, Array, Number, String, Set, Map });
-  const src = `${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n`
+  // 戦術カード(助手の EXPERT・MASTER の基本カード)も読む。--no-tactics のときは読まない(入れる前の強さとくらべる)
+  const tac = path.join(GAME, 'src', 'parts', '82-card-tactics-core.jsx');
+  const withTac = !process.argv.includes('--no-tactics') && fs.existsSync(tac);
+  const src = `${fs.readFileSync(path.join(GAME, 'data', 'card-battle-cards.js'), 'utf8')}\n;\n${fs.readFileSync(path.join(GAME, 'src', 'parts', '82-card-battle-core.jsx'), 'utf8')}\n;\n${withTac ? `${fs.readFileSync(tac, 'utf8')}\n;\n` : ''}`
     + 'this.E = { CARD_BATTLE_DATA, cardSimulate, cardAiBuildDeck, cardAiPolicy, CARD_AI_HABITS, cardAiSeededRand };';
   vm.runInContext(src, ctx, { filename: '82-card-battle-core.jsx' });
   return ctx.E;
