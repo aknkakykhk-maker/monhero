@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-10-30 07:07", type:'content', title:'遊ぶほど上がる「ビートランク」ができました', status:'new', group:'rhythm',
+    date: "2026-10-30 07:45", type:'content', title:'遊ぶほど上がる「ビートランク」ができました', status:'new', group:'rhythm',
     assistantNotice:{ id:'update_notice_beat_rank_v1', type:'content' },
     items:[
       '曲を最後まで遊ぶと経験値がたまり、ビートランクが上がります。むずかしい難易度ほど多くもらえ、HELL はとくに多くもらえます。',
