@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f8a306d96a06d9cc
+// source-sha256: e9c6646db289691d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -55444,33 +55444,50 @@ function PlayerRankBoard({
   }, jaWrap('あなたの記録は、次に曲を遊んだときに載ります。'))));
 }
 const PLAYER_RANK_UP_FX_CSS = `
-.mh-prfx{position:fixed;inset:0;z-index:95000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 38%,rgba(64,24,120,.92),rgba(8,4,20,.94) 70%);cursor:pointer;user-select:none;overflow:hidden}
-.mh-prfx-stage{position:relative;width:min(100%,420px);height:100%}
-.mh-prfx-center{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+.mh-prfx{position:fixed;inset:0;z-index:95000;container-type:size;background:radial-gradient(circle at 50% 38%,rgba(64,24,120,.92),rgba(8,4,20,.94) 70%);cursor:pointer;user-select:none;overflow:hidden}
+.mh-prfx-stage{position:relative;width:100%;height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:12px;padding:max(16px,var(--mh-sa-top,0px)) 16px max(16px,var(--mh-sa-bottom,0px));overflow-y:auto}
+.mh-prfx-head{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
+.mh-prfx-side{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;width:min(100%,560px)}
 .mh-prfx-big .mh-prb-shield{width:96px;height:107px}
 .mh-prfx-big .mh-prb-shield::after{inset:5px}
 .mh-prfx-big .mh-prb-num{font-size:46px;-webkit-text-stroke:8px var(--prb-ink)}
 .mh-prfx-big .mh-prb-num.mh-prb-w3{font-size:34px}
-.mh-prfx-title{font-weight:900;font-size:32px;color:#fff;-webkit-text-stroke:6px #4c1d95;paint-order:stroke fill;letter-spacing:.04em}
-.mh-prfx-kind{font-weight:900;font-size:15px;color:#fff;-webkit-text-stroke:3px #1e293b;paint-order:stroke fill}
+.mh-prfx-title{font-weight:900;font-size:32px;line-height:1.1;color:#fff;-webkit-text-stroke:6px #4c1d95;paint-order:stroke fill;letter-spacing:.04em}
+.mh-prfx-kind{font-weight:900;font-size:15px;line-height:1.2;color:#fff;-webkit-text-stroke:3px #1e293b;paint-order:stroke fill}
 .mh-prfx-slot{position:relative;width:96px;height:107px}
 .mh-prfx-half{position:absolute;inset:0}
 .mh-prfx-half.l{clip-path:polygon(0 0,52% 0,44% 100%,0 100%)}
 .mh-prfx-half.r{clip-path:polygon(52% 0,100% 0,100% 100%,44% 100%)}
 .mh-prfx-new{position:absolute;inset:0}
-.mh-prfx-ring{position:absolute;left:50%;top:36%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.9);opacity:0}
-.mh-prfx-conf{position:absolute;left:50%;top:36%;width:8px;height:12px;border-radius:2px;opacity:0}
-.mh-prfx-rays{position:absolute;left:50%;top:36%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
+.mh-prfx-ring{position:absolute;left:50%;top:53px;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.9);opacity:0;pointer-events:none}
+.mh-prfx-conf{position:absolute;left:50%;top:53px;width:8px;height:12px;border-radius:2px;opacity:0;pointer-events:none}
+.mh-prfx-rays{position:absolute;left:50%;top:38%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;opacity:0;pointer-events:none;background:repeating-conic-gradient(from 0deg,var(--prfx-ray) 0 8deg,transparent 8deg 24deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%)}
 .mh-prfx-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
-.mh-prfx-band{position:absolute;left:0;right:0;top:56%;text-align:center;padding:10px 0;font-weight:900;font-size:20px;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
-.mh-prfx-gains{position:absolute;left:16px;right:16px;top:58%;display:flex;flex-direction:column;gap:8px}
-.mh-prfx-band ~ .mh-prfx-gains{top:66%}
-.mh-prfx-gain{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
+.mh-prfx-band{align-self:stretch;text-align:center;padding:8px 0;font-weight:900;font-size:20px;line-height:1.2;color:#fff;-webkit-text-stroke:4px rgba(0,0,0,.6);paint-order:stroke fill;opacity:0;background:linear-gradient(90deg,transparent,var(--prfx-band),transparent)}
+.mh-prfx-gains{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.mh-prfx-gain{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 12px;border-radius:14px;background:rgba(15,10,35,.88);border:1px solid rgba(253,224,71,.45);opacity:0}
 .mh-prfx-gain.bonus{border-color:#f0abfc;box-shadow:0 0 18px rgba(240,171,252,.45)}
-.mh-prfx-gain b{font-size:18px;font-weight:900;color:#fef08a;font-variant-numeric:tabular-nums}
+.mh-prfx-gain b{display:block;font-size:18px;font-weight:900;line-height:1.2;color:#fef08a;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mh-prfx-gain small{display:block;font-size:10px;font-weight:700;color:#cbd5e1}
-.mh-prfx-gain .ico{font-size:24px}
-.mh-prfx-hint{position:absolute;left:0;right:0;bottom:calc(14px + var(--mh-sa-bottom,0px));text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
+.mh-prfx-gain .ico{flex:none;font-size:24px}
+.mh-prfx-hint{flex:none;text-align:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.6)}
+/* 横向きで背が低い(画面を回した形も含む。演出の枠の形で見る): 左に盾、右に帯ともらった物 */
+@container (orientation:landscape) and (max-height:520px){
+  .mh-prfx-stage{flex-direction:row;gap:20px;padding:max(12px,var(--mh-sa-top,0px)) max(16px,var(--mh-sa-right,0px)) max(12px,var(--mh-sa-bottom,0px)) max(16px,var(--mh-sa-left,0px))}
+  .mh-prfx-side{flex:1 1 0;min-width:0;max-width:560px}
+  .mh-prfx-title{font-size:26px}
+  .mh-prfx-gains{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .mh-prfx-gain{padding:6px 10px}
+  .mh-prfx-gain b{font-size:16px}
+  .mh-prfx-band{font-size:17px;padding:6px 0}
+}
+/* さらに背が低いときは盾と題を小さく */
+@container (max-height:340px){
+  .mh-prfx-head{gap:4px}
+  .mh-prfx-slot{transform:scale(.8);margin:-10px 0}
+  .mh-prfx-title{font-size:22px}
+  .mh-prfx-gain small{display:none}
+}
 .mh-prfx.play .mh-prfx-half .mh-prb{animation:mhPrfxShake .5s ease-in-out}
 .mh-prfx.play .mh-prfx-half.l{animation:mhPrfxSplitL .45s ease-in .5s forwards}
 .mh-prfx.play .mh-prfx-half.r{animation:mhPrfxSplitR .45s ease-in .5s forwards}
@@ -55609,17 +55626,17 @@ function PlayerRankUpFx({
       '--prfx-ray': fx.ray,
       '--prfx-band': fx.band
     }
-  }, React.createElement("div", {
-    className: "mh-prfx-stage"
   }, tierUp && React.createElement("div", {
     className: "mh-prfx-rays",
     "aria-hidden": "true"
   }), React.createElement("div", {
+    className: "mh-prfx-stage"
+  }, React.createElement("div", {
+    className: "mh-prfx-head"
+  }, React.createElement("div", {
     className: "mh-prfx-ring",
     "aria-hidden": "true"
   }), React.createElement("div", {
-    className: "mh-prfx-center"
-  }, React.createElement("div", {
     className: "mh-prfx-slot"
   }, React.createElement("div", {
     className: "mh-prfx-half l",
@@ -55633,7 +55650,20 @@ function PlayerRankUpFx({
     className: "mh-prfx-title"
   }, "RANK UP!"), React.createElement("div", {
     className: "mh-prfx-kind"
-  }, k.label)), tierUp && React.createElement("div", {
+  }, k.label), confetti.map((c, i) => React.createElement("span", {
+    key: i,
+    className: "mh-prfx-conf",
+    "aria-hidden": "true",
+    style: {
+      '--x': c.x,
+      '--y': c.y,
+      '--r': c.r,
+      '--d': c.d,
+      background: c.c
+    }
+  }))), React.createElement("div", {
+    className: "mh-prfx-side"
+  }, tierUp && React.createElement("div", {
     className: "mh-prfx-band"
   }, `${tierTo.name}に昇格!`), list.length > 0 && React.createElement("ul", {
     className: "mh-prfx-gains",
@@ -55651,23 +55681,12 @@ function PlayerRankUpFx({
     className: "min-w-0"
   }, React.createElement("b", null, String(g.text || '')), g.note && React.createElement("small", {
     style: JA_WRAP_STYLE
-  }, jaWrap(String(g.note))))))), confetti.map((c, i) => React.createElement("span", {
-    key: i,
-    className: "mh-prfx-conf",
-    "aria-hidden": "true",
-    style: {
-      '--x': c.x,
-      '--y': c.y,
-      '--r': c.r,
-      '--d': c.d,
-      background: c.c
-    }
-  })), tierUp && React.createElement("div", {
+  }, jaWrap(String(g.note))))))), React.createElement("div", {
+    className: "mh-prfx-hint"
+  }, stage === 'play' ? '押すと先へ' : '押すと閉じる'))), tierUp && React.createElement("div", {
     className: "mh-prfx-flash",
     "aria-hidden": "true"
-  }), React.createElement("div", {
-    className: "mh-prfx-hint"
-  }, stage === 'play' ? '押すと先へ' : '押すと閉じる')));
+  }));
 }
 class MhErrorBoundary extends React.Component {
   constructor(props) {
