@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c8831fef4cfbec64
+// generated-sha256: 3d1535e0fc29c546
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42481,7 +42481,7 @@ const ExEffectChips = ({ items, max = 3, compact = false, className = '' }) => {
   const more = list.length - shown.length;
   const chip = (e) => (
     <span key={e.key} data-ex-effect={e.key} data-ex-effect-kind={e.kind}
-      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-[96px] text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
+      className={`flex min-w-0 ${compact ? 'max-w-full text-[8px]' : 'max-w-full text-[9px]'} items-center gap-[2px] rounded-md px-1 py-px font-black leading-tight whitespace-nowrap ring-1 ${EX_EFFECT_TONE[e.kind] || EX_EFFECT_TONE.buff}`}>
       <span className="shrink-0">{exEffectIconOf(e)}</span>
       <span className="min-w-0 truncate">{e.name}</span>
       {exEffectAmountText(e) && <span className="shrink-0 tabular-nums opacity-90">{exEffectAmountText(e)}</span>}
@@ -42563,7 +42563,7 @@ const BattleUnitDetailBody = ({ side, status, chips = [], marks = null, debuffs 
       <div data-unit-stat="apt" className="mt-1 text-[10px] font-black text-cyan-300">この枠の間合い適性 {apt >= 0 ? '+' : ''}{apt}%</div>
       {status.tactics
         ? <>{list('own', 'この子にかかっている効果', [...(hasEx ? exRows : markRows), ...lineRows, ...own.map(chipRow)])}{list('team', '味方全員にかかっている効果', team.map(chipRow))}</>
-        : list('team', 'かかっている効果(パーティ全体)', [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)])}
+        : list('team', 'かかっている効果(パーティ全体)', hasEx ? [...exRows, ...lineRows] : [...markRows, ...lineRows, ...own.map(chipRow), ...team.map(chipRow)])}
     </div>
   );
 };
@@ -42962,6 +42962,15 @@ function BattleScreen({
     if (debugStackMarks && debugStackMarks.ally) Object.entries(debugStackMarks.ally).forEach(([i, c]) => { out[Number(i)] = { ...(c || {}) }; });
     return out;
   })();
+  // 枠ごとの効果の札(ExEffectChips)と詳細の一覧に出す要素。タクティクス/レイドは EX の効果(tacticsExEffectsAt)、
+  //   本編(5つの遊び)は強化の札を同じ形に直したもの(classicEffectsFromChips・2026-10-29 社長「本編にも足す」)。どちらも溜まる物を含む。
+  //   関数が無いときは null(いままでのマーク×数を出す)
+  const slotEffectsOf = (i) => {
+    if (!Array.isArray(slots) || !slots[i]) return null;
+    if (typeof tacticsExEffectsAt === 'function') return tacticsExEffectsAt(i, allyStackCounts[i]) || [];
+    if (!Array.isArray(tacticsUnits) && typeof classicEffectsFromChips === 'function') return classicEffectsFromChips(battleBuffChips(), i, allyStackCounts[i]) || [];
+    return null;
+  };
   // 敵のデバフの詳細(名前の横の簡易表示を押すと開く)
   const [enemyDebuffOpen, setEnemyDebuffOpen] = useState(false);
   // レイドバトル(A)のターンごとの強化の表示(2026-10-04・ユーザー指示「ターン毎の強化がもうちょいわかるような表示がほしい」)。
@@ -44348,8 +44357,8 @@ function BattleScreen({
               // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
               // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
               const slotArt = (img) => (!ecoBattleView&&!idleMotionOff ? <MonsterIdleArt baseId={s?.id} image={img}/> : img);
-              // この枠に効いているEXの効果と溜まる物(タクティクス/レイドだけ。ほかの遊びでは null で、いままでのマーク×数を出す)
-              const slotExEffects=s&&typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(i,allyStackCounts[i])||[]):null;
+              // この枠に効いている効果と溜まる物(タクティクス/レイドはEX・本編は強化の札。関数が無いときは null で、いままでのマーク×数を出す)
+              const slotExEffects=s?slotEffectsOf(i):null;
               // この枠の子の魂格の段階(1〜5)。枠の子とは masuId で結ぶ。出さない設定のときは 0
               const slotSoulStage=(()=>{
                 if(!s||!s.masuId||ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL'||!Array.isArray(battleSoulMasus)) return 0;
@@ -44635,7 +44644,8 @@ function BattleScreen({
                           「カード×4とかは確かにいらない」)。ガードやアシストカードを足すと1体に5枚まで置けるので、
                           1枚1段ではライフ・ガッツの行まで届いていた。高さはライフの行の上までに切ってある。
                           🎯は枠の横幅をまるごと使う上の段(data-tactics-slot-top-row)へ出す */}
-                      {!tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} className="w-full"/>}
+                      {/* 縦長の枠(本編・タクティクス旧)は縦積みの欄の先頭。枠の高さに収まるよう2つまで+「+N」(全部は枠を押した詳細で見る) */}
+                      {!tacticsNewLayout&&slotExEffects&&<ExEffectChips items={slotExEffects} max={2} className="w-full"/>}
                       {!tacticsNewLayout&&!slotExEffects&&<BattleStackMarks counts={allyStackCounts[i]} side="ally" full={SWEET_STACK_MAX} className="mh-stack-marks-flow"/>}
                       {!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
@@ -44997,7 +45007,7 @@ function BattleScreen({
               {exTab==='status'?(
                 <div data-tactics-unit-detail={exPanel.slot}>
                   <div className="mb-2 break-words text-[16px] font-black leading-tight">{exPanel.monName}</div>
-                  {typeof battleUnitStatusOf==='function'&&<BattleUnitDetailBody side="ally" status={battleUnitStatusOf(exPanel.slot)} chips={battleBuffChips()} marks={allyStackCounts[exPanel.slot]} exEffects={typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(exPanel.slot,allyStackCounts[exPanel.slot])||[]):null}/>}
+                  {typeof battleUnitStatusOf==='function'&&<BattleUnitDetailBody side="ally" status={battleUnitStatusOf(exPanel.slot)} chips={battleBuffChips()} marks={allyStackCounts[exPanel.slot]} exEffects={slotEffectsOf(exPanel.slot)}/>}
                   <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="mt-3 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
                 </div>
               ):(<>
@@ -45070,7 +45080,7 @@ function BattleScreen({
         ), document.body)}
         {unitDetail&&(unitDetail.side==='enemy'
           ? <BattleUnitDetailPanel side="enemy" status={typeof battleEnemyStatus==='function'?battleEnemyStatus():null} debuffs={enemyDebuffs} onClose={()=>setUnitDetail(null)}/>
-          : <BattleUnitDetailPanel side="ally" status={typeof battleUnitStatusOf==='function'?battleUnitStatusOf(unitDetail.slot):null} chips={battleBuffChips()} marks={allyStackCounts[unitDetail.slot]} exEffects={typeof tacticsExEffectsAt==='function'?(tacticsExEffectsAt(unitDetail.slot,allyStackCounts[unitDetail.slot])||[]):null} onClose={()=>setUnitDetail(null)}/>)}
+          : <BattleUnitDetailPanel side="ally" status={typeof battleUnitStatusOf==='function'?battleUnitStatusOf(unitDetail.slot):null} chips={battleBuffChips()} marks={allyStackCounts[unitDetail.slot]} exEffects={slotEffectsOf(unitDetail.slot)} onClose={()=>setUnitDetail(null)}/>)}
         {showBattleMenu&&ReactDOM.createPortal((
           <div className="fixed inset-0 z-[70000] flex items-start justify-end bg-black/70 p-2" onClick={()=>setShowBattleMenu(false)}>
             <div data-battle-menu className="mt-11 flex w-[190px] flex-col gap-1.5 rounded-2xl border border-white/20 bg-slate-900 p-2 shadow-2xl" onClick={e=>e.stopPropagation()}>
