@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1dab30fafb8770f1
+// source-sha256: 5e5809d89029ccb3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96532,44 +96532,6 @@ const CardBattleBoard = ({
   const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null : null;
   const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
-  const comboOpen = mode === 'attack' && !tutorial && !replay && !!sel && monChosen !== undefined && sets.length > 1 && !sel.set;
-  const comboPreview = s0 => {
-    const os = byMon.filter(o => JSON.stringify(o.hand) === s0).slice(0, 6);
-    const cards = JSON.parse(s0).map(i => cardOf(db, me.hand[i]));
-    const main = cards.find(c => c && !cardHasEff(c, 'attach') && cardIsAttackKind(c.kind)) || cards[0];
-    const dmgs = [];
-    let guts = null;
-    os.forEach(o => {
-      const nx = cardApplyAction(db, st, o);
-      if (!nx) return;
-      if (guts === null) guts = me.guts.length - nx.players[CARD_ME].guts.length;
-      const pv = nx.pending ? cardGuardPreview(db, nx) : null;
-      const hit = (nx.events || []).filter(e => e.t === 'hit' && e.p !== CARD_ME).map(e => e.dmg);
-      const d = pv ? pv.before : hit.length ? Math.max(...hit) : null;
-      if (Number.isFinite(d)) dmgs.push(d);
-    });
-    const lo = dmgs.length ? Math.min(...dmgs) : null;
-    const hi = dmgs.length ? Math.max(...dmgs) : null;
-    const dmg = lo === null ? '' : `${main && cardHasEff(main, 'area') ? '全体に' : ''}${lo === hi ? lo : `${lo}〜${hi}`}`;
-    return {
-      dmg,
-      guts: guts === null ? null : Math.max(0, guts)
-    };
-  };
-  const chosenPv = mode === 'attack' && setChosen && sets.length > 1 && !tutorial ? comboPreview(setChosen) : null;
-  const pickCombo = s0 => {
-    Audio_.fgSe.tap();
-    const drop = sel && sel.drop;
-    setSel({
-      ...sel,
-      mon: monChosen,
-      set: s0,
-      drop: undefined
-    });
-    if (!drop) return;
-    const o = byMon.find(x => JSON.stringify(x.hand) === s0 && (!x.target || `${x.target.p}-${x.target.m}` === drop));
-    if (o) dropUse(o, true);
-  };
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
   const [bindAsk, setBindAsk] = useState(null);
@@ -96721,7 +96683,7 @@ const CardBattleBoard = ({
     const os = attackOpts.filter(o => o.hand.includes(i));
     const c = cardOf(db, me.hand[i]);
     if (!os.length) {
-      setHint(attackWhyShort(i) || '');
+      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います' : !c.ready ? 'このカードは準備中です' : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
       setSel(null);
       return;
     }
@@ -96729,17 +96691,6 @@ const CardBattleBoard = ({
       hand: i
     });
     setHint('');
-  };
-  const attackWhyShort = i => {
-    const c = cardOf(db, me.hand[i]);
-    if (!c || attackOpts.some(o => o.hand.includes(i))) return null;
-    if (!c.ready) return '準備中';
-    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
-    if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
-    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
-    if (cardHasEff(c, 'attach')) return '付ける技がない';
-    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
-    return '今は使えない';
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
@@ -96786,10 +96737,6 @@ const CardBattleBoard = ({
     if (attackOpts.some(x => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
     return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size <= 1;
   };
-  const cardDropNameSets = (o, i) => {
-    const mo = x => x.mon === undefined ? -1 : x.mon;
-    return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size;
-  };
   const dropTargetsOf = i => {
     const out = {};
     if (mode === 'attack') {
@@ -96798,20 +96745,9 @@ const CardBattleBoard = ({
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
         const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
-        if (!chosen && !tutorial && !cardDropComboOk(o, i) && cardDropNameSets(o, i) > 1) {
-          keys.forEach(k => {
-            if (!out[k]) out[k] = {
-              ask: true,
-              hand: [i],
-              mon: o.mon,
-              key: k
-            };
-          });
-          return;
-        }
         if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
         keys.forEach(k => {
-          if (!out[k] || out[k].ask || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
+          if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
         });
       });
     }
@@ -96860,29 +96796,10 @@ const CardBattleBoard = ({
     };
     tapHand(i);
   };
-  const dropUse = (t, picked) => {
+  const dropUse = t => {
     const monKey = o => o.mon === undefined ? -1 : o.mon;
-    if (t.ask) {
-      const us = [...new Set(attackOpts.filter(o => o.hand.includes(t.hand[0])).map(monKey))];
-      if (us.length > 1) {
-        setSel({
-          hand: t.hand[0]
-        });
-        setHint('使う子をタップしてください');
-        return;
-      }
-      setSel({
-        hand: t.hand[0],
-        ...(t.mon !== undefined ? {
-          mon: t.mon
-        } : {}),
-        drop: t.key
-      });
-      setHint('');
-      return;
-    }
     const users = [...new Set(attackOpts.filter(o => o.hand[0] === t.hand[0]).map(monKey))];
-    if (!picked && users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
+    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
       setSel({
         hand: t.hand[0]
       });
@@ -97261,23 +97178,7 @@ const CardBattleBoard = ({
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => askUse(finalOpts[0])
-    }, chosenPv && (chosenPv.dmg || chosenPv.guts !== null) ? React.createElement("span", {
-      "data-card-use-pv": true,
-      className: "block leading-tight"
-    }, "使う", React.createElement("span", {
-      className: "block text-[11px] font-bold text-amber-100"
-    }, [chosenPv.dmg, chosenPv.guts !== null ? `ガッツ${chosenPv.guts}` : ''].filter(Boolean).join('・'))) : '使う') : null, chosenPv && sel && sel.set ? React.createElement("button", {
-      type: "button",
-      "data-card-combo-change": true,
-      className: `${btn} border border-white/20 bg-slate-800`,
-      onClick: () => {
-        Audio_.fgSe.tap();
-        setSel({
-          hand: sel.hand,
-          mon: monChosen
-        });
-      }
-    }, "組を変える") : React.createElement("button", {
+    }, "使う") : null, React.createElement("button", {
       type: "button",
       disabled: tutOff('end'),
       className: `${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`,
@@ -97699,7 +97600,7 @@ const CardBattleBoard = ({
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
     style: JA_LABEL_STYLE
-  }, jaWrap(hint)), mode === 'attack' && (tutorial || replay) && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
+  }, jaWrap(hint)), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
     className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
   }, sets.slice().reverse().map(s => React.createElement("button", {
     key: s,
@@ -97735,7 +97636,7 @@ const CardBattleBoard = ({
     const c = cardOf(db, no);
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
-    const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? (w => w === '今は使えない' ? null : w)(attackWhyShort(i)) : null;
+    const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
@@ -98208,51 +98109,7 @@ const CardBattleBoard = ({
     className: "block text-[14px] font-black text-white"
   }, c ? c.name : 'カード'), c && React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-300"
-  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), comboOpen && React.createElement("div", {
-    "data-card-combo-sheet": true,
-    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
-    onClick: () => {
-      setSel(null);
-      setHint('');
-    }
-  }, React.createElement("div", {
-    className: "max-h-[80vh] w-full max-w-[340px] overflow-y-auto rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]",
-    onClick: e => e.stopPropagation()
-  }, React.createElement("div", {
-    className: "text-[14px] font-black text-white"
-  }, "どの組み合わせで出す？"), sets.slice().reverse().map(s0 => {
-    const idx = JSON.parse(s0);
-    const add = idx.filter(i => i !== sel.hand);
-    const pv = comboPreview(s0);
-    const title = add.length ? add.map(i => `＋${(cardOf(db, me.hand[i]) || {}).name || ''}`).join('') : `「${(cardOf(db, me.hand[sel.hand]) || {}).name || ''}」だけ`;
-    return React.createElement("button", {
-      key: s0,
-      type: "button",
-      "data-card-set": s0,
-      onClick: () => pickCombo(s0),
-      className: "mt-2 flex w-full items-center gap-2 rounded-xl border-2 border-white/25 bg-slate-800 p-1.5 text-left active:scale-[.98]"
-    }, React.createElement("span", {
-      className: "flex shrink-0 pl-1.5"
-    }, idx.map(i => {
-      const c = cardOf(db, me.hand[i]);
-      return React.createElement("img", {
-        key: i,
-        src: CARD_IMG(c ? c.img : me.hand[i]),
-        alt: "",
-        className: "-ml-1.5 w-[30px] rounded-[3px] shadow-[0_1px_3px_#000]"
-      });
-    })), React.createElement("span", {
-      className: "min-w-0 flex-1 leading-snug"
-    }, React.createElement("span", {
-      className: "block text-[13px] font-black text-white",
-      style: JA_WRAP_STYLE
-    }, title), React.createElement("span", {
-      "data-card-combo-pv": true,
-      className: "block text-[12px] font-bold text-amber-200"
-    }, [pv.dmg ? `${pv.dmg}ダメージ` : '', pv.guts !== null ? `ガッツ${pv.guts}` : ''].filter(Boolean).join(' / '))));
-  }), React.createElement("div", {
-    className: "mt-2 text-[11px] font-bold text-slate-300"
-  }, "窓の外を押すとやめる"))), guardAsk && React.createElement("div", {
+  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), guardAsk && React.createElement("div", {
     "data-card-guard-ask": true,
     className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
     onClick: () => setGuardAsk(null)
@@ -99400,12 +99257,20 @@ const CardBattleScreen = ({
           moves: cardRecordMovesOf(db, replayRec),
           today: cardTodayJst()
         }));
+        const levelGain = !game.demo && typeof cardLevelEntries === 'function' ? await cardLevelEntries({
+          kind: 'cpu',
+          level: game.level,
+          outcome,
+          debug
+        }) : {
+          entries: []
+        };
         const ok = await persist({
           point: save.point + reward.total,
           daily: reward.daily,
           record: nextRecord,
           unlocked: nextUnlocked
-        }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
+        }, fresh.raw, [...openExtra, ...(detailEntry ? [detailEntry] : []), ...levelGain.entries]);
         if (ok && openExtra.length) {
           openIdRef.current = null;
           openRef.current = null;
@@ -99884,6 +99749,13 @@ const CardBattleScreen = ({
         point: base.point + bonus,
         bonus
       };
+      const levelGain = typeof cardLevelEntries === 'function' && (r.reward === 'win' || r.reward === 'lose') ? await cardLevelEntries({
+        kind: 'pvp',
+        outcome: r.reward,
+        debug
+      }) : {
+        entries: []
+      };
       const ok = await persist({
         point: save.point + got.point,
         daily: {
@@ -99898,7 +99770,7 @@ const CardBattleScreen = ({
             lose: record.pvp.lose + (win ? 0 : 1)
           }
         }
-      }, fresh.raw);
+      }, fresh.raw, levelGain.entries);
       let quick = null;
       if (ok && got.loops > 0 && onQuickLoops) {
         try {
@@ -110625,6 +110497,338 @@ const CardDeckShare = ({
       void register();
     }
   }, mine ? 'このデッキで登録し直す' : 'このデッキを登録する')));
+};
+const CARD_TACTICS_KEY = 'mh_card_tactics_v1';
+const CARD_LEVEL_KEY = 'mh_card_level_v1';
+const cardTacticsOpen = () => false;
+const cardLevelNeed = lv => 20 + 3 * lv;
+const CARD_LEVEL_XP = Object.freeze({
+  easy: {
+    win: 20,
+    lose: 8
+  },
+  normal: {
+    win: 30,
+    lose: 12
+  },
+  hard: {
+    win: 40,
+    lose: 16
+  },
+  expert: {
+    win: 50,
+    lose: 20
+  },
+  master: {
+    win: 60,
+    lose: 24
+  },
+  pvp: {
+    win: 100,
+    lose: 40
+  },
+  firstWin: 30
+});
+const CARD_LEVEL_FRAMES = Object.freeze([{
+  at: 1,
+  base: 1,
+  breeder: 1,
+  mon: 2
+}, {
+  at: 5,
+  mon: 3
+}, {
+  at: 10,
+  base: 2
+}, {
+  at: 15,
+  breeder: 2,
+  mon: 4
+}, {
+  at: 20,
+  breeder: 3
+}, {
+  at: 25,
+  mon: 5
+}, {
+  at: 30,
+  base: 3
+}]);
+const cardLevelFrames = lv => CARD_LEVEL_FRAMES.filter(x => lv >= x.at).reduce((a, x) => ({
+  ...a,
+  ...Object.fromEntries(Object.entries(x).filter(([k]) => k !== 'at'))
+}), {});
+const cardLevelNextFrame = lv => CARD_LEVEL_FRAMES.find(x => x.at > lv) || null;
+const cardLevelTicketAt = lv => lv === 3 || lv === 10 || lv >= 20 && lv % 5 === 0;
+const cardLevelSafeXp = xp => {
+  const n = Number(xp);
+  return Number.isFinite(n) ? Math.min(Math.max(0, Math.floor(n)), Number.MAX_SAFE_INTEGER) : 0;
+};
+const cardLevelInfo = xp => {
+  let left = cardLevelSafeXp(xp),
+    level = 1;
+  for (;;) {
+    const need = cardLevelNeed(level);
+    if (left < need) return {
+      level,
+      into: left,
+      need
+    };
+    left -= need;
+    level += 1;
+  }
+};
+const cardNormalizeLevel = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const got = Array.isArray(r.got) ? [...new Set(r.got.filter(n => Number.isInteger(n) && n > 1))].sort((a, b) => a - b) : [];
+  return {
+    v: 1,
+    xp: cardLevelSafeXp(r.xp),
+    day: typeof r.day === 'string' ? r.day.slice(0, 10) : '',
+    dayWin: r.dayWin === true,
+    got
+  };
+};
+const cardLevelXpOf = ({
+  kind,
+  level,
+  outcome
+}) => {
+  if (outcome !== 'win' && outcome !== 'lose') return 0;
+  const t = kind === 'pvp' ? CARD_LEVEL_XP.pvp : CARD_LEVEL_XP[level];
+  return t ? t[outcome] : 0;
+};
+const cardLevelAfter = (prev, {
+  kind,
+  level,
+  outcome,
+  today
+}) => {
+  const cur = cardNormalizeLevel(prev);
+  const lv0 = cardLevelInfo(cur.xp).level;
+  let add = cardLevelXpOf({
+    kind,
+    level,
+    outcome
+  });
+  if (!add) return {
+    next: cur,
+    tickets: 0,
+    add: 0,
+    from: lv0,
+    to: lv0
+  };
+  const sameDay = cur.day === today;
+  if (outcome === 'win' && !(sameDay && cur.dayWin)) add += CARD_LEVEL_XP.firstWin;
+  const xp = cardLevelSafeXp(cur.xp + add);
+  const to = cardLevelInfo(xp).level;
+  const got = [...cur.got];
+  let tickets = 0;
+  for (let lv = 2; lv <= to; lv++) if (cardLevelTicketAt(lv) && !got.includes(lv)) {
+    got.push(lv);
+    tickets += 1;
+  }
+  return {
+    next: {
+      ...cur,
+      xp,
+      day: today,
+      dayWin: sameDay && cur.dayWin || outcome === 'win',
+      got
+    },
+    tickets,
+    add,
+    from: lv0,
+    to
+  };
+};
+const cardTacticsInt = (n, max = 1e9) => Number.isFinite(Number(n)) ? Math.min(max, Math.max(0, Math.floor(Number(n)))) : 0;
+const cardNormalizeTactics = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const own = {};
+  if (r.own && typeof r.own === 'object' && !Array.isArray(r.own)) Object.entries(r.own).forEach(([id, n]) => {
+    const k = cardTacticsInt(n, 999);
+    if (id && id.length <= 64 && k > 0) own[id] = k;
+  });
+  return {
+    v: 1,
+    own,
+    frames: cardTacticNormalizeFrames(r.frames),
+    shards: cardTacticsInt(r.shards),
+    tickets: cardTacticsInt(r.tickets),
+    pulls: cardTacticsInt(r.pulls),
+    dry: cardTacticsInt(r.dry, 99)
+  };
+};
+const cardTacticsOwns = (t, id) => CARD_TACTIC_START.includes(id) || (t && t.own && t.own[id] || 0) > 0;
+const cardTacticsFramesForBattle = (t, lv) => {
+  const f = cardTacticNormalizeFrames(t && t.frames);
+  const n = cardLevelFrames(lv);
+  const owns = id => cardTacticsOwns(t, id);
+  const rows = (list, max) => list.filter(r => owns(r.c) && owns(r.a)).slice(0, max);
+  return {
+    base: f.base.map((id, i) => id && i < n.base && owns(id) ? id : null),
+    breeder: rows(f.breeder, n.breeder),
+    mons: f.mons.map(list => rows(list, n.mon))
+  };
+};
+const CARD_TACTICS_PULL = Object.freeze({
+  n: 8,
+  price: 300,
+  bundle: Object.freeze({
+    n: 5,
+    price: 1350
+  }),
+  pityAt: 7
+});
+const CARD_TACTICS_RATE = Object.freeze([['N', 0.7], ['R', 0.25], ['SR', 0.05]]);
+const CARD_TACTICS_SHARD_COST = 10;
+const cardTacticsPool = r => CARD_TACTIC_CARDS.filter(c => c.r === r && !c.start);
+const cardTacticsPrice = count => count === CARD_TACTICS_PULL.bundle.n ? CARD_TACTICS_PULL.bundle.price : CARD_TACTICS_PULL.price * count;
+const cardTacticsPullOnce = (t, rand = Math.random) => {
+  let cur = t;
+  const cards = [];
+  const pity = cur.dry >= CARD_TACTICS_PULL.pityAt;
+  for (let k = 0; k < CARD_TACTICS_PULL.n; k++) {
+    let r = 'N';
+    if (pity && k === CARD_TACTICS_PULL.n - 1) r = 'SR';else {
+      const x = rand();
+      let acc = 0;
+      for (const [q, p] of CARD_TACTICS_RATE) {
+        acc += p;
+        if (x < acc) {
+          r = q;
+          break;
+        }
+      }
+    }
+    const pool = cardTacticsPool(r);
+    const card = pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))];
+    const dup = cardTacticsOwns(cur, card.id);
+    cur = {
+      ...cur,
+      own: {
+        ...cur.own,
+        [card.id]: Math.min(999, (cur.own[card.id] || 0) + 1)
+      },
+      shards: cur.shards + (dup ? 1 : 0)
+    };
+    cards.push({
+      id: card.id,
+      r: card.r,
+      dup
+    });
+  }
+  const sr = cards.some(c => c.r === 'SR');
+  return {
+    next: {
+      ...cur,
+      pulls: cur.pulls + 1,
+      dry: sr ? 0 : cur.dry + 1
+    },
+    cards
+  };
+};
+const cardTacticsPull = (t, count, {
+  payWith = 'point',
+  point = 0
+} = {}, rand = Math.random) => {
+  if (!Number.isInteger(count) || count < 1) return null;
+  const cost = payWith === 'ticket' ? 0 : cardTacticsPrice(count);
+  if (payWith === 'ticket' ? t.tickets < count : point < cost) return null;
+  let cur = payWith === 'ticket' ? {
+    ...t,
+    tickets: t.tickets - count
+  } : t;
+  const packs = [];
+  for (let i = 0; i < count; i++) {
+    const one = cardTacticsPullOnce(cur, rand);
+    cur = one.next;
+    packs.push(one.cards);
+  }
+  return {
+    next: cur,
+    packs,
+    cost
+  };
+};
+const cardTacticsExchange = (t, id) => {
+  const c = cardTacticOf(id);
+  if (!c || cardTacticsOwns(t, id) || t.shards < CARD_TACTICS_SHARD_COST) return null;
+  return {
+    ...t,
+    own: {
+      ...t.own,
+      [id]: 1
+    },
+    shards: t.shards - CARD_TACTICS_SHARD_COST
+  };
+};
+const cardTacticsLoad = async () => {
+  let rawT = null,
+    rawL = null;
+  try {
+    [rawT, rawL] = await Promise.all([storeGet(CARD_TACTICS_KEY, null), storeGet(CARD_LEVEL_KEY, null)]);
+  } catch (_) {}
+  const level = cardNormalizeLevel(rawL);
+  return {
+    tactics: cardNormalizeTactics(rawT),
+    level,
+    info: cardLevelInfo(level.xp),
+    rawT,
+    rawL
+  };
+};
+const cardLevelEntries = async ({
+  kind,
+  level,
+  outcome,
+  debug = false
+}) => {
+  if (!cardTacticsOpen() && !debug) return {
+    entries: [],
+    gain: null
+  };
+  let rawL = null,
+    rawT = null;
+  try {
+    [rawL, rawT] = await Promise.all([storeGet(CARD_LEVEL_KEY, null), storeGet(CARD_TACTICS_KEY, null)]);
+  } catch (_) {
+    return {
+      entries: [],
+      gain: null
+    };
+  }
+  const gain = cardLevelAfter(rawL, {
+    kind,
+    level,
+    outcome,
+    today: typeof cardTodayJst === 'function' ? cardTodayJst() : ''
+  });
+  if (!gain.add) return {
+    entries: [],
+    gain
+  };
+  const entries = [{
+    key: CARD_LEVEL_KEY,
+    before: rawL,
+    next: gain.next
+  }];
+  if (gain.tickets) {
+    const t = cardNormalizeTactics(rawT);
+    entries.push({
+      key: CARD_TACTICS_KEY,
+      before: rawT,
+      next: {
+        ...t,
+        tickets: t.tickets + gain.tickets
+      }
+    });
+  }
+  return {
+    entries,
+    gain
+  };
 };
 const DEBUG_TRIALS = [{
   id: 'rhythm_mon_ab1',

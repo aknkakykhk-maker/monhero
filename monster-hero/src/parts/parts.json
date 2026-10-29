@@ -391,6 +391,10 @@
       "role": "MFバトルカードのみんなのデッキ(デッキ登録の対戦・デッキのレンタル)。表 card_deck_entries などとの通信・持ち主の鍵(mh_card_deck_owner_key_v1)・戦い方(助手の打ち方に乗せる)・登録の画面"
     },
     {
+      "file": "96-card-tactics.jsx",
+      "role": "MFバトルカードの戦術カードの持ち物・枠(mh_card_tactics_v1)・MFバトルカードのレベル(mh_card_level_v1。式・強さ別の経験値・枠の開き・引く券)・戦術カードのガチャ(1回300ビートPで8枚・まとめ買い・天井・かけら)。84 の結果の取引に cardLevelEntries を足す"
+    },
+    {
       "file": "81-debug-trials.jsx",
       "role": "デバッグ設定のいちばん上の「確認待ちの試作」(DEBUG_TRIALS に1行足すと出る)。デバッグ専用"
     },
