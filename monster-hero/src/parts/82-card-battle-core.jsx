@@ -1500,7 +1500,8 @@ const cardAiEvadeAllCovers = (st, pd) => {
   return pd.targets.slice(pd.ti + 1).filter((t) => t.p !== pd.attacker && !(noHybrid && !cardIsPureMon(st.players[t.p].mons[t.m]))).length;
 };
 // 守りの1枚に点を付ける(出さないなら pass)
-const cardAiChooseGuard = (db, st, policy, rand) => {
+// gopt … 戦術カード(82-card-tactics-core)から: only(守りの候補を絞る)・force(守れるなら、しきい値を見ずに守る)。無ければ今のまま
+const cardAiChooseGuard = (db, st, policy, rand, gopt = null) => {
   const pd = st.pending;
   const q = pd.defender;
   const me = st.players[q];
@@ -1509,7 +1510,7 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
   const loseAfter = (a) => { try { const s = cardAiSettle(db, cardApplyAction(db, st, a)); return !!s && s.winner !== null && s.winner !== undefined && s.winner !== q; } catch (_) { return false; } };
   const few = me.mons.filter((m) => !m.ko).length <= 2;
   const passLoses = few && loseAfter({ type: 'pass' });
-  const opts = cardGuardOptions(db, st).filter((o) => !few || passLoses || !loseAfter(o));
+  const opts = cardGuardOptions(db, st).filter((o) => (!few || passLoses || !loseAfter(o)) && (!gopt || !gopt.only || gopt.only(o)));
   if (!opts.length) return { type: 'pass' };
   const main = cardOf(db, pd.main);
   const tgt = pd.targets[pd.ti];
@@ -1538,12 +1539,13 @@ const cardAiChooseGuard = (db, st, policy, rand) => {
     if (!dies && guardsInHand <= 1 && habit.keepGuard >= 0.55 && habit.keepGuard < 1.3 && Math.min(dmg, target.life) * 2 < target.life) v -= 0.8;
     if (!best || v > best.v) best = { v, o };
   });
-  if (!best || best.v < 0.8 + rand() * 0.3) return { type: 'pass' };
+  if (!best || (!(gopt && gopt.force) && best.v < 0.8 + rand() * 0.3)) return { type: 'pass' };
   return best.o;
 };
 
 // 手札をガッツへ: 使えない札(持ち主が KO)・使えそうにない重い札から。くせ「ガッツをためる」でためる量が増える
-const cardAiChooseGuts = (db, st, policy) => {
+// gopt … 戦術カードから: count(この枚数だけ置く)・keepGuards(回避・防御の札はガッツにしない)。無ければ今のまま
+const cardAiChooseGuts = (db, st, policy, gopt = null) => {
   const p = st.active;
   const me = st.players[p];
   const habit = cardAiHabitNow(db, st, p, policy);
@@ -1570,6 +1572,10 @@ const cardAiChooseGuts = (db, st, policy) => {
   const pick = [];
   order.forEach((o) => { if (o.k <= -9) pick.push(o.i); });
   for (const o of order) { if (pick.length >= Math.max(need, pick.length) || me.hand.length - pick.length <= 1) break; if (!pick.includes(o.i)) pick.push(o.i); }
+  if (gopt && Number.isInteger(gopt.count)) {
+    pick.splice(0, pick.length, ...order.map((o) => o.i).slice(0, gopt.count));
+  }
+  if (gopt && gopt.keepGuards) { for (let k = pick.length - 1; k >= 0; k--) if (cardIsGuardKind((cardOf(db, me.hand[pick[k]]) || {}).kind)) pick.splice(k, 1); }
   const gm = cardFieldEff(st, 'fieldGutsMax'); // 長期戦の予感
   // 山札切れを自分から呼ばない(2026-10-27 あつさん「山札を気にせず負ける」):
   //   次の自分の番に引く枚数(手札が5枚なら1枚・それ未満なら5枚まで)が山札より多くなるほど、手札をガッツにしない
@@ -1655,6 +1661,13 @@ const cardAttachUseless = (db, st, o) => {
     return false;
   });
 };
+// 攻撃の候補(自分で負けにいく手は、どの強さでも選ばない。付けても何も変わらない札は付けない。外すと手が無くなるときは元のまま)
+const cardAiAttackChoices = (db, st, policy) => {
+  const opts0 = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy));
+  const useful = opts0.filter((o) => !cardAttachUseless(db, st, o));
+  return useful.length ? useful : opts0;
+};
+const cardAiAttackScored = (db, st, opts, policy) => opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0) })).sort((a, b) => b.s - a.s);
 const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
   // おいのり: 相手が出した全体カードは、相手に都合のよいものとみて、持っていれば無くす(雑な手のときは出し忘れる)
   if (st.pendingPray) { const use = cardPrayOptions(db, st).find((o) => o.hand); return use && rand() >= (policy.level.sloppy || 0) ? use : { type: 'pray' }; }
@@ -1682,6 +1695,12 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     return { type: 'setupGuts', hand: order.slice(0, CARD_BATTLE_SETUP_GUTS_MAX) };
   }
   const sloppy = rand() < (policy.level.sloppy || 0);
+  // 戦術カード(みんなのデッキ・82-card-tactics-core)。並びが無い・雑な手のときは今のまま
+  if (!sloppy && policy.gambit && typeof cardTacticDecide === 'function') {
+    const tac = cardTacticDecide(db, st, policy);
+    if (tac && tac.act) return tac.act;
+    if (tac && tac.policy) policy = tac.policy;
+  }
   if (st.pending) return sloppy ? { type: 'pass' } : cardAiChooseGuard(db, st, policy, rand);
   if (st.phase === 'guts') {
     if (!sloppy) return cardAiChooseGuts(db, st, policy);
@@ -1689,13 +1708,10 @@ const cardAiChooseAction = (db, st, policy, rand = Math.random) => {
     const gm = cardFieldEff(st, 'fieldGutsMax');
     return { type: 'guts', hand: hand.map((_, i) => i).filter(() => rand() < 0.4).slice(0, Math.min(gm ? gm.n : 99, policy.playerRole ? 99 : cardAiGutsCap(st.players[st.active]))) };
   }
-  const opts0 = cardAttackOptions(db, st).filter((o) => !cardAiLosesBy(db, st, o, st.active, policy)); // 自分で負けにいく手は、どの強さでも選ばない
-  // 付けても何も変わらない札は付けない(カードを1枚むだにするだけ。外すと手が無くなるときは元のまま)
-  const useful = opts0.filter((o) => !cardAttachUseless(db, st, o));
-  const opts = useful.length ? useful : opts0;
+  const opts = cardAiAttackChoices(db, st, policy);
   if (!opts.length) return { type: 'endAttacks' };
   if (sloppy) return rand() < 0.25 ? { type: 'endAttacks' } : cardAiFillBind(db, st, opts[Math.floor(rand() * opts.length)], policy);
-  const scored = opts.map((o) => ({ o, s: cardAiScoreAttack(db, st, o, policy) + (cardAiAceHit(policy, st.players[st.active].hand, o.hand) ? 2 : 0) })).sort((a, b) => b.s - a.s);
+  const scored = cardAiAttackScored(db, st, opts, policy);
   if (scored[0].s <= 0.3) return { type: 'endAttacks' };
   if (rand() < policy.level.whim) {
     const pool = scored.filter((x) => x.s > 0.3).slice(0, 3);
