@@ -2732,6 +2732,12 @@ function BattleScreen({
               // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
               // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
               const slotArt = (img) => (!ecoBattleView&&!idleMotionOff ? <MonsterIdleArt baseId={s?.id} image={img}/> : img);
+              // この枠の子の魂格の段階(1〜5)。枠の子とは masuId で結ぶ。出さない設定のときは 0
+              const slotSoulStage=(()=>{
+                if(!s||!s.masuId||ecoBattleView||liteBattleView||fxLoad==='LIGHT'||fxLoad==='MINIMAL'||!Array.isArray(battleSoulMasus)) return 0;
+                const m=battleSoulMasus.find(x=>x&&(x.id===s.masuId||x.masuId===s.masuId));
+                return m?normalizeSoulRankStage(normalizeMasuProgression(m).soulRankStage):0;
+              })();
               // 体当たりだった初期モンスターは、種族ごとの攻撃(ThemedAttackMotion)で見せる。枠は飛ばさない
               const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
@@ -3073,7 +3079,7 @@ function BattleScreen({
                       大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
                   {/* 足元の魔法陣(新しい盤面の飾り)。絵と一緒に跳ねないよう、動く絵の外に置く */}
                   {tacticsNewLayout&&s&&<span aria-hidden="true" data-slot-circle/>}
-                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
+                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className={`relative flex items-center justify-center${slotSoulStage>0?' mh-reincarnate-stack':''}`} style={{...(s?slotArtBox:{}),...(isAnimating&&tacticsNewLayout&&!pandoraArt?{zIndex:9999,animation:themedAttack?undefined:attackMotionAnimation(attackAnim),...attackAimStyle}:{}),...(pandoraArt&&isAnimating?{zIndex:9999}:{})}}>{/* 魂格オーラ(一覧・詳細・HOMEと同じ部品)を、バトルでも絵の後ろに小さく出す(2026-10-29 社長「魂格オーラがバトルに反映されてない」)。軽め・最軽量・省エネ表示では出さず、標準では動きを止める(is-still) */}{slotSoulStage>0&&<SoulRankAura soulRankStage={slotSoulStage} className={`is-battle${fxLoad==='STANDARD'?' is-still':''}`}/>}{pandoraArt?pandoraArt:s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion

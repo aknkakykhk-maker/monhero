@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33c126dd37109fd5
+// source-sha256: 3d94d596e47aa5c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -73148,6 +73148,11 @@ function BattleScreen({
       baseId: s?.id,
       image: img
     }) : img;
+    const slotSoulStage = (() => {
+      if (!s || !s.masuId || ecoBattleView || liteBattleView || fxLoad === 'LIGHT' || fxLoad === 'MINIMAL' || !Array.isArray(battleSoulMasus)) return 0;
+      const m = battleSoulMasus.find(x => x && (x.id === s.masuId || x.masuId === s.masuId));
+      return m ? normalizeSoulRankStage(normalizeMasuProgression(m).soulRankStage) : 0;
+    })();
     const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
     const slotArtBox = {
       width: tacticsNewLayout ? '58px' : '64px',
@@ -73738,7 +73743,7 @@ function BattleScreen({
       "data-slot-circle": true
     }), React.createElement("div", {
       "data-tactics-attack-image": tacticsNewLayout ? i : undefined,
-      className: "relative flex items-center justify-center",
+      className: `relative flex items-center justify-center${slotSoulStage > 0 ? ' mh-reincarnate-stack' : ''}`,
       style: {
         ...(s ? slotArtBox : {}),
         ...(isAnimating && tacticsNewLayout && !pandoraArt ? {
@@ -73750,7 +73755,10 @@ function BattleScreen({
           zIndex: 9999
         } : {})
       }
-    }, pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
+    }, slotSoulStage > 0 && React.createElement(SoulRankAura, {
+      soulRankStage: slotSoulStage,
+      className: `is-battle${fxLoad === 'STANDARD' ? ' is-still' : ''}`
+    }), pandoraArt ? pandoraArt : s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? React.createElement(PandoraDualThunder, {
       image: React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
@@ -144532,6 +144540,9 @@ const createAnimationStyle = () => {
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
     [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
     [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    /* バトルの枠の魂格オーラ(SoulRankAura is-battle)。大きさは枠の絵に合わせて小さめ。標準では動きを止める(2026-10-29) */
+    .mh-reincarnate-aura.is-battle{inset:-24%}
+    .mh-reincarnate-aura.is-battle.is-still, .mh-reincarnate-aura.is-battle.is-still *, .mh-reincarnate-aura.is-battle.is-still *::before, .mh-reincarnate-aura.is-battle.is-still *::after { animation: none !important; }
     [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
     /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
     [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }
