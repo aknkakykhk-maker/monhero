@@ -354,8 +354,10 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                     )}
                   </>)}
                 </div>
-                {typeof CardShareDeckTile === 'function' && <CardShareDeckTile mode="friend" breederId={selected.otherId} onGo={onCardShareGo}/>}
+                {typeof CardShareDeckTile === 'function' && <CardShareDeckTile mode="friend" breederId={selected.otherId}/>}
               </div>
+              {/* 札の下(2枚並びの外・全幅)に「このデッキと戦う」「借りる」。登録していない人は出ない(95 の CardShareDeckActions) */}
+              {typeof CardShareDeckActions === 'function' && <div className="mt-2"><CardShareDeckActions breederId={selected.otherId} onGo={onCardShareGo}/></div>}
               {/* デッキの札(95)が入るまでは、今までの大きい欄を札の下に出す */}
               {typeof CardShareDeckTile !== 'function' && typeof CardShareProfileDeck === 'function' && <div className="mt-2"><CardShareProfileDeck ownerId={selected.otherId} onGo={onCardShareGo}/></div>}
               {/* 記録は1行ずつにたたむ(2026-10-29 案B。前はタブ4つ)。押した行だけ開く。もう一度押すと閉じる */}
