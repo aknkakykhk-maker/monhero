@@ -95,7 +95,7 @@ const serve = () => new Promise((resolve) => {
     await page.locator('[data-card-cpu]').click();
     await page.locator('[data-card-mode-assistant]').click();
     await page.locator('[data-card-foe="momosuke"]').click();
-    await page.locator('[data-card-start]').click();
+    await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
     const t0 = Date.now();
     const center = async (loc) => { const b = await loc.boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };

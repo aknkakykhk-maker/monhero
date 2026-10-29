@@ -358,6 +358,10 @@
       "role": "画面: MFバトルカードのデッキ編成(デッキの一覧・組む画面)・カード図鑑・ルールの画面。決まりは 82 の cardDeckProblems・cardDeckAddReason。保存は 84 の CardBattleScreen が入れる"
     },
     {
+      "file": "87-card-deck-pick.jsx",
+      "role": "画面: MFバトルカードの対戦の前のデッキ選び(助手と対戦・マルチの前に1枚挟む)。選べる一覧は cardDeckPickChoices の1か所(借りたデッキを足す口)。保存は 84 が mh_card_decks_v1 の active を書き換えるだけ"
+    },
+    {
       "file": "90-card-rank.jsx",
       "role": "MFバトルカードのランキング(台帳 #3513)。新しい表 card_battle_ranks の読み書きと、ランキングの画面。送るのは公開後のふつうの対戦の勝ちだけ(SQL: docs/sql/card-battle-ranks/)"
     },

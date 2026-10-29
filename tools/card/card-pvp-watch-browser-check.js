@@ -141,7 +141,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     };
     const toLobby = async (page) => {
       await page.locator('[data-card-cpu]').first().click({ timeout: 20000 });
-      await page.locator('[data-card-mode-multi]').click();
+      await page.locator('[data-card-mode-multi]').click(); await page.locator('[data-card-deck-pick-go]').click(); // マルチの入口の前のデッキ選び
       await page.locator('[data-card-pvp="idle"]').waitFor({ timeout: 10000 });
     };
     const [ctxA, ctxB, ctxC] = [await makeCtx('snegurochka_icon'), await makeCtx('🐣'), await makeCtx('🦊')];
