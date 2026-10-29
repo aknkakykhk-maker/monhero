@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47d5efb36f32af97
+// source-sha256: 3862fdf34c81e300
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110447,7 +110447,7 @@ const cardShareSmartLevel = tactics => {
   const t = cardShareNormalizeTactics(tactics);
   return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
 };
-const cardShareRowsCount = frames => frames.breeder.filter(x => x.on).length + frames.mons.reduce((a, r) => a + r.filter(x => x.on).length, 0);
+const cardShareRowsCount = frames => cardTacticCountedRows(frames);
 const cardShareSmartText = tactics => {
   const t = cardShareNormalizeTactics(tactics);
   const lv = cardShareSmartLevel(t);
@@ -112081,12 +112081,10 @@ const CardTacticsScreen = ({
     });
   };
   const f = t.frames;
-  const countDetail = null;
+  const uncounted = cardTacticUncounted(f);
   const whyOf = (k, i) => {
-    if (!countDetail) return '';
-    const list = k === 'breeder' ? countDetail.breeder : (countDetail.mons || [])[k];
-    const x = list && list[i];
-    return x && !x.counted ? x.why || '' : '';
+    const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k];
+    return list && list[i] || '';
   };
   const rowsOf = k => k === 'breeder' ? f.breeder : f.mons[k];
   const setRows = (k, rows) => saveFrames(k === 'breeder' ? {

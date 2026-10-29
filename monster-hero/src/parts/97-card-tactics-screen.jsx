@@ -234,9 +234,9 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
     setData({ ...fresh, tactics: next, rawT: next });
   };
   const f = t.frames;
-  // 賢さに数えるか(数え方はルールくんの 82-card-tactics-core に入ったら、ここで読む)
-  const countDetail = null;
-  const whyOf = (k, i) => { if (!countDetail) return ''; const list = k === 'breeder' ? countDetail.breeder : (countDetail.mons || [])[k]; const x = list && list[i]; return x && !x.counted ? (x.why || '') : ''; };
+  // 賢さに数えないセットの理由(82-card-tactics-core の cardTacticUncounted。ルールくん 2026-10-29「ちゃんと効く戦術カードだけ数える」)
+  const uncounted = cardTacticUncounted(f);
+  const whyOf = (k, i) => { const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k]; return (list && list[i]) || ''; };
   const rowsOf = (k) => (k === 'breeder' ? f.breeder : f.mons[k]);
   const setRows = (k, rows) => saveFrames(k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) });
   const maxOf = (k) => (k === 'breeder' ? open.breeder : open.mon);

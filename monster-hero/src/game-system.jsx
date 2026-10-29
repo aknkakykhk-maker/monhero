@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5c8f98875b974d28
+// generated-sha256: 4cae02e136904b52
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -65769,7 +65769,8 @@ const cardShareSmartLevel = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
   return t.f && typeof cardTacticSmartLevel === 'function' ? cardTacticSmartLevel(cardTacticUnpackFrames(t.f)) : 'normal';
 };
-const cardShareRowsCount = (frames) => frames.breeder.filter((x) => x.on).length + frames.mons.reduce((a, r) => a + r.filter((x) => x.on).length, 0);
+// 賢さに数える戦術カードの枚数(場面が合わない・同じもの・ほとんど当たらないものは数えない。82 の cardTacticCountedRows)
+const cardShareRowsCount = (frames) => cardTacticCountedRows(frames);
 const cardShareSmartText = (tactics) => {
   const t = cardShareNormalizeTactics(tactics);
   const lv = cardShareSmartLevel(t);
@@ -66594,9 +66595,9 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null }
     setData({ ...fresh, tactics: next, rawT: next });
   };
   const f = t.frames;
-  // 賢さに数えるか(数え方はルールくんの 82-card-tactics-core に入ったら、ここで読む)
-  const countDetail = null;
-  const whyOf = (k, i) => { if (!countDetail) return ''; const list = k === 'breeder' ? countDetail.breeder : (countDetail.mons || [])[k]; const x = list && list[i]; return x && !x.counted ? (x.why || '') : ''; };
+  // 賢さに数えないセットの理由(82-card-tactics-core の cardTacticUncounted。ルールくん 2026-10-29「ちゃんと効く戦術カードだけ数える」)
+  const uncounted = cardTacticUncounted(f);
+  const whyOf = (k, i) => { const list = k === 'breeder' ? uncounted.breeder : uncounted.mons[k]; return (list && list[i]) || ''; };
   const rowsOf = (k) => (k === 'breeder' ? f.breeder : f.mons[k]);
   const setRows = (k, rows) => saveFrames(k === 'breeder' ? { ...f, breeder: rows } : { ...f, mons: f.mons.map((r, i) => (i === k ? rows : r)) });
   const maxOf = (k) => (k === 'breeder' ? open.breeder : open.mon);
