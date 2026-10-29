@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d987a1c65d58c27b
+// source-sha256: 46c421382483acd7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -57499,6 +57499,10 @@ const DexStatusTag = ({
     className: `inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`
   }, def.label);
 };
+const dexListScrollMemo = {
+  filter: null,
+  top: 0
+};
 function MonsterDexScreen({
   dexLineageFilter,
   unlockedMonsterIds,
@@ -57522,7 +57526,10 @@ function MonsterDexScreen({
   }, React.createElement(ScreenHead, {
     title: "モンスター図鑑",
     accent: "text-amber-300",
-    onBack: onBackToManagement,
+    onBack: () => {
+      dexListScrollMemo.top = 0;
+      onBackToManagement();
+    },
     backLabel: "M/B管理へ戻る"
   }), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -57561,7 +57568,13 @@ function MonsterDexScreen({
       el.style.width = `${Math.max(0, el.parentElement.clientWidth - el.previousElementSibling.offsetWidth - 6)}px`;
     }
   })), React.createElement("div", {
-    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`
+    "data-dex-list": true,
+    className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`,
+    ref: el => {
+      if (!el || el.dataset.dexScrollRestored) return;
+      el.dataset.dexScrollRestored = '1';
+      if (dexListScrollMemo.filter === dexLineageFilter && dexListScrollMemo.top > 0) el.scrollTop = dexListScrollMemo.top;
+    }
   }, sections.map(section => React.createElement("section", {
     key: section.id,
     "data-dex-section": section.id,
@@ -57591,7 +57604,12 @@ function MonsterDexScreen({
       "data-dex-entry": true,
       "data-dex-entry-status": section.id,
       "aria-label": `${mon.name}の図鑑を見る`,
-      onClick: () => onOpenDetail(mon.id),
+      onClick: e => {
+        const list = e.currentTarget.closest('[data-dex-list]');
+        dexListScrollMemo.filter = dexLineageFilter;
+        dexListScrollMemo.top = list ? list.scrollTop : 0;
+        onOpenDetail(mon.id);
+      },
       className: `w-full min-h-[124px] rounded-2xl border ${section.id === 'draft' ? 'border-dashed border-fuchsia-300/30' : 'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`
     }, React.createElement(DexMonsterIcon, {
       src: iconSrc
