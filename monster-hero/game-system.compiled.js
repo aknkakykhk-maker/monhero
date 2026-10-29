@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f91c4643caaf484
+// source-sha256: a8dd473f1ee3c304
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -41535,7 +41535,8 @@ const RhythmTapTest = ({
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
     }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), React.createElement(PlayerRankGain, {
       kind: "beat",
-      award: beatRankAward
+      award: beatRankAward,
+      next: beatRankAward ? `ランク${beatRankNextBeatPointsRank(playerRankInfo(beatRankAward.xp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}` : ''
     }), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
       className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left [@container(min-width:680px)]:hidden"
@@ -55105,6 +55106,35 @@ function PlayerRankPanel({
     style: JA_WRAP_STYLE
   }, jaWrap(sub)));
 }
+function PlayerRankStrip({
+  kind = 'beat',
+  xp = 0
+}) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return React.createElement("div", {
+    "data-player-rank-strip": kind,
+    className: "flex min-w-0 items-center gap-1.5"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: info.rank,
+    size: "sm"
+  }), React.createElement("div", {
+    className: "h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80",
+    role: "progressbar",
+    "aria-label": "次のランクまで",
+    "aria-valuemin": 0,
+    "aria-valuemax": info.need,
+    "aria-valuenow": info.into
+  }, React.createElement("i", {
+    className: `block h-full rounded-full bg-gradient-to-r ${k.bar}`,
+    style: {
+      width: `${Math.min(100, Math.round(info.into / info.need * 100))}%`
+    }
+  })), React.createElement("small", {
+    className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums"
+  }, `次まで ${(info.need - info.into).toLocaleString()}`));
+}
 function PlayerRankUp({
   kind = 'beat',
   from = 1,
@@ -55142,7 +55172,8 @@ function PlayerRankUp({
 }
 function PlayerRankGain({
   kind = 'beat',
-  award
+  award,
+  next = ''
 }) {
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
@@ -55169,7 +55200,11 @@ function PlayerRankGain({
   }, jaWrap(award.parts.map(p => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))), React.createElement(PlayerRankGauge, {
     kind: kind,
     info: info
-  }), up && React.createElement(PlayerRankUp, {
+  }), next && React.createElement("p", {
+    "data-player-rank-gain-next": true,
+    className: "text-[10px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`次は ${next}`)), up && React.createElement(PlayerRankUp, {
     kind: kind,
     from: award.from,
     to: award.to,
@@ -82597,7 +82632,12 @@ function RhythmMultiScreen({
     }, "モードえらび"), ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
       className: "block truncate text-[9px] font-black text-violet-200/90"
-    }, ms.beatPointText)), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    }, ms.beatPointText), Number.isFinite(ms.beatRankXp) && React.createElement("div", {
+      className: "mt-0.5"
+    }, React.createElement(PlayerRankStrip, {
+      kind: "beat",
+      xp: ms.beatRankXp
+    }))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
@@ -82616,12 +82656,7 @@ function RhythmMultiScreen({
       onToggle: ms.onToggleAssistant
     }), React.createElement("div", {
       className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2"
-    }, Number.isFinite(ms.beatRankXp) && React.createElement(PlayerRankPanel, {
-      kind: "beat",
-      xp: ms.beatRankXp,
-      note: `ランク${beatRankNextBeatPointsRank(playerRankInfo(ms.beatRankXp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}`,
-      sub: "曲を遊ぶとたまります。ランクが上がるたびにセッション券を1枚もらえます。"
-    }), !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
+    }, !(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
     }, React.createElement("h3", {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a5a64082ce57e8f8
+// generated-sha256: 0c30863ac379f5e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25174,7 +25174,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
 {/* ビートランク(2026-10-29 社長)。この1曲でたまった経験値と、ランクが上がったときのごほうび。横向きでも縦持ちでも、ここに1か所だけ出す。
     裏のクイック周回の「経験値」(マスモンの経験値)と取り違えないよう、札に「🎵 ビートランク」と書く(PlayerRankGain) */}
-<PlayerRankGain kind="beat" award={beatRankAward}/>
+<PlayerRankGain kind="beat" award={beatRankAward} next={beatRankAward?`ランク${beatRankNextBeatPointsRank(playerRankInfo(beatRankAward.xp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}`:''}/>
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
@@ -34588,6 +34588,22 @@ function PlayerRankPanel({ kind = 'beat', xp = 0, note = '', sub = '' }) {
   );
 }
 
+// 上の帯に入れる細い1行(2026-10-29 社長「立ち絵が小さくなるのはだめ」→ 上の帯に横長で薄く)。小さいバッジ・細い棒・次まで。
+// 次のごほうびは帯には入れない(社長「トップに要らなければ詳しい所だけ」。ヘルプと曲の結果で見せる)
+function PlayerRankStrip({ kind = 'beat', xp = 0 }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return (
+    <div data-player-rank-strip={kind} className="flex min-w-0 items-center gap-1.5">
+      <PlayerRankBadge kind={kind} rank={info.rank} size="sm"/>
+      <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
+        <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
+      </div>
+      <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+    </div>
+  );
+}
+
 // ランクが上がったときの演出。gains は [{ icon, text }](もらった物。カードは引く券・枠が増える知らせなど)
 function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
   if (!(to > from)) return null;
@@ -34609,8 +34625,8 @@ function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
 }
 
 // 1回ぶんの結果に出す札: 「経験値 +26(ランク12→13)」・内わけ・棒・上がったら演出。
-// award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }
-function PlayerRankGain({ kind = 'beat', award }) {
+// award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
+function PlayerRankGain({ kind = 'beat', award, next = '' }) {
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
   const info = playerRankInfo(award.xp);
@@ -34626,6 +34642,7 @@ function PlayerRankGain({ kind = 'beat', award }) {
         {jaWrap(award.parts.map((p) => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))}
       </p>}
       <PlayerRankGauge kind={kind} info={info}/>
+      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
       {up && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
   );
@@ -49966,6 +49983,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
             <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
+            {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない) */}
+            {Number.isFinite(ms.beatRankXp) && <div className="mt-0.5"><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
           </div>
           {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
@@ -49976,10 +49995,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`}>
           <ModeSelectAssistantPanel assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} />
           <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
-            {/* ビートランク(2026-10-29 社長): 今のランクと次までの棒。曲を遊ぶとたまり、上がるたびにセッション券(下のひとこと) */}
-            {Number.isFinite(ms.beatRankXp) && <PlayerRankPanel kind="beat" xp={ms.beatRankXp}
-              note={`ランク${beatRankNextBeatPointsRank(playerRankInfo(ms.beatRankXp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}`}
-              sub="曲を遊ぶとたまります。ランクが上がるたびにセッション券を1枚もらえます。"/>}
             {!(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true)}
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>

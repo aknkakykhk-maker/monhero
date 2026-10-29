@@ -54,6 +54,22 @@ function PlayerRankPanel({ kind = 'beat', xp = 0, note = '', sub = '' }) {
   );
 }
 
+// 上の帯に入れる細い1行(2026-10-29 社長「立ち絵が小さくなるのはだめ」→ 上の帯に横長で薄く)。小さいバッジ・細い棒・次まで。
+// 次のごほうびは帯には入れない(社長「トップに要らなければ詳しい所だけ」。ヘルプと曲の結果で見せる)
+function PlayerRankStrip({ kind = 'beat', xp = 0 }) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return (
+    <div data-player-rank-strip={kind} className="flex min-w-0 items-center gap-1.5">
+      <PlayerRankBadge kind={kind} rank={info.rank} size="sm"/>
+      <div className="h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80" role="progressbar" aria-label="次のランクまで" aria-valuemin={0} aria-valuemax={info.need} aria-valuenow={info.into}>
+        <i className={`block h-full rounded-full bg-gradient-to-r ${k.bar}`} style={{ width: `${Math.min(100, Math.round((info.into / info.need) * 100))}%` }}/>
+      </div>
+      <small className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums">{`次まで ${(info.need - info.into).toLocaleString()}`}</small>
+    </div>
+  );
+}
+
 // ランクが上がったときの演出。gains は [{ icon, text }](もらった物。カードは引く券・枠が増える知らせなど)
 function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
   if (!(to > from)) return null;
@@ -75,8 +91,8 @@ function PlayerRankUp({ kind = 'beat', from = 1, to = 1, gains = [] }) {
 }
 
 // 1回ぶんの結果に出す札: 「経験値 +26(ランク12→13)」・内わけ・棒・上がったら演出。
-// award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }
-function PlayerRankGain({ kind = 'beat', award }) {
+// award: { add, parts:[{label,xp}], from, to, xp(足したあとの合計), gains:[{icon,text}] }。next は次のごほうびの文(「ランク20で ビートP 300」)
+function PlayerRankGain({ kind = 'beat', award, next = '' }) {
   if (!award || !(award.add > 0)) return null;
   const k = playerRankKind(kind);
   const info = playerRankInfo(award.xp);
@@ -92,6 +108,7 @@ function PlayerRankGain({ kind = 'beat', award }) {
         {jaWrap(award.parts.map((p) => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))}
       </p>}
       <PlayerRankGauge kind={kind} info={info}/>
+      {next && <p data-player-rank-gain-next className="text-[10px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`次は ${next}`)}</p>}
       {up && <PlayerRankUp kind={kind} from={award.from} to={award.to} gains={award.gains || []}/>}
     </section>
   );

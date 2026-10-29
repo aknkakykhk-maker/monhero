@@ -2339,6 +2339,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
             <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
+            {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない) */}
+            {Number.isFinite(ms.beatRankXp) && <div className="mt-0.5"><PlayerRankStrip kind="beat" xp={ms.beatRankXp}/></div>}
           </div>
           {quickRunInfo && <RhythmQuickRunPill info={quickRunInfo} onRestart={onRestartQuickRun} onResume={onResumeQuickRun} widthClass="max-w-[42%]" />}
           <RhythmOrientationButton/>
@@ -2349,10 +2351,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${ms.showArt && ms.assistant ? '' : 'portrait:justify-center'}`}>
           <ModeSelectAssistantPanel assistant={ms.assistant} showArt={ms.showArt} showComment={ms.showComment} onToggle={ms.onToggleAssistant} />
           <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
-            {/* ビートランク(2026-10-29 社長): 今のランクと次までの棒。曲を遊ぶとたまり、上がるたびにセッション券(下のひとこと) */}
-            {Number.isFinite(ms.beatRankXp) && <PlayerRankPanel kind="beat" xp={ms.beatRankXp}
-              note={`ランク${beatRankNextBeatPointsRank(playerRankInfo(ms.beatRankXp).rank)}で ビートP ${BEAT_RANK_BEAT_POINTS}`}
-              sub="曲を遊ぶとたまります。ランクが上がるたびにセッション券を1枚もらえます。"/>}
             {!(ms.assistant && (ms.showArt || ms.showComment)) && assistToggles('justify-end', true)}
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
