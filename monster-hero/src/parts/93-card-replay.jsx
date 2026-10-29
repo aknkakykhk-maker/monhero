@@ -404,7 +404,7 @@ const CardReplayList = ({ onOpen, onBack }) => {
       <div className={`${SCREEN_LIST_CLASS} space-y-1.5 pb-4`}>
         {note && <p data-card-replay-note className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{note}</p>}
         {!box && <div className="py-6 text-center text-[13px] font-bold text-slate-400">読み込み中…</div>}
-        {box && !box.list.length && <div data-card-replay-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだありません。助手と対戦かマルチ対戦を遊ぶと、ここに残ります')}</div>}
+        {box && !box.list.length && <div data-card-replay-empty className="py-6 text-center text-[13px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('まだありません。フリー対戦かマルチ対戦を遊ぶと、ここに残ります')}</div>}
         {box && box.list.map((r) => {
           const a = r.kind === 'cpu' && r.foe.who ? assistants.find((x) => x.id === r.foe.who) : null;
           const res = CARD_REPLAY_OUTCOME[r.outcome] || '';
@@ -419,7 +419,7 @@ const CardReplayList = ({ onOpen, onBack }) => {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
                     <b className="truncate text-[13px] font-black text-white">{r.foe.name}</b>
-                    <small className={`shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`}>{r.kind === 'pvp' ? 'マルチ' : '助手と対戦'}</small>
+                    <small className={`shrink-0 rounded-md px-1 text-[10px] font-black ${r.kind === 'pvp' ? 'bg-sky-500/25 text-sky-100' : 'bg-amber-500/20 text-amber-100'}`}>{r.kind === 'pvp' ? 'マルチ' : 'フリー対戦'}</small>
                   </span>
                   <span className="block text-[11px] font-bold text-slate-400">{cardReplayWhen(r.at)}{r.turn !== null ? `・${r.turn}番まで` : `・${r.acts.length}手`}</span>
                 </span>

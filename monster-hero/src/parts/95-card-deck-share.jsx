@@ -24,7 +24,7 @@ const CARD_SHARE_ACES_MAX = 3;
 let _cardShareUnavailable = false; // 表がまだ無い(SQL 未適用)と分かったら、その回は読みに行かない
 
 // 公開の印。区切り⑤(報酬)まで入るまでは、デバッグ設定から入ったときだけ押せる
-const cardShareOpen = () => false;
+const cardShareOpen = () => true;
 
 // 戦い方をきれいにする(知らない項目は捨てる・無い人は既定で補う)。deck を渡すと、切り札はそのデッキに入っている札だけ残す
 const cardShareNormalizeTactics = (v, deck = null) => {
@@ -221,7 +221,7 @@ const cardRentedDeckSet = async (entry) => {
 //   title・headExtra … part='fight' のときの見出しと、見出しの下に出すもの(84 の「助手/ほかのブリーダー」のタブ)
 //   embedded … 外の画面(97 のデッキ登録)の中に入れる。殻と見出しを出さず、登録のボタンは中に置く
 //   借りるのは対戦前のデッキを選ぶ画面(87)へ移したので、part='fight' では「借りる」を出さない
-const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'みんなのデッキ', headExtra = null, embedded = false }) => {
+const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null, onOpenTactics = null, part = 'all', title = 'デッキ登録', headExtra = null, embedded = false }) => {
   const [tab, setTab] = useState(part === 'mine' ? 'mine' : onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
   // 戦術カード(96・97): 登録するときに載せる枠(レベルで開いている枠・持っているカードだけ)
@@ -233,7 +233,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   const rent = async (e) => {
     if (busy) return;
     setBusy(true); setMsg('');
-    if (await cardRentedDeckSet(e)) { setRented(await cardRentedDeckGet()); setMsg(`${e.name}さんのデッキを借りました。助手と対戦のデッキ選びで使えます`); }
+    if (await cardRentedDeckSet(e)) { setRented(await cardRentedDeckGet()); setMsg(`${e.name}さんのデッキを借りました。フリー対戦のデッキ選びで使えます`); }
     else setMsg('この端末に保存できなかったため、借りられませんでした');
     setBusy(false);
   };
@@ -350,7 +350,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           </div>
           {rented && part !== 'fight' && (
             <div data-card-share-rented className={`${SCREEN_PANEL_CLASS} flex items-center gap-2`}>
-              <span className="min-w-0 flex-1 text-[12px] font-bold text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(助手と対戦のデッキ選びで使えます。マルチ対戦では使えません)`)}</span>
+              <span className="min-w-0 flex-1 text-[12px] font-bold text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(フリー対戦のデッキ選びで使えます。マルチ対戦では使えません)`)}</span>
               <button type="button" data-card-share-giveback disabled={busy} className="shrink-0 rounded-lg border border-white/15 bg-slate-900 px-2 py-1 text-[11px] font-black text-slate-200 disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); void giveBack(); }}>返す</button>
             </div>
           )}

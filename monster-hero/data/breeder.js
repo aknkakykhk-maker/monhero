@@ -1114,8 +1114,8 @@ const muaCardMasterCostume = Object.freeze({
   price: Object.freeze({ diamond: 100000 }),
   unlock: Object.freeze({ cardFoe: 'mua', cardLevel: 'master' }),
   // 解放する前の案内(遊ぶ人向けの文)。unlockHow … プロフィールの着替えで押したとき / lockLabel … マーケットの鍵つきの札(行ごと)
-  unlockHow: 'MFバトルカードの「助手と対戦」で、みゅあの MASTER に勝つと買えます',
-  lockLabel: Object.freeze(['MFバトルカードの', '「助手と対戦」で', 'みゅあの MASTER に', '勝つと買えます']),
+  unlockHow: 'MFバトルカードの「フリー対戦」で、みゅあの MASTER に勝つと買えます',
+  lockLabel: Object.freeze(['MFバトルカードの', '「フリー対戦」で', 'みゅあの MASTER に', '勝つと買えます']),
 });
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),

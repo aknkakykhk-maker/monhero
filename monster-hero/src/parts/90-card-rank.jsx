@@ -344,7 +344,7 @@ const CardBattleStatsPanel = ({ stats, who = 'self' }) => {
   return (
     <section data-card-stats={who} className={`${SCREEN_PANEL_FLAT_CLASS} mb-3`}>
       <b className="block text-[12px] font-black text-amber-100">MFバトルカードの戦績</b>
-      <small className="mb-2 block text-[9px] font-bold text-slate-400">助手と対戦の、強さごとの勝ち数</small>
+      <small className="mb-2 block text-[9px] font-bold text-slate-400">フリー対戦の、強さごとの勝ち数</small>
       <div className="grid grid-cols-5 gap-1 text-center">
         {CARD_LEVEL_ORDER.map((lv) => (
           <div key={lv} data-card-stats-level={lv} className={cell}>
@@ -489,7 +489,7 @@ const CardRankingBoard = ({ onBack, renderBreederIcon = null, selfName = '', rec
         <div className="mb-1.5 shrink-0 space-y-1.5">
           <div className="flex gap-1.5">
             {[['week', '今週'], ['total', '通算']].map(([id, label]) => <button key={id} type="button" data-card-ranking-period={id} onClick={() => setPeriod(id)} className={chip(period === id)}>{label}</button>)}
-            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : '助手と対戦で勝った数'}</small>
+            <small className="ml-auto self-center text-[10px] font-bold text-slate-400">{period === 'week' ? '月曜 5:00 から' : 'フリー対戦で勝った数'}</small>
           </div>
           {/* 5つを等分に並べる(横にすべらせる形だと、320幅で MASTER が画面の外・375幅で「MASTEF」と切れていた。2026-10-26 見回り #5) */}
           <div className="grid grid-cols-5 gap-1">
@@ -753,7 +753,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
           </button>
         )}
         <div className={`${SCREEN_PANEL_CLASS} grid grid-cols-2 gap-1.5 text-center`}>
-          {cell('助手と対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu')}
+          {cell('フリー対戦', `${rec.cpu.win}勝 ${rec.cpu.lose + rec.cpu.surrender}敗`, '', 'side-cpu')}
           {cell('マルチ対戦', `${rec.pvp.win}勝 ${rec.pvp.lose}敗`, '', 'side-pvp')}
           {cell('いまの連勝', r.streak.now, '連勝', 'side-now')}
           {cell('最高の連勝', r.streak.best, '連勝', 'side-best')}
@@ -770,7 +770,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
           )}
           {/* 投了は負けに数える(カゲあつくんの確認)。保存の形(cpu.lose と cpu.surrender を別に持つ)はそのまま、見せるときに足す */}
           <div className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">助手と対戦</div>
+            <div className="text-[12px] font-bold text-slate-400">フリー対戦</div>
             <div data-card-record className="text-[16px] font-black text-white">{rec.cpu.win}勝 {rec.cpu.lose + rec.cpu.surrender}敗{rec.cpu.surrender ? `(うち投了${rec.cpu.surrender})` : ''}</div>
             <table data-card-record-levels className="mt-2 w-full text-[12px] font-bold">
               <thead><tr className="text-slate-400"><th className="py-1 text-left font-bold">難易度</th><th className="py-1 text-right font-bold">勝ち</th><th className="py-1 text-right font-bold">負け</th></tr></thead>
@@ -780,7 +780,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             {CARD_LEVEL_ORDER.reduce((a, lv) => a + rec.byLevel.win[lv] + rec.byLevel.lose[lv], 0) !== rec.cpu.win + rec.cpu.lose + rec.cpu.surrender && <p data-card-record-levels-note className={small} style={JA_LABEL_STYLE}>{jaWrap('難易度別の数は、この表ができてからのぶんです')}</p>}
           </div>
           <div data-card-record-wins className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">勝ち方(助手と対戦)</div>
+            <div className="text-[12px] font-bold text-slate-400">勝ち方(フリー対戦)</div>
             <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
               {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, '番')}
               {cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? '番目' : '')}
@@ -789,7 +789,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「番」は自分の番の数です。この記録ができてからのぶんです')}</p>
           </div>
           <div data-card-record-often className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">よく使う(助手と対戦)</div>
+            <div className="text-[12px] font-bold text-slate-400">よく使う(フリー対戦)</div>
             {row('デッキ', deckTop ? `${deckTop[1].name || 'デッキ'}(${deckTop[1].n}戦)` : 'まだありません', 'deck')}
             {row('モンスター', monTop.length ? monTop.map(([no, n]) => `${nameOf(no)}(${n}戦)`).join('・') : 'まだありません', 'mon')}
             {row('技', moveTop.length ? moveTop.map(([no, n]) => `${nameOf(no)}(${n}回)`).join('・') : 'まだありません', 'move')}
@@ -802,7 +802,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
               {cell('いまの連勝', r.streak.now, '連勝')}
               {cell('最高の連勝', r.streak.best, '連勝')}
             </div>
-            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、助手と対戦の勝ちと連勝です')}</p>
+            <p className={small} style={JA_WRAP_STYLE}>{jaWrap('ランキングに数えるのは、フリー対戦の勝ちと連勝です')}</p>
           </div>
           <div data-card-record-other className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">ほか</div>

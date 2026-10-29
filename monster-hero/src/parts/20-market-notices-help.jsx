@@ -704,7 +704,7 @@ const helpDataRows = (id) => {
       const label = (lv) => (typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase();
       // 負けは勝ちの 3/4(82 の cardLosePoint。2026-10-26)
       const lose = (lv) => (typeof cardLosePoint === 'function' ? cardLosePoint(CARD_AI_LEVELS[lv]) : 0);
-      const rows = CARD_LEVEL_ORDER.map(lv => [`助手と対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
+      const rows = CARD_LEVEL_ORDER.map(lv => [`フリー対戦 ${label(lv)}`, `勝ち ${CARD_AI_LEVELS[lv].point} ／ 負け ${lose(lv)}`]);
       if (typeof CARD_PVP_REWARD !== 'undefined') { const x = CARD_PVP_REWARD.x || 1; rows.push(['マルチ対戦', `勝ち ${CARD_PVP_REWARD.win.point * x} ／ 負け ${CARD_PVP_REWARD.lose.point * x}`]); } // x … マルチだけの倍率(2026-10-27 社長 2倍)
       return rows;
     }
