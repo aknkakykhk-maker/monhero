@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a09ce8667f6605b5
+// source-sha256: ffb49b6a11070a70
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -15425,8 +15425,8 @@ const ETERNAL_SETTING = Object.freeze({
   unlockRequirement: 'HELHEIM',
   rankingId: 'ExtremeETERNAL',
   recordId: 'ETERNAL',
-  description: '冥府の上に、敵が殻をまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。',
-  cardDescription: 'WAVEの始めに敵が最大ライフ50%の殻をまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。',
+  description: '冥府の上に、敵がシールドをまとい、攻撃の一部が丈夫さを貫いてくる。戦いは長く続き、ターンとともに重くなる、極限チャレンジの最奥の難易度。',
+  cardDescription: 'WAVEの始めに敵が最大ライフ50%のシールドをまとい、攻撃の30〜50%が丈夫さを貫く。冥府・ボス復活・敵ライフ10倍はヘルヘイムのまま。',
   specialRules: Object.freeze({
     assistCardEffect: 0.30,
     positiveModifier: 0.30,
@@ -15895,7 +15895,7 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
     push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
-    if (difficultyId === ETERNAL_SETTING.id) push('殻と貫き', [['殻', 'WAVEの始めに、敵が最大ライフ50%ぶんの殻をまとう。殻を割るまで敵のライフは減らない'], ['殻と距離強化', '殻に当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
+    if (difficultyId === ETERNAL_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
@@ -96023,6 +96023,44 @@ const CardBattleBoard = ({
   const setChosen = sel && sets.length ? sel.set && sets.includes(sel.set) ? sel.set : sets.includes(setAlone) ? setAlone : sets.length === 1 ? sets[0] : null : null;
   const setPending = !!(sel && monChosen !== undefined && sets.length > 1 && !setChosen);
   const finalOpts = byMon.filter(o => JSON.stringify(o.hand) === setChosen);
+  const comboOpen = mode === 'attack' && !tutorial && !replay && !!sel && monChosen !== undefined && sets.length > 1 && !sel.set;
+  const comboPreview = s0 => {
+    const os = byMon.filter(o => JSON.stringify(o.hand) === s0).slice(0, 6);
+    const cards = JSON.parse(s0).map(i => cardOf(db, me.hand[i]));
+    const main = cards.find(c => c && !cardHasEff(c, 'attach') && cardIsAttackKind(c.kind)) || cards[0];
+    const dmgs = [];
+    let guts = null;
+    os.forEach(o => {
+      const nx = cardApplyAction(db, st, o);
+      if (!nx) return;
+      if (guts === null) guts = me.guts.length - nx.players[CARD_ME].guts.length;
+      const pv = nx.pending ? cardGuardPreview(db, nx) : null;
+      const hit = (nx.events || []).filter(e => e.t === 'hit' && e.p !== CARD_ME).map(e => e.dmg);
+      const d = pv ? pv.before : hit.length ? Math.max(...hit) : null;
+      if (Number.isFinite(d)) dmgs.push(d);
+    });
+    const lo = dmgs.length ? Math.min(...dmgs) : null;
+    const hi = dmgs.length ? Math.max(...dmgs) : null;
+    const dmg = lo === null ? '' : `${main && cardHasEff(main, 'area') ? '全体に' : ''}${lo === hi ? lo : `${lo}〜${hi}`}`;
+    return {
+      dmg,
+      guts: guts === null ? null : Math.max(0, guts)
+    };
+  };
+  const chosenPv = mode === 'attack' && setChosen && sets.length > 1 && !tutorial ? comboPreview(setChosen) : null;
+  const pickCombo = s0 => {
+    Audio_.fgSe.tap();
+    const drop = sel && sel.drop;
+    setSel({
+      ...sel,
+      mon: monChosen,
+      set: s0,
+      drop: undefined
+    });
+    if (!drop) return;
+    const o = byMon.find(x => JSON.stringify(x.hand) === s0 && (!x.target || `${x.target.p}-${x.target.m}` === drop));
+    if (o) dropUse(o, true);
+  };
   const needTarget = finalOpts.some(o => o.target);
   const [confirm, setConfirm] = useState(null);
   const [bindAsk, setBindAsk] = useState(null);
@@ -96174,7 +96212,7 @@ const CardBattleBoard = ({
     const os = attackOpts.filter(o => o.hand.includes(i));
     const c = cardOf(db, me.hand[i]);
     if (!os.length) {
-      setHint(!c ? '' : cardIsGuardKind(c.kind) ? '回避・防御は、相手に攻撃されたときに使います' : !c.ready ? 'このカードは準備中です' : c.guts > me.guts.length ? `ガッツが足りません(あと${c.guts - me.guts.length})` : 'いまは使えません(使える子がいない・もう攻撃した など)');
+      setHint(attackWhyShort(i) || '');
       setSel(null);
       return;
     }
@@ -96182,6 +96220,17 @@ const CardBattleBoard = ({
       hand: i
     });
     setHint('');
+  };
+  const attackWhyShort = i => {
+    const c = cardOf(db, me.hand[i]);
+    if (!c || attackOpts.some(o => o.hand.includes(i))) return null;
+    if (!c.ready) return '準備中';
+    if (cardIsGuardKind(c.kind)) return '守りの番に使う';
+    if (c.user !== 'any' && c.user !== 'breeder' && !me.mons.some(m => !m.ko && cardUsableBy(c, m))) return cardUserLabel(db, c);
+    if (c.guts > me.guts.length) return `ガッツ不足(あと${c.guts - me.guts.length})`;
+    if (cardHasEff(c, 'attach')) return '付ける技がない';
+    if (cardHasEff(c, 'requires')) return 'いっしょに出す札がない';
+    return '今は使えない';
   };
   const tapMon = (p, m) => {
     if (mode === 'guard' && sel) {
@@ -96228,6 +96277,10 @@ const CardBattleBoard = ({
     if (attackOpts.some(x => mo(x) === mo(o) && x.hand.length === 1 && x.hand[0] === i)) return true;
     return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size <= 1;
   };
+  const cardDropNameSets = (o, i) => {
+    const mo = x => x.mon === undefined ? -1 : x.mon;
+    return new Set(attackOpts.filter(x => mo(x) === mo(o) && x.hand.includes(i)).map(x => cardHandNameKey(me.hand, x.hand))).size;
+  };
   const dropTargetsOf = i => {
     const out = {};
     if (mode === 'attack') {
@@ -96236,9 +96289,20 @@ const CardBattleBoard = ({
       os.forEach(o => {
         const keys = o.target ? [`${o.target.p}-${o.target.m}`] : [...opp.mons.map((x, m) => x.ko ? null : `${CARD_CPU}-${m}`).filter(Boolean), ...(o.mon >= 0 ? [`${CARD_ME}-${o.mon}`] : [])];
         const alone = x => !chosen && x.hand.length === 1 && x.hand[0] === i;
+        if (!chosen && !tutorial && !cardDropComboOk(o, i) && cardDropNameSets(o, i) > 1) {
+          keys.forEach(k => {
+            if (!out[k]) out[k] = {
+              ask: true,
+              hand: [i],
+              mon: o.mon,
+              key: k
+            };
+          });
+          return;
+        }
         if (!chosen && !alone(o) && !cardDropComboOk(o, i)) return;
         keys.forEach(k => {
-          if (!out[k] || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
+          if (!out[k] || out[k].ask || !alone(out[k]) && (alone(o) || o.hand.length > out[k].hand.length)) out[k] = o;
         });
       });
     }
@@ -96287,10 +96351,29 @@ const CardBattleBoard = ({
     };
     tapHand(i);
   };
-  const dropUse = t => {
+  const dropUse = (t, picked) => {
     const monKey = o => o.mon === undefined ? -1 : o.mon;
+    if (t.ask) {
+      const us = [...new Set(attackOpts.filter(o => o.hand.includes(t.hand[0])).map(monKey))];
+      if (us.length > 1) {
+        setSel({
+          hand: t.hand[0]
+        });
+        setHint('使う子をタップしてください');
+        return;
+      }
+      setSel({
+        hand: t.hand[0],
+        ...(t.mon !== undefined ? {
+          mon: t.mon
+        } : {}),
+        drop: t.key
+      });
+      setHint('');
+      return;
+    }
     const users = [...new Set(attackOpts.filter(o => o.hand[0] === t.hand[0]).map(monKey))];
-    if (users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
+    if (!picked && users.length > 1 && !(sel && t.hand.includes(sel.hand) && monChosen !== undefined)) {
       setSel({
         hand: t.hand[0]
       });
@@ -96669,7 +96752,23 @@ const CardBattleBoard = ({
       type: "button",
       className: `${btn} mh-button-primary`,
       onClick: () => askUse(finalOpts[0])
-    }, "使う") : null, React.createElement("button", {
+    }, chosenPv && (chosenPv.dmg || chosenPv.guts !== null) ? React.createElement("span", {
+      "data-card-use-pv": true,
+      className: "block leading-tight"
+    }, "使う", React.createElement("span", {
+      className: "block text-[11px] font-bold text-amber-100"
+    }, [chosenPv.dmg, chosenPv.guts !== null ? `ガッツ${chosenPv.guts}` : ''].filter(Boolean).join('・'))) : '使う') : null, chosenPv && sel && sel.set ? React.createElement("button", {
+      type: "button",
+      "data-card-combo-change": true,
+      className: `${btn} border border-white/20 bg-slate-800`,
+      onClick: () => {
+        Audio_.fgSe.tap();
+        setSel({
+          hand: sel.hand,
+          mon: monChosen
+        });
+      }
+    }, "組を変える") : React.createElement("button", {
       type: "button",
       disabled: tutOff('end'),
       className: `${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`,
@@ -97091,7 +97190,7 @@ const CardBattleBoard = ({
   }, cardGuardBlockReasons(db, st).join(' / ')), !guide && !tutorial && hint && React.createElement("div", {
     className: "mx-auto mb-1 shrink-0 rounded-lg bg-amber-300 px-2 py-0.5 text-[11px] font-black text-slate-900",
     style: JA_LABEL_STYLE
-  }, jaWrap(hint)), mode === 'attack' && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
+  }, jaWrap(hint)), mode === 'attack' && (tutorial || replay) && sel && monChosen !== undefined && sets.length > 1 && React.createElement("div", {
     className: "mb-1 flex shrink-0 flex-wrap justify-center gap-1 px-2"
   }, sets.slice().reverse().map(s => React.createElement("button", {
     key: s,
@@ -97127,7 +97226,7 @@ const CardBattleBoard = ({
     const c = cardOf(db, no);
     const on = handUsable(i);
     const up = sel && sel.hand === i || picks.includes(i) || setChosen && JSON.parse(setChosen).includes(i);
-    const why = mode === 'guard' && !tutorial && !on ? cardGuardWhyShort(db, st, c) : null;
+    const why = tutorial || on ? null : mode === 'guard' ? cardGuardWhyShort(db, st, c) : mode === 'attack' && myTurn && !sel ? (w => w === '今は使えない' ? null : w)(attackWhyShort(i)) : null;
     return React.createElement("div", {
       key: `${no}-${i}`,
       "data-card-hand-card": i,
@@ -97600,7 +97699,51 @@ const CardBattleBoard = ({
     className: "block text-[14px] font-black text-white"
   }, c ? c.name : 'カード'), c && React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-300"
-  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), guardAsk && React.createElement("div", {
+  }, `ガッツ${c.guts}${c.damage !== null && c.damage !== undefined ? `・ダメージ${c.damage}` : ''}`))))))), comboOpen && React.createElement("div", {
+    "data-card-combo-sheet": true,
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
+    onClick: () => {
+      setSel(null);
+      setHint('');
+    }
+  }, React.createElement("div", {
+    className: "max-h-[80vh] w-full max-w-[340px] overflow-y-auto rounded-2xl border-2 border-sky-300 bg-slate-900 p-3 text-center shadow-[0_8px_24px_#000]",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "text-[14px] font-black text-white"
+  }, "どの組み合わせで出す？"), sets.slice().reverse().map(s0 => {
+    const idx = JSON.parse(s0);
+    const add = idx.filter(i => i !== sel.hand);
+    const pv = comboPreview(s0);
+    const title = add.length ? add.map(i => `＋${(cardOf(db, me.hand[i]) || {}).name || ''}`).join('') : `「${(cardOf(db, me.hand[sel.hand]) || {}).name || ''}」だけ`;
+    return React.createElement("button", {
+      key: s0,
+      type: "button",
+      "data-card-set": s0,
+      onClick: () => pickCombo(s0),
+      className: "mt-2 flex w-full items-center gap-2 rounded-xl border-2 border-white/25 bg-slate-800 p-1.5 text-left active:scale-[.98]"
+    }, React.createElement("span", {
+      className: "flex shrink-0 pl-1.5"
+    }, idx.map(i => {
+      const c = cardOf(db, me.hand[i]);
+      return React.createElement("img", {
+        key: i,
+        src: CARD_IMG(c ? c.img : me.hand[i]),
+        alt: "",
+        className: "-ml-1.5 w-[30px] rounded-[3px] shadow-[0_1px_3px_#000]"
+      });
+    })), React.createElement("span", {
+      className: "min-w-0 flex-1 leading-snug"
+    }, React.createElement("span", {
+      className: "block text-[13px] font-black text-white",
+      style: JA_WRAP_STYLE
+    }, title), React.createElement("span", {
+      "data-card-combo-pv": true,
+      className: "block text-[12px] font-bold text-amber-200"
+    }, [pv.dmg ? `${pv.dmg}ダメージ` : '', pv.guts !== null ? `ガッツ${pv.guts}` : ''].filter(Boolean).join(' / '))));
+  }), React.createElement("div", {
+    className: "mt-2 text-[11px] font-bold text-slate-300"
+  }, "窓の外を押すとやめる"))), guardAsk && React.createElement("div", {
     "data-card-guard-ask": true,
     className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4",
     onClick: () => setGuardAsk(null)
@@ -123810,7 +123953,7 @@ function MonsterHeroGame() {
       short
     });
     if (!enemy) return list;
-    if (Number(enemy.shell) > 0) add('shell', '🛡️', '殻', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。殻を削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
+    if (Number(enemy.shell) > 0) add('shell', '🛡️', 'シールド', `${Math.floor(enemy.shell).toLocaleString()}`, 'text-pink-200 border-pink-400/60', 'ライフより先に削れる。シールドを削ったぶんは距離強化の加点に入らない', `${Math.floor(enemy.shell).toLocaleString()}`);
     if (iceLockTurns > 0) add('ice', '❄️', '絶氷の楔', iceLockPreparing ? '準備' : `残り${iceLockTurns}T`, 'text-cyan-200 border-cyan-400/60', iceLockPreparing ? '次のターンから、敵は間合いを動けず、与えるダメージが30%下がる' : '敵は間合いを動けず、与えるダメージが30%下がる', iceLockPreparing ? '準備' : `${iceLockTurns}T`);
     if (enemyConfuseTurns > 0) add('confuse', '🌀', '乱心', `残り${enemyConfuseTurns}T`, 'text-violet-200 border-violet-400/60', '毎ターン50%で、敵は意味不明になって動けない', `${enemyConfuseTurns}T`);
     const psycho = isTacticsMode(runMode) ? tacticsExPsychoLockOf(tacticsExState, {
