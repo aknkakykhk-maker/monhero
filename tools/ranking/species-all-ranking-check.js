@@ -63,7 +63,7 @@ check('キーまわりの関数を実装から取り出せる',
 
 const lineages = x.speciesChallengeLineages();
 const DIFFS = x.SPECIES_CHALLENGE_DIFFICULTY_IDS;
-check('血統と難易度を読めている', lineages.length > 0 && DIFFS.length === 17,
+check('血統と難易度を読めている', lineages.length > 0 && DIFFS.length === 18,
   `${lineages.length}血統 / ${DIFFS.length}難易度`);
 // 'all' が実在の血統idと衝突していないこと。ここが崩れると全種族と個別種族を取り違える
 check("血統idに 'all' が存在しない(合成キーと衝突しない)",

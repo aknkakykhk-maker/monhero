@@ -38,12 +38,12 @@ check('IDと動的キー',h.recordId==='HELHEIM'&&h.rankingId==='ExtremeHELHEIM'
 check('RAGNAROKクリアで解放',!G('isHelheimUnlocked')(0)&&G('isHelheimUnlocked')(1)&&!G('isHelheimUnlocked')(undefined));
 check('ランキングキーへ追加され既存キーを崩さない',(()=>{const keys=G('RANKING_DIFFICULTY_KEYS');
   return keys.includes('ExtremeHELHEIM')&&keys.includes('ExtremeRAGNAROK')&&keys.includes('ExtremeGOD')&&new Set(keys).size===keys.length;})());
-check('難易度一覧の末尾に並ぶ',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-3).join()==='GOD,RAGNAROK,HELHEIM');
+check('難易度一覧の末尾に並ぶ',G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id).slice(-4).join()==='GOD,RAGNAROK,HELHEIM,ETERNAL');
 
 // 種族チャレンジは極限チャレンジと同じ難易度まで出す。GOD以降のIDは本体で手書きしているので、ずれていないか見る
-check('種族チャレンジの難易度が極限の全難易度(HELHEIMまで)と一致する',
+check('種族チャレンジの難易度が極限の全難易度(ETERNALまで)と一致する',
   JSON.stringify(G('SPECIES_CHALLENGE_DIFFICULTY_IDS'))===JSON.stringify([...Object.keys(G('DIFFICULTY_SETTINGS')),...G('ALL_EXTREME_DIFFICULTIES').map(x=>x.id)])
-  &&G('SPECIES_CHALLENGE_DIFFICULTY_IDS').slice(-3).join()==='GOD,RAGNAROK,HELHEIM');
+  &&G('SPECIES_CHALLENGE_DIFFICULTY_IDS').slice(-4).join()==='GOD,RAGNAROK,HELHEIM,ETERNAL');
 check('種族チャレンジの初回クリア報酬(超越の実)',[['INFINITY',40],['GOD',60],['RAGNAROK',80],['HELHEIM',100],['Beginner',1]].every(([id,n])=>G('speciesChallengeFirstClearReward')(id)===n));
 check('種族チャレンジはRAGNAROKを先にクリアするとHELHEIMが開く',(()=>{const f=G('isSpeciesChallengeDifficultyUnlocked');return !f('HELHEIM',['GOD'])&&f('HELHEIM',['RAGNAROK'])&&f('GOD',['INFINITY']);})());
 
@@ -103,12 +103,12 @@ check('敵生成のあとで上乗せを1か所で掛ける',source.includes('co
 check('実効最大ライフへ冥府の率を掛ける(表示用・ターン中の両方)',source.includes('const allyMaxHpRate = extremeAllyMaxHpRate(specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty), wave);')
   &&source.includes("applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), allyMaxHpRate)")
   &&source.includes("applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct')), allyMaxHpRateRef.current)"));
-check('通常UIへ公開しRAGNAROKクリアで解放',source.includes("setting.id==='HELHEIM'?helheimUnlocked:false")&&source.includes("'RAGNAROKクリアで解放'")
+check('通常UIへ公開しRAGNAROKクリアで解放',source.includes("setting.id==='HELHEIM'?helheimUnlocked:")&&source.includes("'RAGNAROKクリアで解放'")
   &&source.includes('const helheimUnlocked = useMemo(() => isHelheimUnlocked(ragnarokClearCount), [ragnarokClearCount]);'));
 check('クイックにHELHEIMを入れない',G('QUICK_EXTREME_SETTINGS').HELHEIM===undefined);
 check('既存難易度の値を動かしていない',G('RAGNAROK_SETTING').power===200&&G('GOD_SETTING').power===100
   &&near(G('ragnarokTwilightRules')(9).enemyMultiplier,2.0)&&G('ragnarokTwilightRules')(1).distanceEnhancement===0.35);
-check('勇者の証はHELHEIMで3個',/extreme:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3 \}\)/.test(source));
+check('勇者の証はHELHEIMで3個',/extreme:Object\.freeze\(\{ GOD:1, RAGNAROK:2, HELHEIM:3, ETERNAL:4 \}\)/.test(source));
 check('ヘルプにHELHEIMの案内がある',help.includes('HELHEIM専用ルール「冥府」')&&help.includes('HELHEIMの記録と報酬'));
 check('更新履歴にHELHEIM追加が載っている',changelog.includes("update_notice_helheim_v1"));
 process.exit(failed?1:0);

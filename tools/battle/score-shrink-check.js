@@ -85,7 +85,10 @@ const initial = () => ({
 const difficulties = read('monster-hero/src/parts/19-difficulties-and-rules.jsx');
 const normalBlock = difficulties.slice(difficulties.indexOf('const DIFFICULTY_SETTINGS = {'), difficulties.indexOf('};', difficulties.indexOf('const DIFFICULTY_SETTINGS = {')));
 const codeNormal = [...normalBlock.matchAll(/^  (\w+):\s+\{ label:/gm)].map(m => m[1]);
-const codeExtreme = [...difficulties.matchAll(/\bid:'([A-Z]+)', label:'\1'/g)].map(m => m[1]).filter((v, i, arr) => arr.indexOf(v) === i);
+// 縮める移行(2026-10-03・一度きり)のあとに足した極限難易度。はじめから新しい桁で記録されるので、縮める SQL へは入れない
+const EXTREME_ADDED_AFTER_SHRINK = ['ETERNAL'];
+const codeExtreme = [...difficulties.matchAll(/\bid:'([A-Z]+)', label:'\1'/g)].map(m => m[1]).filter((v, i, arr) => arr.indexOf(v) === i)
+  .filter(id => !EXTREME_ADDED_AFTER_SHRINK.includes(id));
 const sqlFiles = ['SCORE_SHRINK_AUDIT.sql', 'SCORE_SHRINK_APPLY.sql', 'SCORE_SHRINK_APPLY_TEST.sql', 'SCORE_SHRINK_VERIFY.sql'];
 check('コードの難易度を読み取れている(通常9・極限8以上)', codeNormal.length === 9 && codeExtreme.length >= 8,
   `通常 ${codeNormal.join(',')} / 極限 ${codeExtreme.join(',')}`);

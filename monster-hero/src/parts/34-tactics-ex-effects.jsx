@@ -168,7 +168,7 @@ const CLASSIC_CHIP_VIEW = Object.freeze({
   costNext:     { icon: '⚡', turns: 'next', kind: 'debuff' }, costNow: { icon: '⚡', turns: 'now', kind: 'debuff' },
 });
 const CLASSIC_DEBUFF_VIEW = Object.freeze({
-  ice: 'wave', confuse: 'count', aquaPrison: 'count', aquaFreeze: 'count', aquaFinale: 'count', nightmare: 'count', psycho: 'count',
+  shell: 'wave', ice: 'wave', confuse: 'count', aquaPrison: 'count', aquaFreeze: 'count', aquaFinale: 'count', nightmare: 'count', psycho: 'count',
   fateAtkDown: 'count', fateTakenUp: 'count', stun: 'next', atkDown: 'wave', taken: 'wave', roar: 'wave',
 });
 // 札の key は「種類+枠」(trick0・sweetparty など)のことがあるので、表の種類へ戻す

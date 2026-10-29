@@ -454,12 +454,17 @@ const CARD_FOE_STYLES = Object.freeze({
   area: { label: '全体攻撃型', note: '全体攻撃で、まとめてダメージを与える' },
   finish: { label: 'とどめ型', note: '弱ったモンスターを、確実に倒しにくる' },
   balance: { label: 'バランス型', note: '場面に合わせて、まんべんなく戦う' },
+  flex: { label: '臨機応変型', note: '場を見て、とどめ・全体攻撃・守りを切り替える' },
+  mill: { label: '山札切れ型', note: '山札とガッツを削って、山札切れを狙う' },
 });
 // いちばん強い癖で型を決める。どの癖もほとんど同じ(いちばん強くても 1.2 まで)なら、バランス型
 const cardFoeStyle = (who) => {
   const h = CARD_AI_HABITS[who];
   if (!h) return null;
-  const [k, v] = Object.entries(h).sort((a, b) => b[1] - a[1])[0];
+  // 型が場で変わる子(あつ)・山札切れを狙う子(ソラシド)は、くせの重みでなく、その型を出す(2026-10-29 社長)
+  if (h.flex) return CARD_FOE_STYLES.flex;
+  if (h.mill) return CARD_FOE_STYLES.mill;
+  const [k, v] = Object.entries(h).filter((e) => typeof e[1] === 'number').sort((a, b) => b[1] - a[1])[0];
   return v <= 1.2 ? CARD_FOE_STYLES.balance : (CARD_FOE_STYLES[k] || CARD_FOE_STYLES.balance);
 };
 // 強さごとの組み方の説明(82 の CARD_AI_BUILD と同じ決め。数字は出さない)
