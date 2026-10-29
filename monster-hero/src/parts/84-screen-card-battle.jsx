@@ -2751,7 +2751,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
       const loops = cardCpuLoops(game.level, outcome, facts);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
-      const rankable = !!(rank && rank.send) && !debug;
+      //   借りたデッキ(みんなのデッキ・95)で戦った試合は数えない(人のデッキで勝ち数を伸ばせないように)
+      const rankable = !!(rank && rank.send) && !debug && !game.rented;
       const nextRecord = cardRecordAfter(fresh.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
       const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
       const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
@@ -2767,6 +2768,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
+      // 借りたデッキで戦った: 表へ「借りて使った」(試合の番号ごとに1回だけ数えられる。貸した人の次の日の報酬になる)
+      if (ok && game.rented && typeof cardShareReportUse === 'function') {
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string') void cardShareReportUse({ match: `rent-${game.key}-${Date.now().toString(36)}`, ownerId: game.rented.ownerId, userId: selfId, kind: 'rent', version: game.rented.version });
+      }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // 助手の服の解放(data/breeder.js。2026-10-27 社長「バトルカードでみゅあのマスターに勝つと解放」)。どの相手・難易度で解放するかは breeder.js が決める。
       // 勝ちの記録を保存できたあとに、別に保存する(こちらが書けなくても勝ちの記録は落とさない。次に開いたとき、
@@ -2816,8 +2822,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onBgm && onBgm(CARD_AI_BGM.mua); // 練習試合は、みゅあの曲(#3634 の前と同じ)
     onNavigate('CARD_BATTLE');
   };
-  const startBattle = (pick = foe, deck = activeDeck) => {
-    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+  // opts.rented … みんなのデッキ(95)で借りたデッキで戦う(デッキ選びの kind:'rent' の行)。借り物なので、持っているかは見ない
+  const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
+    const rented = opts && opts.rented ? opts.rented : null;
+    const issues = deck ? (rented ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
     if (!deck || issues.length) { setNotice(issues.join('・')); return; }
     const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
     // みんなのデッキ(95): 登録デッキがそのまま相手。打ち方は登録した戦い方(盤面の policy)・名前とアイコンは登録した人
@@ -2837,12 +2845,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}) });
+    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}),
+      ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: `${seed}`, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
     // 途中で閉じたときに投了として数えるための印(CARD_CPU_OPEN_KEY)。書けなかったら、終わりにも印を見ない
     //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
-    if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
+    if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug && !rented, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
     onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
     onNavigate('CARD_BATTLE');
@@ -2934,8 +2943,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const toPvp = deckPick.next === 'pvp';
     return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
-      onBack={() => { setDeckPick(null); setView(toPvp ? 'mode' : 'foe'); }}
+      onBack={() => { setDeckPick(null); setView(toPvp ? 'mode' : 'foe'); }} allowRented={!toPvp}
       onPick={async (c) => {
+        // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
+        if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
         const deck = save.decks.decks.find((d) => d.id === c.id);
         if (!deck) return;
         if (save.decks.active !== deck.id) {

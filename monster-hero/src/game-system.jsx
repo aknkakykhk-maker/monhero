@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 990c7df5ade5df91
+// generated-sha256: aa515b05e568e290
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59135,7 +59135,8 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       const reward = cardCpuReward(fresh.daily, game.level, outcome, facts);
       const loops = cardCpuLoops(game.level, outcome, facts);
       // ランキングに数えるのは、公開後に、デバッグでない人がふつうの入口から戦ったぶんだけ(rank.send。60-app が決める)
-      const rankable = !!(rank && rank.send) && !debug;
+      //   借りたデッキ(みんなのデッキ・95)で戦った試合は数えない(人のデッキで勝ち数を伸ばせないように)
+      const rankable = !!(rank && rank.send) && !debug && !game.rented;
       const nextRecord = cardRecordAfter(fresh.record, { who: game.who, level: game.level, outcome, at: Date.now(), rankable });
       const nextUnlocked = outcome === 'win' ? cardUnlockAfterWin(fresh.unlocked, game.level) : fresh.unlocked;
       const opened = CARD_LEVEL_ORDER.find((lv) => nextUnlocked[lv] && !fresh.unlocked[lv]) || null;
@@ -59151,6 +59152,11 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
         deck: usedDeck ? { id: usedDeck.id, name: usedDeck.name } : null, mons: usedMons, moves: cardRecordMovesOf(db, replayRec), today: cardTodayJst() }));
       const ok = await persist({ point: save.point + reward.total, daily: reward.daily, record: nextRecord, unlocked: nextUnlocked }, fresh.raw, detailEntry ? [...openExtra, detailEntry] : openExtra);
       if (ok && openExtra.length) { openIdRef.current = null; openRef.current = null; }
+      // 借りたデッキで戦った: 表へ「借りて使った」(試合の番号ごとに1回だけ数えられる。貸した人の次の日の報酬になる)
+      if (ok && game.rented && typeof cardShareReportUse === 'function') {
+        const selfId = typeof ensureBreederId === 'function' ? await ensureBreederId().catch(() => null) : null;
+        if (typeof selfId === 'string') void cardShareReportUse({ match: `rent-${game.key}-${Date.now().toString(36)}`, ownerId: game.rented.ownerId, userId: selfId, kind: 'rent', version: game.rented.version });
+      }
       if (ok && rankable) void cardRankSync(db, { record: nextRecord, collection: save.collection, profile: rank.profile });
       // 助手の服の解放(data/breeder.js。2026-10-27 社長「バトルカードでみゅあのマスターに勝つと解放」)。どの相手・難易度で解放するかは breeder.js が決める。
       // 勝ちの記録を保存できたあとに、別に保存する(こちらが書けなくても勝ちの記録は落とさない。次に開いたとき、
@@ -59200,8 +59206,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     onBgm && onBgm(CARD_AI_BGM.mua); // 練習試合は、みゅあの曲(#3634 の前と同じ)
     onNavigate('CARD_BATTLE');
   };
-  const startBattle = (pick = foe, deck = activeDeck) => {
-    const issues = deck ? [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)] : ['デッキがありません'];
+  // opts.rented … みんなのデッキ(95)で借りたデッキで戦う(デッキ選びの kind:'rent' の行)。借り物なので、持っているかは見ない
+  const startBattle = (pick = foe, deck = activeDeck, opts = {}) => {
+    const rented = opts && opts.rented ? opts.rented : null;
+    const issues = deck ? (rented ? cardDeckProblems(db, deck) : [...cardDeckProblems(db, deck), ...cardDeckOwnProblems(db, deck, save.collection)]) : ['デッキがありません'];
     if (!deck || issues.length) { setNotice(issues.join('・')); return; }
     const activeDeck = deck; // 下は選んだデッキで組む(デッキ選びで書き換えた active は、この描画ではまだ古いので受け取った物を使う)
     // みんなのデッキ(95): 登録デッキがそのまま相手。打ち方は登録した戦い方(盤面の policy)・名前とアイコンは登録した人
@@ -59221,12 +59229,13 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } } : { mode: 'assistant',
       foe: { who: pick.who, name: assistant ? assistant.name : 'あいて', line: (CARD_VS_LINES[pick.who] || {})[pick.level] || null, deckName: cardAssistantDeckName(db, cpuDeck, pick.who, pick.level), monsters: vsMons(st, CARD_CPU) },
       me: { name: myName, deckName: activeDeck.name || null, monsters: vsMons(st, CARD_ME) } };
-    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}) });
+    setGame({ key: `${seed}`, st, who: pick.who, level: pick.level, settings: save.settings, intro, cpuSameBlood: !!cpuDeck.sameBlood, ...(share ? { share } : {}),
+      ...(rented ? { rented: { ownerId: rented.ownerId, version: rented.version, name: rented.owner } } : {}) });
     const scene = typeof window !== 'undefined' && typeof window.__mhCardScene === 'function';
     cpuLogRef.current = scene ? null : { id: `${seed}`, seed, first, decks: [{ monsters: activeDeck.monsters, cards: activeDeck.cards }, cpuDeck], foeName: intro.foe.name, deckName: intro.foe.deckName || null, acts: [] };
     // 途中で閉じたときに投了として数えるための印(CARD_CPU_OPEN_KEY)。書けなかったら、終わりにも印を見ない
     //   みんなのデッキの対戦は数えない(途中で閉じても投了の記録は付かない・ビートPも入らない)
-    if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
+    if (!share) void writeCpuOpen({ id: `${seed}`, who: pick.who, level: pick.level, rankable: !!(rank && rank.send) && !debug && !rented, at: Date.now(), beat: Date.now(), facts: cardResultFacts(st, CARD_ME) }, true);
     // 対戦の BGM: オプションで曲を決めていればその曲、「おまかせ」なら相手の助手に合わせる
     onBgm && onBgm(cardCpuPlaylistOf(save.cpuPlaylist, pick.who)); // 並びは対戦を始めるたびにシャッフルし直す(60-app)
     onNavigate('CARD_BATTLE');
@@ -59318,8 +59327,10 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const toPvp = deckPick.next === 'pvp';
     return <CardDeckPick db={db} decks={save.decks} collection={save.collection}
       note={toPvp ? 'マルチ対戦で使うデッキを選んでください。選んだデッキは次の対戦でも使います' : '使うデッキを選んでください。選んだデッキは次の対戦でも使います'}
-      onBack={() => { setDeckPick(null); setView(toPvp ? 'mode' : 'foe'); }}
+      onBack={() => { setDeckPick(null); setView(toPvp ? 'mode' : 'foe'); }} allowRented={!toPvp}
       onPick={async (c) => {
+        // 借りたデッキ(みんなのデッキ・95): 自分のデッキの active は書き換えない
+        if (c.kind === 'rent') { const next = deckPick; setDeckPick(null); if (next.next !== 'pvp') startBattle(next.pick, c.deck, { rented: c }); return; }
         const deck = save.decks.decks.find((d) => d.id === c.id);
         if (!deck) return;
         if (save.decks.active !== deck.id) {
@@ -60834,13 +60845,28 @@ const CardShopStarters = ({ db, point, busy, starter, shop, collection = null, o
 //   選んだデッキは active を書き換えるだけ(保存の形は変えない。書くのは 84 の CardBattleScreen)。
 //   使えないデッキ(枚数が足りない・持っていないカードがある など)は、理由を出して選べないようにする。
 // 選べるデッキの一覧は cardDeckPickChoices の1か所で作る。借りたデッキ(レンタル)は、ここに kind の違う行を足せば並ぶ
-const cardDeckPickChoices = (db, decks, collection) => ((decks && decks.decks) || []).map((d) => ({
-  id: d.id, kind: 'own', name: d.name, monsters: d.monsters, count: d.cards.length,
-  why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})],
-}));
+// opts.rented … みんなのデッキ(95)で借りたデッキ(cardRentedDeckGet の形)。あれば末尾に1行。借り物なので、持っているかは見ない(マルチでは渡さない)
+const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
+  const own = ((decks && decks.decks) || []).map((d) => ({
+    id: d.id, kind: 'own', name: d.name, monsters: d.monsters, count: d.cards.length,
+    why: [...cardDeckProblems(db, d), ...cardDeckOwnProblems(db, d, collection || {})],
+  }));
+  const r = opts && opts.rented;
+  if (!r || !r.deck) return own;
+  return [...own, { id: 'rented', kind: 'rent', name: r.deckName || 'デッキ', owner: r.name, icon: r.icon || null, frame: r.frame || null,
+    monsters: r.deck.monsters, count: r.deck.cards.length, deck: r.deck, ownerId: r.ownerId, version: r.version, why: cardDeckProblems(db, r.deck) }];
+};
 
-const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack }) => {
-  const choices = cardDeckPickChoices(db, decks, collection);
+// allowRented … 借りたデッキも並べる(助手と対戦のとき。マルチでは並べない)
+const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false }) => {
+  const [rented, setRented] = useState(null);
+  useEffect(() => {
+    if (!allowRented || typeof cardRentedDeckGet !== 'function') return undefined;
+    let alive = true;
+    void cardRentedDeckGet().then((r) => { if (alive) setRented(r); });
+    return () => { alive = false; };
+  }, [allowRented]);
+  const choices = cardDeckPickChoices(db, decks, collection, { rented: allowRented ? rented : null });
   const usable = (c) => c && c.why.length === 0;
   const first = choices.find((c) => c.id === decks.active && usable(c)) || choices.find(usable) || null;
   const [sel, setSel] = useState(first ? first.id : null);
@@ -60866,6 +60892,7 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
               className={`${SCREEN_PANEL_CLASS} flex w-full items-center gap-2 text-left active:scale-[.99] ${on ? '!border-amber-300 ring-2 ring-amber-300/70' : ''} ${ok ? '' : 'opacity-60'}`}>
               <span className="flex shrink-0 gap-0.5">{[0, 1, 2].map((i) => { const m = cardMonsterOf(db, c.monsters[i]); return m ? <img key={i} src={CARD_IMG(m.img)} alt={m.name} className="h-[52px] w-[37px] rounded-[4px] object-cover"/> : <span key={i} className="block h-[52px] w-[37px] rounded-[4px] border border-dashed border-white/20"/>; })}</span>
               <span className="min-w-0 flex-1">
+                {c.kind === 'rent' && <span data-card-deck-pick-rent className="block text-[11px] font-black text-emerald-200">{`借りたデッキ(${c.owner || 'ブリーダー'}さんの)`}</span>}
                 <span className="block text-[14px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>{on ? '★ ' : ''}{jaWrap(c.name)}</span>
                 <span className={`block text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-amber-200'}`}>{`${c.count}/${CARD_BATTLE_DECK_SIZE}枚`}</span>
                 {!ok && <span data-card-deck-pick-why={c.id} className="block text-[11px] font-bold leading-snug text-amber-200" style={JA_WRAP_STYLE}>{c.why.join('・')}</span>}
@@ -64471,6 +64498,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
 
 const CARD_SHARE_KEY = 'mh_card_deck_owner_key_v1';   // 持ち主の鍵(新しいキー。端末で作り、バックアップで引き継ぐ)
 const CARD_SHARE_TABLE = 'card_deck_entries';
+const CARD_RENTED_KEY = 'mh_card_rented_deck_v1';     // 借りているデッキ(新しいキー。1組だけ・期限なし・返すと null)
 // 戦い方の7つの向き(82 の CARD_AI_HABITS の項目と同じ名前)。-1 控えめ / 0 ふつう / 1 強め
 const CARD_SHARE_TILTS = Object.freeze([
   { id: 'attack', label: '攻める' }, { id: 'keepGuard', label: '守りを残す' }, { id: 'saveGuts', label: 'ガッツをためる' },
@@ -64602,13 +64630,48 @@ const cardShareSameBlood = (db, deck) => {
   return ms.length > 0 && ms.filter((m) => cardAiBloodOf(m) === cardAiBloodOf(ms[0])).length >= 2;
 };
 
-// ---- 画面: みんなのデッキ(区切り② 登録・③ 戦う) ----
+// ---- 借りたデッキ(区切り④)。助手と対戦で使える(マルチでは使えない・社長の決め)。持っているかは見ない(借り物) ----
+const cardRentedNormalize = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+  if (!r || typeof r.ownerId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(r.ownerId)) return null;
+  const d = r.deck && typeof r.deck === 'object' ? r.deck : {};
+  const monsters = Array.isArray(d.monsters) ? d.monsters.filter((x) => typeof x === 'string').slice(0, 3) : [];
+  const cards = Array.isArray(d.cards) ? d.cards.filter((x) => typeof x === 'string').slice(0, 50) : [];
+  if (monsters.length !== 3 || cards.length !== 50) return null;
+  return { ownerId: r.ownerId, name: typeof r.name === 'string' && r.name ? r.name.slice(0, 40) : 'ブリーダー', icon: typeof r.icon === 'string' ? r.icon : null,
+    frame: typeof r.frame === 'string' ? r.frame : null, version: Number.isInteger(r.version) && r.version > 0 ? r.version : 1,
+    deckName: typeof r.deckName === 'string' ? r.deckName.slice(0, 20) : '', deck: { monsters, cards }, at: Number.isFinite(r.at) ? r.at : 0 };
+};
+const cardRentedDeckGet = async () => { try { return cardRentedNormalize(await storeGet(CARD_RENTED_KEY, null, false)); } catch (_) { return null; } };
+// entry … 表の1行(cardShareRow の形)・null で返す。保存できたら true
+const cardRentedDeckSet = async (entry) => {
+  const next = entry ? cardRentedNormalize({ ownerId: entry.ownerId, name: entry.name, icon: entry.icon, frame: entry.frame, version: entry.version, deckName: entry.tactics && entry.tactics.name, deck: entry.deck, at: Date.now() }) : null;
+  if (entry && !next) return false;
+  try { return !!(await storeSet(CARD_RENTED_KEY, next, false)); } catch (_) { return false; }
+};
+
+// ---- 画面: みんなのデッキ(区切り② 登録・③ 戦う・④ 借りる) ----
 // db … カードの表 / decks … 自分のデッキ(cardNormalizeDecks の形)/ collection … 持っているカード / frame … プロフィールのフレーム / onBack … 対戦えらびへ
 // unlocked … 助手と対戦で開いた強さ(cardLevelOpen)/ debug … デバッグから入った(強さを全部選べる)/ onFight(entry, level) … 登録デッキと戦う(84 の startBattle へ)
 const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked = null, debug = false, onFight = null }) => {
   const [tab, setTab] = useState(onFight ? 'fight' : 'mine');
   const [foes, setFoes] = useState(null);             // { picks, friends, popular } … 戦う相手の3つの並び
   const [level, setLevel] = useState('normal');
+  const [rented, setRented] = useState(null);         // 借りているデッキ(cardRentedDeckGet)
+  useEffect(() => { void cardRentedDeckGet().then(setRented); }, []);
+  const rent = async (e) => {
+    if (busy) return;
+    setBusy(true); setMsg('');
+    if (await cardRentedDeckSet(e)) { setRented(await cardRentedDeckGet()); setMsg(`${e.name}さんのデッキを借りました。助手と対戦のデッキ選びで使えます`); }
+    else setMsg('この端末に保存できなかったため、借りられませんでした');
+    setBusy(false);
+  };
+  const giveBack = async () => {
+    if (busy) return;
+    setBusy(true);
+    if (await cardRentedDeckSet(null)) { setRented(null); setMsg('借りていたデッキを返しました'); }
+    setBusy(false);
+  };
   const [selfId, setSelfId] = useState(null);
   const [mine, setMine] = useState(undefined);        // undefined … 読み込み中 / null … 登録なし
   const [off, setOff] = useState(false);               // 表が無い・通信できない
@@ -64685,8 +64748,12 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
         <small className="block truncate text-[11px] font-bold text-slate-300">{e.tactics.name || 'デッキ'}・{e.deck.monsters.map((no) => ((cardMonsterOf(db, no) || {}).name) || no).join('・')}</small>
         <small className="block text-[10px] font-bold text-sky-200 tabular-nums">{e.battles ? `戦われた ${e.battles}回・デッキの勝ち ${Math.round((e.deckWins / e.battles) * 100)}%` : 'まだ戦われていません'}</small>
       </span>
-      <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[40px] shrink-0 rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
-        onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, level); }}>戦う</button>
+      <span className="flex shrink-0 flex-col gap-1">
+        <button type="button" data-card-share-fight={e.ownerId} disabled={!onFight || fightIssues.length > 0} className="mh-button mh-button-primary min-h-[36px] rounded-lg px-3 text-[12px] font-black disabled:opacity-50"
+          onClick={() => { Audio_.fgSe.tap(); if (onFight) onFight(e, level); }}>戦う</button>
+        <button type="button" data-card-share-rent={e.ownerId} disabled={busy || (rented && rented.ownerId === e.ownerId && rented.version === e.version)} className="min-h-[30px] rounded-lg border border-emerald-300/50 bg-slate-900 px-2 text-[11px] font-black text-emerald-100 disabled:opacity-50"
+          onClick={() => { Audio_.fgSe.tap(); void rent(e); }}>{rented && rented.ownerId === e.ownerId && rented.version === e.version ? '借りています' : '借りる'}</button>
+      </span>
     </li>
   );
   const foeList = (title, rows, key) => (
@@ -64712,6 +64779,13 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
             <div className="mt-1 flex flex-wrap gap-1.5">{levels.map((lv) => <button key={lv} type="button" data-card-share-level={lv} className={chip(level === lv)} onClick={() => setLevel(lv)}>{(typeof CARD_LEVEL_LABEL !== 'undefined' && CARD_LEVEL_LABEL[lv]) || lv.toUpperCase()}</button>)}</div>
             {fightIssues.length > 0 && <p className="mt-1 text-[12px] font-bold text-rose-200" style={JA_WRAP_STYLE}>{jaWrap(`使うデッキ: ${fightIssues[0]}`)}</p>}
           </div>
+          {rented && (
+            <div data-card-share-rented className={`${SCREEN_PANEL_CLASS} flex items-center gap-2`}>
+              <span className="min-w-0 flex-1 text-[12px] font-bold text-emerald-100" style={JA_WRAP_STYLE}>{jaWrap(`借りているデッキ: ${rented.name}さんの「${rented.deckName || 'デッキ'}」(助手と対戦のデッキ選びで使えます。マルチ対戦では使えません)`)}</span>
+              <button type="button" data-card-share-giveback disabled={busy} className="shrink-0 rounded-lg border border-white/15 bg-slate-900 px-2 py-1 text-[11px] font-black text-slate-200 disabled:opacity-50" onClick={() => { Audio_.fgSe.tap(); void giveBack(); }}>返す</button>
+            </div>
+          )}
+          {msg && tab === 'fight' && <p className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
           {foes === null ? <p className="text-[13px] font-bold text-slate-300">読み込み中…</p> : (<>
             {foeList('おすすめ', foes.picks, 'picks')}
             <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人をさがす</button>
