@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bfd6250ba47ebb3c
+// source-sha256: ad178c0821c27dd1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14332,6 +14332,165 @@ const reconcileMonthlyMissionCompletions = (value, now = Date.now()) => {
   }
   return state;
 };
+const playerRankNeed = rank => 20 + 3 * rank;
+const playerRankSafeXp = xp => {
+  const n = Number(xp);
+  return Number.isFinite(n) ? Math.min(Math.max(0, Math.floor(n)), Number.MAX_SAFE_INTEGER) : 0;
+};
+const playerRankInfo = xp => {
+  let left = playerRankSafeXp(xp),
+    rank = 1;
+  for (;;) {
+    const need = playerRankNeed(rank);
+    if (left < need) return {
+      rank,
+      into: left,
+      need
+    };
+    left -= need;
+    rank += 1;
+  }
+};
+const BEAT_RANK_KEY = 'mh_rhythm_rank_v1';
+const BEAT_RANK_XP = Object.freeze({
+  EASY: 6,
+  NORMAL: 8,
+  HARD: 10,
+  EXPERT: 14,
+  MASTER: 18,
+  HELL: 60
+});
+const BEAT_RANK_BONUS = Object.freeze({
+  failDivisor: 3,
+  fullCombo: 4,
+  allMarvelous: 8,
+  multiScale: 1.5,
+  dayFirst: 30
+});
+const playerRankBeatPointsFor = rank => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : r * 100 + (r % 5 === 0 ? r * 200 : 0);
+};
+const beatRankTicketsFor = rank => {
+  const r = Math.max(0, Math.floor(Number(rank) || 0));
+  return r < 2 ? 0 : 1 + (r % 5 === 0 ? r : 0);
+};
+const beatRankRewardText = rank => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
+const normalizeBeatRank = raw => {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const gotRaw = Array.isArray(r.got) ? Math.max(1, ...r.got.filter(n => Number.isInteger(n))) : Number(r.got);
+  const got = Number.isFinite(gotRaw) ? Math.max(1, Math.floor(gotRaw)) : 1;
+  const k = typeof r.k === 'string' && /^[A-Za-z0-9_-]{24,128}$/.test(r.k) ? r.k : '';
+  return {
+    v: 1,
+    xp: playerRankSafeXp(r.xp),
+    day: typeof r.day === 'string' ? r.day.slice(0, 10) : '',
+    dayFirst: r.dayFirst === true,
+    got,
+    k
+  };
+};
+const beatRankPlayXp = ({
+  difficultyId,
+  cleared = true,
+  fullCombo = false,
+  allMarvelous = false,
+  multi = false
+}) => {
+  const base = BEAT_RANK_XP[difficultyId];
+  if (!base) return {
+    xp: 0,
+    parts: []
+  };
+  const parts = [];
+  let xp = cleared ? base : Math.round(base / BEAT_RANK_BONUS.failDivisor);
+  parts.push({
+    label: cleared ? difficultyId : `${difficultyId}(ライフが尽きた)`,
+    xp
+  });
+  if (cleared && allMarvelous) {
+    xp += BEAT_RANK_BONUS.allMarvelous;
+    parts.push({
+      label: '全部 MARVELOUS',
+      xp: BEAT_RANK_BONUS.allMarvelous
+    });
+  } else if (cleared && fullCombo) {
+    xp += BEAT_RANK_BONUS.fullCombo;
+    parts.push({
+      label: 'フルコンボ',
+      xp: BEAT_RANK_BONUS.fullCombo
+    });
+  }
+  if (multi) {
+    const scaled = Math.round(xp * BEAT_RANK_BONUS.multiScale);
+    parts.push({
+      label: 'みんなで対戦 ×1.5',
+      xp: scaled - xp
+    });
+    xp = scaled;
+  }
+  return {
+    xp,
+    parts
+  };
+};
+const beatRankAfter = (prev, {
+  difficultyId,
+  cleared,
+  fullCombo,
+  allMarvelous,
+  multi,
+  today
+}) => {
+  const cur = normalizeBeatRank(prev);
+  const from = playerRankInfo(cur.xp).rank;
+  const play = beatRankPlayXp({
+    difficultyId,
+    cleared,
+    fullCombo,
+    allMarvelous,
+    multi
+  });
+  if (!play.xp) return {
+    next: cur,
+    add: 0,
+    parts: [],
+    from,
+    to: from,
+    tickets: 0,
+    beatPoints: 0
+  };
+  const day = typeof today === 'string' ? today.slice(0, 10) : '';
+  const first = !!day && !(cur.day === day && cur.dayFirst);
+  const parts = first ? [...play.parts, {
+    label: 'その日はじめての1曲',
+    xp: BEAT_RANK_BONUS.dayFirst
+  }] : play.parts;
+  const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
+  const xp = playerRankSafeXp(cur.xp + add);
+  const to = playerRankInfo(xp).rank;
+  let tickets = 0,
+    beatPoints = 0;
+  for (let r = Math.max(cur.got + 1, 2); r <= to; r++) {
+    tickets += beatRankTicketsFor(r);
+    beatPoints += playerRankBeatPointsFor(r);
+  }
+  return {
+    next: {
+      ...cur,
+      xp,
+      day: day || cur.day,
+      dayFirst: first || cur.day === day && cur.dayFirst,
+      got: Math.max(cur.got, to)
+    },
+    add,
+    parts,
+    from,
+    to,
+    tickets,
+    beatPoints
+  };
+};
 const STAT_POINT_GAIN = {
   hp: 10,
   atk: 3,
@@ -28558,7 +28717,7 @@ const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
   'Content-Type': 'application/json'
 };
-const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report']);
+const SB_WRITE_RPCS = Object.freeze(['card_battle_pvp_report', 'rhythm_beat_rank_put', 'card_rank_put']);
 const sbAutomationWriteBlocked = (url, method) => {
   try {
     if (typeof navigator === 'undefined' || navigator.webdriver !== true) return false;
@@ -37117,6 +37276,7 @@ const RhythmTapTest = ({
   onExit,
   raidPlay = false,
   quickRunAward = null,
+  beatRankAward = null,
   debugPlay = false,
   tutorial = false,
   calibrating = false,
@@ -41374,7 +41534,11 @@ const RhythmTapTest = ({
       className: "mt-1 block text-[10px] font-black text-amber-200"
     }, result.allMarvelous ? 'すべてMARVELOUS。文句なしの完璧です' : result.allExcellent ? 'すべてEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), React.createElement("div", {
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
-    }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
+    }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), React.createElement(PlayerRankGain, {
+      kind: "beat",
+      award: beatRankAward,
+      next: beatRankAward ? `ランク${playerRankInfo(beatRankAward.xp).rank + 1}で ${beatRankRewardText(playerRankInfo(beatRankAward.xp).rank + 1)}` : ''
+    }), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
       className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left [@container(min-width:680px)]:hidden"
     }, React.createElement("div", {
@@ -53031,6 +53195,135 @@ const sbUpsertRhythmBuddyRanks = async rows => {
     clearTimeout(timer);
   }
 };
+const PLAYER_RANK_TABLES = Object.freeze({
+  beat: {
+    table: 'rhythm_beat_ranks',
+    put: 'rhythm_beat_rank_put',
+    place: 'rhythm_beat_rank_place'
+  },
+  card: {
+    table: 'card_ranks',
+    put: 'card_rank_put',
+    place: 'card_rank_place'
+  }
+});
+const PLAYER_RANK_SELECT = 'breeder_id,user_name,icon,profile_frame,rank,xp_total,updated_at';
+const PLAYER_RANK_SHOW_LIMIT = 100;
+const _playerRanksUnavailable = {
+  beat: false,
+  card: false
+};
+const playerRanksUnavailable = kind => !!_playerRanksUnavailable[kind];
+const playerRankMissing = (status, body) => status === 404 && /PGRST20[25]|Could not find the (table|function)|does not exist/i.test(String(body || ''));
+const beatRankNewKey = () => {
+  const a = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  const b = globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  return `${a}${b}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 96);
+};
+const playerRankEntryFromRow = row => ({
+  breederId: typeof row.breeder_id === 'string' ? row.breeder_id : '',
+  name: typeof row.user_name === 'string' && row.user_name ? row.user_name.slice(0, 40) : 'ブリーダー',
+  icon: row.icon ?? null,
+  profileFrame: row.profile_frame ?? null,
+  rank: Math.max(1, Math.floor(Number(row.rank) || 1)),
+  xp: playerRankSafeXp(row.xp_total)
+});
+const playerRankTimed = async (url, init) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const sbFetchPlayerRanks = async kind => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind]) return null;
+  const url = `${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}` + `&order=rank.desc,xp_total.desc,updated_at.asc&limit=${PLAYER_RANK_SHOW_LIMIT}`;
+  const res = await playerRankTimed(url, {
+    headers: SB_HEADERS,
+    cache: 'no-store'
+  });
+  const body = await res.text();
+  if (!res.ok) {
+    if (playerRankMissing(res.status, body)) {
+      _playerRanksUnavailable[kind] = true;
+      return null;
+    }
+    throw new Error(`${t.table} ${res.status}: ${body || res.statusText}`);
+  }
+  const rows = JSON.parse(body || '[]');
+  return (Array.isArray(rows) ? rows : []).map(playerRankEntryFromRow);
+};
+const sbFetchPlayerRankMine = async (kind, breederId) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId) return null;
+  const rowRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/${t.table}?select=${PLAYER_RANK_SELECT}&breeder_id=eq.${encodeURIComponent(breederId)}`, {
+    headers: SB_HEADERS,
+    cache: 'no-store'
+  });
+  const rowBody = await rowRes.text();
+  if (!rowRes.ok) {
+    if (playerRankMissing(rowRes.status, rowBody)) _playerRanksUnavailable[kind] = true;
+    return null;
+  }
+  const rows = JSON.parse(rowBody || '[]');
+  if (!Array.isArray(rows) || !rows[0]) return null;
+  const placeRes = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.place}`, {
+    method: 'POST',
+    headers: SB_HEADERS,
+    body: JSON.stringify({
+      p_id: breederId
+    })
+  });
+  const placeBody = await placeRes.text();
+  const place = placeRes.ok ? Number(JSON.parse(placeBody || 'null')) : NaN;
+  return {
+    ...playerRankEntryFromRow(rows[0]),
+    place: Number.isFinite(place) && place > 0 ? Math.floor(place) : null
+  };
+};
+const sbPutPlayerRank = async (kind, {
+  breederId,
+  key,
+  name,
+  icon,
+  profileFrame,
+  xp
+}) => {
+  const t = PLAYER_RANK_TABLES[kind];
+  if (!t || _playerRanksUnavailable[kind] || typeof breederId !== 'string' || !breederId || typeof key !== 'string' || !key) return null;
+  const res = await playerRankTimed(`${SUPABASE_URL}/rest/v1/rpc/${t.put}`, {
+    method: 'POST',
+    headers: SB_HEADERS,
+    body: JSON.stringify({
+      p_id: breederId,
+      p_key: key,
+      p_name: String(name || '名無しのブリーダー').slice(0, 40),
+      p_icon: icon ?? null,
+      p_frame: profileFrame ?? null,
+      p_xp: playerRankSafeXp(xp)
+    })
+  });
+  const body = await res.text();
+  if (!res.ok) {
+    if (playerRankMissing(res.status, body)) _playerRanksUnavailable[kind] = true;
+    return null;
+  }
+  try {
+    const v = JSON.parse(body);
+    return typeof v === 'string' ? v : null;
+  } catch (_) {
+    return null;
+  }
+};
+const sbFetchBeatRanks = () => sbFetchPlayerRanks('beat');
+const sbFetchBeatRankMine = breederId => sbFetchPlayerRankMine('beat', breederId);
+const sbPutBeatRank = row => sbPutPlayerRank('beat', row);
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
   PROGRESS: 'progress'
@@ -54732,6 +55025,416 @@ const PickerCheckMark = () => React.createElement("span", {
 }, React.createElement(Check, {
   size: 12
 }));
+const PLAYER_RANK_KINDS = Object.freeze({
+  beat: {
+    label: 'ビートランク',
+    icon: '🎵',
+    pill: 'bg-cyan-700 text-cyan-50',
+    accent: 'text-cyan-200',
+    bar: 'from-cyan-400 to-fuchsia-300',
+    border: 'border-cyan-300/50',
+    panel: 'bg-slate-900/85'
+  },
+  card: {
+    label: 'カードランク',
+    icon: '🃏',
+    pill: 'bg-amber-700 text-amber-50',
+    accent: 'text-amber-200',
+    bar: 'from-emerald-400 to-amber-300',
+    border: 'border-amber-300/50',
+    panel: 'bg-slate-900/85'
+  }
+});
+const playerRankKind = kind => PLAYER_RANK_KINDS[kind] || PLAYER_RANK_KINDS.beat;
+const playerRankTier = rank => {
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  if (r >= 50) return {
+    t: 5,
+    name: 'レインボー'
+  };
+  if (r >= 30) return {
+    t: 4,
+    name: 'アメジスト'
+  };
+  if (r >= 20) return {
+    t: 3,
+    name: 'ゴールド'
+  };
+  if (r >= 10) return {
+    t: 2,
+    name: 'シルバー'
+  };
+  return {
+    t: 1,
+    name: 'ブロンズ'
+  };
+};
+const PLAYER_RANK_BADGE_CSS = `
+.mh-prb{display:inline-flex;align-items:center;gap:6px}
+.mh-prb-shield{position:relative;width:52px;height:58px;flex:none;filter:drop-shadow(0 3px 0 rgba(0,0,0,.45)) drop-shadow(0 0 10px var(--prb-glow))}
+.mh-prb-shield::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-rim)}
+.mh-prb-shield::after{content:"";position:absolute;inset:3px;clip-path:polygon(50% 0,100% 18%,100% 70%,50% 100%,0 70%,0 18%);background:var(--prb-face)}
+.mh-prb-gloss{position:absolute;inset:3px 3px 50% 3px;z-index:2;clip-path:polygon(50% 0,100% 18%,100% 100%,0 100%,0 18%);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.05))}
+.mh-prb-num{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;padding-top:3px;font-weight:900;font-size:26px;color:#fff;-webkit-text-stroke:5px var(--prb-ink);paint-order:stroke fill;letter-spacing:-.04em;line-height:1}
+.mh-prb-num.mh-prb-w3{font-size:20px}
+.mh-prb-tag{display:flex;flex-direction:column;line-height:1.05}
+.mh-prb-kind{white-space:nowrap;font-size:10px;font-weight:900;color:var(--prb-label);letter-spacing:.08em}
+.mh-prb-name{white-space:nowrap;font-size:14px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--prb-ink);paint-order:stroke fill}
+.mh-prb.mh-prb-s .mh-prb-shield{width:32px;height:36px}.mh-prb.mh-prb-s .mh-prb-shield::after{inset:2px}
+.mh-prb.mh-prb-s .mh-prb-num{font-size:16px;-webkit-text-stroke:3.5px var(--prb-ink)}.mh-prb.mh-prb-s .mh-prb-num.mh-prb-w3{font-size:12px}
+.mh-prb.mh-prb-s .mh-prb-name{font-size:12px}.mh-prb.mh-prb-s .mh-prb-kind{display:none}
+.mh-prb-t1{--prb-rim:linear-gradient(160deg,#fde2c4,#9a4b1c 55%,#5a250b);--prb-face:linear-gradient(160deg,#e08a4a,#8a3f12);--prb-ink:#3b1406;--prb-glow:rgba(234,138,74,.55);--prb-label:#fbbf8a}
+.mh-prb-t2{--prb-rim:linear-gradient(160deg,#ffffff,#94a3b8 55%,#475569);--prb-face:linear-gradient(160deg,#cbd5e1,#64748b);--prb-ink:#1e293b;--prb-glow:rgba(203,213,225,.6);--prb-label:#e2e8f0}
+.mh-prb-t3{--prb-rim:linear-gradient(160deg,#fff7c2,#f59e0b 55%,#92400e);--prb-face:linear-gradient(160deg,#fcd34d,#d97706);--prb-ink:#5b2a03;--prb-glow:rgba(251,191,36,.7);--prb-label:#fde68a}
+.mh-prb-t4{--prb-rim:linear-gradient(160deg,#f5d0fe,#a21caf 55%,#4a044e);--prb-face:linear-gradient(160deg,#c084fc,#6d28d9);--prb-ink:#2e1065;--prb-glow:rgba(192,132,252,.75);--prb-label:#f0abfc}
+.mh-prb-t5{--prb-rim:conic-gradient(from 0deg,#f43f5e,#f59e0b,#84cc16,#06b6d4,#8b5cf6,#f43f5e);--prb-face:linear-gradient(160deg,#1e1b4b,#0f172a);--prb-ink:#000;--prb-glow:rgba(255,255,255,.8);--prb-label:#fff}
+`;
+const ensurePlayerRankBadgeCss = () => {
+  try {
+    if (typeof document === 'undefined' || document.getElementById('mh-player-rank-badge-css')) return;
+    const el = document.createElement('style');
+    el.id = 'mh-player-rank-badge-css';
+    el.textContent = PLAYER_RANK_BADGE_CSS;
+    document.head.appendChild(el);
+  } catch (_) {}
+};
+function PlayerRankBadge({
+  kind = 'beat',
+  rank = 1,
+  size = 'lg',
+  showName = true
+}) {
+  ensurePlayerRankBadgeCss();
+  const k = playerRankKind(kind);
+  const r = Math.max(1, Math.floor(Number(rank) || 1));
+  const tier = playerRankTier(r);
+  const text = r.toLocaleString();
+  return React.createElement("span", {
+    "data-player-rank-badge": kind,
+    "data-player-rank-tier": tier.t,
+    "aria-label": `${k.label} ${r}`,
+    className: `mh-prb mh-prb-t${tier.t}${size === 'sm' ? ' mh-prb-s' : ''}`
+  }, React.createElement("span", {
+    className: "mh-prb-shield",
+    "aria-hidden": "true"
+  }, React.createElement("span", {
+    className: "mh-prb-gloss"
+  }), React.createElement("b", {
+    "data-player-rank-value": true,
+    className: `mh-prb-num${text.length >= 3 ? ' mh-prb-w3' : ''}`
+  }, text)), showName && React.createElement("span", {
+    className: "mh-prb-tag",
+    "aria-hidden": "true"
+  }, React.createElement("span", {
+    className: "mh-prb-kind"
+  }, tier.name), React.createElement("span", {
+    className: "mh-prb-name"
+  }, k.label)));
+}
+function PlayerRankGauge({
+  kind = 'beat',
+  info,
+  note = ''
+}) {
+  const k = playerRankKind(kind);
+  const into = Math.max(0, Number(info && info.into) || 0),
+    need = Math.max(1, Number(info && info.need) || 1);
+  return React.createElement("div", {
+    "data-player-rank-gauge": kind
+  }, React.createElement("div", {
+    className: "h-2 overflow-hidden rounded-full bg-slate-700",
+    role: "progressbar",
+    "aria-label": "次のランクまで",
+    "aria-valuemin": 0,
+    "aria-valuemax": need,
+    "aria-valuenow": into
+  }, React.createElement("i", {
+    className: `block h-full rounded-full bg-gradient-to-r ${k.bar}`,
+    style: {
+      width: `${Math.min(100, Math.round(into / need * 100))}%`
+    }
+  })), React.createElement("div", {
+    className: "mt-0.5 flex justify-between gap-2 text-[10px] font-bold text-slate-300"
+  }, React.createElement("span", {
+    className: "tabular-nums"
+  }, `${into.toLocaleString()} / ${need.toLocaleString()}`), React.createElement("span", {
+    className: "min-w-0 text-right",
+    style: JA_WRAP_STYLE
+  }, jaWrap(note || `次まで ${(need - into).toLocaleString()}`))));
+}
+function PlayerRankPanel({
+  kind = 'beat',
+  xp = 0,
+  note = '',
+  sub = ''
+}) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return React.createElement("section", {
+    "data-player-rank-panel": kind,
+    className: `rounded-2xl border px-3 py-2 ${k.border} ${k.panel}`
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: info.rank,
+    size: "lg"
+  }), React.createElement("small", {
+    className: "ml-auto shrink-0 text-[11px] font-black text-slate-200 tabular-nums"
+  }, `次まで ${(info.need - info.into).toLocaleString()}`)), React.createElement("div", {
+    className: "mt-1.5"
+  }, React.createElement(PlayerRankGauge, {
+    kind: kind,
+    info: info,
+    note: note || ' '
+  })), sub && React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-snug text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(sub)));
+}
+function PlayerRankStrip({
+  kind = 'beat',
+  xp = 0
+}) {
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(xp);
+  return React.createElement("div", {
+    "data-player-rank-strip": kind,
+    className: "flex min-w-0 items-center gap-1.5"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: info.rank,
+    size: "sm"
+  }), React.createElement("div", {
+    className: "h-1.5 min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-700/80",
+    role: "progressbar",
+    "aria-label": "次のランクまで",
+    "aria-valuemin": 0,
+    "aria-valuemax": info.need,
+    "aria-valuenow": info.into
+  }, React.createElement("i", {
+    className: `block h-full rounded-full bg-gradient-to-r ${k.bar}`,
+    style: {
+      width: `${Math.min(100, Math.round(info.into / info.need * 100))}%`
+    }
+  })), React.createElement("small", {
+    className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-300 tabular-nums"
+  }, `次まで ${(info.need - info.into).toLocaleString()}`));
+}
+function PlayerRankUp({
+  kind = 'beat',
+  from = 1,
+  to = 1,
+  gains = []
+}) {
+  if (!(to > from)) return null;
+  return React.createElement("div", {
+    "data-player-rank-up": kind,
+    className: "rounded-2xl border-2 border-fuchsia-300 bg-gradient-to-b from-violet-700/80 to-indigo-950/90 px-3 py-2 text-center"
+  }, React.createElement("small", {
+    className: "block text-[10px] font-black tracking-[.2em] text-fuchsia-100"
+  }, "RANK UP!"), React.createElement("div", {
+    className: "mt-0.5 flex items-center justify-center gap-2"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: from,
+    size: "sm",
+    showName: false
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "font-black text-fuchsia-200"
+  }, "→"), React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: to,
+    size: "lg"
+  })), gains.length > 0 && React.createElement("ul", {
+    "data-player-rank-up-gains": true,
+    className: "mt-1.5 flex flex-wrap justify-center gap-1.5"
+  }, gains.map((g, i) => React.createElement("li", {
+    key: i,
+    className: "rounded-lg border border-fuchsia-200/40 bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-amber-100"
+  }, g.icon && React.createElement("span", {
+    "aria-hidden": "true"
+  }, g.icon, " "), React.createElement("span", {
+    style: JA_WRAP_STYLE
+  }, jaWrap(String(g.text || '')))))));
+}
+function PlayerRankGain({
+  kind = 'beat',
+  award,
+  next = ''
+}) {
+  if (!award || !(award.add > 0)) return null;
+  const k = playerRankKind(kind);
+  const info = playerRankInfo(award.xp);
+  const up = award.to > award.from;
+  return React.createElement("section", {
+    "data-player-rank-gain": kind,
+    className: `my-3 space-y-1.5 rounded-2xl border p-3 text-left ${k.border} ${k.panel}`
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
+  }, React.createElement("span", {
+    className: `rounded-full px-2 py-0.5 text-[10px] font-black ${k.pill}`
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, k.icon, " "), k.label), React.createElement("b", {
+    "data-player-rank-gain-add": true,
+    className: `text-[15px] font-black ${k.accent}`
+  }, `経験値 +${award.add.toLocaleString()}`), React.createElement("span", {
+    className: "text-[12px] font-black text-white tabular-nums"
+  }, up ? `(ランク${award.from}→${award.to})` : `(ランク${info.rank})`)), Array.isArray(award.parts) && award.parts.length > 0 && React.createElement("p", {
+    "data-player-rank-gain-parts": true,
+    className: "text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(award.parts.map(p => `${p.label} ${p.xp >= 0 ? '+' : ''}${p.xp}`).join(' ・ '))), React.createElement(PlayerRankGauge, {
+    kind: kind,
+    info: info
+  }), next && React.createElement("p", {
+    "data-player-rank-gain-next": true,
+    className: "text-[10px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`次は ${next}`)), up && React.createElement(PlayerRankUp, {
+    kind: kind,
+    from: award.from,
+    to: award.to,
+    gains: award.gains || []
+  }));
+}
+function PlayerRankRow({
+  kind = 'beat',
+  place = null,
+  icon = null,
+  name = '',
+  rank = 1,
+  xp = 0,
+  mine = false
+}) {
+  const k = playerRankKind(kind);
+  return React.createElement("li", {
+    "data-player-rank-row": kind,
+    "data-player-rank-mine": mine ? 'true' : undefined,
+    className: `flex items-center gap-2 rounded-xl border px-2 py-1.5 ${mine ? `border-2 ${k.border} bg-cyan-950/50` : 'border-white/10 bg-slate-900/80'}`
+  }, React.createElement("b", {
+    className: `w-9 shrink-0 text-center text-sm font-black tabular-nums ${place === 1 ? 'text-amber-300' : 'text-slate-200'}`
+  }, place ? place.toLocaleString() : '—'), icon, React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-xs font-black text-white"
+  }, name, mine ? '(あなた)' : ''), React.createElement("span", {
+    className: "flex shrink-0 flex-col items-end gap-0.5"
+  }, React.createElement(PlayerRankBadge, {
+    kind: kind,
+    rank: rank,
+    size: "sm",
+    showName: false
+  }), React.createElement("small", {
+    className: "block text-[9px] font-bold text-slate-400 tabular-nums"
+  }, `経験値 ${playerRankSafeXp(xp).toLocaleString()}`)));
+}
+function PlayerRankBoard({
+  kind = 'beat',
+  fetchTop,
+  fetchMine,
+  renderIcon = null,
+  selfBreederId = '',
+  selfXp = 0,
+  reloadKey = 0
+}) {
+  const [board, setBoard] = React.useState({
+    status: 'loading',
+    top: [],
+    mine: null
+  });
+  React.useEffect(() => {
+    let alive = true;
+    setBoard(b => ({
+      ...b,
+      status: b.top.length ? 'ready' : 'loading'
+    }));
+    (async () => {
+      try {
+        const [top, mine] = await Promise.all([fetchTop ? fetchTop() : null, fetchMine ? fetchMine().catch(() => null) : null]);
+        if (!alive) return;
+        if (top === null) {
+          setBoard({
+            status: 'closed',
+            top: [],
+            mine: null
+          });
+          return;
+        }
+        setBoard({
+          status: 'ready',
+          top,
+          mine
+        });
+      } catch (_) {
+        if (alive) setBoard(b => ({
+          ...b,
+          status: b.top.length ? 'ready' : 'error'
+        }));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [reloadKey]);
+  const label = playerRankKind(kind).label;
+  const iconOf = e => renderIcon ? renderIcon({
+    icon: e.icon,
+    profileFrame: e.profileFrame,
+    userName: e.name,
+    breederId: e.breederId
+  }) : null;
+  if (board.status === 'loading') return React.createElement("p", {
+    "data-player-rank-board": "loading",
+    className: "px-3 py-6 text-center text-xs font-black text-slate-400"
+  }, "読み込んでいます…");
+  if (board.status === 'closed') return React.createElement("p", {
+    "data-player-rank-board": "closed",
+    className: "px-3 py-6 text-center text-xs font-black text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`${label}のランキングは準備中です。`));
+  if (board.status === 'error') return React.createElement("p", {
+    "data-player-rank-board": "error",
+    className: "px-3 py-6 text-center text-xs font-black text-rose-300",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ランキングを読み込めませんでした。電波のよいところで「更新」を押してください。'));
+  const selfId = selfBreederId || board.mine && board.mine.breederId || '';
+  const inTop = !!selfId && board.top.some(e => e.breederId === selfId);
+  return React.createElement("div", {
+    "data-player-rank-board": kind,
+    className: "space-y-2 px-3 py-2"
+  }, React.createElement("p", {
+    className: "text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('ランクの高い順。同じランクなら、経験値の合計が多い順です(上位100人とあなた)。')), board.top.length === 0 ? React.createElement("p", {
+    className: "py-4 text-center text-xs font-black text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('まだだれも載っていません。曲を遊ぶと、ここに載ります。')) : React.createElement("ol", {
+    className: "space-y-1.5"
+  }, board.top.map((e, i) => React.createElement(PlayerRankRow, {
+    key: e.breederId || i,
+    kind: kind,
+    place: i + 1,
+    icon: iconOf(e),
+    name: e.name,
+    rank: e.rank,
+    xp: e.xp,
+    mine: !!selfId && e.breederId === selfId
+  }))), !inTop && (board.mine ? React.createElement("ol", {
+    className: "border-t border-white/10 pt-2"
+  }, React.createElement(PlayerRankRow, {
+    kind: kind,
+    place: board.mine.place,
+    icon: iconOf(board.mine),
+    name: board.mine.name,
+    rank: board.mine.rank,
+    xp: board.mine.xp,
+    mine: true
+  })) : selfXp > 0 && React.createElement("p", {
+    className: "border-t border-white/10 pt-2 text-center text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('あなたの記録は、次に曲を遊んだときに載ります。'))));
+}
 class MhErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -59467,7 +60170,8 @@ function RhythmRankingScreen({
   onResendRhythmRankingPending = null,
   setRhythmEventDivision,
   setRhythmRankingDetail,
-  setRhythmRankingTab
+  setRhythmRankingTab,
+  beatRankXp = 0
 }) {
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
@@ -59489,7 +60193,9 @@ function RhythmRankingScreen({
   const boardKind = rhythmRankingTab === 'weekly' ? 'weekly' : eventTabOpen ? eventPhase === 'prev' ? prevEventEntry ? 'prevEvent' : null : limitedEvent ? 'limited' : null : null;
   const boardTab = eventReleased && !!boardKind;
   const totalTabOpen = totalTab && !boardTab && !eventTabOpen;
-  const songTab = !totalTabOpen && !boardTab && !eventTabOpen;
+  const beatRankTabOpen = rhythmRankingTab === 'beatRank' && !boardTab && !eventTabOpen;
+  const [beatRankReload, setBeatRankReload] = useState(0);
+  const songTab = !totalTabOpen && !boardTab && !eventTabOpen && !beatRankTabOpen;
   const boards = rhythmEventRanking || {};
   const event = boardKind && boards[boardKind] || {
     status: 'idle',
@@ -59553,7 +60259,10 @@ function RhythmRankingScreen({
   }] : []), ...(eventReleased ? [{
     id: 'event',
     label: 'イベント'
-  }] : [])];
+  }] : []), {
+    id: 'beatRank',
+    label: 'ビートランク'
+  }];
   const openTab = tab => {
     setRhythmRankingTab(tab);
     if (tab === 'total') loadRhythmTotalRanking && loadRhythmTotalRanking();
@@ -59579,7 +60288,7 @@ function RhythmRankingScreen({
     loadRhythmEventRanking && loadRhythmEventRanking(boardKind, divisionId);
   };
   const refresh = () => {
-    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else loadRhythmRanking(song, rhythmRanking.difficultyId || 'ALL');
+    if (boardTab) loadRhythmEventRanking && loadRhythmEventRanking(boardKind, eventDivisionId);else if (totalTabOpen) loadRhythmTotalRanking && loadRhythmTotalRanking();else if (beatRankTabOpen) setBeatRankReload(n => n + 1);else loadRhythmRanking(song, rhythmRanking.difficultyId || 'ALL');
   };
   const eventRankScore = entry => entry && entry.baseScore !== null && entry.baseScore !== undefined ? entry.baseScore : entry?.score || 0;
   const totalRow = (entry, rank, mine) => React.createElement("div", {
@@ -59676,12 +60385,12 @@ function RhythmRankingScreen({
     className: "ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200"
   }, "更新")), rankingTabs.length > 1 && React.createElement("div", {
     "data-rhythm-ranking-tabs": true,
-    className: "flex shrink-0 gap-1 border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1"
+    className: "flex shrink-0 gap-1 overflow-x-auto border-b border-white/10 bg-slate-950/95 px-3 pb-2 pt-1"
   }, rankingTabs.map(tab => React.createElement("button", {
     key: tab.id,
     "data-rhythm-ranking-tab": tab.id,
     onClick: () => openTab(tab.id),
-    className: `min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab === tab.id ? 'border-amber-300/60 bg-amber-500/15 text-amber-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
+    className: `min-h-[44px] min-w-fit flex-1 whitespace-nowrap rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab === tab.id ? 'border-amber-300/60 bg-amber-500/15 text-amber-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
   }, tab.label))), rhythmRankingPending && rhythmRankingPending.count > 0 && React.createElement("div", {
     "data-rhythm-ranking-pending": true,
     className: "flex shrink-0 items-center gap-2 border-b border-amber-300/25 bg-amber-500/10 px-3 py-1.5"
@@ -59703,7 +60412,14 @@ function RhythmRankingScreen({
     style: {
       paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
-  }, totalTabOpen && React.createElement(React.Fragment, null, total.status === 'loading' && React.createElement("p", {
+  }, beatRankTabOpen && React.createElement(PlayerRankBoard, {
+    kind: "beat",
+    fetchTop: sbFetchBeatRanks,
+    fetchMine: async () => sbFetchBeatRankMine(await ensureBreederId()),
+    renderIcon: rankingBreederIcon,
+    selfXp: beatRankXp,
+    reloadKey: beatRankReload
+  }), totalTabOpen && React.createElement(React.Fragment, null, total.status === 'loading' && React.createElement("p", {
     "data-rhythm-total-loading": true,
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
   }, "読み込み中…"), total.status === 'notReady' && React.createElement("p", {
@@ -82037,7 +82753,12 @@ function RhythmMultiScreen({
     }, "モードえらび"), ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
       className: "block truncate text-[9px] font-black text-violet-200/90"
-    }, ms.beatPointText)), quickRunInfo && React.createElement(RhythmQuickRunPill, {
+    }, ms.beatPointText), Number.isFinite(ms.beatRankXp) && React.createElement("div", {
+      className: "mt-0.5"
+    }, React.createElement(PlayerRankStrip, {
+      kind: "beat",
+      xp: ms.beatRankXp
+    }))), quickRunInfo && React.createElement(RhythmQuickRunPill, {
       info: quickRunInfo,
       onRestart: onRestartQuickRun,
       onResume: onResumeQuickRun,
@@ -114157,6 +114878,14 @@ function MonsterHeroGame() {
     setRhythmMonsterMessage('');
     setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
     const lastDifficulty = normalizeRhythmLastDifficulty(await storeGet(RHYTHM_LAST_DIFFICULTY_KEY, '', false));
+    {
+      const savedRank = normalizeBeatRank(await storeGet(BEAT_RANK_KEY, null, false));
+      setBeatRank(savedRank);
+      if (!beatRankSyncedRef.current && savedRank.xp > 0) {
+        beatRankSyncedRef.current = true;
+        void syncBeatRankToServer(savedRank);
+      }
+    }
     if (lastDifficulty) setRhythmSelectedDifficultyId(prev => prev || lastDifficulty);
     setGameState(opts && typeof opts.to === 'string' ? opts.to : 'RHYTHM_MODE_SELECT');
   };
@@ -116127,6 +116856,69 @@ function MonsterHeroGame() {
     setOwnedItems(nextItems);
     await storeSet('mh_owned_items', nextItems, false);
     return true;
+  };
+  const syncBeatRankToServer = async saved => {
+    try {
+      const cur = normalizeBeatRank(saved);
+      if (!cur.k || cur.xp <= 0) return;
+      const breederId = await ensureBreederId();
+      if (!breederId) return;
+      await sbPutBeatRank({
+        breederId,
+        key: cur.k,
+        name: breederName,
+        icon: breederIcon,
+        profileFrame: typeof rankingProfileFrameValue === 'function' ? rankingProfileFrameValue(profileFrameId) : null,
+        xp: cur.xp
+      });
+    } catch (_) {}
+  };
+  const grantBeatRankForResult = async (result, play) => {
+    try {
+      const raw = await storeGet(BEAT_RANK_KEY, null, false);
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const gain = beatRankAfter(raw, {
+        difficultyId: play && play.difficulty && play.difficulty.id,
+        cleared: result?.cleared !== false,
+        fullCombo: result?.fullCombo === true,
+        allMarvelous: result?.allMarvelous === true,
+        multi: play && play.from === 'multi',
+        today
+      });
+      if (!gain.add) return;
+      const next = {
+        ...gain.next,
+        k: gain.next.k || beatRankNewKey()
+      };
+      await storeSet(BEAT_RANK_KEY, next, false);
+      setBeatRank(next);
+      if (gain.tickets > 0) {
+        const nextItems = {
+          ...ownedItemsRef.current,
+          [RHYTHM_BUDDY_TICKET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, RHYTHM_BUDDY_TICKET_ITEM_ID) + gain.tickets
+        };
+        ownedItemsRef.current = nextItems;
+        setOwnedItems(nextItems);
+        await storeSet('mh_owned_items', nextItems, false);
+      }
+      if (gain.beatPoints > 0 && typeof addRhythmEventPoints === 'function') await addRhythmEventPoints(gain.beatPoints);
+      const gains = [...(gain.tickets > 0 ? [{
+        icon: '🎶',
+        text: `セッション券 ×${gain.tickets}`
+      }] : []), ...(gain.beatPoints > 0 ? [{
+        icon: '🎟️',
+        text: `ビートP ${gain.beatPoints.toLocaleString()}`
+      }] : [])];
+      setBeatRankAward({
+        add: gain.add,
+        parts: gain.parts,
+        from: gain.from,
+        to: gain.to,
+        xp: next.xp,
+        gains
+      });
+      void syncBeatRankToServer(next);
+    } catch (_) {}
   };
   const refundBuddyTicket = async () => {
     const nextItems = {
@@ -118821,6 +119613,9 @@ function MonsterHeroGame() {
   };
   const [quickRunProgress, setQuickRunProgress] = useState(null);
   const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
+  const [beatRank, setBeatRank] = useState(() => normalizeBeatRank(null));
+  const [beatRankAward, setBeatRankAward] = useState(null);
+  const beatRankSyncedRef = useRef(false);
   const rhythmPlayRunAwardRef = useRef(null);
   const rhythmPlayRunAward = rhythmPlayRunAwardState;
   const setRhythmPlayRunAward = next => {
@@ -119694,6 +120489,7 @@ function MonsterHeroGame() {
       rhythmPlayStartedAtRef.current = Date.now();
       setRhythmPlayRunAward(null);
       stopCatchUp();
+      setBeatRankAward(null);
       return;
     }
     const startedAt = rhythmPlayStartedAtRef.current;
@@ -138124,7 +138920,29 @@ function MonsterHeroGame() {
         }
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
-    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
+    }, t.label))), React.createElement("div", {
+      className: "grid grid-cols-2 gap-1.5 mb-2 shrink-0"
+    }, [{
+      k: 'beatRank',
+      label: 'ビートランク'
+    }, {
+      k: 'cardRank',
+      label: 'カードランク'
+    }].map(t => React.createElement("button", {
+      key: t.k,
+      "data-player-rank-tab": t.k,
+      onClick: () => setRankingKind(t.k),
+      className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
+    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody(), (rankingKind === 'beatRank' || rankingKind === 'cardRank') && React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-y-auto"
+    }, React.createElement(PlayerRankBoard, {
+      key: rankingKind,
+      kind: rankingKind === 'beatRank' ? 'beat' : 'card',
+      fetchTop: () => sbFetchPlayerRanks(rankingKind === 'beatRank' ? 'beat' : 'card'),
+      fetchMine: async () => sbFetchPlayerRankMine(rankingKind === 'beatRank' ? 'beat' : 'card', await ensureBreederId()),
+      renderIcon: rankingBreederIcon,
+      selfXp: rankingKind === 'beatRank' ? beatRank.xp : 0
+    }))))), gameState === 'BATTLE_SYSTEM_SELECT' && (() => {
       const tutorialNeedsDebugSystems = !!battleTutorial && battleSystemComingSoon(battleTutorialSystem, {
         debugBattle: false
       });
@@ -140588,6 +141406,7 @@ function MonsterHeroGame() {
       multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiTotalScale(rhythmPlay.multiCount, rhythmPlay.multiStreak, rhythmPlay.multiCpus) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
+      beatRankAward: beatRankAward,
       onComplete: async (result, merged) => {
         if (rhythmPlay.from === 'proto') return;
         if (rhythmPlay.from === 'lineAdjust') return;
@@ -140643,6 +141462,7 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'tutorial') return;
         if (rhythmPlay.from === 'notedex') return;
         if (result?.assist === true) return;
+        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi' || rhythmPlay.from === 'raid') await grantBeatRankForResult(result, rhythmPlay);
         if (result?.cleared !== false) {
           try {
             setRhythmClearTotal(await addRhythmClearTotal());
@@ -140772,6 +141592,7 @@ function MonsterHeroGame() {
           loadRhythmRanking(song);
         },
         render: onClose => React.createElement(RhythmRankingScreen, {
+          beatRankXp: beatRank.xp,
           loadRhythmEventRanking: loadRhythmEventRanking,
           loadRhythmRanking: loadRhythmRanking,
           loadRhythmTotalRanking: loadRhythmTotalRanking,
@@ -140819,6 +141640,7 @@ function MonsterHeroGame() {
             src: base ? base.faceIconUrl || base.iconUrl : ''
           };
         }),
+        beatRankXp: beatRank.xp,
         assistant: rhythmModeAssistant,
         showArt: rhythmSettings.modeSelectArt !== false,
         showComment: rhythmSettings.modeSelectComment !== false,
@@ -140982,6 +141804,7 @@ function MonsterHeroGame() {
       setRhythmMonsterMessage: setRhythmMonsterMessage,
       setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen
     }), gameState === 'RHYTHM_RANKING' && React.createElement(RhythmRankingScreen, {
+      beatRankXp: beatRank.xp,
       loadRhythmEventRanking: loadRhythmEventRanking,
       loadRhythmRanking: loadRhythmRanking,
       loadRhythmTotalRanking: loadRhythmTotalRanking,

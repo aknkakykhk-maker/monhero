@@ -38,6 +38,11 @@
       "pure": true
     },
     {
+      "file": "18-player-rank.jsx",
+      "role": "プレイヤーのランク(ビートランク・カードランク共通)の計算と、ビートランクの1曲の経験値・ごほうびの決まり",
+      "pure": true
+    },
+    {
       "file": "18-points-and-auto.jsx",
       "role": "強化ポイントの補填と補正、AUTO 設定と自動ターン選択",
       "pure": true
@@ -177,6 +182,10 @@
       "role": "マスモンランキング(モンヒロビート)の通信層(Supabase の rhythm_buddy_ranks)。マスモン1体のビートLvと難易度ごとの最高スコアを、1人1個体1行で上書き保存・取得する。既存のランキングには書かない"
     },
     {
+      "file": "39-beat-rank-api.jsx",
+      "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
@@ -187,6 +196,10 @@
     {
       "file": "42-picker-sheet.jsx",
       "role": "共通部品: 一覧から選ぶ窓(PickerSheet)。アイコン・フレーム・好きなモンスターなど、増えていく一覧から選ぶ窓の共通の形(いまの選択を固定・検索・絞り込み・一覧だけスクロール)"
+    },
+    {
+      "file": "43-player-rank-ui.jsx",
+      "role": "プレイヤーのランクの見せ方(札・棒・ランクアップの演出・ランキングの行。ビートランク・カードランク共通)"
     },
     {
       "file": "50-error-boundary.jsx",
