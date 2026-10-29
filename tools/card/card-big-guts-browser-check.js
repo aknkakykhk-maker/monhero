@@ -97,7 +97,7 @@ const openBattle = async (browser, cfg, errors) => {
   await page.locator('[data-card-mode-assistant]').click();
   await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
   await page.locator('[data-card-foe="momosuke"]').click();
-  await page.locator('[data-card-start]').click();
+  await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
   await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
   await page.waitForFunction((m) => document.querySelector('[data-card-battle]') && document.querySelector('[data-card-battle]').getAttribute('data-card-mode') === m, cfg.mode || 'attack', { timeout: 20000 });
   return page;

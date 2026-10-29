@@ -265,7 +265,7 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
       await page.click('[data-card-mode-assistant]');
       await page.waitForSelector(`[data-card-foe="${who}"]`, { timeout: 8000 });
       await page.click(`[data-card-foe="${who}"]`);
-      await page.click('[data-card-start]');
+      await page.click('[data-card-start]'); await page.click('[data-card-deck-pick-go]'); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
       await page.waitForSelector('[data-card-vs], [data-card-battle]', { timeout: 20000 });
     };
     const quitBattle = async () => {
@@ -293,7 +293,7 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
       const later = await bgmNow();
       check('⑦ 投了したら並びは止まり、そのあと並びの曲へ戻らない', !['__pl_a', '__pl_b'].includes(afterQuit.bgm) && !['__pl_a', '__pl_b'].includes(later.bgm), JSON.stringify({ afterQuit, later }));
       // もう一度: 並びをまた始める
-      await page.getByRole('button', { name: 'もう一度' }).click();
+      await page.getByRole('button', { name: 'もう一度' }).click(); await page.click('[data-card-deck-pick-go]'); // 対戦の前のデッキ選び
       await page.waitForSelector('[data-card-vs], [data-card-battle]', { timeout: 20000 });
       const again = await waitBgm((k) => k === '__pl_a' || k === '__pl_b', 8000);
       check('⑦ 「もう一度」で並びをまた始める', !!again, String(again));
@@ -303,7 +303,7 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
       await page.getByRole('button', { name: '相手をえらぶ' }).click();
       await page.waitForSelector('[data-card-foe="kiki"]', { timeout: 8000 });
       await page.click('[data-card-foe="kiki"]');
-      await page.click('[data-card-start]');
+      await page.click('[data-card-start]'); await page.click('[data-card-deck-pick-go]'); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
       await page.waitForSelector('[data-card-vs], [data-card-battle]', { timeout: 20000 });
       if (await has('[data-card-vs]')) await page.click('[data-card-vs]');
       await page.waitForSelector('[data-card-battle]', { timeout: 20000 });

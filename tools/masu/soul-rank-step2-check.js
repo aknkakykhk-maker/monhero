@@ -154,9 +154,10 @@ const makeMasu = (stage, level, over = {}) => api.normalizeMasuProgression({
     app.includes('data-soul-rank-link') && app.includes("setGameState('MASU_SOUL_RANK')")
     && app.includes("MASU_SOUL_RANK: 'temple'"));
   // 2026-10-27 魂格進化に専用の吹き出し(scene soulRank)を足した(45d0ab89)。定義の無い scene は作らない、だけを見る
+  // 2026-10-27 #4152 で「たたむ」の印(collapseKey)が後ろに付いた。後ろの属性は問わない
   const assistantsSrc = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/data/assistants.js'), 'utf8');
   check('魂格画面の助手の吹き出しは、data/assistants.js に定義のある scene を使う',
-    app.includes("gameState==='MASU_SOUL_RANK'") && app.includes('<AssistantBubble scene="soulRank" compact/>')
+    app.includes("gameState==='MASU_SOUL_RANK'") && /<AssistantBubble scene="soulRank" compact(?: [^>]*)?\/>/.test(app)
     && /^  soulRank: \{/m.test(assistantsSrc) && (assistantsSrc.match(/^  soulRank: \[/gm) || []).length >= 1);
   check('条件不足でもLv・ダイヤ・勇者の証を表示',
     app.includes('必要Lv') && app.includes('必要ダイヤ') && app.includes('必要な勇者の証')

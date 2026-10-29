@@ -83,6 +83,8 @@ const copyRect = (px, ch, r) => {
 };
 
 // オボロゲソウ C-208 も提供済み完成画像なので帯を塗らない。--build --only=C208.jpg,C208S.jpg,C208V.jpg で追加分だけ配信画像を作れる
+// ただしオボロゲソウの配信画像は、右のふちの切れ・「地上」の丸の欠けを直した tools/card/card-art-oborogesou-fix.js で作る(2026-10-29)。
+//   ここで全部を作り直したら、そのあと node tools/card/card-art-oborogesou-fix.js を打ち直すこと
 // © と URL の字が無い絵(2026-10-26 社長が送った剣士モッチー C-066・パンドラ C-067 の3枚ずつ)。
 // 前は帯を塗っていて、パンドラは赤い帯・別絵キラは縞の四角が出ていた(2026-10-27 カード追加部パックくんの見回り)
 const NO_COPYRIGHT = ['C066.jpg', 'C066S.jpg', 'C066V.jpg', 'C067.jpg', 'C067S.jpg', 'C067V.jpg', 'C208.jpg', 'C208S.jpg', 'C208V.jpg'];

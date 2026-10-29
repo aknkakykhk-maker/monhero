@@ -11,7 +11,7 @@
 //   ① 攻撃の番: 手札を1回押すと、すぐ選ばれる
 //   ② 使う子 → 狙う相手 を速く続けて押しても、両方とも効いて技が出る(使う子が取り消されない)
 //   ③ 同じ手札を2回続けて押すと詳しい画面。1回目で選んだ技は選ばれたまま残らない
-//   ④ 守りの番: 守りの札を1回押すと、待たずにすぐ守りが決まる(前は 350ms 以上かかっていた。技を使う前の確認が「なし」の既定のとき)
+//   ④ 守りの番: 守りの札を1回押すと、待たずにすぐ予告の窓が出る(前は 350ms 以上かかっていた)。「これで守る」で決める
 //   ⑤ 守りの札が1回だけ使われる
 //   ⑥ 実行時エラーが無い
 const http = require('http');
@@ -146,7 +146,7 @@ const GUARD_MS = 950;
       await page.locator('[data-card-mode-assistant]').click();
       await page.locator('[data-card-foe="mua"]').click(); await sleep(200);
       await page.locator('[data-card-level="easy"]').click().catch(() => {});
-      await page.locator('[data-card-start]').click();
+      await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
       for (let i = 0; i < 40 && !(await page.locator('[data-card-battle]').count()); i++) { if (i > 6) await page.mouse.click(195, 420); await sleep(300); }
     };
     // 対戦を抜ける: 読み込み直して MFバトルカードへ入り直す(途中の対戦は、次に開いたとき投了として数えられる)
@@ -198,19 +198,20 @@ const GUARD_MS = 950;
     check('守りの番になる(相手が攻めてくる)', inGuard, String(await mode()));
     if (inGuard) {
       await sleep(2000); // 相手の技の知らせが出ているあいだは待つ
-      // ④ 守りの札を1回押すと、待たずにすぐ守りが決まる(技を使う前の確認が「なし」の既定では、1つしか選べない守りは押した時点で決まる)
+      // ④ 守りの札を1回押すと、待たずにすぐ予告の窓が出る(2026-10-29 案C: 「受けるダメージ 前→後」を見て「これで守る」で決める)
       await page.evaluate(() => { window.__t0 = performance.now(); });
       await page.locator('[data-card-hand-card="0"]').click();
       const lat4 = await page.evaluate(() => new Promise((resolve) => {
         const end = window.__t0 + 2500;
         const tick = () => {
-          if (document.querySelectorAll('[data-card-hand-card]').length < 5) return resolve(Math.round(performance.now() - window.__t0)); // 使った守りの札が手札から出る(守りの演出の分を含む)
+          if (document.querySelector('[data-card-guard-ask]')) return resolve(Math.round(performance.now() - window.__t0));
           if (performance.now() > end) return resolve(null);
           setTimeout(tick, 5);
         };
         tick();
       }));
-      check('④ 守りの番: 守りの札を1回押すと、待たずにすぐ守りが決まる', lat4 !== null && lat4 < GUARD_MS, `${lat4}ms`);
+      check('④ 守りの番: 守りの札を1回押すと、待たずにすぐ予告の窓が出る', lat4 !== null && lat4 < GUARD_MS, `${lat4}ms`);
+      await page.locator('[data-card-guard-ask-yes]').click();
       await sleep(1500);
       check('⑤ 守りが1回だけ使われる(手札の緊急回避が1枚減る)', (await page.locator('[data-card-hand-card]').count()) === 4, String(await page.locator('[data-card-hand-card]').count()));
     }

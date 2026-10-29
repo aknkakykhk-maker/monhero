@@ -271,7 +271,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
     await page.locator('[data-card-foe="momosuke"]').click();
     await page.waitForTimeout(500);
     await shot(page, '03-foe');
-    await page.locator('[data-card-start]').click();
+    await page.locator('[data-card-start]').click(); await page.locator('[data-card-deck-pick-go]').click(); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)
     await page.locator('[data-card-battle]').waitFor({ timeout: 20000 });
     // ㉒ 始まりの台詞は、相手が先に動いても、字の数で決めた時間(最低 3 秒)は出ている(2026-10-27 社長「すぐ流れる。とくに開始のとき」)
     const startTalk = await page.evaluate(async () => {

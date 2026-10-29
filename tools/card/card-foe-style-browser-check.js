@@ -126,7 +126,7 @@ const seed = (withAuto) => `(() => {
     await page.waitForTimeout(1200);
   };
   try {
-    const WANT = { mua: '攻撃型', momosuke: '邪魔型', kiki: '大技型', kyuko: 'バランス型', dra: '守り型', atsu: '全体攻撃型' };
+    const WANT = { mua: '攻撃型', momosuke: '邪魔型', kiki: '大技型', kyuko: 'バランス型', dra: '守り型', atsu: '臨機応変型' };
     for (const [w, h] of [[390, 664], [844, 390], [1280, 800], [390, 844]]) {
       VIEW = { width: w, height: h };
       const { context, page } = await open(true);
@@ -151,7 +151,7 @@ const seed = (withAuto) => `(() => {
           if (!r) { bad.push(`${who}: 型の欄が出ない`); continue; }
           if (WANT[who] && r.label !== WANT[who]) bad.push(`${who}: 型が ${r.label}(${WANT[who]} のはず)`);
           if (r.mons !== 1) bad.push(`${who}: 好きなモンスターが ${r.mons}体`);
-          if (r.prefer !== (who === 'atsu' && lv === 'hard')) bad.push(`${who} ${lv}: よく使うカードの出かたが違う`);
+          if (r.prefer !== ((who === 'atsu' || who === 'sorashido') && lv === 'hard')) bad.push(`${who} ${lv}: よく使うカードの出かたが違う`);
           if (lv === 'easy' && !/^EASY: 好きな子を中心に/.test(r.note)) bad.push(`${who} EASY: ${r.note}`);
           if (lv === 'hard' && !/^HARD: 戦い方に合う子/.test(r.note)) bad.push(`${who} HARD: ${r.note}`);
           // 作り手の言葉を出さない(2026-10-26 カゲあつくんの通しの点検で「組み方は雑」「型どおりに組む」)

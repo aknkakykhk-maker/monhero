@@ -731,7 +731,8 @@ const helpDataRows = (id) => {
         return [`${index + 1}位`,
           `${HERO_PROOF_SHARD_ITEM.emoji} ${HERO_PROOF_SHARD_ITEM.name}×${reward.count}`
           + ` ／ 💗 虹のプシュケー×${reward.psyche.toLocaleString()}`
-          + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`];
+          + ` ／ 💎 ダイヤ×${reward.gold.toLocaleString()}`
+          + ` ／ 🎵 ビートP×${reward.beatPoint.toLocaleString()}`];
       });
     // イベントの回数ボーナス。難易度ごとの割合を実データから出す
     // (ヘルプへ手で書き写すと、割合を変えたときに古いままになる)

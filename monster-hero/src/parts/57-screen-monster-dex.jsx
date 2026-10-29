@@ -222,6 +222,10 @@ const DexStatusTag = ({ status, size = 'sm', announced = false }) => {
   return <span data-dex-status-tag={def.id} className={`inline-flex items-center rounded-full border px-1.5 py-px font-black leading-none whitespace-nowrap ${size === 'md' ? 'text-[11px]' : 'text-[9px]'} ${DEX_STATUS_STYLE[def.id]}`}>{def.label}</span>;
 };
 
+// 図鑑の一覧のスクロールの位置(2026-10-29 社長「モンスターを開いて戻ると、一覧のいちばん上まで戻される」)。
+// 詳細を開くと一覧は作り直されるので、画面の外で覚えておき、戻ったらそこへ戻す。保存はしない(読み込み直すと上から)。
+// 覚えるのは札を押した瞬間。絞り込みが替わっていたとき・M/B管理へ戻ったときは上から
+const dexListScrollMemo = { filter: null, top: 0 };
 function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineage, onOpenDetail, onBackToManagement }) {
       const monsters=dexMonsterList();
       const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
@@ -233,7 +237,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
       const chipClass=(on)=>`shrink-0 snap-start min-h-[44px] px-3 rounded-xl border text-[11px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-white/10 text-amber-200/80'}`;
       return (
       <div data-mh-screen className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="モンスター図鑑" accent="text-amber-300" onBack={onBackToManagement} backLabel="M/B管理へ戻る"/>
+        <ScreenHead title="モンスター図鑑" accent="text-amber-300" onBack={()=>{ dexListScrollMemo.top=0; onBackToManagement(); }} backLabel="M/B管理へ戻る"/>
         <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="monsterDex" compact/></div>
         <div data-dex-count className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-amber-500/60 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2">
           <span className="text-[10px] font-black text-amber-300 shrink-0">図鑑登録数</span>
@@ -252,7 +256,9 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
           <span aria-hidden="true" className="shrink-0" ref={el=>{ if(!el||!el.parentElement||!el.previousElementSibling) return;
             el.style.width=`${Math.max(0, el.parentElement.clientWidth-el.previousElementSibling.offsetWidth-6)}px`; }}/>
         </div>
-        <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}>
+        <div data-dex-list className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto`}
+          ref={el=>{ if(!el||el.dataset.dexScrollRestored) return; el.dataset.dexScrollRestored='1';
+            if(dexListScrollMemo.filter===dexLineageFilter&&dexListScrollMemo.top>0) el.scrollTop=dexListScrollMemo.top; }}>
           {sections.map(section=>(
             <section key={section.id} data-dex-section={section.id} className="pb-3">
               {/* 区切りの見出し。数は「この区切りの数 / いま並んでいる全員」 */}
@@ -268,7 +274,8 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
                   const category=unlocked?monsterCategoryOf(mon.id):null;
                   return (
                     <button key={mon.id} type="button" data-dex-entry data-dex-entry-status={section.id} aria-label={`${mon.name}の図鑑を見る`}
-                      onClick={()=>onOpenDetail(mon.id)}
+                      onClick={e=>{ const list=e.currentTarget.closest('[data-dex-list]');
+                        dexListScrollMemo.filter=dexLineageFilter; dexListScrollMemo.top=list?list.scrollTop:0; onOpenDetail(mon.id); }}
                       className={`w-full min-h-[124px] rounded-2xl border ${section.id==='draft'?'border-dashed border-fuchsia-300/30':'border-white/10'} bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none`}>
                       {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
                           少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
