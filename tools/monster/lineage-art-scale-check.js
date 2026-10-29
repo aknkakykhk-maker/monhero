@@ -27,7 +27,7 @@ vm.runInContext(`${read('monster-hero/data/images/images-ally.js')}\n${read('mon
 const { ALL_PLAYER_MONSTERS: mons, MONSTER_ART_SCALE: table } = ctx.x;
 
 check('つなぎ込み: DyedMonsterImage が倍率を掛ける(マスクの位置合わせの画面では掛けない)',
-  /const artScale = debugMaskPlacement \? null : monsterArtScaleOf\(baseId, src, className, fitStyle\);/.test(art));
+  /const artScale = debugMaskPlacement \? null : monsterArtScaleOf\(baseId, src, className, monsterArtFitStyle\(baseId, givenStyle\)\);/.test(art));
 check('つなぎ込み: 倍率は src がその子の立ち絵(imgUrl)で、収め方が contain のときだけ',
   /_artPathOf\(src\) !== _artPathOf\(mon\.imgUrl\)/.test(art) && /return fit === 'contain' \? def : null;/.test(art));
 check('つなぎ込み: MonsterArtFrame の素の img とモンスターノーツの canvas にも掛ける',

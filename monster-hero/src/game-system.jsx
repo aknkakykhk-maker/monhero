@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a99bacbe759b23f2
+// generated-sha256: a5e04783c47095c7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7789,11 +7789,11 @@ const _bakeDyedLayers = (key, src, layers) => {
   promise.then((url) => { if (!url && _dyedBakeCache.get(key) === promise) _dyedBakeCache.delete(key); });
   return promise;
 };
-const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
-  const fitStyle = monsterArtFitStyle(baseId, rawStyle);
+const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: givenStyle, draggable, debugMaskPlacement = null }) => {
   // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
-  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, fitStyle);
-  const style = artScale ? { ...(fitStyle || {}), transform: monsterArtScaleTransform(artScale, fitStyle && fitStyle.transform) } : fitStyle;
+  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
+  const rawStyle = artScale ? { ...(givenStyle || {}), transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform) } : givenStyle;
+  const style = monsterArtFitStyle(baseId, rawStyle);
   const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);

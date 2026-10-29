@@ -1505,11 +1505,11 @@ const _bakeDyedLayers = (key, src, layers) => {
   promise.then((url) => { if (!url && _dyedBakeCache.get(key) === promise) _dyedBakeCache.delete(key); });
   return promise;
 };
-const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
-  const fitStyle = monsterArtFitStyle(baseId, rawStyle);
+const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: givenStyle, draggable, debugMaskPlacement = null }) => {
   // 同じ血統の立ち絵の大きさをそろえる倍率(MONSTER_ART_SCALE)。マスクの位置合わせ(debugMaskPlacement)の画面では掛けない
-  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, fitStyle);
-  const style = artScale ? { ...(fitStyle || {}), transform: monsterArtScaleTransform(artScale, fitStyle && fitStyle.transform) } : fitStyle;
+  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
+  const rawStyle = artScale ? { ...(givenStyle || {}), transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform) } : givenStyle;
+  const style = monsterArtFitStyle(baseId, rawStyle);
   const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);

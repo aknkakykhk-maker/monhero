@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 971b9262642dd9ca
+// source-sha256: 0d67acd29525786f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10679,16 +10679,16 @@ const DyedMonsterImage = ({
   masuColors,
   alt,
   className,
-  style: rawStyle,
+  style: givenStyle,
   draggable,
   debugMaskPlacement = null
 }) => {
-  const fitStyle = monsterArtFitStyle(baseId, rawStyle);
-  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, fitStyle);
-  const style = artScale ? {
-    ...(fitStyle || {}),
-    transform: monsterArtScaleTransform(artScale, fitStyle && fitStyle.transform)
-  } : fitStyle;
+  const artScale = debugMaskPlacement ? null : monsterArtScaleOf(baseId, src, className, monsterArtFitStyle(baseId, givenStyle));
+  const rawStyle = artScale ? {
+    ...(givenStyle || {}),
+    transform: monsterArtScaleTransform(artScale, givenStyle && givenStyle.transform)
+  } : givenStyle;
+  const style = monsterArtFitStyle(baseId, rawStyle);
   const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
