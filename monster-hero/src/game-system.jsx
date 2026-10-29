@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 474715ebc8f77d29
+// generated-sha256: 41f68584cdef7bbb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57189,6 +57189,8 @@ const CARD_IMG = (img, size = 's') => `${CARD_IMAGE_SET.imageDir}/${size}/${img}
 const CARD_BACK_IMG = (size = 's') => CARD_IMG('back', size);
 const CARD_KIND_LABEL = Object.freeze({ pow: 'ちから', int: 'かしこさ', spe: '特殊', dge: '回避', blk: '防御', fld: '全体' });
 const CARD_TYPE_LABEL = Object.freeze({ ground: '地上', air: '空中', water: '水中' });
+// 地上・空中・水中の札の色(地上は今までの色・空中は水色・水中は青。2026-10-29 社長「色で見分けやすく」)
+const CARD_TYPE_TONE = Object.freeze({ ground: 'bg-indigo-900 text-white', air: 'bg-sky-300 text-sky-950', water: 'bg-blue-600 text-white' });
 const CARD_LEVEL_LABEL = Object.freeze({ easy: 'EASY', normal: 'NORMAL', hard: 'HARD', expert: 'EXPERT', master: 'MASTER' });
 // 難易度の札の色(対戦の上の帯。2026-10-26)
 const CARD_LEVEL_TONE = Object.freeze({
@@ -57810,8 +57812,10 @@ const cardJaWrap = (text) => String(text ?? '').split(CARD_KEEP_WORDS).map((t, i
   : <React.Fragment key={i}>{jaWrap(t)}</React.Fragment>));
 // 場のモンスターの名前。「…」で切らずに収める(320で「メタル…」と切れていた。QA 8)。
 // 字を少し小さく(10pxまで) → それでも入らなければ横をつめて1行に収める(2行にすると「ストライ/クリパー」と言葉の途中で割れる)
-const CardMonName = ({ name, w }) => {
+// two … 長い名前を、字を縮めすぎずに2行で出す(2026-10-29 社長「長い名前の字が小さくなりすぎない工夫」。地上・空中の札をライフの行へ移して空いた1行を使う)
+const CardMonName = ({ name, w, two = false }) => {
   const len = Math.max(1, String(name || '').length);
+  if (two && len * 11 > w) return <div data-card-mon-name data-card-mon-name-two className="line-clamp-2 break-all font-black leading-[1.1]" style={{ fontSize: 11 }}>{name}</div>;
   const fs = Math.max(10, Math.min(12, Math.floor(w / len)));
   const k = Math.min(1, w / (len * fs));
   return <div data-card-mon-name className="whitespace-nowrap font-black leading-tight" style={{ fontSize: fs, transform: k < 1 ? `scaleX(${k})` : undefined, transformOrigin: 'left', width: k < 1 ? `${w / k}px` : undefined }}>{name}</div>;
@@ -57843,12 +57847,11 @@ const CardMonSlot = ({ db, st, p, m, mark = null, fx = [], onTap, press, compact
         {mon.ko && <span className="mh-card-flip-back" aria-hidden="true" style={{ backgroundImage: `url(${CARD_BACK_IMG()})`, backgroundSize: '100% 100%', border: 0 }}/>}
       </span>
       <div className={`${tiny ? 'w-[56px]' : 'w-[62px]'} min-w-0`}>
-        <CardMonName name={mon.name} w={tiny ? 56 : 62}/>
-        {/* 小さい画面(tiny)は、地上・空中の札をライフと同じ行へ(1行ぶん低くする) */}
-        <div className="flex items-center gap-1 whitespace-nowrap text-[13px] font-black leading-tight">{mon.life}<span className="text-[10px] text-slate-400"> / {mon.max}</span>
-          {tiny && <span className={`ml-auto rounded px-0.5 text-[9px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`}>{CARD_TYPE_LABEL[ty]}</span>}</div>
+        <CardMonName name={mon.name} w={tiny ? 56 : 62} two={!tiny}/>
+        {/* 地上・空中・水中の札は、ライフと同じ行へ(空いた1行を長い名前の2行目に使う)。空中は水色・水中は青で見分ける(2026-10-29 社長) */}
+        <div className={`flex items-center gap-1 whitespace-nowrap ${tiny ? 'text-[13px]' : 'text-[14px]'} font-black leading-tight`}>{mon.life}<span className={`${tiny ? 'text-[10px]' : 'text-[11px]'} text-slate-300`}> / {mon.max}</span>
+          <span data-card-mon-type={ty} className={`ml-auto rounded ${tiny ? 'px-0.5 text-[9px]' : 'px-1 text-[10px]'} font-bold ${CARD_TYPE_TONE[ty] || CARD_TYPE_TONE.ground}`}>{CARD_TYPE_LABEL[ty]}</span></div>
         <div className="h-[6px] overflow-hidden rounded bg-slate-700"><div className={`h-full ${pct > 50 ? 'bg-emerald-400' : pct > 25 ? 'bg-amber-400' : 'bg-rose-500'}`} style={{ width: `${pct}%` }}/></div>
-        {!tiny && <span className={`mt-0.5 inline-block rounded px-1 text-[10px] font-bold ${ty === 'air' ? 'bg-cyan-800' : ty === 'water' ? 'bg-blue-800' : 'bg-indigo-900'}`}>{CARD_TYPE_LABEL[ty]}</span>}
         {/* 「攻撃できない」は1行に収める(320で「攻撃でき/ない」と折れて場の背が伸び、下のボタンが画面の下で切れた。最後の見回り) */}
         {stunned && <span data-card-stunned className={`inline-block whitespace-nowrap rounded bg-rose-900 font-bold ${tiny ? 'px-0.5 text-[9px] leading-tight' : 'ml-0.5 px-1 text-[10px]'}`}>攻撃できない</span>}
       </div>
@@ -59056,7 +59059,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {/* 顔の大きいカットインは、まんなか(横 72px・小さい縦 89px ほど)に記録といっしょには入り切らない(2026-10-27 デッキくん ⑲ 記録の下が 11〜22px 切れる)。
             詰めの段が最後(3)まで行っても入らないときは、カットインのあいだだけ記録を出さない(倒れたことはダウンの帯が知らせる。台詞が消えれば戻る) */}
         {!(stageFit >= 3 && bubbleInFlow) && (
-        <div data-card-log className={`relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
+        <div data-card-log data-card-log-empty={!pendingText && !liveLine ? '1' : undefined} className={`${!pendingText && !liveLine ? 'invisible ' : ''}relative ${guardAtk ? 'z-[41] bg-slate-950/95' : 'z-[1] bg-black/45'} max-w-full rounded-xl border border-white/15 px-3 py-1 text-center ${compact ? 'text-[13px]' : 'text-[14px]'} font-bold leading-snug ${turnBanner || bigCard || downBand || endFx ? 'invisible' : ''}`} style={JA_WRAP_STYLE}>
           {/* 守りを選ぶあいだは、いま受けている相手の攻撃カード(絵・名前・ダメージ・効果)を出す。押すと詳しい画面(2026-10-26 ソラシドさん) */}
           {pendingText && (guardAtk
             ? <button type="button" data-card-guard-attack={guardAtk.no} {...press(guardAtk.no, () => setDetail(guardAtk.no))} className="flex w-full max-w-[360px] items-center gap-2 text-left active:scale-[.98]">
